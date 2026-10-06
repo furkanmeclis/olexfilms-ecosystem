@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -322,8 +323,30 @@ func (a *NotificationsAdapter) ExportColumns() []ioengine.Column {
 }
 
 func (a *NotificationsAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _ i18n.Locale) (ioengine.Dataset, error) {
+	// TEC-367: the export reads the list filters, q and sort with the
+	// same meaning as GET /v1/platform/notifications.
+	vals := url.Values{}
+	for k, v := range query {
+		vals.Set(k, v)
+	}
+	created, err := apiquery.DateRange(vals, "created")
+	if err != nil {
+		return ioengine.Dataset{}, err
+	}
+	sort, err := apiquery.ResolveSort(apiquery.Parse(vals).Sort, apiquery.NotificationsSortSpec)
+	if err != nil {
+		return ioengine.Dataset{}, err
+	}
 	params := db.ListPlatformNotificationsForExportParams{
-		Statuses: apiquery.SplitCSV(query["status"]), Channel: textArg(query["channel"]), Q: textArg(query["q"]),
+		Statuses: apiquery.SplitCSV(query["status"]), Channels: apiquery.SplitCSV(query["channel"]),
+		Priorities: apiquery.SplitCSV(query["priority"]), Q: textArg(query["q"]),
+		SortKey: sort.Key, SortDesc: sort.Desc,
+	}
+	if created.From != nil {
+		params.CreatedFrom = pgtype.Timestamptz{Time: *created.From, Valid: true}
+	}
+	if created.Before != nil {
+		params.CreatedBefore = pgtype.Timestamptz{Time: *created.Before, Valid: true}
 	}
 	if raw := strings.TrimSpace(query["user_uuid"]); raw != "" {
 		id, err := uuid.Parse(raw)

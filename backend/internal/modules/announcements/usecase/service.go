@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
@@ -146,6 +147,8 @@ type ReadReport struct {
 	ReadTotal   int64      `json:"read_total"`
 	ReadRate    float64    `json:"read_rate"`
 	Items       []ReadItem `json:"items"`
+	Limit       int32      `json:"limit"`
+	Offset      int32      `json:"offset"`
 }
 
 // ReadItem is one read receipt.
@@ -601,7 +604,81 @@ func (s *Service) GetAuthor(ctx context.Context, c Caller, id uuid.UUID) (Announ
 	return out, nil
 }
 
-// Reads returns author read receipts and target total.
+// Statuses are the announcement statuses (chk_announcements_status).
+var Statuses = []string{StatusDraft, StatusPublished, StatusArchived}
+
+// AdminSortSpec is the sort whitelist of GET /v1/announcements/manage
+// (TEC-367, docs/list-contract.md).
+var AdminSortSpec = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"created_at": "created_at", "updated_at": "updated_at", "publish_at": "publish_at",
+		"title": "title", "status": "status",
+	},
+	Default: apiquery.SortField{Field: "created_at", Desc: true},
+}
+
+// AdminFilter narrows AdminList. Nil Statuses lists every status.
+type AdminFilter struct {
+	Statuses []string
+	Pinned   *bool
+	Publish  apiquery.TimeRange
+	Q        string // title
+	SortKey  string
+	SortDesc bool
+	Limit    int32
+	Offset   int32
+}
+
+// AdminList is the author view (TEC-367): every announcement written by
+// the caller's organization (drafts and archived ones too), the same scope
+// GetAuthor reads. Items carry no audiences; GET /{uuid} via the author
+// detail has them.
+func (s *Service) AdminList(ctx context.Context, c Caller, f AdminFilter) ([]Announcement, int64, error) {
+	if err := s.requireWriter(c); err != nil {
+		return nil, 0, err
+	}
+	if f.SortKey == "" {
+		f.SortKey, f.SortDesc = AdminSortSpec.Default.Field, AdminSortSpec.Default.Desc
+	}
+	var pinned pgtype.Bool
+	if f.Pinned != nil {
+		pinned = pgtype.Bool{Bool: *f.Pinned, Valid: true}
+	}
+	q := strings.TrimSpace(f.Q)
+	arg := db.ListAnnouncementsByOrganizationsParams{
+		OrganizationIds: []int64{c.Org.InternalID}, Statuses: f.Statuses, Pinned: pinned,
+		PublishFrom: pgTime(f.Publish.From), PublishBefore: pgTime(f.Publish.Before),
+		Q: pgtype.Text{String: q, Valid: q != ""}, SortKey: f.SortKey, SortDesc: f.SortDesc,
+		PageLimit: f.Limit, PageOffset: f.Offset,
+	}
+	rows, err := s.q.ListAnnouncementsByOrganizations(ctx, arg)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.q.CountAnnouncementsByOrganizations(ctx, db.CountAnnouncementsByOrganizationsParams{
+		OrganizationIds: arg.OrganizationIds, Statuses: arg.Statuses, Pinned: arg.Pinned,
+		PublishFrom: arg.PublishFrom, PublishBefore: arg.PublishBefore, Q: arg.Q,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]Announcement, 0, len(rows))
+	for _, a := range rows {
+		out = append(out, Announcement{
+			UUID: a.Uuid, DefaultLocale: a.DefaultLocale, Title: a.Title, Body: a.Body, BodyFormat: a.BodyFormat,
+			Status: a.Status, Pinned: a.Pinned, Notify: a.Notify, PublishAt: ptrTime(a.PublishAt),
+			ExpiresAt: ptrTime(a.ExpiresAt), CreatedAt: a.CreatedAt.Time, UpdatedAt: a.UpdatedAt.Time,
+		})
+	}
+	return out, total, nil
+}
+
+// MaxReadsLimit is the page cap of the read report (a nested,
+// client-side table; TEC-367 raised it above the list default of 100).
+const MaxReadsLimit = 500
+
+// Reads returns author read receipts and target total. limit 0 means 50;
+// above MaxReadsLimit it is capped. ReadTotal is the paging total.
 func (s *Service) Reads(ctx context.Context, c Caller, id uuid.UUID, limit, offset int32) (ReadReport, error) {
 	if err := s.requireWriter(c); err != nil {
 		return ReadReport{}, err
@@ -610,8 +687,14 @@ func (s *Service) Reads(ctx context.Context, c Caller, id uuid.UUID, limit, offs
 	if err != nil || a.OrganizationID != c.Org.InternalID {
 		return ReadReport{}, ErrNotFound
 	}
-	if limit <= 0 || limit > 100 {
+	switch {
+	case limit <= 0:
 		limit = 50
+	case limit > MaxReadsLimit:
+		limit = MaxReadsLimit
+	}
+	if offset < 0 {
+		offset = 0
 	}
 	targets, err := s.q.ListAnnouncementTargetUserIDs(ctx, a.ID)
 	if err != nil {
@@ -627,7 +710,7 @@ func (s *Service) Reads(ctx context.Context, c Caller, id uuid.UUID, limit, offs
 	if err != nil {
 		return ReadReport{}, err
 	}
-	out := ReadReport{TargetTotal: int64(len(targets)), ReadTotal: readTotal}
+	out := ReadReport{TargetTotal: int64(len(targets)), ReadTotal: readTotal, Limit: limit, Offset: offset, Items: []ReadItem{}}
 	if out.TargetTotal > 0 {
 		out.ReadRate = float64(out.ReadTotal) / float64(out.TargetTotal)
 	}

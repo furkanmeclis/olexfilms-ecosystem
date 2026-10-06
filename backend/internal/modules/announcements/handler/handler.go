@@ -29,7 +29,14 @@ func caller(r *http.Request) usecase.Caller {
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *usecase.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
+	case errors.As(err, &qe):
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
 	case errors.Is(err, usecase.ErrForbidden):
@@ -90,6 +97,39 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	q := apiquery.Parse(r.URL.Query())
 	items, total, err := h.svc.List(r.Context(), caller(r), locale(r), unread, q.Limit, q.Offset)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+}
+
+// AdminList handles GET /v1/announcements/manage (TEC-367): the author
+// list of the active organization in every status. Params: status (CSV of
+// draft|published|archived), pinned, publish_from/publish_to, q (title),
+// sort, limit, offset.
+func (h *Handler) AdminList(w http.ResponseWriter, r *http.Request) {
+	qv := r.URL.Query()
+	q := apiquery.Parse(qv)
+	srt, err := apiquery.ResolveSort(q.Sort, usecase.AdminSortSpec)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	f := usecase.AdminFilter{Q: q.Q, SortKey: srt.Key, SortDesc: srt.Desc, Limit: q.Limit, Offset: q.Offset}
+	if f.Statuses, err = apiquery.EnumList(qv, "status", usecase.Statuses...); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	if f.Pinned, err = apiquery.Bool(qv, "pinned"); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	if f.Publish, err = apiquery.DateRange(qv, "publish"); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.AdminList(r.Context(), caller(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -227,8 +267,19 @@ func (h *Handler) Reads(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// The read report pages up to usecase.MaxReadsLimit (above the
+	// apiquery list cap of 100).
 	q := apiquery.Parse(r.URL.Query())
-	out, err := h.svc.Reads(r.Context(), caller(r), id, q.Limit, q.Offset)
+	limit := q.Limit
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 {
+			response.ValidationError(w, r, []response.Detail{{Field: "limit", Message: "must be a positive integer", Code: "invalid"}})
+			return
+		}
+		limit = int32(min(n, usecase.MaxReadsLimit))
+	}
+	out, err := h.svc.Reads(r.Context(), caller(r), id, limit, q.Offset)
 	if err != nil {
 		writeError(w, r, err)
 		return

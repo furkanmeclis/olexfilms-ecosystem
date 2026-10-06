@@ -29,28 +29,48 @@ func (q *Queries) AttachNotificationDelivery(ctx context.Context, arg AttachNoti
 const countNotificationDeliveries = `-- name: CountNotificationDeliveries :one
 SELECT COUNT(*)::bigint
 FROM notification_deliveries d
-WHERE ($1::text IS NULL OR d.status = $1)
-  AND ($2::text IS NULL OR d.channel = $2)
+JOIN users u ON u.id = d.user_id
+WHERE (
+    COALESCE(cardinality($1::text[]), 0) = 0
+    OR d.status = ANY ($1::text[])
+  )
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR d.channel = ANY ($2::text[])
+  )
   AND ($3::text IS NULL OR d.event_code = $3)
   AND ($4::uuid IS NULL OR d.event_id = $4)
   AND ($5::bigint IS NULL OR d.user_id = $5)
+  AND ($6::timestamptz IS NULL OR d.created_at >= $6)
+  AND ($7::timestamptz IS NULL OR d.created_at < $7)
+  AND (
+    $8::text IS NULL
+    OR COALESCE(u.email, '') ILIKE '%' || $8 || '%'
+    OR d.event_code ILIKE '%' || $8 || '%'
+  )
 `
 
 type CountNotificationDeliveriesParams struct {
-	Status    pgtype.Text `json:"status"`
-	Channel   pgtype.Text `json:"channel"`
-	EventCode pgtype.Text `json:"event_code"`
-	EventID   pgtype.UUID `json:"event_id"`
-	UserID    pgtype.Int8 `json:"user_id"`
+	Statuses      []string           `json:"statuses"`
+	Channels      []string           `json:"channels"`
+	EventCode     pgtype.Text        `json:"event_code"`
+	EventID       pgtype.UUID        `json:"event_id"`
+	UserID        pgtype.Int8        `json:"user_id"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countNotificationDeliveries,
-		arg.Status,
-		arg.Channel,
+		arg.Statuses,
+		arg.Channels,
 		arg.EventCode,
 		arg.EventID,
 		arg.UserID,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
 	)
 	var column_1 int64
 	err := row.Scan(&column_1)
@@ -391,23 +411,55 @@ const listNotificationDeliveries = `-- name: ListNotificationDeliveries :many
 SELECT d.id, d.uuid, d.event_id, d.event_code, d.user_id, d.organization_id, d.brand_id, d.channel, d.role, d.language, d.template_id, d.status, d.provider, d.provider_ref, d.error, d.attempts, d.created_at, d.updated_at, u.uuid AS user_uuid, COALESCE(u.email, '')::text AS user_email
 FROM notification_deliveries d
 JOIN users u ON u.id = d.user_id
-WHERE ($1::text IS NULL OR d.status = $1)
-  AND ($2::text IS NULL OR d.channel = $2)
+WHERE (
+    COALESCE(cardinality($1::text[]), 0) = 0
+    OR d.status = ANY ($1::text[])
+  )
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR d.channel = ANY ($2::text[])
+  )
   AND ($3::text IS NULL OR d.event_code = $3)
   AND ($4::uuid IS NULL OR d.event_id = $4)
   AND ($5::bigint IS NULL OR d.user_id = $5)
-ORDER BY d.created_at DESC, d.id DESC
-LIMIT $7 OFFSET $6
+  AND ($6::timestamptz IS NULL OR d.created_at >= $6)
+  AND ($7::timestamptz IS NULL OR d.created_at < $7)
+  AND (
+    $8::text IS NULL
+    OR COALESCE(u.email, '') ILIKE '%' || $8 || '%'
+    OR d.event_code ILIKE '%' || $8 || '%'
+  )
+ORDER BY
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text
+      WHEN 'status' THEN d.status::text WHEN 'channel' THEN d.channel::text WHEN 'event_code' THEN d.event_code::text
+    END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text
+      WHEN 'status' THEN d.status::text WHEN 'channel' THEN d.channel::text WHEN 'event_code' THEN d.event_code::text
+    END
+  END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'created_at' THEN d.created_at END ASC,
+  CASE WHEN $9::bool AND $10::text = 'created_at' THEN d.created_at END DESC,
+  CASE WHEN $9::bool THEN d.id END DESC,
+  d.id ASC
+LIMIT $12 OFFSET $11
 `
 
 type ListNotificationDeliveriesParams struct {
-	Status      pgtype.Text `json:"status"`
-	Channel     pgtype.Text `json:"channel"`
-	EventCode   pgtype.Text `json:"event_code"`
-	EventID     pgtype.UUID `json:"event_id"`
-	UserID      pgtype.Int8 `json:"user_id"`
-	OffsetCount int32       `json:"offset_count"`
-	LimitCount  int32       `json:"limit_count"`
+	Statuses      []string           `json:"statuses"`
+	Channels      []string           `json:"channels"`
+	EventCode     pgtype.Text        `json:"event_code"`
+	EventID       pgtype.UUID        `json:"event_id"`
+	UserID        pgtype.Int8        `json:"user_id"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	Q             pgtype.Text        `json:"q"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
+	OffsetCount   int32              `json:"offset_count"`
+	LimitCount    int32              `json:"limit_count"`
 }
 
 type ListNotificationDeliveriesRow struct {
@@ -433,13 +485,19 @@ type ListNotificationDeliveriesRow struct {
 	UserEmail      string             `json:"user_email"`
 }
 
+// Sort: docs/list-contract.md, keys from usecase.DeliveriesSortSpec.
 func (q *Queries) ListNotificationDeliveries(ctx context.Context, arg ListNotificationDeliveriesParams) ([]ListNotificationDeliveriesRow, error) {
 	rows, err := q.db.Query(ctx, listNotificationDeliveries,
-		arg.Status,
-		arg.Channel,
+		arg.Statuses,
+		arg.Channels,
 		arg.EventCode,
 		arg.EventID,
 		arg.UserID,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

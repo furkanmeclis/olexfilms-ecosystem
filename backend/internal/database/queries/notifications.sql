@@ -19,6 +19,7 @@ SELECT * FROM notifications WHERE uuid = $1;
 SELECT * FROM notifications WHERE id = $1;
 
 -- name: ListNotificationsForUser :many
+-- Sort: docs/list-contract.md, keys from apiquery.NotificationsSortSpec.
 SELECT * FROM notifications
 WHERE user_id = sqlc.arg(user_id)
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status))
@@ -35,7 +36,30 @@ WHERE user_id = sqlc.arg(user_id)
     OR COALESCE(template_code, '') ILIKE '%' || sqlc.narg(q) || '%'
     OR COALESCE(recipient, '') ILIKE '%' || sqlc.narg(q) || '%'
   )
-ORDER BY created_at DESC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END DESC,
+  -- priority sorts by severity rank, not alphabetically.
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'sent_at' THEN sent_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'sent_at' THEN sent_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountNotificationsForUser :one
@@ -70,12 +94,23 @@ WHERE (
     COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
     OR status = ANY (sqlc.narg(statuses)::text[])
   )
-  AND (sqlc.narg(channel)::text IS NULL OR channel = sqlc.narg(channel))
+  AND (
+    COALESCE(cardinality(sqlc.narg(channels)::text[]), 0) = 0
+    OR channel = ANY (sqlc.narg(channels)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0
+    OR priority = ANY (sqlc.narg(priorities)::text[])
+  )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR created_at < sqlc.narg(created_before))
   AND (sqlc.narg(user_id)::bigint IS NULL OR user_id = sqlc.narg(user_id))
   AND (
     sqlc.narg(q)::text IS NULL
     OR title ILIKE '%' || sqlc.narg(q) || '%'
     OR body ILIKE '%' || sqlc.narg(q) || '%'
+    OR COALESCE(template_code, '') ILIKE '%' || sqlc.narg(q) || '%'
+    OR COALESCE(recipient, '') ILIKE '%' || sqlc.narg(q) || '%'
   )
 ORDER BY
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
@@ -109,12 +144,23 @@ WHERE (
     COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
     OR status = ANY (sqlc.narg(statuses)::text[])
   )
-  AND (sqlc.narg(channel)::text IS NULL OR channel = sqlc.narg(channel))
+  AND (
+    COALESCE(cardinality(sqlc.narg(channels)::text[]), 0) = 0
+    OR channel = ANY (sqlc.narg(channels)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0
+    OR priority = ANY (sqlc.narg(priorities)::text[])
+  )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR created_at < sqlc.narg(created_before))
   AND (sqlc.narg(user_id)::bigint IS NULL OR user_id = sqlc.narg(user_id))
   AND (
     sqlc.narg(q)::text IS NULL
     OR title ILIKE '%' || sqlc.narg(q) || '%'
     OR body ILIKE '%' || sqlc.narg(q) || '%'
+    OR COALESCE(template_code, '') ILIKE '%' || sqlc.narg(q) || '%'
+    OR COALESCE(recipient, '') ILIKE '%' || sqlc.narg(q) || '%'
   );
 
 -- name: ListPlatformNotificationsForExport :many
@@ -123,14 +169,48 @@ WHERE (
     COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
     OR status = ANY (sqlc.narg(statuses)::text[])
   )
-  AND (sqlc.narg(channel)::text IS NULL OR channel = sqlc.narg(channel))
+  AND (
+    COALESCE(cardinality(sqlc.narg(channels)::text[]), 0) = 0
+    OR channel = ANY (sqlc.narg(channels)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0
+    OR priority = ANY (sqlc.narg(priorities)::text[])
+  )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR created_at >= sqlc.narg(created_from))
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR created_at < sqlc.narg(created_before))
   AND (sqlc.narg(user_id)::bigint IS NULL OR user_id = sqlc.narg(user_id))
   AND (
     sqlc.narg(q)::text IS NULL
     OR title ILIKE '%' || sqlc.narg(q) || '%'
     OR body ILIKE '%' || sqlc.narg(q) || '%'
+    OR COALESCE(template_code, '') ILIKE '%' || sqlc.narg(q) || '%'
+    OR COALESCE(recipient, '') ILIKE '%' || sqlc.narg(q) || '%'
   )
-ORDER BY created_at DESC, id DESC;
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END DESC,
+  -- priority sorts by severity rank, not alphabetically.
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'sent_at' THEN sent_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'sent_at' THEN sent_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC;
 
 -- name: MarkNotificationProcessing :one
 UPDATE notifications

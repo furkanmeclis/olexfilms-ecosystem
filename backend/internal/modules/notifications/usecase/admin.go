@@ -167,15 +167,32 @@ func (s *Service) PreviewTemplate(ctx context.Context, in model.TemplateInput) (
 	return out, nil
 }
 
-// DeliveryFilter narrows ListDeliveries.
+// DeliveryFilter narrows ListDeliveries. Nil slices do not filter.
 type DeliveryFilter struct {
-	Status, Channel, EventCode string
-	EventID                    *uuid.UUID
-	UserUUID                   *uuid.UUID
+	Statuses  []string
+	Channels  []string
+	EventCode string
+	EventID   *uuid.UUID
+	UserUUID  *uuid.UUID
+	Created   apiquery.TimeRange
 }
 
-// ListDeliveries returns the delivery log, newest first.
+// DeliveriesSortSpec is the sort whitelist of GET
+// /v1/platform/notification-deliveries (docs/list-contract.md).
+var DeliveriesSortSpec = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"created_at": "created_at", "status": "status", "channel": "channel", "event_code": "event_code",
+	},
+	Default: apiquery.SortField{Field: "created_at", Desc: true},
+}
+
+// ListDeliveries returns the delivery log (default newest first). q
+// searches the recipient email and the event code.
 func (s *Service) ListDeliveries(ctx context.Context, q apiquery.Query, f DeliveryFilter) (apiquery.Page[model.Delivery], error) {
+	sort, err := apiquery.ResolveSort(q.Sort, DeliveriesSortSpec)
+	if err != nil {
+		return apiquery.Page[model.Delivery]{}, err
+	}
 	store, err := s.admin()
 	if err != nil {
 		return apiquery.Page[model.Delivery]{}, err
@@ -195,16 +212,20 @@ func (s *Service) ListDeliveries(ctx context.Context, q apiquery.Query, f Delive
 	if f.EventID != nil {
 		eventID = pgtype.UUID{Bytes: *f.EventID, Valid: true}
 	}
-	rows, err := store.ListNotificationDeliveries(ctx, db.ListNotificationDeliveriesParams{
-		Status: optionalText(f.Status), Channel: optionalText(f.Channel), EventCode: optionalText(f.EventCode),
-		EventID: eventID, UserID: userID, LimitCount: q.Limit, OffsetCount: q.Offset,
-	})
+	params := db.ListNotificationDeliveriesParams{
+		Statuses: f.Statuses, Channels: f.Channels, EventCode: optionalText(f.EventCode),
+		EventID: eventID, UserID: userID,
+		CreatedFrom: tsArg(f.Created.From), CreatedBefore: tsArg(f.Created.Before), Q: optionalText(q.Q),
+		SortKey: sort.Key, SortDesc: sort.Desc, LimitCount: q.Limit, OffsetCount: q.Offset,
+	}
+	rows, err := store.ListNotificationDeliveries(ctx, params)
 	if err != nil {
 		return apiquery.Page[model.Delivery]{}, err
 	}
 	total, err := store.CountNotificationDeliveries(ctx, db.CountNotificationDeliveriesParams{
-		Status: optionalText(f.Status), Channel: optionalText(f.Channel), EventCode: optionalText(f.EventCode),
-		EventID: eventID, UserID: userID,
+		Statuses: params.Statuses, Channels: params.Channels, EventCode: params.EventCode,
+		EventID: eventID, UserID: userID, CreatedFrom: params.CreatedFrom, CreatedBefore: params.CreatedBefore,
+		Q: params.Q,
 	})
 	if err != nil {
 		return apiquery.Page[model.Delivery]{}, err

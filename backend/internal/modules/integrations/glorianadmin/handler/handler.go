@@ -16,6 +16,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
 )
@@ -42,10 +43,6 @@ type Handler struct {
 // New creates the handler; rec may be nil.
 func New(svc *usecase.Service, rec *activity.Recorder) *Handler {
 	return &Handler{svc: svc, activity: rec}
-}
-
-type listResponse[T any] struct {
-	Items []T `json:"items"`
 }
 
 // brand resolves the glorian brand and checks the caller's scope on it:
@@ -124,25 +121,36 @@ func (h *Handler) Test(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, res)
 }
 
-// ListSyncRuns (GET .../sync-runs?kind=&status=&limit=).
+// ListSyncRuns (GET .../sync-runs?kind=&status=&started_from=&started_to=&sort=&limit=&offset=).
 func (h *Handler) ListSyncRuns(w http.ResponseWriter, r *http.Request) {
 	b, ok := h.brand(w, r, rbac.PermIntegrationsGlorianView)
 	if !ok {
 		return
 	}
-	limit, ok := limitParam(w, r)
+	limit, offset, ok := pageParams(w, r)
 	if !ok {
 		return
 	}
 	q := r.URL.Query()
-	items, err := h.svc.ListSyncRuns(r.Context(), b, usecase.SyncRunFilter{
-		Kind: q.Get("kind"), Status: q.Get("status"), Limit: limit,
+	srt, err := apiquery.ResolveSort(apiquery.Parse(q).Sort, usecase.SyncRunsSortSpec)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	started, err := apiquery.DateRange(q, "started")
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListSyncRuns(r.Context(), b, usecase.SyncRunFilter{
+		Kinds: apiquery.CSVValues(q, "kind"), Statuses: apiquery.CSVValues(q, "status"), Started: started,
+		SortKey: srt.Key, SortDesc: srt.Desc, Limit: limit, Offset: offset,
 	})
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, listResponse[usecase.SyncRunView]{Items: items})
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, int32(limit), int32(offset)))
 }
 
 type syncBody struct {
@@ -187,22 +195,63 @@ func (h *Handler) GetSyncRun(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, v)
 }
 
-// ListOutbounds (GET .../outbounds?state=held&limit=).
+// ListOutbounds (GET .../outbounds?state=&q=&updated_from=&updated_to=&sort=&limit=&offset=).
+// No state lists every state.
 func (h *Handler) ListOutbounds(w http.ResponseWriter, r *http.Request) {
 	b, ok := h.brand(w, r, rbac.PermIntegrationsGlorianView)
 	if !ok {
 		return
 	}
-	limit, ok := limitParam(w, r)
+	limit, offset, ok := pageParams(w, r)
 	if !ok {
 		return
 	}
-	items, err := h.svc.ListOutbounds(r.Context(), b, r.URL.Query().Get("state"), limit)
+	q := r.URL.Query()
+	srt, err := apiquery.ResolveSort(apiquery.Parse(q).Sort, usecase.OutboundsSortSpec)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, listResponse[usecase.OutboundView]{Items: items})
+	updated, err := apiquery.DateRange(q, "updated")
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListOutbounds(r.Context(), b, usecase.OutboundFilter{
+		States: apiquery.CSVValues(q, "state"), Q: q.Get("q"), Updated: updated,
+		SortKey: srt.Key, SortDesc: srt.Desc, Limit: limit, Offset: offset,
+	})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, int32(limit), int32(offset)))
+}
+
+type replayBatchBody struct {
+	UUIDs []uuid.UUID `json:"uuids"`
+}
+
+// ReplayOutbounds (POST .../outbounds/replay): queues the replay of every
+// held or failed outbound in uuids (max 100); the rest come back skipped. 202.
+func (h *Handler) ReplayOutbounds(w http.ResponseWriter, r *http.Request) {
+	b, ok := h.brand(w, r, rbac.PermIntegrationsGlorianManage)
+	if !ok {
+		return
+	}
+	var body replayBatchBody
+	if !decode(w, r, &body) {
+		return
+	}
+	out, err := h.svc.ReplayOutbounds(r.Context(), b, body.UUIDs)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	for _, v := range out.Queued {
+		h.record(r, activityReplayQueued, &v.UUID, map[string]any{"order_no": v.OrderNo, "state": v.State, "batch": true})
+	}
+	response.JSON(w, r, http.StatusAccepted, out)
 }
 
 // ReplayOutbound (POST .../outbounds/{uuid}/replay). 202.
@@ -253,7 +302,14 @@ func (h *Handler) record(r *http.Request, action string, id *uuid.UUID, payload 
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var verr *usecase.ValidationError
+	var qerr *apiquery.ValidationError
 	switch {
+	case errors.As(err, &qerr):
+		details := make([]response.Detail, 0, len(qerr.Details))
+		for _, d := range qerr.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &verr):
 		details := make([]response.Detail, 0, len(verr.Fields))
 		for f, m := range verr.Fields {
@@ -301,6 +357,23 @@ func uuidParam(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 		return uuid.Nil, false
 	}
 	return id, true
+}
+
+// pageParams reads limit (1..MaxListLimit, default DefaultListLimit) and
+// offset (>= 0).
+func pageParams(w http.ResponseWriter, r *http.Request) (limit, offset int, ok bool) {
+	if limit, ok = limitParam(w, r); !ok {
+		return 0, 0, false
+	}
+	if raw := r.URL.Query().Get("offset"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 0 {
+			response.ValidationError(w, r, []response.Detail{{Field: "offset", Message: "must be a non-negative integer"}})
+			return 0, 0, false
+		}
+		offset = n
+	}
+	return limit, offset, true
 }
 
 func limitParam(w http.ResponseWriter, r *http.Request) (int, bool) {

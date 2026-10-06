@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator"
@@ -231,7 +230,9 @@ func (c glorianReconcileCheck) Run(ctx context.Context) Result {
 func (c glorianReconcileCheck) connection(ctx context.Context, conn db.IntegrationConnection) (string, bool) {
 	runs, err := c.q.ListGlorianSyncRuns(ctx, db.ListGlorianSyncRunsParams{
 		ConnectionID: conn.ID,
-		Kind:         pgtype.Text{String: glorian.KindReconcile, Valid: true},
+		Kinds:        []string{glorian.KindReconcile},
+		SortKey:      "started_at",
+		SortDesc:     true,
 		RowLimit:     1,
 	})
 	if err != nil {

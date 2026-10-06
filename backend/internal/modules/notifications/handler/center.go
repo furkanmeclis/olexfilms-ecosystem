@@ -131,7 +131,20 @@ func (h *Handler) SetChannel(w http.ResponseWriter, r *http.Request) {
 // ListDeliveries (GET /v1/platform/notification-deliveries).
 func (h *Handler) ListDeliveries(w http.ResponseWriter, r *http.Request) {
 	qv := r.URL.Query()
-	f := usecase.DeliveryFilter{Status: qv.Get("status"), Channel: qv.Get("channel"), EventCode: qv.Get("event_code")}
+	f := usecase.DeliveryFilter{EventCode: qv.Get("event_code")}
+	var err error
+	if f.Statuses, err = apiquery.EnumList(qv, "status", model.DeliveryStatuses...); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if f.Channels, err = apiquery.EnumList(qv, "channel", model.NotificationChannels...); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if f.Created, err = apiquery.DateRange(qv, "created"); err != nil {
+		writeErr(w, r, err)
+		return
+	}
 	for name, dst := range map[string]**uuid.UUID{"event_id": &f.EventID, "user_uuid": &f.UserUUID} {
 		raw := strings.TrimSpace(qv.Get(name))
 		if raw == "" {

@@ -38,5 +38,6 @@ func Mount(mux *http.ServeMux, h *handler.Handler, authn func(http.Handler) http
 	mux.Handle("GET "+Prefix+"/sync-runs/{uuid}", view(h.GetSyncRun))
 	mux.Handle("GET "+Prefix+"/outbounds", view(h.ListOutbounds))
 	mux.Handle("POST "+Prefix+"/outbounds/{uuid}/replay", manage(h.ReplayOutbound))
+	mux.Handle("POST "+Prefix+"/outbounds/replay", manage(h.ReplayOutbounds))
 	mux.Handle("POST "+Prefix+"/reconcile", manage(h.Reconcile))
 }

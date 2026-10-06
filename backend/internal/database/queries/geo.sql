@@ -156,3 +156,7 @@ RETURNING *;
 
 -- name: DeletePlateFormat :execrows
 DELETE FROM plate_formats WHERE country_id = $1;
+
+-- name: SetPlateFormatSortOrder :exec
+-- TEC-367: batch reorder (PUT /v1/platform/plate-formats/order).
+UPDATE plate_formats SET sort_order = sqlc.arg(sort_order) WHERE country_id = sqlc.arg(country_id);

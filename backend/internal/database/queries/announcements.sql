@@ -48,18 +48,49 @@ DELETE FROM announcements
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND status = 'draft';
 
 -- name: ListAnnouncementsByOrganizations :many
--- Author view: announcements written by the given organizations (the
--- caller's resolved write scope), newest first.
+-- Author view (TEC-367): announcements written by the given organizations
+-- (the caller's write scope) in every status. Sort keys from
+-- usecase.AdminSortSpec (docs/list-contract.md); default -created_at.
 SELECT * FROM announcements
 WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
-  AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar)
-ORDER BY created_at DESC, id DESC
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (sqlc.narg(pinned)::bool IS NULL OR pinned = sqlc.narg(pinned)::bool)
+  AND (sqlc.narg(publish_from)::timestamptz IS NULL OR publish_at >= sqlc.narg(publish_from))
+  AND (sqlc.narg(publish_before)::timestamptz IS NULL OR publish_at < sqlc.narg(publish_before))
+  AND (sqlc.narg(q)::text IS NULL OR title ILIKE '%' || sqlc.narg(q) || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'title' THEN title::text WHEN 'status' THEN status::text END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'title' THEN title::text WHEN 'status' THEN status::text END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'publish_at' THEN publish_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'publish_at' THEN publish_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- name: CountAnnouncementsByOrganizations :one
 SELECT COUNT(*) FROM announcements
 WHERE organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
-  AND (sqlc.narg(status)::varchar IS NULL OR status = sqlc.narg(status)::varchar);
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (sqlc.narg(pinned)::bool IS NULL OR pinned = sqlc.narg(pinned)::bool)
+  AND (sqlc.narg(publish_from)::timestamptz IS NULL OR publish_at >= sqlc.narg(publish_from))
+  AND (sqlc.narg(publish_before)::timestamptz IS NULL OR publish_at < sqlc.narg(publish_before))
+  AND (sqlc.narg(q)::text IS NULL OR title ILIKE '%' || sqlc.narg(q) || '%');
 
 -- name: UpsertAnnouncementLocale :one
 INSERT INTO announcement_locales (announcement_id, locale, title, body)

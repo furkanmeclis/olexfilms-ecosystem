@@ -18,6 +18,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
@@ -115,26 +116,59 @@ type KindInfo struct {
 	HasSource bool `json:"has_source"`
 }
 
-// ListFilter filters template listings.
+// ListFilter filters template listings (TEC-367 list contract). Nil
+// slices do not filter; SortKey comes from TemplatesSortSpec.
 type ListFilter struct {
-	Kind        string
-	Language    string
+	Kinds       []string
+	Languages   []string
+	Statuses    []string // derived: draft, active, superseded
+	BrandSlug   string   // one brand's overrides
+	DefaultOnly bool     // platform defaults (no brand) only
+	Q           string   // name
 	CurrentOnly bool
+	SortKey     string
+	SortDesc    bool
 	Limit       int32
 	Offset      int32
 }
 
+// TemplateStatuses are the derived template statuses (status filter).
+var TemplateStatuses = []string{model.StatusDraft, model.StatusActive, model.StatusSuperseded}
+
+// TemplatesSortSpec is the sort whitelist of GET
+// /v1/platform/document-templates. The default (kind) keeps the catalog
+// grouping: kind, platform default before brands, language, newest version.
+var TemplatesSortSpec = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"kind": "kind", "language": "language", "name": "name", "version": "version",
+		"updated_at": "updated_at", "created_at": "created_at",
+	},
+	Default: apiquery.SortField{Field: "kind"},
+}
+
 // ListTemplates lists template versions (without HTML bodies).
 func (s *Service) ListTemplates(ctx context.Context, f ListFilter) ([]model.TemplateView, int64, error) {
-	kind := pgtype.Text{String: f.Kind, Valid: f.Kind != ""}
-	lang := pgtype.Text{String: f.Language, Valid: f.Language != ""}
+	brandID, err := s.brandID(ctx, f.BrandSlug)
+	if err != nil {
+		return nil, 0, err
+	}
+	q := pgtype.Text{String: strings.TrimSpace(f.Q), Valid: strings.TrimSpace(f.Q) != ""}
+	sortKey := f.SortKey
+	if sortKey == "" {
+		sortKey = TemplatesSortSpec.Default.Field
+	}
 	rows, err := s.q.ListDocumentTemplates(ctx, db.ListDocumentTemplatesParams{
-		Kind: kind, Language: lang, CurrentOnly: f.CurrentOnly, LimitCount: f.Limit, OffsetCount: f.Offset,
+		Kinds: f.Kinds, Languages: f.Languages, Statuses: f.Statuses, CurrentOnly: f.CurrentOnly,
+		PlatformDefaultOnly: f.DefaultOnly, BrandID: brandID, Q: q,
+		SortKey: sortKey, SortDesc: f.SortDesc, LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := s.q.CountDocumentTemplates(ctx, db.CountDocumentTemplatesParams{Kind: kind, Language: lang, CurrentOnly: f.CurrentOnly})
+	total, err := s.q.CountDocumentTemplates(ctx, db.CountDocumentTemplatesParams{
+		Kinds: f.Kinds, Languages: f.Languages, Statuses: f.Statuses, CurrentOnly: f.CurrentOnly,
+		PlatformDefaultOnly: f.DefaultOnly, BrandID: brandID, Q: q,
+	})
 	if err != nil {
 		return nil, 0, err
 	}

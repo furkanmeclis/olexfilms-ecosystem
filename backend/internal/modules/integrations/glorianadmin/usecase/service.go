@@ -22,6 +22,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5"
@@ -371,36 +372,66 @@ var SyncRunKinds = []string{
 // SyncRunStatuses are the statuses of a sync run.
 var SyncRunStatuses = []string{glorian.RunRunning, glorian.RunSucceeded, glorian.RunFailed}
 
-// SyncRunFilter narrows ListSyncRuns; empty fields do not filter.
+// SyncRunFilter narrows ListSyncRuns; nil slices and zero ranges do not
+// filter. SortKey comes from SyncRunsSortSpec.
 type SyncRunFilter struct {
-	Kind   string
-	Status string
-	Limit  int
+	Kinds    []string
+	Statuses []string
+	Started  apiquery.TimeRange
+	SortKey  string
+	SortDesc bool
+	Limit    int
+	Offset   int
 }
 
-// ListSyncRuns lists the runs of the connection, newest first.
-func (s *Service) ListSyncRuns(ctx context.Context, brand db.Brand, f SyncRunFilter) ([]SyncRunView, error) {
-	if f.Kind != "" && !contains(SyncRunKinds, f.Kind) {
-		return nil, invalid("kind", "must be one of "+strings.Join(SyncRunKinds, ", "))
+// SyncRunsSortSpec is the sort whitelist of GET .../sync-runs (TEC-367).
+var SyncRunsSortSpec = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"started_at": "started_at", "finished_at": "finished_at", "kind": "kind", "status": "status",
+	},
+	Default: apiquery.SortField{Field: "started_at", Desc: true},
+}
+
+// ListSyncRuns lists the runs of the connection (default newest first)
+// and the filtered total.
+func (s *Service) ListSyncRuns(ctx context.Context, brand db.Brand, f SyncRunFilter) ([]SyncRunView, int64, error) {
+	for _, k := range f.Kinds {
+		if !contains(SyncRunKinds, k) {
+			return nil, 0, invalid("kind", "must be one of "+strings.Join(SyncRunKinds, ", "))
+		}
 	}
-	if f.Status != "" && !contains(SyncRunStatuses, f.Status) {
-		return nil, invalid("status", "must be one of "+strings.Join(SyncRunStatuses, ", "))
+	for _, st := range f.Statuses {
+		if !contains(SyncRunStatuses, st) {
+			return nil, 0, invalid("status", "must be one of "+strings.Join(SyncRunStatuses, ", "))
+		}
+	}
+	if f.SortKey == "" {
+		f.SortKey, f.SortDesc = SyncRunsSortSpec.Default.Field, SyncRunsSortSpec.Default.Desc
 	}
 	conn, err := s.connection(ctx, brand.ID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	rows, err := s.q.ListGlorianSyncRuns(ctx, db.ListGlorianSyncRunsParams{
-		ConnectionID: conn.ID, Kind: optText(f.Kind), Status: optText(f.Status), RowLimit: int32(f.Limit),
+		ConnectionID: conn.ID, Kinds: f.Kinds, Statuses: f.Statuses,
+		StartedFrom: tsArg(f.Started.From), StartedBefore: tsArg(f.Started.Before),
+		SortKey: f.SortKey, SortDesc: f.SortDesc, RowLimit: int32(f.Limit), RowOffset: int32(f.Offset),
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	total, err := s.q.CountGlorianSyncRuns(ctx, db.CountGlorianSyncRunsParams{
+		ConnectionID: conn.ID, Kinds: f.Kinds, Statuses: f.Statuses,
+		StartedFrom: tsArg(f.Started.From), StartedBefore: tsArg(f.Started.Before),
+	})
+	if err != nil {
+		return nil, 0, err
 	}
 	out := make([]SyncRunView, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, syncRunView(r))
 	}
-	return out, nil
+	return out, total, nil
 }
 
 // GetSyncRun returns one run of the connection with its counts (the
@@ -518,28 +549,131 @@ var OutboundStates = []string{
 	glorian.OutboundPending, glorian.OutboundHeld, glorian.OutboundSent, glorian.OutboundFailed, glorian.OutboundCancelled,
 }
 
-// ListOutbounds lists the outbounds of the connection in one state
-// (default held), oldest first.
-func (s *Service) ListOutbounds(ctx context.Context, brand db.Brand, state string, limit int) ([]OutboundView, error) {
-	if state == "" {
-		state = glorian.OutboundHeld
+// OutboundFilter narrows ListOutbounds; nil States lists every state.
+// SortKey comes from OutboundsSortSpec.
+type OutboundFilter struct {
+	States   []string
+	Q        string // order_no or external_reference
+	Updated  apiquery.TimeRange
+	SortKey  string
+	SortDesc bool
+	Limit    int
+	Offset   int
+}
+
+// OutboundsSortSpec is the sort whitelist of GET .../outbounds (TEC-367);
+// the default is the replay order (oldest first).
+var OutboundsSortSpec = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"created_at": "created_at", "updated_at": "updated_at", "attempts": "attempts",
+		"state": "state", "order_no": "order_no",
+	},
+	Default: apiquery.SortField{Field: "created_at"},
+}
+
+// ListOutbounds lists the outbounds of the connection and the filtered
+// total.
+func (s *Service) ListOutbounds(ctx context.Context, brand db.Brand, f OutboundFilter) ([]OutboundView, int64, error) {
+	for _, st := range f.States {
+		if !contains(OutboundStates, st) {
+			return nil, 0, invalid("state", "must be one of "+strings.Join(OutboundStates, ", "))
+		}
 	}
-	if !contains(OutboundStates, state) {
-		return nil, invalid("state", "must be one of "+strings.Join(OutboundStates, ", "))
+	if f.SortKey == "" {
+		f.SortKey, f.SortDesc = OutboundsSortSpec.Default.Field, OutboundsSortSpec.Default.Desc
 	}
 	conn, err := s.connection(ctx, brand.ID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+	q := optText(strings.TrimSpace(f.Q))
 	rows, err := s.q.ListGlorianOutbounds(ctx, db.ListGlorianOutboundsParams{
-		ConnectionID: conn.ID, State: state, RowLimit: int32(limit),
+		ConnectionID: conn.ID, States: f.States, Q: q,
+		UpdatedFrom: tsArg(f.Updated.From), UpdatedBefore: tsArg(f.Updated.Before),
+		SortKey: f.SortKey, SortDesc: f.SortDesc, RowLimit: int32(f.Limit), RowOffset: int32(f.Offset),
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	total, err := s.q.CountGlorianOutbounds(ctx, db.CountGlorianOutboundsParams{
+		ConnectionID: conn.ID, States: f.States, Q: q,
+		UpdatedFrom: tsArg(f.Updated.From), UpdatedBefore: tsArg(f.Updated.Before),
+	})
+	if err != nil {
+		return nil, 0, err
 	}
 	out := make([]OutboundView, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, outboundView(db.GetGlorianOutboundByUUIDRow(r)))
+	}
+	return out, total, nil
+}
+
+// MaxReplayBatch caps POST .../outbounds/replay.
+const MaxReplayBatch = 100
+
+// ReplaySkip is an outbound a batch replay did not queue.
+type ReplaySkip struct {
+	UUID   uuid.UUID `json:"uuid"`
+	Reason string    `json:"reason"` // not_found | not_replayable
+}
+
+// ReplayBatchResult answers POST .../outbounds/replay.
+type ReplayBatchResult struct {
+	Queued  []OutboundView `json:"queued"`
+	Skipped []ReplaySkip   `json:"skipped"`
+}
+
+// Replay skip reasons.
+const (
+	SkipNotFound      = "not_found"
+	SkipNotReplayable = "not_replayable"
+)
+
+// ReplayOutbounds queues the replay of every held or failed outbound in
+// ids (TEC-367 bulk replay). Unknown and not replayable ones are reported
+// as skipped; a queue failure stops the batch.
+func (s *Service) ReplayOutbounds(ctx context.Context, brand db.Brand, ids []uuid.UUID) (ReplayBatchResult, error) {
+	if len(ids) == 0 {
+		return ReplayBatchResult{}, invalid("uuids", "must not be empty")
+	}
+	if len(ids) > MaxReplayBatch {
+		return ReplayBatchResult{}, invalid("uuids", fmt.Sprintf("must have at most %d items", MaxReplayBatch))
+	}
+	if s.queue == nil {
+		return ReplayBatchResult{}, ErrQueueUnavailable
+	}
+	conn, err := s.connection(ctx, brand.ID)
+	if err != nil {
+		return ReplayBatchResult{}, err
+	}
+	out := ReplayBatchResult{Queued: []OutboundView{}, Skipped: []ReplaySkip{}}
+	seen := map[uuid.UUID]bool{}
+	for _, id := range ids {
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		row, err := s.q.GetGlorianOutboundByUUID(ctx, db.GetGlorianOutboundByUUIDParams{Uuid: id, ConnectionID: conn.ID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			out.Skipped = append(out.Skipped, ReplaySkip{UUID: id, Reason: SkipNotFound})
+			continue
+		}
+		if err != nil {
+			return ReplayBatchResult{}, err
+		}
+		if row.State != glorian.OutboundHeld && row.State != glorian.OutboundFailed {
+			out.Skipped = append(out.Skipped, ReplaySkip{UUID: id, Reason: SkipNotReplayable})
+			continue
+		}
+		task, err := queue.NewGlorianOutboundReplayOneTask(row.ID)
+		if err != nil {
+			return ReplayBatchResult{}, err
+		}
+		if err := s.enqueue(task, queue.GlorianOutboundReplayOneOpts(row.ID)); err != nil {
+			return ReplayBatchResult{}, err
+		}
+		out.Queued = append(out.Queued, outboundView(row))
 	}
 	return out, nil
 }
@@ -634,6 +768,13 @@ func text(t pgtype.Text) *string {
 	}
 	s := t.String
 	return &s
+}
+
+func tsArg(t *time.Time) pgtype.Timestamptz {
+	if t == nil {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: *t, Valid: true}
 }
 
 func ts(t pgtype.Timestamptz) *time.Time {

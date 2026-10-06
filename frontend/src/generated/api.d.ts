@@ -2186,6 +2186,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/announcements/manage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Author list of the organization's announcements (TEC-367)
+         * @description Requires `announcements.write` (center or distributor). Every announcement the
+         *     active organization wrote, drafts and archived ones included (no audiences in
+         *     the items). `q` matches the title. `sort` created_at, updated_at, publish_at
+         *     (empty last), title, status; default `-created_at`, id tiebreak, unknown → 400.
+         */
+        get: operations["listManagedAnnouncements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/announcements/unread-count": {
         parameters: {
             query?: never;
@@ -2302,7 +2325,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Announcement read report */
+        /**
+         * Announcement read report
+         * @description Pages the readers with `limit` (default 50, up to 500 here, larger values are capped; TEC-367) and `offset`; `read_total` is the paging total.
+         */
         get: operations["getAnnouncementReads"];
         put?: never;
         post?: never;
@@ -2322,6 +2348,8 @@ export interface paths {
         /**
          * List own inbox
          * @description Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+         *     `sort` (one field, id tiebreak; TEC-367 applies it): channel, status, priority (by
+         *     severity), created_at, updated_at, sent_at. Default `-created_at`; unknown field → 400.
          */
         get: operations["getNotifications"];
         put?: never;
@@ -2508,6 +2536,7 @@ export interface paths {
          *     Sortable (`sort`, one primary field, id tiebreak): channel, status, priority
          *     (by severity), created_at, updated_at, sent_at (empty values last).
          *     Default `-created_at`. Unknown field → 400.
+         *     `q` searches title, body, template_code and recipient (TEC-367).
          */
         get: operations["getPlatformNotifications"];
         put?: never;
@@ -2673,8 +2702,11 @@ export interface paths {
         };
         /**
          * Notification delivery log
-         * @description One row per event x user x channel (the idempotency key), newest
-         *     first. Rows are swept after 90 days. Requires `notification_deliveries.read`.
+         * @description One row per event x user x channel (the idempotency key). Rows are
+         *     swept after 90 days. Requires `notification_deliveries.read`.
+         *     Sortable (one field, id tiebreak): created_at, status, channel, event_code;
+         *     default `-created_at`, unknown field → 400. `q` searches the recipient
+         *     email and the event code (TEC-367).
          */
         get: operations["getNotificationDeliveries"];
         put?: never;
@@ -3008,6 +3040,10 @@ export interface paths {
         /**
          * List PDF document template versions
          * @description Without `current=false` only active and draft versions are listed. Requires platform.documents.templates.read.
+         *     Sortable (one field, id tiebreak; TEC-367): kind, language, name, version, updated_at,
+         *     created_at. Default `kind` (then platform default before brands, language, newest
+         *     version). Unknown field → 400. `q` searches the template name. Page through
+         *     `offset` to read more than 100 versions.
          */
         get: operations["listDocumentTemplates"];
         put?: never;
@@ -3492,7 +3528,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Module matrix of the distributor's dealers (modules.read subtree) */
+        /**
+         * Module matrix of the distributor's dealers (modules.read subtree)
+         * @description TEC-367: `q` matches the dealer name or slug; `sort` name (default) or slug,
+         *     unknown field → 400. `state` / `source` filter on the state of the `module`
+         *     key (required with them). Without `limit` and `offset` every matching dealer
+         *     is returned (pre-TEC-367 callers); with either, the page is limit/offset
+         *     (max 100) and `total` counts every match.
+         */
         get: operations["listDealerModules"];
         put?: never;
         post?: never;
@@ -6573,6 +6616,26 @@ export interface paths {
          * @description The plate country is chosen on the vehicle and is independent of the customer's country (a German plate on a Turkish customer validates against DE). The regex runs on the compact form (upper case, no spaces/dashes/dots). A mismatch answers 422 INVALID_PLATE.
          */
         post: operations["validatePlate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/plate-formats/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the display order of plate formats (TEC-367)
+         * @description Needs platform.settings.write. `countries` are ISO2 codes in their new order (drag and drop). A subset keeps the positions it occupies among all formats and is rearranged inside them; every format is then renumbered (sort_order 10, 20, …). Empty, duplicate, malformed codes or countries without a format → 400. Returns the full list.
+         */
+        put: operations["reorderPlateFormats"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10592,7 +10655,9 @@ export interface paths {
         };
         /**
          * List the sync runs of the Glorian connection (TEC-273)
-         * @description Needs integrations.glorian.view. Newest first.
+         * @description Needs integrations.glorian.view. TEC-367: `sort` started_at, finished_at
+         *     (empty last), kind, status; default `-started_at`, id tiebreak, unknown → 400.
+         *     Page with `limit` (1..200, default 50) and `offset`; `total` counts matches.
          */
         get: operations["listGlorianSyncRuns"];
         put?: never;
@@ -10635,8 +10700,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Glorian order outbounds in one state (TEC-273)
-         * @description Needs integrations.glorian.view. Oldest first; `state` defaults to held.
+         * List Glorian order outbounds (TEC-273)
+         * @description Needs integrations.glorian.view. TEC-367: no `state` lists every state
+         *     (it used to default to held). `q` matches the order number or the external
+         *     reference. `sort` created_at (default, the replay order), updated_at,
+         *     attempts, state, order_no; id tiebreak, unknown → 400. Page with `limit`
+         *     (1..200, default 50) and `offset`; `total` counts matches.
          */
         get: operations["listGlorianOutbounds"];
         put?: never;
@@ -10661,6 +10730,26 @@ export interface paths {
          * @description Needs integrations.glorian.manage. The worker re-reads the order and the hub order, so a replay never repeats a step; a pending replay of the same outbound is reused. 422 GLORIAN_OUTBOUND_NOT_REPLAYABLE for another state, 503 QUEUE_UNAVAILABLE when the task queue is off.
          */
         post: operations["replayGlorianOutbound"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/outbounds/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the replay of several held or failed order outbounds (TEC-367)
+         * @description Needs integrations.glorian.manage. Every held or failed outbound of `uuids` (1..100, duplicates ignored) is queued as in the single replay; unknown and other-state ones come back in `skipped` (not_found, not_replayable). 503 QUEUE_UNAVAILABLE when the task queue is off.
+         */
+        post: operations["replayGlorianOutbounds"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10906,6 +10995,8 @@ export interface components {
             /** Format: double */
             read_rate: number;
             items: components["schemas"]["AnnouncementReadItem"][];
+            limit: number;
+            offset: number;
         };
         EnvelopeAnnouncement: {
             /** @enum {boolean} */
@@ -13558,6 +13649,10 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["DealerModuleRow"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -15379,6 +15474,9 @@ export interface components {
                 match: components["schemas"]["TerritoryMatch"] | null;
             };
             meta: components["schemas"]["ResponseMeta"];
+        };
+        PlateFormatOrderRequest: {
+            countries: string[];
         };
         EnvelopePlateFormatList: {
             /** @enum {boolean} */
@@ -19628,6 +19726,10 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["GlorianSyncRun"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -19643,11 +19745,33 @@ export interface components {
             data: components["schemas"]["GlorianOutbound"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        ReplayGlorianOutboundsRequest: {
+            uuids: string[];
+        };
+        GlorianReplaySkip: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            reason: "not_found" | "not_replayable";
+        };
+        EnvelopeGlorianReplayBatch: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                queued: components["schemas"]["GlorianOutbound"][];
+                skipped: components["schemas"]["GlorianReplaySkip"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopeGlorianOutboundList: {
             /** @enum {boolean} */
             success: true;
             data: {
                 items: components["schemas"]["GlorianOutbound"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -23480,6 +23604,42 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listManagedAnnouncements: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma-separated statuses (draft, published, archived). Unknown value → 400. */
+                status?: string;
+                pinned?: boolean;
+                /** @description publish_at lower bound (YYYY-MM-DD or RFC3339) */
+                publish_from?: string;
+                /** @description publish_at upper bound (a date includes the whole day) */
+                publish_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Announcements page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAnnouncementPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     getAnnouncementsUnreadCount: {
         parameters: {
             query?: {
@@ -23679,7 +23839,7 @@ export interface operations {
     getAnnouncementReads: {
         parameters: {
             query?: {
-                limit?: components["parameters"]["Limit"];
+                limit?: number;
                 offset?: components["parameters"]["Offset"];
             };
             header?: never;
@@ -23994,7 +24154,14 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 /** @description Comma-separated statuses (queued, processing, sent, delivered, read, failed, cancelled). Unknown value → 400. */
                 status?: string;
+                /** @description Comma-separated channels (inapp, email, webpush, expo_push, sms, whatsapp). Unknown value → 400. */
                 channel?: string;
+                /** @description Comma-separated priorities (low, normal, high, critical). Unknown value → 400. */
+                priority?: string;
+                /** @description created_at lower bound (YYYY-MM-DD or RFC3339, inclusive). */
+                created_from?: string;
+                /** @description created_at upper bound (a date includes the whole day). */
+                created_to?: string;
                 /** @description me (default) or all (requires read_all) */
                 scope?: "me" | "all";
                 /** @description Filter to one user (requires read_all) */
@@ -24254,8 +24421,17 @@ export interface operations {
             query?: {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
-                status?: components["schemas"]["NotificationDeliveryStatus"];
-                channel?: components["schemas"]["NotificationChannel"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma-separated NotificationDeliveryStatus values. Unknown value → 400. */
+                status?: string;
+                /** @description Comma-separated NotificationChannel values. Unknown value → 400. */
+                channel?: string;
+                /** @description created_at lower bound (YYYY-MM-DD or RFC3339) */
+                created_from?: string;
+                /** @description created_at upper bound (a date includes the whole day) */
+                created_to?: string;
                 event_code?: string;
                 event_id?: string;
                 user_uuid?: string;
@@ -24275,6 +24451,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeNotificationDeliveryPage"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
@@ -24791,11 +24968,22 @@ export interface operations {
     listDocumentTemplates: {
         parameters: {
             query?: {
-                kind?: components["schemas"]["DocumentKind"];
+                /** @description Comma-separated DocumentKind values. Unknown value → 400. */
+                kind?: string;
+                /** @description Comma-separated template languages (tr, en, …, zh_CN; zh-CN accepted). Unknown value → 400. */
                 language?: string;
+                /** @description Comma-separated derived statuses (draft, active, superseded). Unknown value → 400. */
+                status?: string;
+                /** @description Brand slug; only that brand's override versions. */
+                brand?: string;
+                /** @description true lists only platform default versions (no brand). */
+                platform_default?: boolean;
                 current?: boolean;
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
             };
             header?: never;
             path?: never;
@@ -24812,6 +25000,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeDocumentTemplatePage"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["InternalError"];
@@ -25631,7 +25820,19 @@ export interface operations {
     };
     listDealerModules: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Module key the state/source filters apply to. */
+                module?: string;
+                /** @description Comma-separated enabled, disabled (of `module`). */
+                state?: string;
+                /** @description Comma-separated resolved sources of `module` (core, system, default, upstream, standard, admin, distributor, service). */
+                source?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -25647,6 +25848,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeDealerModuleList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
@@ -31439,6 +31641,33 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["InvalidPlate"];
+        };
+    };
+    reorderPlateFormats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlateFormatOrderRequest"];
+            };
+        };
+        responses: {
+            /** @description Reordered formats */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePlateFormatList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listPlatformPlateFormats: {
@@ -38560,9 +38789,18 @@ export interface operations {
     listGlorianSyncRuns: {
         parameters: {
             query?: {
-                kind?: "pull_categories" | "pull_products" | "pull_dealers" | "pull_stock" | "push_barcodes" | "outbound" | "reconcile";
-                status?: "running" | "succeeded" | "failed";
+                /** @description Comma-separated kinds (pull_categories, pull_products, pull_dealers, pull_stock, push_barcodes, outbound, reconcile). Unknown value → 400. */
+                kind?: string;
+                /** @description Comma-separated statuses (running, succeeded, failed). Unknown value → 400. */
+                status?: string;
+                /** @description started_at lower bound (YYYY-MM-DD or RFC3339) */
+                started_from?: string;
+                /** @description started_at upper bound (a date includes the whole day) */
+                started_to?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: number;
+                offset?: number;
             };
             header?: never;
             path?: never;
@@ -38663,8 +38901,17 @@ export interface operations {
     listGlorianOutbounds: {
         parameters: {
             query?: {
-                state?: "pending" | "held" | "sent" | "failed" | "cancelled";
+                /** @description Comma-separated states (pending, held, sent, failed, cancelled). Unknown value → 400. */
+                state?: string;
+                q?: components["parameters"]["Q"];
+                /** @description updated_at lower bound (YYYY-MM-DD or RFC3339) */
+                updated_from?: string;
+                /** @description updated_at upper bound (a date includes the whole day) */
+                updated_to?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: number;
+                offset?: number;
             };
             header?: never;
             path?: never;
@@ -38721,6 +38968,44 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            500: components["responses"]["InternalError"];
+            /** @description QUEUE_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    replayGlorianOutbounds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplayGlorianOutboundsRequest"];
+            };
+        };
+        responses: {
+            /** @description Replays queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianReplayBatch"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
             /** @description QUEUE_UNAVAILABLE */
             503: {

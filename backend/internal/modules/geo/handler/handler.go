@@ -488,6 +488,53 @@ func (h *Handler) UpdatePlateFormat(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, f)
 }
 
+type plateOrderBody struct {
+	Countries []string `json:"countries"`
+}
+
+// ReorderPlateFormats sets the display order of the formats from a
+// drag-and-drop list of ISO2 codes (PUT /v1/platform/plate-formats/order,
+// TEC-367). The list may be a subset; the full, renumbered list returns.
+func (h *Handler) ReorderPlateFormats(w http.ResponseWriter, r *http.Request) {
+	var in plateOrderBody
+	if !decodeJSON(w, r, &in) {
+		return
+	}
+	if len(in.Countries) == 0 {
+		response.ValidationError(w, r, []response.Detail{{Field: "countries", Message: "must not be empty", Code: "required"}})
+		return
+	}
+	seen := make(map[string]bool, len(in.Countries))
+	codes := make([]string, 0, len(in.Countries))
+	for _, raw := range in.Countries {
+		code, err := geo.NormalizeISO2(raw)
+		if err != nil {
+			response.ValidationError(w, r, []response.Detail{{Field: "countries", Message: "invalid country " + strconv.Quote(raw), Code: "invalid"}})
+			return
+		}
+		if seen[code] {
+			response.ValidationError(w, r, []response.Detail{{Field: "countries", Message: "duplicate country " + code, Code: "duplicate"}})
+			return
+		}
+		seen[code] = true
+		codes = append(codes, code)
+	}
+	items, err := h.svc.ReorderPlateFormats(r.Context(), codes)
+	var unknown *geo.UnknownPlateFormatsError
+	if errors.As(err, &unknown) {
+		response.ValidationError(w, r, []response.Detail{{
+			Field: "countries", Message: "no plate format for " + strings.Join(unknown.Countries, ", "), Code: "unknown",
+		}})
+		return
+	}
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.record(r, "plate_formats.reordered", "plate_formats", nil, map[string]any{"countries": codes})
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
 // DeletePlateFormat removes a format (DELETE /v1/platform/plate-formats/{iso2}).
 func (h *Handler) DeletePlateFormat(w http.ResponseWriter, r *http.Request) {
 	iso2 := r.PathValue("iso2")

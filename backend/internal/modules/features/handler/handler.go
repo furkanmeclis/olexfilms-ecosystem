@@ -9,6 +9,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"slices"
+	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	notifcatalog "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/catalog"
@@ -19,6 +22,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -58,7 +62,14 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 }
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	var ve *apiquery.ValidationError
 	switch {
+	case errors.As(err, &ve):
+		details := make([]response.Detail, 0, len(ve.Details))
+		for _, d := range ve.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.Is(err, features.ErrUnknownModule):
 		response.NotFound(w, r, "Module was not found")
 	case errors.Is(err, features.ErrOrganizationNotFound):
@@ -211,13 +222,90 @@ type dealerRow struct {
 	Modules []dealerModule `json:"modules"`
 }
 
+// DealersSortSpec is the sort whitelist of GET /v1/tenant/modules/dealers
+// (TEC-367, docs/list-contract.md). The matrix is resolved in memory, so
+// sorting and paging happen here, not in SQL.
+var DealersSortSpec = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{"name": "name", "slug": "slug"},
+	Default: apiquery.SortField{Field: "name"},
+}
+
+// DealerStates are the values of the dealer list state filter.
+var DealerStates = []string{"enabled", "disabled"}
+
+// DealerSources are the resolved sources a dealer module state can have.
+var DealerSources = []string{
+	features.FromCore, features.FromSystem, features.FromDefault, features.FromUpstream, features.FromStandard,
+	features.SourceAdmin, features.SourceDistributor, features.SourceService,
+}
+
+// dealerListFilter is the parsed query of GET /v1/tenant/modules/dealers.
+// State and Source apply to the Module key's state.
+type dealerListFilter struct {
+	Q       string
+	Module  string
+	States  []string
+	Sources []string
+}
+
+func parseDealerFilter(qv url.Values) (dealerListFilter, error) {
+	f := dealerListFilter{Q: strings.ToLower(strings.TrimSpace(qv.Get("q"))), Module: strings.TrimSpace(qv.Get("module"))}
+	var err error
+	if f.States, err = apiquery.EnumList(qv, "state", DealerStates...); err != nil {
+		return f, err
+	}
+	if f.Sources, err = apiquery.EnumList(qv, "source", DealerSources...); err != nil {
+		return f, err
+	}
+	if f.Module == "" && (len(f.States) > 0 || len(f.Sources) > 0) {
+		return f, &apiquery.ValidationError{Details: []apiquery.Detail{{
+			Field: "module", Message: "module is required with state or source", Code: "required",
+		}}}
+	}
+	return f, nil
+}
+
+func (f dealerListFilter) match(d dealerRow) bool {
+	if f.Q != "" && !strings.Contains(strings.ToLower(d.Name), f.Q) && !strings.Contains(strings.ToLower(d.Slug), f.Q) {
+		return false
+	}
+	if len(f.States) == 0 && len(f.Sources) == 0 {
+		return true
+	}
+	for _, m := range d.Modules {
+		if m.Key != f.Module {
+			continue
+		}
+		state := "disabled"
+		if m.Enabled {
+			state = "enabled"
+		}
+		return (len(f.States) == 0 || slices.Contains(f.States, state)) &&
+			(len(f.Sources) == 0 || slices.Contains(f.Sources, m.Source))
+	}
+	return false
+}
+
 // Dealers returns the module matrix of the distributor's dealers
-// (GET /v1/tenant/modules/dealers).
+// (GET /v1/tenant/modules/dealers): q (name/slug), module + state/source
+// filters, sort name|slug, limit/offset paging with total.
 func (h *Handler) Dealers(w http.ResponseWriter, r *http.Request) {
 	scope := orgctx.MustScope(r.Context())
 	f, _ := scopefilter.From(r.Context())
 	if f.Scope != rbac.ScopeSubtree && f.Scope != rbac.ScopeAll {
 		writeError(w, r, features.ErrNotDistributor)
+		return
+	}
+	qv := r.URL.Query()
+	q := apiquery.Parse(qv)
+	sort, err := apiquery.ResolveSort(q.Sort, DealersSortSpec)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	lf, err := parseDealerFilter(qv)
+	if err != nil {
+		writeError(w, r, err)
 		return
 	}
 	rows, err := h.svc.DealerMatrix(r.Context(), scope.InternalID)
@@ -239,9 +327,33 @@ func (h *Handler) Dealers(w http.ResponseWriter, r *http.Request) {
 				Key: st.Key, Enabled: st.Enabled, Visible: st.Visible, Source: st.Source, AdminOverride: st.AdminOverride,
 			})
 		}
-		out = append(out, dr)
+		if lf.match(dr) {
+			out = append(out, dr)
+		}
 	}
-	response.JSON(w, r, http.StatusOK, map[string]any{"items": out})
+	slices.SortStableFunc(out, func(a, b dealerRow) int {
+		var c int
+		if sort.Key == "slug" {
+			c = strings.Compare(a.Slug, b.Slug)
+		} else {
+			c = strings.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+		}
+		if c == 0 {
+			c = strings.Compare(a.UUID.String(), b.UUID.String())
+		}
+		if sort.Desc {
+			c = -c
+		}
+		return c
+	})
+	total := int64(len(out))
+	if qv.Get("limit") == "" && qv.Get("offset") == "" {
+		// Pre-TEC-367 callers read the whole matrix; without paging
+		// params the page is every matching dealer.
+		response.JSON(w, r, http.StatusOK, apiquery.NewPage(out, total, int32(len(out)), 0))
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.FromSlice(out, q.Limit, q.Offset))
 }
 
 // dealerIDs resolves dealer UUIDs inside the caller's modules.manage scope.

@@ -58,26 +58,43 @@ WHERE (
     COALESCE(cardinality($1::text[]), 0) = 0
     OR status = ANY ($1::text[])
   )
-  AND ($2::text IS NULL OR channel = $2)
-  AND ($3::bigint IS NULL OR user_id = $3)
   AND (
-    $4::text IS NULL
-    OR title ILIKE '%' || $4 || '%'
-    OR body ILIKE '%' || $4 || '%'
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR channel = ANY ($2::text[])
+  )
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR priority = ANY ($3::text[])
+  )
+  AND ($4::timestamptz IS NULL OR created_at >= $4)
+  AND ($5::timestamptz IS NULL OR created_at < $5)
+  AND ($6::bigint IS NULL OR user_id = $6)
+  AND (
+    $7::text IS NULL
+    OR title ILIKE '%' || $7 || '%'
+    OR body ILIKE '%' || $7 || '%'
+    OR COALESCE(template_code, '') ILIKE '%' || $7 || '%'
+    OR COALESCE(recipient, '') ILIKE '%' || $7 || '%'
   )
 `
 
 type CountPlatformNotificationsParams struct {
-	Statuses []string    `json:"statuses"`
-	Channel  pgtype.Text `json:"channel"`
-	UserID   pgtype.Int8 `json:"user_id"`
-	Q        pgtype.Text `json:"q"`
+	Statuses      []string           `json:"statuses"`
+	Channels      []string           `json:"channels"`
+	Priorities    []string           `json:"priorities"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	UserID        pgtype.Int8        `json:"user_id"`
+	Q             pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countPlatformNotifications,
 		arg.Statuses,
-		arg.Channel,
+		arg.Channels,
+		arg.Priorities,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.UserID,
 		arg.Q,
 	)
@@ -337,8 +354,31 @@ WHERE user_id = $1
     OR COALESCE(template_code, '') ILIKE '%' || $5 || '%'
     OR COALESCE(recipient, '') ILIKE '%' || $5 || '%'
   )
-ORDER BY created_at DESC
-LIMIT $7 OFFSET $6
+ORDER BY
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END DESC,
+  -- priority sorts by severity rank, not alphabetically.
+  CASE WHEN NOT $6::bool AND $7::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END ASC,
+  CASE WHEN $6::bool AND $7::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END DESC,
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT $6::bool AND $7::text = 'sent_at' THEN sent_at END ASC NULLS LAST,
+  CASE WHEN $6::bool AND $7::text = 'sent_at' THEN sent_at END DESC NULLS LAST,
+  CASE WHEN $6::bool THEN id END DESC,
+  id ASC
+LIMIT $9 OFFSET $8
 `
 
 type ListNotificationsForUserParams struct {
@@ -347,10 +387,13 @@ type ListNotificationsForUserParams struct {
 	Channel     pgtype.Text `json:"channel"`
 	Unread      pgtype.Bool `json:"unread"`
 	Q           pgtype.Text `json:"q"`
+	SortDesc    bool        `json:"sort_desc"`
+	SortKey     string      `json:"sort_key"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
 
+// Sort: docs/list-contract.md, keys from apiquery.NotificationsSortSpec.
 func (q *Queries) ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]Notification, error) {
 	rows, err := q.db.Query(ctx, listNotificationsForUser,
 		arg.UserID,
@@ -358,6 +401,8 @@ func (q *Queries) ListNotificationsForUser(ctx context.Context, arg ListNotifica
 		arg.Channel,
 		arg.Unread,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -417,56 +462,73 @@ WHERE (
     COALESCE(cardinality($1::text[]), 0) = 0
     OR status = ANY ($1::text[])
   )
-  AND ($2::text IS NULL OR channel = $2)
-  AND ($3::bigint IS NULL OR user_id = $3)
   AND (
-    $4::text IS NULL
-    OR title ILIKE '%' || $4 || '%'
-    OR body ILIKE '%' || $4 || '%'
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR channel = ANY ($2::text[])
+  )
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR priority = ANY ($3::text[])
+  )
+  AND ($4::timestamptz IS NULL OR created_at >= $4)
+  AND ($5::timestamptz IS NULL OR created_at < $5)
+  AND ($6::bigint IS NULL OR user_id = $6)
+  AND (
+    $7::text IS NULL
+    OR title ILIKE '%' || $7 || '%'
+    OR body ILIKE '%' || $7 || '%'
+    OR COALESCE(template_code, '') ILIKE '%' || $7 || '%'
+    OR COALESCE(recipient, '') ILIKE '%' || $7 || '%'
   )
 ORDER BY
-  CASE WHEN NOT $5::bool THEN
-    CASE $6::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  CASE WHEN NOT $8::bool THEN
+    CASE $9::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
   END ASC,
-  CASE WHEN $5::bool THEN
-    CASE $6::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  CASE WHEN $8::bool THEN
+    CASE $9::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
   END DESC,
   -- priority sorts by severity rank, not alphabetically.
-  CASE WHEN NOT $5::bool AND $6::text = 'priority' THEN
+  CASE WHEN NOT $8::bool AND $9::text = 'priority' THEN
     CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
   END ASC,
-  CASE WHEN $5::bool AND $6::text = 'priority' THEN
+  CASE WHEN $8::bool AND $9::text = 'priority' THEN
     CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
   END DESC,
-  CASE WHEN NOT $5::bool THEN
-    CASE $6::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  CASE WHEN NOT $8::bool THEN
+    CASE $9::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
   END ASC,
-  CASE WHEN $5::bool THEN
-    CASE $6::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  CASE WHEN $8::bool THEN
+    CASE $9::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
   END DESC,
-  CASE WHEN NOT $5::bool AND $6::text = 'sent_at' THEN sent_at END ASC NULLS LAST,
-  CASE WHEN $5::bool AND $6::text = 'sent_at' THEN sent_at END DESC NULLS LAST,
-  CASE WHEN $5::bool THEN id END DESC,
+  CASE WHEN NOT $8::bool AND $9::text = 'sent_at' THEN sent_at END ASC NULLS LAST,
+  CASE WHEN $8::bool AND $9::text = 'sent_at' THEN sent_at END DESC NULLS LAST,
+  CASE WHEN $8::bool THEN id END DESC,
   id ASC
-LIMIT $8 OFFSET $7
+LIMIT $11 OFFSET $10
 `
 
 type ListPlatformNotificationsParams struct {
-	Statuses    []string    `json:"statuses"`
-	Channel     pgtype.Text `json:"channel"`
-	UserID      pgtype.Int8 `json:"user_id"`
-	Q           pgtype.Text `json:"q"`
-	SortDesc    bool        `json:"sort_desc"`
-	SortKey     string      `json:"sort_key"`
-	OffsetCount int32       `json:"offset_count"`
-	LimitCount  int32       `json:"limit_count"`
+	Statuses      []string           `json:"statuses"`
+	Channels      []string           `json:"channels"`
+	Priorities    []string           `json:"priorities"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	UserID        pgtype.Int8        `json:"user_id"`
+	Q             pgtype.Text        `json:"q"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
+	OffsetCount   int32              `json:"offset_count"`
+	LimitCount    int32              `json:"limit_count"`
 }
 
 // Sort: docs/list-contract.md, keys from apiquery.NotificationsSortSpec.
 func (q *Queries) ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error) {
 	rows, err := q.db.Query(ctx, listPlatformNotifications,
 		arg.Statuses,
-		arg.Channel,
+		arg.Channels,
+		arg.Priorities,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.UserID,
 		arg.Q,
 		arg.SortDesc,
@@ -530,29 +592,73 @@ WHERE (
     COALESCE(cardinality($1::text[]), 0) = 0
     OR status = ANY ($1::text[])
   )
-  AND ($2::text IS NULL OR channel = $2)
-  AND ($3::bigint IS NULL OR user_id = $3)
   AND (
-    $4::text IS NULL
-    OR title ILIKE '%' || $4 || '%'
-    OR body ILIKE '%' || $4 || '%'
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR channel = ANY ($2::text[])
   )
-ORDER BY created_at DESC, id DESC
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR priority = ANY ($3::text[])
+  )
+  AND ($4::timestamptz IS NULL OR created_at >= $4)
+  AND ($5::timestamptz IS NULL OR created_at < $5)
+  AND ($6::bigint IS NULL OR user_id = $6)
+  AND (
+    $7::text IS NULL
+    OR title ILIKE '%' || $7 || '%'
+    OR body ILIKE '%' || $7 || '%'
+    OR COALESCE(template_code, '') ILIKE '%' || $7 || '%'
+    OR COALESCE(recipient, '') ILIKE '%' || $7 || '%'
+  )
+ORDER BY
+  CASE WHEN NOT $8::bool THEN
+    CASE $9::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END ASC,
+  CASE WHEN $8::bool THEN
+    CASE $9::text WHEN 'channel' THEN channel WHEN 'status' THEN status END
+  END DESC,
+  -- priority sorts by severity rank, not alphabetically.
+  CASE WHEN NOT $8::bool AND $9::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END ASC,
+  CASE WHEN $8::bool AND $9::text = 'priority' THEN
+    CASE priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 WHEN 'critical' THEN 4 END
+  END DESC,
+  CASE WHEN NOT $8::bool THEN
+    CASE $9::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN $8::bool THEN
+    CASE $9::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT $8::bool AND $9::text = 'sent_at' THEN sent_at END ASC NULLS LAST,
+  CASE WHEN $8::bool AND $9::text = 'sent_at' THEN sent_at END DESC NULLS LAST,
+  CASE WHEN $8::bool THEN id END DESC,
+  id ASC
 `
 
 type ListPlatformNotificationsForExportParams struct {
-	Statuses []string    `json:"statuses"`
-	Channel  pgtype.Text `json:"channel"`
-	UserID   pgtype.Int8 `json:"user_id"`
-	Q        pgtype.Text `json:"q"`
+	Statuses      []string           `json:"statuses"`
+	Channels      []string           `json:"channels"`
+	Priorities    []string           `json:"priorities"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	UserID        pgtype.Int8        `json:"user_id"`
+	Q             pgtype.Text        `json:"q"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
 }
 
 func (q *Queries) ListPlatformNotificationsForExport(ctx context.Context, arg ListPlatformNotificationsForExportParams) ([]Notification, error) {
 	rows, err := q.db.Query(ctx, listPlatformNotificationsForExport,
 		arg.Statuses,
-		arg.Channel,
+		arg.Channels,
+		arg.Priorities,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.UserID,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 	)
 	if err != nil {
 		return nil, err

@@ -40,5 +40,6 @@ func RegisterRoutes(mux *http.ServeMux, h *geohandler.Handler, tokens *jwt.Manag
 	mux.Handle("GET /v1/platform/plate-formats", platform(h.PlatformPlateFormats, rbac.PermPlatformSettingsRead))
 	mux.Handle("POST /v1/platform/plate-formats", platform(h.CreatePlateFormat, rbac.PermPlatformSettingsWrite))
 	mux.Handle("PATCH /v1/platform/plate-formats/{iso2}", platform(h.UpdatePlateFormat, rbac.PermPlatformSettingsWrite))
+	mux.Handle("PUT /v1/platform/plate-formats/order", platform(h.ReorderPlateFormats, rbac.PermPlatformSettingsWrite))
 	mux.Handle("DELETE /v1/platform/plate-formats/{iso2}", platform(h.DeletePlateFormat, rbac.PermPlatformSettingsWrite))
 }

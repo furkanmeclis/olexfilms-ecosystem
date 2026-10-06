@@ -61,21 +61,76 @@ WHERE id = $1 AND published_at IS NULL
 RETURNING *;
 
 -- name: ListDocumentTemplates :many
+-- Sort: docs/list-contract.md, keys from documents handler templatesSortSpec.
+-- Secondary order keeps the catalog grouping (kind, brand, language, version DESC).
 SELECT t.*, b.slug AS brand_slug
 FROM document_templates t
 LEFT JOIN brands b ON b.id = t.brand_id
-WHERE (sqlc.narg(kind)::text IS NULL OR t.kind = sqlc.narg(kind)::text)
-  AND (sqlc.narg(language)::text IS NULL OR t.language = sqlc.narg(language)::text)
+WHERE (
+    COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0
+    OR t.kind = ANY (sqlc.narg(kinds)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(languages)::text[]), 0) = 0
+    OR t.language = ANY (sqlc.narg(languages)::text[])
+  )
   AND (NOT sqlc.arg(current_only)::bool OR t.is_active OR t.published_at IS NULL)
-ORDER BY t.kind, t.brand_id NULLS FIRST, t.language, t.version DESC
+  -- Derived status: draft (unpublished), active, superseded (published, not active).
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR (CASE WHEN t.published_at IS NULL THEN 'draft' WHEN t.is_active THEN 'active' ELSE 'superseded' END)
+      = ANY (sqlc.narg(statuses)::text[])
+  )
+  -- Brand: platform_default_only = brand NULL; brand_id = that brand's override.
+  AND (NOT sqlc.arg(platform_default_only)::bool OR t.brand_id IS NULL)
+  AND (sqlc.narg(brand_id)::bigint IS NULL OR t.brand_id = sqlc.narg(brand_id))
+  AND (sqlc.narg(q)::text IS NULL OR t.name ILIKE '%' || sqlc.narg(q) || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'kind' THEN t.kind::text WHEN 'language' THEN t.language::text WHEN 'name' THEN t.name::text
+    END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'kind' THEN t.kind::text WHEN 'language' THEN t.language::text WHEN 'name' THEN t.name::text
+    END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'version' THEN t.version END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'version' THEN t.version END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'updated_at' THEN t.updated_at WHEN 'created_at' THEN t.created_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'updated_at' THEN t.updated_at WHEN 'created_at' THEN t.created_at END
+  END DESC,
+  t.kind, t.brand_id NULLS FIRST, t.language, t.version DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN t.id END DESC,
+  t.id ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
 -- name: CountDocumentTemplates :one
 SELECT COUNT(*)::bigint
 FROM document_templates t
-WHERE (sqlc.narg(kind)::text IS NULL OR t.kind = sqlc.narg(kind)::text)
-  AND (sqlc.narg(language)::text IS NULL OR t.language = sqlc.narg(language)::text)
-  AND (NOT sqlc.arg(current_only)::bool OR t.is_active OR t.published_at IS NULL);
+WHERE (
+    COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0
+    OR t.kind = ANY (sqlc.narg(kinds)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(languages)::text[]), 0) = 0
+    OR t.language = ANY (sqlc.narg(languages)::text[])
+  )
+  AND (NOT sqlc.arg(current_only)::bool OR t.is_active OR t.published_at IS NULL)
+  -- Derived status: draft (unpublished), active, superseded (published, not active).
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR (CASE WHEN t.published_at IS NULL THEN 'draft' WHEN t.is_active THEN 'active' ELSE 'superseded' END)
+      = ANY (sqlc.narg(statuses)::text[])
+  )
+  -- Brand: platform_default_only = brand NULL; brand_id = that brand's override.
+  AND (NOT sqlc.arg(platform_default_only)::bool OR t.brand_id IS NULL)
+  AND (sqlc.narg(brand_id)::bigint IS NULL OR t.brand_id = sqlc.narg(brand_id))
+  AND (sqlc.narg(q)::text IS NULL OR t.name ILIKE '%' || sqlc.narg(q) || '%');
 
 -- name: ListDocumentTemplateVersions :many
 SELECT * FROM document_templates

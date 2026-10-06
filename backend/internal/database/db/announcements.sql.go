@@ -58,16 +58,34 @@ func (q *Queries) CountAnnouncementReads(ctx context.Context, announcementID int
 const countAnnouncementsByOrganizations = `-- name: CountAnnouncementsByOrganizations :one
 SELECT COUNT(*) FROM announcements
 WHERE organization_id = ANY($1::bigint[])
-  AND ($2::varchar IS NULL OR status = $2::varchar)
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR status = ANY ($2::text[])
+  )
+  AND ($3::bool IS NULL OR pinned = $3::bool)
+  AND ($4::timestamptz IS NULL OR publish_at >= $4)
+  AND ($5::timestamptz IS NULL OR publish_at < $5)
+  AND ($6::text IS NULL OR title ILIKE '%' || $6 || '%')
 `
 
 type CountAnnouncementsByOrganizationsParams struct {
-	OrganizationIds []int64     `json:"organization_ids"`
-	Status          pgtype.Text `json:"status"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	Statuses        []string           `json:"statuses"`
+	Pinned          pgtype.Bool        `json:"pinned"`
+	PublishFrom     pgtype.Timestamptz `json:"publish_from"`
+	PublishBefore   pgtype.Timestamptz `json:"publish_before"`
+	Q               pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountAnnouncementsByOrganizations(ctx context.Context, arg CountAnnouncementsByOrganizationsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countAnnouncementsByOrganizations, arg.OrganizationIds, arg.Status)
+	row := q.db.QueryRow(ctx, countAnnouncementsByOrganizations,
+		arg.OrganizationIds,
+		arg.Statuses,
+		arg.Pinned,
+		arg.PublishFrom,
+		arg.PublishBefore,
+		arg.Q,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -504,24 +522,60 @@ func (q *Queries) ListAnnouncementTargetUserIDs(ctx context.Context, announcemen
 const listAnnouncementsByOrganizations = `-- name: ListAnnouncementsByOrganizations :many
 SELECT id, uuid, organization_id, brand_id, default_locale, title, body, body_format, status, pinned, notify, publish_at, expires_at, author_user_id, created_at, updated_at FROM announcements
 WHERE organization_id = ANY($1::bigint[])
-  AND ($2::varchar IS NULL OR status = $2::varchar)
-ORDER BY created_at DESC, id DESC
-LIMIT $4 OFFSET $3
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR status = ANY ($2::text[])
+  )
+  AND ($3::bool IS NULL OR pinned = $3::bool)
+  AND ($4::timestamptz IS NULL OR publish_at >= $4)
+  AND ($5::timestamptz IS NULL OR publish_at < $5)
+  AND ($6::text IS NULL OR title ILIKE '%' || $6 || '%')
+ORDER BY
+  CASE WHEN NOT $7::bool THEN
+    CASE $8::text WHEN 'title' THEN title::text WHEN 'status' THEN status::text END
+  END ASC,
+  CASE WHEN $7::bool THEN
+    CASE $8::text WHEN 'title' THEN title::text WHEN 'status' THEN status::text END
+  END DESC,
+  CASE WHEN NOT $7::bool THEN
+    CASE $8::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN $7::bool THEN
+    CASE $8::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT $7::bool AND $8::text = 'publish_at' THEN publish_at END ASC NULLS LAST,
+  CASE WHEN $7::bool AND $8::text = 'publish_at' THEN publish_at END DESC NULLS LAST,
+  CASE WHEN $7::bool THEN id END DESC,
+  id ASC
+LIMIT $10 OFFSET $9
 `
 
 type ListAnnouncementsByOrganizationsParams struct {
-	OrganizationIds []int64     `json:"organization_ids"`
-	Status          pgtype.Text `json:"status"`
-	PageOffset      int32       `json:"page_offset"`
-	PageLimit       int32       `json:"page_limit"`
+	OrganizationIds []int64            `json:"organization_ids"`
+	Statuses        []string           `json:"statuses"`
+	Pinned          pgtype.Bool        `json:"pinned"`
+	PublishFrom     pgtype.Timestamptz `json:"publish_from"`
+	PublishBefore   pgtype.Timestamptz `json:"publish_before"`
+	Q               pgtype.Text        `json:"q"`
+	SortDesc        bool               `json:"sort_desc"`
+	SortKey         string             `json:"sort_key"`
+	PageOffset      int32              `json:"page_offset"`
+	PageLimit       int32              `json:"page_limit"`
 }
 
-// Author view: announcements written by the given organizations (the
-// caller's resolved write scope), newest first.
+// Author view (TEC-367): announcements written by the given organizations
+// (the caller's write scope) in every status. Sort keys from
+// usecase.AdminSortSpec (docs/list-contract.md); default -created_at.
 func (q *Queries) ListAnnouncementsByOrganizations(ctx context.Context, arg ListAnnouncementsByOrganizationsParams) ([]Announcement, error) {
 	rows, err := q.db.Query(ctx, listAnnouncementsByOrganizations,
 		arg.OrganizationIds,
-		arg.Status,
+		arg.Statuses,
+		arg.Pinned,
+		arg.PublishFrom,
+		arg.PublishBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.PageOffset,
 		arg.PageLimit,
 	)

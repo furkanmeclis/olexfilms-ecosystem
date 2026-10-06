@@ -4038,6 +4038,42 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/announcements/manage:
+    get:
+      tags: [Announcements]
+      operationId: listManagedAnnouncements
+      summary: Author list of the organization's announcements (TEC-367)
+      description: |
+        Requires `announcements.write` (center or distributor). Every announcement the
+        active organization wrote, drafts and archived ones included (no audiences in
+        the items). `q` matches the title. `sort` created_at, updated_at, publish_at
+        (empty last), title, status; default `-created_at`, id tiebreak, unknown → 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          description: Comma-separated statuses (draft, published, archived). Unknown value → 400.
+          schema: { type: string }
+        - name: pinned
+          in: query
+          schema: { type: boolean }
+        - { name: publish_from, in: query, description: "publish_at lower bound (YYYY-MM-DD or RFC3339)", schema: { type: string } }
+        - { name: publish_to, in: query, description: "publish_at upper bound (a date includes the whole day)", schema: { type: string } }
+      responses:
+        "200":
+          description: Announcements page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAnnouncementPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/announcements/unread-count:
     get:
       tags: [Announcements]
@@ -4204,11 +4240,15 @@ paths:
       tags: [Announcements]
       operationId: getAnnouncementReads
       summary: Announcement read report
+      description: >-
+        Pages the readers with `limit` (default 50, up to 500 here, larger
+        values are capped; TEC-367) and `offset`; `read_total` is the paging
+        total.
       security:
         - bearerAuth: []
       parameters:
         - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
-        - $ref: "#/components/parameters/Limit"
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, default: 50 } }
         - $ref: "#/components/parameters/Offset"
       responses:
         "200":
@@ -4225,7 +4265,10 @@ paths:
       tags: [Notifications]
       operationId: getNotifications
       summary: List own inbox
-      description: Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+      description: |
+        Requires `notifications.read`. Supports `limit`,`offset`,`q`,`sort`,`status`,`channel`,`unread`.
+        `sort` (one field, id tiebreak; TEC-367 applies it): channel, status, priority (by
+        severity), created_at, updated_at, sent_at. Default `-created_at`; unknown field → 400.
       security:
         - bearerAuth: []
       parameters:
@@ -4501,6 +4544,7 @@ paths:
         Sortable (`sort`, one primary field, id tiebreak): channel, status, priority
         (by severity), created_at, updated_at, sent_at (empty values last).
         Default `-created_at`. Unknown field → 400.
+        `q` searches title, body, template_code and recipient (TEC-367).
       security:
         - bearerAuth: []
       parameters:
@@ -4516,6 +4560,21 @@ paths:
           schema: { type: string }
         - name: channel
           in: query
+          description: >-
+            Comma-separated channels (inapp, email, webpush, expo_push, sms,
+            whatsapp). Unknown value → 400.
+          schema: { type: string }
+        - name: priority
+          in: query
+          description: Comma-separated priorities (low, normal, high, critical). Unknown value → 400.
+          schema: { type: string }
+        - name: created_from
+          in: query
+          description: created_at lower bound (YYYY-MM-DD or RFC3339, inclusive).
+          schema: { type: string }
+        - name: created_to
+          in: query
+          description: created_at upper bound (a date includes the whole day).
           schema: { type: string }
         - name: scope
           in: query
@@ -4774,15 +4833,28 @@ paths:
       operationId: getNotificationDeliveries
       summary: Notification delivery log
       description: |
-        One row per event x user x channel (the idempotency key), newest
-        first. Rows are swept after 90 days. Requires `notification_deliveries.read`.
+        One row per event x user x channel (the idempotency key). Rows are
+        swept after 90 days. Requires `notification_deliveries.read`.
+        Sortable (one field, id tiebreak): created_at, status, channel, event_code;
+        default `-created_at`, unknown field → 400. `q` searches the recipient
+        email and the event code (TEC-367).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
-        - { name: status, in: query, schema: { $ref: "#/components/schemas/NotificationDeliveryStatus" } }
-        - { name: channel, in: query, schema: { $ref: "#/components/schemas/NotificationChannel" } }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          description: Comma-separated NotificationDeliveryStatus values. Unknown value → 400.
+          schema: { type: string }
+        - name: channel
+          in: query
+          description: Comma-separated NotificationChannel values. Unknown value → 400.
+          schema: { type: string }
+        - { name: created_from, in: query, description: "created_at lower bound (YYYY-MM-DD or RFC3339)", schema: { type: string } }
+        - { name: created_to, in: query, description: "created_at upper bound (a date includes the whole day)", schema: { type: string } }
         - { name: event_code, in: query, schema: { type: string } }
         - { name: event_id, in: query, schema: { type: string, format: uuid } }
         - { name: user_uuid, in: query, schema: { type: string, format: uuid } }
@@ -4793,6 +4865,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeNotificationDeliveryPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -5349,21 +5423,42 @@ paths:
       tags: [Documents]
       operationId: listDocumentTemplates
       summary: List PDF document template versions
-      description: Without `current=false` only active and draft versions are listed. Requires platform.documents.templates.read.
+      description: |
+        Without `current=false` only active and draft versions are listed. Requires platform.documents.templates.read.
+        Sortable (one field, id tiebreak; TEC-367): kind, language, name, version, updated_at,
+        created_at. Default `kind` (then platform default before brands, language, newest
+        version). Unknown field → 400. `q` searches the template name. Page through
+        `offset` to read more than 100 versions.
       security:
         - bearerAuth: []
       parameters:
         - name: kind
           in: query
-          schema: { $ref: "#/components/schemas/DocumentKind" }
+          description: Comma-separated DocumentKind values. Unknown value → 400.
+          schema: { type: string }
         - name: language
           in: query
+          description: Comma-separated template languages (tr, en, …, zh_CN; zh-CN accepted). Unknown value → 400.
           schema: { type: string }
+        - name: status
+          in: query
+          description: Comma-separated derived statuses (draft, active, superseded). Unknown value → 400.
+          schema: { type: string }
+        - name: brand
+          in: query
+          description: Brand slug; only that brand's override versions.
+          schema: { type: string }
+        - name: platform_default
+          in: query
+          description: true lists only platform default versions (no brand).
+          schema: { type: boolean }
         - name: current
           in: query
           schema: { type: boolean, default: true }
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
       responses:
         "200":
           description: Template versions page
@@ -5371,6 +5466,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeDocumentTemplatePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -6267,8 +6364,33 @@ paths:
       tags: [Features]
       operationId: listDealerModules
       summary: Module matrix of the distributor's dealers (modules.read subtree)
+      description: |
+        TEC-367: `q` matches the dealer name or slug; `sort` name (default) or slug,
+        unknown field → 400. `state` / `source` filter on the state of the `module`
+        key (required with them). Without `limit` and `offset` every matching dealer
+        is returned (pre-TEC-367 callers); with either, the page is limit/offset
+        (max 100) and `total` counts every match.
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: module
+          in: query
+          description: Module key the state/source filters apply to.
+          schema: { type: string }
+        - name: state
+          in: query
+          description: Comma-separated enabled, disabled (of `module`).
+          schema: { type: string }
+        - name: source
+          in: query
+          description: >-
+            Comma-separated resolved sources of `module` (core, system, default,
+            upstream, standard, admin, distributor, service).
+          schema: { type: string }
       responses:
         "200":
           description: Dealers with their module states
@@ -6276,6 +6398,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeDealerModuleList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -12464,6 +12588,39 @@ paths:
           $ref: "#/components/responses/NotFound"
         "422":
           $ref: "#/components/responses/InvalidPlate"
+
+  /v1/platform/plate-formats/order:
+    put:
+      tags: [Geo]
+      operationId: reorderPlateFormats
+      summary: Set the display order of plate formats (TEC-367)
+      description: >-
+        Needs platform.settings.write. `countries` are ISO2 codes in their new
+        order (drag and drop). A subset keeps the positions it occupies among
+        all formats and is rearranged inside them; every format is then
+        renumbered (sort_order 10, 20, …). Empty, duplicate, malformed codes or
+        countries without a format → 400. Returns the full list.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlateFormatOrderRequest"
+      responses:
+        "200":
+          description: Reordered formats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePlateFormatList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /v1/platform/plate-formats:
     get:
@@ -20112,24 +20269,36 @@ paths:
       tags: [Platform]
       operationId: listGlorianSyncRuns
       summary: List the sync runs of the Glorian connection (TEC-273)
-      description: Needs integrations.glorian.view. Newest first.
+      description: |
+        Needs integrations.glorian.view. TEC-367: `sort` started_at, finished_at
+        (empty last), kind, status; default `-started_at`, id tiebreak, unknown → 400.
+        Page with `limit` (1..200, default 50) and `offset`; `total` counts matches.
       security:
         - bearerAuth: []
       parameters:
         - name: kind
           in: query
           required: false
-          schema:
-            type: string
-            enum: [pull_categories, pull_products, pull_dealers, pull_stock, push_barcodes, outbound, reconcile]
+          description: >-
+            Comma-separated kinds (pull_categories, pull_products, pull_dealers,
+            pull_stock, push_barcodes, outbound, reconcile). Unknown value → 400.
+          schema: { type: string }
         - name: status
           in: query
           required: false
-          schema: { type: string, enum: [running, succeeded, failed] }
+          description: Comma-separated statuses (running, succeeded, failed). Unknown value → 400.
+          schema: { type: string }
+        - { name: started_from, in: query, description: "started_at lower bound (YYYY-MM-DD or RFC3339)", schema: { type: string } }
+        - { name: started_to, in: query, description: "started_at upper bound (a date includes the whole day)", schema: { type: string } }
+        - $ref: "#/components/parameters/Sort"
         - name: limit
           in: query
           required: false
           schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
       responses:
         "200":
           description: Sync runs
@@ -20232,19 +20401,33 @@ paths:
     get:
       tags: [Platform]
       operationId: listGlorianOutbounds
-      summary: List Glorian order outbounds in one state (TEC-273)
-      description: Needs integrations.glorian.view. Oldest first; `state` defaults to held.
+      summary: List Glorian order outbounds (TEC-273)
+      description: |
+        Needs integrations.glorian.view. TEC-367: no `state` lists every state
+        (it used to default to held). `q` matches the order number or the external
+        reference. `sort` created_at (default, the replay order), updated_at,
+        attempts, state, order_no; id tiebreak, unknown → 400. Page with `limit`
+        (1..200, default 50) and `offset`; `total` counts matches.
       security:
         - bearerAuth: []
       parameters:
         - name: state
           in: query
           required: false
-          schema: { type: string, enum: [pending, held, sent, failed, cancelled], default: held }
+          description: Comma-separated states (pending, held, sent, failed, cancelled). Unknown value → 400.
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - { name: updated_from, in: query, description: "updated_at lower bound (YYYY-MM-DD or RFC3339)", schema: { type: string } }
+        - { name: updated_to, in: query, description: "updated_at upper bound (a date includes the whole day)", schema: { type: string } }
+        - $ref: "#/components/parameters/Sort"
         - name: limit
           in: query
           required: false
           schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: offset
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
       responses:
         "200":
           description: Order outbounds
@@ -20300,6 +20483,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: QUEUE_UNAVAILABLE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /v1/platform/integrations/glorian/outbounds/replay:
+    post:
+      tags: [Platform]
+      operationId: replayGlorianOutbounds
+      summary: Queue the replay of several held or failed order outbounds (TEC-367)
+      description: >-
+        Needs integrations.glorian.manage. Every held or failed outbound of
+        `uuids` (1..100, duplicates ignored) is queued as in the single replay;
+        unknown and other-state ones come back in `skipped` (not_found,
+        not_replayable). 503 QUEUE_UNAVAILABLE when the task queue is off.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplayGlorianOutboundsRequest"
+      responses:
+        "202":
+          description: Replays queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianReplayBatch"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
         "503":
@@ -20903,7 +21127,7 @@ components:
 
     AnnouncementReadReport:
       type: object
-      required: [target_total, read_total, read_rate, items]
+      required: [target_total, read_total, read_rate, items, limit, offset]
       properties:
         target_total: { type: integer, format: int64, minimum: 0 }
         read_total: { type: integer, format: int64, minimum: 0 }
@@ -20911,6 +21135,8 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/AnnouncementReadItem" }
+        limit: { type: integer }
+        offset: { type: integer }
 
     EnvelopeAnnouncement:
       type: object
@@ -24525,11 +24751,14 @@ components:
         success: { type: boolean, enum: [true] }
         data:
           type: object
-          required: [items]
+          required: [items, total, limit, offset]
           properties:
             items:
               type: array
               items: { $ref: "#/components/schemas/DealerModuleRow" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ModuleSwitchRequest:
@@ -26894,6 +27123,15 @@ components:
                 - $ref: "#/components/schemas/TerritoryMatch"
                 - type: "null"
         meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PlateFormatOrderRequest:
+      type: object
+      required: [countries]
+      properties:
+        countries:
+          type: array
+          minItems: 1
+          items: { type: string, minLength: 2, maxLength: 2 }
 
     EnvelopePlateFormatList:
       type: object
@@ -32256,11 +32494,14 @@ components:
         success: { type: boolean, enum: [true] }
         data:
           type: object
-          required: [items]
+          required: [items, total, limit, offset]
           properties:
             items:
               type: array
               items: { $ref: "#/components/schemas/GlorianSyncRun" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeGlorianSyncQueued:
@@ -32279,6 +32520,40 @@ components:
         data: { $ref: "#/components/schemas/GlorianOutbound" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    ReplayGlorianOutboundsRequest:
+      type: object
+      required: [uuids]
+      properties:
+        uuids:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { type: string, format: uuid }
+
+    GlorianReplaySkip:
+      type: object
+      required: [uuid, reason]
+      properties:
+        uuid: { type: string, format: uuid }
+        reason: { type: string, enum: [not_found, not_replayable] }
+
+    EnvelopeGlorianReplayBatch:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [queued, skipped]
+          properties:
+            queued:
+              type: array
+              items: { $ref: "#/components/schemas/GlorianOutbound" }
+            skipped:
+              type: array
+              items: { $ref: "#/components/schemas/GlorianReplaySkip" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     EnvelopeGlorianOutboundList:
       type: object
       required: [success, data, meta]
@@ -32286,9 +32561,12 @@ components:
         success: { type: boolean, enum: [true] }
         data:
           type: object
-          required: [items]
+          required: [items, total, limit, offset]
           properties:
             items:
               type: array
               items: { $ref: "#/components/schemas/GlorianOutbound" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
