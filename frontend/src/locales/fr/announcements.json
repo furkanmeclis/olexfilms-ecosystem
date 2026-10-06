@@ -44,5 +44,19 @@
   "report.counts": "{{read}} of {{total}} read",
   "dashboard.title": "Latest announcements",
   "dashboard.all": "View all",
-  "dashboard.empty": "No recent announcements."
+  "dashboard.empty": "No recent announcements.",
+  "manage.title": "Gérer les annonces",
+  "manage.status": "Statut",
+  "manage.created_at": "Créé",
+  "manage.updated_at": "Mis à jour",
+  "manage.view": "Ouvrir",
+  "manage.pin": "Épingler",
+  "manage.unpin": "Désépingler",
+  "manage.archive": "Archiver",
+  "manage.published": "Annonce publiée.",
+  "manage.archived": "Annonce archivée.",
+  "report.empty": "Personne ne l'a encore lue.",
+  "report.reader": "Lecteur",
+  "report.email": "E-mail",
+  "report.read_at": "Lu le"
 }

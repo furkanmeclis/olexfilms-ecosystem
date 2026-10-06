@@ -44,5 +44,19 @@
   "report.counts": "{{read}} of {{total}} read",
   "dashboard.title": "Latest announcements",
   "dashboard.all": "View all",
-  "dashboard.empty": "No recent announcements."
+  "dashboard.empty": "No recent announcements.",
+  "manage.title": "Управление на обявите",
+  "manage.status": "Статус",
+  "manage.created_at": "Създадено",
+  "manage.updated_at": "Обновено",
+  "manage.view": "Отвори",
+  "manage.pin": "Закачи",
+  "manage.unpin": "Откачи",
+  "manage.archive": "Архивирай",
+  "manage.published": "Обявата е публикувана.",
+  "manage.archived": "Обявата е архивирана.",
+  "report.empty": "Все още никой не я е прочел.",
+  "report.reader": "Читател",
+  "report.email": "Имейл",
+  "report.read_at": "Прочетено на"
 }

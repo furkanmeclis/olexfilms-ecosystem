@@ -257,5 +257,8 @@
   "glorian.drift.field.local_owner_id": "Lokaler Besitzer",
   "glorian.drift.field.expected_location": "Erwarteter Standort",
   "glorian.drift.field.remote_location": "Hub-Standort",
-  "glorian.drift.field.remote_dealer_id": "Hub-Händler"
+  "glorian.drift.field.remote_dealer_id": "Hub-Händler",
+  "glorian.outbounds.created": "Erstellt",
+  "glorian.outbounds.replay_selected": "Auswahl erneut senden ({{count}})",
+  "glorian.outbounds.replay_batch_done": "{{queued}} zum erneuten Senden eingereiht, {{skipped}} übersprungen"
 }

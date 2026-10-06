@@ -64,5 +64,6 @@
   "plates.validation.color": "#RRGGBB biçimini kullanın",
   "plates.toast.saved": "Plaka formatı kaydedildi",
   "plates.toast.deleted": "Plaka formatı silindi",
-  "plates.toast.failed": "Plaka formatı kaydedilemedi"
+  "plates.toast.failed": "Plaka formatı kaydedilemedi",
+  "territories.columns.country": "Ülke"
 }

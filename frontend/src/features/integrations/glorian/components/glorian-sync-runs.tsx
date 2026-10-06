@@ -1,17 +1,18 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
-import { Fragment, useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useMemo, useState } from "react";
 
-import { ErrorState } from "@/components/common/error-state";
-import { Loading } from "@/components/common/loading";
+import {
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import { DriftReportView } from "@/features/integrations/glorian/components/drift-report";
-import {
-  RunStatusBadge,
-  selectClass,
-} from "@/features/integrations/glorian/components/glorian-status";
+import { RunStatusBadge } from "@/features/integrations/glorian/components/glorian-status";
 import {
   countEntries,
   parseDriftReport,
@@ -22,6 +23,7 @@ import {
   glorianService,
   type GlorianSyncKind,
   type GlorianSyncRun,
+  type GlorianSyncRunFilter,
   type GlorianSyncRunKind,
   type GlorianSyncRunStatus,
 } from "@/features/integrations/glorian/services/glorian.service";
@@ -48,25 +50,120 @@ const SYNC_KINDS: GlorianSyncKind[] = [
   "outbound_replay",
 ];
 
-/** Sync run table with kind/status filters and the manual sync buttons. */
+export const SYNC_RUNS_PERSIST_KEY = "platform-glorian-sync-runs-v1";
+
+/**
+ * Sync runs (server list: sort, CSV kind/status, started range, paging)
+ * and the manual sync buttons. A reconcile run's drift report opens below
+ * the table.
+ */
 export function GlorianSyncRuns({ canManage }: { canManage: boolean }) {
   const { t } = useLocale();
   const format = useFormatter();
   const queryClient = useQueryClient();
-  const [kind, setKind] = useState<GlorianSyncRunKind | "">("");
-  const [status, setStatus] = useState<GlorianSyncRunStatus | "">("");
   const [open, setOpen] = useState<string | null>(null);
 
-  const runs = useQuery({
-    queryKey: glorianKeys.runs(kind, status),
-    queryFn: () =>
-      glorianService.listSyncRuns({
-        ...(kind ? { kind } : {}),
-        ...(status ? { status } : {}),
+  const columns = useMemo<ColumnDef<GlorianSyncRun, unknown>[]>(
+    () => [
+      createColumn<GlorianSyncRun>({
+        accessorKey: "kind",
+        labelKey: "integrations.glorian.runs.kind",
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "kind",
+        gridPrimary: true,
+        filterOptions: RUN_KINDS.map((value) => ({
+          value,
+          labelKey: `integrations.glorian.run_kind.${value}`,
+          label: value,
+        })),
+        cell: ({ row }) =>
+          t(`integrations.glorian.run_kind.${row.original.kind}`),
       }),
-    refetchInterval: (q) =>
-      q.state.data?.some((r) => r.status === "running") ? 5_000 : false,
+      createColumn<GlorianSyncRun>({
+        accessorKey: "status",
+        labelKey: "integrations.glorian.runs.status",
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "status",
+        gridSecondary: true,
+        filterOptions: RUN_STATUSES.map((value) => ({
+          value,
+          labelKey: `integrations.glorian.run_status.${value}`,
+          label: value,
+        })),
+        cell: ({ row }) => <RunStatusBadge status={row.original.status} />,
+      }),
+      createColumn<GlorianSyncRun>({
+        accessorKey: "started_at",
+        labelKey: "integrations.glorian.runs.started",
+        enableSorting: true,
+        filterVariant: "date-range",
+        param: "started",
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap">
+            {format.dateTime(row.original.started_at)}
+          </span>
+        ),
+      }),
+      createColumn<GlorianSyncRun>({
+        accessorKey: "finished_at",
+        labelKey: "integrations.glorian.runs.finished",
+        enableSorting: true,
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap">
+            {row.original.finished_at
+              ? format.dateTime(row.original.finished_at)
+              : "—"}
+          </span>
+        ),
+      }),
+      createColumn<GlorianSyncRun>({
+        id: "counts",
+        labelKey: "integrations.glorian.runs.counts",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <RunCounts
+            run={row.original}
+            open={open === row.original.uuid}
+            onToggle={() =>
+              setOpen((prev) =>
+                prev === row.original.uuid ? null : row.original.uuid,
+              )
+            }
+          />
+        ),
+      }),
+      createColumn<GlorianSyncRun>({
+        accessorKey: "error",
+        labelKey: "integrations.glorian.runs.error",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="text-destructive break-all">
+            {row.original.error ?? ""}
+          </span>
+        ),
+      }),
+    ],
+    [format, open, t],
+  );
+
+  const listState = useServerListState({
+    columns,
+    initialSort: "-started_at",
+    initialPageSize: 20,
+    persistKey: SYNC_RUNS_PERSIST_KEY,
   });
+  const query = listState.params as GlorianSyncRunFilter;
+
+  const runs = useQuery({
+    queryKey: glorianKeys.runs(query),
+    queryFn: () => glorianService.syncRunsPage(query),
+    placeholderData: (previous) => previous,
+    refetchInterval: (q) =>
+      q.state.data?.items.some((r) => r.status === "running") ? 5_000 : false,
+  });
+  const openRun = runs.data?.items.find((run) => run.uuid === open);
 
   const trigger = useMutation({
     mutationFn: (k: GlorianSyncKind) => glorianService.triggerSync(k),
@@ -85,149 +182,52 @@ export function GlorianSyncRuns({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="grid gap-1 text-sm">
-          <span>{t("integrations.glorian.runs.filter_kind")}</span>
-          <select
-            className={selectClass}
-            value={kind}
-            onChange={(e) => setKind(e.target.value as GlorianSyncRunKind)}
-            data-testid="runs-kind"
-          >
-            <option value="">{t("integrations.glorian.runs.all")}</option>
-            {RUN_KINDS.map((k) => (
-              <option key={k} value={k}>
-                {t(`integrations.glorian.run_kind.${k}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span>{t("integrations.glorian.runs.filter_status")}</span>
-          <select
-            className={selectClass}
-            value={status}
-            onChange={(e) => setStatus(e.target.value as GlorianSyncRunStatus)}
-            data-testid="runs-status"
-          >
-            <option value="">{t("integrations.glorian.runs.all")}</option>
-            {RUN_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {t(`integrations.glorian.run_status.${s}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => runs.refetch()}
-          disabled={runs.isFetching}
-        >
-          <RefreshCw className="size-4" aria-hidden />
-          {t("integrations.glorian.refresh")}
-        </Button>
-        {canManage ? (
-          <div className="ms-auto flex flex-wrap gap-2">
-            {SYNC_KINDS.map((k) => (
-              <Button
-                key={k}
-                type="button"
-                size="sm"
-                variant={k === "pull" ? "default" : "outline"}
-                onClick={() => trigger.mutate(k)}
-                disabled={trigger.isPending}
-                data-testid={`sync-${k}`}
-              >
-                {t(`integrations.glorian.sync.kind.${k}`)}
-              </Button>
-            ))}
-          </div>
-        ) : null}
+      {canManage ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          {SYNC_KINDS.map((k) => (
+            <Button
+              key={k}
+              type="button"
+              size="sm"
+              variant={k === "pull" ? "default" : "outline"}
+              onClick={() => trigger.mutate(k)}
+              disabled={trigger.isPending}
+              data-testid={`sync-${k}`}
+            >
+              {t(`integrations.glorian.sync.kind.${k}`)}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+
+      <div data-testid="sync-runs">
+        <EntityTable
+          columns={columns}
+          data={runs.data?.items ?? []}
+          getRowId={(row) => row.uuid}
+          isLoading={runs.isLoading}
+          isError={runs.isError}
+          errorTitle={glorianErrorText(t, runs.error)}
+          onRetry={() => void runs.refetch()}
+          emptyTitle={t("integrations.glorian.runs.empty")}
+          emptyDescription=""
+          rowCount={runs.data?.total ?? 0}
+          state={listState.tableState}
+          features={{
+            persistKey: SYNC_RUNS_PERSIST_KEY,
+            rowSelection: false,
+          }}
+          toolbarExtra={
+            <EntityToolbar
+              onRefresh={() => void runs.refetch()}
+              refreshDisabled={runs.isFetching}
+            />
+          }
+        />
       </div>
 
-      {runs.isLoading ? <Loading label={t("common.loading")} /> : null}
-      {runs.isError ? (
-        <ErrorState
-          title={glorianErrorText(t, runs.error)}
-          retryLabel={t("common.retry")}
-          onRetry={() => runs.refetch()}
-        />
-      ) : null}
-      {runs.data && runs.data.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          {t("integrations.glorian.runs.empty")}
-        </p>
-      ) : null}
-      {runs.data && runs.data.length > 0 ? (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" data-testid="sync-runs">
-            <thead className="text-muted-foreground text-start text-xs">
-              <tr className="border-b">
-                <th className="p-2 text-start">
-                  {t("integrations.glorian.runs.kind")}
-                </th>
-                <th className="p-2 text-start">
-                  {t("integrations.glorian.runs.status")}
-                </th>
-                <th className="p-2 text-start">
-                  {t("integrations.glorian.runs.started")}
-                </th>
-                <th className="p-2 text-start">
-                  {t("integrations.glorian.runs.finished")}
-                </th>
-                <th className="p-2 text-start">
-                  {t("integrations.glorian.runs.counts")}
-                </th>
-                <th className="p-2 text-start">
-                  {t("integrations.glorian.runs.error")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {runs.data.map((run) => (
-                <Fragment key={run.uuid}>
-                  <tr className="border-b align-top">
-                    <td className="p-2">
-                      {t(`integrations.glorian.run_kind.${run.kind}`)}
-                    </td>
-                    <td className="p-2">
-                      <RunStatusBadge status={run.status} />
-                    </td>
-                    <td className="p-2 whitespace-nowrap">
-                      {format.dateTime(run.started_at)}
-                    </td>
-                    <td className="p-2 whitespace-nowrap">
-                      {run.finished_at ? format.dateTime(run.finished_at) : "—"}
-                    </td>
-                    <td className="p-2">
-                      <RunCounts
-                        run={run}
-                        open={open === run.uuid}
-                        onToggle={() =>
-                          setOpen(open === run.uuid ? null : run.uuid)
-                        }
-                      />
-                    </td>
-                    <td className="text-destructive p-2 break-all">
-                      {run.error ?? ""}
-                    </td>
-                  </tr>
-                  {open === run.uuid ? (
-                    <tr className="border-b">
-                      <td colSpan={6} className="p-2">
-                        <DriftReportView
-                          report={parseDriftReport(run.counts)}
-                        />
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {openRun ? (
+        <DriftReportView report={parseDriftReport(openRun.counts)} />
       ) : null}
     </div>
   );

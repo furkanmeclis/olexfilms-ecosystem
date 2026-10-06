@@ -257,5 +257,8 @@
   "glorian.drift.field.local_owner_id": "Local owner",
   "glorian.drift.field.expected_location": "Expected location",
   "glorian.drift.field.remote_location": "Hub location",
-  "glorian.drift.field.remote_dealer_id": "Hub dealer"
+  "glorian.drift.field.remote_dealer_id": "Hub dealer",
+  "glorian.outbounds.created": "Created",
+  "glorian.outbounds.replay_selected": "Replay selected ({{count}})",
+  "glorian.outbounds.replay_batch_done": "{{queued}} queued for replay, {{skipped}} skipped"
 }

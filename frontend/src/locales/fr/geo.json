@@ -64,5 +64,6 @@
   "plates.validation.color": "Utilisez le format #RRGGBB",
   "plates.toast.saved": "Format de plaque enregistré",
   "plates.toast.deleted": "Format de plaque supprimé",
-  "plates.toast.failed": "Le format de plaque n'a pas pu être enregistré"
+  "plates.toast.failed": "Le format de plaque n'a pas pu être enregistré",
+  "territories.columns.country": "Pays"
 }

@@ -44,5 +44,19 @@
   "report.counts": "{{read}} of {{total}} read",
   "dashboard.title": "Latest announcements",
   "dashboard.all": "View all",
-  "dashboard.empty": "No recent announcements."
+  "dashboard.empty": "No recent announcements.",
+  "manage.title": "Ankündigungen verwalten",
+  "manage.status": "Status",
+  "manage.created_at": "Erstellt",
+  "manage.updated_at": "Aktualisiert",
+  "manage.view": "Öffnen",
+  "manage.pin": "Anheften",
+  "manage.unpin": "Lösen",
+  "manage.archive": "Archivieren",
+  "manage.published": "Ankündigung veröffentlicht.",
+  "manage.archived": "Ankündigung archiviert.",
+  "report.empty": "Noch niemand hat sie gelesen.",
+  "report.reader": "Leser",
+  "report.email": "E-Mail",
+  "report.read_at": "Gelesen am"
 }

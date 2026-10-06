@@ -66,5 +66,6 @@
   "variable_groups.order": "Παραγγελία",
   "variable_groups.invoice": "Τιμολόγιο",
   "variable_groups.warranty": "Εγγύηση",
-  "variable_groups.totals": "Σύνολα"
+  "variable_groups.totals": "Σύνολα",
+  "fields.updated_at": "Ενημερώθηκε"
 }

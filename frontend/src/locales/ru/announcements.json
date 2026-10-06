@@ -44,5 +44,19 @@
   "report.counts": "Прочитано {{read}} из {{total}}",
   "dashboard.title": "Последние объявления",
   "dashboard.all": "Смотреть все",
-  "dashboard.empty": "Недавних объявлений нет."
+  "dashboard.empty": "Недавних объявлений нет.",
+  "manage.title": "Управление объявлениями",
+  "manage.status": "Статус",
+  "manage.created_at": "Создано",
+  "manage.updated_at": "Обновлено",
+  "manage.view": "Открыть",
+  "manage.pin": "Закрепить",
+  "manage.unpin": "Открепить",
+  "manage.archive": "В архив",
+  "manage.published": "Объявление опубликовано.",
+  "manage.archived": "Объявление перемещено в архив.",
+  "report.empty": "Пока никто не прочитал.",
+  "report.reader": "Читатель",
+  "report.email": "Эл. почта",
+  "report.read_at": "Время прочтения"
 }

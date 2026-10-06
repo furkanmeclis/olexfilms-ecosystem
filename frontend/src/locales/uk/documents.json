@@ -66,5 +66,6 @@
   "variable_groups.order": "Замовлення",
   "variable_groups.invoice": "Рахунок",
   "variable_groups.warranty": "Гарантія",
-  "variable_groups.totals": "Підсумки"
+  "variable_groups.totals": "Підсумки",
+  "fields.updated_at": "Оновлено"
 }

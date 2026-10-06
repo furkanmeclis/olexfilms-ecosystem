@@ -64,5 +64,6 @@
   "plates.validation.color": "Формат #RRGGBB",
   "plates.toast.saved": "Формат номерного знака збережено",
   "plates.toast.deleted": "Формат номерного знака видалено",
-  "plates.toast.failed": "Не вдалося зберегти формат номерного знака"
+  "plates.toast.failed": "Не вдалося зберегти формат номерного знака",
+  "territories.columns.country": "Країна"
 }

@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Пропуснато (каналът е изключен)",
   "center.statuses.skipped_preference": "Пропуснато (заглушено от потребителя)",
   "center.statuses.skipped_no_template": "Пропуснато (няма шаблон)",
-  "center.statuses.skipped_no_recipient": "Пропуснато (няма адрес)"
+  "center.statuses.skipped_no_recipient": "Пропуснато (няма адрес)",
+  "center.attempts": "Опити",
+  "center.delivery_error": "Грешка"
 }

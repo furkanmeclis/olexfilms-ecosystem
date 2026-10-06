@@ -17,6 +17,18 @@ export type GlorianOutboundState = GlorianOutbound["state"];
 export type GlorianSyncRunFilter = NonNullable<
   operations["listGlorianSyncRuns"]["parameters"]["query"]
 >;
+export type GlorianOutboundFilter = NonNullable<
+  operations["listGlorianOutbounds"]["parameters"]["query"]
+>;
+export type GlorianReplaySkip = components["schemas"]["GlorianReplaySkip"];
+
+/** List envelope of the sync runs / outbounds (TEC-367). */
+export type GlorianPage<T> = {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+};
 
 /**
  * Errors are not toasted globally: the page maps the Glorian codes to its
@@ -56,6 +68,16 @@ export const glorianService = {
     return res.items;
   },
 
+  /** One page of sync runs (sort, CSV kind/status, started range). */
+  async syncRunsPage(query: GlorianSyncRunFilter = {}) {
+    return unwrap<GlorianPage<GlorianSyncRun>>(
+      await apiClient.GET("/v1/platform/integrations/glorian/sync-runs", {
+        params: { query },
+      }),
+      SILENT,
+    );
+  },
+
   async getSyncRun(uuid: string) {
     return unwrap<GlorianSyncRun>(
       await apiClient.GET(
@@ -75,14 +97,14 @@ export const glorianService = {
     );
   },
 
-  async listOutbounds(state: GlorianOutboundState = "held") {
-    const res = await unwrap<{ items: GlorianOutbound[] }>(
+  /** One page of outbounds (no `state` = every state; CSV, q, sort). */
+  async outboundsPage(query: GlorianOutboundFilter = {}) {
+    return unwrap<GlorianPage<GlorianOutbound>>(
       await apiClient.GET("/v1/platform/integrations/glorian/outbounds", {
-        params: { query: { state } },
+        params: { query },
       }),
       SILENT,
     );
-    return res.items;
   },
 
   async replayOutbound(uuid: string) {
@@ -90,6 +112,20 @@ export const glorianService = {
       await apiClient.POST(
         "/v1/platform/integrations/glorian/outbounds/{uuid}/replay",
         { params: { path: { uuid } } },
+      ),
+      SILENT,
+    );
+  },
+
+  /** Replay several held / failed outbounds (1..100 uuids). */
+  async replayOutbounds(uuids: string[]) {
+    return unwrap<{
+      queued: GlorianOutbound[];
+      skipped: GlorianReplaySkip[];
+    }>(
+      await apiClient.POST(
+        "/v1/platform/integrations/glorian/outbounds/replay",
+        { body: { uuids } },
       ),
       SILENT,
     );

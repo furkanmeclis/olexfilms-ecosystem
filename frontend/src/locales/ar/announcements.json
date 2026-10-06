@@ -44,5 +44,19 @@
   "report.counts": "{{read}} of {{total}} read",
   "dashboard.title": "Latest announcements",
   "dashboard.all": "View all",
-  "dashboard.empty": "No recent announcements."
+  "dashboard.empty": "No recent announcements.",
+  "manage.title": "إدارة الإعلانات",
+  "manage.status": "الحالة",
+  "manage.created_at": "تاريخ الإنشاء",
+  "manage.updated_at": "تاريخ التحديث",
+  "manage.view": "فتح",
+  "manage.pin": "تثبيت",
+  "manage.unpin": "إلغاء التثبيت",
+  "manage.archive": "أرشفة",
+  "manage.published": "تم نشر الإعلان.",
+  "manage.archived": "تمت أرشفة الإعلان.",
+  "report.empty": "لم يقرأه أحد بعد.",
+  "report.reader": "القارئ",
+  "report.email": "البريد الإلكتروني",
+  "report.read_at": "وقت القراءة"
 }

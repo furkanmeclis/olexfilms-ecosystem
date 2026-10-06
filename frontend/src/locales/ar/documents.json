@@ -66,5 +66,6 @@
   "variable_groups.order": "الطلب",
   "variable_groups.invoice": "الفاتورة",
   "variable_groups.warranty": "الضمان",
-  "variable_groups.totals": "الإجماليات"
+  "variable_groups.totals": "الإجماليات",
+  "fields.updated_at": "تاريخ التحديث"
 }

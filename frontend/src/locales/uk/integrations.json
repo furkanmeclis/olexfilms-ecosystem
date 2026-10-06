@@ -257,5 +257,8 @@
   "glorian.drift.field.local_owner_id": "Локальний власник",
   "glorian.drift.field.expected_location": "Очікуване місце",
   "glorian.drift.field.remote_location": "Місце в хабі",
-  "glorian.drift.field.remote_dealer_id": "Дилер у хабі"
+  "glorian.drift.field.remote_dealer_id": "Дилер у хабі",
+  "glorian.outbounds.created": "Створено",
+  "glorian.outbounds.replay_selected": "Повторити вибрані ({{count}})",
+  "glorian.outbounds.replay_batch_done": "{{queued}} поставлено в чергу, {{skipped}} пропущено"
 }

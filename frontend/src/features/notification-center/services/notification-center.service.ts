@@ -23,9 +23,17 @@ export type NotificationDeliveryStatus =
 export type DeliveryFilter = {
   limit?: number;
   offset?: number;
-  status?: NotificationDeliveryStatus;
-  channel?: NotificationChannel;
+  sort?: string;
+  q?: string;
+  /** CSV of NotificationDeliveryStatus */
+  status?: string;
+  /** CSV of NotificationChannel */
+  channel?: string;
+  created_from?: string;
+  created_to?: string;
   event_code?: string;
+  event_id?: string;
+  user_uuid?: string;
 };
 
 export const notificationCenterService = {

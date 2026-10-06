@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Buraxıldı (kanal deaktivdir)",
   "center.statuses.skipped_preference": "Buraxıldı (istifadəçi səssizə alıb)",
   "center.statuses.skipped_no_template": "Buraxıldı (şablon yoxdur)",
-  "center.statuses.skipped_no_recipient": "Buraxıldı (ünvan yoxdur)"
+  "center.statuses.skipped_no_recipient": "Buraxıldı (ünvan yoxdur)",
+  "center.attempts": "Cəhdlər",
+  "center.delivery_error": "Xəta"
 }

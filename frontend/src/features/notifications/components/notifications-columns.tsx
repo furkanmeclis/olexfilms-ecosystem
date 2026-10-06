@@ -5,7 +5,9 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { StatusChip } from "@/components/common/status-chip";
 import { createColumn } from "@/components/tables";
+import { CHANNELS } from "@/features/notification-center/lib/options";
 import {
+  NOTIFICATION_PRIORITY_VALUES,
   NOTIFICATION_STATUS_VALUES,
   priorityTone,
   statusTone,
@@ -57,8 +59,9 @@ export function useNotificationsColumns(
         createColumn<Notification>({
           accessorKey: "title",
           labelKey: "notifications.columns.title",
-          enableSorting: true,
-          filterVariant: "text",
+          // Not in the backend sort whitelist; the toolbar search (`q`)
+          // covers title, body, template code and recipient.
+          enableSorting: false,
           gridPrimary: true,
           cell: ({ row }) => (
             <span className="font-medium">{row.original.title}</span>
@@ -69,6 +72,7 @@ export function useNotificationsColumns(
           labelKey: "notifications.columns.status",
           enableSorting: true,
           filterVariant: "faceted",
+          param: "status",
           gridSecondary: true,
           filterOptions: NOTIFICATION_STATUS_VALUES.map((value) => ({
             value,
@@ -90,7 +94,13 @@ export function useNotificationsColumns(
           accessorKey: "priority",
           labelKey: "notifications.columns.priority",
           enableSorting: true,
-          enableColumnFilter: false,
+          filterVariant: "faceted",
+          param: "priority",
+          filterOptions: NOTIFICATION_PRIORITY_VALUES.map((value) => ({
+            value,
+            labelKey: `notifications.priority.${value}`,
+            label: value,
+          })),
           cell: ({ row }) => {
             const key = `notifications.priority.${row.original.priority}`;
             const label = t(key);
@@ -100,6 +110,23 @@ export function useNotificationsColumns(
                 tone={priorityTone(row.original.priority)}
               />
             );
+          },
+        }),
+        createColumn<Notification>({
+          accessorKey: "channel",
+          labelKey: "notifications.columns.channel",
+          enableSorting: true,
+          filterVariant: "faceted",
+          param: "channel",
+          filterOptions: CHANNELS.map((value) => ({
+            value,
+            labelKey: `notifications.center.channels.${value}`,
+            label: value,
+          })),
+          cell: ({ row }) => {
+            const key = `notifications.center.channels.${row.original.channel}`;
+            const label = t(key);
+            return label === key ? row.original.channel : label;
           },
         }),
         createColumn<Notification>({
@@ -130,8 +157,21 @@ export function useNotificationsColumns(
           accessorKey: "created_at",
           labelKey: "notifications.columns.created_at",
           enableSorting: true,
-          enableColumnFilter: false,
+          filterVariant: "date-range",
+          param: "created",
           cell: ({ row }) => format.dateTime(row.original.created_at),
+        }),
+        createColumn<Notification>({
+          accessorKey: "sent_at",
+          labelKey: "notifications.fields.sent_at",
+          enableSorting: true,
+          defaultHidden: true,
+          cell: ({ row }) =>
+            row.original.sent_at ? (
+              format.dateTime(row.original.sent_at)
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            ),
         }),
         createColumn<Notification>({
           id: "actions",

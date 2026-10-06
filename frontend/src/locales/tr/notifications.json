@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Atlandı (kanal kapalı)",
   "center.statuses.skipped_preference": "Atlandı (kullanıcı kapattı)",
   "center.statuses.skipped_no_template": "Atlandı (şablon yok)",
-  "center.statuses.skipped_no_recipient": "Atlandı (adres yok)"
+  "center.statuses.skipped_no_recipient": "Atlandı (adres yok)",
+  "center.attempts": "Deneme",
+  "center.delivery_error": "Hata"
 }

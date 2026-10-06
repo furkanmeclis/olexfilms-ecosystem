@@ -21,11 +21,20 @@ export type DocumentTemplateListResult = {
 };
 
 export type ListDocumentTemplatesParams = {
-  kind?: DocumentKind;
+  /** One kind or a CSV of kinds */
+  kind?: DocumentKind | string;
+  /** One language or a CSV (zh-CN accepted) */
   language?: string;
+  /** CSV of draft, active, superseded */
+  status?: string;
+  /** Brand slug */
+  brand?: string;
+  platform_default?: boolean;
   current?: boolean;
   limit?: number;
   offset?: number;
+  sort?: string;
+  q?: string;
 };
 
 /**
@@ -57,9 +66,17 @@ export const documentTemplatesService = {
       query: {
         kind: params.kind,
         language: params.language,
+        status: params.status,
+        brand: params.brand,
+        platform_default:
+          params.platform_default === undefined
+            ? undefined
+            : String(params.platform_default),
         current: params.current === false ? "false" : undefined,
         limit: params.limit ?? 100,
         offset: params.offset,
+        sort: params.sort,
+        q: params.q,
       },
     });
   },

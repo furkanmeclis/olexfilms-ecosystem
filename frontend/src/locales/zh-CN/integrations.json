@@ -257,5 +257,8 @@
   "glorian.drift.field.local_owner_id": "本地归属方",
   "glorian.drift.field.expected_location": "预期位置",
   "glorian.drift.field.remote_location": "中心位置",
-  "glorian.drift.field.remote_dealer_id": "中心经销商"
+  "glorian.drift.field.remote_dealer_id": "中心经销商",
+  "glorian.outbounds.created": "创建时间",
+  "glorian.outbounds.replay_selected": "重放所选 ({{count}})",
+  "glorian.outbounds.replay_batch_done": "{{queued}} 条已排队重放，{{skipped}} 条已跳过"
 }

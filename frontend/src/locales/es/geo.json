@@ -64,5 +64,6 @@
   "plates.validation.color": "Use #RRGGBB",
   "plates.toast.saved": "Formato de matrícula guardado",
   "plates.toast.deleted": "Formato de matrícula eliminado",
-  "plates.toast.failed": "No se pudo guardar el formato de matrícula"
+  "plates.toast.failed": "No se pudo guardar el formato de matrícula",
+  "territories.columns.country": "País"
 }
