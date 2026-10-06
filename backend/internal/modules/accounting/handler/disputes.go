@@ -43,23 +43,23 @@ func writeDisputeError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 
-// ListDisputes (GET /v1/accounting/disputes?status&organization_uuid&limit&offset):
+// ListDisputes (GET /v1/accounting/disputes?status&organization_uuid&
+// counterparty_organization_uuid&created_from&created_to&q&sort&limit&offset):
 // disputes the accounting.read scope reaches (the disputing organization and
-// the parent it addresses; brand scope: the whole domain brand).
+// the parent it addresses; brand scope: the whole domain brand). status and
+// the organization filters are CSV lists (TEC-379).
 func (h *Handler) ListDisputes(w http.ResponseWriter, r *http.Request) {
-	f := acc.DisputeFilter{Status: strings.TrimSpace(r.URL.Query().Get("status"))}
-	var ok bool
-	if f.OrganizationUUID, ok = queryUUID(w, r, "organization_uuid"); !ok {
+	f, err := acc.ParseDisputeFilter(r.URL.Query())
+	if err != nil {
+		writeDisputeError(w, r, err)
 		return
 	}
-	q := apiquery.Parse(r.URL.Query())
-	f.Limit, f.Offset = q.Limit, q.Offset
 	items, total, err := h.svc.ListDisputes(r.Context(), caller(r), f)
 	if err != nil {
 		writeDisputeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // GetDispute (GET /v1/accounting/disputes/{uuid}).

@@ -11,6 +11,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -61,28 +62,33 @@ func rowAccount(r db.ListFinanceAccountsWithBalanceRow) Account {
 	}, r.Balance, r.EntryCount, r.LastEntryAt)
 }
 
-// AccountFilter narrows ListAccounts.
+// AccountFilter narrows ListAccounts (ParseAccountFilter builds it).
 type AccountFilter struct {
 	OrganizationUUID *uuid.UUID
 	Active           *bool
-	Type             string
+	Types            []string // cash, bank
+	Q                string
+	Sort             apiquery.ResolvedSort
 }
 
-// ListAccounts lists the cash/bank accounts of the book with balances.
+// ListAccounts lists the cash/bank accounts of the book with balances
+// (a full array; the grid sorts and pages it client-side).
 func (s *Service) ListAccounts(ctx context.Context, c Caller, f AccountFilter) ([]Account, error) {
 	book, err := s.readBook(ctx, c, f.OrganizationUUID)
 	if err != nil {
 		return nil, err
 	}
-	arg := db.ListFinanceAccountsWithBalanceParams{OrganizationID: book.ID}
+	sort := sortOrDefault(f.Sort, AccountSort)
+	arg := db.ListFinanceAccountsWithBalanceParams{
+		OrganizationID: book.ID, Types: f.Types, Q: likeArg(f.Q), SortKey: sort.Key, SortDesc: sort.Desc,
+	}
 	if f.Active != nil {
 		arg.Active = pgtype.Bool{Bool: *f.Active, Valid: true}
 	}
-	if f.Type != "" {
-		if f.Type != AccountCash && f.Type != AccountBank {
+	for _, t := range f.Types {
+		if t != AccountCash && t != AccountBank {
 			return nil, invalid("type", "must be cash or bank")
 		}
-		arg.Type = pgtype.Text{String: f.Type, Valid: true}
 	}
 	rows, err := s.q.ListFinanceAccountsWithBalance(ctx, arg)
 	if err != nil {

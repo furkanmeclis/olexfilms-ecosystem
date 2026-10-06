@@ -596,6 +596,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		accountingusecase.NewMarginAdapter(accountingSvc),
 		accountingusecase.NewCariAgingAdapter(accountingSvc),
 		accountingusecase.NewStaffCostAdapter(accountingSvc),
+		// TEC-379: ledger entry list export.
+		accountingusecase.NewEntriesAdapter(accountingSvc),
 		// TEC-161: personal data export (center and portal).
 		customersusecase.NewDataExportAdapter(customersSvc),
 		customersusecase.NewPortalDataExportAdapter(customersSvc),

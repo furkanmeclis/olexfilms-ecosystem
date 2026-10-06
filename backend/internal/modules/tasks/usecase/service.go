@@ -23,6 +23,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -213,74 +214,85 @@ func cleanDescription(v string) (string, error) {
 	return v, nil
 }
 
-// Filter narrows List.
+// Filter narrows List (ParseListFilter builds it from the list query).
 type Filter struct {
-	Status         string // a status, or "active" for open + in_progress
-	Priority       string
-	SubjectOrgUUID *uuid.UUID
-	AssigneeUUID   *uuid.UUID
+	Statuses        []string // validated; "active" already expanded
+	Priorities      []string // validated
+	SubjectOrgUUIDs []uuid.UUID
+	AssigneeUUID    *uuid.UUID
 	// DueAfter / DueBefore bound due_at (inclusive / exclusive, TEC-221);
 	// either one leaves tasks without a due date out.
 	DueAfter, DueBefore *time.Time
-	Limit, Offset       int32
+	// CreatedFrom / CreatedBefore bound created_at (inclusive / exclusive).
+	CreatedFrom, CreatedBefore *time.Time
+	Q                          string
+	Sort                       apiquery.ResolvedSort
+	Limit, Offset              int32
 }
 
-// List lists the tasks of the active brand, newest first.
-func (s *Service) List(ctx context.Context, c Caller, f Filter) ([]Task, int64, error) {
-	if err := requireCenter(c); err != nil {
-		return nil, 0, err
+// listParams validates the filter and builds the query arguments. ok=false
+// means the assignee is not a member of the center (an empty page).
+func (s *Service) listParams(ctx context.Context, c Caller, f Filter) (db.ListTasksParams, bool, error) {
+	arg := db.ListTasksParams{
+		BrandID: c.Org.BrandID, Statuses: f.Statuses, Priorities: f.Priorities,
+		SubjectOrgUuids: f.SubjectOrgUUIDs, Q: textArg(f.Q),
+		CreatedFrom: tstz(f.CreatedFrom), CreatedBefore: tstz(f.CreatedBefore),
+		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc, RowLimit: f.Limit, RowOffset: f.Offset,
 	}
-	arg := db.ListTasksParams{BrandID: c.Org.BrandID, RowLimit: f.Limit, RowOffset: f.Offset}
-	switch {
-	case f.Status == "":
-	case f.Status == "active":
-		arg.OnlyOpen = true
-	case validStatus(f.Status):
-		arg.Status = pgtype.Text{String: f.Status, Valid: true}
-	default:
-		return nil, 0, invalid("status", "must be open, in_progress, done, cancelled or active")
+	for _, st := range f.Statuses {
+		if !validStatus(st) {
+			return arg, false, invalid("status", "must be open, in_progress, done, cancelled or active")
+		}
 	}
-	if f.Priority != "" {
-		if !validPriority(f.Priority) {
-			return nil, 0, invalid("priority", "must be low, normal, high or urgent")
+	for _, p := range f.Priorities {
+		if !validPriority(p) {
+			return arg, false, invalid("priority", "must be low, normal, high or urgent")
 		}
-		arg.Priority = pgtype.Text{String: f.Priority, Valid: true}
 	}
-	if f.SubjectOrgUUID != nil {
-		o, err := s.q.GetTaskSubjectOrg(ctx, db.GetTaskSubjectOrgParams{Uuid: *f.SubjectOrgUUID, BrandID: c.Org.BrandID})
-		if errors.Is(err, pgx.ErrNoRows) {
-			return []Task{}, 0, nil
-		}
-		if err != nil {
-			return nil, 0, fmt.Errorf("tasks: subject: %w", err)
-		}
-		arg.SubjectOrgID = pgtype.Int8{Int64: o.ID, Valid: true}
+	if arg.SortKey == "" {
+		arg.SortKey, arg.SortDesc = "created_at", true
 	}
 	if f.AssigneeUUID != nil {
 		u, err := s.q.GetCenterMemberByUUID(ctx, db.GetCenterMemberByUUIDParams{Uuid: *f.AssigneeUUID, OrganizationID: c.Org.InternalID})
 		if errors.Is(err, pgx.ErrNoRows) {
-			return []Task{}, 0, nil
+			return arg, false, nil
 		}
 		if err != nil {
-			return nil, 0, fmt.Errorf("tasks: assignee: %w", err)
+			return arg, false, fmt.Errorf("tasks: assignee: %w", err)
 		}
 		arg.AssigneeUserID = pgtype.Int8{Int64: u.ID, Valid: true}
 	}
 	if f.DueAfter != nil && f.DueBefore != nil && !f.DueBefore.After(*f.DueAfter) {
-		return nil, 0, invalid("due_before", "must be after due_after")
+		return arg, false, invalid("due_before", "must be after due_after")
 	}
 	arg.DueAfter, arg.DueBefore = tstz(f.DueAfter), tstz(f.DueBefore)
 	if arg.RowLimit <= 0 {
 		arg.RowLimit = 20
+	}
+	return arg, true, nil
+}
+
+// List lists the tasks of the active brand (default newest first).
+func (s *Service) List(ctx context.Context, c Caller, f Filter) ([]Task, int64, error) {
+	if err := requireCenter(c); err != nil {
+		return nil, 0, err
+	}
+	arg, ok, err := s.listParams(ctx, c, f)
+	if err != nil {
+		return nil, 0, err
+	}
+	if !ok {
+		return []Task{}, 0, nil
 	}
 	rows, err := s.q.ListTasks(ctx, arg)
 	if err != nil {
 		return nil, 0, fmt.Errorf("tasks: list: %w", err)
 	}
 	total, err := s.q.CountTasks(ctx, db.CountTasksParams{
-		BrandID: arg.BrandID, Status: arg.Status, OnlyOpen: arg.OnlyOpen, Priority: arg.Priority,
-		SubjectOrgID: arg.SubjectOrgID, AssigneeUserID: arg.AssigneeUserID,
+		BrandID: arg.BrandID, Statuses: arg.Statuses, Priorities: arg.Priorities,
+		SubjectOrgUuids: arg.SubjectOrgUuids, AssigneeUserID: arg.AssigneeUserID,
 		DueAfter: arg.DueAfter, DueBefore: arg.DueBefore,
+		CreatedFrom: arg.CreatedFrom, CreatedBefore: arg.CreatedBefore, Q: arg.Q,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("tasks: count: %w", err)
@@ -290,6 +302,33 @@ func (s *Service) List(ctx context.Context, c Caller, f Filter) ([]Task, int64, 
 		out = append(out, taskOf(r))
 	}
 	return out, total, nil
+}
+
+// MatchingUUIDs returns up to max tasks of the active center that match the
+// list filter (bulk "select all matching", TEC-379).
+func (s *Service) MatchingUUIDs(ctx context.Context, c Caller, f Filter, max int32) ([]string, error) {
+	if err := requireCenter(c); err != nil {
+		return nil, err
+	}
+	arg, ok, err := s.listParams(ctx, c, f)
+	if err != nil || !ok {
+		return nil, err
+	}
+	ids, err := s.q.ListTaskUUIDsFiltered(ctx, db.ListTaskUUIDsFilteredParams{
+		BrandID: arg.BrandID, Statuses: arg.Statuses, Priorities: arg.Priorities,
+		SubjectOrgUuids: arg.SubjectOrgUuids, AssigneeUserID: arg.AssigneeUserID,
+		DueAfter: arg.DueAfter, DueBefore: arg.DueBefore,
+		CreatedFrom: arg.CreatedFrom, CreatedBefore: arg.CreatedBefore, Q: arg.Q,
+		OrganizationID: c.Org.InternalID, RowLimit: max,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("tasks: matching: %w", err)
+	}
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, id.String())
+	}
+	return out, nil
 }
 
 // Get returns one task of the active brand.

@@ -38,7 +38,8 @@ func (h *Handler) WithExports(e Exports) *Handler {
 
 func accountingResource(resource string) bool {
 	return resource == acc.ResourceCariStatement || resource == acc.ResourceBalances ||
-		acc.IsReportResource(resource) // TEC-346
+		acc.IsReportResource(resource) || // TEC-346
+		resource == acc.ResourceEntries // TEC-379
 }
 
 // accountingJob points the download link of an accounting export job at the
@@ -207,6 +208,59 @@ func (h *Handler) ExportBalances(w http.ResponseWriter, r *http.Request) {
 		query[acc.QueryAsOf] = asOf.Format(time.DateOnly)
 	}
 	h.queueExport(w, r, c, acc.ResourceBalances, format, query, b.Locale)
+}
+
+type entryExportBody struct {
+	Format string            `json:"format"`
+	Query  map[string]string `json:"query"`
+	Locale string            `json:"locale"`
+}
+
+// ExportEntries queues an entry list export job
+// (POST /v1/accounting/entries/export, 202, TEC-379): the rows of
+// GET /v1/accounting/entries with the filters, q and sort of query
+// (organization_uuid picks the book like the list). Poll and download
+// through /v1/accounting/exports/{uuid}.
+func (h *Handler) ExportEntries(w http.ResponseWriter, r *http.Request) {
+	var b entryExportBody
+	if !decode(w, r, &b) {
+		return
+	}
+	format, err := exportFormat(b.Format)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	org, err := bookUUID(b.Query)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	c := caller(r)
+	book, err := h.svc.ResolveBook(r.Context(), c, org)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	query, err := acc.EntryExportQuery(book.ID, b.Query)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.queueExport(w, r, c, acc.ResourceEntries, format, query, b.Locale)
+}
+
+// bookUUID reads the optional organization_uuid of an export query.
+func bookUUID(q map[string]string) (*uuid.UUID, error) {
+	raw := strings.TrimSpace(q["organization_uuid"])
+	if raw == "" {
+		return nil, nil
+	}
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return nil, &acc.ValidationError{Field: "organization_uuid", Message: "must be a UUID"}
+	}
+	return &id, nil
 }
 
 func (h *Handler) queueExport(w http.ResponseWriter, r *http.Request, c acc.Caller, resource string,

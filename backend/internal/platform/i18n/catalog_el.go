@@ -398,6 +398,12 @@ var elCatalog = map[string]string{
 	"accounting.source.opening_balance":             "Υπόλοιπο έναρξης",
 	"export.title.tenant.accounting.cari_statement": "Καρτέλα λογαριασμού",
 	"export.title.tenant.accounting.balances":       "Αναφορά υπολοίπων",
+	"export.title.tenant.accounting.entries":        "Λογιστικές εγγραφές",
+	"accounting.export.direction":                   "Κατεύθυνση",
+	"accounting.export.account":                     "Λογαριασμός",
+	"accounting.export.amount":                      "Ποσό",
+	"accounting.export.orig_amount":                 "Αρχικό ποσό",
+	"accounting.export.orig_currency":               "Αρχικό νόμισμα",
 	"resources.tenant.accounting.cari_statement":    "Καρτέλα λογαριασμού",
 	"resources.tenant.accounting.balances":          "Αναφορά υπολοίπων",
 	// TEC-166: order statuses.

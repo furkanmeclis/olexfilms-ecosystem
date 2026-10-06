@@ -53,6 +53,11 @@ LEFT JOIN users a ON a.id = t.assignee_user_id
 LEFT JOIN users c ON c.id = t.created_by_user_id
 WHERE t.uuid = sqlc.arg(uuid) AND t.brand_id = sqlc.arg(brand_id);
 
+-- TEC-379 (DT-BE-8): list contract (docs/list-contract.md). status and
+-- priority sort by their rank (open → cancelled, low → urgent), subject by
+-- the subject organization name; due_at keeps tasks without a deadline
+-- last in both directions; id is the tiebreak. q matches the title or the
+-- description (the caller escapes LIKE wildcards).
 -- name: ListTasks :many
 SELECT t.*,
        s.uuid AS subject_uuid, s.name AS subject_name, s.type AS subject_type,
@@ -64,26 +69,79 @@ JOIN organizations s ON s.id = t.subject_org_id
 LEFT JOIN users a ON a.id = t.assignee_user_id
 LEFT JOIN users c ON c.id = t.created_by_user_id
 WHERE t.brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(status)::text IS NULL OR t.status = sqlc.narg(status)::text)
-  AND (NOT sqlc.arg(only_open)::boolean OR t.status IN ('open', 'in_progress'))
-  AND (sqlc.narg(priority)::text IS NULL OR t.priority = sqlc.narg(priority)::text)
-  AND (sqlc.narg(subject_org_id)::bigint IS NULL OR t.subject_org_id = sqlc.narg(subject_org_id)::bigint)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR t.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0 OR t.priority = ANY (sqlc.narg(priorities)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(subject_org_uuids)::uuid[]), 0) = 0
+       OR t.subject_org_id IN (SELECT so.id FROM organizations so
+                               WHERE so.uuid = ANY (sqlc.narg(subject_org_uuids)::uuid[])))
   AND (sqlc.narg(assignee_user_id)::bigint IS NULL OR t.assignee_user_id = sqlc.narg(assignee_user_id)::bigint)
   AND (sqlc.narg(due_after)::timestamptz IS NULL OR t.due_at >= sqlc.narg(due_after)::timestamptz)
   AND (sqlc.narg(due_before)::timestamptz IS NULL OR t.due_at < sqlc.narg(due_before)::timestamptz)
-ORDER BY t.created_at DESC, t.id DESC
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR t.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR t.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR t.title ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR t.description ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text
+    WHEN 'title' THEN lower(t.title) WHEN 'subject' THEN lower(s.name) END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text
+    WHEN 'title' THEN lower(t.title) WHEN 'subject' THEN lower(s.name) END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text
+    WHEN 'status' THEN CASE t.status WHEN 'open' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'done' THEN 3 ELSE 4 END
+    WHEN 'priority' THEN CASE t.priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 ELSE 4 END
+  END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text
+    WHEN 'status' THEN CASE t.status WHEN 'open' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'done' THEN 3 ELSE 4 END
+    WHEN 'priority' THEN CASE t.priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 ELSE 4 END
+  END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text
+    WHEN 'created_at' THEN t.created_at WHEN 'updated_at' THEN t.updated_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text
+    WHEN 'created_at' THEN t.created_at WHEN 'updated_at' THEN t.updated_at END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'due_at' THEN t.due_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'due_at' THEN t.due_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN t.id END DESC,
+  t.id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountTasks :one
 SELECT COUNT(*)::bigint FROM tasks t
 WHERE t.brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(status)::text IS NULL OR t.status = sqlc.narg(status)::text)
-  AND (NOT sqlc.arg(only_open)::boolean OR t.status IN ('open', 'in_progress'))
-  AND (sqlc.narg(priority)::text IS NULL OR t.priority = sqlc.narg(priority)::text)
-  AND (sqlc.narg(subject_org_id)::bigint IS NULL OR t.subject_org_id = sqlc.narg(subject_org_id)::bigint)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR t.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0 OR t.priority = ANY (sqlc.narg(priorities)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(subject_org_uuids)::uuid[]), 0) = 0
+       OR t.subject_org_id IN (SELECT so.id FROM organizations so
+                               WHERE so.uuid = ANY (sqlc.narg(subject_org_uuids)::uuid[])))
   AND (sqlc.narg(assignee_user_id)::bigint IS NULL OR t.assignee_user_id = sqlc.narg(assignee_user_id)::bigint)
   AND (sqlc.narg(due_after)::timestamptz IS NULL OR t.due_at >= sqlc.narg(due_after)::timestamptz)
-  AND (sqlc.narg(due_before)::timestamptz IS NULL OR t.due_at < sqlc.narg(due_before)::timestamptz);
+  AND (sqlc.narg(due_before)::timestamptz IS NULL OR t.due_at < sqlc.narg(due_before)::timestamptz)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR t.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR t.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR t.title ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR t.description ILIKE '%' || sqlc.narg(q)::text || '%');
+
+-- TEC-379: "select all matching" of the task bulk actions (same filters).
+-- name: ListTaskUUIDsFiltered :many
+SELECT t.uuid FROM tasks t
+WHERE t.brand_id = sqlc.arg(brand_id)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR t.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0 OR t.priority = ANY (sqlc.narg(priorities)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(subject_org_uuids)::uuid[]), 0) = 0
+       OR t.subject_org_id IN (SELECT so.id FROM organizations so
+                               WHERE so.uuid = ANY (sqlc.narg(subject_org_uuids)::uuid[])))
+  AND (sqlc.narg(assignee_user_id)::bigint IS NULL OR t.assignee_user_id = sqlc.narg(assignee_user_id)::bigint)
+  AND (sqlc.narg(due_after)::timestamptz IS NULL OR t.due_at >= sqlc.narg(due_after)::timestamptz)
+  AND (sqlc.narg(due_before)::timestamptz IS NULL OR t.due_at < sqlc.narg(due_before)::timestamptz)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR t.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR t.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR t.title ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR t.description ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND t.organization_id = sqlc.arg(organization_id)
+ORDER BY t.created_at DESC, t.id DESC
+LIMIT sqlc.arg(row_limit);
 
 -- name: InsertTaskComment :one
 INSERT INTO task_comments (task_id, organization_id, brand_id, author_user_id, body)
@@ -116,6 +174,24 @@ WHERE u.uuid = sqlc.arg(uuid) AND m.organization_id = sqlc.arg(organization_id) 
 -- name: SetTaskAssignee :one
 UPDATE tasks
 SET assignee_user_id = sqlc.narg(assignee_user_id)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- TEC-379 (DT-BE-8): bulk set_status / set_priority. Closing stamps
+-- closed_at (chk_tasks_closed); reopening clears closed_at and closed_by.
+-- name: SetTaskStatus :one
+UPDATE tasks
+SET status = sqlc.arg(status)::text,
+    closed_at = CASE WHEN sqlc.arg(status)::text IN ('done', 'cancelled')
+                     THEN COALESCE(sqlc.narg(closed_at)::timestamptz, closed_at, NOW()) END,
+    closed_by_user_id = CASE WHEN sqlc.arg(status)::text IN ('done', 'cancelled')
+                             THEN sqlc.narg(closed_by_user_id)::bigint END
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: SetTaskPriority :one
+UPDATE tasks
+SET priority = sqlc.arg(priority)
 WHERE id = sqlc.arg(id)
 RETURNING *;
 

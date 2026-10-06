@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
@@ -29,9 +28,16 @@ func caller(r *http.Request) usecase.Caller {
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *usecase.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
+	case errors.As(err, &qe):
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message})
+		}
+		response.ValidationError(w, r, details)
 	case errors.Is(err, usecase.ErrCenterOnly):
 		response.Forbidden(w, r, "Only the center organization manages tasks")
 	case errors.Is(err, usecase.ErrNotFound):
@@ -48,33 +54,6 @@ func pathUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 		return uuid.Nil, false
 	}
 	return id, true
-}
-
-func queryUUID(w http.ResponseWriter, r *http.Request, name string) (*uuid.UUID, bool) {
-	raw := strings.TrimSpace(r.URL.Query().Get(name))
-	if raw == "" {
-		return nil, true
-	}
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		response.ValidationError(w, r, []response.Detail{{Field: name, Message: "must be a UUID"}})
-		return nil, false
-	}
-	return &id, true
-}
-
-// queryTime reads an optional RFC 3339 timestamp query parameter.
-func queryTime(w http.ResponseWriter, r *http.Request, name string) (*time.Time, bool) {
-	raw := strings.TrimSpace(r.URL.Query().Get(name))
-	if raw == "" {
-		return nil, true
-	}
-	v, err := time.Parse(time.RFC3339, raw)
-	if err != nil {
-		response.ValidationError(w, r, []response.Detail{{Field: name, Message: "must be an RFC 3339 date-time"}})
-		return nil, false
-	}
-	return &v, true
 }
 
 func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
@@ -107,43 +86,23 @@ func (n *nullable[T]) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// List (GET /v1/tasks?status&priority&subject_organization_uuid&assignee_user_uuid&mine&due_after&due_before&limit&offset).
+// List (GET /v1/tasks?status&priority&subject_organization_uuid&
+// assignee_user_uuid&mine&due_after&due_before&due_from&due_to&created_from&
+// created_to&q&sort&limit&offset). status, priority and
+// subject_organization_uuid are CSV lists (TEC-379).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	qv := r.URL.Query()
-	f := usecase.Filter{
-		Status:   strings.TrimSpace(qv.Get("status")),
-		Priority: strings.TrimSpace(qv.Get("priority")),
-	}
-	var ok bool
-	if f.SubjectOrgUUID, ok = queryUUID(w, r, "subject_organization_uuid"); !ok {
+	me := authctx.MustPrincipal(r.Context()).UserID
+	f, err := usecase.ParseListFilter(r.URL.Query(), &me)
+	if err != nil {
+		writeError(w, r, err)
 		return
 	}
-	if f.AssigneeUUID, ok = queryUUID(w, r, "assignee_user_uuid"); !ok {
-		return
-	}
-	switch strings.TrimSpace(qv.Get("mine")) {
-	case "", "false":
-	case "true":
-		id := authctx.MustPrincipal(r.Context()).UserID
-		f.AssigneeUUID = &id
-	default:
-		response.ValidationError(w, r, []response.Detail{{Field: "mine", Message: "must be true or false"}})
-		return
-	}
-	if f.DueAfter, ok = queryTime(w, r, "due_after"); !ok {
-		return
-	}
-	if f.DueBefore, ok = queryTime(w, r, "due_before"); !ok {
-		return
-	}
-	q := apiquery.Parse(qv)
-	f.Limit, f.Offset = q.Limit, q.Offset
 	items, total, err := h.svc.List(r.Context(), caller(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // Get (GET /v1/tasks/{uuid}).

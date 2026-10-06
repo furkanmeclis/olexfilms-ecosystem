@@ -398,6 +398,12 @@ var frCatalog = map[string]string{
 	"accounting.source.opening_balance":             "Solde d'ouverture",
 	"export.title.tenant.accounting.cari_statement": "Relevé de compte",
 	"export.title.tenant.accounting.balances":       "Rapport des soldes",
+	"export.title.tenant.accounting.entries":        "Écritures comptables",
+	"accounting.export.direction":                   "Sens",
+	"accounting.export.account":                     "Compte",
+	"accounting.export.amount":                      "Montant",
+	"accounting.export.orig_amount":                 "Montant d'origine",
+	"accounting.export.orig_currency":               "Devise d'origine",
 	"resources.tenant.accounting.cari_statement":    "Relevé de compte",
 	"resources.tenant.accounting.balances":          "Rapport des soldes",
 	// TEC-166: order statuses.

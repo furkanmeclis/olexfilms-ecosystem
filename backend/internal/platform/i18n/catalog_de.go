@@ -398,6 +398,12 @@ var deCatalog = map[string]string{
 	"accounting.source.opening_balance":             "Eröffnungssaldo",
 	"export.title.tenant.accounting.cari_statement": "Kontoauszug",
 	"export.title.tenant.accounting.balances":       "Saldenbericht",
+	"export.title.tenant.accounting.entries":        "Buchungen",
+	"accounting.export.direction":                   "Richtung",
+	"accounting.export.account":                     "Konto",
+	"accounting.export.amount":                      "Betrag",
+	"accounting.export.orig_amount":                 "Ursprungsbetrag",
+	"accounting.export.orig_currency":               "Ursprungswährung",
 	"resources.tenant.accounting.cari_statement":    "Kontoauszug",
 	"resources.tenant.accounting.balances":          "Saldenbericht",
 	// TEC-166: order statuses.

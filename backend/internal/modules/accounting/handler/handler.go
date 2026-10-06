@@ -47,9 +47,16 @@ func caller(r *http.Request) acc.Caller {
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *acc.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
+	case errors.As(err, &qe):
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message})
+		}
+		response.ValidationError(w, r, details)
 	case errors.Is(err, acc.ErrForbidden):
 		response.Forbidden(w, r, "This organization cannot write accounting entries")
 	case errors.Is(err, acc.ErrBookNotFound):
@@ -167,19 +174,15 @@ func (h *Handler) ListCategories(w http.ResponseWriter, r *http.Request) {
 
 // --- Accounts ----------------------------------------------------------------
 
-// ListAccounts (GET /v1/accounting/accounts?organization_uuid&active&type).
+// ListAccounts (GET /v1/accounting/accounts?organization_uuid&active&type&q&
+// sort): a full array (client-side grid); type is a CSV list (TEC-379).
 func (h *Handler) ListAccounts(w http.ResponseWriter, r *http.Request) {
-	org, ok := queryUUID(w, r, "organization_uuid")
-	if !ok {
+	f, err := acc.ParseAccountFilter(r.URL.Query())
+	if err != nil {
+		writeError(w, r, err)
 		return
 	}
-	active, ok := queryBool(w, r, "active")
-	if !ok {
-		return
-	}
-	items, err := h.svc.ListAccounts(r.Context(), caller(r), acc.AccountFilter{
-		OrganizationUUID: org, Active: active, Type: strings.TrimSpace(r.URL.Query().Get("type")),
-	})
+	items, err := h.svc.ListAccounts(r.Context(), caller(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -271,25 +274,20 @@ func (h *Handler) UpdateAccount(w http.ResponseWriter, r *http.Request) {
 
 // --- Cari --------------------------------------------------------------------
 
-// ListCari (GET /v1/accounting/cari?organization_uuid&active&q&limit&offset).
+// ListCari (GET /v1/accounting/cari?organization_uuid&active&
+// counterparty_kind&balance_min&balance_max&q&sort&limit&offset, TEC-379).
 func (h *Handler) ListCari(w http.ResponseWriter, r *http.Request) {
-	org, ok := queryUUID(w, r, "organization_uuid")
-	if !ok {
-		return
-	}
-	active, ok := queryBool(w, r, "active")
-	if !ok {
-		return
-	}
-	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.ListCari(r.Context(), caller(r), acc.CariFilter{
-		OrganizationUUID: org, Active: active, Q: q.Q, Limit: q.Limit, Offset: q.Offset,
-	})
+	f, err := acc.ParseCariFilter(r.URL.Query())
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	items, total, err := h.svc.ListCari(r.Context(), caller(r), f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // GetCari (GET /v1/accounting/cari/{uuid}?organization_uuid).
@@ -340,37 +338,21 @@ func (h *Handler) OpenCari(w http.ResponseWriter, r *http.Request) {
 // --- Entries -----------------------------------------------------------------
 
 // ListEntries (GET /v1/accounting/entries?organization_uuid&account_uuid&
-// cari_uuid&direction&category&source_type&date_from&date_to&limit&offset).
+// cari_uuid&direction&category&source_type&date_from&date_to&created_from&
+// created_to&amount_min&amount_max&q&sort&limit&offset). direction,
+// category and source_type are CSV lists (TEC-379).
 func (h *Handler) ListEntries(w http.ResponseWriter, r *http.Request) {
-	f := acc.EntryFilter{}
-	var ok bool
-	if f.OrganizationUUID, ok = queryUUID(w, r, "organization_uuid"); !ok {
+	f, err := acc.ParseEntryFilter(r.URL.Query())
+	if err != nil {
+		writeError(w, r, err)
 		return
 	}
-	if f.AccountUUID, ok = queryUUID(w, r, "account_uuid"); !ok {
-		return
-	}
-	if f.CariUUID, ok = queryUUID(w, r, "cari_uuid"); !ok {
-		return
-	}
-	if f.From, ok = queryDate(w, r, "date_from"); !ok {
-		return
-	}
-	if f.To, ok = queryDate(w, r, "date_to"); !ok {
-		return
-	}
-	v := r.URL.Query()
-	f.Direction = strings.TrimSpace(v.Get("direction"))
-	f.Category = strings.TrimSpace(v.Get("category"))
-	f.SourceType = strings.TrimSpace(v.Get("source_type"))
-	q := apiquery.Parse(v)
-	f.Limit, f.Offset = q.Limit, q.Offset
 	items, total, err := h.svc.ListEntries(r.Context(), caller(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // GetEntry (GET /v1/accounting/entries/{uuid}?organization_uuid).

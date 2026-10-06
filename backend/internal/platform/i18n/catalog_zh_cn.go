@@ -398,6 +398,12 @@ var zhCNCatalog = map[string]string{
 	"accounting.source.opening_balance":             "期初余额",
 	"export.title.tenant.accounting.cari_statement": "对账单",
 	"export.title.tenant.accounting.balances":       "余额报表",
+	"export.title.tenant.accounting.entries":        "账务记录",
+	"accounting.export.direction":                   "方向",
+	"accounting.export.account":                     "账户",
+	"accounting.export.amount":                      "金额",
+	"accounting.export.orig_amount":                 "原始金额",
+	"accounting.export.orig_currency":               "原始币种",
 	"resources.tenant.accounting.cari_statement":    "对账单",
 	"resources.tenant.accounting.balances":          "余额报表",
 	// TEC-166: order statuses.

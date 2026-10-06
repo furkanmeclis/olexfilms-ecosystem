@@ -79,6 +79,8 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/accounting/entries", write(h.CreateEntry))
 	mux.Handle("GET /v1/accounting/entries/{uuid}", read(h.GetEntry))
 	mux.Handle("POST /v1/accounting/entries/{uuid}/void", sensitive(h.VoidEntry))
+	// TEC-379: entry list export (list filters + q + sort, read scope).
+	mux.Handle("POST /v1/accounting/entries/export", read(h.ExportEntries))
 
 	// TEC-174: disputes (K24). The child opens (accounting.dispute), both
 	// sides read (accounting.read), the parent resolves (accounting.resolve).

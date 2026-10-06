@@ -398,6 +398,12 @@ var arCatalog = map[string]string{
 	"accounting.source.opening_balance":             "الرصيد الافتتاحي",
 	"export.title.tenant.accounting.cari_statement": "كشف حساب",
 	"export.title.tenant.accounting.balances":       "تقرير الأرصدة",
+	"export.title.tenant.accounting.entries":        "قيود دفتر الأستاذ",
+	"accounting.export.direction":                   "الاتجاه",
+	"accounting.export.account":                     "الحساب",
+	"accounting.export.amount":                      "المبلغ",
+	"accounting.export.orig_amount":                 "المبلغ الأصلي",
+	"accounting.export.orig_currency":               "العملة الأصلية",
 	"resources.tenant.accounting.cari_statement":    "كشف حساب",
 	"resources.tenant.accounting.balances":          "تقرير الأرصدة",
 	// TEC-166: order statuses.

@@ -15,6 +15,7 @@ import (
 const countCariAccountsWithBalance = `-- name: CountCariAccountsWithBalance :one
 SELECT COUNT(*)
 FROM cari_accounts c
+JOIN cari_account_balances b ON b.cari_id = c.id
 LEFT JOIN organizations o ON o.id = c.counterparty_org_id
 LEFT JOIN users u ON u.id = c.counterparty_user_id
 WHERE c.organization_id = $1
@@ -22,16 +23,30 @@ WHERE c.organization_id = $1
   AND ($3::text IS NULL
        OR o.name ILIKE '%' || $3::text || '%'
        OR concat_ws(' ', u.name, u.surname) ILIKE '%' || $3::text || '%')
+  AND (COALESCE(cardinality($4::text[]), 0) = 0
+       OR (CASE WHEN c.counterparty_type = 'user' THEN 'customer' ELSE o.type END) = ANY ($4::text[]))
+  AND ($5::numeric IS NULL OR b.balance >= $5::numeric)
+  AND ($6::numeric IS NULL OR b.balance <= $6::numeric)
 `
 
 type CountCariAccountsWithBalanceParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	Active         pgtype.Bool `json:"active"`
-	Q              pgtype.Text `json:"q"`
+	OrganizationID int64          `json:"organization_id"`
+	Active         pgtype.Bool    `json:"active"`
+	Q              pgtype.Text    `json:"q"`
+	Kinds          []string       `json:"kinds"`
+	BalanceMin     pgtype.Numeric `json:"balance_min"`
+	BalanceMax     pgtype.Numeric `json:"balance_max"`
 }
 
 func (q *Queries) CountCariAccountsWithBalance(ctx context.Context, arg CountCariAccountsWithBalanceParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countCariAccountsWithBalance, arg.OrganizationID, arg.Active, arg.Q)
+	row := q.db.QueryRow(ctx, countCariAccountsWithBalance,
+		arg.OrganizationID,
+		arg.Active,
+		arg.Q,
+		arg.Kinds,
+		arg.BalanceMin,
+		arg.BalanceMax,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -43,22 +58,37 @@ FROM finance_entries e
 WHERE e.organization_id = $1
   AND ($2::bigint IS NULL OR e.account_id = $2::bigint)
   AND ($3::bigint IS NULL OR e.cari_id = $3::bigint)
-  AND ($4::text IS NULL OR e.direction = $4::text)
-  AND ($5::text IS NULL OR e.category = $5::text)
-  AND ($6::text IS NULL OR e.source_type = $6::text)
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR e.direction = ANY ($4::text[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR e.category = ANY ($5::text[]))
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR e.source_type = ANY ($6::text[]))
   AND ($7::timestamptz IS NULL OR e.created_at >= $7::timestamptz)
   AND ($8::timestamptz IS NULL OR e.created_at < $8::timestamptz)
+  AND ($9::numeric IS NULL OR e.amount >= $9::numeric)
+  AND ($10::numeric IS NULL OR e.amount <= $10::numeric)
+  AND ($11::text IS NULL
+       OR e.description ILIKE '%' || $11::text || '%'
+       OR EXISTS (SELECT 1 FROM finance_accounts qa
+                  WHERE qa.id = e.account_id AND qa.name ILIKE '%' || $11::text || '%')
+       OR EXISTS (SELECT 1 FROM cari_accounts qc
+                  LEFT JOIN organizations qo ON qo.id = qc.counterparty_org_id
+                  LEFT JOIN users qu ON qu.id = qc.counterparty_user_id
+                  WHERE qc.id = e.cari_id
+                    AND (qo.name ILIKE '%' || $11::text || '%'
+                         OR concat_ws(' ', qu.name, qu.surname) ILIKE '%' || $11::text || '%')))
 `
 
 type CountSearchFinanceEntriesParams struct {
 	OrganizationID int64              `json:"organization_id"`
 	AccountID      pgtype.Int8        `json:"account_id"`
 	CariID         pgtype.Int8        `json:"cari_id"`
-	Direction      pgtype.Text        `json:"direction"`
-	Category       pgtype.Text        `json:"category"`
-	SourceType     pgtype.Text        `json:"source_type"`
+	Directions     []string           `json:"directions"`
+	Categories     []string           `json:"categories"`
+	SourceTypes    []string           `json:"source_types"`
 	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
 	CreatedTo      pgtype.Timestamptz `json:"created_to"`
+	AmountMin      pgtype.Numeric     `json:"amount_min"`
+	AmountMax      pgtype.Numeric     `json:"amount_max"`
+	Q              pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error) {
@@ -66,11 +96,14 @@ func (q *Queries) CountSearchFinanceEntries(ctx context.Context, arg CountSearch
 		arg.OrganizationID,
 		arg.AccountID,
 		arg.CariID,
-		arg.Direction,
-		arg.Category,
-		arg.SourceType,
+		arg.Directions,
+		arg.Categories,
+		arg.SourceTypes,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.AmountMin,
+		arg.AmountMax,
+		arg.Q,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -248,16 +281,37 @@ WHERE c.organization_id = $1
   AND ($3::text IS NULL
        OR o.name ILIKE '%' || $3::text || '%'
        OR concat_ws(' ', u.name, u.surname) ILIKE '%' || $3::text || '%')
-ORDER BY COALESCE(o.name, u.name, ''), c.id
-LIMIT $5 OFFSET $4
+  AND (COALESCE(cardinality($4::text[]), 0) = 0
+       OR (CASE WHEN c.counterparty_type = 'user' THEN 'customer' ELSE o.type END) = ANY ($4::text[]))
+  AND ($5::numeric IS NULL OR b.balance >= $5::numeric)
+  AND ($6::numeric IS NULL OR b.balance <= $6::numeric)
+ORDER BY
+  CASE WHEN NOT $7::bool AND $8::text = 'name' THEN lower(COALESCE(o.name, NULLIF(btrim(concat_ws(' ', u.name, u.surname)), ''), '')) END ASC,
+  CASE WHEN $7::bool AND $8::text = 'name' THEN lower(COALESCE(o.name, NULLIF(btrim(concat_ws(' ', u.name, u.surname)), ''), '')) END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text
+    WHEN 'balance' THEN b.balance WHEN 'entry_count' THEN b.entry_count::numeric END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text
+    WHEN 'balance' THEN b.balance WHEN 'entry_count' THEN b.entry_count::numeric END END DESC,
+  CASE WHEN NOT $7::bool AND $8::text = 'created_at' THEN c.created_at END ASC,
+  CASE WHEN $7::bool AND $8::text = 'created_at' THEN c.created_at END DESC,
+  CASE WHEN NOT $7::bool AND $8::text = 'last_entry_at' THEN b.last_entry_at END ASC NULLS LAST,
+  CASE WHEN $7::bool AND $8::text = 'last_entry_at' THEN b.last_entry_at END DESC NULLS LAST,
+  CASE WHEN $7::bool THEN c.id END DESC,
+  c.id ASC
+LIMIT $10 OFFSET $9
 `
 
 type ListCariAccountsWithBalanceParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	Active         pgtype.Bool `json:"active"`
-	Q              pgtype.Text `json:"q"`
-	PageOffset     int32       `json:"page_offset"`
-	PageLimit      int32       `json:"page_limit"`
+	OrganizationID int64          `json:"organization_id"`
+	Active         pgtype.Bool    `json:"active"`
+	Q              pgtype.Text    `json:"q"`
+	Kinds          []string       `json:"kinds"`
+	BalanceMin     pgtype.Numeric `json:"balance_min"`
+	BalanceMax     pgtype.Numeric `json:"balance_max"`
+	SortDesc       bool           `json:"sort_desc"`
+	SortKey        string         `json:"sort_key"`
+	PageOffset     int32          `json:"page_offset"`
+	PageLimit      int32          `json:"page_limit"`
 }
 
 type ListCariAccountsWithBalanceRow struct {
@@ -282,11 +336,20 @@ type ListCariAccountsWithBalanceRow struct {
 	CounterpartyUserName string             `json:"counterparty_user_name"`
 }
 
+// TEC-379 (DT-BE-8): list contract (docs/list-contract.md). name is the
+// counterparty name (the old order); last_entry_at keeps caris without an
+// entry last; id is the tiebreak. kinds: center, distributor, dealer (the
+// counterparty organization type) or customer (a user counterparty).
 func (q *Queries) ListCariAccountsWithBalance(ctx context.Context, arg ListCariAccountsWithBalanceParams) ([]ListCariAccountsWithBalanceRow, error) {
 	rows, err := q.db.Query(ctx, listCariAccountsWithBalance,
 		arg.OrganizationID,
 		arg.Active,
 		arg.Q,
+		arg.Kinds,
+		arg.BalanceMin,
+		arg.BalanceMax,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.PageOffset,
 		arg.PageLimit,
 	)
@@ -335,14 +398,32 @@ FROM finance_accounts a
 JOIN finance_account_balances b ON b.account_id = a.id
 WHERE a.organization_id = $1
   AND ($2::bool IS NULL OR a.active = $2::bool)
-  AND ($3::text IS NULL OR a.type = $3::text)
-ORDER BY a.type, a.name, a.id
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR a.type = ANY ($3::text[]))
+  AND ($4::text IS NULL
+       OR a.name ILIKE '%' || $4::text || '%'
+       OR a.iban ILIKE '%' || $4::text || '%')
+ORDER BY
+  CASE WHEN NOT $5::bool THEN CASE $6::text
+    WHEN 'name' THEN lower(a.name) WHEN 'type' THEN a.type || ' ' || lower(a.name) END END ASC,
+  CASE WHEN $5::bool THEN CASE $6::text
+    WHEN 'name' THEN lower(a.name) WHEN 'type' THEN a.type || ' ' || lower(a.name) END END DESC,
+  CASE WHEN NOT $5::bool AND $6::text = 'balance' THEN b.balance END ASC,
+  CASE WHEN $5::bool AND $6::text = 'balance' THEN b.balance END DESC,
+  CASE WHEN NOT $5::bool AND $6::text = 'created_at' THEN a.created_at END ASC,
+  CASE WHEN $5::bool AND $6::text = 'created_at' THEN a.created_at END DESC,
+  CASE WHEN NOT $5::bool AND $6::text = 'last_entry_at' THEN b.last_entry_at END ASC NULLS LAST,
+  CASE WHEN $5::bool AND $6::text = 'last_entry_at' THEN b.last_entry_at END DESC NULLS LAST,
+  CASE WHEN $5::bool THEN a.id END DESC,
+  a.id ASC
 `
 
 type ListFinanceAccountsWithBalanceParams struct {
 	OrganizationID int64       `json:"organization_id"`
 	Active         pgtype.Bool `json:"active"`
-	Type           pgtype.Text `json:"type"`
+	Types          []string    `json:"types"`
+	Q              pgtype.Text `json:"q"`
+	SortDesc       bool        `json:"sort_desc"`
+	SortKey        string      `json:"sort_key"`
 }
 
 type ListFinanceAccountsWithBalanceRow struct {
@@ -365,8 +446,18 @@ type ListFinanceAccountsWithBalanceRow struct {
 // TEC-172 (F1-07b): read models of the /v1/accounting endpoints. The caller
 // resolves the book (one organization inside the request scope) and passes
 // its id; every query is limited to that organization.
+// TEC-379 (DT-BE-8): the account grid is a full array (client-side
+// table); the sort follows docs/list-contract.md. type sorts by type, then
+// name (the old order); last_entry_at keeps unused accounts last.
 func (q *Queries) ListFinanceAccountsWithBalance(ctx context.Context, arg ListFinanceAccountsWithBalanceParams) ([]ListFinanceAccountsWithBalanceRow, error) {
-	rows, err := q.db.Query(ctx, listFinanceAccountsWithBalance, arg.OrganizationID, arg.Active, arg.Type)
+	rows, err := q.db.Query(ctx, listFinanceAccountsWithBalance,
+		arg.OrganizationID,
+		arg.Active,
+		arg.Types,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -414,28 +505,55 @@ LEFT JOIN organizations co ON co.id = c.counterparty_org_id
 LEFT JOIN finance_entries r ON r.reversal_of_id = e.id
 LEFT JOIN finance_entries o ON o.id = e.reversal_of_id
 WHERE e.organization_id = $1
-  AND ($2::uuid IS NULL OR e.uuid = $2::uuid)
-  AND ($3::bigint IS NULL OR e.account_id = $3::bigint)
-  AND ($4::bigint IS NULL OR e.cari_id = $4::bigint)
-  AND ($5::text IS NULL OR e.direction = $5::text)
-  AND ($6::text IS NULL OR e.category = $6::text)
-  AND ($7::text IS NULL OR e.source_type = $7::text)
-  AND ($8::timestamptz IS NULL OR e.created_at >= $8::timestamptz)
-  AND ($9::timestamptz IS NULL OR e.created_at < $9::timestamptz)
-ORDER BY e.created_at DESC, e.id DESC
-LIMIT $11 OFFSET $10
+  AND ($2::bigint IS NULL OR e.account_id = $2::bigint)
+  AND ($3::bigint IS NULL OR e.cari_id = $3::bigint)
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR e.direction = ANY ($4::text[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR e.category = ANY ($5::text[]))
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR e.source_type = ANY ($6::text[]))
+  AND ($7::timestamptz IS NULL OR e.created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR e.created_at < $8::timestamptz)
+  AND ($9::numeric IS NULL OR e.amount >= $9::numeric)
+  AND ($10::numeric IS NULL OR e.amount <= $10::numeric)
+  AND ($11::text IS NULL
+       OR e.description ILIKE '%' || $11::text || '%'
+       OR EXISTS (SELECT 1 FROM finance_accounts qa
+                  WHERE qa.id = e.account_id AND qa.name ILIKE '%' || $11::text || '%')
+       OR EXISTS (SELECT 1 FROM cari_accounts qc
+                  LEFT JOIN organizations qo ON qo.id = qc.counterparty_org_id
+                  LEFT JOIN users qu ON qu.id = qc.counterparty_user_id
+                  WHERE qc.id = e.cari_id
+                    AND (qo.name ILIKE '%' || $11::text || '%'
+                         OR concat_ws(' ', qu.name, qu.surname) ILIKE '%' || $11::text || '%')))
+  AND ($12::uuid IS NULL OR e.uuid = $12::uuid)
+ORDER BY
+  CASE WHEN NOT $13::bool THEN CASE $14::text
+    WHEN 'direction' THEN e.direction WHEN 'category' THEN e.category END END ASC,
+  CASE WHEN $13::bool THEN CASE $14::text
+    WHEN 'direction' THEN e.direction WHEN 'category' THEN e.category END END DESC,
+  CASE WHEN NOT $13::bool AND $14::text = 'amount' THEN e.amount END ASC,
+  CASE WHEN $13::bool AND $14::text = 'amount' THEN e.amount END DESC,
+  CASE WHEN NOT $13::bool AND $14::text = 'created_at' THEN e.created_at END ASC,
+  CASE WHEN $13::bool AND $14::text = 'created_at' THEN e.created_at END DESC,
+  CASE WHEN $13::bool THEN e.id END DESC,
+  e.id ASC
+LIMIT $16 OFFSET $15
 `
 
 type SearchFinanceEntriesParams struct {
 	OrganizationID int64              `json:"organization_id"`
-	EntryUuid      pgtype.UUID        `json:"entry_uuid"`
 	AccountID      pgtype.Int8        `json:"account_id"`
 	CariID         pgtype.Int8        `json:"cari_id"`
-	Direction      pgtype.Text        `json:"direction"`
-	Category       pgtype.Text        `json:"category"`
-	SourceType     pgtype.Text        `json:"source_type"`
+	Directions     []string           `json:"directions"`
+	Categories     []string           `json:"categories"`
+	SourceTypes    []string           `json:"source_types"`
 	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
 	CreatedTo      pgtype.Timestamptz `json:"created_to"`
+	AmountMin      pgtype.Numeric     `json:"amount_min"`
+	AmountMax      pgtype.Numeric     `json:"amount_max"`
+	Q              pgtype.Text        `json:"q"`
+	EntryUuid      pgtype.UUID        `json:"entry_uuid"`
+	SortDesc       bool               `json:"sort_desc"`
+	SortKey        string             `json:"sort_key"`
 	PageOffset     int32              `json:"page_offset"`
 	PageLimit      int32              `json:"page_limit"`
 }
@@ -474,17 +592,27 @@ type SearchFinanceEntriesRow struct {
 
 // SearchFinanceEntries is the filtered, paged ledger of one organization.
 // reversed_by_uuid is set when the row has been reversed (void).
+// TEC-379 (DT-BE-8): list contract (docs/list-contract.md): direction,
+// category and source_type are lists, amount_min / amount_max bound the
+// signed amount in the book currency, q matches the description, the
+// account name or the cari counterparty name; id is the tiebreak (an empty
+// sort_key orders by id only, as the single-entry lookup does).
 func (q *Queries) SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error) {
 	rows, err := q.db.Query(ctx, searchFinanceEntries,
 		arg.OrganizationID,
-		arg.EntryUuid,
 		arg.AccountID,
 		arg.CariID,
-		arg.Direction,
-		arg.Category,
-		arg.SourceType,
+		arg.Directions,
+		arg.Categories,
+		arg.SourceTypes,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.AmountMin,
+		arg.AmountMax,
+		arg.Q,
+		arg.EntryUuid,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.PageOffset,
 		arg.PageLimit,
 	)

@@ -37,6 +37,11 @@ SET status = sqlc.arg(status),
 WHERE id = sqlc.arg(id) AND status = 'open'
 RETURNING *;
 
+-- TEC-379 (DT-BE-8): list contract (docs/list-contract.md). status sorts by
+-- rank (open, resolved_reversal, resolved_revision, rejected), organization
+-- by the disputing organization name, amount by the disputed amount in the
+-- disputing book's currency; resolved_at keeps open disputes last; id is the
+-- tiebreak. q matches the reason or either organization name.
 -- name: ListAccountingDisputes :many
 SELECT d.*,
        o.uuid AS organization_uuid, o.name AS organization_name,
@@ -56,9 +61,37 @@ WHERE d.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL
        OR d.organization_id = ANY (sqlc.narg(org_ids)::bigint[])
        OR d.counterparty_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
-  AND (sqlc.narg(status)::text IS NULL OR d.status = sqlc.narg(status)::text)
-  AND (sqlc.narg(organization_id)::bigint IS NULL OR d.organization_id = sqlc.narg(organization_id)::bigint)
-ORDER BY d.created_at DESC, d.id DESC
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR d.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+       OR d.organization_id IN (SELECT fo.id FROM organizations fo
+                                WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(counterparty_uuids)::uuid[]), 0) = 0
+       OR d.counterparty_org_id IN (SELECT fc.id FROM organizations fc
+                                    WHERE fc.uuid = ANY (sqlc.narg(counterparty_uuids)::uuid[])))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR d.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR d.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR d.reason ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM organizations qo
+                  WHERE qo.id IN (d.organization_id, d.counterparty_org_id)
+                    AND qo.name ILIKE '%' || sqlc.narg(q)::text || '%'))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'organization' THEN lower(o.name) END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'organization' THEN lower(o.name) END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text
+    WHEN 'status' THEN CASE d.status WHEN 'open' THEN 1 WHEN 'resolved_reversal' THEN 2
+                                     WHEN 'resolved_revision' THEN 3 ELSE 4 END::numeric
+    WHEN 'amount' THEN e.amount END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text
+    WHEN 'status' THEN CASE d.status WHEN 'open' THEN 1 WHEN 'resolved_reversal' THEN 2
+                                     WHEN 'resolved_revision' THEN 3 ELSE 4 END::numeric
+    WHEN 'amount' THEN e.amount END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN d.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN d.created_at END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'resolved_at' THEN d.resolved_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'resolved_at' THEN d.resolved_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN d.id END DESC,
+  d.id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountAccountingDisputes :one
@@ -67,8 +100,20 @@ WHERE d.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL
        OR d.organization_id = ANY (sqlc.narg(org_ids)::bigint[])
        OR d.counterparty_org_id = ANY (sqlc.narg(org_ids)::bigint[]))
-  AND (sqlc.narg(status)::text IS NULL OR d.status = sqlc.narg(status)::text)
-  AND (sqlc.narg(organization_id)::bigint IS NULL OR d.organization_id = sqlc.narg(organization_id)::bigint);
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR d.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+       OR d.organization_id IN (SELECT fo.id FROM organizations fo
+                                WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(counterparty_uuids)::uuid[]), 0) = 0
+       OR d.counterparty_org_id IN (SELECT fc.id FROM organizations fc
+                                    WHERE fc.uuid = ANY (sqlc.narg(counterparty_uuids)::uuid[])))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR d.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR d.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR d.reason ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM organizations qo
+                  WHERE qo.id IN (d.organization_id, d.counterparty_org_id)
+                    AND qo.name ILIKE '%' || sqlc.narg(q)::text || '%'));
 
 -- name: GetAccountingDisputeView :one
 SELECT d.*,
