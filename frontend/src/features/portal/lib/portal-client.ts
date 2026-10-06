@@ -200,8 +200,16 @@ export type PortalVehicleTransfer = components["schemas"]["VehicleTransfer"];
 export type PortalVehicleTransferVerifyInput =
   components["schemas"]["VehicleTransferVerifyInput"];
 
-/** TEC-245: a signed vehicle intake contract (empty list until F3). */
+/** TEC-245 / TEC-288: an executed vehicle intake contract of the user. */
 export type PortalContract = components["schemas"]["PortalContract"];
+/**
+ * Executed contract PDF through the portal BFF (TEC-288); the bytes come
+ * straight back (no export job), so a plain download link is enough.
+ */
+export function portalContractPdfUrl(contractUuid: string): string {
+  return `${PORTAL_API_BASE}/portal/contracts/${encodeURIComponent(contractUuid)}/pdf`;
+}
+
 /** TEC-245: the F0-10 notification preferences, as the portal reads them. */
 export type PortalNotificationPreferences =
   components["schemas"]["NotificationPreferences"];
