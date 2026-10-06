@@ -60,6 +60,14 @@ export function VehicleDetailPage({
       description={t("vehicles.detail.description")}
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.tenant.home(slug) },
+        ...(canRead
+          ? [
+              {
+                label: t("vehicles.list.title"),
+                href: routes.tenant.vehicles.list(slug),
+              },
+            ]
+          : []),
         { label: t("vehicles.detail.title") },
       ]}
     />

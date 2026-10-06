@@ -100,8 +100,9 @@ export const routes = {
       detail: (slug: string, uuid: string) => `/t/${slug}/customers/${uuid}`,
       edit: (slug: string, uuid: string) => `/t/${slug}/customers/${uuid}/edit`,
     },
-    /** TEC-190 vehicle detail with the ownership transfer. */
+    /** TEC-190 vehicle detail with the ownership transfer; TEC-372 list. */
     vehicles: {
+      list: (slug: string) => `/t/${slug}/vehicles`,
       detail: (slug: string, uuid: string) => `/t/${slug}/vehicles/${uuid}`,
     },
     /** TEC-221 center tasks: list, new, detail (edit, status, comments). */

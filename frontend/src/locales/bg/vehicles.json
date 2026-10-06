@@ -100,5 +100,12 @@
   "transfer.status.completed": "Завършено",
   "transfer.status.cancelled": "Отменено",
   "transfer.status.expired": "Изтекло",
-  "columns.created_at": "Създаден"
+  "columns.created_at": "Създаден",
+  "list.nav": "Превозни средства",
+  "list.title": "Превозни средства",
+  "list.description": "Превозните средства на клиентите, които обслужвате.",
+  "list.forbidden": "Нужно е право за преглед на превозни средства, за да отворите тази страница.",
+  "list.empty_title": "Няма превозни средства",
+  "list.empty_description": "Тук се показват превозните средства, регистрирани за вашите клиенти.",
+  "list.open_customer": "Отвори клиента"
 }

@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "Propriétaire revendeur",
   "actions.upgrade.role_staff": "Employé revendeur",
   "actions.upgrade.confirm": "Promouvoir",
-  "actions.upgrade.success": "Le client est désormais membre de {{dealer}}."
+  "actions.upgrade.success": "Le client est désormais membre de {{dealer}}.",
+  "fields.organization": "Organisation"
 }

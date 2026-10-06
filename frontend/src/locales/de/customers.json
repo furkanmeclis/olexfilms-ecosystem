@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "Händler-Inhaber",
   "actions.upgrade.role_staff": "Händler-Mitarbeiter",
   "actions.upgrade.confirm": "Hochstufen",
-  "actions.upgrade.success": "Der Kunde ist jetzt Mitglied von {{dealer}}."
+  "actions.upgrade.success": "Der Kunde ist jetzt Mitglied von {{dealer}}.",
+  "fields.organization": "Organisation"
 }

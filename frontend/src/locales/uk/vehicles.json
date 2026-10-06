@@ -100,5 +100,12 @@
   "transfer.status.completed": "Завершено",
   "transfer.status.cancelled": "Скасовано",
   "transfer.status.expired": "Термін минув",
-  "columns.created_at": "Створено"
+  "columns.created_at": "Створено",
+  "list.nav": "Автомобілі",
+  "list.title": "Автомобілі",
+  "list.description": "Автомобілі клієнтів, яких ви обслуговуєте.",
+  "list.forbidden": "Щоб відкрити цю сторінку, потрібен дозвіл на перегляд автомобілів.",
+  "list.empty_title": "Немає автомобілів",
+  "list.empty_description": "Тут з’являються автомобілі, зареєстровані для ваших клієнтів.",
+  "list.open_customer": "Відкрити клієнта"
 }

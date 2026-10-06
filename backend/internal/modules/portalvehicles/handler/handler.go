@@ -33,6 +33,15 @@ func caller(r *http.Request) usecase.Caller {
 }
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
+	var qe *apiquery.ValidationError
+	if errors.As(err, &qe) {
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
+		return
+	}
 	if errors.Is(err, usecase.ErrVehicleNotFound) {
 		response.NotFound(w, r, "Vehicle not found")
 		return
@@ -66,15 +75,20 @@ func (h *Handler) GetVehicle(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, v)
 }
 
-// ListServices (GET /v1/portal/services).
+// ListServices (GET /v1/portal/services; TEC-377: q, status, organization_uuid,
+// created_from / created_to and sort, docs/list-contract.md).
 func (h *Handler) ListServices(w http.ResponseWriter, r *http.Request) {
-	pq := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.ListServices(r.Context(), caller(r), usecase.Page{Limit: pq.Limit, Offset: pq.Offset})
+	f, err := usecase.ParseServiceListFilter(r.URL.Query())
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, pq.Limit, pq.Offset))
+	items, total, err := h.svc.ListServices(r.Context(), caller(r), f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // ListContracts (GET /v1/portal/contracts, TEC-245): the user's signed

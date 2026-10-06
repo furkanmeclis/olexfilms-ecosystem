@@ -133,5 +133,6 @@
   "actions.upgrade.role_owner": "مالك الوكالة",
   "actions.upgrade.role_staff": "موظف الوكالة",
   "actions.upgrade.confirm": "ترقية",
-  "actions.upgrade.success": "أصبح العميل عضواً في {{dealer}}."
+  "actions.upgrade.success": "أصبح العميل عضواً في {{dealer}}.",
+  "fields.organization": "المؤسسة"
 }

@@ -88,7 +88,7 @@ func TestListArgs(t *testing.T) {
 	var ve *ValidationError
 
 	for _, f := range []ListFilter{
-		{Status: "open"},
+		{Statuses: []string{"active", "open"}},
 		{Q: strings.Repeat("a", 101)},
 		{DaysLeftMin: intp(-1)},
 		{DaysLeftMax: intp(4000)},
@@ -101,11 +101,11 @@ func TestListArgs(t *testing.T) {
 		}
 	}
 
-	p, ok, err := r.listArgs(ctx, sp, ListFilter{Status: "active", Q: " 34 abc-12 ", DaysLeftMax: intp(30), Limit: 20})
+	p, ok, err := r.listArgs(ctx, sp, ListFilter{Statuses: []string{"active"}, Q: " 34 abc-12 ", DaysLeftMax: intp(30), Limit: 20})
 	if err != nil || !ok {
 		t.Fatalf("args: %v %v", ok, err)
 	}
-	if p.Status.String != "active" || p.Q.String != "34 abc-12" || p.QPlate.String != "34ABC12" {
+	if len(p.Statuses) != 1 || p.Statuses[0] != "active" || p.SortKey != "expiry" || p.SortDesc || p.Q.String != "34 abc-12" || p.QPlate.String != "34ABC12" {
 		t.Fatalf("q / status = %+v", p)
 	}
 	if !p.EndsAfter.Time.Equal(now) || !p.EndsBefore.Time.Equal(now.AddDate(0, 0, 30)) {
@@ -117,7 +117,7 @@ func TestListArgs(t *testing.T) {
 		t.Fatalf("min/max window = %v .. %v", p.EndsAfter.Time, p.EndsBefore.Time)
 	}
 	p, _, _ = r.listArgs(ctx, sp, ListFilter{})
-	if p.EndsAfter.Valid || p.EndsBefore.Valid || p.Q.Valid || p.Status.Valid {
+	if p.EndsAfter.Valid || p.EndsBefore.Valid || p.Q.Valid || p.Statuses != nil {
 		t.Fatalf("empty filter = %+v", p)
 	}
 }

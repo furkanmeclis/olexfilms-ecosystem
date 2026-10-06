@@ -108,5 +108,6 @@
   "timeline.event.assigned": "Призначено",
   "timeline.event.follow_up_set": "Follow-up призначено",
   "timeline.event.converted": "Конвертовано",
-  "timeline.event.task_created": "Завдання створено"
+  "timeline.event.task_created": "Завдання створено",
+  "columns.created_at": "Створено"
 }
