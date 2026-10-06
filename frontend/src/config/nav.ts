@@ -45,6 +45,8 @@ import {
   ClipboardCheck,
   Sunset,
   ChartColumn,
+  Gauge,
+  Cpu,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -506,6 +508,38 @@ export function tenantNav(slug: string) {
             icon: Car,
             permission: permissions.vehicles.read,
             feature: "customers",
+          },
+        ],
+      },
+      {
+        // TEC-299: paint measurements need measurements.read, the NexPTG
+        // devices measurement_devices.manage; both behind the measurements
+        // module (same gates as /v1/measurements, /v1/measurement-devices).
+        id: "measurements",
+        labelKey: "measurements.nav",
+        icon: Gauge,
+        defaultOpen: true,
+        anyPermission: [
+          permissions.measurements.read,
+          permissions.measurements.devicesManage,
+        ],
+        feature: "measurements",
+        items: [
+          {
+            id: "measurements-list",
+            titleKey: "measurements.nav_list",
+            href: routes.tenant.measurements.list(slug),
+            icon: Gauge,
+            permission: permissions.measurements.read,
+            feature: "measurements",
+          },
+          {
+            id: "measurement-devices",
+            titleKey: "measurements.nav_devices",
+            href: routes.tenant.measurements.devices(slug),
+            icon: Cpu,
+            permission: permissions.measurements.devicesManage,
+            feature: "measurements",
           },
         ],
       },
