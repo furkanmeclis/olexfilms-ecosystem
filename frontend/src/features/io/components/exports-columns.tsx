@@ -14,6 +14,11 @@ import {
   formatExportStatus,
   resourceLabelKey,
 } from "@/features/io/lib/display";
+import {
+  EXPORT_FORMAT_VALUES,
+  EXPORT_STATUS_VALUES,
+  ioResourceOptions,
+} from "@/features/io/lib/filter-options";
 import { exportsService } from "@/features/io/services/exports.service";
 import type { ExportJob, ExportJobScope } from "@/features/io/types";
 import { useLocale } from "@/providers/locale-provider";
@@ -48,7 +53,11 @@ export function useExportsColumns(options: ExportsColumnsOptions = {}) {
         id: "resource",
         accessorKey: "resource",
         labelKey: "exports.columns.resource",
-        enableColumnFilter: false,
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "resource",
+        filterOptions: ioResourceOptions("exports", scope),
+        gridPrimary: true,
         cell: ({ row }) => {
           const key = resourceLabelKey(row.original.resource);
           return key ? t(`exports.${key}`) : row.original.resource;
@@ -58,14 +67,28 @@ export function useExportsColumns(options: ExportsColumnsOptions = {}) {
         id: "format",
         accessorKey: "format",
         labelKey: "exports.columns.format",
-        enableColumnFilter: false,
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "format",
+        filterOptions: EXPORT_FORMAT_VALUES.map((value) => ({
+          value,
+          labelKey: `exports.formats.${value}`,
+          label: value.toUpperCase(),
+        })),
         cell: ({ row }) => formatExportFormat(t, row.original.format),
       }),
       createColumn<ExportJob>({
         id: "status",
         accessorKey: "status",
         labelKey: "exports.columns.status",
-        enableColumnFilter: false,
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "status",
+        filterOptions: EXPORT_STATUS_VALUES.map((value) => ({
+          value,
+          labelKey: `exports.status.${value}`,
+          label: value,
+        })),
         cell: ({ row }) => (
           <Badge variant={statusVariant(row.original.status)}>
             {formatExportStatus(t, row.original.status)}
@@ -76,7 +99,7 @@ export function useExportsColumns(options: ExportsColumnsOptions = {}) {
         id: "row_count",
         accessorKey: "row_count",
         labelKey: "exports.columns.rows",
-        enableColumnFilter: false,
+        enableSorting: false,
       }),
       // TEC-211: who requested the job and which file it produces.
       createColumn<ExportJob>({
@@ -102,7 +125,9 @@ export function useExportsColumns(options: ExportsColumnsOptions = {}) {
         id: "created_at",
         accessorKey: "created_at",
         labelKey: "exports.columns.created_at",
-        enableColumnFilter: false,
+        enableSorting: true,
+        filterVariant: "date-range",
+        param: "created",
         cell: ({ row }) => format.dateTime(row.original.created_at),
       }),
       createColumn<ExportJob>({

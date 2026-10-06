@@ -10,6 +10,17 @@ import {
 import { platformRequest } from "@/lib/api/platform-request";
 import { exportDownloadFilename } from "@/features/io/lib/display";
 
+export type ListJobsParams = {
+  limit?: number;
+  offset?: number;
+  sort?: string;
+  q?: string;
+  status?: string;
+  resource?: string;
+  format?: string;
+  created_from?: string;
+  created_to?: string;
+};
 export type ListJobsResult = {
   items: ExportJob[];
   total: number;
@@ -33,12 +44,23 @@ export const exportsService = {
     return platformRequest<ExportJob>("POST", path, { body });
   },
 
-  async list(
-    params: { limit?: number; offset?: number },
-    scope: ExportJobScope = "platform",
-  ) {
+  /**
+   * Job list: `sort`, `q`, CSV `status` / `resource` / `format`,
+   * `created_from` / `created_to` (TEC-365).
+   */
+  async list(params: ListJobsParams, scope: ExportJobScope = "platform") {
     return platformRequest<ListJobsResult>("GET", exportsBase(scope), {
-      query: params,
+      query: {
+        limit: params.limit,
+        offset: params.offset,
+        sort: params.sort,
+        q: params.q,
+        status: params.status,
+        resource: params.resource,
+        format: params.format,
+        created_from: params.created_from,
+        created_to: params.created_to,
+      },
     });
   },
 

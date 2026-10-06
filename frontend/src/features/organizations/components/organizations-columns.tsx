@@ -10,6 +10,7 @@ import { routes } from "@/config/routes";
 import {
   ORGANIZATION_STATUS_TONE,
   ORGANIZATION_STATUS_VALUES,
+  ORGANIZATION_TYPE_VALUES,
 } from "@/features/organizations/constants";
 import {
   OrganizationRowActionsMenu,
@@ -43,8 +44,8 @@ export function useOrganizationsColumns({
         createColumn<Organization>({
           accessorKey: "name",
           labelKey: "organizations.columns.name",
+          // Name / slug / city / phone are searched through the toolbar `q`.
           enableSorting: true,
-          filterVariant: "text",
           gridPrimary: true,
           cell: ({ row }) => (
             <span className="font-medium">{row.original.name}</span>
@@ -54,7 +55,6 @@ export function useOrganizationsColumns({
           accessorKey: "slug",
           labelKey: "organizations.columns.slug",
           enableSorting: true,
-          filterVariant: "text",
           gridSecondary: true,
           cell: ({ row }) => (
             <Link
@@ -70,6 +70,13 @@ export function useOrganizationsColumns({
           accessorKey: "type",
           labelKey: "organizations.columns.type",
           enableSorting: false,
+          filterVariant: "faceted",
+          param: "type",
+          filterOptions: ORGANIZATION_TYPE_VALUES.map((value) => ({
+            value,
+            labelKey: `organizations.types.${value}`,
+            label: value,
+          })),
           cell: ({ row }) =>
             row.original.type
               ? t(`organizations.types.${row.original.type}`)
@@ -86,19 +93,19 @@ export function useOrganizationsColumns({
           accessorKey: "city",
           labelKey: "organizations.columns.city",
           enableSorting: true,
-          filterVariant: "text",
         }),
         createColumn<Organization>({
           accessorKey: "phone",
           labelKey: "organizations.columns.phone",
           enableSorting: false,
-          filterVariant: "text",
         }),
         createColumn<Organization>({
           accessorKey: "plan_code",
           labelKey: "organizations.columns.plan_code",
           enableSorting: false,
-          enableColumnFilter: false,
+          // Free text, comma-separated plan codes (`plan_code=a,b`).
+          filterVariant: "text",
+          param: "plan_code",
           cell: ({ row }) => row.original.plan_code ?? "—",
         }),
         createColumn<Organization>({
@@ -106,6 +113,7 @@ export function useOrganizationsColumns({
           labelKey: "organizations.columns.status",
           enableSorting: true,
           filterVariant: "faceted",
+          param: "status",
           filterOptions: ORGANIZATION_STATUS_VALUES.map((value) => ({
             value,
             labelKey: `organizations.status.${value}`,
@@ -122,11 +130,27 @@ export function useOrganizationsColumns({
           accessorKey: "access_ends_at",
           labelKey: "organizations.columns.access_ends_at",
           enableSorting: true,
-          enableColumnFilter: false,
+          filterVariant: "date-range",
+          param: "access_ends",
           cell: ({ row }) =>
             row.original.access_ends_at
               ? format.dateTime(row.original.access_ends_at)
               : "—",
+        }),
+        createColumn<Organization>({
+          accessorKey: "created_at",
+          labelKey: "organizations.columns.created_at",
+          enableSorting: true,
+          filterVariant: "date-range",
+          param: "created",
+          cell: ({ row }) =>
+            row.original.created_at ? (
+              <span className="text-sm tabular-nums">
+                {format.dateTime(row.original.created_at)}
+              </span>
+            ) : (
+              "—"
+            ),
         }),
         createColumn<Organization>({
           accessorKey: "uuid",

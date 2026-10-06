@@ -192,5 +192,7 @@
   "actions.stock.reclassification.cancelled": "Yeniden sınıflandırma talebi geri çekildi",
   "resources.stock.reclassification": "Stok yeniden sınıflandırma",
   "actions.stock.split.created": "Rulo bölündü",
-  "resources.stock.split": "Rulo bölme"
+  "resources.stock.split": "Rulo bölme",
+  "filters.actor": "Kullanıcıya göre filtrele",
+  "resources.platform.organizations": "İşletmeler"
 }

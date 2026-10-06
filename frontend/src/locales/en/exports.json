@@ -69,5 +69,8 @@
   "status.failed": "Failed",
   "toast.queued": "Export queued. You will be notified when the file is ready.",
   "toast.failed": "Could not start export. Check permissions and filters.",
-  "toast.download_failed": "Could not download the file."
+  "toast.download_failed": "Could not download the file.",
+  "status.queued": "Queued",
+  "status.expired": "Expired",
+  "resources.platform.organizations": "Organizations"
 }

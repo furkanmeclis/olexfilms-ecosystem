@@ -66,6 +66,7 @@ var esCatalog = map[string]string{
 	"export.document":                                  "Exportación",
 	"export.generated_at":                              "Generado",
 	"export.title.platform.users":                      "Exportación de usuarios",
+	"export.title.platform.organizations":              "Exportación de organizaciones",
 	"export.title.platform.roles":                      "Exportación de roles",
 	"export.title.platform.notifications":              "Exportación de notificaciones",
 	"export.title.platform.activity":                   "Exportación del registro de actividad",

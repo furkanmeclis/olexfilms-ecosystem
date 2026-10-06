@@ -66,6 +66,7 @@ var elCatalog = map[string]string{
 	"export.document":                                  "Εξαγωγή",
 	"export.generated_at":                              "Δημιουργήθηκε",
 	"export.title.platform.users":                      "Εξαγωγή χρηστών",
+	"export.title.platform.organizations":              "Εξαγωγή οργανισμών",
 	"export.title.platform.roles":                      "Εξαγωγή ρόλων",
 	"export.title.platform.notifications":              "Εξαγωγή ειδοποιήσεων",
 	"export.title.platform.activity":                   "Εξαγωγή αρχείου δραστηριότητας",

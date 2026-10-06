@@ -15,7 +15,7 @@ import { routes } from "@/config/routes";
 import { useLocale } from "@/providers/locale-provider";
 
 export function useRolesColumns(handlers: RoleRowActionHandlers) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
 
   return useMemo(
     () =>
@@ -23,8 +23,8 @@ export function useRolesColumns(handlers: RoleRowActionHandlers) {
         createColumn<RoleSummary>({
           accessorKey: "name",
           labelKey: "roles.fields.name",
-          enableSorting: false,
-          filterVariant: "text",
+          // Name / slug are searched through the toolbar `q`.
+          enableSorting: true,
           gridPrimary: true,
           cell: ({ row }) => (
             <div className="flex flex-wrap items-center gap-2">
@@ -45,7 +45,8 @@ export function useRolesColumns(handlers: RoleRowActionHandlers) {
         createColumn<RoleSummary>({
           accessorKey: "slug",
           labelKey: "roles.fields.slug",
-          enableSorting: false,
+          enableSorting: true,
+          gridSecondary: true,
           cell: ({ row }) => (
             <code className="text-muted-foreground text-xs">
               {row.original.slug}
@@ -61,6 +62,40 @@ export function useRolesColumns(handlers: RoleRowActionHandlers) {
           cell: ({ row }) => row.original.description ?? "—",
         }),
         createColumn<RoleSummary>({
+          id: "is_system",
+          accessorFn: (row) => (row.is_system ? "true" : "false"),
+          labelKey: "roles.fields.system",
+          enableSorting: true,
+          // `is_system=true|false` (TEC-365).
+          filterVariant: "select",
+          param: "is_system",
+          filterOptions: [
+            { value: "true", labelKey: "roles.labels.system", label: "system" },
+            {
+              value: "false",
+              labelKey: "roles.labels.custom",
+              label: "custom",
+            },
+          ],
+          cell: ({ row }) =>
+            row.original.is_system
+              ? t("roles.labels.system")
+              : t("roles.labels.custom"),
+        }),
+        createColumn<RoleSummary>({
+          accessorKey: "created_at",
+          labelKey: "roles.fields.created_at",
+          enableSorting: true,
+          cell: ({ row }) =>
+            row.original.created_at ? (
+              <span className="text-sm tabular-nums">
+                {format.dateTime(row.original.created_at)}
+              </span>
+            ) : (
+              "—"
+            ),
+        }),
+        createColumn<RoleSummary>({
           id: "actions",
           labelKey: "roles.columns.actions",
           enableSorting: false,
@@ -72,6 +107,6 @@ export function useRolesColumns(handlers: RoleRowActionHandlers) {
           ),
         }),
       ] as ColumnDef<RoleSummary, unknown>[],
-    [handlers, t],
+    [format, handlers, t],
   );
 }

@@ -15,6 +15,9 @@ import {
   Trash2,
   FolderInput,
   History,
+  MoreHorizontal,
+  RotateCcw,
+  type LucideIcon,
 } from "lucide-react";
 
 import {
@@ -24,6 +27,14 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { StorageObject } from "@/features/storage/types";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -46,123 +57,188 @@ export type StorageAction =
   | "restore"
   | "purge";
 
+type StorageMenuEntry = {
+  action: StorageAction;
+  labelKey: string;
+  icon?: LucideIcon;
+  destructive?: boolean;
+  /** Separator before this entry */
+  separator?: boolean;
+};
+
+/** Actions offered for one object (shared by the context and row menus). */
+export function storageMenuEntries(
+  item: StorageObject,
+  { canWrite, trash }: { canWrite: boolean; trash?: boolean },
+): StorageMenuEntry[] {
+  if (trash) {
+    return canWrite
+      ? [
+          { action: "restore", labelKey: "storage.restore", icon: RotateCcw },
+          {
+            action: "purge",
+            labelKey: "storage.purge",
+            icon: Trash2,
+            destructive: true,
+          },
+        ]
+      : [];
+  }
+
+  const folder = item.kind === "folder";
+  const entries: StorageMenuEntry[] = [
+    { action: "open", labelKey: "storage.open", icon: FolderOpen },
+  ];
+  if (!folder) {
+    entries.push(
+      { action: "preview", labelKey: "storage.preview", icon: ExternalLink },
+      { action: "download", labelKey: "storage.download", icon: Download },
+      {
+        action: "copy-link",
+        labelKey: "storage.copy_link",
+        icon: Copy,
+        separator: true,
+      },
+    );
+    if (canWrite) {
+      entries.push(
+        {
+          action: "public",
+          labelKey: "storage.generate_public",
+          icon: Link2,
+        },
+        {
+          action: "signed",
+          labelKey: "storage.generate_signed",
+          icon: Link2,
+        },
+        { action: "qr", labelKey: "storage.generate_qr", icon: QrCode },
+      );
+    }
+  }
+  if (canWrite) {
+    entries.push(
+      {
+        action: "rename",
+        labelKey: "storage.rename",
+        icon: Pencil,
+        separator: true,
+      },
+      { action: "move", labelKey: "storage.move", icon: FolderInput },
+      { action: "copy", labelKey: "storage.copy", icon: Copy },
+      { action: "share", labelKey: "storage.share", icon: Share2 },
+    );
+  }
+  entries.push(
+    {
+      action: "star",
+      labelKey: item.is_starred ? "storage.unstar" : "storage.star",
+      icon: Star,
+    },
+    { action: "details", labelKey: "storage.details", icon: Info },
+  );
+  if (!folder) {
+    entries.push({
+      action: "versions",
+      labelKey: "storage.versions",
+      icon: History,
+    });
+  }
+  if (canWrite) {
+    entries.push({
+      action: "delete",
+      labelKey: "storage.delete",
+      icon: Trash2,
+      destructive: true,
+      separator: true,
+    });
+  }
+  return entries;
+}
+
+type StorageMenuProps = {
+  object: StorageObject;
+  canWrite: boolean;
+  trash?: boolean;
+  onAction: (action: StorageAction, object: StorageObject) => void;
+};
+
+/** Right-click menu around a row / card. */
 export function StorageContextMenu({
   object: item,
   canWrite,
   trash,
   children,
   onAction,
-}: {
-  object: StorageObject;
-  canWrite: boolean;
-  trash?: boolean;
-  children: ReactNode;
-  onAction: (action: StorageAction, object: StorageObject) => void;
-}) {
+}: StorageMenuProps & { children: ReactNode }) {
   const { t } = useLocale();
-  const folder = item.kind === "folder";
-
-  if (trash) {
-    return (
-      <ContextMenu>
-        <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-        <ContextMenuContent>
-          {canWrite ? (
-            <>
-              <ContextMenuItem onSelect={() => onAction("restore", item)}>
-                {t("storage.restore")}
-              </ContextMenuItem>
-              <ContextMenuItem
-                variant="destructive"
-                onSelect={() => onAction("purge", item)}
-              >
-                {t("storage.purge")}
-              </ContextMenuItem>
-            </>
-          ) : null}
-        </ContextMenuContent>
-      </ContextMenu>
-    );
-  }
+  const entries = storageMenuEntries(item, { canWrite, trash });
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
-      <ContextMenuContent className="w-56">
-        <ContextMenuItem onSelect={() => onAction("open", item)}>
-          <FolderOpen /> {t("storage.open")}
-        </ContextMenuItem>
-        {!folder ? (
-          <ContextMenuItem onSelect={() => onAction("preview", item)}>
-            <ExternalLink /> {t("storage.preview")}
-          </ContextMenuItem>
-        ) : null}
-        {!folder ? (
-          <ContextMenuItem onSelect={() => onAction("download", item)}>
-            <Download /> {t("storage.download")}
-          </ContextMenuItem>
-        ) : null}
-        {!folder ? (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem onSelect={() => onAction("copy-link", item)}>
-              <Copy /> {t("storage.copy_link")}
-            </ContextMenuItem>
-            {canWrite ? (
-              <>
-                <ContextMenuItem onSelect={() => onAction("public", item)}>
-                  <Link2 /> {t("storage.generate_public")}
-                </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onAction("signed", item)}>
-                  <Link2 /> {t("storage.generate_signed")}
-                </ContextMenuItem>
-                <ContextMenuItem onSelect={() => onAction("qr", item)}>
-                  <QrCode /> {t("storage.generate_qr")}
-                </ContextMenuItem>
-              </>
-            ) : null}
-          </>
-        ) : null}
-        {canWrite ? (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem onSelect={() => onAction("rename", item)}>
-              <Pencil /> {t("storage.rename")}
-            </ContextMenuItem>
-            <ContextMenuItem onSelect={() => onAction("move", item)}>
-              <FolderInput /> {t("storage.move")}
-            </ContextMenuItem>
-            <ContextMenuItem onSelect={() => onAction("copy", item)}>
-              <Copy /> {t("storage.copy")}
-            </ContextMenuItem>
-            <ContextMenuItem onSelect={() => onAction("share", item)}>
-              <Share2 /> {t("storage.share")}
-            </ContextMenuItem>
-          </>
-        ) : null}
-        <ContextMenuItem onSelect={() => onAction("star", item)}>
-          <Star /> {item.is_starred ? t("storage.unstar") : t("storage.star")}
-        </ContextMenuItem>
-        <ContextMenuItem onSelect={() => onAction("details", item)}>
-          <Info /> {t("storage.details")}
-        </ContextMenuItem>
-        {!folder ? (
-          <ContextMenuItem onSelect={() => onAction("versions", item)}>
-            <History /> {t("storage.versions")}
-          </ContextMenuItem>
-        ) : null}
-        {canWrite ? (
-          <>
-            <ContextMenuSeparator />
+      <ContextMenuContent className="w-56" data-no-row-click="">
+        {entries.map((entry) => {
+          const Icon = entry.icon;
+          return [
+            entry.separator ? (
+              <ContextMenuSeparator key={`${entry.action}-sep`} />
+            ) : null,
             <ContextMenuItem
-              variant="destructive"
-              onSelect={() => onAction("delete", item)}
+              key={entry.action}
+              variant={entry.destructive ? "destructive" : undefined}
+              onSelect={() => onAction(entry.action, item)}
             >
-              <Trash2 /> {t("storage.delete")}
-            </ContextMenuItem>
-          </>
-        ) : null}
+              {Icon ? <Icon /> : null} {t(entry.labelKey)}
+            </ContextMenuItem>,
+          ];
+        })}
       </ContextMenuContent>
     </ContextMenu>
+  );
+}
+
+/** Row actions button (same entries as the context menu). */
+export function StorageActionsMenu({
+  object: item,
+  canWrite,
+  trash,
+  onAction,
+}: StorageMenuProps) {
+  const { t } = useLocale();
+  const entries = storageMenuEntries(item, { canWrite, trash });
+  if (!entries.length) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          aria-label={t("storage.col_actions")}
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56" data-no-row-click="">
+        {entries.map((entry) => {
+          const Icon = entry.icon;
+          return [
+            entry.separator ? (
+              <DropdownMenuSeparator key={`${entry.action}-sep`} />
+            ) : null,
+            <DropdownMenuItem
+              key={entry.action}
+              variant={entry.destructive ? "destructive" : undefined}
+              onSelect={() => onAction(entry.action, item)}
+            >
+              {Icon ? <Icon /> : null} {t(entry.labelKey)}
+            </DropdownMenuItem>,
+          ];
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

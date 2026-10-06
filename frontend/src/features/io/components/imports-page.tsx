@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
@@ -15,6 +15,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { useImportsColumns } from "@/features/io/components/imports-columns";
 import { ioKeys } from "@/features/io/hooks/query-keys";
+import type { ListJobsParams } from "@/features/io/services/exports.service";
 import { importsService } from "@/features/io/services/imports.service";
 import type { ExportJobScope } from "@/features/io/types";
 import { useAppMutation } from "@/lib/query/mutation";
@@ -30,20 +31,7 @@ export function ImportsPage({ scope = "platform", slug }: ImportsPageProps) {
   const { t } = useLocale();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const listState = useServerListState({ initialPageSize: 20 });
   const tenant = scope === "tenant";
-
-  const listQuery = useQuery({
-    queryKey: ioKeys.imports.list(listState.params, scope),
-    queryFn: () =>
-      importsService.list(
-        {
-          limit: listState.params.limit,
-          offset: listState.params.offset,
-        },
-        scope,
-      ),
-  });
 
   const rollback = useAppMutation({
     mutationFn: (uuid: string) => importsService.rollback(uuid, scope),
@@ -55,26 +43,46 @@ export function ImportsPage({ scope = "platform", slug }: ImportsPageProps) {
     },
   });
 
-  const columns = useImportsColumns({
-    onRollback: (uuid) => rollback.mutate(uuid),
-    rollbackPending: rollback.isPending,
-    detailHref: (uuid) =>
+  const { mutate: rollbackMutate } = rollback;
+  const onRollback = useCallback(
+    (uuid: string) => rollbackMutate(uuid),
+    [rollbackMutate],
+  );
+  const detailHref = useCallback(
+    (uuid: string) =>
       tenant && slug
         ? routes.tenant.imports.detail(slug, uuid)
         : routes.platform.imports.detail(uuid),
+    [slug, tenant],
+  );
+  const columns = useImportsColumns({
+    scope,
+    onRollback,
+    rollbackPending: rollback.isPending,
+    detailHref,
   });
-
-  const pageCount = useMemo(() => {
-    const total = listQuery.data?.total ?? 0;
-    const size = listState.pagination.pageSize || 20;
-    return Math.max(1, Math.ceil(total / size));
-  }, [listQuery.data?.total, listState.pagination.pageSize]);
 
   const homeHref =
     tenant && slug ? routes.tenant.home(slug) : routes.platform.home;
   const persistKey = tenant
     ? `tenant-imports-v1-${slug}`
     : "platform-imports-v1";
+
+  // Column meta drives the params: status/resource/format (CSV) and
+  // created_from/_to; sort on created_at/status/resource/format.
+  const listState = useServerListState({
+    columns,
+    initialSort: "-created_at",
+    initialPageSize: 20,
+    persistKey,
+  });
+  const listParams: ListJobsParams = listState.params;
+
+  const listQuery = useQuery({
+    queryKey: ioKeys.imports.list(listParams, scope),
+    queryFn: () => importsService.list(listParams, scope),
+    placeholderData: (previous) => previous,
+  });
 
   return (
     <EntityPage
@@ -116,13 +124,11 @@ export function ImportsPage({ scope = "platform", slug }: ImportsPageProps) {
             ? t("imports.tenant_empty_description")
             : t("imports.empty_description")
         }
-        pageCount={pageCount}
+        rowCount={listQuery.data?.total ?? 0}
         state={listState.tableState}
         features={{
           persistKey,
           rowSelection: false,
-          columnFilters: false,
-          globalFilter: false,
         }}
         toolbarExtra={
           <EntityToolbar

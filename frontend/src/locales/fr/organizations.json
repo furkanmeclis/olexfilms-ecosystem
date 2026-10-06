@@ -126,5 +126,9 @@
   "fields.timezone": "Fuseau horaire",
   "fields.timezone_hint": "Les dates et heures sont affichées dans ce fuseau, sauf si l'utilisateur choisit le sien.",
   "form.section_regional": "Langue et région",
-  "form.section_regional_desc": "Langue et fuseau horaire par défaut pour les utilisateurs, documents et notifications."
+  "form.section_regional_desc": "Langue et fuseau horaire par défaut pour les utilisateurs, documents et notifications.",
+  "columns.created_at": "Créée le",
+  "columns.email": "E-mail",
+  "detail.children": "Sous-organisations",
+  "detail.children_empty": "Aucune sous-organisation pour le moment."
 }

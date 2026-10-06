@@ -145,20 +145,23 @@ const column = (id: string) =>
   );
 
 describe("UsersPage list params", () => {
-  it("sends status as CSV and the roles column filter as role slug", async () => {
+  it("sends status/roles as CSV and created_at as a date range", async () => {
     await render();
     expect(lastParams()).toEqual({ limit: 20, offset: 0, sort: "-created_at" });
 
     await act(async () => {
       captured.table?.state?.onColumnFiltersChange?.([
         { id: "status", value: ["active", "disabled"] },
-        { id: "roles", value: "admin" },
+        { id: "roles", value: ["admin", "support"] },
+        { id: "created_at", value: ["2026-01-01", "2026-02-01"] },
       ]);
     });
 
     expect(lastParams()).toMatchObject({
       status: "active,disabled",
-      role: "admin",
+      role: "admin,support",
+      created_from: "2026-01-01",
+      created_to: "2026-02-01",
       offset: 0,
     });
   });
@@ -167,7 +170,7 @@ describe("UsersPage list params", () => {
     await render();
     const roles = column("roles");
     expect(roles?.meta?.param).toBe("role");
-    expect(roles?.meta?.filterVariant).toBe("select");
+    expect(roles?.meta?.filterVariant).toBe("faceted");
     expect(roles?.meta?.filterOptions?.map((o) => o.value)).toEqual([
       "admin",
       "support",
