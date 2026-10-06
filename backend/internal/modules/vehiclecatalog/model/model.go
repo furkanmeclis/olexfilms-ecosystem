@@ -5,6 +5,7 @@ package model
 import (
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 )
 
@@ -79,12 +80,35 @@ type ModelInput struct {
 	Present map[string]bool `json:"-"`
 }
 
+// BrandSort is the sort contract of GET /v1/vehicle-catalog/brands
+// (TEC-369, docs/list-contract.md). Default: name.
+var BrandSort = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"name": "name", "model_count": "model_count", "active": "active",
+		"created_at": "created_at", "updated_at": "updated_at",
+	},
+	Default: apiquery.SortField{Field: "name"},
+}
+
+// ModelSort is the sort contract of GET /v1/vehicle-catalog/models
+// (TEC-369). Default: brand name, then model name.
+var ModelSort = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"brand": "brand", "name": "name", "year_start": "year_start", "year_stop": "year_stop",
+		"body_type": "body_type", "powertrain": "powertrain", "active": "active",
+		"created_at": "created_at", "updated_at": "updated_at",
+	},
+	Default: apiquery.SortField{Field: "brand"},
+}
+
 // BrandFilter filters the brand list.
 type BrandFilter struct {
-	Q      string
-	Active *bool
-	Limit  int32
-	Offset int32
+	Q       string
+	Active  *bool
+	HasLogo *bool
+	Sort    apiquery.ResolvedSort
+	Limit   int32
+	Offset  int32
 }
 
 // ModelFilter filters the model list / search.
@@ -94,6 +118,24 @@ type ModelFilter struct {
 	Active    *bool
 	// OnlyActiveBrands hides models of inactive brands (pickers).
 	OnlyActiveBrands bool
-	Limit            int32
-	Offset           int32
+	// BodyTypes / Powertrains: any of (exact values, CSV).
+	BodyTypes   []string
+	Powertrains []string
+	// Year: the production span overlaps [Min, Max] (year_min / year_max).
+	Year   apiquery.NumberRange
+	Sort   apiquery.ResolvedSort
+	Limit  int32
+	Offset int32
+}
+
+// FacetValue is one distinct value of a free-text model column.
+type FacetValue struct {
+	Value string `json:"value"`
+	Count int64  `json:"count"`
+}
+
+// ModelFacets are the faceted filter options of the model list (TEC-369).
+type ModelFacets struct {
+	BodyType   []FacetValue `json:"body_type"`
+	Powertrain []FacetValue `json:"powertrain"`
 }

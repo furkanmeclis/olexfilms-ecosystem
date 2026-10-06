@@ -92,10 +92,12 @@ type LocaleInput struct {
 	HTML        string
 }
 
-// ListFilter filters templates.
+// ListFilter filters templates (TEC-369): Kinds is any of; Active and
+// IsDefault are true / false / nil (no filter).
 type ListFilter struct {
-	Kind       string
-	ActiveOnly bool
+	Kinds     []string
+	Active    *bool
+	IsDefault *bool
 }
 
 // Service is the contract template use case.
@@ -182,16 +184,16 @@ func (s *Service) Variables() []model.Variable { return variables }
 
 // List returns templates for the active brand.
 func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]model.Template, error) {
-	var kind pgtype.Text
-	if strings.TrimSpace(f.Kind) != "" {
-		k, err := normalizeKind(f.Kind)
+	kinds := make([]string, 0, len(f.Kinds))
+	for _, raw := range f.Kinds {
+		k, err := normalizeKind(raw)
 		if err != nil {
 			return nil, err
 		}
-		kind = pgtype.Text{String: k, Valid: true}
+		kinds = append(kinds, k)
 	}
 	rows, err := s.repo.Queries().ListContractTemplates(ctx, db.ListContractTemplatesParams{
-		BrandID: c.BrandID, Kind: kind, ActiveOnly: f.ActiveOnly,
+		BrandID: c.BrandID, Kinds: kinds, IsActive: optBool(f.Active), IsDefault: optBool(f.IsDefault),
 	})
 	if err != nil {
 		return nil, err
@@ -1154,6 +1156,13 @@ func NormalizeLocale(raw string) string {
 		}
 	}
 	return ""
+}
+
+func optBool(v *bool) pgtype.Bool {
+	if v == nil {
+		return pgtype.Bool{}
+	}
+	return pgtype.Bool{Bool: *v, Valid: true}
 }
 
 func normalizeKind(raw string) (string, error) {

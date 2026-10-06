@@ -4,6 +4,7 @@ package model
 import (
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 )
 
@@ -108,22 +109,55 @@ type ProductInput struct {
 	MicronSet   bool `json:"-"`
 }
 
+// CategorySort is the sort contract of GET /v1/catalog/categories
+// (TEC-369, docs/list-contract.md). Default: the display order (sort).
+var CategorySort = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"name": "name", "sort": "sort", "active": "active",
+		"created_at": "created_at", "updated_at": "updated_at",
+	},
+	Default: apiquery.SortField{Field: "sort"},
+}
+
+// ProductSort is the sort contract of GET /v1/catalog/products (TEC-369).
+var ProductSort = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"sku": "sku", "name": "name", "category": "category", "unit_type": "unit_type",
+		"warranty_duration_months": "warranty_duration_months", "micron_thickness": "micron_thickness",
+		"active": "active", "created_at": "created_at", "updated_at": "updated_at",
+	},
+	Default: apiquery.SortField{Field: "name"},
+}
+
 // CategoryFilter narrows the category list.
 type CategoryFilter struct {
 	Q      string
 	Active *bool
+	Sort   apiquery.ResolvedSort
 	Limit  int32
 	Offset int32
 }
 
-// ProductFilter narrows the product list.
+// ProductFilter narrows the product list. CategoryUUIDs and UnitTypes are
+// multi-value (any of); the ranges are inclusive (created: [From, Before)).
 type ProductFilter struct {
-	Q            string
-	CategoryUUID *uuid.UUID
-	Active       *bool
-	UnitType     string
-	Limit        int32
-	Offset       int32
+	Q                string
+	CategoryUUIDs    []uuid.UUID
+	Active           *bool
+	UnitTypes        []string
+	UsesFixedBarcode *bool
+	Warranty         apiquery.NumberRange
+	Micron           apiquery.NumberRange
+	Created          apiquery.TimeRange
+	Sort             apiquery.ResolvedSort
+	Limit            int32
+	Offset           int32
+}
+
+// CategoryOrderInput is the body of PUT /v1/catalog/categories/order: the
+// category uuids in the wanted display order (a subset is allowed).
+type CategoryOrderInput struct {
+	UUIDs []uuid.UUID `json:"uuids"`
 }
 
 // BulkActiveResult is the outcome of a bulk activate/deactivate.

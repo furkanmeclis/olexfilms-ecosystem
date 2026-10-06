@@ -17,6 +17,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/vehiclecatalog/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -104,6 +105,9 @@ type Store interface {
 	DeleteCarModel(ctx context.Context, id int64) (int64, error)
 	ListCarModels(ctx context.Context, arg db.ListCarModelsParams) ([]db.ListCarModelsRow, error)
 	CountCarModels(ctx context.Context, arg db.CountCarModelsParams) (int64, error)
+	// TEC-369: faceted filter options of the model list.
+	ListCarModelBodyTypeFacets(ctx context.Context, arg db.ListCarModelBodyTypeFacetsParams) ([]db.ListCarModelBodyTypeFacetsRow, error)
+	ListCarModelPowertrainFacets(ctx context.Context, arg db.ListCarModelPowertrainFacetsParams) ([]db.ListCarModelPowertrainFacetsRow, error)
 }
 
 // Service is the vehicle catalog use case.
@@ -252,14 +256,18 @@ func boolArg(b *bool) pgtype.Bool {
 
 // ListBrands lists brands by name (paged, searchable).
 func (s *Service) ListBrands(ctx context.Context, f model.BrandFilter) ([]model.Brand, int64, error) {
-	q, active := searchArg(f.Q), boolArg(f.Active)
+	q, active, hasLogo := searchArg(f.Q), boolArg(f.Active), boolArg(f.HasLogo)
+	if f.Sort.Key == "" {
+		f.Sort = apiquery.ResolvedSort{Key: model.BrandSort.Default.Field}
+	}
 	rows, err := s.store.ListCarBrands(ctx, db.ListCarBrandsParams{
-		Active: active, Q: q, LimitCount: f.Limit, OffsetCount: f.Offset,
+		Active: active, HasLogo: hasLogo, Q: q, SortKey: f.Sort.Key, SortDesc: f.Sort.Desc,
+		LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := s.store.CountCarBrands(ctx, db.CountCarBrandsParams{Active: active, Q: q})
+	total, err := s.store.CountCarBrands(ctx, db.CountCarBrandsParams{Active: active, HasLogo: hasLogo, Q: q})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -519,8 +527,14 @@ func (s *Service) ListModels(ctx context.Context, f model.ModelFilter) ([]model.
 		brandActive = pgtype.Bool{Bool: true, Valid: true}
 	}
 	q, active := searchArg(f.Q), boolArg(f.Active)
+	if f.Sort.Key == "" {
+		f.Sort = apiquery.ResolvedSort{Key: model.ModelSort.Default.Field}
+	}
+	yearMin, yearMax := yearArg(f.Year.Min), yearArg(f.Year.Max)
 	rows, err := s.store.ListCarModels(ctx, db.ListCarModelsParams{
 		CarBrandID: brandID, Active: active, BrandActive: brandActive, Q: q,
+		BodyTypes: f.BodyTypes, Powertrains: f.Powertrains, YearMin: yearMin, YearMax: yearMax,
+		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc,
 		LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
@@ -528,6 +542,7 @@ func (s *Service) ListModels(ctx context.Context, f model.ModelFilter) ([]model.
 	}
 	total, err := s.store.CountCarModels(ctx, db.CountCarModelsParams{
 		CarBrandID: brandID, Active: active, BrandActive: brandActive, Q: q,
+		BodyTypes: f.BodyTypes, Powertrains: f.Powertrains, YearMin: yearMin, YearMax: yearMax,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -541,6 +556,56 @@ func (s *Service) ListModels(ctx context.Context, f model.ModelFilter) ([]model.
 		}, db.CarBrand{Uuid: r.BrandUuid, Name: r.BrandName, HeroObjectKey: r.BrandHeroObjectKey}))
 	}
 	return out, total, nil
+}
+
+// yearArg narrows a year bound to the int filter argument (the handler
+// accepts whole years 1900..2100 only).
+func yearArg(v *float64) pgtype.Int4 {
+	if v == nil {
+		return pgtype.Int4{}
+	}
+	return pgtype.Int4{Int32: int32(*v), Valid: true}
+}
+
+// ModelFacets returns the distinct body_type / powertrain values (with
+// counts) of the models the same reader would list, optionally inside one
+// brand (TEC-369 faceted filter options).
+func (s *Service) ModelFacets(ctx context.Context, f model.ModelFilter) (model.ModelFacets, error) {
+	var brandID pgtype.Int8
+	if f.BrandUUID != nil {
+		b, err := s.brand(ctx, *f.BrandUUID)
+		if err != nil {
+			return model.ModelFacets{}, err
+		}
+		brandID = pgtype.Int8{Int64: b.ID, Valid: true}
+	}
+	var brandActive pgtype.Bool
+	if f.OnlyActiveBrands {
+		brandActive = pgtype.Bool{Bool: true, Valid: true}
+	}
+	active := boolArg(f.Active)
+	bodies, err := s.store.ListCarModelBodyTypeFacets(ctx, db.ListCarModelBodyTypeFacetsParams{
+		CarBrandID: brandID, Active: active, BrandActive: brandActive,
+	})
+	if err != nil {
+		return model.ModelFacets{}, err
+	}
+	powers, err := s.store.ListCarModelPowertrainFacets(ctx, db.ListCarModelPowertrainFacetsParams{
+		CarBrandID: brandID, Active: active, BrandActive: brandActive,
+	})
+	if err != nil {
+		return model.ModelFacets{}, err
+	}
+	out := model.ModelFacets{
+		BodyType: make([]model.FacetValue, 0, len(bodies)), Powertrain: make([]model.FacetValue, 0, len(powers)),
+	}
+	for _, r := range bodies {
+		out.BodyType = append(out.BodyType, model.FacetValue{Value: r.Value, Count: r.Count})
+	}
+	for _, r := range powers {
+		out.Powertrain = append(out.Powertrain, model.FacetValue{Value: r.Value, Count: r.Count})
+	}
+	return out, nil
 }
 
 // GetModel returns one model.

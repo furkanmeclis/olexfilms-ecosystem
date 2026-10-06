@@ -14,6 +14,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
 )
@@ -121,21 +122,32 @@ func (b itemBody) input() usecase.ItemInput {
 	}
 }
 
+// listFilter reads q, category / recurrence (CSV) and active (TEC-369).
+func listFilter(w http.ResponseWriter, r *http.Request) (usecase.ListFilter, bool) {
+	values := r.URL.Query()
+	f := usecase.ListFilter{Q: strings.TrimSpace(values.Get("q"))}
+	var err error
+	if f.Active, err = apiquery.Bool(values, "active"); err != nil {
+		response.QueryValidation(w, r, err)
+		return f, false
+	}
+	if f.Categories, err = apiquery.EnumList(values, "category", usecase.Categories...); err != nil {
+		response.QueryValidation(w, r, err)
+		return f, false
+	}
+	if f.Recurrences, err = apiquery.EnumList(values, "recurrence", usecase.Recurrences...); err != nil {
+		response.QueryValidation(w, r, err)
+		return f, false
+	}
+	return f, true
+}
+
 func (h *Handler) ListPlatform(w http.ResponseWriter, r *http.Request) {
-	var active *bool
-	switch strings.TrimSpace(r.URL.Query().Get("active")) {
-	case "":
-	case "true":
-		v := true
-		active = &v
-	case "false":
-		v := false
-		active = &v
-	default:
-		response.ValidationError(w, r, []response.Detail{{Field: "active", Message: "must be true or false"}})
+	f, ok := listFilter(w, r)
+	if !ok {
 		return
 	}
-	items, err := h.svc.ListPlatform(r.Context(), orgctx.MustScope(r.Context()), r.URL.Query().Get("category"), active)
+	items, err := h.svc.ListPlatform(r.Context(), orgctx.MustScope(r.Context()), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -411,7 +423,11 @@ func (h *Handler) DeleteOverride(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListVisible(w http.ResponseWriter, r *http.Request) {
-	items, err := h.svc.ListVisible(r.Context(), orgctx.MustScope(r.Context()), viewer(r))
+	f, ok := listFilter(w, r)
+	if !ok {
+		return
+	}
+	items, err := h.svc.ListVisible(r.Context(), orgctx.MustScope(r.Context()), viewer(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return

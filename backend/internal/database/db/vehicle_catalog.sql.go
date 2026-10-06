@@ -15,17 +15,19 @@ import (
 const countCarBrands = `-- name: CountCarBrands :one
 SELECT COUNT(*)::bigint FROM car_brands b
 WHERE ($1::bool IS NULL OR b.active = $1::bool)
-  AND ($2::text IS NULL OR b.name ILIKE '%' || $2::text || '%'
-       OR b.external_id = $2::text)
+  AND ($2::bool IS NULL OR (b.logo_object_key IS NOT NULL) = $2::bool)
+  AND ($3::text IS NULL OR b.name ILIKE '%' || $3::text || '%'
+       OR b.external_id = $3::text)
 `
 
 type CountCarBrandsParams struct {
-	Active pgtype.Bool `json:"active"`
-	Q      pgtype.Text `json:"q"`
+	Active  pgtype.Bool `json:"active"`
+	HasLogo pgtype.Bool `json:"has_logo"`
+	Q       pgtype.Text `json:"q"`
 }
 
 func (q *Queries) CountCarBrands(ctx context.Context, arg CountCarBrandsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countCarBrands, arg.Active, arg.Q)
+	row := q.db.QueryRow(ctx, countCarBrands, arg.Active, arg.HasLogo, arg.Q)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -38,14 +40,30 @@ JOIN car_brands b ON b.id = m.car_brand_id
 WHERE ($1::bigint IS NULL OR m.car_brand_id = $1::bigint)
   AND ($2::bool IS NULL OR m.active = $2::bool)
   AND ($3::bool IS NULL OR b.active = $3::bool)
-  AND ($4::text IS NULL OR (b.name || ' ' || m.name) ILIKE '%' || $4::text || '%'
-       OR m.external_id = $4::text)
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR m.body_type = ANY ($4::text[])
+  )
+  AND (
+    COALESCE(cardinality($5::text[]), 0) = 0
+    OR m.powertrain = ANY ($5::text[])
+  )
+  -- Model year range: the production span [year_start, year_stop] overlaps
+  -- [year_min, year_max]; an open end (NULL) counts as unbounded.
+  AND ($6::int IS NULL OR m.year_start IS NULL OR m.year_start <= $6::int)
+  AND ($7::int IS NULL OR m.year_stop IS NULL OR m.year_stop >= $7::int)
+  AND ($8::text IS NULL OR (b.name || ' ' || m.name) ILIKE '%' || $8::text || '%'
+       OR m.external_id = $8::text)
 `
 
 type CountCarModelsParams struct {
 	CarBrandID  pgtype.Int8 `json:"car_brand_id"`
 	Active      pgtype.Bool `json:"active"`
 	BrandActive pgtype.Bool `json:"brand_active"`
+	BodyTypes   []string    `json:"body_types"`
+	Powertrains []string    `json:"powertrains"`
+	YearMax     pgtype.Int4 `json:"year_max"`
+	YearMin     pgtype.Int4 `json:"year_min"`
 	Q           pgtype.Text `json:"q"`
 }
 
@@ -54,6 +72,10 @@ func (q *Queries) CountCarModels(ctx context.Context, arg CountCarModelsParams) 
 		arg.CarBrandID,
 		arg.Active,
 		arg.BrandActive,
+		arg.BodyTypes,
+		arg.Powertrains,
+		arg.YearMax,
+		arg.YearMin,
 		arg.Q,
 	)
 	var column_1 int64
@@ -265,15 +287,46 @@ SELECT b.id, b.uuid, b.external_id, b.name, b.logo_object_key, b.hero_object_key
        (SELECT COUNT(*) FROM car_models m WHERE m.car_brand_id = b.id)::bigint AS model_count
 FROM car_brands b
 WHERE ($1::bool IS NULL OR b.active = $1::bool)
-  AND ($2::text IS NULL OR b.name ILIKE '%' || $2::text || '%'
-       OR b.external_id = $2::text)
-ORDER BY lower(b.name) ASC, b.id ASC
-LIMIT $4 OFFSET $3
+  AND ($2::bool IS NULL OR (b.logo_object_key IS NOT NULL) = $2::bool)
+  AND ($3::text IS NULL OR b.name ILIKE '%' || $3::text || '%'
+       OR b.external_id = $3::text)
+ORDER BY
+  CASE WHEN NOT $4::bool THEN
+    CASE $5::text WHEN 'name' THEN lower(b.name) END
+  END ASC,
+  CASE WHEN $4::bool THEN
+    CASE $5::text WHEN 'name' THEN lower(b.name) END
+  END DESC,
+  CASE WHEN NOT $4::bool THEN
+    CASE $5::text WHEN 'model_count' THEN (SELECT COUNT(*) FROM car_models m WHERE m.car_brand_id = b.id) END
+  END ASC,
+  CASE WHEN $4::bool THEN
+    CASE $5::text WHEN 'model_count' THEN (SELECT COUNT(*) FROM car_models m WHERE m.car_brand_id = b.id) END
+  END DESC,
+  CASE WHEN NOT $4::bool THEN
+    CASE $5::text WHEN 'active' THEN b.active END
+  END ASC,
+  CASE WHEN $4::bool THEN
+    CASE $5::text WHEN 'active' THEN b.active END
+  END DESC,
+  CASE WHEN NOT $4::bool THEN
+    CASE $5::text WHEN 'created_at' THEN b.created_at WHEN 'updated_at' THEN b.updated_at END
+  END ASC,
+  CASE WHEN $4::bool THEN
+    CASE $5::text WHEN 'created_at' THEN b.created_at WHEN 'updated_at' THEN b.updated_at END
+  END DESC,
+  lower(b.name) ASC,
+  CASE WHEN $4::bool THEN b.id END DESC,
+  b.id ASC
+LIMIT $7 OFFSET $6
 `
 
 type ListCarBrandsParams struct {
 	Active      pgtype.Bool `json:"active"`
+	HasLogo     pgtype.Bool `json:"has_logo"`
 	Q           pgtype.Text `json:"q"`
+	SortDesc    bool        `json:"sort_desc"`
+	SortKey     string      `json:"sort_key"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
@@ -293,10 +346,14 @@ type ListCarBrandsRow struct {
 	ModelCount    int64              `json:"model_count"`
 }
 
+// TEC-369: sort keys from model.BrandSort (docs/list-contract.md); default name.
 func (q *Queries) ListCarBrands(ctx context.Context, arg ListCarBrandsParams) ([]ListCarBrandsRow, error) {
 	rows, err := q.db.Query(ctx, listCarBrands,
 		arg.Active,
+		arg.HasLogo,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -331,6 +388,95 @@ func (q *Queries) ListCarBrands(ctx context.Context, arg ListCarBrandsParams) ([
 	return items, nil
 }
 
+const listCarModelBodyTypeFacets = `-- name: ListCarModelBodyTypeFacets :many
+
+SELECT m.body_type::text AS value, COUNT(*)::bigint AS count
+FROM car_models m
+JOIN car_brands b ON b.id = m.car_brand_id
+WHERE m.body_type IS NOT NULL
+  AND ($1::bigint IS NULL OR m.car_brand_id = $1::bigint)
+  AND ($2::bool IS NULL OR m.active = $2::bool)
+  AND ($3::bool IS NULL OR b.active = $3::bool)
+GROUP BY m.body_type
+ORDER BY lower(m.body_type), m.body_type
+`
+
+type ListCarModelBodyTypeFacetsParams struct {
+	CarBrandID  pgtype.Int8 `json:"car_brand_id"`
+	Active      pgtype.Bool `json:"active"`
+	BrandActive pgtype.Bool `json:"brand_active"`
+}
+
+type ListCarModelBodyTypeFacetsRow struct {
+	Value string `json:"value"`
+	Count int64  `json:"count"`
+}
+
+// TEC-369: faceted filter options of the model list (distinct free-text
+// values with counts), scoped like the list.
+func (q *Queries) ListCarModelBodyTypeFacets(ctx context.Context, arg ListCarModelBodyTypeFacetsParams) ([]ListCarModelBodyTypeFacetsRow, error) {
+	rows, err := q.db.Query(ctx, listCarModelBodyTypeFacets, arg.CarBrandID, arg.Active, arg.BrandActive)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCarModelBodyTypeFacetsRow{}
+	for rows.Next() {
+		var i ListCarModelBodyTypeFacetsRow
+		if err := rows.Scan(&i.Value, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCarModelPowertrainFacets = `-- name: ListCarModelPowertrainFacets :many
+SELECT m.powertrain::text AS value, COUNT(*)::bigint AS count
+FROM car_models m
+JOIN car_brands b ON b.id = m.car_brand_id
+WHERE m.powertrain IS NOT NULL
+  AND ($1::bigint IS NULL OR m.car_brand_id = $1::bigint)
+  AND ($2::bool IS NULL OR m.active = $2::bool)
+  AND ($3::bool IS NULL OR b.active = $3::bool)
+GROUP BY m.powertrain
+ORDER BY lower(m.powertrain), m.powertrain
+`
+
+type ListCarModelPowertrainFacetsParams struct {
+	CarBrandID  pgtype.Int8 `json:"car_brand_id"`
+	Active      pgtype.Bool `json:"active"`
+	BrandActive pgtype.Bool `json:"brand_active"`
+}
+
+type ListCarModelPowertrainFacetsRow struct {
+	Value string `json:"value"`
+	Count int64  `json:"count"`
+}
+
+func (q *Queries) ListCarModelPowertrainFacets(ctx context.Context, arg ListCarModelPowertrainFacetsParams) ([]ListCarModelPowertrainFacetsRow, error) {
+	rows, err := q.db.Query(ctx, listCarModelPowertrainFacets, arg.CarBrandID, arg.Active, arg.BrandActive)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCarModelPowertrainFacetsRow{}
+	for rows.Next() {
+		var i ListCarModelPowertrainFacetsRow
+		if err := rows.Scan(&i.Value, &i.Count); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCarModels = `-- name: ListCarModels :many
 SELECT m.id, m.uuid, m.car_brand_id, m.external_id, m.name, m.body_type, m.powertrain, m.year_start, m.year_stop, m.hero_object_key, m.active, m.created_at, m.updated_at, b.uuid AS brand_uuid, b.name AS brand_name, b.hero_object_key AS brand_hero_object_key
 FROM car_models m
@@ -338,17 +484,65 @@ JOIN car_brands b ON b.id = m.car_brand_id
 WHERE ($1::bigint IS NULL OR m.car_brand_id = $1::bigint)
   AND ($2::bool IS NULL OR m.active = $2::bool)
   AND ($3::bool IS NULL OR b.active = $3::bool)
-  AND ($4::text IS NULL OR (b.name || ' ' || m.name) ILIKE '%' || $4::text || '%'
-       OR m.external_id = $4::text)
-ORDER BY lower(b.name) ASC, lower(m.name) ASC, m.id ASC
-LIMIT $6 OFFSET $5
+  AND (
+    COALESCE(cardinality($4::text[]), 0) = 0
+    OR m.body_type = ANY ($4::text[])
+  )
+  AND (
+    COALESCE(cardinality($5::text[]), 0) = 0
+    OR m.powertrain = ANY ($5::text[])
+  )
+  -- Model year range: the production span [year_start, year_stop] overlaps
+  -- [year_min, year_max]; an open end (NULL) counts as unbounded.
+  AND ($6::int IS NULL OR m.year_start IS NULL OR m.year_start <= $6::int)
+  AND ($7::int IS NULL OR m.year_stop IS NULL OR m.year_stop >= $7::int)
+  AND ($8::text IS NULL OR (b.name || ' ' || m.name) ILIKE '%' || $8::text || '%'
+       OR m.external_id = $8::text)
+ORDER BY
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'name' THEN lower(m.name) WHEN 'brand' THEN lower(b.name) END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'name' THEN lower(m.name) WHEN 'brand' THEN lower(b.name) END
+  END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'year_start' THEN m.year_start END ASC NULLS LAST,
+  CASE WHEN $9::bool AND $10::text = 'year_start' THEN m.year_start END DESC NULLS LAST,
+  CASE WHEN NOT $9::bool AND $10::text = 'year_stop' THEN m.year_stop END ASC NULLS LAST,
+  CASE WHEN $9::bool AND $10::text = 'year_stop' THEN m.year_stop END DESC NULLS LAST,
+  CASE WHEN NOT $9::bool AND $10::text = 'body_type' THEN lower(m.body_type) END ASC NULLS LAST,
+  CASE WHEN $9::bool AND $10::text = 'body_type' THEN lower(m.body_type) END DESC NULLS LAST,
+  CASE WHEN NOT $9::bool AND $10::text = 'powertrain' THEN lower(m.powertrain) END ASC NULLS LAST,
+  CASE WHEN $9::bool AND $10::text = 'powertrain' THEN lower(m.powertrain) END DESC NULLS LAST,
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'active' THEN m.active END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'active' THEN m.active END
+  END DESC,
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'created_at' THEN m.created_at WHEN 'updated_at' THEN m.updated_at END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'created_at' THEN m.created_at WHEN 'updated_at' THEN m.updated_at END
+  END DESC,
+  lower(b.name) ASC,
+  lower(m.name) ASC,
+  CASE WHEN $9::bool THEN m.id END DESC,
+  m.id ASC
+LIMIT $12 OFFSET $11
 `
 
 type ListCarModelsParams struct {
 	CarBrandID  pgtype.Int8 `json:"car_brand_id"`
 	Active      pgtype.Bool `json:"active"`
 	BrandActive pgtype.Bool `json:"brand_active"`
+	BodyTypes   []string    `json:"body_types"`
+	Powertrains []string    `json:"powertrains"`
+	YearMax     pgtype.Int4 `json:"year_max"`
+	YearMin     pgtype.Int4 `json:"year_min"`
 	Q           pgtype.Text `json:"q"`
+	SortDesc    bool        `json:"sort_desc"`
+	SortKey     string      `json:"sort_key"`
 	OffsetCount int32       `json:"offset_count"`
 	LimitCount  int32       `json:"limit_count"`
 }
@@ -373,12 +567,19 @@ type ListCarModelsRow struct {
 }
 
 // Search matches the model name, "brand model" and the external id.
+// TEC-369: sort keys from model.ModelSort (docs/list-contract.md); default brand.
 func (q *Queries) ListCarModels(ctx context.Context, arg ListCarModelsParams) ([]ListCarModelsRow, error) {
 	rows, err := q.db.Query(ctx, listCarModels,
 		arg.CarBrandID,
 		arg.Active,
 		arg.BrandActive,
+		arg.BodyTypes,
+		arg.Powertrains,
+		arg.YearMax,
+		arg.YearMin,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -415,6 +616,37 @@ func (q *Queries) ListCarModels(ctx context.Context, arg ListCarModelsParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const setCarBrandActiveByUUID = `-- name: SetCarBrandActiveByUUID :one
+UPDATE car_brands SET active = $1
+WHERE uuid = $2
+RETURNING id, uuid, external_id, name, logo_object_key, hero_object_key, show_name, logo_height, active, created_at, updated_at
+`
+
+type SetCarBrandActiveByUUIDParams struct {
+	Active bool      `json:"active"`
+	Uuid   uuid.UUID `json:"uuid"`
+}
+
+// TEC-369 bulk activate/deactivate.
+func (q *Queries) SetCarBrandActiveByUUID(ctx context.Context, arg SetCarBrandActiveByUUIDParams) (CarBrand, error) {
+	row := q.db.QueryRow(ctx, setCarBrandActiveByUUID, arg.Active, arg.Uuid)
+	var i CarBrand
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ExternalID,
+		&i.Name,
+		&i.LogoObjectKey,
+		&i.HeroObjectKey,
+		&i.ShowName,
+		&i.LogoHeight,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const setCarBrandHero = `-- name: SetCarBrandHero :one
@@ -470,6 +702,38 @@ func (q *Queries) SetCarBrandLogo(ctx context.Context, arg SetCarBrandLogoParams
 		&i.HeroObjectKey,
 		&i.ShowName,
 		&i.LogoHeight,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setCarModelActiveByUUID = `-- name: SetCarModelActiveByUUID :one
+UPDATE car_models SET active = $1
+WHERE uuid = $2
+RETURNING id, uuid, car_brand_id, external_id, name, body_type, powertrain, year_start, year_stop, hero_object_key, active, created_at, updated_at
+`
+
+type SetCarModelActiveByUUIDParams struct {
+	Active bool      `json:"active"`
+	Uuid   uuid.UUID `json:"uuid"`
+}
+
+func (q *Queries) SetCarModelActiveByUUID(ctx context.Context, arg SetCarModelActiveByUUIDParams) (CarModel, error) {
+	row := q.db.QueryRow(ctx, setCarModelActiveByUUID, arg.Active, arg.Uuid)
+	var i CarModel
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.CarBrandID,
+		&i.ExternalID,
+		&i.Name,
+		&i.BodyType,
+		&i.Powertrain,
+		&i.YearStart,
+		&i.YearStop,
+		&i.HeroObjectKey,
 		&i.Active,
 		&i.CreatedAt,
 		&i.UpdatedAt,
