@@ -90,13 +90,53 @@ SELECT * FROM barcode_batches
 WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
 
 -- name: ListBarcodeBatches :many
-SELECT * FROM barcode_batches
-WHERE organization_id = sqlc.arg(organization_id)
-ORDER BY created_at DESC, id DESC
+-- TEC-375: list contract (docs/list-contract.md), keys from stock usecase
+-- BarcodeBatchSort. q: prefix, first/last barcode, product name or sku, or
+-- any barcode of the batch.
+SELECT b.* FROM barcode_batches b
+WHERE b.organization_id = sqlc.arg(organization_id)
+  AND (COALESCE(cardinality(sqlc.narg(product_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM products fp
+                  WHERE fp.id = b.product_id AND fp.uuid = ANY (sqlc.narg(product_uuids)::uuid[])))
+  AND (sqlc.narg(printed)::bool IS NULL OR (b.print_count > 0) = sqlc.narg(printed)::bool)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR b.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR b.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR b.prefix ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR (b.prefix || '-' || lpad(b.first_seq::text, 8, '0')) ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR (b.prefix || '-' || lpad(b.last_seq::text, 8, '0')) ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM products qp
+                  WHERE qp.id = b.product_id
+                    AND (qp.name ILIKE '%' || sqlc.narg(q)::text || '%' OR qp.sku ILIKE '%' || sqlc.narg(q)::text || '%'))
+       OR EXISTS (SELECT 1 FROM units qu
+                  WHERE qu.batch_id = b.id AND qu.barcode ILIKE '%' || sqlc.narg(q)::text || '%'))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN b.created_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN b.created_at END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'quantity' THEN b.quantity WHEN 'print_count' THEN b.print_count END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'quantity' THEN b.quantity WHEN 'print_count' THEN b.print_count END END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN b.id END DESC,
+  b.id ASC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- name: CountBarcodeBatches :one
-SELECT COUNT(*)::bigint FROM barcode_batches WHERE organization_id = sqlc.arg(organization_id);
+SELECT COUNT(*)::bigint FROM barcode_batches b
+WHERE b.organization_id = sqlc.arg(organization_id)
+  AND (COALESCE(cardinality(sqlc.narg(product_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM products fp
+                  WHERE fp.id = b.product_id AND fp.uuid = ANY (sqlc.narg(product_uuids)::uuid[])))
+  AND (sqlc.narg(printed)::bool IS NULL OR (b.print_count > 0) = sqlc.narg(printed)::bool)
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR b.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR b.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR b.prefix ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR (b.prefix || '-' || lpad(b.first_seq::text, 8, '0')) ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR (b.prefix || '-' || lpad(b.last_seq::text, 8, '0')) ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR EXISTS (SELECT 1 FROM products qp
+                  WHERE qp.id = b.product_id
+                    AND (qp.name ILIKE '%' || sqlc.narg(q)::text || '%' OR qp.sku ILIKE '%' || sqlc.narg(q)::text || '%'))
+       OR EXISTS (SELECT 1 FROM units qu
+                  WHERE qu.batch_id = b.id AND qu.barcode ILIKE '%' || sqlc.narg(q)::text || '%'));
 
 -- name: MarkBarcodeBatchPrinted :one
 UPDATE barcode_batches

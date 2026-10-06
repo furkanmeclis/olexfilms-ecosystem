@@ -78,18 +78,42 @@ func (q *Queries) ConfirmStockEntry(ctx context.Context, arg ConfirmStockEntryPa
 }
 
 const countStockEntries = `-- name: CountStockEntries :one
-SELECT count(*) FROM stock_entries
-WHERE organization_id = $1
-  AND ($2::text IS NULL OR status = $2::text)
+SELECT count(*) FROM stock_entries e
+WHERE e.organization_id = $1
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR e.status = ANY ($2::text[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR e.mode = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = e.warehouse_id AND fw.uuid = ANY ($4::uuid[])))
+  AND ($5::timestamptz IS NULL OR e.created_at >= $5::timestamptz)
+  AND ($6::timestamptz IS NULL OR e.created_at < $6::timestamptz)
+  AND ($7::text IS NULL
+       OR e.note ILIKE '%' || $7::text || '%'
+       OR EXISTS (SELECT 1 FROM warehouses qw
+                  WHERE qw.id = e.warehouse_id
+                    AND (qw.name ILIKE '%' || $7::text || '%' OR qw.code ILIKE '%' || $7::text || '%')))
 `
 
 type CountStockEntriesParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	Status         pgtype.Text `json:"status"`
+	OrganizationID int64              `json:"organization_id"`
+	Statuses       []string           `json:"statuses"`
+	Modes          []string           `json:"modes"`
+	WarehouseUuids []uuid.UUID        `json:"warehouse_uuids"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countStockEntries, arg.OrganizationID, arg.Status)
+	row := q.db.QueryRow(ctx, countStockEntries,
+		arg.OrganizationID,
+		arg.Statuses,
+		arg.Modes,
+		arg.WarehouseUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -376,24 +400,64 @@ func (q *Queries) InsertStockEntryLine(ctx context.Context, arg InsertStockEntry
 }
 
 const listStockEntries = `-- name: ListStockEntries :many
-SELECT id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at FROM stock_entries
-WHERE organization_id = $1
-  AND ($2::text IS NULL OR status = $2::text)
-ORDER BY created_at DESC, id DESC
-LIMIT $4 OFFSET $3
+SELECT e.id, e.uuid, e.organization_id, e.brand_id, e.warehouse_id, e.mode, e.status, e.note, e.import_batch_id, e.created_by_user_id, e.confirmed_by_user_id, e.confirmed_at, e.cancelled_at, e.created_at, e.updated_at FROM stock_entries e
+WHERE e.organization_id = $1
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR e.status = ANY ($2::text[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR e.mode = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = e.warehouse_id AND fw.uuid = ANY ($4::uuid[])))
+  AND ($5::timestamptz IS NULL OR e.created_at >= $5::timestamptz)
+  AND ($6::timestamptz IS NULL OR e.created_at < $6::timestamptz)
+  AND ($7::text IS NULL
+       OR e.note ILIKE '%' || $7::text || '%'
+       OR EXISTS (SELECT 1 FROM warehouses qw
+                  WHERE qw.id = e.warehouse_id
+                    AND (qw.name ILIKE '%' || $7::text || '%' OR qw.code ILIKE '%' || $7::text || '%')))
+ORDER BY
+  CASE WHEN NOT $8::bool THEN CASE $9::text WHEN 'created_at' THEN e.created_at END END ASC,
+  CASE WHEN $8::bool THEN CASE $9::text WHEN 'created_at' THEN e.created_at END END DESC,
+  CASE WHEN NOT $8::bool THEN CASE $9::text WHEN 'status' THEN
+    CASE e.status WHEN 'draft' THEN 1 WHEN 'confirmed' THEN 2 WHEN 'undone' THEN 3 ELSE 4 END END END ASC,
+  CASE WHEN $8::bool THEN CASE $9::text WHEN 'status' THEN
+    CASE e.status WHEN 'draft' THEN 1 WHEN 'confirmed' THEN 2 WHEN 'undone' THEN 3 ELSE 4 END END END DESC,
+  CASE WHEN NOT $8::bool THEN CASE $9::text WHEN 'warehouse' THEN
+    (SELECT sw.name FROM warehouses sw WHERE sw.id = e.warehouse_id) END END ASC NULLS LAST,
+  CASE WHEN $8::bool THEN CASE $9::text WHEN 'warehouse' THEN
+    (SELECT sw.name FROM warehouses sw WHERE sw.id = e.warehouse_id) END END DESC NULLS LAST,
+  CASE WHEN $8::bool THEN e.id END DESC,
+  e.id ASC
+LIMIT $11 OFFSET $10
 `
 
 type ListStockEntriesParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	Status         pgtype.Text `json:"status"`
-	PageOffset     int32       `json:"page_offset"`
-	PageLimit      int32       `json:"page_limit"`
+	OrganizationID int64              `json:"organization_id"`
+	Statuses       []string           `json:"statuses"`
+	Modes          []string           `json:"modes"`
+	WarehouseUuids []uuid.UUID        `json:"warehouse_uuids"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
+	SortDesc       bool               `json:"sort_desc"`
+	SortKey        string             `json:"sort_key"`
+	PageOffset     int32              `json:"page_offset"`
+	PageLimit      int32              `json:"page_limit"`
 }
 
+// TEC-375: list contract (docs/list-contract.md), keys from warehouse
+// usecase EntrySort. status sorts by flow rank; warehouse by name (import
+// entries have none and come last). q: note, warehouse name or code.
 func (q *Queries) ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error) {
 	rows, err := q.db.Query(ctx, listStockEntries,
 		arg.OrganizationID,
-		arg.Status,
+		arg.Statuses,
+		arg.Modes,
+		arg.WarehouseUuids,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.PageOffset,
 		arg.PageLimit,
 	)

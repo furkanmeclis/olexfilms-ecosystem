@@ -99,6 +99,8 @@ WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
 -- name: ListEODReports :many
 -- scope: '' every report, 'system' only system reports, 'warehouse' only
 -- warehouse reports (warehouse_id narrows to one warehouse).
+-- TEC-375: sort keys from warehouse usecase EODSort (report_date,
+-- generated_at); within one key the system report comes first.
 SELECT * FROM eod_reports
 WHERE organization_id = sqlc.arg(organization_id)
   AND (sqlc.narg(warehouse_id)::bigint IS NULL OR warehouse_id = sqlc.narg(warehouse_id)::bigint)
@@ -107,7 +109,15 @@ WHERE organization_id = sqlc.arg(organization_id)
        OR (sqlc.arg(scope)::text = 'warehouse' AND warehouse_id IS NOT NULL))
   AND (sqlc.narg(date_from)::date IS NULL OR report_date >= sqlc.narg(date_from)::date)
   AND (sqlc.narg(date_to)::date IS NULL OR report_date <= sqlc.narg(date_to)::date)
-ORDER BY report_date DESC, warehouse_id NULLS FIRST, id DESC
+  AND (COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0 OR kind = ANY (sqlc.narg(kinds)::text[]))
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'report_date' THEN report_date END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'report_date' THEN report_date END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'generated_at' THEN generated_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'generated_at' THEN generated_at END END DESC,
+  warehouse_id NULLS FIRST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountEODReports :one
@@ -118,7 +128,8 @@ WHERE organization_id = sqlc.arg(organization_id)
        OR (sqlc.arg(scope)::text = 'system' AND warehouse_id IS NULL)
        OR (sqlc.arg(scope)::text = 'warehouse' AND warehouse_id IS NOT NULL))
   AND (sqlc.narg(date_from)::date IS NULL OR report_date >= sqlc.narg(date_from)::date)
-  AND (sqlc.narg(date_to)::date IS NULL OR report_date <= sqlc.narg(date_to)::date);
+  AND (sqlc.narg(date_to)::date IS NULL OR report_date <= sqlc.narg(date_to)::date)
+  AND (COALESCE(cardinality(sqlc.narg(kinds)::text[]), 0) = 0 OR kind = ANY (sqlc.narg(kinds)::text[]));
 
 -- name: ListEODReportOrganizations :many
 -- The organizations the cron reports on: active centers and distributors

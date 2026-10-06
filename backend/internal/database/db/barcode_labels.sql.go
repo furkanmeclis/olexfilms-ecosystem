@@ -30,11 +30,43 @@ func (q *Queries) ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaul
 }
 
 const countBarcodeBatches = `-- name: CountBarcodeBatches :one
-SELECT COUNT(*)::bigint FROM barcode_batches WHERE organization_id = $1
+SELECT COUNT(*)::bigint FROM barcode_batches b
+WHERE b.organization_id = $1
+  AND (COALESCE(cardinality($2::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM products fp
+                  WHERE fp.id = b.product_id AND fp.uuid = ANY ($2::uuid[])))
+  AND ($3::bool IS NULL OR (b.print_count > 0) = $3::bool)
+  AND ($4::timestamptz IS NULL OR b.created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR b.created_at < $5::timestamptz)
+  AND ($6::text IS NULL
+       OR b.prefix ILIKE '%' || $6::text || '%'
+       OR (b.prefix || '-' || lpad(b.first_seq::text, 8, '0')) ILIKE '%' || $6::text || '%'
+       OR (b.prefix || '-' || lpad(b.last_seq::text, 8, '0')) ILIKE '%' || $6::text || '%'
+       OR EXISTS (SELECT 1 FROM products qp
+                  WHERE qp.id = b.product_id
+                    AND (qp.name ILIKE '%' || $6::text || '%' OR qp.sku ILIKE '%' || $6::text || '%'))
+       OR EXISTS (SELECT 1 FROM units qu
+                  WHERE qu.batch_id = b.id AND qu.barcode ILIKE '%' || $6::text || '%'))
 `
 
-func (q *Queries) CountBarcodeBatches(ctx context.Context, organizationID int64) (int64, error) {
-	row := q.db.QueryRow(ctx, countBarcodeBatches, organizationID)
+type CountBarcodeBatchesParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	ProductUuids   []uuid.UUID        `json:"product_uuids"`
+	Printed        pgtype.Bool        `json:"printed"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
+}
+
+func (q *Queries) CountBarcodeBatches(ctx context.Context, arg CountBarcodeBatchesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countBarcodeBatches,
+		arg.OrganizationID,
+		arg.ProductUuids,
+		arg.Printed,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -386,20 +418,62 @@ func (q *Queries) GetLabelTemplateByUUID(ctx context.Context, arg GetLabelTempla
 }
 
 const listBarcodeBatches = `-- name: ListBarcodeBatches :many
-SELECT id, uuid, organization_id, brand_id, product_id, quantity, prefix, first_seq, last_seq, meters, template_id, print_count, last_printed_at, created_by_user_id, created_at FROM barcode_batches
-WHERE organization_id = $1
-ORDER BY created_at DESC, id DESC
-LIMIT $3 OFFSET $2
+SELECT b.id, b.uuid, b.organization_id, b.brand_id, b.product_id, b.quantity, b.prefix, b.first_seq, b.last_seq, b.meters, b.template_id, b.print_count, b.last_printed_at, b.created_by_user_id, b.created_at FROM barcode_batches b
+WHERE b.organization_id = $1
+  AND (COALESCE(cardinality($2::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM products fp
+                  WHERE fp.id = b.product_id AND fp.uuid = ANY ($2::uuid[])))
+  AND ($3::bool IS NULL OR (b.print_count > 0) = $3::bool)
+  AND ($4::timestamptz IS NULL OR b.created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR b.created_at < $5::timestamptz)
+  AND ($6::text IS NULL
+       OR b.prefix ILIKE '%' || $6::text || '%'
+       OR (b.prefix || '-' || lpad(b.first_seq::text, 8, '0')) ILIKE '%' || $6::text || '%'
+       OR (b.prefix || '-' || lpad(b.last_seq::text, 8, '0')) ILIKE '%' || $6::text || '%'
+       OR EXISTS (SELECT 1 FROM products qp
+                  WHERE qp.id = b.product_id
+                    AND (qp.name ILIKE '%' || $6::text || '%' OR qp.sku ILIKE '%' || $6::text || '%'))
+       OR EXISTS (SELECT 1 FROM units qu
+                  WHERE qu.batch_id = b.id AND qu.barcode ILIKE '%' || $6::text || '%'))
+ORDER BY
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'created_at' THEN b.created_at END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'created_at' THEN b.created_at END END DESC,
+  CASE WHEN NOT $7::bool THEN CASE $8::text WHEN 'quantity' THEN b.quantity WHEN 'print_count' THEN b.print_count END END ASC,
+  CASE WHEN $7::bool THEN CASE $8::text WHEN 'quantity' THEN b.quantity WHEN 'print_count' THEN b.print_count END END DESC,
+  CASE WHEN $7::bool THEN b.id END DESC,
+  b.id ASC
+LIMIT $10 OFFSET $9
 `
 
 type ListBarcodeBatchesParams struct {
-	OrganizationID int64 `json:"organization_id"`
-	PageOffset     int32 `json:"page_offset"`
-	PageLimit      int32 `json:"page_limit"`
+	OrganizationID int64              `json:"organization_id"`
+	ProductUuids   []uuid.UUID        `json:"product_uuids"`
+	Printed        pgtype.Bool        `json:"printed"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	Q              pgtype.Text        `json:"q"`
+	SortDesc       bool               `json:"sort_desc"`
+	SortKey        string             `json:"sort_key"`
+	PageOffset     int32              `json:"page_offset"`
+	PageLimit      int32              `json:"page_limit"`
 }
 
+// TEC-375: list contract (docs/list-contract.md), keys from stock usecase
+// BarcodeBatchSort. q: prefix, first/last barcode, product name or sku, or
+// any barcode of the batch.
 func (q *Queries) ListBarcodeBatches(ctx context.Context, arg ListBarcodeBatchesParams) ([]BarcodeBatch, error) {
-	rows, err := q.db.Query(ctx, listBarcodeBatches, arg.OrganizationID, arg.PageOffset, arg.PageLimit)
+	rows, err := q.db.Query(ctx, listBarcodeBatches,
+		arg.OrganizationID,
+		arg.ProductUuids,
+		arg.Printed,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

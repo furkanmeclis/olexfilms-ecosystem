@@ -9143,12 +9143,29 @@ paths:
       description: >-
         Needs `stock.read` in the active organization; only the center
         issues barcodes (K14), any other organization type answers 403
-        STOCK_BARCODES_CENTER_ONLY. Newest first.
+        STOCK_BARCODES_CENTER_ONLY. TEC-375 (docs/list-contract.md): `sort`
+        is one of created_at (default `-created_at`), quantity, print_count
+        (id tiebreak). `q` matches the prefix, the first or last barcode,
+        the product name or SKU, or any barcode of the batch. Labels of a
+        batch: GET /v1/stock/barcodes/{uuid}/labels.pdf.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: product_uuid
+          in: query
+          description: >-
+            Comma separated product uuids (any of).
+          schema: { type: string }
+        - name: printed
+          in: query
+          description: "true: printed at least once (print_count > 0); false: never printed."
+          schema: { type: boolean }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
       responses:
         "200":
           description: Batches
@@ -9156,6 +9173,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeBarcodeBatchPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -9515,14 +9534,44 @@ paths:
       summary: Stock counts of the active organization
       description: >-
         Needs `warehouse.read` with the warehouse module on (center or
-        distributor, 403 for dealers, K12). Newest first; no expected values.
+        distributor, 403 for dealers, K12). No expected values. TEC-375 (docs/list-contract.md): `sort`
+        is one of created_at (default `-created_at`), status (flow rank
+        draft → cancelled), warehouse (name), with an id tiebreak; `status`,
+        `method`, `visibility`, `scope_type` and `warehouse_uuid` are comma
+        separated any-of filters; `q` matches the note and the warehouse
+        name or code. A per-count CSV export is GET .../{uuid}/export.
       security:
         - bearerAuth: []
       parameters:
         - name: status
           in: query
-          required: false
-          schema: { $ref: "#/components/schemas/StockCountStatus" }
+          description: >-
+            Comma separated StockCountStatus values (any of).
+          schema: { type: string }
+        - name: method
+          in: query
+          description: >-
+            Comma separated methods (location_first, unit_first, product_qty, initial_placement).
+          schema: { type: string }
+        - name: visibility
+          in: query
+          description: >-
+            Comma separated visibilities (blind, guided).
+          schema: { type: string }
+        - name: scope_type
+          in: query
+          description: >-
+            Comma separated scope types (warehouse, room, location, product).
+          schema: { type: string }
+        - name: warehouse_uuid
+          in: query
+          description: >-
+            Comma separated warehouse uuids (any of).
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -9661,11 +9710,20 @@ paths:
       tags: [Warehouse]
       operationId: listStockCountScans
       summary: Recorded scans of a count
-      description: Needs `warehouse.read`. No expected values.
+      description: >-
+        Needs `warehouse.read`. No expected values. TEC-375: `limit` / `offset` page the scans
+        (oldest first) and `total` counts every scan of the count; without
+        either parameter every scan comes back (limit = total).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/ResourceUUID"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
       responses:
         "200":
           description: Scans, oldest first
@@ -9967,14 +10025,35 @@ paths:
       description: >-
         Needs `warehouse.read` with the warehouse module on (center or
         distributor, K12). Newest first; entries written by an applied stock
-        import (TEC-158) have mode `import`. An unknown status is 400
-        VALIDATION_ERROR.
+        import (TEC-158) have mode `import`. TEC-375
+        (docs/list-contract.md): `sort` is one of created_at (default
+        `-created_at`), status (flow rank draft, confirmed, undone,
+        cancelled), warehouse (name; import entries last), with an id
+        tiebreak; `status`, `mode` and `warehouse_uuid` are comma separated
+        any-of filters; `q` matches the note and the warehouse name or
+        code. An unknown value is 400 VALIDATION_ERROR.
       security:
         - bearerAuth: []
       parameters:
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/StockEntryStatus" }
+          description: >-
+            Comma separated StockEntryStatus values (any of).
+          schema: { type: string }
+        - name: mode
+          in: query
+          description: >-
+            Comma separated modes (with_existing, generate_new, import).
+          schema: { type: string }
+        - name: warehouse_uuid
+          in: query
+          description: >-
+            Comma separated warehouse uuids (any of).
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100 }
@@ -10324,15 +10403,35 @@ paths:
       operationId: listWarehouseTransfers
       summary: List the warehouse transfers of the active organization
       description: >-
-        Needs `warehouse.read`. Newest first. Transfers between
-        organizations are `/v1/transfers` (TEC-197). An unknown status is
-        400 VALIDATION_ERROR.
+        Needs `warehouse.read`. Transfers between organizations are
+        `/v1/transfers` (TEC-197). TEC-375 (docs/list-contract.md): `sort` is one of
+        transfer_no, created_at (default `-created_at`), status (flow rank
+        draft, in_transit, completed, cancelled), with an id tiebreak;
+        `status`, `from_warehouse_uuid` and `to_warehouse_uuid` are comma
+        separated any-of filters; `q` matches the transfer number and the
+        note. An unknown value is 400 VALIDATION_ERROR.
       security:
         - bearerAuth: []
       parameters:
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/WarehouseTransferStatus" }
+          description: >-
+            Comma separated WarehouseTransferStatus values (any of).
+          schema: { type: string }
+        - name: from_warehouse_uuid
+          in: query
+          description: >-
+            Comma separated source warehouse uuids (any of).
+          schema: { type: string }
+        - name: to_warehouse_uuid
+          in: query
+          description: >-
+            Comma separated target warehouse uuids (any of).
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100 }
@@ -10627,12 +10726,23 @@ paths:
         report before the warehouse reports of a day). The hourly cron writes
         the previous local day of every center / distributor with a
         warehouse (kind auto); a manual run rewrites a day (kind manual).
+        TEC-375 (docs/list-contract.md): `sort` is one of report_date
+        (default `-report_date`), generated_at; within one value the system
+        report comes first, then an id tiebreak. `kind` is a comma separated
+        any-of filter (auto, manual). PDF of a report: POST
+        /v1/warehouse/eod-reports/{uuid}/pdf.
       security:
         - bearerAuth: []
       parameters:
         - name: warehouse_uuid
           in: query
           schema: { type: string, format: uuid }
+        - name: kind
+          in: query
+          description: >-
+            Comma separated kinds (auto, manual).
+          schema: { type: string }
+        - $ref: "#/components/parameters/Sort"
         - name: scope
           in: query
           description: "system: only system reports; warehouse: only warehouse reports."
@@ -14235,16 +14345,40 @@ paths:
       description: |
         Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
 
-        Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Newest first; no expected values.
+        Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). No expected values. TEC-375: same list contract (sort, CSV filters, q, created range) as the panel endpoint.
       security:
       - bearerAuth: []
       parameters:
       - $ref: '#/components/parameters/MobileApiVersion'
       - name: status
         in: query
-        required: false
+        description: Comma separated StockCountStatus values (any of).
         schema:
-          $ref: '#/components/schemas/StockCountStatus'
+          type: string
+      - name: method
+        in: query
+        description: Comma separated methods (any of).
+        schema:
+          type: string
+      - name: visibility
+        in: query
+        description: Comma separated visibilities (any of).
+        schema:
+          type: string
+      - name: scope_type
+        in: query
+        description: Comma separated scope types (any of).
+        schema:
+          type: string
+      - name: warehouse_uuid
+        in: query
+        description: Comma separated warehouse uuids (any of).
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Q'
+      - $ref: '#/components/parameters/Sort'
+      - $ref: '#/components/parameters/CreatedFrom'
+      - $ref: '#/components/parameters/CreatedTo'
       - $ref: '#/components/parameters/Limit'
       - $ref: '#/components/parameters/Offset'
       responses:
@@ -14401,12 +14535,23 @@ paths:
       description: |
         Mobile mirror (TEC-235) of `GET /v1/warehouse/stock-counts/{uuid}/scans`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
 
-        Needs `warehouse.read`. No expected values.
+        Needs `warehouse.read`. No expected values. TEC-375: optional `limit` / `offset` page the scans; without them every scan comes back.
       security:
       - bearerAuth: []
       parameters:
       - $ref: '#/components/parameters/MobileApiVersion'
       - $ref: '#/components/parameters/ResourceUUID'
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          minimum: 0
       responses:
         '200':
           description: Scans, oldest first
@@ -14651,15 +14796,30 @@ paths:
       description: |
         Mobile mirror (TEC-235) of `GET /v1/warehouse/transfers`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
 
-        Needs `warehouse.read`. Newest first. Transfers between organizations are `/v1/transfers` (TEC-197). An unknown status is 400 VALIDATION_ERROR.
+        Needs `warehouse.read`. Transfers between organizations are `/v1/transfers` (TEC-197). TEC-375: same list contract (sort, CSV filters, q, created range) as the panel endpoint. An unknown value is 400 VALIDATION_ERROR.
       security:
       - bearerAuth: []
       parameters:
       - $ref: '#/components/parameters/MobileApiVersion'
       - name: status
         in: query
+        description: Comma separated WarehouseTransferStatus values (any of).
         schema:
-          $ref: '#/components/schemas/WarehouseTransferStatus'
+          type: string
+      - name: from_warehouse_uuid
+        in: query
+        description: Comma separated source warehouse uuids (any of).
+        schema:
+          type: string
+      - name: to_warehouse_uuid
+        in: query
+        description: Comma separated target warehouse uuids (any of).
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Q'
+      - $ref: '#/components/parameters/Sort'
+      - $ref: '#/components/parameters/CreatedFrom'
+      - $ref: '#/components/parameters/CreatedTo'
       - name: limit
         in: query
         schema:
@@ -26662,11 +26822,14 @@ components:
         success: { type: boolean, enum: [true] }
         data:
           type: object
-          required: [items]
+          required: [items, total, limit, offset]
           properties:
             items:
               type: array
               items: { $ref: "#/components/schemas/StockCountScan" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockCountReport:

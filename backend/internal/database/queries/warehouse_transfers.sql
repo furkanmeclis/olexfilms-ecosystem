@@ -20,16 +20,50 @@ WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id)
 FOR UPDATE;
 
 -- name: ListWarehouseTransfers :many
-SELECT * FROM warehouse_transfers
-WHERE organization_id = sqlc.arg(organization_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-ORDER BY created_at DESC, id DESC
+-- TEC-375: list contract (docs/list-contract.md), keys from warehouse
+-- usecase TransferSort. status sorts by flow rank. q: transfer no, note.
+SELECT t.* FROM warehouse_transfers t
+WHERE t.organization_id = sqlc.arg(organization_id)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR t.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(from_warehouse_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = t.from_warehouse_id AND fw.uuid = ANY (sqlc.narg(from_warehouse_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(to_warehouse_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses tw
+                  WHERE tw.id = t.to_warehouse_id AND tw.uuid = ANY (sqlc.narg(to_warehouse_uuids)::uuid[])))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR t.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR t.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR t.transfer_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR t.note ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'transfer_no' THEN t.transfer_no END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'transfer_no' THEN t.transfer_no END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE t.status WHEN 'draft' THEN 1 WHEN 'in_transit' THEN 2 WHEN 'completed' THEN 3 ELSE 4 END END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'status' THEN
+    CASE t.status WHEN 'draft' THEN 1 WHEN 'in_transit' THEN 2 WHEN 'completed' THEN 3 ELSE 4 END END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN t.created_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN t.created_at END END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN t.id END DESC,
+  t.id ASC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- name: CountWarehouseTransfers :one
-SELECT count(*) FROM warehouse_transfers
-WHERE organization_id = sqlc.arg(organization_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text);
+SELECT count(*) FROM warehouse_transfers t
+WHERE t.organization_id = sqlc.arg(organization_id)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR t.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(from_warehouse_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses fw
+                  WHERE fw.id = t.from_warehouse_id AND fw.uuid = ANY (sqlc.narg(from_warehouse_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(to_warehouse_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM warehouses tw
+                  WHERE tw.id = t.to_warehouse_id AND tw.uuid = ANY (sqlc.narg(to_warehouse_uuids)::uuid[])))
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR t.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR t.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR t.transfer_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR t.note ILIKE '%' || sqlc.narg(q)::text || '%');
 
 -- name: ShipWarehouseTransfer :one
 UPDATE warehouse_transfers

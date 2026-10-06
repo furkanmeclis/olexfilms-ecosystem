@@ -651,26 +651,29 @@ func (s *Counts) Create(ctx context.Context, c ScanCaller, in CountInput) (Stock
 	return s.view(ctx, s.q, row)
 }
 
-// List lists the organization's counts, newest first.
-func (s *Counts) List(ctx context.Context, c ScanCaller, status string, limit, offset int32) ([]StockCount, int64, error) {
+// List lists the organization's counts (TEC-375: list contract, default
+// newest first).
+func (s *Counts) List(ctx context.Context, c ScanCaller, f CountListFilter) ([]StockCount, int64, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return nil, 0, err
 	}
-	var st pgtype.Text
-	if status != "" {
-		switch status {
-		case CountStatusDraft, CountStatusInProgress, CountStatusPendingReview, CountStatusApproved, CountStatusCancelled:
-		default:
-			return nil, 0, invalid("status", "is not a count status")
-		}
-		st = pgtype.Text{String: status, Valid: true}
+	f.Sort = orDefault(f.Sort, CountSort)
+	cp := db.CountStockCountsParams{
+		OrganizationID: org, Statuses: f.Statuses, Methods: f.Methods, Visibilities: f.Visibilities,
+		ScopeTypes: f.ScopeTypes, WarehouseUuids: f.WarehouseUUIDs,
+		CreatedFrom: listTS(f.CreatedFrom), CreatedBefore: listTS(f.CreatedBefore), Q: listQ(f.Q),
 	}
-	rows, err := s.q.ListStockCounts(ctx, db.ListStockCountsParams{OrganizationID: org, Status: st, RowLimit: limit, RowOffset: offset})
+	rows, err := s.q.ListStockCounts(ctx, db.ListStockCountsParams{
+		OrganizationID: cp.OrganizationID, Statuses: cp.Statuses, Methods: cp.Methods, Visibilities: cp.Visibilities,
+		ScopeTypes: cp.ScopeTypes, WarehouseUuids: cp.WarehouseUuids,
+		CreatedFrom: cp.CreatedFrom, CreatedBefore: cp.CreatedBefore, Q: cp.Q,
+		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc, RowLimit: f.Limit, RowOffset: f.Offset,
+	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("warehouse: list counts: %w", err)
 	}
-	total, err := s.q.CountStockCounts(ctx, db.CountStockCountsParams{OrganizationID: org, Status: st})
+	total, err := s.q.CountStockCounts(ctx, cp)
 	if err != nil {
 		return nil, 0, fmt.Errorf("warehouse: count counts: %w", err)
 	}
@@ -1150,19 +1153,37 @@ func (s *Counts) serialExpectation(ctx context.Context, q *db.Queries, cnt db.St
 	return exp, nil
 }
 
-// Scans lists the recorded scans (no expected values).
-func (s *Counts) Scans(ctx context.Context, c ScanCaller, id uuid.UUID) ([]CountScan, error) {
+// ScanPage pages the scan list (TEC-375); nil returns every scan.
+type ScanPage struct {
+	Limit, Offset int32
+}
+
+// Scans lists the recorded scans in scan order (no expected values) and
+// the total number of scans of the count.
+func (s *Counts) Scans(ctx context.Context, c ScanCaller, id uuid.UUID, page *ScanPage) ([]CountScan, int64, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	cnt, err := s.q.GetStockCountByUUID(ctx, db.GetStockCountByUUIDParams{Uuid: id, OrganizationID: org})
 	if err != nil {
-		return nil, notFound(err, ErrCountNotFound)
+		return nil, 0, notFound(err, ErrCountNotFound)
 	}
-	rows, err := s.q.ListStockCountScans(ctx, cnt.ID)
+	var rows []db.StockCountScan
+	var total int64
+	if page == nil {
+		rows, err = s.q.ListStockCountScans(ctx, cnt.ID)
+		total = int64(len(rows))
+	} else {
+		rows, err = s.q.ListStockCountScansPage(ctx, db.ListStockCountScansPageParams{
+			CountID: cnt.ID, RowLimit: page.Limit, RowOffset: page.Offset,
+		})
+		if err == nil {
+			total, err = s.q.CountStockCountScans(ctx, cnt.ID)
+		}
+	}
 	if err != nil {
-		return nil, fmt.Errorf("warehouse: count scans: %w", err)
+		return nil, 0, fmt.Errorf("warehouse: count scans: %w", err)
 	}
 	var locIDs, productIDs, unitIDs []int64
 	for _, r := range rows {
@@ -1178,13 +1199,13 @@ func (s *Counts) Scans(ctx context.Context, c ScanCaller, id uuid.UUID) ([]Count
 	}
 	r, err := loadRefs(ctx, s.q, locIDs, productIDs, unitIDs)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	out := make([]CountScan, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, scanView(row, r))
 	}
-	return out, nil
+	return out, total, nil
 }
 
 // DeleteScan removes a scan of an in-progress count.
