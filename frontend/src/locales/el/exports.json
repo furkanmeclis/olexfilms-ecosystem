@@ -73,5 +73,7 @@
   "status.queued": "Στην ουρά",
   "status.expired": "Έληξε",
   "resources.platform.organizations": "Οργανισμοί",
-  "resources.leads.list": "Δυνητικοί πελάτες"
+  "resources.leads.list": "Δυνητικοί πελάτες",
+  "resources.services.list": "Υπηρεσίες",
+  "resources.warranties.list": "Εγγυήσεις"
 }

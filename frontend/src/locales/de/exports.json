@@ -73,5 +73,7 @@
   "status.queued": "In Warteschlange",
   "status.expired": "Abgelaufen",
   "resources.platform.organizations": "Organisationen",
-  "resources.leads.list": "Leads"
+  "resources.leads.list": "Leads",
+  "resources.services.list": "Services",
+  "resources.warranties.list": "Garantien"
 }

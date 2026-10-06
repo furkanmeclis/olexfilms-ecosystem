@@ -1,3 +1,4 @@
+import type { ServerListQuery } from "@/components/entity";
 import { apiConfig } from "@/config/api";
 import type { components } from "@/generated/api";
 import { platformRequest } from "@/lib/api/platform-request";
@@ -20,15 +21,16 @@ export type ServiceStatusLog = Schemas["ServiceStatusLog"];
 export type ServiceImage = Schemas["ServiceImage"];
 export type ServiceWarranty = Schemas["ServiceWarranty"];
 
-/** GET /v1/services filters (TEC-183); dates are ISO bounds. */
-export type ServiceListQuery = {
-  q?: string;
-  status?: ServiceStatus;
-  created_from?: string;
-  created_to?: string;
-  limit: number;
-  offset: number;
-};
+/**
+ * GET /v1/services params (TEC-183, TEC-377): limit / offset, one sort field
+ * (`service_no`, `status`, `created_at`, `updated_at`, `completed_at`,
+ * `plate`, `organization`), `q`, CSV `status` / `organization_uuid` and the
+ * `created_*` / `completed_*` day windows.
+ */
+export type ServiceListQuery = ServerListQuery;
+
+/** List export (TEC-377): same filters, search and sort as the list. */
+export const SERVICES_EXPORT_PATH = "/v1/services/export";
 
 export type StockUnitQuery = {
   barcode?: string;

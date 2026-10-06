@@ -73,5 +73,7 @@
   "status.queued": "En file d’attente",
   "status.expired": "Expiré",
   "resources.platform.organizations": "Organisations",
-  "resources.leads.list": "Prospects"
+  "resources.leads.list": "Prospects",
+  "resources.services.list": "Services",
+  "resources.warranties.list": "Garanties"
 }

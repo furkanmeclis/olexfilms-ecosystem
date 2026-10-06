@@ -73,5 +73,7 @@
   "status.queued": "In coda",
   "status.expired": "Scaduto",
   "resources.platform.organizations": "Organizzazioni",
-  "resources.leads.list": "Contatti commerciali"
+  "resources.leads.list": "Contatti commerciali",
+  "resources.services.list": "Servizi",
+  "resources.warranties.list": "Garanzie"
 }

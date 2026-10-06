@@ -1,10 +1,13 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ChartColumn } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
+import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -19,7 +22,6 @@ import {
   CLAIM_REPORT_TABS,
   dealerFilterOptions,
   failureRowKey,
-  filterDealerRows,
   formatClaimRate,
   isPeriodValid,
   tabGroup,
@@ -28,19 +30,22 @@ import {
 import {
   claimReportKeys,
   claimReportsService,
+  type ByDealerRow,
   type ClaimReportPeriod,
+  type FailureRateRow,
+  type PartsRow,
 } from "@/features/warranty-claims/services/claim-reports.service";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-
-const selectClass =
-  "border-input bg-background h-9 w-full rounded-md border px-2 text-sm";
 
 /**
  * Tenant > Warranty claim report (TEC-340 on the TEC-338 endpoints): period
  * filter, product / lot failure rates (table + bar chart), claims by dealer
  * (with a dealer filter limited to the caller's scope) and part
  * distribution; each tab exports to CSV / XLSX through the export center.
+ * TEC-378: each report is a client-side DataTable (the API returns the
+ * full aggregate) with sortable counts and rates; the dealer filter is the
+ * organization facet of the by-dealer table.
  */
 export function WarrantyClaimReportsPage({ slug }: { slug: string }) {
   const { t } = useLocale();
@@ -152,19 +157,20 @@ export function WarrantyClaimReportsPage({ slug }: { slug: string }) {
   );
 }
 
-function Th({ children, end }: { children: ReactNode; end?: boolean }) {
-  return (
-    <th className={`p-2 font-medium ${end ? "text-end" : "text-start"}`}>
-      {children}
-    </th>
-  );
-}
+/** Right-aligned numeric column of the report tables. */
+const NUMERIC = {
+  headerClassName: "text-end",
+  cellClassName: "text-end tabular-nums",
+};
 
-function Td({ children, end }: { children: ReactNode; end?: boolean }) {
-  return (
-    <td className={`p-2 ${end ? "text-end tabular-nums" : ""}`}>{children}</td>
-  );
-}
+export const CLAIM_REPORT_PERSIST_KEYS = {
+  product: "tenant-claim-report-product-v1",
+  lot: "tenant-claim-report-lot-v1",
+  dealer: "tenant-claim-report-dealer-v1",
+  parts: "tenant-claim-report-parts-v1",
+} as const;
+
+const ORG_TYPES = ["center", "distributor", "dealer"] as const;
 
 function ReportState({
   isLoading,
@@ -227,8 +233,82 @@ function FailureRateSection({
     enabled,
     placeholderData: keepPreviousData,
   });
-  const rows = report.data?.group === group ? report.data.items : [];
-  const rate = (v: number) => formatClaimRate(v, { locale });
+  const rows = useMemo(
+    () => (report.data?.group === group ? report.data.items : []),
+    [report.data, group],
+  );
+
+  const columns = useMemo(() => {
+    const rate = (v: number) => formatClaimRate(v, { locale });
+    const count = (
+      key: "warranty_count" | "claim_count" | "approved_claim_count",
+      labelKey: string,
+    ) =>
+      createColumn<FailureRateRow>({
+        accessorKey: key,
+        labelKey,
+        enableSorting: true,
+        meta: NUMERIC,
+        cell: ({ row }) => format.number(row.original[key]),
+      });
+    return [
+      createColumn<FailureRateRow>({
+        id: "product",
+        accessorFn: (row) => row.product_name,
+        labelKey: "warranty.claim_reports.columns.product",
+        enableSorting: true,
+        enableHiding: false,
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <div data-testid="claim-report-failure-row">
+            <div>{row.original.product_name}</div>
+            <div className="text-muted-foreground font-mono text-xs" dir="ltr">
+              {row.original.product_sku}
+            </div>
+          </div>
+        ),
+      }),
+      ...(tab === "lot"
+        ? [
+            createColumn<FailureRateRow>({
+              id: "lot",
+              accessorFn: (row) => row.lot_code ?? "",
+              labelKey: "warranty.claim_reports.columns.lot",
+              enableSorting: true,
+              cell: ({ row }) => (
+                <span className="font-mono text-xs" dir="ltr">
+                  {row.original.lot_code ?? "—"}
+                </span>
+              ),
+            }),
+          ]
+        : []),
+      count("warranty_count", "warranty.claim_reports.columns.warranties"),
+      count("claim_count", "warranty.claim_reports.columns.claims"),
+      count("approved_claim_count", "warranty.claim_reports.columns.approved"),
+      createColumn<FailureRateRow>({
+        accessorKey: "claim_rate",
+        labelKey: "warranty.claim_reports.columns.claim_rate",
+        enableSorting: true,
+        meta: NUMERIC,
+        cell: ({ row }) => (
+          <span data-testid="claim-rate">{rate(row.original.claim_rate)}</span>
+        ),
+      }),
+      createColumn<FailureRateRow>({
+        accessorKey: "approved_rate",
+        labelKey: "warranty.claim_reports.columns.approved_rate",
+        enableSorting: true,
+        gridSecondary: true,
+        meta: NUMERIC,
+        cell: ({ row }) => (
+          <span data-testid="approved-rate">
+            {rate(row.original.approved_rate)}
+          </span>
+        ),
+      }),
+    ] as ColumnDef<FailureRateRow, unknown>[];
+  }, [format, locale, tab]);
 
   return (
     <Card>
@@ -243,64 +323,18 @@ function FailureRateSection({
           onRetry={() => void report.refetch()}
         >
           <FailureRateChart rows={rows} />
-          <div className="overflow-x-auto">
-            <table
-              className="w-full text-sm"
-              data-testid="claim-report-failure-table"
-            >
-              <thead>
-                <tr className="text-muted-foreground border-b text-xs">
-                  <Th>{t("warranty.claim_reports.columns.product")}</Th>
-                  {tab === "lot" ? (
-                    <Th>{t("warranty.claim_reports.columns.lot")}</Th>
-                  ) : null}
-                  <Th end>{t("warranty.claim_reports.columns.warranties")}</Th>
-                  <Th end>{t("warranty.claim_reports.columns.claims")}</Th>
-                  <Th end>{t("warranty.claim_reports.columns.approved")}</Th>
-                  <Th end>{t("warranty.claim_reports.columns.claim_rate")}</Th>
-                  <Th end>
-                    {t("warranty.claim_reports.columns.approved_rate")}
-                  </Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr
-                    key={failureRowKey(r)}
-                    className="border-b last:border-0"
-                    data-testid="claim-report-failure-row"
-                  >
-                    <Td>
-                      <div>{r.product_name}</div>
-                      <div
-                        className="text-muted-foreground font-mono text-xs"
-                        dir="ltr"
-                      >
-                        {r.product_sku}
-                      </div>
-                    </Td>
-                    {tab === "lot" ? (
-                      <Td>
-                        <span className="font-mono text-xs" dir="ltr">
-                          {r.lot_code ?? "—"}
-                        </span>
-                      </Td>
-                    ) : null}
-                    <Td end>{format.number(r.warranty_count)}</Td>
-                    <Td end>{format.number(r.claim_count)}</Td>
-                    <Td end>{format.number(r.approved_claim_count)}</Td>
-                    <Td end>
-                      <span data-testid="claim-rate">{rate(r.claim_rate)}</span>
-                    </Td>
-                    <Td end>
-                      <span data-testid="approved-rate">
-                        {rate(r.approved_rate)}
-                      </span>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div data-testid="claim-report-failure-table">
+            <EntityTable
+              key={tab}
+              columns={columns}
+              data={rows}
+              getRowId={failureRowKey}
+              manual={CLIENT_SIDE_MANUAL}
+              initialState={{ pagination: { pageIndex: 0, pageSize: 20 } }}
+              emptyTitle={t("warranty.claim_reports.empty")}
+              emptyDescription=""
+              features={{ persistKey: CLAIM_REPORT_PERSIST_KEYS[tab] }}
+            />
           </div>
         </ReportState>
       </CardContent>
@@ -316,18 +350,85 @@ function ByDealerSection({
   enabled: boolean;
 }) {
   const { t, format, locale } = useLocale();
-  const [dealer, setDealer] = useState("");
   const report = useQuery({
     queryKey: claimReportKeys.byDealer(query),
     queryFn: () => claimReportsService.byDealer(query),
     enabled,
     placeholderData: keepPreviousData,
   });
-  const all = useMemo(() => report.data?.items ?? [], [report.data]);
-  const options = useMemo(() => dealerFilterOptions(all), [all]);
-  // A dealer that left the scope (new period) falls back to "all".
-  const selected = options.some((o) => o.value === dealer) ? dealer : "";
-  const rows = filterDealerRows(all, selected);
+  const rows = useMemo(() => report.data?.items ?? [], [report.data]);
+  // Dealer options come only from the scoped rows (a distributor sees its
+  // own subtree); the facet filters by organization uuid.
+  const dealerOptions = useMemo(() => dealerFilterOptions(rows), [rows]);
+
+  const columns = useMemo(() => {
+    const count = (
+      key: "claim_count" | "approved_claim_count" | "rejected_claim_count",
+      labelKey: string,
+    ) =>
+      createColumn<ByDealerRow>({
+        accessorKey: key,
+        labelKey,
+        enableSorting: true,
+        meta: NUMERIC,
+        cell: ({ row }) => format.number(row.original[key]),
+      });
+    return [
+      createColumn<ByDealerRow>({
+        id: "organization",
+        accessorFn: (row) => row.organization_name,
+        labelKey: "warranty.claim_reports.columns.organization",
+        enableSorting: true,
+        enableHiding: false,
+        gridPrimary: true,
+        filterVariant: "faceted",
+        filterOptions: dealerOptions,
+        enableColumnFilter: dealerOptions.length > 0,
+        filterFn: (row, _id, value: unknown) => {
+          const selected = value as string[] | undefined;
+          return (
+            !selected?.length ||
+            selected.includes(row.original.organization_uuid)
+          );
+        },
+        cell: ({ row }) => (
+          <span
+            data-testid="claim-report-dealer-row"
+            data-uuid={row.original.organization_uuid}
+          >
+            {row.original.organization_name}
+          </span>
+        ),
+      }),
+      createColumn<ByDealerRow>({
+        accessorKey: "organization_type",
+        labelKey: "warranty.claim_reports.columns.org_type",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: ORG_TYPES.map((value) => ({
+          value,
+          label: value,
+          labelKey: `warranty.claim_reports.org_type.${value}`,
+        })),
+        cell: ({ row }) =>
+          t(
+            `warranty.claim_reports.org_type.${row.original.organization_type}`,
+          ),
+      }),
+      count("claim_count", "warranty.claim_reports.columns.claims"),
+      count("approved_claim_count", "warranty.claim_reports.columns.approved"),
+      count("rejected_claim_count", "warranty.claim_reports.columns.rejected"),
+      createColumn<ByDealerRow>({
+        accessorKey: "approval_rate",
+        labelKey: "warranty.claim_reports.columns.approval_rate",
+        enableSorting: true,
+        gridSecondary: true,
+        meta: NUMERIC,
+        cell: ({ row }) =>
+          formatClaimRate(row.original.approval_rate, { locale }),
+      }),
+    ] as ColumnDef<ByDealerRow, unknown>[];
+  }, [dealerOptions, format, locale, t]);
 
   return (
     <Card>
@@ -335,70 +436,23 @@ function ByDealerSection({
         <CardTitle>{t("warranty.claim_reports.sections.dealer")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="max-w-xs space-y-1.5">
-          <Label htmlFor="claim-report-dealer">
-            {t("warranty.claim_reports.dealer_filter")}
-          </Label>
-          <select
-            id="claim-report-dealer"
-            data-testid="claim-report-dealer-filter"
-            className={selectClass}
-            value={selected}
-            onChange={(e) => setDealer(e.target.value)}
-          >
-            <option value="">{t("warranty.claim_reports.dealer_all")}</option>
-            {options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
         <ReportState
           isLoading={report.isLoading}
           isError={report.isError}
           empty={rows.length === 0}
           onRetry={() => void report.refetch()}
         >
-          <div className="overflow-x-auto">
-            <table
-              className="w-full text-sm"
-              data-testid="claim-report-dealer-table"
-            >
-              <thead>
-                <tr className="text-muted-foreground border-b text-xs">
-                  <Th>{t("warranty.claim_reports.columns.organization")}</Th>
-                  <Th>{t("warranty.claim_reports.columns.org_type")}</Th>
-                  <Th end>{t("warranty.claim_reports.columns.claims")}</Th>
-                  <Th end>{t("warranty.claim_reports.columns.approved")}</Th>
-                  <Th end>{t("warranty.claim_reports.columns.rejected")}</Th>
-                  <Th end>
-                    {t("warranty.claim_reports.columns.approval_rate")}
-                  </Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr
-                    key={r.organization_uuid}
-                    className="border-b last:border-0"
-                    data-testid="claim-report-dealer-row"
-                    data-uuid={r.organization_uuid}
-                  >
-                    <Td>{r.organization_name}</Td>
-                    <Td>
-                      {t(
-                        `warranty.claim_reports.org_type.${r.organization_type}`,
-                      )}
-                    </Td>
-                    <Td end>{format.number(r.claim_count)}</Td>
-                    <Td end>{format.number(r.approved_claim_count)}</Td>
-                    <Td end>{format.number(r.rejected_claim_count)}</Td>
-                    <Td end>{formatClaimRate(r.approval_rate, { locale })}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div data-testid="claim-report-dealer-table">
+            <EntityTable
+              columns={columns}
+              data={rows}
+              getRowId={(row) => row.organization_uuid}
+              manual={CLIENT_SIDE_MANUAL}
+              initialState={{ pagination: { pageIndex: 0, pageSize: 20 } }}
+              emptyTitle={t("warranty.claim_reports.empty")}
+              emptyDescription=""
+              features={{ persistKey: CLAIM_REPORT_PERSIST_KEYS.dealer }}
+            />
           </div>
         </ReportState>
       </CardContent>
@@ -420,13 +474,67 @@ function PartsSection({
     enabled,
     placeholderData: keepPreviousData,
   });
-  const rows = report.data?.items ?? [];
-  // Car part names of the service wizard; unknown keys stay as they are.
-  const partLabel = (key: string) => {
-    const msg = `services.parts.names.${key}`;
-    const text = t(msg);
-    return text === msg ? key : text;
-  };
+  const rows = useMemo(() => report.data?.items ?? [], [report.data]);
+
+  const columns = useMemo(() => {
+    // Car part names of the service wizard; unknown keys stay as they are.
+    const partLabel = (key: string) => {
+      const msg = `services.parts.names.${key}`;
+      const text = t(msg);
+      return text === msg ? key : text;
+    };
+    const count = (
+      key: "part_count" | "claim_count" | "approved_claim_count",
+      labelKey: string,
+    ) =>
+      createColumn<PartsRow>({
+        accessorKey: key,
+        labelKey,
+        enableSorting: true,
+        meta: NUMERIC,
+        cell: ({ row }) => format.number(row.original[key]),
+      });
+    return [
+      createColumn<PartsRow>({
+        id: "part",
+        accessorFn: (row) => partLabel(row.part_key),
+        labelKey: "warranty.claim_reports.columns.part",
+        enableSorting: true,
+        enableHiding: false,
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <div data-testid="claim-report-parts-row">
+            <div>{partLabel(row.original.part_key)}</div>
+            <div className="text-muted-foreground font-mono text-xs" dir="ltr">
+              {row.original.part_key}
+            </div>
+          </div>
+        ),
+      }),
+      createColumn<PartsRow>({
+        id: "product",
+        accessorFn: (row) => row.product_name ?? "",
+        labelKey: "warranty.claim_reports.columns.product",
+        enableSorting: true,
+        cell: ({ row }) => (
+          <div>
+            <div>{row.original.product_name || "—"}</div>
+            {row.original.product_sku ? (
+              <div
+                className="text-muted-foreground font-mono text-xs"
+                dir="ltr"
+              >
+                {row.original.product_sku}
+              </div>
+            ) : null}
+          </div>
+        ),
+      }),
+      count("part_count", "warranty.claim_reports.columns.part_count"),
+      count("claim_count", "warranty.claim_reports.columns.claims"),
+      count("approved_claim_count", "warranty.claim_reports.columns.approved"),
+    ] as ColumnDef<PartsRow, unknown>[];
+  }, [format, t]);
 
   return (
     <Card>
@@ -440,54 +548,17 @@ function PartsSection({
           empty={rows.length === 0}
           onRetry={() => void report.refetch()}
         >
-          <div className="overflow-x-auto">
-            <table
-              className="w-full text-sm"
-              data-testid="claim-report-parts-table"
-            >
-              <thead>
-                <tr className="text-muted-foreground border-b text-xs">
-                  <Th>{t("warranty.claim_reports.columns.part")}</Th>
-                  <Th>{t("warranty.claim_reports.columns.product")}</Th>
-                  <Th end>{t("warranty.claim_reports.columns.part_count")}</Th>
-                  <Th end>{t("warranty.claim_reports.columns.claims")}</Th>
-                  <Th end>{t("warranty.claim_reports.columns.approved")}</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr
-                    key={`${r.part_key}:${r.product_uuid ?? ""}`}
-                    className="border-b last:border-0"
-                    data-testid="claim-report-parts-row"
-                  >
-                    <Td>
-                      <div>{partLabel(r.part_key)}</div>
-                      <div
-                        className="text-muted-foreground font-mono text-xs"
-                        dir="ltr"
-                      >
-                        {r.part_key}
-                      </div>
-                    </Td>
-                    <Td>
-                      <div>{r.product_name || "—"}</div>
-                      {r.product_sku ? (
-                        <div
-                          className="text-muted-foreground font-mono text-xs"
-                          dir="ltr"
-                        >
-                          {r.product_sku}
-                        </div>
-                      ) : null}
-                    </Td>
-                    <Td end>{format.number(r.part_count)}</Td>
-                    <Td end>{format.number(r.claim_count)}</Td>
-                    <Td end>{format.number(r.approved_claim_count)}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div data-testid="claim-report-parts-table">
+            <EntityTable
+              columns={columns}
+              data={rows}
+              getRowId={(row) => `${row.part_key}:${row.product_uuid ?? ""}`}
+              manual={CLIENT_SIDE_MANUAL}
+              initialState={{ pagination: { pageIndex: 0, pageSize: 20 } }}
+              emptyTitle={t("warranty.claim_reports.empty")}
+              emptyDescription=""
+              features={{ persistKey: CLAIM_REPORT_PERSIST_KEYS.parts }}
+            />
           </div>
         </ReportState>
       </CardContent>

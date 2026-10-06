@@ -73,5 +73,7 @@
   "status.queued": "Növbədə",
   "status.expired": "Müddəti bitib",
   "resources.platform.organizations": "Təşkilatlar",
-  "resources.leads.list": "Potensial müştərilər"
+  "resources.leads.list": "Potensial müştərilər",
+  "resources.services.list": "Xidmətlər",
+  "resources.warranties.list": "Zəmanətlər"
 }

@@ -73,5 +73,7 @@
   "status.queued": "В очереди",
   "status.expired": "Истёк",
   "resources.platform.organizations": "Организации",
-  "resources.leads.list": "Лиды"
+  "resources.leads.list": "Лиды",
+  "resources.services.list": "Услуги",
+  "resources.warranties.list": "Гарантии"
 }

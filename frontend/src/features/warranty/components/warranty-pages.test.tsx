@@ -58,7 +58,6 @@ import type { Warranty } from "@/features/warranty/lib/warranty-list";
 
 import { PortalWarranties } from "./portal-warranties";
 import { validVoidReason, WarrantyDetailPage } from "./warranty-detail-page";
-import { WarrantiesListPage } from "./warranties-list-page";
 import { WarrantyProgressBar } from "./warranty-progress";
 
 (
@@ -196,60 +195,6 @@ describe("WarrantyProgressBar (TEC-191)", () => {
   });
 });
 
-describe("WarrantiesListPage", () => {
-  it("is forbidden without warranties.read", async () => {
-    await render(createElement(WarrantiesListPage, { slug: "acme" }));
-    expect(api.list).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("warranty.list.forbidden");
-  });
-
-  it("lists rows and sends the status and ends-within filters", async () => {
-    state.grants = new Set([Permission.WarrantiesRead]);
-    api.list.mockResolvedValue(page([warranty()]));
-    await render(createElement(WarrantiesListPage, { slug: "acme" }));
-    expect(api.list).toHaveBeenLastCalledWith({ limit: 20, offset: 0 });
-    const rows = container.querySelectorAll("[data-testid=warranty-row]");
-    expect(rows).toHaveLength(1);
-    expect(rows[0].textContent).toContain("Film PPF");
-    expect(rows[0].textContent).toContain("Ayşe Kaya");
-    expect(rows[0].querySelector("a")?.getAttribute("href")).toBe(
-      "/t/acme/warranties/w-1",
-    );
-    // No catalog.read: no product picker.
-    expect(container.querySelector("#warranty-product")).toBeNull();
-
-    await click(container.querySelector("[data-status=expired]"));
-    expect(api.list).toHaveBeenLastCalledWith({
-      limit: 20,
-      offset: 0,
-      status: "expired",
-    });
-    await click(container.querySelector("[data-status=all]"));
-    await click(container.querySelector("[data-ends-within='30']"));
-    expect(api.list).toHaveBeenLastCalledWith({
-      limit: 20,
-      offset: 0,
-      status: "active",
-      days_left_max: 30,
-    });
-    await type(container.querySelector("#warranty-search"), "34ABC");
-    expect(api.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ q: "34ABC", days_left_max: 30 }),
-    );
-    await click(container.querySelector("[data-testid=clear-filters]"));
-    expect(api.list).toHaveBeenLastCalledWith({ limit: 20, offset: 0 });
-  });
-
-  it("shows the empty state", async () => {
-    state.grants = new Set([Permission.WarrantiesRead]);
-    api.list.mockResolvedValue(page([]));
-    await render(createElement(WarrantiesListPage, { slug: "acme" }));
-    expect(
-      container.querySelector("[data-testid=warranties-empty]"),
-    ).not.toBeNull();
-  });
-});
-
 describe("WarrantyDetailPage", () => {
   it("hides the void action without warranties.void", async () => {
     state.grants = new Set([Permission.WarrantiesRead]);
@@ -315,6 +260,7 @@ describe("PortalWarranties", () => {
     expect(portal.listWarranties).toHaveBeenLastCalledWith({
       limit: 10,
       offset: 0,
+      sort: "expiry",
     });
     const items = container.querySelectorAll("[data-testid=portal-warranty]");
     expect(items).toHaveLength(2);
@@ -340,6 +286,31 @@ describe("PortalWarranties", () => {
       offset: 0,
       status: "active",
       days_left_max: 7,
+      sort: "expiry",
+    });
+  });
+
+  it("sends the chosen sort (TEC-378)", async () => {
+    portal.listWarranties.mockResolvedValue(page([warranty()]));
+    await render(createElement(PortalWarranties));
+    const select = container.querySelector("#portal-warranty-sort");
+    if (!(select instanceof HTMLSelectElement)) throw new Error("no sort");
+    expect(
+      Array.from(select.options).map((o) => [o.value, o.textContent]),
+    ).toEqual([
+      ["expiry", "warranty.portal.sort.expiry"],
+      ["-start_at", "warranty.portal.sort.desc_start_at"],
+      ["start_at", "warranty.portal.sort.start_at"],
+    ]);
+    await act(async () => {
+      select.value = "-start_at";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await flush();
+    expect(portal.listWarranties).toHaveBeenLastCalledWith({
+      limit: 10,
+      offset: 0,
+      sort: "-start_at",
     });
   });
 

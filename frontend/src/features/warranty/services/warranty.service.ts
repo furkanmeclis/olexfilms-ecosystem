@@ -1,7 +1,5 @@
-import type {
-  Warranty,
-  WarrantyListQuery,
-} from "@/features/warranty/lib/warranty-list";
+import type { ServerListQuery } from "@/components/entity";
+import type { Warranty } from "@/features/warranty/lib/warranty-list";
 import { platformRequest } from "@/lib/api/platform-request";
 
 export type WarrantyPage = {
@@ -10,6 +8,18 @@ export type WarrantyPage = {
   limit: number;
   offset: number;
 };
+
+/**
+ * GET /v1/warranties params (TEC-191, TEC-377): one sort field (`expiry`
+ * default, `end_at`, `start_at`, `created_at`, `public_code`, `service_no`,
+ * `status`, `product`, `organization`), `q`, CSV `status` /
+ * `organization_uuid`, `product_uuid`, `days_left_min` / `_max` and the
+ * `start_*` / `end_*` day windows.
+ */
+export type WarrantyServerQuery = ServerListQuery;
+
+/** List export (TEC-377): same filters, search and sort as the list. */
+export const WARRANTIES_EXPORT_PATH = "/v1/warranties/export";
 
 const enc = encodeURIComponent;
 
@@ -20,7 +30,7 @@ const enc = encodeURIComponent;
  * dialog).
  */
 export const warrantyService = {
-  list(params: WarrantyListQuery) {
+  list(params: WarrantyServerQuery) {
     return platformRequest<WarrantyPage>("GET", "/v1/warranties", {
       query: params,
     });
@@ -39,6 +49,7 @@ export const warrantyService = {
 
 export const warrantyKeys = {
   all: ["warranties"] as const,
-  list: (params: WarrantyListQuery) => ["warranties", "list", params] as const,
+  list: (params: WarrantyServerQuery) =>
+    ["warranties", "list", params] as const,
   detail: (uuid: string) => ["warranties", "detail", uuid] as const,
 };

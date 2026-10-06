@@ -58,7 +58,8 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function VoidDialog({
+/** Void with a reason (detail page and the list row action, TEC-378). */
+export function VoidDialog({
   warranty,
   open,
   onOpenChange,

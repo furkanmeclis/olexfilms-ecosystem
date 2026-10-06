@@ -73,5 +73,7 @@
   "status.queued": "في قائمة الانتظار",
   "status.expired": "منتهي الصلاحية",
   "resources.platform.organizations": "المنشآت",
-  "resources.leads.list": "العملاء المحتملون"
+  "resources.leads.list": "العملاء المحتملون",
+  "resources.services.list": "الخدمات",
+  "resources.warranties.list": "الضمانات"
 }

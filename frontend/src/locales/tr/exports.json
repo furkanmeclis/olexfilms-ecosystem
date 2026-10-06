@@ -73,5 +73,7 @@
   "status.queued": "Sırada",
   "status.expired": "Süresi doldu",
   "resources.platform.organizations": "İşletmeler",
-  "resources.leads.list": "Lead'ler"
+  "resources.leads.list": "Lead'ler",
+  "resources.services.list": "Hizmetler",
+  "resources.warranties.list": "Garantiler"
 }

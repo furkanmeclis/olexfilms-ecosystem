@@ -73,5 +73,7 @@
   "status.queued": "排队中",
   "status.expired": "已过期",
   "resources.platform.organizations": "组织",
-  "resources.leads.list": "线索"
+  "resources.leads.list": "线索",
+  "resources.services.list": "服务",
+  "resources.warranties.list": "质保"
 }
