@@ -414,6 +414,38 @@ func TestQuoteTotalsProductAndCatalogLines(t *testing.T) {
 	}
 }
 
+func TestListLeadQuotesNewestFirstAndScoped(t *testing.T) {
+	f := newFixture(t)
+	dist := f.orgTyped("quote-list", "distributor", f.center.ID)
+	other := f.orgTyped("quote-list-other", "distributor", f.center.ID)
+	c := f.quoteCaller(dist, rbac.ScopeManaged)
+	lead := f.lead(dist, StatusNew, nil)
+	item := f.catalogItem("Listing", "40.00")
+	first, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	second, err := f.svc.CreateQuote(f.ctx, c, lead.Uuid, QuoteInput{Lines: []QuoteLineInput{
+		{LineType: QuoteLineCatalogService, ServiceCatalogItemUUID: &item.Uuid, Quantity: "2"},
+	}})
+	if err != nil {
+		t.Fatalf("CreateQuote: %v", err)
+	}
+	items, err := f.svc.ListLeadQuotes(f.ctx, c, lead.Uuid)
+	if err != nil {
+		t.Fatalf("ListLeadQuotes: %v", err)
+	}
+	if len(items) != 2 || items[0].UUID != second.UUID || items[1].UUID != first.UUID {
+		t.Fatalf("items = %+v", items)
+	}
+	if items[0].GrandTotal != "80.00" || len(items[0].Lines) != 1 {
+		t.Fatalf("newest = %+v", items[0])
+	}
+	if _, err := f.svc.ListLeadQuotes(f.ctx, f.quoteCaller(other, rbac.ScopeManaged), lead.Uuid); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("other org err = %v, want ErrNotFound", err)
+	}
+}
+
 func TestQuoteLinesLockedAfterSent(t *testing.T) {
 	f := newFixture(t)
 	dist := f.orgTyped("quote-sent", "distributor", f.center.ID)

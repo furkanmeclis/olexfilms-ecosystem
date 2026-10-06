@@ -333,6 +333,27 @@ func (s *Service) GetQuote(ctx context.Context, c Caller, id uuid.UUID) (Quote, 
 	return s.quoteOf(ctx, row)
 }
 
+// ListLeadQuotes returns the quotes of one lead, newest first (TEC-319).
+func (s *Service) ListLeadQuotes(ctx context.Context, c Caller, leadID uuid.UUID) ([]Quote, error) {
+	lead, err := s.getRow(ctx, c, leadID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.q.ListQuotesByLead(ctx, db.ListQuotesByLeadParams{LeadID: lead.ID, OrganizationID: lead.OrganizationID})
+	if err != nil {
+		return nil, fmt.Errorf("quotes: list: %w", err)
+	}
+	out := make([]Quote, 0, len(rows))
+	for _, row := range rows {
+		q, err := s.quoteOf(ctx, row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, q)
+	}
+	return out, nil
+}
+
 func (s *Service) PatchQuote(ctx context.Context, c Caller, id uuid.UUID, in QuotePatchInput) (Quote, error) {
 	cur, err := s.quoteRow(ctx, c, id)
 	if err != nil {

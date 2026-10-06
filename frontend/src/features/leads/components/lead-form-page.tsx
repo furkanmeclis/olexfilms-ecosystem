@@ -16,10 +16,12 @@ import { LeadFields } from "@/features/leads/components/lead-fields";
 import {
   createBody,
   emptyLeadForm,
+  leadTargetTypesFor,
   validateLeadForm,
   type LeadFormValues,
 } from "@/features/leads/lib/leads";
 import { leadsService } from "@/features/leads/services/leads.service";
+import { useAuthStore } from "@/lib/auth/session-store";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -28,6 +30,9 @@ export function LeadFormPage({ slug }: { slug: string }) {
   const { can } = usePermission();
   const router = useRouter();
   const canWrite = can(permissions.leads.write);
+  const orgType = useAuthStore(
+    (s) => s.user?.organizations.find((o) => o.slug === slug)?.type,
+  );
   const [values, setValues] = useState<LeadFormValues>(() => emptyLeadForm());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const create = useMutation({
@@ -83,6 +88,7 @@ export function LeadFormPage({ slug }: { slug: string }) {
       <Card>
         <CardContent className="space-y-6 pt-6">
           <LeadFields
+            targetTypes={leadTargetTypesFor(orgType)}
             values={values}
             errors={errors}
             disabled={create.isPending}

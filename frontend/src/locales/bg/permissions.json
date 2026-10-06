@@ -199,5 +199,9 @@
   "labels.library.manage": "Управление на библиотеката с документи",
   "groups.announcements": "Съобщения",
   "groups.library": "Библиотека с документи",
-  "labels.warranty_claims.read": "Преглед на гаранционни претенции"
+  "labels.warranty_claims.read": "Преглед на гаранционни претенции",
+  "labels.leads.convert_org": "Преобразуване в организация",
+  "labels.quotes.read": "Преглед на оферти",
+  "labels.quotes.write": "Управление на оферти",
+  "groups.quotes": "Оферти"
 }

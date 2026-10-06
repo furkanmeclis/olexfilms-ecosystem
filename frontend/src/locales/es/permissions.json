@@ -199,5 +199,9 @@
   "labels.library.manage": "Gestionar la biblioteca de documentos",
   "groups.announcements": "Anuncios",
   "groups.library": "Biblioteca de documentos",
-  "labels.warranty_claims.read": "Ver reclamaciones de garantía"
+  "labels.warranty_claims.read": "Ver reclamaciones de garantía",
+  "labels.leads.convert_org": "Convertir cliente potencial en organización",
+  "labels.quotes.read": "Ver presupuestos",
+  "labels.quotes.write": "Gestionar presupuestos",
+  "groups.quotes": "Presupuestos"
 }
