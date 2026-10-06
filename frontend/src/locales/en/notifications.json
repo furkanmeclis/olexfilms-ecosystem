@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Skipped (channel off)",
   "center.statuses.skipped_preference": "Skipped (user muted)",
   "center.statuses.skipped_no_template": "Skipped (no template)",
-  "center.statuses.skipped_no_recipient": "Skipped (no address)"
+  "center.statuses.skipped_no_recipient": "Skipped (no address)",
+  "center.attempts": "Attempts",
+  "center.delivery_error": "Error"
 }

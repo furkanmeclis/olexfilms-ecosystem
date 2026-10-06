@@ -1,13 +1,20 @@
 "use client";
 
-import Link from "next/link";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
-import { Loading } from "@/components/common/loading";
 import { PermissionGuard } from "@/components/common/permission-guard";
-import { EntityPage } from "@/components/entity";
+import {
+  EntityPage,
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,8 +33,28 @@ import {
   documentLanguage,
   type DocumentKind,
   type DocumentTemplate,
+  type ListDocumentTemplatesParams,
 } from "@/features/document-templates/services/document-templates.service";
 import { useLocale } from "@/providers/locale-provider";
+
+export const DOCUMENT_TEMPLATES_PERSIST_KEY = "platform-document-templates-v1";
+
+const DOCUMENT_STATUSES = ["draft", "active", "superseded"] as const;
+
+/**
+ * Status filter → `status` CSV. The list shows current versions only
+ * (`current` defaults to true), so asking for superseded versions also
+ * sends `current=false`.
+ */
+export function documentStatusParams(value: unknown) {
+  const list = (Array.isArray(value) ? value : [])
+    .map((item) => String(item))
+    .filter(Boolean);
+  return {
+    status: list.length ? list.join(",") : undefined,
+    current: list.includes("superseded") ? "false" : undefined,
+  };
+}
 
 export function statusVariant(status: DocumentTemplate["status"]) {
   if (status === "active") return "success" as const;
@@ -36,21 +63,130 @@ export function statusVariant(status: DocumentTemplate["status"]) {
 }
 
 export function DocumentTemplatesPage() {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const router = useRouter();
-  const query = useDocumentTemplates({ current: true, limit: 100 });
   const [kind, setKind] = useState<DocumentKind>("service");
   const [language, setLanguage] = useState<string>("de");
 
-  const byKind = useMemo(() => {
-    const map = new Map<string, DocumentTemplate[]>();
-    for (const row of query.data?.items ?? []) {
-      const list = map.get(row.kind) ?? [];
-      list.push(row);
-      map.set(row.kind, list);
-    }
-    return map;
-  }, [query.data]);
+  const columns = useMemo<ColumnDef<DocumentTemplate, unknown>[]>(
+    () => [
+      createColumn<DocumentTemplate>({
+        accessorKey: "kind",
+        labelKey: "documents.fields.kind",
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "kind",
+        filterOptions: DOCUMENT_KINDS.map((value) => ({
+          value,
+          labelKey: `documents.kinds.${value}`,
+          label: value,
+        })),
+        cell: ({ row }) => t(`documents.kinds.${row.original.kind}`),
+      }),
+      createColumn<DocumentTemplate>({
+        accessorKey: "language",
+        labelKey: "documents.fields.language",
+        enableSorting: true,
+        filterVariant: "faceted",
+        param: "language",
+        filterOptions: DOCUMENT_LANGUAGES.map((value) => ({
+          value,
+          labelKey: `documents.languages.${value}`,
+          label: value,
+        })),
+        cell: ({ row }) =>
+          t(`documents.languages.${documentLanguage(row.original.language)}`),
+      }),
+      createColumn<DocumentTemplate>({
+        id: "brand",
+        accessorFn: (row) => row.brand_slug ?? "",
+        labelKey: "documents.fields.brand",
+        enableSorting: false,
+        filterVariant: "text",
+        param: "brand",
+        cell: ({ row }) =>
+          row.original.brand_slug ?? (
+            <span className="text-muted-foreground">
+              {t("documents.brand_default")}
+            </span>
+          ),
+      }),
+      createColumn<DocumentTemplate>({
+        accessorKey: "name",
+        labelKey: "documents.fields.name",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.name}</span>
+        ),
+      }),
+      createColumn<DocumentTemplate>({
+        accessorKey: "version",
+        labelKey: "documents.fields.version",
+        enableSorting: true,
+        cell: ({ row }) => `v${row.original.version}`,
+      }),
+      createColumn<DocumentTemplate>({
+        accessorKey: "status",
+        labelKey: "documents.fields.status",
+        enableSorting: false,
+        filterVariant: "faceted",
+        param: "status",
+        paramFormat: documentStatusParams,
+        gridSecondary: true,
+        filterOptions: DOCUMENT_STATUSES.map((value) => ({
+          value,
+          labelKey: `documents.status.${value}`,
+          label: value,
+        })),
+        cell: ({ row }) => (
+          <Badge variant={statusVariant(row.original.status)}>
+            {t(`documents.status.${row.original.status}`)}
+          </Badge>
+        ),
+      }),
+      createColumn<DocumentTemplate>({
+        accessorKey: "updated_at",
+        labelKey: "documents.fields.updated_at",
+        enableSorting: true,
+        cell: ({ row }) => format.dateTime(row.original.updated_at),
+      }),
+      createColumn<DocumentTemplate>({
+        id: "actions",
+        labelKey: "common.actions",
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        cell: ({ row }) => (
+          <EntityRowActions
+            actions={[
+              {
+                id: "edit",
+                label: t("documents.actions.edit"),
+                icon: Pencil,
+                onSelect: () =>
+                  router.push(
+                    routes.platform.documentTemplates.edit(row.original.uuid),
+                  ),
+              },
+            ]}
+          />
+        ),
+      }),
+    ],
+    [format, router, t],
+  );
+
+  // Backend default sort (kind, platform default first, language, newest
+  // version) until the user picks a column.
+  const listState = useServerListState({
+    columns,
+    initialSort: null,
+    initialPageSize: 50,
+    persistKey: DOCUMENT_TEMPLATES_PERSIST_KEY,
+  });
+  const listParams = listState.params as ListDocumentTemplatesParams;
+  const query = useDocumentTemplates(listParams);
 
   return (
     <EntityPage
@@ -119,77 +255,32 @@ export function DocumentTemplatesPage() {
         </div>
       </PermissionGuard>
 
-      {query.isLoading ? <Loading label={t("common.loading")} /> : null}
-      {query.isError ? (
-        <ErrorState
-          title={t("common.error_generic")}
-          description={t("documents.load_failed")}
-        />
-      ) : null}
-
-      <div className="grid gap-6">
-        {DOCUMENT_KINDS.map((k) => (
-          <section key={k} className="rounded-lg border">
-            <h2 className="border-b px-4 py-3 text-sm font-semibold">
-              {t(`documents.kinds.${k}`)}
-            </h2>
-            <table className="w-full text-sm">
-              <thead className="text-muted-foreground text-start text-xs">
-                <tr>
-                  <th className="px-4 py-2 text-start font-medium">
-                    {t("documents.fields.language")}
-                  </th>
-                  <th className="px-4 py-2 text-start font-medium">
-                    {t("documents.fields.brand")}
-                  </th>
-                  <th className="px-4 py-2 text-start font-medium">
-                    {t("documents.fields.name")}
-                  </th>
-                  <th className="px-4 py-2 text-start font-medium">
-                    {t("documents.fields.version")}
-                  </th>
-                  <th className="px-4 py-2 text-start font-medium">
-                    {t("documents.fields.status")}
-                  </th>
-                  <th className="px-4 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {(byKind.get(k) ?? []).map((row) => (
-                  <tr key={row.uuid} className="border-t">
-                    <td className="px-4 py-2">
-                      {t(
-                        `documents.languages.${documentLanguage(row.language)}`,
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      {row.brand_slug ?? t("documents.brand_default")}
-                    </td>
-                    <td className="px-4 py-2">{row.name}</td>
-                    <td className="px-4 py-2">v{row.version}</td>
-                    <td className="px-4 py-2">
-                      <Badge variant={statusVariant(row.status)}>
-                        {t(`documents.status.${row.status}`)}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-2 text-end">
-                      <Button asChild size="sm" variant="outline">
-                        <Link
-                          href={routes.platform.documentTemplates.edit(
-                            row.uuid,
-                          )}
-                        >
-                          {t("documents.actions.edit")}
-                        </Link>
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        ))}
-      </div>
+      <EntityTable
+        columns={columns}
+        data={query.data?.items ?? []}
+        getRowId={(row) => row.uuid}
+        onRowClick={(row) =>
+          router.push(routes.platform.documentTemplates.edit(row.uuid))
+        }
+        isLoading={query.isLoading}
+        isError={query.isError}
+        errorDescription={t("documents.load_failed")}
+        onRetry={() => void query.refetch()}
+        rowCount={query.data?.total ?? 0}
+        state={listState.tableState}
+        pageSizeOptions={[20, 50, 100]}
+        features={{
+          persistKey: DOCUMENT_TEMPLATES_PERSIST_KEY,
+          // No bulk endpoint for templates.
+          rowSelection: false,
+        }}
+        toolbarExtra={
+          <EntityToolbar
+            onRefresh={() => void query.refetch()}
+            refreshDisabled={query.isFetching}
+          />
+        }
+      />
     </EntityPage>
   );
 }

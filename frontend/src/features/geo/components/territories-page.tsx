@@ -2,11 +2,16 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MapPinned, Trash2 } from "lucide-react";
-import { useCallback } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useCallback, useMemo } from "react";
 import { z } from "zod";
 
-import { ErrorState } from "@/components/common/error-state";
-import { Loading } from "@/components/common/loading";
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+} from "@/components/entity";
 import {
   AppCombobox,
   AppForm,
@@ -14,6 +19,7 @@ import {
   type ComboboxOption,
 } from "@/components/forms";
 import { PageHeader } from "@/components/layout/page-header";
+import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { permissions } from "@/config/permissions";
@@ -48,6 +54,19 @@ function assignSchema(t: Translate) {
 
 type AssignValues = z.infer<ReturnType<typeof assignSchema>>;
 
+export const TERRITORIES_PERSIST_KEY = "platform-territories-v1";
+const TERRITORY_LEVELS = ["country", "province", "district"] as const;
+
+function uniqueOptions(options: { value: string; label: string }[]) {
+  const seen = new Map<string, string>();
+  for (const option of options) {
+    if (!seen.has(option.value)) seen.set(option.value, option.label);
+  }
+  return [...seen.entries()]
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 function areaLabel(item: Territory, locale: string) {
   return [
     countryName(
@@ -69,7 +88,7 @@ export function TerritoriesPage() {
   const queryClient = useQueryClient();
   const schema = assignSchema(t);
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: geoKeys.territories,
     queryFn: () => geoService.territories(),
   });
@@ -128,6 +147,98 @@ export function TerritoriesPage() {
       ),
   });
 
+  const removeTerritory = remove.mutate;
+  const removePending = remove.isPending;
+  const columns = useMemo<ColumnDef<Territory, unknown>[]>(() => {
+    const items = data?.items ?? [];
+    const countries = uniqueOptions(
+      items.map((item) => ({
+        value: item.country_iso2,
+        label: countryName(
+          { name_en: item.country_name_en, name_tr: item.country_name_tr },
+          locale,
+        ),
+      })),
+    );
+    const distributors = uniqueOptions(
+      items.map((item) => ({
+        value: item.organization_name,
+        label: item.organization_name,
+      })),
+    );
+    return [
+      createColumn<Territory>({
+        id: "area",
+        accessorFn: (row) => areaLabel(row, locale),
+        labelKey: "geo.territories.columns.area",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ getValue }) => (
+          <span className="font-medium">{String(getValue())}</span>
+        ),
+      }),
+      createColumn<Territory>({
+        accessorKey: "country_iso2",
+        labelKey: "geo.territories.columns.country",
+        enableSorting: true,
+        filterVariant: "select",
+        filterFn: "equalsString",
+        filterOptions: countries,
+        defaultHidden: true,
+      }),
+      createColumn<Territory>({
+        accessorKey: "level",
+        labelKey: "geo.territories.columns.level",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: TERRITORY_LEVELS.map((value) => ({
+          value,
+          labelKey: `geo.levels.${value}`,
+          label: value,
+        })),
+        cell: ({ row }) => (
+          <Badge variant="outline">
+            {t(`geo.levels.${row.original.level}`)}
+          </Badge>
+        ),
+      }),
+      createColumn<Territory>({
+        id: "distributor",
+        // Name (not uuid) so the toolbar search matches distributors too.
+        accessorFn: (row) => row.organization_name,
+        labelKey: "geo.territories.columns.distributor",
+        enableSorting: false,
+        filterVariant: "select",
+        filterFn: "equalsString",
+        filterOptions: distributors,
+        gridSecondary: true,
+        cell: ({ row }) => row.original.organization_name,
+      }),
+      createColumn<Territory>({
+        id: "actions",
+        labelKey: "common.actions",
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        cell: ({ row }) => (
+          <EntityRowActions
+            actions={[
+              {
+                id: "remove",
+                label: t("geo.territories.remove"),
+                icon: Trash2,
+                variant: "destructive",
+                permission: permissions.territories.write,
+                disabled: removePending,
+                onSelect: () => removeTerritory(row.original.uuid),
+              },
+            ]}
+          />
+        ),
+      }),
+    ];
+  }, [data?.items, locale, removePending, removeTerritory, t]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -174,73 +285,31 @@ export function TerritoriesPage() {
         </AppForm>
       ) : null}
 
-      {isLoading ? <Loading label={t("common.loading")} /> : null}
-      {isError ? (
-        <ErrorState
-          title={t("geo.territories.error")}
-          retryLabel={t("common.retry")}
-          onRetry={() => refetch()}
-        />
-      ) : null}
-      {data ? (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("geo.territories.columns.area")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("geo.territories.columns.level")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("geo.territories.columns.distributor")}
-                </th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="text-muted-foreground px-3 py-6 text-center"
-                  >
-                    {t("geo.territories.empty")}
-                  </td>
-                </tr>
-              ) : null}
-              {data.items.map((item) => (
-                <tr key={item.uuid} className="border-t">
-                  <td className="px-3 py-2 font-medium">
-                    {areaLabel(item, locale)}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Badge variant="outline">
-                      {t(`geo.levels.${item.level}`)}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-2">{item.organization_name}</td>
-                  <td className="px-3 py-2 text-end">
-                    {canWrite ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("geo.territories.remove")}
-                        disabled={remove.isPending}
-                        onClick={() => remove.mutate(item.uuid)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+      <EntityTable
+        columns={columns}
+        data={data?.items ?? []}
+        getRowId={(row) => row.uuid}
+        manual={CLIENT_SIDE_MANUAL}
+        isLoading={isLoading}
+        isError={isError}
+        errorTitle={t("geo.territories.error")}
+        onRetry={() => void refetch()}
+        emptyTitle={t("geo.territories.empty")}
+        emptyDescription=""
+        initialState={{ pagination: { pageIndex: 0, pageSize: 50 } }}
+        pageSizeOptions={[20, 50, 100]}
+        features={{
+          persistKey: TERRITORIES_PERSIST_KEY,
+          // No bulk delete endpoint.
+          rowSelection: false,
+        }}
+        toolbarExtra={
+          <EntityToolbar
+            onRefresh={() => void refetch()}
+            refreshDisabled={isFetching}
+          />
+        }
+      />
     </div>
   );
 }

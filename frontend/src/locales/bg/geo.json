@@ -64,5 +64,6 @@
   "plates.validation.color": "Използвайте #RRGGBB",
   "plates.toast.saved": "Форматът на номера е запазен",
   "plates.toast.deleted": "Форматът на номера е изтрит",
-  "plates.toast.failed": "Форматът на номера не можа да бъде запазен"
+  "plates.toast.failed": "Форматът на номера не можа да бъде запазен",
+  "territories.columns.country": "Държава"
 }

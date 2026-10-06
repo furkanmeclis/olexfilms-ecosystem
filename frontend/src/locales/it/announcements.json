@@ -44,5 +44,19 @@
   "report.counts": "{{read}} di {{total}} letti",
   "dashboard.title": "Ultimi annunci",
   "dashboard.all": "Vedi tutti",
-  "dashboard.empty": "Nessun annuncio recente."
+  "dashboard.empty": "Nessun annuncio recente.",
+  "manage.title": "Gestisci annunci",
+  "manage.status": "Stato",
+  "manage.created_at": "Creato",
+  "manage.updated_at": "Aggiornato",
+  "manage.view": "Apri",
+  "manage.pin": "Fissa",
+  "manage.unpin": "Rimuovi fissaggio",
+  "manage.archive": "Archivia",
+  "manage.published": "Annuncio pubblicato.",
+  "manage.archived": "Annuncio archiviato.",
+  "report.empty": "Nessuno l'ha ancora letto.",
+  "report.reader": "Lettore",
+  "report.email": "E-mail",
+  "report.read_at": "Letto il"
 }

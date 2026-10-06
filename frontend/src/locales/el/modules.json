@@ -94,5 +94,6 @@
   "names.photo_standard": "Πρότυπο φωτογραφιών",
   "names.reviews": "Κριτικές",
   "names.e_invoice": "Ηλεκτρονικό τιμολόγιο (UBL-TR)",
-  "names.short_url": "Σύντομοι σύνδεσμοι"
+  "names.short_url": "Σύντομοι σύνδεσμοι",
+  "columns.slug": "Σύντομο όνομα"
 }

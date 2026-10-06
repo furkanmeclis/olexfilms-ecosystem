@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "已跳过（渠道已关闭）",
   "center.statuses.skipped_preference": "已跳过（用户已静音）",
   "center.statuses.skipped_no_template": "已跳过（无模板）",
-  "center.statuses.skipped_no_recipient": "已跳过（无地址）"
+  "center.statuses.skipped_no_recipient": "已跳过（无地址）",
+  "center.attempts": "尝试次数",
+  "center.delivery_error": "错误"
 }

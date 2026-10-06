@@ -99,5 +99,6 @@
   "transfer.status.pending": "قيد الانتظار",
   "transfer.status.completed": "مكتمل",
   "transfer.status.cancelled": "ملغى",
-  "transfer.status.expired": "منتهي الصلاحية"
+  "transfer.status.expired": "منتهي الصلاحية",
+  "columns.created_at": "تاريخ الإنشاء"
 }

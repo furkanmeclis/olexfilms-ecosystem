@@ -151,3 +151,28 @@ export function useSetDefaultContractTemplate() {
       ),
   });
 }
+
+/** Delete a template; one already in use is deactivated instead. */
+export function useDeleteContractTemplate() {
+  const { t } = useLocale();
+  const queryClient = useQueryClient();
+  return useAppMutation({
+    mutationFn: (uuid: string) => contractTemplatesService.remove(uuid),
+    onSuccess: (row) => {
+      void queryClient.invalidateQueries({
+        queryKey: contractTemplatesKeys.all,
+      });
+      appToast.success(
+        t(
+          row
+            ? "contract_templates.toast.deactivated"
+            : "contract_templates.toast.deleted",
+        ),
+      );
+    },
+    onError: (err) =>
+      appToast.error(
+        errorMessage(err, t("contract_templates.toast.delete_failed")),
+      ),
+  });
+}

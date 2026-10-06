@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Saltata (canale disattivato)",
   "center.statuses.skipped_preference": "Saltata (disattivata dall'utente)",
   "center.statuses.skipped_no_template": "Saltata (nessun modello)",
-  "center.statuses.skipped_no_recipient": "Saltata (nessun indirizzo)"
+  "center.statuses.skipped_no_recipient": "Saltata (nessun indirizzo)",
+  "center.attempts": "Tentativi",
+  "center.delivery_error": "Errore"
 }

@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "Пропущено (канал выключен)",
   "center.statuses.skipped_preference": "Пропущено (отключено пользователем)",
   "center.statuses.skipped_no_template": "Пропущено (нет шаблона)",
-  "center.statuses.skipped_no_recipient": "Пропущено (нет адреса)"
+  "center.statuses.skipped_no_recipient": "Пропущено (нет адреса)",
+  "center.attempts": "Попытки",
+  "center.delivery_error": "Ошибка"
 }

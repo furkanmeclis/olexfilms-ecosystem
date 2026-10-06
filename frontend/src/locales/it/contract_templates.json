@@ -52,5 +52,13 @@
   "toast.locale_saved": "Versione linguistica salvata.",
   "toast.save_failed": "Impossibile salvare il modello.",
   "toast.default_set": "Modello predefinito aggiornato.",
-  "toast.default_failed": "Impossibile modificare il modello predefinito."
+  "toast.default_failed": "Impossibile modificare il modello predefinito.",
+  "fields.is_default": "Predefinito",
+  "fields.updated_at": "Ultimo aggiornamento",
+  "actions.delete": "Elimina",
+  "delete_confirm.title": "Eliminare questo modello?",
+  "delete_confirm.description": "\"{{name}}\" viene eliminato. Un modello già usato nei contratti viene invece disattivato, così i contratti firmati mantengono il loro testo.",
+  "toast.deleted": "Modello di contratto eliminato.",
+  "toast.deactivated": "Il modello è usato nei contratti, quindi è stato disattivato invece che eliminato.",
+  "toast.delete_failed": "Impossibile eliminare il modello."
 }

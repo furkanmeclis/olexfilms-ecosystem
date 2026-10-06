@@ -4,6 +4,7 @@ import {
   CircleCheck,
   Lock,
   CircleOff,
+  FolderInput,
   Trash2,
   UserCheck,
   UserPlus,
@@ -31,6 +32,7 @@ const bulkActionIconCatalog: Record<
   "catalog.products": {
     activate: CircleCheck,
     deactivate: CircleOff,
+    set_category: FolderInput,
   },
   tasks: {
     assign: UserPlus,
@@ -40,6 +42,19 @@ const bulkActionIconCatalog: Record<
     suspend: Ban,
     set_read_only: Lock,
     extend_access: CalendarPlus,
+  },
+  "catalog.categories": {
+    activate: CircleCheck,
+    deactivate: CircleOff,
+    delete: Trash2,
+  },
+  "vehicle_catalog.brands": {
+    activate: CircleCheck,
+    deactivate: CircleOff,
+  },
+  "vehicle_catalog.models": {
+    activate: CircleCheck,
+    deactivate: CircleOff,
   },
 };
 

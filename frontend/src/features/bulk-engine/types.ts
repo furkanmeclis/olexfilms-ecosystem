@@ -82,7 +82,10 @@ export type BulkResource =
   | "platform.roles"
   | "catalog.products"
   | "tasks"
-  | "platform.organizations";
+  | "platform.organizations"
+  | "catalog.categories"
+  | "vehicle_catalog.brands"
+  | "vehicle_catalog.models";
 
 export const BULK_PATHS: Record<BulkResource, string> = {
   "platform.users": "/v1/platform/users/bulk",
@@ -90,11 +93,22 @@ export const BULK_PATHS: Record<BulkResource, string> = {
   "catalog.products": "/v1/catalog/products/bulk",
   tasks: "/v1/tasks/bulk",
   "platform.organizations": "/v1/platform/organizations/bulk",
+  "catalog.categories": "/v1/catalog/categories/bulk",
+  "vehicle_catalog.brands": "/v1/platform/vehicle-catalog/brands/bulk",
+  "vehicle_catalog.models": "/v1/platform/vehicle-catalog/models/bulk",
 };
+
+/** Platform-scoped resources whose name has no `platform.` prefix. */
+const PLATFORM_BULK_RESOURCES = new Set<string>([
+  "vehicle_catalog.brands",
+  "vehicle_catalog.models",
+]);
 
 /** Tenant resources log their operations under the active organization. */
 export function isTenantBulkResource(resource: BulkResource | string) {
-  return !resource.startsWith("platform.");
+  return (
+    !resource.startsWith("platform.") && !PLATFORM_BULK_RESOURCES.has(resource)
+  );
 }
 
 /** Undo route of an operation: tenant or platform scope. */

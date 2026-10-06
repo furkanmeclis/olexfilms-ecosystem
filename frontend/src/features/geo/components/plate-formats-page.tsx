@@ -1,13 +1,18 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RectangleHorizontal } from "lucide-react";
-import { useState } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Pencil, RectangleHorizontal } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { z } from "zod";
 
-import { ErrorState } from "@/components/common/error-state";
-import { Loading } from "@/components/common/loading";
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+} from "@/components/entity";
 import {
   AppCombobox,
   AppForm,
@@ -16,6 +21,7 @@ import {
   FormSection,
 } from "@/components/forms";
 import { PageHeader } from "@/components/layout/page-header";
+import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +46,8 @@ type Translate = (
 ) => string;
 
 const COLOR = /^#[0-9A-Fa-f]{6}$/;
+
+export const PLATE_FORMATS_PERSIST_KEY = "platform-plate-formats-v1";
 
 function plateSchema(t: Translate) {
   const color = z.string().regex(COLOR, t("geo.plates.validation.color"));
@@ -128,7 +136,7 @@ export function PlateFormatsPage() {
   const [editing, setEditing] = useState<PlateFormat | "new" | null>(null);
   const countries = useCountries();
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: geoKeys.platformPlateFormats,
     queryFn: () => geoService.platformPlateFormats(),
   });
@@ -170,6 +178,137 @@ export function PlateFormatsPage() {
       ),
   });
 
+  // Row drag-and-drop → PUT /v1/platform/plate-formats/order (optimistic).
+  const reorder = useMutation({
+    mutationFn: (rows: PlateFormat[]) =>
+      geoService.reorderPlateFormats(rows.map((row) => row.country_iso2)),
+    onMutate: async (rows) => {
+      await queryClient.cancelQueries({
+        queryKey: geoKeys.platformPlateFormats,
+      });
+      const previous = queryClient.getQueryData<{ items: PlateFormat[] }>(
+        geoKeys.platformPlateFormats,
+      );
+      queryClient.setQueryData(geoKeys.platformPlateFormats, { items: rows });
+      return { previous };
+    },
+    onSuccess: async (result) => {
+      queryClient.setQueryData(geoKeys.platformPlateFormats, result);
+      await queryClient.invalidateQueries({ queryKey: geoKeys.plateFormats });
+      appToast.success(t("table.reorder_saved"));
+    },
+    onError: (error, _rows, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          geoKeys.platformPlateFormats,
+          context.previous,
+        );
+      }
+      appToast.error(
+        isApiError(error) ? error.message : t("geo.plates.toast.failed"),
+      );
+    },
+  });
+
+  // Inline edit of the active flag (double-click) → PATCH is_active.
+  const toggleActive = useMutation({
+    mutationFn: ({ iso2, isActive }: { iso2: string; isActive: boolean }) =>
+      geoService.updatePlateFormat(iso2, { is_active: isActive }),
+    onSuccess: async () => {
+      await invalidate();
+      appToast.success(t("geo.plates.toast.saved"));
+    },
+    onError: (error) =>
+      appToast.error(
+        isApiError(error) ? error.message : t("geo.plates.toast.failed"),
+      ),
+  });
+
+  const columns = useMemo<ColumnDef<PlateFormat, unknown>[]>(
+    () => [
+      createColumn<PlateFormat>({
+        id: "country",
+        accessorFn: (row) =>
+          countryName(
+            { name_en: row.country_name_en, name_tr: row.country_name_tr },
+            locale,
+          ),
+        labelKey: "geo.plates.fields.country",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ row, getValue }) => (
+          <div className="flex min-w-0 flex-col">
+            <span className="font-medium">{String(getValue())}</span>
+            <span className="text-muted-foreground font-mono text-xs">
+              {row.original.country_iso2}
+            </span>
+          </div>
+        ),
+      }),
+      createColumn<PlateFormat>({
+        id: "preview",
+        accessorKey: "example",
+        labelKey: "geo.plates.columns.preview",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <PlateBadge plate={row.original.example} format={row.original} />
+        ),
+      }),
+      createColumn<PlateFormat>({
+        accessorKey: "regex",
+        labelKey: "geo.plates.fields.regex",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="text-muted-foreground block max-w-xs truncate font-mono text-xs">
+            {row.original.regex}
+          </span>
+        ),
+      }),
+      createColumn<PlateFormat>({
+        accessorKey: "is_active",
+        labelKey: "geo.plates.fields.active",
+        enableSorting: true,
+        filterVariant: "boolean",
+        editVariant: "boolean",
+        gridSecondary: true,
+        cell: ({ row }) => (
+          <Badge variant={row.original.is_active ? "secondary" : "outline"}>
+            {row.original.is_active
+              ? t("geo.plates.active")
+              : t("geo.plates.inactive")}
+          </Badge>
+        ),
+      }),
+      createColumn<PlateFormat>({
+        accessorKey: "sort_order",
+        labelKey: "table.reorder",
+        enableSorting: true,
+        defaultHidden: true,
+      }),
+      createColumn<PlateFormat>({
+        id: "actions",
+        labelKey: "common.actions",
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        cell: ({ row }) =>
+          canWrite ? (
+            <EntityRowActions
+              actions={[
+                {
+                  id: "edit",
+                  label: t("geo.plates.edit"),
+                  icon: Pencil,
+                  onSelect: () => setEditing(row.original),
+                },
+              ]}
+            />
+          ) : null,
+      }),
+    ],
+    [canWrite, locale, t],
+  );
+
   const used = new Set((data?.items ?? []).map((f) => f.country_iso2));
   const countryOptions = (countries.data ?? [])
     .filter((c) => !used.has(c.iso2))
@@ -193,14 +332,6 @@ export function PlateFormatsPage() {
           ) : null
         }
       />
-      {isLoading ? <Loading label={t("common.loading")} /> : null}
-      {isError ? (
-        <ErrorState
-          title={t("geo.plates.error")}
-          retryLabel={t("common.retry")}
-          onRetry={() => refetch()}
-        />
-      ) : null}
 
       {editing ? (
         <AppForm
@@ -286,69 +417,41 @@ export function PlateFormatsPage() {
         </AppForm>
       ) : null}
 
-      {data ? (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("geo.plates.fields.country")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("geo.plates.columns.preview")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("geo.plates.fields.regex")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("geo.plates.fields.active")}
-                </th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((f) => (
-                <tr key={f.country_iso2} className="border-t">
-                  <td className="px-3 py-2 font-medium">
-                    {countryName(
-                      {
-                        name_en: f.country_name_en,
-                        name_tr: f.country_name_tr,
-                      },
-                      locale,
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <PlateBadge plate={f.example} format={f} />
-                  </td>
-                  <td className="text-muted-foreground max-w-xs truncate px-3 py-2 font-mono text-xs">
-                    {f.regex}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Badge variant={f.is_active ? "secondary" : "outline"}>
-                      {f.is_active
-                        ? t("geo.plates.active")
-                        : t("geo.plates.inactive")}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-2 text-end">
-                    {canWrite ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditing(f)}
-                      >
-                        {t("geo.plates.edit")}
-                      </Button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+      <EntityTable
+        columns={columns}
+        data={data?.items ?? []}
+        getRowId={(row) => row.country_iso2}
+        manual={CLIENT_SIDE_MANUAL}
+        isLoading={isLoading}
+        isError={isError}
+        errorTitle={t("geo.plates.error")}
+        onRetry={() => void refetch()}
+        initialState={{ pagination: { pageIndex: 0, pageSize: 50 } }}
+        pageSizeOptions={[20, 50, 100]}
+        features={{
+          persistKey: PLATE_FORMATS_PERSIST_KEY,
+          rowSelection: false,
+          rowReorder: canWrite,
+          inlineEdit: canWrite,
+        }}
+        onRowReorder={canWrite ? (rows) => reorder.mutate(rows) : undefined}
+        onCellEdit={
+          canWrite
+            ? ({ row, columnId, value }) => {
+                if (columnId !== "is_active") return;
+                const next = Boolean(value);
+                if (next === row.is_active) return;
+                toggleActive.mutate({ iso2: row.country_iso2, isActive: next });
+              }
+            : undefined
+        }
+        toolbarExtra={
+          <EntityToolbar
+            onRefresh={() => void refetch()}
+            refreshDisabled={isFetching}
+          />
+        }
+      />
     </div>
   );
 }

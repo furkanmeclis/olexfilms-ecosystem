@@ -64,5 +64,6 @@
   "plates.validation.color": "#RRGGBB formatından istifadə edin",
   "plates.toast.saved": "Nömrə formatı yadda saxlanıldı",
   "plates.toast.deleted": "Nömrə formatı silindi",
-  "plates.toast.failed": "Nömrə formatını yadda saxlamaq mümkün olmadı"
+  "plates.toast.failed": "Nömrə formatını yadda saxlamaq mümkün olmadı",
+  "territories.columns.country": "Ölkə"
 }

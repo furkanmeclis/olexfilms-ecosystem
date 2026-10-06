@@ -8,6 +8,7 @@ export type VehicleBrand = Schemas["VehicleBrand"];
 export type VehicleModel = Schemas["VehicleModel"];
 export type VehicleBrandInput = Schemas["VehicleBrandInput"];
 export type VehicleModelInput = Schemas["VehicleModelInput"];
+export type VehicleModelFacets = Schemas["VehicleModelFacets"];
 
 export type VehiclePage<T> = {
   items: T[];
@@ -16,13 +17,19 @@ export type VehiclePage<T> = {
   offset: number;
 };
 
+/**
+ * List query (TEC-369): paging, single-field `sort`, `q` and the column
+ * filters, passed through as query params. Brands: `active`, `has_logo`;
+ * models also `body_type` / `powertrain` (CSV) and `year_min` / `year_max`.
+ */
 export type VehicleListParams = {
   limit: number;
   offset: number;
   q?: string;
+  sort?: string;
   /** "true" / "false"; undefined lists both (super_admin only). */
   active?: string;
-};
+} & Record<string, string | number | undefined>;
 
 export type VehicleModelListParams = VehicleListParams & {
   brand_uuid: string;
@@ -86,6 +93,14 @@ export const vehicleCatalogService = {
     return platformRequest<VehiclePage<VehicleModel>>(
       "GET",
       "/v1/vehicle-catalog/models",
+      { query: params },
+    );
+  },
+  /** Distinct body_type / powertrain values with counts (TEC-369). */
+  modelFacets(params: { brand_uuid?: string; active?: string }) {
+    return platformRequest<VehicleModelFacets>(
+      "GET",
+      "/v1/vehicle-catalog/models/facets",
       { query: params },
     );
   },

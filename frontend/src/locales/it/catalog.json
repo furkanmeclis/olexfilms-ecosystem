@@ -135,5 +135,6 @@
   "services.categories.other": "Altro",
   "services.recurrences.one_time": "Una tantum",
   "services.recurrences.monthly": "Mensile",
-  "services.recurrences.yearly": "Annuale"
+  "services.recurrences.yearly": "Annuale",
+  "fields.created_at": "Creato"
 }

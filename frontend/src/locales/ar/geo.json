@@ -64,5 +64,6 @@
   "plates.validation.color": "استخدم الصيغة #RRGGBB",
   "plates.toast.saved": "حُفظت صيغة اللوحة",
   "plates.toast.deleted": "حُذفت صيغة اللوحة",
-  "plates.toast.failed": "تعذّر حفظ صيغة اللوحة"
+  "plates.toast.failed": "تعذّر حفظ صيغة اللوحة",
+  "territories.columns.country": "الدولة"
 }

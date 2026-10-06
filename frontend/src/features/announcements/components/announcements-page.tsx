@@ -17,11 +17,18 @@ import {
   Plus,
   Send,
 } from "lucide-react";
+import type { ColumnDef, FilterFn } from "@tanstack/react-table";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { ErrorState } from "@/components/common/error-state";
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityTable,
+  clientDateRangeFilter,
+} from "@/components/entity";
 import { PageHeader } from "@/components/layout/page-header";
+import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -42,10 +49,12 @@ import {
   validateAnnouncementForm,
   type AnnouncementFormValues,
 } from "@/features/announcements/lib/announcements";
+import { AnnouncementsManageTable } from "@/features/announcements/components/announcements-manage-table";
 import {
   announcementKeys,
   announcementsService,
   type Announcement,
+  type AnnouncementReadItem,
   type LocaleCode,
 } from "@/features/announcements/services/announcements.service";
 import { Markdown } from "@/features/portal/lib/markdown";
@@ -58,6 +67,8 @@ import { usePermission } from "@/providers/permission-provider";
 const inputClass =
   "border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
 const selectClass = inputClass;
+
+export const ANNOUNCEMENT_READS_PERSIST_KEY = "tenant-announcement-reads-v1";
 
 function pageCount(total: number) {
   return Math.max(1, Math.ceil(total / ANNOUNCEMENT_PAGE_SIZE));
@@ -141,8 +152,39 @@ function ReadReport({ uuid }: { uuid: string }) {
   const { t, format } = useLocale();
   const query = useQuery({
     queryKey: announcementKeys.reads(uuid),
-    queryFn: () => announcementsService.reads(uuid),
+    queryFn: () => announcementsService.readsAll(uuid),
   });
+
+  const readColumns = useMemo<ColumnDef<AnnouncementReadItem, unknown>[]>(
+    () => [
+      createColumn<AnnouncementReadItem>({
+        id: "name",
+        accessorFn: (row) =>
+          [row.name, row.surname].filter(Boolean).join(" ") || row.email,
+        labelKey: "announcements.report.reader",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ getValue }) => (
+          <span className="font-medium">{String(getValue())}</span>
+        ),
+      }),
+      createColumn<AnnouncementReadItem>({
+        accessorKey: "email",
+        labelKey: "announcements.report.email",
+        enableSorting: true,
+        gridSecondary: true,
+      }),
+      createColumn<AnnouncementReadItem>({
+        accessorKey: "read_at",
+        labelKey: "announcements.report.read_at",
+        enableSorting: true,
+        filterVariant: "date-range",
+        filterFn: clientDateRangeFilter as FilterFn<AnnouncementReadItem>,
+        cell: ({ row }) => format.dateTime(row.original.read_at),
+      }),
+    ],
+    [format],
+  );
 
   if (query.isError) {
     return (
@@ -184,19 +226,24 @@ function ReadReport({ uuid }: { uuid: string }) {
             })}
           </p>
         </div>
-        <ul className="divide-y rounded-md border">
-          {(report?.items ?? []).map((item) => (
-            <li key={item.user_uuid} className="px-3 py-2 text-sm">
-              <div className="font-medium">
-                {[item.name, item.surname].filter(Boolean).join(" ") ||
-                  item.email}
-              </div>
-              <div className="text-muted-foreground text-xs">
-                {item.email} · {format.dateTime(item.read_at)}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <EntityTable
+          columns={readColumns}
+          data={report?.items ?? []}
+          getRowId={(row) => row.user_uuid}
+          manual={CLIENT_SIDE_MANUAL}
+          isLoading={query.isLoading}
+          emptyTitle={t("announcements.report.empty")}
+          emptyDescription=""
+          initialState={{
+            sorting: [{ id: "read_at", desc: true }],
+            pagination: { pageIndex: 0, pageSize: 20 },
+          }}
+          features={{
+            persistKey: ANNOUNCEMENT_READS_PERSIST_KEY,
+            rowSelection: false,
+            viewMode: false,
+          }}
+        />
       </CardContent>
     </Card>
   );
@@ -343,6 +390,9 @@ function AnnouncementComposer({
       setValues(defaultAnnouncementForm(locale, org?.type));
       setActiveLocale((locale as LocaleCode) || "tr");
       void qc.invalidateQueries({ queryKey: announcementKeys.lists() });
+      void qc.invalidateQueries({
+        queryKey: [...announcementKeys.all, "manage"],
+      });
       void qc.invalidateQueries({
         queryKey: announcementKeys.unreadCount(locale as LocaleCode),
       });
@@ -706,6 +756,16 @@ export function AnnouncementsPage({ slug }: { slug: string }) {
           canWrite={canWrite}
         />
       </div>
+      {canWrite ? (
+        <Card data-testid="announcements-manage">
+          <CardHeader>
+            <CardTitle>{t("announcements.manage.title")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AnnouncementsManageTable onOpen={setSelectedUuid} />
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

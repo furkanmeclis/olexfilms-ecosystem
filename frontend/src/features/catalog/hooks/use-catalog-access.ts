@@ -30,7 +30,9 @@ export const catalogKeys = {
   products: (params: unknown) => ["catalog", "products", params] as const,
   product: (uuid: string) => ["catalog", "product", uuid] as const,
   prices: (uuid: string) => ["catalog", "prices", uuid] as const,
-  distributorPrices: (uuid: string) =>
-    ["catalog", "distributor-prices", uuid] as const,
+  distributorPrices: (uuid: string, params?: unknown) =>
+    params === undefined
+      ? (["catalog", "distributor-prices", uuid] as const)
+      : (["catalog", "distributor-prices", uuid, params] as const),
   distributors: ["catalog", "distributors"] as const,
 };

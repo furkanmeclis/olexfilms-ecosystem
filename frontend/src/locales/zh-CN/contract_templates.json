@@ -52,5 +52,13 @@
   "toast.locale_saved": "语言版本已保存。",
   "toast.save_failed": "无法保存模板。",
   "toast.default_set": "默认模板已更新。",
-  "toast.default_failed": "无法更改默认模板。"
+  "toast.default_failed": "无法更改默认模板。",
+  "fields.is_default": "默认",
+  "fields.updated_at": "最后更新",
+  "actions.delete": "删除",
+  "delete_confirm.title": "删除此模板？",
+  "delete_confirm.description": "将删除“{{name}}”。已被合同使用的模板会改为停用，以便已签署的合同保留其文本。",
+  "toast.deleted": "合同模板已删除。",
+  "toast.deactivated": "该模板已被合同使用，因此已停用而未删除。",
+  "toast.delete_failed": "无法删除该模板。"
 }

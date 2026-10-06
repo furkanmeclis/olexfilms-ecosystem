@@ -128,5 +128,7 @@
   "center.statuses.skipped_disabled": "متخطّى (القناة معطّلة)",
   "center.statuses.skipped_preference": "متخطّى (كتمه المستخدم)",
   "center.statuses.skipped_no_template": "متخطّى (لا يوجد قالب)",
-  "center.statuses.skipped_no_recipient": "متخطّى (لا يوجد عنوان)"
+  "center.statuses.skipped_no_recipient": "متخطّى (لا يوجد عنوان)",
+  "center.attempts": "المحاولات",
+  "center.delivery_error": "الخطأ"
 }

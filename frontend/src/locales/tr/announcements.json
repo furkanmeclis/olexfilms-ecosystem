@@ -44,5 +44,19 @@
   "report.counts": "{{total}} kişiden {{read}} kişi okudu",
   "dashboard.title": "Son duyurular",
   "dashboard.all": "Tümünü gör",
-  "dashboard.empty": "Yakın zamanda duyuru yok."
+  "dashboard.empty": "Yakın zamanda duyuru yok.",
+  "manage.title": "Duyuru yönetimi",
+  "manage.status": "Durum",
+  "manage.created_at": "Oluşturuldu",
+  "manage.updated_at": "Güncellendi",
+  "manage.view": "Aç",
+  "manage.pin": "Sabitle",
+  "manage.unpin": "Sabitlemeyi kaldır",
+  "manage.archive": "Arşivle",
+  "manage.published": "Duyuru yayımlandı.",
+  "manage.archived": "Duyuru arşivlendi.",
+  "report.empty": "Henüz okuyan yok.",
+  "report.reader": "Okuyan",
+  "report.email": "E-posta",
+  "report.read_at": "Okunma zamanı"
 }

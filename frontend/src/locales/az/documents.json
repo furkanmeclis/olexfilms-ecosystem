@@ -66,5 +66,6 @@
   "variable_groups.order": "Sifariş",
   "variable_groups.invoice": "Faktura",
   "variable_groups.warranty": "Zəmanət",
-  "variable_groups.totals": "Yekunlar"
+  "variable_groups.totals": "Yekunlar",
+  "fields.updated_at": "Yenilənib"
 }

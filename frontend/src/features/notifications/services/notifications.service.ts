@@ -10,8 +10,14 @@ export type ResourceMeta = components["schemas"]["ResourceMeta"];
 export type NotificationListResult = NotificationPage;
 
 export type ListPlatformNotificationsParams = ServerListParams & {
+  /** CSV */
   status?: string;
+  /** CSV */
   channel?: string;
+  /** CSV */
+  priority?: string;
+  created_from?: string;
+  created_to?: string;
   scope?: "me" | "all";
   user_uuid?: string;
 };
@@ -27,7 +33,6 @@ export const notificationsService = {
     return unwrap<NotificationListResult>(
       await apiClient.GET("/v1/platform/notifications", {
         params: {
-          // Backend accepts status/channel; OpenAPI list params omit them.
           query: {
             limit: params.limit,
             offset: params.offset,
@@ -35,17 +40,13 @@ export const notificationsService = {
             q: params.q,
             ...(params.status ? { status: params.status } : {}),
             ...(params.channel ? { channel: params.channel } : {}),
+            ...(params.priority ? { priority: params.priority } : {}),
+            ...(params.created_from
+              ? { created_from: params.created_from }
+              : {}),
+            ...(params.created_to ? { created_to: params.created_to } : {}),
             ...(params.scope ? { scope: params.scope } : {}),
             ...(params.user_uuid ? { user_uuid: params.user_uuid } : {}),
-          } as {
-            limit?: number;
-            offset?: number;
-            sort?: string;
-            q?: string;
-            status?: string;
-            channel?: string;
-            scope?: "me" | "all";
-            user_uuid?: string;
           },
         },
       }),

@@ -64,5 +64,6 @@
   "plates.validation.color": "Usa #RRGGBB",
   "plates.toast.saved": "Formato targa salvato",
   "plates.toast.deleted": "Formato targa eliminato",
-  "plates.toast.failed": "Impossibile salvare il formato targa"
+  "plates.toast.failed": "Impossibile salvare il formato targa",
+  "territories.columns.country": "Paese"
 }

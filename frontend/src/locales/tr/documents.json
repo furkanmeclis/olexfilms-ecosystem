@@ -66,5 +66,6 @@
   "variable_groups.order": "Sipariş",
   "variable_groups.invoice": "Fatura",
   "variable_groups.warranty": "Garanti",
-  "variable_groups.totals": "Tutarlar"
+  "variable_groups.totals": "Tutarlar",
+  "fields.updated_at": "Güncellendi"
 }

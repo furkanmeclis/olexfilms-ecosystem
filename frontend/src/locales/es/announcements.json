@@ -44,5 +44,19 @@
   "report.counts": "{{read}} de {{total}} leídos",
   "dashboard.title": "Últimos anuncios",
   "dashboard.all": "Ver todos",
-  "dashboard.empty": "No hay anuncios recientes."
+  "dashboard.empty": "No hay anuncios recientes.",
+  "manage.title": "Gestionar anuncios",
+  "manage.status": "Estado",
+  "manage.created_at": "Creado",
+  "manage.updated_at": "Actualizado",
+  "manage.view": "Abrir",
+  "manage.pin": "Fijar",
+  "manage.unpin": "Desfijar",
+  "manage.archive": "Archivar",
+  "manage.published": "Anuncio publicado.",
+  "manage.archived": "Anuncio archivado.",
+  "report.empty": "Nadie lo ha leído todavía.",
+  "report.reader": "Lector",
+  "report.email": "Correo electrónico",
+  "report.read_at": "Leído el"
 }

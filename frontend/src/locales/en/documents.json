@@ -66,5 +66,6 @@
   "variable_groups.order": "Order",
   "variable_groups.invoice": "Invoice",
   "variable_groups.warranty": "Warranty",
-  "variable_groups.totals": "Totals"
+  "variable_groups.totals": "Totals",
+  "fields.updated_at": "Updated"
 }

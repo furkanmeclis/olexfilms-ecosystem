@@ -64,5 +64,6 @@
   "plates.validation.color": "请使用 #RRGGBB",
   "plates.toast.saved": "车牌格式已保存",
   "plates.toast.deleted": "车牌格式已删除",
-  "plates.toast.failed": "无法保存车牌格式"
+  "plates.toast.failed": "无法保存车牌格式",
+  "territories.columns.country": "国家"
 }

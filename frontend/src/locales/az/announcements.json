@@ -44,5 +44,19 @@
   "report.counts": "{{read}} of {{total}} read",
   "dashboard.title": "Latest announcements",
   "dashboard.all": "View all",
-  "dashboard.empty": "No recent announcements."
+  "dashboard.empty": "No recent announcements.",
+  "manage.title": "Elanların idarəsi",
+  "manage.status": "Status",
+  "manage.created_at": "Yaradılıb",
+  "manage.updated_at": "Yenilənib",
+  "manage.view": "Aç",
+  "manage.pin": "Sabitlə",
+  "manage.unpin": "Sabitləməni ləğv et",
+  "manage.archive": "Arxivləşdir",
+  "manage.published": "Elan dərc edildi.",
+  "manage.archived": "Elan arxivləşdirildi.",
+  "report.empty": "Hələ heç kim oxumayıb.",
+  "report.reader": "Oxuyan",
+  "report.email": "E-poçt",
+  "report.read_at": "Oxunma vaxtı"
 }

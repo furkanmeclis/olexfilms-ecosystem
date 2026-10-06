@@ -170,4 +170,16 @@ describe("useServerListState", () => {
     render({ persistKey: "list-v1" });
     expect(result.params).toMatchObject({ limit: 50, offset: 0 });
   });
+
+  it("starts from initialColumnFilters and resets back to them", () => {
+    const initialColumnFilters = [{ id: "status", value: ["held"] }];
+    render({ columns, initialSort: null, initialColumnFilters });
+    expect(result.params).toEqual({ status: "held", limit: 20, offset: 0 });
+
+    act(() => result.onColumnFiltersChange([]));
+    expect(result.params).toEqual({ limit: 20, offset: 0 });
+
+    act(() => result.resetListState());
+    expect(result.params).toEqual({ status: "held", limit: 20, offset: 0 });
+  });
 });

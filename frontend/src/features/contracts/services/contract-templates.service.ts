@@ -59,6 +59,16 @@ export const contractTemplatesService = {
       { body },
     );
   },
+  /**
+   * 204 (undefined) when the template is deleted; a template already used
+   * by contracts is deactivated instead and returned (200).
+   */
+  remove(uuid: string) {
+    return platformRequest<ContractTemplate | undefined>(
+      "DELETE",
+      `${base}/${uuid}`,
+    );
+  },
   setDefault(uuid: string) {
     return platformRequest<ContractTemplate>("POST", `${base}/${uuid}/default`);
   },

@@ -9,6 +9,7 @@ export type AnnouncementAudienceTarget = Schemas["AnnouncementAudienceTarget"];
 export type AnnouncementInput = Schemas["AnnouncementInput"];
 export type AnnouncementLocaleInput = Schemas["AnnouncementLocaleInput"];
 export type AnnouncementReadReport = Schemas["AnnouncementReadReport"];
+export type AnnouncementReadItem = Schemas["AnnouncementReadItem"];
 export type AnnouncementUnreadCount = Schemas["AnnouncementUnreadCount"];
 export type LocaleCode = Schemas["LocaleCode"];
 
@@ -25,6 +26,24 @@ export type AnnouncementListQuery = {
   limit: number;
   offset: number;
 };
+
+/** `GET /v1/announcements/manage` (authors, every status; TEC-367). */
+export type AnnouncementManageQuery = {
+  limit: number;
+  offset: number;
+  sort?: string;
+  q?: string;
+  /** CSV of draft, published, archived */
+  status?: string;
+  pinned?: string;
+  publish_from?: string;
+  publish_to?: string;
+};
+
+/** Page size of the read report (backend caps `limit` at 500). */
+export const ANNOUNCEMENT_READS_PAGE_SIZE = 500;
+/** Safety stop for very large audiences (500 × 40 = 20 000 readers). */
+const ANNOUNCEMENT_READS_MAX_PAGES = 40;
 
 const enc = encodeURIComponent;
 
@@ -44,6 +63,13 @@ export const announcementsService = {
     return platformRequest<AnnouncementPage>("GET", "/v1/announcements", {
       query,
     });
+  },
+  manage(params: AnnouncementManageQuery) {
+    return platformRequest<AnnouncementPage>(
+      "GET",
+      "/v1/announcements/manage",
+      { query: params },
+    );
   },
   unreadCount(locale?: LocaleCode) {
     return platformRequest<AnnouncementUnreadCount>(
@@ -97,12 +123,41 @@ export const announcementsService = {
       { body: { pinned } },
     );
   },
-  reads(uuid: string, params = { limit: 200, offset: 0 }) {
+  reads(
+    uuid: string,
+    params = { limit: ANNOUNCEMENT_READS_PAGE_SIZE, offset: 0 },
+  ) {
     return platformRequest<AnnouncementReadReport>(
       "GET",
       `/v1/announcements/${enc(uuid)}/reads`,
       { query: params },
     );
+  },
+  /**
+   * The whole read report: pages through `read_total` (the old single
+   * request was clamped at 100 readers).
+   */
+  async readsAll(uuid: string): Promise<AnnouncementReadReport> {
+    const first = await announcementsService.reads(uuid, {
+      limit: ANNOUNCEMENT_READS_PAGE_SIZE,
+      offset: 0,
+    });
+    const items = [...(first.items ?? [])];
+    let pages = 1;
+    while (
+      items.length < first.read_total &&
+      pages < ANNOUNCEMENT_READS_MAX_PAGES
+    ) {
+      const next = await announcementsService.reads(uuid, {
+        limit: ANNOUNCEMENT_READS_PAGE_SIZE,
+        offset: items.length,
+      });
+      const batch = next.items ?? [];
+      if (!batch.length) break;
+      items.push(...batch);
+      pages += 1;
+    }
+    return { ...first, items, limit: items.length, offset: 0 };
   },
 };
 
@@ -117,4 +172,6 @@ export const announcementKeys = {
   unreadCount: (locale?: LocaleCode) =>
     [...announcementKeys.all, "unread-count", locale ?? ""] as const,
   reads: (uuid: string) => [...announcementKeys.all, "reads", uuid] as const,
+  manage: (params: AnnouncementManageQuery) =>
+    [...announcementKeys.all, "manage", params] as const,
 };

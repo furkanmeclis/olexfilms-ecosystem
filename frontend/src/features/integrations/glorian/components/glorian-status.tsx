@@ -40,6 +40,3 @@ export function OutboundStateBadge({ state }: { state: GlorianOutboundState }) {
     </Badge>
   );
 }
-
-export const selectClass =
-  "border-input bg-background h-9 rounded-md border px-3 text-sm";

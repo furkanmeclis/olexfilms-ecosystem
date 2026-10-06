@@ -1,21 +1,37 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useMemo } from "react";
 
-import { ErrorState } from "@/components/common/error-state";
-import { Loading } from "@/components/common/loading";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  CLIENT_SIDE_MANUAL,
+  EntityTable,
+  EntityToolbar,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { permissions } from "@/config/permissions";
 import { modulesKeys } from "@/features/modules/hooks/use-features";
 import { moduleLevelLabel, moduleName } from "@/features/modules/lib/labels";
 import { modulesService } from "@/features/modules/services/modules.service";
-import type { PlatformModulePatch } from "@/features/modules/types";
+import type {
+  ModuleLevel,
+  PlatformModule,
+  PlatformModulePatch,
+} from "@/features/modules/types";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
+
+export const PLATFORM_MODULES_PERSIST_KEY = "platform-modules-v1";
+
+export const MODULE_LEVELS: ModuleLevel[] = ["core", "standard", "addon"];
+
+type SwitchField = keyof PlatformModulePatch;
 
 /** Platform admin: system switches and defaults of every module. */
 export function PlatformModulesPage() {
@@ -23,7 +39,7 @@ export function PlatformModulesPage() {
   const { can } = usePermission();
   const canWrite = can(permissions.modules.platformWrite);
   const queryClient = useQueryClient();
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: modulesKeys.platform,
     queryFn: () => modulesService.platformList(),
   });
@@ -39,6 +55,73 @@ export function PlatformModulesPage() {
         isApiError(error) ? error.message : t("modules.toast.failed"),
       ),
   });
+  const { mutate, isPending } = patch;
+
+  const columns = useMemo<ColumnDef<PlatformModule, unknown>[]>(() => {
+    // Inline edit: each switch PATCHes /v1/platform/modules/{key}.
+    const switchColumn = (field: SwitchField, labelKey: string) =>
+      createColumn<PlatformModule>({
+        accessorKey: field,
+        labelKey,
+        enableSorting: true,
+        filterVariant: "boolean",
+        cell: ({ row }) => {
+          const m = row.original;
+          return (
+            <Switch
+              aria-label={t(labelKey)}
+              checked={Boolean(m[field])}
+              disabled={!canWrite || m.level === "core" || isPending}
+              onCheckedChange={(v) =>
+                mutate({ key: m.key, body: { [field]: v === true } })
+              }
+            />
+          );
+        },
+      });
+
+    return [
+      createColumn<PlatformModule>({
+        id: "module",
+        accessorFn: (row) => moduleName(t, row.key),
+        labelKey: "modules.columns.module",
+        enableSorting: true,
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <div className="flex min-w-0 flex-col">
+            <span className="font-medium">
+              {moduleName(t, row.original.key)}
+            </span>
+            <span className="text-muted-foreground font-mono text-xs">
+              {row.original.key}
+            </span>
+          </div>
+        ),
+      }),
+      createColumn<PlatformModule>({
+        accessorKey: "level",
+        labelKey: "modules.columns.level",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: MODULE_LEVELS.map((value) => ({
+          value,
+          labelKey: `modules.level.${value}`,
+          label: value,
+        })),
+        gridSecondary: true,
+        cell: ({ row }) => (
+          <Badge
+            variant={row.original.level === "core" ? "secondary" : "outline"}
+          >
+            {moduleLevelLabel(t, row.original.level)}
+          </Badge>
+        ),
+      }),
+      switchColumn("enabled", "modules.platform.system_enabled"),
+      switchColumn("default_enabled", "modules.platform.default_enabled"),
+      switchColumn("paid", "modules.platform.paid"),
+    ];
+  }, [canWrite, isPending, mutate, t]);
 
   return (
     <div className="space-y-6">
@@ -46,86 +129,29 @@ export function PlatformModulesPage() {
         title={t("modules.platform.title")}
         description={t("modules.platform.description")}
       />
-      {isLoading ? <Loading label={t("common.loading")} /> : null}
-      {isError ? (
-        <ErrorState
-          title={t("modules.error.title")}
-          description={t("modules.error.description")}
-          retryLabel={t("common.retry")}
-          onRetry={() => refetch()}
-        />
-      ) : null}
-      {data ? (
-        <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("modules.columns.module")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("modules.columns.level")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("modules.platform.system_enabled")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("modules.platform.default_enabled")}
-                </th>
-                <th className="px-3 py-2 text-start font-medium">
-                  {t("modules.platform.paid")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((m) => {
-                const core = m.level === "core";
-                const disabled = !canWrite || core || patch.isPending;
-                const set = (body: PlatformModulePatch) =>
-                  patch.mutate({ key: m.key, body });
-                return (
-                  <tr key={m.key} className="border-t">
-                    <td className="px-3 py-2 font-medium">
-                      {moduleName(t, m.key)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge variant={core ? "secondary" : "outline"}>
-                        {moduleLevelLabel(t, m.level)}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2">
-                      <Switch
-                        aria-label={t("modules.platform.system_enabled")}
-                        checked={m.enabled}
-                        disabled={disabled}
-                        onCheckedChange={(v) => set({ enabled: v === true })}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Switch
-                        aria-label={t("modules.platform.default_enabled")}
-                        checked={m.default_enabled}
-                        disabled={disabled}
-                        onCheckedChange={(v) =>
-                          set({ default_enabled: v === true })
-                        }
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Switch
-                        aria-label={t("modules.platform.paid")}
-                        checked={m.paid}
-                        disabled={disabled}
-                        onCheckedChange={(v) => set({ paid: v === true })}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+      <EntityTable
+        columns={columns}
+        data={data?.items ?? []}
+        getRowId={(row) => row.key}
+        manual={CLIENT_SIDE_MANUAL}
+        isLoading={isLoading}
+        isError={isError}
+        errorTitle={t("modules.error.title")}
+        errorDescription={t("modules.error.description")}
+        onRetry={() => void refetch()}
+        initialState={{ pagination: { pageIndex: 0, pageSize: 50 } }}
+        pageSizeOptions={[20, 50, 100]}
+        features={{
+          persistKey: PLATFORM_MODULES_PERSIST_KEY,
+          rowSelection: false,
+        }}
+        toolbarExtra={
+          <EntityToolbar
+            onRefresh={() => void refetch()}
+            refreshDisabled={isFetching}
+          />
+        }
+      />
     </div>
   );
 }

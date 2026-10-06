@@ -99,5 +99,6 @@
   "transfer.status.pending": "Очікує",
   "transfer.status.completed": "Завершено",
   "transfer.status.cancelled": "Скасовано",
-  "transfer.status.expired": "Термін минув"
+  "transfer.status.expired": "Термін минув",
+  "columns.created_at": "Створено"
 }

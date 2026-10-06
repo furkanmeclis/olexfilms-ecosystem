@@ -64,5 +64,6 @@
   "plates.validation.color": "Формат #RRGGBB",
   "plates.toast.saved": "Формат госномера сохранён",
   "plates.toast.deleted": "Формат госномера удалён",
-  "plates.toast.failed": "Не удалось сохранить формат госномера"
+  "plates.toast.failed": "Не удалось сохранить формат госномера",
+  "territories.columns.country": "Страна"
 }

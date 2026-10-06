@@ -99,5 +99,6 @@
   "transfer.status.pending": "Gözləyir",
   "transfer.status.completed": "Tamamlandı",
   "transfer.status.cancelled": "Ləğv edildi",
-  "transfer.status.expired": "Müddəti bitdi"
+  "transfer.status.expired": "Müddəti bitdi",
+  "columns.created_at": "Yaradılma"
 }

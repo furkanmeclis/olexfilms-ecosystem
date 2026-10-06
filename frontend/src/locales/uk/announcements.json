@@ -44,5 +44,19 @@
   "report.counts": "Прочитано {{read}} з {{total}}",
   "dashboard.title": "Останні оголошення",
   "dashboard.all": "Переглянути всі",
-  "dashboard.empty": "Немає нещодавніх оголошень."
+  "dashboard.empty": "Немає нещодавніх оголошень.",
+  "manage.title": "Керування оголошеннями",
+  "manage.status": "Статус",
+  "manage.created_at": "Створено",
+  "manage.updated_at": "Оновлено",
+  "manage.view": "Відкрити",
+  "manage.pin": "Закріпити",
+  "manage.unpin": "Відкріпити",
+  "manage.archive": "В архів",
+  "manage.published": "Оголошення опубліковано.",
+  "manage.archived": "Оголошення переміщено в архів.",
+  "report.empty": "Ще ніхто не прочитав.",
+  "report.reader": "Читач",
+  "report.email": "Ел. пошта",
+  "report.read_at": "Час прочитання"
 }

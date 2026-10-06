@@ -66,5 +66,6 @@
   "variable_groups.order": "订单",
   "variable_groups.invoice": "发票",
   "variable_groups.warranty": "质保",
-  "variable_groups.totals": "合计"
+  "variable_groups.totals": "合计",
+  "fields.updated_at": "更新时间"
 }

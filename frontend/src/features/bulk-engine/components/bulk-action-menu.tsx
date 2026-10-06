@@ -21,6 +21,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -37,6 +44,11 @@ type BulkActionMenuProps = {
   scope: SelectionScope;
   selectedCount: number;
   onComplete?: () => void;
+  /**
+   * Choices for parameterized actions, keyed by param key (e.g. the
+   * category of `set_category`). A param with options renders a select.
+   */
+  paramOptions?: Record<string, { value: string; label: string }[]>;
 };
 
 export function BulkActionMenu({
@@ -45,6 +57,7 @@ export function BulkActionMenu({
   scope,
   selectedCount,
   onComplete,
+  paramOptions,
 }: BulkActionMenuProps) {
   const { t } = useLocale();
   const { can } = usePermission();
@@ -120,27 +133,57 @@ export function BulkActionMenu({
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          {(pending?.params ?? []).map((param) => (
-            <label key={param.key} className="flex flex-col gap-1.5 text-sm">
-              <span className="font-medium">{t(param.label_key)}</span>
-              <Input
-                type="number"
-                step="any"
-                value={paramValues[param.key] ?? ""}
-                placeholder={
-                  param.kind === "percent"
-                    ? t("bulk.params.percent_placeholder")
-                    : t("bulk.params.delta_placeholder")
-                }
-                onChange={(event) =>
-                  setParamValues((prev) => ({
-                    ...prev,
-                    [param.key]: event.target.value,
-                  }))
-                }
-              />
-            </label>
-          ))}
+          {(pending?.params ?? []).map((param) => {
+            const options = paramOptions?.[param.key];
+            if (options) {
+              return (
+                <div key={param.key} className="flex flex-col gap-1.5 text-sm">
+                  <span className="font-medium">{t(param.label_key)}</span>
+                  <Select
+                    value={paramValues[param.key] ?? ""}
+                    onValueChange={(value) =>
+                      setParamValues((prev) => ({
+                        ...prev,
+                        [param.key]: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger aria-label={t(param.label_key)}>
+                      <SelectValue placeholder={t(param.label_key)} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {options.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            }
+            return (
+              <label key={param.key} className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium">{t(param.label_key)}</span>
+                <Input
+                  type="number"
+                  step="any"
+                  value={paramValues[param.key] ?? ""}
+                  placeholder={
+                    param.kind === "percent"
+                      ? t("bulk.params.percent_placeholder")
+                      : t("bulk.params.delta_placeholder")
+                  }
+                  onChange={(event) =>
+                    setParamValues((prev) => ({
+                      ...prev,
+                      [param.key]: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+            );
+          })}
         </div>
         <DialogFooter>
           <Button

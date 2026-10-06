@@ -94,5 +94,6 @@
   "names.photo_standard": "Fotoğraf standardı",
   "names.reviews": "Değerlendirme",
   "names.e_invoice": "E-fatura altyapısı (UBL-TR)",
-  "names.short_url": "Kısa URL"
+  "names.short_url": "Kısa URL",
+  "columns.slug": "Kısa ad"
 }

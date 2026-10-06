@@ -94,5 +94,6 @@
   "names.photo_standard": "Фотостандарт",
   "names.reviews": "Отзывы",
   "names.e_invoice": "Электронный счёт (UBL-TR)",
-  "names.short_url": "Короткие ссылки"
+  "names.short_url": "Короткие ссылки",
+  "columns.slug": "Короткое имя"
 }

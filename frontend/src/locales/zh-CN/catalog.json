@@ -135,5 +135,6 @@
   "services.categories.other": "其他",
   "services.recurrences.one_time": "一次性",
   "services.recurrences.monthly": "每月",
-  "services.recurrences.yearly": "每年"
+  "services.recurrences.yearly": "每年",
+  "fields.created_at": "创建时间"
 }

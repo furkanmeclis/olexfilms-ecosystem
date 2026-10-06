@@ -94,5 +94,6 @@
   "names.photo_standard": "Photo standard",
   "names.reviews": "Reviews",
   "names.e_invoice": "E-invoice (UBL-TR)",
-  "names.short_url": "Short URLs"
+  "names.short_url": "Short URLs",
+  "columns.slug": "Slug"
 }

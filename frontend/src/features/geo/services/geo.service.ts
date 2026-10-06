@@ -113,6 +113,15 @@ export const geoService = {
     );
   },
 
+  /** Drag-and-drop order (ISO2 codes); returns the renumbered full list. */
+  reorderPlateFormats(countries: string[]) {
+    return platformRequest<{ items: PlateFormat[] }>(
+      "PUT",
+      "/v1/platform/plate-formats/order",
+      { body: { countries } },
+    );
+  },
+
   deletePlateFormat(iso2: string) {
     return platformRequest<{ deleted: boolean }>(
       "DELETE",

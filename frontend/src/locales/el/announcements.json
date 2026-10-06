@@ -44,5 +44,19 @@
   "report.counts": "{{read}} of {{total}} read",
   "dashboard.title": "Latest announcements",
   "dashboard.all": "View all",
-  "dashboard.empty": "No recent announcements."
+  "dashboard.empty": "No recent announcements.",
+  "manage.title": "Διαχείριση ανακοινώσεων",
+  "manage.status": "Κατάσταση",
+  "manage.created_at": "Δημιουργήθηκε",
+  "manage.updated_at": "Ενημερώθηκε",
+  "manage.view": "Άνοιγμα",
+  "manage.pin": "Καρφίτσωμα",
+  "manage.unpin": "Ξεκαρφίτσωμα",
+  "manage.archive": "Αρχειοθέτηση",
+  "manage.published": "Η ανακοίνωση δημοσιεύτηκε.",
+  "manage.archived": "Η ανακοίνωση αρχειοθετήθηκε.",
+  "report.empty": "Δεν το έχει διαβάσει κανείς ακόμη.",
+  "report.reader": "Αναγνώστης",
+  "report.email": "Email",
+  "report.read_at": "Διαβάστηκε στις"
 }

@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
+import { CircleCheck, CircleOff, Pencil, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -16,7 +16,7 @@ import {
   EntityToolbar,
   useServerListState,
 } from "@/components/entity";
-import { createColumn } from "@/components/tables";
+import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
@@ -29,31 +29,59 @@ import {
   catalogService,
   type CatalogCategory,
   type CatalogCategoryInput,
+  type CatalogPage,
+  type ListCategoriesParams,
 } from "@/features/catalog/services/catalog.service";
+import {
+  BulkActionMenu,
+  useBulkSelection,
+  type BulkActionDef,
+} from "@/features/bulk-engine";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
-/** Tenant > Catalog > Categories (TEC-147). Writes are center only (K4). */
+export const CATEGORIES_PERSIST_KEY = "tenant-catalog-categories-v2";
+
+/** `POST /v1/catalog/categories/bulk` (TEC-369): center only, ids scope. */
+export const CATEGORY_BULK_ACTIONS: BulkActionDef[] = [
+  {
+    id: "activate",
+    label_key: "bulk.actions.catalog_categories.activate",
+    permission: permissions.catalog.write,
+    reversible: true,
+    icon: CircleCheck,
+  },
+  {
+    id: "deactivate",
+    label_key: "bulk.actions.catalog_categories.deactivate",
+    permission: permissions.catalog.write,
+    reversible: true,
+    confirm_key: "bulk.confirm.catalog_categories.deactivate",
+    icon: CircleOff,
+  },
+  {
+    id: "delete",
+    label_key: "bulk.actions.catalog_categories.delete",
+    permission: permissions.catalog.write,
+    destructive: true,
+    confirm_key: "bulk.confirm.catalog_categories.delete",
+    icon: Trash2,
+  },
+];
+
+/**
+ * Tenant > Catalog > Categories (TEC-147, TEC-370). Server DataTable with
+ * sort, active filter, bulk actions, drag-to-reorder (sort order) and
+ * inline edit of name / active. Writes are center only (K4).
+ */
 export function CategoriesPage({ slug }: { slug: string }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const queryClient = useQueryClient();
   const { catalog } = useCatalogAccess(slug);
-  const listState = useServerListState({ initialSort: "sort" });
   const [editing, setEditing] = useState<CatalogCategory | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [deleting, setDeleting] = useState<CatalogCategory | null>(null);
-
-  const params = {
-    limit: listState.params.limit,
-    offset: listState.params.offset,
-    q: listState.params.q,
-  };
-  const list = useQuery({
-    queryKey: catalogKeys.categories(params),
-    queryFn: () => catalogService.listCategories(params),
-    enabled: catalog.canRead,
-  });
 
   const onError = (error: unknown) =>
     appToast.error(
@@ -62,35 +90,14 @@ export function CategoriesPage({ slug }: { slug: string }) {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: catalogKeys.all });
 
-  const save = useMutation({
-    mutationFn: (input: CatalogCategoryInput) =>
-      editing
-        ? catalogService.updateCategory(editing.uuid, input)
-        : catalogService.createCategory(input),
-    onSuccess: async () => {
-      await invalidate();
-      setFormOpen(false);
-      appToast.success(t("catalog.toast.saved"));
-    },
-    onError,
-  });
-  const remove = useMutation({
-    mutationFn: (uuid: string) => catalogService.deleteCategory(uuid),
-    onSuccess: async () => {
-      await invalidate();
-      setDeleting(null);
-      appToast.success(t("catalog.toast.deleted"));
-    },
-    onError,
-  });
-
-  const columns = useMemo(() => {
+  const baseColumns = useMemo(() => {
     const cols = [
       createColumn<CatalogCategory>({
         accessorKey: "name",
         labelKey: "catalog.fields.name",
-        enableSorting: false,
+        enableSorting: true,
         gridPrimary: true,
+        editVariant: "text",
         cell: ({ row }) => (
           <span className="font-medium">{row.original.name}</span>
         ),
@@ -119,12 +126,15 @@ export function CategoriesPage({ slug }: { slug: string }) {
       createColumn<CatalogCategory>({
         accessorKey: "sort",
         labelKey: "catalog.fields.sort",
-        enableSorting: false,
+        enableSorting: true,
       }),
       createColumn<CatalogCategory>({
         accessorKey: "active",
         labelKey: "catalog.fields.active",
-        enableSorting: false,
+        enableSorting: true,
+        filterVariant: "boolean",
+        param: "active",
+        editVariant: "boolean",
         cell: ({ row }) => (
           <StatusChip
             label={
@@ -135,6 +145,20 @@ export function CategoriesPage({ slug }: { slug: string }) {
             tone={row.original.active ? "success" : "default"}
           />
         ),
+      }),
+      createColumn<CatalogCategory>({
+        accessorKey: "created_at",
+        labelKey: "catalog.fields.created_at",
+        enableSorting: true,
+        defaultHidden: true,
+        cell: ({ row }) => format.dateTime(row.original.created_at),
+      }),
+      createColumn<CatalogCategory>({
+        accessorKey: "updated_at",
+        labelKey: "catalog.fields.updated_at",
+        enableSorting: true,
+        defaultHidden: true,
+        cell: ({ row }) => format.dateTime(row.original.updated_at),
       }),
     ];
     if (catalog.canWrite) {
@@ -171,13 +195,103 @@ export function CategoriesPage({ slug }: { slug: string }) {
       );
     }
     return cols as ColumnDef<CatalogCategory, unknown>[];
-  }, [catalog.canWrite, t]);
+  }, [catalog.canWrite, format, t]);
 
-  const total = list.data?.total ?? 0;
-  const pageCount = Math.max(
-    1,
-    Math.ceil(total / (listState.pagination.pageSize || 20)),
+  const columns = useMemo(
+    () =>
+      catalog.canWrite
+        ? [createSelectColumnDef<CatalogCategory>(), ...baseColumns]
+        : baseColumns,
+    [baseColumns, catalog.canWrite],
   );
+
+  const listState = useServerListState({
+    columns,
+    initialSort: "sort",
+    persistKey: CATEGORIES_PERSIST_KEY,
+  });
+  const params: ListCategoriesParams = listState.params;
+  const listKey = catalogKeys.categories(params);
+  const list = useQuery({
+    queryKey: listKey,
+    queryFn: () => catalogService.listCategories(params),
+    enabled: catalog.canRead,
+  });
+  const total = list.data?.total ?? 0;
+
+  const bulkQuery = useMemo(
+    () => ({ ...listState.filterParams, q: params.q, sort: params.sort }),
+    [listState.filterParams, params.q, params.sort],
+  );
+  const bulkSelection = useBulkSelection({
+    listQueryKey: params,
+    bulkQuery,
+    total,
+  });
+
+  const save = useMutation({
+    mutationFn: (input: CatalogCategoryInput) =>
+      editing
+        ? catalogService.updateCategory(editing.uuid, input)
+        : catalogService.createCategory(input),
+    onSuccess: async () => {
+      await invalidate();
+      setFormOpen(false);
+      appToast.success(t("catalog.toast.saved"));
+    },
+    onError,
+  });
+  const remove = useMutation({
+    mutationFn: (uuid: string) => catalogService.deleteCategory(uuid),
+    onSuccess: async () => {
+      await invalidate();
+      setDeleting(null);
+      appToast.success(t("catalog.toast.deleted"));
+    },
+    onError,
+  });
+  // Inline edit (double-click) of name / active → PATCH with that field.
+  const patch = useMutation({
+    mutationFn: ({
+      uuid,
+      input,
+    }: {
+      uuid: string;
+      input: CatalogCategoryInput;
+    }) => catalogService.updateCategory(uuid, input),
+    onSuccess: async () => {
+      await invalidate();
+      appToast.success(t("table.cell_saved"));
+    },
+    onError,
+  });
+  // Drag-and-drop → PUT /v1/catalog/categories/order with the page's uuids
+  // (the backend rearranges them within the positions they hold).
+  const reorder = useMutation({
+    mutationFn: (rows: CatalogCategory[]) =>
+      catalogService.reorderCategories(rows.map((row) => row.uuid)),
+    onMutate: async (rows) => {
+      await queryClient.cancelQueries({ queryKey: listKey });
+      const previous =
+        queryClient.getQueryData<CatalogPage<CatalogCategory>>(listKey);
+      if (previous) {
+        queryClient.setQueryData(listKey, { ...previous, items: rows });
+      }
+      return { previous };
+    },
+    onSuccess: async () => {
+      await invalidate();
+      appToast.success(t("table.reorder_saved"));
+    },
+    onError: (error, _rows, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(listKey, context.previous);
+      onError(error);
+    },
+  });
+
+  // Order only makes sense on the sort-order view.
+  const canReorder = catalog.canWrite && params.sort === "sort";
 
   return (
     <EntityPage
@@ -223,19 +337,53 @@ export function CategoriesPage({ slug }: { slug: string }) {
         onRetry={() => void list.refetch()}
         emptyTitle={t("catalog.categories.empty_title")}
         emptyDescription={t("catalog.categories.empty_description")}
-        pageCount={pageCount}
-        state={listState.tableState}
-        features={{
-          persistKey: "tenant-catalog-categories-v1",
-          rowSelection: false,
-          columnFilters: false,
-          facetedFilters: false,
+        rowCount={total}
+        state={{
+          ...listState.tableState,
+          rowSelection: bulkSelection.rowSelection,
+          onRowSelectionChange: bulkSelection.onRowSelectionChange,
         }}
+        features={{
+          persistKey: CATEGORIES_PERSIST_KEY,
+          rowSelection: catalog.canWrite,
+          rowReorder: canReorder,
+          inlineEdit: catalog.canWrite,
+        }}
+        onRowReorder={canReorder ? (rows) => reorder.mutate(rows) : undefined}
+        onCellEdit={
+          catalog.canWrite
+            ? ({ row, columnId, value }) => {
+                if (columnId === "name") {
+                  const name = String(value ?? "").trim();
+                  if (!name || name === row.name) return;
+                  patch.mutate({ uuid: row.uuid, input: { name } });
+                } else if (columnId === "active") {
+                  const active = Boolean(value);
+                  if (active === row.active) return;
+                  patch.mutate({ uuid: row.uuid, input: { active } });
+                }
+              }
+            : undefined
+        }
         toolbarExtra={
-          <EntityToolbar
-            onRefresh={() => void list.refetch()}
-            refreshDisabled={list.isFetching}
-          />
+          <>
+            {catalog.canWrite ? (
+              <BulkActionMenu
+                resource="catalog.categories"
+                actions={CATEGORY_BULK_ACTIONS}
+                scope={bulkSelection.scope}
+                selectedCount={bulkSelection.selectedCount}
+                onComplete={() => {
+                  bulkSelection.clearSelection();
+                  void invalidate();
+                }}
+              />
+            ) : null}
+            <EntityToolbar
+              onRefresh={() => void list.refetch()}
+              refreshDisabled={list.isFetching}
+            />
+          </>
         }
       />
 
