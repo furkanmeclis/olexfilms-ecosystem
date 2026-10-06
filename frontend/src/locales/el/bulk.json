@@ -66,5 +66,15 @@
   "confirm.vehicle_brands.deactivate": "Απενεργοποίηση των επιλεγμένων μαρκών;",
   "actions.vehicle_models.activate": "Ενεργοποίηση",
   "actions.vehicle_models.deactivate": "Απενεργοποίηση",
-  "confirm.vehicle_models.deactivate": "Απενεργοποίηση των επιλεγμένων μοντέλων;"
+  "confirm.vehicle_models.deactivate": "Απενεργοποίηση των επιλεγμένων μοντέλων;",
+  "actions.leads.assign": "Ανάθεση",
+  "actions.leads.set_status": "Αλλαγή κατάστασης",
+  "confirm.leads.set_status": "Αλλαγή κατάστασης των επιλεγμένων υποψήφιων πελατών;",
+  "params.lead_status": "Κατάσταση",
+  "params.lead_status.new": "Νέο",
+  "params.lead_status.contacted": "Επικοινωνήθηκε",
+  "params.lead_status.quoted": "Στάλθηκε προσφορά",
+  "params.lead_status.won": "Κερδήθηκε",
+  "params.lead_status.lost": "Χάθηκε",
+  "params.lost_reason": "Αιτία απώλειας"
 }

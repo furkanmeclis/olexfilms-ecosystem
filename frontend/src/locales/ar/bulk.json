@@ -66,5 +66,15 @@
   "confirm.vehicle_brands.deactivate": "إلغاء تفعيل العلامات المحددة؟",
   "actions.vehicle_models.activate": "تفعيل",
   "actions.vehicle_models.deactivate": "إلغاء التفعيل",
-  "confirm.vehicle_models.deactivate": "إلغاء تفعيل الطرازات المحددة؟"
+  "confirm.vehicle_models.deactivate": "إلغاء تفعيل الطرازات المحددة؟",
+  "actions.leads.assign": "تعيين",
+  "actions.leads.set_status": "تغيير الحالة",
+  "confirm.leads.set_status": "هل تريد تغيير حالة العملاء المحتملين المحددين؟",
+  "params.lead_status": "الحالة",
+  "params.lead_status.new": "جديد",
+  "params.lead_status.contacted": "تم التواصل",
+  "params.lead_status.quoted": "تم تقديم عرض",
+  "params.lead_status.won": "تم الفوز",
+  "params.lead_status.lost": "خسارة",
+  "params.lost_reason": "سبب الخسارة"
 }
