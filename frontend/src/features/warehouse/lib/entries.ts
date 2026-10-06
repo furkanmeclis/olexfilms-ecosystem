@@ -1,6 +1,7 @@
 import type {
   StockEntry,
   StockEntryLine,
+  StockEntryMode,
   StockEntryStatus,
 } from "@/features/warehouse/services/warehouse.service";
 
@@ -9,6 +10,13 @@ export const ENTRY_STATUSES: StockEntryStatus[] = [
   "confirmed",
   "cancelled",
   "undone",
+];
+
+/** Entry modes (TEC-204); import entries come from the stock import. */
+export const ENTRY_MODES: StockEntryMode[] = [
+  "with_existing",
+  "generate_new",
+  "import",
 ];
 
 export function entryStatusTone(

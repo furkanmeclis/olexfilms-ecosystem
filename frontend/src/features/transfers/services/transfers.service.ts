@@ -1,3 +1,4 @@
+import type { ServerListQuery } from "@/components/entity";
 import type { components } from "@/generated/api";
 import { platformRequest } from "@/lib/api/platform-request";
 
@@ -14,14 +15,17 @@ export type TransferOrgRef = Schemas["OrderOrgRef"];
 /** List direction: the active organization's side of the request. */
 export type TransferDirection = "outgoing" | "incoming" | "approval";
 
-/** GET /v1/stock-transfers filters (TEC-197). */
-export type TransferListQuery = {
-  kind?: StockTransferKind;
+/**
+ * GET /v1/stock-transfers params (TEC-197, TEC-373): the list contract
+ * (`sort` transfer_no/status/created_at, `q`, CSV `kind` / `direction` /
+ * `status` / `organization_uuid`, `created_from` / `created_to`).
+ */
+export type TransferListQuery = ServerListQuery & {
   direction?: TransferDirection;
-  status?: StockTransferStatus;
-  limit: number;
-  offset: number;
 };
+
+/** An organization in the caller's organizations.read scope. */
+export type ScopeOrganization = { uuid: string; name: string };
 
 export type TransferPage = {
   items: StockTransfer[];
@@ -51,6 +55,15 @@ export const transfersService = {
       kind ? { query: { kind } } : undefined,
     );
   },
+  /** Party filter options: organizations in the organizations.read scope. */
+  async listOrganizations(): Promise<ScopeOrganization[]> {
+    const data = await platformRequest<{ items: ScopeOrganization[] }>(
+      "GET",
+      "/v1/tenant/organizations",
+      { query: { limit: 100 } },
+    );
+    return (data.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name }));
+  },
   get(uuid: string) {
     return platformRequest<StockTransfer>(
       "GET",
@@ -77,6 +90,7 @@ export const transferKeys = {
     ["stock-transfers", "list", params] as const,
   detail: (uuid: string) => ["stock-transfers", "detail", uuid] as const,
   targets: ["stock-transfers", "targets"] as const,
+  organizations: ["stock-transfers", "organizations"] as const,
   targetsOf: (kind: StockTransferKind) =>
     ["stock-transfers", "targets", kind] as const,
 };

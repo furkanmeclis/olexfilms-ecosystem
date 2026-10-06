@@ -1,6 +1,7 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   Building2,
   History,
@@ -11,32 +12,30 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
 import { StatusChip } from "@/components/common/status-chip";
+import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
 import { PageHeader } from "@/components/layout/page-header";
+import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import {
+  OrderActionDialog,
+  useStoreOrder,
+} from "@/features/orders/components/order-action-dialog";
+import {
   canAssignUnits,
   canEditDraft,
+  lineAmount,
   lineFullyAssigned,
   orderActions,
   orderFullyAssigned,
@@ -57,8 +56,6 @@ import {
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-
-const REASON_MAX = 500;
 
 function Section({
   title,
@@ -90,95 +87,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <dt className="text-muted-foreground text-xs">{label}</dt>
       <dd className="text-sm break-words">{children}</dd>
     </div>
-  );
-}
-
-function useStoreOrder() {
-  const qc = useQueryClient();
-  return (order: Order) => {
-    qc.setQueryData(orderKeys.detail(order.uuid), order);
-    void qc.invalidateQueries({ queryKey: ["orders", "list"] });
-  };
-}
-
-/** Confirmation of a status action; cancel kinds ask for a reason. */
-function ActionDialog({
-  order,
-  action,
-  onClose,
-}: {
-  order: Order;
-  action: OrderAction | null;
-  onClose: () => void;
-}) {
-  const { t } = useLocale();
-  const store = useStoreOrder();
-  const [reason, setReason] = useState("");
-  const mutation = useMutation({
-    mutationFn: (a: OrderAction) =>
-      ordersService.transition(
-        order.uuid,
-        a.target,
-        reason.trim() || undefined,
-      ),
-    onSuccess: (updated, a) => {
-      store(updated);
-      toast.success(t(`orders.actions.${a.kind}.success`));
-      setReason("");
-      onClose();
-    },
-    onError: (err) =>
-      toast.error(orderErrorMessage(err, t, t("orders.actions.failed"))),
-  });
-  const open = action !== null;
-  const reasonOk = !action?.reasonRequired || reason.trim().length >= 3;
-  return (
-    <Dialog open={open} onOpenChange={(o) => (!o ? onClose() : undefined)}>
-      <DialogContent>
-        {action ? (
-          <>
-            <DialogHeader>
-              <DialogTitle>
-                {t(`orders.actions.${action.kind}.title`)}
-              </DialogTitle>
-              <DialogDescription>
-                {t(`orders.actions.${action.kind}.description`)}
-              </DialogDescription>
-            </DialogHeader>
-            {action.destructive ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="order-reason">
-                  {action.reasonRequired
-                    ? t("orders.actions.reason_required")
-                    : t("orders.actions.reason_optional")}
-                </Label>
-                <Textarea
-                  id="order-reason"
-                  value={reason}
-                  rows={3}
-                  maxLength={REASON_MAX}
-                  onChange={(e) => setReason(e.target.value)}
-                />
-              </div>
-            ) : null}
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
-                {t("orders.actions.back")}
-              </Button>
-              <Button
-                type="button"
-                variant={action.destructive ? "destructive" : "default"}
-                data-testid="action-confirm"
-                disabled={!reasonOk || mutation.isPending}
-                onClick={() => mutation.mutate(action)}
-              >
-                {t(`orders.actions.${action.kind}.confirm`)}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : null}
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -309,10 +217,16 @@ function AssignForm({ order, item }: { order: Order; item: OrderItem }) {
   );
 }
 
+export const ORDER_ITEMS_PERSIST_KEY = "tenant-order-items-v1";
+
+/**
+ * Lines of the order as a nested client-side table (TEC-374): sort, search
+ * and the assigned units with the barcode form while the seller prepares.
+ */
 function Items({ order, assign }: { order: Order; assign: boolean }) {
   const { t, format } = useLocale();
   const store = useStoreOrder();
-  const items = order.items ?? [];
+  const items = useMemo(() => order.items ?? [], [order.items]);
   const unassign = useMutation({
     mutationFn: (v: { item: string; unit: string }) =>
       ordersService.unassignUnit(order.uuid, v.item, v.unit),
@@ -320,112 +234,160 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
     onError: (err) =>
       toast.error(orderErrorMessage(err, t, t("orders.assign.failed"))),
   });
+  const unassignUnit = unassign.mutate;
+  const unassignPending = unassign.isPending;
   const showAssigned = ![
     "draft",
     "submitted",
     "approved",
     "cancelled",
   ].includes(order.status);
+
+  const columns = useMemo(() => {
+    const cols: ColumnDef<OrderItem, unknown>[] = [
+      createColumn<OrderItem>({
+        id: "product",
+        accessorFn: (item) => `${item.product.name} ${item.product.sku}`,
+        labelKey: "orders.form.product",
+        gridPrimary: true,
+        cell: ({ row }) => (
+          <div
+            className="min-w-0"
+            data-testid="order-item"
+            data-sku={row.original.product.sku}
+          >
+            <div className="font-medium">{row.original.product.name}</div>
+            <div className="text-muted-foreground text-xs" dir="ltr">
+              {row.original.product.sku}
+            </div>
+          </div>
+        ),
+      }) as ColumnDef<OrderItem, unknown>,
+      createColumn<OrderItem>({
+        id: "amount",
+        accessorFn: (item) => lineAmount(item),
+        labelKey: "orders.items.amount",
+        cell: ({ row }) =>
+          isRoll(row.original.product.unit_type)
+            ? `${row.original.meters ?? "0"} ${t("orders.unit.m")}`
+            : `${row.original.quantity ?? 0} ${t("orders.unit.pcs")}`,
+      }) as ColumnDef<OrderItem, unknown>,
+      createColumn<OrderItem>({
+        id: "unit_price",
+        accessorFn: (item) => amountNumber(item.unit_price),
+        labelKey: "orders.items.unit_price",
+        cell: ({ row }) =>
+          format.currency(
+            amountNumber(row.original.unit_price),
+            order.currency,
+          ),
+      }) as ColumnDef<OrderItem, unknown>,
+      createColumn<OrderItem>({
+        id: "line_total",
+        accessorFn: (item) => amountNumber(item.line_total),
+        labelKey: "orders.items.line_total",
+        gridSecondary: true,
+        cell: ({ row }) => (
+          <span className="font-semibold" data-testid="line-total">
+            {format.currency(
+              amountNumber(row.original.line_total),
+              order.currency,
+            )}
+          </span>
+        ),
+      }) as ColumnDef<OrderItem, unknown>,
+    ];
+    if (showAssigned) {
+      cols.push(
+        createColumn<OrderItem>({
+          id: "assigned",
+          accessorFn: (item) => Number(item.assigned) || 0,
+          labelKey: "orders.assign.assigned",
+          cell: ({ row }) => {
+            const item = row.original;
+            const roll = isRoll(item.product.unit_type);
+            return (
+              <Badge
+                variant={lineFullyAssigned(item) ? "success" : "warning"}
+                data-testid="line-assigned"
+              >
+                {item.assigned} / {roll ? item.meters : item.quantity}
+              </Badge>
+            );
+          },
+        }) as ColumnDef<OrderItem, unknown>,
+        createColumn<OrderItem>({
+          id: "units",
+          accessorFn: (item) => item.units.map((u) => u.barcode).join(" "),
+          labelKey: "orders.items.units",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <div className="min-w-48 space-y-2">
+                {item.units.length > 0 ? (
+                  <ul className="flex flex-wrap gap-2">
+                    {item.units.map((u) => (
+                      <li
+                        key={u.unit_uuid}
+                        className="bg-muted flex items-center gap-1 rounded px-2 py-1 font-mono text-xs"
+                        dir="ltr"
+                        data-testid="assigned-unit"
+                      >
+                        {u.barcode}
+                        {u.quantity && u.quantity > 1 ? ` ×${u.quantity}` : ""}
+                        {u.meters ? ` ${u.meters} m` : ""}
+                        {assign ? (
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-destructive ms-1"
+                            aria-label={t("orders.assign.remove")}
+                            data-testid="unassign"
+                            disabled={unassignPending}
+                            onClick={() =>
+                              unassignUnit({
+                                item: item.uuid,
+                                unit: u.unit_uuid,
+                              })
+                            }
+                          >
+                            <X className="size-3" />
+                          </button>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {assign && !lineFullyAssigned(item) ? (
+                  <AssignForm order={order} item={item} />
+                ) : null}
+              </div>
+            );
+          },
+        }) as ColumnDef<OrderItem, unknown>,
+      );
+    }
+    return cols;
+  }, [assign, format, order, showAssigned, t, unassignPending, unassignUnit]);
+
   return (
     <Section
       title={t("orders.detail.items", { count: items.length })}
       icon={<Package className="size-4" />}
       testId="order-items"
     >
-      <ul className="space-y-3">
-        {items.map((item) => {
-          const roll = isRoll(item.product.unit_type);
-          const amount = roll
-            ? `${item.meters ?? "0"} ${t("orders.unit.m")}`
-            : `${item.quantity ?? 0} ${t("orders.unit.pcs")}`;
-          const full = lineFullyAssigned(item);
-          return (
-            <li
-              key={item.uuid}
-              className="space-y-2 rounded-lg border p-3"
-              data-testid="order-item"
-              data-sku={item.product.sku}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-medium">{item.product.name}</div>
-                  <div className="text-muted-foreground text-xs" dir="ltr">
-                    {item.product.sku}
-                  </div>
-                </div>
-                <div className="text-end text-sm">
-                  <div>
-                    {amount} ×{" "}
-                    {format.currency(
-                      amountNumber(item.unit_price),
-                      order.currency,
-                    )}
-                  </div>
-                  <div className="font-semibold" data-testid="line-total">
-                    {format.currency(
-                      amountNumber(item.line_total),
-                      order.currency,
-                    )}
-                  </div>
-                </div>
-              </div>
-              {showAssigned ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="text-muted-foreground">
-                      {t("orders.assign.assigned")}
-                    </span>
-                    <Badge
-                      variant={full ? "success" : "warning"}
-                      data-testid="line-assigned"
-                    >
-                      {item.assigned} / {roll ? item.meters : item.quantity}
-                    </Badge>
-                  </div>
-                  {item.units.length > 0 ? (
-                    <ul className="flex flex-wrap gap-2">
-                      {item.units.map((u) => (
-                        <li
-                          key={u.unit_uuid}
-                          className="bg-muted flex items-center gap-1 rounded px-2 py-1 font-mono text-xs"
-                          dir="ltr"
-                          data-testid="assigned-unit"
-                        >
-                          {u.barcode}
-                          {u.quantity && u.quantity > 1
-                            ? ` ×${u.quantity}`
-                            : ""}
-                          {u.meters ? ` ${u.meters} m` : ""}
-                          {assign ? (
-                            <button
-                              type="button"
-                              className="text-muted-foreground hover:text-destructive ms-1"
-                              aria-label={t("orders.assign.remove")}
-                              data-testid="unassign"
-                              disabled={unassign.isPending}
-                              onClick={() =>
-                                unassign.mutate({
-                                  item: item.uuid,
-                                  unit: u.unit_uuid,
-                                })
-                              }
-                            >
-                              <X className="size-3" />
-                            </button>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                  {assign && !full ? (
-                    <AssignForm order={order} item={item} />
-                  ) : null}
-                </div>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+      <EntityTable
+        columns={columns}
+        data={items}
+        getRowId={(item) => item.uuid}
+        manual={CLIENT_SIDE_MANUAL}
+        emptyTitle={t("orders.form.lines_empty")}
+        features={{
+          persistKey: ORDER_ITEMS_PERSIST_KEY,
+          rowSelection: false,
+          pagination: items.length > 20,
+        }}
+      />
       <dl className="mt-4 space-y-1 border-t pt-3 text-sm">
         <div className="flex justify-between gap-2">
           <dt className="text-muted-foreground">
@@ -677,7 +639,7 @@ export function OrderDetailPage({
           <HistoryList order={order} />
         </div>
       </div>
-      <ActionDialog
+      <OrderActionDialog
         order={order}
         action={action}
         onClose={() => setAction(null)}

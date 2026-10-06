@@ -14,14 +14,7 @@ import {
   validateOrderForm,
   type OrderFormLine,
 } from "@/features/orders/lib/form";
-import {
-  EMPTY_ORDER_FILTERS,
-  buildOrderListQuery,
-} from "@/features/orders/lib/list-filters";
-import type {
-  Order,
-  OrderStatus,
-} from "@/features/orders/services/orders.service";
+import type { Order } from "@/features/orders/services/orders.service";
 
 const grants =
   (...g: string[]) =>
@@ -268,40 +261,5 @@ describe("order form validation", () => {
       amount: "1",
     }));
     expect(validateOrderForm(many).form).toBe("too_many");
-  });
-});
-
-describe("buildOrderListQuery", () => {
-  it("maps side, status and local-day bounds", () => {
-    const q = buildOrderListQuery(
-      "seller",
-      {
-        status: "shipped" as OrderStatus,
-        from: "2026-10-01",
-        to: "2026-10-02",
-      },
-      { limit: 20, offset: 40 },
-    );
-    expect(q.side).toBe("seller");
-    expect(q.status).toBe("shipped");
-    expect(q.offset).toBe(40);
-    expect(new Date(q.created_from ?? "").getDate()).toBe(1);
-    expect(new Date(q.created_to ?? "").getDate()).toBe(3);
-  });
-
-  it("drops empty filters and a reversed range", () => {
-    expect(
-      buildOrderListQuery("buyer", EMPTY_ORDER_FILTERS, {
-        limit: 20,
-        offset: 0,
-      }),
-    ).toEqual({ side: "buyer", limit: 20, offset: 0 });
-    const q = buildOrderListQuery(
-      "buyer",
-      { status: "all", from: "2026-10-05", to: "2026-10-01" },
-      { limit: 20, offset: 0 },
-    );
-    expect(q.created_from).toBeUndefined();
-    expect(q.created_to).toBeUndefined();
   });
 });

@@ -10,18 +10,10 @@ import { StatusChip } from "@/components/common/status-chip";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { TransferItemsTable } from "@/features/transfers/components/transfer-items-table";
+import { ReasonDialog } from "@/features/transfers/components/transfer-reason-dialog";
 import {
   transferErrorMessage,
   transferStatusTone,
@@ -45,66 +37,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <dt className="text-muted-foreground text-xs">{label}</dt>
       <dd className="text-sm">{children}</dd>
     </div>
-  );
-}
-
-function ReasonDialog({
-  target,
-  onClose,
-  onConfirm,
-  pending,
-}: {
-  target: StockTransferStatus | null;
-  onClose: () => void;
-  onConfirm: (reason: string) => void;
-  pending: boolean;
-}) {
-  const { t } = useLocale();
-  const [reason, setReason] = useState("");
-  return (
-    <Dialog
-      open={target !== null}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {target ? t(`transfers.action.${target}`) : ""}
-          </DialogTitle>
-          <DialogDescription>
-            {t("transfers.detail.reason_hint")}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-1.5">
-          <Label htmlFor="transfer-reason">
-            {t("transfers.detail.reason")}
-          </Label>
-          <Textarea
-            id="transfer-reason"
-            rows={3}
-            maxLength={500}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            {t("transfers.form.cancel")}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            data-testid="transfer-reason-confirm"
-            disabled={pending}
-            onClick={() => onConfirm(reason.trim())}
-          >
-            {target ? t(`transfers.action.${target}`) : ""}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -301,62 +233,7 @@ export function TransferDetailPage({
           <CardTitle>{t("transfers.form.units")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="transfer-items">
-              <thead>
-                <tr className="text-muted-foreground border-b text-xs">
-                  <th className="p-2 text-start font-medium">
-                    {t("transfers.form.barcode")}
-                  </th>
-                  <th className="p-2 text-start font-medium">
-                    {t("transfers.detail.product")}
-                  </th>
-                  <th className="p-2 text-start font-medium">
-                    {t("transfers.form.quantity")}
-                  </th>
-                  <th className="p-2 text-start font-medium">
-                    {t("transfers.detail.unit_price")}
-                  </th>
-                  <th className="p-2 text-start font-medium">
-                    {t("transfers.detail.stock_state")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(r.items ?? []).map((it) => (
-                  <tr key={it.uuid} className="border-b last:border-0">
-                    <td className="p-2 font-mono text-xs" dir="ltr">
-                      {it.barcode}
-                    </td>
-                    <td className="p-2">
-                      {it.product.name}{" "}
-                      <span
-                        className="text-muted-foreground font-mono text-xs"
-                        dir="ltr"
-                      >
-                        {it.product.sku}
-                      </span>
-                    </td>
-                    <td className="p-2" dir="ltr">
-                      {it.quantity ?? (it.meters ? `${it.meters} m` : 1)}
-                    </td>
-                    <td className="p-2" dir="ltr">
-                      {it.unit_price ?? "—"}
-                    </td>
-                    <td className="text-muted-foreground p-2 text-xs">
-                      {it.restored
-                        ? t("transfers.item.restored")
-                        : it.received
-                          ? t("transfers.item.received")
-                          : it.shipped
-                            ? t("transfers.item.shipped")
-                            : t("transfers.item.pending")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TransferItemsTable items={r.items ?? []} currency={r.currency} />
         </CardContent>
       </Card>
       <ReasonDialog

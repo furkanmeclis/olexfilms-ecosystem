@@ -56,5 +56,7 @@
   "widget.empty": "Stokta ürün yok.",
   "widget.meters_value": "{{meters}} m",
   "widget.quantity_value": "{{quantity}} adet",
-  "widget.truncated": "Özet ilk {{limit}} ürünü kapsar."
+  "widget.truncated": "Özet ilk {{limit}} ürünü kapsar.",
+  "filters.product_search": "Ürün adı veya SKU",
+  "filters.product_none": "Bu stokta ürün yok."
 }

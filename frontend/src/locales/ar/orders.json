@@ -161,5 +161,9 @@
   "assign.failed": "تعذّر تعيين الوحدة.",
   "assign.meters": "الأمتار",
   "assign.meters_placeholder": "الكل",
-  "assign.split_success": "قُسّمت اللفة: باركود جديد {{barcode}}، وتبقّى {{rest}} م في اللفة."
+  "assign.split_success": "قُسّمت اللفة: باركود جديد {{barcode}}، وتبقّى {{rest}} م في اللفة.",
+  "items.amount": "الكمية",
+  "items.unit_price": "سعر الوحدة",
+  "items.line_total": "إجمالي البند",
+  "items.units": "الوحدات المخصصة"
 }

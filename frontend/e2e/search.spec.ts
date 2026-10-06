@@ -46,7 +46,9 @@ test("cmd+k: barcode search opens the unit in My stock", async ({ page }) => {
     new RegExp(`/t/${STOCK_SLUG}/stock\\?barcode=OLX-ROLL-001$`),
   );
   await expect(page.locator("#stock-barcode")).toHaveValue(ROLL.barcode);
-  const rows = page.getByTestId("stock-row");
+  const rows = page
+    .getByRole("row")
+    .filter({ has: page.getByTestId("stock-row") });
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText(ROLL.barcode);
 });

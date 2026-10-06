@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "未找到该条码对应的单元。",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "该单元不在您组织的库存中。",
   "errors.TRANSFER_UNIT_RESERVED": "该单元已被订单或其他调拨预留。",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "该条码库存不足。"
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "该条码库存不足。",
+  "columns.organization": "组织",
+  "detail.line_total": "行合计"
 }

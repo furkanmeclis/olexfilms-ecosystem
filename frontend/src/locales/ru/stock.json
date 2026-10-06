@@ -56,5 +56,7 @@
   "widget.empty": "Товаров на складе нет.",
   "widget.meters_value": "{{meters}} м",
   "widget.quantity_value": "{{quantity}} шт.",
-  "widget.truncated": "Сводка охватывает первые {{limit}} товаров."
+  "widget.truncated": "Сводка охватывает первые {{limit}} товаров.",
+  "filters.product_search": "Название товара или артикул",
+  "filters.product_none": "В этом запасе нет товаров."
 }

@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "Aucune unité trouvée avec ce code-barres.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "Cette unité n'est pas dans le stock de votre organisation.",
   "errors.TRANSFER_UNIT_RESERVED": "Cette unité est réservée par une commande ou un autre transfert.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "Stock insuffisant pour ce code-barres."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "Stock insuffisant pour ce code-barres.",
+  "columns.organization": "Organisation",
+  "detail.line_total": "Total de la ligne"
 }

@@ -1,17 +1,29 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { ClipboardCheck, Plus } from "lucide-react";
+  ClipboardCheck,
+  Eye,
+  FileDown,
+  Play,
+  Plus,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
+import {
+  EntityRowActions,
+  EntityTable,
+  EntityToolbar,
+  useServerListState,
+  type EntityRowAction,
+} from "@/components/entity";
+import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,44 +31,52 @@ import { Label } from "@/components/ui/label";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { catalogService } from "@/features/catalog/services/catalog.service";
-import {
-  ALL,
-  ListBody,
-  Pager,
-  StatusFilter,
-} from "@/features/warehouse/components/list-controls";
 import { LocationPicker } from "@/features/warehouse/components/location-picker";
 import { nativeSelectClass } from "@/features/warehouse/components/native-select-field";
+import {
+  enumFilterOptions,
+  useWarehouseFilterOptions,
+} from "@/features/warehouse/components/table-options";
 import {
   useWarehouseAccess,
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
 import {
+  canCancelCount,
+  canStart,
   COUNT_METHODS,
+  COUNT_SCOPES,
   COUNT_STATUSES,
   COUNT_VISIBILITIES,
   countBody,
   countFormErrors,
   countStatusTone,
   EMPTY_COUNT_FORM,
+  needsStartApproval,
   scopesFor,
   type CountFormState,
 } from "@/features/warehouse/lib/counts";
+import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import {
-  pageCount,
-  warehouseErrorMessage,
-} from "@/features/warehouse/lib/errors";
-import {
+  countExportPath,
   warehouseKeys,
   warehouseService,
   type CountListQuery,
   type StockCount,
-  type StockCountStatus,
 } from "@/features/warehouse/services/warehouse.service";
 import { useDebounce } from "@/hooks/use-debounce";
+import {
+  platformDownloadFile,
+  triggerBrowserDownload,
+} from "@/lib/api/platform-form-request";
+import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
+import { appToast } from "@/providers/toast-provider";
 
 export const COUNT_PAGE_SIZE = 20;
+export const COUNTS_PERSIST_KEY = "tenant-warehouse-counts-v1";
+
+type CountRowAction = "approve-start" | "start" | "cancel";
 
 /** Scope summary of a count: warehouse, room, location or product. */
 export function countScopeText(
@@ -77,35 +97,243 @@ export function countScopeText(
   }
 }
 
+/** The CSV of a count exists once it is completed (review or approved). */
+function hasReport(c: StockCount): boolean {
+  return c.status === "pending_review" || c.status === "approved";
+}
+
 /**
- * Warehouse > Stock counts (TEC-206): the counts of the organization and a
- * new draft (warehouse, method, blind / guided, scope).
+ * Warehouse > Stock counts (TEC-206, TEC-376): the counts of the
+ * organization over a server DataTable — sort (created, status,
+ * warehouse), search (note, warehouse), status / method / visibility /
+ * scope / warehouse / created filters, row actions (open, approve the
+ * start, start, cancel, CSV) and mobile cards — and a new draft
+ * (warehouse, method, blind / guided, scope).
  */
 export function CountsPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { confirm } = useDialogs();
   const access = useWarehouseAccess(slug);
   const canWrite = access.can(Permission.WarehouseWrite);
-  const [status, setStatus] = useState<StockCountStatus | typeof ALL>(ALL);
-  const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false);
+  const warehouseOptions = useWarehouseFilterOptions(access.allowed);
 
-  const query = useMemo<CountListQuery>(
-    () => ({
-      ...(status === ALL ? {} : { status }),
-      limit: COUNT_PAGE_SIZE,
-      offset: page * COUNT_PAGE_SIZE,
-    }),
-    [status, page],
-  );
+  const action = useMutation({
+    mutationFn: (v: { uuid: string; action: CountRowAction }) =>
+      warehouseService.countAction(v.uuid, v.action),
+    onSuccess: async (next, v) => {
+      qc.setQueryData(warehouseKeys.count(next.uuid), next);
+      await qc.invalidateQueries({ queryKey: ["warehouse", "counts"] });
+      appToast.success(t(`warehouse.count.${v.action.replace("-", "_")}_done`));
+    },
+    onError: (err) =>
+      appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
+  });
+  const runAction = action.mutate;
+  const actionPending = action.isPending;
+
+  const columns = useMemo(() => {
+    const askCancel = async (count: StockCount) => {
+      const ok = await confirm({
+        title: t("warehouse.count.cancel_title"),
+        description: t("warehouse.count.cancel_description"),
+        confirmLabel: t("warehouse.count.cancel"),
+        variant: "destructive",
+      });
+      if (ok) runAction({ uuid: count.uuid, action: "cancel" });
+    };
+    const downloadCsv = async (count: StockCount) => {
+      try {
+        const { blob, filename } = await platformDownloadFile(
+          countExportPath(count.uuid),
+        );
+        triggerBrowserDownload(blob, filename ?? `count-${count.uuid}.csv`);
+      } catch {
+        appToast.error(t("warehouse.count.export_failed"));
+      }
+    };
+    return [
+      createColumn<StockCount>({
+        id: "warehouse",
+        accessorFn: (c) => c.warehouse.name,
+        labelKey: "warehouse.entries.columns.warehouse",
+        enableSorting: true,
+        gridPrimary: true,
+        filterVariant: "faceted",
+        filterOptions: warehouseOptions,
+        enableColumnFilter: warehouseOptions.length > 0,
+        param: "warehouse_uuid",
+        cell: ({ row }) => (
+          <Link
+            href={routes.tenant.warehouse.count(slug, row.original.uuid)}
+            className="font-medium hover:underline"
+            data-testid="count-row"
+            data-uuid={row.original.uuid}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {row.original.warehouse.code} · {row.original.warehouse.name}
+          </Link>
+        ),
+      }),
+      createColumn<StockCount>({
+        accessorKey: "method",
+        labelKey: "warehouse.fields.method",
+        enableSorting: false,
+        filterVariant: "faceted",
+        filterOptions: enumFilterOptions(
+          COUNT_METHODS,
+          "warehouse.count_method",
+        ),
+        param: "method",
+        gridSecondary: true,
+        cell: ({ row }) => t(`warehouse.count_method.${row.original.method}`),
+      }),
+      createColumn<StockCount>({
+        accessorKey: "visibility",
+        labelKey: "warehouse.fields.visibility",
+        enableSorting: false,
+        filterVariant: "faceted",
+        filterOptions: enumFilterOptions(
+          COUNT_VISIBILITIES,
+          "warehouse.count_visibility",
+        ),
+        param: "visibility",
+        cell: ({ row }) =>
+          t(`warehouse.count_visibility.${row.original.visibility}`),
+      }),
+      createColumn<StockCount>({
+        accessorKey: "scope_type",
+        labelKey: "warehouse.fields.scope",
+        enableSorting: false,
+        filterVariant: "faceted",
+        filterOptions: enumFilterOptions(COUNT_SCOPES, "warehouse.count_scope"),
+        param: "scope_type",
+        cell: ({ row }) => (
+          <div>
+            {t(`warehouse.count_scope.${row.original.scope_type}`)}
+            {row.original.scope_type !== "warehouse" ? (
+              <div className="text-muted-foreground text-xs" dir="ltr">
+                {countScopeText(row.original, t)}
+              </div>
+            ) : null}
+          </div>
+        ),
+      }),
+      createColumn<StockCount>({
+        accessorKey: "status",
+        labelKey: "warehouse.entries.columns.status",
+        enableSorting: true,
+        filterVariant: "faceted",
+        filterOptions: enumFilterOptions(
+          COUNT_STATUSES,
+          "warehouse.count_status",
+        ),
+        param: "status",
+        cell: ({ row }) => (
+          <StatusChip
+            label={t(`warehouse.count_status.${row.original.status}`)}
+            tone={countStatusTone(row.original.status)}
+          />
+        ),
+      }),
+      createColumn<StockCount>({
+        accessorKey: "created_at",
+        labelKey: "warehouse.entries.columns.created",
+        enableSorting: true,
+        filterVariant: "date-range",
+        param: "created",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs whitespace-nowrap">
+            {format.dateTime(row.original.created_at)}
+          </span>
+        ),
+      }),
+      createColumn<StockCount>({
+        id: "actions",
+        labelKey: "common.actions",
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        cell: ({ row }) => {
+          const count = row.original;
+          const items: EntityRowAction[] = [
+            {
+              id: "view",
+              label: t("common.view"),
+              icon: Eye,
+              onSelect: () =>
+                router.push(routes.tenant.warehouse.count(slug, count.uuid)),
+            },
+          ];
+          if (canWrite && needsStartApproval(count)) {
+            items.push({
+              id: "approve-start",
+              label: t("warehouse.count.approve_start"),
+              icon: ShieldCheck,
+              disabled: actionPending,
+              onSelect: () =>
+                runAction({ uuid: count.uuid, action: "approve-start" }),
+            });
+          }
+          if (canWrite && canStart(count)) {
+            items.push({
+              id: "start",
+              label: t("warehouse.count.start"),
+              icon: Play,
+              disabled: actionPending,
+              onSelect: () => runAction({ uuid: count.uuid, action: "start" }),
+            });
+          }
+          if (hasReport(count)) {
+            items.push({
+              id: "export",
+              label: t("warehouse.count.export"),
+              icon: FileDown,
+              onSelect: () => void downloadCsv(count),
+            });
+          }
+          if (canWrite && canCancelCount(count)) {
+            items.push({
+              id: "cancel",
+              label: t("warehouse.count.cancel"),
+              icon: XCircle,
+              variant: "destructive",
+              disabled: actionPending,
+              onSelect: () => void askCancel(count),
+            });
+          }
+          return <EntityRowActions actions={items} />;
+        },
+      }),
+    ] as ColumnDef<StockCount, unknown>[];
+  }, [
+    actionPending,
+    canWrite,
+    confirm,
+    format,
+    router,
+    runAction,
+    slug,
+    t,
+    warehouseOptions,
+  ]);
+
+  // Column meta drives the params: warehouse_uuid / method / visibility /
+  // scope_type / status (CSV), created (created_from/_to).
+  const listState = useServerListState({
+    columns,
+    initialSort: "-created_at",
+    initialPageSize: COUNT_PAGE_SIZE,
+    persistKey: COUNTS_PERSIST_KEY,
+  });
+  const query: CountListQuery = listState.params;
   const list = useQuery({
     queryKey: warehouseKeys.counts(query),
     queryFn: () => warehouseService.listCounts(query),
     enabled: access.allowed,
-    placeholderData: keepPreviousData,
   });
-  const rows = list.data?.items ?? [];
-  const total = list.data?.total ?? 0;
-  const pages = pageCount(total, COUNT_PAGE_SIZE);
 
   return (
     <WarehouseShell
@@ -131,95 +359,53 @@ export function CountsPage({ slug }: { slug: string }) {
         <NewCountForm slug={slug} onCancel={() => setCreating(false)} />
       ) : null}
 
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <StatusFilter
-            value={status}
-            statuses={COUNT_STATUSES}
-            labelKey="warehouse.count_status"
-            ariaLabel={t("warehouse.entries.status_filter")}
-            onChange={(s) => {
-              setStatus(s);
-              setPage(0);
-            }}
-          />
-          <ListBody
-            isError={list.isError}
-            isLoading={list.isLoading}
-            isEmpty={rows.length === 0}
-            onRetry={() => void list.refetch()}
-            emptyTitle={t("warehouse.counts.empty_title")}
-            emptyDescription={t("warehouse.counts.empty_description")}
-            emptyTestId="counts-empty"
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" data-testid="counts-table">
-                <thead>
-                  <tr className="text-muted-foreground border-b text-xs">
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.warehouse")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.fields.method")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.fields.scope")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.status")}
-                    </th>
-                    <th className="p-2 text-start font-medium">
-                      {t("warehouse.entries.columns.created")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((c) => (
-                    <tr
-                      key={c.uuid}
-                      className="hover:bg-accent/50 border-b last:border-0"
-                      data-testid="count-row"
-                    >
-                      <td className="p-2">
-                        <Link
-                          href={routes.tenant.warehouse.count(slug, c.uuid)}
-                          className="font-medium hover:underline"
-                        >
-                          {c.warehouse.code} · {c.warehouse.name}
-                        </Link>
-                      </td>
-                      <td className="p-2">
-                        {t(`warehouse.count_method.${c.method}`)}
-                        <div className="text-muted-foreground text-xs">
-                          {t(`warehouse.count_visibility.${c.visibility}`)}
-                        </div>
-                      </td>
-                      <td className="p-2">{countScopeText(c, t)}</td>
-                      <td className="p-2">
-                        <StatusChip
-                          label={t(`warehouse.count_status.${c.status}`)}
-                          tone={countStatusTone(c.status)}
-                        />
-                      </td>
-                      <td className="text-muted-foreground p-2 text-xs whitespace-nowrap">
-                        {format.dateTime(c.created_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      <EntityTable
+        columns={columns}
+        data={list.data?.items ?? []}
+        getRowId={(row) => row.uuid}
+        onRowClick={(row) =>
+          router.push(routes.tenant.warehouse.count(slug, row.uuid))
+        }
+        isLoading={list.isLoading}
+        isError={list.isError}
+        onRetry={() => void list.refetch()}
+        emptyTitle={t("warehouse.counts.empty_title")}
+        emptyDescription={t("warehouse.counts.empty_description")}
+        rowCount={list.data?.total ?? 0}
+        state={listState.tableState}
+        features={{
+          persistKey: COUNTS_PERSIST_KEY,
+          rowSelection: false,
+          viewMode: true,
+        }}
+        renderGridItem={(c) => (
+          <div className="space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-medium">
+                {c.warehouse.code} · {c.warehouse.name}
+              </span>
+              <StatusChip
+                label={t(`warehouse.count_status.${c.status}`)}
+                tone={countStatusTone(c.status)}
+              />
             </div>
-          </ListBody>
-          <Pager
-            page={page}
-            pages={pages}
-            total={total}
-            busy={list.isFetching}
-            hidden={rows.length === 0 && page === 0}
-            onPage={setPage}
+            <p className="text-sm">
+              {t(`warehouse.count_method.${c.method}`)} ·{" "}
+              {t(`warehouse.count_visibility.${c.visibility}`)}
+            </p>
+            <div className="text-muted-foreground flex justify-between gap-2 text-xs">
+              <span>{countScopeText(c, t)}</span>
+              <span>{format.dateTime(c.created_at)}</span>
+            </div>
+          </div>
+        )}
+        toolbarExtra={
+          <EntityToolbar
+            onRefresh={() => void list.refetch()}
+            refreshDisabled={list.isFetching}
           />
-        </CardContent>
-      </Card>
+        }
+      />
     </WarehouseShell>
   );
 }

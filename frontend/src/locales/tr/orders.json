@@ -161,5 +161,9 @@
   "assign.failed": "Birim atanamadı.",
   "assign.meters": "Metre",
   "assign.meters_placeholder": "Tümü",
-  "assign.split_success": "Rulo bölündü: yeni barkod {{barcode}}, ruloda {{rest}} m kaldı."
+  "assign.split_success": "Rulo bölündü: yeni barkod {{barcode}}, ruloda {{rest}} m kaldı.",
+  "items.amount": "Miktar",
+  "items.unit_price": "Birim fiyat",
+  "items.line_total": "Satır toplamı",
+  "items.units": "Atanan birimler"
 }

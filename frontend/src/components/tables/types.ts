@@ -86,6 +86,8 @@ export type DataTableColumnMeta = {
   paramFormat?: ColumnParamFormat;
   /** Backend sort field when it differs from the column id */
   sortParam?: string;
+  /** DOM id of the text filter input (deep links, e2e) */
+  filterInputId?: string;
 };
 
 declare module "@tanstack/react-table" {
@@ -106,6 +108,7 @@ declare module "@tanstack/react-table" {
     param?: string;
     paramFormat?: ColumnParamFormat;
     sortParam?: string;
+    filterInputId?: string;
   }
 }
 

@@ -56,5 +56,7 @@
   "widget.empty": "Товарів на складі немає.",
   "widget.meters_value": "{{meters}} м",
   "widget.quantity_value": "{{quantity}} шт.",
-  "widget.truncated": "Зведення охоплює перші {{limit}} товарів."
+  "widget.truncated": "Зведення охоплює перші {{limit}} товарів.",
+  "filters.product_search": "Назва товару або артикул",
+  "filters.product_none": "У цьому запасі немає товарів."
 }

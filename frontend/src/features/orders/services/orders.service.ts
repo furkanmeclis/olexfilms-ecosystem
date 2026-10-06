@@ -1,3 +1,4 @@
+import type { ServerListQuery } from "@/components/entity";
 import type { components } from "@/generated/api";
 import { platformRequest } from "@/lib/api/platform-request";
 
@@ -15,15 +16,19 @@ export type OrderRateSnapshot = Schemas["OrderRateSnapshot"];
 /** Side of the active organization in the list: sales or purchases. */
 export type OrderSide = "seller" | "buyer";
 
-/** GET /v1/orders filters (TEC-170); dates are ISO bounds. */
-export type OrderListQuery = {
-  side: OrderSide;
-  status?: OrderStatus;
-  created_from?: string;
-  created_to?: string;
-  limit: number;
-  offset: number;
-};
+/**
+ * GET /v1/orders params (TEC-170, TEC-373): `side` plus the list contract
+ * (`sort` order_no/status/total/created_at, `q`, CSV `status`,
+ * `seller_org_uuid` / `buyer_org_uuid`, `total_min` / `total_max`,
+ * `created_from` / `created_to`).
+ */
+export type OrderListQuery = ServerListQuery & { side: OrderSide };
+
+/** POST /v1/orders/export (TEC-373): csv, xlsx or pdf of the list. */
+export const ORDERS_EXPORT_PATH = "/v1/orders/export";
+
+/** An organization in the caller's organizations.read scope. */
+export type ScopeOrganization = { uuid: string; name: string };
 
 export type Page<T> = {
   items: T[];
@@ -47,6 +52,15 @@ export const ordersService = {
   },
   get(uuid: string) {
     return platformRequest<Order>("GET", `/v1/orders/${enc(uuid)}`);
+  },
+  /** Party filter options: organizations in the organizations.read scope. */
+  async listOrganizations(): Promise<ScopeOrganization[]> {
+    const data = await platformRequest<{ items: ScopeOrganization[] }>(
+      "GET",
+      "/v1/tenant/organizations",
+      { query: { limit: 100 } },
+    );
+    return (data.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name }));
   },
   create(body: OrderCreateInput) {
     return platformRequest<Order>("POST", "/v1/orders", { body });
@@ -82,6 +96,7 @@ export const orderKeys = {
   all: ["orders"] as const,
   list: (params: OrderListQuery) => ["orders", "list", params] as const,
   detail: (uuid: string) => ["orders", "detail", uuid] as const,
+  organizations: ["orders", "organizations"] as const,
   products: (q: string) => ["orders", "products", q] as const,
   price: (uuid: string) => ["orders", "price", uuid] as const,
 };

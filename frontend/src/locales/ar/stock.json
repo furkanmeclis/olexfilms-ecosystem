@@ -56,5 +56,7 @@
   "widget.empty": "لا توجد منتجات في المخزون.",
   "widget.meters_value": "{{meters}} م",
   "widget.quantity_value": "{{quantity}} قطعة",
-  "widget.truncated": "يغطي الملخص أول {{limit}} منتج."
+  "widget.truncated": "يغطي الملخص أول {{limit}} منتج.",
+  "filters.product_search": "اسم المنتج أو رمز SKU",
+  "filters.product_none": "لا توجد منتجات في هذا المخزون."
 }

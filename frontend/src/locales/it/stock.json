@@ -56,5 +56,7 @@
   "widget.empty": "Nessun prodotto in stock.",
   "widget.meters_value": "{{meters}} m",
   "widget.quantity_value": "{{quantity}} pz",
-  "widget.truncated": "Il riepilogo copre i primi {{limit}} prodotti."
+  "widget.truncated": "Il riepilogo copre i primi {{limit}} prodotti.",
+  "filters.product_search": "Nome del prodotto o codice articolo",
+  "filters.product_none": "Nessun prodotto in questo magazzino."
 }

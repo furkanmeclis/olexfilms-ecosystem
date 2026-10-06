@@ -73,6 +73,8 @@
   "status.queued": "Queued",
   "status.expired": "Expired",
   "resources.platform.organizations": "Organizations",
+  "resources.orders.list": "Orders",
+  "resources.stock.units": "Stock units",
   "resources.leads.list": "Leads",
   "resources.services.list": "Services",
   "resources.warranties.list": "Warranties"

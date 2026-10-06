@@ -56,5 +56,7 @@
   "widget.empty": "No products in stock.",
   "widget.meters_value": "{{meters}} m",
   "widget.quantity_value": "{{quantity}} pcs",
-  "widget.truncated": "The summary covers the first {{limit}} products."
+  "widget.truncated": "The summary covers the first {{limit}} products.",
+  "filters.product_search": "Product name or SKU",
+  "filters.product_none": "No product in this stock."
 }

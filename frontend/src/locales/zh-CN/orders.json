@@ -161,5 +161,9 @@
   "assign.failed": "单元分配失败。",
   "assign.meters": "米数",
   "assign.meters_placeholder": "整卷",
-  "assign.split_success": "卷材已分切：新条码 {{barcode}}，卷材剩余 {{rest}} 米。"
+  "assign.split_success": "卷材已分切：新条码 {{barcode}}，卷材剩余 {{rest}} 米。",
+  "items.amount": "数量",
+  "items.unit_price": "单价",
+  "items.line_total": "行合计",
+  "items.units": "已分配单元"
 }

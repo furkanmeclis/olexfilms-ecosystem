@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "Одиницю з цим штрихкодом не знайдено.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "Ця одиниця не рахується в залишках вашої організації.",
   "errors.TRANSFER_UNIT_RESERVED": "Ця одиниця зарезервована замовленням або іншим переміщенням.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "Недостатньо залишків за цим штрихкодом."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "Недостатньо залишків за цим штрихкодом.",
+  "columns.organization": "Організація",
+  "detail.line_total": "Сума за рядком"
 }

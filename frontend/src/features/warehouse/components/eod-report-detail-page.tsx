@@ -8,12 +8,16 @@ import { ErrorState } from "@/components/common/error-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
+import {
+  EodGroupsTable,
+  EodProductsTable,
+} from "@/features/warehouse/components/eod-tables";
 import { Info } from "@/features/warehouse/components/list-controls";
 import {
   useWarehouseAccess,
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
-import { eodScopeLabel, netQuantity } from "@/features/warehouse/lib/eod";
+import { eodScopeLabel } from "@/features/warehouse/lib/eod";
 import {
   eodPdfClient,
   warehouseKeys,
@@ -142,40 +146,7 @@ export function EodReportDetailPage({
                   {t("warehouse.eod.no_movements")}
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" data-testid="eod-groups">
-                    <thead>
-                      <tr className="text-muted-foreground border-b text-xs">
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.eod.group")}
-                        </th>
-                        <th className="p-2 text-end font-medium">
-                          {t("warehouse.eod.columns.movements")}
-                        </th>
-                        <th className="p-2 text-end font-medium">
-                          {t("warehouse.eod.net")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {r.summary.groups.map((g) => (
-                        <tr key={g.group} className="border-b last:border-0">
-                          <td className="p-2">
-                            {t(`warehouse.eod_group.${g.group}`)}
-                          </td>
-                          <td className="p-2 text-end">
-                            {format.number(g.movement_count)}
-                          </td>
-                          <td className="p-2 text-end">
-                            {format.number(netQuantity(g), {
-                              signDisplay: "exceptZero",
-                            })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <EodGroupsTable groups={r.summary.groups} />
               )}
             </CardContent>
           </Card>
@@ -186,55 +157,7 @@ export function EodReportDetailPage({
                 <CardTitle>{t("warehouse.eod.products")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm" data-testid="eod-products">
-                    <thead>
-                      <tr className="text-muted-foreground border-b text-xs">
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.fields.product")}
-                        </th>
-                        <th className="p-2 text-start font-medium">
-                          {t("warehouse.eod.group")}
-                        </th>
-                        <th className="p-2 text-end font-medium">
-                          {t("warehouse.eod.columns.movements")}
-                        </th>
-                        <th className="p-2 text-end font-medium">
-                          {t("warehouse.eod.net")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {r.summary.products.map((p) => (
-                        <tr
-                          key={`${p.product_uuid}-${p.type}`}
-                          className="border-b last:border-0"
-                        >
-                          <td className="p-2">
-                            {p.product_name}
-                            <div
-                              className="text-muted-foreground font-mono text-xs"
-                              dir="ltr"
-                            >
-                              {p.sku}
-                            </div>
-                          </td>
-                          <td className="p-2">
-                            {t(`warehouse.eod_group.${p.group}`)}
-                          </td>
-                          <td className="p-2 text-end">
-                            {format.number(p.movement_count)}
-                          </td>
-                          <td className="p-2 text-end">
-                            {format.number(netQuantity(p), {
-                              signDisplay: "exceptZero",
-                            })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <EodProductsTable products={r.summary.products} />
               </CardContent>
             </Card>
           ) : null}
@@ -245,6 +168,21 @@ export function EodReportDetailPage({
 }
 
 /** Queues the PDF, waits for the export job and downloads it. */
+export async function downloadEodPdf(
+  reportUuid: string,
+  locale: string | undefined,
+  filename: string,
+  waitOptions?: WaitOptions,
+) {
+  const { file } = await fetchCertificate(
+    eodPdfClient(reportUuid),
+    locale,
+    waitOptions,
+  );
+  triggerBrowserDownload(file.blob, file.filename ?? filename);
+}
+
+/** PDF button of a report (`downloadEodPdf` with a busy state). */
 export function EodPdfButton({
   reportUuid,
   filename,
@@ -260,12 +198,7 @@ export function EodPdfButton({
   const onClick = async () => {
     setBusy(true);
     try {
-      const { file } = await fetchCertificate(
-        eodPdfClient(reportUuid),
-        locale,
-        waitOptions,
-      );
-      triggerBrowserDownload(file.blob, file.filename ?? filename);
+      await downloadEodPdf(reportUuid, locale, filename, waitOptions);
       appToast.success(t("warehouse.eod.pdf_ready"));
     } catch {
       appToast.error(t("warehouse.eod.pdf_failed"));

@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "Не е намерена единица с този баркод.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "Тази единица не е в наличността на вашата организация.",
   "errors.TRANSFER_UNIT_RESERVED": "Тази единица е резервирана от поръчка или друг трансфер.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "Няма достатъчно наличност за този баркод."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "Няма достатъчно наличност за този баркод.",
+  "columns.organization": "Организация",
+  "detail.line_total": "Сума на реда"
 }
