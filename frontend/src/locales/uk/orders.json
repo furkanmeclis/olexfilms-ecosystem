@@ -161,5 +161,9 @@
   "assign.failed": "Не вдалося призначити одиницю.",
   "assign.meters": "Метри",
   "assign.meters_placeholder": "Увесь",
-  "assign.split_success": "Рулон поділено: новий штрихкод {{barcode}}, у рулоні залишилось {{rest}} м."
+  "assign.split_success": "Рулон поділено: новий штрихкод {{barcode}}, у рулоні залишилось {{rest}} м.",
+  "items.amount": "Кількість",
+  "items.unit_price": "Ціна за одиницю",
+  "items.line_total": "Сума за рядком",
+  "items.units": "Призначені одиниці"
 }

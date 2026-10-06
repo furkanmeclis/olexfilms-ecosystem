@@ -59,7 +59,7 @@ test("order: create → approve → ship → receive", async ({ page }) => {
   api.actAs("seller");
   await page.goto(`/t/${ORDER_SLUG}/orders`);
   await expect(page.getByTestId("order-row")).toHaveCount(1);
-  await page.getByTestId("order-row").getByRole("link").click();
+  await page.getByRole("link", { name: "ORD-00000007" }).click();
   await expect(page).toHaveURL(detailUrl);
   await expect(page.locator('[data-action="reject"]')).toBeVisible();
   await act(page, "approve");

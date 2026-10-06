@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "Bu barkodla vahid tapılmadı.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "Bu vahid təşkilatınızın stokunda deyil.",
   "errors.TRANSFER_UNIT_RESERVED": "Bu vahid sifariş və ya başqa transfer tərəfindən rezerv edilib.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "Bu barkod üçün kifayət qədər stok yoxdur."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "Bu barkod üçün kifayət qədər stok yoxdur.",
+  "columns.organization": "Təşkilat",
+  "detail.line_total": "Sətir cəmi"
 }

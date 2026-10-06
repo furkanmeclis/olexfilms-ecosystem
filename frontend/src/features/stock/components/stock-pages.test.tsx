@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, createElement } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
+import { act, createElement, Fragment, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,6 +9,13 @@ const api = vi.hoisted(() => ({
   listUnits: vi.fn(),
   listProducts: vi.fn(),
   listDealers: vi.fn(),
+  unitLabels: vi.fn(),
+}));
+const captured = vi.hoisted(() => ({
+  tables: [] as Record<string, unknown>[],
+  exports: [] as Record<string, unknown>[],
+  combos: [] as Record<string, unknown>[],
+  download: vi.fn(),
 }));
 const state = vi.hoisted(() => ({
   grants: new Set<string>(),
@@ -61,11 +69,75 @@ vi.mock("@/features/stock/services/stock.service", async (orig) => ({
   ...(await orig<object>()),
   stockService: api,
 }));
+vi.mock("@/lib/api/platform-form-request", async (orig) => ({
+  ...(await orig<object>()),
+  triggerBrowserDownload: captured.download,
+}));
+vi.mock("@/providers/toast-provider", () => ({
+  appToast: { success: vi.fn(), error: vi.fn() },
+}));
+vi.mock("@/features/io/components/export-menu", () => ({
+  ExportMenu: (props: Record<string, unknown>) => {
+    captured.exports.push(props);
+    return null;
+  },
+}));
+vi.mock("@/components/ui/async-combobox", () => ({
+  AsyncCombobox: (props: Record<string, unknown>) => {
+    captured.combos.push(props);
+    return null;
+  },
+}));
+// The table renders each row's cells (no select column) and the toolbar.
+vi.mock("@/components/entity", async (orig) => ({
+  ...(await orig<object>()),
+  EntityToolbar: () => null,
+  EntityRowActions: ({ actions }: { actions: { id: string }[] }) =>
+    createElement("span", {
+      "data-testid": "row-actions",
+      "data-actions": actions.map((a) => a.id).join(","),
+    }),
+  EntityTable: (props: {
+    columns: ColumnDef<unknown, unknown>[];
+    data: unknown[];
+    toolbarExtra?: ReactNode;
+    emptyTitle?: string;
+  }) => {
+    captured.tables.push(props as Record<string, unknown>);
+    const cells = props.columns.filter(
+      (c) => c.id !== "__select" && typeof c.cell === "function",
+    );
+    return createElement(
+      "div",
+      null,
+      props.toolbarExtra,
+      props.data.length === 0
+        ? createElement("p", { "data-testid": "table-empty" }, props.emptyTitle)
+        : null,
+      ...props.data.map((row, i) =>
+        createElement(
+          "div",
+          { key: i },
+          ...cells.map((c, j) =>
+            createElement(
+              Fragment,
+              { key: j },
+              (c.cell as (ctx: unknown) => ReactNode)({
+                row: { original: row },
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+  },
+}));
 
 import { Permission } from "@/config/permissions";
-import type {
-  StockProduct,
-  StockUnitRow,
+import {
+  unitLabelsPath,
+  type StockProduct,
+  type StockUnitRow,
 } from "@/features/stock/services/stock.service";
 
 import { MyStockPage } from "./my-stock-page";
@@ -79,6 +151,10 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  window.localStorage.clear();
+  captured.tables = [];
+  captured.exports = [];
+  captured.combos = [];
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -163,6 +239,25 @@ const rows = () => container.querySelectorAll('[data-testid="stock-row"]');
 const byId = (id: string) =>
   container.querySelector(`[data-testid="${id}"]`) as HTMLElement | null;
 
+type TableProps = {
+  columns: ColumnDef<StockUnitRow, unknown>[];
+  rowCount?: number;
+  bulkActions?: { id: string; onClick: (rows: StockUnitRow[]) => void }[];
+  state?: {
+    onColumnFiltersChange?: (v: { id: string; value: unknown }[]) => void;
+    onSortingChange?: (v: { id: string; desc: boolean }[]) => void;
+    onGlobalFilterChange?: (v: string) => void;
+  };
+};
+const lastTable = () =>
+  captured.tables[captured.tables.length - 1] as unknown as TableProps;
+const columnIds = () =>
+  lastTable().columns.map(
+    (c) => c.id ?? ("accessorKey" in c ? String(c.accessorKey) : "") ?? "",
+  );
+const lastUnitsCall = () =>
+  api.listUnits.mock.calls[api.listUnits.mock.calls.length - 1];
+
 async function select(selector: string, value: string) {
   await act(async () => {
     const el = container.querySelector(selector) as HTMLSelectElement;
@@ -172,21 +267,22 @@ async function select(selector: string, value: string) {
   await flush();
 }
 
-describe("MyStockPage (TEC-224)", () => {
+describe("MyStockPage (TEC-224, TEC-374 DataTable)", () => {
   it("hides the purchase price column when no row carries a price", async () => {
     state.grants = new Set([Permission.StockRead]);
     api.listUnits.mockResolvedValue(page([unit(), unit({ uuid: "u-2" })]));
     await render(createElement(MyStockPage, { slug: "acme" }));
     expect(rows()).toHaveLength(2);
-    expect(byId("stock-price-header")).toBeNull();
+    expect(columnIds()).not.toContain("purchase_price");
     expect(byId("stock-price")).toBeNull();
     expect(container.textContent).toContain(
       'stock.list.meters_of {"remaining":"37.50","initial":"50.00"}',
     );
-    expect(api.listUnits).toHaveBeenLastCalledWith("org-1", {
-      limit: 20,
-      offset: 0,
-    });
+    expect(lastUnitsCall()).toEqual([
+      "org-1",
+      { limit: 20, offset: 0, sort: "product" },
+    ]);
+    expect(lastTable().rowCount).toBe(2);
   });
 
   it("shows the purchase price column when the API answers a price", async () => {
@@ -200,50 +296,165 @@ describe("MyStockPage (TEC-224)", () => {
       ]),
     );
     await render(createElement(MyStockPage, { slug: "acme" }));
-    expect(byId("stock-price-header")).not.toBeNull();
+    expect(columnIds()).toContain("purchase_price");
     const cells = container.querySelectorAll('[data-testid="stock-price"]');
     expect(cells).toHaveLength(2);
     expect(cells[0].textContent).toBe("120 TRY");
     expect(cells[1].textContent).toBe("—");
   });
 
-  it("renders the empty state and the consumed tab pins status=used", async () => {
+  it("maps column filters and sort to the units params", async () => {
     state.grants = new Set([Permission.StockRead]);
-    api.listUnits.mockResolvedValue(page([]));
+    api.listUnits.mockResolvedValue(page([unit()]));
     await render(createElement(MyStockPage, { slug: "acme" }));
-    expect(byId("stock-empty")).not.toBeNull();
-    expect(container.textContent).toContain("stock.list.empty_title");
-    expect(byId("page-info")?.closest(".hidden")).not.toBeNull();
-
     await act(async () => {
-      byId("stock-tab-consumed")?.click();
+      lastTable().state?.onColumnFiltersChange?.([
+        { id: "barcode", value: " OLX-" },
+        { id: "status", value: ["available", "placed"] },
+        { id: "updated_at", value: ["2026-10-01", "2026-10-05"] },
+      ]);
+    });
+    await act(async () => {
+      lastTable().state?.onSortingChange?.([{ id: "meters", desc: true }]);
+      lastTable().state?.onGlobalFilterChange?.("ppf");
     });
     await flush();
-    expect(container.textContent).toContain("stock.list.empty_consumed_title");
-    expect(api.listUnits).toHaveBeenLastCalledWith(
+    expect(lastUnitsCall()).toEqual([
       "org-1",
-      expect.objectContaining({ status: "used", offset: 0 }),
-    );
-    // The status filter belongs to the on-hand tab only.
-    expect(container.querySelector("#stock-status")).toBeNull();
+      {
+        limit: 20,
+        offset: 0,
+        sort: "-meters",
+        q: "ppf",
+        barcode: "OLX-",
+        barcode_match: "prefix",
+        status: "available,placed",
+        updated_from: "2026-10-01",
+        updated_to: "2026-10-05",
+      },
+    ]);
   });
 
-  it("filters by status and product", async () => {
+  it("filters by a product picked from the async search", async () => {
     state.grants = new Set([Permission.StockRead]);
     api.listUnits.mockResolvedValue(page([unit()]));
     api.listProducts.mockResolvedValue(page([product()]));
     await render(createElement(MyStockPage, { slug: "acme" }));
-    await select("#stock-status", "placed");
-    expect(api.listUnits).toHaveBeenLastCalledWith(
-      "org-1",
-      expect.objectContaining({ status: "placed" }),
+    const combo = captured.combos[captured.combos.length - 1] as {
+      loadOptions: (q: string) => Promise<{ value: string; label: string }[]>;
+      onValueChange: (v: string) => void;
+    };
+    const options = await combo.loadOptions(" ppf ");
+    // Searched page by page with q, under the endpoint's 100 cap.
+    expect(api.listProducts).toHaveBeenLastCalledWith("org-1", {
+      q: "ppf",
+      limit: 20,
+      offset: 0,
+    });
+    expect(options[0]).toMatchObject({ value: "p-1", label: "Olex PPF 190" });
+    await act(async () => combo.onValueChange("p-1"));
+    await flush();
+    expect(lastUnitsCall()?.[1]).toMatchObject({ product_uuid: "p-1" });
+    const picked = captured.combos[captured.combos.length - 1] as {
+      value: string;
+      options: { label: string }[];
+    };
+    expect(picked.value).toBe("p-1");
+    expect(picked.options[0].label).toBe("Olex PPF 190");
+  });
+
+  it("the consumed tab pins status=used and drops the status filter", async () => {
+    state.grants = new Set([Permission.StockRead]);
+    api.listUnits.mockResolvedValue(page([]));
+    await render(createElement(MyStockPage, { slug: "acme" }));
+    expect(byId("table-empty")?.textContent).toBe("stock.list.empty_title");
+    await act(async () => {
+      lastTable().state?.onColumnFiltersChange?.([
+        { id: "status", value: ["placed"] },
+      ]);
+    });
+    await act(async () => {
+      byId("stock-tab-consumed")?.click();
+    });
+    await flush();
+    expect(byId("table-empty")?.textContent).toBe(
+      "stock.list.empty_consumed_title",
     );
-    await select("#stock-product", "p-1");
-    expect(api.listUnits).toHaveBeenLastCalledWith(
+    expect(lastUnitsCall()).toEqual([
       "org-1",
-      expect.objectContaining({ status: "placed", product_uuid: "p-1" }),
+      { limit: 20, offset: 0, sort: "product", status: "used" },
+    ]);
+    const status = lastTable().columns.find(
+      (c) => "accessorKey" in c && c.accessorKey === "status",
     );
-    expect(byId("stock-clear-filters")).not.toBeNull();
+    expect(status?.enableColumnFilter).toBe(false);
+  });
+
+  it("exports with the same tab, filters, search and sort", async () => {
+    state.grants = new Set([Permission.StockRead]);
+    api.listUnits.mockResolvedValue(page([unit()]));
+    await render(createElement(MyStockPage, { slug: "acme" }));
+    await act(async () => {
+      lastTable().state?.onColumnFiltersChange?.([
+        { id: "status", value: ["available"] },
+      ]);
+      lastTable().state?.onGlobalFilterChange?.("ppf");
+    });
+    await flush();
+    const props = captured.exports[captured.exports.length - 1];
+    expect(props?.exportPath).toBe(
+      "/v1/stock/organizations/org-1/units/export",
+    );
+    expect(props?.formats).toEqual(["xlsx", "csv", "pdf"]);
+    expect(props?.query).toEqual({
+      status: "available",
+      q: "ppf",
+      sort: "product",
+    });
+  });
+
+  it("prints labels for the selected units and for one row", async () => {
+    state.grants = new Set([Permission.StockRead]);
+    const a = unit();
+    const b = unit({ uuid: "u-2", barcode: "OLX-2" });
+    api.listUnits.mockResolvedValue(page([a, b]));
+    api.unitLabels.mockResolvedValue({
+      blob: new Blob(["%PDF"]),
+      filename: null,
+    });
+    await render(createElement(MyStockPage, { slug: "acme" }));
+    const bulk = lastTable().bulkActions ?? [];
+    expect(bulk.map((x) => x.id)).toEqual(["print_labels"]);
+    await act(async () => bulk[0].onClick([a, b]));
+    await flush();
+    expect(api.unitLabels).toHaveBeenLastCalledWith(["OLX-1", "OLX-2"]);
+    expect(captured.download).toHaveBeenLastCalledWith(
+      expect.any(Blob),
+      "labels.pdf",
+    );
+    expect(
+      container
+        .querySelector('[data-testid="row-actions"]')
+        ?.getAttribute("data-actions"),
+    ).toBe("print_label");
+  });
+
+  it("builds the units.pdf path with one barcode per unit", () => {
+    expect(unitLabelsPath(["A 1", "B/2"])).toBe(
+      "/v1/stock/labels/units.pdf?barcode=A%201&barcode=B%2F2",
+    );
+  });
+
+  it("opens a palette deep link as a barcode filter", async () => {
+    state.grants = new Set([Permission.StockRead]);
+    api.listUnits.mockResolvedValue(page([unit()]));
+    await render(
+      createElement(MyStockPage, { slug: "acme", initialBarcode: "OLX-1" }),
+    );
+    expect(lastUnitsCall()?.[1]).toMatchObject({
+      barcode: "OLX-1",
+      barcode_match: "prefix",
+    });
   });
 
   it("lets a distributor pick a dealer of its subtree", async () => {
@@ -255,10 +466,7 @@ describe("MyStockPage (TEC-224)", () => {
     const picker = byId("stock-dealer") as HTMLSelectElement;
     expect(picker).not.toBeNull();
     expect(picker.querySelectorAll("option")).toHaveLength(2);
-    expect(api.listUnits).toHaveBeenLastCalledWith(
-      "org-1",
-      expect.objectContaining({ offset: 0 }),
-    );
+    expect(lastUnitsCall()?.[0]).toBe("org-1");
 
     await select('[data-testid="stock-dealer"]', "d-1");
     expect(api.listUnits).toHaveBeenLastCalledWith(

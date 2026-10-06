@@ -161,5 +161,9 @@
   "assign.failed": "Единицата не можа да бъде назначена.",
   "assign.meters": "Метри",
   "assign.meters_placeholder": "Всичко",
-  "assign.split_success": "Ролката е разделена: нов баркод {{barcode}}, на ролката остават {{rest}} м."
+  "assign.split_success": "Ролката е разделена: нов баркод {{barcode}}, на ролката остават {{rest}} м.",
+  "items.amount": "Количество",
+  "items.unit_price": "Единична цена",
+  "items.line_total": "Сума на реда",
+  "items.units": "Присвоени единици"
 }

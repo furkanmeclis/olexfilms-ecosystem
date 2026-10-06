@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "Keine Einheit mit diesem Barcode gefunden.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "Diese Einheit ist nicht im Bestand Ihrer Organisation.",
   "errors.TRANSFER_UNIT_RESERVED": "Diese Einheit ist durch eine Bestellung oder eine andere Umlagerung reserviert.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "Nicht genügend Bestand für diesen Barcode."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "Nicht genügend Bestand für diesen Barcode.",
+  "columns.organization": "Organisation",
+  "detail.line_total": "Positionssumme"
 }

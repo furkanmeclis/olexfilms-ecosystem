@@ -73,5 +73,7 @@
   "status.queued": "У черзі",
   "status.expired": "Минув термін",
   "resources.platform.organizations": "Організації",
+  "resources.orders.list": "Замовлення",
+  "resources.stock.units": "Одиниці запасу",
   "resources.leads.list": "Ліди"
 }

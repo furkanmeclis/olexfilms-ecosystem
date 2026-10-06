@@ -73,5 +73,7 @@
   "status.queued": "En cola",
   "status.expired": "Caducado",
   "resources.platform.organizations": "Organizaciones",
+  "resources.orders.list": "Pedidos",
+  "resources.stock.units": "Unidades de stock",
   "resources.leads.list": "Clientes potenciales"
 }

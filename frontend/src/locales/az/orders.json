@@ -161,5 +161,9 @@
   "assign.failed": "Vahid təyin edilə bilmədi.",
   "assign.meters": "Metr",
   "assign.meters_placeholder": "Hamısı",
-  "assign.split_success": "Rulon bölündü: yeni barkod {{barcode}}, rulonda {{rest}} m qaldı."
+  "assign.split_success": "Rulon bölündü: yeni barkod {{barcode}}, rulonda {{rest}} m qaldı.",
+  "items.amount": "Miqdar",
+  "items.unit_price": "Vahid qiyməti",
+  "items.line_total": "Sətir cəmi",
+  "items.units": "Təyin edilmiş vahidlər"
 }

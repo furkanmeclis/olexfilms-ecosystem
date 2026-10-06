@@ -73,5 +73,7 @@
   "status.queued": "في قائمة الانتظار",
   "status.expired": "منتهي الصلاحية",
   "resources.platform.organizations": "المنشآت",
+  "resources.orders.list": "الطلبات",
+  "resources.stock.units": "وحدات المخزون",
   "resources.leads.list": "العملاء المحتملون"
 }

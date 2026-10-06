@@ -161,5 +161,9 @@
   "assign.failed": "Die Einheit konnte nicht zugewiesen werden.",
   "assign.meters": "Meter",
   "assign.meters_placeholder": "Alles",
-  "assign.split_success": "Rolle geteilt: neuer Barcode {{barcode}}, {{rest}} m verbleiben auf der Rolle."
+  "assign.split_success": "Rolle geteilt: neuer Barcode {{barcode}}, {{rest}} m verbleiben auf der Rolle.",
+  "items.amount": "Menge",
+  "items.unit_price": "Stückpreis",
+  "items.line_total": "Positionssumme",
+  "items.units": "Zugeordnete Einheiten"
 }

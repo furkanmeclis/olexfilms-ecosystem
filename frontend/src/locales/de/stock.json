@@ -56,5 +56,7 @@
   "widget.empty": "Keine Produkte im Bestand.",
   "widget.meters_value": "{{meters}} m",
   "widget.quantity_value": "{{quantity}} Stk.",
-  "widget.truncated": "Die Übersicht umfasst die ersten {{limit}} Produkte."
+  "widget.truncated": "Die Übersicht umfasst die ersten {{limit}} Produkte.",
+  "filters.product_search": "Produktname oder Artikelnummer",
+  "filters.product_none": "Kein Produkt in diesem Bestand."
 }

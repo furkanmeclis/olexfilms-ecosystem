@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "Δεν βρέθηκε μονάδα με αυτό το barcode.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "Αυτή η μονάδα δεν βρίσκεται στο απόθεμα του οργανισμού σας.",
   "errors.TRANSFER_UNIT_RESERVED": "Αυτή η μονάδα έχει δεσμευτεί από παραγγελία ή άλλη μεταφορά.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "Ανεπαρκές απόθεμα για αυτό το barcode."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "Ανεπαρκές απόθεμα για αυτό το barcode.",
+  "columns.organization": "Οργανισμός",
+  "detail.line_total": "Σύνολο γραμμής"
 }

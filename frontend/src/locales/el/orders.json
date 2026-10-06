@@ -161,5 +161,9 @@
   "assign.failed": "Η μονάδα δεν ανατέθηκε.",
   "assign.meters": "Μέτρα",
   "assign.meters_placeholder": "Όλο",
-  "assign.split_success": "Το ρολό χωρίστηκε: νέο barcode {{barcode}}, απομένουν {{rest}} m στο ρολό."
+  "assign.split_success": "Το ρολό χωρίστηκε: νέο barcode {{barcode}}, απομένουν {{rest}} m στο ρολό.",
+  "items.amount": "Ποσότητα",
+  "items.unit_price": "Τιμή μονάδας",
+  "items.line_total": "Σύνολο γραμμής",
+  "items.units": "Αντιστοιχισμένες μονάδες"
 }

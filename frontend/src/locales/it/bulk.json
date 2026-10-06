@@ -77,5 +77,6 @@
   "params.lead_status.won": "Vinto",
   "params.lead_status.lost": "Perso",
   "params.lost_reason": "Motivo della perdita",
+  "actions.stock_units.print_labels": "Stampa etichette",
   "actions.warehouse_count_lines.set_resolution": "Imposta risoluzione: {{resolution}}"
 }

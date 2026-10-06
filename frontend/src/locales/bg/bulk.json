@@ -77,5 +77,6 @@
   "params.lead_status.won": "Спечелен",
   "params.lead_status.lost": "Загубен",
   "params.lost_reason": "Причина за загуба",
+  "actions.stock_units.print_labels": "Печат на етикети",
   "actions.warehouse_count_lines.set_resolution": "Задай решение: {{resolution}}"
 }

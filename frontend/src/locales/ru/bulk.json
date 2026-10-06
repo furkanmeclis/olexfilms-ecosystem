@@ -77,5 +77,6 @@
   "params.lead_status.won": "Выигран",
   "params.lead_status.lost": "Проигран",
   "params.lost_reason": "Причина проигрыша",
+  "actions.stock_units.print_labels": "Печать этикеток",
   "actions.warehouse_count_lines.set_resolution": "Назначить решение: {{resolution}}"
 }

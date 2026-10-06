@@ -161,5 +161,9 @@
   "assign.failed": "Impossibile assegnare l'unità.",
   "assign.meters": "Metri",
   "assign.meters_placeholder": "Tutto",
-  "assign.split_success": "Rotolo diviso: nuovo codice a barre {{barcode}}, restano {{rest}} m sul rotolo."
+  "assign.split_success": "Rotolo diviso: nuovo codice a barre {{barcode}}, restano {{rest}} m sul rotolo.",
+  "items.amount": "Quantità",
+  "items.unit_price": "Prezzo unitario",
+  "items.line_total": "Totale riga",
+  "items.units": "Unità assegnate"
 }

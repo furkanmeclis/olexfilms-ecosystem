@@ -50,11 +50,28 @@ import type { StockTransfer } from "@/features/transfers/services/transfers.serv
 
 import { TransferDetailPage } from "./transfer-detail-page";
 import { TransferFormPage } from "./transfer-form-page";
-import { TransfersListPage } from "./transfers-list-page";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+// DataTable reads the mobile breakpoint (jsdom has no matchMedia).
+window.matchMedia ??= ((query: string) => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  addListener: () => {},
+  removeListener: () => {},
+  dispatchEvent: () => false,
+})) as typeof window.matchMedia;
+(
+  globalThis as typeof globalThis & { ResizeObserver?: typeof ResizeObserver }
+).ResizeObserver = class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as typeof ResizeObserver;
 
 let container: HTMLDivElement;
 let root: Root;
@@ -147,7 +164,12 @@ describe("TransferDetailPage (TEC-197)", () => {
       (b) => b.getAttribute("data-transition"),
     );
     expect(buttons).toEqual(["approved", "rejected"]);
+    // Units are a nested DataTable (TEC-374).
+    expect(
+      container.querySelectorAll('table [data-testid="transfer-item"]'),
+    ).toHaveLength(1);
     expect(container.textContent).toContain("OLX-1");
+    expect(container.textContent).toContain("transfers.item.pending");
 
     // The refetch after the move reads the server's new state.
     api.get.mockResolvedValue(
@@ -183,49 +205,7 @@ describe("TransferDetailPage (TEC-197)", () => {
   });
 });
 
-describe("TransfersListPage (TEC-197)", () => {
-  it("lists requests and filters by direction", async () => {
-    state.grants = new Set([Permission.TransfersApprove]);
-    api.list.mockResolvedValue({
-      items: [transfer({ role: "parent" })],
-      total: 1,
-      limit: 20,
-      offset: 0,
-    });
-    await render(createElement(TransfersListPage, { slug: "s" }));
-    expect(
-      container.querySelectorAll('[data-testid="transfer-row"]'),
-    ).toHaveLength(1);
-    expect(container.querySelector('[data-testid="transfer-new"]')).toBeNull();
-    await act(async () => {
-      (
-        container.querySelector('[data-direction="approval"]') as HTMLElement
-      ).click();
-    });
-    await flush();
-    expect(api.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ direction: "approval", offset: 0 }),
-    );
-  });
-});
-
 describe("Returns (TEC-223)", () => {
-  it("filters the list by kind", async () => {
-    state.grants = new Set([Permission.TransfersRequest]);
-    api.list.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
-    await render(createElement(TransfersListPage, { slug: "s" }));
-    expect(
-      container.querySelector('[data-testid="transfer-new-return"]'),
-    ).not.toBeNull();
-    await act(async () => {
-      (container.querySelector('[data-kind="return"]') as HTMLElement).click();
-    });
-    await flush();
-    expect(api.list).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: "return", offset: 0 }),
-    );
-  });
-
   it("sends a return to the parent the server lists", async () => {
     state.grants = new Set([Permission.TransfersRequest]);
     api.targets.mockResolvedValue({

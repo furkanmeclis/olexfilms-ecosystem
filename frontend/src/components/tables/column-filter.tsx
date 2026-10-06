@@ -172,6 +172,7 @@ export function ColumnFilter<TData>({ column }: ColumnFilterProps<TData>) {
   return (
     <InputGroup className="h-8 w-full min-w-0">
       <InputGroupInput
+        id={meta?.filterInputId}
         className="h-8"
         placeholder={t("table.filter")}
         value={text}

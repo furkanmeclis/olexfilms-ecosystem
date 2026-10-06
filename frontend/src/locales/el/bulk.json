@@ -77,5 +77,6 @@
   "params.lead_status.won": "Κερδήθηκε",
   "params.lead_status.lost": "Χάθηκε",
   "params.lost_reason": "Αιτία απώλειας",
+  "actions.stock_units.print_labels": "Εκτύπωση ετικετών",
   "actions.warehouse_count_lines.set_resolution": "Ορισμός επίλυσης: {{resolution}}"
 }

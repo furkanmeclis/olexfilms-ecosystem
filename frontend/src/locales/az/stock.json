@@ -56,5 +56,7 @@
   "widget.empty": "Stokda məhsul yoxdur.",
   "widget.meters_value": "{{meters}} m",
   "widget.quantity_value": "{{quantity}} ədəd",
-  "widget.truncated": "Xülasə ilk {{limit}} məhsulu əhatə edir."
+  "widget.truncated": "Xülasə ilk {{limit}} məhsulu əhatə edir.",
+  "filters.product_search": "Məhsul adı və ya SKU",
+  "filters.product_none": "Bu stokda məhsul yoxdur."
 }

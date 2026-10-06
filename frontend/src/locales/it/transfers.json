@@ -104,5 +104,7 @@
   "errors.TRANSFER_UNIT_NOT_FOUND": "Nessuna unità trovata con questo codice a barre.",
   "errors.TRANSFER_UNIT_NOT_AVAILABLE": "Questa unità non è nella giacenza della tua organizzazione.",
   "errors.TRANSFER_UNIT_RESERVED": "Questa unità è riservata da un ordine o da un altro trasferimento.",
-  "errors.TRANSFER_INSUFFICIENT_STOCK": "Giacenza insufficiente per questo codice a barre."
+  "errors.TRANSFER_INSUFFICIENT_STOCK": "Giacenza insufficiente per questo codice a barre.",
+  "columns.organization": "Organizzazione",
+  "detail.line_total": "Totale riga"
 }

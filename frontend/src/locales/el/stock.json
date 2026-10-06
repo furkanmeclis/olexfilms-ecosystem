@@ -56,5 +56,7 @@
   "widget.empty": "Δεν υπάρχουν προϊόντα στο απόθεμα.",
   "widget.meters_value": "{{meters}} m",
   "widget.quantity_value": "{{quantity}} τεμ.",
-  "widget.truncated": "Η σύνοψη καλύπτει τα πρώτα {{limit}} προϊόντα."
+  "widget.truncated": "Η σύνοψη καλύπτει τα πρώτα {{limit}} προϊόντα.",
+  "filters.product_search": "Όνομα προϊόντος ή κωδικός",
+  "filters.product_none": "Δεν υπάρχει προϊόν σε αυτό το απόθεμα."
 }
