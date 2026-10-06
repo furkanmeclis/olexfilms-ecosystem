@@ -53,5 +53,18 @@
   "confirm.organizations.suspend": "Αναστολή {{count}} οργανισμών;",
   "confirm.organizations.set_read_only": "Ορισμός {{count}} οργανισμών μόνο για ανάγνωση;",
   "confirm.organizations.extend_access": "Παράταση πρόσβασης {{count}} οργανισμών;",
-  "params.days": "Ημέρες"
+  "params.days": "Ημέρες",
+  "actions.catalog_products.set_category": "Ορισμός κατηγορίας",
+  "params.category": "Κατηγορία",
+  "actions.catalog_categories.activate": "Ενεργοποίηση",
+  "actions.catalog_categories.deactivate": "Απενεργοποίηση",
+  "actions.catalog_categories.delete": "Διαγραφή",
+  "confirm.catalog_categories.deactivate": "Απενεργοποίηση των επιλεγμένων κατηγοριών;",
+  "confirm.catalog_categories.delete": "Διαγραφή των επιλεγμένων κατηγοριών; Όσες έχουν προϊόντα παραλείπονται.",
+  "actions.vehicle_brands.activate": "Ενεργοποίηση",
+  "actions.vehicle_brands.deactivate": "Απενεργοποίηση",
+  "confirm.vehicle_brands.deactivate": "Απενεργοποίηση των επιλεγμένων μαρκών;",
+  "actions.vehicle_models.activate": "Ενεργοποίηση",
+  "actions.vehicle_models.deactivate": "Απενεργοποίηση",
+  "confirm.vehicle_models.deactivate": "Απενεργοποίηση των επιλεγμένων μοντέλων;"
 }

@@ -53,5 +53,18 @@
   "confirm.organizations.suspend": "Призупинити {{count}} організацій?",
   "confirm.organizations.set_read_only": "Зробити {{count}} організацій лише для читання?",
   "confirm.organizations.extend_access": "Продовжити доступ для {{count}} організацій?",
-  "params.days": "Дні"
+  "params.days": "Дні",
+  "actions.catalog_products.set_category": "Призначити категорію",
+  "params.category": "Категорія",
+  "actions.catalog_categories.activate": "Активувати",
+  "actions.catalog_categories.deactivate": "Деактивувати",
+  "actions.catalog_categories.delete": "Видалити",
+  "confirm.catalog_categories.deactivate": "Деактивувати вибрані категорії?",
+  "confirm.catalog_categories.delete": "Видалити вибрані категорії? Категорії з товарами буде пропущено.",
+  "actions.vehicle_brands.activate": "Активувати",
+  "actions.vehicle_brands.deactivate": "Деактивувати",
+  "confirm.vehicle_brands.deactivate": "Деактивувати вибрані марки?",
+  "actions.vehicle_models.activate": "Активувати",
+  "actions.vehicle_models.deactivate": "Деактивувати",
+  "confirm.vehicle_models.deactivate": "Деактивувати вибрані моделі?"
 }
