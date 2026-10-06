@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
 )
@@ -331,61 +331,27 @@ func decode(w http.ResponseWriter, r *http.Request, dst any) bool {
 	return true
 }
 
+// listFilter parses the GET /v1/warranty-claims parameters (TEC-377,
+// usecase.ParseListFilter); a bad value answers 400.
 func listFilter(w http.ResponseWriter, r *http.Request) (model.ListFilter, bool) {
-	q := r.URL.Query()
-	var f model.ListFilter
-	f.Status = q.Get("status")
-	f.Limit = int32Param(q.Get("limit"), 50)
-	f.Offset = int32Param(q.Get("offset"), 0)
-	if raw := q.Get("warranty_uuid"); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			response.BadRequest(w, r, response.CodeValidationError, "warranty_uuid is invalid")
-			return f, false
-		}
-		f.WarrantyID = id
-	}
-	if raw := q.Get("vehicle_uuid"); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			response.BadRequest(w, r, response.CodeValidationError, "vehicle_uuid is invalid")
-			return f, false
-		}
-		f.VehicleID = id
-	}
-	if raw := q.Get("created_from"); raw != "" {
-		t, err := time.Parse(time.RFC3339, raw)
-		if err != nil {
-			response.BadRequest(w, r, response.CodeValidationError, "created_from is invalid")
-			return f, false
-		}
-		f.CreatedFrom = &t
-	}
-	if raw := q.Get("created_to"); raw != "" {
-		t, err := time.Parse(time.RFC3339, raw)
-		if err != nil {
-			response.BadRequest(w, r, response.CodeValidationError, "created_to is invalid")
-			return f, false
-		}
-		f.CreatedTo = &t
+	f, err := usecase.ParseListFilter(r.URL.Query())
+	if err != nil {
+		writeErr(w, r, err)
+		return f, false
 	}
 	return f, true
 }
 
-func int32Param(raw string, def int32) int32 {
-	if raw == "" {
-		return def
-	}
-	n, err := strconv.ParseInt(raw, 10, 32)
-	if err != nil {
-		return def
-	}
-	return int32(n)
-}
-
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *usecase.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
+	case errors.As(err, &qe):
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
 	case errors.Is(err, usecase.ErrNotFound):

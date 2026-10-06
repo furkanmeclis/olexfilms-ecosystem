@@ -65,3 +65,19 @@ func RegisterListRoutes(
 	mux.Handle("GET /v1/portal/warranties/{uuid}", portal(h.PortalGet))
 	return reader
 }
+
+// RegisterListExportRoutes mounts POST /v1/warranties/export (TEC-377): the
+// same session, module and warranties.read scope as GET /v1/warranties.
+func RegisterListExportRoutes(
+	mux *http.ServeMux,
+	q *db.Queries,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	checker middleware.FeatureChecker,
+	h *handler.ListExport,
+) {
+	mux.Handle("POST /v1/warranties/export", middleware.Chain(http.HandlerFunc(h.Request),
+		middleware.Authenticate(tokens, loader), middleware.RequireOrganization(tokens, q),
+		middleware.RequireFeature(checker, features.ModuleServices),
+		middleware.RequireScope(q, rbac.PermWarrantiesRead)))
+}

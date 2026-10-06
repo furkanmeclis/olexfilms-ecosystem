@@ -23,33 +23,46 @@ WHERE w.brand_id = $1::bigint
   AND ($3::bigint IS NULL OR w.holder_user_id = $3::bigint)
   AND ($4::bigint IS NULL OR s.created_by_user_id = $4::bigint)
   AND ($5::uuid IS NULL OR w.uuid = $5::uuid)
-  AND ($6::text IS NULL OR w.status = $6::text)
-  AND ($7::bigint IS NULL OR w.product_id = $7::bigint)
-  AND ($8::bigint IS NULL OR w.vehicle_id = $8::bigint)
-  AND ($9::timestamptz IS NULL OR w.end_at > $9::timestamptz)
-  AND ($10::timestamptz IS NULL OR w.end_at <= $10::timestamptz)
-  AND ($11::text IS NULL
-       OR w.public_code ILIKE '%' || $11::text || '%'
-       OR s.service_no ILIKE '%' || $11::text || '%'
-       OR p.name ILIKE '%' || $11::text || '%'
-       OR ($12::text IS NOT NULL AND $12::text <> '' AND (
-              upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || $12::text || '%'
-              OR COALESCE(v.plate_normalized, '') LIKE '%' || $12::text || '%')))
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR w.status = ANY ($6::text[]))
+  AND (
+    COALESCE(cardinality($7::uuid[]), 0) = 0
+    OR w.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($7::uuid[]))
+  )
+  AND ($8::timestamptz IS NULL OR w.start_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR w.start_at < $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR w.end_at >= $10::timestamptz)
+  AND ($11::timestamptz IS NULL OR w.end_at < $11::timestamptz)
+  AND ($12::bigint IS NULL OR w.product_id = $12::bigint)
+  AND ($13::bigint IS NULL OR w.vehicle_id = $13::bigint)
+  AND ($14::timestamptz IS NULL OR w.end_at > $14::timestamptz)
+  AND ($15::timestamptz IS NULL OR w.end_at <= $15::timestamptz)
+  AND ($16::text IS NULL
+       OR w.public_code ILIKE '%' || $16::text || '%'
+       OR s.service_no ILIKE '%' || $16::text || '%'
+       OR p.name ILIKE '%' || $16::text || '%'
+       OR ($17::text IS NOT NULL AND $17::text <> '' AND (
+              upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || $17::text || '%'
+              OR COALESCE(v.plate_normalized, '') LIKE '%' || $17::text || '%')))
 `
 
 type CountWarrantyRowsParams struct {
-	BrandID          int64              `json:"brand_id"`
-	OrgIds           []int64            `json:"org_ids"`
-	HolderUserID     pgtype.Int8        `json:"holder_user_id"`
-	ServiceCreatedBy pgtype.Int8        `json:"service_created_by"`
-	WarrantyUuid     pgtype.UUID        `json:"warranty_uuid"`
-	Status           pgtype.Text        `json:"status"`
-	ProductID        pgtype.Int8        `json:"product_id"`
-	VehicleID        pgtype.Int8        `json:"vehicle_id"`
-	EndsAfter        pgtype.Timestamptz `json:"ends_after"`
-	EndsBefore       pgtype.Timestamptz `json:"ends_before"`
-	Q                pgtype.Text        `json:"q"`
-	QPlate           pgtype.Text        `json:"q_plate"`
+	BrandID           int64              `json:"brand_id"`
+	OrgIds            []int64            `json:"org_ids"`
+	HolderUserID      pgtype.Int8        `json:"holder_user_id"`
+	ServiceCreatedBy  pgtype.Int8        `json:"service_created_by"`
+	WarrantyUuid      pgtype.UUID        `json:"warranty_uuid"`
+	Statuses          []string           `json:"statuses"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	StartFrom         pgtype.Timestamptz `json:"start_from"`
+	StartBefore       pgtype.Timestamptz `json:"start_before"`
+	EndFrom           pgtype.Timestamptz `json:"end_from"`
+	EndBefore         pgtype.Timestamptz `json:"end_before"`
+	ProductID         pgtype.Int8        `json:"product_id"`
+	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	EndsAfter         pgtype.Timestamptz `json:"ends_after"`
+	EndsBefore        pgtype.Timestamptz `json:"ends_before"`
+	Q                 pgtype.Text        `json:"q"`
+	QPlate            pgtype.Text        `json:"q_plate"`
 }
 
 func (q *Queries) CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsParams) (int64, error) {
@@ -59,7 +72,12 @@ func (q *Queries) CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsPa
 		arg.HolderUserID,
 		arg.ServiceCreatedBy,
 		arg.WarrantyUuid,
-		arg.Status,
+		arg.Statuses,
+		arg.OrganizationUuids,
+		arg.StartFrom,
+		arg.StartBefore,
+		arg.EndFrom,
+		arg.EndBefore,
 		arg.ProductID,
 		arg.VehicleID,
 		arg.EndsAfter,
@@ -96,39 +114,92 @@ WHERE w.brand_id = $1::bigint
   AND ($3::bigint IS NULL OR w.holder_user_id = $3::bigint)
   AND ($4::bigint IS NULL OR s.created_by_user_id = $4::bigint)
   AND ($5::uuid IS NULL OR w.uuid = $5::uuid)
-  AND ($6::text IS NULL OR w.status = $6::text)
-  AND ($7::bigint IS NULL OR w.product_id = $7::bigint)
-  AND ($8::bigint IS NULL OR w.vehicle_id = $8::bigint)
-  AND ($9::timestamptz IS NULL OR w.end_at > $9::timestamptz)
-  AND ($10::timestamptz IS NULL OR w.end_at <= $10::timestamptz)
-  AND ($11::text IS NULL
-       OR w.public_code ILIKE '%' || $11::text || '%'
-       OR s.service_no ILIKE '%' || $11::text || '%'
-       OR p.name ILIKE '%' || $11::text || '%'
-       OR ($12::text IS NOT NULL AND $12::text <> '' AND (
-              upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || $12::text || '%'
-              OR COALESCE(v.plate_normalized, '') LIKE '%' || $12::text || '%')))
-  AND ($13::uuid[] IS NULL OR w.uuid = ANY ($13::uuid[]))
-ORDER BY CASE WHEN w.status = 'active' THEN w.end_at END ASC NULLS LAST, w.end_at DESC, w.id DESC
-LIMIT $15::int OFFSET $14::int
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR w.status = ANY ($6::text[]))
+  AND (
+    COALESCE(cardinality($7::uuid[]), 0) = 0
+    OR w.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($7::uuid[]))
+  )
+  AND ($8::timestamptz IS NULL OR w.start_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR w.start_at < $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR w.end_at >= $10::timestamptz)
+  AND ($11::timestamptz IS NULL OR w.end_at < $11::timestamptz)
+  AND ($12::bigint IS NULL OR w.product_id = $12::bigint)
+  AND ($13::bigint IS NULL OR w.vehicle_id = $13::bigint)
+  AND ($14::timestamptz IS NULL OR w.end_at > $14::timestamptz)
+  AND ($15::timestamptz IS NULL OR w.end_at <= $15::timestamptz)
+  AND ($16::text IS NULL
+       OR w.public_code ILIKE '%' || $16::text || '%'
+       OR s.service_no ILIKE '%' || $16::text || '%'
+       OR p.name ILIKE '%' || $16::text || '%'
+       OR ($17::text IS NOT NULL AND $17::text <> '' AND (
+              upper(translate(COALESCE(s.plate, ''), ' -._·', '')) LIKE '%' || $17::text || '%'
+              OR COALESCE(v.plate_normalized, '') LIKE '%' || $17::text || '%')))
+  AND ($18::uuid[] IS NULL OR w.uuid = ANY ($18::uuid[]))
+ORDER BY
+  CASE WHEN NOT $19::bool AND $20::text = 'expiry' THEN
+    CASE WHEN w.status = 'active' THEN w.end_at END
+  END ASC NULLS LAST,
+  CASE WHEN NOT $19::bool AND $20::text = 'expiry' THEN w.end_at END DESC,
+  CASE WHEN $19::bool AND $20::text = 'expiry' THEN
+    CASE WHEN w.status = 'active' THEN w.end_at END
+  END DESC NULLS FIRST,
+  CASE WHEN $19::bool AND $20::text = 'expiry' THEN w.end_at END ASC,
+  CASE WHEN NOT $19::bool THEN
+    CASE $20::text
+      WHEN 'public_code' THEN w.public_code::text
+      WHEN 'service_no' THEN s.service_no::text
+      WHEN 'product' THEN p.name::text
+      WHEN 'organization' THEN o.name::text
+    END
+  END ASC,
+  CASE WHEN $19::bool THEN
+    CASE $20::text
+      WHEN 'public_code' THEN w.public_code::text
+      WHEN 'service_no' THEN s.service_no::text
+      WHEN 'product' THEN p.name::text
+      WHEN 'organization' THEN o.name::text
+    END
+  END DESC,
+  CASE WHEN NOT $19::bool AND $20::text = 'status' THEN
+    CASE w.status WHEN 'active' THEN 0 WHEN 'expired' THEN 1 WHEN 'void' THEN 2 ELSE 3 END
+  END ASC,
+  CASE WHEN $19::bool AND $20::text = 'status' THEN
+    CASE w.status WHEN 'active' THEN 0 WHEN 'expired' THEN 1 WHEN 'void' THEN 2 ELSE 3 END
+  END DESC,
+  CASE WHEN NOT $19::bool THEN
+    CASE $20::text WHEN 'end_at' THEN w.end_at WHEN 'start_at' THEN w.start_at WHEN 'created_at' THEN w.created_at END
+  END ASC,
+  CASE WHEN $19::bool THEN
+    CASE $20::text WHEN 'end_at' THEN w.end_at WHEN 'start_at' THEN w.start_at WHEN 'created_at' THEN w.created_at END
+  END DESC,
+  CASE WHEN $19::bool THEN w.id END DESC,
+  w.id ASC
+LIMIT $22::int OFFSET $21::int
 `
 
 type ListWarrantyRowsParams struct {
-	BrandID          int64              `json:"brand_id"`
-	OrgIds           []int64            `json:"org_ids"`
-	HolderUserID     pgtype.Int8        `json:"holder_user_id"`
-	ServiceCreatedBy pgtype.Int8        `json:"service_created_by"`
-	WarrantyUuid     pgtype.UUID        `json:"warranty_uuid"`
-	Status           pgtype.Text        `json:"status"`
-	ProductID        pgtype.Int8        `json:"product_id"`
-	VehicleID        pgtype.Int8        `json:"vehicle_id"`
-	EndsAfter        pgtype.Timestamptz `json:"ends_after"`
-	EndsBefore       pgtype.Timestamptz `json:"ends_before"`
-	Q                pgtype.Text        `json:"q"`
-	QPlate           pgtype.Text        `json:"q_plate"`
-	Uuids            []uuid.UUID        `json:"uuids"`
-	RowOffset        int32              `json:"row_offset"`
-	RowLimit         int32              `json:"row_limit"`
+	BrandID           int64              `json:"brand_id"`
+	OrgIds            []int64            `json:"org_ids"`
+	HolderUserID      pgtype.Int8        `json:"holder_user_id"`
+	ServiceCreatedBy  pgtype.Int8        `json:"service_created_by"`
+	WarrantyUuid      pgtype.UUID        `json:"warranty_uuid"`
+	Statuses          []string           `json:"statuses"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	StartFrom         pgtype.Timestamptz `json:"start_from"`
+	StartBefore       pgtype.Timestamptz `json:"start_before"`
+	EndFrom           pgtype.Timestamptz `json:"end_from"`
+	EndBefore         pgtype.Timestamptz `json:"end_before"`
+	ProductID         pgtype.Int8        `json:"product_id"`
+	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	EndsAfter         pgtype.Timestamptz `json:"ends_after"`
+	EndsBefore        pgtype.Timestamptz `json:"ends_before"`
+	Q                 pgtype.Text        `json:"q"`
+	QPlate            pgtype.Text        `json:"q_plate"`
+	Uuids             []uuid.UUID        `json:"uuids"`
+	SortDesc          bool               `json:"sort_desc"`
+	SortKey           string             `json:"sort_key"`
+	RowOffset         int32              `json:"row_offset"`
+	RowLimit          int32              `json:"row_limit"`
 }
 
 type ListWarrantyRowsRow struct {
@@ -177,6 +248,11 @@ type ListWarrantyRowsRow struct {
 // public code, service number, product name or plate; q_plate is the
 // normalized plate, geo.NormalizePlate), warranty_uuid (detail).
 // Order: active first by the soonest end, then the rest by the latest end.
+// TEC-377 (DT-BE-7): statuses / organization_uuids are multi-value filters,
+// start_from / start_before and end_from / end_before date windows; the
+// sort keys come from warranty usecase.ListSort (docs/list-contract.md).
+// 'expiry' is the order above (descending reverses it), status sorts by
+// rank (active, expired, void), product / organization by name.
 func (q *Queries) ListWarrantyRows(ctx context.Context, arg ListWarrantyRowsParams) ([]ListWarrantyRowsRow, error) {
 	rows, err := q.db.Query(ctx, listWarrantyRows,
 		arg.BrandID,
@@ -184,7 +260,12 @@ func (q *Queries) ListWarrantyRows(ctx context.Context, arg ListWarrantyRowsPara
 		arg.HolderUserID,
 		arg.ServiceCreatedBy,
 		arg.WarrantyUuid,
-		arg.Status,
+		arg.Statuses,
+		arg.OrganizationUuids,
+		arg.StartFrom,
+		arg.StartBefore,
+		arg.EndFrom,
+		arg.EndBefore,
 		arg.ProductID,
 		arg.VehicleID,
 		arg.EndsAfter,
@@ -192,6 +273,8 @@ func (q *Queries) ListWarrantyRows(ctx context.Context, arg ListWarrantyRowsPara
 		arg.Q,
 		arg.QPlate,
 		arg.Uuids,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

@@ -24,6 +24,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	platstorage "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -332,6 +333,7 @@ func (s *Service) PortalList(ctx context.Context, brandID, userID int64) ([]mode
 	}
 	rows, err := s.q.ListWarrantyClaimsInScope(ctx, db.ListWarrantyClaimsInScopeParams{
 		BrandID: brandID, OrganizationIds: nil, CustomerUserID: int8(userID), PageLimit: 100, PageOffset: 0,
+		SortKey: "created_at", SortDesc: true,
 	})
 	if err != nil {
 		return nil, err
@@ -696,13 +698,20 @@ func (s *Service) event(nc db.GetWarrantyClaimOpenContextRow, from, to string, r
 }
 
 func (s *Service) listArgs(ctx context.Context, c Caller, f model.ListFilter) (db.ListWarrantyClaimsInScopeParams, error) {
-	limit := f.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 50
+	limit, offset := apiquery.Clamp(f.Limit, f.Offset, apiquery.DefaultLimit, apiquery.MaxLimit)
+	sortKey, sortDesc := f.SortKey, f.SortDesc
+	if sortKey == "" {
+		sortKey, sortDesc = ListSort.Columns[ListSort.Default.Field], ListSort.Default.Desc
 	}
 	args := db.ListWarrantyClaimsInScopeParams{
-		BrandID: c.BrandID, OrganizationIds: c.Filter.OrgIDsArg(), Statuses: statusArg(f.Status),
-		CreatedFrom: tsPtr(f.CreatedFrom), CreatedTo: tsPtr(f.CreatedTo), PageLimit: limit, PageOffset: max(f.Offset, 0),
+		BrandID: c.BrandID, OrganizationIds: c.Filter.OrgIDsArg(), Statuses: f.Statuses,
+		OrganizationUuids: f.OrganizationUUIDs,
+		CreatedFrom:       tsPtr(f.CreatedFrom), CreatedTo: tsPtr(f.CreatedTo), PageLimit: limit, PageOffset: offset,
+		SortKey: sortKey, SortDesc: sortDesc,
+	}
+	if q := strings.TrimSpace(f.Q); q != "" {
+		args.Q = pgtype.Text{String: escapeLike(q), Valid: true}
+		args.QExact = pgtype.Text{String: q, Valid: true}
 	}
 	if f.WarrantyID != uuid.Nil {
 		w, err := s.q.GetWarrantyByUUID(ctx, db.GetWarrantyByUUIDParams{Uuid: f.WarrantyID, BrandID: c.BrandID})
@@ -848,19 +857,12 @@ func validPartKey(s string) bool {
 	return true
 }
 
-func statusArg(status string) []string {
-	status = strings.TrimSpace(status)
-	if status == "" {
-		return nil
-	}
-	return []string{status}
-}
-
 func countArgs(a db.ListWarrantyClaimsInScopeParams) db.CountWarrantyClaimsInScopeParams {
 	return db.CountWarrantyClaimsInScopeParams{
 		BrandID: a.BrandID, OrganizationIds: a.OrganizationIds, Statuses: a.Statuses,
 		WarrantyID: a.WarrantyID, ServiceID: a.ServiceID, VehicleID: a.VehicleID,
 		CustomerUserID: a.CustomerUserID, CreatedFrom: a.CreatedFrom, CreatedTo: a.CreatedTo, Q: a.Q,
+		OrganizationUuids: a.OrganizationUuids, QExact: a.QExact,
 	}
 }
 

@@ -59,7 +59,10 @@ WHERE v.uuid = sqlc.arg(uuid)
   AND b.slug <> 'glorian';
 
 -- Services of the user across every organization of the brand (one list,
--- newest first). vehicle_id narrows to one vehicle (vehicle detail).
+-- newest first by default). vehicle_id narrows to one vehicle (vehicle
+-- detail). TEC-377 (DT-BE-7): statuses / organization_uuids (multi-value),
+-- created window, q (service number or plate; the caller escapes LIKE
+-- wildcards) and the sort keys of portalvehicles usecase.ServiceSort.
 -- name: ListPortalServices :many
 SELECT s.uuid, s.service_no, s.status, s.package, s.plate, s.plate_country, s.model_year,
        s.completed_at, s.created_at,
@@ -79,7 +82,37 @@ WHERE (s.customer_user_id = sqlc.arg(user_id)::bigint
   AND s.status <> 'draft'
   AND b.slug <> 'glorian'
   AND (sqlc.narg(vehicle_id)::bigint IS NULL OR s.vehicle_id = sqlc.narg(vehicle_id)::bigint)
-ORDER BY s.created_at DESC, s.id DESC
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR s.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR s.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR s.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR s.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR s.service_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR s.plate ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN o.name::text END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN o.name::text END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE s.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
+      WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'status' THEN
+    CASE s.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2
+      WHEN 'ready' THEN 3 WHEN 'completed' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN s.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN s.created_at END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'completed_at' THEN s.completed_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'completed_at' THEN s.completed_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN s.id END DESC,
+  s.id ASC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
 -- name: CountPortalServices :one
@@ -92,7 +125,17 @@ WHERE (s.customer_user_id = sqlc.arg(user_id)::bigint
   AND s.brand_id = sqlc.arg(brand_id)::bigint
   AND s.status <> 'draft'
   AND b.slug <> 'glorian'
-  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR s.vehicle_id = sqlc.narg(vehicle_id)::bigint);
+  AND (sqlc.narg(vehicle_id)::bigint IS NULL OR s.vehicle_id = sqlc.narg(vehicle_id)::bigint)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR s.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_uuids)::uuid[]), 0) = 0
+    OR s.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY (sqlc.narg(organization_uuids)::uuid[]))
+  )
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR s.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR s.created_at < sqlc.narg(created_before)::timestamptz)
+  AND (sqlc.narg(q)::text IS NULL
+       OR s.service_no ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR s.plate ILIKE '%' || sqlc.narg(q)::text || '%');
 
 -- Active warranties of one vehicle held by the user (soonest end first).
 -- name: ListPortalVehicleActiveWarranties :many

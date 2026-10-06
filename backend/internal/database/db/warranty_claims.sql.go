@@ -243,29 +243,39 @@ func (q *Queries) CountWarrantyClaimPhotos(ctx context.Context, claimID int64) (
 
 const countWarrantyClaimsInScope = `-- name: CountWarrantyClaimsInScope :one
 SELECT COUNT(*) FROM warranty_claims
-WHERE brand_id = $1
-  AND ($2::bigint[] IS NULL OR organization_id = ANY($2::bigint[]))
-  AND ($3::varchar[] IS NULL OR status = ANY($3::varchar[]))
-  AND ($4::bigint IS NULL OR warranty_id = $4::bigint)
-  AND ($5::bigint IS NULL OR service_id = $5::bigint)
-  AND ($6::bigint IS NULL OR vehicle_id = $6::bigint)
-  AND ($7::bigint IS NULL OR customer_user_id = $7::bigint)
-  AND ($8::timestamptz IS NULL OR created_at >= $8::timestamptz)
-  AND ($9::timestamptz IS NULL OR created_at < $9::timestamptz)
-  AND ($10::text IS NULL OR description ILIKE '%' || $10::text || '%')
+WHERE warranty_claims.brand_id = $1
+  AND ($2::bigint[] IS NULL OR warranty_claims.organization_id = ANY($2::bigint[]))
+  AND ($3::varchar[] IS NULL OR warranty_claims.status = ANY($3::varchar[]))
+  AND ($4::bigint IS NULL OR warranty_claims.warranty_id = $4::bigint)
+  AND ($5::bigint IS NULL OR warranty_claims.service_id = $5::bigint)
+  AND ($6::bigint IS NULL OR warranty_claims.vehicle_id = $6::bigint)
+  AND ($7::bigint IS NULL OR warranty_claims.customer_user_id = $7::bigint)
+  AND ($8::timestamptz IS NULL OR warranty_claims.created_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR warranty_claims.created_at < $9::timestamptz)
+  AND (
+    COALESCE(cardinality($10::uuid[]), 0) = 0
+    OR warranty_claims.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($10::uuid[]))
+  )
+  AND ($11::text IS NULL
+       OR warranty_claims.description ILIKE '%' || $11::text || '%'
+       OR warranty_claims.claim_no::text = $12::text
+       OR EXISTS (SELECT 1 FROM services qs WHERE qs.id = warranty_claims.service_id
+                  AND qs.service_no ILIKE '%' || $11::text || '%'))
 `
 
 type CountWarrantyClaimsInScopeParams struct {
-	BrandID         int64              `json:"brand_id"`
-	OrganizationIds []int64            `json:"organization_ids"`
-	Statuses        []string           `json:"statuses"`
-	WarrantyID      pgtype.Int8        `json:"warranty_id"`
-	ServiceID       pgtype.Int8        `json:"service_id"`
-	VehicleID       pgtype.Int8        `json:"vehicle_id"`
-	CustomerUserID  pgtype.Int8        `json:"customer_user_id"`
-	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
-	CreatedTo       pgtype.Timestamptz `json:"created_to"`
-	Q               pgtype.Text        `json:"q"`
+	BrandID           int64              `json:"brand_id"`
+	OrganizationIds   []int64            `json:"organization_ids"`
+	Statuses          []string           `json:"statuses"`
+	WarrantyID        pgtype.Int8        `json:"warranty_id"`
+	ServiceID         pgtype.Int8        `json:"service_id"`
+	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	CustomerUserID    pgtype.Int8        `json:"customer_user_id"`
+	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
+	CreatedTo         pgtype.Timestamptz `json:"created_to"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	Q                 pgtype.Text        `json:"q"`
+	QExact            pgtype.Text        `json:"q_exact"`
 }
 
 func (q *Queries) CountWarrantyClaimsInScope(ctx context.Context, arg CountWarrantyClaimsInScopeParams) (int64, error) {
@@ -279,7 +289,9 @@ func (q *Queries) CountWarrantyClaimsInScope(ctx context.Context, arg CountWarra
 		arg.CustomerUserID,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.OrganizationUuids,
 		arg.Q,
+		arg.QExact,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -1210,35 +1222,71 @@ func (q *Queries) ListWarrantyClaimsByWarranty(ctx context.Context, arg ListWarr
 
 const listWarrantyClaimsInScope = `-- name: ListWarrantyClaimsInScope :many
 SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
-WHERE brand_id = $1
-  AND ($2::bigint[] IS NULL OR organization_id = ANY($2::bigint[]))
-  AND ($3::varchar[] IS NULL OR status = ANY($3::varchar[]))
-  AND ($4::bigint IS NULL OR warranty_id = $4::bigint)
-  AND ($5::bigint IS NULL OR service_id = $5::bigint)
-  AND ($6::bigint IS NULL OR vehicle_id = $6::bigint)
-  AND ($7::bigint IS NULL OR customer_user_id = $7::bigint)
-  AND ($8::timestamptz IS NULL OR created_at >= $8::timestamptz)
-  AND ($9::timestamptz IS NULL OR created_at < $9::timestamptz)
-  AND ($10::text IS NULL OR description ILIKE '%' || $10::text || '%')
-ORDER BY created_at DESC, id DESC
-LIMIT $12 OFFSET $11
+WHERE warranty_claims.brand_id = $1
+  AND ($2::bigint[] IS NULL OR warranty_claims.organization_id = ANY($2::bigint[]))
+  AND ($3::varchar[] IS NULL OR warranty_claims.status = ANY($3::varchar[]))
+  AND ($4::bigint IS NULL OR warranty_claims.warranty_id = $4::bigint)
+  AND ($5::bigint IS NULL OR warranty_claims.service_id = $5::bigint)
+  AND ($6::bigint IS NULL OR warranty_claims.vehicle_id = $6::bigint)
+  AND ($7::bigint IS NULL OR warranty_claims.customer_user_id = $7::bigint)
+  AND ($8::timestamptz IS NULL OR warranty_claims.created_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR warranty_claims.created_at < $9::timestamptz)
+  AND (
+    COALESCE(cardinality($10::uuid[]), 0) = 0
+    OR warranty_claims.organization_id IN (SELECT fo.id FROM organizations fo WHERE fo.uuid = ANY ($10::uuid[]))
+  )
+  AND ($11::text IS NULL
+       OR warranty_claims.description ILIKE '%' || $11::text || '%'
+       OR warranty_claims.claim_no::text = $12::text
+       OR EXISTS (SELECT 1 FROM services qs WHERE qs.id = warranty_claims.service_id
+                  AND qs.service_no ILIKE '%' || $11::text || '%'))
+ORDER BY
+  CASE WHEN NOT $13::bool AND $14::text = 'claim_no' THEN claim_no END ASC,
+  CASE WHEN $13::bool AND $14::text = 'claim_no' THEN claim_no END DESC,
+  CASE WHEN NOT $13::bool AND $14::text = 'status' THEN
+    CASE status WHEN 'open' THEN 0 WHEN 'dealer_review' THEN 1 WHEN 'center_review' THEN 2 WHEN 'approved' THEN 3
+      WHEN 'rejected' THEN 4 WHEN 'reapplied' THEN 5 WHEN 'closed' THEN 6 ELSE 7 END
+  END ASC,
+  CASE WHEN $13::bool AND $14::text = 'status' THEN
+    CASE status WHEN 'open' THEN 0 WHEN 'dealer_review' THEN 1 WHEN 'center_review' THEN 2 WHEN 'approved' THEN 3
+      WHEN 'rejected' THEN 4 WHEN 'reapplied' THEN 5 WHEN 'closed' THEN 6 ELSE 7 END
+  END DESC,
+  CASE WHEN NOT $13::bool THEN
+    CASE $14::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN $13::bool THEN
+    CASE $14::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN NOT $13::bool AND $14::text = 'decided_at' THEN decided_at END ASC NULLS LAST,
+  CASE WHEN $13::bool AND $14::text = 'decided_at' THEN decided_at END DESC NULLS LAST,
+  CASE WHEN $13::bool THEN id END DESC,
+  id ASC
+LIMIT $16 OFFSET $15
 `
 
 type ListWarrantyClaimsInScopeParams struct {
-	BrandID         int64              `json:"brand_id"`
-	OrganizationIds []int64            `json:"organization_ids"`
-	Statuses        []string           `json:"statuses"`
-	WarrantyID      pgtype.Int8        `json:"warranty_id"`
-	ServiceID       pgtype.Int8        `json:"service_id"`
-	VehicleID       pgtype.Int8        `json:"vehicle_id"`
-	CustomerUserID  pgtype.Int8        `json:"customer_user_id"`
-	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
-	CreatedTo       pgtype.Timestamptz `json:"created_to"`
-	Q               pgtype.Text        `json:"q"`
-	PageOffset      int32              `json:"page_offset"`
-	PageLimit       int32              `json:"page_limit"`
+	BrandID           int64              `json:"brand_id"`
+	OrganizationIds   []int64            `json:"organization_ids"`
+	Statuses          []string           `json:"statuses"`
+	WarrantyID        pgtype.Int8        `json:"warranty_id"`
+	ServiceID         pgtype.Int8        `json:"service_id"`
+	VehicleID         pgtype.Int8        `json:"vehicle_id"`
+	CustomerUserID    pgtype.Int8        `json:"customer_user_id"`
+	CreatedFrom       pgtype.Timestamptz `json:"created_from"`
+	CreatedTo         pgtype.Timestamptz `json:"created_to"`
+	OrganizationUuids []uuid.UUID        `json:"organization_uuids"`
+	Q                 pgtype.Text        `json:"q"`
+	QExact            pgtype.Text        `json:"q_exact"`
+	SortDesc          bool               `json:"sort_desc"`
+	SortKey           string             `json:"sort_key"`
+	PageOffset        int32              `json:"page_offset"`
+	PageLimit         int32              `json:"page_limit"`
 }
 
+// TEC-377 (DT-BE-7): organization_uuids (multi-value), q also matches the
+// claim number exactly (q_exact) and the service number; sort keys from
+// warranty_claims usecase.ListSort (status by flow rank, decided_at NULLS
+// LAST both ways).
 func (q *Queries) ListWarrantyClaimsInScope(ctx context.Context, arg ListWarrantyClaimsInScopeParams) ([]WarrantyClaim, error) {
 	rows, err := q.db.Query(ctx, listWarrantyClaimsInScope,
 		arg.BrandID,
@@ -1250,7 +1298,11 @@ func (q *Queries) ListWarrantyClaimsInScope(ctx context.Context, arg ListWarrant
 		arg.CustomerUserID,
 		arg.CreatedFrom,
 		arg.CreatedTo,
+		arg.OrganizationUuids,
 		arg.Q,
+		arg.QExact,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.PageOffset,
 		arg.PageLimit,
 	)
