@@ -673,6 +673,9 @@ func TestCanSubscribeChannelScopes(t *testing.T) {
 		{"conversation:" + other.String(), false, false},
 		{"system.notifications", false, false},
 		{"system.notifications", true, true},
+		// TEC-395: WhatsApp inbox events, platform admins only (S2).
+		{"system.conversations", false, false},
+		{"system.conversations", true, true},
 	}
 	for _, c := range cases {
 		got, err := uc.CanSubscribeChannel(ctx, me, c.sa, c.ch)

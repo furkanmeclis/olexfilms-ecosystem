@@ -41,6 +41,9 @@ type Querier interface {
 	// Atomically appends one image while the product holds fewer than
 	// max_images; no row means the product is gone or already full.
 	AppendProductImage(ctx context.Context, arg AppendProductImageParams) (Product, error)
+	// Delivery receipt of outgoing messages. A receipt only moves forward
+	// (sent → delivered → read); read is final.
+	ApplyMessageReceipt(ctx context.Context, arg ApplyMessageReceiptParams) ([]Message, error)
 	AppointmentClosureExists(ctx context.Context, arg AppointmentClosureExistsParams) (bool, error)
 	// Seller approval: freezes the rate (decision 2).
 	ApproveOrder(ctx context.Context, arg ApproveOrderParams) (Order, error)
@@ -829,6 +832,7 @@ type Querier interface {
 	// transaction).
 	GetMeasurementResultForPDF(ctx context.Context, id int64) (MeasurementResult, error)
 	GetMeasurementResultPanel(ctx context.Context, arg GetMeasurementResultPanelParams) (GetMeasurementResultPanelRow, error)
+	GetMessageByID(ctx context.Context, id int64) (Message, error)
 	// Messages (timeline) ----------------------------------------------------------
 	GetMessageByUUID(ctx context.Context, argUuid uuid.UUID) (Message, error)
 	// TEC-252: migrator bookkeeping (000074). Written only by cmd/migrator.
@@ -1172,6 +1176,12 @@ type Querier interface {
 	// its uuid is the change id the cari transfer rows are sourced by.
 	InsertOrganizationParentChange(ctx context.Context, arg InsertOrganizationParentChangeParams) (OrganizationParentChange, error)
 	InsertOutboxEvent(ctx context.Context, arg InsertOutboxEventParams) (OutboxEvent, error)
+	// TEC-395 (F4-02d): WhatsApp outgoing queue, delivery receipts and inbound
+	// media storage.
+	// An outgoing AI/staff/system message waiting for the whatsapp:send task.
+	// uuid is chosen by the caller (idempotency key); external_id is the client
+	// message id handed to the provider.
+	InsertQueuedMessage(ctx context.Context, arg InsertQueuedMessageParams) (Message, error)
 	InsertRolePermission(ctx context.Context, arg InsertRolePermissionParams) error
 	// ---------------------------------------------------------------------------
 	// Status log (append-only).
@@ -1867,6 +1877,9 @@ type Querier interface {
 	// docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
 	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]ListStaffPaymentsRow, error)
 	ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error)
+	// Queued messages older than the cutoff whose send task may have been lost
+	// (enqueue failure, Redis flush); the sweep enqueues them again.
+	ListStaleQueuedMessages(ctx context.Context, arg ListStaleQueuedMessagesParams) ([]ListStaleQueuedMessagesRow, error)
 	ListStockCountLines(ctx context.Context, countID int64) ([]StockCountLine, error)
 	ListStockCountProducts(ctx context.Context, ids []int64) ([]ListStockCountProductsRow, error)
 	ListStockCountScans(ctx context.Context, countID int64) ([]StockCountScan, error)
@@ -2117,6 +2130,9 @@ type Querier interface {
 	// FOR UPDATE) and the receipt of the return are serialized.
 	LockOrdersOfTransferRequest(ctx context.Context, requestID int64) ([]int64, error)
 	LockOrganizationProductStock(ctx context.Context, arg LockOrganizationProductStockParams) (OrganizationProductStock, error)
+	// The send task holds the row while it calls the provider: a second run of
+	// the same task (or a concurrent one) finds nothing and sends nothing.
+	LockQueuedMessage(ctx context.Context, id int64) (Message, error)
 	LockQuoteByID(ctx context.Context, id int64) (Quote, error)
 	// Serializes quote number allocation per organization (transaction scoped).
 	LockQuoteNumbering(ctx context.Context, organizationID int64) error
@@ -2202,6 +2218,10 @@ type Querier interface {
 	MarkLogPurgeRuleRun(ctx context.Context, arg MarkLogPurgeRuleRunParams) (LogPurgeRule, error)
 	// Marks a result normalized and fills the fields parsed from raw.
 	MarkMeasurementResultParsed(ctx context.Context, arg MarkMeasurementResultParsedParams) error
+	// A failed provider call: failed = final (no retry left or a permanent
+	// error), else the message stays queued for the next attempt.
+	MarkMessageSendError(ctx context.Context, arg MarkMessageSendErrorParams) (Message, error)
+	MarkMessageSent(ctx context.Context, arg MarkMessageSentParams) (Message, error)
 	MarkNotificationFailed(ctx context.Context, arg MarkNotificationFailedParams) (Notification, error)
 	MarkNotificationProcessing(ctx context.Context, id int64) (Notification, error)
 	MarkNotificationRead(ctx context.Context, arg MarkNotificationReadParams) (Notification, error)
@@ -2615,6 +2635,9 @@ type Querier interface {
 	SetMessageAIRun(ctx context.Context, arg SetMessageAIRunParams) (Message, error)
 	// Inbound media after it was copied to object storage.
 	SetMessageMedia(ctx context.Context, arg SetMessageMediaParams) (Message, error)
+	// Inbound media that was not stored (too large, unsupported type, download
+	// error): the reason is kept in the media JSON for the inbox.
+	SetMessageMediaNote(ctx context.Context, arg SetMessageMediaNoteParams) (Message, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
 	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)

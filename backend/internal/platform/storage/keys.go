@@ -94,3 +94,10 @@ func trimExt(ext string) string {
 func MeasurementPDFObjectKey(orgUUID, resultUUID uuid.UUID) string {
 	return fmt.Sprintf("measurements/%s/%s/report.pdf", orgUUID.String(), resultUUID.String())
 }
+
+// WhatsAppMediaObjectKey builds whatsapp/{conversation}/{message} (TEC-395):
+// inbound media copied from the gateway and outgoing documents/images. The
+// object is private; the sniffed content type is stored with it.
+func WhatsAppMediaObjectKey(conversationUUID, messageUUID uuid.UUID) string {
+	return fmt.Sprintf("whatsapp/%s/%s", conversationUUID.String(), messageUUID.String())
+}

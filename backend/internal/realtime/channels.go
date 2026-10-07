@@ -9,6 +9,12 @@ import (
 
 const ChannelSystemNotifications = "system.notifications"
 
+// ChannelConversations carries WhatsApp inbox events
+// (conversations.message.created|updated, TEC-395). Per the F4 decision S2
+// only platform admins read conversations, so it is the platform-wide
+// channel of the inbox; the assigned user also gets them on user:{uuid}.
+const ChannelConversations = "system.conversations"
+
 // ChannelAuthorizer decides whether a principal may subscribe to a channel.
 type ChannelAuthorizer interface {
 	CanSubscribeChannel(ctx context.Context, userUUID uuid.UUID, isSuperAdmin bool, channel string) (bool, error)
