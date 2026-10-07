@@ -11833,6 +11833,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Campaigns inside campaigns.read scope
+         * @description TEC-405 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), scheduled_at (unscheduled last both ways), name, status (flow rank draft → rejected); id tiebreak. `status` and `channel` are comma separated any-of filters (a campaign matches a channel when it uses it). `q` matches the name. Requires the campaigns add-on.
+         */
+        get: operations["listCampaigns"];
+        put?: never;
+        /**
+         * Create a campaign draft of the active organization
+         * @description TEC-405. The audience filter is validated: a dealer may target only `customers`, a distributor `customers` or `dealer_users`, the center any type. Customer-only criteria (last service, car brand, product, category, warranty) are refused for panel user audiences; `organization_uuids` must lie inside the campaign reach (dealer: itself, distributor: its subtree, center: the brand).
+         */
+        post: operations["createCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        /** Campaign with its per-locale contents and media */
+        get: operations["getCampaign"];
+        put?: never;
+        post?: never;
+        /** Delete a draft with its contents and media */
+        delete: operations["deleteCampaign"];
+        options?: never;
+        head?: never;
+        /**
+         * Update name, channels or audience of a draft
+         * @description Only drafts change (409 CAMPAIGN_NOT_DRAFT otherwise). New channels are checked against the length limits of the existing contents.
+         */
+        patch: operations["updateCampaign"];
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/contents/{locale}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                locale: components["schemas"]["LocaleCode"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Create or replace the content of one locale of a draft
+         * @description `title` is the push title / e-mail subject (WhatsApp uses only the body). Limits of every selected channel apply: push title ≤ 65 and body ≤ 240, WhatsApp body ≤ 4096, e-mail subject ≤ 150 characters.
+         */
+        put: operations["putCampaignContent"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/contents/{locale}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                locale: components["schemas"]["LocaleCode"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach an image or PDF to the content of a locale
+         * @description The type is sniffed from the bytes: JPEG, PNG or WebP images up to 5 MB, PDF documents up to 16 MB; anything else or larger → 400. At most 5 files per locale. The content is created empty when the locale has none. E-mails link to the file instead of attaching it.
+         */
+        post: operations["addCampaignMedia"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/contents/{locale}/media/{media}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                locale: components["schemas"]["LocaleCode"];
+                media: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a medium of a draft */
+        delete: operations["deleteCampaignMedia"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve the audience of a campaign
+         * @description Customers count only with an accepted marketing_consent and no marketing opt-out of their phone; the others are reported under `excluded`. Panel user audiences need no consent (business notifications). `locales` is the distribution by the resolved user locale (user → serving organization → center → tr), `channels` the reachable members per selected channel (push token, WhatsApp E.164 number, e-mail address, honoring the customer's channel preferences), `missing_locales` the audience locales whose content is missing or incomplete (submission then answers 422 CAMPAIGN_LOCALE_MISSING), `sample` up to 10 masked members.
+         */
+        post: operations["previewCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -21326,6 +21463,156 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["GlorianOutbound"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @enum {string} */
+        CampaignStatus: "draft" | "pending_approval" | "approved" | "scheduled" | "sending" | "sent" | "partially_failed" | "cancelled" | "rejected";
+        /** @enum {string} */
+        CampaignChannel: "push" | "whatsapp" | "email";
+        /** @description TEC-405 audience definition. Empty lists mean no restriction; lists are any-of, criteria are combined with AND. Geography uses the ids of /v1/geo (customers: address ids, panel users: their organization). Service based criteria look at completed services of organizations inside the campaign reach. warranty_statuses: active (valid now), expiring (valid, ends within 30 days), expired (an ended warranty and no valid one). */
+        CampaignAudienceFilter: {
+            /** @enum {string} */
+            audience_type: "customers" | "dealer_users" | "distributor_users";
+            country_ids?: number[];
+            province_ids?: number[];
+            district_ids?: number[];
+            organization_uuids?: string[];
+            /** Format: date */
+            last_service_from?: string | null;
+            /** Format: date */
+            last_service_to?: string | null;
+            car_brand_uuids?: string[];
+            product_uuids?: string[];
+            category_uuids?: string[];
+            warranty_statuses?: ("active" | "expiring" | "expired")[];
+            locales?: components["schemas"]["LocaleCode"][];
+        };
+        CampaignInput: {
+            name: string;
+            channels: components["schemas"]["CampaignChannel"][];
+            audience_filter: components["schemas"]["CampaignAudienceFilter"];
+        };
+        CampaignPatch: {
+            name?: string;
+            channels?: components["schemas"]["CampaignChannel"][];
+            audience_filter?: components["schemas"]["CampaignAudienceFilter"];
+        };
+        CampaignContentInput: {
+            title: string;
+            body: string;
+            deeplink?: string | null;
+        };
+        CampaignMedia: {
+            /** Format: uuid */
+            uuid: string;
+            locale: components["schemas"]["LocaleCode"];
+            /** @enum {string} */
+            kind: "image" | "document";
+            /** @enum {string} */
+            mime_type: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+            /** Format: int64 */
+            size_bytes: number;
+            file_name: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        CampaignContent: {
+            locale: components["schemas"]["LocaleCode"];
+            title: string;
+            body: string;
+            deeplink: string | null;
+            media: components["schemas"]["CampaignMedia"][];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        Campaign: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            name: string;
+            channels: components["schemas"]["CampaignChannel"][];
+            audience_filter: components["schemas"]["CampaignAudienceFilter"];
+            status: components["schemas"]["CampaignStatus"];
+            /** Format: date-time */
+            scheduled_at: string | null;
+            /** Format: date-time */
+            started_at: string | null;
+            /** Format: date-time */
+            finished_at: string | null;
+            recipients_total: number;
+            recipients_sent: number;
+            recipients_failed: number;
+            recipients_skipped: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Detail responses only. */
+            contents?: components["schemas"]["CampaignContent"][];
+        };
+        CampaignPreview: {
+            total: number;
+            locales: {
+                locale: components["schemas"]["LocaleCode"];
+                count: number;
+            }[];
+            channels: {
+                channel: components["schemas"]["CampaignChannel"];
+                reachable: number;
+            }[];
+            unreachable: number;
+            excluded: {
+                total: number;
+                no_consent: number;
+                opted_out: number;
+            };
+            missing_locales: components["schemas"]["LocaleCode"][];
+            sample: {
+                /** @example A*** Y*** */
+                name: string;
+                /** @example +90*******67 */
+                phone: string | null;
+                /** @example a***@e***.com */
+                email: string | null;
+                locale: components["schemas"]["LocaleCode"];
+                channels: components["schemas"]["CampaignChannel"][];
+            }[];
+        };
+        EnvelopeCampaign: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Campaign"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCampaignContent: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CampaignContent"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCampaignMedia: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CampaignMedia"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCampaignPreview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["CampaignPreview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCampaignPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Campaign"][];
                 /** Format: int64 */
                 total: number;
                 limit: number;
@@ -42758,6 +43045,268 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeLibraryDownload"];
                 };
             };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listCampaigns: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated campaign statuses; unknown value → 400. */
+                status?: components["schemas"]["CampaignStatus"][];
+                /** @description Comma separated channels (push, whatsapp, email); unknown value → 400. */
+                channel?: components["schemas"]["CampaignChannel"][];
+                /** @description Inclusive lower bound of scheduled_at (RFC3339 or YYYY-MM-DD, UTC). */
+                scheduled_from?: string;
+                /** @description Upper bound of scheduled_at; a YYYY-MM-DD day covers the whole day. */
+                scheduled_to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Campaigns */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaignPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignInput"];
+            };
+        };
+        responses: {
+            /** @description Created draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    updateCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignPatch"];
+            };
+        };
+        responses: {
+            /** @description Updated draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    putCampaignContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                locale: components["schemas"]["LocaleCode"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignContentInput"];
+            };
+        };
+        responses: {
+            /** @description Stored content */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaignContent"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    addCampaignMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                locale: components["schemas"]["LocaleCode"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Stored medium */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaignMedia"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteCampaignMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                locale: components["schemas"]["LocaleCode"];
+                media: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    previewCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Audience preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaignPreview"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };

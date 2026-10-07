@@ -162,6 +162,7 @@ type Querier interface {
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountBulkOperationsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
 	CountCampaignApprovals(ctx context.Context, arg CountCampaignApprovalsParams) (int64, error)
+	CountCampaignContentMedia(ctx context.Context, contentID int64) (int64, error)
 	CountCampaignRecipients(ctx context.Context, arg CountCampaignRecipientsParams) (int64, error)
 	CountCampaigns(ctx context.Context, arg CountCampaignsParams) (int64, error)
 	CountCarBrands(ctx context.Context, arg CountCarBrandsParams) (int64, error)
@@ -606,6 +607,8 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Product stock projections.
 	EnsureBinProductStock(ctx context.Context, arg EnsureBinProductStockParams) error
+	// The content of a locale, created empty when missing (media upload).
+	EnsureCampaignContent(ctx context.Context, arg EnsureCampaignContentParams) (CampaignContent, error)
 	EnsureCustomerProfile(ctx context.Context, userID int64) error
 	// Projection deltas are two steps: Ensure* creates a zero row on first use
 	// (no-op otherwise), Add* applies the signed delta. A plain UPDATE keeps the
@@ -1335,6 +1338,23 @@ type Querier interface {
 	// Sort created_at | scheduled_at | name, default created_at (oldest first is
 	// chosen by the handler); channels multi-valued; q matches the name.
 	ListCampaignApprovals(ctx context.Context, arg ListCampaignApprovalsParams) ([]Campaign, error)
+	// TEC-405 (F4-04b): campaign audience resolution. One row per candidate
+	// user of the validated audience filter; the use case applies the locale
+	// filter (resolved locale), the marketing consent rule and the channel
+	// reachability on these rows.
+	//
+	//   * reach_org_ids: organizations of the campaign reach (NULL = the whole
+	//     brand, center campaigns; distributor = its subtree; dealer = itself).
+	//     organization_ids narrows the reach further (filter "served by").
+	//   * customers: users linked to a reached organization in
+	//     customer_organizations; service based filters (last service date,
+	//     products, categories, warranties) look at reached organizations only.
+	//     Geography comes from customer_profiles.address ids (K29).
+	//   * dealer_users / distributor_users: members of reached dealer /
+	//     distributor organizations; geography comes from that organization.
+	//   * Geography and catalog ids are compared as text so a malformed address
+	//     value never fails the query.
+	ListCampaignAudience(ctx context.Context, arg ListCampaignAudienceParams) ([]ListCampaignAudienceRow, error)
 	ListCampaignContents(ctx context.Context, campaignID int64) ([]CampaignContent, error)
 	ListCampaignEvents(ctx context.Context, campaignID int64) ([]CampaignEvent, error)
 	// Every medium of the campaign with the locale of its content.
@@ -2566,6 +2586,8 @@ type Querier interface {
 	// Finishes a claimed action: executing → confirmed | failed.
 	ResolveAIPendingAction(ctx context.Context, arg ResolveAIPendingActionParams) (AiPendingAction, error)
 	ResolveAccountingDispute(ctx context.Context, arg ResolveAccountingDisputeParams) (AccountingDispute, error)
+	// Organizations of the brand with the given uuids (filter "served by").
+	ResolveCampaignOrganizations(ctx context.Context, arg ResolveCampaignOrganizationsParams) ([]ResolveCampaignOrganizationsRow, error)
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone
 	// written by the API in the meantime is kept (only phone_raw is cleared).
 	ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOrganizationRawPhoneParams) (int64, error)
