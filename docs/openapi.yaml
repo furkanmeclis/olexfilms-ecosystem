@@ -63,6 +63,8 @@ tags:
     description: "Duyuru API: authoring, feed, read receipts and unread badge"
   - name: Fleets
     description: "Filo yönetimi: filo açma, bayi bağı, kullanıcılar, araçlar, içe aktarma, filo kartı ve ekstre (F5-02)"
+  - name: Showcase
+    description: "Bayi vitrini API: panel editor, gallery, center review queue (F5-01b)"
   - name: Campaigns
     description: "Kampanya API: drafts, per-locale contents and media, audience preview (F4-04)"
   - name: WhatsApp
@@ -2210,12 +2212,20 @@ paths:
         together when the dealer has no map position; `whatsapp` is the
         organization phone when it is E.164, otherwise null. Rate limited
         per client IP (120 per minute); over the limit 429 with Retry-After.
+        TEC-467: while the dealer_showcase module is on and a showcase is
+        published, a `showcase` block is added (see PublicDealerShowcaseBlock);
+        otherwise the body is unchanged.
       security: []
       parameters:
         - name: code
           in: path
           required: true
           schema: { type: string, maxLength: 100 }
+        - name: locale
+          in: query
+          required: false
+          description: TEC-467. Locale of the showcase block texts (default Accept-Language, then the organization locale, then tr).
+          schema: { type: string }
       responses:
         "200":
           description: Dealer showcase
@@ -2238,6 +2248,516 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /v1/public/dealers/{code}/photos/{uuid}:
+    get:
+      tags: [Public]
+      operationId: getPublicDealerShowcasePhoto
+      summary: Gallery photo of a published dealer showcase
+      description: |
+        TEC-467. No authentication. Streams a photo of the dealer's
+        published showcase snapshot (the `showcase.photos[].url` of
+        `GET /v1/public/dealers/{code}`). The bytes are served as uploaded
+        (`X-Content-Type-Options: nosniff`, public cache 1 h). Unknown
+        photos, unpublished showcases and dealers whose dealer_showcase
+        module is off are 404.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, maxLength: 100 }
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Photo bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase:
+    get:
+      tags: [Showcase]
+      operationId: getShowcase
+      summary: Showcase editor view of the active organization (or ?org=)
+      description: |
+        TEC-467 (F5-01b). Requires the dealer_showcase module of the active
+        organization (403 FEATURE_DISABLED) and showcase.read. Without
+        `org` it is the caller's own showcase (dealer or distributor); with
+        `org` a dealer or distributor inside the caller's scope (a
+        distributor's subtree), anything else 404; a target without the
+        module is 403 FEATURE_DISABLED. An organization without a showcase
+        gets an empty draft (`uuid` null). `content` is the draft;
+        `published_content` the live snapshot (null until the first
+        publish).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      responses:
+        "200":
+          description: Showcase
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Showcase]
+      operationId: saveShowcase
+      summary: Replace the showcase draft
+      description: |
+        TEC-467. Requires showcase.write. Replaces the draft content (per
+        locale headline ≤ 160 / about ≤ 5000), working hours (same shape as
+        appointment working hours: weekday → [{start, end}]), social links
+        (instagram, facebook, youtube, tiktok, website; https only), SEO
+        keywords (≤ 30, ≤ 100 chars, trimmed, duplicates dropped) and the
+        Google place id. The status and `published_content` are not touched:
+        a draft edit never changes the live page. Invalid input is 400
+        VALIDATION_ERROR.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseInput" }
+      responses:
+        "200":
+          description: Saved showcase
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/submit:
+    post:
+      tags: [Showcase]
+      operationId: submitShowcase
+      summary: Publish the draft (or send it for center review)
+      description: |
+        TEC-467. Requires showcase.write. With `showcase.approval_required`
+        off (default) the draft is published at once: status `published`,
+        `published_content` written from the draft, the visible services
+        and the gallery (event `showcase.published`). With it on the
+        showcase moves to `pending_review` and the brand center's members
+        holding platform.showcase.review are notified
+        (`showcase.review_requested`); the previous snapshot stays live.
+        A showcase already pending is 409 INVALID_TRANSITION.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      responses:
+        "200":
+          description: Showcase after the move
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/showcase/services:
+    get:
+      tags: [Showcase]
+      operationId: listShowcaseServices
+      summary: Showcase services in display order
+      description: TEC-467. Requires showcase.read. Services never carry a price.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      responses:
+        "200":
+          description: Services
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseServices" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Showcase]
+      operationId: createShowcaseService
+      summary: Add a showcase service (end of the list)
+      description: |
+        TEC-467. Requires showcase.write. `product_category` needs a
+        `category_uuid` of the brand (title optional, the category name is
+        the fallback); `custom` needs a title. A category listed twice is
+        409 CONFLICT. Opens the showcase when the organization has none.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseServiceInput" }
+      responses:
+        "201":
+          description: Service
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseService" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/showcase/services/order:
+    put:
+      tags: [Showcase]
+      operationId: reorderShowcaseServices
+      summary: Reorder the showcase services
+      description: TEC-467. Requires showcase.write. `uuids` lists every service exactly once (otherwise 400).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseOrderInput" }
+      responses:
+        "200":
+          description: Services in the new order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseServices" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/services/{uuid}:
+    put:
+      tags: [Showcase]
+      operationId: updateShowcaseService
+      summary: Replace a showcase service
+      description: TEC-467. Requires showcase.write.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseServiceInput" }
+      responses:
+        "200":
+          description: Service
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseService" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Showcase]
+      operationId: deleteShowcaseService
+      summary: Remove a showcase service
+      description: TEC-467. Requires showcase.write.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/photos:
+    post:
+      tags: [Showcase]
+      operationId: uploadShowcasePhoto
+      summary: Upload a gallery photo (multipart)
+      description: |
+        TEC-467. Requires showcase.write. Multipart field `photo` (JPEG,
+        PNG or WebP by byte sniffing; the declared type is ignored; anything
+        else 415 UNSUPPORTED_MEDIA_TYPE), at most 5 MiB (413), and an
+        optional `caption` JSON object (locale → text, ≤ 300). The bytes
+        are stored as uploaded (no re-encoding, EXIF kept). The gallery
+        holds `showcase.max_photos` photos (default 12); one more is 422
+        SHOWCASE_PHOTO_LIMIT (`data.count`, `data.max`). The same image
+        twice is 409 CONFLICT.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo: { type: string, format: binary }
+                caption: { type: string, description: "JSON object: locale → caption" }
+      responses:
+        "201":
+          description: Photo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcasePhoto" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415":
+          description: Not a JPEG, PNG or WebP image (UNSUPPORTED_MEDIA_TYPE)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/showcase/photos/order:
+    put:
+      tags: [Showcase]
+      operationId: reorderShowcasePhotos
+      summary: Reorder the gallery
+      description: TEC-467. Requires showcase.write. `uuids` lists every photo exactly once (otherwise 400).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseOrderInput" }
+      responses:
+        "200":
+          description: Photos in the new order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcasePhotos" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/photos/{uuid}:
+    put:
+      tags: [Showcase]
+      operationId: updateShowcasePhoto
+      summary: Replace a photo caption
+      description: TEC-467. Requires showcase.write.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [caption]
+              properties:
+                caption: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+      responses:
+        "200":
+          description: Photo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcasePhoto" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Showcase]
+      operationId: deleteShowcasePhoto
+      summary: Remove a gallery photo
+      description: |
+        TEC-467. Requires showcase.write. The object is deleted unless the
+        live snapshot still shows it; then the next publish removes it.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/photos/{uuid}/file:
+    get:
+      tags: [Showcase]
+      operationId: getShowcasePhotoFile
+      summary: Gallery photo bytes (panel preview)
+      description: TEC-467. Requires showcase.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Photo bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/platform/showcases:
+    get:
+      tags: [Showcase]
+      operationId: listPlatformShowcases
+      summary: Center showcase review queue
+      description: |
+        TEC-467 (docs/list-contract.md). Requires platform.showcase.review
+        in the brand center (or super admin). Lists the showcases of the
+        brand's dealers and distributors. `sort` is one of updated_at
+        (default `-updated_at`), name (organization name), status (flow rank
+        draft → pending_review → published → rejected); id tiebreak in the
+        sort direction; an unknown field is 400. `status` is a comma
+        separated any-of filter (unknown value 400); `q` matches the
+        organization name or city; `updated_from` / `updated_to` bound the
+        last change.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          description: Comma separated showcase statuses; unknown value → 400.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/ShowcaseStatus" }
+        - name: updated_from
+          in: query
+          description: Inclusive lower bound of updated_at (RFC3339 or YYYY-MM-DD, UTC).
+          schema: { type: string }
+        - name: updated_to
+          in: query
+          description: Upper bound of updated_at; a YYYY-MM-DD day covers the whole day.
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Review queue page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseReviewPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/platform/showcases/{org_uuid}:
+    get:
+      tags: [Showcase]
+      operationId: getPlatformShowcase
+      summary: Showcase under review (draft and live snapshot)
+      description: TEC-467. Requires platform.showcase.review. Organizations outside the brand are 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: org_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Showcase
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/platform/showcases/{org_uuid}/review:
+    post:
+      tags: [Showcase]
+      operationId: reviewPlatformShowcase
+      summary: Approve or reject a pending showcase
+      description: |
+        TEC-467. Requires platform.showcase.review. `approve` publishes the
+        current draft (snapshot written, event `showcase.published`);
+        `reject` keeps the previous snapshot live and needs a `note` (422
+        SHOWCASE_REVIEW_NOTE_REQUIRED; event `showcase.rejected`). The
+        dealer's owners are notified of either decision. A showcase that is
+        not pending is 409 INVALID_TRANSITION.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: org_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseReviewInput" }
+      responses:
+        "200":
+          description: Showcase after the decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
   /v1/public/warranties/{public_code}:
     get:
@@ -26424,6 +26944,15 @@ components:
         Created on or before; a date (YYYY-MM-DD) covers the whole day, an
         RFC3339 value that instant. `created_from` after `created_to` → 400.
       schema: { type: string }
+    ShowcaseTargetOrg:
+      name: org
+      in: query
+      required: false
+      description: |
+        TEC-467. Organization uuid of a dealer or distributor inside the
+        caller's scope (a distributor's subtree); absent = the active
+        organization. Outside the scope 404.
+      schema: { type: string, format: uuid }
     Sort:
       name: sort
       in: query
@@ -30025,7 +30554,8 @@ components:
 
     NearbyDealer:
       type: object
-      required: [uuid, slug, name, city, district, latitude, longitude, distance_km, accepts_appointments, whatsapp]
+      required: [uuid, slug, name, city, district, latitude, longitude, distance_km, accepts_appointments, whatsapp,
+        has_showcase, google_rating]
       properties:
         uuid: { type: string, format: uuid, description: "TEC-327. Organization uuid for portal appointment booking" }
         slug: { type: string }
@@ -30037,6 +30567,8 @@ components:
         distance_km: { type: number, description: Haversine distance in km (2 decimals) }
         accepts_appointments: { type: boolean }
         whatsapp: { type: [string, "null"], description: E.164 phone }
+        has_showcase: { type: boolean, description: "TEC-467. A published showcase with the dealer_showcase module on" }
+        google_rating: { type: [number, "null"], description: "TEC-467. Live Google rating of the showcase (null without one)" }
 
     EnvelopeNearbyDealers:
       type: object
@@ -30066,6 +30598,12 @@ components:
         latitude: { type: [number, "null"] }
         longitude: { type: [number, "null"] }
         whatsapp: { type: [string, "null"], description: E.164 phone }
+        showcase:
+          $ref: "#/components/schemas/PublicDealerShowcaseBlock"
+          description: |
+            TEC-467. Present only while the dealer_showcase module is on and
+            a showcase is published; otherwise the key is absent and the
+            body is exactly the TEC-250 skeleton.
 
     EnvelopePublicDealer:
       type: object
@@ -30074,6 +30612,292 @@ components:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PublicDealer" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ShowcaseStatus:
+      type: string
+      enum: [draft, pending_review, published, rejected]
+
+    ShowcaseLocaleTexts:
+      type: object
+      description: Locale (13 UI locales) → text; empty entries are dropped.
+      additionalProperties: { type: string }
+
+    ShowcaseWorkWindow:
+      type: object
+      required: [start, end]
+      properties:
+        start: { type: string, example: "09:00" }
+        end: { type: string, example: "18:00" }
+
+    ShowcaseInput:
+      type: object
+      additionalProperties: false
+      properties:
+        content:
+          type: object
+          description: Locale → {headline ≤ 160, about ≤ 5000}.
+          additionalProperties:
+            type: object
+            additionalProperties: false
+            properties:
+              headline: { type: string, maxLength: 160 }
+              about: { type: string, maxLength: 5000 }
+        working_hours:
+          type: object
+          description: Weekday (monday/mon/1 … sunday/sun/7) → windows.
+          additionalProperties:
+            type: array
+            items: { $ref: "#/components/schemas/ShowcaseWorkWindow" }
+        social_links:
+          type: object
+          description: instagram, facebook, youtube, tiktok, website → https URL.
+          additionalProperties: { type: string, maxLength: 500 }
+        seo_keywords:
+          type: array
+          maxItems: 30
+          items: { type: string, maxLength: 100 }
+        google_place_id: { type: [string, "null"], maxLength: 255 }
+
+    ShowcaseOrganization:
+      type: object
+      required: [uuid, code, name, type, city]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string, description: "Organization slug (/bayi/{code})" }
+        name: { type: string }
+        type: { type: string, enum: [dealer, distributor] }
+        city: { type: string }
+
+    ShowcaseServiceInput:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [product_category, custom] }
+        category_uuid: { type: [string, "null"], format: uuid }
+        title: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        description: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        visible: { type: boolean, default: true }
+
+    ShowcaseService:
+      type: object
+      required: [uuid, kind, category, title, description, visible, sort_order]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [product_category, custom] }
+        category:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [uuid, name]
+              properties:
+                uuid: { type: string, format: uuid }
+                name: { type: string }
+        title: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        description: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        visible: { type: boolean }
+        sort_order: { type: integer }
+
+    ShowcasePhoto:
+      type: object
+      required: [uuid, mime, size_bytes, caption, sort_order, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        mime: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        size_bytes: { type: integer }
+        caption: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        sort_order: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    ShowcaseOrderInput:
+      type: object
+      additionalProperties: false
+      required: [uuids]
+      properties:
+        uuids:
+          type: array
+          items: { type: string, format: uuid }
+
+    ShowcaseReviewInput:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approve, reject] }
+        note: { type: string, maxLength: 2000, description: Required to reject }
+
+    Showcase:
+      type: object
+      description: TEC-467 showcase editor view (draft + live snapshot). No price fields.
+      required: [uuid, organization, status, content, working_hours, social_links, seo_keywords, google_place_id,
+        google_rating, google_review_count, google_rating_source, google_rating_updated_at, published_content,
+        published_at, submitted_at, reviewed_at, review_note, updated_at, approval_required, max_photos, services, photos]
+      properties:
+        uuid: { type: [string, "null"], format: uuid, description: Null until the showcase is first saved }
+        organization: { $ref: "#/components/schemas/ShowcaseOrganization" }
+        status: { $ref: "#/components/schemas/ShowcaseStatus" }
+        content:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              headline: { type: string }
+              about: { type: string }
+        working_hours:
+          type: object
+          additionalProperties:
+            type: array
+            items: { $ref: "#/components/schemas/ShowcaseWorkWindow" }
+        social_links:
+          type: object
+          additionalProperties: { type: string }
+        seo_keywords: { type: array, items: { type: string } }
+        google_place_id: { type: [string, "null"] }
+        google_rating: { type: [number, "null"] }
+        google_review_count: { type: [integer, "null"] }
+        google_rating_source: { type: [string, "null"], enum: [places, manual, null] }
+        google_rating_updated_at: { type: [string, "null"], format: date-time }
+        published_content:
+          type: [object, "null"]
+          description: The live snapshot (content, working_hours, social_links, seo_keywords, services, photos).
+        published_at: { type: [string, "null"], format: date-time }
+        submitted_at: { type: [string, "null"], format: date-time }
+        reviewed_at: { type: [string, "null"], format: date-time }
+        review_note: { type: [string, "null"] }
+        updated_at: { type: [string, "null"], format: date-time }
+        approval_required: { type: boolean, description: "showcase.approval_required" }
+        max_photos: { type: integer, description: "showcase.max_photos" }
+        services: { type: array, items: { $ref: "#/components/schemas/ShowcaseService" } }
+        photos: { type: array, items: { $ref: "#/components/schemas/ShowcasePhoto" } }
+
+    EnvelopeShowcase:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Showcase" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeShowcaseService:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ShowcaseService" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeShowcaseServices:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/ShowcaseService" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeShowcasePhoto:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ShowcasePhoto" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeShowcasePhotos:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/ShowcasePhoto" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ShowcaseReviewItem:
+      type: object
+      required: [uuid, organization, status, submitted_at, published_at, reviewed_at, review_note, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        organization: { $ref: "#/components/schemas/ShowcaseOrganization" }
+        status: { $ref: "#/components/schemas/ShowcaseStatus" }
+        submitted_at: { type: [string, "null"], format: date-time }
+        published_at: { type: [string, "null"], format: date-time }
+        reviewed_at: { type: [string, "null"], format: date-time }
+        review_note: { type: [string, "null"] }
+        updated_at: { type: string, format: date-time }
+
+    EnvelopeShowcaseReviewPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/ShowcaseReviewItem" } }
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PublicDealerShowcaseBlock:
+      type: object
+      description: |
+        TEC-467. The published snapshot in the requested locale (?locale=,
+        then Accept-Language; each text falls back to the organization
+        locale, then tr). No price anywhere (F5 S8).
+      required: [locale, headline, about, working_hours, open_now, timezone, services, photos, social_links,
+        seo_keywords, google_rating, google_review_count, google_rating_source, google_place_id,
+        lead_form_enabled, whatsapp_chat_url, published_at]
+      properties:
+        locale: { type: string }
+        headline: { type: string }
+        about: { type: string }
+        working_hours:
+          type: array
+          description: Monday first; a day without windows is closed.
+          items:
+            type: object
+            required: [day, windows]
+            properties:
+              day: { type: string, enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday] }
+              windows: { type: array, items: { $ref: "#/components/schemas/ShowcaseWorkWindow" } }
+        open_now: { type: [boolean, "null"], description: Now in the organization's time zone; null without hours }
+        timezone: { type: string }
+        services:
+          type: array
+          items:
+            type: object
+            required: [kind, title, description]
+            properties:
+              kind: { type: string, enum: [product_category, custom] }
+              title: { type: string }
+              description: { type: string }
+        photos:
+          type: array
+          items:
+            type: object
+            required: [url, caption]
+            properties:
+              url: { type: string, description: "/v1/public/dealers/{code}/photos/{uuid}" }
+              caption: { type: string }
+        social_links:
+          type: object
+          additionalProperties: { type: string }
+        seo_keywords: { type: array, items: { type: string } }
+        google_rating: { type: [number, "null"] }
+        google_review_count: { type: [integer, "null"] }
+        google_rating_source: { type: [string, "null"], enum: [places, manual, null] }
+        google_place_id: { type: [string, "null"] }
+        lead_form_enabled: { type: boolean, description: The leads module is on for the dealer }
+        whatsapp_chat_url: { type: [string, "null"], description: "wa.me link of the dealer phone (E.164)" }
+        published_at: { type: string, format: date-time }
 
     PublicDealerCode:
       type: object

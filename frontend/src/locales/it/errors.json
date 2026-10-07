@@ -139,5 +139,8 @@
   "codes.FLEET_VEHICLE_EXISTS": "Un veicolo con questa targa o questo VIN appartiene agli utenti della flotta; può collegarlo alla flotta.",
   "codes.FLEET_VEHICLE_OTHER_OWNER": "Il veicolo appartiene a un altro cliente o a un'altra flotta e non può essere aggiunto.",
   "codes.FLEET_NO_DEALER_LINK": "La sua organizzazione non ha un collegamento attivo con questa flotta.",
-  "codes.FLEET_LINK_NOT_PENDING": "La richiesta di collegamento ha già ricevuto risposta."
+  "codes.FLEET_LINK_NOT_PENDING": "La richiesta di collegamento ha già ricevuto risposta.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "La galleria è piena; elimini una foto prima di aggiungerne una nuova.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Scriva una nota per rifiutare.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Tipo di file non supportato; carichi un'immagine JPEG, PNG o WebP."
 }
