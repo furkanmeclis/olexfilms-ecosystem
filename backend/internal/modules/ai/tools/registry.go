@@ -36,6 +36,10 @@ const (
 	// KindWrite tools change data; the chat loop routes them through the
 	// confirmation card (F4-01e) instead of running them directly.
 	KindWrite Kind = "write"
+	// KindSelf tools change only the caller's own preference (e.g. the
+	// reply language, TEC-386) and run immediately without a confirmation
+	// card.
+	KindSelf Kind = "self"
 )
 
 // Realm is the audience of a tool set.
@@ -108,6 +112,21 @@ type Principal struct {
 	// Org is the active organization; nil outside the panel realm.
 	Org   *orgctx.Scope
 	Realm Realm
+	// Brand is the brand of the customer / visitor conversation (the domain
+	// brand on the portal, the conversation brand on WhatsApp); required in
+	// those realms, ignored in the panel realm (Org carries the brand).
+	Brand *brandctx.Brand
+}
+
+// brandID is the brand the principal acts in.
+func (p Principal) brandID() int64 {
+	if p.Org != nil {
+		return p.Org.BrandID
+	}
+	if p.Brand != nil {
+		return p.Brand.ID
+	}
+	return 0
 }
 
 // Env is the execution environment of one tool call.
@@ -139,6 +158,8 @@ type Result struct {
 	IsError bool
 	// Code is set on errors (Code* constants).
 	Code string
+	// Link is the record a confirmed write created or changed.
+	Link *Link
 }
 
 // Block converts the result to a tool_result block.
@@ -258,12 +279,20 @@ func (r *Registry) allowed(ctx context.Context, p Principal, spec Spec, toggles 
 	if spec.Realm == RealmPanel && p.Org == nil {
 		return false, nil
 	}
+	// Customer and visitor tools read only the conversation brand; a
+	// customer is a signed-in user (TEC-386).
+	if spec.Realm != RealmPanel && (p.Brand == nil || p.Brand.ID <= 0) {
+		return false, nil
+	}
+	if spec.Realm == RealmCustomer && p.Auth.UserInternal <= 0 {
+		return false, nil
+	}
 	if len(spec.OrgTypes) > 0 && (p.Org == nil || !slices.Contains(spec.OrgTypes, p.Org.OrgType)) {
 		return false, nil
 	}
 	// K20: a request made on one brand's domain never reaches another
 	// brand's organization.
-	if b, ok := brandctx.From(ctx); ok && p.Org != nil && b.ID != p.Org.BrandID {
+	if b, ok := brandctx.From(ctx); ok && p.brandID() != 0 && b.ID != p.brandID() {
 		return false, nil
 	}
 	for _, perm := range spec.Permissions {
@@ -338,6 +367,11 @@ func (r *Registry) Call(ctx context.Context, p Principal, name string, input jso
 	if !allowed {
 		return notAllowed(name), ErrToolNotAllowed
 	}
+	// TEC-387: a write tool only runs through the confirmation card
+	// (Propose → actions use case → RunConfirmed).
+	if spec.Kind == KindWrite {
+		return confirmationRequired(name), ErrConfirmationRequired
+	}
 	if err := Validate(spec.InputSchema, input); err != nil {
 		return ErrorResult(CodeInvalidInput, "invalid input for "+name+": "+err.Error()+
 			". Fix the arguments and call the tool again."), nil
@@ -347,8 +381,13 @@ func (r *Registry) Call(ctx context.Context, p Principal, name string, input jso
 	}
 	// Channels without a domain (WhatsApp, MCP) carry the organization's
 	// brand, which the brand scoped use cases read (K20).
-	if _, ok := brandctx.From(ctx); !ok && p.Org != nil {
-		ctx = brandctx.WithBrand(ctx, brandctx.Brand{ID: p.Org.BrandID, Slug: p.Org.BrandSlug, Status: "active"})
+	if _, ok := brandctx.From(ctx); !ok {
+		switch {
+		case p.Org != nil:
+			ctx = brandctx.WithBrand(ctx, brandctx.Brand{ID: p.Org.BrandID, Slug: p.Org.BrandSlug, Status: "active"})
+		case p.Brand != nil:
+			ctx = brandctx.WithBrand(ctx, *p.Brand)
+		}
 	}
 	defer func() {
 		if rec := recover(); rec != nil {

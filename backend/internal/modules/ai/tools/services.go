@@ -298,3 +298,77 @@ func (t ServiceActivity) Run(ctx context.Context, env Env, raw json.RawMessage) 
 		CreatedCount: a.CreatedCount, CompletedCount: a.CompletedCount, CarBrands: a.CarBrands, TopProducts: a.TopProducts,
 	})
 }
+
+// ServicePDFLink: hizmetin garanti sertifikası PDF linkleri (eski
+// dealer_service_pdf paritesi, TEC-386). Dosya üretilmez; mevcut
+// /garanti/{code}/pdf çıktısına kısa link verilir.
+type ServicePDFLink struct {
+	servicesBase
+	links LinkMaker
+}
+
+// Spec implements Tool.
+func (ServicePDFLink) Spec() Spec {
+	return Spec{
+		Name: "service_pdf_link",
+		Description: "Get short links to the warranty certificate PDFs of one service (by uuid or service number), " +
+			"e.g. to forward to the customer. The links open without signing in; no file is attached.",
+		InputSchema: object(map[string]any{
+			"service": strMin("Service uuid or service number.", 2, 64),
+		}, "service"),
+		Kind: KindRead, Realm: RealmPanel, Feature: features.ModuleServices,
+		Permissions: []string{rbac.PermServicesRead},
+	}
+}
+
+// Run implements Tool.
+func (t ServicePDFLink) Run(ctx context.Context, env Env, raw json.RawMessage) (Result, error) {
+	var in struct {
+		Service string `json:"service"`
+	}
+	if r := decode(t.Spec(), raw, &in); r != nil {
+		return *r, nil
+	}
+	c, err := t.caller(ctx, env.Principal)
+	if err != nil {
+		return serviceError(err, t.Spec().Name)
+	}
+	id, ok := parseID(in.Service)
+	if !ok {
+		no := strings.ToUpper(strings.TrimSpace(in.Service))
+		rows, _, err := t.svc.List(ctx, c, svcuc.ListFilter{Q: no, Limit: 5})
+		if err != nil {
+			return serviceError(err, t.Spec().Name)
+		}
+		for _, r := range rows {
+			if strings.EqualFold(r.ServiceNo, no) {
+				id, ok = r.UUID, true
+				break
+			}
+		}
+		if !ok {
+			return notFound("service"), nil
+		}
+	}
+	v, err := t.svc.Get(ctx, c, id)
+	if err != nil {
+		return serviceError(err, t.Spec().Name)
+	}
+	certs := make([]certificate, 0, len(v.Warranties))
+	for _, w := range v.Warranties {
+		certs = append(certs, certificate{Code: w.PublicCode, Product: w.ProductName, Status: w.Status})
+	}
+	pdfs, err := certificateLinks(ctx, t.links, env.Principal, certs)
+	if err != nil {
+		return Result{}, err
+	}
+	out := struct {
+		ServiceNo    string    `json:"service_no"`
+		Certificates []pdfLink `json:"warranty_certificate_pdfs"`
+		Hint         string    `json:"hint,omitempty"`
+	}{ServiceNo: v.ServiceNo, Certificates: pdfs}
+	if len(pdfs) == 0 {
+		out.Hint = "This service has no warranty certificate yet (warranties are issued when the service is completed)."
+	}
+	return JSONResult(out)
+}

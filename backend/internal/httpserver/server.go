@@ -23,7 +23,9 @@ import (
 	activitymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity"
 	activityhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/usecase"
+	airepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/repository"
 	aitools "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
+	aiusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/usecase"
 	announcementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements"
 	announcementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/handler"
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
@@ -244,6 +246,8 @@ type Server struct {
 	waMessaging *whatsappusecase.Messaging
 	// aiTools is the AI assistant tool registry (TEC-385).
 	aiTools *aitools.Registry
+	// aiActions is the write-tool confirmation flow (TEC-387).
+	aiActions *aiusecase.Actions
 }
 
 // New wires router and middleware for the API skeleton.
@@ -852,7 +856,18 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Tree: deps.Queries, Services: servicesSvc, Warranties: warrantyReader, Customers: customersSvc,
 		Stock: stockSvc, Orders: ordersSvc, Accounting: accountingSvc, Appointments: appointmentsSvc,
 		Leads: leadsSvc, Tasks: tasksSvc, Catalog: catalogSvc, Organizations: orgSvc,
+		Links: shorturlsmodule.NewLinker(deps.Queries, cfg.Auth.FrontendURL),
 	})
+	// TEC-387 (F4-01e): write tools behind the confirmation card; every
+	// channel confirms through s.aiActions.
+	aitools.RegisterPanelWrite(s.aiTools, aitools.WriteDeps{
+		Tree: deps.Queries, Tasks: tasksSvc, Leads: leadsSvc, Appointments: appointmentsSvc,
+		Customers: customersSvc, Orders: ordersSvc, Products: catalogSvc, Services: servicesSvc,
+	})
+	s.aiActions = aiusecase.NewActions(airepo.New(deps.DB), s.aiTools, activityRec, log)
+	if s.worker != nil {
+		s.worker.WithAIActionSweep(s.aiActions.SweepTask)
+	}
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
@@ -919,6 +934,18 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	)
 	// TEC-238: customer portal vehicles, vehicle detail and service history.
 	portalvehiclesmodule.RegisterRoutes(mux, portalvehicleshandler.New(portalvehiclesusecase.New(deps.Queries)), tokens, loader)
+	// TEC-386 (F4-01d): AI customer (own records via the portal use cases)
+	// and visitor (public catalog, dealers, knowledge text, warranty lookup)
+	// tool sets.
+	aitools.RegisterCustomer(s.aiTools, aitools.CustomerDeps{
+		Portal: portalvehiclesusecase.New(deps.Queries), Services: servicesSvc, Warranties: warrantyReader,
+		Appointments: appointmentsSvc, Claims: warrantyClaimsSvc, Profile: uc,
+		Links: shorturlsmodule.NewLinker(deps.Queries, cfg.Auth.FrontendURL),
+	})
+	aitools.RegisterVisitor(s.aiTools, aitools.VisitorDeps{
+		Catalog: catalogSvc, Dealers: orgSvc, Settings: deps.Queries,
+		Warranties: warrantyusecase.NewPublicLookup(deps.Queries), FrontendURL: cfg.Auth.FrontendURL,
+	})
 	// TEC-273: Glorian admin API (connection settings, sync runs, outbound
 	// replay, reconcile); glorian.Store is wired here.
 	glorianadminmodule.RegisterRoutes(mux, glorianadminhandler.New(glorianadminusecase.New(deps.Queries, secretBox,

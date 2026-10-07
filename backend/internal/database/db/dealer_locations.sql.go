@@ -74,6 +74,107 @@ func (q *Queries) GetPublicDealerBySlug(ctx context.Context, arg GetPublicDealer
 	return i, err
 }
 
+const listAreaDealers = `-- name: ListAreaDealers :many
+SELECT n.uuid, n.slug, n.name, n.city, n.district, n.phone, n.accepts_appointments
+FROM (
+    SELECT o.uuid,
+           o.slug,
+           o.name,
+           COALESCE(NULLIF(btrim(o.city), ''), p.name, '')::text AS city,
+           COALESCE(NULLIF(btrim(o.district), ''), d.name, '')::text AS district,
+           o.phone,
+           (COALESCE(s.portal_appointments_enabled, FALSE) AND
+            CASE
+                WHEN sys.enabled = FALSE THEN FALSE
+                WHEN o.type = 'dealer' AND parent.type = 'distributor' THEN
+                    CASE
+                        WHEN own.source = 'admin' THEN own.enabled
+                        WHEN COALESCE(parent_own.enabled, m.default_enabled) = FALSE THEN FALSE
+                        WHEN own.id IS NOT NULL THEN own.enabled
+                        WHEN dealer_std.id IS NOT NULL THEN dealer_std.enabled
+                        ELSE m.default_enabled
+                    END
+                ELSE COALESCE(own.enabled, m.default_enabled)
+            END)::boolean AS accepts_appointments
+    FROM organizations o
+    LEFT JOIN appointment_settings s ON s.organization_id = o.id
+    JOIN modules m ON m.key = 'appointments'
+    LEFT JOIN organizations parent ON parent.id = o.parent_id
+    LEFT JOIN module_flags sys ON sys.scope = 'system' AND sys.module_key = m.key
+    LEFT JOIN module_flags own ON own.scope = 'org' AND own.organization_id = o.id AND own.module_key = m.key
+    LEFT JOIN module_flags parent_own ON parent_own.scope = 'org' AND parent_own.organization_id = parent.id AND parent_own.module_key = m.key
+    LEFT JOIN module_flags dealer_std ON dealer_std.scope = 'dealer_standard' AND dealer_std.organization_id = parent.id AND dealer_std.module_key = m.key
+    LEFT JOIN provinces p ON p.id = o.province_id
+    LEFT JOIN districts d ON d.id = o.district_id
+    WHERE o.brand_id = $1
+      AND o.deleted_at IS NULL
+      AND o.status = 'active'
+      AND o.type IN ('dealer', 'distributor')
+      AND o.access_starts_at <= NOW()
+      AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+      -- TEC-386: an expired contract hides the dealer too.
+      AND (o.contract_valid_until IS NULL OR o.contract_valid_until >= CURRENT_DATE)
+) n
+WHERE lower(translate(n.city, 'İIıŞşĞğÜüÖöÇç', 'iiissgguuoocc')) = lower(translate($2::text, 'İIıŞşĞğÜüÖöÇç', 'iiissgguuoocc'))
+  AND ($3::text IS NULL OR lower(translate(n.district, 'İIıŞşĞğÜüÖöÇç', 'iiissgguuoocc')) = lower(translate($3::text, 'İIıŞşĞğÜüÖöÇç', 'iiissgguuoocc')))
+ORDER BY n.district ASC, n.name ASC, n.slug ASC
+LIMIT $4
+`
+
+type ListAreaDealersParams struct {
+	BrandID    int64       `json:"brand_id"`
+	City       string      `json:"city"`
+	District   pgtype.Text `json:"district"`
+	LimitCount int32       `json:"limit_count"`
+}
+
+type ListAreaDealersRow struct {
+	Uuid                uuid.UUID `json:"uuid"`
+	Slug                string    `json:"slug"`
+	Name                string    `json:"name"`
+	City                string    `json:"city"`
+	District            string    `json:"district"`
+	Phone               string    `json:"phone"`
+	AcceptsAppointments bool      `json:"accepts_appointments"`
+}
+
+// TEC-386: active, serving (access window open, contract not expired)
+// dealers and distributors of a brand in a city (and district), for the AI
+// visitor tool. city / district match case- and Turkish-accent-insensitively
+// against the organization's own text or its province / district name.
+func (q *Queries) ListAreaDealers(ctx context.Context, arg ListAreaDealersParams) ([]ListAreaDealersRow, error) {
+	rows, err := q.db.Query(ctx, listAreaDealers,
+		arg.BrandID,
+		arg.City,
+		arg.District,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAreaDealersRow{}
+	for rows.Next() {
+		var i ListAreaDealersRow
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.Slug,
+			&i.Name,
+			&i.City,
+			&i.District,
+			&i.Phone,
+			&i.AcceptsAppointments,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listNearbyDealers = `-- name: ListNearbyDealers :many
 SELECT n.uuid, n.slug, n.name, n.city, n.district, n.latitude, n.longitude, n.phone, n.distance_km, n.accepts_appointments
 FROM (
@@ -121,6 +222,8 @@ FROM (
       AND o.longitude IS NOT NULL
       AND o.access_starts_at <= NOW()
       AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+      -- TEC-386: an expired contract hides the dealer too.
+      AND (o.contract_valid_until IS NULL OR o.contract_valid_until >= CURRENT_DATE)
 ) n
 WHERE n.distance_km <= $4::float8
 ORDER BY n.distance_km ASC, n.slug ASC
