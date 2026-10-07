@@ -174,6 +174,8 @@ export type PendingLegalText = {
 };
 
 export type PortalWarranty = components["schemas"]["Warranty"];
+export type PortalWarrantyClaimStatus =
+  components["schemas"]["PortalWarrantyClaimStatus"];
 
 export type PortalWarrantyPage = {
   items: PortalWarranty[];
@@ -259,6 +261,12 @@ export const portalApi = {
         accepted,
       },
     });
+  },
+  /** Claim statuses of the user's warranties (TEC-339; no description / photos). */
+  listWarrantyClaims() {
+    return portalRequest<{ items: PortalWarrantyClaimStatus[] }>(
+      "portal/warranty-claims",
+    );
   },
   /** Warranties the signed-in user holds (TEC-191). */
   listWarranties(query: Record<string, string | number | undefined>) {

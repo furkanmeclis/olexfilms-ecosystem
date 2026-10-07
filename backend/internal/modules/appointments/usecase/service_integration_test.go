@@ -335,7 +335,7 @@ func TestAvailabilityBerlinSlotsAndClosedDay(t *testing.T) {
 	f.settings(f.dealer, 3) // Europe/Berlin, monday 09:00-17:00
 	c := f.caller(f.dealer, rbac.ScopeManaged, []int64{f.dealer.ID})
 	monday := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC) // parsed YYYY-MM-DD
-	days, err := f.svc.Availability(f.ctx, c, monday, monday)
+	days, err := f.svc.Availability(f.ctx, c, nil, monday, monday)
 	if err != nil {
 		t.Fatalf("availability: %v", err)
 	}
@@ -349,14 +349,14 @@ func TestAvailabilityBerlinSlotsAndClosedDay(t *testing.T) {
 		t.Fatalf("first slot = %s, want %s (09:00 Berlin, CEST)", days[0].Slots[0].Start, want)
 	}
 	f.closure(f.dealer, monday)
-	days, err = f.svc.Availability(f.ctx, c, monday, monday)
+	days, err = f.svc.Availability(f.ctx, c, nil, monday, monday)
 	if err != nil {
 		t.Fatalf("availability closed: %v", err)
 	}
 	if !days[0].Closed || len(days[0].Slots) != 0 || days[0].RemainingCapacity != 0 {
 		t.Fatalf("closed day availability = %+v, want empty", days[0])
 	}
-	if _, err := f.svc.Availability(f.ctx, c, monday, monday.AddDate(0, 0, maxRangeDays+1)); err == nil {
+	if _, err := f.svc.Availability(f.ctx, c, nil, monday, monday.AddDate(0, 0, maxRangeDays+1)); err == nil {
 		t.Fatal("over-long range accepted")
 	}
 }
@@ -614,5 +614,46 @@ func TestCreateCapacityHoldsUnderConcurrentInserts(t *testing.T) {
 	}
 	if ok != 3 || full != workers-3 {
 		t.Fatalf("created=%d full=%d, want 3/%d", ok, full, workers-3)
+	}
+}
+
+// TEC-328: organization_uuid narrows the list / availability to one
+// organization inside the read scope; a foreign one yields nothing.
+func TestListAndAvailabilityOrganizationFilterStaysInScope(t *testing.T) {
+	f := newFixture(t)
+	f.settings(f.dealer, 4)
+	f.settings(f.other, 6)
+	start := time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC)
+	for _, org := range []db.Organization{f.dealer, f.other} {
+		if _, err := f.q.CreateAppointment(f.ctx, db.CreateAppointmentParams{
+			OrganizationID: org.ID, BrandID: org.BrandID, CustomerUserID: f.user.ID,
+			StartsAt: tsArg(start), EndsAt: tsArg(start.Add(time.Hour)), EstimatedMinutes: 60, Source: "panel", Status: StatusScheduled,
+		}); err != nil {
+			t.Fatalf("seed appointment: %v", err)
+		}
+	}
+	from, to := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC), time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC)
+
+	center := f.caller(f.center, rbac.ScopeAll, nil)
+	items, total, err := f.svc.List(f.ctx, center, ListFilter{From: from, To: to, OrganizationUUIDs: []uuid.UUID{f.other.Uuid}, Limit: 100})
+	if err != nil || total != 1 || len(items) != 1 || items[0].OrganizationID != f.other.ID {
+		t.Fatalf("center filtered list = %+v total=%d err=%v, want only the other dealer", items, total, err)
+	}
+	days, err := f.svc.Availability(f.ctx, center, &f.dealer.Uuid, from, from)
+	if err != nil || len(days) != 1 || days[0].Capacity != 4 || days[0].Timezone != "Europe/Berlin" {
+		t.Fatalf("center dealer availability = %+v err=%v, want capacity 4 in Europe/Berlin", days, err)
+	}
+
+	dist := f.caller(f.dist, rbac.ScopeSubtree, []int64{f.dist.ID, f.dealer.ID})
+	items, total, err = f.svc.List(f.ctx, dist, ListFilter{From: from, To: to, OrganizationUUIDs: []uuid.UUID{f.other.Uuid}, Limit: 100})
+	if err != nil || total != 0 || len(items) != 0 {
+		t.Fatalf("distributor foreign filter = %d/%d err=%v, want empty", len(items), total, err)
+	}
+	items, total, err = f.svc.List(f.ctx, dist, ListFilter{From: from, To: to, OrganizationUUIDs: []uuid.UUID{f.dealer.Uuid, f.other.Uuid}, Limit: 100})
+	if err != nil || total != 1 || len(items) != 1 || items[0].OrganizationID != f.dealer.ID {
+		t.Fatalf("distributor mixed filter = %+v total=%d err=%v, want only the own dealer", items, total, err)
+	}
+	if _, err := f.svc.Availability(f.ctx, dist, &f.other.Uuid, from, from); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("distributor foreign availability err = %v, want ErrNotFound", err)
 	}
 }

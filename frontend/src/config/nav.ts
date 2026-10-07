@@ -31,6 +31,7 @@ import {
   Shield,
   ShoppingCart,
   SlidersHorizontal,
+  ShieldAlert,
   ShieldCheck,
   Upload,
   UserRound,
@@ -461,6 +462,15 @@ export function tenantNav(slug: string) {
             feature: "services",
           },
           {
+            // TEC-339: warranty claims (dealer, distributor, center).
+            id: "warranty-claims-list",
+            titleKey: "warranty.claims.nav",
+            href: routes.tenant.warrantyClaims.list(slug),
+            icon: ShieldAlert,
+            permission: permissions.warrantyClaims.read,
+            feature: "warranty_claims",
+          },
+          {
             // TEC-340: center / distributor warranty claim report.
             id: "warranty-claim-reports",
             titleKey: "warranty.claim_reports.nav",
@@ -529,6 +539,17 @@ export function tenantNav(slug: string) {
             href: routes.tenant.appointments.calendar(slug),
             icon: CalendarClock,
             permission: permissions.appointments.read,
+            feature: "appointments",
+          },
+          {
+            // TEC-328: network occupancy (GET /v1/appointments/occupancy),
+            // center and distributor only; a dealer has no network.
+            id: "appointments-occupancy",
+            titleKey: "appointments.occupancy.nav",
+            href: routes.tenant.appointments.occupancy(slug),
+            icon: Flame,
+            permission: permissions.appointments.read,
+            orgTypes: ["center", "distributor"],
             feature: "appointments",
           },
         ],

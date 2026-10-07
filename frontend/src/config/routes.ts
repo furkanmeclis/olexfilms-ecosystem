@@ -92,6 +92,10 @@ export const routes = {
     /** TEC-340 warranty claim report (failure rate, dealer, parts). */
     warrantyClaims: {
       reports: (slug: string) => `/t/${slug}/warranty-claims/reports`,
+      /** TEC-339 claim list and detail. */
+      list: (slug: string) => `/t/${slug}/warranty-claims`,
+      detail: (slug: string, uuid: string) =>
+        `/t/${slug}/warranty-claims/${uuid}`,
     },
     /** TEC-197 stock transfer requests between siblings: list, new, detail. */
     transfers: {
@@ -119,6 +123,21 @@ export const routes = {
     /** TEC-326 appointment calendar (day / week) and settings tab. */
     appointments: {
       calendar: (slug: string) => `/t/${slug}/appointments`,
+      /** TEC-328: network occupancy (center / distributor). */
+      occupancy: (slug: string) => `/t/${slug}/appointments/occupancy`,
+      /** TEC-328: read-only calendar of one organization of the network. */
+      organizationCalendar: (
+        slug: string,
+        organizationUuid: string,
+        preset?: { name?: string; date?: string; view?: "day" | "week" },
+      ) => {
+        const qs = new URLSearchParams();
+        if (preset?.name) qs.set("name", preset.name);
+        if (preset?.date) qs.set("date", preset.date);
+        if (preset?.view) qs.set("view", preset.view);
+        const tail = qs.toString();
+        return `/t/${slug}/appointments/occupancy/${encodeURIComponent(organizationUuid)}${tail ? `?${tail}` : ""}`;
+      },
     },
     /** TEC-299 measurements: list, detail (part map, VIN, PDF), devices. */
     measurements: {
