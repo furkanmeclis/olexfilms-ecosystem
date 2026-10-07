@@ -175,6 +175,9 @@ export const Permission = {
   ProductSalesWrite: "product_sales.write",
   SuppliersManage: "suppliers.manage",
   PurchasesWrite: "purchases.write",
+  /** TEC-353: admin review questions and service review reports. */
+  ReviewsQuestionsManage: "reviews.questions.manage",
+  ReviewsRead: "reviews.read",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -517,5 +520,9 @@ export const permissions = {
     salesWrite: Permission.ProductSalesWrite,
     suppliersManage: Permission.SuppliersManage,
     purchasesWrite: Permission.PurchasesWrite,
+  },
+  reviews: {
+    questionsManage: Permission.ReviewsQuestionsManage,
+    read: Permission.ReviewsRead,
   },
 } as const;

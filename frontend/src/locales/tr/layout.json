@@ -86,5 +86,6 @@
   "nav_glorian_integration": "Glorian",
   "nav_service_catalog": "Hizmet kataloğu",
   "nav_service_subscriptions": "Hizmet abonelikleri",
-  "nav_service_subscription_cancels": "İptal talepleri"
+  "nav_service_subscription_cancels": "İptal talepleri",
+  "nav_review_questions": "Değerlendirme soruları"
 }

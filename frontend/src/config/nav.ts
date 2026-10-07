@@ -22,6 +22,7 @@ import {
   LogIn,
   MapPinned,
   MessageCircle,
+  MessageSquareText,
   MessageSquareWarning,
   Megaphone,
   Package,
@@ -204,6 +205,14 @@ export const platformNav = defineNav({
           href: routes.platform.contractTemplates.root,
           icon: FileSignature,
           permission: permissions.contractTemplates.manage,
+        },
+        {
+          // TEC-353: questions under the portal service review ratings.
+          id: "review-questions",
+          titleKey: "layout.nav_review_questions",
+          href: routes.platform.reviewQuestions.root,
+          icon: MessageSquareText,
+          permission: permissions.reviews.questionsManage,
         },
         {
           // TEC-222: system settings hub (platform.settings.read).

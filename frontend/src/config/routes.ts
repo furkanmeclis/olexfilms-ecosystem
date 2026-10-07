@@ -342,6 +342,10 @@ export const routes = {
       root: "/platform/contract-templates",
       edit: (uuid: string) => `/platform/contract-templates/${uuid}`,
     },
+    /** TEC-353: admin review questions (portal review form). */
+    reviewQuestions: {
+      root: "/platform/review-questions",
+    },
     /** TEC-222: system settings hub (TEC-215 key/value store + topic links). */
     systemSettings: {
       root: "/platform/system-settings",

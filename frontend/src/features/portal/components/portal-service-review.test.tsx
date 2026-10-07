@@ -44,6 +44,13 @@ import { PortalServiceReview } from "./portal-service-review";
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
+// Radix Checkbox measures itself; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;
+
 const SERVICE = "11111111-1111-4111-8111-111111111111";
 
 let container: HTMLDivElement;
@@ -70,7 +77,7 @@ async function flush() {
   }
 }
 
-async function render() {
+async function render(props: { fromLink?: boolean } = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -79,7 +86,7 @@ async function render() {
       createElement(
         QueryClientProvider,
         { client },
-        createElement(PortalServiceReview, { serviceUuid: SERVICE }),
+        createElement(PortalServiceReview, { serviceUuid: SERVICE, ...props }),
       ),
     );
   });
@@ -110,7 +117,11 @@ async function click(el: Element | null) {
 }
 
 function setComment(value: string) {
-  const ta = q<HTMLTextAreaElement>("textarea")!;
+  const ta = q<HTMLTextAreaElement>("textarea[name=comment]")!;
+  setTextarea(ta, value);
+}
+
+function setTextarea(ta: HTMLTextAreaElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(
     HTMLTextAreaElement.prototype,
     "value",
@@ -234,6 +245,205 @@ describe("PortalServiceReview (TEC-244)", () => {
     await render();
     expect(q("[data-testid=portal-review-form]")).toBeNull();
     expect(container.textContent).toContain("portal.review.not_completed");
+  });
+});
+
+const Q_STAFF = "aaaaaaaa-0000-4000-8000-000000000001";
+const Q_NOTE = "aaaaaaaa-0000-4000-8000-000000000002";
+const Q_FILM = "aaaaaaaa-0000-4000-8000-000000000003";
+const P1 = "bbbbbbbb-0000-4000-8000-000000000001";
+const P2 = "bbbbbbbb-0000-4000-8000-000000000002";
+
+/** Admin questions (TEC-353): a required dealer rating, an optional
+ * platform text and a required product rating; a two-product service. */
+function withQuestions(
+  patch: Partial<PortalServiceReviewState> = {},
+): PortalServiceReviewState {
+  return state({
+    questions: [
+      {
+        uuid: Q_FILM,
+        question_key: "film_quality",
+        question_type: "rating_1_5",
+        target: "product",
+        is_required: true,
+        sort_order: 30,
+        text: "Film quality",
+      },
+      {
+        uuid: Q_STAFF,
+        question_key: "staff",
+        question_type: "rating_1_5",
+        target: "dealer",
+        is_required: true,
+        sort_order: 10,
+        text: "Staff attitude",
+      },
+      {
+        uuid: Q_NOTE,
+        question_key: "note",
+        question_type: "text",
+        target: "platform",
+        is_required: false,
+        sort_order: 20,
+        text: "Anything else?",
+      },
+    ],
+    products: [
+      { uuid: P1, sku: "PPF-1", name: "Clear PPF" },
+      { uuid: P2, sku: "WF-2", name: "Window film" },
+    ],
+    ...patch,
+  });
+}
+
+const submitButton = () =>
+  q<HTMLButtonElement>("[data-testid=portal-review-submit]")!;
+
+async function rateFixed() {
+  await click(q("[data-rating=platform] [data-star='4']"));
+  await click(q("[data-rating=product] [data-star='5']"));
+}
+
+describe("PortalServiceReview admin questions (TEC-353)", () => {
+  it("disables submit while a required question is empty", async () => {
+    reviewApi.get.mockResolvedValue(withQuestions());
+    await render();
+    await rateFixed();
+    expect(submitButton().disabled).toBe(true);
+
+    await click(q(`[data-rating='${Q_STAFF}'] [data-star='3']`));
+    await click(q(`[data-rating='${Q_FILM}:${P1}'] [data-star='4']`));
+    // One product row of the required product question is still empty.
+    expect(submitButton().disabled).toBe(true);
+    await submit();
+    expect(reviewApi.create).not.toHaveBeenCalled();
+    expect(q("[role=alert]")?.textContent).toBe(
+      "portal.review.answers_required",
+    );
+
+    await click(q(`[data-rating='${Q_FILM}:${P2}'] [data-star='2']`));
+    expect(submitButton().disabled).toBe(false);
+  });
+
+  it("renders a product question once per product, in question order", async () => {
+    reviewApi.get.mockResolvedValue(withQuestions());
+    await render();
+    const rows = [
+      ...container.querySelectorAll<HTMLElement>(
+        "[data-testid=portal-review-questions] [data-question]",
+      ),
+    ].map((el) => el.dataset.question);
+    expect(rows).toEqual([
+      Q_STAFF,
+      Q_NOTE,
+      `${Q_FILM}:${P1}`,
+      `${Q_FILM}:${P2}`,
+    ]);
+    const film = container.querySelectorAll(`[data-question^='${Q_FILM}:']`);
+    expect(film).toHaveLength(2);
+    expect(film[0]?.textContent).toContain("Film quality");
+    expect(film[0]?.textContent).toContain("Clear PPF");
+    expect(film[1]?.textContent).toContain("Window film");
+  });
+
+  it("sends the answers and is_anonymous=true when the box is ticked", async () => {
+    reviewApi.get.mockResolvedValue(withQuestions());
+    reviewApi.create.mockResolvedValue(withQuestions({ can_review: false }));
+    await render();
+    await rateFixed();
+    await click(q(`[data-rating='${Q_STAFF}'] [data-star='3']`));
+    await click(q(`[data-rating='${Q_FILM}:${P1}'] [data-star='4']`));
+    await click(q(`[data-rating='${Q_FILM}:${P2}'] [data-star='2']`));
+    setTextarea(
+      q<HTMLTextAreaElement>(`[data-question='${Q_NOTE}'] textarea`)!,
+      "  Quick job  ",
+    );
+    await click(q("[data-testid=portal-review-anonymous]"));
+    await submit();
+
+    expect(reviewApi.create).toHaveBeenCalledWith(SERVICE, {
+      platform_rating: 4,
+      product_rating: 5,
+      comment: null,
+      is_anonymous: true,
+      source: "portal",
+      answers: [
+        { question_uuid: Q_STAFF, rating: 3 },
+        { question_uuid: Q_NOTE, text: "Quick job" },
+        { question_uuid: Q_FILM, product_uuid: P1, rating: 4 },
+        { question_uuid: Q_FILM, product_uuid: P2, rating: 2 },
+      ],
+    });
+  });
+
+  it("leaves unanswered optional questions out and is not anonymous by default", async () => {
+    reviewApi.get.mockResolvedValue(
+      withQuestions({ products: [{ uuid: P1, sku: "PPF-1", name: "PPF" }] }),
+    );
+    reviewApi.create.mockResolvedValue(withQuestions({ can_review: false }));
+    await render();
+    await rateFixed();
+    await click(q(`[data-rating='${Q_STAFF}'] [data-star='5']`));
+    await click(q(`[data-rating='${Q_FILM}:${P1}'] [data-star='5']`));
+    await submit();
+    const body = reviewApi.create.mock.calls[0]?.[1];
+    expect(body.is_anonymous).toBe(false);
+    expect(body.answers).toEqual([
+      { question_uuid: Q_STAFF, rating: 5 },
+      { question_uuid: Q_FILM, product_uuid: P1, rating: 5 },
+    ]);
+  });
+
+  it("opens the form in view from the WhatsApp link and sends source=whatsapp_link", async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    reviewApi.get.mockResolvedValue(state());
+    reviewApi.create.mockResolvedValue(state({ can_review: false }));
+    await render({ fromLink: true });
+    expect(q("[data-testid=portal-review-form]")).not.toBeNull();
+    expect(scroll).toHaveBeenCalled();
+    await rateFixed();
+    await submit();
+    expect(reviewApi.create.mock.calls[0]?.[1]).toMatchObject({
+      source: "whatsapp_link",
+    });
+  });
+
+  it("shows stored answers and the anonymous note", async () => {
+    reviewApi.get.mockResolvedValue(
+      withQuestions({
+        can_review: false,
+        review: {
+          uuid: "r1",
+          platform_rating: 4,
+          product_rating: 5,
+          comment: null,
+          is_anonymous: true,
+          source: "portal",
+          answers: [
+            {
+              question_uuid: Q_STAFF,
+              product_uuid: null,
+              rating: 3,
+              text: null,
+            },
+            {
+              question_uuid: Q_NOTE,
+              product_uuid: null,
+              rating: null,
+              text: "Fine",
+            },
+          ],
+          created_at: "2026-10-03T10:00:00Z",
+        },
+      }),
+    );
+    await render();
+    const done = q("[data-testid=portal-review-done]")!;
+    expect(done.querySelector(`[data-rating='${Q_STAFF}']`)).not.toBeNull();
+    expect(done.textContent).toContain("Fine");
+    expect(done.textContent).toContain("portal.review.sent_anonymous");
   });
 });
 

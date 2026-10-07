@@ -55,6 +55,9 @@ const (
 	ModuleDealerAccounting = "dealer_accounting"
 	ModuleServiceCatalog   = "service_catalog"
 	ModuleDealerTransfers  = "dealer_transfers"
+	// Reviews moved from add-ons to standard (user decision 2026-10-07,
+	// migration 000099).
+	ModuleReviews = "reviews"
 
 	// Add-ons (§5.3).
 	ModuleAIAssistant    = "ai_assistant"
@@ -68,7 +71,6 @@ const (
 	ModuleEfficiency     = "efficiency"
 	ModuleCampaigns      = "campaigns"
 	ModulePhotoStandard  = "photo_standard"
-	ModuleReviews        = "reviews"
 	ModuleEInvoice       = "e_invoice"
 	ModuleShortURL       = "short_url"
 )
@@ -109,6 +111,7 @@ var Modules = []ModuleDef{
 	standard(ModuleDealerAccounting),
 	standard(ModuleServiceCatalog),
 	standard(ModuleDealerTransfers),
+	standard(ModuleReviews),
 
 	addon(ModuleAIAssistant, true),
 	addon(ModuleWhatsApp, true),
@@ -122,7 +125,6 @@ var Modules = []ModuleDef{
 	addon(ModuleCampaigns, true),
 	// Photo standard is an admin switch (§5.3 "admin aç/kapa"), not sold.
 	addon(ModulePhotoStandard, false),
-	addon(ModuleReviews, true),
 	addon(ModuleEInvoice, true),
 	addon(ModuleShortURL, true),
 }
