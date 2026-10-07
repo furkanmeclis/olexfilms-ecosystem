@@ -467,6 +467,16 @@ func TestIntegrationWuzapiWebhook(t *testing.T) {
 	if text != "Merhaba" || contact != ph {
 		t.Fatalf("stored %q from %q", text, contact)
 	}
+	// TEC-393: new columns take their defaults; the duplicate delivery does
+	// not count twice.
+	var status, aiMode, identity string
+	var unread int
+	var inboundSet bool
+	_ = it.pool.QueryRow(ctx, `SELECT status, ai_mode, identity_kind, unread_count, last_inbound_at IS NOT NULL
+		FROM conversations WHERE channel = 'whatsapp' AND contact_e164 = $1`, ph).Scan(&status, &aiMode, &identity, &unread, &inboundSet)
+	if status != "open" || aiMode != "auto" || identity != "unknown" || unread != 1 || !inboundSet {
+		t.Fatalf("conversation state = %s %s %s unread=%d inbound=%v", status, aiMode, identity, unread, inboundSet)
+	}
 	var outboxRows int
 	_ = it.pool.QueryRow(ctx, `SELECT COUNT(*) FROM outbox_events WHERE event_name = 'whatsapp.message.received' AND payload->'data'->>'external_id' = $1`, extID).Scan(&outboxRows)
 	if outboxRows != 1 {

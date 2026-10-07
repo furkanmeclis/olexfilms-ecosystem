@@ -264,6 +264,12 @@ const (
 	PermAIUsageRead      = "ai.usage.read"
 	PermAISettingsManage = "ai.settings.manage"
 	PermAIActionsConfirm = "ai.actions.confirm"
+	// TEC-393 (000103): WhatsApp conversations (F4-02). Only the platform
+	// admin sees WhatsApp conversations (F4 user answer S2), so all three are
+	// super_admin only.
+	PermConversationsRead   = "conversations.read"
+	PermConversationsReply  = "conversations.reply"
+	PermConversationsManage = "conversations.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

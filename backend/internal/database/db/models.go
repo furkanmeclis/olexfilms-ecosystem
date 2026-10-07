@@ -472,6 +472,28 @@ type Consent struct {
 	UserAgent   pgtype.Text        `json:"user_agent"`
 }
 
+type ContactOptOut struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	ContactE164     string             `json:"contact_e164"`
+	Scope           string             `json:"scope"`
+	Action          string             `json:"action"`
+	Source          string             `json:"source"`
+	ConversationID  pgtype.Int8        `json:"conversation_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	Note            pgtype.Text        `json:"note"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type ContactOptOutState struct {
+	ContactE164 string             `json:"contact_e164"`
+	Scope       string             `json:"scope"`
+	OptedOut    bool               `json:"opted_out"`
+	LastEntryID int64              `json:"last_entry_id"`
+	Source      string             `json:"source"`
+	ChangedAt   pgtype.Timestamptz `json:"changed_at"`
+}
+
 type ContractCounter struct {
 	OrganizationID int64 `json:"organization_id"`
 	NextSeq        int64 `json:"next_seq"`
@@ -585,17 +607,54 @@ type ContractTemplateLocale struct {
 }
 
 type Conversation struct {
-	ID             int64              `json:"id"`
-	Uuid           uuid.UUID          `json:"uuid"`
-	OrganizationID pgtype.Int8        `json:"organization_id"`
-	BrandID        pgtype.Int8        `json:"brand_id"`
-	Channel        string             `json:"channel"`
-	ContactE164    string             `json:"contact_e164"`
-	ContactName    pgtype.Text        `json:"contact_name"`
-	UserID         pgtype.Int8        `json:"user_id"`
-	LastMessageAt  pgtype.Timestamptz `json:"last_message_at"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	OrganizationID     pgtype.Int8        `json:"organization_id"`
+	BrandID            pgtype.Int8        `json:"brand_id"`
+	Channel            string             `json:"channel"`
+	ContactE164        string             `json:"contact_e164"`
+	ContactName        pgtype.Text        `json:"contact_name"`
+	UserID             pgtype.Int8        `json:"user_id"`
+	LastMessageAt      pgtype.Timestamptz `json:"last_message_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	Status             string             `json:"status"`
+	AiMode             string             `json:"ai_mode"`
+	AiPausedUntil      pgtype.Timestamptz `json:"ai_paused_until"`
+	AssignedUserID     pgtype.Int8        `json:"assigned_user_id"`
+	AssignedOrgID      pgtype.Int8        `json:"assigned_org_id"`
+	IdentityKind       string             `json:"identity_kind"`
+	IdentityUserID     pgtype.Int8        `json:"identity_user_id"`
+	IdentityOrgID      pgtype.Int8        `json:"identity_org_id"`
+	IdentityResolvedAt pgtype.Timestamptz `json:"identity_resolved_at"`
+	Locale             pgtype.Text        `json:"locale"`
+	LastInboundAt      pgtype.Timestamptz `json:"last_inbound_at"`
+	UnreadCount        int32              `json:"unread_count"`
+	AiConsentAt        pgtype.Timestamptz `json:"ai_consent_at"`
+	VisitorLeadID      pgtype.Int8        `json:"visitor_lead_id"`
+}
+
+type ConversationAiRun struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	ConversationID   int64              `json:"conversation_id"`
+	TriggerMessageID int64              `json:"trigger_message_id"`
+	OrganizationID   pgtype.Int8        `json:"organization_id"`
+	BrandID          pgtype.Int8        `json:"brand_id"`
+	Status           string             `json:"status"`
+	Stages           []byte             `json:"stages"`
+	ToolCalls        []byte             `json:"tool_calls"`
+	Model            string             `json:"model"`
+	InputTokens      int64              `json:"input_tokens"`
+	OutputTokens     int64              `json:"output_tokens"`
+	CacheReadTokens  int64              `json:"cache_read_tokens"`
+	CacheWriteTokens int64              `json:"cache_write_tokens"`
+	Error            pgtype.Text        `json:"error"`
+	StartedAt        pgtype.Timestamptz `json:"started_at"`
+	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
+	DurationMs       pgtype.Int4        `json:"duration_ms"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Country struct {
@@ -1190,21 +1249,27 @@ type MeasurementValue struct {
 }
 
 type Message struct {
-	ID             int64              `json:"id"`
-	Uuid           uuid.UUID          `json:"uuid"`
-	ConversationID int64              `json:"conversation_id"`
-	OrganizationID pgtype.Int8        `json:"organization_id"`
-	BrandID        pgtype.Int8        `json:"brand_id"`
-	Channel        string             `json:"channel"`
-	Direction      string             `json:"direction"`
-	SenderType     string             `json:"sender_type"`
-	ExternalID     string             `json:"external_id"`
-	Body           pgtype.Text        `json:"body"`
-	Media          []byte             `json:"media"`
-	Status         string             `json:"status"`
-	Raw            []byte             `json:"raw"`
-	SentAt         pgtype.Timestamptz `json:"sent_at"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	ConversationID   int64              `json:"conversation_id"`
+	OrganizationID   pgtype.Int8        `json:"organization_id"`
+	BrandID          pgtype.Int8        `json:"brand_id"`
+	Channel          string             `json:"channel"`
+	Direction        string             `json:"direction"`
+	SenderType       string             `json:"sender_type"`
+	ExternalID       string             `json:"external_id"`
+	Body             pgtype.Text        `json:"body"`
+	Media            []byte             `json:"media"`
+	Status           string             `json:"status"`
+	Raw              []byte             `json:"raw"`
+	SentAt           pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	SenderUserID     pgtype.Int8        `json:"sender_user_id"`
+	AiRunID          pgtype.Int8        `json:"ai_run_id"`
+	MediaStorageKey  pgtype.Text        `json:"media_storage_key"`
+	MediaMime        pgtype.Text        `json:"media_mime"`
+	MediaSize        pgtype.Int8        `json:"media_size"`
+	DeliveryStatusAt pgtype.Timestamptz `json:"delivery_status_at"`
 }
 
 type MigrationMap struct {

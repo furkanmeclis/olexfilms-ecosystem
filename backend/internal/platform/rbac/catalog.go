@@ -607,6 +607,24 @@ var Permissions = []PermissionDef{
 		Slug: PermAIActionsConfirm, Name: "Confirm AI actions", Module: "ai", Scopes: scopesSelf,
 		Description: "Confirm or cancel write actions proposed by the AI assistant for oneself.",
 	},
+
+	// TEC-393: WhatsApp conversations (F4-02). Appended last; migration
+	// 000103 seeds them. Platform admin only (F4 user answer S2).
+	{
+		Slug: PermConversationsRead, Name: "Read conversations", Module: "conversations",
+		Scopes: scopesAll, SuperAdminOnly: true,
+		Description: "Read WhatsApp conversations, their messages and AI runs.",
+	},
+	{
+		Slug: PermConversationsReply, Name: "Reply to conversations", Module: "conversations",
+		Scopes: scopesAll, SuperAdminOnly: true,
+		Description: "Send staff replies and attachments in WhatsApp conversations.",
+	},
+	{
+		Slug: PermConversationsManage, Name: "Manage conversations", Module: "conversations",
+		Scopes: scopesAll, SuperAdminOnly: true,
+		Description: "Assign, close and reopen WhatsApp conversations and change their AI mode.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
