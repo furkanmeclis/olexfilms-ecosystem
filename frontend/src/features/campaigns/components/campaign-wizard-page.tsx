@@ -39,12 +39,15 @@ import { useLocale } from "@/providers/locale-provider";
 type ContentDraft = Record<LocaleCode, { title: string; body: string }>;
 
 const DEFAULT_PREVIEW: CampaignPreview = {
-  total: 0,
-  locales: [{ locale: "tr", count: 0 }],
+  total: 24,
+  locales: [
+    { locale: "tr", count: 16 },
+    { locale: "de", count: 8 },
+  ],
   channels: [],
   unreachable: 0,
   excluded: { total: 0, no_consent: 0, opted_out: 0 },
-  missing_locales: ["tr"],
+  missing_locales: ["tr", "de"],
   sample: [],
 };
 
