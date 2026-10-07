@@ -39344,6 +39344,8 @@ export interface operations {
                 from: string;
                 to: string;
                 status?: components["schemas"]["AppointmentStatus"];
+                /** @description CSV of organization UUIDs; appointments of those organizations (inside the read scope, others are ignored). */
+                organization_uuid?: string;
                 limit?: number;
                 offset?: number;
             };
@@ -39400,6 +39402,8 @@ export interface operations {
             query: {
                 from: string;
                 to: string;
+                /** @description Another organization inside the read scope (default: the active organization); 404 when unknown or outside the scope. */
+                organization_uuid?: string;
             };
             header?: never;
             path?: never;
@@ -39419,6 +39423,7 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getAppointmentOccupancy: {

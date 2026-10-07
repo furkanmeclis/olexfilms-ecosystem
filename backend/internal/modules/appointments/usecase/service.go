@@ -198,8 +198,11 @@ type StatusInput struct {
 type ListFilter struct {
 	From, To time.Time
 	Status   string
-	Limit    int32
-	Offset   int32
+	// OrganizationUUIDs narrows the list to these organizations inside the
+	// read scope (TEC-328: read-only calendar of one dealer).
+	OrganizationUUIDs []uuid.UUID
+	Limit             int32
+	Offset            int32
 }
 
 type PortalCaller struct {
@@ -323,8 +326,21 @@ func (s *Service) DeleteClosure(ctx context.Context, c Caller, id uuid.UUID) err
 	return nil
 }
 
-func (s *Service) Availability(ctx context.Context, c Caller, from, to time.Time) ([]DayAvailability, error) {
-	org, setting, loc, err := s.orgSettings(ctx, c.Org.InternalID)
+// Availability reports the days of the active organization or, with
+// orgID (TEC-328), of another organization inside the read scope.
+func (s *Service) Availability(ctx context.Context, c Caller, orgID *uuid.UUID, from, to time.Time) ([]DayAvailability, error) {
+	id := c.Org.InternalID
+	if orgID != nil {
+		ids, err := s.scopedOrgIDs(ctx, c, []uuid.UUID{*orgID})
+		if err != nil {
+			return nil, err
+		}
+		if len(ids) == 0 {
+			return nil, ErrNotFound
+		}
+		id = ids[0]
+	}
+	org, setting, loc, err := s.orgSettings(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -517,8 +533,17 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]Appointme
 	if err != nil {
 		return nil, 0, err
 	}
+	orgIDs := c.Filter.OrgIDsArg()
+	if len(f.OrganizationUUIDs) > 0 {
+		if orgIDs, err = s.scopedOrgIDs(ctx, c, f.OrganizationUUIDs); err != nil {
+			return nil, 0, err
+		}
+		if len(orgIDs) == 0 {
+			return []Appointment{}, 0, nil
+		}
+	}
 	params := db.ListAppointmentsByOrganizationsParams{
-		OrganizationIds: c.Filter.OrgIDsArg(), BrandID: c.Org.BrandID,
+		OrganizationIds: orgIDs, BrandID: c.Org.BrandID,
 		FromTime: tsArg(f.From), ToTime: tsArg(f.To), Status: status,
 		PageLimit: f.Limit, PageOffset: f.Offset,
 	}
@@ -914,6 +939,25 @@ func (s *Service) portalDealer(ctx context.Context, c PortalCaller, id uuid.UUID
 		}
 	}
 	return dealer, nil
+}
+
+// scopedOrgIDs resolves organization uuids to the ids the caller may read
+// (same brand, inside the read scope); unknown or foreign ones are dropped.
+func (s *Service) scopedOrgIDs(ctx context.Context, c Caller, ids []uuid.UUID) ([]int64, error) {
+	out := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		org, err := s.q.GetOrganizationByUUID(ctx, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("appointments: organization filter: %w", err)
+		}
+		if org.BrandID == c.Org.BrandID && c.Filter.AllowsOrg(org.ID, org.BrandID) {
+			out = append(out, org.ID)
+		}
+	}
+	return out, nil
 }
 
 func (s *Service) orgSettings(ctx context.Context, orgID int64) (db.Organization, db.AppointmentSetting, *time.Location, error) {

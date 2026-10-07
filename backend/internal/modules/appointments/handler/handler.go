@@ -87,6 +87,22 @@ func parseTimeParam(w http.ResponseWriter, r *http.Request, name string) (time.T
 	return time.Time{}, false
 }
 
+// queryUUIDs parses a comma separated UUID query parameter (list contract
+// CSV filter); an invalid value is a 400 VALIDATION_ERROR.
+func queryUUIDs(w http.ResponseWriter, r *http.Request, name string) ([]uuid.UUID, bool) {
+	vals := apiquery.CSVValues(r.URL.Query(), name)
+	out := make([]uuid.UUID, 0, len(vals))
+	for _, v := range vals {
+		id, err := uuid.Parse(v)
+		if err != nil {
+			response.ValidationError(w, r, []response.Detail{{Field: name, Message: "must be a comma separated list of UUIDs"}})
+			return nil, false
+		}
+		out = append(out, id)
+	}
+	return out, true
+}
+
 func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	out, err := h.svc.GetSettings(r.Context(), caller(r))
 	if err != nil {
@@ -171,7 +187,19 @@ func (h *Handler) Availability(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	out, err := h.svc.Availability(r.Context(), caller(r), from, to)
+	orgs, ok := queryUUIDs(w, r, "organization_uuid")
+	if !ok {
+		return
+	}
+	if len(orgs) > 1 {
+		response.ValidationError(w, r, []response.Detail{{Field: "organization_uuid", Message: "must be a single UUID"}})
+		return
+	}
+	var org *uuid.UUID
+	if len(orgs) == 1 {
+		org = &orgs[0]
+	}
+	out, err := h.svc.Availability(r.Context(), caller(r), org, from, to)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -256,9 +284,13 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	orgs, ok := queryUUIDs(w, r, "organization_uuid")
+	if !ok {
+		return
+	}
 	q := apiquery.Parse(r.URL.Query())
 	items, total, err := h.svc.List(r.Context(), caller(r), usecase.ListFilter{
-		From: from, To: to, Status: r.URL.Query().Get("status"), Limit: q.Limit, Offset: q.Offset,
+		From: from, To: to, Status: r.URL.Query().Get("status"), OrganizationUUIDs: orgs, Limit: q.Limit, Offset: q.Offset,
 	})
 	if err != nil {
 		writeError(w, r, err)
