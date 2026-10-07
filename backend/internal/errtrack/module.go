@@ -106,6 +106,7 @@ var segmentAliases = map[string]Module{
 	"wuzapi":                   ModuleWhatsApp,
 	"ai":                       ModuleAI,
 	"mcp":                      ModuleMCP,
+	"oauth":                    ModuleMCP, // TEC-401: MCP OAuth endpoints
 	"migrator":                 ModuleMigrator,
 	"docs":                     ModuleDocs,
 	"pdf":                      ModuleDocs,

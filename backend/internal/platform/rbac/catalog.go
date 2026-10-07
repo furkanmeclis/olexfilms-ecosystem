@@ -635,6 +635,12 @@ var Permissions = []PermissionDef{
 		Scopes: scopesAll, SuperAdminOnly: true,
 		Description: "List and revoke registered MCP (OAuth) clients platform wide.",
 	},
+	// TEC-404: campaign approval (F4-04). Appended last; migration 000107
+	// seeds it.
+	{
+		Slug: PermCampaignsApprove, Name: "Approve campaigns", Module: "campaigns", Scopes: scopesTree,
+		Description: "Approve, reject or send back campaigns submitted to the organization for approval.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -885,6 +891,8 @@ var Roles = []RoleDef{
 			PermAIActionsConfirm: ScopeOwn,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-404 (000107).
+			PermCampaignsApprove: ScopeBrand,
 		}),
 	},
 	{
@@ -975,6 +983,11 @@ var Roles = []RoleDef{
 			PermAIUsageRead:      ScopeManaged,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-404 (000107): own campaigns; approves those of the
+			// dealers below it.
+			PermCampaignsRead:    ScopeSubtree,
+			PermCampaignsWrite:   ScopeManaged,
+			PermCampaignsApprove: ScopeSubtree,
 		}),
 	},
 	{
@@ -1148,6 +1161,9 @@ var Roles = []RoleDef{
 			PermAIUsageRead:      ScopeManaged,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-404 (000107): own campaigns, approved upstream.
+			PermCampaignsRead:  ScopeManaged,
+			PermCampaignsWrite: ScopeManaged,
 		}),
 	},
 	{

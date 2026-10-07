@@ -101,6 +101,10 @@ type Worker struct {
 	staffPaymentsPostDue StaffPaymentsPostDueFunc
 	// TEC-393: 90-day retention of conversation AI runs.
 	purgeConversationAIRuns ConversationAIRunPurgeFunc
+	// TEC-395: WhatsApp outgoing send, inbound media storage, queue sweep.
+	whatsAppSend  WhatsAppMessageFunc
+	whatsAppMedia WhatsAppMessageFunc
+	whatsAppSweep WhatsAppQueueSweepFunc
 	// TEC-387: AI confirmation card expiry and stale run cleanup.
 	aiActionSweep AIActionSweepFunc
 }
@@ -122,6 +126,7 @@ func DefaultQueues() map[string]int {
 		QueueSearch:        2,
 		QueueMaintenance:   1,
 		QueueDocs:          2,
+		QueueWhatsApp:      2,
 	}
 }
 
@@ -145,9 +150,11 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 		concurrency = 10
 	}
 	server := asynq.NewServer(RedisOpt(cfg.Redis), asynq.Config{
-		Concurrency:  concurrency,
-		Queues:       queues,
-		ErrorHandler: TaskErrorHandler(log),
+		Concurrency:    concurrency,
+		Queues:         queues,
+		ErrorHandler:   TaskErrorHandler(log),
+		IsFailure:      IsTaskFailure,
+		RetryDelayFunc: TaskRetryDelay,
 	})
 	mux := asynq.NewServeMux()
 	w := &Worker{server: server, mux: mux, log: log, deliver: deliver}
@@ -190,6 +197,9 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskMeasurementPDF, w.handleMeasurementPDF)
 	mux.HandleFunc(TaskStaffPaymentsPostDue, w.handleStaffPaymentsPostDue)
 	mux.HandleFunc(TaskConversationAIRunPurge, w.handleConversationAIRunPurge)
+	mux.HandleFunc(TaskWhatsAppSend, w.handleWhatsAppSend)
+	mux.HandleFunc(TaskWhatsAppMediaStore, w.handleWhatsAppMediaStore)
+	mux.HandleFunc(TaskWhatsAppQueueSweep, w.handleWhatsAppQueueSweep)
 	return w
 }
 
@@ -201,6 +211,10 @@ func TaskErrorHandler(log *slog.Logger) asynq.ErrorHandler {
 		log = slog.Default()
 	}
 	return asynq.ErrorHandlerFunc(func(ctx context.Context, task *asynq.Task, err error) {
+		if !IsTaskFailure(err) {
+			log.Debug("queue_task_deferred", "type", task.Type(), "error", err)
+			return
+		}
 		log.Error("queue_task_failed", "type", task.Type(), "error", err)
 		info := errtrack.TaskInfo{Type: task.Type()}
 		info.Queue, _ = asynq.GetQueueName(ctx)

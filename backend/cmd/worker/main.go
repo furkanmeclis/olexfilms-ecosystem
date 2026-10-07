@@ -64,6 +64,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
@@ -370,6 +371,19 @@ func main() {
 	// TEC-394: user / membership / organization events drop the WhatsApp
 	// identity cache.
 	whatsappmodule.RegisterIdentityInvalidation(eventBus, rdb, cfg.App.Env, log)
+
+	// TEC-395: WhatsApp outgoing queue, inbound media storage, receipts.
+	waMsgs := whatsappmodule.NewMessaging(waSvc, pool, queries, whatsappmodule.MessagingDeps{
+		Storage: store, Queue: queue.WhatsAppEnqueuer{Client: reviewQueue},
+		Limiter:       ratelimit.New(rdb, cfg.App.Env),
+		SendPerMinute: sysconfig.New(queries, sysconfig.NoCache{}).WhatsAppSendPerMinute,
+		Publisher:     publisher,
+	}, log)
+	waMsgs.SetDocuments(whatsappmodule.NewDocumentRenderer(
+		servicesusecase.NewPDFAdapter(servicePDF), warrantyusecase.NewCertificateAdapter(warrantyCert), pdfClient))
+	worker.WithWhatsAppMessaging(waMsgs.ProcessSend, waMsgs.StoreInboundMedia, func(ctx context.Context) (int, error) {
+		return waMsgs.RequeueStale(ctx, 2*time.Minute)
+	})
 
 	healthPath := os.Getenv("WORKER_HEALTH_FILE")
 	if healthPath == "" {

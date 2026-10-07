@@ -195,3 +195,107 @@ type AccessToken struct {
 	Scopes         []string
 	ExpiresAt      time.Time
 }
+
+// --- consent and connected apps (TEC-401, F4-03b) ---------------------------
+
+// Realms of the MCP endpoints: who may connect to each.
+const (
+	RealmCustomer = "customer" // /mcp/customer: portal (customer realm) sessions
+	RealmDealer   = "dealer"   // /mcp/dealer: distributor / dealer members with mcp.connect
+	RealmUser     = "user"     // /mcp/user: every panel user with mcp.connect
+)
+
+// RealmOf maps an MCP endpoint path to its realm.
+func RealmOf(resource string) string {
+	switch resource {
+	case ResourceCustomer:
+		return RealmCustomer
+	case ResourceDealer:
+		return RealmDealer
+	default:
+		return RealmUser
+	}
+}
+
+// Consent decisions.
+const (
+	DecisionApprove = "approve"
+	DecisionDeny    = "deny"
+)
+
+// ConsentPath is the frontend consent screen /oauth/authorize redirects to.
+const ConsentPath = "/oauth/consent"
+
+// Activity log actions.
+const (
+	ActionConsentApproved = "oauth.consent_approved"
+	ActionConsentDenied   = "oauth.consent_denied"
+	ActionGrantRevoked    = "oauth.grant_revoked"
+	ActionClientRevoked   = "oauth.client_revoked"
+)
+
+// ConsentOrganization is an organization the token may be bound to.
+type ConsentOrganization struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+	Type string    `json:"type"`
+}
+
+// Consent is what the consent screen shows for a pending request.
+type Consent struct {
+	RequestID     uuid.UUID             `json:"request_uuid"`
+	ClientID      string                `json:"client_id"`
+	ClientName    string                `json:"client_name"`
+	RedirectHost  string                `json:"redirect_host"`
+	Resource      string                `json:"resource"`
+	ResourceURL   string                `json:"resource_url"`
+	Realm         string                `json:"realm"`
+	Organizations []ConsentOrganization `json:"organizations"`
+	ExpiresAt     time.Time             `json:"expires_at"`
+}
+
+// DecideInput is the body of a consent decision.
+type DecideInput struct {
+	Decision         string     `json:"decision"`
+	OrganizationUUID *uuid.UUID `json:"organization_uuid"`
+}
+
+// Decision is the result of a consent decision: where to send the browser.
+type Decision struct {
+	RedirectURL string `json:"redirect_url"`
+}
+
+// Grant is one of the user's connected apps.
+type Grant struct {
+	UUID             uuid.UUID  `json:"uuid"`
+	ClientID         string     `json:"client_id"`
+	ClientName       string     `json:"client_name"`
+	Resource         string     `json:"resource"`
+	Realm            string     `json:"realm"`
+	Scopes           []string   `json:"scopes"`
+	OrganizationUUID uuid.UUID  `json:"organization_uuid"`
+	OrganizationName string     `json:"organization_name"`
+	OrganizationType string     `json:"organization_type"`
+	CreatedAt        time.Time  `json:"created_at"`
+	LastUsedAt       *time.Time `json:"last_used_at"`
+}
+
+// ClientSummary is a registered client in the platform list.
+type ClientSummary struct {
+	UUID         uuid.UUID  `json:"uuid"`
+	ClientID     string     `json:"client_id"`
+	ClientName   string     `json:"client_name"`
+	RedirectURIs []string   `json:"redirect_uris"`
+	CreatedIP    *string    `json:"created_ip"`
+	Status       string     `json:"status"`
+	ActiveGrants int64      `json:"active_grants"`
+	CreatedAt    time.Time  `json:"created_at"`
+	LastUsedAt   *time.Time `json:"last_used_at"`
+	RevokedAt    *time.Time `json:"revoked_at"`
+}
+
+// Client statuses of the platform list.
+const (
+	ClientStatusActive  = "active"
+	ClientStatusRevoked = "revoked"
+)

@@ -66,6 +66,56 @@ func (q *Queries) CleanupOAuthTokens(ctx context.Context) (int64, error) {
 	return result.RowsAffected(), nil
 }
 
+const countOAuthClients = `-- name: CountOAuthClients :one
+SELECT COUNT(*)
+FROM oauth_clients c
+WHERE (
+    $1::text IS NULL
+    OR ($1::text = 'active' AND c.revoked_at IS NULL)
+    OR ($1::text = 'revoked' AND c.revoked_at IS NOT NULL)
+  )
+  AND ($2::text IS NULL OR c.client_name ILIKE '%' || $2::text || '%' OR c.client_id ILIKE '%' || $2::text || '%')
+`
+
+type CountOAuthClientsParams struct {
+	Status pgtype.Text `json:"status"`
+	Q      pgtype.Text `json:"q"`
+}
+
+func (q *Queries) CountOAuthClients(ctx context.Context, arg CountOAuthClientsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOAuthClients, arg.Status, arg.Q)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countUserOAuthGrants = `-- name: CountUserOAuthGrants :one
+SELECT COUNT(*)
+FROM oauth_grants g
+JOIN oauth_clients c ON c.client_id = g.client_id
+JOIN organizations o ON o.id = g.organization_id
+WHERE g.user_id = $1
+  AND g.revoked_at IS NULL AND c.revoked_at IS NULL
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR g.resource = ANY ($2::text[])
+  )
+  AND ($3::text IS NULL OR c.client_name ILIKE '%' || $3::text || '%' OR o.name ILIKE '%' || $3::text || '%')
+`
+
+type CountUserOAuthGrantsParams struct {
+	UserID    int64       `json:"user_id"`
+	Resources []string    `json:"resources"`
+	Q         pgtype.Text `json:"q"`
+}
+
+func (q *Queries) CountUserOAuthGrants(ctx context.Context, arg CountUserOAuthGrantsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserOAuthGrants, arg.UserID, arg.Resources, arg.Q)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createOAuthAuthRequest = `-- name: CreateOAuthAuthRequest :one
 INSERT INTO oauth_auth_requests (client_id, redirect_uri, code_challenge, state, scopes, resource, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -332,12 +382,62 @@ func (q *Queries) GetOAuthAuthRequest(ctx context.Context, id uuid.UUID) (GetOAu
 	return i, err
 }
 
+const getOAuthBrandCenter = `-- name: GetOAuthBrandCenter :one
+SELECT o.id, o.uuid, o.name, o.type, o.brand_id
+FROM organizations o
+WHERE o.brand_id = $1 AND o.type = 'center' AND o.deleted_at IS NULL
+ORDER BY o.id
+LIMIT 1
+`
+
+type GetOAuthBrandCenterRow struct {
+	ID      int64     `json:"id"`
+	Uuid    uuid.UUID `json:"uuid"`
+	Name    string    `json:"name"`
+	Type    string    `json:"type"`
+	BrandID int64     `json:"brand_id"`
+}
+
+func (q *Queries) GetOAuthBrandCenter(ctx context.Context, brandID int64) (GetOAuthBrandCenterRow, error) {
+	row := q.db.QueryRow(ctx, getOAuthBrandCenter, brandID)
+	var i GetOAuthBrandCenterRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Name,
+		&i.Type,
+		&i.BrandID,
+	)
+	return i, err
+}
+
 const getOAuthClient = `-- name: GetOAuthClient :one
 SELECT id, uuid, client_id, client_name, redirect_uris, created_ip, last_used_at, revoked_at, created_at FROM oauth_clients WHERE client_id = $1
 `
 
 func (q *Queries) GetOAuthClient(ctx context.Context, clientID string) (OauthClient, error) {
 	row := q.db.QueryRow(ctx, getOAuthClient, clientID)
+	var i OauthClient
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ClientID,
+		&i.ClientName,
+		&i.RedirectUris,
+		&i.CreatedIp,
+		&i.LastUsedAt,
+		&i.RevokedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getOAuthClientByUUID = `-- name: GetOAuthClientByUUID :one
+SELECT id, uuid, client_id, client_name, redirect_uris, created_ip, last_used_at, revoked_at, created_at FROM oauth_clients WHERE uuid = $1
+`
+
+func (q *Queries) GetOAuthClientByUUID(ctx context.Context, argUuid uuid.UUID) (OauthClient, error) {
+	row := q.db.QueryRow(ctx, getOAuthClientByUUID, argUuid)
 	var i OauthClient
 	err := row.Scan(
 		&i.ID,
@@ -396,12 +496,277 @@ func (q *Queries) GetUsedOAuthCodeFamily(ctx context.Context, codeHash string) (
 	return family, err
 }
 
+const listOAuthClients = `-- name: ListOAuthClients :many
+SELECT c.id, c.uuid, c.client_id, c.client_name, c.redirect_uris, c.created_ip,
+       c.last_used_at, c.revoked_at, c.created_at,
+       (SELECT COUNT(*) FROM oauth_grants g WHERE g.client_id = c.client_id AND g.revoked_at IS NULL)::bigint AS active_grants
+FROM oauth_clients c
+WHERE (
+    $1::text IS NULL
+    OR ($1::text = 'active' AND c.revoked_at IS NULL)
+    OR ($1::text = 'revoked' AND c.revoked_at IS NOT NULL)
+  )
+  AND ($2::text IS NULL OR c.client_name ILIKE '%' || $2::text || '%' OR c.client_id ILIKE '%' || $2::text || '%')
+ORDER BY
+  CASE WHEN NOT $3::bool AND $4::text = 'client_name' THEN c.client_name END ASC,
+  CASE WHEN $3::bool AND $4::text = 'client_name' THEN c.client_name END DESC,
+  CASE WHEN NOT $3::bool AND $4::text = 'created_at' THEN c.created_at END ASC,
+  CASE WHEN $3::bool AND $4::text = 'created_at' THEN c.created_at END DESC,
+  CASE WHEN NOT $3::bool AND $4::text = 'last_used_at' THEN c.last_used_at END ASC NULLS LAST,
+  CASE WHEN $3::bool AND $4::text = 'last_used_at' THEN c.last_used_at END DESC NULLS LAST,
+  CASE WHEN $3::bool THEN c.id END DESC,
+  c.id ASC
+LIMIT $6 OFFSET $5
+`
+
+type ListOAuthClientsParams struct {
+	Status    pgtype.Text `json:"status"`
+	Q         pgtype.Text `json:"q"`
+	SortDesc  bool        `json:"sort_desc"`
+	SortKey   string      `json:"sort_key"`
+	RowOffset int32       `json:"row_offset"`
+	RowLimit  int32       `json:"row_limit"`
+}
+
+type ListOAuthClientsRow struct {
+	ID           int64              `json:"id"`
+	Uuid         uuid.UUID          `json:"uuid"`
+	ClientID     string             `json:"client_id"`
+	ClientName   string             `json:"client_name"`
+	RedirectUris []string           `json:"redirect_uris"`
+	CreatedIp    pgtype.Text        `json:"created_ip"`
+	LastUsedAt   pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt    pgtype.Timestamptz `json:"revoked_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ActiveGrants int64              `json:"active_grants"`
+}
+
+// Sort: docs/list-contract.md, keys from oauth usecase ClientsSortSpec.
+func (q *Queries) ListOAuthClients(ctx context.Context, arg ListOAuthClientsParams) ([]ListOAuthClientsRow, error) {
+	rows, err := q.db.Query(ctx, listOAuthClients,
+		arg.Status,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOAuthClientsRow{}
+	for rows.Next() {
+		var i ListOAuthClientsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.ClientID,
+			&i.ClientName,
+			&i.RedirectUris,
+			&i.CreatedIp,
+			&i.LastUsedAt,
+			&i.RevokedAt,
+			&i.CreatedAt,
+			&i.ActiveGrants,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOAuthSelectableOrgs = `-- name: ListOAuthSelectableOrgs :many
+
+SELECT o.id, o.uuid, o.name, o.type, o.brand_id
+FROM organization_members om
+JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+WHERE om.user_id = $1
+  AND o.status = 'active'
+  AND o.type = ANY ($2::text[])
+ORDER BY o.name ASC, o.id ASC
+`
+
+type ListOAuthSelectableOrgsParams struct {
+	UserID int64    `json:"user_id"`
+	Types  []string `json:"types"`
+}
+
+type ListOAuthSelectableOrgsRow struct {
+	ID      int64     `json:"id"`
+	Uuid    uuid.UUID `json:"uuid"`
+	Name    string    `json:"name"`
+	Type    string    `json:"type"`
+	BrandID int64     `json:"brand_id"`
+}
+
+// TEC-401 (F4-03b): consent, connected apps, platform client list.
+// The user's active organizations of the given types (consent org picker).
+func (q *Queries) ListOAuthSelectableOrgs(ctx context.Context, arg ListOAuthSelectableOrgsParams) ([]ListOAuthSelectableOrgsRow, error) {
+	rows, err := q.db.Query(ctx, listOAuthSelectableOrgs, arg.UserID, arg.Types)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOAuthSelectableOrgsRow{}
+	for rows.Next() {
+		var i ListOAuthSelectableOrgsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Name,
+			&i.Type,
+			&i.BrandID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserOAuthGrants = `-- name: ListUserOAuthGrants :many
+SELECT g.id, g.uuid, g.client_id, c.client_name, g.resource, g.scopes,
+       g.last_used_at, g.created_at,
+       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type
+FROM oauth_grants g
+JOIN oauth_clients c ON c.client_id = g.client_id
+JOIN organizations o ON o.id = g.organization_id
+WHERE g.user_id = $1
+  AND g.revoked_at IS NULL AND c.revoked_at IS NULL
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR g.resource = ANY ($2::text[])
+  )
+  AND ($3::text IS NULL OR c.client_name ILIKE '%' || $3::text || '%' OR o.name ILIKE '%' || $3::text || '%')
+ORDER BY
+  CASE WHEN NOT $4::bool AND $5::text = 'client_name' THEN c.client_name END ASC,
+  CASE WHEN $4::bool AND $5::text = 'client_name' THEN c.client_name END DESC,
+  CASE WHEN NOT $4::bool AND $5::text = 'created_at' THEN g.created_at END ASC,
+  CASE WHEN $4::bool AND $5::text = 'created_at' THEN g.created_at END DESC,
+  CASE WHEN NOT $4::bool AND $5::text = 'last_used_at' THEN g.last_used_at END ASC NULLS LAST,
+  CASE WHEN $4::bool AND $5::text = 'last_used_at' THEN g.last_used_at END DESC NULLS LAST,
+  CASE WHEN $4::bool THEN g.id END DESC,
+  g.id ASC
+LIMIT $7 OFFSET $6
+`
+
+type ListUserOAuthGrantsParams struct {
+	UserID    int64       `json:"user_id"`
+	Resources []string    `json:"resources"`
+	Q         pgtype.Text `json:"q"`
+	SortDesc  bool        `json:"sort_desc"`
+	SortKey   string      `json:"sort_key"`
+	RowOffset int32       `json:"row_offset"`
+	RowLimit  int32       `json:"row_limit"`
+}
+
+type ListUserOAuthGrantsRow struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	ClientID         string             `json:"client_id"`
+	ClientName       string             `json:"client_name"`
+	Resource         string             `json:"resource"`
+	Scopes           []string           `json:"scopes"`
+	LastUsedAt       pgtype.Timestamptz `json:"last_used_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	OrganizationUuid uuid.UUID          `json:"organization_uuid"`
+	OrganizationName string             `json:"organization_name"`
+	OrganizationType string             `json:"organization_type"`
+}
+
+// Sort: docs/list-contract.md, keys from oauth usecase GrantsSortSpec.
+func (q *Queries) ListUserOAuthGrants(ctx context.Context, arg ListUserOAuthGrantsParams) ([]ListUserOAuthGrantsRow, error) {
+	rows, err := q.db.Query(ctx, listUserOAuthGrants,
+		arg.UserID,
+		arg.Resources,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUserOAuthGrantsRow{}
+	for rows.Next() {
+		var i ListUserOAuthGrantsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.ClientID,
+			&i.ClientName,
+			&i.Resource,
+			&i.Scopes,
+			&i.LastUsedAt,
+			&i.CreatedAt,
+			&i.OrganizationUuid,
+			&i.OrganizationName,
+			&i.OrganizationType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const revokeOAuthClient = `-- name: RevokeOAuthClient :exec
+WITH c AS (
+    UPDATE oauth_clients SET revoked_at = COALESCE(revoked_at, NOW())
+    WHERE oauth_clients.client_id = $1
+    RETURNING client_id
+), g AS (
+    UPDATE oauth_grants SET revoked_at = NOW()
+    WHERE oauth_grants.client_id = $1 AND revoked_at IS NULL
+), r AS (
+    DELETE FROM oauth_auth_requests WHERE oauth_auth_requests.client_id = $1
+), d AS (
+    DELETE FROM oauth_codes WHERE oauth_codes.client_id = $1 AND used_at IS NULL
+)
+UPDATE oauth_tokens SET revoked_at = NOW()
+WHERE oauth_tokens.client_id = $1 AND revoked_at IS NULL
+`
+
+// Blocks the client and everything issued to it: grants, tokens, pending
+// requests and unused codes.
+func (q *Queries) RevokeOAuthClient(ctx context.Context, clientID string) error {
+	_, err := q.db.Exec(ctx, revokeOAuthClient, clientID)
+	return err
+}
+
 const revokeOAuthFamily = `-- name: RevokeOAuthFamily :exec
 UPDATE oauth_tokens SET revoked_at = NOW() WHERE family = $1 AND revoked_at IS NULL
 `
 
 func (q *Queries) RevokeOAuthFamily(ctx context.Context, family uuid.UUID) error {
 	_, err := q.db.Exec(ctx, revokeOAuthFamily, family)
+	return err
+}
+
+const revokeOAuthGrantTokens = `-- name: RevokeOAuthGrantTokens :exec
+WITH codes AS (
+    DELETE FROM oauth_codes WHERE oauth_codes.grant_id = $1 AND used_at IS NULL
+)
+UPDATE oauth_tokens SET revoked_at = NOW()
+WHERE oauth_tokens.grant_id = $1 AND revoked_at IS NULL
+`
+
+// Every token family of a grant; unused codes of the grant go too.
+func (q *Queries) RevokeOAuthGrantTokens(ctx context.Context, grantID int64) error {
+	_, err := q.db.Exec(ctx, revokeOAuthGrantTokens, grantID)
 	return err
 }
 
@@ -416,6 +781,44 @@ func (q *Queries) RevokeOAuthToken(ctx context.Context, id int64) (int64, error)
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const revokeUserOAuthGrant = `-- name: RevokeUserOAuthGrant :one
+UPDATE oauth_grants g
+SET revoked_at = NOW()
+FROM oauth_clients c
+WHERE g.uuid = $1 AND g.user_id = $2
+  AND g.revoked_at IS NULL AND c.client_id = g.client_id
+RETURNING g.id, g.uuid, g.client_id, c.client_name, g.resource, g.organization_id
+`
+
+type RevokeUserOAuthGrantParams struct {
+	Uuid   uuid.UUID `json:"uuid"`
+	UserID int64     `json:"user_id"`
+}
+
+type RevokeUserOAuthGrantRow struct {
+	ID             int64     `json:"id"`
+	Uuid           uuid.UUID `json:"uuid"`
+	ClientID       string    `json:"client_id"`
+	ClientName     string    `json:"client_name"`
+	Resource       string    `json:"resource"`
+	OrganizationID int64     `json:"organization_id"`
+}
+
+// Disconnects one of the user's apps; no row when missing, foreign or revoked.
+func (q *Queries) RevokeUserOAuthGrant(ctx context.Context, arg RevokeUserOAuthGrantParams) (RevokeUserOAuthGrantRow, error) {
+	row := q.db.QueryRow(ctx, revokeUserOAuthGrant, arg.Uuid, arg.UserID)
+	var i RevokeUserOAuthGrantRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ClientID,
+		&i.ClientName,
+		&i.Resource,
+		&i.OrganizationID,
+	)
+	return i, err
 }
 
 const touchOAuthClient = `-- name: TouchOAuthClient :exec

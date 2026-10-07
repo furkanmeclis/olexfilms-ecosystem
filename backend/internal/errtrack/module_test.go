@@ -45,6 +45,8 @@ func TestModuleFromPath(t *testing.T) {
 		"/api/v1/tenant/exports":             ModuleDocs,
 		"/api/v1/tenant/orders/5":            ModuleOrder,
 		"/mcp/dealer":                        ModuleMCP,
+		"/oauth/authorize":                   ModuleMCP,
+		"/api/v1/platform/oauth/clients":     ModuleMCP,
 		"/hooks/wuzapi":                      ModuleWhatsApp,
 		"/api/v1/platform/storage/files":     ModuleUnknown,
 		"/healthz":                           ModuleUnknown,

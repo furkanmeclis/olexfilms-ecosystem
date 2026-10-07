@@ -11,12 +11,13 @@ import (
 // queueGroups maps the WORKER_QUEUES groups used by compose.prod.yml to the
 // Asynq queues the backend enqueues on (queue name → priority weight).
 //
-//	critical  user-facing delivery (notifications: OTP, WhatsApp, e-mail)
+//	critical  user-facing delivery (notifications: OTP, WhatsApp, e-mail;
+//	          WhatsApp conversation sends and inbound media, TEC-395)
 //	default   imports, bulk actions, search indexing, untagged tasks
 //	low       maintenance sweeps (log purge)
 //	docs      PDF documents (Gotenberg) and exports, run by worker-docs
 var queueGroups = map[string]map[string]int{
-	"critical": {queue.QueueNotifications: 6},
+	"critical": {queue.QueueNotifications: 6, queue.QueueWhatsApp: 6},
 	"default": {
 		"default":          3,
 		queue.QueueImports: 3,
