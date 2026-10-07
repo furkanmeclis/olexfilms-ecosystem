@@ -190,6 +190,11 @@ export const Permission = {
   /** TEC-403: MCP connections (consent) and the platform client list. */
   McpConnect: "mcp.connect",
   McpClientsManage: "mcp.clients.manage",
+  /** TEC-472: fleets (panel) and the fleet portal. */
+  FleetsRead: "fleets.read",
+  FleetsManage: "fleets.manage",
+  FleetsPlan: "fleets.plan",
+  FleetPortalRead: "fleet.portal.read",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -556,5 +561,12 @@ export const permissions = {
   aiAdmin: {
     settingsManage: Permission.AiSettingsManage,
     usageRead: Permission.AiUsageRead,
+  },
+  /** TEC-472: fleet list/card, management, bulk plans and the fleet portal. */
+  fleets: {
+    read: Permission.FleetsRead,
+    manage: Permission.FleetsManage,
+    plan: Permission.FleetsPlan,
+    portalRead: Permission.FleetPortalRead,
   },
 } as const;

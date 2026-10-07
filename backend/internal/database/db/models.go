@@ -1080,6 +1080,58 @@ type FixedBarcodeHolding struct {
 	OwnerServiceID      pgtype.Int8        `json:"owner_service_id"`
 }
 
+type FleetDealerLink struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	FleetOrgID      int64              `json:"fleet_org_id"`
+	DealerOrgID     int64              `json:"dealer_org_id"`
+	BrandID         int64              `json:"brand_id"`
+	Status          string             `json:"status"`
+	CreatedByOrgID  int64              `json:"created_by_org_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CariAccountID   pgtype.Int8        `json:"cari_account_id"`
+	StartedAt       pgtype.Timestamptz `json:"started_at"`
+	EndedAt         pgtype.Timestamptz `json:"ended_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FleetProfile struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	TaxNumber       string             `json:"tax_number"`
+	TaxOffice       pgtype.Text        `json:"tax_office"`
+	LegalName       string             `json:"legal_name"`
+	ContactName     pgtype.Text        `json:"contact_name"`
+	ContactPhone    pgtype.Text        `json:"contact_phone"`
+	BillingEmail    pgtype.Text        `json:"billing_email"`
+	ReportFrequency string             `json:"report_frequency"`
+	ReportLocale    string             `json:"report_locale"`
+	PrimaryUserID   pgtype.Int8        `json:"primary_user_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FleetReport struct {
+	ID          int64              `json:"id"`
+	Uuid        uuid.UUID          `json:"uuid"`
+	FleetOrgID  int64              `json:"fleet_org_id"`
+	BrandID     int64              `json:"brand_id"`
+	PeriodKind  string             `json:"period_kind"`
+	PeriodStart pgtype.Date        `json:"period_start"`
+	PeriodEnd   pgtype.Date        `json:"period_end"`
+	Locale      string             `json:"locale"`
+	StorageKey  pgtype.Text        `json:"storage_key"`
+	Status      string             `json:"status"`
+	Error       pgtype.Text        `json:"error"`
+	EmailedAt   pgtype.Timestamptz `json:"emailed_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type GithubAppSetting struct {
 	ID              int16              `json:"id"`
 	Enabled         bool               `json:"enabled"`
@@ -3035,6 +3087,7 @@ type Vehicle struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+	FleetOrgID      pgtype.Int8        `json:"fleet_org_id"`
 }
 
 type VehicleTransfer struct {

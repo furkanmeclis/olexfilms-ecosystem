@@ -37,6 +37,8 @@ const (
 	OrgCenter      = "center"
 	OrgDistributor = "distributor"
 	OrgDealer      = "dealer"
+	// OrgFleet is outside the tree; the resolver does not see it (TEC-472).
+	OrgFleet = "fleet"
 )
 
 // ModuleRow is a modules table row.
