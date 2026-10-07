@@ -7352,7 +7352,7 @@ export interface paths {
             query?: never;
             header?: never;
             path: {
-                kind: "ai_guidelines";
+                kind: "ai_guidelines" | "marketing_consent";
             };
             cookie?: never;
         };
@@ -16732,7 +16732,7 @@ export interface components {
             /** Format: uuid */
             uuid: string;
             /** @enum {string} */
-            kind: "ai_guidelines";
+            kind: "ai_guidelines" | "marketing_consent";
             locale: string;
             version: number;
             /** @description Markdown */
@@ -16761,7 +16761,7 @@ export interface components {
         };
         ConsentDecisionRequest: {
             /** @enum {string} */
-            kind: "ai_guidelines";
+            kind: "ai_guidelines" | "marketing_consent";
             /** @description Locale of the text shown (from pending) */
             locale: string;
             version: number;
@@ -34428,7 +34428,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                kind: "ai_guidelines";
+                kind: "ai_guidelines" | "marketing_consent";
             };
             cookie?: never;
         };
@@ -34454,7 +34454,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                kind: "ai_guidelines";
+                kind: "ai_guidelines" | "marketing_consent";
             };
             cookie?: never;
         };
