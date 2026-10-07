@@ -176,18 +176,25 @@ type DialogState =
  * organization's time zone (availability `timezone`, else the session's
  * effective zone). Cards move by drag and drop (PATCH, optimistic): a 422
  * (capacity full, closed day) puts the card back and shows a toast.
+ * TEC-328: with `organizationUuid` it shows another organization of the
+ * read scope; `readOnly` drops booking, drag and drop and status actions.
  */
 export function AppointmentCalendar({
   slug,
-  canWrite,
+  canWrite: canWriteProp,
   initialView = "week",
   initialDate,
+  organizationUuid,
+  readOnly = false,
 }: {
   slug: string;
   canWrite: boolean;
   initialView?: CalendarView;
   initialDate?: string;
+  organizationUuid?: string;
+  readOnly?: boolean;
 }) {
+  const canWrite = canWriteProp && !readOnly;
   const { t, locale, format } = useLocale();
   const qc = useQueryClient();
   const [view, setView] = useState<CalendarView>(initialView);
@@ -204,8 +211,9 @@ export function AppointmentCalendar({
   const lastDay = days[days.length - 1] ?? anchor;
 
   const availability = useQuery({
-    queryKey: appointmentKeys.availability(firstDay, lastDay),
-    queryFn: () => appointmentsService.availability(firstDay, lastDay),
+    queryKey: appointmentKeys.availability(firstDay, lastDay, organizationUuid),
+    queryFn: () =>
+      appointmentsService.availability(firstDay, lastDay, organizationUuid),
   });
   const timeZone = availability.data?.[0]?.timezone || format.timeZone;
   const byDay = useMemo(() => {
@@ -215,10 +223,11 @@ export function AppointmentCalendar({
   }, [availability.data]);
 
   const range = useMemo(() => daysRange(days, timeZone), [days, timeZone]);
-  const listKey = appointmentKeys.range(range.from, range.to);
+  const listKey = appointmentKeys.range(range.from, range.to, organizationUuid);
   const list = useQuery({
     queryKey: listKey,
-    queryFn: () => appointmentsService.listRange(range.from, range.to),
+    queryFn: () =>
+      appointmentsService.listRange(range.from, range.to, organizationUuid),
   });
 
   const placed = useMemo(
@@ -313,7 +322,11 @@ export function AppointmentCalendar({
   const today = todayIn(timeZone);
 
   return (
-    <div className="space-y-4" data-testid="appointment-calendar">
+    <div
+      className="space-y-4"
+      data-testid="appointment-calendar"
+      data-read-only={readOnly ? "true" : undefined}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Button

@@ -10,6 +10,7 @@ export type AppointmentSettings = Schemas["AppointmentSettings"];
 export type AppointmentSettingsInput = Schemas["AppointmentSettingsInput"];
 export type AppointmentClosure = Schemas["AppointmentClosure"];
 export type AppointmentAvailabilityDay = Schemas["AppointmentAvailabilityDay"];
+export type AppointmentOccupancy = Schemas["AppointmentOccupancy"];
 
 type Page<T> = { items: T[]; total: number; limit: number; offset: number };
 
@@ -24,25 +25,54 @@ const MAX_PAGES = 10;
  * goes through the BFF with the active organization of the session.
  */
 export const appointmentsService = {
-  /** Every appointment starting in [from, to). */
-  async listRange(from: string, to: string): Promise<Appointment[]> {
+  /**
+   * Every appointment starting in [from, to); `organizationUuid` narrows
+   * to one organization of the read scope (TEC-328 read-only calendar).
+   */
+  async listRange(
+    from: string,
+    to: string,
+    organizationUuid?: string,
+  ): Promise<Appointment[]> {
     const items: Appointment[] = [];
     for (let page = 0; page < MAX_PAGES; page++) {
       const res = await platformRequest<Page<Appointment>>(
         "GET",
         "/v1/appointments",
-        { query: { from, to, limit: PAGE, offset: page * PAGE } },
+        {
+          query: {
+            from,
+            to,
+            limit: PAGE,
+            offset: page * PAGE,
+            ...(organizationUuid
+              ? { organization_uuid: organizationUuid }
+              : {}),
+          },
+        },
       );
       items.push(...res.items);
       if (items.length >= res.total || res.items.length < PAGE) break;
     }
     return items;
   },
-  availability(from: string, to: string) {
+  availability(from: string, to: string, organizationUuid?: string) {
     return platformRequest<AppointmentAvailabilityDay[]>(
       "GET",
       "/v1/appointments/availability",
-      { query: { from, to } },
+      {
+        query: organizationUuid
+          ? { from, to, organization_uuid: organizationUuid }
+          : { from, to },
+      },
+    );
+  },
+  /** Occupancy of every organization of the read scope on `date` (TEC-328). */
+  occupancy(date: string) {
+    return platformRequest<AppointmentOccupancy[]>(
+      "GET",
+      "/v1/appointments/occupancy",
+      { query: { date } },
     );
   },
   create(body: AppointmentInput) {
@@ -133,10 +163,11 @@ export function rescheduleBody(
 
 export const appointmentKeys = {
   all: ["appointments"] as const,
-  range: (from: string, to: string) =>
-    ["appointments", "range", from, to] as const,
-  availability: (from: string, to: string) =>
-    ["appointments", "availability", from, to] as const,
+  range: (from: string, to: string, organizationUuid = "") =>
+    ["appointments", "range", from, to, organizationUuid] as const,
+  availability: (from: string, to: string, organizationUuid = "") =>
+    ["appointments", "availability", from, to, organizationUuid] as const,
+  occupancy: (date: string) => ["appointments", "occupancy", date] as const,
   settings: ["appointments", "settings"] as const,
   closures: (from: string, to: string) =>
     ["appointments", "closures", from, to] as const,

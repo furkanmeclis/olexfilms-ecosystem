@@ -530,6 +530,17 @@ export function tenantNav(slug: string) {
             permission: permissions.appointments.read,
             feature: "appointments",
           },
+          {
+            // TEC-328: network occupancy (GET /v1/appointments/occupancy),
+            // center and distributor only; a dealer has no network.
+            id: "appointments-occupancy",
+            titleKey: "appointments.occupancy.nav",
+            href: routes.tenant.appointments.occupancy(slug),
+            icon: Flame,
+            permission: permissions.appointments.read,
+            orgTypes: ["center", "distributor"],
+            feature: "appointments",
+          },
         ],
       },
       {
