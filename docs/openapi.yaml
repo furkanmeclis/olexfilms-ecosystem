@@ -26021,6 +26021,177 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/platform/certificate-types:
+    get:
+      tags: [Platform]
+      summary: List certificate types
+      operationId: listCertificateTypes
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+    post:
+      tags: [Platform]
+      summary: Create certificate type
+      operationId: createCertificateType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CertificateTypeInput" }
+      responses:
+        "201": { description: Created }
+        "400": { description: Validation error }
+
+  /v1/platform/certificate-types/{uuid}:
+    put:
+      tags: [Platform]
+      summary: Update certificate type
+      operationId: updateCertificateType
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CertificateTypeInput" }
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+    delete:
+      tags: [Platform]
+      summary: Delete certificate type
+      operationId: deleteCertificateType
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "204": { description: Deleted }
+        "400": { description: Validation error }
+
+  /v1/certificates:
+    get:
+      tags: [Platform]
+      summary: List certificates
+      operationId: listCertificates
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+    post:
+      tags: [Platform]
+      summary: Upload staff certificate PDF
+      operationId: uploadCertificate
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [user_uuid, type_uuid, file]
+              properties:
+                user_uuid: { type: string, format: uuid }
+                type_uuid: { type: string, format: uuid }
+                issued_at: { type: string, format: date-time }
+                expires_at: { type: string, format: date-time }
+                file:
+                  type: string
+                  format: binary
+                  description: PDF only, maximum 10 MB.
+      responses:
+        "201": { description: Created }
+        "400": { description: Validation error }
+        "415": { description: Unsupported media type }
+
+  /v1/certificates/{uuid}/file:
+    get:
+      tags: [Platform]
+      summary: Download certificate PDF
+      operationId: downloadCertificateFile
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "404": { description: Not found }
+
+  /v1/certificates/{uuid}/verify:
+    post:
+      tags: [Platform]
+      summary: Verify a certificate
+      operationId: verifyCertificate
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+
+  /v1/certificates/{uuid}/reject:
+    post:
+      tags: [Platform]
+      summary: Reject a certificate
+      operationId: rejectCertificate
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+
+  /v1/certificates/{uuid}/revoke:
+    post:
+      tags: [Platform]
+      summary: Revoke a certificate
+      operationId: revokeCertificate
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+
+  /v1/certificates/coverage:
+    get:
+      tags: [Platform]
+      summary: Staff certificate coverage
+      operationId: getCertificateCoverage
+      parameters:
+        - name: user
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+
+  /v1/certificate-warnings:
+    get:
+      tags: [Platform]
+      summary: List service certificate warnings
+      operationId: listCertificateWarnings
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+
+  /v1/certificate-warnings/{uuid}/approve:
+    post:
+      tags: [Platform]
+      summary: Approve a service certificate warning
+      operationId: approveCertificateWarning
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+
+  /v1/certificate-warnings/{uuid}/reject:
+    post:
+      tags: [Platform]
+      summary: Reject a service certificate warning
+      operationId: rejectCertificateWarning
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation error }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -26365,6 +26536,29 @@ components:
             $ref: "#/components/schemas/Error"
 
   schemas:
+    CertificateTypeInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: object
+          additionalProperties: { type: string }
+        description:
+          type: object
+          additionalProperties: { type: string }
+        validity_months:
+          type: [integer, "null"]
+          minimum: 1
+        active: { type: boolean }
+        sort_order: { type: integer }
+        category_uuids:
+          type: array
+          items: { type: string, format: uuid }
+        product_uuids:
+          type: array
+          items: { type: string, format: uuid }
+
     OAuthError:
       type: object
       required: [error]

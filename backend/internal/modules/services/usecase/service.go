@@ -185,14 +185,15 @@ func visible(c Caller, s db.Service) bool {
 
 // Service implements the service use cases.
 type Service struct {
-	pool     TxBeginner
-	q        *db.Queries
-	out      outbox.Enqueuer
-	poster   CompletedCancelPoster
-	income   IncomePoster
-	finder   searchengine.ListFinder // TEC-209: services index search (nil: SQL only)
-	settings SettingReader
-	features FeatureChecker
+	pool              TxBeginner
+	q                 *db.Queries
+	out               outbox.Enqueuer
+	poster            CompletedCancelPoster
+	income            IncomePoster
+	finder            searchengine.ListFinder // TEC-209: services index search (nil: SQL only)
+	settings          SettingReader
+	features          FeatureChecker
+	certificatePolicy CertificatePolicy
 }
 
 // New creates the service.
@@ -462,7 +463,7 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 			CarBrandID: v.CarBrandID.Int64, CarModelID: v.CarModelID.Int64,
 			ModelYear: v.ModelYear, Plate: v.Plate, PlateCountry: v.PlateCountry, Vin: v.Vin, Km: km,
 			Package: textOrNull(in.Package), Notes: textOrNull(in.Notes), HasMeasurement: in.HasMeasurement,
-			Status: StatusDraft, CreatedByUserID: c.actor(),
+			Status: StatusDraft, CreatedByUserID: c.actor(), PerformedByUserID: c.actor(),
 		})
 		if isUniqueViolation(err, "uq_services_service_no") {
 			return ErrServiceNoExhausted
@@ -594,7 +595,7 @@ func (s *Service) Update(ctx context.Context, c Caller, id uuid.UUID, in UpdateI
 			Plate: svc.Plate, PlateCountry: svc.PlateCountry, Vin: svc.Vin, Km: svc.Km,
 			Package: svc.Package, Notes: svc.Notes, HasMeasurement: svc.HasMeasurement,
 			MeasurementResultID: svc.MeasurementResultID, ContractID: svc.ContractID,
-			UpdatedByUserID: c.actor(),
+			PerformedByUserID: svc.PerformedByUserID, UpdatedByUserID: c.actor(),
 		}
 		if in.KM.Set {
 			if p.Km, err = kmOrNull("km", in.KM.Value); err != nil {
@@ -621,6 +622,9 @@ func (s *Service) Update(ctx context.Context, c Caller, id uuid.UUID, in UpdateI
 		row, err := q.UpdateService(ctx, p)
 		if err != nil {
 			return fmt.Errorf("services: update: %w", err)
+		}
+		if err := s.evaluateCertificatePolicy(ctx, q, tx, row, c); err != nil {
+			return err
 		}
 		updated = row
 		return s.emit(ctx, tx, events.ServiceUpdated, row, "", c, nil)

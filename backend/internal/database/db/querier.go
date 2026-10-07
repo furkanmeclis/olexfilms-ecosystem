@@ -161,6 +161,7 @@ type Querier interface {
 	CountAppointmentsByOrganizations(ctx context.Context, arg CountAppointmentsByOrganizationsParams) (int64, error)
 	CountBarcodeBatches(ctx context.Context, arg CountBarcodeBatchesParams) (int64, error)
 	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
+	CountBlockingServiceCertificateWarnings(ctx context.Context, arg CountBlockingServiceCertificateWarningsParams) (int64, error)
 	// TEC-229: booked return lines of an order (a received return whose line
 	// was priced and not excluded); a dispute on that order's sale cannot then
 	// be resolved with a reversal.
@@ -1083,6 +1084,7 @@ type Querier interface {
 	GetServiceCatalogItem(ctx context.Context, arg GetServiceCatalogItemParams) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByID(ctx context.Context, id int64) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByUUID(ctx context.Context, arg GetServiceCatalogItemByUUIDParams) (ServiceCatalogItem, error)
+	GetServiceCertificateWarningByUUID(ctx context.Context, arg GetServiceCertificateWarningByUUIDParams) (ServiceCertificateWarning, error)
 	GetServiceConsumedPurchaseCost(ctx context.Context, arg GetServiceConsumedPurchaseCostParams) (pgtype.Numeric, error)
 	GetServiceContractSummary(ctx context.Context, id int64) (GetServiceContractSummaryRow, error)
 	GetServiceForContractByID(ctx context.Context, id int64) (GetServiceForContractByIDRow, error)
@@ -1372,6 +1374,7 @@ type Querier interface {
 	// The latest successful run of a kind; its watermark seeds the next
 	// incremental pull.
 	LastSucceededIntegrationSyncRun(ctx context.Context, arg LastSucceededIntegrationSyncRunParams) (IntegrationSyncRun, error)
+	LatestCertificateForUserType(ctx context.Context, arg LatestCertificateForUserTypeParams) (Certificate, error)
 	LatestExchangeRateDate(ctx context.Context, onDate pgtype.Date) (pgtype.Date, error)
 	LinkAppointmentLead(ctx context.Context, arg LinkAppointmentLeadParams) (Appointment, error)
 	// Idempotent link: a second call keeps the row and fills first_service_at
@@ -2038,6 +2041,7 @@ type Querier interface {
 	ListServiceCatalogItems(ctx context.Context, arg ListServiceCatalogItemsParams) ([]ServiceCatalogItem, error)
 	ListServiceCatalogModules(ctx context.Context, itemID int64) ([]string, error)
 	ListServiceCertificateWarnings(ctx context.Context, arg ListServiceCertificateWarningsParams) ([]ListServiceCertificateWarningsRow, error)
+	ListServiceCertificateWarningsByService(ctx context.Context, arg ListServiceCertificateWarningsByServiceParams) ([]ListServiceCertificateWarningsByServiceRow, error)
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
@@ -2479,6 +2483,7 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	MarkServiceCertificateWarningsPending(ctx context.Context, arg MarkServiceCertificateWarningsPendingParams) (int64, error)
 	MarkServiceMeasurementChecked(ctx context.Context, arg MarkServiceMeasurementCheckedParams) (int64, error)
 	// Idempotent: an already processed review returns no row (pgx.ErrNoRows).
 	MarkServiceReviewProcessed(ctx context.Context, id int64) (ServiceReview, error)
@@ -3104,6 +3109,7 @@ type Querier interface {
 	UpdateCarBrand(ctx context.Context, arg UpdateCarBrandParams) (CarBrand, error)
 	UpdateCarModel(ctx context.Context, arg UpdateCarModelParams) (CarModel, error)
 	UpdateCertificateExpiry(ctx context.Context, arg UpdateCertificateExpiryParams) (Certificate, error)
+	UpdateCertificateStorageKey(ctx context.Context, arg UpdateCertificateStorageKeyParams) (Certificate, error)
 	UpdateCertificateType(ctx context.Context, arg UpdateCertificateTypeParams) (CertificateType, error)
 	// Re-renders an open contract (draft or pending).
 	UpdateContractInstanceContent(ctx context.Context, arg UpdateContractInstanceContentParams) (ContractInstance, error)

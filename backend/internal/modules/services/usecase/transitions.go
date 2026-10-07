@@ -167,6 +167,9 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in Tra
 				return err
 			}
 		}
+		if err := s.checkCertificateStatusPolicy(ctx, q, tx, svc, c, to); err != nil {
+			return err
+		}
 		if to == StatusCompleted {
 			result, err = s.complete(ctx, q, tx, svc, c, in.Note)
 			return err

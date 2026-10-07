@@ -266,6 +266,16 @@ const (
 	ServiceNoteAdded    = "service.note_added"
 )
 
+// Certificate add-on events (TEC-480/F5-03b).
+const (
+	CertificateUploaded       = "certificate.uploaded"
+	CertificateVerified       = "certificate.verified"
+	CertificateRejected       = "certificate.rejected"
+	CertificateExpired        = "certificate.expired"
+	CertificateRevoked        = "certificate.revoked"
+	CertificateServiceWarning = "certificate.service_warning"
+)
+
 // MeasurementDiffCheckRequired (TEC-297) is written when a service's
 // before/after micron difference deviates from the product expectation and
 // the dealer owner should review the measurement table.
@@ -615,6 +625,12 @@ func catalogConstants() []string {
 		ServiceImageAdded,
 		ServiceImageRemoved,
 		ServiceNoteAdded,
+		CertificateUploaded,
+		CertificateVerified,
+		CertificateRejected,
+		CertificateExpired,
+		CertificateRevoked,
+		CertificateServiceWarning,
 		AppointmentCreated,
 		AppointmentRescheduled,
 		AppointmentCancelled,
