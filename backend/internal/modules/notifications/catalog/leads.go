@@ -8,9 +8,11 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // over in-app and e-mail. Default templates ship in all 13 locales and are
 // seeded with InsertNotificationTemplateIfMissing by SyncCatalog.
 const EventLeadDealerApplication = "LEAD_DEALER_APPLICATION"
+const EventLeadWebsiteReceived = "LEAD_WEBSITE_RECEIVED"
 
 // LeadApplicationChannels are the default channels of the event.
 var LeadApplicationChannels = []string{ChannelInapp, ChannelEmail}
+var LeadWebsiteChannels = []string{ChannelInapp, ChannelEmail, ChannelWhatsApp}
 
 var leadApplicationTexts = map[string]localizedText{
 	"tr": {"Yeni bayi başvurusu: {{company_name}}",
@@ -58,6 +60,36 @@ func leadApplicationTemplates() []DefaultTemplate {
 	return out
 }
 
+var leadWebsiteTexts = map[string]localizedText{
+	"tr":    {"Yeni vitrin talebi: {{contact_name}}", "{{contact_name}} ({{phone}}) #{{dealer_code}} vitrin formundan teklif istedi. Lead listenize eklendi."},
+	"en":    {"New showcase request: {{contact_name}}", "{{contact_name}} ({{phone}}) requested a quote from showcase #{{dealer_code}}. It was added to your leads."},
+	"bg":    {"Ново запитване от витрина: {{contact_name}}", "{{contact_name}} ({{phone}}) поиска оферта от витрина #{{dealer_code}}. Добавено е към вашите лийдове."},
+	"de":    {"Neue Showcase-Anfrage: {{contact_name}}", "{{contact_name}} ({{phone}}) hat über Showcase #{{dealer_code}} ein Angebot angefragt. Der Lead wurde hinzugefügt."},
+	"el":    {"Νέο αίτημα βιτρίνας: {{contact_name}}", "Ο/Η {{contact_name}} ({{phone}}) ζήτησε προσφορά από τη βιτρίνα #{{dealer_code}}. Προστέθηκε στους υποψήφιους πελάτες."},
+	"uk":    {"Новий запит з вітрини: {{contact_name}}", "{{contact_name}} ({{phone}}) попросив/ла пропозицію з вітрини #{{dealer_code}}. Лід додано."},
+	"ru":    {"Новый запрос с витрины: {{contact_name}}", "{{contact_name}} ({{phone}}) запросил(а) предложение с витрины #{{dealer_code}}. Лид добавлен."},
+	"fr":    {"Nouvelle demande vitrine : {{contact_name}}", "{{contact_name}} ({{phone}}) a demandé un devis depuis la vitrine #{{dealer_code}}. Le prospect a été ajouté."},
+	"es":    {"Nueva solicitud de vitrina: {{contact_name}}", "{{contact_name}} ({{phone}}) pidió un presupuesto desde la vitrina #{{dealer_code}}. El lead se añadió."},
+	"it":    {"Nuova richiesta vetrina: {{contact_name}}", "{{contact_name}} ({{phone}}) ha richiesto un preventivo dalla vetrina #{{dealer_code}}. Il lead è stato aggiunto."},
+	"zh-CN": {"新的展示页请求：{{contact_name}}", "{{contact_name}}（{{phone}}）从展示页 #{{dealer_code}} 请求报价。已加入线索列表。"},
+	"az":    {"Yeni vitrin sorğusu: {{contact_name}}", "{{contact_name}} ({{phone}}) #{{dealer_code}} vitrinindən təklif istədi. Lead siyahınıza əlavə olundu."},
+	"ar":    {"طلب واجهة جديد: {{contact_name}}", "طلب {{contact_name}} ({{phone}}) عرض سعر من الواجهة #{{dealer_code}}. تمت إضافته إلى قائمة العملاء المحتملين."},
+}
+
+func leadWebsiteTemplates() []DefaultTemplate {
+	out := make([]DefaultTemplate, 0, len(leadWebsiteTexts)*len(LeadWebsiteChannels))
+	for _, lang := range msgtemplate.Locales {
+		t, ok := leadWebsiteTexts[lang]
+		if !ok {
+			continue
+		}
+		for _, ch := range LeadWebsiteChannels {
+			out = append(out, DefaultTemplate{Role: RoleGeneric, Channel: ch, Language: lang, Subject: t.subject, Body: t.body, Format: "text"})
+		}
+	}
+	return out
+}
+
 func init() {
 	Register(Event{
 		Code: EventLeadDealerApplication, Module: "leads",
@@ -70,5 +102,17 @@ func init() {
 		},
 		UserConfigurable: true,
 		Templates:        leadApplicationTemplates(),
+	})
+	Register(Event{
+		Code: EventLeadWebsiteReceived, Module: "leads",
+		DefaultChannels: LeadWebsiteChannels,
+		AudienceRoles:   []string{RoleDealer},
+		Placeholders: []msgtemplate.Placeholder{
+			ph("contact_name", "Ayşe Yılmaz", "Jane Doe"),
+			ph("phone", "+905551234567", "+491701234567"),
+			ph("dealer_code", "ankara-ppf", "berlin-ppf"),
+		},
+		UserConfigurable: true,
+		Templates:        leadWebsiteTemplates(),
 	})
 }

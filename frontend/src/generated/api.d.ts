@@ -1212,6 +1212,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/dealers/{code}/lead-form/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public dealer showcase lead form config
+         * @description TEC-468. No authentication. Returns the lead form fields, current KVKK
+         *     text version, showcase services and WhatsApp click-to-chat URL for a
+         *     published dealer showcase. Dealers without the module enabled or without
+         *     a published showcase return 404.
+         */
+        get: operations["getPublicDealerLeadFormConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/dealers/{code}/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit public dealer showcase lead
+         * @description TEC-468. No authentication. Accepts website leads for a published dealer
+         *     showcase. Stores accepted leads under the dealer organization with
+         *     `source=website`; an open lead with the same phone is updated with a
+         *     timeline note instead of creating a duplicate. The endpoint enforces a
+         *     16 KB body limit, HMAC form token, minimum fill time, honeypot, 5/hour
+         *     IP limit and 3/day phone limit.
+         */
+        post: operations["submitPublicDealerLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/showcase": {
         parameters: {
             query?: never;
@@ -16412,6 +16460,49 @@ export interface components {
             data: components["schemas"]["PublicDealer"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        PublicDealerLeadFormService: {
+            /** Format: uuid */
+            uuid: string;
+            kind: string;
+            title: string;
+            description?: string;
+        };
+        PublicDealerLeadFormConfig: {
+            dealer_code: string;
+            dealer_name: string;
+            fields: string[];
+            /** Format: int32 */
+            kvkk_text_version: number;
+            kvkk_text: string;
+            services: components["schemas"]["PublicDealerLeadFormService"][];
+            /** Format: uri */
+            whatsapp_chat_url: string;
+            form_token: string;
+            min_fill_seconds: number;
+            default_phone_country: string;
+            preferred_locales: string[];
+        };
+        PublicDealerLeadRequest: {
+            name: string;
+            phone: string;
+            /** Format: email */
+            email?: string;
+            vehicle_brand?: string;
+            vehicle_model?: string;
+            interested_services: string[];
+            message?: string;
+            /** @enum {string} */
+            preferred_channel?: "phone" | "email" | "whatsapp";
+            kvkk_consent: boolean;
+            language: string;
+            form_token: string;
+            /** @description Hidden honeypot field; legitimate clients submit an empty value. */
+            website?: string;
+        };
+        PublicDealerLeadAccepted: {
+            /** @enum {boolean} */
+            received: true;
+        };
         /** @enum {string} */
         ShowcaseStatus: "draft" | "pending_review" | "published" | "rejected";
         /** @description Locale (13 UI locales) → text; empty entries are dropped. */
@@ -26900,6 +26991,88 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    getPublicDealerLeadFormConfig: {
+        parameters: {
+            query?: {
+                lang?: string;
+            };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead form configuration */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDealerLeadFormConfig"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    submitPublicDealerLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicDealerLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description Lead accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDealerLeadAccepted"];
+                };
+            };
+            /** @description Honeypot submission accepted without storing a lead */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            /** @description KVKK consent is required */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited by IP or phone */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
         };
     };
     getShowcase: {

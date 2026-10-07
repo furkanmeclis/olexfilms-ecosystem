@@ -302,6 +302,7 @@ func (q *Queries) GetDealerShowcasePhoto(ctx context.Context, arg GetDealerShowc
 
 const getPublishedDealerShowcase = `-- name: GetPublishedDealerShowcase :one
 SELECT s.published_content,
+       s.id AS showcase_id,
        s.published_at,
        s.google_place_id,
        s.google_rating,
@@ -330,6 +331,7 @@ type GetPublishedDealerShowcaseParams struct {
 
 type GetPublishedDealerShowcaseRow struct {
 	PublishedContent      []byte             `json:"published_content"`
+	ShowcaseID            int64              `json:"showcase_id"`
 	PublishedAt           pgtype.Timestamptz `json:"published_at"`
 	GooglePlaceID         pgtype.Text        `json:"google_place_id"`
 	GoogleRating          pgtype.Numeric     `json:"google_rating"`
@@ -350,6 +352,7 @@ func (q *Queries) GetPublishedDealerShowcase(ctx context.Context, arg GetPublish
 	var i GetPublishedDealerShowcaseRow
 	err := row.Scan(
 		&i.PublishedContent,
+		&i.ShowcaseID,
 		&i.PublishedAt,
 		&i.GooglePlaceID,
 		&i.GoogleRating,
@@ -358,6 +361,66 @@ func (q *Queries) GetPublishedDealerShowcase(ctx context.Context, arg GetPublish
 		&i.GoogleRatingUpdatedAt,
 		&i.OrganizationID,
 		&i.OrganizationLocale,
+	)
+	return i, err
+}
+
+const getShowcaseLeadTargetBySlug = `-- name: GetShowcaseLeadTargetBySlug :one
+SELECT o.id AS organization_id,
+       o.brand_id,
+       o.slug,
+       o.name,
+       o.locale,
+       o.country_id,
+       c.iso2 AS country_iso2,
+       s.id AS showcase_id,
+       s.published_at
+FROM organizations o
+JOIN dealer_showcases s ON s.organization_id = o.id AND s.brand_id = o.brand_id
+LEFT JOIN countries c ON c.id = o.country_id
+WHERE o.slug = $1
+  AND o.brand_id = $2
+  AND s.published_content IS NOT NULL
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type IN ('dealer', 'distributor')
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+  AND (o.contract_valid_until IS NULL OR o.contract_valid_until >= CURRENT_DATE)
+`
+
+type GetShowcaseLeadTargetBySlugParams struct {
+	Slug    string `json:"slug"`
+	BrandID int64  `json:"brand_id"`
+}
+
+type GetShowcaseLeadTargetBySlugRow struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Slug           string             `json:"slug"`
+	Name           string             `json:"name"`
+	Locale         string             `json:"locale"`
+	CountryID      pgtype.Int8        `json:"country_id"`
+	CountryIso2    pgtype.Text        `json:"country_iso2"`
+	ShowcaseID     int64              `json:"showcase_id"`
+	PublishedAt    pgtype.Timestamptz `json:"published_at"`
+}
+
+// TEC-468: public lead form is accepted only when the dealer showcase add-on
+// is enabled and the showcase has a published snapshot.
+func (q *Queries) GetShowcaseLeadTargetBySlug(ctx context.Context, arg GetShowcaseLeadTargetBySlugParams) (GetShowcaseLeadTargetBySlugRow, error) {
+	row := q.db.QueryRow(ctx, getShowcaseLeadTargetBySlug, arg.Slug, arg.BrandID)
+	var i GetShowcaseLeadTargetBySlugRow
+	err := row.Scan(
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Slug,
+		&i.Name,
+		&i.Locale,
+		&i.CountryID,
+		&i.CountryIso2,
+		&i.ShowcaseID,
+		&i.PublishedAt,
 	)
 	return i, err
 }

@@ -21,6 +21,19 @@ INSERT INTO leads (
 )
 RETURNING *;
 
+-- name: GetOpenWebsiteLeadByPhone :one
+-- TEC-468: one open public showcase lead per dealer + phone.
+SELECT * FROM leads
+WHERE organization_id = sqlc.arg(organization_id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND target_type = 'customer'
+  AND source = 'website'
+  AND candidate_phone_e164 = sqlc.arg(phone_e164)::text
+  AND status IN ('new', 'contacted', 'quoted')
+  AND deleted_at IS NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 1;
+
 -- name: GetLeadByUUID :one
 SELECT * FROM leads
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS NULL;

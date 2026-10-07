@@ -762,31 +762,32 @@ type ContractTemplateLocale struct {
 }
 
 type Conversation struct {
-	ID                 int64              `json:"id"`
-	Uuid               uuid.UUID          `json:"uuid"`
-	OrganizationID     pgtype.Int8        `json:"organization_id"`
-	BrandID            pgtype.Int8        `json:"brand_id"`
-	Channel            string             `json:"channel"`
-	ContactE164        string             `json:"contact_e164"`
-	ContactName        pgtype.Text        `json:"contact_name"`
-	UserID             pgtype.Int8        `json:"user_id"`
-	LastMessageAt      pgtype.Timestamptz `json:"last_message_at"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
-	Status             string             `json:"status"`
-	AiMode             string             `json:"ai_mode"`
-	AiPausedUntil      pgtype.Timestamptz `json:"ai_paused_until"`
-	AssignedUserID     pgtype.Int8        `json:"assigned_user_id"`
-	AssignedOrgID      pgtype.Int8        `json:"assigned_org_id"`
-	IdentityKind       string             `json:"identity_kind"`
-	IdentityUserID     pgtype.Int8        `json:"identity_user_id"`
-	IdentityOrgID      pgtype.Int8        `json:"identity_org_id"`
-	IdentityResolvedAt pgtype.Timestamptz `json:"identity_resolved_at"`
-	Locale             pgtype.Text        `json:"locale"`
-	LastInboundAt      pgtype.Timestamptz `json:"last_inbound_at"`
-	UnreadCount        int32              `json:"unread_count"`
-	AiConsentAt        pgtype.Timestamptz `json:"ai_consent_at"`
-	VisitorLeadID      pgtype.Int8        `json:"visitor_lead_id"`
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	OrganizationID      pgtype.Int8        `json:"organization_id"`
+	BrandID             pgtype.Int8        `json:"brand_id"`
+	Channel             string             `json:"channel"`
+	ContactE164         string             `json:"contact_e164"`
+	ContactName         pgtype.Text        `json:"contact_name"`
+	UserID              pgtype.Int8        `json:"user_id"`
+	LastMessageAt       pgtype.Timestamptz `json:"last_message_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	Status              string             `json:"status"`
+	AiMode              string             `json:"ai_mode"`
+	AiPausedUntil       pgtype.Timestamptz `json:"ai_paused_until"`
+	AssignedUserID      pgtype.Int8        `json:"assigned_user_id"`
+	AssignedOrgID       pgtype.Int8        `json:"assigned_org_id"`
+	IdentityKind        string             `json:"identity_kind"`
+	IdentityUserID      pgtype.Int8        `json:"identity_user_id"`
+	IdentityOrgID       pgtype.Int8        `json:"identity_org_id"`
+	IdentityResolvedAt  pgtype.Timestamptz `json:"identity_resolved_at"`
+	Locale              pgtype.Text        `json:"locale"`
+	LastInboundAt       pgtype.Timestamptz `json:"last_inbound_at"`
+	UnreadCount         int32              `json:"unread_count"`
+	AiConsentAt         pgtype.Timestamptz `json:"ai_consent_at"`
+	VisitorLeadID       pgtype.Int8        `json:"visitor_lead_id"`
+	ReferredDealerOrgID pgtype.Int8        `json:"referred_dealer_org_id"`
 }
 
 type ConversationAiRun struct {

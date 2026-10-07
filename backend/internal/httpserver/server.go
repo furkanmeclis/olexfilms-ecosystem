@@ -1001,7 +1001,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	sysSvc.SetGuard(sysconfig.KeyLeadsDealerApplicationEnabled, dealerApps.SettingGuard)
 	leadsmodule.RegisterPublicRoutes(mux, leadshandler.NewPublic(dealerApps, ratelimit.New(deps.Redis, cfg.App.Env),
 		leadshandler.RateLimits{IPLimit: cfg.Leads.ApplicationIPLimit, PhoneLimit: cfg.Leads.ApplicationPhoneLimit,
-			Window: cfg.Leads.ApplicationRateWindow}).WithQuotes(leadsSvc, docSvc))
+			Window: cfg.Leads.ApplicationRateWindow}).WithShowcaseSecret(cfg.JWT.AccessSecret).WithQuotes(leadsSvc, docSvc))
 	bulkSvc.WithUndoWindow(sysSvc.BulkUndoWindowHours)
 	// TEC-206: stock counts (scans through the TEC-203 resolver, approval via the ledger).
 	warehousemodule.RegisterCountRoutes(mux, warehousehandler.NewCounts(warehouseusecase.NewCounts(deps.DB, deps.Queries,
