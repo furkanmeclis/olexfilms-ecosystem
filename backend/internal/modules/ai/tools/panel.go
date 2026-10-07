@@ -20,6 +20,8 @@ type Deps struct {
 	Tasks         TasksReader
 	Catalog       CatalogReader
 	Organizations OrganizationsReader
+	// Links shortens internal links (service_pdf_link, TEC-386).
+	Links LinkMaker
 	// Extensions are registered as they are. F5 registers its stock
 	// forecast and performance tools here (Spec.Feature
 	// features.ModuleStockForecast / ModulePerformance), so they appear only
@@ -34,6 +36,9 @@ func RegisterPanel(r *Registry, d Deps) {
 		r.Register(SearchServices{b})
 		r.Register(GetService{b})
 		r.Register(ServiceActivity{b})
+		if d.Links != nil {
+			r.Register(ServicePDFLink{servicesBase: b, links: d.Links})
+		}
 	}
 	if d.Warranties != nil {
 		r.Register(LookupWarranties{warranties: d.Warranties, tree: d.Tree})

@@ -2122,7 +2122,7 @@ paths:
       summary: Nearby dealers of the request brand ("find a dealer")
       description: |
         TEC-240. No authentication. Lists the active, serving (access window
-        open) dealers and distributors of the brand resolved from the request
+        open; TEC-386: contract_valid_until not passed) dealers and distributors of the brand resolved from the request
         domain that have coordinates, within `radius_km` of (`lat`, `lng`).
         Distance is the haversine great-circle distance in km, computed in
         SQL; results are nearest first, at most 50. Organizations without

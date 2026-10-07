@@ -154,3 +154,38 @@ func (s *Service) NearbyDealers(ctx context.Context, brandID int64, in NearbyInp
 	}
 	return out, nil
 }
+
+// AreaInput is a validated dealers-in-area query (TEC-386): City is
+// required, District optional.
+type AreaInput struct {
+	City     string
+	District string
+}
+
+// AreaDealers lists the active, serving dealers / distributors of a brand
+// in a city (and district), at most NearbyMaxResults. The rows have no
+// distance or coordinates. It answers the AI visitor tool when the visitor
+// names a place instead of sharing a location.
+func (s *Service) AreaDealers(ctx context.Context, brandID int64, in AreaInput) ([]NearbyDealer, error) {
+	arg := db.ListAreaDealersParams{BrandID: brandID, City: in.City, LimitCount: NearbyMaxResults}
+	if in.District != "" {
+		arg.District = pgtype.Text{String: in.District, Valid: true}
+	}
+	rows, err := s.q.ListAreaDealers(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]NearbyDealer, 0, len(rows))
+	for _, r := range rows {
+		d := NearbyDealer{
+			UUID: r.Uuid, Slug: r.Slug, Name: r.Name, City: r.City, District: r.District,
+			AcceptsAppointments: r.AcceptsAppointments,
+		}
+		if e164.MatchString(r.Phone) {
+			p := r.Phone
+			d.WhatsApp = &p
+		}
+		out = append(out, d)
+	}
+	return out, nil
+}

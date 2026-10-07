@@ -161,7 +161,10 @@ func testRegistry(fs FeatureChecker) *Registry {
 		Tree: fakeTree{}, Services: fakeServices{}, Warranties: fakeWarranties{}, Customers: fakeCustomers{},
 		Stock: fakeStock{}, Orders: fakeOrders{}, Accounting: fakeAccounting{}, Appointments: &fakeAppointments{},
 		Leads: fakeLeads{}, Tasks: fakeTasks{}, Catalog: fakeCatalog{}, Organizations: fakeOrgs{},
+		Links: &fakeLinks{},
 	})
+	RegisterCustomer(r, testCustomerDeps())
+	RegisterVisitor(r, testVisitorDeps())
 	return r
 }
 
@@ -206,6 +209,8 @@ func validValue(schema map[string]any) any {
 	switch schema["type"] {
 	case "integer":
 		return 5
+	case "number":
+		return 41
 	case "boolean":
 		return true
 	}
@@ -232,16 +237,25 @@ func wrongValue(schema map[string]any) any {
 // panic or an internal error; a valid input runs.
 func TestEveryToolValidatesItsSchema(t *testing.T) {
 	r := testRegistry(nil)
-	p := superAdmin()
 	all := r.All()
-	if len(all) != 15 {
-		t.Fatalf("registered tools = %d, want 15", len(all))
+	// 16 panel (TEC-385 + service_pdf_link), 10 customer, 4 visitor.
+	if len(all) != 30 {
+		t.Fatalf("registered tools = %d, want 30", len(all))
 	}
+	// Tools without a required field whose empty input is not runnable.
+	extraValid := map[string]map[string]any{"find_nearest_dealers": {"city": "Istanbul"}}
 	for _, tool := range all {
 		spec := tool.Spec()
 		t.Run(spec.Name, func(t *testing.T) {
-			if spec.Description == "" || spec.Kind != KindRead || spec.Realm != RealmPanel || len(spec.Permissions) == 0 {
+			p := realmPrincipal(spec.Realm)
+			if spec.Description == "" || (spec.Kind != KindRead && spec.Kind != KindSelf) {
 				t.Fatalf("incomplete spec: %+v", spec)
+			}
+			// Panel tools need a permission; customer / visitor tools are
+			// gated by the realm and read only the principal's own / public
+			// data, without a module (they have no organization).
+			if (spec.Realm == RealmPanel) != (len(spec.Permissions) > 0) || (spec.Realm != RealmPanel && spec.Feature != "") {
+				t.Fatalf("realm %s spec: %+v", spec.Realm, spec)
 			}
 			if spec.InputSchema["type"] != "object" || spec.InputSchema["additionalProperties"] != false {
 				t.Fatalf("schema must be a closed object: %v", spec.InputSchema)
@@ -254,6 +268,9 @@ func TestEveryToolValidatesItsSchema(t *testing.T) {
 				}
 			}
 			valid := map[string]any{}
+			for k, v := range extraValid[spec.Name] {
+				valid[k] = v
+			}
 			for _, f := range required(spec) {
 				schema, _ := props(spec)[f].(map[string]any)
 				valid[f] = validValue(schema)
@@ -393,7 +410,7 @@ func TestAvailableAndCallShareTheGate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"get_service", "list_leads", "search_services", "service_activity_summary"}
+	want := []string{"get_service", "list_leads", "search_services", "service_activity_summary", "service_pdf_link"}
 	if fmt.Sprint(names(got)) != fmt.Sprint(want) {
 		t.Fatalf("dealer tools = %v, want %v (no permission: stock; center only: my_tasks; distributor+: list_sub_organizations)", names(got), want)
 	}
