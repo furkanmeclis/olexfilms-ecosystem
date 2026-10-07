@@ -44,6 +44,7 @@
   "card.expires_in": "Läuft ab in {{time}}",
   "card.expired": "Dieser Vorschlag ist abgelaufen. Fragen Sie den Assistenten erneut.",
   "card.edit_hint": "Sie können diese Felder vor dem Bestätigen ändern.",
+  "card.confirm_permission": "Ein Benutzer mit Freigabeberechtigung muss diese Aktion genehmigen.",
   "card.status_executing": "Wird ausgeführt",
   "card.status_confirmed": "Bestätigt",
   "card.status_failed": "Fehlgeschlagen",

@@ -44,6 +44,7 @@
   "card.expires_in": "{{time}} 后过期",
   "card.expired": "此建议已过期，请重新询问助手。",
   "card.edit_hint": "确认前可以修改这些字段。",
+  "card.confirm_permission": "必须由具有审批权限的用户批准此操作。",
   "card.status_executing": "执行中",
   "card.status_confirmed": "已确认",
   "card.status_failed": "失败",

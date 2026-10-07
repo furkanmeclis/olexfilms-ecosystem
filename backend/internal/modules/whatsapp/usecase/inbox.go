@@ -141,6 +141,26 @@ type MessagePage struct {
 	NextCursor *string       `json:"next_cursor"`
 }
 
+// AIRunView is a redacted AI pipeline run log for one conversation.
+type AIRunView struct {
+	UUID             uuid.UUID `json:"uuid"`
+	Status           string    `json:"status"`
+	Model            string    `json:"model"`
+	Tokens           int64     `json:"tokens"`
+	InputTokens      int64     `json:"input_tokens"`
+	OutputTokens     int64     `json:"output_tokens"`
+	CacheReadTokens  int64     `json:"cache_read_tokens"`
+	CacheWriteTokens int64     `json:"cache_write_tokens"`
+	DurationMS       *int32    `json:"duration_ms"`
+	Error            *string   `json:"error"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+// AIRunPage is the newest-first run list of a conversation.
+type AIRunPage struct {
+	Items []AIRunView `json:"items"`
+}
+
 // ReplyResult is a queued staff message and the conversation after it.
 type ReplyResult struct {
 	Conversation ConversationView `json:"conversation"`
@@ -202,6 +222,29 @@ func (r *refs) conversation(ctx context.Context, c db.Conversation) Conversation
 
 func (r *refs) message(ctx context.Context, c db.Conversation, m db.Message) MessageView {
 	return MessageView{MessageEvent: NewMessageEvent(c, m), SenderUser: r.user(ctx, m.SenderUserID)}
+}
+
+func aiRunView(row db.ConversationAiRun) AIRunView {
+	return AIRunView{
+		UUID:             row.Uuid,
+		Status:           row.Status,
+		Model:            row.Model,
+		Tokens:           row.InputTokens + row.OutputTokens + row.CacheReadTokens + row.CacheWriteTokens,
+		InputTokens:      row.InputTokens,
+		OutputTokens:     row.OutputTokens,
+		CacheReadTokens:  row.CacheReadTokens,
+		CacheWriteTokens: row.CacheWriteTokens,
+		DurationMS:       int4Ptr(row.DurationMs),
+		Error:            textPtr(row.Error),
+		CreatedAt:        row.CreatedAt.Time,
+	}
+}
+
+func int4Ptr(v pgtype.Int4) *int32 {
+	if !v.Valid {
+		return nil
+	}
+	return &v.Int32
 }
 
 // ParseConversationFilter reads the GET /v1/conversations filters (list
@@ -338,6 +381,30 @@ func (in *Inbox) Messages(ctx context.Context, v Viewer, id uuid.UUID, before *r
 	if next != nil {
 		s := EncodeCursor(*next)
 		page.NextCursor = &s
+	}
+	return page, nil
+}
+
+// AIRuns returns the newest AI pipeline runs of a visible conversation.
+func (in *Inbox) AIRuns(ctx context.Context, v Viewer, id uuid.UUID, limit int32) (AIRunPage, error) {
+	c, err := in.load(ctx, in.d.Queries, v, id)
+	if err != nil {
+		return AIRunPage{}, err
+	}
+	if limit <= 0 {
+		limit = DefaultMessagePage
+	}
+	limit = min(limit, MaxMessagePage)
+	rows, err := in.d.Queries.ListConversationAIRuns(ctx, db.ListConversationAIRunsParams{
+		ConversationID: c.ID,
+		LimitCount:     limit,
+	})
+	if err != nil {
+		return AIRunPage{}, err
+	}
+	page := AIRunPage{Items: make([]AIRunView, 0, len(rows))}
+	for _, row := range rows {
+		page.Items = append(page.Items, aiRunView(row))
 	}
 	return page, nil
 }

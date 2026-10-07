@@ -37,6 +37,7 @@ export function MessageList({
   messages,
   streaming,
   showToolChips,
+  canConfirmActions = true,
   transport,
   onConfirm,
   onCancel,
@@ -46,6 +47,7 @@ export function MessageList({
   streaming: boolean;
   /** Panel shows "searching…" chips; the portal hides tool activity. */
   showToolChips: boolean;
+  canConfirmActions?: boolean;
   transport: AssistantTransport;
   onConfirm: (card: AIActionCard, edits?: Record<string, unknown>) => void;
   onCancel: (card: AIActionCard) => void;
@@ -114,6 +116,7 @@ export function MessageList({
                         key={b.card.action_uuid}
                         card={b.card}
                         disabled={streaming}
+                        canConfirm={canConfirmActions}
                         onConfirm={(edits) => onConfirm(b.card, edits)}
                         onCancel={() => onCancel(b.card)}
                       />

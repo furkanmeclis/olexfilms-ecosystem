@@ -23,6 +23,7 @@ const state = vi.hoisted(() => ({
 const service = vi.hoisted(() => ({
   get: vi.fn(),
   messages: vi.fn(),
+  aiRuns: vi.fn(),
   reply: vi.fn(),
   patch: vi.fn(),
   markRead: vi.fn(),
@@ -137,6 +138,23 @@ beforeEach(() => {
   service.messages.mockReset().mockResolvedValue({
     items: [message({})],
     next_cursor: null,
+  });
+  service.aiRuns.mockReset().mockResolvedValue({
+    items: [
+      {
+        uuid: "run-1",
+        status: "completed",
+        model: "claude-sonnet-5-5",
+        tokens: 42,
+        input_tokens: 20,
+        output_tokens: 22,
+        cache_read_tokens: 0,
+        cache_write_tokens: 0,
+        duration_ms: 1300,
+        error: null,
+        created_at: NOW,
+      },
+    ],
   });
   service.reply.mockReset();
   service.patch.mockReset().mockImplementation(async (_uuid, body) => ({
@@ -302,6 +320,21 @@ describe("ConversationPanel", () => {
     await render();
     expect(q('[data-testid="message-thread"]')).not.toBeNull();
     expect(q('[data-testid="message-composer"]')).toBeNull();
+  });
+
+  it("opens the AI run drawer and lists recent runs", async () => {
+    await render();
+    await act(async () => {
+      q<HTMLButtonElement>('[data-testid="ai-runs-open"]')!.click();
+    });
+    await flush();
+
+    expect(service.aiRuns).toHaveBeenCalledWith(UUID);
+    expect(document.body.textContent).toContain("claude-sonnet-5-5");
+    expect(document.body.textContent).toContain("conversations.ai_runs.tokens");
+    expect(
+      document.querySelectorAll('[data-testid="ai-run-row"]'),
+    ).toHaveLength(1);
   });
 
   it("appends a message from the realtime channel", async () => {

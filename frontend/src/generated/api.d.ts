@@ -12365,6 +12365,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/whatsapp/conversations/{uuid}/ai-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List AI pipeline runs of a WhatsApp conversation (TEC-465)
+         * @description conversations.read; only the platform/system admin can read WhatsApp conversation AI run logs (S2). Other panel users without the permission receive 403; a hidden or unknown conversation answers 404.
+         */
+        get: operations["listConversationAIRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ai/status": {
         parameters: {
             query?: never;
@@ -22729,6 +22749,28 @@ export interface components {
             created_at: string;
             sender_user: components["schemas"]["ConversationUserRef"] | null;
         };
+        ConversationAIRun: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            status: "running" | "completed" | "failed" | "skipped";
+            model: string;
+            /** Format: int64 */
+            tokens: number;
+            /** Format: int64 */
+            input_tokens: number;
+            /** Format: int64 */
+            output_tokens: number;
+            /** Format: int64 */
+            cache_read_tokens: number;
+            /** Format: int64 */
+            cache_write_tokens: number;
+            /** Format: int32 */
+            duration_ms: number | null;
+            error: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
         ConversationReplyInput: {
             body: string;
         };
@@ -22785,6 +22827,14 @@ export interface components {
             data: {
                 items: components["schemas"]["ConversationMessage"][];
                 next_cursor: string | null;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeConversationAIRunPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ConversationAIRun"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -45506,6 +45556,34 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listConversationAIRuns: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description AI run logs, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConversationAIRunPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };

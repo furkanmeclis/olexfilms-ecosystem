@@ -168,6 +168,30 @@ func (h *Conversations) Messages(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, out)
 }
 
+// AIRuns lists AI pipeline run logs
+// (GET /v1/platform/whatsapp/conversations/{uuid}/ai-runs).
+func (h *Conversations) AIRuns(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	limit := int32(usecase.DefaultMessagePage)
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n < 1 || n > usecase.MaxMessagePage {
+			response.ValidationError(w, r, []response.Detail{{Field: "limit", Message: "must be 1-100", Code: "invalid"}})
+			return
+		}
+		limit = int32(n)
+	}
+	out, err := h.inbox.AIRuns(r.Context(), viewer(r), id, limit)
+	if err != nil {
+		writeConversationError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
 // Media streams a stored attachment
 // (GET /v1/conversations/{uuid}/messages/{message_uuid}/media).
 func (h *Conversations) Media(w http.ResponseWriter, r *http.Request) {

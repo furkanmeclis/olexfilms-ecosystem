@@ -44,6 +44,7 @@
   "card.expires_in": "{{time}} içinde sona erer",
   "card.expired": "Bu önerinin süresi doldu. Asistana yeniden sorun.",
   "card.edit_hint": "Onaylamadan önce bu alanları değiştirebilirsiniz.",
+  "card.confirm_permission": "Bu işlemi onay yetkisi olan bir kullanıcı onaylamalı.",
   "card.status_executing": "Çalışıyor",
   "card.status_confirmed": "Onaylandı",
   "card.status_failed": "Başarısız",

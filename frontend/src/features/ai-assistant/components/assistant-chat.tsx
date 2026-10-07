@@ -7,8 +7,10 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { permissions } from "@/config/permissions";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
+import { usePermission } from "@/providers/permission-provider";
 
 import { useAssistantChat } from "../hooks/use-assistant-chat";
 import { quotaRemainingPercent } from "../lib/chat-state";
@@ -39,6 +41,7 @@ export function AssistantChat({
   fullPageHref?: string;
 }) {
   const { t, dir } = useLocale();
+  const { can } = usePermission();
   const chat = useAssistantChat(transport, scope);
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -80,6 +83,8 @@ export function AssistantChat({
 
   const percent = quotaRemainingPercent(status.quota);
   const inputDisabled = chat.consentRequired || chat.quotaExceeded;
+  const canConfirmActions =
+    transport.realm !== "panel" || can(permissions.ai.actionsConfirm);
 
   const submit = async () => {
     const text = input.trim();
@@ -190,6 +195,7 @@ export function AssistantChat({
               messages={chat.messages}
               streaming={chat.streaming}
               showToolChips={showToolChips}
+              canConfirmActions={canConfirmActions}
               transport={transport}
               onConfirm={(card, edits) => void chat.confirm(card, edits)}
               onCancel={(card) => void chat.cancel(card)}

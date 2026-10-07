@@ -44,6 +44,7 @@
   "card.expires_in": "Изтича след {{time}}",
   "card.expired": "Предложението е изтекло. Попитайте асистента отново.",
   "card.edit_hint": "Можете да промените тези полета преди потвърждение.",
+  "card.confirm_permission": "Потребител с право за одобрение трябва да одобри това действие.",
   "card.status_executing": "Изпълнява се",
   "card.status_confirmed": "Потвърдено",
   "card.status_failed": "Неуспешно",

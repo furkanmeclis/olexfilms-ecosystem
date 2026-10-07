@@ -44,6 +44,7 @@
   "card.expires_in": "Expires in {{time}}",
   "card.expired": "This suggestion has expired. Ask the assistant again.",
   "card.edit_hint": "You can change these fields before confirming.",
+  "card.confirm_permission": "A user with approval permission must approve this action.",
   "card.status_executing": "Running",
   "card.status_confirmed": "Confirmed",
   "card.status_failed": "Failed",
