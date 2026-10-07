@@ -12717,7 +12717,7 @@ export interface paths {
          *     when it is inside the caller's ai.usage.read scope; another or a
          *     missing organization is 404 alike. List contract: `sort` =
          *     created_at | tokens (default `-created_at`, id tiebreak; unknown →
-         *     400), `created_from` / `created_to`, multi-value `channel`,
+         *     400), `created_from` / `created_to`, `tokens_min` / `tokens_max`, multi-value `channel`,
          *     `purpose`, `pool`, `model`, `user` (user uuids). `tokens` is the
          *     quota count (input + output + cache write).
          */
@@ -23152,6 +23152,10 @@ export interface components {
         AIUsageModel: string[];
         /** @description User uuids; unknown ones match nothing. */
         AIUsageUser: string[];
+        /** @description Inclusive lower bound of `tokens` (TEC-391). */
+        AIUsageTokensMin: number;
+        /** @description Inclusive upper bound of `tokens` (TEC-391). */
+        AIUsageTokensMax: number;
         /** @description Organization inside the caller's ai.usage.read scope (default the active one); otherwise 404. */
         AIUsageOrganization: string;
         /** @description Pending authorization request (the `request` of the consent screen URL) */
@@ -46258,6 +46262,10 @@ export interface operations {
                 model?: components["parameters"]["AIUsageModel"];
                 /** @description User uuids; unknown ones match nothing. */
                 user?: components["parameters"]["AIUsageUser"];
+                /** @description Inclusive lower bound of `tokens` (TEC-391). */
+                tokens_min?: components["parameters"]["AIUsageTokensMin"];
+                /** @description Inclusive upper bound of `tokens` (TEC-391). */
+                tokens_max?: components["parameters"]["AIUsageTokensMax"];
                 organization?: string[];
             };
             header?: never;
@@ -46325,6 +46333,10 @@ export interface operations {
                 model?: components["parameters"]["AIUsageModel"];
                 /** @description User uuids; unknown ones match nothing. */
                 user?: components["parameters"]["AIUsageUser"];
+                /** @description Inclusive lower bound of `tokens` (TEC-391). */
+                tokens_min?: components["parameters"]["AIUsageTokensMin"];
+                /** @description Inclusive upper bound of `tokens` (TEC-391). */
+                tokens_max?: components["parameters"]["AIUsageTokensMax"];
                 /** @description Organization inside the caller's ai.usage.read scope (default the active one); otherwise 404. */
                 organization?: components["parameters"]["AIUsageOrganization"];
             };

@@ -34,7 +34,7 @@ const (
 
 // usageExportKeys are the client query keys an export keeps (the list
 // parameters without limit / offset).
-var usageExportKeys = []string{"created_from", "created_to", "channel", "purpose", "model", "pool", "user", "sort"}
+var usageExportKeys = []string{"created_from", "created_to", "tokens_min", "tokens_max", "channel", "purpose", "model", "pool", "user", "sort"}
 
 // ErrUsageExportScope: the job reach is missing or outside the job
 // organization.

@@ -77,5 +77,6 @@
   "resources.stock.units": "Unità di magazzino",
   "resources.leads.list": "Contatti commerciali",
   "resources.services.list": "Servizi",
-  "resources.warranties.list": "Garanzie"
+  "resources.warranties.list": "Garanzie",
+  "resources.ai.usage": "Utilizzo dell'IA"
 }

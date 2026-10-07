@@ -172,6 +172,14 @@ type Querier interface {
 	CountCariAccountsWithBalance(ctx context.Context, arg CountCariAccountsWithBalanceParams) (int64, error)
 	CountConsentsOfUser(ctx context.Context, userID int64) (int64, error)
 	CountContractInstances(ctx context.Context, arg CountContractInstancesParams) (int64, error)
+	// TEC-397 (F4-02e): WhatsApp visitor flow — abuse limits, the KVKK notice
+	// before a lead, the 30 day lead window and the address of a visitor lead.
+	// AI runs of a conversation since a time that called the model (a fixed
+	// reply without a model call is not a turn).
+	CountConversationModelRunsSince(ctx context.Context, arg CountConversationModelRunsSinceParams) (int64, error)
+	// Earlier AI runs (id below before_run_id) of a conversation since a time
+	// that recorded a stage (e.g. the KVKK notice of a visitor lead).
+	CountConversationRunsWithStageBefore(ctx context.Context, arg CountConversationRunsWithStageBeforeParams) (int64, error)
 	CountConversations(ctx context.Context, arg CountConversationsParams) (int64, error)
 	CountCustomerCariAccounts(ctx context.Context, organizationID int64) (int64, error)
 	CountCustomerOrganizationLinks(ctx context.Context, arg CountCustomerOrganizationLinksParams) (CountCustomerOrganizationLinksRow, error)
@@ -642,6 +650,8 @@ type Querier interface {
 	// Both have a profile: the target keeps its values and only fills its empty
 	// fields from the source (an identity number moves with its mask).
 	FillCustomerProfileFromSource(ctx context.Context, arg FillCustomerProfileFromSourceParams) (int64, error)
+	// A district of a province by name, case- and Turkish-accent-insensitively.
+	FindDistrictByName(ctx context.Context, arg FindDistrictByNameParams) (District, error)
 	// The first upload of a repeated idempotency key or client_measurement_id.
 	FindMeasurementResultByKeys(ctx context.Context, arg FindMeasurementResultByKeysParams) (MeasurementResult, error)
 	FindOpenCustomerLeadForAppointment(ctx context.Context, arg FindOpenCustomerLeadForAppointmentParams) (Lead, error)
@@ -653,6 +663,9 @@ type Querier interface {
 	// The rate of a pair (either direction) on the latest day within
 	// [min_date, on_date]; on that day manual > tcmb > ecb, direct before inverse.
 	FindPairRate(ctx context.Context, arg FindPairRateParams) (FindPairRateRow, error)
+	// A province of an active country by name, case- and Turkish-accent-
+	// insensitively; Turkey first when several countries have the name.
+	FindProvinceByName(ctx context.Context, name string) (Province, error)
 	// The sibling with this code (bulk generation reuses existing nodes).
 	FindTypedLocationChild(ctx context.Context, arg FindTypedLocationChildParams) (WarehouseLocation, error)
 	// Plate lookup (not unique: plates change hands).
@@ -961,6 +974,9 @@ type Querier interface {
 	GetQuotePublicViewByToken(ctx context.Context, arg GetQuotePublicViewByTokenParams) (GetQuotePublicViewByTokenRow, error)
 	GetQuoteRecipient(ctx context.Context, arg GetQuoteRecipientParams) (GetQuoteRecipientRow, error)
 	GetQuoteReminderByID(ctx context.Context, id int64) (QuoteReminder, error)
+	// The newest WhatsApp customer lead of a phone number in a brand since a
+	// time (one lead per number per 30 days).
+	GetRecentWhatsAppVisitorLead(ctx context.Context, arg GetRecentWhatsAppVisitorLeadParams) (Lead, error)
 	GetRecommendedProductPrice(ctx context.Context, arg GetRecommendedProductPriceParams) (pgtype.Numeric, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error)
@@ -2847,6 +2863,9 @@ type Querier interface {
 	// Period summary: per staff and type, the paid total of a period (voided
 	// payments excluded).
 	SumStaffPaymentsByPeriod(ctx context.Context, arg SumStaffPaymentsByPeriodParams) ([]SumStaffPaymentsByPeriodRow, error)
+	// Quota tokens of unidentified WhatsApp contacts (no user) on the system
+	// pool of an organization since a time.
+	SumVisitorWhatsAppTokensSince(ctx context.Context, arg SumVisitorWhatsAppTokensSinceParams) (int64, error)
 	// Usage summary of one organization per channel and pool.
 	SummarizeAIUsageByChannel(ctx context.Context, arg SummarizeAIUsageByChannelParams) ([]SummarizeAIUsageByChannelRow, error)
 	// Usage summary of one organization in [created_from, created_before):

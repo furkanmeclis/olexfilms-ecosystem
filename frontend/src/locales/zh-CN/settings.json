@@ -146,6 +146,8 @@
   "system.groups.whatsapp_hint": "WhatsApp 会话、发送速率和 AI 回复。",
   "system.keys.whatsapp_ai_staff_pause_minutes": "员工发消息后 AI 暂停时间（分钟）",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "员工在此时间内在会话中发过消息时，AI 不回复；0 = 不暂停。",
+  "system.keys.ai_visitor_daily_token_cap": "WhatsApp 访客 AI 每日令牌上限",
+  "system.keys.ai_visitor_daily_token_cap_hint": "所有未识别的 WhatsApp 访客每天可从系统额度中使用的令牌总数；超出后将收到附带经销商查找链接的固定回复。0 = 不设上限。",
   "system.keys.whatsapp_ai_guidelines_url": "AI 使用准则链接",
   "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp 同意询问中发送的准则链接（https）；留空则在消息中直接发送准则文本。"
 }

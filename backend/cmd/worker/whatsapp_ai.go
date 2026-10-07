@@ -133,5 +133,8 @@ func newWhatsAppAIPipeline(d whatsAppAIDeps) *wapipeline.Pipeline {
 		Provider: provider, Models: models, Access: authUC, Features: d.features, Settings: sys,
 		Redis: d.rdb, Env: cfg.App.Env, Notifier: d.notifier, Media: media, Downloader: d.downloader,
 		DefaultBrandSlug: cfg.App.DefaultBrandSlug, Log: log,
+		// TEC-397 (F4-02e): visitor flow (locations, limits, leads).
+		Tools: reg, Dealers: orgSvc, VisitorSettings: sys, FrontendURL: cfg.Auth.FrontendURL,
+		Leads: leadsusecase.NewApplications(pool, q, geoSvc, d.features, sys, box),
 	})
 }

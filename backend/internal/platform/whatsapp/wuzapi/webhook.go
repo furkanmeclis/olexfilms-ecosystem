@@ -103,11 +103,20 @@ type messageBody struct {
 	ExtendedTextMessage *struct {
 		Text string `json:"text"`
 	} `json:"extendedTextMessage"`
-	ImageMessage    *mediaMessage `json:"imageMessage"`
-	DocumentMessage *mediaMessage `json:"documentMessage"`
-	AudioMessage    *mediaMessage `json:"audioMessage"`
-	VideoMessage    *mediaMessage `json:"videoMessage"`
-	StickerMessage  *mediaMessage `json:"stickerMessage"`
+	ImageMessage    *mediaMessage    `json:"imageMessage"`
+	DocumentMessage *mediaMessage    `json:"documentMessage"`
+	AudioMessage    *mediaMessage    `json:"audioMessage"`
+	VideoMessage    *mediaMessage    `json:"videoMessage"`
+	StickerMessage  *mediaMessage    `json:"stickerMessage"`
+	LocationMessage *locationMessage `json:"locationMessage"`
+}
+
+// locationMessage is a shared (static) location (TEC-397).
+type locationMessage struct {
+	DegreesLatitude  *float64 `json:"degreesLatitude"`
+	DegreesLongitude *float64 `json:"degreesLongitude"`
+	Name             string   `json:"name"`
+	Address          string   `json:"address"`
 }
 
 type messageEvent struct {
@@ -293,6 +302,12 @@ func messageContent(m messageBody) (string, *whatsapp.InboundMedia) {
 		return pick("video", m.VideoMessage)
 	case m.StickerMessage != nil:
 		return pick("sticker", m.StickerMessage)
+	case m.LocationMessage != nil && m.LocationMessage.DegreesLatitude != nil && m.LocationMessage.DegreesLongitude != nil:
+		l := m.LocationMessage
+		label := strings.TrimSpace(strings.Join([]string{strings.TrimSpace(l.Name), strings.TrimSpace(l.Address)}, " "))
+		return "", &whatsapp.InboundMedia{
+			Type: whatsapp.MediaLocation, Caption: label, Latitude: l.DegreesLatitude, Longitude: l.DegreesLongitude,
+		}
 	}
 	return "", nil
 }

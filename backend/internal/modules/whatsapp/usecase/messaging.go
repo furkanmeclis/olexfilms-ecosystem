@@ -524,6 +524,11 @@ func (m *Messaging) AfterStored(ctx context.Context, conv db.Conversation, msg d
 	if len(msg.Media) == 0 || msg.MediaStorageKey.Valid || m.d.Queue == nil {
 		return
 	}
+	// TEC-397: a shared location has no file to store.
+	var meta whatsapp.InboundMedia
+	if json.Unmarshal(msg.Media, &meta) == nil && meta.Type == whatsapp.MediaLocation {
+		return
+	}
 	if err := m.d.Queue.EnqueueMediaStore(ctx, msg.ID, msg.Uuid); err != nil {
 		m.log.Warn("whatsapp_media_enqueue_failed", "message", msg.Uuid, "error", err)
 	}

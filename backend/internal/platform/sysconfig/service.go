@@ -170,6 +170,12 @@ func (s *Service) WhatsAppSendPerMinute(ctx context.Context) int {
 	return int(s.Int(ctx, KeyWhatsAppSendPerMinute))
 }
 
+// AIVisitorDailyTokenCap is the typed accessor for
+// KeyAIVisitorDailyTokenCap.
+func (s *Service) AIVisitorDailyTokenCap(ctx context.Context) int64 {
+	return s.Int(ctx, KeyAIVisitorDailyTokenCap)
+}
+
 // WhatsAppAIStaffPauseMinutes is the typed accessor for
 // KeyWhatsAppAIStaffPauseMinutes.
 func (s *Service) WhatsAppAIStaffPauseMinutes(ctx context.Context) int {
