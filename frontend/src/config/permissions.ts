@@ -538,4 +538,10 @@ export const permissions = {
     use: Permission.AiUse,
     actionsConfirm: Permission.AiActionsConfirm,
   },
+  /** TEC-399: WhatsApp inbox (platform admin only, S2). */
+  conversations: {
+    read: Permission.ConversationsRead,
+    reply: Permission.ConversationsReply,
+    manage: Permission.ConversationsManage,
+  },
 } as const;

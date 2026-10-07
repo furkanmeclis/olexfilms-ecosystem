@@ -38,6 +38,10 @@ export const RealtimeEvents = {
   MessagesSent: "messages.sent",
   MessagesStatusChanged: "messages.status_changed",
   ConversationsTyping: "conversations.typing",
+  // WhatsApp inbox (TEC-395/398): `system.conversations` channel
+  ConversationMessageCreated: "conversations.message.created",
+  ConversationMessageUpdated: "conversations.message.updated",
+  ConversationUpdated: "conversations.conversation.updated",
 
   // AI pipeline / drafts (inbox ops)
   AIPipelineCompleted: "ai.pipeline.completed",

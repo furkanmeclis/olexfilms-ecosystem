@@ -22,6 +22,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { UserSetPasswordDialog } from "@/features/users/components/user-set-password-dialog";
 import { UserAuthMethodsIcons } from "@/features/users/components/user-auth-methods";
+import { StartConversationButton } from "@/features/conversations/components/start-conversation-button";
 import { StepUpGate } from "@/features/step-up-engine";
 import { USER_STATUS_TONE } from "@/features/users/constants";
 import {
@@ -95,6 +96,12 @@ function UserDetailActions({
           {t("users.actions.set_password")}
         </Button>
       </PermissionGuard>
+
+      {/* TEC-399: "WhatsApp'ta yaz", platform admin only (S2). */}
+      <StartConversationButton
+        userUuid={user.uuid}
+        userLabel={userFullName(user)}
+      />
 
       {can(permissions.users.write) &&
       (user.status === "disabled" || user.status === "pending") ? (

@@ -62,6 +62,7 @@ import { googleNavIcon } from "@/components/icons/google-icon";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { announcementsNavAdornment } from "@/features/announcements/nav";
+import { conversationsNavItem } from "@/features/conversations/nav";
 import { dealerSalesNavGroup } from "@/features/dealer-sales/nav";
 import { leadsNavItem } from "@/features/leads/nav";
 import { staffReportsNavGroup } from "@/features/staff-reports/nav";
@@ -113,6 +114,8 @@ export const platformNav = defineNav({
           icon: Bell,
           permission: permissions.notifications.platformRead,
         },
+        // TEC-399: WhatsApp inbox, platform admin only (S2).
+        conversationsNavItem,
         {
           id: "notification-center",
           titleKey: "layout.nav_notification_center",
