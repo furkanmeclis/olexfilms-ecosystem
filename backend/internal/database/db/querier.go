@@ -206,6 +206,14 @@ type Querier interface {
 	// Active warranties on the fleet's vehicles; service_org_ids limits them
 	// to the warranties of those organizations (NULL: all).
 	CountFleetActiveWarranties(ctx context.Context, arg CountFleetActiveWarrantiesParams) (int64, error)
+	CountFleetPortalReports(ctx context.Context, arg CountFleetPortalReportsParams) (int64, error)
+	// Same filter block as ListFleetPortalServices.
+	CountFleetPortalServices(ctx context.Context, arg CountFleetPortalServicesParams) (int64, error)
+	CountFleetPortalUpcomingAppointments(ctx context.Context, arg CountFleetPortalUpcomingAppointmentsParams) (int64, error)
+	// Same filter block as ListFleetPortalVehicles.
+	CountFleetPortalVehicles(ctx context.Context, arg CountFleetPortalVehiclesParams) (int64, error)
+	// Same filter block as ListFleetPortalWarranties.
+	CountFleetPortalWarranties(ctx context.Context, arg CountFleetPortalWarrantiesParams) (int64, error)
 	CountFleetReports(ctx context.Context, arg CountFleetReportsParams) (int64, error)
 	CountFleetServices(ctx context.Context, arg CountFleetServicesParams) (int64, error)
 	// Same filter block as ListFleetUsers.
@@ -743,6 +751,9 @@ type Querier interface {
 	// The cari balance (income/charge/payment add, expense/collection
 	// subtract, like cari_account_balances) before a point in time.
 	FleetCariBalanceBefore(ctx context.Context, arg FleetCariBalanceBeforeParams) (pgtype.Numeric, error)
+	// The balance of the same rows (service income adds, collections subtract)
+	// before a point in time.
+	FleetPortalCariBalanceBefore(ctx context.Context, arg FleetPortalCariBalanceBeforeParams) (pgtype.Numeric, error)
 	// TEC-388: prompt context of a chat turn: the user, the conversation's
 	// organization, its brand and the brand center (K10 locale / time zone).
 	GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error)
@@ -1704,6 +1715,36 @@ type Querier interface {
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
 	// Links of a fleet with the dealer names (fleet card, portal).
 	ListFleetDealerLinks(ctx context.Context, arg ListFleetDealerLinksParams) ([]ListFleetDealerLinksRow, error)
+	// The fleet's view of its cari in one dealer's ledger: only service income
+	// (source service_income) and collections; the dealer's other cari
+	// movements never leave the dealer. Reversals stay as their own rows.
+	ListFleetPortalCariEntries(ctx context.Context, arg ListFleetPortalCariEntriesParams) ([]ListFleetPortalCariEntriesRow, error)
+	// Ready reports of the fleet (the portal downloads them). Sort
+	// period_start, default -period_start.
+	ListFleetPortalReports(ctx context.Context, arg ListFleetPortalReportsParams) ([]FleetReport, error)
+	// Services on the fleet's vehicles at the visible dealers (drafts stay
+	// dealer internal). Filters: vehicle, status, dealer (organization uuid),
+	// created_at range, q (service no / plate). Sort keys created_at |
+	// completed_at | service_no | status, default -created_at.
+	ListFleetPortalServices(ctx context.Context, arg ListFleetPortalServicesParams) ([]ListFleetPortalServicesRow, error)
+	// Scheduled / confirmed appointments of the fleet's vehicles at the visible
+	// dealers from now on.
+	ListFleetPortalUpcomingAppointments(ctx context.Context, arg ListFleetPortalUpcomingAppointmentsParams) ([]ListFleetPortalUpcomingAppointmentsRow, error)
+	// TEC-474 (F5-02c): fleet portal reads. Every query is bounded by the
+	// signed-in user's fleet (fleet_org_id) and by dealer_ids: the dealers the
+	// fleet worked with (an active or ended link) whose fleet module is still
+	// on. A dealer that turns the module off drops out of dealer_ids, so its
+	// services, warranties, appointments and cari disappear from the portal
+	// (nothing is deleted).
+	// Vehicles of the fleet with the last service, the service count, the
+	// active warranty count and the latest active warranty end of the visible
+	// dealers. Sort keys plate | last_service_at | warranty_until, default plate.
+	ListFleetPortalVehicles(ctx context.Context, arg ListFleetPortalVehiclesParams) ([]ListFleetPortalVehiclesRow, error)
+	// Warranties on the fleet's vehicles issued by the visible dealers. state
+	// is the effective status: active (active and not past end_at), expired
+	// (expired, or active past end_at) or void. Sort keys end_at | start_at,
+	// default end_at.
+	ListFleetPortalWarranties(ctx context.Context, arg ListFleetPortalWarrantiesParams) ([]ListFleetPortalWarrantiesRow, error)
 	// The latest services on the fleet's vehicles, limited to service_org_ids
 	// (NULL: all organizations).
 	ListFleetRecentServices(ctx context.Context, arg ListFleetRecentServicesParams) ([]ListFleetRecentServicesRow, error)

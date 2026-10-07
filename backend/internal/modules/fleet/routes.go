@@ -19,7 +19,8 @@ import (
 // fleets.manage with the resolved scope. A dealer reaches a fleet only
 // through an active link (pending: 404); services, warranties and the cari
 // it sees are its own. The portal routes need fleet.portal.read: a fleet
-// user accepts or rejects a pending link of their own fleet.
+// user accepts or rejects a pending link of their own fleet and reads the
+// fleet's vehicles, services, warranties, accounts and reports (TEC-474).
 func RegisterRoutes(
 	mux *http.ServeMux,
 	h *handler.Handler,
@@ -60,4 +61,18 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/portal/fleet/links", portal(h.PortalLinks))
 	mux.Handle("POST /v1/portal/fleet/links/{uuid}/accept", portal(h.AcceptLink))
 	mux.Handle("POST /v1/portal/fleet/links/{uuid}/reject", portal(h.RejectLink))
+
+	// TEC-474 (F5-02c): the fleet portal reads. Only GETs: a fleet session
+	// is read only (middleware.PortalReadOnly); the link decision above and
+	// the report download are its only allowed actions. The use case opens
+	// them while an actively linked dealer has the fleet module (else 403
+	// FEATURE_DISABLED) and hides the dealers that turned it off.
+	mux.Handle("GET /v1/portal/fleet/overview", portal(h.PortalOverview))
+	mux.Handle("GET /v1/portal/fleet/vehicles", portal(h.PortalVehicles))
+	mux.Handle("GET /v1/portal/fleet/vehicles/{uuid}", portal(h.PortalVehicle))
+	mux.Handle("GET /v1/portal/fleet/services", portal(h.PortalServices))
+	mux.Handle("GET /v1/portal/fleet/warranties", portal(h.PortalWarranties))
+	mux.Handle("GET /v1/portal/fleet/accounting", portal(h.PortalAccounting))
+	mux.Handle("GET /v1/portal/fleet/reports", portal(h.PortalReports))
+	mux.Handle("GET /v1/portal/fleet/reports/{uuid}/file", portal(h.PortalReportFile))
 }

@@ -79,6 +79,8 @@ type Service struct {
 	out     outbox.Enqueuer
 	plates  PlateValidator
 	inviter PasswordInviter
+	modules ModuleChecker
+	files   ReportFiles
 }
 
 // New creates the fleet usecase.

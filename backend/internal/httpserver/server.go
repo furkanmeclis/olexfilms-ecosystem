@@ -635,6 +635,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	fleetSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries))
 	fleetSvc.SetPlates(geoSvc)
 	fleetSvc.SetInviter(uc)
+	// TEC-474 (F5-02c): the fleet portal reads follow each dealer's fleet
+	// module, download the report PDFs from storage, and the portal service
+	// detail / PDF serves a fleet user's fleet vehicles.
+	fleetSvc.SetModules(featureSvc)
+	fleetSvc.SetReportFiles(deps.Storage)
+	servicesSvc.WithFleetPortal(fleetSvc)
 	ioReg := ioengine.NewRegistry(
 		// TEC-211: price columns behind pricing.* grants.
 		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries).WithPrices(pricingSvc),

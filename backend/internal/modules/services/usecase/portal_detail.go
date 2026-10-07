@@ -109,6 +109,49 @@ func portalOwns(svc db.Service, userID int64, warranties []db.Warranty) bool {
 	return false
 }
 
+// FleetPortal lets a fleet user read the services of their fleet's
+// vehicles on the portal (TEC-474, fleet usecase): holder is the fleet's
+// primary user, the holder of the fleet warranties.
+type FleetPortal interface {
+	PortalServiceHolder(ctx context.Context, brandID, userID int64, svc db.Service) (holder int64, ok bool, err error)
+}
+
+// WithFleetPortal wires the fleet portal access of the portal service
+// detail and PDF (the review stays the owner's).
+func (s *Service) WithFleetPortal(f FleetPortal) *Service {
+	s.fleetPortal = f
+	return s
+}
+
+// portalViewable loads a service the user owns, or (TEC-474) a service on a
+// vehicle of the user's fleet the fleet portal shows. holder is the user
+// whose warranties the views print: the user, or the fleet's primary user.
+func (s *Service) portalViewable(ctx context.Context, brandID, userID int64, id uuid.UUID) (db.Service, []db.Warranty, int64, error) {
+	svc, warranties, err := s.portalService(ctx, brandID, userID, id)
+	if err == nil || !errors.Is(err, ErrNotFound) || s.fleetPortal == nil || brandID <= 0 || userID <= 0 {
+		return svc, warranties, userID, err
+	}
+	svc, err = s.q.GetServiceByUUID(ctx, db.GetServiceByUUIDParams{Uuid: id, BrandID: brandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.Service{}, nil, 0, ErrNotFound
+	}
+	if err != nil {
+		return db.Service{}, nil, 0, fmt.Errorf("services: portal get: %w", err)
+	}
+	holder, ok, err := s.fleetPortal.PortalServiceHolder(ctx, brandID, userID, svc)
+	if err != nil {
+		return db.Service{}, nil, 0, fmt.Errorf("services: portal fleet: %w", err)
+	}
+	if !ok {
+		return db.Service{}, nil, 0, ErrNotFound
+	}
+	warranties, err = s.q.ListWarrantiesByService(ctx, db.ListWarrantiesByServiceParams{ServiceID: svc.ID, BrandID: svc.BrandID})
+	if err != nil {
+		return db.Service{}, nil, 0, fmt.Errorf("services: portal warranties: %w", err)
+	}
+	return svc, warranties, holder, nil
+}
+
 // portalService loads a service of the brand the user owns, with its
 // warranties (ErrNotFound otherwise).
 func (s *Service) portalService(ctx context.Context, brandID, userID int64, id uuid.UUID) (db.Service, []db.Warranty, error) {
@@ -133,9 +176,9 @@ func (s *Service) portalService(ctx context.Context, brandID, userID int64, id u
 }
 
 // PortalAuthorize checks a portal request for a service (ErrNotFound when
-// the user does not own it in the brand).
+// the user does not own it in the brand, nor sees it through their fleet).
 func (s *Service) PortalAuthorize(ctx context.Context, brandID, userID int64, id uuid.UUID) (db.Service, error) {
-	svc, _, err := s.portalService(ctx, brandID, userID, id)
+	svc, _, _, err := s.portalViewable(ctx, brandID, userID, id)
 	return svc, err
 }
 
@@ -150,7 +193,7 @@ type portalItem struct {
 
 // PortalGet returns the portal detail of a service the user owns.
 func (s *Service) PortalGet(ctx context.Context, brandID, userID int64, id uuid.UUID) (PortalServiceView, error) {
-	svc, warranties, err := s.portalService(ctx, brandID, userID, id)
+	svc, warranties, holder, err := s.portalViewable(ctx, brandID, userID, id)
 	if err != nil {
 		return PortalServiceView{}, err
 	}
@@ -187,7 +230,7 @@ func (s *Service) PortalGet(ctx context.Context, brandID, userID int64, id uuid.
 		items = append(items, portalItem{ID: it.ID, UUID: it.Uuid, Product: p.Name, Category: cat, Parts: parts})
 	}
 	loc := i18n.FromContext(ctx).Locale
-	return portalView(svc, refs, org, items, warranties, userID, loc), nil
+	return portalView(svc, refs, org, items, warranties, holder, loc), nil
 }
 
 // portalView maps the loaded data to the portal projection (pure).
@@ -273,7 +316,7 @@ func (p *PDFService) BuildPortal(ctx context.Context, q ioengine.ExportQuery, lo
 	if err != nil || userID <= 0 {
 		return PDFDoc{}, errPDFScope
 	}
-	svc, warranties, err := p.svc.portalService(ctx, brandID, userID, id)
+	svc, warranties, holder, err := p.svc.portalViewable(ctx, brandID, userID, id)
 	if err != nil {
 		return PDFDoc{}, err
 	}
@@ -283,7 +326,7 @@ func (p *PDFService) BuildPortal(ctx context.Context, q ioengine.ExportQuery, lo
 	}
 	held := map[string]bool{}
 	for _, w := range warranties {
-		if w.HolderUserID == userID {
+		if w.HolderUserID == holder {
 			held[w.PublicCode] = true
 		}
 	}
