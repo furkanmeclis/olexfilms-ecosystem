@@ -63,7 +63,7 @@ SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.dis
        p.name AS parent_name
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
-WHERE o.uuid = $1 AND o.deleted_at IS NULL
+WHERE o.uuid = $1 AND o.deleted_at IS NULL AND o.type <> 'fleet'
 `
 
 type GetOrganizationForIndexRow struct {
@@ -80,6 +80,7 @@ type GetOrganizationForIndexRow struct {
 	ParentName pgtype.Text `json:"parent_name"`
 }
 
+// TEC-472: fleets are not indexed (a stale document is removed).
 func (q *Queries) GetOrganizationForIndex(ctx context.Context, argUuid uuid.UUID) (GetOrganizationForIndexRow, error) {
 	row := q.db.QueryRow(ctx, getOrganizationForIndex, argUuid)
 	var i GetOrganizationForIndexRow
@@ -248,7 +249,7 @@ SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.dis
        p.name AS parent_name
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
-WHERE o.deleted_at IS NULL
+WHERE o.deleted_at IS NULL AND o.type <> 'fleet'
 ORDER BY o.id
 `
 

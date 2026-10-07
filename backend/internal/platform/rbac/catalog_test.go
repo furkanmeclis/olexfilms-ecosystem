@@ -668,3 +668,38 @@ func TestCampaignGrants(t *testing.T) {
 		}
 	}
 }
+
+// TEC-472: fleets. Dealer owner/staff, the distributor owner (subtree) and
+// the center (center_staff, brand) read fleets; only owners and the center
+// manage them; dealer owner and staff plan; the fleet role reads its own
+// fleet in the portal. No other role holds a fleet permission.
+func TestFleetGrants(t *testing.T) {
+	slugs := []string{PermFleetsRead, PermFleetsManage, PermFleetsPlan, PermFleetPortalRead}
+	for _, slug := range slugs {
+		def, ok := PermissionBySlug(slug)
+		if !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+		if def.Module != "fleet" || def.SuperAdminOnly {
+			t.Fatalf("%s def = %+v", slug, def)
+		}
+	}
+	want := map[string]map[string]Scope{
+		RoleSuperAdmin: {
+			PermFleetsRead: ScopeAll, PermFleetsManage: ScopeAll, PermFleetsPlan: ScopeAll, PermFleetPortalRead: ScopeOwn,
+		},
+		RoleCenterStaff:      {PermFleetsRead: ScopeBrand, PermFleetsManage: ScopeBrand},
+		RoleDistributorOwner: {PermFleetsRead: ScopeSubtree, PermFleetsManage: ScopeSubtree},
+		RoleDealerOwner:      {PermFleetsRead: ScopeManaged, PermFleetsManage: ScopeManaged, PermFleetsPlan: ScopeManaged},
+		RoleDealerStaff:      {PermFleetsRead: ScopeManaged, PermFleetsPlan: ScopeManaged},
+		RoleFleet:            {PermFleetPortalRead: ScopeOwn},
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range slugs {
+			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
+				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
+			}
+		}
+	}
+}

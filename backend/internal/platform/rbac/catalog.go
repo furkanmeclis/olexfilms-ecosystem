@@ -641,6 +641,24 @@ var Permissions = []PermissionDef{
 		Slug: PermCampaignsApprove, Name: "Approve campaigns", Module: "campaigns", Scopes: scopesTree,
 		Description: "Approve, reject or send back campaigns submitted to the organization for approval.",
 	},
+	// TEC-472: fleets (F5-02). Appended last; migration 000111 seeds them.
+	{
+		Slug: PermFleetsRead, Name: "Read fleets", Module: "fleet", Scopes: scopesTree,
+		Description: "Fleets linked to the organization, their vehicles, services and reports.",
+	},
+	{
+		Slug: PermFleetsManage, Name: "Manage fleets", Module: "fleet", Scopes: scopesTree,
+		Description: "Open fleets, invite fleet users, add vehicles and manage dealer links.",
+	},
+	{
+		Slug: PermFleetsPlan, Name: "Plan fleet services", Module: "fleet",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Bulk service plans and bulk vehicle intake for a linked fleet.",
+	},
+	{
+		Slug: PermFleetPortalRead, Name: "Read own fleet (portal)", Module: "fleet", Scopes: scopesSelf,
+		Description: "Fleet portal: vehicles, services, warranties, accounts and reports of one's own fleet.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -781,6 +799,9 @@ var Roles = []RoleDef{
 			PermAIUsageRead:      ScopeBrand,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-472 (000111).
+			PermFleetsRead:   ScopeBrand,
+			PermFleetsManage: ScopeBrand,
 		}),
 	},
 	{
@@ -988,6 +1009,10 @@ var Roles = []RoleDef{
 			PermCampaignsRead:    ScopeSubtree,
 			PermCampaignsWrite:   ScopeManaged,
 			PermCampaignsApprove: ScopeSubtree,
+			// TEC-472 (000111): fleets linked to the subtree; a serving
+			// distributor links a fleet itself.
+			PermFleetsRead:   ScopeSubtree,
+			PermFleetsManage: ScopeSubtree,
 		}),
 	},
 	{
@@ -1164,6 +1189,10 @@ var Roles = []RoleDef{
 			// TEC-404 (000107): own campaigns, approved upstream.
 			PermCampaignsRead:  ScopeManaged,
 			PermCampaignsWrite: ScopeManaged,
+			// TEC-472 (000111).
+			PermFleetsRead:   ScopeManaged,
+			PermFleetsManage: ScopeManaged,
+			PermFleetsPlan:   ScopeManaged,
 		}),
 	},
 	{
@@ -1207,6 +1236,10 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-472 (000111): reads linked fleets and runs bulk plans and
+			// intake; opening fleets is the owner's.
+			PermFleetsRead: ScopeManaged,
+			PermFleetsPlan: ScopeManaged,
 		}),
 	},
 	{
@@ -1260,6 +1293,8 @@ var Roles = []RoleDef{
 			PermCustomersRead:      ScopeCustomer,
 			PermVehiclesRead:       ScopeCustomer,
 			PermWarrantiesRead:     ScopeCustomer,
+			// TEC-472 (000111): own fleet organization in the portal.
+			PermFleetPortalRead: ScopeOwn,
 		}),
 	},
 }
