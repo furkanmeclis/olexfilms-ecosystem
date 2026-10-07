@@ -20660,6 +20660,12 @@ paths:
         - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
         - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
         - { name: status, in: query, schema: { $ref: "#/components/schemas/AppointmentStatus" } }
+        - name: organization_uuid
+          in: query
+          description: >-
+            CSV of organization UUIDs; appointments of those organizations
+            (inside the read scope, others are ignored).
+          schema: { type: string }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
         - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
       responses:
@@ -20707,6 +20713,12 @@ paths:
       parameters:
         - { name: from, in: query, required: true, schema: { type: string, format: date } }
         - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - name: organization_uuid
+          in: query
+          description: >-
+            Another organization inside the read scope (default: the active
+            organization); 404 when unknown or outside the scope.
+          schema: { type: string, format: uuid }
       responses:
         "200":
           description: Appointment availability
@@ -20716,6 +20728,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /v1/appointments/occupancy:
     get:
