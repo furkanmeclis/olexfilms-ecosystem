@@ -14,6 +14,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
@@ -988,7 +989,7 @@ func (s *Service) UpgradeToDealer(ctx context.Context, c Caller, id uuid.UUID, i
 		return UpgradeResult{}, invalid("organization_uuid", "is required")
 	}
 	var res UpgradeResult
-	err := s.inTx(ctx, func(q *db.Queries) error {
+	err := s.inTxRaw(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		user, err := s.scopedUser(ctx, q, c, id)
 		if err != nil {
 			return err
@@ -1044,6 +1045,15 @@ func (s *Service) UpgradeToDealer(ctx context.Context, c Caller, id uuid.UUID, i
 		}
 		if err := q.AssignMemberRoleBySlug(ctx, db.AssignMemberRoleBySlugParams{MemberID: member.ID, Slug: in.Role}); err != nil {
 			return fmt.Errorf("customers: member role: %w", err)
+		}
+		// TEC-394: the WhatsApp identity cache drops on a new membership.
+		if s.out != nil {
+			ev := events.New(events.TenantMemberAdded).WithTenant(org.ID).WithPayload(map[string]any{
+				"organization_id": org.ID, "user_id": user.ID, "role": memberRole,
+			})
+			if err := s.out.Enqueue(ctx, tx, ev); err != nil {
+				return fmt.Errorf("customers: outbox: %w", err)
+			}
 		}
 		res.CustomerUUID = user.Uuid
 		res.Organization.UUID, res.Organization.Slug = org.Uuid, org.Slug
