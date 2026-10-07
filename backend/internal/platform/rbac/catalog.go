@@ -625,6 +625,16 @@ var Permissions = []PermissionDef{
 		Scopes: scopesAll, SuperAdminOnly: true,
 		Description: "Assign, close and reopen WhatsApp conversations and change their AI mode.",
 	},
+	// TEC-400: MCP OAuth (F4-03). Appended last; migration 000104 seeds them.
+	{
+		Slug: PermMCPConnect, Name: "Connect MCP clients", Module: "mcp", Scopes: scopesSelf,
+		Description: "Connect AI agents (MCP clients) to the panel MCP endpoints with one's own permissions.",
+	},
+	{
+		Slug: PermMCPClientsManage, Name: "Manage MCP clients", Module: "mcp",
+		Scopes: scopesAll, SuperAdminOnly: true,
+		Description: "List and revoke registered MCP (OAuth) clients platform wide.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -763,6 +773,8 @@ var Roles = []RoleDef{
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
 			PermAIUsageRead:      ScopeBrand,
+			// TEC-400 (000104).
+			PermMCPConnect: ScopeOwn,
 		}),
 	},
 	{
@@ -798,6 +810,8 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-400 (000104).
+			PermMCPConnect: ScopeOwn,
 		}),
 	},
 	{
@@ -831,6 +845,8 @@ var Roles = []RoleDef{
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
 			PermAIUsageRead:      ScopeBrand,
+			// TEC-400 (000104).
+			PermMCPConnect: ScopeOwn,
 		}),
 	},
 	{
@@ -867,6 +883,8 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-400 (000104).
+			PermMCPConnect: ScopeOwn,
 		}),
 	},
 	{
@@ -955,6 +973,8 @@ var Roles = []RoleDef{
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
 			PermAIUsageRead:      ScopeManaged,
+			// TEC-400 (000104).
+			PermMCPConnect: ScopeOwn,
 		}),
 	},
 	{
@@ -1126,6 +1146,8 @@ var Roles = []RoleDef{
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
 			PermAIUsageRead:      ScopeManaged,
+			// TEC-400 (000104).
+			PermMCPConnect: ScopeOwn,
 		}),
 	},
 	{
