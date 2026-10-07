@@ -12,6 +12,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cancelPlannedStaffPayment = `-- name: CancelPlannedStaffPayment :one
+UPDATE staff_payments
+SET status = 'cancelled', cancelled_at = NOW()
+WHERE id = $1 AND organization_id = $2
+  AND status = 'planned'
+RETURNING id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at, status, account_id, cancelled_at
+`
+
+type CancelPlannedStaffPaymentParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// CancelPlannedStaffPayment cancels a payment that is not booked yet; it
+// never had a ledger row, and a cancelled salary frees its period.
+func (q *Queries) CancelPlannedStaffPayment(ctx context.Context, arg CancelPlannedStaffPaymentParams) (StaffPayment, error) {
+	row := q.db.QueryRow(ctx, cancelPlannedStaffPayment, arg.ID, arg.OrganizationID)
+	var i StaffPayment
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.StaffID,
+		&i.Type,
+		&i.Period,
+		&i.Amount,
+		&i.Currency,
+		&i.PaidOn,
+		&i.Description,
+		&i.FinanceEntryID,
+		&i.CreatedByUserID,
+		&i.VoidedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+		&i.AccountID,
+		&i.CancelledAt,
+	)
+	return i, err
+}
+
 const countCustomerCariAccounts = `-- name: CountCustomerCariAccounts :one
 SELECT COUNT(*) FROM cari_accounts
 WHERE organization_id = $1
@@ -106,33 +148,51 @@ func (q *Queries) CountPurchases(ctx context.Context, arg CountPurchasesParams) 
 }
 
 const countStaffPayments = `-- name: CountStaffPayments :one
-SELECT COUNT(*) FROM staff_payments
-WHERE organization_id = $1
-  AND ($2::bigint IS NULL OR staff_id = $2::bigint)
-  AND ($3::text IS NULL OR period = $3::text)
-  AND ($4::varchar IS NULL OR type = $4::varchar)
-  AND ($5::boolean OR voided_at IS NULL)
+SELECT COUNT(*) AS total, COALESCE(SUM(p.amount), 0)::NUMERIC(18,2) AS amount
+FROM staff_payments p
+WHERE p.organization_id = $1
+  AND ($2::bigint IS NULL OR p.id = $2::bigint)
+  AND ($3::bigint IS NULL OR p.staff_id = $3::bigint)
+  AND ($4::text IS NULL OR p.period = $4::text)
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR p.type = ANY ($5::text[]))
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR p.status = ANY ($6::text[]))
+  AND ($7::date IS NULL OR p.paid_on >= $7::date)
+  AND ($8::date IS NULL OR p.paid_on <= $8::date)
+  AND p.voided_at IS NULL
 `
 
 type CountStaffPaymentsParams struct {
 	OrganizationID int64       `json:"organization_id"`
+	PaymentID      pgtype.Int8 `json:"payment_id"`
 	StaffID        pgtype.Int8 `json:"staff_id"`
 	Period         pgtype.Text `json:"period"`
-	Type           pgtype.Text `json:"type"`
-	IncludeVoided  bool        `json:"include_voided"`
+	Types          []string    `json:"types"`
+	Statuses       []string    `json:"statuses"`
+	PaidFrom       pgtype.Date `json:"paid_from"`
+	PaidTo         pgtype.Date `json:"paid_to"`
 }
 
-func (q *Queries) CountStaffPayments(ctx context.Context, arg CountStaffPaymentsParams) (int64, error) {
+type CountStaffPaymentsRow struct {
+	Total  int64          `json:"total"`
+	Amount pgtype.Numeric `json:"amount"`
+}
+
+// CountStaffPayments mirrors the filter of ListStaffPayments and sums the
+// matching amounts (the "upcoming payments" total of the planned view).
+func (q *Queries) CountStaffPayments(ctx context.Context, arg CountStaffPaymentsParams) (CountStaffPaymentsRow, error) {
 	row := q.db.QueryRow(ctx, countStaffPayments,
 		arg.OrganizationID,
+		arg.PaymentID,
 		arg.StaffID,
 		arg.Period,
-		arg.Type,
-		arg.IncludeVoided,
+		arg.Types,
+		arg.Statuses,
+		arg.PaidFrom,
+		arg.PaidTo,
 	)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+	var i CountStaffPaymentsRow
+	err := row.Scan(&i.Total, &i.Amount)
+	return i, err
 }
 
 const countStaffProfiles = `-- name: CountStaffProfiles :one
@@ -450,13 +510,14 @@ const createStaffPayment = `-- name: CreateStaffPayment :one
 
 INSERT INTO staff_payments (
     organization_id, brand_id, staff_id, type, period, amount, currency,
-    paid_on, description, created_by_user_id
+    paid_on, description, created_by_user_id, status, account_id
 ) VALUES (
     $1, $2, $3, $4,
     $5, $6, $7, $8,
-    $9, $10
+    $9, $10, $11,
+    $12
 )
-RETURNING id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at, status, account_id, cancelled_at
 `
 
 type CreateStaffPaymentParams struct {
@@ -470,6 +531,8 @@ type CreateStaffPaymentParams struct {
 	PaidOn          pgtype.Date    `json:"paid_on"`
 	Description     pgtype.Text    `json:"description"`
 	CreatedByUserID pgtype.Int8    `json:"created_by_user_id"`
+	Status          string         `json:"status"`
+	AccountID       pgtype.Int8    `json:"account_id"`
 }
 
 // ---------------------------------------------------------------------------
@@ -486,6 +549,8 @@ func (q *Queries) CreateStaffPayment(ctx context.Context, arg CreateStaffPayment
 		arg.PaidOn,
 		arg.Description,
 		arg.CreatedByUserID,
+		arg.Status,
+		arg.AccountID,
 	)
 	var i StaffPayment
 	err := row.Scan(
@@ -505,6 +570,9 @@ func (q *Queries) CreateStaffPayment(ctx context.Context, arg CreateStaffPayment
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
+		&i.AccountID,
+		&i.CancelledAt,
 	)
 	return i, err
 }
@@ -828,7 +896,7 @@ func (q *Queries) GetServedCustomerByUUID(ctx context.Context, arg GetServedCust
 }
 
 const getStaffPaymentByUUID = `-- name: GetStaffPaymentByUUID :one
-SELECT id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at FROM staff_payments
+SELECT id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at, status, account_id, cancelled_at FROM staff_payments
 WHERE uuid = $1 AND organization_id = $2
 `
 
@@ -857,6 +925,9 @@ func (q *Queries) GetStaffPaymentByUUID(ctx context.Context, arg GetStaffPayment
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
+		&i.AccountID,
+		&i.CancelledAt,
 	)
 	return i, err
 }
@@ -1001,6 +1072,48 @@ func (q *Queries) ListDealerProductPrices(ctx context.Context, arg ListDealerPro
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDueStaffPayments = `-- name: ListDueStaffPayments :many
+SELECT p.id, p.organization_id
+FROM staff_payments p
+JOIN organizations o ON o.id = p.organization_id
+WHERE p.status = 'planned'
+  AND p.paid_on <= ($1::timestamptz AT TIME ZONE o.timezone)::date
+ORDER BY p.paid_on, p.id
+LIMIT $2
+`
+
+type ListDueStaffPaymentsParams struct {
+	Now       pgtype.Timestamptz `json:"now"`
+	PageLimit int32              `json:"page_limit"`
+}
+
+type ListDueStaffPaymentsRow struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// ListDueStaffPayments is the scan of the posting job: planned payments
+// whose paid_on has arrived in their organization's time zone.
+func (q *Queries) ListDueStaffPayments(ctx context.Context, arg ListDueStaffPaymentsParams) ([]ListDueStaffPaymentsRow, error) {
+	rows, err := q.db.Query(ctx, listDueStaffPayments, arg.Now, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDueStaffPaymentsRow{}
+	for rows.Next() {
+		var i ListDueStaffPaymentsRow
+		if err := rows.Scan(&i.ID, &i.OrganizationID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1358,33 +1471,97 @@ func (q *Queries) ListPurchases(ctx context.Context, arg ListPurchasesParams) ([
 }
 
 const listStaffPayments = `-- name: ListStaffPayments :many
-SELECT id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at FROM staff_payments
-WHERE organization_id = $1
-  AND ($2::bigint IS NULL OR staff_id = $2::bigint)
-  AND ($3::text IS NULL OR period = $3::text)
-  AND ($4::varchar IS NULL OR type = $4::varchar)
-  AND ($5::boolean OR voided_at IS NULL)
-ORDER BY paid_on DESC, id DESC
-LIMIT $7 OFFSET $6
+SELECT p.id, p.uuid, p.organization_id, p.brand_id, p.staff_id, p.type, p.period, p.amount, p.currency, p.paid_on, p.description, p.finance_entry_id, p.created_by_user_id, p.voided_at, p.created_at, p.updated_at, p.status, p.account_id, p.cancelled_at, sp.uuid AS staff_uuid, sp.name AS staff_name, a.uuid AS account_uuid,
+       e.uuid AS finance_entry_uuid
+FROM staff_payments p
+JOIN staff_profiles sp ON sp.id = p.staff_id
+LEFT JOIN finance_accounts a ON a.id = p.account_id
+LEFT JOIN finance_entries e ON e.id = p.finance_entry_id
+WHERE p.organization_id = $1
+  AND ($2::bigint IS NULL OR p.id = $2::bigint)
+  AND ($3::bigint IS NULL OR p.staff_id = $3::bigint)
+  AND ($4::text IS NULL OR p.period = $4::text)
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR p.type = ANY ($5::text[]))
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR p.status = ANY ($6::text[]))
+  AND ($7::date IS NULL OR p.paid_on >= $7::date)
+  AND ($8::date IS NULL OR p.paid_on <= $8::date)
+  AND p.voided_at IS NULL
+ORDER BY
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'type' THEN p.type WHEN 'status' THEN p.status
+      WHEN 'period' THEN p.period::text WHEN 'staff_name' THEN sp.name END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'type' THEN p.type WHEN 'status' THEN p.status
+      WHEN 'period' THEN p.period::text WHEN 'staff_name' THEN sp.name END
+  END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'paid_on' THEN p.paid_on END ASC,
+  CASE WHEN $9::bool AND $10::text = 'paid_on' THEN p.paid_on END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'amount' THEN p.amount END ASC,
+  CASE WHEN $9::bool AND $10::text = 'amount' THEN p.amount END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'created_at' THEN p.created_at END ASC,
+  CASE WHEN $9::bool AND $10::text = 'created_at' THEN p.created_at END DESC,
+  CASE WHEN $9::bool THEN p.id END DESC,
+  p.id ASC
+LIMIT $12 OFFSET $11
 `
 
 type ListStaffPaymentsParams struct {
 	OrganizationID int64       `json:"organization_id"`
+	PaymentID      pgtype.Int8 `json:"payment_id"`
 	StaffID        pgtype.Int8 `json:"staff_id"`
 	Period         pgtype.Text `json:"period"`
-	Type           pgtype.Text `json:"type"`
-	IncludeVoided  bool        `json:"include_voided"`
+	Types          []string    `json:"types"`
+	Statuses       []string    `json:"statuses"`
+	PaidFrom       pgtype.Date `json:"paid_from"`
+	PaidTo         pgtype.Date `json:"paid_to"`
+	SortDesc       bool        `json:"sort_desc"`
+	SortKey        string      `json:"sort_key"`
 	PageOffset     int32       `json:"page_offset"`
 	PageLimit      int32       `json:"page_limit"`
 }
 
-func (q *Queries) ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]StaffPayment, error) {
+type ListStaffPaymentsRow struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	StaffID          int64              `json:"staff_id"`
+	Type             string             `json:"type"`
+	Period           string             `json:"period"`
+	Amount           pgtype.Numeric     `json:"amount"`
+	Currency         string             `json:"currency"`
+	PaidOn           pgtype.Date        `json:"paid_on"`
+	Description      pgtype.Text        `json:"description"`
+	FinanceEntryID   pgtype.Int8        `json:"finance_entry_id"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	VoidedAt         pgtype.Timestamptz `json:"voided_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Status           string             `json:"status"`
+	AccountID        pgtype.Int8        `json:"account_id"`
+	CancelledAt      pgtype.Timestamptz `json:"cancelled_at"`
+	StaffUuid        uuid.UUID          `json:"staff_uuid"`
+	StaffName        string             `json:"staff_name"`
+	AccountUuid      pgtype.UUID        `json:"account_uuid"`
+	FinanceEntryUuid pgtype.UUID        `json:"finance_entry_uuid"`
+}
+
+// ListStaffPayments: the payment history of one staff card or (staff_id
+// NULL) the book; payment_id reads one payment back after a write. Sort:
+// docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
+func (q *Queries) ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]ListStaffPaymentsRow, error) {
 	rows, err := q.db.Query(ctx, listStaffPayments,
 		arg.OrganizationID,
+		arg.PaymentID,
 		arg.StaffID,
 		arg.Period,
-		arg.Type,
-		arg.IncludeVoided,
+		arg.Types,
+		arg.Statuses,
+		arg.PaidFrom,
+		arg.PaidTo,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.PageOffset,
 		arg.PageLimit,
 	)
@@ -1392,9 +1569,9 @@ func (q *Queries) ListStaffPayments(ctx context.Context, arg ListStaffPaymentsPa
 		return nil, err
 	}
 	defer rows.Close()
-	items := []StaffPayment{}
+	items := []ListStaffPaymentsRow{}
 	for rows.Next() {
-		var i StaffPayment
+		var i ListStaffPaymentsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Uuid,
@@ -1412,6 +1589,13 @@ func (q *Queries) ListStaffPayments(ctx context.Context, arg ListStaffPaymentsPa
 			&i.VoidedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Status,
+			&i.AccountID,
+			&i.CancelledAt,
+			&i.StaffUuid,
+			&i.StaffName,
+			&i.AccountUuid,
+			&i.FinanceEntryUuid,
 		); err != nil {
 			return nil, err
 		}
@@ -1531,6 +1715,45 @@ func (q *Queries) ListSuppliers(ctx context.Context, arg ListSuppliersParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockStaffPayment = `-- name: LockStaffPayment :one
+SELECT id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at, status, account_id, cancelled_at FROM staff_payments
+WHERE id = $1 AND organization_id = $2
+FOR UPDATE
+`
+
+type LockStaffPaymentParams struct {
+	ID             int64 `json:"id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+// LockStaffPayment reads a payment for a status change (edit, cancel, post).
+func (q *Queries) LockStaffPayment(ctx context.Context, arg LockStaffPaymentParams) (StaffPayment, error) {
+	row := q.db.QueryRow(ctx, lockStaffPayment, arg.ID, arg.OrganizationID)
+	var i StaffPayment
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.StaffID,
+		&i.Type,
+		&i.Period,
+		&i.Amount,
+		&i.Currency,
+		&i.PaidOn,
+		&i.Description,
+		&i.FinanceEntryID,
+		&i.CreatedByUserID,
+		&i.VoidedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+		&i.AccountID,
+		&i.CancelledAt,
+	)
+	return i, err
 }
 
 const productSaleProfitByProduct = `-- name: ProductSaleProfitByProduct :many
@@ -1732,10 +1955,10 @@ func (q *Queries) SetServiceIncomeEntry(ctx context.Context, arg SetServiceIncom
 
 const setStaffPaymentFinanceEntry = `-- name: SetStaffPaymentFinanceEntry :one
 UPDATE staff_payments
-SET finance_entry_id = $1
+SET finance_entry_id = $1, status = 'posted'
 WHERE id = $2 AND organization_id = $3
-  AND finance_entry_id IS NULL
-RETURNING id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at
+  AND finance_entry_id IS NULL AND status IN ('planned', 'posted')
+RETURNING id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at, status, account_id, cancelled_at
 `
 
 type SetStaffPaymentFinanceEntryParams struct {
@@ -1744,6 +1967,8 @@ type SetStaffPaymentFinanceEntryParams struct {
 	OrganizationID int64       `json:"organization_id"`
 }
 
+// SetStaffPaymentFinanceEntry links the ledger row of a payment and marks
+// it posted (TEC-381: a planned payment is booked on its paid_on).
 func (q *Queries) SetStaffPaymentFinanceEntry(ctx context.Context, arg SetStaffPaymentFinanceEntryParams) (StaffPayment, error) {
 	row := q.db.QueryRow(ctx, setStaffPaymentFinanceEntry, arg.FinanceEntryID, arg.ID, arg.OrganizationID)
 	var i StaffPayment
@@ -1764,6 +1989,9 @@ func (q *Queries) SetStaffPaymentFinanceEntry(ctx context.Context, arg SetStaffP
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
+		&i.AccountID,
+		&i.CancelledAt,
 	)
 	return i, err
 }
@@ -1774,6 +2002,7 @@ FROM staff_payments
 WHERE organization_id = $1
   AND period = $2
   AND voided_at IS NULL
+  AND status <> 'cancelled'
 GROUP BY staff_id, type, currency
 ORDER BY staff_id, type
 `
@@ -1817,6 +2046,67 @@ func (q *Queries) SumStaffPaymentsByPeriod(ctx context.Context, arg SumStaffPaym
 		return nil, err
 	}
 	return items, nil
+}
+
+const updatePlannedStaffPayment = `-- name: UpdatePlannedStaffPayment :one
+UPDATE staff_payments
+SET type = $1,
+    period = $2,
+    amount = $3,
+    paid_on = $4,
+    description = $5,
+    account_id = $6
+WHERE id = $7 AND organization_id = $8
+  AND status = 'planned'
+RETURNING id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at, status, account_id, cancelled_at
+`
+
+type UpdatePlannedStaffPaymentParams struct {
+	Type           string         `json:"type"`
+	Period         string         `json:"period"`
+	Amount         pgtype.Numeric `json:"amount"`
+	PaidOn         pgtype.Date    `json:"paid_on"`
+	Description    pgtype.Text    `json:"description"`
+	AccountID      pgtype.Int8    `json:"account_id"`
+	ID             int64          `json:"id"`
+	OrganizationID int64          `json:"organization_id"`
+}
+
+// UpdatePlannedStaffPayment edits a payment that is not booked yet.
+func (q *Queries) UpdatePlannedStaffPayment(ctx context.Context, arg UpdatePlannedStaffPaymentParams) (StaffPayment, error) {
+	row := q.db.QueryRow(ctx, updatePlannedStaffPayment,
+		arg.Type,
+		arg.Period,
+		arg.Amount,
+		arg.PaidOn,
+		arg.Description,
+		arg.AccountID,
+		arg.ID,
+		arg.OrganizationID,
+	)
+	var i StaffPayment
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.StaffID,
+		&i.Type,
+		&i.Period,
+		&i.Amount,
+		&i.Currency,
+		&i.PaidOn,
+		&i.Description,
+		&i.FinanceEntryID,
+		&i.CreatedByUserID,
+		&i.VoidedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+		&i.AccountID,
+		&i.CancelledAt,
+	)
+	return i, err
 }
 
 const updateStaffProfile = `-- name: UpdateStaffProfile :one
@@ -1983,7 +2273,7 @@ UPDATE staff_payments
 SET voided_at = NOW()
 WHERE id = $1 AND organization_id = $2
   AND voided_at IS NULL
-RETURNING id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, staff_id, type, period, amount, currency, paid_on, description, finance_entry_id, created_by_user_id, voided_at, created_at, updated_at, status, account_id, cancelled_at
 `
 
 type VoidStaffPaymentParams struct {
@@ -2013,6 +2303,9 @@ func (q *Queries) VoidStaffPayment(ctx context.Context, arg VoidStaffPaymentPara
 		&i.VoidedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
+		&i.AccountID,
+		&i.CancelledAt,
 	)
 	return i, err
 }

@@ -2087,6 +2087,9 @@ type StaffPayment struct {
 	VoidedAt        pgtype.Timestamptz `json:"voided_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	Status          string             `json:"status"`
+	AccountID       pgtype.Int8        `json:"account_id"`
+	CancelledAt     pgtype.Timestamptz `json:"cancelled_at"`
 }
 
 type StaffProfile struct {

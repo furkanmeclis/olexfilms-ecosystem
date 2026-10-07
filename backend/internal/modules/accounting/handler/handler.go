@@ -28,6 +28,8 @@ const (
 	CodeCounterpartyAbsent = "COUNTERPARTY_NOT_FOUND"
 	CodeOpeningExists      = "OPENING_BALANCE_EXISTS"
 	CodeSalaryExists       = "STAFF_SALARY_EXISTS"
+	// TEC-381: a posted / cancelled payment is not edited or cancelled.
+	CodeStaffPaymentNotPlanned = "STAFF_PAYMENT_NOT_PLANNED"
 )
 
 // Handler serves accounting endpoints.
@@ -84,6 +86,11 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeRateNotFound, "No exchange rate for this currency")
 	case errors.Is(err, acc.ErrStaffSalaryExists):
 		response.Conflict(w, r, CodeSalaryExists, "Salary already exists for this staff period")
+	case errors.Is(err, acc.ErrStaffPaymentNotFound):
+		response.NotFound(w, r, "Staff payment not found")
+	case errors.Is(err, acc.ErrStaffPaymentNotPlanned):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeStaffPaymentNotPlanned,
+			"Only a planned staff payment can be changed; reverse a posted one")
 	default:
 		response.InternalErr(w, r, err, "accounting request failed")
 	}

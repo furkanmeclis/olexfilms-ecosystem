@@ -12,6 +12,8 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -24,7 +26,30 @@ const (
 	StaffPaymentBonus   = "bonus"
 
 	SourceStaffPayment = "staff_payment"
+
+	// Payment states (TEC-381): a payment dated in the future waits as
+	// planned (no ledger row) until its paid_on; cancelled is a planned
+	// payment called off.
+	StaffPaymentPlanned   = "planned"
+	StaffPaymentPosted    = "posted"
+	StaffPaymentCancelled = "cancelled"
 )
+
+// StaffPaymentStatuses lists the status filter values.
+var StaffPaymentStatuses = []string{StaffPaymentPlanned, StaffPaymentPosted, StaffPaymentCancelled}
+
+// StaffPaymentTypes lists the type filter values.
+var StaffPaymentTypes = []string{StaffPaymentSalary, StaffPaymentAdvance, StaffPaymentBonus}
+
+// StaffPaymentSortSpec is the sort whitelist of the payment lists
+// (docs/list-contract.md); newest payment day first by default.
+var StaffPaymentSortSpec = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"paid_on": "paid_on", "amount": "amount", "created_at": "created_at",
+		"type": "type", "status": "status", "period": "period", "staff_name": "staff_name",
+	},
+	Default: apiquery.SortField{Field: "paid_on", Desc: true},
+}
 
 var periodRe = regexp.MustCompile(`^[0-9]{4}-(0[1-9]|1[0-2])$`)
 
@@ -42,18 +67,24 @@ type StaffProfile struct {
 }
 
 type StaffPayment struct {
-	UUID             uuid.UUID `json:"uuid"`
-	StaffUUID        uuid.UUID `json:"staff_uuid"`
-	Type             string    `json:"type"`
-	Period           string    `json:"period"`
-	Amount           string    `json:"amount"`
-	Currency         string    `json:"currency"`
-	PaidOn           string    `json:"paid_on"`
-	Description      *string   `json:"description"`
-	TargetNote       *string   `json:"target_note"`
-	FinanceEntryUUID uuid.UUID `json:"finance_entry_uuid"`
-	PeriodAdvances   string    `json:"period_advances"`
-	CreatedAt        time.Time `json:"created_at"`
+	UUID      uuid.UUID `json:"uuid"`
+	StaffUUID uuid.UUID `json:"staff_uuid"`
+	StaffName string    `json:"staff_name"`
+	Type      string    `json:"type"`
+	Period    string    `json:"period"`
+	Amount    string    `json:"amount"`
+	Currency  string    `json:"currency"`
+	PaidOn    string    `json:"paid_on"`
+	// Status: planned (paid_on still ahead, no ledger row), posted or
+	// cancelled (TEC-381).
+	Status      string     `json:"status"`
+	AccountUUID *uuid.UUID `json:"account_uuid"`
+	Description *string    `json:"description"`
+	TargetNote  *string    `json:"target_note"`
+	// FinanceEntryUUID is the ledger row; null until the payment is posted.
+	FinanceEntryUUID *uuid.UUID `json:"finance_entry_uuid"`
+	PeriodAdvances   string     `json:"period_advances"`
+	CreatedAt        time.Time  `json:"created_at"`
 }
 
 type StaffProfileFilter struct {
@@ -93,6 +124,19 @@ type StaffPaymentInput struct {
 	PaidOn      *time.Time
 }
 
+// UpdateStaffPaymentInput edits a planned payment; nil keeps a field.
+type UpdateStaffPaymentInput struct {
+	Type             *string
+	Period           *string
+	Amount           *string
+	AccountUUID      *uuid.UUID
+	Description      *string
+	ClearDescription bool
+	TargetNote       *string
+	ClearTargetNote  bool
+	PaidOn           *time.Time
+}
+
 type PayrollResult struct {
 	Period  string         `json:"period"`
 	Created int            `json:"created"`
@@ -125,18 +169,27 @@ func staffProfileOf(r db.StaffProfile, userUUID *uuid.UUID) StaffProfile {
 	return out
 }
 
-func staffPaymentOf(r db.StaffPayment, staff db.StaffProfile, entry db.FinanceEntry, advances string) StaffPayment {
+func staffPaymentOf(r db.ListStaffPaymentsRow, advances string) StaffPayment {
 	out := StaffPayment{
-		UUID:             r.Uuid,
-		StaffUUID:        staff.Uuid,
-		Type:             r.Type,
-		Period:           r.Period,
-		Amount:           posting.FormatNumeric(r.Amount),
-		Currency:         r.Currency,
-		PaidOn:           r.PaidOn.Time.Format(time.DateOnly),
-		FinanceEntryUUID: entry.Uuid,
-		PeriodAdvances:   advances,
-		CreatedAt:        r.CreatedAt.Time,
+		UUID:           r.Uuid,
+		StaffUUID:      r.StaffUuid,
+		StaffName:      r.StaffName,
+		Type:           r.Type,
+		Period:         r.Period,
+		Amount:         posting.FormatNumeric(r.Amount),
+		Currency:       r.Currency,
+		PaidOn:         r.PaidOn.Time.Format(time.DateOnly),
+		Status:         r.Status,
+		PeriodAdvances: advances,
+		CreatedAt:      r.CreatedAt.Time,
+	}
+	if r.AccountUuid.Valid {
+		id := uuid.UUID(r.AccountUuid.Bytes)
+		out.AccountUUID = &id
+	}
+	if r.FinanceEntryUuid.Valid {
+		id := uuid.UUID(r.FinanceEntryUuid.Bytes)
+		out.FinanceEntryUUID = &id
 	}
 	if r.Description.Valid {
 		desc, target := splitPaymentDescription(r.Description.String)
@@ -301,83 +354,125 @@ func (s *Service) CreateStaffPayment(ctx context.Context, c Caller, staffUUID uu
 	return s.createStaffPayment(ctx, c, book, staff, in, false)
 }
 
+// StaffPaymentFilter filters the payment lists (docs/list-contract.md).
 type StaffPaymentFilter struct {
-	Type          *string
-	Period        *string
-	Limit, Offset int32
+	Types    []string
+	Statuses []string
+	Period   *string
+	// PaidFrom / PaidTo are payment days, both inclusive.
+	PaidFrom, PaidTo *time.Time
+	Sort             apiquery.ResolvedSort
+	Limit, Offset    int32
 }
 
-// ListStaffPayments is the payment history of one staff card (TEC-349):
-// non-void payments, newest paid_on first.
-func (s *Service) ListStaffPayments(ctx context.Context, c Caller, staffUUID uuid.UUID, f StaffPaymentFilter) ([]StaffPayment, int64, error) {
+// StaffPaymentPage is one page of a payment list with the amount total of
+// every matching payment (the "upcoming payments" sum of the planned view).
+type StaffPaymentPage struct {
+	Items       []StaffPayment
+	Total       int64
+	TotalAmount string
+	Currency    string
+}
+
+// ListStaffPayments is the payment history of one staff card (TEC-349)
+// with the status / payment day filters of TEC-381.
+func (s *Service) ListStaffPayments(ctx context.Context, c Caller, staffUUID uuid.UUID, f StaffPaymentFilter) (StaffPaymentPage, error) {
 	book, err := s.writeBook(ctx, c)
 	if err != nil {
-		return nil, 0, err
+		return StaffPaymentPage{}, err
 	}
 	staff, err := s.staffRow(ctx, book.ID, staffUUID)
 	if err != nil {
-		return nil, 0, err
+		return StaffPaymentPage{}, err
 	}
-	var typeArg, periodArg pgtype.Text
-	if f.Type != nil {
-		t, _, err := staffPaymentType(*f.Type)
-		if err != nil {
-			return nil, 0, err
-		}
-		typeArg = pgtype.Text{String: t, Valid: true}
+	return s.listStaffPayments(ctx, book, &staff.ID, f)
+}
+
+// ListBookStaffPayments lists the payments of every staff card of the book,
+// e.g. the planned payments still to go out (TEC-381).
+func (s *Service) ListBookStaffPayments(ctx context.Context, c Caller, f StaffPaymentFilter) (StaffPaymentPage, error) {
+	book, err := s.writeBook(ctx, c)
+	if err != nil {
+		return StaffPaymentPage{}, err
 	}
+	return s.listStaffPayments(ctx, book, nil, f)
+}
+
+func (s *Service) listStaffPayments(ctx context.Context, book db.Organization, staffID *int64, f StaffPaymentFilter) (StaffPaymentPage, error) {
+	var periodArg pgtype.Text
 	if f.Period != nil {
 		p, err := validPeriod(*f.Period)
 		if err != nil {
-			return nil, 0, err
+			return StaffPaymentPage{}, err
 		}
 		periodArg = pgtype.Text{String: p, Valid: true}
 	}
-	staffID := pgtype.Int8{Int64: staff.ID, Valid: true}
+	if f.PaidFrom != nil && f.PaidTo != nil && f.PaidFrom.After(*f.PaidTo) {
+		return StaffPaymentPage{}, invalid("paid_on_from", "must not be after paid_on_to")
+	}
+	sort := f.Sort
+	if sort.Key == "" {
+		sort = apiquery.ResolvedSort{Key: StaffPaymentSortSpec.Default.Field, Desc: StaffPaymentSortSpec.Default.Desc}
+	}
+	staffArg := int8PtrArg(staffID)
+	paidFrom, paidTo := dateArg(f.PaidFrom), dateArg(f.PaidTo)
 	rows, err := s.q.ListStaffPayments(ctx, db.ListStaffPaymentsParams{
 		OrganizationID: book.ID,
-		StaffID:        staffID,
+		StaffID:        staffArg,
 		Period:         periodArg,
-		Type:           typeArg,
+		Types:          f.Types,
+		Statuses:       f.Statuses,
+		PaidFrom:       paidFrom,
+		PaidTo:         paidTo,
+		SortKey:        sort.Key,
+		SortDesc:       sort.Desc,
 		PageLimit:      f.Limit,
 		PageOffset:     f.Offset,
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("accounting: list staff payments: %w", err)
+		return StaffPaymentPage{}, fmt.Errorf("accounting: list staff payments: %w", err)
 	}
-	total, err := s.q.CountStaffPayments(ctx, db.CountStaffPaymentsParams{
+	count, err := s.q.CountStaffPayments(ctx, db.CountStaffPaymentsParams{
 		OrganizationID: book.ID,
-		StaffID:        staffID,
+		StaffID:        staffArg,
 		Period:         periodArg,
-		Type:           typeArg,
+		Types:          f.Types,
+		Statuses:       f.Statuses,
+		PaidFrom:       paidFrom,
+		PaidTo:         paidTo,
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("accounting: count staff payments: %w", err)
+		return StaffPaymentPage{}, fmt.Errorf("accounting: count staff payments: %w", err)
 	}
-	advances := map[string]string{}
-	out := make([]StaffPayment, 0, len(rows))
+	type staffPeriod struct {
+		staff  int64
+		period string
+	}
+	advances := map[staffPeriod]string{}
+	out := StaffPaymentPage{
+		Items: make([]StaffPayment, 0, len(rows)), Total: count.Total,
+		TotalAmount: moneyText(count.Amount), Currency: book.Currency,
+	}
 	for _, r := range rows {
-		var entry db.FinanceEntry
-		if r.FinanceEntryID.Valid {
-			entry, err = s.q.GetFinanceEntry(ctx, db.GetFinanceEntryParams{ID: r.FinanceEntryID.Int64, OrganizationID: book.ID})
-			if err != nil {
-				return nil, 0, fmt.Errorf("accounting: staff payment entry: %w", err)
-			}
-		}
-		adv, ok := advances[r.Period]
+		key := staffPeriod{r.StaffID, r.Period}
+		adv, ok := advances[key]
 		if !ok {
-			adv, err = s.periodAdvanceTotal(ctx, book.ID, staff.ID, r.Period)
+			adv, err = s.periodAdvanceTotal(ctx, book.ID, r.StaffID, r.Period)
 			if err != nil {
-				return nil, 0, err
+				return StaffPaymentPage{}, err
 			}
-			advances[r.Period] = adv
+			advances[key] = adv
 		}
-		out = append(out, staffPaymentOf(r, staff, entry, adv))
+		out.Items = append(out.Items, staffPaymentOf(r, adv))
 	}
-	return out, total, nil
+	return out, nil
 }
 
-func (s *Service) RunPayroll(ctx context.Context, c Caller, period string) (PayrollResult, error) {
+// RunPayroll writes the salary of every active staff card for a period.
+// paidOn (nil: today in the organization's time zone) is the payment day:
+// a future day writes planned salaries that are booked on that day
+// (TEC-381).
+func (s *Service) RunPayroll(ctx context.Context, c Caller, period string, paidOn *time.Time) (PayrollResult, error) {
 	book, err := s.writeBook(ctx, c)
 	if err != nil {
 		return PayrollResult{}, err
@@ -405,6 +500,7 @@ func (s *Service) RunPayroll(ctx context.Context, c Caller, period string) (Payr
 			Type:   StaffPaymentSalary,
 			Period: period,
 			Amount: &amount,
+			PaidOn: paidOn,
 		}, true)
 		switch {
 		case err == nil:
@@ -427,7 +523,7 @@ func (s *Service) createStaffPayment(
 	in StaffPaymentInput,
 	allowTargetless bool,
 ) (StaffPayment, error) {
-	paymentType, category, err := staffPaymentType(in.Type)
+	paymentType, _, err := staffPaymentType(in.Type)
 	if err != nil {
 		return StaffPayment{}, err
 	}
@@ -456,29 +552,27 @@ func (s *Service) createStaffPayment(
 	if err != nil {
 		return StaffPayment{}, err
 	}
-	var accountID int64
+	var accountID pgtype.Int8
 	if in.AccountUUID != nil {
-		a, err := s.q.GetFinanceAccountByUUID(ctx, *in.AccountUUID)
-		if errors.Is(err, pgx.ErrNoRows) || (err == nil && a.OrganizationID != book.ID) {
-			return StaffPayment{}, ErrAccountNotFound
-		}
+		accountID, err = s.paymentAccount(ctx, book, *in.AccountUUID)
 		if err != nil {
-			return StaffPayment{}, fmt.Errorf("accounting: account: %w", err)
+			return StaffPayment{}, err
 		}
-		if !a.Active {
-			return StaffPayment{}, invalid("account_uuid", "the account is inactive")
-		}
-		accountID = a.ID
 	} else if !allowTargetless {
 		return StaffPayment{}, invalid("account_uuid", "is required")
 	}
-	paidOn := time.Now().UTC()
+	now := s.clock()
+	today := bookToday(book, now)
+	paidOn := today
 	if in.PaidOn != nil {
-		paidOn = *in.PaidOn
+		paidOn = dayStart(*in.PaidOn)
+	}
+	status := StaffPaymentPosted
+	if paidOn.After(today) {
+		status = StaffPaymentPlanned
 	}
 
 	var payment db.StaffPayment
-	var entry db.FinanceEntry
 	err = s.inTx(ctx, func(tx pgx.Tx) error {
 		qtx := s.q.WithTx(tx)
 		payment, err = qtx.CreateStaffPayment(ctx, db.CreateStaffPaymentParams{
@@ -492,43 +586,291 @@ func (s *Service) createStaffPayment(
 			PaidOn:          pgtype.Date{Time: paidOn, Valid: true},
 			Description:     textArg(&desc),
 			CreatedByUserID: int8PtrArg(c.actor()),
+			Status:          status,
+			AccountID:       accountID,
 		})
 		if err != nil {
 			return staffPaymentCreateErr(err)
 		}
-		res, err := s.poster.PostExpense(ctx, tx, posting.Entry{
-			OrganizationID: book.ID,
-			Source:         posting.Source{Type: SourceStaffPayment, UUID: payment.Uuid},
-			Category:       category,
-			Amount:         posting.FormatNumeric(payment.Amount),
-			Currency:       payment.Currency,
-			AccountID:      accountID,
-			AllowNoTarget:  allowTargetless && accountID == 0,
-			Description:    desc,
-			ActorUserID:    c.actor(),
-		})
-		if err != nil {
-			return postingErr(err)
-		}
-		entry = res.Entry
-		payment, err = qtx.SetStaffPaymentFinanceEntry(ctx, db.SetStaffPaymentFinanceEntryParams{
-			FinanceEntryID: pgtype.Int8{Int64: entry.ID, Valid: true},
-			ID:             payment.ID,
-			OrganizationID: book.ID,
-		})
-		if err != nil {
-			return fmt.Errorf("accounting: link staff payment: %w", err)
+		if status == StaffPaymentPosted {
+			return s.postStaffPayment(ctx, tx, payment, c.actor(), now)
 		}
 		return nil
 	})
 	if err != nil {
 		return StaffPayment{}, err
 	}
-	advances, err := s.periodAdvanceTotal(ctx, book.ID, staff.ID, period)
+	return s.staffPaymentView(ctx, book.ID, payment.ID)
+}
+
+// UpdateStaffPayment edits a planned payment (TEC-381). When the new paid_on
+// is today or past it is booked at once on that day; a posted payment is
+// only undone by a reversal (ErrStaffPaymentNotPlanned).
+func (s *Service) UpdateStaffPayment(ctx context.Context, c Caller, id uuid.UUID, in UpdateStaffPaymentInput) (StaffPayment, error) {
+	book, err := s.writeBook(ctx, c)
 	if err != nil {
 		return StaffPayment{}, err
 	}
-	return staffPaymentOf(payment, staff, entry, advances), nil
+	cur, err := s.staffPaymentRow(ctx, book.ID, id)
+	if err != nil {
+		return StaffPayment{}, err
+	}
+	if cur.Status != StaffPaymentPlanned {
+		return StaffPayment{}, ErrStaffPaymentNotPlanned
+	}
+	arg := db.UpdatePlannedStaffPaymentParams{ID: cur.ID, OrganizationID: book.ID}
+	typ := cur.Type
+	if in.Type != nil {
+		typ = *in.Type
+	}
+	if arg.Type, _, err = staffPaymentType(typ); err != nil {
+		return StaffPayment{}, err
+	}
+	period := cur.Period
+	if in.Period != nil {
+		period = *in.Period
+	}
+	if arg.Period, err = validPeriod(period); err != nil {
+		return StaffPayment{}, err
+	}
+	arg.Amount = cur.Amount
+	if in.Amount != nil {
+		if arg.Amount, err = requiredMoney("amount", *in.Amount); err != nil {
+			return StaffPayment{}, err
+		}
+	}
+	arg.AccountID = cur.AccountID
+	if in.AccountUUID != nil {
+		if arg.AccountID, err = s.paymentAccount(ctx, book, *in.AccountUUID); err != nil {
+			return StaffPayment{}, err
+		}
+	}
+	desc, target := "", ""
+	if cur.Description.Valid {
+		desc, target = splitPaymentDescription(cur.Description.String)
+	}
+	switch {
+	case in.ClearDescription:
+		desc = ""
+	case in.Description != nil:
+		desc = *in.Description
+	}
+	switch {
+	case in.ClearTargetNote:
+		target = ""
+	case in.TargetNote != nil:
+		target = *in.TargetNote
+	}
+	combined, err := staffPaymentDescription(&desc, &target)
+	if err != nil {
+		return StaffPayment{}, err
+	}
+	arg.Description = textArg(&combined)
+	arg.PaidOn = cur.PaidOn
+	if in.PaidOn != nil {
+		arg.PaidOn = pgtype.Date{Time: dayStart(*in.PaidOn), Valid: true}
+	}
+	now := s.clock()
+	err = s.inTx(ctx, func(tx pgx.Tx) error {
+		qtx := s.q.WithTx(tx)
+		locked, err := qtx.LockStaffPayment(ctx, db.LockStaffPaymentParams{ID: cur.ID, OrganizationID: book.ID})
+		if err != nil {
+			return fmt.Errorf("accounting: lock staff payment: %w", err)
+		}
+		if locked.Status != StaffPaymentPlanned || locked.VoidedAt.Valid {
+			return ErrStaffPaymentNotPlanned
+		}
+		updated, err := qtx.UpdatePlannedStaffPayment(ctx, arg)
+		if err != nil {
+			return staffPaymentCreateErr(err)
+		}
+		if !updated.PaidOn.Time.After(bookToday(book, now)) {
+			return s.postStaffPayment(ctx, tx, updated, c.actor(), now)
+		}
+		return nil
+	})
+	if err != nil {
+		return StaffPayment{}, err
+	}
+	return s.staffPaymentView(ctx, book.ID, cur.ID)
+}
+
+// CancelStaffPayment calls off a planned payment; it never reached the
+// ledger, so nothing is reversed (TEC-381).
+func (s *Service) CancelStaffPayment(ctx context.Context, c Caller, id uuid.UUID) (StaffPayment, error) {
+	book, err := s.writeBook(ctx, c)
+	if err != nil {
+		return StaffPayment{}, err
+	}
+	cur, err := s.staffPaymentRow(ctx, book.ID, id)
+	if err != nil {
+		return StaffPayment{}, err
+	}
+	_, err = s.q.CancelPlannedStaffPayment(ctx, db.CancelPlannedStaffPaymentParams{ID: cur.ID, OrganizationID: book.ID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return StaffPayment{}, ErrStaffPaymentNotPlanned
+	}
+	if err != nil {
+		return StaffPayment{}, fmt.Errorf("accounting: cancel staff payment: %w", err)
+	}
+	return s.staffPaymentView(ctx, book.ID, cur.ID)
+}
+
+// dueStaffPaymentBatch bounds one pass of the posting job; the next hourly
+// run picks up the rest.
+const dueStaffPaymentBatch = 500
+
+// PostDueStaffPayments books the planned payments whose paid_on has arrived
+// in their organization's time zone (worker-core, TEC-381). Each payment is
+// locked and re-checked in its own transaction and the ledger write is
+// source-keyed, so a second run writes nothing. It returns the number of
+// payments booked.
+func (s *Service) PostDueStaffPayments(ctx context.Context) (int, error) {
+	now := s.clock()
+	due, err := s.q.ListDueStaffPayments(ctx, db.ListDueStaffPaymentsParams{
+		Now:       pgtype.Timestamptz{Time: now, Valid: true},
+		PageLimit: dueStaffPaymentBatch,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("accounting: due staff payments: %w", err)
+	}
+	posted := 0
+	var errs []error
+	for _, d := range due {
+		done := false
+		err := s.inTx(ctx, func(tx pgx.Tx) error {
+			p, err := s.q.WithTx(tx).LockStaffPayment(ctx, db.LockStaffPaymentParams(d))
+			if err != nil {
+				return fmt.Errorf("accounting: lock staff payment: %w", err)
+			}
+			if p.Status != StaffPaymentPlanned || p.VoidedAt.Valid {
+				return nil
+			}
+			done = true
+			return s.postStaffPayment(ctx, tx, p, nil, now)
+		})
+		if err != nil {
+			errs = append(errs, fmt.Errorf("staff payment %d: %w", d.ID, err))
+			continue
+		}
+		if done {
+			posted++
+		}
+	}
+	return posted, errors.Join(errs...)
+}
+
+// PostDueStaffPaymentsTask is the worker-core task body.
+func (s *Service) PostDueStaffPaymentsTask(ctx context.Context) error {
+	_, err := s.PostDueStaffPayments(ctx)
+	return err
+}
+
+// postStaffPayment writes the expense row of a payment on its paid_on and
+// marks it posted. Payroll rows without an account are the targetless
+// staff_payment rows of 000097.
+func (s *Service) postStaffPayment(ctx context.Context, tx pgx.Tx, p db.StaffPayment, actor *int64, now time.Time) error {
+	_, category, err := staffPaymentType(p.Type)
+	if err != nil {
+		return err
+	}
+	desc := ""
+	if p.Description.Valid {
+		desc = p.Description.String
+	}
+	res, err := s.poster.PostExpense(ctx, tx, posting.Entry{
+		OrganizationID: p.OrganizationID,
+		Source:         posting.Source{Type: SourceStaffPayment, UUID: p.Uuid},
+		Category:       category,
+		Amount:         posting.FormatNumeric(p.Amount),
+		Currency:       p.Currency,
+		AccountID:      p.AccountID.Int64,
+		AllowNoTarget:  !p.AccountID.Valid,
+		Description:    desc,
+		ActorUserID:    actor,
+		PostedAt:       ledgerTime(p.PaidOn.Time, now),
+	})
+	if err != nil {
+		return postingErr(err)
+	}
+	if _, err := s.q.WithTx(tx).SetStaffPaymentFinanceEntry(ctx, db.SetStaffPaymentFinanceEntryParams{
+		FinanceEntryID: pgtype.Int8{Int64: res.Entry.ID, Valid: true},
+		ID:             p.ID,
+		OrganizationID: p.OrganizationID,
+	}); err != nil {
+		return fmt.Errorf("accounting: link staff payment: %w", err)
+	}
+	return nil
+}
+
+// ledgerTime places a payment's ledger row on its paid_on (the reports
+// read UTC calendar days): now when paid_on is today (UTC), else the start
+// of that day.
+func ledgerTime(paidOn, now time.Time) time.Time {
+	day := dayStart(paidOn)
+	if dayStart(now.UTC()).Equal(day) {
+		return now
+	}
+	return day
+}
+
+// bookToday is today's date in the organization's time zone, as a UTC
+// midnight like the parsed paid_on dates.
+func bookToday(book db.Organization, now time.Time) time.Time {
+	loc, err := time.LoadLocation(book.Timezone)
+	if err != nil || book.Timezone == "" {
+		loc, _ = time.LoadLocation(i18n.DefaultTimezone)
+	}
+	if loc == nil {
+		loc = time.UTC
+	}
+	return dayStart(now.In(loc))
+}
+
+func (s *Service) paymentAccount(ctx context.Context, book db.Organization, id uuid.UUID) (pgtype.Int8, error) {
+	a, err := s.q.GetFinanceAccountByUUID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && a.OrganizationID != book.ID) {
+		return pgtype.Int8{}, ErrAccountNotFound
+	}
+	if err != nil {
+		return pgtype.Int8{}, fmt.Errorf("accounting: account: %w", err)
+	}
+	if !a.Active {
+		return pgtype.Int8{}, invalid("account_uuid", "the account is inactive")
+	}
+	return pgtype.Int8{Int64: a.ID, Valid: true}, nil
+}
+
+func (s *Service) staffPaymentRow(ctx context.Context, orgID int64, id uuid.UUID) (db.StaffPayment, error) {
+	row, err := s.q.GetStaffPaymentByUUID(ctx, db.GetStaffPaymentByUUIDParams{Uuid: id, OrganizationID: orgID})
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && row.VoidedAt.Valid) {
+		return db.StaffPayment{}, ErrStaffPaymentNotFound
+	}
+	if err != nil {
+		return db.StaffPayment{}, fmt.Errorf("accounting: staff payment: %w", err)
+	}
+	return row, nil
+}
+
+// staffPaymentView reads one payment back in its API shape.
+func (s *Service) staffPaymentView(ctx context.Context, orgID, id int64) (StaffPayment, error) {
+	rows, err := s.q.ListStaffPayments(ctx, db.ListStaffPaymentsParams{
+		OrganizationID: orgID,
+		PaymentID:      pgtype.Int8{Int64: id, Valid: true},
+		SortKey:        "paid_on",
+		PageLimit:      1,
+	})
+	if err != nil {
+		return StaffPayment{}, fmt.Errorf("accounting: staff payment view: %w", err)
+	}
+	if len(rows) == 0 {
+		return StaffPayment{}, ErrStaffPaymentNotFound
+	}
+	adv, err := s.periodAdvanceTotal(ctx, orgID, rows[0].StaffID, rows[0].Period)
+	if err != nil {
+		return StaffPayment{}, err
+	}
+	return staffPaymentOf(rows[0], adv), nil
 }
 
 func (s *Service) staffRow(ctx context.Context, orgID int64, id uuid.UUID) (db.StaffProfile, error) {

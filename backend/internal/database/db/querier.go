@@ -54,6 +54,9 @@ type Querier interface {
 	// remote hub, so their remote-sourced fields are locked in the panel.
 	BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error)
 	CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error)
+	// CancelPlannedStaffPayment cancels a payment that is not booked yet; it
+	// never had a ledger row, and a cancelled salary frees its period.
+	CancelPlannedStaffPayment(ctx context.Context, arg CancelPlannedStaffPaymentParams) (StaffPayment, error)
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockCount(ctx context.Context, id int64) (StockCount, error)
 	CancelStockEntry(ctx context.Context, id int64) (StockEntry, error)
@@ -199,7 +202,9 @@ type Querier interface {
 	CountServiceSubscriptionsPage(ctx context.Context, arg CountServiceSubscriptionsPageParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
-	CountStaffPayments(ctx context.Context, arg CountStaffPaymentsParams) (int64, error)
+	// CountStaffPayments mirrors the filter of ListStaffPayments and sums the
+	// matching amounts (the "upcoming payments" total of the planned view).
+	CountStaffPayments(ctx context.Context, arg CountStaffPaymentsParams) (CountStaffPaymentsRow, error)
 	CountStaffProfiles(ctx context.Context, arg CountStaffProfilesParams) (int64, error)
 	CountStockCountScans(ctx context.Context, countID int64) (int64, error)
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
@@ -1279,6 +1284,9 @@ type Querier interface {
 	// Secondary order keeps the catalog grouping (kind, brand, language, version DESC).
 	ListDocumentTemplates(ctx context.Context, arg ListDocumentTemplatesParams) ([]ListDocumentTemplatesRow, error)
 	ListDueQuoteReminders(ctx context.Context, arg ListDueQuoteRemindersParams) ([]QuoteReminder, error)
+	// ListDueStaffPayments is the scan of the posting job: planned payments
+	// whose paid_on has arrived in their organization's time zone.
+	ListDueStaffPayments(ctx context.Context, arg ListDueStaffPaymentsParams) ([]ListDueStaffPaymentsRow, error)
 	// The organizations the cron reports on: active centers and distributors
 	// with at least one active warehouse.
 	ListEODReportOrganizations(ctx context.Context) ([]ListEODReportOrganizationsRow, error)
@@ -1703,10 +1711,13 @@ type Querier interface {
 	ListServicesInScope(ctx context.Context, arg ListServicesInScopeParams) ([]Service, error)
 	ListSharedKeys(ctx context.Context, keys []string) ([]string, error)
 	// ListStaffCostTotals is the salary/advance/bonus total per staff card of
-	// the book over the non-void payments paid in the period (paid_on, both
-	// days inclusive).
+	// the book over the non-void booked payments paid in the period (paid_on,
+	// both days inclusive). Planned payments are not costs yet (TEC-381).
 	ListStaffCostTotals(ctx context.Context, arg ListStaffCostTotalsParams) ([]ListStaffCostTotalsRow, error)
-	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]StaffPayment, error)
+	// ListStaffPayments: the payment history of one staff card or (staff_id
+	// NULL) the book; payment_id reads one payment back after a write. Sort:
+	// docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
+	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]ListStaffPaymentsRow, error)
 	ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error)
 	ListStockCountLines(ctx context.Context, countID int64) ([]StockCountLine, error)
 	ListStockCountProducts(ctx context.Context, ids []int64) ([]ListStockCountProductsRow, error)
@@ -1967,6 +1978,8 @@ type Querier interface {
 	// completions sharing a unit).
 	LockServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
 	LockServiceSubscription(ctx context.Context, arg LockServiceSubscriptionParams) (ServiceSubscription, error)
+	// LockStaffPayment reads a payment for a status change (edit, cancel, post).
+	LockStaffPayment(ctx context.Context, arg LockStaffPaymentParams) (StaffPayment, error)
 	LockStockCountByUUID(ctx context.Context, arg LockStockCountByUUIDParams) (StockCount, error)
 	LockStockEntryByUUID(ctx context.Context, arg LockStockEntryByUUIDParams) (StockEntry, error)
 	LockStockImportBatch(ctx context.Context, id int64) (StockImportBatch, error)
@@ -2466,6 +2479,8 @@ type Querier interface {
 	SetServiceSubscriptionContract(ctx context.Context, arg SetServiceSubscriptionContractParams) (ServiceSubscription, error)
 	SetServiceSubscriptionStatus(ctx context.Context, arg SetServiceSubscriptionStatusParams) (ServiceSubscription, error)
 	SetServiceWarrantyClaim(ctx context.Context, arg SetServiceWarrantyClaimParams) (SetServiceWarrantyClaimRow, error)
+	// SetStaffPaymentFinanceEntry links the ledger row of a payment and marks
+	// it posted (TEC-381: a planned payment is booked on its paid_on).
 	SetStaffPaymentFinanceEntry(ctx context.Context, arg SetStaffPaymentFinanceEntryParams) (StaffPayment, error)
 	SetStockEntryLineLocation(ctx context.Context, arg SetStockEntryLineLocationParams) (int64, error)
 	SetStockEntryLineMovements(ctx context.Context, arg SetStockEntryLineMovementsParams) error
@@ -2596,6 +2611,8 @@ type Querier interface {
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
+	// UpdatePlannedStaffPayment edits a payment that is not booked yet.
+	UpdatePlannedStaffPayment(ctx context.Context, arg UpdatePlannedStaffPaymentParams) (StaffPayment, error)
 	UpdatePlateFormat(ctx context.Context, arg UpdatePlateFormatParams) (PlateFormat, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	// The F2 sync columns are not touched here.

@@ -114,6 +114,10 @@ func RegisterRoutes(
 	// TEC-349: payment history of a staff card.
 	mux.Handle("GET /v1/staff-profiles/{uuid}/payments", staffManage(h.ListStaffPayments))
 	mux.Handle("POST /v1/staff-payments/payroll", staffPayments(h.RunPayroll))
+	// TEC-381: planned payments (paid_on ahead): book-wide list, edit, cancel.
+	mux.Handle("GET /v1/staff-payments", staffManage(h.ListBookStaffPayments))
+	mux.Handle("PATCH /v1/staff-payments/{uuid}", staffPayments(h.UpdateStaffPayment))
+	mux.Handle("POST /v1/staff-payments/{uuid}/cancel", staffPayments(h.CancelStaffPayment))
 
 	// TEC-346: reports of the active organization's own book (no subtree)
 	// and their export jobs (read scope, like the balance report).
