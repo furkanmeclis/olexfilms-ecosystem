@@ -163,6 +163,7 @@ import (
 	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	whatsapphandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/handler"
+	wapipeline "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/pipeline"
 	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
@@ -893,6 +894,25 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Outbox: outbox.NewStore(deps.DB, deps.Queries), Log: log,
 	})
 	aimodule.RegisterRoutes(mux, s.aiChat, tokens, loader, deps.Queries)
+	// TEC-396 (F4-02c): WhatsApp AI pipeline. whatsapp.message.received arms
+	// the debounced whatsapp:ai_reply task; the in-process worker runs it
+	// here, worker-core in production (cmd/worker).
+	if deps.Queue != nil {
+		wapipeline.RegisterEventHandlers(eventBus, queue.WhatsAppAIEnqueuer{Client: deps.Queue}, log)
+	}
+	if s.worker != nil {
+		var waMedia llm.ObjectReader
+		if deps.Storage != nil {
+			waMedia = deps.Storage
+		}
+		s.worker.WithWhatsAppAIReply(wapipeline.Wire(wapipeline.WireDeps{
+			Queries: deps.Queries, AIStore: airepo.New(deps.DB), Chat: s.aiChat, Actions: s.aiActions,
+			Messaging: s.waMessaging, Provider: aiProvider, Models: llm.ModelsFromConfig(cfg.AI),
+			Access: uc, Features: featureSvc, Settings: sysSvc, Redis: deps.Redis, Env: cfg.App.Env,
+			Notifier: notifSvc, Media: waMedia, Downloader: waSvc.MediaDownloader(),
+			DefaultBrandSlug: cfg.App.DefaultBrandSlug, Log: log,
+		}).Process)
+	}
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
