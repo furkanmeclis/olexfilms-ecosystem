@@ -2651,6 +2651,11 @@ type Querier interface {
 	ReleaseReservationsByOrder(ctx context.Context, orderID int64) (int64, error)
 	ReleaseStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	RemoveUserRoleBySlug(ctx context.Context, arg RemoveUserRoleBySlugParams) error
+	// TEC-462: a platform super admin manually reopens a closed claim. The
+	// completed/cancelled re-application service history stays on the service and
+	// finance rows; the active reapply pointer is cleared so a new attempt can be
+	// opened later.
+	ReopenWarrantyClaim(ctx context.Context, arg ReopenWarrantyClaimParams) (WarrantyClaim, error)
 	// Optimistic replacement of the image list: no row when another request
 	// changed the list since it was read (expected).
 	ReplaceProductImages(ctx context.Context, arg ReplaceProductImagesParams) (Product, error)

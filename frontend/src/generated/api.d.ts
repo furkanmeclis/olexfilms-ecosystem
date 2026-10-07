@@ -10017,6 +10017,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranty-claims/{uuid}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reopen a closed warranty claim
+         * @description TEC-462. Only platform super admins may move a closed claim back to approved. The reason is required and stored in the claim timeline as `reopened`; existing accounting rows and reversals are not changed. Non-super-admin roles receive 403, and non-closed claims return 409.
+         */
+        post: operations["reopenWarrantyClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warranty-claims/{uuid}/ai-triage": {
         parameters: {
             query?: never;
@@ -19880,6 +19900,9 @@ export interface components {
             status: components["schemas"]["WarrantyClaimStatus"];
             rejection_reason?: string;
         };
+        WarrantyClaimReopenInput: {
+            reason: string;
+        };
         WarrantyClaimPart: {
             /** Format: uuid */
             uuid: string;
@@ -19944,7 +19967,7 @@ export interface components {
             /** Format: uuid */
             uuid: string;
             /** @enum {string} */
-            event_type: "created" | "status_changed" | "note" | "part_added" | "photo_added" | "ai_triaged" | "reapply_linked";
+            event_type: "created" | "status_changed" | "note" | "part_added" | "photo_added" | "ai_triaged" | "reapply_linked" | "reopened";
             from_status?: components["schemas"]["WarrantyClaimStatus"];
             to_status?: components["schemas"]["WarrantyClaimStatus"];
             /** @description Rejection reason of a rejected status change, or the note text. */
@@ -41163,6 +41186,38 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    reopenWarrantyClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarrantyClaimReopenInput"];
+            };
+        };
+        responses: {
+            /** @description Reopened warranty claim */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaim"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     retriggerWarrantyClaimAITriage: {

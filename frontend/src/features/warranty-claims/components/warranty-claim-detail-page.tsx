@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Check,
+  RotateCcw,
   Send,
   ShieldAlert,
   Sparkles,
@@ -29,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Permission } from "@/config/permissions";
+import { Permission, Role } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { isKnownPart } from "@/features/services/lib/car-parts";
 import { ClaimPhotoPicker } from "@/features/warranty-claims/components/claim-photo-picker";
@@ -50,6 +51,7 @@ import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
 export const REJECTION_REASON_MAX = 5000;
+export const REOPEN_REASON_MAX = 5000;
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -145,6 +147,62 @@ function RejectDialog({
   );
 }
 
+function ReopenDialog({
+  open,
+  onOpenChange,
+  pending,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  pending: boolean;
+  onConfirm: (reason: string) => void;
+}) {
+  const { t } = useLocale();
+  const [reason, setReason] = useState("");
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("warranty.claims.reopen.title")}</DialogTitle>
+          <DialogDescription>
+            {t("warranty.claims.reopen.description")}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5">
+          <Label htmlFor="claim-reopen-reason">
+            {t("warranty.claims.reopen.reason")}
+          </Label>
+          <Textarea
+            id="claim-reopen-reason"
+            value={reason}
+            rows={4}
+            maxLength={REOPEN_REASON_MAX}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            {t("warranty.claims.cancel")}
+          </Button>
+          <Button
+            type="button"
+            data-testid="claim-reopen-confirm"
+            disabled={reason.trim() === "" || pending}
+            onClick={() => onConfirm(reason.trim())}
+          >
+            {t("warranty.claims.actions.reopen")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /**
  * Tenant > Warranty claims > detail (TEC-339): coverage warning band,
  * description and parts, photo gallery, event timeline, AI triage fields
@@ -161,11 +219,12 @@ export function WarrantyClaimDetailPage({
   uuid: string;
 }) {
   const { t, format } = useLocale();
-  const { can } = usePermission();
+  const { can, hasRole } = usePermission();
   const org = useActiveOrganization(slug);
   const qc = useQueryClient();
   const canRead = can(Permission.WarrantyClaimsRead);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
   const [newPhotos, setNewPhotos] = useState<File[]>([]);
 
   const detail = useQuery({
@@ -197,6 +256,17 @@ export function WarrantyClaimDetailPage({
       );
     },
   });
+  const reopen = useMutation({
+    mutationFn: (reason: string) => claimsService.reopen(uuid, reason),
+    onSuccess: (updated) => {
+      onUpdated(updated);
+      setReopenOpen(false);
+      toast.success(t("warranty.claims.toast.reopened"));
+    },
+    onError: () => {
+      toast.error(t("warranty.claims.toast.reopen_error"));
+    },
+  });
   const upload = useMutation({
     mutationFn: async (files: File[]) => {
       for (const file of files) await claimsService.addPhoto(uuid, file);
@@ -224,11 +294,12 @@ export function WarrantyClaimDetailPage({
           write: can(Permission.WarrantyClaimsWrite),
           review: can(Permission.WarrantyClaimsReview),
           decide: can(Permission.WarrantyClaimsDecide),
+          superAdmin: hasRole(Role.SuperAdmin),
         },
         org?.type,
       )
     : null;
-  const busy = transition.isPending || upload.isPending;
+  const busy = transition.isPending || upload.isPending || reopen.isPending;
   const photoCount = c?.photos?.length ?? 0;
 
   const header = (
@@ -288,6 +359,18 @@ export function WarrantyClaimDetailPage({
                   {t("warranty.claims.actions.reject")}
                 </Button>
               </>
+            ) : null}
+            {actions.reopen ? (
+              <Button
+                type="button"
+                variant="outline"
+                data-testid="claim-reopen"
+                disabled={busy}
+                onClick={() => setReopenOpen(true)}
+              >
+                <RotateCcw className="size-4" />
+                {t("warranty.claims.actions.reopen")}
+              </Button>
             ) : null}
           </div>
         ) : null
@@ -611,6 +694,14 @@ export function WarrantyClaimDetailPage({
           onConfirm={(reason) =>
             transition.mutate({ status: "rejected", reason })
           }
+        />
+      ) : null}
+      {actions?.reopen ? (
+        <ReopenDialog
+          open={reopenOpen}
+          onOpenChange={setReopenOpen}
+          pending={reopen.isPending}
+          onConfirm={(reason) => reopen.mutate(reason)}
         />
       ) : null}
     </div>

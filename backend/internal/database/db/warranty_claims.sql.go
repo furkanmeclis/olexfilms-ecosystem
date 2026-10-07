@@ -14,10 +14,10 @@ import (
 
 const addWarrantyClaimEvent = `-- name: AddWarrantyClaimEvent :one
 INSERT INTO warranty_claim_events (
-    claim_id, organization_id, brand_id, event_type, note, payload, actor_user_id
+    claim_id, organization_id, brand_id, event_type, from_status, to_status, note, payload, actor_user_id
 ) VALUES (
     $1, $2, $3, $4,
-    $5, $6, $7
+    $5, $6, $7, $8, $9
 )
 RETURNING id, uuid, claim_id, organization_id, brand_id, event_type, from_status, to_status, note, payload, actor_user_id, created_at
 `
@@ -27,6 +27,8 @@ type AddWarrantyClaimEventParams struct {
 	OrganizationID int64       `json:"organization_id"`
 	BrandID        int64       `json:"brand_id"`
 	EventType      string      `json:"event_type"`
+	FromStatus     pgtype.Text `json:"from_status"`
+	ToStatus       pgtype.Text `json:"to_status"`
 	Note           pgtype.Text `json:"note"`
 	Payload        []byte      `json:"payload"`
 	ActorUserID    pgtype.Int8 `json:"actor_user_id"`
@@ -38,6 +40,8 @@ func (q *Queries) AddWarrantyClaimEvent(ctx context.Context, arg AddWarrantyClai
 		arg.OrganizationID,
 		arg.BrandID,
 		arg.EventType,
+		arg.FromStatus,
+		arg.ToStatus,
 		arg.Note,
 		arg.Payload,
 		arg.ActorUserID,
@@ -1461,6 +1465,63 @@ func (q *Queries) ListWarrantyReapplyItemCosts(ctx context.Context, arg ListWarr
 		return nil, err
 	}
 	return items, nil
+}
+
+const reopenWarrantyClaim = `-- name: ReopenWarrantyClaim :one
+UPDATE warranty_claims
+SET reapply_service_id = NULL,
+    status             = 'approved',
+    decided_at         = COALESCE(decided_at, NOW()),
+    decided_by_user_id = COALESCE(decided_by_user_id, $1::bigint),
+    closed_at          = NULL,
+    updated_by_user_id = $1::bigint
+WHERE id = $2
+  AND brand_id = $3
+  AND status = 'closed'
+RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at
+`
+
+type ReopenWarrantyClaimParams struct {
+	ActorUserID pgtype.Int8 `json:"actor_user_id"`
+	ID          int64       `json:"id"`
+	BrandID     int64       `json:"brand_id"`
+}
+
+// TEC-462: a platform super admin manually reopens a closed claim. The
+// completed/cancelled re-application service history stays on the service and
+// finance rows; the active reapply pointer is cleared so a new attempt can be
+// opened later.
+func (q *Queries) ReopenWarrantyClaim(ctx context.Context, arg ReopenWarrantyClaimParams) (WarrantyClaim, error) {
+	row := q.db.QueryRow(ctx, reopenWarrantyClaim, arg.ActorUserID, arg.ID, arg.BrandID)
+	var i WarrantyClaim
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ClaimNo,
+		&i.WarrantyID,
+		&i.ServiceID,
+		&i.VehicleID,
+		&i.CustomerUserID,
+		&i.Description,
+		&i.Status,
+		&i.RejectionReason,
+		&i.CoverageCheck,
+		&i.AiDamageType,
+		&i.AiSummary,
+		&i.AiConfidence,
+		&i.AiTriagedAt,
+		&i.ReapplyServiceID,
+		&i.DecidedByUserID,
+		&i.DecidedAt,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.ClosedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const setServiceWarrantyClaim = `-- name: SetServiceWarrantyClaim :one

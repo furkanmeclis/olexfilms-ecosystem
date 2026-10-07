@@ -19,6 +19,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -43,7 +44,10 @@ const (
 
 	MaxPhotoBytes = 12 << 20
 
-	EventStatusChanged = "warranty_claim.status_changed"
+	EventStatusChanged        = "warranty_claim.status_changed"
+	EventActionReopened       = "reopened"
+	EventTypeReopened         = "reopened"
+	ActionWarrantyClaimReopen = "warranty_claim.reopened"
 )
 
 var (
@@ -53,6 +57,7 @@ var (
 	ErrPhotoRequired   = errors.New("warranty claims: photo required")
 	ErrConflict        = errors.New("warranty claims: conflict")
 	ErrUnsupportedFlow = errors.New("warranty claims: unsupported transition")
+	ErrReopenConflict  = errors.New("warranty claims: reopen requires closed claim")
 )
 
 type ValidationError struct {
@@ -86,6 +91,8 @@ type Store interface {
 	CountWarrantyClaimsInScope(ctx context.Context, arg db.CountWarrantyClaimsInScopeParams) (int64, error)
 	ListWarrantyClaimsByWarranty(ctx context.Context, arg db.ListWarrantyClaimsByWarrantyParams) ([]db.WarrantyClaim, error)
 	SetWarrantyClaimStatus(ctx context.Context, arg db.SetWarrantyClaimStatusParams) (db.WarrantyClaim, error)
+	ReopenWarrantyClaim(ctx context.Context, arg db.ReopenWarrantyClaimParams) (db.WarrantyClaim, error)
+	AddWarrantyClaimEvent(ctx context.Context, arg db.AddWarrantyClaimEventParams) (db.WarrantyClaimEvent, error)
 	ListWarrantyClaimNotifyUsersByOrg(ctx context.Context, arg db.ListWarrantyClaimNotifyUsersByOrgParams) ([]int64, error)
 	ListWarrantyClaimCenterNotifyUsers(ctx context.Context, arg db.ListWarrantyClaimCenterNotifyUsersParams) ([]int64, error)
 	Descendants(ctx context.Context, id int64) ([]db.Organization, error)
@@ -299,6 +306,64 @@ func (s *Service) Transition(ctx context.Context, c Caller, id uuid.UUID, in mod
 	}
 	if err := s.emitStatus(ctx, tx, updated, cur.Status, to); err != nil {
 		return model.ClaimView{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return model.ClaimView{}, fmt.Errorf("warranty claims: commit: %w", err)
+	}
+	return s.view(ctx, updated, true)
+}
+
+func (s *Service) Reopen(ctx context.Context, c Caller, id uuid.UUID, in model.ReopenInput) (model.ClaimView, error) {
+	reason := strings.TrimSpace(in.Reason)
+	if reason == "" {
+		return model.ClaimView{}, invalid("reason", "reason is required")
+	}
+	if len([]rune(reason)) > 5000 {
+		return model.ClaimView{}, invalid("reason", "reason is too long")
+	}
+	tx, err := s.q.Begin(ctx)
+	if err != nil {
+		return model.ClaimView{}, fmt.Errorf("warranty claims: begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	qtx := db.New(tx)
+	cur, err := qtx.GetWarrantyClaimByUUIDForUpdate(ctx, db.GetWarrantyClaimByUUIDForUpdateParams{
+		Uuid: id, BrandID: c.BrandID, OrganizationIds: c.Filter.OrgIDsArg(),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return model.ClaimView{}, ErrNotFound
+	}
+	if err != nil {
+		return model.ClaimView{}, err
+	}
+	if cur.Status != StatusClosed {
+		return model.ClaimView{}, ErrReopenConflict
+	}
+	updated, err := qtx.ReopenWarrantyClaim(ctx, db.ReopenWarrantyClaimParams{
+		ID: cur.ID, BrandID: cur.BrandID, ActorUserID: int8(c.UserID),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return model.ClaimView{}, ErrReopenConflict
+	}
+	if err != nil {
+		return model.ClaimView{}, mapCreateErr(err)
+	}
+	if _, err := qtx.AddWarrantyClaimEvent(ctx, db.AddWarrantyClaimEventParams{
+		ClaimID: cur.ID, OrganizationID: cur.OrganizationID, BrandID: cur.BrandID,
+		EventType: EventTypeReopened, FromStatus: text(StatusClosed), ToStatus: text(StatusApproved),
+		Note: text(reason), Payload: []byte(`{}`), ActorUserID: int8(c.UserID),
+	}); err != nil {
+		return model.ClaimView{}, fmt.Errorf("warranty claims: reopened event: %w", err)
+	}
+	if err := s.emitReopened(ctx, tx, updated, reason); err != nil {
+		return model.ClaimView{}, err
+	}
+	uid := updated.Uuid
+	if err := activity.Write(ctx, qtx, &c.UserID, ActionWarrantyClaimReopen, "warranty_claims", &uid, map[string]any{
+		"claim_no": updated.ClaimNo, "reason": reason, "from": StatusClosed, "to": StatusApproved,
+		"organization_id": updated.OrganizationID, "brand_id": updated.BrandID,
+	}, activity.Meta{}); err != nil {
+		return model.ClaimView{}, fmt.Errorf("warranty claims: audit: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return model.ClaimView{}, fmt.Errorf("warranty claims: commit: %w", err)
@@ -660,6 +725,33 @@ func (s *Service) emitStatus(ctx context.Context, tx pgx.Tx, claim db.WarrantyCl
 	}
 	recipients = append(recipients, orgUsers...)
 	ev := s.event(nc, from, to, uniquePositive(recipients), "status_changed")
+	return s.out.Enqueue(ctx, tx, ev)
+}
+
+func (s *Service) emitReopened(ctx context.Context, tx pgx.Tx, claim db.WarrantyClaim, reason string) error {
+	if s.out == nil {
+		return nil
+	}
+	q := db.New(tx)
+	nc, err := q.GetWarrantyClaimOpenContext(ctx, db.GetWarrantyClaimOpenContextParams{ID: claim.ID, BrandID: claim.BrandID})
+	if err != nil {
+		return err
+	}
+	recipients, err := q.ListWarrantyClaimNotifyUsersByOrg(ctx, db.ListWarrantyClaimNotifyUsersByOrgParams{
+		OrganizationIds: []int64{nc.OrganizationID}, PermissionSlug: rbac.PermWarrantyClaimsWrite,
+	})
+	if err != nil {
+		return err
+	}
+	center, err := q.ListWarrantyClaimCenterNotifyUsers(ctx, db.ListWarrantyClaimCenterNotifyUsersParams{
+		BrandID: nc.BrandID, PermissionSlug: rbac.PermWarrantyClaimsDecide,
+	})
+	if err != nil {
+		return err
+	}
+	recipients = append(recipients, center...)
+	ev := s.event(nc, StatusClosed, StatusApproved, uniquePositive(recipients), EventActionReopened)
+	ev.Payload["reason"] = reason
 	return s.out.Enqueue(ctx, tx, ev)
 }
 

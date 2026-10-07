@@ -9,6 +9,7 @@ const form = vi.hoisted(() => ({ platformFormRequest: vi.fn() }));
 const wizard = vi.hoisted(() => ({ getService: vi.fn() }));
 const state = vi.hoisted(() => ({
   grants: new Set<string>(),
+  roles: new Set<string>(),
   orgType: "dealer",
 }));
 
@@ -42,7 +43,10 @@ vi.mock("@/providers/locale-provider", () => ({
   }),
 }));
 vi.mock("@/providers/permission-provider", () => ({
-  usePermission: () => ({ can: (p: string) => state.grants.has(p) }),
+  usePermission: () => ({
+    can: (p: string) => state.grants.has(p),
+    hasRole: (r: string) => state.roles.has(r),
+  }),
 }));
 vi.mock("@/hooks/use-active-organization", () => ({
   useActiveOrganization: () => ({ slug: "org", type: state.orgType }),
@@ -93,7 +97,7 @@ vi.mock("@/features/services/components/car-part-picker", async () => {
   };
 });
 
-import { Permission } from "@/config/permissions";
+import { Permission, Role } from "@/config/permissions";
 import type { WarrantyClaim } from "@/features/warranty-claims/lib/claims";
 import type { Warranty } from "@/features/warranty/lib/warranty-list";
 
@@ -167,6 +171,7 @@ afterEach(() => {
   container.remove();
   vi.clearAllMocks();
   state.grants = new Set();
+  state.roles = new Set();
   state.orgType = "dealer";
 });
 
@@ -390,6 +395,43 @@ describe("WarrantyClaimDetailPage", () => {
     expect(q("claim-reapply-link")?.getAttribute("href")).toBe(
       "/t/org/services/svc-2",
     );
+  });
+
+  it("shows reopen only to super_admin and requires a reason", async () => {
+    state.grants = new Set([Permission.WarrantyClaimsRead]);
+    state.roles = new Set([Role.SuperAdmin]);
+    await renderDetail({ ...claim, status: "closed" });
+    expect(q("claim-reopen")).not.toBeNull();
+
+    await act(async () => q("claim-reopen")!.click());
+    const confirm = q("claim-reopen-confirm") as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+
+    await act(async () =>
+      setText(
+        document.querySelector("#claim-reopen-reason") as HTMLTextAreaElement,
+        "Completed cancellation was reversed by mistake",
+      ),
+    );
+    expect(confirm.disabled).toBe(false);
+    await act(async () => confirm.click());
+    await flush();
+
+    expect(http.platformRequest).toHaveBeenCalledWith(
+      "POST",
+      "/v1/warranty-claims/claim-1/reopen",
+      { body: { reason: "Completed cancellation was reversed by mistake" } },
+    );
+  });
+
+  it("hides reopen from non-super-admin users", async () => {
+    state.grants = new Set([
+      Permission.WarrantyClaimsRead,
+      Permission.WarrantyClaimsDecide,
+    ]);
+    state.orgType = "center";
+    await renderDetail({ ...claim, status: "closed" });
+    expect(q("claim-reopen")).toBeNull();
   });
 });
 

@@ -187,6 +187,23 @@ WHERE id = sqlc.arg(id)
   AND status = 'reapplied'
 RETURNING *;
 
+-- name: ReopenWarrantyClaim :one
+-- TEC-462: a platform super admin manually reopens a closed claim. The
+-- completed/cancelled re-application service history stays on the service and
+-- finance rows; the active reapply pointer is cleared so a new attempt can be
+-- opened later.
+UPDATE warranty_claims
+SET reapply_service_id = NULL,
+    status             = 'approved',
+    decided_at         = COALESCE(decided_at, NOW()),
+    decided_by_user_id = COALESCE(decided_by_user_id, sqlc.narg(actor_user_id)::bigint),
+    closed_at          = NULL,
+    updated_by_user_id = sqlc.narg(actor_user_id)::bigint
+WHERE id = sqlc.arg(id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND status = 'closed'
+RETURNING *;
+
 -- name: GetWarrantyClaimReapplyService :one
 SELECT * FROM services
 WHERE id = sqlc.arg(reapply_service_id)
@@ -254,10 +271,10 @@ RETURNING storage_key;
 
 -- name: AddWarrantyClaimEvent :one
 INSERT INTO warranty_claim_events (
-    claim_id, organization_id, brand_id, event_type, note, payload, actor_user_id
+    claim_id, organization_id, brand_id, event_type, from_status, to_status, note, payload, actor_user_id
 ) VALUES (
     sqlc.arg(claim_id), sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(event_type),
-    sqlc.narg(note), sqlc.arg(payload), sqlc.narg(actor_user_id)
+    sqlc.narg(from_status), sqlc.narg(to_status), sqlc.narg(note), sqlc.arg(payload), sqlc.narg(actor_user_id)
 )
 RETURNING *;
 

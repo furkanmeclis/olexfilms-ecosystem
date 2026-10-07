@@ -32,4 +32,20 @@ func TestWarrantyClaimDispatch(t *testing.T) {
 	if !ok || opened.EventCode != catalog.EventWarrantyClaimOpened {
 		t.Fatalf("opened dispatch = %+v, %v", opened, ok)
 	}
+
+	reopenedPayload := map[string]any{}
+	for k, v := range base {
+		reopenedPayload[k] = v
+	}
+	reopenedPayload["action"] = "reopened"
+	reopenedPayload["from"] = "closed"
+	reopenedPayload["to"] = "approved"
+	reopenedPayload["reason"] = "iptal düzeltildi"
+	reopened, ok := warrantyClaimDispatch(events.New(events.WarrantyClaimStatusChanged).WithPayload(reopenedPayload))
+	if !ok || reopened.EventCode != catalog.EventWarrantyClaimReopened || len(reopened.UserIDs) != 1 || reopened.UserIDs[0] != 7 {
+		t.Fatalf("reopened dispatch = %+v, %v", reopened, ok)
+	}
+	if reopened.Vars["reason"] != "iptal düzeltildi" {
+		t.Fatalf("reopened vars = %+v", reopened.Vars)
+	}
 }

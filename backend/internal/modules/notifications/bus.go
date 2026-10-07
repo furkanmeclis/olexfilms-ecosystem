@@ -290,6 +290,9 @@ func warrantyClaimDispatch(event events.Event) (notifmodel.DispatchInput, bool) 
 	if action == "opened" {
 		code = catalog.EventWarrantyClaimOpened
 	}
+	if action == "reopened" {
+		code = catalog.EventWarrantyClaimReopened
+	}
 	ids := userIDsFromPayload(event.Payload, "notify_user_ids")
 	if to == "approved" || to == "rejected" {
 		code = catalog.EventWarrantyClaimResult
@@ -299,11 +302,15 @@ func warrantyClaimDispatch(event events.Event) (notifmodel.DispatchInput, bool) 
 			ids = nil
 		}
 	}
+	if action == "reopened" {
+		code = catalog.EventWarrantyClaimReopened
+		ids = userIDsFromPayload(event.Payload, "notify_user_ids")
+	}
 	if len(ids) == 0 {
 		return notifmodel.DispatchInput{}, false
 	}
 	vars := map[string]string{}
-	for _, k := range []string{"claim_no", "from", "to", "organization_name", "product_name", "plate"} {
+	for _, k := range []string{"claim_no", "from", "to", "organization_name", "product_name", "plate", "reason"} {
 		vars[k] = stringFromPayload(event.Payload, k)
 	}
 	in := notifmodel.DispatchInput{

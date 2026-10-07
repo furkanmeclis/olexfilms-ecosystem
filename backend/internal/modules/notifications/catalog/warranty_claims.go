@@ -6,6 +6,7 @@ const (
 	EventWarrantyClaimOpened        = "WARRANTY_CLAIM_OPENED"
 	EventWarrantyClaimStatusChanged = "WARRANTY_CLAIM_STATUS_CHANGED"
 	EventWarrantyClaimResult        = "WARRANTY_CLAIM_RESULT"
+	EventWarrantyClaimReopened      = "WARRANTY_CLAIM_REOPENED"
 )
 
 var warrantyClaimStaffChannels = []string{ChannelInapp}
@@ -59,6 +60,22 @@ var warrantyClaimResultTexts = map[string]localizedText{
 	"ar":    {"اكتمل طلب الضمان الخاص بك", "تم وضع طلبك {{claim_no}} بالحالة {{to}}. المنتج: {{product_name}}، المركبة: {{plate}}."},
 }
 
+var warrantyClaimReopenedTexts = map[string]localizedText{
+	"tr":    {"Garanti talebi yeniden açıldı", "{{claim_no}} numaralı garanti talebi yeniden approved durumuna alındı. Sebep: {{reason}}"},
+	"en":    {"Warranty claim reopened", "Warranty claim {{claim_no}} was moved back to approved. Reason: {{reason}}"},
+	"bg":    {"Гаранционната претенция е отворена отново", "Гаранционна претенция {{claim_no}} е върната към approved. Причина: {{reason}}"},
+	"de":    {"Garantiefall wieder geöffnet", "Garantiefall {{claim_no}} wurde wieder auf approved gesetzt. Grund: {{reason}}"},
+	"el":    {"Το αίτημα εγγύησης άνοιξε ξανά", "Το αίτημα εγγύησης {{claim_no}} επέστρεψε σε approved. Αιτία: {{reason}}"},
+	"uk":    {"Гарантійну заявку відкрито повторно", "Гарантійну заявку {{claim_no}} повернуто в approved. Причина: {{reason}}"},
+	"ru":    {"Гарантийная заявка открыта повторно", "Гарантийная заявка {{claim_no}} возвращена в approved. Причина: {{reason}}"},
+	"fr":    {"Demande de garantie rouverte", "La demande {{claim_no}} est repassée en approved. Motif : {{reason}}"},
+	"es":    {"Reclamación de garantía reabierta", "La reclamación {{claim_no}} volvió a approved. Motivo: {{reason}}"},
+	"it":    {"Richiesta in garanzia riaperta", "La richiesta {{claim_no}} è tornata ad approved. Motivo: {{reason}}"},
+	"zh-CN": {"质保申请已重新打开", "质保申请 {{claim_no}} 已恢复为 approved。原因：{{reason}}"},
+	"az":    {"Zəmanət müraciəti yenidən açıldı", "{{claim_no}} müraciəti yenidən approved statusuna qaytarıldı. Səbəb: {{reason}}"},
+	"ar":    {"أُعيد فتح طلب الضمان", "تمت إعادة طلب الضمان {{claim_no}} إلى approved. السبب: {{reason}}"},
+}
+
 func warrantyClaimTemplates(texts map[string]localizedText, channels []string, role string) []DefaultTemplate {
 	out := make([]DefaultTemplate, 0, len(texts)*len(channels))
 	for _, lang := range msgtemplate.Locales {
@@ -83,6 +100,7 @@ func warrantyClaimPlaceholders() []msgtemplate.Placeholder {
 		ph("organization_name", "Tech Oto", "Tech Oto"),
 		ph("product_name", "PPF Parlak", "PPF Gloss"),
 		ph("plate", "34 ABC 123", "34 ABC 123"),
+		ph("reason", "İptal düzeltildi", "Cancellation corrected"),
 	}
 }
 
@@ -107,5 +125,12 @@ func init() {
 		AudienceRoles:   []string{RoleCustomer},
 		Placeholders:    warrantyClaimPlaceholders(), UserConfigurable: true,
 		Templates: warrantyClaimTemplates(warrantyClaimResultTexts, warrantyClaimResultChannels, RoleGeneric),
+	})
+	Register(Event{
+		Code: EventWarrantyClaimReopened, Module: "warranty_claims",
+		DefaultChannels: warrantyClaimStaffChannels,
+		AudienceRoles:   []string{RoleDealer, RoleCenter},
+		Placeholders:    warrantyClaimPlaceholders(), UserConfigurable: true,
+		Templates: warrantyClaimTemplates(warrantyClaimReopenedTexts, warrantyClaimStaffChannels, RoleGeneric),
 	})
 }
