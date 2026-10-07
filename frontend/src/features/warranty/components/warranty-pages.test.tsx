@@ -9,7 +9,10 @@ const api = vi.hoisted(() => ({
   get: vi.fn(),
   void: vi.fn(),
 }));
-const portal = vi.hoisted(() => ({ listWarranties: vi.fn() }));
+const portal = vi.hoisted(() => ({
+  listWarranties: vi.fn(),
+  listWarrantyClaims: vi.fn(),
+}));
 const state = vi.hoisted(() => ({ grants: new Set<string>() }));
 
 vi.mock("next/link", () => ({
@@ -48,6 +51,10 @@ vi.mock("@/features/warranty/services/warranty.service", async (orig) => ({
   ...(await orig<object>()),
   warrantyService: api,
 }));
+// The claim block (TEC-339) has its own tests.
+vi.mock("@/features/warranty-claims/components/open-claim-section", () => ({
+  WarrantyClaimSection: () => null,
+}));
 vi.mock("@/features/portal/lib/portal-client", async (orig) => ({
   ...(await orig<object>()),
   portalApi: portal,
@@ -71,6 +78,7 @@ beforeEach(() => {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
+  portal.listWarrantyClaims.mockResolvedValue({ items: [] });
 });
 
 afterEach(() => {
@@ -288,6 +296,29 @@ describe("PortalWarranties", () => {
       days_left_max: 7,
       sort: "expiry",
     });
+  });
+
+  it("shows the claim status badge of a warranty (TEC-339)", async () => {
+    portal.listWarranties.mockResolvedValue(
+      page([warranty({ holder: undefined })]),
+    );
+    portal.listWarrantyClaims.mockResolvedValue({
+      items: [
+        {
+          uuid: "c-1",
+          warranty_uuid: "w-1",
+          status: "center_review",
+          created_at: "2026-10-01T09:00:00Z",
+          updated_at: "2026-10-02T09:00:00Z",
+        },
+      ],
+    });
+    await render(createElement(PortalWarranties));
+    const badge = container.querySelector("[data-testid=portal-claim-badge]");
+    expect(badge?.textContent).toContain(
+      "warranty.claims.status.center_review",
+    );
+    expect(badge?.textContent).toContain("date(2026-10-02T09:00:00Z)");
   });
 
   it("sends the chosen sort (TEC-378)", async () => {

@@ -148,6 +148,10 @@ export const Permission = {
   ContractsRead: "contracts.read",
   ContractsWrite: "contracts.write",
   WarrantyClaimsRead: "warranty_claims.read",
+  /** TEC-339: open a claim, forward to the center, decide. */
+  WarrantyClaimsWrite: "warranty_claims.write",
+  WarrantyClaimsReview: "warranty_claims.review",
+  WarrantyClaimsDecide: "warranty_claims.decide",
   /** TEC-299: measurement pages and NexPTG devices. */
   MeasurementsRead: "measurements.read",
   MeasurementsLink: "measurements.link",
@@ -461,6 +465,9 @@ export const permissions = {
   },
   warrantyClaims: {
     read: Permission.WarrantyClaimsRead,
+    write: Permission.WarrantyClaimsWrite,
+    review: Permission.WarrantyClaimsReview,
+    decide: Permission.WarrantyClaimsDecide,
   },
   measurements: {
     read: Permission.MeasurementsRead,
