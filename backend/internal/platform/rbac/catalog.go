@@ -641,6 +641,25 @@ var Permissions = []PermissionDef{
 		Slug: PermCampaignsApprove, Name: "Approve campaigns", Module: "campaigns", Scopes: scopesTree,
 		Description: "Approve, reject or send back campaigns submitted to the organization for approval.",
 	},
+
+	// TEC-483: stock forecast schema and thresholds (F5-04a). Appended last;
+	// migration 000111 seeds them. Dealer/distributor owners manage only
+	// their own thresholds; network demand is center-only.
+	{
+		Slug: PermStockForecastRead, Name: "Read stock forecasts", Module: "stock_forecast",
+		Scopes:      []Scope{ScopeManaged, ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Read stock forecast snapshots and product history.",
+	},
+	{
+		Slug: PermStockForecastManage, Name: "Manage stock forecast thresholds", Module: "stock_forecast",
+		Scopes:      []Scope{ScopeManaged, ScopeBrand, ScopeAll},
+		Description: "Edit stock forecast warning and cover thresholds.",
+	},
+	{
+		Slug: PermStockForecastNetworkRead, Name: "Read network stock demand forecasts", Module: "stock_forecast",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Read center network demand forecasts for the brand.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -781,6 +800,10 @@ var Roles = []RoleDef{
 			PermAIUsageRead:      ScopeBrand,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-483 (000111).
+			PermStockForecastRead:        ScopeBrand,
+			PermStockForecastManage:      ScopeBrand,
+			PermStockForecastNetworkRead: ScopeBrand,
 		}),
 	},
 	{
@@ -818,6 +841,10 @@ var Roles = []RoleDef{
 			PermAIActionsConfirm: ScopeOwn,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-483 (000111).
+			PermStockForecastRead:        ScopeBrand,
+			PermStockForecastManage:      ScopeBrand,
+			PermStockForecastNetworkRead: ScopeBrand,
 		}),
 	},
 	{
@@ -988,6 +1015,9 @@ var Roles = []RoleDef{
 			PermCampaignsRead:    ScopeSubtree,
 			PermCampaignsWrite:   ScopeManaged,
 			PermCampaignsApprove: ScopeSubtree,
+			// TEC-483 (000111).
+			PermStockForecastRead:   ScopeSubtree,
+			PermStockForecastManage: ScopeManaged,
 		}),
 	},
 	{
@@ -1031,6 +1061,8 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-483 (000111).
+			PermStockForecastRead: ScopeSubtree,
 		}),
 	},
 	{
@@ -1053,6 +1085,8 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-483 (000111).
+			PermStockForecastRead: ScopeSubtree,
 		}),
 	},
 	{
@@ -1164,6 +1198,9 @@ var Roles = []RoleDef{
 			// TEC-404 (000107): own campaigns, approved upstream.
 			PermCampaignsRead:  ScopeManaged,
 			PermCampaignsWrite: ScopeManaged,
+			// TEC-483 (000111).
+			PermStockForecastRead:   ScopeManaged,
+			PermStockForecastManage: ScopeManaged,
 		}),
 	},
 	{
@@ -1207,6 +1244,8 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-483 (000111).
+			PermStockForecastRead: ScopeManaged,
 		}),
 	},
 	{

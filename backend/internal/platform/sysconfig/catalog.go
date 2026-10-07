@@ -61,6 +61,14 @@ const (
 	// KeyForecastMinDays is the minimum data window (days) before the stock
 	// forecast proposes anything (K15).
 	KeyForecastMinDays = "forecast_min_days"
+	// KeyForecastDefaultWarningDays is the fallback warning threshold when an
+	// organization/product override does not exist (TEC-483).
+	KeyForecastDefaultWarningDays = "forecast.default_warning_days"
+	// KeyForecastCriticalDays is the global critical threshold (TEC-483).
+	KeyForecastCriticalDays = "forecast.critical_days"
+	// KeyForecastDefaultCoverDays is the fallback suggested cover window
+	// when an organization/product override does not exist (TEC-483).
+	KeyForecastDefaultCoverDays = "forecast.default_cover_days"
 	// KeyContractGraceDays is the read-only grace after a contract expires
 	// (design §4). Default 0 keeps K23 ("grace yok"); raising it is a product
 	// decision.
@@ -239,8 +247,14 @@ func checkHTTPSURL(s string) string {
 func i64(v int64) *int64 { return &v }
 
 var catalog = []Definition{
-	{Key: KeyForecastMinDays, Group: GroupForecast, Kind: KindInt, Default: int64(30), Min: i64(1), Max: i64(3650),
+	{Key: KeyForecastMinDays, Group: GroupForecast, Kind: KindInt, Default: int64(90), Min: i64(1), Max: i64(3650),
 		Description: "Minimum days of movement history before the stock forecast proposes anything (K15)"},
+	{Key: KeyForecastDefaultWarningDays, Group: GroupForecast, Kind: KindInt, Default: int64(14), Min: i64(1), Max: i64(3650),
+		Description: "Default days-left threshold for stock forecast warning status (TEC-483)"},
+	{Key: KeyForecastCriticalDays, Group: GroupForecast, Kind: KindInt, Default: int64(7), Min: i64(1), Max: i64(3650),
+		Description: "Days-left threshold for stock forecast critical status (TEC-483)"},
+	{Key: KeyForecastDefaultCoverDays, Group: GroupForecast, Kind: KindInt, Default: int64(30), Min: i64(1), Max: i64(3650),
+		Description: "Default cover days used for stock forecast suggested quantities (TEC-483)"},
 	{Key: KeyContractGraceDays, Group: GroupContracts, Kind: KindInt, Default: int64(0), Min: i64(0), Max: i64(365),
 		Description: "Read-only grace period after a contract expires; 0 = no grace (K23)"},
 	{Key: KeyContractsIntakeRequired, Group: GroupContracts, Kind: KindBool, Default: false,

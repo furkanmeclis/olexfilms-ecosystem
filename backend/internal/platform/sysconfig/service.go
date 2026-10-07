@@ -155,6 +155,23 @@ func (s *Service) ForecastMinDays(ctx context.Context) int {
 	return int(s.Int(ctx, KeyForecastMinDays))
 }
 
+// ForecastDefaultWarningDays is the typed accessor for
+// KeyForecastDefaultWarningDays.
+func (s *Service) ForecastDefaultWarningDays(ctx context.Context) int {
+	return int(s.Int(ctx, KeyForecastDefaultWarningDays))
+}
+
+// ForecastCriticalDays is the typed accessor for KeyForecastCriticalDays.
+func (s *Service) ForecastCriticalDays(ctx context.Context) int {
+	return int(s.Int(ctx, KeyForecastCriticalDays))
+}
+
+// ForecastDefaultCoverDays is the typed accessor for
+// KeyForecastDefaultCoverDays.
+func (s *Service) ForecastDefaultCoverDays(ctx context.Context) int {
+	return int(s.Int(ctx, KeyForecastDefaultCoverDays))
+}
+
 // BulkUndoWindowHours is the typed accessor for KeyBulkUndoWindowHours.
 func (s *Service) BulkUndoWindowHours(ctx context.Context) int {
 	return int(s.Int(ctx, KeyBulkUndoWindowHours))
