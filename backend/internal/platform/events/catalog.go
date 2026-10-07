@@ -661,6 +661,10 @@ func catalogConstants() []string {
 		LeadsApplicationReceived,
 		MeasurementMatchSuggested,
 		MeasurementDiffCheckRequired,
+		CampaignsSubmitted,
+		CampaignsApproved,
+		CampaignsRejected,
+		CampaignsChangesRequested,
 		AIQuotaThreshold,
 	}
 }
@@ -687,6 +691,17 @@ const QuoteSent = "quote.sent"
 // service linked a measurement automatically (waiting for the dealer's
 // confirmation) or found candidates; written in the matching transaction.
 const MeasurementMatchSuggested = "measurement.match_suggested"
+
+// Campaign approval chain (TEC-406, F4-04c): written in the transaction that
+// moves the campaign; notify_user_ids are the approver organization's
+// members holding campaigns.approve (submitted) or the campaign creator
+// (approved / rejected / changes_requested).
+const (
+	CampaignsSubmitted        = "campaigns.submitted"
+	CampaignsApproved         = "campaigns.approved"
+	CampaignsRejected         = "campaigns.rejected"
+	CampaignsChangesRequested = "campaigns.changes_requested"
+)
 
 // AIQuotaThreshold (TEC-388) is written in the usage transaction when a
 // model call moves an organization's monthly AI token pool past 80 % or

@@ -11866,7 +11866,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Campaign with its per-locale contents and media */
+        /**
+         * Campaign with its per-locale contents and media
+         * @description Campaigns inside campaigns.read scope; the approver organization of a campaign (approver_organization_uuid) reads it too (TEC-406).
+         */
         get: operations["getCampaign"];
         put?: never;
         post?: never;
@@ -11876,7 +11879,7 @@ export interface paths {
         head?: never;
         /**
          * Update name, channels or audience of a draft
-         * @description Only drafts change (409 CAMPAIGN_NOT_DRAFT otherwise). New channels are checked against the length limits of the existing contents.
+         * @description Drafts change; an approved or scheduled campaign returns to draft when something changes (TEC-406, a new approval is needed; event changes_requested with payload cause=edited). Other statuses answer 409 CAMPAIGN_NOT_DRAFT. New channels are checked against the length limits of the existing contents.
          */
         patch: operations["updateCampaign"];
         trace?: never;
@@ -11964,6 +11967,180 @@ export interface paths {
          * @description Customers count only with an accepted marketing_consent and no marketing opt-out of their phone; the others are reported under `excluded`. Panel user audiences need no consent (business notifications). `locales` is the distribution by the resolved user locale (user → serving organization → center → tr), `channels` the reachable members per selected channel (push token, WhatsApp E.164 number, e-mail address, honoring the customer's channel preferences), `missing_locales` the audience locales whose content is missing or incomplete (submission then answers 422 CAMPAIGN_LOCALE_MISSING), `sample` up to 10 masked members.
          */
         post: operations["previewCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit a draft for approval
+         * @description TEC-406. Runs the localization gate (422 CAMPAIGN_LOCALE_MISSING) and resolves the approver: dealer → its active distributor (a dealer without one → the brand center), distributor → center, center → approved at once (event `approved` with payload auto=true). Submission moves the draft to pending_approval and notifies the approver members holding campaigns.approve. A non-draft answers 409 CAMPAIGN_INVALID_STATUS; an organization that is not active (expired contract, read only) 422 CAMPAIGN_ORGANIZATION_READ_ONLY.
+         */
+        post: operations["submitCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Schedule an approved campaign
+         * @description TEC-406. `scheduled_at` is RFC 3339 with an offset or a local date- time (YYYY-MM-DDTHH:MM[:SS]) read in the organization time zone (`timezone` of the campaign); it is stored in UTC and must be at least 5 minutes from now (422 CAMPAIGN_SCHEDULE_TOO_SOON). Approved or already scheduled campaigns only (409 CAMPAIGN_INVALID_STATUS); the localization gate runs again; a non-active organization answers 422 CAMPAIGN_ORGANIZATION_READ_ONLY.
+         */
+        post: operations["scheduleCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/send-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send an approved campaign now
+         * @description TEC-406. Schedules the campaign at the current time; the sending worker (F4-04d) picks it up. Same status, organization and localization rules as schedule.
+         */
+        post: operations["sendCampaignNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a campaign
+         * @description TEC-406. Before sending (draft, pending_approval, approved, scheduled) the campaign is cancelled entirely; while sending the remaining pending recipients are marked skipped. Finished, rejected or cancelled campaigns answer 409 CAMPAIGN_INVALID_STATUS.
+         */
+        post: operations["cancelCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Approval queue of the active organization
+         * @description TEC-406 (docs/list-contract.md): pending_approval campaigns whose approver is the active organization (campaigns.approve). `sort` is one of created_at (default, oldest first), scheduled_at, name; id tiebreak. `channel` and `organization_uuid` are comma separated any-of filters; `q` matches the name.
+         */
+        get: operations["listCampaignApprovals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a pending campaign
+         * @description TEC-406. Only members of the approver organization holding campaigns.approve decide; a campaign of another approver is 404, a campaign that is not pending 409 CAMPAIGN_INVALID_STATUS. The optional reason is kept in the history; the creator is notified.
+         */
+        post: operations["approveCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a pending campaign
+         * @description TEC-406. The reason is required (400). The campaign ends in rejected; the creator is notified with the reason.
+         */
+        post: operations["rejectCampaign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/campaigns/{uuid}/request-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a pending campaign back to draft
+         * @description TEC-406. The reason is required (400). The campaign returns to draft and can be edited and submitted again; the creator is notified with the reason.
+         */
+        post: operations["requestCampaignChanges"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21983,11 +22160,40 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        CampaignScheduleInput: {
+            /**
+             * @description RFC 3339 with offset, or a local date-time in the organization time zone.
+             * @example 2026-10-08T10:00:00+03:00
+             */
+            scheduled_at: string;
+        };
+        CampaignDecisionInput: {
+            reason?: string;
+        };
+        CampaignEvent: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            event_type: "submitted" | "approved" | "rejected" | "changes_requested" | "scheduled" | "cancelled" | "started" | "finished";
+            from_status: components["schemas"]["CampaignStatus"] | null;
+            to_status: components["schemas"]["CampaignStatus"] | null;
+            reason: string | null;
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            created_at: string;
+        };
         Campaign: {
             /** Format: uuid */
             uuid: string;
             /** Format: uuid */
             organization_uuid: string;
+            organization_name: string;
+            /** @description IANA time zone of the organization; times are UTC and shown in this zone. */
+            timezone: string;
+            /** Format: uuid */
+            approver_organization_uuid: string | null;
             name: string;
             channels: components["schemas"]["CampaignChannel"][];
             audience_filter: components["schemas"]["CampaignAudienceFilter"];
@@ -22008,6 +22214,8 @@ export interface components {
             updated_at: string;
             /** @description Detail responses only. */
             contents?: components["schemas"]["CampaignContent"][];
+            /** @description Detail responses only; the status history (TEC-406). */
+            events?: components["schemas"]["CampaignEvent"][];
         };
         CampaignPreview: {
             total: number;
@@ -44049,6 +44257,244 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    submitCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    scheduleCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignScheduleInput"];
+            };
+        };
+        responses: {
+            /** @description Campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    sendCampaignNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    cancelCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listCampaignApprovals: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated channels (push, whatsapp, email); unknown value → 400. */
+                channel?: components["schemas"]["CampaignChannel"][];
+                /** @description Comma separated uuids of the submitting organizations. */
+                organization_uuid?: string[];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending campaigns */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaignPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    approveCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CampaignDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectCampaign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    requestCampaignChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignDecisionInput"];
+            };
+        };
+        responses: {
+            /** @description Campaign */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaign"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     getConversationsMeta: {

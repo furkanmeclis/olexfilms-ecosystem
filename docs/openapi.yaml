@@ -23268,6 +23268,9 @@ paths:
       tags: [Campaigns]
       operationId: getCampaign
       summary: Campaign with its per-locale contents and media
+      description: >-
+        Campaigns inside campaigns.read scope; the approver organization of
+        a campaign (approver_organization_uuid) reads it too (TEC-406).
       security:
         - bearerAuth: []
       responses:
@@ -23284,8 +23287,11 @@ paths:
       operationId: updateCampaign
       summary: Update name, channels or audience of a draft
       description: >-
-        Only drafts change (409 CAMPAIGN_NOT_DRAFT otherwise). New channels
-        are checked against the length limits of the existing contents.
+        Drafts change; an approved or scheduled campaign returns to draft
+        when something changes (TEC-406, a new approval is needed; event
+        changes_requested with payload cause=edited). Other statuses answer
+        409 CAMPAIGN_NOT_DRAFT. New channels are checked against the length
+        limits of the existing contents.
       security:
         - bearerAuth: []
       requestBody:
@@ -23453,6 +23459,272 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /v1/campaigns/{uuid}/submit:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Campaigns]
+      operationId: submitCampaign
+      summary: Submit a draft for approval
+      description: >-
+        TEC-406. Runs the localization gate (422 CAMPAIGN_LOCALE_MISSING) and
+        resolves the approver: dealer → its active distributor (a dealer
+        without one → the brand center), distributor → center, center →
+        approved at once (event `approved` with payload auto=true). Submission
+        moves the draft to pending_approval and notifies the approver members
+        holding campaigns.approve. A non-draft answers 409
+        CAMPAIGN_INVALID_STATUS; an organization that is not active (expired
+        contract, read only) 422 CAMPAIGN_ORGANIZATION_READ_ONLY.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCampaign" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/campaigns/{uuid}/schedule:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Campaigns]
+      operationId: scheduleCampaign
+      summary: Schedule an approved campaign
+      description: >-
+        TEC-406. `scheduled_at` is RFC 3339 with an offset or a local date-
+        time (YYYY-MM-DDTHH:MM[:SS]) read in the organization time zone
+        (`timezone` of the campaign); it is stored in UTC and must be at least
+        5 minutes from now (422 CAMPAIGN_SCHEDULE_TOO_SOON). Approved or
+        already scheduled campaigns only (409 CAMPAIGN_INVALID_STATUS); the
+        localization gate runs again; a non-active organization answers 422
+        CAMPAIGN_ORGANIZATION_READ_ONLY.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CampaignScheduleInput" }
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCampaign" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/campaigns/{uuid}/send-now:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Campaigns]
+      operationId: sendCampaignNow
+      summary: Send an approved campaign now
+      description: >-
+        TEC-406. Schedules the campaign at the current time; the sending
+        worker (F4-04d) picks it up. Same status, organization and
+        localization rules as schedule.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCampaign" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/campaigns/{uuid}/cancel:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Campaigns]
+      operationId: cancelCampaign
+      summary: Cancel a campaign
+      description: >-
+        TEC-406. Before sending (draft, pending_approval, approved, scheduled)
+        the campaign is cancelled entirely; while sending the remaining
+        pending recipients are marked skipped. Finished, rejected or cancelled
+        campaigns answer 409 CAMPAIGN_INVALID_STATUS.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCampaign" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/campaigns/approvals:
+    get:
+      tags: [Campaigns]
+      operationId: listCampaignApprovals
+      summary: Approval queue of the active organization
+      description: >-
+        TEC-406 (docs/list-contract.md): pending_approval campaigns whose
+        approver is the active organization (campaigns.approve). `sort` is
+        one of created_at (default, oldest first), scheduled_at, name; id
+        tiebreak. `channel` and `organization_uuid` are comma separated
+        any-of filters; `q` matches the name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: channel
+          in: query
+          description: Comma separated channels (push, whatsapp, email); unknown value → 400.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/CampaignChannel" }
+        - name: organization_uuid
+          in: query
+          description: Comma separated uuids of the submitting organizations.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Pending campaigns
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCampaignPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/campaigns/{uuid}/approve:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Campaigns]
+      operationId: approveCampaign
+      summary: Approve a pending campaign
+      description: >-
+        TEC-406. Only members of the approver organization holding
+        campaigns.approve decide; a campaign of another approver is 404, a
+        campaign that is not pending 409 CAMPAIGN_INVALID_STATUS. The optional
+        reason is kept in the history; the creator is notified.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CampaignDecisionInput" }
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCampaign" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/campaigns/{uuid}/reject:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Campaigns]
+      operationId: rejectCampaign
+      summary: Reject a pending campaign
+      description: >-
+        TEC-406. The reason is required (400). The campaign ends in rejected;
+        the creator is notified with the reason.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CampaignDecisionInput" }
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCampaign" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/campaigns/{uuid}/request-changes:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Campaigns]
+      operationId: requestCampaignChanges
+      summary: Send a pending campaign back to draft
+      description: >-
+        TEC-406. The reason is required (400). The campaign returns to draft
+        and can be edited and submitted again; the creator is notified with
+        the reason.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CampaignDecisionInput" }
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCampaign" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /v1/conversations/meta:
     get:
@@ -37265,14 +37537,50 @@ components:
         deeplink: { type: [string, "null"] }
         media: { type: array, items: { $ref: "#/components/schemas/CampaignMedia" } }
         updated_at: { type: string, format: date-time }
+    CampaignScheduleInput:
+      type: object
+      required: [scheduled_at]
+      properties:
+        scheduled_at:
+          type: string
+          description: RFC 3339 with offset, or a local date-time in the organization time zone.
+          example: "2026-10-08T10:00:00+03:00"
+    CampaignDecisionInput:
+      type: object
+      properties:
+        reason: { type: string, maxLength: 2000 }
+    CampaignEvent:
+      type: object
+      required: [uuid, event_type, from_status, to_status, reason, payload, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        event_type:
+          type: string
+          enum: [submitted, approved, rejected, changes_requested, scheduled, cancelled, started, finished]
+        from_status:
+          oneOf:
+            - { $ref: "#/components/schemas/CampaignStatus" }
+            - { type: "null" }
+        to_status:
+          oneOf:
+            - { $ref: "#/components/schemas/CampaignStatus" }
+            - { type: "null" }
+        reason: { type: [string, "null"] }
+        payload: { type: object, additionalProperties: true }
+        created_at: { type: string, format: date-time }
     Campaign:
       type: object
-      required: [uuid, organization_uuid, name, channels, audience_filter, status, scheduled_at, started_at,
-                 finished_at, recipients_total, recipients_sent, recipients_failed, recipients_skipped,
-                 created_at, updated_at]
+      required: [uuid, organization_uuid, organization_name, timezone, approver_organization_uuid, name, channels,
+                 audience_filter, status, scheduled_at, started_at, finished_at, recipients_total, recipients_sent,
+                 recipients_failed, recipients_skipped, created_at, updated_at]
       properties:
         uuid: { type: string, format: uuid }
         organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+        timezone:
+          type: string
+          description: IANA time zone of the organization; times are UTC and shown in this zone.
+        approver_organization_uuid: { type: [string, "null"], format: uuid }
         name: { type: string }
         channels: { type: array, items: { $ref: "#/components/schemas/CampaignChannel" } }
         audience_filter: { $ref: "#/components/schemas/CampaignAudienceFilter" }
@@ -37290,6 +37598,10 @@ components:
           type: array
           description: Detail responses only.
           items: { $ref: "#/components/schemas/CampaignContent" }
+        events:
+          type: array
+          description: Detail responses only; the status history (TEC-406).
+          items: { $ref: "#/components/schemas/CampaignEvent" }
     CampaignPreview:
       type: object
       required: [total, locales, channels, unreachable, excluded, missing_locales, sample]

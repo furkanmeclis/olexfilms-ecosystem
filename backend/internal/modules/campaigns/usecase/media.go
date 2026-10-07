@@ -42,7 +42,8 @@ type MediaInput struct {
 }
 
 // AddMedia stores an image or PDF on the content of a locale of a draft;
-// the content is created empty when the locale has none yet.
+// the content is created empty when the locale has none yet. An approved
+// or scheduled campaign returns to draft (TEC-406).
 func (s *Service) AddMedia(ctx context.Context, c Caller, id uuid.UUID, locale string, in MediaInput) (Media, error) {
 	if !i18n.IsSupported(locale) {
 		return Media{}, invalid("locale", "must be one of "+i18n.SupportedList())
@@ -55,12 +56,13 @@ func (s *Service) AddMedia(ctx context.Context, c Caller, id uuid.UUID, locale s
 	if s.storage == nil {
 		return Media{}, errors.New("campaigns: storage is not configured")
 	}
-	// Scope and draft check before the upload; repeated under lock below.
+	// Scope and status check before the upload; repeated under lock below
+	// (an approved or scheduled campaign returns to draft, TEC-406).
 	row, err := s.load(ctx, s.q, c, id)
 	if err != nil {
 		return Media{}, err
 	}
-	if row.Status != StatusDraft {
+	if !editable(row.Status) {
 		return Media{}, ErrNotDraft
 	}
 	org, err := s.q.GetOrganizationByID(ctx, row.OrganizationID)
@@ -75,7 +77,7 @@ func (s *Service) AddMedia(ctx context.Context, c Caller, id uuid.UUID, locale s
 	}
 	var out Media
 	err = s.inTx(ctx, func(q *db.Queries) error {
-		row, err := s.lockDraft(ctx, q, c, id)
+		row, err := s.lockEditable(ctx, q, c, id, nil)
 		if err != nil {
 			return err
 		}
@@ -115,7 +117,7 @@ func (s *Service) AddMedia(ctx context.Context, c Caller, id uuid.UUID, locale s
 func (s *Service) DeleteMedia(ctx context.Context, c Caller, id uuid.UUID, locale string, mediaID uuid.UUID) error {
 	var key string
 	err := s.inTx(ctx, func(q *db.Queries) error {
-		row, err := s.lockDraft(ctx, q, c, id)
+		row, err := s.lockEditable(ctx, q, c, id, nil)
 		if err != nil {
 			return err
 		}

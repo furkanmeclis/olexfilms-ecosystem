@@ -835,8 +835,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if deps.Storage != nil {
 		campaignStorage = deps.Storage
 	}
-	campaignsmodule.RegisterRoutes(mux, campaignshandler.New(campaignsusecase.New(deps.DB, deps.Queries, campaignStorage)),
-		tokens, loader, deps.Queries, featureSvc)
+	campaignsSvc := campaignsusecase.New(deps.DB, deps.Queries, campaignStorage)
+	campaignsSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-406: approval notifications
+	campaignsmodule.RegisterRoutes(mux, campaignshandler.New(campaignsSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-313: leads and follow-up queue.
 	leadsSvc := leadsusecase.New(deps.DB, deps.Queries, tasksSvc)
 	var quoteQueue leadsusecase.TaskEnqueuer
