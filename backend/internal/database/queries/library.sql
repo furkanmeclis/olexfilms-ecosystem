@@ -17,6 +17,45 @@ SELECT * FROM library_folders
 WHERE organization_id = $1 AND deleted_at IS NULL
 ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id;
 
+-- name: ListLibraryFoldersByBrand :many
+-- Center reader view: the brand's whole folder tree (other organizations
+-- use ListVisibleLibraryFolders).
+SELECT * FROM library_folders
+WHERE brand_id = $1 AND deleted_at IS NULL
+ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id;
+
+-- name: ListVisibleLibraryFolders :many
+-- Reader view of a non-center organization: a brand folder is listed only
+-- if it (or a descendant folder) holds an item the viewer may see (same
+-- access_levels / viewer_role_slugs rule as ListLibraryItems), plus the
+-- ancestors needed to reach it. The viewer organization's own folders stay
+-- listed.
+WITH RECURSIVE visible AS (
+    SELECT f.id, f.parent_id
+    FROM library_folders f
+    WHERE f.brand_id = sqlc.arg(brand_id)::bigint
+      AND f.deleted_at IS NULL
+      AND (
+          f.organization_id = sqlc.arg(organization_id)::bigint
+          OR EXISTS (
+              SELECT 1 FROM library_items i
+              WHERE i.folder_id = f.id
+                AND i.brand_id = sqlc.arg(brand_id)::bigint
+                AND i.deleted_at IS NULL
+                AND i.access_level = ANY(sqlc.arg(access_levels)::text[])
+                AND (i.role_slug IS NULL OR i.role_slug = ANY(sqlc.arg(viewer_role_slugs)::text[]))
+          )
+      )
+    UNION
+    SELECT p.id, p.parent_id
+    FROM library_folders p
+    JOIN visible v ON p.id = v.parent_id
+    WHERE p.brand_id = sqlc.arg(brand_id)::bigint AND p.deleted_at IS NULL
+)
+SELECT library_folders.* FROM library_folders
+WHERE id IN (SELECT visible.id FROM visible)
+ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id;
+
 -- name: UpdateLibraryFolder :one
 UPDATE library_folders
 SET name       = sqlc.arg(name),
@@ -70,14 +109,22 @@ WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND dele
 -- organization may see (center: all four; distributor: all_network and
 -- distributors; dealer: all_network and dealers); an item with a role_slug
 -- is shown only to viewers holding that role. folder_id NULL lists every
--- folder; tag filters on one tag.
+-- folder; tags matches items carrying any of the given tags; access_filter
+-- narrows the visible levels. Sort: docs/list-contract.md, keys from
+-- usecase.ItemsSortSpec.
 SELECT * FROM library_items
 WHERE brand_id = sqlc.arg(brand_id)::bigint
   AND deleted_at IS NULL
   AND access_level = ANY(sqlc.arg(access_levels)::text[])
   AND (role_slug IS NULL OR role_slug = ANY(sqlc.arg(viewer_role_slugs)::text[]))
   AND (sqlc.narg(folder_id)::bigint IS NULL OR folder_id = sqlc.narg(folder_id)::bigint)
-  AND (sqlc.narg(tag)::text IS NULL OR tags @> ARRAY[sqlc.narg(tag)::text])
+  AND (COALESCE(cardinality(sqlc.narg(tags)::text[]), 0) = 0 OR tags && sqlc.narg(tags)::text[])
+  AND (
+      COALESCE(cardinality(sqlc.narg(access_filter)::text[]), 0) = 0
+      OR access_level = ANY(sqlc.narg(access_filter)::text[])
+  )
+  AND (sqlc.narg(updated_from)::timestamptz IS NULL OR updated_at >= sqlc.narg(updated_from)::timestamptz)
+  AND (sqlc.narg(updated_before)::timestamptz IS NULL OR updated_at < sqlc.narg(updated_before)::timestamptz)
   AND (
       sqlc.narg(q)::text IS NULL
       OR name ILIKE ('%' || sqlc.narg(q)::text || '%')
@@ -87,8 +134,47 @@ WHERE brand_id = sqlc.arg(brand_id)::bigint
           WHERE tag_value ILIKE ('%' || sqlc.narg(q)::text || '%')
       )
   )
-ORDER BY lower(name), id
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(name) WHEN 'access_level' THEN access_level END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'name' THEN lower(name) WHEN 'access_level' THEN access_level END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: CountLibraryItems :one
+-- Same filter block as ListLibraryItems.
+SELECT COUNT(*)::bigint FROM library_items
+WHERE brand_id = sqlc.arg(brand_id)::bigint
+  AND deleted_at IS NULL
+  AND access_level = ANY(sqlc.arg(access_levels)::text[])
+  AND (role_slug IS NULL OR role_slug = ANY(sqlc.arg(viewer_role_slugs)::text[]))
+  AND (sqlc.narg(folder_id)::bigint IS NULL OR folder_id = sqlc.narg(folder_id)::bigint)
+  AND (COALESCE(cardinality(sqlc.narg(tags)::text[]), 0) = 0 OR tags && sqlc.narg(tags)::text[])
+  AND (
+      COALESCE(cardinality(sqlc.narg(access_filter)::text[]), 0) = 0
+      OR access_level = ANY(sqlc.narg(access_filter)::text[])
+  )
+  AND (sqlc.narg(updated_from)::timestamptz IS NULL OR updated_at >= sqlc.narg(updated_from)::timestamptz)
+  AND (sqlc.narg(updated_before)::timestamptz IS NULL OR updated_at < sqlc.narg(updated_before)::timestamptz)
+  AND (
+      sqlc.narg(q)::text IS NULL
+      OR name ILIKE ('%' || sqlc.narg(q)::text || '%')
+      OR COALESCE(description, '') ILIKE ('%' || sqlc.narg(q)::text || '%')
+      OR EXISTS (
+          SELECT 1 FROM unnest(tags) AS tag_value
+          WHERE tag_value ILIKE ('%' || sqlc.narg(q)::text || '%')
+      )
+  );
 
 -- name: NextLibraryItemVersionNo :one
 SELECT (COALESCE(MAX(version_no), 0) + 1)::int AS next_version
