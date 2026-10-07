@@ -10,6 +10,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -367,5 +368,13 @@ func TestIntegrationCustomerUpgradeToDealer(t *testing.T) {
 	}
 	if members != 1 {
 		t.Fatalf("memberships = %d, want 1", members)
+	}
+	// TEC-394: the new membership drops the WhatsApp identity cache.
+	var memberEvents int
+	if err := it.pool.QueryRow(ctx, `SELECT COUNT(*) FROM outbox_events WHERE event_name = $1
+		AND (payload->'data'->>'organization_id')::bigint = $2
+		AND (payload->'data'->>'user_id')::bigint = (SELECT id FROM users WHERE uuid = $3)`,
+		events.TenantMemberAdded, dealer.ID, cust.UUID).Scan(&memberEvents); err != nil || memberEvents != 1 {
+		t.Fatalf("outbox tenant.member_added = %d %v", memberEvents, err)
 	}
 }

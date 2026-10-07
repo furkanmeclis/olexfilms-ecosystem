@@ -48,6 +48,8 @@ type Querier interface {
 	ApproveStockCountStart(ctx context.Context, arg ApproveStockCountStartParams) (StockCount, error)
 	// Approval freezes A's purchase price (K13).
 	ApproveStockTransferRequest(ctx context.Context, arg ApproveStockTransferRequestParams) (StockTransferRequest, error)
+	// assigned_org_id NULL = center.
+	AssignConversation(ctx context.Context, arg AssignConversationParams) (Conversation, error)
 	AssignLead(ctx context.Context, arg AssignLeadParams) (Lead, error)
 	AssignMemberRoleBySlug(ctx context.Context, arg AssignMemberRoleBySlugParams) error
 	AssignUserRoleBySlug(ctx context.Context, arg AssignUserRoleBySlugParams) error
@@ -92,6 +94,13 @@ type Querier interface {
 	// never claimed. The overdue pass also stamps due_soon so a missed run does
 	// not send a stale "due soon" after the deadline.
 	ClaimTasksOverdue(ctx context.Context, arg ClaimTasksOverdueParams) ([]ClaimTasksOverdueRow, error)
+	CleanupOAuthAuthRequests(ctx context.Context) (int64, error)
+	// Registrations never connected within a day (abandoned DCR attempts).
+	CleanupOAuthClients(ctx context.Context) (int64, error)
+	// Used codes stay one day past expiry so a late replay still revokes.
+	CleanupOAuthCodes(ctx context.Context) (int64, error)
+	// Rotated refresh tokens stay until they expire, for reuse detection.
+	CleanupOAuthTokens(ctx context.Context) (int64, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
 	// Run before setting a new default in the same transaction.
 	ClearDefaultContractTemplate(ctx context.Context, arg ClearDefaultContractTemplateParams) error
@@ -149,6 +158,7 @@ type Querier interface {
 	CountCariAccountsWithBalance(ctx context.Context, arg CountCariAccountsWithBalanceParams) (int64, error)
 	CountConsentsOfUser(ctx context.Context, userID int64) (int64, error)
 	CountContractInstances(ctx context.Context, arg CountContractInstancesParams) (int64, error)
+	CountConversations(ctx context.Context, arg CountConversationsParams) (int64, error)
 	CountCustomerCariAccounts(ctx context.Context, organizationID int64) (int64, error)
 	CountCustomerOrganizationLinks(ctx context.Context, arg CountCustomerOrganizationLinksParams) (CountCustomerOrganizationLinksRow, error)
 	CountDealerPriceCatalog(ctx context.Context, arg CountDealerPriceCatalogParams) (int64, error)
@@ -276,6 +286,10 @@ type Querier interface {
 	// Instances.
 	CreateContractInstance(ctx context.Context, arg CreateContractInstanceParams) (ContractInstance, error)
 	CreateContractTemplate(ctx context.Context, arg CreateContractTemplateParams) (ContractTemplate, error)
+	// AI runs ----------------------------------------------------------------------
+	// One run per triggering message: a second insert for the same message
+	// returns no row (pgx.ErrNoRows).
+	CreateConversationAIRun(ctx context.Context, arg CreateConversationAIRunParams) (ConversationAiRun, error)
 	// TEC-159: customer profiles, customer x organization links and vehicles
 	// (migration 000048). Scope arguments follow scopefilter: org_ids NULL means
 	// no organization restriction (all/brand), an empty array matches nothing;
@@ -310,6 +324,11 @@ type Querier interface {
 	CreateMigrationRun(ctx context.Context, arg CreateMigrationRunParams) (MigrationRun, error)
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	CreateOAuthAccount(ctx context.Context, arg CreateOAuthAccountParams) (OauthAccount, error)
+	CreateOAuthAuthRequest(ctx context.Context, arg CreateOAuthAuthRequestParams) (OauthAuthRequest, error)
+	// TEC-400 (F4-03a): MCP OAuth 2.1 authorization server.
+	CreateOAuthClient(ctx context.Context, arg CreateOAuthClientParams) (OauthClient, error)
+	CreateOAuthCode(ctx context.Context, arg CreateOAuthCodeParams) error
+	CreateOAuthToken(ctx context.Context, arg CreateOAuthTokenParams) error
 	CreateOTPCode(ctx context.Context, arg CreateOTPCodeParams) (OtpCode, error)
 	// TEC-165 (F1-04a): orders, order lines, assigned units, status history,
 	// stock reservations and sibling transfer requests (migration 000049).
@@ -512,6 +531,8 @@ type Querier interface {
 	DeleteNotificationPreferenceRow(ctx context.Context, arg DeleteNotificationPreferenceRowParams) error
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
+	// Deleting is the claim: a concurrent second decision finds nothing.
+	DeleteOAuthAuthRequest(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteOrderItem(ctx context.Context, id int64) (int64, error)
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
@@ -608,6 +629,8 @@ type Querier interface {
 	FindVehiclesByVIN(ctx context.Context, arg FindVehiclesByVINParams) ([]Vehicle, error)
 	// Completes a pending assistant turn (complete, error or cancelled).
 	FinishAIMessage(ctx context.Context, arg FinishAIMessageParams) (AiMessage, error)
+	// running → completed | failed | skipped, once.
+	FinishConversationAIRun(ctx context.Context, arg FinishConversationAIRunParams) (ConversationAiRun, error)
 	FinishIntegrationSyncRun(ctx context.Context, arg FinishIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	FinishMigrationRun(ctx context.Context, arg FinishMigrationRunParams) (MigrationRun, error)
 	GetAIConversationForUser(ctx context.Context, arg GetAIConversationForUserParams) (AiConversation, error)
@@ -624,6 +647,8 @@ type Querier interface {
 	// Full-unit duplicate guard before creation (decision 3); the partial
 	// unique index uq_warranties_active_full_unit is the final barrier.
 	GetActiveFullWarrantyByVehicleUnit(ctx context.Context, arg GetActiveFullWarrantyByVehicleUnitParams) (Warranty, error)
+	// A live token of a live grant and client, with the user's status.
+	GetActiveOAuthToken(ctx context.Context, arg GetActiveOAuthTokenParams) (GetActiveOAuthTokenRow, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
 	GetActivePhoneOTP(ctx context.Context, arg GetActivePhoneOTPParams) (OtpCode, error)
 	// Public image route: the active product (any brand) that lists the key.
@@ -670,6 +695,7 @@ type Querier interface {
 	GetCenterMemberByUUID(ctx context.Context, arg GetCenterMemberByUUIDParams) (GetCenterMemberByUUIDRow, error)
 	GetConnectionLocationMapByRemote(ctx context.Context, arg GetConnectionLocationMapByRemoteParams) (ConnectionLocationMap, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
+	GetContactOptOutState(ctx context.Context, arg GetContactOptOutStateParams) (ContactOptOutState, error)
 	GetContractInstanceByID(ctx context.Context, id int64) (ContractInstance, error)
 	GetContractInstanceByUUID(ctx context.Context, argUuid uuid.UUID) (ContractInstance, error)
 	GetContractInstanceByUUIDScoped(ctx context.Context, arg GetContractInstanceByUUIDScopedParams) (ContractInstance, error)
@@ -679,6 +705,13 @@ type Querier interface {
 	GetContractTemplateByID(ctx context.Context, id int64) (ContractTemplate, error)
 	GetContractTemplateByUUID(ctx context.Context, arg GetContractTemplateByUUIDParams) (ContractTemplate, error)
 	GetContractTemplateLocale(ctx context.Context, arg GetContractTemplateLocaleParams) (ContractTemplateLocale, error)
+	GetConversationAIRunByTrigger(ctx context.Context, triggerMessageID int64) (ConversationAiRun, error)
+	GetConversationAIRunByUUID(ctx context.Context, argUuid uuid.UUID) (ConversationAiRun, error)
+	// TEC-393 (F4-02a): WhatsApp conversation inbox (list contract, cursor
+	// timeline, counters, state changes), AI run log and contact opt-outs.
+	// Conversations ----------------------------------------------------------------
+	GetConversationByID(ctx context.Context, id int64) (Conversation, error)
+	GetConversationByUUID(ctx context.Context, argUuid uuid.UUID) (Conversation, error)
 	GetCountryByID(ctx context.Context, id int64) (Country, error)
 	GetCountryByISO2(ctx context.Context, iso2 string) (Country, error)
 	GetCustomerForIndex(ctx context.Context, argUuid uuid.UUID) (GetCustomerForIndexRow, error)
@@ -780,6 +813,8 @@ type Querier interface {
 	// transaction).
 	GetMeasurementResultForPDF(ctx context.Context, id int64) (MeasurementResult, error)
 	GetMeasurementResultPanel(ctx context.Context, arg GetMeasurementResultPanelParams) (GetMeasurementResultPanelRow, error)
+	// Messages (timeline) ----------------------------------------------------------
+	GetMessageByUUID(ctx context.Context, argUuid uuid.UUID) (Message, error)
 	// TEC-252: migrator bookkeeping (000074). Written only by cmd/migrator.
 	GetMigrationMap(ctx context.Context, arg GetMigrationMapParams) (MigrationMap, error)
 	GetModule(ctx context.Context, key string) (Module, error)
@@ -794,7 +829,11 @@ type Querier interface {
 	GetNotificationRecipient(ctx context.Context, arg GetNotificationRecipientParams) (GetNotificationRecipientRow, error)
 	GetOAuthAccountByProviderAccount(ctx context.Context, arg GetOAuthAccountByProviderAccountParams) (GetOAuthAccountByProviderAccountRow, error)
 	GetOAuthAccountByUserProvider(ctx context.Context, arg GetOAuthAccountByUserProviderParams) (GetOAuthAccountByUserProviderRow, error)
+	// A pending request that has not expired, with its client.
+	GetOAuthAuthRequest(ctx context.Context, id uuid.UUID) (GetOAuthAuthRequestRow, error)
+	GetOAuthClient(ctx context.Context, clientID string) (OauthClient, error)
 	GetOAuthProviderSettings(ctx context.Context, provider string) (OauthProviderSetting, error)
+	GetOAuthTokenAnyState(ctx context.Context, arg GetOAuthTokenAnyStateParams) (OauthToken, error)
 	GetOTPByUUID(ctx context.Context, argUuid uuid.UUID) (OtpCode, error)
 	GetOrder(ctx context.Context, arg GetOrderParams) (Order, error)
 	GetOrderByExternalReference(ctx context.Context, arg GetOrderByExternalReferenceParams) (Order, error)
@@ -977,6 +1016,7 @@ type Querier interface {
 	// TEC-223: the price a unit was sold at to buyer by seller (its latest
 	// order line with the unit assigned, the order not cancelled), in currency.
 	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
+	GetUsedOAuthCodeFamily(ctx context.Context, codeHash string) (pgtype.UUID, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (User, error)
@@ -1050,6 +1090,9 @@ type Querier interface {
 	// TEC-212: bulk operation log + undo.
 	InsertBulkOperation(ctx context.Context, arg InsertBulkOperationParams) (BulkOperation, error)
 	InsertConsent(ctx context.Context, arg InsertConsentParams) (Consent, error)
+	// Opt-outs ---------------------------------------------------------------------
+	// Append-only; the AFTER INSERT trigger updates contact_opt_out_state.
+	InsertContactOptOut(ctx context.Context, arg InsertContactOptOutParams) (ContactOptOut, error)
 	// ---------------------------------------------------------------------------
 	// Media.
 	InsertContractMedia(ctx context.Context, arg InsertContractMediaParams) (ContractMedium, error)
@@ -1089,6 +1132,7 @@ type Querier interface {
 	// TEC-293 (F3-02a): normalized readings, tires, device registry and the
 	// before/after service link. Every query is bounded by the organization.
 	InsertMeasurementValue(ctx context.Context, arg InsertMeasurementValueParams) (MeasurementValue, error)
+	// TEC-393: sender_user_id (staff), ai_run_id and stored media are optional.
 	InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error)
 	// ON CONFLICT DO NOTHING: a concurrent insert of the same key returns no row
 	// and the caller reads the existing one.
@@ -1147,6 +1191,9 @@ type Querier interface {
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error
+	// A customer is a users row with a customer profile or an organization link
+	// (K11).
+	IsCustomerUser(ctx context.Context, userID int64) (bool, error)
 	// The watermark of the latest successful run of a kind that set one. The
 	// barcode PATCH runs share the push_barcodes kind without a watermark, so
 	// LastSucceededIntegrationSyncRun would lose the bulk push cursor.
@@ -1259,6 +1306,8 @@ type Querier interface {
 	// TEC-221: assignee picker of the task form (members of the center).
 	ListCenterMembers(ctx context.Context, organizationID int64) ([]ListCenterMembersRow, error)
 	ListConnectionLocationMaps(ctx context.Context, connectionID int64) ([]ConnectionLocationMap, error)
+	ListContactOptOutHistory(ctx context.Context, arg ListContactOptOutHistoryParams) ([]ContactOptOut, error)
+	ListContactOptOutStates(ctx context.Context, contactE164 string) ([]ContactOptOutState, error)
 	// org_ids is the caller's scope (empty = no organization).
 	ListContractInstances(ctx context.Context, arg ListContractInstancesParams) ([]ContractInstance, error)
 	ListContractInstancesBySubject(ctx context.Context, arg ListContractInstancesBySubjectParams) ([]ContractInstance, error)
@@ -1274,6 +1323,17 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Templates.
 	ListContractTemplates(ctx context.Context, arg ListContractTemplatesParams) ([]ContractTemplate, error)
+	ListConversationAIRuns(ctx context.Context, arg ListConversationAIRunsParams) ([]ConversationAiRun, error)
+	// Messages newer than the cursor (created_at, id) of the newest message
+	// already shown, oldest first (catch-up after a reconnect).
+	ListConversationMessagesAfter(ctx context.Context, arg ListConversationMessagesAfterParams) ([]Message, error)
+	// Timeline page, newest first. The cursor is the (created_at, id) of the
+	// oldest message already shown; no cursor = the newest page.
+	ListConversationMessagesBefore(ctx context.Context, arg ListConversationMessagesBeforeParams) ([]Message, error)
+	// Sort: docs/list-contract.md, keys from whatsapp/repository.ConversationSort.
+	// q matches the contact name, the identity user's name and (digits only)
+	// the phone number.
+	ListConversations(ctx context.Context, arg ListConversationsParams) ([]Conversation, error)
 	// Fixed barcode holdings at the given locations of the organization.
 	ListCountExpectedFixed(ctx context.Context, arg ListCountExpectedFixedParams) ([]ListCountExpectedFixedRow, error)
 	// ---------------------------------------------------------------------------
@@ -1493,6 +1553,9 @@ type Querier interface {
 	// Other open services holding the same unit (draft check; the ledger has
 	// the final word on completion).
 	ListOpenServicesByUnit(ctx context.Context, arg ListOpenServicesByUnitParams) ([]ListOpenServicesByUnitRow, error)
+	// The subset of contacts that are currently opted out of a scope (campaign
+	// audience and pipeline guard).
+	ListOptedOutContacts(ctx context.Context, arg ListOptedOutContactsParams) ([]string, error)
 	ListOrderItemUnitsByItem(ctx context.Context, orderItemID int64) ([]OrderItemUnit, error)
 	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
@@ -1968,6 +2031,11 @@ type Querier interface {
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
 	ListWhatsAppConnectionEvents(ctx context.Context, limit int32) ([]WhatsappConnectionEvent, error)
+	// Identity resolution (TEC-394, F4-02b) ---------------------------------------
+	// Panel memberships of a contact's user with the organization state the
+	// resolver needs (access window, read_only, locale). Deleted organizations
+	// are skipped; suspended / expired / outside-window ones are filtered in Go.
+	ListWhatsAppIdentityMemberships(ctx context.Context, userID int64) ([]ListWhatsAppIdentityMembershipsRow, error)
 	// LockAccountingDispute locks a dispute addressed to the counterparty
 	// organization for its resolution.
 	LockAccountingDispute(ctx context.Context, arg LockAccountingDisputeParams) (AccountingDispute, error)
@@ -2070,6 +2138,7 @@ type Querier interface {
 	MarkBulkJobRolledBack(ctx context.Context, arg MarkBulkJobRolledBackParams) (BulkJob, error)
 	MarkBulkOperationUndone(ctx context.Context, arg MarkBulkOperationUndoneParams) (BulkOperation, error)
 	MarkContractSignerSigned(ctx context.Context, id int64) (ContractSigner, error)
+	MarkConversationRead(ctx context.Context, id int64) (Conversation, error)
 	MarkCustomerFirstService(ctx context.Context, arg MarkCustomerFirstServiceParams) (int64, error)
 	MarkDeliveryProcessing(ctx context.Context, id int64) error
 	MarkDeliveryResult(ctx context.Context, arg MarkDeliveryResultParams) error
@@ -2380,6 +2449,8 @@ type Querier interface {
 	// are reported separately).
 	ProductSaleProfitByProduct(ctx context.Context, arg ProductSaleProfitByProductParams) ([]ProductSaleProfitByProductRow, error)
 	PublishDocumentTemplate(ctx context.Context, id int64) (DocumentTemplate, error)
+	// Retention (90 days, QUESTIONS #15): deletes one batch of old runs.
+	PurgeConversationAIRunsBefore(ctx context.Context, arg PurgeConversationAIRunsBeforeParams) (int64, error)
 	PurgeNotificationDeliveriesBefore(ctx context.Context, arg PurgeNotificationDeliveriesBeforeParams) (int64, error)
 	PurgeNotificationsBefore(ctx context.Context, arg PurgeNotificationsBeforeParams) (int64, error)
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
@@ -2407,6 +2478,8 @@ type Querier interface {
 	// The most specific territory covering an address (district > province >
 	// country) whose distributor is live.
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
+	// Paused conversations whose pause ended return to auto.
+	ResumeExpiredAIPauses(ctx context.Context, now pgtype.Timestamptz) (int64, error)
 	// A failed render is re-queued with a new attempt number (new task id).
 	RetryDocumentRender(ctx context.Context, id int64) (DocumentRender, error)
 	ReviewDealerStats(ctx context.Context, arg ReviewDealerStatsParams) ([]ReviewDealerStatsRow, error)
@@ -2418,6 +2491,9 @@ type Querier interface {
 	// TEC-91: mobile sign-out drops the device's Expo tokens.
 	RevokeDevicePushTokensForDevice(ctx context.Context, arg RevokeDevicePushTokensForDeviceParams) (int64, error)
 	RevokeMobileSessionsForDevice(ctx context.Context, arg RevokeMobileSessionsForDeviceParams) (int64, error)
+	RevokeOAuthFamily(ctx context.Context, family uuid.UUID) error
+	// Revoking is the claim: of two concurrent refreshes only one wins.
+	RevokeOAuthToken(ctx context.Context, id int64) (int64, error)
 	RevokeOtherRefreshTokensForUser(ctx context.Context, arg RevokeOtherRefreshTokensForUserParams) error
 	RevokeRefreshTokenByHash(ctx context.Context, tokenHash string) (int64, error)
 	RevokeRefreshTokenByUUIDForUser(ctx context.Context, arg RevokeRefreshTokenByUUIDForUserParams) (int64, error)
@@ -2461,6 +2537,13 @@ type Querier interface {
 	// Stores the consumed contract_sign OTP row as the signer's proof.
 	SetContractSignerOTP(ctx context.Context, arg SetContractSignerOTPParams) (ContractSigner, error)
 	SetContractSignerOTPByUUID(ctx context.Context, arg SetContractSignerOTPByUUIDParams) (ContractSigner, error)
+	SetConversationAIConsent(ctx context.Context, arg SetConversationAIConsentParams) (Conversation, error)
+	// paused_until is only kept for ai_mode = paused (CHECK).
+	SetConversationAIMode(ctx context.Context, arg SetConversationAIModeParams) (Conversation, error)
+	SetConversationIdentity(ctx context.Context, arg SetConversationIdentityParams) (Conversation, error)
+	SetConversationLocale(ctx context.Context, arg SetConversationLocaleParams) (Conversation, error)
+	SetConversationStatus(ctx context.Context, arg SetConversationStatusParams) (Conversation, error)
+	SetConversationVisitorLead(ctx context.Context, arg SetConversationVisitorLeadParams) (Conversation, error)
 	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)
 	// Full identity edit (only when the caller's scope covers every link of the
 	// customer and the user has no panel membership).
@@ -2476,6 +2559,9 @@ type Querier interface {
 	SetLocationSortOrder(ctx context.Context, arg SetLocationSortOrderParams) (int64, error)
 	SetMeasurementDeviceActive(ctx context.Context, arg SetMeasurementDeviceActiveParams) (int64, error)
 	SetMeasurementResultPDFKey(ctx context.Context, arg SetMeasurementResultPDFKeyParams) error
+	SetMessageAIRun(ctx context.Context, arg SetMessageAIRunParams) (Message, error)
+	// Inbound media after it was copied to object storage.
+	SetMessageMedia(ctx context.Context, arg SetMessageMediaParams) (Message, error)
 	SetNotificationChannelEnabled(ctx context.Context, arg SetNotificationChannelEnabledParams) (NotificationChannelSetting, error)
 	SetOrderCancelReason(ctx context.Context, arg SetOrderCancelReasonParams) (Order, error)
 	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)
@@ -2619,6 +2705,14 @@ type Querier interface {
 	TopServicedCarModels(ctx context.Context, arg TopServicedCarModelsParams) ([]TopServicedCarModelsRow, error)
 	// Counts a newly stored message and moves the conversation to the top.
 	TouchAIConversation(ctx context.Context, id int64) (AiConversation, error)
+	// Counters of a newly stored inbound message: unread + 1, last inbound and
+	// last message time. A closed conversation reopens on a new inbound message.
+	TouchConversationInbound(ctx context.Context, arg TouchConversationInboundParams) (Conversation, error)
+	// Counters of a newly stored outbound (staff, AI, system) message.
+	TouchConversationOutbound(ctx context.Context, arg TouchConversationOutboundParams) (Conversation, error)
+	TouchOAuthClient(ctx context.Context, clientID string) error
+	// Last use of the token and its grant (connected apps list).
+	TouchOAuthToken(ctx context.Context, id int64) error
 	UnlinkServiceMeasurement(ctx context.Context, arg UnlinkServiceMeasurementParams) (int64, error)
 	UpdateAIConversationTitle(ctx context.Context, arg UpdateAIConversationTitleParams) (AiConversation, error)
 	UpdateAISettings(ctx context.Context, arg UpdateAISettingsParams) (AiSetting, error)
@@ -2633,6 +2727,8 @@ type Querier interface {
 	// Re-renders an open contract (draft or pending).
 	UpdateContractInstanceContent(ctx context.Context, arg UpdateContractInstanceContentParams) (ContractInstance, error)
 	UpdateContractTemplate(ctx context.Context, arg UpdateContractTemplateParams) (ContractTemplate, error)
+	// Stages and tool calls of a running run (whole arrays are replaced).
+	UpdateConversationAIRunProgress(ctx context.Context, arg UpdateConversationAIRunProgressParams) (ConversationAiRun, error)
 	UpdateCustomerProfile(ctx context.Context, arg UpdateCustomerProfileParams) (CustomerProfile, error)
 	UpdateDocumentTemplateDraft(ctx context.Context, arg UpdateDocumentTemplateDraftParams) (DocumentTemplate, error)
 	UpdateFinanceAccount(ctx context.Context, arg UpdateFinanceAccountParams) (FinanceAccount, error)
@@ -2758,6 +2854,8 @@ type Querier interface {
 	UpsertNotificationEvent(ctx context.Context, arg UpsertNotificationEventParams) error
 	UpsertNotificationPreferenceRow(ctx context.Context, arg UpsertNotificationPreferenceRowParams) (NotificationPreference, error)
 	UpsertNotificationTemplate(ctx context.Context, arg UpsertNotificationTemplateParams) (NotificationTemplate, error)
+	// Consent creates the user's connected app or brings a revoked one back.
+	UpsertOAuthGrant(ctx context.Context, arg UpsertOAuthGrantParams) (OauthGrant, error)
 	UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error)
 	UpsertOrganizationProductStockForRepair(ctx context.Context, arg UpsertOrganizationProductStockForRepairParams) error
 	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
@@ -2776,6 +2874,8 @@ type Querier interface {
 	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)
 	UpsertUnitCurrentStateForRepair(ctx context.Context, arg UpsertUnitCurrentStateForRepairParams) error
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
+	// Marking the code used is the claim; an expired or used code returns no row.
+	UseOAuthCode(ctx context.Context, arg UseOAuthCodeParams) (OauthCode, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
 	VoidContractInstance(ctx context.Context, arg VoidContractInstanceParams) (ContractInstance, error)
 	// VoidStaffPayment marks a payment void after its ledger row was reversed;

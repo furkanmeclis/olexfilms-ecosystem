@@ -33,6 +33,7 @@ import (
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	oauthmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth"
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
@@ -48,6 +49,7 @@ import (
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
+	whatsapprepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/repository"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	bulkadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
@@ -328,6 +330,8 @@ func main() {
 		// TEC-314: daily quote expiry (valid_until passed).
 		WithQuoteExpire(leadsSvc.ExpireDueQuotesTask).
 		WithQuoteReminder(leadsSvc.QuoteReminderTask).
+		// TEC-400: hourly MCP OAuth cleanup (expired rows, abandoned clients).
+		WithOAuthCleanup(oauthmodule.New(pool, featureSvc, nil, cfg.Auth.FrontendURL, log).Cleanup).
 		WithTasksDueScan(tasksusecase.NewCron(pool, queries, outbox.NewStore(pool, queries)).DueScanTask).
 		// TEC-207: hourly end-of-day warehouse reports (previous local day).
 		WithWarehouseEOD(eodSvc.DailyTask(log)).
@@ -345,6 +349,8 @@ func main() {
 			glorian.NewReconciler(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log).ReconcileTask,
 			glorianOrders.ReplayOneTask,
 		).
+		// TEC-393: 90-day retention of WhatsApp conversation AI runs.
+		WithConversationAIRunPurge(whatsapprepo.New(pool).PurgeExpiredAIRuns).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,
@@ -357,6 +363,9 @@ func main() {
 
 	rdb := redis.NewClient(&redis.Options{Addr: cfg.Redis.Addr, Password: cfg.Redis.Password, DB: cfg.Redis.DB})
 	defer func() { _ = rdb.Close() }()
+	// TEC-394: user / membership / organization events drop the WhatsApp
+	// identity cache.
+	whatsappmodule.RegisterIdentityInvalidation(eventBus, rdb, cfg.App.Env, log)
 
 	healthPath := os.Getenv("WORKER_HEALTH_FILE")
 	if healthPath == "" {

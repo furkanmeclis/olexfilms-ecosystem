@@ -78,6 +78,8 @@ type Worker struct {
 	quoteExpire QuoteExpireFunc
 	// TEC-315: delayed quote WhatsApp reminder.
 	quoteReminder QuoteReminderFunc
+	// TEC-400: hourly MCP OAuth cleanup.
+	oauthCleanup OAuthCleanupFunc
 	// TEC-207: end-of-day warehouse reports.
 	warehouseEOD WarehouseEODFunc
 	// TEC-268: Glorian catalog and dealer pull.
@@ -97,6 +99,8 @@ type Worker struct {
 	measurementPDF MeasurementPDFFunc
 	// TEC-381: planned staff payments booked on their paid_on.
 	staffPaymentsPostDue StaffPaymentsPostDueFunc
+	// TEC-393: 90-day retention of conversation AI runs.
+	purgeConversationAIRuns ConversationAIRunPurgeFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -171,6 +175,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskTasksDueScan, w.handleTasksDueScan)
 	mux.HandleFunc(TaskQuoteExpire, w.handleQuoteExpire)
 	mux.HandleFunc(TaskQuoteReminder, w.handleQuoteReminder)
+	mux.HandleFunc(TaskOAuthCleanup, w.handleOAuthCleanup)
 	mux.HandleFunc(TaskWarehouseEODReports, w.handleWarehouseEOD)
 	mux.HandleFunc(TaskGlorianPullCatalog, w.handleGlorianPull)
 	mux.HandleFunc(TaskGlorianPushBarcodes, w.handleGlorianPush)
@@ -181,6 +186,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskGlorianOutboundReplayOne, w.handleGlorianOutboundReplayOne)
 	mux.HandleFunc(TaskMeasurementPDF, w.handleMeasurementPDF)
 	mux.HandleFunc(TaskStaffPaymentsPostDue, w.handleStaffPaymentsPostDue)
+	mux.HandleFunc(TaskConversationAIRunPurge, w.handleConversationAIRunPurge)
 	return w
 }
 

@@ -606,3 +606,33 @@ func TestAIGrants(t *testing.T) {
 		}
 	}
 }
+
+// TEC-393: WhatsApp conversations are visible to the platform admin only
+// (F4 user answer S2); no center, distributor, dealer or portal role holds
+// any conversations permission.
+func TestConversationGrants(t *testing.T) {
+	slugs := []string{PermConversationsRead, PermConversationsReply, PermConversationsManage}
+	for _, slug := range slugs {
+		if _, ok := PermissionBySlug(slug); !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+		if !SuperAdminOnly(slug) {
+			t.Fatalf("%s must be super_admin only", slug)
+		}
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range slugs {
+			scope, ok := g[slug]
+			if r.Slug == RoleSuperAdmin {
+				if scope != ScopeAll {
+					t.Fatalf("super_admin %s = %q, want all", slug, scope)
+				}
+				continue
+			}
+			if ok {
+				t.Fatalf("%s must not hold %s", r.Slug, slug)
+			}
+		}
+	}
+}

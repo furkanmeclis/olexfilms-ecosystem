@@ -472,6 +472,28 @@ type Consent struct {
 	UserAgent   pgtype.Text        `json:"user_agent"`
 }
 
+type ContactOptOut struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	ContactE164     string             `json:"contact_e164"`
+	Scope           string             `json:"scope"`
+	Action          string             `json:"action"`
+	Source          string             `json:"source"`
+	ConversationID  pgtype.Int8        `json:"conversation_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	Note            pgtype.Text        `json:"note"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type ContactOptOutState struct {
+	ContactE164 string             `json:"contact_e164"`
+	Scope       string             `json:"scope"`
+	OptedOut    bool               `json:"opted_out"`
+	LastEntryID int64              `json:"last_entry_id"`
+	Source      string             `json:"source"`
+	ChangedAt   pgtype.Timestamptz `json:"changed_at"`
+}
+
 type ContractCounter struct {
 	OrganizationID int64 `json:"organization_id"`
 	NextSeq        int64 `json:"next_seq"`
@@ -585,17 +607,54 @@ type ContractTemplateLocale struct {
 }
 
 type Conversation struct {
-	ID             int64              `json:"id"`
-	Uuid           uuid.UUID          `json:"uuid"`
-	OrganizationID pgtype.Int8        `json:"organization_id"`
-	BrandID        pgtype.Int8        `json:"brand_id"`
-	Channel        string             `json:"channel"`
-	ContactE164    string             `json:"contact_e164"`
-	ContactName    pgtype.Text        `json:"contact_name"`
-	UserID         pgtype.Int8        `json:"user_id"`
-	LastMessageAt  pgtype.Timestamptz `json:"last_message_at"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	OrganizationID     pgtype.Int8        `json:"organization_id"`
+	BrandID            pgtype.Int8        `json:"brand_id"`
+	Channel            string             `json:"channel"`
+	ContactE164        string             `json:"contact_e164"`
+	ContactName        pgtype.Text        `json:"contact_name"`
+	UserID             pgtype.Int8        `json:"user_id"`
+	LastMessageAt      pgtype.Timestamptz `json:"last_message_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	Status             string             `json:"status"`
+	AiMode             string             `json:"ai_mode"`
+	AiPausedUntil      pgtype.Timestamptz `json:"ai_paused_until"`
+	AssignedUserID     pgtype.Int8        `json:"assigned_user_id"`
+	AssignedOrgID      pgtype.Int8        `json:"assigned_org_id"`
+	IdentityKind       string             `json:"identity_kind"`
+	IdentityUserID     pgtype.Int8        `json:"identity_user_id"`
+	IdentityOrgID      pgtype.Int8        `json:"identity_org_id"`
+	IdentityResolvedAt pgtype.Timestamptz `json:"identity_resolved_at"`
+	Locale             pgtype.Text        `json:"locale"`
+	LastInboundAt      pgtype.Timestamptz `json:"last_inbound_at"`
+	UnreadCount        int32              `json:"unread_count"`
+	AiConsentAt        pgtype.Timestamptz `json:"ai_consent_at"`
+	VisitorLeadID      pgtype.Int8        `json:"visitor_lead_id"`
+}
+
+type ConversationAiRun struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	ConversationID   int64              `json:"conversation_id"`
+	TriggerMessageID int64              `json:"trigger_message_id"`
+	OrganizationID   pgtype.Int8        `json:"organization_id"`
+	BrandID          pgtype.Int8        `json:"brand_id"`
+	Status           string             `json:"status"`
+	Stages           []byte             `json:"stages"`
+	ToolCalls        []byte             `json:"tool_calls"`
+	Model            string             `json:"model"`
+	InputTokens      int64              `json:"input_tokens"`
+	OutputTokens     int64              `json:"output_tokens"`
+	CacheReadTokens  int64              `json:"cache_read_tokens"`
+	CacheWriteTokens int64              `json:"cache_write_tokens"`
+	Error            pgtype.Text        `json:"error"`
+	StartedAt        pgtype.Timestamptz `json:"started_at"`
+	FinishedAt       pgtype.Timestamptz `json:"finished_at"`
+	DurationMs       pgtype.Int4        `json:"duration_ms"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Country struct {
@@ -1190,21 +1249,27 @@ type MeasurementValue struct {
 }
 
 type Message struct {
-	ID             int64              `json:"id"`
-	Uuid           uuid.UUID          `json:"uuid"`
-	ConversationID int64              `json:"conversation_id"`
-	OrganizationID pgtype.Int8        `json:"organization_id"`
-	BrandID        pgtype.Int8        `json:"brand_id"`
-	Channel        string             `json:"channel"`
-	Direction      string             `json:"direction"`
-	SenderType     string             `json:"sender_type"`
-	ExternalID     string             `json:"external_id"`
-	Body           pgtype.Text        `json:"body"`
-	Media          []byte             `json:"media"`
-	Status         string             `json:"status"`
-	Raw            []byte             `json:"raw"`
-	SentAt         pgtype.Timestamptz `json:"sent_at"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	ConversationID   int64              `json:"conversation_id"`
+	OrganizationID   pgtype.Int8        `json:"organization_id"`
+	BrandID          pgtype.Int8        `json:"brand_id"`
+	Channel          string             `json:"channel"`
+	Direction        string             `json:"direction"`
+	SenderType       string             `json:"sender_type"`
+	ExternalID       string             `json:"external_id"`
+	Body             pgtype.Text        `json:"body"`
+	Media            []byte             `json:"media"`
+	Status           string             `json:"status"`
+	Raw              []byte             `json:"raw"`
+	SentAt           pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	SenderUserID     pgtype.Int8        `json:"sender_user_id"`
+	AiRunID          pgtype.Int8        `json:"ai_run_id"`
+	MediaStorageKey  pgtype.Text        `json:"media_storage_key"`
+	MediaMime        pgtype.Text        `json:"media_mime"`
+	MediaSize        pgtype.Int8        `json:"media_size"`
+	DeliveryStatusAt pgtype.Timestamptz `json:"delivery_status_at"`
 }
 
 type MigrationMap struct {
@@ -1384,6 +1449,62 @@ type OauthAccount struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
+type OauthAuthRequest struct {
+	ID            uuid.UUID          `json:"id"`
+	ClientID      string             `json:"client_id"`
+	RedirectUri   string             `json:"redirect_uri"`
+	CodeChallenge string             `json:"code_challenge"`
+	State         pgtype.Text        `json:"state"`
+	Scopes        []string           `json:"scopes"`
+	Resource      string             `json:"resource"`
+	ExpiresAt     pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type OauthClient struct {
+	ID           int64              `json:"id"`
+	Uuid         uuid.UUID          `json:"uuid"`
+	ClientID     string             `json:"client_id"`
+	ClientName   string             `json:"client_name"`
+	RedirectUris []string           `json:"redirect_uris"`
+	CreatedIp    pgtype.Text        `json:"created_ip"`
+	LastUsedAt   pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt    pgtype.Timestamptz `json:"revoked_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type OauthCode struct {
+	CodeHash       string             `json:"code_hash"`
+	GrantID        int64              `json:"grant_id"`
+	ClientID       string             `json:"client_id"`
+	UserID         int64              `json:"user_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	RedirectUri    string             `json:"redirect_uri"`
+	CodeChallenge  string             `json:"code_challenge"`
+	Resource       string             `json:"resource"`
+	Scopes         []string           `json:"scopes"`
+	ExpiresAt      pgtype.Timestamptz `json:"expires_at"`
+	UsedAt         pgtype.Timestamptz `json:"used_at"`
+	Family         pgtype.UUID        `json:"family"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type OauthGrant struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	UserID         int64              `json:"user_id"`
+	ClientID       string             `json:"client_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Resource       string             `json:"resource"`
+	Scopes         []string           `json:"scopes"`
+	LastUsedAt     pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt      pgtype.Timestamptz `json:"revoked_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type OauthProviderSetting struct {
 	Provider        string             `json:"provider"`
 	LoginEnabled    bool               `json:"login_enabled"`
@@ -1392,6 +1513,24 @@ type OauthProviderSetting struct {
 	ClientSecretEnc pgtype.Text        `json:"client_secret_enc"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type OauthToken struct {
+	ID             int64              `json:"id"`
+	TokenHash      string             `json:"token_hash"`
+	Kind           string             `json:"kind"`
+	Family         uuid.UUID          `json:"family"`
+	GrantID        int64              `json:"grant_id"`
+	ClientID       string             `json:"client_id"`
+	UserID         int64              `json:"user_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Resource       string             `json:"resource"`
+	Scopes         []string           `json:"scopes"`
+	ExpiresAt      pgtype.Timestamptz `json:"expires_at"`
+	RevokedAt      pgtype.Timestamptz `json:"revoked_at"`
+	LastUsedAt     pgtype.Timestamptz `json:"last_used_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type Order struct {

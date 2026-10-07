@@ -751,7 +751,20 @@ func (s *Service) AddMember(ctx context.Context, orgUUID uuid.UUID, in AddMember
 		}
 		return err
 	}
+	if s.out != nil {
+		if err := s.out.Enqueue(ctx, tx, MemberAddedEvent(org.ID, user.ID, role)); err != nil {
+			return fmt.Errorf("organizations: outbox: %w", err)
+		}
+	}
 	return tx.Commit(ctx)
+}
+
+// MemberAddedEvent is tenant.member_added for a new membership (TEC-394: the
+// WhatsApp identity cache drops on it).
+func MemberAddedEvent(orgID, userID int64, memberRole string) events.Event {
+	return events.New(events.TenantMemberAdded).WithTenant(orgID).WithPayload(map[string]any{
+		"organization_id": orgID, "user_id": userID, "role": memberRole,
+	})
 }
 
 // validMemberRoles checks that explicit membership roles are system roles of

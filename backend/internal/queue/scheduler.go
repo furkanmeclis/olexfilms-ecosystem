@@ -66,6 +66,10 @@ func Schedules() []Periodic {
 		{Cron: glorianOrderReplayCron, Type: TaskGlorianOrderReplay, Queue: QueueMaintenance, Opts: glorianOrderReplayCronOpts(), New: NewGlorianOrderReplayAllTask},
 		// TEC-381: hourly booking of planned staff payments due (idempotent).
 		{Cron: staffPaymentsPostDueCron, Type: TaskStaffPaymentsPostDue, Queue: QueueMaintenance, Opts: staffPaymentsPostDueOpts(), New: NewStaffPaymentsPostDueTask},
+		// TEC-393: 90-day retention of WhatsApp conversation AI runs.
+		{Cron: conversationAIRunPurgeCron, Type: TaskConversationAIRunPurge, Queue: QueueMaintenance, New: NewConversationAIRunPurgeTask},
+		// TEC-400: hourly MCP OAuth cleanup (idempotent deletes).
+		{Cron: oauthCleanupCron, Type: TaskOAuthCleanup, Queue: QueueMaintenance, Opts: oauthCleanupOpts(), New: NewOAuthCleanupTask},
 	}
 }
 
