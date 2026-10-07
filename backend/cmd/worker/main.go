@@ -51,6 +51,7 @@ import (
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
+	wapipeline "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/pipeline"
 	whatsapprepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/repository"
 	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
@@ -62,6 +63,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
@@ -132,7 +134,8 @@ func main() {
 	eventBus := events.NewBus(log)
 	outboxStore := outbox.NewStore(pool, queries)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log,
-		notifmodule.WithAnnouncementFanout(queries, reviewQueue))
+		notifmodule.WithAnnouncementFanout(queries, reviewQueue),
+		notifmodule.WithAIQuotaRecipients(queries)) // TEC-389
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, pool, queries, cfg.Auth.FrontendURL, log)
 	// TEC-336: approved claims open and track their re-application service.
@@ -154,6 +157,8 @@ func main() {
 	contractsmodule.RegisterEventHandlers(eventBus, reviewQueue, log)
 	// TEC-296: service events compute the before/after measurement match.
 	measurementsmodule.RegisterEventHandlers(eventBus, pool, queries, log)
+	// TEC-396: whatsapp.message.received arms the debounced whatsapp:ai_reply.
+	wapipeline.RegisterEventHandlers(eventBus, queue.WhatsAppAIEnqueuer{Client: reviewQueue}, log)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
 	outboxStop := outboxPub.StartRun(ctx)
 	defer outboxStop()
@@ -235,6 +240,8 @@ func main() {
 		// TEC-377: service and warranty list exports (read only).
 		servicesusecase.NewListExportAdapter(servicesusecase.New(pool, queries, nil)),
 		warrantyusecase.NewListExportAdapter(warrantyusecase.NewReader(pool, queries, nil, cfg.Auth.FrontendURL)),
+		// TEC-389: AI usage report export (read only).
+		aiusecase.NewUsageExportAdapter(aiusecase.NewAdmin(airepo.New(pool), llm.ModelsFromConfig(cfg.AI), nil)),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
@@ -387,6 +394,12 @@ func main() {
 	worker.WithWhatsAppMessaging(waMsgs.ProcessSend, waMsgs.StoreInboundMedia, func(ctx context.Context) (int, error) {
 		return waMsgs.RequeueStale(ctx, 2*time.Minute)
 	})
+	// TEC-396 (F4-02c): WhatsApp AI pipeline (whatsapp queue).
+	worker.WithWhatsAppAIReply(newWhatsAppAIPipeline(whatsAppAIDeps{
+		cfg: cfg, pool: pool, queries: queries, features: featureSvc, activity: activityRec,
+		notifier: notifSvc, messaging: waMsgs, downloader: waSvc.MediaDownloader(), store: store,
+		rdb: rdb, log: log,
+	}).Process)
 
 	healthPath := os.Getenv("WORKER_HEALTH_FILE")
 	if healthPath == "" {

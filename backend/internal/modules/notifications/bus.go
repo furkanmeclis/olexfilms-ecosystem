@@ -16,6 +16,7 @@ import (
 type eventHandlerConfig struct {
 	announcementTargets announcementsusecase.TargetResolver
 	announcementQueue   announcementsusecase.TaskEnqueuer
+	aiQuotaRecipients   AIQuotaRecipients
 }
 
 // EventHandlerOption customizes notification event listeners.
@@ -199,6 +200,24 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 		}
 		return nil
 	})
+	// TEC-389: AI quota thresholds (80 % / 100 %) once per pool and month.
+	if cfg.aiQuotaRecipients != nil {
+		bus.Subscribe(events.AIQuotaThreshold, func(ctx context.Context, event events.Event) error {
+			in, ok, err := aiQuotaThresholdDispatch(ctx, cfg.aiQuotaRecipients, event)
+			if err != nil {
+				log.Error("ai_quota_notification_failed", "event_id", event.EventID, "error", err)
+			}
+			if !ok {
+				return nil
+			}
+			in.EventID = event.EventID
+			in.OrganizationID = event.TenantID
+			if _, err := svc.Dispatch(ctx, in); err != nil {
+				log.Error("notifications_dispatch_failed", "event", event.Name, "event_id", event.EventID, "error", err)
+			}
+			return nil
+		})
+	}
 	on(events.AIDraftCreated, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		ids := userIDsFromAIEvent(event)
 		return notifmodel.DispatchInput{

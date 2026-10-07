@@ -141,5 +141,11 @@
   "system.groups.mcp": "MCP connections",
   "system.groups.mcp_hint": "Limits of the MCP endpoints that AI clients (Claude, ChatGPT) connect to.",
   "system.keys.mcp_requests_per_hour_per_org": "MCP requests per organization per hour",
-  "system.keys.mcp_requests_per_hour_per_org_hint": "Requests one organization may make per hour over all connected AI apps; further requests are refused until the window ends."
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Requests one organization may make per hour over all connected AI apps; further requests are refused until the window ends.",
+  "system.groups.whatsapp": "WhatsApp",
+  "system.groups.whatsapp_hint": "WhatsApp conversations, send rate and AI replies.",
+  "system.keys.whatsapp_ai_staff_pause_minutes": "AI pause after a staff message (minutes)",
+  "system.keys.whatsapp_ai_staff_pause_minutes_hint": "The AI does not answer a conversation a staff member wrote in within this time; 0 = no pause.",
+  "system.keys.whatsapp_ai_guidelines_url": "AI guidelines link",
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Guidelines link (https) sent with the WhatsApp consent question; empty = the guidelines text is sent in the message."
 }

@@ -141,5 +141,11 @@
   "system.groups.mcp": "اتصالات MCP",
   "system.groups.mcp_hint": "حدود نقاط نهاية MCP التي تتصل بها عملاء الذكاء الاصطناعي (Claude وChatGPT).",
   "system.keys.mcp_requests_per_hour_per_org": "طلبات MCP لكل مؤسسة في الساعة",
-  "system.keys.mcp_requests_per_hour_per_org_hint": "عدد الطلبات التي يمكن للمؤسسة إرسالها في الساعة عبر جميع تطبيقات الذكاء الاصطناعي المتصلة؛ تُرفض الطلبات الزائدة حتى انتهاء الفترة."
+  "system.keys.mcp_requests_per_hour_per_org_hint": "عدد الطلبات التي يمكن للمؤسسة إرسالها في الساعة عبر جميع تطبيقات الذكاء الاصطناعي المتصلة؛ تُرفض الطلبات الزائدة حتى انتهاء الفترة.",
+  "system.groups.whatsapp": "واتساب",
+  "system.groups.whatsapp_hint": "محادثات واتساب ومعدل الإرسال وردود الذكاء الاصطناعي.",
+  "system.keys.whatsapp_ai_staff_pause_minutes": "إيقاف الذكاء الاصطناعي بعد رسالة موظف (بالدقائق)",
+  "system.keys.whatsapp_ai_staff_pause_minutes_hint": "لا يرد الذكاء الاصطناعي في محادثة كتب فيها موظف خلال هذه المدة؛ 0 = دون إيقاف.",
+  "system.keys.whatsapp_ai_guidelines_url": "رابط إرشادات الذكاء الاصطناعي",
+  "system.keys.whatsapp_ai_guidelines_url_hint": "رابط الإرشادات (https) المرسل مع سؤال الموافقة في واتساب؛ إذا كان فارغًا يُرسل نص الإرشادات في الرسالة."
 }

@@ -43,12 +43,33 @@ const customerPrompt = `
 - Never give prices (including recommended retail prices); direct the customer to the nearest dealer for an offer.
 `
 
+// customerWhatsAppPrompt is the customer part on WhatsApp (F4-02c): the
+// number resolved to a customer user.
+const customerWhatsAppPrompt = `
+# Customer assistant
+- The user is a customer of the brand, writing on WhatsApp from the phone number of their customer account. Only talk about their own vehicles, services, warranties and appointments, and general product information.
+- Never give prices (including recommended retail prices); direct the customer to the nearest dealer for an offer.
+`
+
+// visitorPrompt is the realm part of an unidentified WhatsApp contact.
+const visitorPrompt = `
+# Visitor assistant
+- The user is an unidentified visitor writing on WhatsApp: no account matches their phone number. You cannot see any personal records; only public product information, the dealer network and public warranty lookups.
+- Never give prices (including recommended retail prices); direct the visitor to the nearest dealer for an offer.
+`
+
 // systemPrompt builds the cached system block: base rules, the realm part
-// and the platform administrator's extra instructions.
-func systemPrompt(customer bool, extra string) string {
+// and the platform administrator's extra instructions. The portal and
+// panel text is unchanged by the WhatsApp variants (cache stability).
+func systemPrompt(f sessionFacts, extra string) string {
 	var sb strings.Builder
 	sb.WriteString(basePrompt)
-	if customer {
+	switch {
+	case f.Visitor:
+		sb.WriteString(visitorPrompt)
+	case f.Customer && f.Channel == ChannelWhatsApp:
+		sb.WriteString(customerWhatsAppPrompt)
+	case f.Customer:
 		sb.WriteString(customerPrompt)
 	}
 	if e := strings.TrimSpace(extra); e != "" {
@@ -69,6 +90,10 @@ type sessionFacts struct {
 	Locale   string
 	Timezone string
 	Customer bool
+	// Visitor is an unidentified WhatsApp contact; Channel is
+	// ChannelWhatsApp for WhatsApp turns (empty: panel / portal).
+	Visitor bool
+	Channel string
 }
 
 // sessionPrompt carries the per user context (after the cache breakpoint).
@@ -76,9 +101,14 @@ func sessionPrompt(f sessionFacts) string {
 	var sb strings.Builder
 	sb.WriteString("<session>\n")
 	fmt.Fprintf(&sb, "Brand: %s\n", inline(f.Brand))
-	if f.Customer {
+	switch {
+	case f.Visitor:
+		sb.WriteString("User: unidentified visitor (WhatsApp)\n")
+	case f.Customer && f.Channel == ChannelWhatsApp:
+		fmt.Fprintf(&sb, "User: %s (customer, WhatsApp)\n", inline(f.User))
+	case f.Customer:
 		fmt.Fprintf(&sb, "User: %s (customer, portal)\n", inline(f.User))
-	} else {
+	default:
 		fmt.Fprintf(&sb, "Organization: %s (%s)\n", inline(f.Org), inline(f.OrgType))
 		fmt.Fprintf(&sb, "User: %s (role: %s)\n", inline(f.User), inline(f.Role))
 	}

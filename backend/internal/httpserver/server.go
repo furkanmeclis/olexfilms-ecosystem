@@ -24,6 +24,7 @@ import (
 	activityhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/usecase"
 	aimodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai"
+	aihandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/handler"
 	airepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/repository"
 	aitools "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
 	aiusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/usecase"
@@ -163,6 +164,7 @@ import (
 	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	whatsapphandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/handler"
+	wapipeline "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/pipeline"
 	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
@@ -557,7 +559,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	nh := notifhandler.New(notifSvc)
 	notifmodule.RegisterRoutes(mux, nh, tokens, loader)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log,
-		notifmodule.WithAnnouncementFanout(deps.Queries, deps.Queue))
+		notifmodule.WithAnnouncementFanout(deps.Queries, deps.Queue),
+		notifmodule.WithAIQuotaRecipients(deps.Queries)) // TEC-389
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, cfg.Auth.FrontendURL, log)
 	// TEC-336: approved claims open and track their re-application service.
@@ -613,6 +616,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-207: end-of-day warehouse reports and their PDF.
 	eodSvc := warehouseusecase.NewEOD(deps.DB, deps.Queries)
 	eodPDF := warehouseusecase.NewEODPDF(eodSvc, deps.Storage, log)
+	// TEC-389 (F4-01g): AI settings, quotas and usage report; the tool
+	// registry is attached once it is built (below).
+	aiAdmin := aiusecase.NewAdmin(airepo.New(deps.DB), llm.ModelsFromConfig(cfg.AI), nil)
 	ioReg := ioengine.NewRegistry(
 		// TEC-211: price columns behind pricing.* grants.
 		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries).WithPrices(pricingSvc),
@@ -662,6 +668,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-377: service and warranty list exports.
 		servicesusecase.NewListExportAdapter(servicesSvc),
 		warrantyusecase.NewListExportAdapter(warrantyReader),
+		// TEC-389: AI usage report export (read only).
+		aiusecase.NewUsageExportAdapter(aiAdmin),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -893,6 +901,27 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Outbox: outbox.NewStore(deps.DB, deps.Queries), Log: log,
 	})
 	aimodule.RegisterRoutes(mux, s.aiChat, tokens, loader, deps.Queries)
+	aiAdmin.Tools = s.aiTools
+	aimodule.RegisterAdminRoutes(mux, aihandler.NewAdmin(aiAdmin, exportSvc), tokens, loader, deps.Queries)
+	// TEC-396 (F4-02c): WhatsApp AI pipeline. whatsapp.message.received arms
+	// the debounced whatsapp:ai_reply task; the in-process worker runs it
+	// here, worker-core in production (cmd/worker).
+	if deps.Queue != nil {
+		wapipeline.RegisterEventHandlers(eventBus, queue.WhatsAppAIEnqueuer{Client: deps.Queue}, log)
+	}
+	if s.worker != nil {
+		var waMedia llm.ObjectReader
+		if deps.Storage != nil {
+			waMedia = deps.Storage
+		}
+		s.worker.WithWhatsAppAIReply(wapipeline.Wire(wapipeline.WireDeps{
+			Queries: deps.Queries, AIStore: airepo.New(deps.DB), Chat: s.aiChat, Actions: s.aiActions,
+			Messaging: s.waMessaging, Provider: aiProvider, Models: llm.ModelsFromConfig(cfg.AI),
+			Access: uc, Features: featureSvc, Settings: sysSvc, Redis: deps.Redis, Env: cfg.App.Env,
+			Notifier: notifSvc, Media: waMedia, Downloader: waSvc.MediaDownloader(),
+			DefaultBrandSlug: cfg.App.DefaultBrandSlug, Log: log,
+		}).Process)
+	}
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)

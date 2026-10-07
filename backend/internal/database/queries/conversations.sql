@@ -282,3 +282,35 @@ ORDER BY o.name ASC, o.id ASC;
 -- (K11).
 SELECT (EXISTS (SELECT 1 FROM customer_profiles cp WHERE cp.user_id = sqlc.arg(user_id))
      OR EXISTS (SELECT 1 FROM customer_organizations co WHERE co.user_id = sqlc.arg(user_id)))::boolean AS is_customer;
+
+-- AI pipeline (TEC-396, F4-02c) -------------------------------------------------
+
+-- name: ListInboundMessagesAfter :many
+-- Inbound contact messages of a conversation newer than after_id and since,
+-- newest first (the pipeline turns them oldest first).
+SELECT * FROM messages m
+WHERE m.conversation_id = sqlc.arg(conversation_id)
+  AND m.direction = 'in'
+  AND m.sender_type = 'contact'
+  AND m.id > sqlc.arg(after_id)::bigint
+  AND m.created_at >= sqlc.arg(since)::timestamptz
+ORDER BY m.id DESC
+LIMIT sqlc.arg(limit_count);
+
+-- name: MaxConversationAIRunTrigger :one
+-- The newest message an AI run was started for (0 = none).
+SELECT COALESCE(MAX(trigger_message_id), 0)::bigint
+FROM conversation_ai_runs
+WHERE conversation_id = sqlc.arg(conversation_id);
+
+-- name: MaxConversationMessageIDBySender :one
+-- The newest message of one sender type (0 = none).
+SELECT COALESCE(MAX(id), 0)::bigint
+FROM messages
+WHERE conversation_id = sqlc.arg(conversation_id) AND sender_type = sqlc.arg(sender_type);
+
+-- name: LastConversationMessageAtBySender :one
+-- Time of the newest message of one sender type (NULL = none).
+SELECT MAX(created_at)::timestamptz
+FROM messages
+WHERE conversation_id = sqlc.arg(conversation_id) AND sender_type = sqlc.arg(sender_type);

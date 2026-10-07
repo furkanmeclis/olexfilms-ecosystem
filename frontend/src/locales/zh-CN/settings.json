@@ -141,5 +141,11 @@
   "system.groups.mcp": "MCP 连接",
   "system.groups.mcp_hint": "AI 客户端（Claude、ChatGPT）所连接的 MCP 端点的限制。",
   "system.keys.mcp_requests_per_hour_per_org": "每个组织每小时的 MCP 请求数",
-  "system.keys.mcp_requests_per_hour_per_org_hint": "一个组织每小时通过所有已连接的 AI 应用可发出的请求数；超出的请求在时间窗口结束前将被拒绝。"
+  "system.keys.mcp_requests_per_hour_per_org_hint": "一个组织每小时通过所有已连接的 AI 应用可发出的请求数；超出的请求在时间窗口结束前将被拒绝。",
+  "system.groups.whatsapp": "WhatsApp",
+  "system.groups.whatsapp_hint": "WhatsApp 会话、发送速率和 AI 回复。",
+  "system.keys.whatsapp_ai_staff_pause_minutes": "员工发消息后 AI 暂停时间（分钟）",
+  "system.keys.whatsapp_ai_staff_pause_minutes_hint": "员工在此时间内在会话中发过消息时，AI 不回复；0 = 不暂停。",
+  "system.keys.whatsapp_ai_guidelines_url": "AI 使用准则链接",
+  "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp 同意询问中发送的准则链接（https）；留空则在消息中直接发送准则文本。"
 }

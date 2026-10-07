@@ -253,7 +253,10 @@ type session struct {
 	pool    string
 	source  string
 	channel string
-	tools   tools.Principal
+	// usage is the ai_usage channel when it differs from channel
+	// (WhatsApp turns, agent.go).
+	usage string
+	tools tools.Principal
 }
 
 func (c *Chat) session(ctx context.Context, caller Caller) (*session, error) {
@@ -322,14 +325,12 @@ func (c *Chat) quota(ctx context.Context, s *session, settings db.AiSetting) (li
 	if s.pool == model.PoolSystem {
 		limit = settings.SystemPoolMonthlyQuota
 	} else {
-		limit = settings.DefaultMonthlyTokenQuota
-		os, ok, err := c.Store.OrgSettings(ctx, s.orgID)
+		os, _, err := c.Store.OrgSettings(ctx, s.orgID)
 		if err != nil {
 			return 0, 0, err
 		}
-		if ok && os.MonthlyTokenQuota.Valid {
-			limit = os.MonthlyTokenQuota.Int64
-		}
+		// No override row: os is zero, so the platform default applies.
+		limit = EffectiveQuota(settings, os.MonthlyTokenQuota)
 	}
 	used, err = c.Store.MonthlyTokens(ctx, s.orgID, s.pool, c.now())
 	return limit, used, err
@@ -638,6 +639,20 @@ type Turn struct {
 	limit    int64
 	text     string
 	outcome  *Outcome
+	// ref is the pending action source_ref when the turn has no
+	// ai_conversations row (WhatsApp, agent.go); readOnly hides the write
+	// tools; channelPrompt is appended to the cached system prompt.
+	ref           string
+	readOnly      bool
+	channelPrompt string
+}
+
+// sourceRef is the conversation reference of the turn's pending actions.
+func (t *Turn) sourceRef() string {
+	if t.ref != "" {
+		return t.ref
+	}
+	return t.conv.Uuid.String()
 }
 
 // ConversationUUID returns the conversation of the turn.
@@ -910,10 +925,16 @@ func (c *Chat) loop(ctx context.Context, t *Turn, ts *turnState, history []llm.M
 	byName := make(map[string]tools.Tool, len(available))
 	defs := make([]llm.ToolDef, 0, len(available))
 	for _, tl := range available {
+		if t.readOnly && tl.Spec().Kind == tools.KindWrite {
+			continue
+		}
 		byName[tl.Spec().Name] = tl
 		defs = append(defs, tl.Spec().Def())
 	}
-	system := []llm.SystemBlock{{Text: systemPrompt(t.facts.Customer, t.settings.ExtraInstructions), Cache: true}}
+	system := []llm.SystemBlock{{Text: systemPrompt(t.facts, t.settings.ExtraInstructions), Cache: true}}
+	if p := strings.TrimSpace(t.channelPrompt); p != "" {
+		system = append(system, llm.SystemBlock{Text: p, Cache: true})
+	}
 	if k := knowledgePrompt(t.settings.KnowledgeText); k != "" {
 		system = append(system, llm.SystemBlock{Text: k, Cache: true})
 	}
@@ -1066,7 +1087,7 @@ func (c *Chat) execTool(ctx context.Context, t *Turn, ts *turnState, byName map[
 			return finish(tools.ErrorResult("", resultOneCard)), false
 		}
 		out, err := c.Actions.Propose(ctx, ProposeCall{
-			Principal: t.s.tools, Source: t.s.source, SourceRef: t.conv.Uuid.String(),
+			Principal: t.s.tools, Source: t.s.source, SourceRef: t.sourceRef(),
 			ToolUseID: tu.ID, ToolName: tu.Name, Input: tu.Input,
 		})
 		if err != nil {
@@ -1098,13 +1119,19 @@ func (c *Chat) execTool(ctx context.Context, t *Turn, ts *turnState, byName map[
 // transaction. A booking failure is logged, never shown.
 func (c *Chat) record(ctx context.Context, t *Turn, purpose, modelID string, u llm.Usage) {
 	s := t.s
-	userID := s.caller.Auth.UserInternal
+	var userID *int64
+	if id := s.caller.Auth.UserInternal; id > 0 {
+		userID = &id
+	}
 	usageChannel := model.UsageChannelPanel
-	if s.channel == model.ChannelPortal {
+	switch {
+	case s.usage != "":
+		usageChannel = s.usage
+	case s.channel == model.ChannelPortal:
 		usageChannel = model.UsageChannelPortal
 	}
 	_, _, err := c.Store.RecordUsageEvents(ctx, repository.Usage{
-		OrganizationID: s.orgID, BrandID: s.brandID, Pool: s.pool, UserID: &userID,
+		OrganizationID: s.orgID, BrandID: s.brandID, Pool: s.pool, UserID: userID,
 		Channel: usageChannel, Purpose: purpose, Model: truncate(firstNonEmpty(modelID, "unknown"), 128),
 		InputTokens: u.InputTokens, OutputTokens: u.OutputTokens,
 		CacheReadTokens: u.CacheReadTokens, CacheWriteTokens: u.CacheWriteTokens,
@@ -1119,9 +1146,22 @@ func (c *Chat) record(ctx context.Context, t *Turn, purpose, modelID string, u l
 // QuotaThresholds are the notified percentages of the monthly quota.
 var QuotaThresholds = []int64{80, 100}
 
+// thresholdEventNamespace scopes ThresholdEventID.
+var thresholdEventNamespace = uuid.MustParse("6f0b8a52-3c1e-5d7a-9f43-0a1c2e4b6d89")
+
+// ThresholdEventID is the event id of a threshold of one organization pool
+// and month (TEC-389). It is the notification idempotency key, so a
+// threshold crossed again in the same month (e.g. after the quota was
+// raised) notifies nobody twice.
+func ThresholdEventID(orgID int64, pool, period string, threshold int64) uuid.UUID {
+	return uuid.NewSHA1(thresholdEventNamespace,
+		[]byte(fmt.Sprintf("%s:%d:%s:%s:%d", events.AIQuotaThreshold, orgID, pool, period, threshold)))
+}
+
 // thresholdEvents returns an ai.quota.threshold event per threshold the
 // booked row crossed. The projection only grows within a month, so each
-// threshold is crossed (and notified) once per pool and month.
+// threshold is crossed once per pool and month; ThresholdEventID keeps a
+// re-crossing after a quota change from notifying again.
 func thresholdEvents(limit int64, row db.AiUsage, month db.AiUsageMonthly) []events.Event {
 	if limit <= 0 || row.QuotaTokens <= 0 {
 		return nil
@@ -1135,6 +1175,7 @@ func thresholdEvents(limit int64, row db.AiUsage, month db.AiUsageMonthly) []eve
 				"organization_id": month.OrganizationID, "brand_id": month.BrandID, "pool": month.Pool,
 				"period": month.Period, "threshold": pct, "used_tokens": after, "quota_tokens": limit,
 			})
+			ev.EventID = ThresholdEventID(month.OrganizationID, month.Pool, month.Period, pct)
 			out = append(out, ev)
 		}
 	}

@@ -141,5 +141,11 @@
   "system.groups.mcp": "MCP bağlantıları",
   "system.groups.mcp_hint": "AI müştərilərinin (Claude, ChatGPT) qoşulduğu MCP son nöqtələrinin limitləri.",
   "system.keys.mcp_requests_per_hour_per_org": "Təşkilat üzrə saatlıq MCP sorğuları",
-  "system.keys.mcp_requests_per_hour_per_org_hint": "Bir təşkilatın bütün qoşulmuş AI tətbiqləri vasitəsilə saatda edə biləcəyi sorğu sayı; artıq sorğular müddət bitənə qədər rədd edilir."
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Bir təşkilatın bütün qoşulmuş AI tətbiqləri vasitəsilə saatda edə biləcəyi sorğu sayı; artıq sorğular müddət bitənə qədər rədd edilir.",
+  "system.groups.whatsapp": "WhatsApp",
+  "system.groups.whatsapp_hint": "WhatsApp söhbətləri, göndərmə sürəti və süni intellekt cavabları.",
+  "system.keys.whatsapp_ai_staff_pause_minutes": "İşçi mesajından sonra süni intellekt fasiləsi (dəqiqə)",
+  "system.keys.whatsapp_ai_staff_pause_minutes_hint": "İşçi bu müddət ərzində söhbətə yazıbsa, süni intellekt cavab vermir; 0 = fasilə yoxdur.",
+  "system.keys.whatsapp_ai_guidelines_url": "Süni intellekt qaydaları linki",
+  "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp razılıq sualı ilə göndərilən qaydalar linki (https); boşdursa, qaydaların mətni mesajda göndərilir."
 }

@@ -141,5 +141,11 @@
   "system.groups.mcp": "Connessioni MCP",
   "system.groups.mcp_hint": "Limiti degli endpoint MCP a cui si collegano i client di IA (Claude, ChatGPT).",
   "system.keys.mcp_requests_per_hour_per_org": "Richieste MCP per organizzazione all’ora",
-  "system.keys.mcp_requests_per_hour_per_org_hint": "Richieste che un’organizzazione può effettuare ogni ora tramite tutte le app di IA collegate; quelle in eccesso vengono rifiutate fino alla fine della finestra."
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Richieste che un’organizzazione può effettuare ogni ora tramite tutte le app di IA collegate; quelle in eccesso vengono rifiutate fino alla fine della finestra.",
+  "system.groups.whatsapp": "WhatsApp",
+  "system.groups.whatsapp_hint": "Conversazioni WhatsApp, velocità di invio e risposte dell'IA.",
+  "system.keys.whatsapp_ai_staff_pause_minutes": "Pausa dell'IA dopo un messaggio del personale (minuti)",
+  "system.keys.whatsapp_ai_staff_pause_minutes_hint": "L'IA non risponde in una conversazione in cui un operatore ha scritto entro questo tempo; 0 = nessuna pausa.",
+  "system.keys.whatsapp_ai_guidelines_url": "Link alle regole di utilizzo dell'IA",
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Link (https) alle regole inviato con la richiesta di consenso su WhatsApp; vuoto = il testo delle regole viene inviato nel messaggio."
 }
