@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	aitools "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/fake"
@@ -303,10 +304,21 @@ func TestIntegrationAIChatPortal(t *testing.T) {
 	if len(reqs) == 0 {
 		t.Fatal("no model call")
 	}
+	realm := map[string]aitools.Realm{}
+	for _, tl := range e.srv.aiTools.All() {
+		realm[tl.Spec().Name] = tl.Spec().Realm
+	}
+	customerTools := 0
 	for _, d := range reqs[0].Tools {
-		if d.Name == "search_services" || d.Name == "stock_summary" || d.Name == "create_task" {
-			t.Fatalf("panel tool %s offered to a customer", d.Name)
+		switch realm[d.Name] {
+		case aitools.RealmCustomer:
+			customerTools++
+		default:
+			t.Fatalf("%s tool %s offered to a customer", realm[d.Name], d.Name)
 		}
+	}
+	if customerTools == 0 {
+		t.Fatal("no customer tools offered")
 	}
 	var pool string
 	if err := e.pool.QueryRow(ctx, `SELECT pool FROM ai_usage WHERE user_id = $1 AND channel = 'portal' LIMIT 1`, cust.ID).Scan(&pool); err != nil || pool != "system" {

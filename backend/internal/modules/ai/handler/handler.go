@@ -66,7 +66,7 @@ func (h *Handler) caller(r *http.Request) usecase.Caller {
 			c.Org = &s
 		}
 	} else if b, ok := brandctx.From(r.Context()); ok {
-		c.BrandID = b.ID
+		c.Brand = &b
 	}
 	return c
 }

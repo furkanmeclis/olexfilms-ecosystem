@@ -101,3 +101,9 @@ func MeasurementPDFObjectKey(orgUUID, resultUUID uuid.UUID) string {
 func WhatsAppMediaObjectKey(conversationUUID, messageUUID uuid.UUID) string {
 	return fmt.Sprintf("whatsapp/%s/%s", conversationUUID.String(), messageUUID.String())
 }
+
+// CampaignMediaObjectKey builds campaigns/{org}/{campaign}/{locale}/{media}.{ext}
+// (TEC-405). The object is private; e-mails link to it instead of attaching.
+func CampaignMediaObjectKey(orgUUID, campaignUUID uuid.UUID, locale string, mediaUUID uuid.UUID, ext string) string {
+	return fmt.Sprintf("campaigns/%s/%s/%s/%s.%s", orgUUID.String(), campaignUUID.String(), locale, mediaUUID.String(), trimExt(ext))
+}

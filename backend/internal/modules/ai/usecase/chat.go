@@ -34,6 +34,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
 	legal "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
@@ -239,7 +240,7 @@ type Caller struct {
 	Auth    authctx.Principal
 	Channel string
 	Org     *orgctx.Scope
-	BrandID int64
+	Brand   *brandctx.Brand
 	// AcceptLanguage is the request header (K10 fallback).
 	AcceptLanguage string
 }
@@ -266,16 +267,16 @@ func (c *Chat) session(ctx context.Context, caller Caller) (*session, error) {
 		s.pool, s.source = model.PoolOrg, model.SourcePanel
 		s.tools = tools.Principal{Auth: caller.Auth, Org: caller.Org, Realm: tools.RealmPanel}
 	case model.ChannelPortal:
-		if caller.BrandID == 0 {
+		if caller.Brand == nil || caller.Brand.ID <= 0 {
 			return nil, ErrForbidden
 		}
-		center, err := c.Store.BrandCenter(ctx, caller.BrandID)
+		center, err := c.Store.BrandCenter(ctx, caller.Brand.ID)
 		if err != nil {
 			return nil, fmt.Errorf("ai chat: brand center: %w", err)
 		}
 		s.orgID, s.brandID = center.ID, center.BrandID
 		s.pool, s.source = model.PoolSystem, model.SourcePortal
-		s.tools = tools.Principal{Auth: caller.Auth, Realm: tools.RealmCustomer}
+		s.tools = tools.Principal{Auth: caller.Auth, Realm: tools.RealmCustomer, Brand: caller.Brand}
 	default:
 		return nil, fmt.Errorf("ai chat: unknown channel %q", caller.Channel)
 	}

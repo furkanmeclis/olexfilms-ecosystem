@@ -18,6 +18,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
 	legal "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
@@ -587,7 +588,7 @@ func TestChatFeatureDisabled(t *testing.T) {
 func TestChatCustomerRealmHasNoPanelTools(t *testing.T) {
 	h := newChatHarness(t, fake.Text("Merhaba!", usage(10, 2)), fake.Text("Selam", usage(1, 1)))
 	h.caller = Caller{Auth: authctx.Principal{UserID: uuid.New(), UserInternal: 9, Realm: "portal"},
-		Channel: model.ChannelPortal, BrandID: 1}
+		Channel: model.ChannelPortal, Brand: &brandctx.Brand{ID: 1, Slug: "olex", Status: "active"}}
 	conv, err := h.chat.Create(h.ctx, h.caller, "")
 	if err != nil {
 		t.Fatal(err)
