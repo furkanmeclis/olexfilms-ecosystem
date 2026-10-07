@@ -87,6 +87,22 @@ export const rollUnit = {
 
 const envelope = (data: unknown) => ({ success: true, data, meta: {} });
 
+async function panelSessionCookie(orgUuid: string) {
+  const value = await encode({
+    token: {
+      sub: USER,
+      email: "e2e@example.com",
+      accessToken: "e2e-access",
+      refreshToken: "e2e-refresh",
+      expiresIn: 3600,
+      organizationUuid: orgUuid,
+    },
+    secret: E2E_AUTH_SECRET,
+    salt: "panel-session",
+  });
+  return `panel-session=${value}; Path=/; SameSite=Lax`;
+}
+
 export const membership = {
   uuid: ORG,
   slug: SLUG,
@@ -277,7 +293,11 @@ export class MockApi {
         });
       }
       this.activeOrg = target.uuid as string;
-      return ok({ authenticated: true, expires_in: 3600 });
+      return route.fulfill({
+        status: 200,
+        headers: { "Set-Cookie": await panelSessionCookie(this.activeOrg) },
+        json: envelope({ authenticated: true, expires_in: 3600 }),
+      });
     }
     if (method === "GET" && path === "/v1/auth/step-up") {
       return ok({ valid: false, expires_at: null, methods: [] });
@@ -414,6 +434,18 @@ export class MockApi {
     }
     if (method === "GET" && path === "/v1/search/specs") {
       return ok({ items: [], enabled: false });
+    }
+    if (
+      method === "POST" &&
+      (path === "/v1/realtime/connection-token" ||
+        path === "/v1/realtime/subscription-token")
+    ) {
+      return route.fulfill({
+        status: 503,
+        json: {
+          error: { code: "REALTIME_DISABLED", message: "Realtime disabled" },
+        },
+      });
     }
 
     for (const handler of this.extra) {

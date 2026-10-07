@@ -19,8 +19,13 @@ const ADAPTER_KEY = process.env.AUTH_ADAPTER_SECRET ?? "";
 
 const USER = "0b9c4c1e-0000-4000-8000-000000000002";
 const ORG = "0b9c4c1e-0000-4000-8000-000000000001";
+const DISTRIBUTOR = "0b9c4c1e-0000-4000-8000-000000004157";
 /** Memberships of the login spec by slug (organization switcher). */
-const ORGS = { acme: ORG, beta: "0b9c4c1e-0000-4000-8000-000000000003" };
+const ORGS = {
+  acme: ORG,
+  beta: "0b9c4c1e-0000-4000-8000-000000000003",
+  dist: DISTRIBUTOR,
+};
 const LOGIN = { email: "e2e@example.com", password: "e2e-password-1" };
 
 /**
@@ -120,6 +125,61 @@ const accessToken = (oid = ORG, sub = USER) =>
     exp: Math.floor(Date.now() / 1000) + 3600,
   })}.e2e`;
 
+const panelPermissions = [
+  "ai.use",
+  "ai.actions.confirm",
+  "campaigns.read",
+  "campaigns.write",
+  "campaigns.approve",
+  "conversations.read",
+  "conversations.reply",
+  "conversations.manage",
+  "customers.read",
+  "services.read",
+];
+
+const panelMe = {
+  effective_locale: "en",
+  effective_timezone: "Europe/Istanbul",
+  user: {
+    uuid: USER,
+    email: LOGIN.email,
+    name: "E2E",
+    surname: "Dealer",
+    status: "active",
+    is_super_admin: false,
+    email_verified: true,
+    locale: "en",
+    timezone: "Europe/Istanbul",
+  },
+  roles: [],
+  permissions: panelPermissions,
+  grants: Object.fromEntries(panelPermissions.map((p) => [p, "organization"])),
+  active_organization_uuid: ORG,
+  organization_roles: ["owner"],
+  organizations: [
+    {
+      uuid: ORG,
+      slug: "acme",
+      name: "Acme Bayi",
+      role: "owner",
+      logo_url: null,
+      status: "active",
+      access_ends_at: null,
+      type: "dealer",
+      brand: { slug: "olex", name: "Olex" },
+      parent: null,
+    },
+  ],
+  links: {
+    profile: "/v1/auth/profile",
+    change_password: "/v1/auth/password/change",
+    notification_preferences: "/v1/notification-preferences",
+  },
+  channels: { user: `user:${USER}` },
+  realtime: { enabled: false, user_channel: `user:${USER}` },
+};
+
 /** Upstream calls seen, newest last: "METHOD /path" (GET /__calls). */
 const calls = [];
 
@@ -192,6 +252,40 @@ const server = createServer(async (req, res) => {
       success: true,
       data: { id: USER, email: LOGIN.email, name: "E2E Dealer" },
     });
+  }
+
+  if (req.method === "GET" && path === "/v1/auth/me") {
+    return send(res, 200, { success: true, data: panelMe });
+  }
+
+  if (req.method === "GET" && path === "/v1/auth/step-up") {
+    return send(res, 200, {
+      success: true,
+      data: { valid: false, expires_at: null, methods: [] },
+    });
+  }
+
+  const orgSlug = path.match(/^\/v1\/public\/organizations\/by-slug\/(.+)$/);
+  if (req.method === "GET" && orgSlug) {
+    const slug = decodeURIComponent(orgSlug[1]);
+    const uuid = ORGS[slug] ?? ORG;
+    const distributor = uuid === DISTRIBUTOR;
+    return send(res, 200, {
+      success: true,
+      data: {
+        uuid,
+        slug,
+        name: distributor ? "Marmara Distribütör" : "Acme Bayi",
+        status: "active",
+        logo_url: null,
+        access_ok: true,
+        type: distributor ? "distributor" : "dealer",
+      },
+    });
+  }
+
+  if (req.method === "POST" && path === "/v1/realtime/connection-token") {
+    return send(res, 503, error("REALTIME_DISABLED", "Realtime disabled"));
   }
 
   // The panel BFF persists the returned pair in the session cookie, so the

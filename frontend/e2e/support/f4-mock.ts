@@ -1,6 +1,7 @@
 import type { Page, Route } from "@playwright/test";
+import { encode } from "next-auth/jwt";
 
-import { E2E_PORTAL } from "./constants";
+import { E2E_AUTH_SECRET, E2E_PORTAL } from "./constants";
 import { ORG, USER, mockApi, type Json, type MockApi } from "./mock-api";
 
 export const F4 = {
@@ -47,6 +48,56 @@ function stream(route: Route, body: string) {
     },
     body,
   });
+}
+
+function b64url(value: unknown) {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function accessToken(sub = USER, oid: string | null = ORG) {
+  return `${b64url({ alg: "none", typ: "JWT" })}.${b64url({
+    sub,
+    oid,
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    aud: "portal",
+  })}.e2e`;
+}
+
+function multipartField(buffer: Buffer | null, name: string): string | null {
+  if (!buffer) return null;
+  const raw = buffer.toString("utf8");
+  const marker = `name="${name}"`;
+  const markerAt = raw.indexOf(marker);
+  if (markerAt < 0) return null;
+  const valueAt = raw.indexOf("\r\n\r\n", markerAt);
+  if (valueAt < 0) return null;
+  return (
+    raw
+      .slice(valueAt + 4)
+      .split("\r\n--", 1)[0]
+      ?.trimEnd() ?? null
+  );
+}
+
+async function signInPortal(page: Page, baseURL: string) {
+  const { owner } = E2E_PORTAL;
+  const value = await encode({
+    token: {
+      sub: owner.uuid,
+      accessToken: accessToken(owner.uuid, null),
+      refreshToken: "e2e-portal-refresh",
+      expiresIn: 3600,
+    },
+    secret: E2E_AUTH_SECRET,
+    salt: "portal-session",
+  });
+  await page.context().addCookies([
+    {
+      name: "portal-session",
+      value,
+      url: baseURL,
+    },
+  ]);
 }
 
 function campaign(status: string, contents: Json[] = []): Json {
@@ -121,8 +172,8 @@ export class F4Mock {
     );
   }
 
-  makeDistributorUser() {
-    this.api.memberships = [DISTRIBUTOR as Json];
+  makeDistributorUser(slug = "dist") {
+    this.api.memberships = [{ ...DISTRIBUTOR, slug } as Json];
     this.api.activeOrg = F4.distributor;
     this.api.permissions = ["campaigns.read", "campaigns.approve"];
     this.api.features = ["campaigns"];
@@ -571,7 +622,13 @@ export async function installF4Platform(page: Page) {
         method === "POST" &&
         path === `/v1/conversations/${F4.conversation}/messages`
       ) {
-        const body = req.postDataJSON() as Json;
+        const contentType = req.headers()["content-type"] ?? "";
+        const body = contentType.includes("multipart/form-data")
+          ? {
+              body: multipartField(req.postDataBuffer(), "body"),
+              has_file: true,
+            }
+          : (req.postDataJSON() as Json);
         state.bodies.reply = body;
         state.aiMode = "paused";
         return ok(
@@ -596,7 +653,10 @@ export async function installF4Platform(page: Page) {
       if (method === "GET" && path === "/v1/platform/users") {
         return ok({ items: [], total: 0, limit: 100, offset: 0 });
       }
-      if (method === "GET" && path === "/v1/organizations") {
+      if (
+        method === "GET" &&
+        (path === "/v1/organizations" || path === "/v1/platform/organizations")
+      ) {
         return ok({
           items: [{ uuid: ORG, name: "Acme Bayi", type: "dealer" }],
           total: 1,
@@ -613,7 +673,8 @@ export async function installF4Platform(page: Page) {
   return state;
 }
 
-export async function installF4Portal(page: Page) {
+export async function installF4Portal(page: Page, baseURL: string) {
+  await signInPortal(page, baseURL);
   const state = {
     conversations: false,
     calls: [] as string[],

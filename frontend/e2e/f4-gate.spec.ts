@@ -87,12 +87,14 @@ test("F4 gate: platform admin handles WhatsApp conversation and handoff", async 
   ).toContainText("PDF'i ekledim");
   await expect(panel.getByTestId("ai-paused-notice")).toContainText("30");
 
-  await panel.getByRole("button", { name: /Hand off|Bayiye devret/ }).click();
-  await page.getByRole("combobox").fill("Acme");
+  await panel
+    .getByRole("button", { name: /Hand over|Hand off|Bayiye devret/ })
+    .click();
+  await page.getByRole("dialog").getByRole("combobox").click();
   await page.getByRole("option", { name: "Acme Bayi" }).click();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: /Hand off|Devret/ })
+    .getByRole("button", { name: /Hand over|Hand off|Devret/ })
     .click();
   await expect(panel).toContainText("Acme Bayi");
   expect(state.bodies.patch).toEqual({ assigned_org_uuid: ORG });
@@ -152,15 +154,16 @@ test("F4 gate: dealer campaign localization blocks submit until distributor appr
   await expect(page.getByTestId("campaign-approval-dialog")).toBeHidden();
 
   await page.goto(`/t/dist/campaigns/${F4.campaign}`);
-  await expect(page.getByText("Approved")).toBeVisible();
+  await expect(page.getByText("Approved").first()).toBeVisible();
   await expect(page.getByText(/Submitted|Gönderildi/)).toBeVisible();
-  await expect(page.getByText(/Approved|Onaylandı/)).toBeVisible();
+  await expect(page.getByText(/Approved|Onaylandı/).first()).toBeVisible();
 });
 
 test("F4 gate: portal customer asks warranty and marketing opt-in is off", async ({
   page,
+  baseURL,
 }) => {
-  await installF4Portal(page);
+  await installF4Portal(page, baseURL ?? "http://127.0.0.1:3000");
 
   await page.goto("/portal/assistant");
   await page.getByTestId("ai-input").fill("garantim devam ediyor mu?");
