@@ -12,7 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// TEC-472: fleet schema (migration 000111). A fleet is an organization of
+// TEC-472: fleet schema (migration 000112). A fleet is an organization of
 // type fleet outside the tree; the tree queries (subtree, scoped and
 // platform lists, tree card, search index, public dealer lists with the
 // contract check) never return it. Reuses the order fixture (center >
