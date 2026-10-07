@@ -89,6 +89,9 @@ export const Permission = {
   AccountingWrite: "accounting.write",
   AccountingDispute: "accounting.dispute",
   AccountingResolve: "accounting.resolve",
+  /** TEC-349: staff cards (TEC-345) and salary / advance / bonus payments. */
+  StaffManage: "staff.manage",
+  StaffPaymentsWrite: "staff_payments.write",
   WarehouseRead: "warehouse.read",
   WarehouseWrite: "warehouse.write",
   CampaignsRead: "campaigns.read",
@@ -418,6 +421,10 @@ export const permissions = {
     write: Permission.AccountingWrite,
     dispute: Permission.AccountingDispute,
     resolve: Permission.AccountingResolve,
+  },
+  staff: {
+    manage: Permission.StaffManage,
+    paymentsWrite: Permission.StaffPaymentsWrite,
   },
   warehouse: {
     read: Permission.WarehouseRead,

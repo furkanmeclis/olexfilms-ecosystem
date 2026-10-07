@@ -301,6 +301,82 @@ func (s *Service) CreateStaffPayment(ctx context.Context, c Caller, staffUUID uu
 	return s.createStaffPayment(ctx, c, book, staff, in, false)
 }
 
+type StaffPaymentFilter struct {
+	Type          *string
+	Period        *string
+	Limit, Offset int32
+}
+
+// ListStaffPayments is the payment history of one staff card (TEC-349):
+// non-void payments, newest paid_on first.
+func (s *Service) ListStaffPayments(ctx context.Context, c Caller, staffUUID uuid.UUID, f StaffPaymentFilter) ([]StaffPayment, int64, error) {
+	book, err := s.writeBook(ctx, c)
+	if err != nil {
+		return nil, 0, err
+	}
+	staff, err := s.staffRow(ctx, book.ID, staffUUID)
+	if err != nil {
+		return nil, 0, err
+	}
+	var typeArg, periodArg pgtype.Text
+	if f.Type != nil {
+		t, _, err := staffPaymentType(*f.Type)
+		if err != nil {
+			return nil, 0, err
+		}
+		typeArg = pgtype.Text{String: t, Valid: true}
+	}
+	if f.Period != nil {
+		p, err := validPeriod(*f.Period)
+		if err != nil {
+			return nil, 0, err
+		}
+		periodArg = pgtype.Text{String: p, Valid: true}
+	}
+	staffID := pgtype.Int8{Int64: staff.ID, Valid: true}
+	rows, err := s.q.ListStaffPayments(ctx, db.ListStaffPaymentsParams{
+		OrganizationID: book.ID,
+		StaffID:        staffID,
+		Period:         periodArg,
+		Type:           typeArg,
+		PageLimit:      f.Limit,
+		PageOffset:     f.Offset,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("accounting: list staff payments: %w", err)
+	}
+	total, err := s.q.CountStaffPayments(ctx, db.CountStaffPaymentsParams{
+		OrganizationID: book.ID,
+		StaffID:        staffID,
+		Period:         periodArg,
+		Type:           typeArg,
+	})
+	if err != nil {
+		return nil, 0, fmt.Errorf("accounting: count staff payments: %w", err)
+	}
+	advances := map[string]string{}
+	out := make([]StaffPayment, 0, len(rows))
+	for _, r := range rows {
+		var entry db.FinanceEntry
+		if r.FinanceEntryID.Valid {
+			entry, err = s.q.GetFinanceEntry(ctx, db.GetFinanceEntryParams{ID: r.FinanceEntryID.Int64, OrganizationID: book.ID})
+			if err != nil {
+				return nil, 0, fmt.Errorf("accounting: staff payment entry: %w", err)
+			}
+		}
+		adv, ok := advances[r.Period]
+		if !ok {
+			adv, err = s.periodAdvanceTotal(ctx, book.ID, staff.ID, r.Period)
+			if err != nil {
+				return nil, 0, err
+			}
+			advances[r.Period] = adv
+		}
+		out = append(out, staffPaymentOf(r, staff, entry, adv))
+	}
+	return out, total, nil
+}
+
 func (s *Service) RunPayroll(ctx context.Context, c Caller, period string) (PayrollResult, error) {
 	book, err := s.writeBook(ctx, c)
 	if err != nil {

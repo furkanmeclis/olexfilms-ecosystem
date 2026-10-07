@@ -111,6 +111,8 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/staff-profiles", staffManage(h.CreateStaffProfile))
 	mux.Handle("PATCH /v1/staff-profiles/{uuid}", staffManage(h.UpdateStaffProfile))
 	mux.Handle("POST /v1/staff-profiles/{uuid}/payments", staffPayments(h.CreateStaffPayment))
+	// TEC-349: payment history of a staff card.
+	mux.Handle("GET /v1/staff-profiles/{uuid}/payments", staffManage(h.ListStaffPayments))
 	mux.Handle("POST /v1/staff-payments/payroll", staffPayments(h.RunPayroll))
 
 	// TEC-346: reports of the active organization's own book (no subtree)
