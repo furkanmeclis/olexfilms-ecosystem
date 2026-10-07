@@ -705,7 +705,7 @@ var Permissions = []PermissionDef{
 	},
 
 	// TEC-487: efficiency and waste analytics (F5-06a). Appended last;
-	// migration 000115 seeds them.
+	// migration 000116 seeds them.
 	{
 		Slug: PermEfficiencyRead, Name: "Read efficiency analytics", Module: "efficiency", Scopes: scopesTree,
 		Description: "Read part consumption, roll efficiency and waste analytics in scope.",
@@ -866,7 +866,7 @@ var Roles = []RoleDef{
 			// TEC-466 (000113).
 			PermShowcaseRead:           ScopeBrand,
 			PermPlatformShowcaseReview: ScopeBrand,
-			// TEC-487 (000115).
+			// TEC-487 (000116).
 			PermEfficiencyRead:               ScopeBrand,
 			PermEfficiencyExpectationsManage: ScopeBrand,
 		}),
@@ -1090,7 +1090,7 @@ var Roles = []RoleDef{
 			// TEC-466 (000113): own showcase and those of its dealers.
 			PermShowcaseRead:  ScopeSubtree,
 			PermShowcaseWrite: ScopeSubtree,
-			// TEC-487 (000115): subtree comparison and roll analytics.
+			// TEC-487 (000116): subtree comparison and roll analytics.
 			PermEfficiencyRead: ScopeSubtree,
 		}),
 	},
@@ -1278,7 +1278,7 @@ var Roles = []RoleDef{
 			// TEC-466 (000113).
 			PermShowcaseRead:  ScopeManaged,
 			PermShowcaseWrite: ScopeManaged,
-			// TEC-487 (000115).
+			// TEC-487 (000116).
 			PermEfficiencyRead: ScopeManaged,
 		}),
 	},
