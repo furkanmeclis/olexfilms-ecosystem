@@ -190,6 +190,11 @@ export const Permission = {
   /** TEC-403: MCP connections (consent) and the platform client list. */
   McpConnect: "mcp.connect",
   McpClientsManage: "mcp.clients.manage",
+  /** TEC-472: fleets (panel) and the fleet portal. */
+  FleetsRead: "fleets.read",
+  FleetsManage: "fleets.manage",
+  FleetsPlan: "fleets.plan",
+  FleetPortalRead: "fleet.portal.read",
   /** TEC-466: dealer showcase (panel editor, center review queue). */
   ShowcaseRead: "showcase.read",
   ShowcaseWrite: "showcase.write",
@@ -560,6 +565,13 @@ export const permissions = {
   aiAdmin: {
     settingsManage: Permission.AiSettingsManage,
     usageRead: Permission.AiUsageRead,
+  },
+  /** TEC-472: fleet list/card, management, bulk plans and the fleet portal. */
+  fleets: {
+    read: Permission.FleetsRead,
+    manage: Permission.FleetsManage,
+    plan: Permission.FleetsPlan,
+    portalRead: Permission.FleetPortalRead,
   },
   /** TEC-466: dealer showcase editor and the center review queue. */
   showcase: {

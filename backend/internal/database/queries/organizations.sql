@@ -35,6 +35,8 @@ FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.deleted_at IS NULL
+  -- TEC-472: fleets live outside the tree (their own list, F5-02b).
+  AND o.type <> 'fleet'
   AND (
     COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
     OR o.status = ANY (sqlc.narg(statuses)::text[])
@@ -95,6 +97,7 @@ LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 SELECT COUNT(*)::bigint
 FROM organizations o
 WHERE o.deleted_at IS NULL
+  AND o.type <> 'fleet'
   AND (
     COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
     OR o.status = ANY (sqlc.narg(statuses)::text[])
@@ -269,7 +272,7 @@ SELECT sqlc.embed(o), b.slug AS brand_slug, p.uuid AS parent_uuid, p.name AS par
 FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
-WHERE o.uuid = $1 AND o.deleted_at IS NULL;
+WHERE o.uuid = $1 AND o.deleted_at IS NULL AND o.type <> 'fleet';
 
 -- name: UpdateOrganizationParent :one
 UPDATE organizations
@@ -314,6 +317,7 @@ FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.deleted_at IS NULL
+  AND o.type <> 'fleet'
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR o.id = ANY (sqlc.narg(org_ids)::bigint[]))
   AND (sqlc.narg(brand_id)::bigint IS NULL OR o.brand_id = sqlc.narg(brand_id))
   AND (sqlc.narg(type)::text IS NULL OR o.type = sqlc.narg(type))

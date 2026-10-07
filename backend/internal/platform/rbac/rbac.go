@@ -257,6 +257,14 @@ const (
 	PermPurchasesWrite     = "purchases.write"
 	PermStaffManage        = "staff.manage"
 	PermStaffPaymentsWrite = "staff_payments.write"
+	// TEC-479 (000111): certificates addon (F5-03). Center defines and
+	// approves; distributor verifies subtree; dealer/distributor owners
+	// upload for their staff.
+	PermCertificateTypesManage     = "certificate_types.manage"
+	PermCertificatesRead           = "certificates.read"
+	PermCertificatesWrite          = "certificates.write"
+	PermCertificatesVerify         = "certificates.verify"
+	PermCertificatesApproveService = "certificates.approve_service"
 	// TEC-383 (000101): AI assistant (F4-01). ai.use and ai.actions.confirm
 	// are granted together to every panel role; customers are gated by realm,
 	// not by a permission.
@@ -282,7 +290,15 @@ const (
 	// of its dealers (F4 user answer S4).
 	PermCampaignsApprove = "campaigns.approve"
 
-	// TEC-466 (000111): dealer showcase (F5-01). The dealer owner edits its
+	// TEC-472 (000112): fleets (F5-02). Dealers and their distributor read
+	// and manage the fleets linked to them, the center its brand; dealer
+	// owner and staff plan bulk services. The fleet role reads its own
+	// fleet in the portal.
+	PermFleetsRead      = "fleets.read"
+	PermFleetsManage    = "fleets.manage"
+	PermFleetsPlan      = "fleets.plan"
+	PermFleetPortalRead = "fleet.portal.read"
+	// TEC-466 (000113): dealer showcase (F5-01). The dealer owner edits its
 	// own showcase, the distributor owner those of its subtree; the center
 	// reviews them when showcase.approval_required is on.
 	PermShowcaseRead           = "showcase.read"

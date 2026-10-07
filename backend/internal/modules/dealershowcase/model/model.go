@@ -1,5 +1,5 @@
 // Package model holds the dealer showcase vocabulary (TEC-466, F5-01a). The
-// values mirror the CHECK constraints of migration 000111.
+// values mirror the CHECK constraints of migration 000113.
 package model
 
 // Showcase status. It follows the latest submission; the public page reads
