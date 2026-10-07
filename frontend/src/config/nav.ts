@@ -57,6 +57,7 @@ import { googleNavIcon } from "@/components/icons/google-icon";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { announcementsNavAdornment } from "@/features/announcements/nav";
+import { dealerSalesNavGroup } from "@/features/dealer-sales/nav";
 import { leadsNavItem } from "@/features/leads/nav";
 import { defineNav } from "@/features/nav-engine";
 import { usersNavItem } from "@/features/users/nav";
@@ -642,6 +643,8 @@ export function tenantNav(slug: string) {
           },
         ],
       },
+      // TEC-348: dealer sale prices, quick sale, suppliers, purchases.
+      dealerSalesNavGroup(slug),
       {
         // TEC-197: stock transfer requests between sibling dealers or
         // distributors (K13); same gates as /v1/stock-transfers (the
