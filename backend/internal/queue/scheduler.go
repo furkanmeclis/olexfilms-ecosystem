@@ -70,6 +70,8 @@ func Schedules() []Periodic {
 		{Cron: conversationAIRunPurgeCron, Type: TaskConversationAIRunPurge, Queue: QueueMaintenance, New: NewConversationAIRunPurgeTask},
 		// TEC-400: hourly MCP OAuth cleanup (idempotent deletes).
 		{Cron: oauthCleanupCron, Type: TaskOAuthCleanup, Queue: QueueMaintenance, Opts: oauthCleanupOpts(), New: NewOAuthCleanupTask},
+		// TEC-395: re-enqueue WhatsApp messages whose send task was lost.
+		{Cron: whatsAppQueueSweepCron, Type: TaskWhatsAppQueueSweep, Queue: QueueMaintenance, New: NewWhatsAppQueueSweepTask},
 	}
 }
 

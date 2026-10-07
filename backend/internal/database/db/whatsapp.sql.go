@@ -118,7 +118,7 @@ INSERT INTO messages (
     $17
 )
 ON CONFLICT (channel, external_id) DO NOTHING
-RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at
+RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason
 `
 
 type InsertMessageParams struct {
@@ -185,6 +185,8 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (M
 		&i.MediaMime,
 		&i.MediaSize,
 		&i.DeliveryStatusAt,
+		&i.SendAttempts,
+		&i.FailureReason,
 	)
 	return i, err
 }

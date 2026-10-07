@@ -44,6 +44,8 @@ const (
 	GroupLeads     Group = "leads"
 	// GroupWarrantyClaims: warranty claim accounting (TEC-337).
 	GroupWarrantyClaims Group = "warranty_claims"
+	// GroupWhatsApp: WhatsApp conversation messaging (TEC-395).
+	GroupWhatsApp Group = "whatsapp"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -108,7 +110,16 @@ const (
 	KeyWarrantyClaimsLaborRule         = "warranty_claims.labor_rule"
 	KeyWarrantyClaimsLaborAmount       = "warranty_claims.labor_amount"
 	KeyWarrantyClaimsLaborSharePercent = "warranty_claims.labor_share_percent"
+
+	// KeyWhatsAppSendPerMinute caps outgoing conversation messages (AI,
+	// staff, system) per recipient number per minute (TEC-395); campaigns
+	// have their own limit.
+	KeyWhatsAppSendPerMinute = "whatsapp.send_per_minute"
 )
+
+// DefaultWhatsAppSendPerMinute is the catalog default of
+// KeyWhatsAppSendPerMinute.
+const DefaultWhatsAppSendPerMinute = 30
 
 // Values of KeyWarrantyClaimsLaborRule.
 const (
@@ -226,6 +237,8 @@ var catalog = []Definition{
 		Description: "Labor amount of one warranty re-application in the center's currency; 0 = no labor entry (TEC-337)"},
 	{Key: KeyWarrantyClaimsLaborSharePercent, Group: GroupWarrantyClaims, Kind: KindInt, Default: int64(50), Min: i64(0), Max: i64(100),
 		Description: "Percent of the labor amount the center credits under the shared rule (TEC-337)"},
+	{Key: KeyWhatsAppSendPerMinute, Group: GroupWhatsApp, Kind: KindInt, Default: int64(DefaultWhatsAppSendPerMinute), Min: i64(1), Max: i64(600),
+		Description: "Outgoing WhatsApp conversation messages per recipient number per minute; further messages wait in the queue (TEC-395)"},
 }
 
 var byKey = func() map[string]Definition {

@@ -79,6 +79,23 @@ type mediaMessage struct {
 	FileName string `json:"fileName"`
 	Title    string `json:"title"`
 	URL      string `json:"URL"`
+	// Download reference (whatsmeow proto JSON; bytes are base64).
+	DirectPath    string `json:"directPath"`
+	MediaKey      string `json:"mediaKey"`
+	FileEncSHA256 string `json:"fileEncSHA256"`
+	FileSHA256    string `json:"fileSHA256"`
+	FileLength    int64  `json:"fileLength"`
+}
+
+// mediaRef is the body of wuzapi's /chat/download{image,document,audio,video}.
+type mediaRef struct {
+	URL           string `json:"Url"`
+	DirectPath    string `json:"DirectPath"`
+	MediaKey      string `json:"MediaKey"`
+	Mimetype      string `json:"Mimetype"`
+	FileEncSHA256 string `json:"FileEncSHA256"`
+	FileSHA256    string `json:"FileSHA256"`
+	FileLength    int64  `json:"FileLength"`
 }
 
 type messageBody struct {
@@ -254,9 +271,16 @@ func messageContent(m messageBody) (string, *whatsapp.InboundMedia) {
 		if name == "" {
 			name = mm.Title
 		}
-		return mm.Caption, &whatsapp.InboundMedia{
-			Type: kind, MimeType: mm.Mimetype, FileName: name, Caption: mm.Caption,
+		media := &whatsapp.InboundMedia{
+			Type: kind, MimeType: mm.Mimetype, FileName: name, Caption: mm.Caption, Size: mm.FileLength,
 		}
+		if mm.DirectPath != "" || mm.URL != "" {
+			media.Download, _ = json.Marshal(mediaRef{
+				URL: mm.URL, DirectPath: mm.DirectPath, MediaKey: mm.MediaKey, Mimetype: mm.Mimetype,
+				FileEncSHA256: mm.FileEncSHA256, FileSHA256: mm.FileSHA256, FileLength: mm.FileLength,
+			})
+		}
+		return mm.Caption, media
 	}
 	switch {
 	case m.ImageMessage != nil:
