@@ -80,9 +80,11 @@ Veri değiştiren tool'lar (`create_task`, `create_lead`, `set_lead_follow_up`, 
 2. `ai_pending_actions` tablosuna `source = mcp` olan bir satır eklenir. Satır 30 dakika geçerlidir ve `source_ref` OAuth
    token ailesidir.
 3. Tool sonucu "panelden onay bekleniyor" metnini, işlemin özetini ve onay linkini döner
-   (`/t/<org>/ai/approvals?action=<uuid>`). `structuredContent.status` değeri `PENDING_APPROVAL` olur.
+   (`/t/<org>/assistant/approvals?action=<uuid>`). `structuredContent.status` değeri `PENDING_APPROVAL` olur.
 4. Kullanıcı işlemi panelde **Onay bekleyen AI işlemleri** ekranında onaylar veya iptal eder (F4-03d). Onay sırasında izin,
-   modül ve kapsam yeniden kontrol edilir. İşlemi yalnız başlatan kullanıcı onaylayabilir.
+   modül ve kapsam yeniden kontrol edilir. İşlemi yalnız başlatan kullanıcı onaylayabilir. Ekranın API'si
+   `GET /v1/ai/pending-actions` (kaynak `mcp`/`whatsapp`, `q`, sıralama) ve
+   `POST /v1/ai/pending-actions/{uuid}/confirm|cancel` uçlarıdır (`ai.actions.confirm`, TEC-403).
 
 MCP istemcilerinin elicitation (istemcide onay sorma) özelliği bu fazda kullanılmaz. Onay yalnız panelden verilir.
 

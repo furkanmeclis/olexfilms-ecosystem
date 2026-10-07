@@ -73,6 +73,7 @@ type Service struct {
 	features FeatureChecker
 	limiter  Limiter
 	access   AccessChecker
+	tools    ToolCounter
 	issuer   string
 	log      *slog.Logger
 	now      func() time.Time

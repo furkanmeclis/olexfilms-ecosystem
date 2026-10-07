@@ -1,7 +1,9 @@
 package usecase_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -489,5 +491,45 @@ func TestGrantListContract(t *testing.T) {
 	}
 	if _, err := usecase.ParseClientListFilter(url.Values{"sort": {"redirect_uris"}}); err == nil {
 		t.Fatal("unknown client sort accepted")
+	}
+}
+
+type fakeToolCounter struct {
+	calls []string
+	err   error
+}
+
+func (c *fakeToolCounter) CountTools(_ context.Context, userID, orgID, brandID int64, resource string) (int, error) {
+	c.calls = append(c.calls, fmt.Sprintf("%d/%d/%d%s", userID, orgID, brandID, resource))
+	return int(orgID%7) + 3, c.err
+}
+
+// TEC-403: every selectable organization carries the tool count of the
+// requested endpoint there; without a counter it is null.
+func TestConsentToolCount(t *testing.T) {
+	f := newConsentFixture(t)
+	c := f.register(t)
+	id := f.request(t, c.ClientID, model.ResourceDealer)
+
+	info, err := f.svc.Consent(f.ctx, panelActor(f.user), id)
+	if err != nil || len(info.Organizations) != 1 || info.Organizations[0].ToolCount != nil {
+		t.Fatalf("without counter: %+v %v", info, err)
+	}
+	counter := &fakeToolCounter{}
+	f.svc.SetToolCounter(counter)
+	info, err = f.svc.Consent(f.ctx, panelActor(f.user), id)
+	if err != nil || len(info.Organizations) != 1 {
+		t.Fatalf("with counter: %+v %v", info, err)
+	}
+	want := int(f.dealer.ID%7) + 3
+	if got := info.Organizations[0].ToolCount; got == nil || *got != want {
+		t.Fatalf("tool_count = %v, want %d", got, want)
+	}
+	if len(counter.calls) != 1 || counter.calls[0] != fmt.Sprintf("%d/%d/%d%s", f.user.ID, f.dealer.ID, f.dealer.BrandID, model.ResourceDealer) {
+		t.Fatalf("counter calls = %v", counter.calls)
+	}
+	counter.err = errors.New("boom")
+	if _, err := f.svc.Consent(f.ctx, panelActor(f.user), id); err == nil {
+		t.Fatal("counter error swallowed")
 	}
 }

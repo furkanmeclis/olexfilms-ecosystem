@@ -56,6 +56,20 @@ func RegisterPortalRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Ma
 	mux.Handle("POST /v1/portal/ai/actions/{uuid}/cancel", route(h.CancelAction))
 }
 
+// RegisterApprovalRoutes mounts the TEC-403 (F4-03d) pending actions
+// screen: the caller's MCP / WhatsApp write-tool proposals in the active
+// organization, confirmed or cancelled with ai.actions.confirm. The tool's
+// own permission, module and scope are checked again on confirmation.
+func RegisterApprovalRoutes(mux *http.ServeMux, h *handler.Approvals, tokens *jwt.Manager, loader middleware.IdentityLoader, q *db.Queries) {
+	route := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, middleware.Authenticate(tokens, loader), middleware.RequireOrganization(tokens, q),
+			middleware.RequirePermission(rbac.PermAIActionsConfirm))
+	}
+	mux.Handle("GET /v1/ai/pending-actions", route(h.List))
+	mux.Handle("POST /v1/ai/pending-actions/{uuid}/confirm", route(h.Confirm))
+	mux.Handle("POST /v1/ai/pending-actions/{uuid}/cancel", route(h.Cancel))
+}
+
 // RegisterAdminRoutes mounts the TEC-389 (F4-01g) routes: the platform
 // settings, the organization quota table and the platform usage report
 // (ai.settings.manage, super_admin only), and the panel usage report of one

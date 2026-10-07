@@ -926,6 +926,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Outbox: outbox.NewStore(deps.DB, deps.Queries), Log: log,
 	})
 	aimodule.RegisterRoutes(mux, s.aiChat, tokens, loader, deps.Queries)
+	// TEC-403 (F4-03d): pending MCP / WhatsApp actions screen.
+	aimodule.RegisterApprovalRoutes(mux, aihandler.NewApprovals(aiusecase.NewApprovals(airepo.New(deps.DB), s.aiActions)),
+		tokens, loader, deps.Queries)
 	aiAdmin.Tools = s.aiTools
 	aimodule.RegisterAdminRoutes(mux, aihandler.NewAdmin(aiAdmin, exportSvc), tokens, loader, deps.Queries)
 	// TEC-396 (F4-02c): WhatsApp AI pipeline. whatsapp.message.received arms
@@ -1035,8 +1038,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-402 (F4-03c): MCP Streamable HTTP endpoints over the complete
 	// tool registry; Bearer tokens from the TEC-400 authorization server,
 	// writes become pending actions approved in the panel.
+	mcpPrincipals := mcpmodule.StoreResolver{Q: deps.Queries, Access: uc}
+	// TEC-403: the consent screen shows how many tools a connection gets.
+	oauthSvc.SetToolCounter(mcpmodule.ToolCounter{Principals: mcpPrincipals, Tools: s.aiTools})
 	mcpmodule.RegisterRoutes(mux, mcpmodule.New(mcpmodule.Config{
-		Tokens: oauthSvc, Principals: mcpmodule.StoreResolver{Q: deps.Queries, Access: uc},
+		Tokens: oauthSvc, Principals: mcpPrincipals,
 		Tools: s.aiTools, Actions: s.aiActions, Limiter: ratelimit.New(deps.Redis, cfg.App.Env),
 		Settings: sysSvc, Activity: activityRec, FrontendURL: cfg.Auth.FrontendURL, Log: log,
 	}))

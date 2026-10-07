@@ -225,6 +225,22 @@ func (s *Store) ListPendingActions(ctx context.Context, orgID, userID int64) ([]
 	return s.q.ListAIPendingActionsForUser(ctx, db.ListAIPendingActionsForUserParams{OrganizationID: orgID, UserID: userID})
 }
 
+// PendingActionsPage returns one page of the caller's open, unexpired
+// actions of the given sources and their total (TEC-403).
+func (s *Store) PendingActionsPage(ctx context.Context, p db.ListAIPendingActionsPageParams) ([]db.AiPendingAction, int64, error) {
+	rows, err := s.q.ListAIPendingActionsPage(ctx, p)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := s.q.CountAIPendingActionsPage(ctx, db.CountAIPendingActionsPageParams{
+		OrganizationID: p.OrganizationID, UserID: p.UserID, Sources: p.Sources, Q: p.Q,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
+}
+
 // ClaimPendingAction moves the caller's pending, unexpired action to
 // executing with a single compare-and-set UPDATE. ok is false when another
 // request already claimed it, it was resolved or it expired. Non-nil input

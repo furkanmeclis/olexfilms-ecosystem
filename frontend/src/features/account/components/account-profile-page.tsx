@@ -21,6 +21,7 @@ import { NotificationPreferencesForm } from "@/features/account/components/notif
 import { PasskeyManager } from "@/features/account/components/passkey-manager";
 import { SessionManager } from "@/features/account/components/session-manager";
 import { TotpManager } from "@/features/account/components/totp-manager";
+import { ConnectedAppsCard } from "@/features/mcp";
 import { ProfileEditForm } from "@/features/account/components/profile-edit-form";
 import { ProfilePermissionsList } from "@/features/account/components/profile-permissions-list";
 import { isApiError } from "@/lib/api";
@@ -251,6 +252,8 @@ export function AccountProfilePage({
           <SessionManager />
         </CardContent>
       </Card>
+
+      <ConnectedAppsCard realm="panel" />
 
       <Card className="shadow-none">
         <CardHeader>

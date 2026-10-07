@@ -9,6 +9,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { SettingsForm } from "@/features/io/components/settings-form";
 import { ioKeys } from "@/features/io/hooks/query-keys";
+import { McpEndpointsCard } from "@/features/mcp";
 import type { PatchSettingsRequest } from "@/features/io/services/settings.service";
 import { settingsService } from "@/features/io/services/settings.service";
 import type { ExportJobScope } from "@/features/io/types";
@@ -117,6 +118,11 @@ export function SettingsPage({ scope = "platform", slug }: SettingsPageProps) {
           onUploadLogo={(file) => uploadLogo.mutate(file)}
           onRemoveLogo={() => removeLogo.mutate()}
         />
+      ) : null}
+      {tenant && slug ? (
+        <div className="mt-6">
+          <McpEndpointsCard slug={slug} />
+        </div>
       ) : null}
     </EntityPage>
   );

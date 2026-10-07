@@ -8,6 +8,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ConnectedAppsCard } from "@/features/mcp";
 import { PortalPage } from "@/features/portal/components/portal-page";
 import {
   portalApi,
@@ -106,6 +107,9 @@ export function PortalPreferences() {
           </CardContent>
         </Card>
       )}
+      <div className="mt-6">
+        <ConnectedAppsCard realm="portal" />
+      </div>
     </PortalPage>
   );
 }

@@ -187,6 +187,9 @@ export const Permission = {
   ConversationsRead: "conversations.read",
   ConversationsReply: "conversations.reply",
   ConversationsManage: "conversations.manage",
+  /** TEC-403: MCP connections (consent) and the platform client list. */
+  McpConnect: "mcp.connect",
+  McpClientsManage: "mcp.clients.manage",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -543,6 +546,11 @@ export const permissions = {
     read: Permission.ConversationsRead,
     reply: Permission.ConversationsReply,
     manage: Permission.ConversationsManage,
+  },
+  /** TEC-403: MCP connect (consent) and the platform client list. */
+  mcp: {
+    connect: Permission.McpConnect,
+    clientsManage: Permission.McpClientsManage,
   },
   /** TEC-391: AI administration (platform settings, quotas, usage report). */
   aiAdmin: {

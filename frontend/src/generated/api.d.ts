@@ -12732,6 +12732,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ai/pending-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's pending MCP / WhatsApp actions (TEC-403)
+         * @description "Pending AI actions" screen: write tools proposed through an MCP
+         *     client or WhatsApp in the active organization, waiting for the
+         *     caller's approval (open and not expired; chat cards stay in their
+         *     conversation). Needs `ai.actions.confirm`. Sort fields `created_at`
+         *     (default `-created_at`), `expires_at`, `tool_name`; `id` tiebreak.
+         *     `q` matches the tool name or the preview summary. `total` is the
+         *     pending count of the navigation badge.
+         */
+        get: operations["listAiPendingActions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/pending-actions/{uuid}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a pending MCP / WhatsApp action (TEC-403)
+         * @description Runs the caller's own action once (F4-01e flow): permission, module
+         *     and scope of the tool are checked again; a revoked permission fails
+         *     the action (403). A failed run answers 200 with status `failed`.
+         *     Chat actions (panel / portal) are 404 here.
+         */
+        post: operations["confirmAiPendingAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/pending-actions/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a pending MCP / WhatsApp action (TEC-403) */
+        post: operations["cancelAiPendingAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ai/usage": {
         parameters: {
             query?: never;
@@ -12927,6 +12997,8 @@ export interface components {
             name: string;
             /** @enum {string} */
             type: "platform" | "center" | "distributor" | "dealer";
+            /** @description MCP tools the caller gets there through the requested endpoint (TEC-403) */
+            tool_count?: number | null;
         };
         OAuthConsent: {
             /** Format: uuid */
@@ -22733,6 +22805,24 @@ export interface components {
             expires_at: string;
             /** Format: date-time */
             created_at: string;
+        };
+        EnvelopeAIActionCardPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["AIActionCard"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAIActionOutcome: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AIActionOutcome"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         AIActionOutcome: {
             /** Format: uuid */
@@ -46403,6 +46493,114 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listAiPendingActions: {
+        parameters: {
+            query?: {
+                /** @description CSV of mcp, whatsapp. Unknown value → 400. */
+                source?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending actions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIActionCardPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    confirmAiPendingAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Outcome */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIActionOutcome"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description AI_ACTION_RESOLVED (already confirmed, cancelled or running) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_ACTION_EXPIRED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    cancelAiPendingAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Outcome (status cancelled) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIActionOutcome"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description AI_ACTION_RESOLVED (already confirmed, cancelled or running) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listAiUsage: {

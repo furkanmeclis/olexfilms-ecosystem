@@ -52,6 +52,7 @@ import {
   Cpu,
   CalendarClock,
   Inbox,
+  Plug,
   Repeat,
 } from "lucide-react";
 
@@ -64,6 +65,7 @@ import { routes } from "@/config/routes";
 import { aiPlatformNavItem, aiUsageNavItem } from "@/features/ai-admin/nav";
 import { announcementsNavAdornment } from "@/features/announcements/nav";
 import { conversationsNavItem } from "@/features/conversations/nav";
+import { pendingActionsNavItem } from "@/features/mcp/nav";
 import { dealerSalesNavGroup } from "@/features/dealer-sales/nav";
 import { leadsNavItem } from "@/features/leads/nav";
 import { staffReportsNavGroup } from "@/features/staff-reports/nav";
@@ -117,6 +119,14 @@ export const platformNav = defineNav({
         },
         // TEC-399: WhatsApp inbox, platform admin only (S2).
         conversationsNavItem,
+        {
+          // TEC-403: registered MCP clients (AI apps).
+          id: "mcp-clients",
+          titleKey: "mcp.clients.nav",
+          href: routes.platform.mcpClients,
+          icon: Plug,
+          permission: permissions.mcp.clientsManage,
+        },
         {
           id: "notification-center",
           titleKey: "layout.nav_notification_center",
@@ -400,6 +410,8 @@ export function tenantNav(slug: string) {
             permission: permissions.ai.use,
             feature: "ai_assistant",
           },
+          // TEC-403: MCP / WhatsApp write tools waiting for approval.
+          pendingActionsNavItem(slug),
           // TEC-391: the organization's AI usage report (ai.usage.read).
           aiUsageNavItem(slug),
         ],

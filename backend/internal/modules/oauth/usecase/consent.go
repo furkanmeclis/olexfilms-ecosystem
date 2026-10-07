@@ -58,6 +58,16 @@ type AccessChecker interface {
 // SetAccess attaches the permission resolver of the consent decision.
 func (s *Service) SetAccess(a AccessChecker) { s.access = a }
 
+// ToolCounter counts the MCP tools a user would get in an organization
+// through an endpoint (mcp.ToolCounter); the consent screen shows it.
+type ToolCounter interface {
+	CountTools(ctx context.Context, userID, orgID, brandID int64, resource string) (int, error)
+}
+
+// SetToolCounter attaches the consent tool count (TEC-403); without it the
+// count is null.
+func (s *Service) SetToolCounter(c ToolCounter) { s.tools = c }
+
 // Actor is the signed-in user deciding on consent or managing grants.
 type Actor struct {
 	UserID int64
@@ -248,7 +258,15 @@ func (s *Service) Consent(ctx context.Context, a Actor, id uuid.UUID) (model.Con
 		Organizations: make([]model.ConsentOrganization, 0, len(orgs)), ExpiresAt: req.ExpiresAt,
 	}
 	for _, o := range orgs {
-		out.Organizations = append(out.Organizations, o.ConsentOrganization)
+		co := o.ConsentOrganization
+		if s.tools != nil {
+			n, err := s.tools.CountTools(ctx, a.UserID, o.id, o.brandID, req.Resource)
+			if err != nil {
+				return model.Consent{}, fmt.Errorf("oauth: tool count: %w", err)
+			}
+			co.ToolCount = &n
+		}
+		out.Organizations = append(out.Organizations, co)
 	}
 	return out, nil
 }
