@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarOff, Trash2 } from "lucide-react";
+import { CalendarOff, Plus, Trash2, X } from "lucide-react";
 import { useId, useState, type FormEvent } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -20,10 +20,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { addDays, todayIn } from "@/features/appointments/lib/time";
 import {
+  nextWindow,
   validateWorkingHours,
   WEEKDAYS,
   workingHoursFromApi,
   workingHoursToApi,
+  type HoursWindow,
+  type Weekday,
   type WorkingHoursErrors,
   type WorkingHoursForm,
 } from "@/features/appointments/lib/working-hours";
@@ -98,10 +101,38 @@ function SettingsForm({ settings }: { settings: AppointmentSettings }) {
     });
   };
 
-  const setDay = (
-    day: (typeof WEEKDAYS)[number],
-    patch: Partial<WorkingHoursForm[typeof day]>,
-  ) => setHours((h) => ({ ...h, [day]: { ...h[day], ...patch } }));
+  const setDay = (day: Weekday, patch: Partial<WorkingHoursForm[Weekday]>) =>
+    setHours((h) => ({ ...h, [day]: { ...h[day], ...patch } }));
+  const setWindow = (
+    day: Weekday,
+    index: number,
+    patch: Partial<HoursWindow>,
+  ) =>
+    setHours((h) => ({
+      ...h,
+      [day]: {
+        ...h[day],
+        windows: h[day].windows.map((w, i) =>
+          i === index ? { ...w, ...patch } : w,
+        ),
+      },
+    }));
+  const addWindow = (day: Weekday) =>
+    setHours((h) => ({
+      ...h,
+      [day]: {
+        ...h[day],
+        windows: [...h[day].windows, nextWindow(h[day].windows)],
+      },
+    }));
+  const removeWindow = (day: Weekday, index: number) =>
+    setHours((h) => ({
+      ...h,
+      [day]: {
+        ...h[day],
+        windows: h[day].windows.filter((_, i) => i !== index),
+      },
+    }));
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
@@ -175,51 +206,99 @@ function SettingsForm({ settings }: { settings: AppointmentSettings }) {
             const err = hourErrors[day];
             return (
               <div key={day} data-weekday={day} className="space-y-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Switch
-                    id={`${id}-${day}-open`}
-                    checked={h.open}
-                    onCheckedChange={(open) => setDay(day, { open })}
-                  />
-                  <Label htmlFor={`${id}-${day}-open`} className="w-28">
-                    {t(`appointments.weekdays.${day}`)}
-                  </Label>
+                <div className="flex flex-wrap items-start gap-3">
+                  <div className="flex h-9 items-center gap-3">
+                    <Switch
+                      id={`${id}-${day}-open`}
+                      checked={h.open}
+                      onCheckedChange={(open) => setDay(day, { open })}
+                    />
+                    <Label htmlFor={`${id}-${day}-open`} className="w-28">
+                      {t(`appointments.weekdays.${day}`)}
+                    </Label>
+                  </div>
                   {h.open ? (
-                    <>
-                      <Input
-                        type="time"
-                        dir="ltr"
-                        className="w-32"
-                        aria-label={t("appointments.settings.opens")}
-                        name={`${day}-start`}
-                        value={h.start}
-                        aria-invalid={err ? true : undefined}
-                        onChange={(e) => setDay(day, { start: e.target.value })}
-                      />
-                      <span className="text-muted-foreground">–</span>
-                      <Input
-                        type="time"
-                        dir="ltr"
-                        className="w-32"
-                        aria-label={t("appointments.settings.closes")}
-                        name={`${day}-end`}
-                        value={h.end}
-                        aria-invalid={err ? true : undefined}
-                        onChange={(e) => setDay(day, { end: e.target.value })}
-                      />
-                    </>
+                    <div className="space-y-2">
+                      {h.windows.map((w, i) => {
+                        const winErr = err?.windows?.[i];
+                        const invalid = winErr || err?.day ? true : undefined;
+                        return (
+                          <div key={i} data-window={i} className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="time"
+                                dir="ltr"
+                                className="w-32"
+                                aria-label={t("appointments.settings.opens")}
+                                name={`${day}-${i}-start`}
+                                value={w.start}
+                                aria-invalid={invalid}
+                                onChange={(e) =>
+                                  setWindow(day, i, { start: e.target.value })
+                                }
+                              />
+                              <span className="text-muted-foreground">–</span>
+                              <Input
+                                type="time"
+                                dir="ltr"
+                                className="w-32"
+                                aria-label={t("appointments.settings.closes")}
+                                name={`${day}-${i}-end`}
+                                value={w.end}
+                                aria-invalid={invalid}
+                                onChange={(e) =>
+                                  setWindow(day, i, { end: e.target.value })
+                                }
+                              />
+                              {h.windows.length > 1 ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={t(
+                                    "appointments.settings.remove_window",
+                                  )}
+                                  data-action={`remove-window-${day}-${i}`}
+                                  onClick={() => removeWindow(day, i)}
+                                >
+                                  <X className="size-4" />
+                                </Button>
+                              ) : null}
+                            </div>
+                            {winErr ? (
+                              <p
+                                className="text-destructive text-xs"
+                                data-error={`${day}-${i}`}
+                              >
+                                {t(winErr)}
+                              </p>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        data-action={`add-window-${day}`}
+                        onClick={() => addWindow(day)}
+                      >
+                        <Plus className="size-4" />
+                        {t("appointments.settings.add_window")}
+                      </Button>
+                    </div>
                   ) : (
-                    <span className="text-muted-foreground text-sm">
+                    <span className="text-muted-foreground flex h-9 items-center text-sm">
                       {t("appointments.settings.day_closed")}
                     </span>
                   )}
                 </div>
-                {err ? (
+                {err?.day ? (
                   <p
                     className="text-destructive ps-14 text-xs"
                     data-error={day}
                   >
-                    {t(err)}
+                    {t(err.day)}
                   </p>
                 ) : null}
               </div>
@@ -372,7 +451,7 @@ function ClosuresCard({ timeZone }: { timeZone: string }) {
 /**
  * Appointment settings of the active organization (TEC-326, needs
  * appointment_settings.manage): daily capacity, default duration, slot
- * interval, one opening per weekday, closure days and portal booking.
+ * interval, opening windows per weekday, closure days and portal booking.
  */
 export function AppointmentSettingsPanel({ timeZone }: { timeZone: string }) {
   const { t } = useLocale();

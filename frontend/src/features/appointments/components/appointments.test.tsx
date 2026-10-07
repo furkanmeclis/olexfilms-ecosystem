@@ -480,7 +480,7 @@ describe("AppointmentDialog status and intake (TEC-326)", () => {
 });
 
 describe("AppointmentSettingsPanel (TEC-326)", () => {
-  it("rejects a closing time before the opening time", async () => {
+  function mockSettings(workingHours: Record<string, unknown>) {
     http.platformRequest.mockImplementation(
       async (method: string, path: string) => {
         if (method === "GET" && path === "/v1/appointment-settings") {
@@ -490,7 +490,7 @@ describe("AppointmentSettingsPanel (TEC-326)", () => {
             daily_vehicle_capacity: 5,
             default_estimated_minutes: 60,
             slot_interval_minutes: 30,
-            working_hours: { monday: [{ start: "09:00", end: "18:00" }] },
+            working_hours: workingHours,
             portal_appointments_enabled: false,
           };
         }
@@ -499,12 +499,12 @@ describe("AppointmentSettingsPanel (TEC-326)", () => {
         throw new Error(`unexpected ${method} ${path}`);
       },
     );
-    await render(createElement(AppointmentSettingsPanel, { timeZone: "UTC" }));
-    const end = document.querySelector(
-      'input[name="monday-end"]',
-    ) as HTMLInputElement;
-    expect(end.value).toBe("18:00");
-    await act(async () => setInput(end, "08:00"));
+  }
+
+  const input = (name: string) =>
+    document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
+
+  async function submit() {
     const form = document.querySelector(
       '[data-testid="appointment-settings"] form',
     ) as HTMLFormElement;
@@ -512,33 +512,115 @@ describe("AppointmentSettingsPanel (TEC-326)", () => {
       form.requestSubmit();
     });
     await flush();
-    expect(document.querySelector('[data-error="monday"]')?.textContent).toBe(
-      "appointments.settings.close_before_open",
-    );
+  }
+
+  const putBody = (workingHours: Record<string, unknown>) => ({
+    body: {
+      daily_vehicle_capacity: 5,
+      default_estimated_minutes: 60,
+      slot_interval_minutes: 30,
+      working_hours: workingHours,
+      portal_appointments_enabled: false,
+    },
+  });
+
+  const notSaved = () =>
     expect(http.platformRequest).not.toHaveBeenCalledWith(
       "PUT",
       expect.anything(),
       expect.anything(),
     );
 
+  it("rejects a closing time before the opening time", async () => {
+    mockSettings({ monday: [{ start: "09:00", end: "18:00" }] });
+    await render(createElement(AppointmentSettingsPanel, { timeZone: "UTC" }));
+    const end = input("monday-0-end");
+    expect(end.value).toBe("18:00");
+    await act(async () => setInput(end, "08:00"));
+    await submit();
+    expect(document.querySelector('[data-error="monday-0"]')?.textContent).toBe(
+      "appointments.settings.close_before_open",
+    );
+    notSaved();
+
     await act(async () => setInput(end, "17:00"));
-    await act(async () => {
-      form.requestSubmit();
-    });
-    await flush();
-    expect(document.querySelector('[data-error="monday"]')).toBeNull();
+    await submit();
+    expect(document.querySelector('[data-error="monday-0"]')).toBeNull();
     expect(http.platformRequest).toHaveBeenCalledWith(
       "PUT",
       "/v1/appointment-settings",
-      {
-        body: {
-          daily_vehicle_capacity: 5,
-          default_estimated_minutes: 60,
-          slot_interval_minutes: 30,
-          working_hours: { monday: [{ start: "09:00", end: "17:00" }] },
-          portal_appointments_enabled: false,
-        },
-      },
+      putBody({ monday: [{ start: "09:00", end: "17:00" }] }),
     );
+  });
+
+  it("renders every saved window of a day and saves them back intact", async () => {
+    const saved = {
+      monday: [
+        { start: "09:00", end: "12:00" },
+        { start: "13:00", end: "18:00" },
+      ],
+      friday: [{ start: "10:00", end: "16:00" }],
+    };
+    mockSettings(saved);
+    await render(createElement(AppointmentSettingsPanel, { timeZone: "UTC" }));
+    expect(
+      document.querySelectorAll('[data-weekday="monday"] [data-window]'),
+    ).toHaveLength(2);
+    expect(input("monday-0-start").value).toBe("09:00");
+    expect(input("monday-0-end").value).toBe("12:00");
+    expect(input("monday-1-start").value).toBe("13:00");
+    expect(input("monday-1-end").value).toBe("18:00");
+    await submit();
+    expect(http.platformRequest).toHaveBeenCalledWith(
+      "PUT",
+      "/v1/appointment-settings",
+      putBody(saved),
+    );
+  });
+
+  it("adds and removes windows of a day", async () => {
+    mockSettings({ tuesday: [{ start: "09:00", end: "12:00" }] });
+    await render(createElement(AppointmentSettingsPanel, { timeZone: "UTC" }));
+    expect(button('[data-action="remove-window-tuesday-0"]')).toBeNull();
+    await act(async () => {
+      button('[data-action="add-window-tuesday"]')?.click();
+    });
+    expect(input("tuesday-1-start").value).toBe("12:00");
+    await act(async () => setInput(input("tuesday-1-start"), "14:00"));
+    await act(async () => setInput(input("tuesday-1-end"), "18:00"));
+    await act(async () => {
+      button('[data-action="add-window-tuesday"]')?.click();
+    });
+    await act(async () => {
+      button('[data-action="remove-window-tuesday-2"]')?.click();
+    });
+    await submit();
+    expect(http.platformRequest).toHaveBeenCalledWith(
+      "PUT",
+      "/v1/appointment-settings",
+      putBody({
+        tuesday: [
+          { start: "09:00", end: "12:00" },
+          { start: "14:00", end: "18:00" },
+        ],
+      }),
+    );
+  });
+
+  it("rejects overlapping windows of the same day", async () => {
+    mockSettings({
+      monday: [
+        { start: "09:00", end: "12:00" },
+        { start: "13:00", end: "18:00" },
+      ],
+    });
+    await render(createElement(AppointmentSettingsPanel, { timeZone: "UTC" }));
+    await act(async () => setInput(input("monday-1-start"), "11:00"));
+    await submit();
+    expect(document.querySelector('[data-error="monday"]')?.textContent).toBe(
+      "appointments.settings.windows_overlap",
+    );
+    expect(input("monday-1-start").getAttribute("aria-invalid")).toBe("true");
+    notSaved();
   });
 });
