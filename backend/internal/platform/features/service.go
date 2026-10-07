@@ -78,6 +78,11 @@ func (s *Service) Enabled(ctx context.Context, organizationID int64, key string)
 		return true, nil
 	}
 	states, err := s.Snapshot(ctx, organizationID)
+	if errors.Is(err, ErrOrganizationNotFound) {
+		// TEC-472: a fleet is outside the resolver; its non-core modules
+		// read as off.
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
@@ -134,6 +139,10 @@ func (s *Service) node(ctx context.Context, q *db.Queries, orgID int64) (OrgNode
 	}
 	if err != nil {
 		return OrgNode{}, err
+	}
+	// TEC-472: a fleet is outside the tree and has no module flags.
+	if org.Type == OrgFleet {
+		return OrgNode{}, ErrOrganizationNotFound
 	}
 	n := OrgNode{ID: org.ID, Type: org.Type}
 	if org.ParentID.Valid {

@@ -289,6 +289,15 @@ const (
 	// distributor and distributor-less dealer campaigns, a distributor those
 	// of its dealers (F4 user answer S4).
 	PermCampaignsApprove = "campaigns.approve"
+
+	// TEC-472 (000112): fleets (F5-02). Dealers and their distributor read
+	// and manage the fleets linked to them, the center its brand; dealer
+	// owner and staff plan bulk services. The fleet role reads its own
+	// fleet in the portal.
+	PermFleetsRead      = "fleets.read"
+	PermFleetsManage    = "fleets.manage"
+	PermFleetsPlan      = "fleets.plan"
+	PermFleetPortalRead = "fleet.portal.read"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

@@ -9,7 +9,7 @@ SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.dis
        p.name AS parent_name
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
-WHERE o.deleted_at IS NULL
+WHERE o.deleted_at IS NULL AND o.type <> 'fleet'
 ORDER BY o.id;
 
 -- name: GetOrganizationForIndex :one
@@ -17,7 +17,8 @@ SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.dis
        p.name AS parent_name
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
-WHERE o.uuid = sqlc.arg(uuid) AND o.deleted_at IS NULL;
+-- TEC-472: fleets are not indexed (a stale document is removed).
+WHERE o.uuid = sqlc.arg(uuid) AND o.deleted_at IS NULL AND o.type <> 'fleet';
 
 -- name: ListOrdersForIndex :many
 SELECT o.uuid, o.order_no, o.organization_id, o.buyer_org_id, o.brand_id, o.status,
