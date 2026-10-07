@@ -115,6 +115,9 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 			Payload: map[string]any{"conversation_uuid": entityUUIDString(event.EntityUUID), "assigned_user_id": userID},
 		}, true
 	})
+	// TEC-398: a new inbound WhatsApp message tells the conversation's
+	// assignee (in-app + web push).
+	on(events.WhatsAppMessageReceived, conversationInboundDispatch)
 	on(events.AIPipelineEscalated, func(event events.Event) (notifmodel.DispatchInput, bool) {
 		ids := userIDsFromAIEvent(event)
 		return notifmodel.DispatchInput{
@@ -206,6 +209,28 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 			},
 		}, len(ids) > 0
 	})
+}
+
+// conversationInboundDispatch maps whatsapp.message.received of an assigned
+// conversation to conversation.inbound for the assignee; an unassigned
+// conversation sends nothing.
+func conversationInboundDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
+	userID, ok := int64FromPayload(event.Payload, "assigned_user_id")
+	if !ok || userID <= 0 {
+		return notifmodel.DispatchInput{}, false
+	}
+	conv := stringFromPayload(event.Payload, "conversation_uuid")
+	return notifmodel.DispatchInput{
+		EventCode: catalog.EventConversationInbound, UserIDs: []int64{userID},
+		Vars: map[string]string{
+			"contact_name": stringFromPayload(event.Payload, "contact_name"),
+			"preview":      stringFromPayload(event.Payload, "preview"),
+		},
+		Payload: map[string]any{
+			"conversation_uuid": conv,
+			"message_uuid":      stringFromPayload(event.Payload, "message_uuid"),
+		},
+	}, true
 }
 
 // warrantyDispatch maps a warranty cron event to a dispatch for the holder;

@@ -91,5 +91,13 @@
   "params.lead_status.lost": "Програно",
   "params.lost_reason": "Причина програшу",
   "actions.stock_units.print_labels": "Друк етикеток",
-  "actions.warehouse_count_lines.set_resolution": "Призначити рішення: {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "Призначити рішення: {{resolution}}",
+  "actions.conversations.assign": "Призначити",
+  "actions.conversations.close": "Закрити",
+  "actions.conversations.set_ai_mode": "Змінити режим ШІ",
+  "confirm.conversations.close": "Закрити вибрані розмови?",
+  "params.ai_mode": "Режим ШІ",
+  "params.ai_mode.auto": "Автоматично",
+  "params.ai_mode.paused": "Призупинено",
+  "params.ai_mode.off": "Вимкнено"
 }

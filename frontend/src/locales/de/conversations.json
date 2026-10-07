@@ -1,0 +1,13 @@
+{
+  "ai_mode": "KI-Modus",
+  "assigned_user": "Zugewiesen an",
+  "channel": "Kanal",
+  "contact_e164": "Telefon",
+  "contact_name": "Kontakt",
+  "created_at": "Erstellt",
+  "identity_kind": "Identitätstyp",
+  "last_message_at": "Letzte Nachricht",
+  "status": "Status",
+  "unread_count": "Ungelesen",
+  "unread": "Nur ungelesene"
+}

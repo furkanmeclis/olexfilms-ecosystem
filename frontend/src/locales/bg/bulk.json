@@ -91,5 +91,13 @@
   "params.lead_status.lost": "Загубен",
   "params.lost_reason": "Причина за загуба",
   "actions.stock_units.print_labels": "Печат на етикети",
-  "actions.warehouse_count_lines.set_resolution": "Задай решение: {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "Задай решение: {{resolution}}",
+  "actions.conversations.assign": "Възложи",
+  "actions.conversations.close": "Затвори",
+  "actions.conversations.set_ai_mode": "Промяна на режима на ИИ",
+  "confirm.conversations.close": "Да се затворят ли избраните разговори?",
+  "params.ai_mode": "Режим на ИИ",
+  "params.ai_mode.auto": "Автоматично",
+  "params.ai_mode.paused": "На пауза",
+  "params.ai_mode.off": "Изключен"
 }

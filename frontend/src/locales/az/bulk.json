@@ -91,5 +91,13 @@
   "params.lead_status.lost": "İtirildi",
   "params.lost_reason": "İtirmə səbəbi",
   "actions.stock_units.print_labels": "Etiketləri çap et",
-  "actions.warehouse_count_lines.set_resolution": "Həll təyin et: {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "Həll təyin et: {{resolution}}",
+  "actions.conversations.assign": "Təyin et",
+  "actions.conversations.close": "Bağla",
+  "actions.conversations.set_ai_mode": "Sİ rejimini dəyiş",
+  "confirm.conversations.close": "Seçilmiş söhbətlər bağlansın?",
+  "params.ai_mode": "Sİ rejimi",
+  "params.ai_mode.auto": "Avtomatik",
+  "params.ai_mode.paused": "Dayandırılıb",
+  "params.ai_mode.off": "Söndürülüb"
 }

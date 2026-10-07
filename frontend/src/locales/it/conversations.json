@@ -1,0 +1,13 @@
+{
+  "ai_mode": "Modalità IA",
+  "assigned_user": "Assegnatario",
+  "channel": "Canale",
+  "contact_e164": "Telefono",
+  "contact_name": "Contatto",
+  "created_at": "Creata",
+  "identity_kind": "Tipo di identità",
+  "last_message_at": "Ultimo messaggio",
+  "status": "Stato",
+  "unread_count": "Non letti",
+  "unread": "Solo non lette"
+}

@@ -12119,6 +12119,156 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/conversations/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List contract of the conversation inbox (TEC-398)
+         * @description conversations.read. `default_sort` is `-last_message_at`.
+         */
+        get: operations["getConversationsMeta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List WhatsApp conversations (TEC-398)
+         * @description conversations.read; only the platform admin sees rows (S2), others get an empty page. Sort `last_message_at`, `created_at`, `unread_count` (default `-last_message_at`, empty last, `id` tiebreak). `status`, `ai_mode`, `identity_kind`, `assigned_user_uuid` are CSV (or repeated); `q` matches the contact name, the number (digits) and the identified user's name.
+         */
+        get: operations["listConversations"];
+        put?: never;
+        /**
+         * Open a conversation with a user and send the first message (TEC-398)
+         * @description conversations.reply. Continues the existing conversation of the user's number. A one-to-one service message: the marketing opt-out does not apply. JSON `{user_uuid, body}` or multipart with `user_uuid`, `body` and `file` (JPEG/PNG/WebP/PDF, at most 16 MB). 422 CONTACT_PHONE_MISSING when the user has no phone number.
+         */
+        post: operations["startConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a logged, undoable bulk action on conversations (TEC-398)
+         * @description conversations.manage. Actions: `close`; `assign` with `target.params.assignee_user_uuid` (a platform admin, others fail per item); `set_ai_mode` with `target.params.ai_mode` (auto, paused, off). Target scope `ids`, or `query` with the GET /v1/conversations filters (at most 10000). Undo through `/v1/platform/bulk-operations/{uuid}/undo`.
+         */
+        post: operations["bulkConversations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Get a conversation (TEC-398)
+         * @description 404 for anyone who may not see it (S2 - platform admin only).
+         */
+        get: operations["getConversation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change status, AI mode or assignment (TEC-398)
+         * @description conversations.manage. Absent fields stay; `assigned_user_uuid: null` unassigns, `assigned_org_uuid: null` gives it back to the center. `ai_paused_until` only with `ai_mode: paused` (null = until changed). The assignee must be a platform admin (422 CONVERSATION_ASSIGNEE_NOT_ALLOWED) and is notified (conversations.assigned). `assigned_org_uuid` grants no visibility yet (S2).
+         */
+        patch: operations["updateConversation"];
+        trace?: never;
+    };
+    "/v1/conversations/{uuid}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Conversation timeline, newest first (TEC-398)
+         * @description Cursor pagination: pass `next_cursor` as `before` for older messages; `next_cursor` is null on the last page.
+         */
+        get: operations["listConversationMessages"];
+        put?: never;
+        /**
+         * Send a staff reply (TEC-398)
+         * @description conversations.reply. Queued as `sender_type: staff` with the caller as `sender_user`; the AI pauses until now + 30 minutes (AI off and a longer pause stay). JSON `{body}` or multipart with `body` (caption) and `file` (JPEG/PNG/WebP/PDF, at most 16 MB).
+         */
+        post: operations["replyConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{uuid}/messages/{message_uuid}/media": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a stored message attachment (TEC-398) */
+        get: operations["getConversationMessageMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversations/{uuid}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clear the unread counter (TEC-398) */
+        post: operations["markConversationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -21785,6 +21935,147 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ConversationUserRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        ConversationOrgRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            type: string;
+        };
+        Conversation: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            channel: "whatsapp" | "sms";
+            contact_e164: string;
+            contact_name: string | null;
+            /** @enum {string} */
+            status: "open" | "pending" | "closed";
+            /** @enum {string} */
+            ai_mode: "auto" | "paused" | "off";
+            /** Format: date-time */
+            ai_paused_until: string | null;
+            assigned_user: components["schemas"]["ConversationUserRef"] | null;
+            assigned_org: components["schemas"]["ConversationOrgRef"] | null;
+            /** @enum {string} */
+            identity_kind: "panel_user" | "customer" | "visitor" | "unknown";
+            identity_user: components["schemas"]["ConversationUserRef"] | null;
+            identity_org: components["schemas"]["ConversationOrgRef"] | null;
+            locale: string | null;
+            unread_count: number;
+            /** Format: date-time */
+            last_message_at: string | null;
+            /** Format: date-time */
+            last_inbound_at: string | null;
+            /** Format: date-time */
+            ai_consent_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        ConversationMessage: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            conversation_uuid: string;
+            /** @enum {string} */
+            direction: "in" | "out";
+            /** @enum {string} */
+            sender_type: "contact" | "staff" | "system" | "ai";
+            /** @enum {string} */
+            status: "queued" | "received" | "sent" | "delivered" | "read" | "failed";
+            body: string | null;
+            /** @description Media metadata (type, mime_type, file_name, caption, storage_skipped). */
+            media?: {
+                [key: string]: unknown;
+            };
+            has_stored_media: boolean;
+            media_mime?: string;
+            /** Format: int64 */
+            media_size?: number;
+            send_attempts: number;
+            failure_reason?: string;
+            /** Format: date-time */
+            sent_at?: string;
+            /** Format: date-time */
+            delivery_status_at?: string;
+            /** Format: date-time */
+            created_at: string;
+            sender_user: components["schemas"]["ConversationUserRef"] | null;
+        };
+        ConversationReplyInput: {
+            body: string;
+        };
+        ConversationReplyMultipart: {
+            body?: string;
+            /** Format: binary */
+            file?: string;
+        };
+        ConversationStartInput: {
+            /** Format: uuid */
+            user_uuid: string;
+            body: string;
+        };
+        ConversationStartMultipart: {
+            /** Format: uuid */
+            user_uuid: string;
+            body?: string;
+            /** Format: binary */
+            file?: string;
+        };
+        ConversationPatchInput: {
+            /** @enum {string} */
+            status?: "open" | "pending" | "closed";
+            /** @enum {string} */
+            ai_mode?: "auto" | "paused" | "off";
+            /** Format: date-time */
+            ai_paused_until?: string | null;
+            /** Format: uuid */
+            assigned_user_uuid?: string | null;
+            /** Format: uuid */
+            assigned_org_uuid?: string | null;
+        };
+        EnvelopeConversation: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Conversation"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeConversationPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Conversation"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeConversationMessagePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ConversationMessage"][];
+                next_cursor: string | null;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeConversationReply: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                conversation: components["schemas"]["Conversation"];
+                message: components["schemas"]["ConversationMessage"];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -43644,6 +43935,298 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getConversationsMeta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resource meta */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeResourceMeta"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listConversations: {
+        parameters: {
+            query?: {
+                /** @description CSV of open, pending, closed. */
+                status?: ("open" | "pending" | "closed")[];
+                /** @description CSV of auto, paused, off. */
+                ai_mode?: ("auto" | "paused" | "off")[];
+                /** @description CSV of panel_user, customer, visitor, unknown. */
+                identity_kind?: ("panel_user" | "customer" | "visitor" | "unknown")[];
+                /** @description CSV of assignee user uuids. */
+                assigned_user_uuid?: string[];
+                channel?: "whatsapp" | "sms";
+                /** @description `true` = unread messages only, `false` = none. */
+                unread?: "true" | "false";
+                last_message_from?: string;
+                last_message_to?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConversationPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    startConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationStartInput"];
+                "multipart/form-data": components["schemas"]["ConversationStartMultipart"];
+            };
+        };
+        responses: {
+            /** @description Conversation and queued message */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConversationReply"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    bulkConversations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result with its undoable operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConversation"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationPatchInput"];
+            };
+        };
+        responses: {
+            /** @description Updated conversation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConversation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listConversationMessages: {
+        parameters: {
+            query?: {
+                before?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Timeline page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConversationMessagePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    replyConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationReplyInput"];
+                "multipart/form-data": components["schemas"]["ConversationReplyMultipart"];
+            };
+        };
+        responses: {
+            /** @description Queued message and the conversation after it */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConversationReply"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getConversationMessageMedia: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                message_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    markConversationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conversation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConversation"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
         };
     };
 }
