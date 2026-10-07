@@ -171,6 +171,11 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range CampaignEventCodes {
 		on(name, campaignDispatcher(code))
 	}
+	// TEC-473: fleet link requests and decisions, fleet user invitations
+	// (notify_user_ids).
+	for name, code := range FleetEventCodes {
+		on(name, fleetDispatcher(code))
+	}
 	// TEC-467: showcase review (center reviewers on submission, the dealer
 	// owners on the decision; notify_user_ids).
 	for name, code := range ShowcaseEventCodes {

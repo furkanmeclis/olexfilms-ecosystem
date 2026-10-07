@@ -103,6 +103,17 @@ func organizationDocument(r db.GetOrganizationForIndexRow) searchengine.Document
 	if p := r.Phone; strings.HasPrefix(p, "+") && len(p) > 4 {
 		doc.Keywords = append(doc.Keywords, strings.TrimPrefix(p, "+"))
 	}
+	// TEC-473: a fleet is reached through its dealer links: its
+	// organization_ids are the dealers with an active link, so a dealer's
+	// search finds only its own fleets.
+	if r.Type == "fleet" {
+		doc.Href = "/fleets/" + r.Uuid.String()
+		doc.Icon = "truck"
+		doc.OrganizationIDs = r.LinkedOrgIds
+		if doc.OrganizationIDs == nil {
+			doc.OrganizationIDs = []int64{}
+		}
+	}
 	return doc
 }
 
@@ -131,6 +142,9 @@ func indexFilter(brandID int64, p db.ListOrganizationsInScopeParams) (string, bo
 	}
 	if p.Type.Valid {
 		f.EqString("org_type", p.Type.String)
+	} else {
+		// TEC-473: fleets share the index but live outside the tree.
+		f.InStrings("org_type", []string{"center", "distributor", "dealer"})
 	}
 	return f.String(), true
 }

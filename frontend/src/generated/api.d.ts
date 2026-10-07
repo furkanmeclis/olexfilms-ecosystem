@@ -13476,6 +13476,290 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fleets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fleets linked to the organizations in scope (one row per link)
+         * @description TEC-473 (docs/list-contract.md): `sort` is one of name (default), vehicle_count, last_service_at (the last completed service of a fleet vehicle at the linked dealer, empty last), created_at (the link's); id tiebreak; unknown field → 400. `status` is a comma separated any-of filter on the link status. `q` matches the name, legal name or a tax number prefix. Requires the fleet add-on (403 FEATURE_DISABLED).
+         */
+        get: operations["listFleets"];
+        put?: never;
+        /**
+         * Open a fleet by tax number (dealer or distributor)
+         * @description TEC-473: the VKN/TCKN is looked up in the brand first. A new one opens the fleet organization, its profile, the caller's active link and the fleet cari in the caller's ledger (fleet.created). An existing one is 409 FLEET_ALREADY_EXISTS whose `data` names the fleet; the dealer then requests a link (POST /v1/fleets/{uuid}/links). A wrong checksum is 422 FLEET_INVALID_TAX_NUMBER. Only dealers and distributors open fleets (403). Needs fleets.manage.
+         */
+        post: operations["openFleet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/vehicle-import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sample file of the fleet vehicle import */
+        get: operations["getFleetVehicleImportSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fleet card
+         * @description TEC-473: profile, vehicle count, active warranties, recent services and the caller's own cari balance. A dealer reaches a fleet only through an active link (a pending link is 404) and sees only its own services, warranties and cari; the center (brand scope) reaches every fleet of the brand.
+         */
+        get: operations["getFleetCard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask to serve an existing fleet (pending link)
+         * @description TEC-473: the link starts pending; the fleet users are notified and accept or reject it in the portal. A second open link of the pair is 409 FLEET_LINK_EXISTS.
+         */
+        post: operations["requestFleetLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Users of a fleet
+         * @description `sort` is one of name, email, status, created_at (default); id tiebreak. `status` is a comma separated filter (active, disabled); `q` matches the name or the e-mail.
+         */
+        get: operations["listFleetUsers"];
+        put?: never;
+        /**
+         * Invite a fleet user by e-mail
+         * @description TEC-473: a new account with the global fleet role (portal, e-mail + password) joins the fleet; the password is set through the existing reset flow (a one-time code by e-mail). The first user of a fleet is its primary user and owns the fleet vehicles. An e-mail with an account is 409 FLEET_USER_EMAIL_TAKEN.
+         */
+        post: operations["inviteFleetUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/users/{user_uuid}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disable a fleet user
+         * @description The user can no longer sign in (sessions revoked); the row stays. The primary user owns the fleet vehicles: 422 FLEET_PRIMARY_USER_LOCKED.
+         */
+        post: operations["disableFleetUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vehicles of a fleet
+         * @description `sort` is one of plate (default), car_brand, last_service_at, active_warranty_count, created_at; id tiebreak. last_service_at and active_warranty_count count only the caller's own work.
+         */
+        get: operations["listFleetVehicles"];
+        put?: never;
+        /**
+         * Add a vehicle to a fleet
+         * @description TEC-473: a new vehicle (plate required) owned by the fleet's primary user (422 FLEET_PRIMARY_USER_REQUIRED without one), or with vehicle_uuid an existing vehicle of the fleet's users (200). A plate / VIN that already belongs to the fleet's users is 409 FLEET_VEHICLE_EXISTS whose data names the vehicle (link suggestion); another customer's or fleet's vehicle is 409 FLEET_VEHICLE_OTHER_OWNER (never linked).
+         */
+        post: operations["addFleetVehicle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/vehicles/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a fleet vehicle import (CSV / XLSX)
+         * @description TEC-473: columns plate (required), vin, car_brand, car_model, model_year, plate_country. The job targets the fleet through defaults.fleet_uuid (keep it when saving the mapping). Preview (dry run: new, link, duplicate, conflict, invalid), confirm and undo run on /v1/tenant/imports/{uuid}; undo deletes the created vehicles (refused once serviced) and unlinks the linked ones.
+         */
+        post: operations["importFleetVehicles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/vehicles/{vehicle_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a vehicle from the fleet (the vehicle is kept) */
+        delete: operations["removeFleetVehicle"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a fleet vehicle
+         * @description Absent keys keep the value, null clears it (the plate cannot be cleared).
+         */
+        patch: operations["updateFleetVehicle"];
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consolidated fleet statement (the caller's own fleet cari)
+         * @description TEC-473: the fleet cari in the caller organization's ledger over the inclusive period (days in the organization's timezone, at most 366): service income lines (finance_entries source service_income) with their service and vehicle, collections and other cari movements, the opening and closing balance. Without an own active link 422 FLEET_NO_DEALER_LINK.
+         */
+        get: operations["getFleetStatement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/statement/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export the fleet statement (PDF / XLSX / CSV, I/O engine)
+         * @description 202 with the export job (resource tenant.fleet.statement); poll /v1/tenant/exports/{uuid}. The worker re-checks the caller's link.
+         */
+        post: operations["exportFleetStatement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dealer links of the signed-in user's fleet (portal) */
+        get: operations["listPortalFleetLinks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/links/{uuid}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept a pending dealer link (fleet user)
+         * @description TEC-473: activates the link, opens the fleet cari in the dealer's ledger and lets the dealer serve the fleet vehicles (fleet.linked). A decided link is 409 FLEET_LINK_NOT_PENDING.
+         */
+        post: operations["acceptPortalFleetLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/links/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject a pending dealer link (fleet user) */
+        post: operations["rejectPortalFleetLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -24013,6 +24297,346 @@ export interface components {
             data: components["schemas"]["AIUsageSummary"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @enum {string} */
+        FleetLinkStatus: "pending" | "active" | "ended";
+        FleetProfile: {
+            tax_number: string;
+            tax_office: string | null;
+            legal_name: string;
+            contact_name: string | null;
+            contact_phone: string | null;
+            billing_email: string | null;
+            /** @enum {string} */
+            report_frequency: "monthly" | "quarterly" | "off";
+            report_locale: string;
+        };
+        FleetLink: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["FleetLinkStatus"];
+            /** Format: uuid */
+            dealer_uuid: string;
+            dealer_name: string;
+            /** Format: date-time */
+            started_at: string | null;
+            /** Format: date-time */
+            ended_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        Fleet: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            status: string;
+            profile: components["schemas"]["FleetProfile"];
+            link: components["schemas"]["FleetLink"] | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetOpenRequest: {
+            /** @description Display name; defaults to legal_name */
+            name?: string;
+            legal_name: string;
+            /** @description VKN (10 digits) or TCKN (11 digits) with a valid checksum */
+            tax_number: string;
+            tax_office?: string;
+            contact_name?: string;
+            /** @description Normalized to E.164 */
+            contact_phone?: string;
+            /** Format: email */
+            billing_email?: string;
+            /**
+             * @default monthly
+             * @enum {string}
+             */
+            report_frequency: "monthly" | "quarterly" | "off";
+            /** @default tr */
+            report_locale: string;
+        };
+        /** @description 409 FLEET_ALREADY_EXISTS; data names the fleet of the tax number. */
+        FleetExistsError: {
+            /** @enum {boolean} */
+            success: false;
+            error: components["schemas"]["ErrorBody"];
+            data?: {
+                /** Format: uuid */
+                fleet_uuid: string;
+                name: string;
+                legal_name: string;
+                /** @description The caller's open link (pending | active), empty without one. */
+                link_status: string;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        FleetListItem: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            legal_name: string;
+            tax_number: string;
+            status: string;
+            /** Format: int64 */
+            vehicle_count: number;
+            /** Format: date-time */
+            last_service_at: string | null;
+            link: components["schemas"]["FleetLink"];
+        };
+        FleetServiceSummary: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            status: string;
+            plate: string | null;
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            organization_name: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            completed_at: string | null;
+        };
+        FleetCari: {
+            /** Format: uuid */
+            uuid: string;
+            currency: string;
+            /** @description > 0: the fleet owes the organization */
+            balance: string;
+        };
+        FleetCard: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            status: string;
+            profile: components["schemas"]["FleetProfile"];
+            has_primary_user: boolean;
+            /** Format: int64 */
+            vehicle_count: number;
+            /** Format: int64 */
+            active_warranty_count: number;
+            /** Format: int64 */
+            service_count: number;
+            recent_services: components["schemas"]["FleetServiceSummary"][];
+            links: components["schemas"]["FleetLink"][];
+            cari: components["schemas"]["FleetCari"] | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetUser: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            user_uuid: string;
+            email: string | null;
+            name: string;
+            surname: string;
+            is_primary: boolean;
+            /** @enum {string} */
+            status: "active" | "disabled";
+            /** Format: date-time */
+            last_login_at: string | null;
+            /** Format: date-time */
+            disabled_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetCatalogRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        FleetVehicle: {
+            /** Format: uuid */
+            uuid: string;
+            plate: string | null;
+            plate_country: string | null;
+            vin: string | null;
+            model_year: number | null;
+            car_brand: components["schemas"]["FleetCatalogRef"] | null;
+            car_model: components["schemas"]["FleetCatalogRef"] | null;
+            /** Format: date-time */
+            last_service_at: string | null;
+            /** Format: int64 */
+            active_warranty_count: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetVehicleAddRequest: {
+            /**
+             * Format: uuid
+             * @description Link an existing vehicle of the fleet's users
+             */
+            vehicle_uuid?: string;
+            plate?: string;
+            /** @description ISO2; defaults to the organization's country */
+            plate_country?: string;
+            vin?: string;
+            /** Format: uuid */
+            car_brand_uuid?: string;
+            /** Format: uuid */
+            car_model_uuid?: string;
+            model_year?: number;
+        };
+        FleetVehicleUpdateRequest: {
+            plate?: string;
+            plate_country?: string | null;
+            vin?: string | null;
+            /** Format: uuid */
+            car_brand_uuid?: string | null;
+            /** Format: uuid */
+            car_model_uuid?: string | null;
+            model_year?: number | null;
+        };
+        /** @description 409 FLEET_VEHICLE_EXISTS (data names the vehicle to link) or FLEET_VEHICLE_OTHER_OWNER (no data). */
+        FleetVehicleExistsError: {
+            /** @enum {boolean} */
+            success: false;
+            error: components["schemas"]["ErrorBody"];
+            data?: {
+                /** Format: uuid */
+                vehicle_uuid: string;
+                plate?: string;
+                in_fleet: boolean;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        FleetPartyRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            legal_name?: string;
+            tax_number?: string;
+        };
+        FleetStatementLine: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: date-time */
+            date: string;
+            /** @enum {string} */
+            kind: "service_income" | "collection" | "other";
+            direction: string;
+            category: string;
+            debit: string;
+            credit: string;
+            balance: string;
+            description: string | null;
+            is_reversal: boolean;
+            service: {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+                plate: string | null;
+                /** Format: uuid */
+                vehicle_uuid: string | null;
+                /** Format: date-time */
+                completed_at: string | null;
+            } | null;
+        };
+        FleetStatement: {
+            fleet: components["schemas"]["FleetPartyRef"];
+            dealer: components["schemas"]["FleetPartyRef"];
+            /** Format: uuid */
+            cari_uuid: string | null;
+            currency: string;
+            /** Format: date */
+            period_from: string;
+            /** Format: date */
+            period_to: string;
+            opening_balance: string;
+            service_income_total: string;
+            collection_total: string;
+            debit_total: string;
+            credit_total: string;
+            closing_balance: string;
+            service_count: number;
+            lines: components["schemas"]["FleetStatementLine"][];
+        };
+        EnvelopeFleet: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Fleet"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetCard: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetCard"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetLink: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetLink"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetUser: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetUser"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetVehicle: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetVehicle"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetStatement: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetStatement"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetListPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetListItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetUserPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetUser"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetVehiclePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetVehicle"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetLinkPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetLink"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
         /** @description 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version) or 426 UPDATE_REQUIRED (X-App-Version below the minimum, TEC-236; `data` carries the minimum and the store links). Either way the app asks the user to update. */
@@ -24218,6 +24842,11 @@ export interface components {
         ShowcaseTargetOrg: string;
         /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
         Sort: string;
+        /** @description Fleet (organization) uuid */
+        FleetUUID: string;
+        FleetVehicleUUID: string;
+        /** @description Fleet-dealer link uuid */
+        FleetLinkUUID: string;
     };
     requestBodies: never;
     headers: never;
@@ -48673,6 +49302,583 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    listFleets: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated link statuses; unknown value → 400. */
+                status?: components["schemas"]["FleetLinkStatus"][];
+                vehicle_count_min?: number;
+                vehicle_count_max?: number;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fleets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetListPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    openFleet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetOpenRequest"];
+            };
+        };
+        responses: {
+            /** @description Fleet opened */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleet"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description FLEET_ALREADY_EXISTS (data names the fleet) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FleetExistsError"];
+                };
+            };
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getFleetVehicleImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getFleetCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fleet card */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetCard"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestFleetLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link requested */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleet"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listFleetUsers: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                status?: ("active" | "disabled")[];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fleet users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetUserPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    inviteFleetUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    name: string;
+                    surname?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Fleet user invited */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetUser"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    disableFleetUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet user uuid (FleetUser.uuid) */
+                user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disabled */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listFleetVehicles: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fleet vehicles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetVehiclePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addFleetVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetVehicleAddRequest"];
+            };
+        };
+        responses: {
+            /** @description Existing vehicle linked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetVehicle"];
+                };
+            };
+            /** @description Vehicle created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetVehicle"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description FLEET_VEHICLE_EXISTS (data names the vehicle) or FLEET_VEHICLE_OTHER_OWNER */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FleetVehicleExistsError"];
+                };
+            };
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    importFleetVehicles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default csv
+                     * @enum {string}
+                     */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @example tr */
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removeFleetVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                vehicle_uuid: components["parameters"]["FleetVehicleUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed from the fleet */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateFleetVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                vehicle_uuid: components["parameters"]["FleetVehicleUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetVehicleUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Vehicle updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetVehicle"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getFleetStatement: {
+        parameters: {
+            query: {
+                period_from: string;
+                period_to: string;
+            };
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Statement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetStatement"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    exportFleetStatement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    format: "pdf" | "xlsx" | "csv";
+                    /** Format: date */
+                    period_from: string;
+                    /** Format: date */
+                    period_to: string;
+                    /** @example tr */
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Export queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listPortalFleetLinks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Links */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetLinkPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    acceptPortalFleetLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet-dealer link uuid */
+                uuid: components["parameters"]["FleetLinkUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link accepted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetLink"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    rejectPortalFleetLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet-dealer link uuid */
+                uuid: components["parameters"]["FleetLinkUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Link rejected (ended) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetLink"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
 }

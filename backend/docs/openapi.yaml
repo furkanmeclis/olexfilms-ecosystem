@@ -61,6 +61,8 @@ tags:
     description: In-app notification center, preferences, and admin send
   - name: Announcements
     description: "Duyuru API: authoring, feed, read receipts and unread badge"
+  - name: Fleets
+    description: "Filo yönetimi: filo açma, bayi bağı, kullanıcılar, araçlar, içe aktarma, filo kartı ve ekstre (F5-02)"
   - name: Showcase
     description: "Bayi vitrini API: panel editor, gallery, center review queue (F5-01b)"
   - name: Campaigns
@@ -26192,6 +26194,534 @@ paths:
         "200": { description: OK }
         "400": { description: Validation error }
 
+  /v1/fleets:
+    get:
+      tags: [Fleets]
+      operationId: listFleets
+      summary: Fleets linked to the organizations in scope (one row per link)
+      description: >-
+        TEC-473 (docs/list-contract.md): `sort` is one of name (default),
+        vehicle_count, last_service_at (the last completed service of a fleet
+        vehicle at the linked dealer, empty last), created_at (the link's); id
+        tiebreak; unknown field → 400. `status` is a comma separated any-of
+        filter on the link status. `q` matches the name, legal name or a tax
+        number prefix. Requires the fleet add-on (403 FEATURE_DISABLED).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          description: Comma separated link statuses; unknown value → 400.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/FleetLinkStatus" }
+        - name: vehicle_count_min
+          in: query
+          schema: { type: integer, minimum: 0 }
+        - name: vehicle_count_max
+          in: query
+          schema: { type: integer, minimum: 0 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Fleets
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetListPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Fleets]
+      operationId: openFleet
+      summary: Open a fleet by tax number (dealer or distributor)
+      description: >-
+        TEC-473: the VKN/TCKN is looked up in the brand first. A new one opens
+        the fleet organization, its profile, the caller's active link and the
+        fleet cari in the caller's ledger (fleet.created). An existing one is
+        409 FLEET_ALREADY_EXISTS whose `data` names the fleet; the dealer then
+        requests a link (POST /v1/fleets/{uuid}/links). A wrong checksum is 422
+        FLEET_INVALID_TAX_NUMBER. Only dealers and distributors open fleets
+        (403). Needs fleets.manage.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FleetOpenRequest" }
+      responses:
+        "201":
+          description: Fleet opened
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleet" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409":
+          description: FLEET_ALREADY_EXISTS (data names the fleet)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FleetExistsError" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/vehicle-import/sample:
+    get:
+      tags: [Fleets]
+      operationId: getFleetVehicleImportSample
+      summary: Sample file of the fleet vehicle import
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, tsv, xlsx, json], default: xlsx }
+        - name: locale
+          in: query
+          schema: { type: string, example: tr }
+      responses:
+        "200":
+          description: Sample file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/fleets/{uuid}:
+    get:
+      tags: [Fleets]
+      operationId: getFleetCard
+      summary: Fleet card
+      description: >-
+        TEC-473: profile, vehicle count, active warranties, recent services and
+        the caller's own cari balance. A dealer reaches a fleet only through an
+        active link (a pending link is 404) and sees only its own services,
+        warranties and cari; the center (brand scope) reaches every fleet of
+        the brand.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+      responses:
+        "200":
+          description: Fleet card
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetCard" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/fleets/{uuid}/links:
+    post:
+      tags: [Fleets]
+      operationId: requestFleetLink
+      summary: Ask to serve an existing fleet (pending link)
+      description: >-
+        TEC-473: the link starts pending; the fleet users are notified and
+        accept or reject it in the portal. A second open link of the pair is
+        409 FLEET_LINK_EXISTS.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+      responses:
+        "201":
+          description: Link requested
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleet" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/fleets/{uuid}/users:
+    get:
+      tags: [Fleets]
+      operationId: listFleetUsers
+      summary: Users of a fleet
+      description: >-
+        `sort` is one of name, email, status, created_at (default); id
+        tiebreak. `status` is a comma separated filter (active, disabled); `q`
+        matches the name or the e-mail.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [active, disabled] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Fleet users
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetUserPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Fleets]
+      operationId: inviteFleetUser
+      summary: Invite a fleet user by e-mail
+      description: >-
+        TEC-473: a new account with the global fleet role (portal, e-mail +
+        password) joins the fleet; the password is set through the existing
+        reset flow (a one-time code by e-mail). The first user of a fleet is
+        its primary user and owns the fleet vehicles. An e-mail with an
+        account is 409 FLEET_USER_EMAIL_TAKEN.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, name]
+              additionalProperties: false
+              properties:
+                email: { type: string, format: email }
+                name: { type: string, maxLength: 100 }
+                surname: { type: string, maxLength: 100 }
+      responses:
+        "201":
+          description: Fleet user invited
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetUser" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/fleets/{uuid}/users/{user_uuid}/disable:
+    post:
+      tags: [Fleets]
+      operationId: disableFleetUser
+      summary: Disable a fleet user
+      description: >-
+        The user can no longer sign in (sessions revoked); the row stays. The
+        primary user owns the fleet vehicles: 422 FLEET_PRIMARY_USER_LOCKED.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - name: user_uuid
+          in: path
+          required: true
+          description: Fleet user uuid (FleetUser.uuid)
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Disabled }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/{uuid}/vehicles:
+    get:
+      tags: [Fleets]
+      operationId: listFleetVehicles
+      summary: Vehicles of a fleet
+      description: >-
+        `sort` is one of plate (default), car_brand, last_service_at,
+        active_warranty_count, created_at; id tiebreak. last_service_at and
+        active_warranty_count count only the caller's own work.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Fleet vehicles
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetVehiclePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Fleets]
+      operationId: addFleetVehicle
+      summary: Add a vehicle to a fleet
+      description: >-
+        TEC-473: a new vehicle (plate required) owned by the fleet's primary
+        user (422 FLEET_PRIMARY_USER_REQUIRED without one), or with
+        vehicle_uuid an existing vehicle of the fleet's users (200). A plate /
+        VIN that already belongs to the fleet's users is 409
+        FLEET_VEHICLE_EXISTS whose data names the vehicle (link suggestion);
+        another customer's or fleet's vehicle is 409 FLEET_VEHICLE_OTHER_OWNER
+        (never linked).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FleetVehicleAddRequest" }
+      responses:
+        "200":
+          description: Existing vehicle linked
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetVehicle" }
+        "201":
+          description: Vehicle created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetVehicle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: FLEET_VEHICLE_EXISTS (data names the vehicle) or FLEET_VEHICLE_OTHER_OWNER
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FleetVehicleExistsError" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/{uuid}/vehicles/import:
+    post:
+      tags: [Fleets]
+      operationId: importFleetVehicles
+      summary: Upload a fleet vehicle import (CSV / XLSX)
+      description: >-
+        TEC-473: columns plate (required), vin, car_brand, car_model,
+        model_year, plate_country. The job targets the fleet through
+        defaults.fleet_uuid (keep it when saving the mapping). Preview (dry
+        run: new, link, duplicate, conflict, invalid), confirm and undo run on
+        /v1/tenant/imports/{uuid}; undo deletes the created vehicles (refused
+        once serviced) and unlinks the linked ones.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, tsv, xlsx, json], default: csv }
+                locale: { type: string, example: tr }
+      responses:
+        "201":
+          description: Import job created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeImportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/fleets/{uuid}/vehicles/{vehicle_uuid}:
+    patch:
+      tags: [Fleets]
+      operationId: updateFleetVehicle
+      summary: Edit a fleet vehicle
+      description: Absent keys keep the value, null clears it (the plate cannot be cleared).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - $ref: "#/components/parameters/FleetVehicleUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FleetVehicleUpdateRequest" }
+      responses:
+        "200":
+          description: Vehicle updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetVehicle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Fleets]
+      operationId: removeFleetVehicle
+      summary: Remove a vehicle from the fleet (the vehicle is kept)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - $ref: "#/components/parameters/FleetVehicleUUID"
+      responses:
+        "204": { description: Removed from the fleet }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/fleets/{uuid}/statement:
+    get:
+      tags: [Fleets]
+      operationId: getFleetStatement
+      summary: Consolidated fleet statement (the caller's own fleet cari)
+      description: >-
+        TEC-473: the fleet cari in the caller organization's ledger over the
+        inclusive period (days in the organization's timezone, at most 366):
+        service income lines (finance_entries source service_income) with
+        their service and vehicle, collections and other cari movements, the
+        opening and closing balance. Without an own active link 422
+        FLEET_NO_DEALER_LINK.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - name: period_from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: period_to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Statement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetStatement" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/{uuid}/statement/export:
+    post:
+      tags: [Fleets]
+      operationId: exportFleetStatement
+      summary: Export the fleet statement (PDF / XLSX / CSV, I/O engine)
+      description: >-
+        202 with the export job (resource tenant.fleet.statement); poll
+        /v1/tenant/exports/{uuid}. The worker re-checks the caller's link.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format, period_from, period_to]
+              additionalProperties: false
+              properties:
+                format: { type: string, enum: [pdf, xlsx, csv] }
+                period_from: { type: string, format: date }
+                period_to: { type: string, format: date }
+                locale: { type: string, example: tr }
+      responses:
+        "202":
+          description: Export queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/portal/fleet/links:
+    get:
+      tags: [Fleets]
+      operationId: listPortalFleetLinks
+      summary: Dealer links of the signed-in user's fleet (portal)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Links
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetLinkPage" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/links/{uuid}/accept:
+    post:
+      tags: [Fleets]
+      operationId: acceptPortalFleetLink
+      summary: Accept a pending dealer link (fleet user)
+      description: >-
+        TEC-473: activates the link, opens the fleet cari in the dealer's
+        ledger and lets the dealer serve the fleet vehicles (fleet.linked).
+        A decided link is 409 FLEET_LINK_NOT_PENDING.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetLinkUUID"
+      responses:
+        "200":
+          description: Link accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetLink" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /v1/portal/fleet/links/{uuid}/reject:
+    post:
+      tags: [Fleets]
+      operationId: rejectPortalFleetLink
+      summary: Reject a pending dealer link (fleet user)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetLinkUUID"
+      responses:
+        "200":
+          description: Link rejected (ended)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetLink" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -26431,6 +26961,23 @@ components:
         descending. Extra comma-separated fields are validated but ignored.
         Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md.
       schema: { type: string }
+    FleetUUID:
+      name: uuid
+      in: path
+      required: true
+      description: Fleet (organization) uuid
+      schema: { type: string, format: uuid }
+    FleetVehicleUUID:
+      name: vehicle_uuid
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    FleetLinkUUID:
+      name: uuid
+      in: path
+      required: true
+      description: Fleet-dealer link uuid
+      schema: { type: string, format: uuid }
 
   responses:
     MobileApiVersionUnsupported:
@@ -40041,4 +40588,397 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/AIUsageSummary" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    # TEC-473 (F5-02b): fleet management.
+    FleetLinkStatus:
+      type: string
+      enum: [pending, active, ended]
+
+    FleetProfile:
+      type: object
+      required: [tax_number, tax_office, legal_name, contact_name, contact_phone, billing_email, report_frequency, report_locale]
+      properties:
+        tax_number: { type: string }
+        tax_office: { type: [string, "null"] }
+        legal_name: { type: string }
+        contact_name: { type: [string, "null"] }
+        contact_phone: { type: [string, "null"] }
+        billing_email: { type: [string, "null"] }
+        report_frequency: { type: string, enum: [monthly, quarterly, "off"] }
+        report_locale: { type: string }
+
+    FleetLink:
+      type: object
+      required: [uuid, status, dealer_uuid, dealer_name, started_at, ended_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/FleetLinkStatus" }
+        dealer_uuid: { type: string, format: uuid }
+        dealer_name: { type: string }
+        started_at: { type: [string, "null"], format: date-time }
+        ended_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    Fleet:
+      type: object
+      required: [uuid, name, status, profile, link, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string }
+        profile: { $ref: "#/components/schemas/FleetProfile" }
+        link:
+          oneOf:
+            - $ref: "#/components/schemas/FleetLink"
+            - type: "null"
+        created_at: { type: string, format: date-time }
+
+    FleetOpenRequest:
+      type: object
+      required: [legal_name, tax_number]
+      additionalProperties: false
+      properties:
+        name: { type: string, description: Display name; defaults to legal_name }
+        legal_name: { type: string, maxLength: 255 }
+        tax_number: { type: string, description: VKN (10 digits) or TCKN (11 digits) with a valid checksum }
+        tax_office: { type: string, maxLength: 120 }
+        contact_name: { type: string, maxLength: 160 }
+        contact_phone: { type: string, description: Normalized to E.164 }
+        billing_email: { type: string, format: email }
+        report_frequency: { type: string, enum: [monthly, quarterly, "off"], default: monthly }
+        report_locale: { type: string, default: tr }
+
+    FleetExistsError:
+      description: 409 FLEET_ALREADY_EXISTS; data names the fleet of the tax number.
+      type: object
+      required: [success, error, meta]
+      properties:
+        success: { type: boolean, enum: [false] }
+        error: { $ref: "#/components/schemas/ErrorBody" }
+        data:
+          type: object
+          required: [fleet_uuid, name, legal_name, link_status]
+          properties:
+            fleet_uuid: { type: string, format: uuid }
+            name: { type: string }
+            legal_name: { type: string }
+            link_status:
+              type: string
+              description: The caller's open link (pending | active), empty without one.
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    FleetListItem:
+      type: object
+      required: [uuid, name, legal_name, tax_number, status, vehicle_count, last_service_at, link]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        legal_name: { type: string }
+        tax_number: { type: string }
+        status: { type: string }
+        vehicle_count: { type: integer, format: int64 }
+        last_service_at: { type: [string, "null"], format: date-time }
+        link: { $ref: "#/components/schemas/FleetLink" }
+
+    FleetServiceSummary:
+      type: object
+      required: [uuid, service_no, status, plate, vehicle_uuid, organization_uuid, organization_name, created_at, completed_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        status: { type: string }
+        plate: { type: [string, "null"] }
+        vehicle_uuid: { type: string, format: uuid }
+        organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: [string, "null"], format: date-time }
+
+    FleetCari:
+      type: object
+      required: [uuid, currency, balance]
+      properties:
+        uuid: { type: string, format: uuid }
+        currency: { type: string }
+        balance: { type: string, description: "> 0: the fleet owes the organization" }
+
+    FleetCard:
+      type: object
+      required: [uuid, name, status, profile, has_primary_user, vehicle_count, active_warranty_count, service_count, recent_services, links, cari, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        status: { type: string }
+        profile: { $ref: "#/components/schemas/FleetProfile" }
+        has_primary_user: { type: boolean }
+        vehicle_count: { type: integer, format: int64 }
+        active_warranty_count: { type: integer, format: int64 }
+        service_count: { type: integer, format: int64 }
+        recent_services:
+          type: array
+          items: { $ref: "#/components/schemas/FleetServiceSummary" }
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/FleetLink" }
+        cari:
+          oneOf:
+            - $ref: "#/components/schemas/FleetCari"
+            - type: "null"
+        created_at: { type: string, format: date-time }
+
+    FleetUser:
+      type: object
+      required: [uuid, user_uuid, email, name, surname, is_primary, status, last_login_at, disabled_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        user_uuid: { type: string, format: uuid }
+        email: { type: [string, "null"] }
+        name: { type: string }
+        surname: { type: string }
+        is_primary: { type: boolean }
+        status: { type: string, enum: [active, disabled] }
+        last_login_at: { type: [string, "null"], format: date-time }
+        disabled_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    FleetCatalogRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    FleetVehicle:
+      type: object
+      required: [uuid, plate, plate_country, vin, model_year, car_brand, car_model, last_service_at, active_warranty_count, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        plate: { type: [string, "null"] }
+        plate_country: { type: [string, "null"] }
+        vin: { type: [string, "null"] }
+        model_year: { type: [integer, "null"] }
+        car_brand:
+          oneOf:
+            - $ref: "#/components/schemas/FleetCatalogRef"
+            - type: "null"
+        car_model:
+          oneOf:
+            - $ref: "#/components/schemas/FleetCatalogRef"
+            - type: "null"
+        last_service_at: { type: [string, "null"], format: date-time }
+        active_warranty_count: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+
+    FleetVehicleAddRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        vehicle_uuid: { type: string, format: uuid, description: Link an existing vehicle of the fleet's users }
+        plate: { type: string }
+        plate_country: { type: string, description: ISO2; defaults to the organization's country }
+        vin: { type: string }
+        car_brand_uuid: { type: string, format: uuid }
+        car_model_uuid: { type: string, format: uuid }
+        model_year: { type: integer }
+
+    FleetVehicleUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        plate: { type: string }
+        plate_country: { type: [string, "null"] }
+        vin: { type: [string, "null"] }
+        car_brand_uuid: { type: [string, "null"], format: uuid }
+        car_model_uuid: { type: [string, "null"], format: uuid }
+        model_year: { type: [integer, "null"] }
+
+    FleetVehicleExistsError:
+      description: >-
+        409 FLEET_VEHICLE_EXISTS (data names the vehicle to link) or
+        FLEET_VEHICLE_OTHER_OWNER (no data).
+      type: object
+      required: [success, error, meta]
+      properties:
+        success: { type: boolean, enum: [false] }
+        error: { $ref: "#/components/schemas/ErrorBody" }
+        data:
+          type: object
+          required: [vehicle_uuid, in_fleet]
+          properties:
+            vehicle_uuid: { type: string, format: uuid }
+            plate: { type: string }
+            in_fleet: { type: boolean }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    FleetPartyRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        legal_name: { type: string }
+        tax_number: { type: string }
+
+    FleetStatementLine:
+      type: object
+      required: [uuid, date, kind, direction, category, debit, credit, balance, description, is_reversal, service]
+      properties:
+        uuid: { type: string, format: uuid }
+        date: { type: string, format: date-time }
+        kind: { type: string, enum: [service_income, collection, other] }
+        direction: { type: string }
+        category: { type: string }
+        debit: { type: string }
+        credit: { type: string }
+        balance: { type: string }
+        description: { type: [string, "null"] }
+        is_reversal: { type: boolean }
+        service:
+          oneOf:
+            - type: object
+              required: [uuid, service_no, plate, vehicle_uuid, completed_at]
+              properties:
+                uuid: { type: string, format: uuid }
+                service_no: { type: string }
+                plate: { type: [string, "null"] }
+                vehicle_uuid: { type: [string, "null"], format: uuid }
+                completed_at: { type: [string, "null"], format: date-time }
+            - type: "null"
+
+    FleetStatement:
+      type: object
+      required: [fleet, dealer, cari_uuid, currency, period_from, period_to, opening_balance, service_income_total, collection_total, debit_total, credit_total, closing_balance, service_count, lines]
+      properties:
+        fleet: { $ref: "#/components/schemas/FleetPartyRef" }
+        dealer: { $ref: "#/components/schemas/FleetPartyRef" }
+        cari_uuid: { type: [string, "null"], format: uuid }
+        currency: { type: string }
+        period_from: { type: string, format: date }
+        period_to: { type: string, format: date }
+        opening_balance: { type: string }
+        service_income_total: { type: string }
+        collection_total: { type: string }
+        debit_total: { type: string }
+        credit_total: { type: string }
+        closing_balance: { type: string }
+        service_count: { type: integer }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/FleetStatementLine" }
+
+    EnvelopeFleet:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Fleet" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetCard:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetCard" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetLink:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetLink" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetUser:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetUser" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetVehicle:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetVehicle" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetStatement:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetStatement" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetListPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetListItem" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetUserPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetUser" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetVehiclePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetVehicle" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetLinkPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetLink" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
