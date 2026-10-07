@@ -141,5 +141,11 @@
   "system.groups.mcp": "Συνδέσεις MCP",
   "system.groups.mcp_hint": "Όρια των τελικών σημείων MCP στα οποία συνδέονται οι πελάτες AI (Claude, ChatGPT).",
   "system.keys.mcp_requests_per_hour_per_org": "Αιτήματα MCP ανά οργανισμό ανά ώρα",
-  "system.keys.mcp_requests_per_hour_per_org_hint": "Αιτήματα που μπορεί να κάνει ένας οργανισμός ανά ώρα μέσω όλων των συνδεδεμένων εφαρμογών AI· τα επιπλέον απορρίπτονται μέχρι να λήξει το διάστημα."
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Αιτήματα που μπορεί να κάνει ένας οργανισμός ανά ώρα μέσω όλων των συνδεδεμένων εφαρμογών AI· τα επιπλέον απορρίπτονται μέχρι να λήξει το διάστημα.",
+  "system.groups.whatsapp": "WhatsApp",
+  "system.groups.whatsapp_hint": "Συνομιλίες WhatsApp, ρυθμός αποστολής και απαντήσεις τεχνητής νοημοσύνης.",
+  "system.keys.whatsapp_ai_staff_pause_minutes": "Παύση τεχνητής νοημοσύνης μετά από μήνυμα υπαλλήλου (λεπτά)",
+  "system.keys.whatsapp_ai_staff_pause_minutes_hint": "Η τεχνητή νοημοσύνη δεν απαντά σε συνομιλία όπου έγραψε υπάλληλος μέσα σε αυτό το διάστημα· 0 = χωρίς παύση.",
+  "system.keys.whatsapp_ai_guidelines_url": "Σύνδεσμος οδηγιών τεχνητής νοημοσύνης",
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Σύνδεσμος (https) των οδηγιών που αποστέλλεται με την ερώτηση συγκατάθεσης στο WhatsApp· κενό = αποστέλλεται το κείμενο των οδηγιών στο μήνυμα."
 }

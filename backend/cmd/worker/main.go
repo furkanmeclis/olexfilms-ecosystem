@@ -51,6 +51,7 @@ import (
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
+	wapipeline "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/pipeline"
 	whatsapprepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/repository"
 	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
@@ -154,6 +155,8 @@ func main() {
 	contractsmodule.RegisterEventHandlers(eventBus, reviewQueue, log)
 	// TEC-296: service events compute the before/after measurement match.
 	measurementsmodule.RegisterEventHandlers(eventBus, pool, queries, log)
+	// TEC-396: whatsapp.message.received arms the debounced whatsapp:ai_reply.
+	wapipeline.RegisterEventHandlers(eventBus, queue.WhatsAppAIEnqueuer{Client: reviewQueue}, log)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
 	outboxStop := outboxPub.StartRun(ctx)
 	defer outboxStop()
@@ -387,6 +390,12 @@ func main() {
 	worker.WithWhatsAppMessaging(waMsgs.ProcessSend, waMsgs.StoreInboundMedia, func(ctx context.Context) (int, error) {
 		return waMsgs.RequeueStale(ctx, 2*time.Minute)
 	})
+	// TEC-396 (F4-02c): WhatsApp AI pipeline (whatsapp queue).
+	worker.WithWhatsAppAIReply(newWhatsAppAIPipeline(whatsAppAIDeps{
+		cfg: cfg, pool: pool, queries: queries, features: featureSvc, activity: activityRec,
+		notifier: notifSvc, messaging: waMsgs, downloader: waSvc.MediaDownloader(), store: store,
+		rdb: rdb, log: log,
+	}).Process)
 
 	healthPath := os.Getenv("WORKER_HEALTH_FILE")
 	if healthPath == "" {

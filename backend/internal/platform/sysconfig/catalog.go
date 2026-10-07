@@ -117,6 +117,12 @@ const (
 	// staff, system) per recipient number per minute (TEC-395); campaigns
 	// have their own limit.
 	KeyWhatsAppSendPerMinute = "whatsapp.send_per_minute"
+	// KeyWhatsAppAIStaffPauseMinutes: the AI does not answer a conversation
+	// a staff member wrote in within this many minutes (TEC-396).
+	KeyWhatsAppAIStaffPauseMinutes = "whatsapp.ai_staff_pause_minutes"
+	// KeyWhatsAppAIGuidelinesURL is the AI guidelines link of the WhatsApp
+	// consent question; empty = the guidelines text itself is sent (TEC-396).
+	KeyWhatsAppAIGuidelinesURL = "whatsapp.ai_guidelines_url"
 
 	// KeyMCPRequestsPerHourPerOrg caps the MCP requests of one organization
 	// per hour over every connected app and endpoint (TEC-402).
@@ -130,6 +136,10 @@ const DefaultMCPRequestsPerHourPerOrg = 600
 // DefaultWhatsAppSendPerMinute is the catalog default of
 // KeyWhatsAppSendPerMinute.
 const DefaultWhatsAppSendPerMinute = 30
+
+// DefaultWhatsAppAIStaffPauseMinutes is the catalog default of
+// KeyWhatsAppAIStaffPauseMinutes.
+const DefaultWhatsAppAIStaffPauseMinutes = 30
 
 // Values of KeyWarrantyClaimsLaborRule.
 const (
@@ -249,6 +259,10 @@ var catalog = []Definition{
 		Description: "Percent of the labor amount the center credits under the shared rule (TEC-337)"},
 	{Key: KeyWhatsAppSendPerMinute, Group: GroupWhatsApp, Kind: KindInt, Default: int64(DefaultWhatsAppSendPerMinute), Min: i64(1), Max: i64(600),
 		Description: "Outgoing WhatsApp conversation messages per recipient number per minute; further messages wait in the queue (TEC-395)"},
+	{Key: KeyWhatsAppAIStaffPauseMinutes, Group: GroupWhatsApp, Kind: KindInt, Default: int64(DefaultWhatsAppAIStaffPauseMinutes), Min: i64(0), Max: i64(1440),
+		Description: "The WhatsApp AI does not answer a conversation in which a staff member wrote within this many minutes; 0 = no pause (TEC-396)"},
+	{Key: KeyWhatsAppAIGuidelinesURL, Group: GroupWhatsApp, Kind: KindString, Default: "", MaxLen: 500, check: checkHTTPSURL,
+		Description: "Link to the AI guidelines sent with the WhatsApp consent question; empty = the guidelines text is sent in the message (TEC-396)"},
 	{Key: KeyMCPRequestsPerHourPerOrg, Group: GroupMCP, Kind: KindInt, Default: int64(DefaultMCPRequestsPerHourPerOrg), Min: i64(1), Max: i64(100000),
 		Description: "MCP requests one organization may make per hour over all connected apps; further requests get 429 (TEC-402)"},
 }
