@@ -208,6 +208,13 @@ tags:
       `slow_down` with `Retry-After`). The `mcp` module must be on for the
       token's organization at issue and on every use.
 
+  - name: Conversations
+    description: >-
+      WhatsApp conversation inbox (TEC-398, F4-02f). Per the F4 decision S2
+      only the platform admin (super admin with conversations.*) reads
+      conversations; anyone else gets 404 for a conversation. Staff replies
+      are queued (sender_type staff) and pause the AI for 30 minutes.
+
 paths:
   /healthz:
     get:
@@ -23364,6 +23371,310 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/conversations/meta:
+    get:
+      tags: [Conversations]
+      operationId: getConversationsMeta
+      summary: List contract of the conversation inbox (TEC-398)
+      description: conversations.read. `default_sort` is `-last_message_at`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Resource meta
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeResourceMeta" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/conversations:
+    get:
+      tags: [Conversations]
+      operationId: listConversations
+      summary: List WhatsApp conversations (TEC-398)
+      description: >-
+        conversations.read; only the platform admin sees rows (S2), others
+        get an empty page. Sort `last_message_at`, `created_at`,
+        `unread_count` (default `-last_message_at`, empty last, `id`
+        tiebreak). `status`, `ai_mode`, `identity_kind`,
+        `assigned_user_uuid` are CSV (or repeated); `q` matches the contact
+        name, the number (digits) and the identified user's name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: "CSV of open, pending, closed."
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string, enum: [open, pending, closed] } }
+        - name: ai_mode
+          in: query
+          description: "CSV of auto, paused, off."
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string, enum: [auto, paused, "off"] } }
+        - name: identity_kind
+          in: query
+          description: "CSV of panel_user, customer, visitor, unknown."
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string, enum: [panel_user, customer, visitor, unknown] } }
+        - name: assigned_user_uuid
+          in: query
+          description: CSV of assignee user uuids.
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string, format: uuid } }
+        - name: channel
+          in: query
+          schema: { type: string, enum: [whatsapp, sms] }
+        - name: unread
+          in: query
+          description: "`true` = unread messages only, `false` = none."
+          schema: { type: string, enum: ["true", "false"] }
+        - name: last_message_from
+          in: query
+          schema: { type: string }
+        - name: last_message_to
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeConversationPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Conversations]
+      operationId: startConversation
+      summary: Open a conversation with a user and send the first message (TEC-398)
+      description: >-
+        conversations.reply. Continues the existing conversation of the
+        user's number. A one-to-one service message: the marketing opt-out
+        does not apply. JSON `{user_uuid, body}` or multipart with `user_uuid`,
+        `body` and `file` (JPEG/PNG/WebP/PDF, at most 16 MB). 422
+        CONTACT_PHONE_MISSING when the user has no phone number.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConversationStartInput" }
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/ConversationStartMultipart" }
+      responses:
+        "201":
+          description: Conversation and queued message
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeConversationReply" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/conversations/bulk:
+    post:
+      tags: [Conversations]
+      operationId: bulkConversations
+      summary: Run a logged, undoable bulk action on conversations (TEC-398)
+      description: >-
+        conversations.manage. Actions: `close`; `assign` with
+        `target.params.assignee_user_uuid` (a platform admin, others fail
+        per item); `set_ai_mode` with `target.params.ai_mode` (auto, paused,
+        off). Target scope `ids`, or `query` with the GET /v1/conversations
+        filters (at most 10000). Undo through
+        `/v1/platform/bulk-operations/{uuid}/undo`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkExecuteRequest" }
+      responses:
+        "200":
+          description: Sync bulk result with its undoable operation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkSyncResult" }
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/conversations/{uuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Conversations]
+      operationId: getConversation
+      summary: Get a conversation (TEC-398)
+      description: 404 for anyone who may not see it (S2 - platform admin only).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Conversation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeConversation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Conversations]
+      operationId: updateConversation
+      summary: Change status, AI mode or assignment (TEC-398)
+      description: >-
+        conversations.manage. Absent fields stay; `assigned_user_uuid: null`
+        unassigns, `assigned_org_uuid: null` gives it back to the center.
+        `ai_paused_until` only with `ai_mode: paused` (null = until changed).
+        The assignee must be a platform admin (422
+        CONVERSATION_ASSIGNEE_NOT_ALLOWED) and is notified
+        (conversations.assigned). `assigned_org_uuid` grants no visibility
+        yet (S2).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConversationPatchInput" }
+      responses:
+        "200":
+          description: Updated conversation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeConversation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/conversations/{uuid}/messages:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Conversations]
+      operationId: listConversationMessages
+      summary: Conversation timeline, newest first (TEC-398)
+      description: >-
+        Cursor pagination: pass `next_cursor` as `before` for older
+        messages; `next_cursor` is null on the last page.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: before
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: Timeline page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeConversationMessagePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Conversations]
+      operationId: replyConversation
+      summary: Send a staff reply (TEC-398)
+      description: >-
+        conversations.reply. Queued as `sender_type: staff` with the caller
+        as `sender_user`; the AI pauses until now + 30 minutes (AI off and a
+        longer pause stay). JSON `{body}` or multipart with `body` (caption)
+        and `file` (JPEG/PNG/WebP/PDF, at most 16 MB).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConversationReplyInput" }
+          multipart/form-data:
+            schema: { $ref: "#/components/schemas/ConversationReplyMultipart" }
+      responses:
+        "201":
+          description: Queued message and the conversation after it
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeConversationReply" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/conversations/{uuid}/messages/{message_uuid}/media:
+    get:
+      tags: [Conversations]
+      operationId: getConversationMessageMedia
+      summary: Download a stored message attachment (TEC-398)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: message_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: The file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/conversations/{uuid}/read:
+    post:
+      tags: [Conversations]
+      operationId: markConversationRead
+      summary: Clear the unread counter (TEC-398)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Conversation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeConversation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -36078,4 +36389,175 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ConversationUserRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    ConversationOrgRef:
+      type: object
+      required: [uuid, name, type]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string }
+
+    Conversation:
+      type: object
+      required: [uuid, channel, contact_e164, contact_name, status, ai_mode, ai_paused_until, assigned_user,
+        assigned_org, identity_kind, identity_user, identity_org, locale, unread_count, last_message_at,
+        last_inbound_at, ai_consent_at, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        channel: { type: string, enum: [whatsapp, sms] }
+        contact_e164: { type: string }
+        contact_name: { type: [string, "null"] }
+        status: { type: string, enum: [open, pending, closed] }
+        ai_mode: { type: string, enum: [auto, paused, "off"] }
+        ai_paused_until: { type: [string, "null"], format: date-time }
+        assigned_user:
+          oneOf:
+            - { $ref: "#/components/schemas/ConversationUserRef" }
+            - { type: "null" }
+        assigned_org:
+          oneOf:
+            - { $ref: "#/components/schemas/ConversationOrgRef" }
+            - { type: "null" }
+        identity_kind: { type: string, enum: [panel_user, customer, visitor, unknown] }
+        identity_user:
+          oneOf:
+            - { $ref: "#/components/schemas/ConversationUserRef" }
+            - { type: "null" }
+        identity_org:
+          oneOf:
+            - { $ref: "#/components/schemas/ConversationOrgRef" }
+            - { type: "null" }
+        locale: { type: [string, "null"] }
+        unread_count: { type: integer }
+        last_message_at: { type: [string, "null"], format: date-time }
+        last_inbound_at: { type: [string, "null"], format: date-time }
+        ai_consent_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    ConversationMessage:
+      type: object
+      required: [uuid, conversation_uuid, direction, sender_type, status, body, has_stored_media, send_attempts,
+        created_at, sender_user]
+      properties:
+        uuid: { type: string, format: uuid }
+        conversation_uuid: { type: string, format: uuid }
+        direction: { type: string, enum: [in, out] }
+        sender_type: { type: string, enum: [contact, staff, system, ai] }
+        status: { type: string, enum: [queued, received, sent, delivered, read, failed] }
+        body: { type: [string, "null"] }
+        media:
+          type: object
+          additionalProperties: true
+          description: Media metadata (type, mime_type, file_name, caption, storage_skipped).
+        has_stored_media: { type: boolean }
+        media_mime: { type: string }
+        media_size: { type: integer, format: int64 }
+        send_attempts: { type: integer }
+        failure_reason: { type: string }
+        sent_at: { type: string, format: date-time }
+        delivery_status_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        sender_user:
+          oneOf:
+            - { $ref: "#/components/schemas/ConversationUserRef" }
+            - { type: "null" }
+
+    ConversationReplyInput:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, maxLength: 4096 }
+
+    ConversationReplyMultipart:
+      type: object
+      properties:
+        body: { type: string, maxLength: 4096 }
+        file: { type: string, format: binary }
+
+    ConversationStartInput:
+      type: object
+      required: [user_uuid, body]
+      properties:
+        user_uuid: { type: string, format: uuid }
+        body: { type: string, maxLength: 4096 }
+
+    ConversationStartMultipart:
+      type: object
+      required: [user_uuid]
+      properties:
+        user_uuid: { type: string, format: uuid }
+        body: { type: string, maxLength: 4096 }
+        file: { type: string, format: binary }
+
+    ConversationPatchInput:
+      type: object
+      additionalProperties: false
+      properties:
+        status: { type: string, enum: [open, pending, closed] }
+        ai_mode: { type: string, enum: [auto, paused, "off"] }
+        ai_paused_until: { type: [string, "null"], format: date-time }
+        assigned_user_uuid: { type: [string, "null"], format: uuid }
+        assigned_org_uuid: { type: [string, "null"], format: uuid }
+
+    EnvelopeConversation:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Conversation" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeConversationPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Conversation" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeConversationMessagePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, next_cursor]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ConversationMessage" }
+            next_cursor: { type: [string, "null"] }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeConversationReply:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [conversation, message]
+          properties:
+            conversation: { $ref: "#/components/schemas/Conversation" }
+            message: { $ref: "#/components/schemas/ConversationMessage" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

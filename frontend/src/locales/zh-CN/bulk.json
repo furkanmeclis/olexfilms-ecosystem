@@ -91,5 +91,13 @@
   "params.lead_status.lost": "已丢单",
   "params.lost_reason": "丢单原因",
   "actions.stock_units.print_labels": "打印标签",
-  "actions.warehouse_count_lines.set_resolution": "设置处理方式：{{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "设置处理方式：{{resolution}}",
+  "actions.conversations.assign": "分配",
+  "actions.conversations.close": "关闭",
+  "actions.conversations.set_ai_mode": "更改 AI 模式",
+  "confirm.conversations.close": "关闭所选会话？",
+  "params.ai_mode": "AI 模式",
+  "params.ai_mode.auto": "自动",
+  "params.ai_mode.paused": "已暂停",
+  "params.ai_mode.off": "关闭"
 }

@@ -91,5 +91,13 @@
   "params.lead_status.lost": "Perdu",
   "params.lost_reason": "Motif de perte",
   "actions.stock_units.print_labels": "Imprimer les étiquettes",
-  "actions.warehouse_count_lines.set_resolution": "Appliquer la résolution : {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "Appliquer la résolution : {{resolution}}",
+  "actions.conversations.assign": "Attribuer",
+  "actions.conversations.close": "Fermer",
+  "actions.conversations.set_ai_mode": "Changer le mode IA",
+  "confirm.conversations.close": "Fermer les conversations sélectionnées ?",
+  "params.ai_mode": "Mode IA",
+  "params.ai_mode.auto": "Automatique",
+  "params.ai_mode.paused": "En pause",
+  "params.ai_mode.off": "Désactivé"
 }

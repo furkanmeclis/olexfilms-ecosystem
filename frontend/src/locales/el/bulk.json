@@ -91,5 +91,13 @@
   "params.lead_status.lost": "Χάθηκε",
   "params.lost_reason": "Αιτία απώλειας",
   "actions.stock_units.print_labels": "Εκτύπωση ετικετών",
-  "actions.warehouse_count_lines.set_resolution": "Ορισμός επίλυσης: {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "Ορισμός επίλυσης: {{resolution}}",
+  "actions.conversations.assign": "Ανάθεση",
+  "actions.conversations.close": "Κλείσιμο",
+  "actions.conversations.set_ai_mode": "Αλλαγή λειτουργίας AI",
+  "confirm.conversations.close": "Κλείσιμο των επιλεγμένων συνομιλιών;",
+  "params.ai_mode": "Λειτουργία AI",
+  "params.ai_mode.auto": "Αυτόματη",
+  "params.ai_mode.paused": "Σε παύση",
+  "params.ai_mode.off": "Ανενεργή"
 }

@@ -91,5 +91,13 @@
   "params.lead_status.lost": "Проигран",
   "params.lost_reason": "Причина проигрыша",
   "actions.stock_units.print_labels": "Печать этикеток",
-  "actions.warehouse_count_lines.set_resolution": "Назначить решение: {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "Назначить решение: {{resolution}}",
+  "actions.conversations.assign": "Назначить",
+  "actions.conversations.close": "Закрыть",
+  "actions.conversations.set_ai_mode": "Изменить режим ИИ",
+  "confirm.conversations.close": "Закрыть выбранные диалоги?",
+  "params.ai_mode": "Режим ИИ",
+  "params.ai_mode.auto": "Автоматически",
+  "params.ai_mode.paused": "Приостановлен",
+  "params.ai_mode.off": "Выключен"
 }

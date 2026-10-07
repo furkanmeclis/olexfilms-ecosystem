@@ -1,0 +1,13 @@
+{
+  "ai_mode": "وضع الذكاء الاصطناعي",
+  "assigned_user": "المسؤول",
+  "channel": "القناة",
+  "contact_e164": "الهاتف",
+  "contact_name": "جهة الاتصال",
+  "created_at": "تاريخ الإنشاء",
+  "identity_kind": "نوع الهوية",
+  "last_message_at": "آخر رسالة",
+  "status": "الحالة",
+  "unread_count": "غير المقروءة",
+  "unread": "غير المقروءة فقط"
+}

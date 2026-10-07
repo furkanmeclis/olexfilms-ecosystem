@@ -1,0 +1,13 @@
+{
+  "ai_mode": "AI 模式",
+  "assigned_user": "负责人",
+  "channel": "渠道",
+  "contact_e164": "电话",
+  "contact_name": "联系人",
+  "created_at": "创建时间",
+  "identity_kind": "身份类型",
+  "last_message_at": "最新消息",
+  "status": "状态",
+  "unread_count": "未读",
+  "unread": "仅未读"
+}

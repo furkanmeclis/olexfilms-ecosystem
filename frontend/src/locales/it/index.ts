@@ -14,6 +14,7 @@ import chart from "./chart.json";
 import cms from "./cms.json";
 import common from "./common.json";
 import contractTemplates from "./contract_templates.json";
+import conversations from "./conversations.json";
 import customers from "./customers.json";
 import dashboard from "./dashboard.json";
 import dealerSales from "./dealer_sales.json";
@@ -71,6 +72,7 @@ const catalog: LocaleCatalog = {
   cms,
   common,
   contract_templates: contractTemplates,
+  conversations,
   customers,
   dashboard,
   dealer_sales: dealerSales,

@@ -687,6 +687,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		bulkadapters.NewVehicleModels(deps.Queries),
 		// TEC-371: leads (assign, set status).
 		leadsusecase.NewBulkAdapter(deps.Queries),
+		// TEC-398: conversations (close, assign, AI mode).
+		whatsappusecase.NewBulkAdapter(deps.Queries),
 	)
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log).WithPool(deps.DB)
 	logsSvc := logsusecase.New(deps.Queries)
@@ -913,6 +915,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	authsettingsmodule.RegisterRoutes(mux, authsettingshandler.New(authSettingsSvc, activityRec), tokens, loader)
 	githubmodule.RegisterRoutes(mux, githubhandler.New(githubSvc, activityRec), tokens, loader)
 	whatsappmodule.RegisterRoutes(mux, whatsapphandler.New(waSvc, activityRec, log), tokens, loader)
+	// TEC-398: panel conversation API (inbox, staff replies, assignment).
+	whatsappmodule.RegisterConversationRoutes(mux, whatsapphandler.NewConversations(
+		whatsappmodule.NewInbox(s.waMessaging, deps.DB, deps.Queries, deps.Storage, deps.Realtime), deps.Queries), tokens, loader)
 	legalmodule.RegisterRoutes(mux, legalhandler.New(legalusecase.New(deps.Queries), activityRec), tokens, loader)
 	oauthprovidermodule.RegisterRoutes(mux, oauthproviderhandler.New(oauthProvSvc, activityRec), tokens, loader)
 	activitymodule.RegisterRoutes(mux, activityhandler.New(activityusecase.New(deps.Queries)), tokens, loader)
