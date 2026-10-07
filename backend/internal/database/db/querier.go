@@ -140,6 +140,7 @@ type Querier interface {
 	ConsumeQRLoginChallenge(ctx context.Context, code string) (QrLoginChallenge, error)
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	CountAIConversations(ctx context.Context, arg CountAIConversationsParams) (int64, error)
+	CountAIOrgQuotas(ctx context.Context, arg CountAIOrgQuotasParams) (int64, error)
 	CountAIUsage(ctx context.Context, arg CountAIUsageParams) (int64, error)
 	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
 	CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error)
@@ -669,6 +670,7 @@ type Querier interface {
 	GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error)
 	GetAIConversationForUser(ctx context.Context, arg GetAIConversationForUserParams) (AiConversation, error)
 	GetAIOrgSettings(ctx context.Context, organizationID int64) (AiOrgSetting, error)
+	GetAIOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	// TEC-387: a repeated proposal of the same tool_use returns the existing card.
 	GetAIPendingActionByIdempotencyKey(ctx context.Context, idempotencyKey string) (AiPendingAction, error)
 	GetAIPendingActionForUser(ctx context.Context, arg GetAIPendingActionForUserParams) (AiPendingAction, error)
@@ -1249,6 +1251,8 @@ type Querier interface {
 	// A customer is a users row with a customer profile or an organization link
 	// (K11).
 	IsCustomerUser(ctx context.Context, userID int64) (bool, error)
+	// Time of the newest message of one sender type (NULL = none).
+	LastConversationMessageAtBySender(ctx context.Context, arg LastConversationMessageAtBySenderParams) (pgtype.Timestamptz, error)
 	// The watermark of the latest successful run of a kind that set one. The
 	// barcode PATCH runs share the push_barcodes kind without a watermark, so
 	// LastSucceededIntegrationSyncRun would lose the bulk push cursor.
@@ -1274,11 +1278,26 @@ type Querier interface {
 	// Sort: docs/list-contract.md, keys from ai/repository.ConversationSort.
 	ListAIConversations(ctx context.Context, arg ListAIConversationsParams) ([]AiConversation, error)
 	ListAIMessages(ctx context.Context, conversationID int64) ([]AiMessage, error)
+	// TEC-389 (F4-01g): platform org quota table, usage report and quota
+	// threshold recipients --------------------------------------------------------
+	// Platform quota table: one row per organization with its override, the
+	// effective quota (override, else default_quota; 0 = unlimited) and the
+	// org-pool usage of period. Sort: docs/list-contract.md, keys from
+	// ai/repository.OrgQuotaSort (unlimited sorts as the largest quota).
+	ListAIOrgQuotas(ctx context.Context, arg ListAIOrgQuotasParams) ([]ListAIOrgQuotasRow, error)
+	ListAIOrganizationIDsByUUIDs(ctx context.Context, uuids []uuid.UUID) ([]int64, error)
+	ListAIOrganizationsByIDs(ctx context.Context, ids []int64) ([]ListAIOrganizationsByIDsRow, error)
 	ListAIPendingActionsForUser(ctx context.Context, arg ListAIPendingActionsForUserParams) ([]AiPendingAction, error)
+	// Recipients of ai.quota.threshold: for the org pool the organization's
+	// members holding ai.usage.read; for the system pool the global role
+	// holders of ai.settings.manage (platform admins).
+	ListAIQuotaNotifyUserIDs(ctx context.Context, arg ListAIQuotaNotifyUserIDsParams) ([]int64, error)
 	// Sort: docs/list-contract.md, keys from ai/repository.UsageSort.
 	ListAIUsage(ctx context.Context, arg ListAIUsageParams) ([]AiUsage, error)
 	// Monthly totals of a brand for the quota report.
 	ListAIUsageMonthly(ctx context.Context, arg ListAIUsageMonthlyParams) ([]AiUsageMonthly, error)
+	ListAIUserIDsByUUIDs(ctx context.Context, uuids []uuid.UUID) ([]int64, error)
+	ListAIUsersByIDs(ctx context.Context, ids []int64) ([]ListAIUsersByIDsRow, error)
 	// TEC-379 (DT-BE-8): list contract (docs/list-contract.md). status sorts by
 	// rank (open, resolved_reversal, resolved_revision, rejected), organization
 	// by the disputing organization name, amount by the disputed amount in the
@@ -1556,6 +1575,10 @@ type Querier interface {
 	// for admins) and tenant jobs (organization_id). Sort:
 	// docs/list-contract.md, keys from imports/usecase.SortSpec.
 	ListImportJobsFiltered(ctx context.Context, arg ListImportJobsFilteredParams) ([]ListImportJobsFilteredRow, error)
+	// AI pipeline (TEC-396, F4-02c) -------------------------------------------------
+	// Inbound contact messages of a conversation newer than after_id and since,
+	// newest first (the pipeline turns them oldest first).
+	ListInboundMessagesAfter(ctx context.Context, arg ListInboundMessagesAfterParams) ([]Message, error)
 	ListIntegrationConnections(ctx context.Context, brandID int64) ([]IntegrationConnection, error)
 	ListIntegrationConnectionsByKey(ctx context.Context, key string) ([]IntegrationConnection, error)
 	ListIntegrationExternalParties(ctx context.Context, connectionID int64) ([]IntegrationExternalParty, error)
@@ -2300,6 +2323,10 @@ type Querier interface {
 	// Stamped in the notification transaction; a second run is a no-op.
 	MarkWarrantyNotified30(ctx context.Context, arg MarkWarrantyNotified30Params) (int64, error)
 	MarkWarrantyNotified7(ctx context.Context, arg MarkWarrantyNotified7Params) (int64, error)
+	// The newest message an AI run was started for (0 = none).
+	MaxConversationAIRunTrigger(ctx context.Context, conversationID int64) (int64, error)
+	// The newest message of one sender type (0 = none).
+	MaxConversationMessageIDBySender(ctx context.Context, arg MaxConversationMessageIDBySenderParams) (int64, error)
 	// Organization links the target already has: the target row keeps the
 	// earliest dates of both rows.
 	MergeConflictingCustomerOrganizations(ctx context.Context, arg MergeConflictingCustomerOrganizationsParams) (int64, error)
@@ -2818,6 +2845,11 @@ type Querier interface {
 	// Period summary: per staff and type, the paid total of a period (voided
 	// payments excluded).
 	SumStaffPaymentsByPeriod(ctx context.Context, arg SumStaffPaymentsByPeriodParams) ([]SumStaffPaymentsByPeriodRow, error)
+	// Usage summary of one organization per channel and pool.
+	SummarizeAIUsageByChannel(ctx context.Context, arg SummarizeAIUsageByChannelParams) ([]SummarizeAIUsageByChannelRow, error)
+	// Usage summary of one organization in [created_from, created_before):
+	// totals per user (NULL user = no user, e.g. visitors).
+	SummarizeAIUsageByUser(ctx context.Context, arg SummarizeAIUsageByUserParams) ([]SummarizeAIUsageByUserRow, error)
 	// TEC-207: end-of-day warehouse reports (000071). Every query is bound to
 	// one organization; the warehouse side is brand-independent (K20).
 	// The day's ledger movements of an organization grouped by type and

@@ -141,5 +141,11 @@
   "system.groups.mcp": "MCP връзки",
   "system.groups.mcp_hint": "Ограничения на MCP крайните точки, към които се свързват AI клиенти (Claude, ChatGPT).",
   "system.keys.mcp_requests_per_hour_per_org": "MCP заявки на организация на час",
-  "system.keys.mcp_requests_per_hour_per_org_hint": "Заявки, които една организация може да направи за час през всички свързани AI приложения; следващите се отказват до края на периода."
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Заявки, които една организация може да направи за час през всички свързани AI приложения; следващите се отказват до края на периода.",
+  "system.groups.whatsapp": "WhatsApp",
+  "system.groups.whatsapp_hint": "Разговори в WhatsApp, скорост на изпращане и отговори с AI.",
+  "system.keys.whatsapp_ai_staff_pause_minutes": "Пауза на AI след съобщение от служител (минути)",
+  "system.keys.whatsapp_ai_staff_pause_minutes_hint": "AI не отговаря в разговор, в който служител е писал през това време; 0 = без пауза.",
+  "system.keys.whatsapp_ai_guidelines_url": "Връзка към правилата за AI",
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Връзка (https) към правилата, изпращана с въпроса за съгласие в WhatsApp; празно = текстът на правилата се изпраща в съобщението."
 }

@@ -24852,6 +24852,348 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/platform/ai/settings:
+    get:
+      tags: [AI]
+      operationId: getPlatformAiSettings
+      summary: Platform AI settings (TEC-389)
+      description: |
+        ai.settings.manage (super_admin). Models, the allow list
+        (`AI_ALLOWED_MODELS`, else the env default and fast models), the
+        default and system pool monthly quotas (0 = unlimited), the tool
+        switches with every registered tool, the extra instructions and the
+        Markdown knowledge text.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAISettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      tags: [AI]
+      operationId: updatePlatformAiSettings
+      summary: Change the platform AI settings (TEC-389)
+      description: |
+        Fields left out keep their value. Models must be on the allow list,
+        tool_toggles keys must be registered tools (only `false` values are
+        stored; a missing tool is enabled), the knowledge text is at most
+        20 KB and the extra instructions 20 000 characters; otherwise 400
+        VALIDATION_ERROR.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AISettingsUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAISettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/ai/orgs:
+    get:
+      tags: [AI]
+      operationId: listPlatformAiOrgQuotas
+      summary: Organization AI quota table (TEC-389)
+      description: |
+        ai.settings.manage. One row per organization: override, effective
+        monthly quota (override, else the platform default; 0 = unlimited),
+        org-pool usage of `period` and percent (null when unlimited).
+        List contract: `sort` = usage | quota | name (default `-usage`, id
+        tiebreak; unlimited sorts as the largest quota), `org_type`
+        (multi-value), `q` (name / slug), `period` (YYYY-MM, default the
+        current UTC month). Only the center sets quotas; a distributor does
+        not hand out quota to its dealers.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: org_type
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [center, distributor, dealer] }
+        - name: period
+          in: query
+          required: false
+          schema: { type: string, pattern: "^[0-9]{4}-[0-9]{2}$" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIOrgQuotaPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/ai/orgs/{uuid}:
+    put:
+      tags: [AI]
+      operationId: updatePlatformAiOrgQuota
+      summary: Set an organization's AI quota override and switch (TEC-389)
+      description: |
+        `monthly_token_quota` null (or absent) returns the organization to
+        the platform default; 0 = unlimited. `enabled` absent keeps the
+        current switch. Returns the organization's row of the current month.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIOrgQuotaUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIOrgQuota"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/ai/usage:
+    get:
+      tags: [AI]
+      operationId: listPlatformAiUsage
+      summary: AI usage ledger of every organization (TEC-389)
+      description: |
+        ai.settings.manage. Same filters and sort as `GET /v1/ai/usage`
+        plus `organization` (multi-value organization uuids).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+        - $ref: "#/components/parameters/AIUsageChannel"
+        - $ref: "#/components/parameters/AIUsagePurpose"
+        - $ref: "#/components/parameters/AIUsagePool"
+        - $ref: "#/components/parameters/AIUsageModel"
+        - $ref: "#/components/parameters/AIUsageUser"
+        - name: organization
+          in: query
+          required: false
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIUsagePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/platform/ai/usage/export:
+    post:
+      tags: [AI]
+      operationId: requestPlatformAiUsageExport
+      summary: Queue an AI usage export of every organization (CSV or XLSX)
+      description: |
+        TEC-389. ai.settings.manage. Resource `ai.usage`; `query` takes the
+        `GET /v1/platform/ai/usage` parameters (without limit / offset), a
+        bad value is 400 at request time. Poll and download through
+        /v1/platform/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIUsageExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/ai/usage:
+    get:
+      tags: [AI]
+      operationId: listAiUsage
+      summary: AI usage ledger of one organization (TEC-389)
+      description: |
+        ai.usage.read. The active organization, or `organization` (uuid)
+        when it is inside the caller's ai.usage.read scope; another or a
+        missing organization is 404 alike. List contract: `sort` =
+        created_at | tokens (default `-created_at`, id tiebreak; unknown →
+        400), `created_from` / `created_to`, multi-value `channel`,
+        `purpose`, `pool`, `model`, `user` (user uuids). `tokens` is the
+        quota count (input + output + cache write).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+        - $ref: "#/components/parameters/AIUsageChannel"
+        - $ref: "#/components/parameters/AIUsagePurpose"
+        - $ref: "#/components/parameters/AIUsagePool"
+        - $ref: "#/components/parameters/AIUsageModel"
+        - $ref: "#/components/parameters/AIUsageUser"
+        - $ref: "#/components/parameters/AIUsageOrganization"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIUsagePage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/ai/usage/summary:
+    get:
+      tags: [AI]
+      operationId: getAiUsageSummary
+      summary: Monthly AI usage summary of one organization (TEC-389)
+      description: |
+        ai.usage.read, same organization rule as `GET /v1/ai/usage`.
+        `period` YYYY-MM (default the current UTC month; the monthly reset
+        is the period key). The org-pool quota, the brand center's system
+        pool (center only), totals and the user and channel breakdown.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          required: false
+          schema: { type: string, pattern: "^[0-9]{4}-[0-9]{2}$" }
+        - $ref: "#/components/parameters/AIUsageOrganization"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIUsageSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/ai/usage/export:
+    post:
+      tags: [AI]
+      operationId: requestAiUsageExport
+      summary: Queue an AI usage export of one organization (CSV or XLSX)
+      description: |
+        TEC-389. ai.usage.read; resource `ai.usage`. `query` takes the
+        `GET /v1/ai/usage` parameters (without limit / offset), including
+        `organization` with the same 404 rule. The job stores the reported
+        organization and the worker re-authorizes it against the job
+        organization. Poll and download through /v1/tenant/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIUsageExportInput"
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/consents/pending:
     get:
       tags: [AI]
@@ -24923,6 +25265,58 @@ components:
       bearerFormat: JWT
 
   parameters:
+    AIUsageChannel:
+      name: channel
+      in: query
+      required: false
+      style: form
+      explode: false
+      schema:
+        type: array
+        items: { type: string, enum: [panel, portal, whatsapp, mcp, triage] }
+    AIUsagePurpose:
+      name: purpose
+      in: query
+      required: false
+      style: form
+      explode: false
+      schema:
+        type: array
+        items: { type: string, enum: [chat, title, triage, locale] }
+    AIUsagePool:
+      name: pool
+      in: query
+      required: false
+      style: form
+      explode: false
+      schema:
+        type: array
+        items: { type: string, enum: [org, system] }
+    AIUsageModel:
+      name: model
+      in: query
+      required: false
+      style: form
+      explode: false
+      schema:
+        type: array
+        items: { type: string }
+    AIUsageUser:
+      name: user
+      in: query
+      required: false
+      description: User uuids; unknown ones match nothing.
+      style: form
+      explode: false
+      schema:
+        type: array
+        items: { type: string, format: uuid }
+    AIUsageOrganization:
+      name: organization
+      in: query
+      required: false
+      description: Organization inside the caller's ai.usage.read scope (default the active one); otherwise 404.
+      schema: { type: string, format: uuid }
     OAuthRequestUUID:
       name: uuid
       in: path
@@ -38035,4 +38429,240 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AIUserRef:
+      type: object
+      required: [uuid, name, surname]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        surname: { type: string }
+
+    AIOrgRef:
+      type: object
+      required: [uuid, name, type]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [center, distributor, dealer] }
+
+    AIToolInfo:
+      type: object
+      required: [name, kind, realm, enabled]
+      properties:
+        name: { type: string }
+        kind: { type: string, enum: [read, write, self] }
+        realm: { type: string, enum: [panel, customer, visitor] }
+        enabled: { type: boolean }
+
+    AISettings:
+      type: object
+      required: [default_model, fast_model, allowed_models, default_monthly_token_quota, system_pool_monthly_quota,
+        tool_toggles, tools, extra_instructions, knowledge_text, updated_at, updated_by]
+      properties:
+        default_model: { type: string }
+        fast_model: { type: string }
+        allowed_models:
+          type: array
+          items: { type: string }
+        default_monthly_token_quota: { type: integer, format: int64, description: 0 = unlimited }
+        system_pool_monthly_quota: { type: integer, format: int64, description: 0 = unlimited }
+        tool_toggles:
+          type: object
+          additionalProperties: { type: boolean }
+          description: "Switched-off tools ({\"name\": false}); a missing tool is enabled."
+        tools:
+          type: array
+          items: { $ref: "#/components/schemas/AIToolInfo" }
+        extra_instructions: { type: string }
+        knowledge_text: { type: string, description: "Markdown, at most 20 KB" }
+        updated_at: { type: string, format: date-time }
+        updated_by:
+          oneOf:
+            - $ref: "#/components/schemas/AIUserRef"
+            - type: "null"
+
+    AISettingsUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        default_model: { type: string }
+        fast_model: { type: string }
+        default_monthly_token_quota: { type: integer, format: int64, minimum: 0 }
+        system_pool_monthly_quota: { type: integer, format: int64, minimum: 0 }
+        tool_toggles:
+          type: object
+          additionalProperties: { type: boolean }
+        extra_instructions: { type: string, maxLength: 20000 }
+        knowledge_text: { type: string }
+
+    AIOrgQuota:
+      type: object
+      required: [organization, status, enabled, quota_override, quota, period, used, percent, request_count, system_used]
+      properties:
+        organization: { $ref: "#/components/schemas/AIOrgRef" }
+        status: { type: string }
+        enabled: { type: boolean }
+        quota_override: { type: [integer, "null"], format: int64, description: null = platform default }
+        quota: { type: integer, format: int64, description: "Effective monthly quota; 0 = unlimited" }
+        period: { type: string, description: YYYY-MM (UTC) }
+        used: { type: integer, format: int64 }
+        percent: { type: [number, "null"], description: null when unlimited }
+        request_count: { type: integer, format: int64 }
+        system_used: { type: integer, format: int64, description: "System pool usage (brand center only)" }
+
+    AIOrgQuotaUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled: { type: boolean }
+        monthly_token_quota: { type: [integer, "null"], format: int64, minimum: 0 }
+
+    AIUsageRow:
+      type: object
+      required: [id, created_at, organization, user, pool, channel, purpose, model, input_tokens, output_tokens,
+        cache_read_tokens, cache_write_tokens, tokens]
+      properties:
+        id: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        organization: { $ref: "#/components/schemas/AIOrgRef" }
+        user:
+          oneOf:
+            - $ref: "#/components/schemas/AIUserRef"
+            - type: "null"
+        pool: { type: string, enum: [org, system] }
+        channel: { type: string, enum: [panel, portal, whatsapp, mcp, triage] }
+        purpose: { type: string, enum: [chat, title, triage, locale] }
+        model: { type: string }
+        input_tokens: { type: integer, format: int64 }
+        output_tokens: { type: integer, format: int64 }
+        cache_read_tokens: { type: integer, format: int64 }
+        cache_write_tokens: { type: integer, format: int64 }
+        tokens: { type: integer, format: int64, description: "Quota count (input + output + cache write)" }
+
+    AIQuotaUsage:
+      type: object
+      required: [limit, used, remaining, percent]
+      properties:
+        limit: { type: integer, format: int64, description: 0 = unlimited }
+        used: { type: integer, format: int64 }
+        remaining: { type: [integer, "null"], format: int64 }
+        percent: { type: [number, "null"] }
+
+    AIUsageTotals:
+      type: object
+      required: [tokens, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, requests]
+      properties:
+        tokens: { type: integer, format: int64 }
+        input_tokens: { type: integer, format: int64 }
+        output_tokens: { type: integer, format: int64 }
+        cache_read_tokens: { type: integer, format: int64 }
+        cache_write_tokens: { type: integer, format: int64 }
+        requests: { type: integer, format: int64 }
+
+    AIUsageSummary:
+      type: object
+      required: [period, organization, enabled, quota, system_pool, totals, by_user, by_channel]
+      properties:
+        period: { type: string }
+        organization: { $ref: "#/components/schemas/AIOrgRef" }
+        enabled: { type: boolean }
+        quota: { $ref: "#/components/schemas/AIQuotaUsage" }
+        system_pool:
+          oneOf:
+            - $ref: "#/components/schemas/AIQuotaUsage"
+            - type: "null"
+        totals: { $ref: "#/components/schemas/AIUsageTotals" }
+        by_user:
+          type: array
+          items:
+            type: object
+            required: [user, tokens, input_tokens, output_tokens, requests]
+            properties:
+              user:
+                oneOf:
+                  - $ref: "#/components/schemas/AIUserRef"
+                  - type: "null"
+              tokens: { type: integer, format: int64 }
+              input_tokens: { type: integer, format: int64 }
+              output_tokens: { type: integer, format: int64 }
+              requests: { type: integer, format: int64 }
+        by_channel:
+          type: array
+          items:
+            allOf:
+              - $ref: "#/components/schemas/AIUsageTotals"
+              - type: object
+                required: [channel, pool]
+                properties:
+                  channel: { type: string }
+                  pool: { type: string }
+
+    AIUsageExportInput:
+      type: object
+      required: [format]
+      properties:
+        format: { type: string, enum: [csv, xlsx] }
+        query:
+          type: object
+          additionalProperties: { type: string }
+        locale: { type: string }
+
+    EnvelopeAISettings:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AISettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAIOrgQuota:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AIOrgQuota" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAIOrgQuotaPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AIOrgQuota" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAIUsagePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AIUsageRow" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAIUsageSummary:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AIUsageSummary" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

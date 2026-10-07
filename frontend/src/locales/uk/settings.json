@@ -141,5 +141,11 @@
   "system.groups.mcp": "Підключення MCP",
   "system.groups.mcp_hint": "Обмеження кінцевих точок MCP, до яких підключаються ШІ-клієнти (Claude, ChatGPT).",
   "system.keys.mcp_requests_per_hour_per_org": "Запитів MCP на організацію за годину",
-  "system.keys.mcp_requests_per_hour_per_org_hint": "Скільки запитів організація може виконати за годину через усі підключені ШІ-застосунки; зайві запити відхиляються до кінця вікна."
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Скільки запитів організація може виконати за годину через усі підключені ШІ-застосунки; зайві запити відхиляються до кінця вікна.",
+  "system.groups.whatsapp": "WhatsApp",
+  "system.groups.whatsapp_hint": "Розмови WhatsApp, швидкість надсилання та відповіді AI.",
+  "system.keys.whatsapp_ai_staff_pause_minutes": "Пауза AI після повідомлення співробітника (хвилини)",
+  "system.keys.whatsapp_ai_staff_pause_minutes_hint": "AI не відповідає в розмові, де співробітник писав протягом цього часу; 0 = без паузи.",
+  "system.keys.whatsapp_ai_guidelines_url": "Посилання на правила AI",
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Посилання (https) на правила, що надсилається з питанням про згоду в WhatsApp; порожньо = текст правил надсилається в повідомленні."
 }

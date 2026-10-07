@@ -105,6 +105,8 @@ type Worker struct {
 	whatsAppSend  WhatsAppMessageFunc
 	whatsAppMedia WhatsAppMessageFunc
 	whatsAppSweep WhatsAppQueueSweepFunc
+	// TEC-396: WhatsApp AI pipeline (debounced per conversation).
+	whatsAppAIReply WhatsAppAIReplyFunc
 	// TEC-387: AI confirmation card expiry and stale run cleanup.
 	aiActionSweep AIActionSweepFunc
 }
@@ -200,6 +202,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskWhatsAppSend, w.handleWhatsAppSend)
 	mux.HandleFunc(TaskWhatsAppMediaStore, w.handleWhatsAppMediaStore)
 	mux.HandleFunc(TaskWhatsAppQueueSweep, w.handleWhatsAppQueueSweep)
+	mux.HandleFunc(TaskWhatsAppAIReply, w.handleWhatsAppAIReply)
 	return w
 }
 

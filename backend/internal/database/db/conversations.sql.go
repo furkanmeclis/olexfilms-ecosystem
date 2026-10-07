@@ -499,6 +499,25 @@ func (q *Queries) IsCustomerUser(ctx context.Context, userID int64) (bool, error
 	return is_customer, err
 }
 
+const lastConversationMessageAtBySender = `-- name: LastConversationMessageAtBySender :one
+SELECT MAX(created_at)::timestamptz
+FROM messages
+WHERE conversation_id = $1 AND sender_type = $2
+`
+
+type LastConversationMessageAtBySenderParams struct {
+	ConversationID int64  `json:"conversation_id"`
+	SenderType     string `json:"sender_type"`
+}
+
+// Time of the newest message of one sender type (NULL = none).
+func (q *Queries) LastConversationMessageAtBySender(ctx context.Context, arg LastConversationMessageAtBySenderParams) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, lastConversationMessageAtBySender, arg.ConversationID, arg.SenderType)
+	var column_1 pgtype.Timestamptz
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const listContactOptOutHistory = `-- name: ListContactOptOutHistory :many
 SELECT id, uuid, contact_e164, scope, action, source, conversation_id, created_by_user_id, note, created_at FROM contact_opt_outs
 WHERE contact_e164 = $1
@@ -870,6 +889,77 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 	return items, nil
 }
 
+const listInboundMessagesAfter = `-- name: ListInboundMessagesAfter :many
+
+SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason FROM messages m
+WHERE m.conversation_id = $1
+  AND m.direction = 'in'
+  AND m.sender_type = 'contact'
+  AND m.id > $2::bigint
+  AND m.created_at >= $3::timestamptz
+ORDER BY m.id DESC
+LIMIT $4
+`
+
+type ListInboundMessagesAfterParams struct {
+	ConversationID int64              `json:"conversation_id"`
+	AfterID        int64              `json:"after_id"`
+	Since          pgtype.Timestamptz `json:"since"`
+	LimitCount     int32              `json:"limit_count"`
+}
+
+// AI pipeline (TEC-396, F4-02c) -------------------------------------------------
+// Inbound contact messages of a conversation newer than after_id and since,
+// newest first (the pipeline turns them oldest first).
+func (q *Queries) ListInboundMessagesAfter(ctx context.Context, arg ListInboundMessagesAfterParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, listInboundMessagesAfter,
+		arg.ConversationID,
+		arg.AfterID,
+		arg.Since,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Message{}
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.ConversationID,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.Channel,
+			&i.Direction,
+			&i.SenderType,
+			&i.ExternalID,
+			&i.Body,
+			&i.Media,
+			&i.Status,
+			&i.Raw,
+			&i.SentAt,
+			&i.CreatedAt,
+			&i.SenderUserID,
+			&i.AiRunID,
+			&i.MediaStorageKey,
+			&i.MediaMime,
+			&i.MediaSize,
+			&i.DeliveryStatusAt,
+			&i.SendAttempts,
+			&i.FailureReason,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listOptedOutContacts = `-- name: ListOptedOutContacts :many
 SELECT contact_e164 FROM contact_opt_out_state
 WHERE scope = $1
@@ -998,6 +1088,39 @@ func (q *Queries) MarkConversationRead(ctx context.Context, id int64) (Conversat
 		&i.VisitorLeadID,
 	)
 	return i, err
+}
+
+const maxConversationAIRunTrigger = `-- name: MaxConversationAIRunTrigger :one
+SELECT COALESCE(MAX(trigger_message_id), 0)::bigint
+FROM conversation_ai_runs
+WHERE conversation_id = $1
+`
+
+// The newest message an AI run was started for (0 = none).
+func (q *Queries) MaxConversationAIRunTrigger(ctx context.Context, conversationID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, maxConversationAIRunTrigger, conversationID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const maxConversationMessageIDBySender = `-- name: MaxConversationMessageIDBySender :one
+SELECT COALESCE(MAX(id), 0)::bigint
+FROM messages
+WHERE conversation_id = $1 AND sender_type = $2
+`
+
+type MaxConversationMessageIDBySenderParams struct {
+	ConversationID int64  `json:"conversation_id"`
+	SenderType     string `json:"sender_type"`
+}
+
+// The newest message of one sender type (0 = none).
+func (q *Queries) MaxConversationMessageIDBySender(ctx context.Context, arg MaxConversationMessageIDBySenderParams) (int64, error) {
+	row := q.db.QueryRow(ctx, maxConversationMessageIDBySender, arg.ConversationID, arg.SenderType)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const purgeConversationAIRunsBefore = `-- name: PurgeConversationAIRunsBefore :execrows
