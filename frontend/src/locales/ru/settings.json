@@ -146,6 +146,8 @@
   "system.groups.whatsapp_hint": "Разговоры WhatsApp, скорость отправки и ответы AI.",
   "system.keys.whatsapp_ai_staff_pause_minutes": "Пауза AI после сообщения сотрудника (минуты)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "AI не отвечает в разговоре, где сотрудник писал в течение этого времени; 0 = без паузы.",
+  "system.keys.ai_visitor_daily_token_cap": "Дневной лимит токенов ИИ для посетителей WhatsApp",
+  "system.keys.ai_visitor_daily_token_cap_hint": "Сколько токенов в день все неидентифицированные посетители WhatsApp могут израсходовать из системного пула; сверх этого они получают фиксированный ответ со ссылкой на поиск дилера. 0 = без лимита.",
   "system.keys.whatsapp_ai_guidelines_url": "Ссылка на правила AI",
   "system.keys.whatsapp_ai_guidelines_url_hint": "Ссылка (https) на правила, отправляемая с вопросом о согласии в WhatsApp; пусто = текст правил отправляется в сообщении."
 }

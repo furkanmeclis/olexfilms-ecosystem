@@ -16,10 +16,13 @@ import (
 	aitools "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
 	aiusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/usecase"
 	authusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/usecase"
+	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	legal "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/usecase"
+	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/pipeline"
 	wausecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/fake"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -86,6 +89,7 @@ type fixture struct {
 	center   db.Organization
 	llm      *fake.Provider
 	settings *fakeSettings
+	visitor  *fakeVisitorSettings
 	toolRuns atomic.Int32
 	pipe     *pipeline.Pipeline
 	now      time.Time
@@ -109,7 +113,8 @@ func newFixture(t *testing.T) *fixture {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
-	f := &fixture{t: t, ctx: ctx, tx: tx, q: db.New(tx), llm: fake.New(), settings: &fakeSettings{pause: 30}, now: time.Now()}
+	f := &fixture{t: t, ctx: ctx, tx: tx, q: db.New(tx), llm: fake.New(), settings: &fakeSettings{pause: 30},
+		visitor: &fakeVisitorSettings{}, now: time.Now()}
 	if f.brand, err = f.q.GetBrandBySlug(ctx, "olex"); err != nil {
 		t.Fatal(err)
 	}
@@ -123,6 +128,9 @@ func newFixture(t *testing.T) *fixture {
 	models := llm.Models{Default: "claude-sonnet-5-5", Fast: "claude-haiku-4-5"}
 	reg := aitools.NewRegistry(nil)
 	reg.Register(writeTool{runs: &f.toolRuns})
+	// TEC-397: the visitor lead tool and a visitor tool leaking prices.
+	reg.Register(pipeline.RequestDealerContact{})
+	reg.Register(priceProbe{})
 	store := airepo.New(tx)
 	actions := aiusecase.NewActions(store, reg, nil, nil)
 	chat := aiusecase.NewChat(aiusecase.ChatDeps{Store: store, Tools: reg, Actions: actions, Provider: f.llm, Models: models})
@@ -132,6 +140,10 @@ func newFixture(t *testing.T) *fixture {
 		Identity: wausecase.NewIdentityResolver(f.q, nil, f.llm, models, nil),
 		Sender:   msgs, Consents: legal.New(f.q), Access: fakeAccess{}, Settings: f.settings,
 		DefaultBrandSlug: "olex",
+		Dealers:          orgusecase.New(nil, f.q),
+		Leads: leadsusecase.NewApplications(tx, f.q, geo.New(nil, f.q), allModules{},
+			fakeBools{}, nil),
+		VisitorSettings: f.visitor, FrontendURL: "https://app.example.test/",
 	})
 	f.pipe.SetClock(func() time.Time { return f.now })
 	return f
