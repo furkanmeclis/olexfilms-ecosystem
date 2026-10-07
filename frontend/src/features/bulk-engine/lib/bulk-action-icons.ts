@@ -1,5 +1,6 @@
 import {
   Ban,
+  Bot,
   CalendarPlus,
   CircleCheck,
   Lock,
@@ -63,6 +64,11 @@ const bulkActionIconCatalog: Record<
   leads: {
     assign: UserPlus,
     set_status: ListChecks,
+  },
+  conversations: {
+    close: Lock,
+    assign: UserPlus,
+    set_ai_mode: Bot,
   },
 };
 

@@ -91,7 +91,8 @@ export type BulkResource =
   | "catalog.categories"
   | "vehicle_catalog.brands"
   | "vehicle_catalog.models"
-  | "leads";
+  | "leads"
+  | "conversations";
 
 export const BULK_PATHS: Record<BulkResource, string> = {
   "platform.users": "/v1/platform/users/bulk",
@@ -103,12 +104,15 @@ export const BULK_PATHS: Record<BulkResource, string> = {
   "vehicle_catalog.brands": "/v1/platform/vehicle-catalog/brands/bulk",
   "vehicle_catalog.models": "/v1/platform/vehicle-catalog/models/bulk",
   leads: "/v1/leads/bulk",
+  conversations: "/v1/conversations/bulk",
 };
 
 /** Platform-scoped resources whose name has no `platform.` prefix. */
 const PLATFORM_BULK_RESOURCES = new Set<string>([
   "vehicle_catalog.brands",
   "vehicle_catalog.models",
+  // WhatsApp inbox: platform admin only (S2), undo under /v1/platform.
+  "conversations",
 ]);
 
 /** Tenant resources log their operations under the active organization. */

@@ -5,6 +5,7 @@ import { realtimeConfig } from "@/config/realtime";
  */
 export const RealtimeChannels = {
   systemNotifications: () => realtimeConfig.channels.systemNotifications,
+  systemConversations: () => realtimeConfig.channels.systemConversations,
   tenant: (tenantUuid: string) => realtimeConfig.channels.tenant(tenantUuid),
   user: (userId: number | string) => realtimeConfig.channels.user(userId),
   workspace: (workspaceUuid: string) =>
@@ -20,6 +21,7 @@ export type RealtimeChannelBuilder = typeof RealtimeChannels;
 
 export function isAuthorizedChannelShape(channel: string): boolean {
   if (channel === realtimeConfig.channels.systemNotifications) return true;
+  if (channel === realtimeConfig.channels.systemConversations) return true;
   if (/^tenant:[0-9a-fA-F-]+$/.test(channel)) return true;
   if (/^user:[0-9a-fA-F-]+$/.test(channel)) return true;
   if (/^user:\d+$/.test(channel)) return true;

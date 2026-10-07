@@ -298,6 +298,11 @@ export const routes = {
       glorian: "/platform/integrations/glorian",
     },
     legalTexts: "/platform/legal-texts",
+    conversations: {
+      root: "/platform/conversations",
+      detail: (uuid: string) =>
+        `/platform/conversations?c=${encodeURIComponent(uuid)}`,
+    },
     organizations: {
       root: "/platform/organizations",
       create: "/platform/organizations/create",
