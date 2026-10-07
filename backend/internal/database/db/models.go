@@ -1270,6 +1270,8 @@ type Message struct {
 	MediaMime        pgtype.Text        `json:"media_mime"`
 	MediaSize        pgtype.Int8        `json:"media_size"`
 	DeliveryStatusAt pgtype.Timestamptz `json:"delivery_status_at"`
+	SendAttempts     int16              `json:"send_attempts"`
+	FailureReason    pgtype.Text        `json:"failure_reason"`
 }
 
 type MigrationMap struct {

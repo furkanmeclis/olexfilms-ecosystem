@@ -525,7 +525,7 @@ func (u *AuthUseCase) CanSubscribeChannel(
 	isSuperAdmin bool,
 	channel string,
 ) (bool, error) {
-	if channel == realtime.ChannelSystemNotifications {
+	if channel == realtime.ChannelSystemNotifications || channel == realtime.ChannelConversations {
 		return isSuperAdmin, nil
 	}
 	if uid, ok := realtime.ParseUserChannel(channel); ok {
