@@ -12120,6 +12120,309 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether the assistant can be used, consent and quota */
+        get: operations["getAiStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's conversations
+         * @description List contract (docs/list-contract.md): `sort` = updated_at |
+         *     created_at | title (default `-updated_at`, id tiebreak; unknown →
+         *     400), `q` searches the title, `created_from` / `created_to`.
+         */
+        get: operations["listAiConversations"];
+        put?: never;
+        /** Start an empty conversation */
+        post: operations["createAiConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/conversations/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        /** A conversation with its messages (rendered blocks) */
+        get: operations["getAiConversation"];
+        put?: never;
+        post?: never;
+        /** Delete a conversation (soft) */
+        delete: operations["deleteAiConversation"];
+        options?: never;
+        head?: never;
+        /** Rename a conversation */
+        patch: operations["renameAiConversation"];
+        trace?: never;
+    };
+    "/v1/ai/conversations/{uuid}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a message and stream the answer (SSE)
+         * @description Runs the pre-checks (see the AI tag), stores the message and streams
+         *     the turn. At most 8 model calls per turn; a write tool pauses the
+         *     turn at a `confirm` card. A new message cancels the open cards of
+         *     the conversation.
+         */
+        post: operations["sendAiMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/actions/{uuid}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a pending action and resume the turn (SSE)
+         * @description Runs the caller's pending action of this channel once (edited card
+         *     fields are validated again; panel: needs `ai.actions.confirm`),
+         *     then streams `action` and the continuation of the paused turn. A
+         *     spent quota still runs the action; the continuation then ends with
+         *     `quota_exceeded`.
+         */
+        post: operations["confirmAiAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/actions/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a pending action and resume the turn (SSE) */
+        post: operations["cancelAiAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Whether the assistant can be used, consent and quota */
+        get: operations["getPortalAiStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/ai/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's conversations
+         * @description List contract (docs/list-contract.md): `sort` = updated_at |
+         *     created_at | title (default `-updated_at`, id tiebreak; unknown →
+         *     400), `q` searches the title, `created_from` / `created_to`.
+         */
+        get: operations["listPortalAiConversations"];
+        put?: never;
+        /** Start an empty conversation */
+        post: operations["createPortalAiConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/ai/conversations/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        /** A conversation with its messages (rendered blocks) */
+        get: operations["getPortalAiConversation"];
+        put?: never;
+        post?: never;
+        /** Delete a conversation (soft) */
+        delete: operations["deletePortalAiConversation"];
+        options?: never;
+        head?: never;
+        /** Rename a conversation */
+        patch: operations["renamePortalAiConversation"];
+        trace?: never;
+    };
+    "/v1/portal/ai/conversations/{uuid}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a message and stream the answer (SSE)
+         * @description Runs the pre-checks (see the AI tag), stores the message and streams
+         *     the turn. At most 8 model calls per turn; a write tool pauses the
+         *     turn at a `confirm` card. A new message cancels the open cards of
+         *     the conversation.
+         */
+        post: operations["sendPortalAiMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/ai/actions/{uuid}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm a pending action and resume the turn (SSE)
+         * @description Runs the caller's pending action of this channel once (edited card
+         *     fields are validated again; panel: needs `ai.actions.confirm`),
+         *     then streams `action` and the continuation of the paused turn. A
+         *     spent quota still runs the action; the continuation then ends with
+         *     `quota_exceeded`.
+         */
+        post: operations["confirmPortalAiAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/ai/actions/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a pending action and resume the turn (SSE) */
+        post: operations["cancelPortalAiAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/consents/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Legal texts the panel user still has to answer
+         * @description Panel twin of `GET /v1/portal/consents/pending` (TEC-388): the AI
+         *     guidelines must be accepted before the assistant can be used.
+         */
+        get: operations["getPendingConsents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record accept / decline of a legal text version (panel)
+         * @description Panel twin of `POST /v1/portal/consents` (TEC-388).
+         */
+        post: operations["postConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -21908,6 +22211,153 @@ export interface components {
             data: {
                 conversation: components["schemas"]["Conversation"];
                 message: components["schemas"]["ConversationMessage"];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        AIConversation: {
+            /** Format: uuid */
+            uuid: string;
+            title: string;
+            message_count: number;
+            /** Format: date-time */
+            last_message_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description Confirmation card of a proposed write (TEC-387). */
+        AIActionCard: {
+            /** Format: uuid */
+            action_uuid: string;
+            tool_use_id: string;
+            tool_name: string;
+            /** @enum {string} */
+            source: "panel" | "portal" | "whatsapp" | "mcp";
+            source_ref?: string;
+            /** @enum {string} */
+            status: "pending" | "executing" | "confirmed" | "failed" | "cancelled" | "expired";
+            /** @description action, summary, fields [{key, value}], edit [{key, type, value, options?, required?}], warnings? */
+            preview: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        AIActionOutcome: {
+            /** Format: uuid */
+            action_uuid: string;
+            tool_use_id: string;
+            tool_name: string;
+            source: string;
+            source_ref?: string;
+            /** @enum {string} */
+            status: "confirmed" | "failed" | "cancelled";
+            message?: string;
+            link?: {
+                kind: string;
+                uuid: string;
+            };
+        };
+        /** @description One rendered block of a message. */
+        AIUIBlock: {
+            /** @enum {string} */
+            type: "text" | "tool" | "confirm" | "action" | "error";
+            text?: string;
+            id?: string;
+            name?: string;
+            /** @description tool: running | done | error | pending */
+            status?: string;
+            card?: components["schemas"]["AIActionCard"];
+            action?: components["schemas"]["AIActionOutcome"];
+            code?: string;
+            message?: string;
+        };
+        AIMessage: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            role: "user" | "assistant";
+            /** @enum {string} */
+            status: "pending" | "complete" | "error" | "cancelled";
+            ui: components["schemas"]["AIUIBlock"][];
+            /** Format: date-time */
+            created_at: string;
+        };
+        AIConversationDetail: components["schemas"]["AIConversation"] & {
+            messages: components["schemas"]["AIMessage"][];
+        };
+        AIConversationTitleRequest: {
+            title?: string;
+        };
+        AIMessageRequest: {
+            content: string;
+        };
+        AIActionConfirmRequest: {
+            /** @description New values of the card's editable fields. */
+            edits?: {
+                [key: string]: unknown;
+            };
+        };
+        AIStatus: {
+            /** @description Module on and a provider configured */
+            enabled: boolean;
+            /** @description Permission ai.use (portal: customer realm) */
+            allowed: boolean;
+            consent_required: boolean;
+            consent?: components["schemas"]["LegalText"];
+            quota: {
+                /** @description YYYY-MM (UTC) */
+                period: string;
+                /**
+                 * Format: int64
+                 * @description 0 = unlimited
+                 */
+                limit: number;
+                /** Format: int64 */
+                used: number;
+                /** Format: int64 */
+                remaining: number | null;
+            };
+        };
+        AIConsentRequiredError: {
+            /** @enum {boolean} */
+            success: false;
+            data?: {
+                consent: components["schemas"]["LegalText"];
+            };
+            error: components["schemas"]["ErrorBody"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAIStatus: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AIStatus"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAIConversation: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AIConversation"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAIConversationDetail: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AIConversationDetail"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAIConversationPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["AIConversation"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -43891,6 +44341,923 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getAiStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listAiConversations: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIConversationPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createAiConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AIConversationTitleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIConversation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getAiConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIConversationDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteAiConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    renameAiConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIConversationTitleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIConversation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    sendAiMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Event stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIConsentRequiredError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+            /** @description AI_UNAVAILABLE (no provider configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    confirmAiAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AIActionConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description Event stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description AI_ACTION_RESOLVED (already confirmed, cancelled or running) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIConsentRequiredError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+            /** @description AI_UNAVAILABLE (no provider configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    cancelAiAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Event stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description AI_ACTION_RESOLVED (already confirmed, cancelled or running) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIConsentRequiredError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+            /** @description AI_UNAVAILABLE (no provider configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPortalAiStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIStatus"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listPortalAiConversations: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIConversationPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    createPortalAiConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AIConversationTitleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIConversation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getPortalAiConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIConversationDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deletePortalAiConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    renamePortalAiConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIConversationTitleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIConversation"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    sendPortalAiMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Event stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIConsentRequiredError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+            /** @description AI_UNAVAILABLE (no provider configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    confirmPortalAiAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AIActionConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description Event stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description AI_ACTION_RESOLVED (already confirmed, cancelled or running) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIConsentRequiredError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+            /** @description AI_UNAVAILABLE (no provider configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    cancelPortalAiAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Event stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description AI_ACTION_RESOLVED (already confirmed, cancelled or running) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIConsentRequiredError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+            /** @description AI_UNAVAILABLE (no provider configured) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPendingConsents: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeLegalTextList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    postConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeConsent"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description LEGAL_TEXT_STALE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
         };
     };
 }

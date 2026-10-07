@@ -77,6 +77,15 @@ func (m *memStore) InsertConsent(ctx context.Context, a db.InsertConsentParams) 
 	return c, nil
 }
 
+func (m *memStore) GetLatestConsent(_ context.Context, a db.GetLatestConsentParams) (db.Consent, error) {
+	for i := len(m.consents) - 1; i >= 0; i-- {
+		if c := m.consents[i]; c.UserID == a.UserID && c.Kind == a.Kind {
+			return c, nil
+		}
+	}
+	return db.Consent{}, pgx.ErrNoRows
+}
+
 func TestConsentAskedOncePerVersion(t *testing.T) {
 	ctx := context.Background()
 	store := &memStore{}
@@ -166,5 +175,42 @@ func TestMarketingConsentKind(t *testing.T) {
 	c, err := svc.Decide(ctx, 7, DecideInput{Kind: KindMarketingConsent, Locale: "tr", Version: 1, Accepted: true})
 	if err != nil || c.Kind != KindMarketingConsent || !c.Accepted {
 		t.Fatalf("decide = %+v %v", c, err)
+	}
+}
+
+// TEC-388: the AI assistant needs an accepted current version; a decline
+// or an outdated acceptance asks for the current text, no text asks for
+// nothing.
+func TestAIConsentRequired(t *testing.T) {
+	ctx := context.Background()
+	store := &memStore{}
+	svc := New(store)
+	if txt, err := svc.AIConsentRequired(ctx, 7, i18n.Locale("tr")); err != nil || txt != nil {
+		t.Fatalf("no text published = %+v %v", txt, err)
+	}
+	if _, _, err := svc.AdminPublish(ctx, KindAIGuidelines, "tr", "metin v1", nil); err != nil {
+		t.Fatal(err)
+	}
+	if txt, err := svc.AIConsentRequired(ctx, 7, i18n.Locale("tr")); err != nil || txt == nil || txt.Version != 1 {
+		t.Fatalf("not answered = %+v %v", txt, err)
+	}
+	if _, err := svc.Decide(ctx, 7, DecideInput{Kind: KindAIGuidelines, Locale: "tr", Version: 1, Accepted: false}); err != nil {
+		t.Fatal(err)
+	}
+	if txt, _ := svc.AIConsentRequired(ctx, 7, i18n.Locale("tr")); txt == nil {
+		t.Fatal("a decline must still require the consent")
+	}
+	if _, err := svc.Decide(ctx, 8, DecideInput{Kind: KindAIGuidelines, Locale: "tr", Version: 1, Accepted: true}); err != nil {
+		t.Fatal(err)
+	}
+	// Accepted in tr; the gate holds in any request language.
+	if txt, err := svc.AIConsentRequired(ctx, 8, i18n.Locale("en")); err != nil || txt != nil {
+		t.Fatalf("accepted = %+v %v", txt, err)
+	}
+	if _, _, err := svc.AdminPublish(ctx, KindAIGuidelines, "tr", "metin v2", nil); err != nil {
+		t.Fatal(err)
+	}
+	if txt, _ := svc.AIConsentRequired(ctx, 8, i18n.Locale("tr")); txt == nil || txt.Version != 2 {
+		t.Fatalf("new version = %+v", txt)
 	}
 }

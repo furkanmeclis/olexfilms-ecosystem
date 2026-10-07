@@ -661,6 +661,7 @@ func catalogConstants() []string {
 		LeadsApplicationReceived,
 		MeasurementMatchSuggested,
 		MeasurementDiffCheckRequired,
+		AIQuotaThreshold,
 	}
 }
 
@@ -686,3 +687,11 @@ const QuoteSent = "quote.sent"
 // service linked a measurement automatically (waiting for the dealer's
 // confirmation) or found candidates; written in the matching transaction.
 const MeasurementMatchSuggested = "measurement.match_suggested"
+
+// AIQuotaThreshold (TEC-388) is written in the usage transaction when a
+// model call moves an organization's monthly AI token pool past 80 % or
+// 100 % of its quota: once per threshold, pool and month, since the
+// monthly projection only grows. Payload: organization_id, brand_id, pool,
+// period, threshold (80 | 100), used_tokens, quota_tokens. The
+// notification template reaches the organization owners (F4-01g).
+const AIQuotaThreshold = "ai.quota.threshold"

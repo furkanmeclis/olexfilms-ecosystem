@@ -191,6 +191,20 @@ tags:
       revoke, logout-all, a password change or deactivation end it at once.
       Only the legacy aliases accept it; every other route answers 401.
 
+  - name: AI
+    description: |
+      AI assistant chat (TEC-388, F4-01f). Panel routes `/v1/ai/*` (active
+      organization, its own monthly quota) and portal routes
+      `/v1/portal/ai/*` (customer realm, the brand center's system pool)
+      share one use case. Pre-checks of a turn, in order: module
+      `ai_assistant` (403 `FEATURE_DISABLED`) → permission `ai.use`
+      (portal: customer realm; 403 `FORBIDDEN`) → AI guidelines consent
+      (428 `AI_CONSENT_REQUIRED`) → monthly quota (403 `AI_QUOTA_EXCEEDED`)
+      → rate limit (30 turns / 5 min per user, 429) → message ≤ 8000
+      characters (400), conversation ≤ 400 messages (422
+      `AI_CONVERSATION_LIMIT`). No provider key → 503 `AI_UNAVAILABLE`.
+      Turns stream as `text/event-stream`.
+
   - name: OAuth
     description: |
       MCP OAuth 2.1 authorization server (TEC-400, F4-03a). Outside `/v1`
@@ -23744,6 +23758,891 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/ai/status:
+    get:
+      tags: [AI]
+      operationId: getAiStatus
+      summary: Whether the assistant can be used, consent and quota
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/ai/conversations:
+    get:
+      tags: [AI]
+      operationId: listAiConversations
+      summary: The caller's conversations
+      description: |
+        List contract (docs/list-contract.md): `sort` = updated_at |
+        created_at | title (default `-updated_at`, id tiebreak; unknown →
+        400), `q` searches the title, `created_from` / `created_to`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIConversationPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [AI]
+      operationId: createAiConversation
+      summary: Start an empty conversation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIConversationTitleRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIConversation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/ai/conversations/{uuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [AI]
+      operationId: getAiConversation
+      summary: A conversation with its messages (rendered blocks)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIConversationDetail"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [AI]
+      operationId: renameAiConversation
+      summary: Rename a conversation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIConversationTitleRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIConversation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [AI]
+      operationId: deleteAiConversation
+      summary: Delete a conversation (soft)
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/ai/conversations/{uuid}/messages:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [AI]
+      operationId: sendAiMessage
+      summary: Send a message and stream the answer (SSE)
+      description: |
+        Runs the pre-checks (see the AI tag), stores the message and streams
+        the turn. At most 8 model calls per turn; a write tool pauses the
+        turn at a `confirm` card. A new message cancels the open cards of
+        the conversation.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIMessageRequest"
+      responses:
+        "200":
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-sent events. Events (each `data:` is JSON): `message_start`
+                  {conversation_uuid, message_uuid, user_message_uuid?},
+                  `text_delta` {text}, `tool_start` {id, name}, `tool_result`
+                  {id, name, ok, code?}, `confirm` (AIActionCard; the turn
+                  pauses), `action` (AIActionOutcome, confirm / cancel only),
+                  `quota_exceeded` {limit, used}, `error` {code, message},
+                  `message_done` {message_uuid, status, stop_reason, usage},
+                  `title` {conversation_uuid, title}. A `: ping` comment every
+                  15 s. Headers: `Cache-Control: no-cache`,
+                  `X-Accel-Buffering: no`. A client disconnect cancels the turn;
+                  the message is stored as `cancelled`.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "428":
+          description: AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConsentRequiredError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: AI_UNAVAILABLE (no provider configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/ai/actions/{uuid}/confirm:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [AI]
+      operationId: confirmAiAction
+      summary: Confirm a pending action and resume the turn (SSE)
+      description: |
+        Runs the caller's pending action of this channel once (edited card
+        fields are validated again; panel: needs `ai.actions.confirm`),
+        then streams `action` and the continuation of the paused turn. A
+        spent quota still runs the action; the continuation then ends with
+        `quota_exceeded`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIActionConfirmRequest"
+      responses:
+        "200":
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-sent events. Events (each `data:` is JSON): `message_start`
+                  {conversation_uuid, message_uuid, user_message_uuid?},
+                  `text_delta` {text}, `tool_start` {id, name}, `tool_result`
+                  {id, name, ok, code?}, `confirm` (AIActionCard; the turn
+                  pauses), `action` (AIActionOutcome, confirm / cancel only),
+                  `quota_exceeded` {limit, used}, `error` {code, message},
+                  `message_done` {message_uuid, status, stop_reason, usage},
+                  `title` {conversation_uuid, title}. A `: ping` comment every
+                  15 s. Headers: `Cache-Control: no-cache`,
+                  `X-Accel-Buffering: no`. A client disconnect cancels the turn;
+                  the message is stored as `cancelled`.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: AI_ACTION_RESOLVED (already confirmed, cancelled or running)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "428":
+          description: AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConsentRequiredError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: AI_UNAVAILABLE (no provider configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/ai/actions/{uuid}/cancel:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [AI]
+      operationId: cancelAiAction
+      summary: Cancel a pending action and resume the turn (SSE)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-sent events. Events (each `data:` is JSON): `message_start`
+                  {conversation_uuid, message_uuid, user_message_uuid?},
+                  `text_delta` {text}, `tool_start` {id, name}, `tool_result`
+                  {id, name, ok, code?}, `confirm` (AIActionCard; the turn
+                  pauses), `action` (AIActionOutcome, confirm / cancel only),
+                  `quota_exceeded` {limit, used}, `error` {code, message},
+                  `message_done` {message_uuid, status, stop_reason, usage},
+                  `title` {conversation_uuid, title}. A `: ping` comment every
+                  15 s. Headers: `Cache-Control: no-cache`,
+                  `X-Accel-Buffering: no`. A client disconnect cancels the turn;
+                  the message is stored as `cancelled`.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: AI_ACTION_RESOLVED (already confirmed, cancelled or running)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "428":
+          description: AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConsentRequiredError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: AI_UNAVAILABLE (no provider configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/portal/ai/status:
+    get:
+      tags: [Portal]
+      operationId: getPortalAiStatus
+      summary: Whether the assistant can be used, consent and quota
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIStatus"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/portal/ai/conversations:
+    get:
+      tags: [Portal]
+      operationId: listPortalAiConversations
+      summary: The caller's conversations
+      description: |
+        List contract (docs/list-contract.md): `sort` = updated_at |
+        created_at | title (default `-updated_at`, id tiebreak; unknown →
+        400), `q` searches the title, `created_from` / `created_to`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIConversationPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [Portal]
+      operationId: createPortalAiConversation
+      summary: Start an empty conversation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIConversationTitleRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIConversation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/portal/ai/conversations/{uuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Portal]
+      operationId: getPortalAiConversation
+      summary: A conversation with its messages (rendered blocks)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIConversationDetail"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Portal]
+      operationId: renamePortalAiConversation
+      summary: Rename a conversation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIConversationTitleRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIConversation"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Portal]
+      operationId: deletePortalAiConversation
+      summary: Delete a conversation (soft)
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/portal/ai/conversations/{uuid}/messages:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Portal]
+      operationId: sendPortalAiMessage
+      summary: Send a message and stream the answer (SSE)
+      description: |
+        Runs the pre-checks (see the AI tag), stores the message and streams
+        the turn. At most 8 model calls per turn; a write tool pauses the
+        turn at a `confirm` card. A new message cancels the open cards of
+        the conversation.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIMessageRequest"
+      responses:
+        "200":
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-sent events. Events (each `data:` is JSON): `message_start`
+                  {conversation_uuid, message_uuid, user_message_uuid?},
+                  `text_delta` {text}, `tool_start` {id, name}, `tool_result`
+                  {id, name, ok, code?}, `confirm` (AIActionCard; the turn
+                  pauses), `action` (AIActionOutcome, confirm / cancel only),
+                  `quota_exceeded` {limit, used}, `error` {code, message},
+                  `message_done` {message_uuid, status, stop_reason, usage},
+                  `title` {conversation_uuid, title}. A `: ping` comment every
+                  15 s. Headers: `Cache-Control: no-cache`,
+                  `X-Accel-Buffering: no`. A client disconnect cancels the turn;
+                  the message is stored as `cancelled`.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "428":
+          description: AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConsentRequiredError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: AI_UNAVAILABLE (no provider configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/portal/ai/actions/{uuid}/confirm:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Portal]
+      operationId: confirmPortalAiAction
+      summary: Confirm a pending action and resume the turn (SSE)
+      description: |
+        Runs the caller's pending action of this channel once (edited card
+        fields are validated again; panel: needs `ai.actions.confirm`),
+        then streams `action` and the continuation of the paused turn. A
+        spent quota still runs the action; the continuation then ends with
+        `quota_exceeded`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AIActionConfirmRequest"
+      responses:
+        "200":
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-sent events. Events (each `data:` is JSON): `message_start`
+                  {conversation_uuid, message_uuid, user_message_uuid?},
+                  `text_delta` {text}, `tool_start` {id, name}, `tool_result`
+                  {id, name, ok, code?}, `confirm` (AIActionCard; the turn
+                  pauses), `action` (AIActionOutcome, confirm / cancel only),
+                  `quota_exceeded` {limit, used}, `error` {code, message},
+                  `message_done` {message_uuid, status, stop_reason, usage},
+                  `title` {conversation_uuid, title}. A `: ping` comment every
+                  15 s. Headers: `Cache-Control: no-cache`,
+                  `X-Accel-Buffering: no`. A client disconnect cancels the turn;
+                  the message is stored as `cancelled`.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: AI_ACTION_RESOLVED (already confirmed, cancelled or running)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "428":
+          description: AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConsentRequiredError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: AI_UNAVAILABLE (no provider configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/portal/ai/actions/{uuid}/cancel:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Portal]
+      operationId: cancelPortalAiAction
+      summary: Cancel a pending action and resume the turn (SSE)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-sent events. Events (each `data:` is JSON): `message_start`
+                  {conversation_uuid, message_uuid, user_message_uuid?},
+                  `text_delta` {text}, `tool_start` {id, name}, `tool_result`
+                  {id, name, ok, code?}, `confirm` (AIActionCard; the turn
+                  pauses), `action` (AIActionOutcome, confirm / cancel only),
+                  `quota_exceeded` {limit, used}, `error` {code, message},
+                  `message_done` {message_uuid, status, stop_reason, usage},
+                  `title` {conversation_uuid, title}. A `: ping` comment every
+                  15 s. Headers: `Cache-Control: no-cache`,
+                  `X-Accel-Buffering: no`. A client disconnect cancels the turn;
+                  the message is stored as `cancelled`.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: FEATURE_DISABLED, FORBIDDEN or AI_QUOTA_EXCEEDED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: AI_ACTION_RESOLVED (already confirmed, cancelled or running)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: AI_CONVERSATION_LIMIT or AI_ACTION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "428":
+          description: AI_CONSENT_REQUIRED; `data.consent` is the guidelines text to accept
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AIConsentRequiredError"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          description: AI_UNAVAILABLE (no provider configured)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/consents/pending:
+    get:
+      tags: [AI]
+      operationId: getPendingConsents
+      summary: Legal texts the panel user still has to answer
+      description: |
+        Panel twin of `GET /v1/portal/consents/pending` (TEC-388): the AI
+        guidelines must be accepted before the assistant can be used.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: locale
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeLegalTextList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/consents:
+    post:
+      tags: [AI]
+      operationId: postConsent
+      summary: Record accept / decline of a legal text version (panel)
+      description: Panel twin of `POST /v1/portal/consents` (TEC-388).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConsentDecisionRequest"
+      responses:
+        "201":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeConsent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "409":
+          description: LEGAL_TEXT_STALE
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -36647,4 +37546,181 @@ components:
           properties:
             conversation: { $ref: "#/components/schemas/Conversation" }
             message: { $ref: "#/components/schemas/ConversationMessage" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    AIConversation:
+      type: object
+      required: [uuid, title, message_count, last_message_at, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        title: { type: string, maxLength: 200 }
+        message_count: { type: integer }
+        last_message_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AIActionCard:
+      description: Confirmation card of a proposed write (TEC-387).
+      type: object
+      required: [action_uuid, tool_use_id, tool_name, source, status, preview, expires_at, created_at]
+      properties:
+        action_uuid: { type: string, format: uuid }
+        tool_use_id: { type: string }
+        tool_name: { type: string }
+        source: { type: string, enum: [panel, portal, whatsapp, mcp] }
+        source_ref: { type: string }
+        status: { type: string, enum: [pending, executing, confirmed, failed, cancelled, expired] }
+        preview:
+          type: object
+          additionalProperties: true
+          description: action, summary, fields [{key, value}], edit [{key, type, value, options?, required?}], warnings?
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+
+    AIActionOutcome:
+      type: object
+      required: [action_uuid, tool_use_id, tool_name, source, status]
+      properties:
+        action_uuid: { type: string, format: uuid }
+        tool_use_id: { type: string }
+        tool_name: { type: string }
+        source: { type: string }
+        source_ref: { type: string }
+        status: { type: string, enum: [confirmed, failed, cancelled] }
+        message: { type: string }
+        link:
+          type: object
+          required: [kind, uuid]
+          properties:
+            kind: { type: string }
+            uuid: { type: string }
+
+    AIUIBlock:
+      description: One rendered block of a message.
+      type: object
+      required: [type]
+      properties:
+        type: { type: string, enum: [text, tool, confirm, action, error] }
+        text: { type: string }
+        id: { type: string }
+        name: { type: string }
+        status: { type: string, description: "tool: running | done | error | pending" }
+        card: { $ref: "#/components/schemas/AIActionCard" }
+        action: { $ref: "#/components/schemas/AIActionOutcome" }
+        code: { type: string }
+        message: { type: string }
+
+    AIMessage:
+      type: object
+      required: [uuid, role, status, ui, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        role: { type: string, enum: [user, assistant] }
+        status: { type: string, enum: [pending, complete, error, cancelled] }
+        ui:
+          type: array
+          items: { $ref: "#/components/schemas/AIUIBlock" }
+        created_at: { type: string, format: date-time }
+
+    AIConversationDetail:
+      allOf:
+        - $ref: "#/components/schemas/AIConversation"
+        - type: object
+          required: [messages]
+          properties:
+            messages:
+              type: array
+              items: { $ref: "#/components/schemas/AIMessage" }
+
+    AIConversationTitleRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string, maxLength: 200 }
+
+    AIMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 8000 }
+
+    AIActionConfirmRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        edits:
+          type: object
+          additionalProperties: true
+          description: New values of the card's editable fields.
+
+    AIStatus:
+      type: object
+      required: [enabled, allowed, consent_required, quota]
+      properties:
+        enabled: { type: boolean, description: Module on and a provider configured }
+        allowed: { type: boolean, description: "Permission ai.use (portal: customer realm)" }
+        consent_required: { type: boolean }
+        consent: { $ref: "#/components/schemas/LegalText" }
+        quota:
+          type: object
+          required: [period, limit, used, remaining]
+          properties:
+            period: { type: string, description: YYYY-MM (UTC) }
+            limit: { type: integer, format: int64, description: 0 = unlimited }
+            used: { type: integer, format: int64 }
+            remaining: { type: [integer, "null"], format: int64 }
+
+    AIConsentRequiredError:
+      type: object
+      required: [success, error, meta]
+      properties:
+        success: { type: boolean, enum: [false] }
+        data:
+          type: object
+          required: [consent]
+          properties:
+            consent: { $ref: "#/components/schemas/LegalText" }
+        error: { $ref: "#/components/schemas/ErrorBody" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAIStatus:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AIStatus" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAIConversation:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AIConversation" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAIConversationDetail:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AIConversationDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAIConversationPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AIConversation" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

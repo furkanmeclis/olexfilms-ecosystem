@@ -177,10 +177,16 @@ func TestRecordUsageUpdatesMonthlyInSameTx(t *testing.T) {
 	if got, err := f.store.MonthlyTokens(f.ctx, f.dealer.ID, model.PoolOrg, now); err != nil || got != 300 {
 		t.Fatalf("monthly tokens = %d, %v", got, err)
 	}
-	// The system pool of the center is a separate projection row.
+	// The system pool of the center is a separate projection row. The
+	// brand center is shared by other tests (portal chat, TEC-388), so the
+	// check is on the delta.
 	sys := u
 	sys.OrganizationID, sys.Pool, sys.UserID, sys.Channel = f.center.ID, model.PoolSystem, nil, model.UsageChannelWhatsApp
-	if _, month, err := f.store.RecordUsage(f.ctx, sys); err != nil || month.QuotaTokens != 150 {
+	sysBefore, err := f.store.MonthlyTokens(f.ctx, f.center.ID, model.PoolSystem, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, month, err := f.store.RecordUsage(f.ctx, sys); err != nil || month.QuotaTokens != sysBefore+150 {
 		t.Fatalf("system pool: %+v %v", month, err)
 	}
 	if got, _ := f.store.MonthlyTokens(f.ctx, f.center.ID, model.PoolOrg, now); got != 0 {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -60,8 +61,10 @@ type ConversationFilter struct {
 	UserID         int64
 	Channel        string
 	Q              string
-	Sort           []apiquery.SortField
-	Limit, Offset  int32
+	// Created filters created_at (created_from / created_to, TEC-388).
+	Created       apiquery.TimeRange
+	Sort          []apiquery.SortField
+	Limit, Offset int32
 }
 
 // ListConversations returns a page of conversations and the total. An
@@ -72,8 +75,10 @@ func (s *Store) ListConversations(ctx context.Context, f ConversationFilter) ([]
 		return nil, 0, err
 	}
 	q := textNarg(f.Q)
+	from, before := tsNarg(f.Created.From), tsNarg(f.Created.Before)
 	rows, err := s.q.ListAIConversations(ctx, db.ListAIConversationsParams{
 		OrganizationID: f.OrganizationID, UserID: f.UserID, Channel: f.Channel, Q: q,
+		CreatedFrom: from, CreatedBefore: before,
 		SortKey: sort.Key, SortDesc: sort.Desc, LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
@@ -81,6 +86,7 @@ func (s *Store) ListConversations(ctx context.Context, f ConversationFilter) ([]
 	}
 	total, err := s.q.CountAIConversations(ctx, db.CountAIConversationsParams{
 		OrganizationID: f.OrganizationID, UserID: f.UserID, Channel: f.Channel, Q: q,
+		CreatedFrom: from, CreatedBefore: before,
 	})
 	return rows, total, err
 }
@@ -297,4 +303,120 @@ func tsNarg(t *time.Time) pgtype.Timestamptz {
 		return pgtype.Timestamptz{}
 	}
 	return pgtype.Timestamptz{Time: *t, Valid: true}
+}
+
+// --- chat (TEC-388) ----------------------------------------------------------
+
+// Settings returns the platform AI settings singleton.
+func (s *Store) Settings(ctx context.Context) (db.AiSetting, error) {
+	return s.q.GetAISettings(ctx)
+}
+
+// OrgSettings returns the organization override; ok is false when there is
+// none (enabled with the platform default quota).
+func (s *Store) OrgSettings(ctx context.Context, orgID int64) (db.AiOrgSetting, bool, error) {
+	row, err := s.q.GetAIOrgSettings(ctx, orgID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.AiOrgSetting{}, false, nil
+	}
+	if err != nil {
+		return db.AiOrgSetting{}, false, err
+	}
+	return row, true, nil
+}
+
+// CreateConversation starts an empty conversation.
+func (s *Store) CreateConversation(ctx context.Context, p db.CreateAIConversationParams) (db.AiConversation, error) {
+	return s.q.CreateAIConversation(ctx, p)
+}
+
+// ConversationForUser returns the caller's own, not deleted conversation of
+// a channel; ok is false otherwise (another user's conversation is never
+// distinguished from a missing one).
+func (s *Store) ConversationForUser(ctx context.Context, id uuid.UUID, orgID, userID int64, channel string) (db.AiConversation, bool, error) {
+	row, err := s.q.GetAIConversationForUser(ctx, db.GetAIConversationForUserParams{
+		Uuid: id, OrganizationID: orgID, UserID: userID,
+	})
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && row.Channel != channel) {
+		return db.AiConversation{}, false, nil
+	}
+	if err != nil {
+		return db.AiConversation{}, false, err
+	}
+	return row, true, nil
+}
+
+// RenameConversation sets the title.
+func (s *Store) RenameConversation(ctx context.Context, id int64, title string) (db.AiConversation, error) {
+	return s.q.UpdateAIConversationTitle(ctx, db.UpdateAIConversationTitleParams{ID: id, Title: title})
+}
+
+// DeleteConversation soft-deletes the caller's conversation; ok is false
+// when there was nothing to delete.
+func (s *Store) DeleteConversation(ctx context.Context, id uuid.UUID, orgID, userID int64) (bool, error) {
+	n, err := s.q.SoftDeleteAIConversation(ctx, db.SoftDeleteAIConversationParams{
+		Uuid: id, OrganizationID: orgID, UserID: userID,
+	})
+	return n > 0, err
+}
+
+// TouchConversation counts a stored message and moves the conversation up.
+func (s *Store) TouchConversation(ctx context.Context, id int64) error {
+	_, err := s.q.TouchAIConversation(ctx, id)
+	return err
+}
+
+// CreateMessage stores a message row.
+func (s *Store) CreateMessage(ctx context.Context, p db.CreateAIMessageParams) (db.AiMessage, error) {
+	return s.q.CreateAIMessage(ctx, p)
+}
+
+// FinishMessage completes a pending assistant row.
+func (s *Store) FinishMessage(ctx context.Context, p db.FinishAIMessageParams) (db.AiMessage, error) {
+	return s.q.FinishAIMessage(ctx, p)
+}
+
+// Messages returns the messages of a conversation in order.
+func (s *Store) Messages(ctx context.Context, conversationID int64) ([]db.AiMessage, error) {
+	return s.q.ListAIMessages(ctx, conversationID)
+}
+
+// ChatContext returns the prompt context of a user in an organization.
+func (s *Store) ChatContext(ctx context.Context, userID, orgID int64) (db.GetAIChatContextRow, error) {
+	return s.q.GetAIChatContext(ctx, db.GetAIChatContextParams{UserID: userID, OrganizationID: orgID})
+}
+
+// BrandCenter returns the center organization of a brand (portal chats
+// belong to it).
+func (s *Store) BrandCenter(ctx context.Context, brandID int64) (db.Organization, error) {
+	return s.q.GetBrandCenter(ctx, brandID)
+}
+
+// EventEnqueuer writes outbox events in a transaction (outbox.Store).
+type EventEnqueuer interface {
+	Enqueue(ctx context.Context, tx pgx.Tx, ev events.Event) error
+}
+
+// RecordUsageEvents is RecordUsage that also writes the events build
+// returns for the booked row and the new monthly total (quota thresholds)
+// to the outbox in the same transaction. A nil enqueuer skips the events.
+func (s *Store) RecordUsageEvents(ctx context.Context, u Usage, enq EventEnqueuer, build func(db.AiUsage, db.AiUsageMonthly) []events.Event) (db.AiUsage, db.AiUsageMonthly, error) {
+	var (
+		row   db.AiUsage
+		month db.AiUsageMonthly
+	)
+	err := pgx.BeginFunc(ctx, s.conn, func(tx pgx.Tx) error {
+		var err error
+		row, month, err = RecordUsageTx(ctx, db.New(tx), u)
+		if err != nil || enq == nil || build == nil {
+			return err
+		}
+		for _, ev := range build(row, month) {
+			if err := enq.Enqueue(ctx, tx, ev); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return row, month, err
 }
