@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -18,12 +19,14 @@ import { Label } from "@/components/ui/label";
 import { accountingKeys } from "@/features/accounting/hooks/use-accounting-access";
 import { Money, FieldError } from "@/features/accounting/components/shared";
 import {
+  isFutureDay,
   isSalaryConflict,
   isValidPeriod,
   payrollAlreadyRan,
   payrollPreview,
   periodDate,
   periodOf,
+  todayIso,
 } from "@/features/staff-reports/lib/staff";
 import {
   staffReportsKeys,
@@ -40,8 +43,10 @@ type Outcome =
   | { kind: "already"; period: string };
 
 /**
- * Month-end salaries (POST /v1/staff-payments/payroll): pick the period,
- * preview the active staff and their salaries, confirm. The run is
+ * Month-end salaries (POST /v1/staff-payments/payroll): pick the period
+ * and the payment day, preview the active staff and their salaries,
+ * confirm. A payment day ahead writes planned salaries that are booked on
+ * that day (TEC-381). The run is
  * idempotent, so a period that already ran shows the "already ran"
  * message (a 409 or a run that created nothing).
  */
@@ -59,12 +64,14 @@ export function PayrollDialog({
   const { t, format } = useLocale();
   const queryClient = useQueryClient();
   const [period, setPeriod] = useState(() => periodOf());
+  const [paidOn, setPaidOn] = useState(() => todayIso());
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const preview = useMemo(() => payrollPreview(staff), [staff]);
   const validPeriod = isValidPeriod(period);
 
   const run = useMutation({
-    mutationFn: (p: string) => staffReportsService.runPayroll(p),
+    mutationFn: (p: string) =>
+      staffReportsService.runPayroll(p, paidOn || undefined),
     onSuccess: async (result) => {
       await Promise.all([
         queryClient.invalidateQueries({
@@ -80,7 +87,12 @@ export function PayrollDialog({
       }
       setOutcome({ kind: "done", result });
       appToast.success(
-        t("staff_reports.payroll.done", { n: format.number(result.created) }),
+        t(
+          result.items.some((p) => p.status === "planned")
+            ? "staff_reports.payroll.done_planned"
+            : "staff_reports.payroll.done",
+          { n: format.number(result.created) },
+        ),
       );
     },
     onError: (error: unknown, p) => {
@@ -139,6 +151,27 @@ export function PayrollDialog({
               validPeriod ? undefined : t("staff_reports.validation.period")
             }
           />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="payroll-paid-on">
+            {t("staff_reports.fields.paid_on")}
+          </Label>
+          <DatePicker
+            id="payroll-paid-on"
+            value={paidOn}
+            onChange={(v) => {
+              setPaidOn(v);
+              setOutcome(null);
+            }}
+          />
+          {isFutureDay(paidOn) ? (
+            <p
+              className="text-muted-foreground text-xs"
+              data-testid="payroll-planned-hint"
+            >
+              {t("staff_reports.planned.future_hint")}
+            </p>
+          ) : null}
         </div>
 
         {outcome?.kind === "already" ? (

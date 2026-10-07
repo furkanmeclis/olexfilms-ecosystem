@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
@@ -44,6 +45,11 @@ var (
 	ErrRateNotFound = errors.New("accounting: exchange rate not found")
 	// ErrStaffSalaryExists: a non-void salary already exists for that staff period.
 	ErrStaffSalaryExists = errors.New("accounting: staff salary already exists for period")
+	// ErrStaffPaymentNotFound: no such (non-void) payment in the book.
+	ErrStaffPaymentNotFound = errors.New("accounting: staff payment not found")
+	// ErrStaffPaymentNotPlanned: only a planned payment is edited or
+	// cancelled; a posted one is undone by a reversal (TEC-381).
+	ErrStaffPaymentNotPlanned = errors.New("accounting: staff payment is not planned")
 )
 
 // ValidationError is a field-level input error.
@@ -100,6 +106,22 @@ type Service struct {
 	features FeatureChecker
 	// out receives the dispute events (TEC-174); nil writes none.
 	out outbox.Enqueuer
+	// now is the clock of the staff payment day rules (TEC-381); nil is
+	// time.Now.
+	now func() time.Time
+}
+
+// WithClock replaces the clock (tests).
+func (s *Service) WithClock(now func() time.Time) *Service {
+	s.now = now
+	return s
+}
+
+func (s *Service) clock() time.Time {
+	if s.now != nil {
+		return s.now()
+	}
+	return time.Now()
 }
 
 // New creates the service. checker may be nil (dealer writes stay closed).

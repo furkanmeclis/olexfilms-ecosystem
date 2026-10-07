@@ -27,6 +27,7 @@ import {
   type FinanceAccount,
 } from "@/features/accounting/services/accounting.service";
 import {
+  isFutureDay,
   isSalaryConflict,
   paymentFormValues,
   paymentInput,
@@ -192,6 +193,14 @@ export function StaffPaymentForm({
             id="staff-payment-paid-on-error"
             message={errors.paid_on}
           />
+          {isFutureDay(values.paid_on) ? (
+            <p
+              className="text-muted-foreground text-xs"
+              data-testid="staff-payment-planned-hint"
+            >
+              {t("staff_reports.planned.future_hint")}
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="grid gap-1.5">
@@ -277,7 +286,13 @@ export function StaffPaymentDialog({
           queryKey: accountingKeys.all(orgUuid),
         }),
       ]);
-      appToast.success(t("staff_reports.payment.done"));
+      appToast.success(
+        t(
+          payment.status === "planned"
+            ? "staff_reports.payment.done_planned"
+            : "staff_reports.payment.done",
+        ),
+      );
       onSaved?.(payment);
       onOpenChange(false);
     },

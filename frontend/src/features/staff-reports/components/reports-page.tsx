@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { routes } from "@/config/routes";
 import { Money } from "@/features/accounting/components/shared";
+import { UpcomingStaffPayments } from "@/features/staff-reports/components/planned-payments";
 import { ReportExport } from "@/features/staff-reports/components/report-export";
 import { useStaffAccess } from "@/features/staff-reports/hooks/use-staff-access";
 import {
@@ -226,6 +227,11 @@ export function ReportsPage({ slug }: { slug: string }) {
           org={access.orgUuid}
           query={query}
           enabled={enabled}
+          upcoming={
+            access.canManage ? (
+              <UpcomingStaffPayments org={access.orgUuid} slug={slug} />
+            ) : null
+          }
         />
       )}
     </div>
@@ -821,7 +827,16 @@ function AgingSection({ org, query, enabled }: SectionProps) {
 
 // --- Staff cost --------------------------------------------------------------
 
-function StaffCostSection({ org, query, enabled }: SectionProps) {
+/**
+ * Staff cost counts booked payments on their payment day, like the P&L
+ * (TEC-381); planned ones show in the "upcoming" summary instead.
+ */
+function StaffCostSection({
+  org,
+  query,
+  enabled,
+  upcoming,
+}: SectionProps & { upcoming?: ReactNode }) {
   const { t, format } = useLocale();
   const report = useQuery({
     queryKey: staffReportsKeys.report(org, "staff-cost", query),
@@ -942,9 +957,7 @@ function StaffCostSection({ org, query, enabled }: SectionProps) {
             />
           </div>
         ) : null}
-        <p className="text-muted-foreground text-xs">
-          {t("staff_reports.reports.staff_cost.paid_on_note")}
-        </p>
+        {upcoming}
         <AppChart
           type="bar"
           data={chart}

@@ -684,7 +684,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 				return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)
 			}).
 			WithWhatsAppPoll(waSvc.PollStatus).
-			WithTasksDueScan(tasksusecase.NewCron(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).DueScanTask)
+			WithTasksDueScan(tasksusecase.NewCron(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).DueScanTask).
+			// TEC-381: planned staff payments booked on their paid_on.
+			WithStaffPaymentsPostDue(accountingSvc.PostDueStaffPaymentsTask)
 		if searchIndexer != nil {
 			s.worker.WithSearch(
 				searchIndexer.ProcessUpsert,

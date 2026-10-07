@@ -161,31 +161,163 @@ func (h *Handler) CreateStaffPayment(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, p)
 }
 
-// ListStaffPayments (GET /v1/staff-profiles/{uuid}/payments?type&period&limit&offset).
+// staffPaymentPage is a payment list page with the amount total of every
+// matching payment (TEC-381).
+type staffPaymentPage struct {
+	apiquery.Page[acc.StaffPayment]
+	TotalAmount string `json:"total_amount"`
+	Currency    string `json:"currency"`
+}
+
+// staffPaymentFilter reads the list contract parameters of the payment
+// lists: sort, type / status (CSV), period, paid_on_from / paid_on_to.
+func staffPaymentFilter(r *http.Request) (acc.StaffPaymentFilter, apiquery.Query, error) {
+	values := r.URL.Query()
+	q := apiquery.Parse(values)
+	f := acc.StaffPaymentFilter{Limit: q.Limit, Offset: q.Offset}
+	var err error
+	if f.Sort, err = apiquery.ResolveSort(q.Sort, acc.StaffPaymentSortSpec); err != nil {
+		return f, q, err
+	}
+	if f.Types, err = apiquery.EnumList(values, "type", acc.StaffPaymentTypes...); err != nil {
+		return f, q, err
+	}
+	if f.Statuses, err = apiquery.EnumList(values, "status", acc.StaffPaymentStatuses...); err != nil {
+		return f, q, err
+	}
+	if v := strings.TrimSpace(values.Get("period")); v != "" {
+		f.Period = &v
+	}
+	paid, err := apiquery.DateRange(values, "paid_on")
+	if err != nil {
+		return f, q, err
+	}
+	if paid.From != nil {
+		d := paid.From.UTC()
+		f.PaidFrom = &d
+	}
+	if paid.Before != nil {
+		// paid_on is a day column: the last day before the exclusive bound.
+		d := paid.Before.UTC().Add(-time.Nanosecond)
+		f.PaidTo = &d
+	}
+	return f, q, nil
+}
+
+// ListStaffPayments (GET /v1/staff-profiles/{uuid}/payments).
 func (h *Handler) ListStaffPayments(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathUUID(w, r, "uuid")
 	if !ok {
 		return
 	}
-	q := apiquery.Parse(r.URL.Query())
-	f := acc.StaffPaymentFilter{Limit: q.Limit, Offset: q.Offset}
-	if v := strings.TrimSpace(r.URL.Query().Get("type")); v != "" {
-		f.Type = &v
-	}
-	if v := strings.TrimSpace(r.URL.Query().Get("period")); v != "" {
-		f.Period = &v
-	}
-	items, total, err := h.svc.ListStaffPayments(r.Context(), caller(r), id, f)
+	f, q, err := staffPaymentFilter(r)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	page, err := h.svc.ListStaffPayments(r.Context(), caller(r), id, f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	writeStaffPaymentPage(w, r, page, q)
 }
 
-// RunPayroll (POST /v1/staff-payments/payroll?period=YYYY-MM).
+// ListBookStaffPayments (GET /v1/staff-payments): every staff card's
+// payments, e.g. ?status=planned for the upcoming ones (TEC-381).
+func (h *Handler) ListBookStaffPayments(w http.ResponseWriter, r *http.Request) {
+	f, q, err := staffPaymentFilter(r)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	page, err := h.svc.ListBookStaffPayments(r.Context(), caller(r), f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	writeStaffPaymentPage(w, r, page, q)
+}
+
+func writeStaffPaymentPage(w http.ResponseWriter, r *http.Request, page acc.StaffPaymentPage, q apiquery.Query) {
+	response.JSON(w, r, http.StatusOK, staffPaymentPage{
+		Page:        apiquery.NewPage(page.Items, page.Total, q.Limit, q.Offset),
+		TotalAmount: page.TotalAmount,
+		Currency:    page.Currency,
+	})
+}
+
+type updateStaffPaymentBody struct {
+	Type        *string         `json:"type"`
+	Period      *string         `json:"period"`
+	Amount      *string         `json:"amount"`
+	AccountUUID *uuid.UUID      `json:"account_uuid"`
+	Description json.RawMessage `json:"description"`
+	TargetNote  json.RawMessage `json:"target_note"`
+	PaidOn      *string         `json:"paid_on"`
+}
+
+// UpdateStaffPayment (PATCH /v1/staff-payments/{uuid}): edits a planned
+// payment (TEC-381).
+func (h *Handler) UpdateStaffPayment(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var b updateStaffPaymentBody
+	if !decode(w, r, &b) {
+		return
+	}
+	in := acc.UpdateStaffPaymentInput{Type: b.Type, Period: b.Period, Amount: b.Amount, AccountUUID: b.AccountUUID}
+	if !nullableString(w, r, "description", b.Description, &in.Description, &in.ClearDescription) {
+		return
+	}
+	if !nullableString(w, r, "target_note", b.TargetNote, &in.TargetNote, &in.ClearTargetNote) {
+		return
+	}
+	if b.PaidOn != nil {
+		d, err := parseBodyDate("paid_on", *b.PaidOn)
+		if err != nil {
+			writeError(w, r, err)
+			return
+		}
+		if d == nil {
+			writeError(w, r, &acc.ValidationError{Field: "paid_on", Message: "must be a date (YYYY-MM-DD)"})
+			return
+		}
+		in.PaidOn = d
+	}
+	p, err := h.svc.UpdateStaffPayment(r.Context(), caller(r), id, in)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, p)
+}
+
+// CancelStaffPayment (POST /v1/staff-payments/{uuid}/cancel): calls off a
+// planned payment (TEC-381).
+func (h *Handler) CancelStaffPayment(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	p, err := h.svc.CancelStaffPayment(r.Context(), caller(r), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, p)
+}
+
+// RunPayroll (POST /v1/staff-payments/payroll?period=YYYY-MM&paid_on=YYYY-MM-DD).
 func (h *Handler) RunPayroll(w http.ResponseWriter, r *http.Request) {
-	p, err := h.svc.RunPayroll(r.Context(), caller(r), r.URL.Query().Get("period"))
+	paidOn, err := parseBodyDate("paid_on", r.URL.Query().Get("paid_on"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	p, err := h.svc.RunPayroll(r.Context(), caller(r), r.URL.Query().Get("period"), paidOn)
 	if err != nil {
 		writeError(w, r, err)
 		return

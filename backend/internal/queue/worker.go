@@ -95,6 +95,8 @@ type Worker struct {
 	contractPDF ContractPDFFunc
 	// TEC-298: measurement PDF (docs queue).
 	measurementPDF MeasurementPDFFunc
+	// TEC-381: planned staff payments booked on their paid_on.
+	staffPaymentsPostDue StaffPaymentsPostDueFunc
 	// TEC-393: 90-day retention of conversation AI runs.
 	purgeConversationAIRuns ConversationAIRunPurgeFunc
 }
@@ -180,6 +182,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskGlorianReconcile, w.handleGlorianReconcile)
 	mux.HandleFunc(TaskGlorianOutboundReplayOne, w.handleGlorianOutboundReplayOne)
 	mux.HandleFunc(TaskMeasurementPDF, w.handleMeasurementPDF)
+	mux.HandleFunc(TaskStaffPaymentsPostDue, w.handleStaffPaymentsPostDue)
 	mux.HandleFunc(TaskConversationAIRunPurge, w.handleConversationAIRunPurge)
 	return w
 }
