@@ -126,5 +126,6 @@
   "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "The roll has fewer meters left than requested.",
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "The roll is not in this organization's stock.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "The roll is on an open service or order.",
-  "codes.STOCK_SPLIT_KEY_CONFLICT": "This idempotency key was used for another split."
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "This idempotency key was used for another split.",
+  "codes.LEADS_MODULE_DISABLED": "The leads module is closed system wide; open the module first."
 }

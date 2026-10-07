@@ -6568,6 +6568,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/geo/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active countries for anonymous pickers (TEC-320)
+         * @description No authentication. Same items as `GET /v1/geo/countries` but always
+         *     active countries only (`all` is ignored). Used by the public
+         *     `/bayi-basvuru` form.
+         */
+        get: operations["listPublicCountries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/geo/countries/{iso2}/provinces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Provinces of a country for anonymous pickers (TEC-320) */
+        get: operations["listPublicProvinces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/geo/provinces/{id}/districts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Districts of a province for anonymous pickers (TEC-320) */
+        get: operations["listPublicDistricts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/geo/countries/{iso2}": {
         parameters: {
             query?: never;
@@ -10350,6 +10406,31 @@ export interface paths {
         };
         /** Request or fetch a public quote PDF render */
         get: operations["requestPublicQuotePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/quotes/{token}/pdf/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the public quote PDF (TEC-320)
+         * @description No authentication. Requests (or finds) the quote PDF render like
+         *     `/pdf` and, once it is ready, answers the PDF bytes; while the
+         *     render is queued it answers 202 with the render so the caller can
+         *     retry. The `download_url` of `/pdf` needs a tenant session, so the
+         *     public `/teklif/{token}` page downloads through here. Shares the
+         *     per-IP limit of `/pdf`.
+         */
+        get: operations["downloadPublicQuotePdf"];
         put?: never;
         post?: never;
         delete?: never;
@@ -32118,6 +32199,74 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listPublicCountries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Countries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCountryList"];
+                };
+            };
+        };
+    };
+    listPublicProvinces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ISO 3166-1 alpha-2 country code (case-insensitive) */
+                iso2: components["parameters"]["CountryISO2"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provinces */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProvinceList"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPublicDistricts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Province or district id */
+                id: components["parameters"]["GeoID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Districts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDistrictList"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
     patchCountry: {
         parameters: {
             query?: never;
@@ -38854,6 +39003,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            /** @description Quote PDF render queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    downloadPublicQuotePdf: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quote PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             /** @description Quote PDF render queued */

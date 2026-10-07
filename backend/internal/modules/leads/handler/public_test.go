@@ -3,14 +3,19 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
+	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/google/uuid"
 )
 
 type fakeApps struct {
@@ -143,5 +148,72 @@ func TestPublicApplicationRateLimits(t *testing.T) {
 	}
 	if apps.submitted != 2 {
 		t.Fatalf("submitted = %d, want 2", apps.submitted)
+	}
+}
+
+type fakePublicQuotes struct{ token uuid.UUID }
+
+func (f fakePublicQuotes) PublicQuote(context.Context, int64, uuid.UUID, string) (usecase.PublicQuote, error) {
+	return usecase.PublicQuote{}, nil
+}
+
+func (f fakePublicQuotes) PublicQuoteOwner(_ context.Context, _ int64, token uuid.UUID) (uuid.UUID, int64, int64, error) {
+	if token != f.token {
+		return uuid.Nil, 0, 0, usecase.ErrQuoteNotFound
+	}
+	return uuid.New(), 7, 1, nil
+}
+
+// fakeQuoteDocs renders on the second request and serves the bytes of
+// organization 7 only.
+type fakeQuoteDocs struct {
+	calls  int
+	render uuid.UUID
+}
+
+func (f *fakeQuoteDocs) RequestRender(context.Context, docmodel.Viewer, docusecase.RenderInput) (docmodel.RenderView, bool, error) {
+	f.calls++
+	return docmodel.RenderView{UUID: f.render, Status: "pending"}, f.calls > 1, nil
+}
+
+func (f *fakeQuoteDocs) Download(_ context.Context, orgID int64, id uuid.UUID) (io.ReadCloser, string, error) {
+	if orgID != 7 || id != f.render {
+		return nil, "", errors.New("wrong render")
+	}
+	return io.NopCloser(strings.NewReader("%PDF-1.7")), "Q-000042.pdf", nil
+}
+
+func getPDFFile(h *Public, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/v1/public/quotes/"+token+"/pdf/file?locale=en", nil)
+	req.SetPathValue("token", token)
+	req.Header.Set("X-Forwarded-For", "198.51.100.9")
+	req = req.WithContext(brandctx.WithBrand(req.Context(), brandctx.Brand{ID: 1, Slug: "olex", Status: "active"}))
+	rec := httptest.NewRecorder()
+	h.QuotePDFFile(rec, req)
+	return rec
+}
+
+// TEC-320: the public quote PDF file route answers 202 while the render is
+// queued, streams the PDF once ready, 404s an unknown token and shares the
+// /pdf per-IP limit.
+func TestPublicQuotePDFFile(t *testing.T) {
+	token := uuid.New()
+	docs := &fakeQuoteDocs{render: uuid.New()}
+	h := NewPublic(&fakeApps{}, countLimiter{}, RateLimits{IPLimit: 3, Window: time.Hour}).
+		WithQuotes(fakePublicQuotes{token: token}, docs)
+
+	if rec := getPDFFile(h, token.String()); rec.Code != http.StatusAccepted {
+		t.Fatalf("queued: %d", rec.Code)
+	}
+	rec := getPDFFile(h, token.String())
+	if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "application/pdf" ||
+		rec.Body.String() != "%PDF-1.7" || !strings.Contains(rec.Header().Get("Content-Disposition"), "Q-000042.pdf") {
+		t.Fatalf("ready: %d %q %q", rec.Code, rec.Header().Get("Content-Type"), rec.Body.String())
+	}
+	if rec := getPDFFile(h, uuid.NewString()); rec.Code != http.StatusNotFound {
+		t.Fatalf("unknown token: %d", rec.Code)
+	}
+	if rec := getPDFFile(h, token.String()); rec.Code != http.StatusTooManyRequests || rec.Header().Get("Retry-After") == "" {
+		t.Fatalf("limit: %d", rec.Code)
 	}
 }

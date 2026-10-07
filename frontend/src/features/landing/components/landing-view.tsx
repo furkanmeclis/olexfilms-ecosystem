@@ -38,6 +38,8 @@ export type LandingViewProps = {
   locale: AppLocale;
   /** Set when the language came from `?lang=`; kept on the links. */
   lang?: string;
+  /** TEC-320: links `/bayi-basvuru` while the application form is open. */
+  dealerApplicationOpen?: boolean;
 };
 
 /**
@@ -46,7 +48,11 @@ export type LandingViewProps = {
  * panel / portal sign-in buttons. Server rendered; only the lookup form is
  * a client island. Logical properties only (RTL for ar), local images.
  */
-export function LandingView({ locale, lang }: LandingViewProps) {
+export function LandingView({
+  locale,
+  lang,
+  dealerApplicationOpen = false,
+}: LandingViewProps) {
   const t = (key: string, params?: Record<string, string | number>) =>
     translate(locale, key, params);
 
@@ -204,11 +210,27 @@ export function LandingView({ locale, lang }: LandingViewProps) {
               {t("landing.dealers.description")}
             </p>
           </div>
-          <Button asChild size="lg" variant="outline">
-            <Link href={routes.portal.dealers} data-slot="find-dealer">
-              {t("landing.dealers.cta")}
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button asChild size="lg" variant="outline">
+              <Link href={routes.portal.dealers} data-slot="find-dealer">
+                {t("landing.dealers.cta")}
+              </Link>
+            </Button>
+            {dealerApplicationOpen ? (
+              <Button asChild size="lg">
+                <Link
+                  href={
+                    lang
+                      ? `${routes.public.dealerApplication}?lang=${encodeURIComponent(lang)}`
+                      : routes.public.dealerApplication
+                  }
+                  data-slot="dealer-application"
+                >
+                  {t("landing.dealers.apply_cta")}
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         </div>
       </section>
 

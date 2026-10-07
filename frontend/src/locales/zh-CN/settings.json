@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "请输入整数。",
   "system.labor.errors.percent_range": "百分比必须介于 0 到 100 之间。",
   "system.keys.contracts_intake_required": "车辆接收合同为必填",
-  "system.keys.contracts_intake_required_hint": "开启后（且已启用车辆接收合同模块），服务在接收合同签署之前不能进入处理或完成。"
+  "system.keys.contracts_intake_required_hint": "开启后（且已启用车辆接收合同模块），服务在接收合同签署之前不能进入处理或完成。",
+  "system.groups.leads": "潜在客户",
+  "system.groups.leads_hint": "潜在客户管道和公开的经销商申请表。",
+  "system.keys.leads_dealer_application_enabled": "经销商申请表",
+  "system.keys.leads_dealer_application_enabled_hint": "开启后，公开申请表 /bayi-basvuru 上线并加入站点地图。仅当潜在客户模块在全系统开启时才能开启。"
 }

@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "Tam ədəd daxil edin.",
   "system.labor.errors.percent_range": "Faiz 0 ilə 100 arasında olmalıdır.",
   "system.keys.contracts_intake_required": "Avtomobil qəbulu müqaviləsi məcburidir",
-  "system.keys.contracts_intake_required_hint": "Aktiv olduqda (və avtomobil qəbulu müqaviləsi modulu aktivdirsə) qəbul müqaviləsi imzalanmadan xidmət emala götürülə və ya tamamlana bilməz."
+  "system.keys.contracts_intake_required_hint": "Aktiv olduqda (və avtomobil qəbulu müqaviləsi modulu aktivdirsə) qəbul müqaviləsi imzalanmadan xidmət emala götürülə və ya tamamlana bilməz.",
+  "system.groups.leads": "Potensial müştərilər",
+  "system.groups.leads_hint": "Potensial müştəri axını və açıq diler müraciət formu.",
+  "system.keys.leads_dealer_application_enabled": "Diler müraciət formu",
+  "system.keys.leads_dealer_application_enabled_hint": "Açıq olduqda /bayi-basvuru açıq müraciət formu yayımlanır və sayt xəritəsinə əlavə olunur. Yalnız potensial müştəri modulu sistem üzrə açıq olduqda aktivləşdirilə bilər."
 }

@@ -3,8 +3,9 @@
 // `page.route` only sees browser traffic. Three flows call Go from the
 // Next.js server instead: the Auth.js credentials login (auth/login + the
 // adapter's user lookup), the public warranty page (/garanti/{code},
-// rendered on the server) and the portal phone OTP sign-in
-// (auth/otp/verify, TEC-246). The organization switch also goes through
+// rendered on the server), the portal phone OTP sign-in
+// (auth/otp/verify, TEC-246) and the TEC-320 public quote page and dealer
+// application config. The organization switch also goes through
 // the real BFF so it can rewrite the session cookie. This tiny server
 // answers exactly those; every other path drops the connection, so the
 // rest of the build still fails fast as it did with the closed-port
@@ -72,6 +73,42 @@ const warranty = {
     plate_masked: "34 *** 12",
     vin_last4: "6752",
   },
+};
+
+/** Public quote token of the TEC-320 spec (keep in sync with constants). */
+const QUOTE_OK = "3f1c2b7a-8d4e-4b6f-9a1c-2e3d4f5a6b7c";
+
+const publicQuote = {
+  uuid: "9b2f0c1d-1111-4222-8333-444455556666",
+  display_no: "Q-000042",
+  organization_name: "Olex Kadıköy",
+  currency: "TRY",
+  subtotal: "12000.00",
+  discount_total: "500.00",
+  tax_total: "0.00",
+  grand_total: "11500.00",
+  valid_until: "2036-11-30T20:59:59Z",
+  lines: [
+    {
+      line_type: "product",
+      description: "Olex PPF Gloss",
+      quantity: "1",
+      unit_price: "10000.00",
+      discount_amount: "500.00",
+      line_total: "9500.00",
+      sort_order: 1,
+    },
+    {
+      line_type: "catalog_service",
+      description: "Window film application",
+      quantity: "1",
+      unit_price: "2000.00",
+      discount_amount: "0.00",
+      line_total: "2000.00",
+      sort_order: 2,
+    },
+  ],
+  pdf: { url: `/v1/public/quotes/${QUOTE_OK}/pdf` },
 };
 
 const b64url = (v) => Buffer.from(JSON.stringify(v)).toString("base64url");
@@ -188,6 +225,21 @@ const server = createServer(async (req, res) => {
       });
     }
     return send(res, 404, error("NOT_FOUND", "Warranty not found"));
+  }
+
+  // TEC-320: public quote page and the dealer application config.
+  const quoteToken = path.match(/^\/v1\/public\/quotes\/([^/]+)$/)?.[1];
+  if (req.method === "GET" && quoteToken) {
+    if (quoteToken === QUOTE_OK) {
+      return send(res, 200, { success: true, data: publicQuote });
+    }
+    return send(res, 404, error("NOT_FOUND", "Quote was not found"));
+  }
+  if (
+    req.method === "GET" &&
+    path === "/v1/public/dealer-applications/config"
+  ) {
+    return send(res, 200, { success: true, data: { enabled: true } });
   }
 
   // Not mocked: behave like the closed port the other specs rely on.

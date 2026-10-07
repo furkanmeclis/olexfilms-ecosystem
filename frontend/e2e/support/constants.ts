@@ -43,3 +43,9 @@ export const E2E_WARRANTY = {
   limited: "E2ELIMITED00001",
   missing: "E2EMISSING00001",
 };
+
+/** Public quote token the upstream mock answers (TEC-320, keep in sync). */
+export const E2E_QUOTE = {
+  ok: "3f1c2b7a-8d4e-4b6f-9a1c-2e3d4f5a6b7c",
+  missing: "00000000-0000-4000-8000-000000000320",
+};

@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "Введите целое число.",
   "system.labor.errors.percent_range": "Процент должен быть от 0 до 100.",
   "system.keys.contracts_intake_required": "Обязательный договор приёмки автомобиля",
-  "system.keys.contracts_intake_required_hint": "Если включено (и модуль договора приёмки активен), услугу нельзя взять в работу или завершить, пока договор приёмки не подписан."
+  "system.keys.contracts_intake_required_hint": "Если включено (и модуль договора приёмки активен), услугу нельзя взять в работу или завершить, пока договор приёмки не подписан.",
+  "system.groups.leads": "Лиды",
+  "system.groups.leads_hint": "Воронка лидов и публичная форма заявки дилера.",
+  "system.keys.leads_dealer_application_enabled": "Форма заявки дилера",
+  "system.keys.leads_dealer_application_enabled_hint": "Если включено, публичная форма /bayi-basvuru доступна и попадает в карту сайта. Включить можно, только когда модуль лидов открыт для всей системы."
 }

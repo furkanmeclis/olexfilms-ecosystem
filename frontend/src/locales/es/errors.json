@@ -126,5 +126,6 @@
   "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "Al rollo le quedan menos metros de los solicitados.",
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "El rollo no está en el stock de esta organización.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "El rollo está en un servicio o pedido abierto.",
-  "codes.STOCK_SPLIT_KEY_CONFLICT": "Esta clave de idempotencia se usó para otra división."
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Esta clave de idempotencia se usó para otra división.",
+  "codes.LEADS_MODULE_DISABLED": "El módulo de oportunidades está cerrado en todo el sistema; actívalo primero."
 }

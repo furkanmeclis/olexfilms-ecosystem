@@ -126,5 +126,6 @@
   "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "تبقّى في اللفة أمتار أقل من المطلوب.",
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "اللفة ليست في مخزون هذه المؤسسة.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "اللفة مستخدمة في خدمة أو طلب مفتوح.",
-  "codes.STOCK_SPLIT_KEY_CONFLICT": "استُخدم مفتاح منع التكرار هذا لتقسيم آخر."
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "استُخدم مفتاح منع التكرار هذا لتقسيم آخر.",
+  "codes.LEADS_MODULE_DISABLED": "وحدة العملاء المحتملين مغلقة على مستوى النظام؛ فعّل الوحدة أولًا."
 }

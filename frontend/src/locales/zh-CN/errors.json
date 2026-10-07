@@ -126,5 +126,6 @@
   "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "卷材剩余米数少于所需。",
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "该卷材不在本组织库存中。",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "该卷材正用于未完成的服务或订单。",
-  "codes.STOCK_SPLIT_KEY_CONFLICT": "此幂等键已用于另一次分切。"
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "此幂等键已用于另一次分切。",
+  "codes.LEADS_MODULE_DISABLED": "潜在客户模块已在全系统关闭，请先开启该模块。"
 }
