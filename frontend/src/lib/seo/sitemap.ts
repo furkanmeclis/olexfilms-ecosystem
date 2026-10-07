@@ -6,7 +6,7 @@ import type { PublicDealerCode } from "@/features/dealers/lib/dealer-sitemap";
 
 /**
  * hreflang alternates of a public page (TEC-251). Public pages pick their
- * language from `?lang=` (landing, /bayi, /garanti), so each of the 13
+ * language from `?lang=` (landing, /bayi, /garanti, /bayi-basvuru), so each of the 13
  * languages is the same URL with that parameter; x-default is the plain URL.
  */
 export function localeAlternates(url: string): Record<string, string> {
@@ -20,14 +20,21 @@ export function localeAlternates(url: string): Record<string, string> {
   return languages;
 }
 
+export type SitemapOptions = {
+  /** TEC-320: `/bayi-basvuru` is listed only while the form is open. */
+  dealerApplication?: boolean;
+};
+
 /**
- * Sitemap entries: the landing page and each active dealer's `/bayi/{code}`
- * showcase. Panel, portal and other signed-in areas are never listed.
+ * Sitemap entries: the landing page, the dealer application form while it
+ * is open, and each active dealer's `/bayi/{code}` showcase. Panel, portal,
+ * quote links and other signed-in or token areas are never listed.
  */
 export function buildSitemap(
   siteUrl: string,
   dealers: readonly PublicDealerCode[],
   now: Date = new Date(),
+  { dealerApplication = false }: SitemapOptions = {},
 ): MetadataRoute.Sitemap {
   const base = siteUrl.replace(/\/$/, "");
   const landing = `${base}${routes.public.root}`;
@@ -40,6 +47,16 @@ export function buildSitemap(
       alternates: { languages: localeAlternates(landing) },
     },
   ];
+  if (dealerApplication) {
+    const url = `${base}${routes.public.dealerApplication}`;
+    entries.push({
+      url,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+      alternates: { languages: localeAlternates(url) },
+    });
+  }
   for (const dealer of dealers) {
     const url = `${base}${routes.public.dealer(dealer.code)}`;
     const updated = new Date(dealer.updated_at);

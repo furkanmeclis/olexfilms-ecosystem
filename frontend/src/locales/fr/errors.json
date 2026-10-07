@@ -126,5 +126,6 @@
   "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "Il reste moins de mètres sur le rouleau que demandé.",
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Le rouleau n'est pas dans le stock de cette organisation.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Le rouleau est utilisé dans un service ou une commande en cours.",
-  "codes.STOCK_SPLIT_KEY_CONFLICT": "Cette clé d'idempotence a servi à un autre découpage."
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Cette clé d'idempotence a servi à un autre découpage.",
+  "codes.LEADS_MODULE_DISABLED": "Le module prospects est fermé pour tout le système ; activez d'abord le module."
 }

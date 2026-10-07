@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "Tam sayı girin.",
   "system.labor.errors.percent_range": "Yüzde 0 ile 100 arasında olmalıdır.",
   "system.keys.contracts_intake_required": "Araç kabul sözleşmesi zorunlu",
-  "system.keys.contracts_intake_required_hint": "Açıkken (ve araç kabul sözleşmesi modülü etkinse) hizmet, kabul sözleşmesi imzalanmadan işleme alınamaz veya tamamlanamaz."
+  "system.keys.contracts_intake_required_hint": "Açıkken (ve araç kabul sözleşmesi modülü etkinse) hizmet, kabul sözleşmesi imzalanmadan işleme alınamaz veya tamamlanamaz.",
+  "system.groups.leads": "Lead'ler",
+  "system.groups.leads_hint": "Lead hattı ve herkese açık bayi başvuru formu.",
+  "system.keys.leads_dealer_application_enabled": "Bayi başvuru formu",
+  "system.keys.leads_dealer_application_enabled_hint": "Açıkken /bayi-basvuru herkese açık başvuru formu yayında olur ve site haritasına eklenir. Yalnızca lead modülü sistem genelinde açıkken açılabilir."
 }

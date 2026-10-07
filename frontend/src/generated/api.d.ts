@@ -6568,6 +6568,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/geo/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active countries for anonymous pickers (TEC-320)
+         * @description No authentication. Same items as `GET /v1/geo/countries` but always
+         *     active countries only (`all` is ignored). Used by the public
+         *     `/bayi-basvuru` form.
+         */
+        get: operations["listPublicCountries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/geo/countries/{iso2}/provinces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Provinces of a country for anonymous pickers (TEC-320) */
+        get: operations["listPublicProvinces"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/geo/provinces/{id}/districts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Districts of a province for anonymous pickers (TEC-320) */
+        get: operations["listPublicDistricts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/geo/countries/{iso2}": {
         parameters: {
             query?: never;
@@ -10358,6 +10414,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/quotes/{token}/pdf/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the public quote PDF (TEC-320)
+         * @description No authentication. Requests (or finds) the quote PDF render like
+         *     `/pdf` and, once it is ready, answers the PDF bytes; while the
+         *     render is queued it answers 202 with the render so the caller can
+         *     retry. The `download_url` of `/pdf` needs a tenant session, so the
+         *     public `/teklif/{token}` page downloads through here. Shares the
+         *     per-IP limit of `/pdf`.
+         */
+        get: operations["downloadPublicQuotePdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portal/dealers/{uuid}/availability": {
         parameters: {
             query?: never;
@@ -13559,6 +13640,11 @@ export interface components {
             longitude?: number | null;
         };
         NearbyDealer: {
+            /**
+             * Format: uuid
+             * @description TEC-327. Organization uuid for portal appointment booking
+             */
+            uuid: string;
             slug: string;
             name: string;
             city: string;
@@ -18826,11 +18912,16 @@ export interface components {
             /** Format: int64 */
             organization_id: number;
         };
+        /** @description customer_user_id or customer_uuid is required (TEC-326: the panel sends UUIDs; a UUID wins over the internal id when both are sent). */
         AppointmentInput: {
             /** Format: int64 */
-            customer_user_id: number;
+            customer_user_id?: number;
+            /** Format: uuid */
+            customer_uuid?: string | null;
             /** Format: int64 */
             vehicle_id?: number | null;
+            /** Format: uuid */
+            vehicle_uuid?: string | null;
             /** Format: date-time */
             starts_at: string;
             estimated_minutes?: number | null;
@@ -18874,6 +18965,23 @@ export interface components {
             created_at?: string | null;
             /** Format: date-time */
             updated_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Panel responses only (TEC-326)
+             */
+            customer_uuid?: string;
+            /** @description Panel responses only (TEC-326) */
+            customer_name?: string;
+            /** Format: uuid */
+            vehicle_uuid?: string | null;
+            vehicle_plate?: string | null;
+            /** @description Car brand and model */
+            vehicle_label?: string | null;
+            /**
+             * Format: uuid
+             * @description Draft service opened by start-intake
+             */
+            service_uuid?: string | null;
         };
         AppointmentStatusInput: {
             status: components["schemas"]["AppointmentStatus"];
@@ -18894,6 +19002,8 @@ export interface components {
             remaining_capacity: number;
             closed: boolean;
             slots: components["schemas"]["AppointmentSlot"][];
+            /** @description IANA zone of the organization the day is bounded in (TEC-326) */
+            timezone?: string;
         };
         AppointmentOccupancy: {
             /** Format: int64 */
@@ -18935,6 +19045,25 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["Appointment"][];
+                /** Format: int64 */
+                total: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description TEC-327. A portal appointment with its dealer and vehicle labels. */
+        PortalAppointment: components["schemas"]["Appointment"] & {
+            /** Format: uuid */
+            dealer_uuid: string;
+            dealer_name: string;
+            /** Format: uuid */
+            vehicle_uuid: string | null;
+            vehicle_plate: string | null;
+        };
+        EnvelopePortalAppointmentPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalAppointment"][];
                 /** Format: int64 */
                 total: number;
             };
@@ -32131,6 +32260,74 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listPublicCountries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Countries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCountryList"];
+                };
+            };
+        };
+    };
+    listPublicProvinces: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ISO 3166-1 alpha-2 country code (case-insensitive) */
+                iso2: components["parameters"]["CountryISO2"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Provinces */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProvinceList"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPublicDistricts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Province or district id */
+                id: components["parameters"]["GeoID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Districts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDistrictList"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
     patchCountry: {
         parameters: {
             query?: never;
@@ -38882,6 +39079,41 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    downloadPublicQuotePdf: {
+        parameters: {
+            query?: {
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quote PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description Quote PDF render queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDocumentRender"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     getPortalDealerAvailability: {
         parameters: {
             query: {
@@ -38930,7 +39162,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EnvelopeAppointmentPage"];
+                    "application/json": components["schemas"]["EnvelopePortalAppointmentPage"];
                 };
             };
             400: components["responses"]["BadRequest"];

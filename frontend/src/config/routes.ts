@@ -10,6 +10,10 @@ export const routes = {
     warranty: (no: string) => `/garanti/${encodeURIComponent(no)}`,
     /** TEC-250: public dealer showcase. */
     dealer: (code: string) => `/bayi/${encodeURIComponent(code)}`,
+    /** TEC-320: public read-only quote (TEC-315 token link). */
+    quote: (token: string) => `/teklif/${encodeURIComponent(token)}`,
+    /** TEC-320: public dealer application form (TEC-317). */
+    dealerApplication: "/bayi-basvuru",
   },
   tenant: {
     home: (slug: string) => `/t/${slug}`,
@@ -105,6 +109,10 @@ export const routes = {
       list: (slug: string) => `/t/${slug}/vehicles`,
       detail: (slug: string, uuid: string) => `/t/${slug}/vehicles/${uuid}`,
     },
+    /** TEC-326 appointment calendar (day / week) and settings tab. */
+    appointments: {
+      calendar: (slug: string) => `/t/${slug}/appointments`,
+    },
     /** TEC-299 measurements: list, detail (part map, VIN, PDF), devices. */
     measurements: {
       list: (slug: string) => `/t/${slug}/measurements`,
@@ -172,6 +180,21 @@ export const routes = {
     /** TEC-245: signed contracts and notification preferences. */
     contracts: "/portal/contracts",
     preferences: "/portal/preferences",
+    /** TEC-327: my appointments and the booking flow (optional preselection). */
+    appointments: "/portal/appointments",
+    newAppointment: (preset?: {
+      dealer?: { uuid: string; name: string };
+      vehicle?: string;
+    }) => {
+      const q = new URLSearchParams();
+      if (preset?.dealer) {
+        q.set("dealer", preset.dealer.uuid);
+        q.set("dealer_name", preset.dealer.name);
+      }
+      if (preset?.vehicle) q.set("vehicle", preset.vehicle);
+      const qs = q.toString();
+      return `/portal/appointments/new${qs ? `?${qs}` : ""}`;
+    },
   },
   guest: {
     login: "/platform/login",

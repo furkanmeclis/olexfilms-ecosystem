@@ -102,6 +102,8 @@ export class PortalMock {
   whatsapp: FakeWhatsApp[] = [];
   calls: string[] = [];
   unknown: string[] = [];
+  /** TEC-327: appointments booked through the portal. */
+  appointments: Json[] = [];
 
   /** Latest code the fake WhatsApp sender delivered to `phone`. */
   lastCode(phone: string, purpose: string): string | undefined {
@@ -208,6 +210,84 @@ export class PortalMock {
         },
       ],
     };
+  }
+
+  /**
+   * TEC-327 portal appointments: two weeks of availability from `from`
+   * (the first day full, the others with a 09:00 and a 10:00 Istanbul
+   * slot), booking, listing and cancelling.
+   */
+  private handleAppointments(
+    method: string,
+    path: string,
+    url: URL,
+    body: Json,
+  ): { data: unknown; status?: number } | null {
+    const availability = /^portal\/dealers\/([^/]+)\/availability$/.exec(path);
+    if (method === "GET" && availability) {
+      const from = url.searchParams.get("from") ?? "";
+      const days = [];
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(`${from}T00:00:00Z`);
+        d.setUTCDate(d.getUTCDate() + i);
+        const date = d.toISOString().slice(0, 10);
+        const full = i === 0;
+        days.push({
+          date,
+          capacity: 2,
+          occupied: full ? 2 : 0,
+          remaining_capacity: full ? 0 : 2,
+          closed: false,
+          slots: [6, 7].map((h) => ({
+            start: `${date}T0${h}:00:00Z`,
+            end: `${date}T0${h + 1}:00:00Z`,
+          })),
+        });
+      }
+      return { data: days };
+    }
+    if (method === "GET" && path === "portal/appointments") {
+      const now = Date.now();
+      const upcoming = url.searchParams.get("period") !== "past";
+      const items = this.appointments.filter(
+        (a) => Date.parse(String(a.starts_at)) >= now === upcoming,
+      );
+      return { data: { items, total: items.length, limit: 20, offset: 0 } };
+    }
+    if (method === "POST" && path === "portal/appointments") {
+      const dealer = Object.values(PORTAL_DEALERS).find(
+        (d) => d.uuid === body.dealer_uuid,
+      );
+      const start = String(body.starts_at);
+      const a = {
+        uuid: `0b9c4c1e-0000-4000-8000-00000000${String(
+          2480 + this.appointments.length,
+        ).padStart(4, "0")}`,
+        organization_id: 1,
+        customer_user_id: 1,
+        vehicle_id: 1,
+        starts_at: start,
+        ends_at: new Date(Date.parse(start) + 3_600_000).toISOString(),
+        estimated_minutes: 60,
+        source: "portal",
+        status: "scheduled",
+        note: String(body.note ?? ""),
+        dealer_uuid: body.dealer_uuid,
+        dealer_name: dealer?.name ?? "",
+        vehicle_uuid: body.vehicle_uuid,
+        vehicle_plate: PLATE,
+      };
+      this.appointments.push(a);
+      return { data: a, status: 201 };
+    }
+    const cancel = /^portal\/appointments\/([^/]+)\/cancel$/.exec(path);
+    if (method === "POST" && cancel) {
+      const a = this.appointments.find((x) => x.uuid === cancel[1]);
+      if (!a) return null;
+      a.status = "cancelled";
+      return { data: a };
+    }
+    return null;
   }
 
   async handle(route: Route, user: PortalUser) {
@@ -345,6 +425,9 @@ export class PortalMock {
       }
       return ok(t);
     }
+
+    const appointment = this.handleAppointments(method, path, url, body);
+    if (appointment) return ok(appointment.data, appointment.status);
 
     this.unknown.push(`${method} ${path}`);
     return fail(404, "NOT_FOUND");

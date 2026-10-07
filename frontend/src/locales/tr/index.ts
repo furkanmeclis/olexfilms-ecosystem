@@ -5,6 +5,7 @@ import access from "./access.json";
 import accounting from "./accounting.json";
 import activity from "./activity.json";
 import announcements from "./announcements.json";
+import appointments from "./appointments.json";
 import auth from "./auth.json";
 import branding from "./branding.json";
 import bulk from "./bulk.json";
@@ -59,6 +60,7 @@ const catalog: LocaleCatalog = {
   accounting,
   activity,
   announcements,
+  appointments,
   auth,
   branding,
   bulk,

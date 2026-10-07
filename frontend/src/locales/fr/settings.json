@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "Saisissez un nombre entier.",
   "system.labor.errors.percent_range": "Le pourcentage doit être compris entre 0 et 100.",
   "system.keys.contracts_intake_required": "Contrat de réception obligatoire",
-  "system.keys.contracts_intake_required_hint": "Lorsque cette option est activée (et que le module de contrat de réception est actif), une prestation ne peut pas passer en traitement ni être terminée tant que son contrat de réception n'est pas signé."
+  "system.keys.contracts_intake_required_hint": "Lorsque cette option est activée (et que le module de contrat de réception est actif), une prestation ne peut pas passer en traitement ni être terminée tant que son contrat de réception n'est pas signé.",
+  "system.groups.leads": "Prospects",
+  "system.groups.leads_hint": "Pipeline de prospects et formulaire public de candidature revendeur.",
+  "system.keys.leads_dealer_application_enabled": "Formulaire de candidature revendeur",
+  "system.keys.leads_dealer_application_enabled_hint": "Activé, le formulaire public /bayi-basvuru est en ligne et figure dans le plan du site. Il ne peut être activé que si le module prospects est ouvert pour tout le système."
 }

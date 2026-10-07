@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "أدخل عددًا صحيحًا.",
   "system.labor.errors.percent_range": "يجب أن تكون النسبة بين 0 و100.",
   "system.keys.contracts_intake_required": "عقد استلام المركبة إلزامي",
-  "system.keys.contracts_intake_required_hint": "عند التفعيل (ومع تمكين وحدة عقد الاستلام)، لا يمكن نقل الخدمة إلى المعالجة أو إكمالها قبل توقيع عقد الاستلام الخاص بها."
+  "system.keys.contracts_intake_required_hint": "عند التفعيل (ومع تمكين وحدة عقد الاستلام)، لا يمكن نقل الخدمة إلى المعالجة أو إكمالها قبل توقيع عقد الاستلام الخاص بها.",
+  "system.groups.leads": "العملاء المحتملون",
+  "system.groups.leads_hint": "مسار العملاء المحتملين ونموذج طلب الوكالة العام.",
+  "system.keys.leads_dealer_application_enabled": "نموذج طلب الوكالة",
+  "system.keys.leads_dealer_application_enabled_hint": "عند التفعيل يصبح النموذج العام /bayi-basvuru متاحًا ويُضاف إلى خريطة الموقع. لا يمكن تفعيله إلا عندما تكون وحدة العملاء المحتملين مفتوحة على مستوى النظام."
 }

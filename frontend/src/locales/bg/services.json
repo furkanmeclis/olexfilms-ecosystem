@@ -64,7 +64,7 @@
   "measurement.no": "Не",
   "measurement.vin_required": "Измерването се свързва по VIN, затова VIN е задължителен.",
   "measurement.vin_optional": "Без измерване VIN не е задължителен.",
-  "measurement.report_placeholder": "Изборът на доклад от измерване ще бъде добавен по-късно; VIN се запазва сега, за да може докладът да бъде свързан.",
+  "measurement.report_auto": "VIN се запазва; каченото измерване ще се съпостави с услугата автоматично.",
   "vin.label": "VIN (номер на шасито)",
   "vin.hint": "17 букви или цифри; I, O и Q не се използват.",
   "vin.errors.required": "За измерване VIN е задължителен.",

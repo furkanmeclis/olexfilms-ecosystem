@@ -64,7 +64,7 @@
   "measurement.no": "No",
   "measurement.vin_required": "La misurazione si abbina tramite VIN, quindi il VIN è obbligatorio.",
   "measurement.vin_optional": "Senza misurazione il VIN è facoltativo.",
-  "measurement.report_placeholder": "La scelta del rapporto di misurazione sarà aggiunta in seguito; il VIN viene salvato ora per abbinare il rapporto.",
+  "measurement.report_auto": "Il VIN viene salvato; una misurazione caricata sarà abbinata al servizio automaticamente.",
   "vin.label": "VIN (numero di telaio)",
   "vin.hint": "17 lettere o cifre; I, O e Q non sono usate.",
   "vin.errors.required": "Il VIN è obbligatorio per una misurazione.",

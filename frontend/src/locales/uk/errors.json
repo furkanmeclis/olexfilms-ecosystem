@@ -126,5 +126,6 @@
   "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "У рулоні залишилось менше метрів, ніж запитано.",
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Рулону немає на складі цієї організації.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Рулон використовується у відкритій послузі чи замовленні.",
-  "codes.STOCK_SPLIT_KEY_CONFLICT": "Цей ключ ідемпотентності вже використано для іншого поділу."
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Цей ключ ідемпотентності вже використано для іншого поділу.",
+  "codes.LEADS_MODULE_DISABLED": "Модуль лідів вимкнено для всієї системи; спочатку увімкніть модуль."
 }

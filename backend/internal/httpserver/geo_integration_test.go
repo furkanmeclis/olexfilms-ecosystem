@@ -342,6 +342,31 @@ func TestIntegrationGeoSeedAndPickers(t *testing.T) {
 	if code, _ := it.do("GET", "/v1/geo/countries", hostOlex, "", nil); code != http.StatusUnauthorized {
 		t.Fatalf("pickers need a session: %d", code)
 	}
+
+	// TEC-320: the public form reads the same pickers without a session.
+	code, env = it.do("GET", "/v1/public/geo/countries?all=true", hostOlex, "", nil)
+	var pubCountries struct {
+		Items []geo.Country `json:"items"`
+	}
+	_ = json.Unmarshal(env.Data, &pubCountries)
+	if code != http.StatusOK || len(pubCountries.Items) == 0 {
+		t.Fatalf("public countries: %d %d", code, len(pubCountries.Items))
+	}
+	for _, c := range pubCountries.Items {
+		if !c.IsActive {
+			t.Fatalf("public countries list hidden %s", c.ISO2)
+		}
+	}
+	code, env = it.do("GET", "/v1/public/geo/countries/tr/provinces", hostOlex, "", nil)
+	_ = json.Unmarshal(env.Data, &provs)
+	if code != http.StatusOK || len(provs.Items) != 81 {
+		t.Fatalf("public TR provinces: %d %d", code, len(provs.Items))
+	}
+	code, env = it.do("GET", fmt.Sprintf("/v1/public/geo/provinces/%d/districts", provs.Items[33].ID), hostOlex, "", nil)
+	_ = json.Unmarshal(env.Data, &dists)
+	if code != http.StatusOK || len(dists.Items) != 39 {
+		t.Fatalf("public İstanbul districts: %d %d", code, len(dists.Items))
+	}
 }
 
 // Override priority and previous-day fallback on the real SQL.

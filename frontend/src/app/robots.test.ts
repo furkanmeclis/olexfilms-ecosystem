@@ -20,6 +20,7 @@ describe("robots (TEC-251)", () => {
       "/t/",
       "/profile",
       "/share/",
+      "/teklif/",
     ]);
   });
 

@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "Geben Sie eine ganze Zahl ein.",
   "system.labor.errors.percent_range": "Der Prozentsatz muss zwischen 0 und 100 liegen.",
   "system.keys.contracts_intake_required": "Fahrzeugannahmevertrag erforderlich",
-  "system.keys.contracts_intake_required_hint": "Wenn aktiviert (und das Modul für Fahrzeugannahmeverträge eingeschaltet ist), kann ein Service erst in Bearbeitung genommen oder abgeschlossen werden, wenn sein Annahmevertrag unterschrieben ist."
+  "system.keys.contracts_intake_required_hint": "Wenn aktiviert (und das Modul für Fahrzeugannahmeverträge eingeschaltet ist), kann ein Service erst in Bearbeitung genommen oder abgeschlossen werden, wenn sein Annahmevertrag unterschrieben ist.",
+  "system.groups.leads": "Leads",
+  "system.groups.leads_hint": "Lead-Pipeline und das öffentliche Händlerbewerbungsformular.",
+  "system.keys.leads_dealer_application_enabled": "Händlerbewerbungsformular",
+  "system.keys.leads_dealer_application_enabled_hint": "Wenn aktiv, ist das öffentliche Bewerbungsformular unter /bayi-basvuru online und in der Sitemap. Es lässt sich nur aktivieren, solange das Lead-Modul systemweit aktiv ist."
 }

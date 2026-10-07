@@ -126,5 +126,6 @@
   "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "Auf der Rolle sind weniger Meter als angefordert übrig.",
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Die Rolle ist nicht im Bestand dieser Organisation.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Die Rolle wird in einem offenen Service oder Auftrag verwendet.",
-  "codes.STOCK_SPLIT_KEY_CONFLICT": "Dieser Idempotenzschlüssel wurde für eine andere Teilung verwendet."
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Dieser Idempotenzschlüssel wurde für eine andere Teilung verwendet.",
+  "codes.LEADS_MODULE_DISABLED": "Das Lead-Modul ist systemweit deaktiviert; aktivieren Sie zuerst das Modul."
 }

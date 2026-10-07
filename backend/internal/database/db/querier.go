@@ -1161,6 +1161,9 @@ type Querier interface {
 	// Sort: docs/list-contract.md, keys from apiquery.LogsSortSpec.
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
 	ListAppointmentClosures(ctx context.Context, arg ListAppointmentClosuresParams) ([]AppointmentClosure, error)
+	// Panel calendar references (TEC-326): customer, vehicle and linked service
+	// UUIDs and labels of the given appointments.
+	ListAppointmentRefs(ctx context.Context, ids []int64) ([]ListAppointmentRefsRow, error)
 	ListAppointmentSettingsByOrganizations(ctx context.Context, organizationIds []int64) ([]AppointmentSetting, error)
 	ListAppointmentsByOrganizations(ctx context.Context, arg ListAppointmentsByOrganizationsParams) ([]Appointment, error)
 	// TEC-375: list contract (docs/list-contract.md), keys from stock usecase
@@ -1507,7 +1510,8 @@ type Querier interface {
 	// category and direction. Reversal rows carry negated amounts, so a voided
 	// row nets out.
 	ListPnlSums(ctx context.Context, arg ListPnlSumsParams) ([]ListPnlSumsRow, error)
-	ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]Appointment, error)
+	// TEC-327: the dealer and vehicle labels the portal list shows.
+	ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]ListPortalAppointmentsRow, error)
 	// TEC-288 (F3-01d): the user's executed vehicle intake contracts. The
 	// ownership rule stays identical to portal services: the service customer or
 	// warranty holder sees it, within the domain brand, excluding Glorian.

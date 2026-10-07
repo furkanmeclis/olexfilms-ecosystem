@@ -241,6 +241,7 @@ export function ServiceWizardPage({
   } else if (shown === "measurement") {
     body = (
       <MeasurementStep
+        slug={slug}
         key={current.updated_at}
         service={current}
         onBack={() => goBack("measurement")}

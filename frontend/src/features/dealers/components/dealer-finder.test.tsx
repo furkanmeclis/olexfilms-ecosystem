@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mapProps = vi.hoisted(() => ({
   last: null as null | { center: unknown; markers: unknown[] },
 }));
+const session = vi.hoisted(() => ({ readOnly: false }));
 
 vi.mock("next/link", () => ({
   default: ({
@@ -37,11 +38,16 @@ vi.mock("@/providers/locale-provider", () => ({
   }),
 }));
 
+vi.mock("@/features/portal/lib/use-portal-read-only", () => ({
+  usePortalReadOnly: () => session.readOnly,
+}));
+
 import { mapConfig } from "@/config/map";
 
 import { DealerFinder } from "./dealer-finder";
 
 const DEALER = {
+  uuid: "11111111-1111-4111-8111-111111111111",
   slug: "kadikoy",
   name: "Olex Kadıköy",
   city: "İstanbul",
@@ -49,6 +55,7 @@ const DEALER = {
   latitude: 40.99,
   longitude: 29.03,
   distance_km: 3.456,
+  accepts_appointments: true,
   whatsapp: "+905321234567",
 };
 
@@ -97,6 +104,7 @@ describe("DealerFinder", () => {
     act(() => root.unmount());
     host.remove();
     vi.unstubAllGlobals();
+    session.readOnly = false;
   });
 
   it("falls back to the default centre and warns when location is denied", async () => {
@@ -168,5 +176,43 @@ describe("DealerFinder", () => {
     });
     await mount();
     expect(q("dealer-error")?.textContent).toContain("portal.dealers.error");
+  });
+
+  it("offers booking at a dealer that takes portal appointments (TEC-327)", async () => {
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: {
+              items: [
+                DEALER,
+                {
+                  ...DEALER,
+                  uuid: "22222222-2222-4222-8222-222222222222",
+                  slug: "cankaya",
+                  accepts_appointments: false,
+                },
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
+    );
+    setGeolocation(undefined);
+    await mount();
+    const book = host.querySelectorAll('[data-testid="dealer-book"]');
+    expect(book).toHaveLength(1);
+    expect(book[0].getAttribute("href")).toBe(
+      `/portal/appointments/new?dealer=${DEALER.uuid}&dealer_name=Olex+Kad%C4%B1k%C3%B6y`,
+    );
+  });
+
+  it("hides booking from a read-only fleet session (TEC-327)", async () => {
+    session.readOnly = true;
+    setGeolocation(undefined);
+    await mount();
+    expect(q("dealer-item")).not.toBeNull();
+    expect(q("dealer-book")).toBeNull();
   });
 });

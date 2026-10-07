@@ -64,7 +64,7 @@
   "measurement.no": "No",
   "measurement.vin_required": "A measurement is matched by VIN, so the VIN is required.",
   "measurement.vin_optional": "The VIN is optional without a measurement.",
-  "measurement.report_placeholder": "Choosing the measurement report will be added later; the VIN is saved now so the report can be matched.",
+  "measurement.report_auto": "The VIN is saved; an uploaded measurement is matched to the service automatically.",
   "vin.label": "VIN (chassis number)",
   "vin.hint": "17 letters or digits; I, O and Q are not used.",
   "vin.errors.required": "The VIN is required for a measurement.",

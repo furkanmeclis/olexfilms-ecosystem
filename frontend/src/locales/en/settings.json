@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "Enter a whole number.",
   "system.labor.errors.percent_range": "The percentage must be between 0 and 100.",
   "system.keys.contracts_intake_required": "Intake contract required",
-  "system.keys.contracts_intake_required_hint": "When on (and the intake contract module is enabled), a service cannot move to processing or be completed until its intake contract is signed."
+  "system.keys.contracts_intake_required_hint": "When on (and the intake contract module is enabled), a service cannot move to processing or be completed until its intake contract is signed.",
+  "system.groups.leads": "Leads",
+  "system.groups.leads_hint": "Lead pipeline and the public dealer application form.",
+  "system.keys.leads_dealer_application_enabled": "Dealer application form",
+  "system.keys.leads_dealer_application_enabled_hint": "When on, the public application form at /bayi-basvuru is live and listed in the sitemap. It can only be switched on while the leads module is open system wide."
 }

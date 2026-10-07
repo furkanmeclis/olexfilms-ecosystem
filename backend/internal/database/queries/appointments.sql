@@ -121,9 +121,13 @@ ORDER BY starts_at, id
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
 -- name: ListPortalAppointments :many
-SELECT a.*
+-- TEC-327: the dealer and vehicle labels the portal list shows.
+SELECT sqlc.embed(a),
+       o.uuid AS dealer_uuid, o.name AS dealer_name,
+       v.uuid AS vehicle_uuid, v.plate AS vehicle_plate
 FROM appointments a
 JOIN organizations o ON o.id = a.organization_id
+LEFT JOIN vehicles v ON v.id = a.vehicle_id
 WHERE a.customer_user_id = sqlc.arg(customer_user_id)::bigint
   AND a.brand_id = sqlc.arg(brand_id)::bigint
   AND a.deleted_at IS NULL
@@ -280,3 +284,23 @@ RETURNING *;
 UPDATE appointments
 SET deleted_at = NOW()
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND deleted_at IS NULL;
+
+-- Panel calendar references (TEC-326): customer, vehicle and linked service
+-- UUIDs and labels of the given appointments.
+-- name: ListAppointmentRefs :many
+SELECT a.id,
+       u.uuid AS customer_uuid,
+       u.name AS customer_name,
+       u.surname AS customer_surname,
+       v.uuid AS vehicle_uuid,
+       v.plate AS vehicle_plate,
+       cb.name AS car_brand,
+       cm.name AS car_model,
+       s.uuid AS service_uuid
+FROM appointments a
+JOIN users u ON u.id = a.customer_user_id
+LEFT JOIN vehicles v ON v.id = a.vehicle_id
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN services s ON s.id = a.service_id
+WHERE a.id = ANY(sqlc.arg(ids)::bigint[]);

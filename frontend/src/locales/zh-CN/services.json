@@ -64,7 +64,7 @@
   "measurement.no": "否",
   "measurement.vin_required": "测量通过 VIN 匹配，因此 VIN 为必填项。",
   "measurement.vin_optional": "无测量时 VIN 为选填项。",
-  "measurement.report_placeholder": "测量报告的选择将在以后添加；现在保存 VIN 以便匹配报告。",
+  "measurement.report_auto": "VIN 已保存；上传的测量会自动匹配到服务。",
   "vin.label": "VIN（车架号）",
   "vin.hint": "17 位字母或数字；不使用 I、O 和 Q。",
   "vin.errors.required": "测量需要填写 VIN。",

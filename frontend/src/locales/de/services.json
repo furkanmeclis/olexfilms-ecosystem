@@ -64,7 +64,7 @@
   "measurement.no": "Nein",
   "measurement.vin_required": "Eine Messung wird über die VIN zugeordnet, daher ist die VIN erforderlich.",
   "measurement.vin_optional": "Ohne Messung ist die VIN optional.",
-  "measurement.report_placeholder": "Die Auswahl des Messberichts folgt später; die VIN wird jetzt gespeichert, damit der Bericht zugeordnet werden kann.",
+  "measurement.report_auto": "Die FIN wird gespeichert; eine hochgeladene Messung wird dem Service automatisch zugeordnet.",
   "vin.label": "VIN (Fahrgestellnummer)",
   "vin.hint": "17 Buchstaben oder Ziffern; I, O und Q werden nicht verwendet.",
   "vin.errors.required": "Für eine Messung ist die VIN erforderlich.",

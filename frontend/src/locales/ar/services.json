@@ -64,7 +64,7 @@
   "measurement.no": "لا",
   "measurement.vin_required": "يُطابَق القياس عبر VIN، لذا فإن VIN مطلوب.",
   "measurement.vin_optional": "بدون قياس يكون VIN اختياريًا.",
-  "measurement.report_placeholder": "سيُضاف اختيار تقرير القياس لاحقًا؛ يُحفظ VIN الآن لتتم مطابقة التقرير.",
+  "measurement.report_auto": "يتم حفظ رقم VIN؛ القياس المرفوع يُطابق مع الخدمة تلقائيًا.",
   "vin.label": "VIN (رقم الهيكل)",
   "vin.hint": "17 حرفًا أو رقمًا؛ لا تُستخدم الأحرف I وO وQ.",
   "vin.errors.required": "VIN مطلوب للقياس.",

@@ -7,7 +7,11 @@ const upstream = vi.hoisted(() => ({
   calls: [] as { path: string; headers: Headers }[],
   status: 200,
   body: "" as string,
+  /** Answer of the dealer application config (TEC-320). */
+  configBody: "" as string,
 }));
+
+const CONFIG_PATH = "public/dealer-applications/config";
 
 vi.mock("@/lib/server/upstream", () => ({
   fetchUpstream: async (
@@ -15,10 +19,13 @@ vi.mock("@/lib/server/upstream", () => ({
     init: { method: string; headers?: HeadersInit },
   ) => {
     upstream.calls.push({ path, headers: new Headers(init.headers) });
+    const config = path === CONFIG_PATH;
     return {
-      status: upstream.status,
+      status: config ? 200 : upstream.status,
       headers: new Headers(),
-      body: new TextEncoder().encode(upstream.body).buffer,
+      body: new TextEncoder().encode(
+        config ? upstream.configBody : upstream.body,
+      ).buffer,
     };
   },
 }));
@@ -73,6 +80,7 @@ describe("sitemap route (TEC-251)", () => {
     upstream.calls = [];
     upstream.status = 200;
     upstream.body = "";
+    upstream.configBody = JSON.stringify({ data: { enabled: false } });
   });
 
   it("reads active dealers from the public list for the site host", async () => {
@@ -86,9 +94,9 @@ describe("sitemap route (TEC-251)", () => {
       },
     });
     const entries = await sitemap();
-    expect(upstream.calls).toHaveLength(1);
-    expect(upstream.calls[0]!.path).toBe("public/dealers");
-    expect(upstream.calls[0]!.headers.get("x-forwarded-host")).toBe(
+    const dealersCall = upstream.calls.find((c) => c.path === "public/dealers");
+    expect(dealersCall).toBeDefined();
+    expect(dealersCall!.headers.get("x-forwarded-host")).toBe(
       new URL(site.url).host,
     );
     const urls = entries.map((e) => e.url);
@@ -100,6 +108,34 @@ describe("sitemap route (TEC-251)", () => {
     upstream.status = 500;
     const entries = await sitemap();
     expect(entries.map((e) => e.url)).toEqual([landing]);
+  });
+
+  it("lists /bayi-basvuru only while the form is open (TEC-320)", async () => {
+    expect((await sitemap()).map((e) => e.url)).toEqual([landing]);
+    upstream.configBody = JSON.stringify({ data: { enabled: true } });
+    const entries = await sitemap();
+    expect(entries.map((e) => e.url)).toEqual([
+      landing,
+      `${site.url}/bayi-basvuru`,
+    ]);
+    expect(Object.keys(entries[1]!.alternates?.languages ?? {})).toHaveLength(
+      14,
+    );
+    const configCall = upstream.calls.find((c) => c.path === CONFIG_PATH);
+    expect(configCall!.headers.get("x-forwarded-host")).toBe(
+      new URL(site.url).host,
+    );
+  });
+
+  it("never lists quote links (TEC-320)", () => {
+    const urls = buildSitemap("https://olex.test", [], new Date(), {
+      dealerApplication: true,
+    }).map((e) => e.url);
+    expect(urls).toEqual([
+      "https://olex.test/",
+      "https://olex.test/bayi-basvuru",
+    ]);
+    expect(urls.join(" ")).not.toContain("/teklif");
   });
 
   it("ignores a malformed body", async () => {

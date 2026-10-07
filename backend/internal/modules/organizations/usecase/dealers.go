@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -115,15 +116,17 @@ type NearbyInput struct {
 
 // NearbyDealer is one row of GET /v1/public/dealers/nearby.
 type NearbyDealer struct {
-	Slug                string  `json:"slug"`
-	Name                string  `json:"name"`
-	City                string  `json:"city"`
-	District            string  `json:"district"`
-	Latitude            float64 `json:"latitude"`
-	Longitude           float64 `json:"longitude"`
-	DistanceKm          float64 `json:"distance_km"`
-	AcceptsAppointments bool    `json:"accepts_appointments"`
-	WhatsApp            *string `json:"whatsapp"`
+	// UUID is the organization uuid the portal books appointments with (TEC-327).
+	UUID                uuid.UUID `json:"uuid"`
+	Slug                string    `json:"slug"`
+	Name                string    `json:"name"`
+	City                string    `json:"city"`
+	District            string    `json:"district"`
+	Latitude            float64   `json:"latitude"`
+	Longitude           float64   `json:"longitude"`
+	DistanceKm          float64   `json:"distance_km"`
+	AcceptsAppointments bool      `json:"accepts_appointments"`
+	WhatsApp            *string   `json:"whatsapp"`
 }
 
 // NearbyDealers lists the active dealers / distributors of a brand around
@@ -138,7 +141,7 @@ func (s *Service) NearbyDealers(ctx context.Context, brandID int64, in NearbyInp
 	out := make([]NearbyDealer, 0, len(rows))
 	for _, r := range rows {
 		d := NearbyDealer{
-			Slug: r.Slug, Name: r.Name, City: r.City, District: r.District,
+			UUID: r.Uuid, Slug: r.Slug, Name: r.Name, City: r.City, District: r.District,
 			Latitude: r.Latitude, Longitude: r.Longitude,
 			DistanceKm:          math.Round(r.DistanceKm*100) / 100,
 			AcceptsAppointments: r.AcceptsAppointments,
