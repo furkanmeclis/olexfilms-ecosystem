@@ -96,6 +96,7 @@ type Store interface {
 	WarrantyClaimPartsReport(ctx context.Context, arg db.WarrantyClaimPartsReportParams) ([]db.WarrantyClaimPartsReportRow, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (db.Organization, error)
 	ListWarrantyClaimCostEntries(ctx context.Context, arg db.ListWarrantyClaimCostEntriesParams) ([]db.ListWarrantyClaimCostEntriesRow, error)
+	CountWarrantyClaimFinanceEntries(ctx context.Context, sourceUuid uuid.UUID) (int64, error)
 }
 
 type txBeginner interface {

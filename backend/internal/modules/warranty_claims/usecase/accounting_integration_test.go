@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"os"
 	"strings"
 	"testing"
@@ -551,4 +552,210 @@ func num(t *testing.T, s string) pgtype.Numeric {
 		t.Fatalf("numeric %q: %v", s, err)
 	}
 	return n
+}
+
+// TEC-382: cancelling the completed re-application service reverses every
+// warranty_claim row (same amount, opposite sign, linked to the original),
+// nets the claim to zero, leaves the originals untouched, adds one timeline
+// note and writes nothing on a second cancellation.
+
+type accLedgerRow struct {
+	id, org     int64
+	role        string
+	direction   string
+	category    string
+	origAmount  string
+	amount      string
+	currency    string
+	cari        int64
+	reversalOf  int64
+	description string
+}
+
+func (f *accFixture) ledgerRows(t *testing.T, claim db.WarrantyClaim) []accLedgerRow {
+	t.Helper()
+	rs, err := f.tx.Query(f.ctx, `
+SELECT id, organization_id, role, direction, category, orig_amount::text, amount::text, currency,
+       COALESCE(cari_id, 0), COALESCE(reversal_of_id, 0), COALESCE(description, '')
+FROM finance_entries WHERE source_type = $1 AND source_uuid = $2 ORDER BY id`, AccountingSourceType, claim.Uuid)
+	if err != nil {
+		t.Fatalf("ledger rows: %v", err)
+	}
+	defer rs.Close()
+	var out []accLedgerRow
+	for rs.Next() {
+		var r accLedgerRow
+		if err := rs.Scan(&r.id, &r.org, &r.role, &r.direction, &r.category, &r.origAmount, &r.amount, &r.currency,
+			&r.cari, &r.reversalOf, &r.description); err != nil {
+			t.Fatalf("scan: %v", err)
+		}
+		out = append(out, r)
+	}
+	if err := rs.Err(); err != nil {
+		t.Fatalf("ledger rows: %v", err)
+	}
+	return out
+}
+
+// cancelService cancels a completed service and publishes service.cancelled
+// `times` times with the payload of POST /v1/services/{uuid}/cancel-completed
+// (no service_id; the entity id carries it).
+func (f *accFixture) cancelService(t *testing.T, svc db.Service, reason string, times int) {
+	t.Helper()
+	done, err := f.q.CancelCompletedService(f.ctx, db.CancelCompletedServiceParams{
+		ID: svc.ID, CancelReason: pgtype.Text{String: reason, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("cancel service: %v", err)
+	}
+	for i := 0; i < times; i++ {
+		ev := events.New(events.ServiceCancelled).WithTenant(done.OrganizationID).
+			WithEntity("service", &done.ID, &done.Uuid).
+			WithPayload(map[string]any{
+				"service_uuid": done.Uuid.String(), "service_no": done.ServiceNo, "status": done.Status,
+				"organization_id": done.OrganizationID, "brand_id": done.BrandID,
+				"from_status": "completed", "reason": reason,
+			})
+		if err := f.bus.Publish(f.ctx, ev); err != nil {
+			t.Fatalf("publish cancelled: %v", err)
+		}
+	}
+}
+
+func TestWarrantyAccountingCancelReversesRows(t *testing.T) {
+	f := newAccFixture(t, "EUR", "UAH")
+	f.settings[sysconfig.KeyWarrantyClaimsLaborRule] = sysconfig.LaborRuleCenter
+	f.settings[sysconfig.KeyWarrantyClaimsLaborAmount] = accLabor
+	claim, _, _ := f.claim(t)
+	done := f.completeReapply(t, claim, 1)
+	before := f.ledgerRows(t, claim)
+	if len(before) != 9 {
+		t.Fatalf("rows before cancel = %d, want 9", len(before))
+	}
+
+	f.cancelService(t, done, "Müşteri vazgeçti", 2)
+
+	after := f.ledgerRows(t, claim)
+	if len(after) != 18 {
+		t.Fatalf("rows after two cancellations = %d, want 9 originals + 9 reversals", len(after))
+	}
+	originals := map[int64]accLedgerRow{}
+	for _, r := range before {
+		originals[r.id] = r
+	}
+	reversed := map[int64]int{}
+	net := map[string]*big.Rat{}
+	for _, r := range after {
+		k := fmt.Sprintf("%d/%s", r.org, r.currency)
+		if net[k] == nil {
+			net[k] = new(big.Rat)
+		}
+		amt, _ := new(big.Rat).SetString(r.amount)
+		net[k].Add(net[k], amt)
+		if r.reversalOf == 0 {
+			if r != originals[r.id] {
+				t.Fatalf("original row changed: %+v -> %+v", originals[r.id], r)
+			}
+			continue
+		}
+		o, ok := originals[r.reversalOf]
+		if !ok {
+			t.Fatalf("reversal %+v of an unknown row", r)
+		}
+		reversed[o.id]++
+		if r.org != o.org || r.role != o.role || r.direction != o.direction || r.category != o.category ||
+			r.cari != o.cari || r.currency != o.currency || trim2(r.amount) != trim2("-"+o.amount) ||
+			trim2(r.origAmount) != trim2("-"+o.origAmount) {
+			t.Fatalf("reversal %+v does not mirror %+v", r, o)
+		}
+		if !strings.Contains(r.description, done.ServiceNo) || !strings.Contains(r.description, "Müşteri vazgeçti") {
+			t.Fatalf("reversal description = %q", r.description)
+		}
+	}
+	for _, o := range before {
+		if reversed[o.id] != 1 {
+			t.Fatalf("row %+v reversed %d times, want 1", o, reversed[o.id])
+		}
+	}
+	for k, v := range net {
+		if v.Sign() != 0 {
+			t.Fatalf("net of %s = %s, want 0", k, v.FloatString(2))
+		}
+	}
+
+	events, err := f.q.ListWarrantyClaimEvents(f.ctx, claim.ID)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	notes := 0
+	for _, ev := range events {
+		if ev.EventType == EventNote && strings.Contains(string(ev.Payload), ReversalEventKind) {
+			notes++
+			if !strings.Contains(ev.Note.String, done.ServiceNo) {
+				t.Fatalf("reversal note = %q", ev.Note.String)
+			}
+		}
+	}
+	if notes != 1 {
+		t.Fatalf("reversal timeline events = %d, want 1", notes)
+	}
+
+	center := Caller{
+		UserID: 1, OrganizationID: f.center.ID, BrandID: f.brand.ID, OrgType: "center",
+		Filter: scopefilter.Filter{Scope: rbac.ScopeBrand},
+		Permissions: map[string]rbac.Scope{
+			rbac.PermWarrantyClaimsRead: rbac.ScopeBrand, rbac.PermAccountingRead: rbac.ScopeBrand,
+		},
+	}
+	v, err := f.svc.Get(f.ctx, center, claim.Uuid)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if v.CostSummary == nil || v.CostSummary.ProductCost != "0.00" || v.CostSummary.Labor != "0.00" || v.CostSummary.Currency != "TRY" {
+		t.Fatalf("cost summary after cancel = %+v, want net 0", v.CostSummary)
+	}
+
+	// A direct repeat writes nothing either.
+	acc := NewAccounting(f.tx, posting.New(f.q, nil, fxrates.New(f.q, nil, nil)), f.settings, nil)
+	res, err := acc.ReverseReapplyService(f.ctx, done.ID, done.BrandID, "tekrar", nil)
+	if err != nil || !res.Skipped {
+		t.Fatalf("repeat reversal = %+v, %v; want skipped", res, err)
+	}
+	if rows := f.ledgerRows(t, claim); len(rows) != 18 {
+		t.Fatalf("rows after repeat = %d, want 18", len(rows))
+	}
+}
+
+// A cancelled service without a claim, and a cancelled claim service that
+// is not the claim's re-application service, write nothing.
+func TestWarrantyAccountingCancelIgnoresOtherServices(t *testing.T) {
+	f := newAccFixture(t, "TRY", "TRY")
+	claim, _, _ := f.claim(t)
+	f.completeReapply(t, claim, 1)
+	if rows := f.ledgerRows(t, claim); len(rows) != 5 {
+		t.Fatalf("rows = %d, want 5", len(rows))
+	}
+	// The claim's original (non-claim) service.
+	original, err := f.q.GetService(f.ctx, db.GetServiceParams{ID: claim.ServiceID, BrandID: claim.BrandID})
+	if err != nil {
+		t.Fatalf("original service: %v", err)
+	}
+	f.cancelService(t, original, "Garanti dışı iptal", 1)
+	acc := NewAccounting(f.tx, posting.New(f.q, nil, fxrates.New(f.q, nil, nil)), f.settings, nil)
+	if res, err := acc.ReverseReapplyService(f.ctx, original.ID, original.BrandID, "x", nil); err != nil || !res.Skipped {
+		t.Fatalf("non-claim service reversal = %+v, %v; want skipped", res, err)
+	}
+	// A completed (not cancelled) re-application service is not reversed.
+	got, err := f.q.GetWarrantyClaimByID(f.ctx, db.GetWarrantyClaimByIDParams{ID: claim.ID, BrandID: claim.BrandID})
+	if err != nil {
+		t.Fatalf("claim: %v", err)
+	}
+	if res, err := acc.ReverseReapplyService(f.ctx, got.ReapplyServiceID.Int64, got.BrandID, "x", nil); err != nil || !res.Skipped {
+		t.Fatalf("completed service reversal = %+v, %v; want skipped", res, err)
+	}
+	for _, r := range f.ledgerRows(t, claim) {
+		if r.reversalOf != 0 {
+			t.Fatalf("unexpected reversal %+v", r)
+		}
+	}
 }
