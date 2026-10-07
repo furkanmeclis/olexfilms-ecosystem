@@ -54,6 +54,8 @@ WHERE c.organization_id = sqlc.arg(organization_id)
   AND c.channel = sqlc.arg(channel)
   AND c.deleted_at IS NULL
   AND (sqlc.narg(q)::text IS NULL OR c.title ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR c.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR c.created_at < sqlc.narg(created_before)::timestamptz)
 ORDER BY
   CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'title' THEN c.title END ASC,
   CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'title' THEN c.title END DESC,
@@ -73,7 +75,9 @@ WHERE c.organization_id = sqlc.arg(organization_id)
   AND c.user_id = sqlc.arg(user_id)
   AND c.channel = sqlc.arg(channel)
   AND c.deleted_at IS NULL
-  AND (sqlc.narg(q)::text IS NULL OR c.title ILIKE '%' || sqlc.narg(q)::text || '%');
+  AND (sqlc.narg(q)::text IS NULL OR c.title ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR c.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR c.created_at < sqlc.narg(created_before)::timestamptz);
 
 -- name: UpdateAIConversationTitle :one
 UPDATE ai_conversations SET title = sqlc.arg(title)
@@ -120,6 +124,21 @@ SET status = sqlc.arg(status),
     error = sqlc.narg(error)
 WHERE id = sqlc.arg(id) AND status = 'pending'
 RETURNING *;
+
+-- name: GetAIChatContext :one
+-- TEC-388: prompt context of a chat turn: the user, the conversation's
+-- organization, its brand and the brand center (K10 locale / time zone).
+SELECT u.name AS user_name, u.surname AS user_surname,
+       COALESCE(u.locale, '')::text AS user_locale, COALESCE(u.timezone, '')::text AS user_timezone,
+       o.name AS org_name, o.type AS org_type, o.locale AS org_locale, o.timezone AS org_timezone,
+       b.name AS brand_name,
+       COALESCE(c.locale, '')::text AS center_locale, COALESCE(c.timezone, '')::text AS center_timezone
+FROM users u
+JOIN organizations o ON o.id = sqlc.arg(organization_id)
+JOIN brands b ON b.id = o.brand_id
+LEFT JOIN organizations c ON c.brand_id = o.brand_id AND c.type = 'center' AND c.deleted_at IS NULL
+WHERE u.id = sqlc.arg(user_id)
+LIMIT 1;
 
 -- name: ListAIMessages :many
 SELECT * FROM ai_messages
