@@ -677,6 +677,11 @@ type Querier interface {
 	// The content of a locale, created empty when missing (media upload).
 	EnsureCampaignContent(ctx context.Context, arg EnsureCampaignContentParams) (CampaignContent, error)
 	EnsureCustomerProfile(ctx context.Context, userID int64) error
+	// TEC-467 (F5-01b) -------------------------------------------------------------
+	// Opens an empty draft showcase for the organization when it has none
+	// (a service or photo added before the first content save) and returns the
+	// row either way.
+	EnsureDealerShowcase(ctx context.Context, arg EnsureDealerShowcaseParams) (EnsureDealerShowcaseRow, error)
 	// Projection deltas are two steps: Ensure* creates a zero row on first use
 	// (no-op otherwise), Add* applies the signed delta. A plain UPDATE keeps the
 	// CHECK (>= 0) on the result only; an INSERT ... ON CONFLICT DO UPDATE would
@@ -857,6 +862,7 @@ type Querier interface {
 	// Showcase --------------------------------------------------------------------
 	GetDealerShowcaseByOrg(ctx context.Context, organizationID int64) (DealerShowcase, error)
 	GetDealerShowcaseByUUID(ctx context.Context, arg GetDealerShowcaseByUUIDParams) (DealerShowcase, error)
+	GetDealerShowcasePhoto(ctx context.Context, arg GetDealerShowcasePhotoParams) (DealerShowcasePhoto, error)
 	GetDefaultContractTemplate(ctx context.Context, arg GetDefaultContractTemplateParams) (ContractTemplate, error)
 	GetDefaultLabelTemplate(ctx context.Context, arg GetDefaultLabelTemplateParams) (LabelTemplate, error)
 	GetDistributorPriceOverride(ctx context.Context, arg GetDistributorPriceOverrideParams) (GetDistributorPriceOverrideRow, error)
@@ -2015,6 +2021,13 @@ type Querier interface {
 	// distributors for the public sitemap. Same filters as
 	// GetPublicDealerBySlug; code and last change only.
 	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
+	// Nearby dealers list: which of the given organizations of the brand serve
+	// a published showcase, with the live Google rating. The module flag is
+	// checked by the caller.
+	ListPublishedDealerShowcaseBadges(ctx context.Context, arg ListPublishedDealerShowcaseBadgesParams) ([]ListPublishedDealerShowcaseBadgesRow, error)
+	// Sitemap: the publish time of every published showcase of the brand (the
+	// caller keeps the organizations whose module is on).
+	ListPublishedDealerShowcaseDates(ctx context.Context, brandID int64) ([]ListPublishedDealerShowcaseDatesRow, error)
 	ListPurchaseLines(ctx context.Context, arg ListPurchaseLinesParams) ([]PurchaseLine, error)
 	ListPurchases(ctx context.Context, arg ListPurchasesParams) ([]Purchase, error)
 	// ---------------------------------------------------------------------------

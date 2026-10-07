@@ -139,5 +139,8 @@
   "codes.FLEET_VEHICLE_EXISTS": "Un véhicule avec cette immatriculation ou ce VIN appartient aux utilisateurs de la flotte ; vous pouvez le lier à la flotte.",
   "codes.FLEET_VEHICLE_OTHER_OWNER": "Le véhicule appartient à un autre client ou à une autre flotte et ne peut pas être ajouté.",
   "codes.FLEET_NO_DEALER_LINK": "Votre organisation n'a pas de liaison active avec cette flotte.",
-  "codes.FLEET_LINK_NOT_PENDING": "La demande de liaison a déjà reçu une réponse."
+  "codes.FLEET_LINK_NOT_PENDING": "La demande de liaison a déjà reçu une réponse.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "La galerie est pleine ; supprimez une photo avant d'en ajouter une nouvelle.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Rédigez une remarque pour refuser.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Type de fichier non pris en charge ; importez une image JPEG, PNG ou WebP."
 }
