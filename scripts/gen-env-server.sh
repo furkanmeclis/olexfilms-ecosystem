@@ -194,6 +194,15 @@ set_kv WUZAPI_WEBHOOK_SECRET "$(secret WUZAPI_WEBHOOK_SECRET hex 32)"
 set_kv WUZAPI_WEBHOOK_URL "$(keep WUZAPI_WEBHOOK_URL "http://backend.$NET:8080/hooks/wuzapi")"
 # AES-256 key, exactly 32 characters. Never rotated by this script.
 set_kv WUZAPI_GLOBAL_ENCRYPTION_KEY "$(stable WUZAPI_GLOBAL_ENCRYPTION_KEY 0 hex 16)"
+# --- AI assistant (Anthropic). The API key is entered by hand and kept on
+# re-run; empty = AI disabled (503 AI_UNAVAILABLE). ---
+set_kv ANTHROPIC_API_KEY "$(keep ANTHROPIC_API_KEY "")"
+set_kv ANTHROPIC_BASE_URL "$(keep ANTHROPIC_BASE_URL "")"
+set_kv AI_MODEL_DEFAULT "$(keep AI_MODEL_DEFAULT claude-sonnet-5-5)"
+set_kv AI_MODEL_FAST "$(keep AI_MODEL_FAST claude-haiku-4-5)"
+set_kv AI_ALLOWED_MODELS "$(keep AI_ALLOWED_MODELS claude-sonnet-5-5,claude-haiku-4-5)"
+set_kv AI_MAX_TOKENS "$(keep AI_MAX_TOKENS 8000)"
+set_kv AI_REQUEST_TIMEOUT "$(keep AI_REQUEST_TIMEOUT 120s)"
 # --- Queue: separate worker containers in production ---
 set_kv QUEUE_WORKER_INPROCESS false
 set_kv WORKER_QUEUES "$(keep WORKER_QUEUES critical,default,low)"
@@ -287,6 +296,7 @@ if [ "$ROTATE_ENC" = 1 ]; then
 fi
 [ -n "$(grep -E '^SMTP_HOST=.' "$OUT" || true)" ] || echo "  ! SMTP_HOST empty: e-mail notifications will not be sent"
 echo "  migrator legacy DSNs (LEGACY_*_DSN) stay empty unless set by hand."
+[ -n "$(grep -E '^ANTHROPIC_API_KEY=.' "$OUT" || true)" ] || echo "  ! ANTHROPIC_API_KEY empty: AI assistant disabled (503 AI_UNAVAILABLE)"
 echo
 echo "Traefik / Dokploy domains (only these two services are public):"
 echo "  $APP_DOMAIN  → service frontend,   port 3000  ($APP_URL)"

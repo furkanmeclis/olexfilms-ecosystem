@@ -40,6 +40,22 @@ type Config struct {
 	Glorian    GlorianConfig
 	ShortURLs  ShortURLsConfig
 	Leads      LeadsConfig
+	AI         AIConfig
+}
+
+// AIConfig is the LLM provider of the AI assistant (F4, platform/llm). The
+// API key lives only in env; empty disables the provider (503
+// AI_UNAVAILABLE). DefaultModel / FastModel back empty
+// ai_settings.default_model / fast_model; AllowedModels is the allow list
+// (empty = the two env models).
+type AIConfig struct {
+	APIKey         string
+	BaseURL        string
+	DefaultModel   string
+	FastModel      string
+	AllowedModels  []string
+	MaxTokens      int
+	RequestTimeout time.Duration
 }
 
 // LeadsConfig caps the public dealer application form
@@ -448,6 +464,15 @@ func Load() (Config, error) {
 			WriteTimeout:   getDuration("GLORIAN_INVENTORY_WRITE_TIMEOUT", 30*time.Second),
 			RetryBaseDelay: getDuration("GLORIAN_INVENTORY_RETRY_BASE_DELAY", 200*time.Millisecond),
 			MaxRetryAfter:  getDuration("GLORIAN_INVENTORY_MAX_RETRY_AFTER", 60*time.Second),
+		},
+		AI: AIConfig{
+			APIKey:         strings.TrimSpace(getEnv("ANTHROPIC_API_KEY", "")),
+			BaseURL:        getEnv("ANTHROPIC_BASE_URL", ""),
+			DefaultModel:   getEnv("AI_MODEL_DEFAULT", "claude-sonnet-5-5"),
+			FastModel:      getEnv("AI_MODEL_FAST", "claude-haiku-4-5"),
+			AllowedModels:  splitCSV(getEnv("AI_ALLOWED_MODELS", "")),
+			MaxTokens:      getInt("AI_MAX_TOKENS", 8000),
+			RequestTimeout: getDuration("AI_REQUEST_TIMEOUT", 120*time.Second),
 		},
 	}
 
