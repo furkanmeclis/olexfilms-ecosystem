@@ -151,4 +151,23 @@ describe("LandingView", () => {
       "لحماية مركبتك",
     );
   });
+
+  it("links the dealer application form only while it is open (TEC-320)", () => {
+    render("tr", "tr");
+    expect(
+      container.querySelector('[data-slot="dealer-application"]'),
+    ).toBeNull();
+    act(() =>
+      root.render(
+        createElement(LandingView, {
+          locale: "tr",
+          lang: "tr",
+          dealerApplicationOpen: true,
+        }),
+      ),
+    );
+    const link = container.querySelector('[data-slot="dealer-application"]');
+    expect(link?.getAttribute("href")).toBe("/bayi-basvuru?lang=tr");
+    expect(link?.textContent).toBe("Bayimiz olun");
+  });
 });

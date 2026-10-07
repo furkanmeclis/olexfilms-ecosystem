@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "Introduzca un número entero.",
   "system.labor.errors.percent_range": "El porcentaje debe estar entre 0 y 100.",
   "system.keys.contracts_intake_required": "Contrato de recepción obligatorio",
-  "system.keys.contracts_intake_required_hint": "Si está activado (y el módulo de contrato de recepción está habilitado), un servicio no puede pasar a proceso ni completarse hasta que su contrato de recepción esté firmado."
+  "system.keys.contracts_intake_required_hint": "Si está activado (y el módulo de contrato de recepción está habilitado), un servicio no puede pasar a proceso ni completarse hasta que su contrato de recepción esté firmado.",
+  "system.groups.leads": "Clientes potenciales",
+  "system.groups.leads_hint": "Embudo de oportunidades y formulario público de solicitud de distribuidor.",
+  "system.keys.leads_dealer_application_enabled": "Formulario de solicitud de distribuidor",
+  "system.keys.leads_dealer_application_enabled_hint": "Activado, el formulario público /bayi-basvuru está publicado y aparece en el mapa del sitio. Solo puede activarse mientras el módulo de oportunidades esté abierto en todo el sistema."
 }

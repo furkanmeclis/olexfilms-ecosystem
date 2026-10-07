@@ -5,9 +5,15 @@ import { i18nConfig, normalizeLocale } from "@/config/i18n";
 import { routes } from "@/config/routes";
 import { site } from "@/config/site";
 import { LandingView } from "@/features/landing/components/landing-view";
+import { fetchDealerApplicationConfig } from "@/features/public-leads/lib/dealer-application";
 import { loadMessages, translate } from "@/lib/i18n/messages";
 import { resolveRequestLocale } from "@/lib/i18n/request-locale";
 import { localeAlternates } from "@/lib/seo/sitemap";
+import {
+  clientIpFromHeaders,
+  fetchUpstream,
+  forwardedHostFromHeaders,
+} from "@/lib/server/upstream";
 
 /**
  * Public landing page (TEC-247). Language: `?lang=`, else the language
@@ -67,5 +73,20 @@ export async function generateMetadata({
 export default async function PublicHomePage({ searchParams }: PageProps) {
   const { locale, fromQuery } = await pageLocale(searchParams);
   if (locale !== i18nConfig.fallbackLocale) await loadMessages(locale);
-  return <LandingView locale={locale} lang={fromQuery ?? undefined} />;
+  const requestHeaders = await headers();
+  // TEC-320: the "become a dealer" link shows only while the form is open.
+  const application = await fetchDealerApplicationConfig(
+    {
+      clientIp: clientIpFromHeaders(requestHeaders),
+      forwardedHost: forwardedHostFromHeaders(requestHeaders),
+    },
+    fetchUpstream,
+  );
+  return (
+    <LandingView
+      locale={locale}
+      lang={fromQuery ?? undefined}
+      dealerApplicationOpen={application === "open"}
+    />
+  );
 }

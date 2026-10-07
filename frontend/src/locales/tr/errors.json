@@ -126,5 +126,6 @@
   "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "Ruloda istenen metreden az kaldı.",
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Rulo bu kuruluşun stokunda değil.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Rulo açık bir hizmette veya siparişte kullanılıyor.",
-  "codes.STOCK_SPLIT_KEY_CONFLICT": "Bu işlem anahtarı başka bir bölme için kullanıldı."
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Bu işlem anahtarı başka bir bölme için kullanıldı.",
+  "codes.LEADS_MODULE_DISABLED": "Lead modülü sistem genelinde kapalı; önce modülü açın."
 }

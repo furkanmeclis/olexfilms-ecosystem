@@ -355,6 +355,55 @@ describe("SystemSettingsPage (TEC-222)", () => {
     }
   });
 
+  it("toggles leads.dealer_application_enabled in the leads group (TEC-320)", async () => {
+    state.grants = new Set(rw);
+    const key = "leads.dealer_application_enabled";
+    const toggle = setting({
+      key,
+      group: "leads",
+      kind: "bool",
+      default: false,
+      value: false,
+      min: undefined,
+      max: undefined,
+    });
+    api.list.mockResolvedValue({ items: [...catalog, toggle] });
+    api.put.mockResolvedValue({ ...toggle, value: true, is_default: false });
+    await render();
+    const group = container.querySelector("[data-testid='group-leads']");
+    expect(
+      group?.querySelector(`[data-testid='setting-${key}']`),
+    ).not.toBeNull();
+    await click(row(key).querySelector<HTMLElement>("[role='switch']")!);
+    await click(button(key, "settings.system.save"));
+    expect(api.put).toHaveBeenCalledWith(key, true);
+
+    const dir = path.join(process.cwd(), "src/locales");
+    for (const locale of readdirSync(dir).filter((l) =>
+      existsSync(path.join(dir, l, "settings.json")),
+    )) {
+      const read = (ns: string) =>
+        JSON.parse(
+          readFileSync(path.join(dir, locale, `${ns}.json`), "utf8"),
+        ) as Record<string, string>;
+      const settings = read("settings");
+      expect(settings["system.groups.leads"], locale).toBeTruthy();
+      expect(
+        settings["system.keys.leads_dealer_application_enabled"],
+        locale,
+      ).toBeTruthy();
+      expect(
+        settings["system.keys.leads_dealer_application_enabled_hint"],
+        locale,
+      ).toBeTruthy();
+      // The 422 rule code of the switch has a readable message.
+      expect(
+        read("errors")["codes.LEADS_MODULE_DISABLED"],
+        locale,
+      ).toBeTruthy();
+    }
+  });
+
   it("masks a secret value and keeps it unless retyped", async () => {
     state.grants = new Set(rw);
     api.put.mockResolvedValue(catalog[4]);

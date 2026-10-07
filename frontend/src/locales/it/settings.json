@@ -133,5 +133,9 @@
   "system.labor.errors.percent_integer": "Inserisci un numero intero.",
   "system.labor.errors.percent_range": "La percentuale deve essere tra 0 e 100.",
   "system.keys.contracts_intake_required": "Contratto di accettazione obbligatorio",
-  "system.keys.contracts_intake_required_hint": "Se attivo (e il modulo del contratto di accettazione è abilitato), un servizio non può passare in lavorazione né essere completato finché il contratto di accettazione non è firmato."
+  "system.keys.contracts_intake_required_hint": "Se attivo (e il modulo del contratto di accettazione è abilitato), un servizio non può passare in lavorazione né essere completato finché il contratto di accettazione non è firmato.",
+  "system.groups.leads": "Contatti commerciali",
+  "system.groups.leads_hint": "Pipeline dei contatti e modulo pubblico di candidatura rivenditore.",
+  "system.keys.leads_dealer_application_enabled": "Modulo di candidatura rivenditore",
+  "system.keys.leads_dealer_application_enabled_hint": "Se attivo, il modulo pubblico /bayi-basvuru è online e incluso nella mappa del sito. Si può attivare solo mentre il modulo contatti è aperto in tutto il sistema."
 }

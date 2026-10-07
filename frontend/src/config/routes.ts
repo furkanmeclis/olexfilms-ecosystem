@@ -10,6 +10,10 @@ export const routes = {
     warranty: (no: string) => `/garanti/${encodeURIComponent(no)}`,
     /** TEC-250: public dealer showcase. */
     dealer: (code: string) => `/bayi/${encodeURIComponent(code)}`,
+    /** TEC-320: public read-only quote (TEC-315 token link). */
+    quote: (token: string) => `/teklif/${encodeURIComponent(token)}`,
+    /** TEC-320: public dealer application form (TEC-317). */
+    dealerApplication: "/bayi-basvuru",
   },
   tenant: {
     home: (slug: string) => `/t/${slug}`,

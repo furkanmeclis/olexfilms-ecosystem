@@ -126,5 +126,6 @@
   "codes.STOCK_SPLIT_INSUFFICIENT_METERS": "Sul rotolo restano meno metri di quelli richiesti.",
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Il rotolo non è nello stock di questa organizzazione.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Il rotolo è in un servizio o ordine aperto.",
-  "codes.STOCK_SPLIT_KEY_CONFLICT": "Questa chiave di idempotenza è stata usata per un'altra divisione."
+  "codes.STOCK_SPLIT_KEY_CONFLICT": "Questa chiave di idempotenza è stata usata per un'altra divisione.",
+  "codes.LEADS_MODULE_DISABLED": "Il modulo contatti è chiuso in tutto il sistema; attiva prima il modulo."
 }
