@@ -46,6 +46,118 @@ type ActivityEvent struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
+type AiConversation struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	UserID         int64              `json:"user_id"`
+	Channel        string             `json:"channel"`
+	Title          string             `json:"title"`
+	MessageCount   int32              `json:"message_count"`
+	LastMessageAt  pgtype.Timestamptz `json:"last_message_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type AiMessage struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	ConversationID   int64              `json:"conversation_id"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	Role             string             `json:"role"`
+	Status           string             `json:"status"`
+	Content          []byte             `json:"content"`
+	Ui               []byte             `json:"ui"`
+	Model            string             `json:"model"`
+	InputTokens      int64              `json:"input_tokens"`
+	OutputTokens     int64              `json:"output_tokens"`
+	CacheReadTokens  int64              `json:"cache_read_tokens"`
+	CacheWriteTokens int64              `json:"cache_write_tokens"`
+	Error            pgtype.Text        `json:"error"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AiOrgSetting struct {
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	Enabled           bool               `json:"enabled"`
+	MonthlyTokenQuota pgtype.Int8        `json:"monthly_token_quota"`
+	UpdatedByUserID   pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AiPendingAction struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	UserID         int64              `json:"user_id"`
+	Source         string             `json:"source"`
+	SourceRef      pgtype.Text        `json:"source_ref"`
+	ToolUseID      string             `json:"tool_use_id"`
+	ToolName       string             `json:"tool_name"`
+	Input          []byte             `json:"input"`
+	Preview        []byte             `json:"preview"`
+	Status         string             `json:"status"`
+	Result         []byte             `json:"result"`
+	Error          pgtype.Text        `json:"error"`
+	IdempotencyKey string             `json:"idempotency_key"`
+	ExpiresAt      pgtype.Timestamptz `json:"expires_at"`
+	ResolvedAt     pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AiSetting struct {
+	ID                       int16              `json:"id"`
+	DefaultModel             string             `json:"default_model"`
+	FastModel                string             `json:"fast_model"`
+	DefaultMonthlyTokenQuota int64              `json:"default_monthly_token_quota"`
+	SystemPoolMonthlyQuota   int64              `json:"system_pool_monthly_quota"`
+	ToolToggles              []byte             `json:"tool_toggles"`
+	ExtraInstructions        string             `json:"extra_instructions"`
+	KnowledgeText            string             `json:"knowledge_text"`
+	UpdatedByUserID          pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+}
+
+type AiUsage struct {
+	ID               int64              `json:"id"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	Pool             string             `json:"pool"`
+	UserID           pgtype.Int8        `json:"user_id"`
+	Channel          string             `json:"channel"`
+	Purpose          string             `json:"purpose"`
+	Model            string             `json:"model"`
+	InputTokens      int64              `json:"input_tokens"`
+	OutputTokens     int64              `json:"output_tokens"`
+	CacheReadTokens  int64              `json:"cache_read_tokens"`
+	CacheWriteTokens int64              `json:"cache_write_tokens"`
+	QuotaTokens      int64              `json:"quota_tokens"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
+type AiUsageMonthly struct {
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	Pool             string             `json:"pool"`
+	Period           string             `json:"period"`
+	QuotaTokens      int64              `json:"quota_tokens"`
+	InputTokens      int64              `json:"input_tokens"`
+	OutputTokens     int64              `json:"output_tokens"`
+	CacheReadTokens  int64              `json:"cache_read_tokens"`
+	CacheWriteTokens int64              `json:"cache_write_tokens"`
+	RequestCount     int64              `json:"request_count"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Announcement struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`

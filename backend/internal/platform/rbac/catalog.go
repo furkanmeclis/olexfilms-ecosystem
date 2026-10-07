@@ -587,6 +587,26 @@ var Permissions = []PermissionDef{
 		Scopes:      []Scope{ScopeManaged, ScopeAll},
 		Description: "Record salary, advance and bonus payments to staff.",
 	},
+
+	// TEC-383: AI assistant (F4-01). Appended last; migration 000101 seeds
+	// them.
+	{
+		Slug: PermAIUse, Name: "Use AI assistant", Module: "ai", Scopes: scopesSelf,
+		Description: "Chat with the AI assistant in the panel; own conversations only.",
+	},
+	{
+		Slug: PermAIUsageRead, Name: "Read AI usage", Module: "ai", Scopes: scopesTree,
+		Description: "Read AI token usage and quotas of the organizations in scope.",
+	},
+	{
+		Slug: PermAISettingsManage, Name: "Manage AI settings", Module: "ai",
+		Scopes: scopesAll, SuperAdminOnly: true,
+		Description: "Manage platform AI settings, models, quotas and the knowledge text.",
+	},
+	{
+		Slug: PermAIActionsConfirm, Name: "Confirm AI actions", Module: "ai", Scopes: scopesSelf,
+		Description: "Confirm or cancel write actions proposed by the AI assistant for oneself.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -721,6 +741,10 @@ var Roles = []RoleDef{
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:   ScopeBrand,
 			PermWarrantyClaimsDecide: ScopeBrand,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
+			PermAIUsageRead:      ScopeBrand,
 		}),
 	},
 	{
@@ -753,6 +777,9 @@ var Roles = []RoleDef{
 			// TEC-329 (000086).
 			PermAnnouncementsRead: ScopeManaged,
 			PermLibraryRead:       ScopeManaged,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
 		}),
 	},
 	{
@@ -782,6 +809,10 @@ var Roles = []RoleDef{
 			// TEC-329 (000086).
 			PermAnnouncementsRead: ScopeManaged,
 			PermLibraryRead:       ScopeManaged,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
+			PermAIUsageRead:      ScopeBrand,
 		}),
 	},
 	{
@@ -815,6 +846,9 @@ var Roles = []RoleDef{
 			PermAppointmentsWrite: ScopeManaged,
 			// TEC-350 (000091).
 			PermReviewsRead: ScopeBrand,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
 		}),
 	},
 	{
@@ -899,6 +933,10 @@ var Roles = []RoleDef{
 			PermWarrantyClaimsRead:   ScopeSubtree,
 			PermWarrantyClaimsWrite:  ScopeManaged,
 			PermWarrantyClaimsReview: ScopeSubtree,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
+			PermAIUsageRead:      ScopeManaged,
 		}),
 	},
 	{
@@ -939,6 +977,9 @@ var Roles = []RoleDef{
 			PermWarrantyClaimsRead:   ScopeSubtree,
 			PermWarrantyClaimsWrite:  ScopeManaged,
 			PermWarrantyClaimsReview: ScopeSubtree,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
 		}),
 	},
 	{
@@ -958,6 +999,9 @@ var Roles = []RoleDef{
 			// TEC-329 (000086).
 			PermAnnouncementsRead: ScopeManaged,
 			PermLibraryRead:       ScopeManaged,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
 		}),
 	},
 	{
@@ -980,6 +1024,9 @@ var Roles = []RoleDef{
 			// TEC-329 (000086).
 			PermAnnouncementsRead: ScopeManaged,
 			PermLibraryRead:       ScopeManaged,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
 		}),
 	},
 	{
@@ -1057,6 +1104,10 @@ var Roles = []RoleDef{
 			PermPurchasesWrite:     ScopeManaged,
 			PermStaffManage:        ScopeManaged,
 			PermStaffPaymentsWrite: ScopeManaged,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
+			PermAIUsageRead:      ScopeManaged,
 		}),
 	},
 	{
@@ -1097,6 +1148,9 @@ var Roles = []RoleDef{
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:  ScopeManaged,
 			PermWarrantyClaimsWrite: ScopeManaged,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
 		}),
 	},
 	{
@@ -1125,6 +1179,9 @@ var Roles = []RoleDef{
 			PermPurchasesWrite:     ScopeManaged,
 			PermStaffManage:        ScopeManaged,
 			PermStaffPaymentsWrite: ScopeManaged,
+			// TEC-383 (000101).
+			PermAIUse:            ScopeOwn,
+			PermAIActionsConfirm: ScopeOwn,
 		}),
 	},
 	{

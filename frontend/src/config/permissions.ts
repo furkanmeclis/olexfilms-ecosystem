@@ -178,6 +178,11 @@ export const Permission = {
   /** TEC-353: admin review questions and service review reports. */
   ReviewsQuestionsManage: "reviews.questions.manage",
   ReviewsRead: "reviews.read",
+  /** TEC-383: AI assistant (chat, usage report, platform settings, confirmations). */
+  AiUse: "ai.use",
+  AiUsageRead: "ai.usage.read",
+  AiSettingsManage: "ai.settings.manage",
+  AiActionsConfirm: "ai.actions.confirm",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
