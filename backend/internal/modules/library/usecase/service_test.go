@@ -25,7 +25,7 @@ func TestService_ListAndDownload_HidesCenterOnlyFromDealer(t *testing.T) {
 	version := store.seedVersion(centerOnly.ID, "tr", 1, "library/center.pdf")
 
 	dealer := Actor{UserID: 55, OrganizationID: 300, BrandID: 10, OrgType: OrgDealer, Roles: []string{"dealer_owner"}}
-	items, err := svc.ListItems(ctx, dealer, ListInput{Locale: "tr"})
+	items, _, err := svc.ListItems(ctx, dealer, ListInput{Locale: "tr"})
 	if err != nil {
 		t.Fatalf("ListItems() error = %v", err)
 	}
@@ -62,7 +62,7 @@ func TestService_AddVersion_ListReturnsLatestAndKeepsHistory(t *testing.T) {
 		t.Fatalf("versions = %d, %d; want 1, 2", v1.VersionNo, v2.VersionNo)
 	}
 
-	items, err := svc.ListItems(ctx, center, ListInput{Locale: "tr"})
+	items, _, err := svc.ListItems(ctx, center, ListInput{Locale: "tr"})
 	if err != nil {
 		t.Fatalf("ListItems() error = %v", err)
 	}
@@ -86,7 +86,7 @@ func TestService_ListItems_FallsBackToDefaultLocale(t *testing.T) {
 	tr := store.seedVersion(item.ID, "tr", 1, "library/price.pdf")
 	viewer := Actor{UserID: 7, OrganizationID: 200, BrandID: 10, OrgType: OrgDistributor, Roles: []string{"distributor_owner"}}
 
-	items, err := svc.ListItems(ctx, viewer, ListInput{Locale: "de"})
+	items, _, err := svc.ListItems(ctx, viewer, ListInput{Locale: "de"})
 	if err != nil {
 		t.Fatalf("ListItems() error = %v", err)
 	}
@@ -124,6 +124,37 @@ func TestService_DeleteFolder_RejectsNonEmptyFolder(t *testing.T) {
 	err := svc.DeleteFolder(ctx, center, folder.Uuid)
 	if !errors.Is(err, ErrFolderNotEmpty) {
 		t.Fatalf("DeleteFolder() error = %v, want ErrFolderNotEmpty", err)
+	}
+}
+
+func TestService_ListItems_DealerBrowsesCenterFolders(t *testing.T) {
+	ctx := context.Background()
+	store := newFakeStore()
+	svc := New(store, &fakeStorage{})
+	folder := store.seedFolder(10, 100)
+	inFolder := store.seedItem(0, 10, 100, AccessAllNetwork, []string{"guide"})
+	inFolder.FolderID = pgtype.Int8{Int64: folder.ID, Valid: true}
+	store.items[inFolder.Uuid] = inFolder
+	store.seedItem(0, 10, 100, AccessAllNetwork, []string{"price"})
+	dealer := Actor{UserID: 55, OrganizationID: 300, BrandID: 10, OrgType: OrgDealer, Roles: []string{"dealer_owner"}}
+
+	folders, err := svc.ListFolders(ctx, dealer)
+	if err != nil || len(folders) != 1 || folders[0].UUID != folder.Uuid {
+		t.Fatalf("ListFolders() = %+v, %v; want the center folder", folders, err)
+	}
+	items, total, err := svc.ListItems(ctx, dealer, ListInput{FolderUUID: &folder.Uuid, Tags: []string{"guide", "x"}})
+	if err != nil {
+		t.Fatalf("ListItems() error = %v", err)
+	}
+	if total != 1 || len(items) != 1 || items[0].UUID != inFolder.Uuid {
+		t.Fatalf("ListItems() = %+v (total %d), want the folder item", items, total)
+	}
+	if items[0].FolderUUID == nil || *items[0].FolderUUID != folder.Uuid {
+		t.Fatalf("folder_uuid = %v, want %s", items[0].FolderUUID, folder.Uuid)
+	}
+	other := uuid.New()
+	if _, _, err := svc.ListItems(ctx, dealer, ListInput{FolderUUID: &other}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("ListItems(unknown folder) error = %v, want ErrNotFound", err)
 	}
 }
 
@@ -183,6 +214,67 @@ func (f *fakeStore) GetLibraryFolderByUUID(_ context.Context, id uuid.UUID) (db.
 func (f *fakeStore) ListLibraryFolders(context.Context, int64) ([]db.LibraryFolder, error) {
 	return nil, nil
 }
+func (f *fakeStore) ListLibraryFoldersByBrand(_ context.Context, brandID int64) ([]db.LibraryFolder, error) {
+	var out []db.LibraryFolder
+	for _, row := range f.folders {
+		if row.BrandID == brandID {
+			out = append(out, row)
+		}
+	}
+	return out, nil
+}
+func (f *fakeStore) ListVisibleLibraryFolders(_ context.Context, arg db.ListVisibleLibraryFoldersParams) ([]db.LibraryFolder, error) {
+	byID := map[int64]db.LibraryFolder{}
+	for _, row := range f.folders {
+		if row.BrandID == arg.BrandID && !row.DeletedAt.Valid {
+			byID[row.ID] = row
+		}
+	}
+	keep := map[int64]bool{}
+	mark := func(id int64) {
+		for row, ok := byID[id]; ok && !keep[row.ID]; row, ok = byID[row.ParentID.Int64] {
+			keep[row.ID] = true
+			if !row.ParentID.Valid {
+				break
+			}
+		}
+	}
+	for _, row := range byID {
+		if row.OrganizationID == arg.OrganizationID {
+			mark(row.ID)
+		}
+	}
+	for _, item := range f.items {
+		if item.BrandID == arg.BrandID && item.FolderID.Valid && !item.DeletedAt.Valid &&
+			contains(arg.AccessLevels, item.AccessLevel) &&
+			(!item.RoleSlug.Valid || contains(arg.ViewerRoleSlugs, item.RoleSlug.String)) {
+			mark(item.FolderID.Int64)
+		}
+	}
+	var out []db.LibraryFolder
+	for _, row := range f.folders {
+		if keep[row.ID] {
+			out = append(out, row)
+		}
+	}
+	return out, nil
+}
+func (f *fakeStore) CountLibraryItems(ctx context.Context, arg db.CountLibraryItemsParams) (int64, error) {
+	rows, err := f.ListLibraryItems(ctx, db.ListLibraryItemsParams{
+		BrandID: arg.BrandID, AccessLevels: arg.AccessLevels, ViewerRoleSlugs: arg.ViewerRoleSlugs,
+		FolderID: arg.FolderID, Tags: arg.Tags,
+	})
+	return int64(len(rows)), err
+}
+
+func anyContains(values, needles []string) bool {
+	for _, n := range needles {
+		if contains(values, n) {
+			return true
+		}
+	}
+	return false
+}
 func (f *fakeStore) UpdateLibraryFolder(context.Context, db.UpdateLibraryFolderParams) (db.LibraryFolder, error) {
 	return db.LibraryFolder{}, nil
 }
@@ -230,7 +322,7 @@ func (f *fakeStore) ListLibraryItems(_ context.Context, arg db.ListLibraryItemsP
 		if arg.FolderID.Valid && (!item.FolderID.Valid || item.FolderID.Int64 != arg.FolderID.Int64) {
 			continue
 		}
-		if arg.Tag.Valid && !contains(item.Tags, arg.Tag.String) {
+		if len(arg.Tags) > 0 && !anyContains(item.Tags, arg.Tags) {
 			continue
 		}
 		out = append(out, item)

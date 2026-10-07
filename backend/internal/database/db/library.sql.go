@@ -12,6 +12,61 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countLibraryItems = `-- name: CountLibraryItems :one
+SELECT COUNT(*)::bigint FROM library_items
+WHERE brand_id = $1::bigint
+  AND deleted_at IS NULL
+  AND access_level = ANY($2::text[])
+  AND (role_slug IS NULL OR role_slug = ANY($3::text[]))
+  AND ($4::bigint IS NULL OR folder_id = $4::bigint)
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR tags && $5::text[])
+  AND (
+      COALESCE(cardinality($6::text[]), 0) = 0
+      OR access_level = ANY($6::text[])
+  )
+  AND ($7::timestamptz IS NULL OR updated_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR updated_at < $8::timestamptz)
+  AND (
+      $9::text IS NULL
+      OR name ILIKE ('%' || $9::text || '%')
+      OR COALESCE(description, '') ILIKE ('%' || $9::text || '%')
+      OR EXISTS (
+          SELECT 1 FROM unnest(tags) AS tag_value
+          WHERE tag_value ILIKE ('%' || $9::text || '%')
+      )
+  )
+`
+
+type CountLibraryItemsParams struct {
+	BrandID         int64              `json:"brand_id"`
+	AccessLevels    []string           `json:"access_levels"`
+	ViewerRoleSlugs []string           `json:"viewer_role_slugs"`
+	FolderID        pgtype.Int8        `json:"folder_id"`
+	Tags            []string           `json:"tags"`
+	AccessFilter    []string           `json:"access_filter"`
+	UpdatedFrom     pgtype.Timestamptz `json:"updated_from"`
+	UpdatedBefore   pgtype.Timestamptz `json:"updated_before"`
+	Q               pgtype.Text        `json:"q"`
+}
+
+// Same filter block as ListLibraryItems.
+func (q *Queries) CountLibraryItems(ctx context.Context, arg CountLibraryItemsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countLibraryItems,
+		arg.BrandID,
+		arg.AccessLevels,
+		arg.ViewerRoleSlugs,
+		arg.FolderID,
+		arg.Tags,
+		arg.AccessFilter,
+		arg.UpdatedFrom,
+		arg.UpdatedBefore,
+		arg.Q,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createLibraryFolder = `-- name: CreateLibraryFolder :one
 
 INSERT INTO library_folders (organization_id, brand_id, parent_id, name, sort_order, created_by_user_id)
@@ -339,6 +394,46 @@ func (q *Queries) ListLibraryFolders(ctx context.Context, organizationID int64) 
 	return items, nil
 }
 
+const listLibraryFoldersByBrand = `-- name: ListLibraryFoldersByBrand :many
+SELECT id, uuid, organization_id, brand_id, parent_id, name, sort_order, created_by_user_id, created_at, updated_at, deleted_at FROM library_folders
+WHERE brand_id = $1 AND deleted_at IS NULL
+ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id
+`
+
+// Center reader view: the brand's whole folder tree (other organizations
+// use ListVisibleLibraryFolders).
+func (q *Queries) ListLibraryFoldersByBrand(ctx context.Context, brandID int64) ([]LibraryFolder, error) {
+	rows, err := q.db.Query(ctx, listLibraryFoldersByBrand, brandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LibraryFolder{}
+	for rows.Next() {
+		var i LibraryFolder
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ParentID,
+			&i.Name,
+			&i.SortOrder,
+			&i.CreatedByUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLibraryItemVersions = `-- name: ListLibraryItemVersions :many
 SELECT id, uuid, item_id, locale, version_no, storage_key, mime, size_bytes, sha256, uploaded_by_user_id, created_at FROM library_item_versions
 WHERE item_id = $1
@@ -384,44 +479,76 @@ WHERE brand_id = $1::bigint
   AND access_level = ANY($2::text[])
   AND (role_slug IS NULL OR role_slug = ANY($3::text[]))
   AND ($4::bigint IS NULL OR folder_id = $4::bigint)
-  AND ($5::text IS NULL OR tags @> ARRAY[$5::text])
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR tags && $5::text[])
   AND (
-      $6::text IS NULL
-      OR name ILIKE ('%' || $6::text || '%')
-      OR COALESCE(description, '') ILIKE ('%' || $6::text || '%')
+      COALESCE(cardinality($6::text[]), 0) = 0
+      OR access_level = ANY($6::text[])
+  )
+  AND ($7::timestamptz IS NULL OR updated_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR updated_at < $8::timestamptz)
+  AND (
+      $9::text IS NULL
+      OR name ILIKE ('%' || $9::text || '%')
+      OR COALESCE(description, '') ILIKE ('%' || $9::text || '%')
       OR EXISTS (
           SELECT 1 FROM unnest(tags) AS tag_value
-          WHERE tag_value ILIKE ('%' || $6::text || '%')
+          WHERE tag_value ILIKE ('%' || $9::text || '%')
       )
   )
-ORDER BY lower(name), id
-LIMIT $8 OFFSET $7
+ORDER BY
+  CASE WHEN NOT $10::bool THEN
+    CASE $11::text WHEN 'name' THEN lower(name) WHEN 'access_level' THEN access_level END
+  END ASC,
+  CASE WHEN $10::bool THEN
+    CASE $11::text WHEN 'name' THEN lower(name) WHEN 'access_level' THEN access_level END
+  END DESC,
+  CASE WHEN NOT $10::bool THEN
+    CASE $11::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END ASC,
+  CASE WHEN $10::bool THEN
+    CASE $11::text WHEN 'created_at' THEN created_at WHEN 'updated_at' THEN updated_at END
+  END DESC,
+  CASE WHEN $10::bool THEN id END DESC,
+  id ASC
+LIMIT $13 OFFSET $12
 `
 
 type ListLibraryItemsParams struct {
-	BrandID         int64       `json:"brand_id"`
-	AccessLevels    []string    `json:"access_levels"`
-	ViewerRoleSlugs []string    `json:"viewer_role_slugs"`
-	FolderID        pgtype.Int8 `json:"folder_id"`
-	Tag             pgtype.Text `json:"tag"`
-	Q               pgtype.Text `json:"q"`
-	PageOffset      int32       `json:"page_offset"`
-	PageLimit       int32       `json:"page_limit"`
+	BrandID         int64              `json:"brand_id"`
+	AccessLevels    []string           `json:"access_levels"`
+	ViewerRoleSlugs []string           `json:"viewer_role_slugs"`
+	FolderID        pgtype.Int8        `json:"folder_id"`
+	Tags            []string           `json:"tags"`
+	AccessFilter    []string           `json:"access_filter"`
+	UpdatedFrom     pgtype.Timestamptz `json:"updated_from"`
+	UpdatedBefore   pgtype.Timestamptz `json:"updated_before"`
+	Q               pgtype.Text        `json:"q"`
+	SortDesc        bool               `json:"sort_desc"`
+	SortKey         string             `json:"sort_key"`
+	PageOffset      int32              `json:"page_offset"`
+	PageLimit       int32              `json:"page_limit"`
 }
 
 // Reader view in a brand. access_levels are the levels the viewer
 // organization may see (center: all four; distributor: all_network and
 // distributors; dealer: all_network and dealers); an item with a role_slug
 // is shown only to viewers holding that role. folder_id NULL lists every
-// folder; tag filters on one tag.
+// folder; tags matches items carrying any of the given tags; access_filter
+// narrows the visible levels. Sort: docs/list-contract.md, keys from
+// usecase.ItemsSortSpec.
 func (q *Queries) ListLibraryItems(ctx context.Context, arg ListLibraryItemsParams) ([]LibraryItem, error) {
 	rows, err := q.db.Query(ctx, listLibraryItems,
 		arg.BrandID,
 		arg.AccessLevels,
 		arg.ViewerRoleSlugs,
 		arg.FolderID,
-		arg.Tag,
+		arg.Tags,
+		arg.AccessFilter,
+		arg.UpdatedFrom,
+		arg.UpdatedBefore,
 		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.PageOffset,
 		arg.PageLimit,
 	)
@@ -443,6 +570,83 @@ func (q *Queries) ListLibraryItems(ctx context.Context, arg ListLibraryItemsPara
 			&i.Tags,
 			&i.AccessLevel,
 			&i.RoleSlug,
+			&i.CreatedByUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listVisibleLibraryFolders = `-- name: ListVisibleLibraryFolders :many
+WITH RECURSIVE visible AS (
+    SELECT f.id, f.parent_id
+    FROM library_folders f
+    WHERE f.brand_id = $1::bigint
+      AND f.deleted_at IS NULL
+      AND (
+          f.organization_id = $2::bigint
+          OR EXISTS (
+              SELECT 1 FROM library_items i
+              WHERE i.folder_id = f.id
+                AND i.brand_id = $1::bigint
+                AND i.deleted_at IS NULL
+                AND i.access_level = ANY($3::text[])
+                AND (i.role_slug IS NULL OR i.role_slug = ANY($4::text[]))
+          )
+      )
+    UNION
+    SELECT p.id, p.parent_id
+    FROM library_folders p
+    JOIN visible v ON p.id = v.parent_id
+    WHERE p.brand_id = $1::bigint AND p.deleted_at IS NULL
+)
+SELECT library_folders.id, library_folders.uuid, library_folders.organization_id, library_folders.brand_id, library_folders.parent_id, library_folders.name, library_folders.sort_order, library_folders.created_by_user_id, library_folders.created_at, library_folders.updated_at, library_folders.deleted_at FROM library_folders
+WHERE id IN (SELECT visible.id FROM visible)
+ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id
+`
+
+type ListVisibleLibraryFoldersParams struct {
+	BrandID         int64    `json:"brand_id"`
+	OrganizationID  int64    `json:"organization_id"`
+	AccessLevels    []string `json:"access_levels"`
+	ViewerRoleSlugs []string `json:"viewer_role_slugs"`
+}
+
+// Reader view of a non-center organization: a brand folder is listed only
+// if it (or a descendant folder) holds an item the viewer may see (same
+// access_levels / viewer_role_slugs rule as ListLibraryItems), plus the
+// ancestors needed to reach it. The viewer organization's own folders stay
+// listed.
+func (q *Queries) ListVisibleLibraryFolders(ctx context.Context, arg ListVisibleLibraryFoldersParams) ([]LibraryFolder, error) {
+	rows, err := q.db.Query(ctx, listVisibleLibraryFolders,
+		arg.BrandID,
+		arg.OrganizationID,
+		arg.AccessLevels,
+		arg.ViewerRoleSlugs,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LibraryFolder{}
+	for rows.Next() {
+		var i LibraryFolder
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ParentID,
+			&i.Name,
+			&i.SortOrder,
 			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,

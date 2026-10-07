@@ -151,6 +151,8 @@ type Querier interface {
 	CountLeadsByOrganizations(ctx context.Context, arg CountLeadsByOrganizationsParams) (int64, error)
 	CountLeadsInScope(ctx context.Context, arg CountLeadsInScopeParams) (int64, error)
 	CountLegacyMessagesByChannel(ctx context.Context, brandID int64) ([]CountLegacyMessagesByChannelRow, error)
+	// Same filter block as ListLibraryItems.
+	CountLibraryItems(ctx context.Context, arg CountLibraryItemsParams) (int64, error)
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
@@ -1364,12 +1366,17 @@ type Querier interface {
 	ListLegacyMessagesByUser(ctx context.Context, arg ListLegacyMessagesByUserParams) ([]ListLegacyMessagesByUserRow, error)
 	ListLegalTextVersions(ctx context.Context, arg ListLegalTextVersionsParams) ([]LegalText, error)
 	ListLibraryFolders(ctx context.Context, organizationID int64) ([]LibraryFolder, error)
+	// Center reader view: the brand's whole folder tree (other organizations
+	// use ListVisibleLibraryFolders).
+	ListLibraryFoldersByBrand(ctx context.Context, brandID int64) ([]LibraryFolder, error)
 	ListLibraryItemVersions(ctx context.Context, itemID int64) ([]LibraryItemVersion, error)
 	// Reader view in a brand. access_levels are the levels the viewer
 	// organization may see (center: all four; distributor: all_network and
 	// distributors; dealer: all_network and dealers); an item with a role_slug
 	// is shown only to viewers holding that role. folder_id NULL lists every
-	// folder; tag filters on one tag.
+	// folder; tags matches items carrying any of the given tags; access_filter
+	// narrows the visible levels. Sort: docs/list-contract.md, keys from
+	// usecase.ItemsSortSpec.
 	ListLibraryItems(ctx context.Context, arg ListLibraryItemsParams) ([]LibraryItem, error)
 	// A location and everything below it.
 	ListLocationSubtreeIDs(ctx context.Context, arg ListLocationSubtreeIDsParams) ([]int64, error)
@@ -1791,6 +1798,12 @@ type Querier interface {
 	// organization. locale picks the translation, falling back to the default
 	// text.
 	ListVisibleAnnouncements(ctx context.Context, arg ListVisibleAnnouncementsParams) ([]ListVisibleAnnouncementsRow, error)
+	// Reader view of a non-center organization: a brand folder is listed only
+	// if it (or a descendant folder) holds an item the viewer may see (same
+	// access_levels / viewer_role_slugs rule as ListLibraryItems), plus the
+	// ancestors needed to reach it. The viewer organization's own folders stay
+	// listed.
+	ListVisibleLibraryFolders(ctx context.Context, arg ListVisibleLibraryFoldersParams) ([]LibraryFolder, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
 	// ---------------------------------------------------------------------------

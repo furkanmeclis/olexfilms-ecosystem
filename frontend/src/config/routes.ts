@@ -129,6 +129,10 @@ export const routes = {
     announcements: {
       list: (slug: string) => `/t/${slug}/announcements`,
     },
+    /** TEC-333 document library: folders, items, language versions. */
+    library: {
+      list: (slug: string) => `/t/${slug}/library`,
+    },
     /** TEC-318 lead pipeline: list, new, detail + timeline. */
     leads: {
       list: (slug: string) => `/t/${slug}/leads`,

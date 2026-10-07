@@ -21890,6 +21890,7 @@ paths:
       tags: [Library]
       operationId: listLibraryFolders
       summary: List document library folders
+      description: The center sees the brand's folder tree; other organizations see only folders holding (directly or below) an item they may read, their ancestors and their own folders.
       responses:
         "200":
           description: Folders
@@ -21968,25 +21969,33 @@ paths:
       tags: [Library]
       operationId: listLibraryItems
       summary: List visible document library items
+      description: |
+        `q` matches name, description and tags. `sort` name, access_level,
+        created_at, updated_at; default `name`, id tiebreak, unknown → 400
+        (docs/list-contract.md). `latest_version` is the newest version in
+        `locale` (falls back to tr, then any language).
       parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - name: folder
           in: query
+          description: Folder readable by the viewer (direct items only); a folder hidden from the viewer is 404.
           schema: { type: string, format: uuid }
         - name: tag
           in: query
+          description: Comma-separated tags; items carrying any of them.
           schema: { type: string }
-        - name: q
+        - name: access_level
           in: query
+          description: Comma-separated access levels (all_network, distributors, dealers, center_only). Unknown value → 400.
           schema: { type: string }
+        - { name: updated_from, in: query, description: "updated_at lower bound (YYYY-MM-DD or RFC3339)", schema: { type: string } }
+        - { name: updated_to, in: query, description: "updated_at upper bound (a date includes the whole day)", schema: { type: string } }
         - name: locale
           in: query
           schema: { type: string, example: de }
-        - name: limit
-          in: query
-          schema: { type: integer, default: 50, maximum: 100 }
-        - name: offset
-          in: query
-          schema: { type: integer, default: 0, minimum: 0 }
       responses:
         "200":
           description: Items visible to the active organization and roles
@@ -21994,6 +22003,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeLibraryItemList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -33732,11 +33743,14 @@ components:
         success: { type: boolean, enum: [true] }
         data:
           type: object
-          required: [items]
+          required: [items, total, limit, offset]
           properties:
             items:
               type: array
               items: { $ref: "#/components/schemas/LibraryItem" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeLibraryVersion:
