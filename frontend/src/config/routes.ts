@@ -175,6 +175,8 @@ export const routes = {
     },
     /** TEC-390: AI assistant full page (the header opens it as a sheet). */
     assistant: (slug: string) => `/t/${slug}/assistant`,
+    /** TEC-403: pending MCP / WhatsApp AI actions (Go mcp.ApprovalsPath). */
+    assistantApprovals: (slug: string) => `/t/${slug}/assistant/approvals`,
     /** TEC-318 lead pipeline: list, new, detail + timeline. */
     leads: {
       list: (slug: string) => `/t/${slug}/leads`,
@@ -302,6 +304,8 @@ export const routes = {
       glorian: "/platform/integrations/glorian",
     },
     legalTexts: "/platform/legal-texts",
+    /** TEC-403: registered MCP (OAuth) clients. */
+    mcpClients: "/platform/mcp-clients",
     conversations: {
       root: "/platform/conversations",
       detail: (uuid: string) =>

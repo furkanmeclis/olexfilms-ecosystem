@@ -33,6 +33,7 @@ import layout from "./layout.json";
 import leads from "./leads.json";
 import library from "./library.json";
 import logs from "./logs.json";
+import mcp from "./mcp.json";
 import measurements from "./measurements.json";
 import modules from "./modules.json";
 import notifications from "./notifications.json";
@@ -92,6 +93,7 @@ const catalog: LocaleCatalog = {
   leads,
   library,
   logs,
+  mcp,
   measurements,
   modules,
   notifications,

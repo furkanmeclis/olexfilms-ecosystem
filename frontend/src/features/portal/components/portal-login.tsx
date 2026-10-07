@@ -53,8 +53,14 @@ const ERROR_KEYS: Record<string, string> = {
   INVALID_MFA_CODE: "portal.errors.invalid_mfa",
 };
 
-/** Only same-site portal paths are followed after sign-in. */
+/**
+ * Only same-site portal paths are followed after sign-in, plus the MCP
+ * OAuth consent screen (TEC-403) a customer signs in for.
+ */
 export function safePortalNext(next: string | null): string {
+  if (next?.startsWith("/oauth/consent?") && !next.includes("//")) {
+    return next;
+  }
   if (!next || !next.startsWith("/portal") || next.startsWith("//")) {
     return routes.portal.home;
   }
