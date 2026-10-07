@@ -51,6 +51,7 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/leads/{uuid}/events", route(h.Events))
 	mux.Handle("POST /v1/leads/{uuid}/task", route(h.CreateTask, write))
 	mux.Handle("POST /v1/leads/{uuid}/quotes", route(h.CreateQuote, quoteWrite))
+	mux.Handle("GET /v1/leads/{uuid}/quotes", quoteRoute(h.ListLeadQuotes))
 	mux.Handle("GET /v1/quotes/{uuid}", quoteRoute(h.GetQuote))
 	mux.Handle("POST /v1/quotes/{uuid}/send", quoteRoute(h.SendQuote, quoteWrite))
 	mux.Handle("POST /v1/quotes/{uuid}/remind", quoteRoute(h.RemindQuote, quoteWrite))

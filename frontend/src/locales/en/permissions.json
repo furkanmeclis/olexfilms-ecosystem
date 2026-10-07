@@ -199,5 +199,9 @@
   "labels.library.manage": "Manage the document library",
   "groups.announcements": "Announcements",
   "groups.library": "Document library",
-  "labels.warranty_claims.read": "Read warranty claims"
+  "labels.warranty_claims.read": "Read warranty claims",
+  "labels.leads.convert_org": "Convert lead to organization",
+  "labels.quotes.read": "View quotes",
+  "labels.quotes.write": "Manage quotes",
+  "groups.quotes": "Quotes"
 }

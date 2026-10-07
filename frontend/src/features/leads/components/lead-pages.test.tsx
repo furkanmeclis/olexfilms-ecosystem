@@ -232,6 +232,27 @@ describe("LeadDetailPage", () => {
     });
   });
 
+  it("opens the conversion dialog instead of setting won directly", async () => {
+    state.grants = new Set([permissions.leads.read, permissions.leads.write]);
+    api.get.mockResolvedValue(lead());
+    await render(createElement(LeadDetailPage, { slug: "olex", uuid: "l-1" }));
+
+    await click("[data-testid=lead-convert-open]");
+    expect(api.setStatus).not.toHaveBeenCalled();
+    expect(
+      document.querySelector("[data-testid=lead-convert-dialog]"),
+    ).not.toBeNull();
+  });
+
+  it("disables the conversion for an already won lead", async () => {
+    state.grants = new Set([permissions.leads.read, permissions.leads.write]);
+    api.get.mockResolvedValue(lead({ status: "won" }));
+    await render(createElement(LeadDetailPage, { slug: "olex", uuid: "l-1" }));
+    expect(
+      q<HTMLButtonElement>("[data-testid=lead-convert-open]")!.disabled,
+    ).toBe(true);
+  });
+
   it("hides task creation outside the center", async () => {
     state.orgType = "dealer";
     state.grants = new Set([permissions.leads.read, permissions.leads.write]);

@@ -242,6 +242,16 @@ func TestIntegrationF3DealerApplication(t *testing.T) {
 		t.Fatalf("quote = %+v, want override catalog service line", quote)
 	}
 
+	// TEC-319: the lead's quotes for the panel "Teklifler" tab.
+	code, env = it.do("GET", "/v1/leads/"+lead.Uuid.String()+"/quotes", hostOlex, distTok, nil)
+	leadQuotes := f3Decode[struct {
+		Items []f3QuoteView `json:"items"`
+		Total int64         `json:"total"`
+	}](t, code, env, http.StatusOK)
+	if leadQuotes.Total != 1 || len(leadQuotes.Items) != 1 || leadQuotes.Items[0].UUID != quote.UUID || leadQuotes.Items[0].GrandTotal != overridePrice {
+		t.Fatalf("lead quotes = %+v", leadQuotes)
+	}
+
 	code, env = it.do("POST", "/v1/quotes/"+quote.UUID.String()+"/send", hostOlex, distTok, nil)
 	sent := f3Decode[f3QuoteSent](t, code, env, http.StatusOK)
 	if sent.Quote.Status != "sent" || sent.PublicURL == "" {

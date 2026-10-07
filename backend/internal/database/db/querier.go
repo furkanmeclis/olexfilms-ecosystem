@@ -1383,7 +1383,12 @@ type Querier interface {
 	// time, falling back to the upload time).
 	ListMeasurementMatchCandidates(ctx context.Context, arg ListMeasurementMatchCandidatesParams) ([]ListMeasurementMatchCandidatesRow, error)
 	// org_ids NULL means the whole brand (brand/all scopes); an empty set
-	// (customer scope) matches nothing.
+	// (customer scope) matches nothing. TEC-299: statuses / device_uuids are
+	// multi-value filters, q searches the VIN, the vehicle plate and the device
+	// serial (an escaped LIKE term), and the sort keys come from
+	// measurements usecase.ListSort (docs/list-contract.md). The vehicle is the
+	// result's own, else the linked service's (as GetMeasurementPDFContext);
+	// service_measurements is unique per result so no join duplicates a row.
 	ListMeasurementResultsPanel(ctx context.Context, arg ListMeasurementResultsPanelParams) ([]ListMeasurementResultsPanelRow, error)
 	ListMeasurementTires(ctx context.Context, arg ListMeasurementTiresParams) ([]MeasurementTire, error)
 	ListMeasurementValues(ctx context.Context, arg ListMeasurementValuesParams) ([]MeasurementValue, error)

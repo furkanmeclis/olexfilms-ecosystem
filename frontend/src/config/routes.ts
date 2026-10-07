@@ -109,6 +109,12 @@ export const routes = {
       list: (slug: string) => `/t/${slug}/vehicles`,
       detail: (slug: string, uuid: string) => `/t/${slug}/vehicles/${uuid}`,
     },
+    /** TEC-299 measurements: list, detail (part map, VIN, PDF), devices. */
+    measurements: {
+      list: (slug: string) => `/t/${slug}/measurements`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/measurements/${uuid}`,
+      devices: (slug: string) => `/t/${slug}/measurements/devices`,
+    },
     /** TEC-221 center tasks: list, new, detail (edit, status, comments). */
     tasks: {
       list: (slug: string) => `/t/${slug}/tasks`,

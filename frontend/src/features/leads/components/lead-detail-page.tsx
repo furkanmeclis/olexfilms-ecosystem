@@ -20,23 +20,28 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { LeadConvertDialog } from "@/features/leads/components/lead-convert-dialog";
 import {
   LeadFields,
   leadInputClass,
 } from "@/features/leads/components/lead-fields";
+import { LeadQuotesTab } from "@/features/leads/components/lead-quotes-tab";
 import {
   LEAD_STATUSES,
   leadFormOf,
   leadName,
+  leadTargetTypesFor,
   leadStatusTone,
   leadTemperatureTone,
   patchBody,
   validateLeadForm,
   type LeadFormValues,
 } from "@/features/leads/lib/leads";
+import { leadConverted } from "@/features/leads/lib/quotes";
 import {
   leadKeys,
   leadsService,
@@ -245,7 +250,13 @@ function TaskCard({ uuid, show }: { uuid: string; show: boolean }) {
   );
 }
 
-function EditCard({ lead }: { lead: Lead }) {
+function EditCard({
+  lead,
+  orgType,
+}: {
+  lead: Lead;
+  orgType: string | undefined;
+}) {
   const { t } = useLocale();
   const qc = useQueryClient();
   const [values, setValues] = useState<LeadFormValues>(() => leadFormOf(lead));
@@ -280,6 +291,7 @@ function EditCard({ lead }: { lead: Lead }) {
       <CardContent>
         <form className="space-y-6" onSubmit={onSubmit} noValidate>
           <LeadFields
+            targetTypes={leadTargetTypesFor(orgType)}
             values={values}
             errors={errors}
             disabled={update.isPending}
@@ -306,10 +318,14 @@ export function LeadDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
   const orgType = useAuthStore(
     (s) => s.user?.organizations.find((o) => o.slug === slug)?.type,
   );
+  const isSuperAdmin = useAuthStore((s) => Boolean(s.user?.isSuperAdmin));
   const qc = useQueryClient();
   const canRead = can(permissions.leads.read);
   const canWrite = can(permissions.leads.write);
+  const canQuotes = can(permissions.quotes.read);
+  const canConvertOrg = can(permissions.leads.convertOrg);
   const center = orgType === "center";
+  const [convertOpen, setConvertOpen] = useState(false);
   const [lostOpen, setLostOpen] = useState(false);
   const [lostReason, setLostReason] = useState("");
   const [lostError, setLostError] = useState("");
@@ -395,6 +411,11 @@ export function LeadDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
   }
 
   const changeStatus = (status: LeadStatus) => {
+    // Won goes through the conversion (TEC-316): it sets the status.
+    if (status === "won") {
+      setConvertOpen(true);
+      return;
+    }
     if (status === "lost") {
       setLostOpen(true);
       return;
@@ -454,10 +475,19 @@ export function LeadDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
                   size="sm"
                   variant={status === "lost" ? "destructive" : "outline"}
                   data-status={status}
-                  disabled={setStatus.isPending || status === lead.status}
+                  data-testid={
+                    status === "won" ? "lead-convert-open" : undefined
+                  }
+                  disabled={
+                    setStatus.isPending ||
+                    status === lead.status ||
+                    (status === "won" && leadConverted(lead))
+                  }
                   onClick={() => changeStatus(status)}
                 >
-                  {t(`leads.action.${status}`)}
+                  {status === "won"
+                    ? t("leads.convert.open")
+                    : t(`leads.action.${status}`)}
                 </Button>
               ))}
             </div>
@@ -533,10 +563,40 @@ export function LeadDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
         </Card>
       ) : null}
 
-      {canWrite ? <EditCard lead={lead} /> : null}
-      <NoteCard uuid={lead.uuid} canWrite={canWrite} />
-      <TaskCard uuid={lead.uuid} show={canWrite && center} />
-      <Timeline uuid={lead.uuid} />
+      {canWrite ? (
+        <LeadConvertDialog
+          key={convertOpen ? "open" : "closed"}
+          lead={lead}
+          slug={slug}
+          ctx={{ orgType, isSuperAdmin, canConvertOrg }}
+          open={convertOpen}
+          onOpenChange={setConvertOpen}
+        />
+      ) : null}
+
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview" data-testid="lead-tab-overview">
+            {t("leads.detail.tab_overview")}
+          </TabsTrigger>
+          {canQuotes ? (
+            <TabsTrigger value="quotes" data-testid="lead-tab-quotes">
+              {t("leads.quotes.title")}
+            </TabsTrigger>
+          ) : null}
+        </TabsList>
+        <TabsContent value="overview" className="space-y-6">
+          {canWrite ? <EditCard lead={lead} orgType={orgType} /> : null}
+          <NoteCard uuid={lead.uuid} canWrite={canWrite} />
+          <TaskCard uuid={lead.uuid} show={canWrite && center} />
+          <Timeline uuid={lead.uuid} />
+        </TabsContent>
+        {canQuotes ? (
+          <TabsContent value="quotes">
+            <LeadQuotesTab leadUuid={lead.uuid} />
+          </TabsContent>
+        ) : null}
+      </Tabs>
     </div>
   );
 }

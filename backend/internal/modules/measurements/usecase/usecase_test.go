@@ -12,6 +12,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -28,6 +29,7 @@ type fakeStore struct {
 	// skipFind makes the pre-insert lookup miss, as a concurrent upload
 	// that inserts between the lookup and the insert would.
 	skipFind int
+	listArgs []db.ListMeasurementResultsPanelParams
 }
 
 func (f *fakeStore) ListMeasurementDevices(_ context.Context, organizationID int64) ([]db.MeasurementDevice, error) {
@@ -76,7 +78,8 @@ func (f *fakeStore) UpdateMeasurementDevice(_ context.Context, a db.UpdateMeasur
 	return db.MeasurementDevice{}, pgx.ErrNoRows
 }
 
-func (f *fakeStore) ListMeasurementResultsPanel(_ context.Context, _ db.ListMeasurementResultsPanelParams) ([]db.ListMeasurementResultsPanelRow, error) {
+func (f *fakeStore) ListMeasurementResultsPanel(_ context.Context, arg db.ListMeasurementResultsPanelParams) ([]db.ListMeasurementResultsPanelRow, error) {
+	f.listArgs = append(f.listArgs, arg)
 	return nil, nil
 }
 
@@ -315,5 +318,40 @@ func TestInactiveDeviceIsListed(t *testing.T) {
 	}
 	if len(got) != 1 || got[0].UUID != created.UUID || got[0].IsActive {
 		t.Fatalf("devices = %+v", got)
+	}
+}
+
+// TEC-299: the list filter reaches the query as the contract arguments.
+func TestListMeasurementsArgs(t *testing.T) {
+	st := &fakeStore{}
+	s := New(st)
+	if _, _, err := s.ListMeasurements(context.Background(), panelCaller, MeasurementFilter{Q: " 50%_x ", Limit: 20}); err != nil {
+		t.Fatal(err)
+	}
+	got := st.listArgs[0]
+	if got.SortKey != "measured_at" || !got.SortDesc || got.Q.String != `50\%\_x` || !got.Q.Valid || got.Statuses != nil {
+		t.Fatalf("args = %+v", got)
+	}
+	d := uuid.New()
+	if _, _, err := s.ListMeasurements(context.Background(), panelCaller, MeasurementFilter{
+		Statuses: []string{StatusAccepted, StatusVINPending}, DeviceUUIDs: []uuid.UUID{d},
+		Sort: apiquery.ResolvedSort{Key: "plate"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got = st.listArgs[1]
+	if got.SortKey != "plate" || got.SortDesc || got.Q.Valid || len(got.Statuses) != 2 || len(got.DeviceUuids) != 1 || got.DeviceUuids[0] != d {
+		t.Fatalf("args = %+v", got)
+	}
+
+	var ve *ValidationError
+	if _, _, err := s.ListMeasurements(context.Background(), panelCaller, MeasurementFilter{Statuses: []string{"done"}}); !errors.As(err, &ve) || ve.Field != "status" {
+		t.Fatalf("bad status err = %v", err)
+	}
+	if _, _, err := s.ListMeasurements(context.Background(), panelCaller, MeasurementFilter{Sort: apiquery.ResolvedSort{Key: "id; drop"}}); !errors.As(err, &ve) || ve.Field != "sort" {
+		t.Fatalf("bad sort err = %v", err)
+	}
+	if len(st.listArgs) != 2 {
+		t.Fatalf("invalid filters reached the store")
 	}
 }

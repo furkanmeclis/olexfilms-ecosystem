@@ -199,5 +199,9 @@
   "labels.library.manage": "Dokumentenbibliothek verwalten",
   "groups.announcements": "Ankündigungen",
   "groups.library": "Dokumentenbibliothek",
-  "labels.warranty_claims.read": "Garantieansprüche anzeigen"
+  "labels.warranty_claims.read": "Garantieansprüche anzeigen",
+  "labels.leads.convert_org": "Lead in Organisation umwandeln",
+  "labels.quotes.read": "Angebote anzeigen",
+  "labels.quotes.write": "Angebote verwalten",
+  "groups.quotes": "Angebote"
 }

@@ -28,6 +28,7 @@ import landing from "./landing.json";
 import layout from "./layout.json";
 import leads from "./leads.json";
 import logs from "./logs.json";
+import measurements from "./measurements.json";
 import modules from "./modules.json";
 import notifications from "./notifications.json";
 import orders from "./orders.json";
@@ -80,6 +81,7 @@ const catalog: LocaleCatalog = {
   layout,
   leads,
   logs,
+  measurements,
   modules,
   notifications,
   orders,

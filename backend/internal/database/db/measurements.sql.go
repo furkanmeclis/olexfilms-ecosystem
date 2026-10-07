@@ -427,11 +427,14 @@ SELECT
     s.uuid AS service_uuid,
     s.service_no AS service_no,
     o.uuid AS organization_uuid,
-    o.name AS organization_name
+    o.name AS organization_name,
+    v.plate AS vehicle_plate
 FROM measurement_results mr
 LEFT JOIN measurement_devices md ON md.id = mr.device_id
 LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
 LEFT JOIN services s ON s.id = sm.service_id
+LEFT JOIN services vs ON vs.id = COALESCE(sm.service_id, mr.service_id)
+LEFT JOIN vehicles v ON v.id = COALESCE(mr.vehicle_id, vs.vehicle_id)
 LEFT JOIN organizations o ON o.id = mr.organization_id
 WHERE mr.uuid = $1
   AND mr.brand_id = $2
@@ -478,6 +481,7 @@ type GetMeasurementResultPanelRow struct {
 	ServiceNo            pgtype.Text        `json:"service_no"`
 	OrganizationUuid     pgtype.UUID        `json:"organization_uuid"`
 	OrganizationName     pgtype.Text        `json:"organization_name"`
+	VehiclePlate         pgtype.Text        `json:"vehicle_plate"`
 }
 
 func (q *Queries) GetMeasurementResultPanel(ctx context.Context, arg GetMeasurementResultPanelParams) (GetMeasurementResultPanelRow, error) {
@@ -517,6 +521,7 @@ func (q *Queries) GetMeasurementResultPanel(ctx context.Context, arg GetMeasurem
 		&i.ServiceNo,
 		&i.OrganizationUuid,
 		&i.OrganizationName,
+		&i.VehiclePlate,
 	)
 	return i, err
 }
@@ -1055,33 +1060,68 @@ SELECT
     s.service_no AS service_no,
     o.uuid AS organization_uuid,
     o.name AS organization_name,
+    v.plate AS vehicle_plate,
     count(*) OVER() AS total_count
 FROM measurement_results mr
 LEFT JOIN measurement_devices md ON md.id = mr.device_id
 LEFT JOIN service_measurements sm ON sm.measurement_result_id = mr.id
 LEFT JOIN services s ON s.id = sm.service_id
+LEFT JOIN services vs ON vs.id = COALESCE(sm.service_id, mr.service_id)
+LEFT JOIN vehicles v ON v.id = COALESCE(mr.vehicle_id, vs.vehicle_id)
 LEFT JOIN organizations o ON o.id = mr.organization_id
 WHERE mr.brand_id = $1
   AND ($2::bigint[] IS NULL OR mr.organization_id = ANY($2::bigint[]))
   AND ($3::varchar IS NULL OR mr.vin = $3::varchar)
-  AND ($4::uuid IS NULL OR md.uuid = $4::uuid)
-  AND ($5::varchar IS NULL OR mr.status = $5::varchar)
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0 OR md.uuid = ANY($4::uuid[]))
+  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR mr.status = ANY($5::text[]))
   AND ($6::boolean IS NULL OR (sm.id IS NOT NULL) = $6::boolean)
   AND ($7::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) >= $7::timestamptz)
   AND ($8::timestamptz IS NULL OR COALESCE(mr.measured_at, mr.created_at) < $8::timestamptz)
-ORDER BY COALESCE(mr.measured_at, mr.created_at) DESC, mr.id DESC
-LIMIT $10 OFFSET $9
+  AND ($9::text IS NULL
+       OR mr.vin ILIKE '%' || $9::text || '%'
+       OR v.plate ILIKE '%' || $9::text || '%'
+       OR COALESCE(md.serial, mr.device_serial) ILIKE '%' || $9::text || '%')
+ORDER BY
+  -- time columns (NOT NULL)
+  CASE WHEN NOT $10::bool THEN
+    CASE $11::text
+      WHEN 'measured_at' THEN COALESCE(mr.measured_at, mr.created_at)
+      WHEN 'created_at' THEN mr.created_at
+    END
+  END ASC,
+  CASE WHEN $10::bool THEN
+    CASE $11::text
+      WHEN 'measured_at' THEN COALESCE(mr.measured_at, mr.created_at)
+      WHEN 'created_at' THEN mr.created_at
+    END
+  END DESC,
+  -- status (NOT NULL)
+  CASE WHEN NOT $10::bool AND $11::text = 'status' THEN mr.status::text END ASC,
+  CASE WHEN $10::bool AND $11::text = 'status' THEN mr.status::text END DESC,
+  -- nullable text columns: blanks last in both directions
+  CASE WHEN NOT $10::bool THEN
+    CASE $11::text WHEN 'vin' THEN mr.vin::text WHEN 'plate' THEN v.plate::text END
+  END ASC NULLS LAST,
+  CASE WHEN $10::bool THEN
+    CASE $11::text WHEN 'vin' THEN mr.vin::text WHEN 'plate' THEN v.plate::text END
+  END DESC NULLS LAST,
+  CASE WHEN $10::bool THEN mr.id END DESC,
+  mr.id ASC
+LIMIT $13 OFFSET $12
 `
 
 type ListMeasurementResultsPanelParams struct {
 	BrandID      int64              `json:"brand_id"`
 	OrgIds       []int64            `json:"org_ids"`
 	Vin          pgtype.Text        `json:"vin"`
-	DeviceUuid   pgtype.UUID        `json:"device_uuid"`
-	Status       pgtype.Text        `json:"status"`
+	DeviceUuids  []uuid.UUID        `json:"device_uuids"`
+	Statuses     []string           `json:"statuses"`
 	Linked       pgtype.Bool        `json:"linked"`
 	MeasuredFrom pgtype.Timestamptz `json:"measured_from"`
 	MeasuredTo   pgtype.Timestamptz `json:"measured_to"`
+	Q            pgtype.Text        `json:"q"`
+	SortDesc     bool               `json:"sort_desc"`
+	SortKey      string             `json:"sort_key"`
 	OffsetCount  int32              `json:"offset_count"`
 	LimitCount   int32              `json:"limit_count"`
 }
@@ -1120,21 +1160,30 @@ type ListMeasurementResultsPanelRow struct {
 	ServiceNo            pgtype.Text        `json:"service_no"`
 	OrganizationUuid     pgtype.UUID        `json:"organization_uuid"`
 	OrganizationName     pgtype.Text        `json:"organization_name"`
+	VehiclePlate         pgtype.Text        `json:"vehicle_plate"`
 	TotalCount           int64              `json:"total_count"`
 }
 
 // org_ids NULL means the whole brand (brand/all scopes); an empty set
-// (customer scope) matches nothing.
+// (customer scope) matches nothing. TEC-299: statuses / device_uuids are
+// multi-value filters, q searches the VIN, the vehicle plate and the device
+// serial (an escaped LIKE term), and the sort keys come from
+// measurements usecase.ListSort (docs/list-contract.md). The vehicle is the
+// result's own, else the linked service's (as GetMeasurementPDFContext);
+// service_measurements is unique per result so no join duplicates a row.
 func (q *Queries) ListMeasurementResultsPanel(ctx context.Context, arg ListMeasurementResultsPanelParams) ([]ListMeasurementResultsPanelRow, error) {
 	rows, err := q.db.Query(ctx, listMeasurementResultsPanel,
 		arg.BrandID,
 		arg.OrgIds,
 		arg.Vin,
-		arg.DeviceUuid,
-		arg.Status,
+		arg.DeviceUuids,
+		arg.Statuses,
 		arg.Linked,
 		arg.MeasuredFrom,
 		arg.MeasuredTo,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)
@@ -1179,6 +1228,7 @@ func (q *Queries) ListMeasurementResultsPanel(ctx context.Context, arg ListMeasu
 			&i.ServiceNo,
 			&i.OrganizationUuid,
 			&i.OrganizationName,
+			&i.VehiclePlate,
 			&i.TotalCount,
 		); err != nil {
 			return nil, err

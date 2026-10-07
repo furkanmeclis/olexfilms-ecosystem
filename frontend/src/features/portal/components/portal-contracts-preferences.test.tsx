@@ -27,6 +27,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 vi.mock("sonner", () => ({ toast: toasts }));
+vi.mock("@/hooks/use-mobile", () => ({
+  useIsMobile: () => false,
+  useIsXl: () => true,
+}));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     locale: "en",
@@ -100,7 +104,7 @@ async function click(el: Element | null) {
   await flush();
 }
 
-function contract(): PortalContract {
+function contract(over: Partial<PortalContract> = {}): PortalContract {
   return {
     contract_uuid: "c-1",
     contract_no: 1001,
@@ -116,43 +120,76 @@ function contract(): PortalContract {
     executed_at: "2026-05-01T11:00:00Z",
     pdf_ready: true,
     created_at: "2026-05-01T10:00:00Z",
+    ...over,
   };
 }
 
+function page(items: PortalContract[]) {
+  return { items, total: items.length, limit: 20, offset: 0 };
+}
+
 describe("PortalContracts", () => {
-  it("shows the empty state when the user has no contract", async () => {
-    portal.listContracts.mockResolvedValue({
-      items: [],
-      total: 0,
-      limit: 20,
-      offset: 0,
-    });
+  it("shows the neutral empty state when the user has no contract", async () => {
+    portal.listContracts.mockResolvedValue(page([]));
     await render(createElement(PortalContracts));
     expect(portal.listContracts).toHaveBeenCalledWith(20, 0);
     const empty = container.querySelector(
       '[data-testid="portal-contracts-empty"]',
     );
     expect(empty?.textContent).toContain("portal.contracts.empty_title");
-    expect(empty?.textContent).toContain("portal.contracts.empty_description");
-    expect(container.querySelector('[data-testid="portal-contract"]')).toBe(
+    expect(empty?.textContent).toContain("portal.contracts.empty_hint");
+    expect(empty?.textContent).not.toContain(
+      "portal.contracts.empty_description",
+    );
+    expect(container.querySelector('[data-testid="portal-contracts"]')).toBe(
       null,
     );
   });
 
-  it("lists a contract with a link to its service", async () => {
-    portal.listContracts.mockResolvedValue({
-      items: [contract()],
-      total: 1,
-      limit: 20,
-      offset: 0,
-    });
+  it("lists a contract with its number, vehicle, dealer, date and PDF link", async () => {
+    portal.listContracts.mockResolvedValue(page([contract()]));
     await render(createElement(PortalContracts));
-    const rows = container.querySelectorAll('[data-testid="portal-contract"]');
-    expect(rows).toHaveLength(1);
-    expect(rows[0].textContent).toContain("SRV-0001");
-    expect(rows[0].querySelector("a")?.getAttribute("href")).toBe(
-      "/portal/services/s-1",
+    const table = container.querySelector('[data-testid="portal-contracts"]');
+    expect(table).not.toBe(null);
+    const no = table?.querySelectorAll('[data-testid="portal-contract-no"]');
+    expect(no).toHaveLength(1);
+    expect(no?.[0].textContent).toBe("#1001");
+    const text = table?.textContent ?? "";
+    expect(text).toContain("BMW 320i (2021)");
+    expect(text).toContain("34 ABC 123");
+    expect(text).toContain("Bayi Kadıköy");
+    expect(text).toContain("date(2026-05-01T11:00:00Z)");
+    expect(
+      table
+        ?.querySelector('[data-testid="portal-contract-service"]')
+        ?.getAttribute("href"),
+    ).toBe("/portal/services/s-1");
+    const pdf = table?.querySelector('[data-testid="portal-contract-pdf"]');
+    expect(pdf?.getAttribute("href")).toBe(
+      "/api/portal/v1/portal/contracts/c-1/pdf",
     );
+    expect(pdf?.textContent).toContain("portal.contracts.download_pdf");
+    expect(
+      table?.querySelector('[data-testid="portal-contract-pdf-pending"]'),
+    ).toBe(null);
+  });
+
+  it("disables the PDF button while the PDF is being prepared", async () => {
+    portal.listContracts.mockResolvedValue(
+      page([contract({ pdf_ready: false, executed_at: null })]),
+    );
+    await render(createElement(PortalContracts));
+    expect(container.querySelector('[data-testid="portal-contract-pdf"]')).toBe(
+      null,
+    );
+    const pending = container.querySelector(
+      '[data-testid="portal-contract-pdf-pending"]',
+    );
+    expect(pending).toBeInstanceOf(HTMLButtonElement);
+    expect((pending as HTMLButtonElement).disabled).toBe(true);
+    expect(pending?.textContent).toContain("portal.contracts.pdf_preparing");
+    // No execution time yet: the record date stands in for the signing date.
+    expect(container.textContent).toContain("date(2026-05-01T10:00:00Z)");
   });
 });
 

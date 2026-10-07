@@ -231,13 +231,6 @@ func textPtr(v *string) pgtype.Text {
 	return text(*v)
 }
 
-func uuidPtr(v *uuid.UUID) pgtype.UUID {
-	if v == nil {
-		return pgtype.UUID{}
-	}
-	return pgtype.UUID{Bytes: *v, Valid: true}
-}
-
 func timePtr(v *time.Time) pgtype.Timestamptz {
 	if v == nil {
 		return pgtype.Timestamptz{}

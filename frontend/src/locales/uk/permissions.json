@@ -199,5 +199,9 @@
   "labels.library.manage": "Керувати бібліотекою документів",
   "groups.announcements": "Оголошення",
   "groups.library": "Бібліотека документів",
-  "labels.warranty_claims.read": "Перегляд гарантійних претензій"
+  "labels.warranty_claims.read": "Перегляд гарантійних претензій",
+  "labels.leads.convert_org": "Конвертувати лід в організацію",
+  "labels.quotes.read": "Перегляд пропозицій",
+  "labels.quotes.write": "Керування пропозиціями",
+  "groups.quotes": "Пропозиції"
 }
