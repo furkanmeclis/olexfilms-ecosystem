@@ -54,5 +54,15 @@
   "short_link.not_found_body": "Belə keçid mövcud deyil. Tam kopyalandığını yoxlayın.",
   "short_link.error_title": "Keçidi açmaq mümkün olmadı",
   "short_link.error_body": "Nəsə səhv getdi. Bir azdan yenidən cəhd edin.",
-  "short_link.home": "Ana səhifəyə keç"
+  "short_link.home": "Ana səhifəyə keç",
+  "campaign_unsubscribe.page_title": "Abunəlikdən çıx",
+  "campaign_unsubscribe.title": "Kampaniya mesajlarından çıxmaq istəyirsiniz?",
+  "campaign_unsubscribe.body": "Təsdiq etsəniz, sizə artıq kampaniya, endirim və elan mesajları (WhatsApp, push bildirişi, e-poçt) göndərilməyəcək. Xidmət, görüş və zəmanət bildirişlərinə təsir etmir.",
+  "campaign_unsubscribe.confirm": "Abunəlikdən çıx",
+  "campaign_unsubscribe.done_title": "Abunəlikdən çıxdınız",
+  "campaign_unsubscribe.done_body": "Bundan sonra kampaniya mesajları almayacaqsınız.",
+  "campaign_unsubscribe.invalid_title": "Keçid etibarsızdır",
+  "campaign_unsubscribe.invalid_body": "Bu abunəlik keçidi etibarlı deyil. Keçidi tam köçürdüyünüzə əmin olun.",
+  "campaign_unsubscribe.error": "Problem yarandı. Bir az sonra yenidən cəhd edin.",
+  "campaign_unsubscribe.home": "Ana səhifəyə keç"
 }

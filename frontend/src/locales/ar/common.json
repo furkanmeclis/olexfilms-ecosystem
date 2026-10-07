@@ -58,5 +58,15 @@
   "short_link.not_found_body": "هذا الرابط غير موجود. تحقق من نسخه بالكامل.",
   "short_link.error_title": "تعذر فتح الرابط",
   "short_link.error_body": "حدث خطأ ما. يرجى المحاولة مرة أخرى بعد قليل.",
-  "short_link.home": "الانتقال إلى الصفحة الرئيسية"
+  "short_link.home": "الانتقال إلى الصفحة الرئيسية",
+  "campaign_unsubscribe.page_title": "إلغاء الاشتراك",
+  "campaign_unsubscribe.title": "هل تريد إلغاء الاشتراك في رسائل الحملات؟",
+  "campaign_unsubscribe.body": "إذا أكدت، فلن نرسل إليك بعد الآن الحملات والخصومات والإعلانات (واتساب، الإشعارات الفورية، البريد الإلكتروني). لا تتأثر إشعارات الخدمة والمواعيد والضمان.",
+  "campaign_unsubscribe.confirm": "إلغاء الاشتراك",
+  "campaign_unsubscribe.done_title": "تم إلغاء اشتراكك",
+  "campaign_unsubscribe.done_body": "لن تتلقى رسائل الحملات بعد الآن.",
+  "campaign_unsubscribe.invalid_title": "رابط غير صالح",
+  "campaign_unsubscribe.invalid_body": "رابط إلغاء الاشتراك هذا غير صالح. تأكد من نسخ الرابط كاملاً.",
+  "campaign_unsubscribe.error": "حدثت مشكلة. يُرجى المحاولة مرة أخرى بعد قليل.",
+  "campaign_unsubscribe.home": "الانتقال إلى الصفحة الرئيسية"
 }

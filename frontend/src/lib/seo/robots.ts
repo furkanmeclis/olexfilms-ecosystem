@@ -12,4 +12,6 @@ export const ROBOTS_DISALLOW = [
   "/profile",
   "/share/",
   "/teklif/",
+  // TEC-407: campaign e-mail unsubscribe links carry a signed token.
+  "/abonelik-iptal/",
 ] as const;

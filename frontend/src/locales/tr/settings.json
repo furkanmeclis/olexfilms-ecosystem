@@ -147,5 +147,13 @@
   "system.keys.whatsapp_ai_staff_pause_minutes": "Personel mesajından sonra yapay zekâ beklemesi (dakika)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "Bir personel konuşmaya bu süre içinde yazdıysa yapay zekâ yanıt vermez; 0 = bekleme yok.",
   "system.keys.whatsapp_ai_guidelines_url": "Yapay zekâ yönerge bağlantısı",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp onay sorusunda gönderilen yönerge bağlantısı (https); boşsa yönerge metni mesajın içinde gönderilir."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp onay sorusunda gönderilen yönerge bağlantısı (https); boşsa yönerge metni mesajın içinde gönderilir.",
+  "system.groups.campaigns": "Kampanyalar",
+  "system.groups.campaigns_hint": "Kampanya gönderiminin WhatsApp hızı ve sessiz saatleri.",
+  "system.keys.campaigns_whatsapp_per_minute": "Dakikada kampanya WhatsApp mesajı",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Tüm alıcılar için dakikada gönderilen kampanya WhatsApp mesajı; fazlası sırada bekler.",
+  "system.keys.campaigns_quiet_hours_start": "Sessiz saat başlangıcı",
+  "system.keys.campaigns_quiet_hours_start_hint": "Alıcının saat diliminde bu saatten itibaren kampanya WhatsApp mesajları bekletilir (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Sessiz saat bitişi",
+  "system.keys.campaigns_quiet_hours_end_hint": "Bekleyen mesajlar alıcının saatiyle bu saatte gönderilir; başlangıçla aynıysa sessiz saat kapalıdır (0–23)."
 }

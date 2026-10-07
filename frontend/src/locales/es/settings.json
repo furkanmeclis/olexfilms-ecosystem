@@ -147,5 +147,13 @@
   "system.keys.whatsapp_ai_staff_pause_minutes": "Pausa de la IA tras un mensaje del personal (minutos)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "La IA no responde en una conversación en la que un empleado escribió dentro de este plazo; 0 = sin pausa.",
   "system.keys.whatsapp_ai_guidelines_url": "Enlace a las normas de uso de la IA",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "Enlace (https) a las normas que se envía con la pregunta de consentimiento de WhatsApp; vacío = el texto de las normas se envía en el mensaje."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Enlace (https) a las normas que se envía con la pregunta de consentimiento de WhatsApp; vacío = el texto de las normas se envía en el mensaje.",
+  "system.groups.campaigns": "Campañas",
+  "system.groups.campaigns_hint": "Ritmo de WhatsApp y horas de silencio del envío de campañas.",
+  "system.keys.campaigns_whatsapp_per_minute": "Mensajes de WhatsApp de campaña por minuto",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Mensajes de WhatsApp de campaña enviados por minuto entre todos los destinatarios; los demás esperan en la cola.",
+  "system.keys.campaigns_quiet_hours_start": "Inicio de las horas de silencio",
+  "system.keys.campaigns_quiet_hours_start_hint": "Desde esta hora en la zona horaria del destinatario, los mensajes de WhatsApp de campaña quedan en espera (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Fin de las horas de silencio",
+  "system.keys.campaigns_quiet_hours_end_hint": "Los mensajes en espera salen a esta hora en la zona horaria del destinatario; si coincide con el inicio, no hay horas de silencio (0–23)."
 }

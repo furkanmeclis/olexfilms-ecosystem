@@ -21,6 +21,7 @@ describe("robots (TEC-251)", () => {
       "/profile",
       "/share/",
       "/teklif/",
+      "/abonelik-iptal/",
     ]);
   });
 

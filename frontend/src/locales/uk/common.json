@@ -56,5 +56,15 @@
   "short_link.not_found_body": "Такого посилання не існує. Перевірте, що його скопійовано повністю.",
   "short_link.error_title": "Не вдалося відкрити посилання",
   "short_link.error_body": "Щось пішло не так. Спробуйте ще раз за хвилину.",
-  "short_link.home": "На головну"
+  "short_link.home": "На головну",
+  "campaign_unsubscribe.page_title": "Відписатися",
+  "campaign_unsubscribe.title": "Відписатися від повідомлень про акції?",
+  "campaign_unsubscribe.body": "Якщо ви підтвердите, ми більше не надсилатимемо вам акції, знижки та оголошення (WhatsApp, push-сповіщення, електронна пошта). Сповіщення про послуги, записи та гарантії залишаться.",
+  "campaign_unsubscribe.confirm": "Відписатися",
+  "campaign_unsubscribe.done_title": "Ви відписалися",
+  "campaign_unsubscribe.done_body": "Ви більше не отримуватимете повідомлень про акції.",
+  "campaign_unsubscribe.invalid_title": "Недійсне посилання",
+  "campaign_unsubscribe.invalid_body": "Це посилання для відписки недійсне. Переконайтеся, що скопіювали посилання повністю.",
+  "campaign_unsubscribe.error": "Сталася помилка. Спробуйте ще раз трохи згодом.",
+  "campaign_unsubscribe.home": "На головну сторінку"
 }

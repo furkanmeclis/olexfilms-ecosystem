@@ -54,5 +54,15 @@
   "short_link.not_found_body": "Αυτός ο σύνδεσμος δεν υπάρχει. Ελέγξτε ότι αντιγράφηκε ολόκληρος.",
   "short_link.error_title": "Δεν ήταν δυνατό να ανοίξει ο σύνδεσμος",
   "short_link.error_body": "Κάτι πήγε στραβά. Δοκιμάστε ξανά σε λίγο.",
-  "short_link.home": "Μετάβαση στην αρχική σελίδα"
+  "short_link.home": "Μετάβαση στην αρχική σελίδα",
+  "campaign_unsubscribe.page_title": "Απεγγραφή",
+  "campaign_unsubscribe.title": "Θέλετε να διαγραφείτε από τα μηνύματα προωθητικών ενεργειών;",
+  "campaign_unsubscribe.body": "Αν επιβεβαιώσετε, δεν θα σας στέλνουμε πλέον προσφορές, εκπτώσεις και ανακοινώσεις (WhatsApp, ειδοποιήσεις push, email). Οι ειδοποιήσεις για υπηρεσίες, ραντεβού και εγγυήσεις δεν επηρεάζονται.",
+  "campaign_unsubscribe.confirm": "Απεγγραφή",
+  "campaign_unsubscribe.done_title": "Η απεγγραφή ολοκληρώθηκε",
+  "campaign_unsubscribe.done_body": "Δεν θα λαμβάνετε πλέον μηνύματα προωθητικών ενεργειών.",
+  "campaign_unsubscribe.invalid_title": "Μη έγκυρος σύνδεσμος",
+  "campaign_unsubscribe.invalid_body": "Αυτός ο σύνδεσμος απεγγραφής δεν είναι έγκυρος. Βεβαιωθείτε ότι αντιγράψατε ολόκληρο τον σύνδεσμο.",
+  "campaign_unsubscribe.error": "Παρουσιάστηκε πρόβλημα. Δοκιμάστε ξανά σε λίγο.",
+  "campaign_unsubscribe.home": "Μετάβαση στην αρχική σελίδα"
 }

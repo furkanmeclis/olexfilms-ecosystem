@@ -147,5 +147,13 @@
   "system.keys.whatsapp_ai_staff_pause_minutes": "Пауза на AI след съобщение от служител (минути)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "AI не отговаря в разговор, в който служител е писал през това време; 0 = без пауза.",
   "system.keys.whatsapp_ai_guidelines_url": "Връзка към правилата за AI",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "Връзка (https) към правилата, изпращана с въпроса за съгласие в WhatsApp; празно = текстът на правилата се изпраща в съобщението."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Връзка (https) към правилата, изпращана с въпроса за съгласие в WhatsApp; празно = текстът на правилата се изпраща в съобщението.",
+  "system.groups.campaigns": "Кампании",
+  "system.groups.campaigns_hint": "Скорост на WhatsApp и тихи часове при изпращане на кампании.",
+  "system.keys.campaigns_whatsapp_per_minute": "WhatsApp съобщения от кампании на минута",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Брой WhatsApp съобщения от кампании на минута за всички получатели; останалите изчакват на опашка.",
+  "system.keys.campaigns_quiet_hours_start": "Начало на тихите часове",
+  "system.keys.campaigns_quiet_hours_start_hint": "От този час в часовата зона на получателя WhatsApp съобщенията от кампании изчакват (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Край на тихите часове",
+  "system.keys.campaigns_quiet_hours_end_hint": "Изчакващите съобщения се изпращат в този час по часовата зона на получателя; ако е равен на началото, тихите часове са изключени (0–23)."
 }

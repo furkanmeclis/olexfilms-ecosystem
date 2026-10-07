@@ -147,5 +147,13 @@
   "system.keys.whatsapp_ai_staff_pause_minutes": "Pause de l'IA après un message d'un collaborateur (minutes)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "L'IA ne répond pas dans une conversation où un collaborateur a écrit pendant ce délai ; 0 = aucune pause.",
   "system.keys.whatsapp_ai_guidelines_url": "Lien vers les règles d'utilisation de l'IA",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "Lien (https) vers les règles envoyé avec la demande de consentement WhatsApp ; vide = le texte des règles est envoyé dans le message."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Lien (https) vers les règles envoyé avec la demande de consentement WhatsApp ; vide = le texte des règles est envoyé dans le message.",
+  "system.groups.campaigns": "Campagnes",
+  "system.groups.campaigns_hint": "Débit WhatsApp et heures calmes de l'envoi des campagnes.",
+  "system.keys.campaigns_whatsapp_per_minute": "Messages WhatsApp de campagne par minute",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Messages WhatsApp de campagne envoyés par minute pour tous les destinataires ; les suivants attendent dans la file.",
+  "system.keys.campaigns_quiet_hours_start": "Début des heures calmes",
+  "system.keys.campaigns_quiet_hours_start_hint": "À partir de cette heure dans le fuseau du destinataire, les messages WhatsApp de campagne sont retenus (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Fin des heures calmes",
+  "system.keys.campaigns_quiet_hours_end_hint": "Les messages retenus partent à cette heure dans le fuseau du destinataire ; une valeur égale au début désactive les heures calmes (0–23)."
 }

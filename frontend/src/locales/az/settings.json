@@ -147,5 +147,13 @@
   "system.keys.whatsapp_ai_staff_pause_minutes": "İşçi mesajından sonra süni intellekt fasiləsi (dəqiqə)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "İşçi bu müddət ərzində söhbətə yazıbsa, süni intellekt cavab vermir; 0 = fasilə yoxdur.",
   "system.keys.whatsapp_ai_guidelines_url": "Süni intellekt qaydaları linki",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp razılıq sualı ilə göndərilən qaydalar linki (https); boşdursa, qaydaların mətni mesajda göndərilir."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp razılıq sualı ilə göndərilən qaydalar linki (https); boşdursa, qaydaların mətni mesajda göndərilir.",
+  "system.groups.campaigns": "Kampaniyalar",
+  "system.groups.campaigns_hint": "Kampaniya göndərişinin WhatsApp sürəti və sakit saatları.",
+  "system.keys.campaigns_whatsapp_per_minute": "Dəqiqədə kampaniya WhatsApp mesajı",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Bütün alıcılar üçün dəqiqədə göndərilən kampaniya WhatsApp mesajları; artığı növbədə gözləyir.",
+  "system.keys.campaigns_quiet_hours_start": "Sakit saatların başlanğıcı",
+  "system.keys.campaigns_quiet_hours_start_hint": "Alıcının saat qurşağında bu saatdan etibarən kampaniya WhatsApp mesajları gözlədilir (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Sakit saatların sonu",
+  "system.keys.campaigns_quiet_hours_end_hint": "Gözləyən mesajlar alıcının saatı ilə bu saatda göndərilir; başlanğıcla eyni olarsa sakit saatlar söndürülür (0–23)."
 }

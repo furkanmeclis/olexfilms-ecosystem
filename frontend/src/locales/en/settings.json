@@ -147,5 +147,13 @@
   "system.keys.whatsapp_ai_staff_pause_minutes": "AI pause after a staff message (minutes)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "The AI does not answer a conversation a staff member wrote in within this time; 0 = no pause.",
   "system.keys.whatsapp_ai_guidelines_url": "AI guidelines link",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "Guidelines link (https) sent with the WhatsApp consent question; empty = the guidelines text is sent in the message."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Guidelines link (https) sent with the WhatsApp consent question; empty = the guidelines text is sent in the message.",
+  "system.groups.campaigns": "Campaigns",
+  "system.groups.campaigns_hint": "WhatsApp rate and quiet hours of campaign sending.",
+  "system.keys.campaigns_whatsapp_per_minute": "Campaign WhatsApp messages per minute",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Campaign WhatsApp messages sent per minute over all recipients; further messages wait in the queue.",
+  "system.keys.campaigns_quiet_hours_start": "Quiet hours start",
+  "system.keys.campaigns_quiet_hours_start_hint": "From this hour in the recipient's time zone campaign WhatsApp messages wait (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Quiet hours end",
+  "system.keys.campaigns_quiet_hours_end_hint": "Waiting messages go out at this hour of the recipient's time zone; equal to the start turns quiet hours off (0–23)."
 }

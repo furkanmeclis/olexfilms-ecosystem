@@ -54,5 +54,15 @@
   "short_link.not_found_body": "Bu bağlantı mevcut değil. Tamamen kopyalandığından emin olun.",
   "short_link.error_title": "Bağlantı açılamadı",
   "short_link.error_body": "Bir sorun oluştu. Lütfen biraz sonra tekrar deneyin.",
-  "short_link.home": "Ana sayfaya git"
+  "short_link.home": "Ana sayfaya git",
+  "campaign_unsubscribe.page_title": "Abonelikten çık",
+  "campaign_unsubscribe.title": "Kampanya mesajlarından çıkmak istiyor musunuz?",
+  "campaign_unsubscribe.body": "Onaylarsanız size kampanya, indirim ve duyuru mesajları (WhatsApp, push bildirimi, e-posta) artık gönderilmez. Hizmet, randevu ve garanti bildirimleri etkilenmez.",
+  "campaign_unsubscribe.confirm": "Abonelikten çık",
+  "campaign_unsubscribe.done_title": "Abonelikten çıktınız",
+  "campaign_unsubscribe.done_body": "Bundan sonra kampanya mesajı almayacaksınız.",
+  "campaign_unsubscribe.invalid_title": "Bağlantı geçersiz",
+  "campaign_unsubscribe.invalid_body": "Bu abonelik bağlantısı geçerli değil. Bağlantının tamamını kopyaladığınızdan emin olun.",
+  "campaign_unsubscribe.error": "Bir sorun oluştu. Lütfen biraz sonra tekrar deneyin.",
+  "campaign_unsubscribe.home": "Ana sayfaya git"
 }

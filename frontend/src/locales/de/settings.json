@@ -147,5 +147,13 @@
   "system.keys.whatsapp_ai_staff_pause_minutes": "KI-Pause nach einer Mitarbeiternachricht (Minuten)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "Die KI antwortet nicht in einer Unterhaltung, in der ein Mitarbeiter innerhalb dieser Zeit geschrieben hat; 0 = keine Pause.",
   "system.keys.whatsapp_ai_guidelines_url": "Link zu den KI-Richtlinien",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "Link (https) zu den Richtlinien, der mit der WhatsApp-Einwilligungsfrage gesendet wird; leer = der Richtlinientext wird in der Nachricht gesendet."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Link (https) zu den Richtlinien, der mit der WhatsApp-Einwilligungsfrage gesendet wird; leer = der Richtlinientext wird in der Nachricht gesendet.",
+  "system.groups.campaigns": "Kampagnen",
+  "system.groups.campaigns_hint": "WhatsApp-Rate und Ruhezeiten beim Kampagnenversand.",
+  "system.keys.campaigns_whatsapp_per_minute": "Kampagnen-WhatsApp-Nachrichten pro Minute",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Pro Minute über alle Empfänger gesendete Kampagnen-WhatsApp-Nachrichten; weitere warten in der Warteschlange.",
+  "system.keys.campaigns_quiet_hours_start": "Beginn der Ruhezeit",
+  "system.keys.campaigns_quiet_hours_start_hint": "Ab dieser Stunde in der Zeitzone des Empfängers warten Kampagnen-WhatsApp-Nachrichten (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Ende der Ruhezeit",
+  "system.keys.campaigns_quiet_hours_end_hint": "Wartende Nachrichten gehen zu dieser Stunde in der Zeitzone des Empfängers raus; gleich dem Beginn schaltet die Ruhezeit ab (0–23)."
 }
