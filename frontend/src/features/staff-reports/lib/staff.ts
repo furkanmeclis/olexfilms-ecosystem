@@ -1,6 +1,8 @@
 import { normalizeAmount } from "@/features/accounting/lib/form";
 import type {
+  StaffPayment,
   StaffPaymentCreateInput,
+  StaffPaymentStatus,
   StaffPaymentType,
   StaffPayrollResult,
   StaffProfile,
@@ -16,6 +18,34 @@ type Translate = (
 
 /** Backend 409 code of a second open salary for the same staff period. */
 export const SALARY_EXISTS_CODE = "STAFF_SALARY_EXISTS";
+
+/** Backend 422 code: only a planned payment is edited or cancelled. */
+export const NOT_PLANNED_CODE = "STAFF_PAYMENT_NOT_PLANNED";
+
+/** Status chip tone of a payment state (TEC-381). */
+export function paymentStatusTone(
+  status: StaffPaymentStatus,
+): "default" | "success" | "warning" {
+  if (status === "posted") return "success";
+  if (status === "planned") return "warning";
+  return "default";
+}
+
+/**
+ * Only a planned payment (no ledger row yet) can be cancelled; a posted one
+ * is undone by a reversal in accounting.
+ */
+export function canCancelPayment(payment: Pick<StaffPayment, "status">) {
+  return payment.status === "planned";
+}
+
+/**
+ * A payment day after today is saved as planned: it is booked on that day
+ * (the backend decides with the organization's time zone).
+ */
+export function isFutureDay(day: string, today: string = todayIso()) {
+  return DATE_RE.test(day) && day > today;
+}
 
 const PERIOD_RE = /^[0-9]{4}-(0[1-9]|1[0-2])$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

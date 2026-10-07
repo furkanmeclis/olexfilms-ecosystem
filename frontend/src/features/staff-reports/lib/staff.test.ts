@@ -5,8 +5,11 @@ import {
   agingChartRows,
 } from "@/features/staff-reports/lib/reports";
 import {
+  canCancelPayment,
+  isFutureDay,
   isSalaryConflict,
   paymentFormValues,
+  paymentStatusTone,
   paymentInput,
   payrollAlreadyRan,
   payrollPreview,
@@ -209,5 +212,34 @@ describe("cari aging buckets", () => {
       { label: "days_61_90", receivable: 30, payable: 3 },
       { label: "days_90_plus", receivable: 40, payable: 0 },
     ]);
+  });
+});
+
+describe("planned payments (TEC-381)", () => {
+  it("only a planned payment can be cancelled", () => {
+    expect(canCancelPayment({ status: "planned" })).toBe(true);
+    expect(canCancelPayment({ status: "posted" })).toBe(false);
+    expect(canCancelPayment({ status: "cancelled" })).toBe(false);
+  });
+
+  it("status tones tell planned from posted", () => {
+    expect(paymentStatusTone("planned")).toBe("warning");
+    expect(paymentStatusTone("posted")).toBe("success");
+    expect(paymentStatusTone("cancelled")).toBe("default");
+  });
+
+  it("a day after today is a future (planned) day", () => {
+    expect(isFutureDay("2026-10-08", "2026-10-07")).toBe(true);
+    expect(isFutureDay("2026-10-07", "2026-10-07")).toBe(false);
+    expect(isFutureDay("2026-09-30", "2026-10-07")).toBe(false);
+    expect(isFutureDay("", "2026-10-07")).toBe(false);
+  });
+
+  it("every payment state has a label in tr and en", () => {
+    for (const s of ["planned", "posted", "cancelled"]) {
+      const key = `payment_statuses.${s}`;
+      expect((tr as Record<string, string>)[key]).toBeTruthy();
+      expect((en as Record<string, string>)[key]).toBeTruthy();
+    }
   });
 });
