@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { Permission } from "@/config/permissions";
-import { resolveAccountingAccess } from "@/features/accounting/lib/access";
+import {
+  isEntryVoidable,
+  resolveAccountingAccess,
+} from "@/features/accounting/lib/access";
 
 const can = (granted: string[]) => (p: string) => granted.includes(p);
 const rw = [Permission.AccountingRead, Permission.AccountingWrite];
@@ -99,5 +102,24 @@ describe("resolveAccountingAccess", () => {
         orgType: "distributor",
       }).canResolve,
     ).toBe(false);
+  });
+});
+
+describe("isEntryVoidable (TEC-347)", () => {
+  const row = {
+    source_type: "manual" as string | null,
+    voided: false,
+    reversal_of_uuid: null as string | null,
+    reversed_by_uuid: null as string | null,
+  };
+
+  it("only an open manual entry is reversed; sourced rows never", () => {
+    expect(isEntryVoidable(row)).toBe(true);
+    for (const source_type of ["order", "service_income", "transfer", null]) {
+      expect(isEntryVoidable({ ...row, source_type })).toBe(false);
+    }
+    expect(isEntryVoidable({ ...row, voided: true })).toBe(false);
+    expect(isEntryVoidable({ ...row, reversal_of_uuid: "x" })).toBe(false);
+    expect(isEntryVoidable({ ...row, reversed_by_uuid: "x" })).toBe(false);
   });
 });

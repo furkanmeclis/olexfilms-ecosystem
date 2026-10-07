@@ -2,7 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowDownLeft, ArrowUpRight, BookOpen } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  BookOpen,
+  Plus,
+  Undo2,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -22,17 +28,23 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { DisputeButton } from "@/features/accounting/components/dispute-dialog";
 import { EntriesExportMenu } from "@/features/accounting/components/entries-export";
+import { ManualEntryDialog } from "@/features/accounting/components/manual-entry-dialog";
 import { SettlementDialog } from "@/features/accounting/components/settlement-dialog";
 import {
   EntryAmount,
   EntryStatus,
   useCategoryLabels,
 } from "@/features/accounting/components/shared";
-import { useOpenDisputeEntries } from "@/features/accounting/components/statement-page";
+import {
+  ReadOnlyNotice,
+  useOpenDisputeEntries,
+} from "@/features/accounting/components/statement-page";
+import { VoidEntryDialog } from "@/features/accounting/components/void-entry-dialog";
 import {
   accountingKeys,
   useAccountingAccess,
 } from "@/features/accounting/hooks/use-accounting-access";
+import { isEntryVoidable } from "@/features/accounting/lib/access";
 import { isEntryDisputable } from "@/features/accounting/lib/disputes";
 import {
   ACCOUNTING_DIRECTIONS,
@@ -98,6 +110,12 @@ export type EntryColumnOptions = {
   dispute?: EntryDisputeOptions | null;
   /** Row action: open the cari account of the row. */
   onOpenCari?: (cariUuid: string) => void;
+  /**
+   * Row action: reverse an open manual entry (only passed with write
+   * access). Rows another module or the parent posted never get it; a
+   * child organization disputes them from the status cell.
+   */
+  onVoid?: (entry: FinanceEntry) => void;
 };
 
 function enumOptions(values: readonly string[], prefix: string) {
@@ -118,6 +136,7 @@ export function useEntryColumns({
   accounts,
   dispute,
   onOpenCari,
+  onVoid,
 }: EntryColumnOptions) {
   const { t, format } = useLocale();
   return useMemo(
@@ -236,25 +255,33 @@ export function useEntryColumns({
           enableResizing: false,
           enableColumnFilter: false,
           cell: ({ row }) => {
-            const cariUuid = row.original.cari_uuid;
-            const actions: EntityRowAction[] =
-              cariUuid && onOpenCari
-                ? [
-                    {
-                      id: "cari",
-                      label: t("accounting.cari.detail_title"),
-                      icon: BookOpen,
-                      onSelect: () => onOpenCari(cariUuid),
-                    },
-                  ]
-                : [];
+            const entry = row.original;
+            const cariUuid = entry.cari_uuid;
+            const actions: EntityRowAction[] = [];
+            if (cariUuid && onOpenCari) {
+              actions.push({
+                id: "cari",
+                label: t("accounting.cari.detail_title"),
+                icon: BookOpen,
+                onSelect: () => onOpenCari(cariUuid),
+              });
+            }
+            if (onVoid && isEntryVoidable(entry)) {
+              actions.push({
+                id: "void",
+                label: t("accounting.void.action"),
+                icon: Undo2,
+                variant: "destructive",
+                onSelect: () => onVoid(entry),
+              });
+            }
             return actions.length ? (
               <EntityRowActions actions={actions} />
             ) : null;
           },
         }),
       ] as ColumnDef<FinanceEntry, unknown>[],
-    [accounts, cari, categories, dispute, format, onOpenCari, t],
+    [accounts, cari, categories, dispute, format, onOpenCari, onVoid, t],
   );
 }
 
@@ -274,6 +301,8 @@ export function EntriesPage({
   const router = useRouter();
   const access = useAccountingAccess(slug);
   const [settle, setSettle] = useState<SettlementKind | null>(null);
+  const [manual, setManual] = useState(false);
+  const [voiding, setVoiding] = useState<FinanceEntry | null>(null);
   const enabled = access.canRead && Boolean(access.orgUuid);
   const categories = useCategoryLabels(access.orgUuid, enabled);
   const openDisputes = useOpenDisputeEntries(
@@ -330,6 +359,7 @@ export function EntriesPage({
     accounts: accountOptions,
     dispute,
     onOpenCari: openCari,
+    onVoid: access.canWrite ? setVoiding : undefined,
   });
 
   const initialFilters = useMemo(
@@ -381,7 +411,14 @@ export function EntriesPage({
       actions={
         access.canWrite ? (
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => setSettle("collection")}>
+            <Button
+              onClick={() => setManual(true)}
+              data-testid="manual-entry-open"
+            >
+              <Plus className="size-4" />
+              {t("accounting.manual.new")}
+            </Button>
+            <Button variant="outline" onClick={() => setSettle("collection")}>
               <ArrowDownLeft className="size-4 rtl:-scale-x-100" />
               {t("accounting.settlement.new_collection")}
             </Button>
@@ -393,6 +430,7 @@ export function EntriesPage({
         ) : null
       }
     >
+      {access.readOnlyDealer ? <ReadOnlyNotice /> : null}
       <EntityTable
         columns={columns}
         data={list.data?.items ?? []}
@@ -427,6 +465,22 @@ export function EntriesPage({
           open
           onOpenChange={(open) => {
             if (!open) setSettle(null);
+          }}
+        />
+      ) : null}
+      {manual ? (
+        <ManualEntryDialog
+          orgUuid={access.orgUuid}
+          open
+          onOpenChange={setManual}
+        />
+      ) : null}
+      {access.canWrite ? (
+        <VoidEntryDialog
+          orgUuid={access.orgUuid}
+          entry={voiding}
+          onOpenChange={(open) => {
+            if (!open) setVoiding(null);
           }}
         />
       ) : null}

@@ -5,7 +5,9 @@ import type {
   FinanceAccount,
   FinanceAccountCreateInput,
   FinanceAccountUpdateInput,
+  FinanceEntryInput,
   FinanceSettlementInput,
+  ManualDirection,
 } from "@/features/accounting/services/accounting.service";
 
 type Translate = (
@@ -150,6 +152,74 @@ export function settlementInput(
     cari_uuid: v.cari_uuid,
     amount: normalizeAmount(v.amount) ?? v.amount.trim(),
     currency: v.currency.trim().toUpperCase(),
+    ...(description ? { description } : {}),
+    idempotency_key: idempotencyKey,
+  };
+}
+
+// --- Manual entry (income / expense / cari charge) ---------------------------
+
+export type ManualEntryFormValues = {
+  direction: ManualDirection;
+  category: string;
+  amount: string;
+  account_uuid: string;
+  cari_uuid: string;
+  description: string;
+};
+
+/**
+ * Mirrors POST /v1/accounting/entries: income and expense need an account
+ * and/or a cari; a charge books a cari only (no account).
+ */
+export function manualEntryFormSchema(t: Translate) {
+  return z
+    .object({
+      direction: z.enum(["income", "expense", "charge"]),
+      category: z.string().min(1, t("accounting.validation.category")),
+      amount: z
+        .string()
+        .trim()
+        .min(1, t("accounting.validation.required"))
+        .refine((v) => normalizeAmount(v) !== null, {
+          message: t("accounting.validation.amount"),
+        }),
+      account_uuid: z.string(),
+      cari_uuid: z.string(),
+      description: z
+        .string()
+        .max(1000, t("accounting.validation.too_long", { max: 1000 })),
+    })
+    .superRefine((v, ctx) => {
+      if (v.direction === "charge" && !v.cari_uuid) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["cari_uuid"],
+          message: t("accounting.validation.cari"),
+        });
+      }
+      if (v.direction !== "charge" && !v.account_uuid && !v.cari_uuid) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["account_uuid"],
+          message: t("accounting.validation.account_or_cari"),
+        });
+      }
+    });
+}
+
+export function manualEntryInput(
+  v: ManualEntryFormValues,
+  idempotencyKey: string,
+): FinanceEntryInput {
+  const description = v.description.trim();
+  const account = v.direction === "charge" ? "" : v.account_uuid;
+  return {
+    direction: v.direction,
+    category: v.category,
+    amount: normalizeAmount(v.amount) ?? v.amount.trim(),
+    ...(account ? { account_uuid: account } : {}),
+    ...(v.cari_uuid ? { cari_uuid: v.cari_uuid } : {}),
     ...(description ? { description } : {}),
     idempotency_key: idempotencyKey,
   };

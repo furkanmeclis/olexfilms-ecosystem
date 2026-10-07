@@ -295,6 +295,29 @@ function warranty(over: Record<string, unknown> = {}) {
 }
 
 describe("ServicesListPage (TEC-378)", () => {
+  it("income / profit / margin columns only for accounting readers, hidden by default (TEC-347)", async () => {
+    captured.grants = new Set([Permission.ServicesRead]);
+    await render(createElement(ServicesListPage, { slug: "acme" }));
+    for (const id of ["income_amount", "gross_profit", "margin_pct"]) {
+      expect(column(id)).toBeUndefined();
+    }
+    act(() => root.unmount());
+    root = createRoot(container);
+    captured.grants = new Set([
+      Permission.ServicesRead,
+      Permission.AccountingRead,
+    ]);
+    await render(createElement(ServicesListPage, { slug: "acme" }));
+    for (const id of ["income_amount", "gross_profit", "margin_pct"]) {
+      const col = column(id);
+      expect(col).toBeDefined();
+      expect(
+        (col?.meta as { defaultHidden?: boolean } | undefined)?.defaultHidden,
+      ).toBe(true);
+      expect(col?.enableSorting).toBe(false);
+    }
+  });
+
   it("is forbidden without services.read", async () => {
     await render(createElement(ServicesListPage, { slug: "acme" }));
     expect(container.textContent).toContain("common.error_forbidden");

@@ -21,6 +21,7 @@ import {
 import { createColumn } from "@/components/tables";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { useServiceMoney } from "@/features/services/components/service-income";
 import { downloadServicePdf } from "@/features/services/components/service-pdf-button";
 import {
   canContinueWizard,
@@ -61,6 +62,10 @@ export function ServicesListPage({ slug }: { slug: string }) {
   const router = useRouter();
   const access = resolveServiceListAccess(can);
   const orgFilter = useScopeOrganizationOptions(slug, access.canRead);
+  const money = useServiceMoney();
+  // TEC-343: the API sends income / profit only to accounting readers.
+  const showIncome =
+    can(permissions.accounting.read) || can(permissions.accounting.write);
 
   const open = (s: Service) =>
     router.push(routes.tenant.services.detail(slug, s.uuid));
@@ -188,6 +193,52 @@ export function ServicesListPage({ slug }: { slug: string }) {
             </span>
           ),
         }),
+        ...(showIncome
+          ? [
+              createColumn<Service>({
+                id: "income_amount",
+                accessorFn: (row) => row.income_amount ?? "",
+                labelKey: "services.list.columns.income",
+                enableSorting: false,
+                enableColumnFilter: false,
+                defaultHidden: true,
+                cell: ({ row }) => (
+                  <span className="tabular-nums" dir="ltr">
+                    {money(row.original.income_amount)}
+                  </span>
+                ),
+              }),
+              createColumn<Service>({
+                id: "gross_profit",
+                accessorFn: (row) => row.profit?.gross_profit ?? "",
+                labelKey: "services.list.columns.profit",
+                enableSorting: false,
+                enableColumnFilter: false,
+                defaultHidden: true,
+                cell: ({ row }) => (
+                  <span className="tabular-nums" dir="ltr">
+                    {money(row.original.profit?.gross_profit)}
+                  </span>
+                ),
+              }),
+              createColumn<Service>({
+                id: "margin_pct",
+                accessorFn: (row) => row.profit?.margin_pct ?? "",
+                labelKey: "services.list.columns.margin",
+                enableSorting: false,
+                enableColumnFilter: false,
+                defaultHidden: true,
+                cell: ({ row }) =>
+                  row.original.profit?.margin_pct ? (
+                    <span className="tabular-nums" dir="ltr">
+                      %{money(row.original.profit.margin_pct)}
+                    </span>
+                  ) : (
+                    "—"
+                  ),
+              }),
+            ]
+          : []),
         createColumn<Service>({
           id: "actions",
           labelKey: "common.actions",
@@ -234,9 +285,11 @@ export function ServicesListPage({ slug }: { slug: string }) {
       can,
       format,
       locale,
+      money,
       orgFilter.enabled,
       orgFilter.options,
       router,
+      showIncome,
       slug,
       t,
     ],

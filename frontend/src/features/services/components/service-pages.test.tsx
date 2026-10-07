@@ -88,6 +88,17 @@ vi.mock("@/features/modules/hooks/use-features", () => ({
     isLoading: false,
     isError: false,
   }),
+  useEnabledFeatures: () => state.features,
+}));
+// The service organization "o1" (a dealer under distributor "d1").
+vi.mock("@/hooks/use-active-organization", () => ({
+  useActiveOrganization: () => ({
+    uuid: "o1",
+    slug: "acme",
+    name: "Acme Bayi",
+    type: "dealer",
+    parent: { uuid: "d1" },
+  }),
 }));
 vi.mock(
   "@/features/measurements/services/service-measurements.service",
@@ -487,6 +498,58 @@ describe("ServiceDetailPage (TEC-183)", () => {
       createElement(ServiceDetailPage, { slug: "acme", uuid: "s1" }),
     );
     expect(container.textContent).toContain("services.detail.not_found");
+  });
+});
+
+describe("Service income and profit (TEC-347)", () => {
+  const profit = {
+    revenue: null,
+    cost: "4500.00",
+    gross_profit: "0.00",
+    margin_pct: null,
+  };
+
+  it("dealer with dealer_accounting: profit card and 'Record income'", async () => {
+    state.grants = new Set([
+      "services.read",
+      "accounting.read",
+      "accounting.write",
+    ]);
+    state.features = ["accounting", "dealer_accounting"];
+    api.getService.mockResolvedValue(
+      service({ income_amount: null, profit } as Partial<Service>),
+    );
+    await render(
+      createElement(ServiceDetailPage, { slug: "acme", uuid: "s1" }),
+    );
+    expect($("[data-testid=detail-profit]")).not.toBeNull();
+    expect($("[data-testid=profit-cost]")).not.toBeNull();
+    expect($("[data-testid=service-income-open]")).not.toBeNull();
+  });
+
+  it("module off: the profit card stays, no income button", async () => {
+    state.grants = new Set([
+      "services.read",
+      "accounting.read",
+      "accounting.write",
+    ]);
+    api.getService.mockResolvedValue(
+      service({ income_amount: null, profit } as Partial<Service>),
+    );
+    await render(
+      createElement(ServiceDetailPage, { slug: "acme", uuid: "s1" }),
+    );
+    expect($("[data-testid=detail-profit]")).not.toBeNull();
+    expect($("[data-testid=service-income-open]")).toBeNull();
+  });
+
+  it("no profit card when the API sends no profit (no accounting read)", async () => {
+    state.grants = new Set(["services.read"]);
+    api.getService.mockResolvedValue(service());
+    await render(
+      createElement(ServiceDetailPage, { slug: "acme", uuid: "s1" }),
+    );
+    expect($("[data-testid=detail-profit]")).toBeNull();
   });
 });
 
