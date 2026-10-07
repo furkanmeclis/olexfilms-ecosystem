@@ -194,5 +194,7 @@
   "actions.stock.split.created": "قُسّمت اللفة",
   "resources.stock.split": "تقسيم اللفة",
   "filters.actor": "تصفية حسب المستخدم",
-  "resources.platform.organizations": "المنشآت"
+  "resources.platform.organizations": "المنشآت",
+  "actions.mcp.tool_called": "تم استدعاء أداة MCP",
+  "resources.mcp_tool": "أداة MCP"
 }

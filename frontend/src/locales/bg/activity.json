@@ -194,5 +194,7 @@
   "actions.stock.split.created": "Ролката е разделена",
   "resources.stock.split": "Разделяне на ролка",
   "filters.actor": "Филтър по потребител",
-  "resources.platform.organizations": "Организации"
+  "resources.platform.organizations": "Организации",
+  "actions.mcp.tool_called": "Извикан MCP инструмент",
+  "resources.mcp_tool": "MCP инструмент"
 }

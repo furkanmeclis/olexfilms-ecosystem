@@ -23,6 +23,7 @@ import (
 	activitymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity"
 	activityhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/usecase"
+	aimodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai"
 	airepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/repository"
 	aitools "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
 	aiusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/usecase"
@@ -95,6 +96,7 @@ import (
 	logsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs"
 	logshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/handler"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
+	mcpmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/mcp"
 	measurementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements"
 	measurementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/handler"
 	measurementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/usecase"
@@ -175,6 +177,8 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/anthropic"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
@@ -209,6 +213,10 @@ type Deps struct {
 	// Clock replaces the access token clock (issue and expiry check), so a
 	// test can move time forward (TEC-284 legacy token). Nil: time.Now.
 	Clock func() time.Time
+	// LLM replaces the AI provider (TEC-388 tests: a scripted fake). Nil:
+	// the Anthropic driver from ANTHROPIC_* / AI_* env (disabled without a
+	// key).
+	LLM llm.Provider
 }
 
 // Server is the HTTP composition root for infrastructure routes.
@@ -248,6 +256,8 @@ type Server struct {
 	aiTools *aitools.Registry
 	// aiActions is the write-tool confirmation flow (TEC-387).
 	aiActions *aiusecase.Actions
+	// aiChat is the panel / portal assistant chat (TEC-388).
+	aiChat *aiusecase.Chat
 }
 
 // New wires router and middleware for the API skeleton.
@@ -871,6 +881,18 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if s.worker != nil {
 		s.worker.WithAIActionSweep(s.aiActions.SweepTask)
 	}
+	// TEC-388 (F4-01f): panel and portal chat with SSE streaming.
+	aiProvider := deps.LLM
+	if aiProvider == nil {
+		aiProvider = anthropic.NewFromConfig(cfg.AI)
+	}
+	s.aiChat = aiusecase.NewChat(aiusecase.ChatDeps{
+		Store: airepo.New(deps.DB), Tools: s.aiTools, Actions: s.aiActions,
+		Provider: aiProvider, Models: llm.ModelsFromConfig(cfg.AI), Features: featureSvc,
+		Consents: legalusecase.New(deps.Queries), Limiter: ratelimit.New(deps.Redis, cfg.App.Env),
+		Outbox: outbox.NewStore(deps.DB, deps.Queries), Log: log,
+	})
+	aimodule.RegisterRoutes(mux, s.aiChat, tokens, loader, deps.Queries)
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
@@ -952,6 +974,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Catalog: catalogSvc, Dealers: orgSvc, Settings: deps.Queries,
 		Warranties: warrantyusecase.NewPublicLookup(deps.Queries), FrontendURL: cfg.Auth.FrontendURL,
 	})
+	// TEC-402 (F4-03c): MCP Streamable HTTP endpoints over the complete
+	// tool registry; Bearer tokens from the TEC-400 authorization server,
+	// writes become pending actions approved in the panel.
+	mcpmodule.RegisterRoutes(mux, mcpmodule.New(mcpmodule.Config{
+		Tokens: oauthSvc, Principals: mcpmodule.StoreResolver{Q: deps.Queries, Access: uc},
+		Tools: s.aiTools, Actions: s.aiActions, Limiter: ratelimit.New(deps.Redis, cfg.App.Env),
+		Settings: sysSvc, Activity: activityRec, FrontendURL: cfg.Auth.FrontendURL, Log: log,
+	}))
 	// TEC-273: Glorian admin API (connection settings, sync runs, outbound
 	// replay, reconcile); glorian.Store is wired here.
 	glorianadminmodule.RegisterRoutes(mux, glorianadminhandler.New(glorianadminusecase.New(deps.Queries, secretBox,

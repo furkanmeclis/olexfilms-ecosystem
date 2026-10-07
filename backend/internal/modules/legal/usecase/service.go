@@ -44,6 +44,7 @@ type Store interface {
 	InsertLegalText(ctx context.Context, arg db.InsertLegalTextParams) (db.LegalText, error)
 	GetConsentForText(ctx context.Context, arg db.GetConsentForTextParams) (db.Consent, error)
 	InsertConsent(ctx context.Context, arg db.InsertConsentParams) (db.Consent, error)
+	GetLatestConsent(ctx context.Context, arg db.GetLatestConsentParams) (db.Consent, error)
 }
 
 // Service implements legal text and consent flows.
@@ -127,6 +128,44 @@ func (s *Service) Pending(ctx context.Context, userID int64, locale i18n.Locale)
 		out = append(out, toText(t))
 	}
 	return out, nil
+}
+
+// AIConsentRequired is the AI assistant gate (TEC-388, K19/K22): it
+// returns the AI guidelines text the user still has to accept, or nil when
+// the user's latest ai_guidelines decision accepts the current version of
+// the text it answered (in whatever language it was shown). A decline, no
+// decision or an outdated version needs a new acceptance. With no text
+// published at all there is nothing to accept.
+func (s *Service) AIConsentRequired(ctx context.Context, userID int64, locale i18n.Locale) (*Text, error) {
+	current, err := s.currentText(ctx, KindAIGuidelines, locale)
+	if errors.Is(err, ErrNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	required := toText(current)
+	c, err := s.store.GetLatestConsent(ctx, db.GetLatestConsentParams{UserID: userID, Kind: KindAIGuidelines})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return &required, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !c.Accepted {
+		return &required, nil
+	}
+	answered, err := s.store.GetLatestLegalText(ctx, db.GetLatestLegalTextParams{Kind: KindAIGuidelines, Locale: c.Locale})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return &required, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if answered.Version != c.TextVersion {
+		return &required, nil
+	}
+	return nil, nil
 }
 
 // DecideInput is a consent answer.

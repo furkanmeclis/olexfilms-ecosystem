@@ -665,6 +665,7 @@ func catalogConstants() []string {
 		CampaignsApproved,
 		CampaignsRejected,
 		CampaignsChangesRequested,
+		AIQuotaThreshold,
 	}
 }
 
@@ -701,3 +702,11 @@ const (
 	CampaignsRejected         = "campaigns.rejected"
 	CampaignsChangesRequested = "campaigns.changes_requested"
 )
+
+// AIQuotaThreshold (TEC-388) is written in the usage transaction when a
+// model call moves an organization's monthly AI token pool past 80 % or
+// 100 % of its quota: once per threshold, pool and month, since the
+// monthly projection only grows. Payload: organization_id, brand_id, pool,
+// period, threshold (80 | 100), used_tokens, quota_tokens. The
+// notification template reaches the organization owners (F4-01g).
+const AIQuotaThreshold = "ai.quota.threshold"

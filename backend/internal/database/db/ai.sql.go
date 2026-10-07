@@ -245,13 +245,17 @@ WHERE c.organization_id = $1
   AND c.channel = $3
   AND c.deleted_at IS NULL
   AND ($4::text IS NULL OR c.title ILIKE '%' || $4::text || '%')
+  AND ($5::timestamptz IS NULL OR c.created_at >= $5::timestamptz)
+  AND ($6::timestamptz IS NULL OR c.created_at < $6::timestamptz)
 `
 
 type CountAIConversationsParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	UserID         int64       `json:"user_id"`
-	Channel        string      `json:"channel"`
-	Q              pgtype.Text `json:"q"`
+	OrganizationID int64              `json:"organization_id"`
+	UserID         int64              `json:"user_id"`
+	Channel        string             `json:"channel"`
+	Q              pgtype.Text        `json:"q"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
 }
 
 func (q *Queries) CountAIConversations(ctx context.Context, arg CountAIConversationsParams) (int64, error) {
@@ -260,6 +264,8 @@ func (q *Queries) CountAIConversations(ctx context.Context, arg CountAIConversat
 		arg.UserID,
 		arg.Channel,
 		arg.Q,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -667,6 +673,60 @@ func (q *Queries) FinishAIMessage(ctx context.Context, arg FinishAIMessageParams
 	return i, err
 }
 
+const getAIChatContext = `-- name: GetAIChatContext :one
+SELECT u.name AS user_name, u.surname AS user_surname,
+       COALESCE(u.locale, '')::text AS user_locale, COALESCE(u.timezone, '')::text AS user_timezone,
+       o.name AS org_name, o.type AS org_type, o.locale AS org_locale, o.timezone AS org_timezone,
+       b.name AS brand_name,
+       COALESCE(c.locale, '')::text AS center_locale, COALESCE(c.timezone, '')::text AS center_timezone
+FROM users u
+JOIN organizations o ON o.id = $1
+JOIN brands b ON b.id = o.brand_id
+LEFT JOIN organizations c ON c.brand_id = o.brand_id AND c.type = 'center' AND c.deleted_at IS NULL
+WHERE u.id = $2
+LIMIT 1
+`
+
+type GetAIChatContextParams struct {
+	OrganizationID int64 `json:"organization_id"`
+	UserID         int64 `json:"user_id"`
+}
+
+type GetAIChatContextRow struct {
+	UserName       string `json:"user_name"`
+	UserSurname    string `json:"user_surname"`
+	UserLocale     string `json:"user_locale"`
+	UserTimezone   string `json:"user_timezone"`
+	OrgName        string `json:"org_name"`
+	OrgType        string `json:"org_type"`
+	OrgLocale      string `json:"org_locale"`
+	OrgTimezone    string `json:"org_timezone"`
+	BrandName      string `json:"brand_name"`
+	CenterLocale   string `json:"center_locale"`
+	CenterTimezone string `json:"center_timezone"`
+}
+
+// TEC-388: prompt context of a chat turn: the user, the conversation's
+// organization, its brand and the brand center (K10 locale / time zone).
+func (q *Queries) GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error) {
+	row := q.db.QueryRow(ctx, getAIChatContext, arg.OrganizationID, arg.UserID)
+	var i GetAIChatContextRow
+	err := row.Scan(
+		&i.UserName,
+		&i.UserSurname,
+		&i.UserLocale,
+		&i.UserTimezone,
+		&i.OrgName,
+		&i.OrgType,
+		&i.OrgLocale,
+		&i.OrgTimezone,
+		&i.BrandName,
+		&i.CenterLocale,
+		&i.CenterTimezone,
+	)
+	return i, err
+}
+
 const getAIConversationForUser = `-- name: GetAIConversationForUser :one
 SELECT id, uuid, organization_id, brand_id, user_id, channel, title, message_count, last_message_at, created_at, updated_at, deleted_at FROM ai_conversations
 WHERE uuid = $1
@@ -914,29 +974,33 @@ WHERE c.organization_id = $1
   AND c.channel = $3
   AND c.deleted_at IS NULL
   AND ($4::text IS NULL OR c.title ILIKE '%' || $4::text || '%')
+  AND ($5::timestamptz IS NULL OR c.created_at >= $5::timestamptz)
+  AND ($6::timestamptz IS NULL OR c.created_at < $6::timestamptz)
 ORDER BY
-  CASE WHEN NOT $5::bool AND $6::text = 'title' THEN c.title END ASC,
-  CASE WHEN $5::bool AND $6::text = 'title' THEN c.title END DESC,
-  CASE WHEN NOT $5::bool THEN
-    CASE $6::text WHEN 'created_at' THEN c.created_at WHEN 'updated_at' THEN c.updated_at END
+  CASE WHEN NOT $7::bool AND $8::text = 'title' THEN c.title END ASC,
+  CASE WHEN $7::bool AND $8::text = 'title' THEN c.title END DESC,
+  CASE WHEN NOT $7::bool THEN
+    CASE $8::text WHEN 'created_at' THEN c.created_at WHEN 'updated_at' THEN c.updated_at END
   END ASC,
-  CASE WHEN $5::bool THEN
-    CASE $6::text WHEN 'created_at' THEN c.created_at WHEN 'updated_at' THEN c.updated_at END
+  CASE WHEN $7::bool THEN
+    CASE $8::text WHEN 'created_at' THEN c.created_at WHEN 'updated_at' THEN c.updated_at END
   END DESC,
-  CASE WHEN $5::bool THEN c.id END DESC,
+  CASE WHEN $7::bool THEN c.id END DESC,
   c.id ASC
-LIMIT $8 OFFSET $7
+LIMIT $10 OFFSET $9
 `
 
 type ListAIConversationsParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	UserID         int64       `json:"user_id"`
-	Channel        string      `json:"channel"`
-	Q              pgtype.Text `json:"q"`
-	SortDesc       bool        `json:"sort_desc"`
-	SortKey        string      `json:"sort_key"`
-	OffsetCount    int32       `json:"offset_count"`
-	LimitCount     int32       `json:"limit_count"`
+	OrganizationID int64              `json:"organization_id"`
+	UserID         int64              `json:"user_id"`
+	Channel        string             `json:"channel"`
+	Q              pgtype.Text        `json:"q"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+	SortDesc       bool               `json:"sort_desc"`
+	SortKey        string             `json:"sort_key"`
+	OffsetCount    int32              `json:"offset_count"`
+	LimitCount     int32              `json:"limit_count"`
 }
 
 // Sort: docs/list-contract.md, keys from ai/repository.ConversationSort.
@@ -946,6 +1010,8 @@ func (q *Queries) ListAIConversations(ctx context.Context, arg ListAIConversatio
 		arg.UserID,
 		arg.Channel,
 		arg.Q,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
 		arg.SortDesc,
 		arg.SortKey,
 		arg.OffsetCount,

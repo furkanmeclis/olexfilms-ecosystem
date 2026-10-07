@@ -664,6 +664,9 @@ type Querier interface {
 	FinishConversationAIRun(ctx context.Context, arg FinishConversationAIRunParams) (ConversationAiRun, error)
 	FinishIntegrationSyncRun(ctx context.Context, arg FinishIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	FinishMigrationRun(ctx context.Context, arg FinishMigrationRunParams) (MigrationRun, error)
+	// TEC-388: prompt context of a chat turn: the user, the conversation's
+	// organization, its brand and the brand center (K10 locale / time zone).
+	GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error)
 	GetAIConversationForUser(ctx context.Context, arg GetAIConversationForUserParams) (AiConversation, error)
 	GetAIOrgSettings(ctx context.Context, organizationID int64) (AiOrgSetting, error)
 	// TEC-387: a repeated proposal of the same tool_use returns the existing card.

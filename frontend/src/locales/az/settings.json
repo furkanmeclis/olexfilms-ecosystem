@@ -137,5 +137,9 @@
   "system.groups.leads": "Potensial müştərilər",
   "system.groups.leads_hint": "Potensial müştəri axını və açıq diler müraciət formu.",
   "system.keys.leads_dealer_application_enabled": "Diler müraciət formu",
-  "system.keys.leads_dealer_application_enabled_hint": "Açıq olduqda /bayi-basvuru açıq müraciət formu yayımlanır və sayt xəritəsinə əlavə olunur. Yalnız potensial müştəri modulu sistem üzrə açıq olduqda aktivləşdirilə bilər."
+  "system.keys.leads_dealer_application_enabled_hint": "Açıq olduqda /bayi-basvuru açıq müraciət formu yayımlanır və sayt xəritəsinə əlavə olunur. Yalnız potensial müştəri modulu sistem üzrə açıq olduqda aktivləşdirilə bilər.",
+  "system.groups.mcp": "MCP bağlantıları",
+  "system.groups.mcp_hint": "AI müştərilərinin (Claude, ChatGPT) qoşulduğu MCP son nöqtələrinin limitləri.",
+  "system.keys.mcp_requests_per_hour_per_org": "Təşkilat üzrə saatlıq MCP sorğuları",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Bir təşkilatın bütün qoşulmuş AI tətbiqləri vasitəsilə saatda edə biləcəyi sorğu sayı; artıq sorğular müddət bitənə qədər rədd edilir."
 }

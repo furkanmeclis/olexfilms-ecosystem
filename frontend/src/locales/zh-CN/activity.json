@@ -194,5 +194,7 @@
   "actions.stock.split.created": "卷材已分切",
   "resources.stock.split": "卷材分切",
   "filters.actor": "按用户筛选",
-  "resources.platform.organizations": "组织"
+  "resources.platform.organizations": "组织",
+  "actions.mcp.tool_called": "已调用 MCP 工具",
+  "resources.mcp_tool": "MCP 工具"
 }

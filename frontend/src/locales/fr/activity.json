@@ -194,5 +194,7 @@
   "actions.stock.split.created": "Rouleau découpé",
   "resources.stock.split": "Découpe de rouleau",
   "filters.actor": "Filtrer par utilisateur",
-  "resources.platform.organizations": "Organisations"
+  "resources.platform.organizations": "Organisations",
+  "actions.mcp.tool_called": "Outil MCP appelé",
+  "resources.mcp_tool": "Outil MCP"
 }

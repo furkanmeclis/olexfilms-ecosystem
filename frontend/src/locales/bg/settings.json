@@ -137,5 +137,9 @@
   "system.groups.leads": "Потенциални клиенти",
   "system.groups.leads_hint": "Фуния на потенциални клиенти и публичен формуляр за кандидатстване на дилъри.",
   "system.keys.leads_dealer_application_enabled": "Формуляр за кандидатстване на дилъри",
-  "system.keys.leads_dealer_application_enabled_hint": "Когато е включено, публичният формуляр /bayi-basvuru е активен и е в картата на сайта. Може да се включи само докато модулът за потенциални клиенти е отворен за цялата система."
+  "system.keys.leads_dealer_application_enabled_hint": "Когато е включено, публичният формуляр /bayi-basvuru е активен и е в картата на сайта. Може да се включи само докато модулът за потенциални клиенти е отворен за цялата система.",
+  "system.groups.mcp": "MCP връзки",
+  "system.groups.mcp_hint": "Ограничения на MCP крайните точки, към които се свързват AI клиенти (Claude, ChatGPT).",
+  "system.keys.mcp_requests_per_hour_per_org": "MCP заявки на организация на час",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Заявки, които една организация може да направи за час през всички свързани AI приложения; следващите се отказват до края на периода."
 }

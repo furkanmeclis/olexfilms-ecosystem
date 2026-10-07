@@ -318,6 +318,16 @@ func (s *Actions) ListPending(ctx context.Context, p tools.Principal) ([]Card, e
 	return out, nil
 }
 
+// Lookup returns the caller's own action as a card (any status); the chat
+// uses its source and conversation to resume the paused turn (TEC-388).
+func (s *Actions) Lookup(ctx context.Context, p tools.Principal, id uuid.UUID) (Card, error) {
+	row, err := s.load(ctx, p, id)
+	if err != nil {
+		return Card{}, err
+	}
+	return cardOf(row), nil
+}
+
 // --- confirm -----------------------------------------------------------------
 
 // load returns the caller's own action; anything else is not found.

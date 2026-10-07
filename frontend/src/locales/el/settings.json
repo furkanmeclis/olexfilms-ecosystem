@@ -137,5 +137,9 @@
   "system.groups.leads": "Δυνητικοί πελάτες",
   "system.groups.leads_hint": "Ροή δυνητικών πελατών και δημόσια φόρμα αίτησης αντιπροσώπου.",
   "system.keys.leads_dealer_application_enabled": "Φόρμα αίτησης αντιπροσώπου",
-  "system.keys.leads_dealer_application_enabled_hint": "Όταν είναι ενεργό, η δημόσια φόρμα /bayi-basvuru είναι διαθέσιμη και εμφανίζεται στον χάρτη ιστότοπου. Ενεργοποιείται μόνο όσο η ενότητα δυνητικών πελατών είναι ανοιχτή σε όλο το σύστημα."
+  "system.keys.leads_dealer_application_enabled_hint": "Όταν είναι ενεργό, η δημόσια φόρμα /bayi-basvuru είναι διαθέσιμη και εμφανίζεται στον χάρτη ιστότοπου. Ενεργοποιείται μόνο όσο η ενότητα δυνητικών πελατών είναι ανοιχτή σε όλο το σύστημα.",
+  "system.groups.mcp": "Συνδέσεις MCP",
+  "system.groups.mcp_hint": "Όρια των τελικών σημείων MCP στα οποία συνδέονται οι πελάτες AI (Claude, ChatGPT).",
+  "system.keys.mcp_requests_per_hour_per_org": "Αιτήματα MCP ανά οργανισμό ανά ώρα",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Αιτήματα που μπορεί να κάνει ένας οργανισμός ανά ώρα μέσω όλων των συνδεδεμένων εφαρμογών AI· τα επιπλέον απορρίπτονται μέχρι να λήξει το διάστημα."
 }

@@ -137,5 +137,9 @@
   "system.groups.leads": "العملاء المحتملون",
   "system.groups.leads_hint": "مسار العملاء المحتملين ونموذج طلب الوكالة العام.",
   "system.keys.leads_dealer_application_enabled": "نموذج طلب الوكالة",
-  "system.keys.leads_dealer_application_enabled_hint": "عند التفعيل يصبح النموذج العام /bayi-basvuru متاحًا ويُضاف إلى خريطة الموقع. لا يمكن تفعيله إلا عندما تكون وحدة العملاء المحتملين مفتوحة على مستوى النظام."
+  "system.keys.leads_dealer_application_enabled_hint": "عند التفعيل يصبح النموذج العام /bayi-basvuru متاحًا ويُضاف إلى خريطة الموقع. لا يمكن تفعيله إلا عندما تكون وحدة العملاء المحتملين مفتوحة على مستوى النظام.",
+  "system.groups.mcp": "اتصالات MCP",
+  "system.groups.mcp_hint": "حدود نقاط نهاية MCP التي تتصل بها عملاء الذكاء الاصطناعي (Claude وChatGPT).",
+  "system.keys.mcp_requests_per_hour_per_org": "طلبات MCP لكل مؤسسة في الساعة",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "عدد الطلبات التي يمكن للمؤسسة إرسالها في الساعة عبر جميع تطبيقات الذكاء الاصطناعي المتصلة؛ تُرفض الطلبات الزائدة حتى انتهاء الفترة."
 }

@@ -194,5 +194,7 @@
   "actions.stock.split.created": "Rulon bölündü",
   "resources.stock.split": "Rulon bölmə",
   "filters.actor": "İstifadəçiyə görə süz",
-  "resources.platform.organizations": "Təşkilatlar"
+  "resources.platform.organizations": "Təşkilatlar",
+  "actions.mcp.tool_called": "MCP aləti çağırıldı",
+  "resources.mcp_tool": "MCP aləti"
 }
