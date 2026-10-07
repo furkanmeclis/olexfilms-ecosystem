@@ -1174,8 +1174,36 @@ export interface paths {
          *     together when the dealer has no map position; `whatsapp` is the
          *     organization phone when it is E.164, otherwise null. Rate limited
          *     per client IP (120 per minute); over the limit 429 with Retry-After.
+         *     TEC-467: while the dealer_showcase module is on and a showcase is
+         *     published, a `showcase` block is added (see PublicDealerShowcaseBlock);
+         *     otherwise the body is unchanged.
          */
         get: operations["getPublicDealerShowcase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/dealers/{code}/photos/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gallery photo of a published dealer showcase
+         * @description TEC-467. No authentication. Streams a photo of the dealer's
+         *     published showcase snapshot (the `showcase.photos[].url` of
+         *     `GET /v1/public/dealers/{code}`). The bytes are served as uploaded
+         *     (`X-Content-Type-Options: nosniff`, public cache 1 h). Unknown
+         *     photos, unpublished showcases and dealers whose dealer_showcase
+         *     module is off are 404.
+         */
+        get: operations["getPublicDealerShowcasePhoto"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1226,6 +1254,308 @@ export interface paths {
          *     IP limit and 3/day phone limit.
          */
         post: operations["submitPublicDealerLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Showcase editor view of the active organization (or ?org=)
+         * @description TEC-467 (F5-01b). Requires the dealer_showcase module of the active
+         *     organization (403 FEATURE_DISABLED) and showcase.read. Without
+         *     `org` it is the caller's own showcase (dealer or distributor); with
+         *     `org` a dealer or distributor inside the caller's scope (a
+         *     distributor's subtree), anything else 404; a target without the
+         *     module is 403 FEATURE_DISABLED. An organization without a showcase
+         *     gets an empty draft (`uuid` null). `content` is the draft;
+         *     `published_content` the live snapshot (null until the first
+         *     publish).
+         */
+        get: operations["getShowcase"];
+        /**
+         * Replace the showcase draft
+         * @description TEC-467. Requires showcase.write. Replaces the draft content (per
+         *     locale headline ≤ 160 / about ≤ 5000), working hours (same shape as
+         *     appointment working hours: weekday → [{start, end}]), social links
+         *     (instagram, facebook, youtube, tiktok, website; https only), SEO
+         *     keywords (≤ 30, ≤ 100 chars, trimmed, duplicates dropped) and the
+         *     Google place id. The status and `published_content` are not touched:
+         *     a draft edit never changes the live page. Invalid input is 400
+         *     VALIDATION_ERROR.
+         */
+        put: operations["saveShowcase"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish the draft (or send it for center review)
+         * @description TEC-467. Requires showcase.write. With `showcase.approval_required`
+         *     off (default) the draft is published at once: status `published`,
+         *     `published_content` written from the draft, the visible services
+         *     and the gallery (event `showcase.published`). With it on the
+         *     showcase moves to `pending_review` and the brand center's members
+         *     holding platform.showcase.review are notified
+         *     (`showcase.review_requested`); the previous snapshot stays live.
+         *     A showcase already pending is 409 INVALID_TRANSITION.
+         */
+        post: operations["submitShowcase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Showcase services in display order
+         * @description TEC-467. Requires showcase.read. Services never carry a price.
+         */
+        get: operations["listShowcaseServices"];
+        put?: never;
+        /**
+         * Add a showcase service (end of the list)
+         * @description TEC-467. Requires showcase.write. `product_category` needs a
+         *     `category_uuid` of the brand (title optional, the category name is
+         *     the fallback); `custom` needs a title. A category listed twice is
+         *     409 CONFLICT. Opens the showcase when the organization has none.
+         */
+        post: operations["createShowcaseService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/services/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reorder the showcase services
+         * @description TEC-467. Requires showcase.write. `uuids` lists every service exactly once (otherwise 400).
+         */
+        put: operations["reorderShowcaseServices"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/services/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a showcase service
+         * @description TEC-467. Requires showcase.write.
+         */
+        put: operations["updateShowcaseService"];
+        post?: never;
+        /**
+         * Remove a showcase service
+         * @description TEC-467. Requires showcase.write.
+         */
+        delete: operations["deleteShowcaseService"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a gallery photo (multipart)
+         * @description TEC-467. Requires showcase.write. Multipart field `photo` (JPEG,
+         *     PNG or WebP by byte sniffing; the declared type is ignored; anything
+         *     else 415 UNSUPPORTED_MEDIA_TYPE), at most 5 MiB (413), and an
+         *     optional `caption` JSON object (locale → text, ≤ 300). The bytes
+         *     are stored as uploaded (no re-encoding, EXIF kept). The gallery
+         *     holds `showcase.max_photos` photos (default 12); one more is 422
+         *     SHOWCASE_PHOTO_LIMIT (`data.count`, `data.max`). The same image
+         *     twice is 409 CONFLICT.
+         */
+        post: operations["uploadShowcasePhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/photos/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reorder the gallery
+         * @description TEC-467. Requires showcase.write. `uuids` lists every photo exactly once (otherwise 400).
+         */
+        put: operations["reorderShowcasePhotos"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/photos/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a photo caption
+         * @description TEC-467. Requires showcase.write.
+         */
+        put: operations["updateShowcasePhoto"];
+        post?: never;
+        /**
+         * Remove a gallery photo
+         * @description TEC-467. Requires showcase.write. The object is deleted unless the
+         *     live snapshot still shows it; then the next publish removes it.
+         */
+        delete: operations["deleteShowcasePhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/photos/{uuid}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gallery photo bytes (panel preview)
+         * @description TEC-467. Requires showcase.read.
+         */
+        get: operations["getShowcasePhotoFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/showcases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Center showcase review queue
+         * @description TEC-467 (docs/list-contract.md). Requires platform.showcase.review
+         *     in the brand center (or super admin). Lists the showcases of the
+         *     brand's dealers and distributors. `sort` is one of updated_at
+         *     (default `-updated_at`), name (organization name), status (flow rank
+         *     draft → pending_review → published → rejected); id tiebreak in the
+         *     sort direction; an unknown field is 400. `status` is a comma
+         *     separated any-of filter (unknown value 400); `q` matches the
+         *     organization name or city; `updated_from` / `updated_to` bound the
+         *     last change.
+         */
+        get: operations["listPlatformShowcases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/showcases/{org_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Showcase under review (draft and live snapshot)
+         * @description TEC-467. Requires platform.showcase.review. Organizations outside the brand are 404.
+         */
+        get: operations["getPlatformShowcase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/showcases/{org_uuid}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve or reject a pending showcase
+         * @description TEC-467. Requires platform.showcase.review. `approve` publishes the
+         *     current draft (snapshot written, event `showcase.published`);
+         *     `reject` keeps the previous snapshot live and needs a `note` (422
+         *     SHOWCASE_REVIEW_NOTE_REQUIRED; event `showcase.rejected`). The
+         *     dealer's owners are notified of either decision. A showcase that is
+         *     not pending is 409 INVALID_TRANSITION.
+         */
+        post: operations["reviewPlatformShowcase"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16060,6 +16390,10 @@ export interface components {
             accepts_appointments: boolean;
             /** @description E.164 phone */
             whatsapp: string | null;
+            /** @description TEC-467. A published showcase with the dealer_showcase module on */
+            has_showcase: boolean;
+            /** @description TEC-467. Live Google rating of the showcase (null without one) */
+            google_rating: number | null;
         };
         EnvelopeNearbyDealers: {
             /** @enum {boolean} */
@@ -16083,6 +16417,12 @@ export interface components {
             longitude: number | null;
             /** @description E.164 phone */
             whatsapp: string | null;
+            /**
+             * @description TEC-467. Present only while the dealer_showcase module is on and
+             *     a showcase is published; otherwise the key is absent and the
+             *     body is exactly the TEC-250 skeleton.
+             */
+            showcase?: components["schemas"]["PublicDealerShowcaseBlock"];
         };
         EnvelopePublicDealer: {
             /** @enum {boolean} */
@@ -16132,6 +16472,244 @@ export interface components {
         PublicDealerLeadAccepted: {
             /** @enum {boolean} */
             received: true;
+        };
+        /** @enum {string} */
+        ShowcaseStatus: "draft" | "pending_review" | "published" | "rejected";
+        /** @description Locale (13 UI locales) → text; empty entries are dropped. */
+        ShowcaseLocaleTexts: {
+            [key: string]: string;
+        };
+        ShowcaseWorkWindow: {
+            /** @example 09:00 */
+            start: string;
+            /** @example 18:00 */
+            end: string;
+        };
+        ShowcaseInput: {
+            /** @description Locale → {headline ≤ 160, about ≤ 5000}. */
+            content?: {
+                [key: string]: {
+                    headline?: string;
+                    about?: string;
+                };
+            };
+            /** @description Weekday (monday/mon/1 … sunday/sun/7) → windows. */
+            working_hours?: {
+                [key: string]: components["schemas"]["ShowcaseWorkWindow"][];
+            };
+            /** @description instagram, facebook, youtube, tiktok, website → https URL. */
+            social_links?: {
+                [key: string]: string;
+            };
+            seo_keywords?: string[];
+            google_place_id?: string | null;
+        };
+        ShowcaseOrganization: {
+            /** Format: uuid */
+            uuid: string;
+            /** @description Organization slug (/bayi/{code}) */
+            code: string;
+            name: string;
+            /** @enum {string} */
+            type: "dealer" | "distributor";
+            city: string;
+        };
+        ShowcaseServiceInput: {
+            /** @enum {string} */
+            kind: "product_category" | "custom";
+            /** Format: uuid */
+            category_uuid?: string | null;
+            title?: components["schemas"]["ShowcaseLocaleTexts"];
+            description?: components["schemas"]["ShowcaseLocaleTexts"];
+            /** @default true */
+            visible: boolean;
+        };
+        ShowcaseService: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "product_category" | "custom";
+            category: null | {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+            title: components["schemas"]["ShowcaseLocaleTexts"];
+            description: components["schemas"]["ShowcaseLocaleTexts"];
+            visible: boolean;
+            sort_order: number;
+        };
+        ShowcasePhoto: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            mime: "image/jpeg" | "image/png" | "image/webp";
+            size_bytes: number;
+            caption: components["schemas"]["ShowcaseLocaleTexts"];
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ShowcaseOrderInput: {
+            uuids: string[];
+        };
+        ShowcaseReviewInput: {
+            /** @enum {string} */
+            decision: "approve" | "reject";
+            /** @description Required to reject */
+            note?: string;
+        };
+        /** @description TEC-467 showcase editor view (draft + live snapshot). No price fields. */
+        Showcase: {
+            /**
+             * Format: uuid
+             * @description Null until the showcase is first saved
+             */
+            uuid: string | null;
+            organization: components["schemas"]["ShowcaseOrganization"];
+            status: components["schemas"]["ShowcaseStatus"];
+            content: {
+                [key: string]: {
+                    headline?: string;
+                    about?: string;
+                };
+            };
+            working_hours: {
+                [key: string]: components["schemas"]["ShowcaseWorkWindow"][];
+            };
+            social_links: {
+                [key: string]: string;
+            };
+            seo_keywords: string[];
+            google_place_id: string | null;
+            google_rating: number | null;
+            google_review_count: number | null;
+            /** @enum {string|null} */
+            google_rating_source: "places" | "manual" | null;
+            /** Format: date-time */
+            google_rating_updated_at: string | null;
+            /** @description The live snapshot (content, working_hours, social_links, seo_keywords, services, photos). */
+            published_content: Record<string, never> | null;
+            /** Format: date-time */
+            published_at: string | null;
+            /** Format: date-time */
+            submitted_at: string | null;
+            /** Format: date-time */
+            reviewed_at: string | null;
+            review_note: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /** @description showcase.approval_required */
+            approval_required: boolean;
+            /** @description showcase.max_photos */
+            max_photos: number;
+            services: components["schemas"]["ShowcaseService"][];
+            photos: components["schemas"]["ShowcasePhoto"][];
+        };
+        EnvelopeShowcase: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Showcase"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeShowcaseService: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ShowcaseService"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeShowcaseServices: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ShowcaseService"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeShowcasePhoto: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ShowcasePhoto"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeShowcasePhotos: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ShowcasePhoto"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ShowcaseReviewItem: {
+            /** Format: uuid */
+            uuid: string;
+            organization: components["schemas"]["ShowcaseOrganization"];
+            status: components["schemas"]["ShowcaseStatus"];
+            /** Format: date-time */
+            submitted_at: string | null;
+            /** Format: date-time */
+            published_at: string | null;
+            /** Format: date-time */
+            reviewed_at: string | null;
+            review_note: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeShowcaseReviewPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ShowcaseReviewItem"][];
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /**
+         * @description TEC-467. The published snapshot in the requested locale (?locale=,
+         *     then Accept-Language; each text falls back to the organization
+         *     locale, then tr). No price anywhere (F5 S8).
+         */
+        PublicDealerShowcaseBlock: {
+            locale: string;
+            headline: string;
+            about: string;
+            /** @description Monday first; a day without windows is closed. */
+            working_hours: {
+                /** @enum {string} */
+                day: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+                windows: components["schemas"]["ShowcaseWorkWindow"][];
+            }[];
+            /** @description Now in the organization's time zone; null without hours */
+            open_now: boolean | null;
+            timezone: string;
+            services: {
+                /** @enum {string} */
+                kind: "product_category" | "custom";
+                title: string;
+                description: string;
+            }[];
+            photos: {
+                /** @description /v1/public/dealers/{code}/photos/{uuid} */
+                url: string;
+                caption: string;
+            }[];
+            social_links: {
+                [key: string]: string;
+            };
+            seo_keywords: string[];
+            google_rating: number | null;
+            google_review_count: number | null;
+            /** @enum {string|null} */
+            google_rating_source: "places" | "manual" | null;
+            google_place_id: string | null;
+            /** @description The leads module is on for the dealer */
+            lead_form_enabled: boolean;
+            /** @description wa.me link of the dealer phone (E.164) */
+            whatsapp_chat_url: string | null;
+            /** Format: date-time */
+            published_at: string;
         };
         PublicDealerCode: {
             code: string;
@@ -24347,6 +24925,12 @@ export interface components {
         CreatedFrom: string;
         /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
         CreatedTo: string;
+        /**
+         * @description TEC-467. Organization uuid of a dealer or distributor inside the
+         *     caller's scope (a distributor's subtree); absent = the active
+         *     organization. Outside the scope 404.
+         */
+        ShowcaseTargetOrg: string;
         /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
         Sort: string;
         /** @description Fleet (organization) uuid */
@@ -26295,7 +26879,10 @@ export interface operations {
     };
     getPublicDealerShowcase: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description TEC-467. Locale of the showcase block texts (default Accept-Language, then the organization locale, then tr). */
+                locale?: string;
+            };
             header?: never;
             path: {
                 code: string;
@@ -26326,6 +26913,32 @@ export interface operations {
                 };
             };
             500: components["responses"]["InternalError"];
+        };
+    };
+    getPublicDealerShowcasePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Photo bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     getPublicDealerLeadFormConfig: {
@@ -26408,6 +27021,554 @@ export interface operations {
                 };
             };
             500: components["responses"]["InternalError"];
+        };
+    };
+    getShowcase: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Showcase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    saveShowcase: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseInput"];
+            };
+        };
+        responses: {
+            /** @description Saved showcase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    submitShowcase: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Showcase after the move */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listShowcaseServices: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseServices"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createShowcaseService: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseServiceInput"];
+            };
+        };
+        responses: {
+            /** @description Service */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    reorderShowcaseServices: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseOrderInput"];
+            };
+        };
+        responses: {
+            /** @description Services in the new order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseServices"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateShowcaseService: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseServiceInput"];
+            };
+        };
+        responses: {
+            /** @description Service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteShowcaseService: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    uploadShowcasePhoto: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    photo: string;
+                    /** @description JSON object: locale → caption */
+                    caption?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Photo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcasePhoto"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
+            /** @description Not a JPEG, PNG or WebP image (UNSUPPORTED_MEDIA_TYPE) */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    reorderShowcasePhotos: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseOrderInput"];
+            };
+        };
+        responses: {
+            /** @description Photos in the new order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcasePhotos"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateShowcasePhoto: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    caption: components["schemas"]["ShowcaseLocaleTexts"];
+                };
+            };
+        };
+        responses: {
+            /** @description Photo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcasePhoto"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteShowcasePhoto: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getShowcasePhotoFile: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Photo bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPlatformShowcases: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated showcase statuses; unknown value → 400. */
+                status?: components["schemas"]["ShowcaseStatus"][];
+                /** @description Inclusive lower bound of updated_at (RFC3339 or YYYY-MM-DD, UTC). */
+                updated_from?: string;
+                /** @description Upper bound of updated_at; a YYYY-MM-DD day covers the whole day. */
+                updated_to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Review queue page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseReviewPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformShowcase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Showcase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reviewPlatformShowcase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseReviewInput"];
+            };
+        };
+        responses: {
+            /** @description Showcase after the decision */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getPublicWarranty: {

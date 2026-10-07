@@ -691,6 +691,9 @@ func catalogConstants() []string {
 		FleetLinkRejected,
 		FleetVehicleAdded,
 		FleetUserInvited,
+		ShowcaseReviewRequested,
+		ShowcasePublished,
+		ShowcaseRejected,
 	}
 }
 
@@ -763,4 +766,19 @@ const (
 	FleetLinkRejected  = "fleet.link_rejected"
 	FleetVehicleAdded  = "fleet.vehicle_added"
 	FleetUserInvited   = "fleet.user_invited"
+)
+
+// Dealer showcase (TEC-467, F5-01b): written in the transaction that moves
+// the showcase. review_requested when an owner submits with
+// showcase.approval_required on (notify_user_ids: the brand center's
+// members holding platform.showcase.review); published when the snapshot is
+// written (direct publish or center approval; notify_user_ids: the owners
+// of the organization after an approval, empty on a direct publish);
+// rejected with the reviewer's note (notify_user_ids: the owners). Payload:
+// organization_uuid, organization_id, organization_name, brand_id, status,
+// reason. The organizations index refreshes has_showcase on published.
+const (
+	ShowcaseReviewRequested = "showcase.review_requested"
+	ShowcasePublished       = "showcase.published"
+	ShowcaseRejected        = "showcase.rejected"
 )

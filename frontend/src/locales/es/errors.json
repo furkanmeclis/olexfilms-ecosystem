@@ -139,5 +139,8 @@
   "codes.FLEET_VEHICLE_EXISTS": "Un vehículo con esta matrícula o VIN pertenece a los usuarios de la flota; puede vincularlo a la flota.",
   "codes.FLEET_VEHICLE_OTHER_OWNER": "El vehículo pertenece a otro cliente o a otra flota y no se puede añadir.",
   "codes.FLEET_NO_DEALER_LINK": "Su organización no tiene un vínculo activo con esta flota.",
-  "codes.FLEET_LINK_NOT_PENDING": "La solicitud de vínculo ya fue respondida."
+  "codes.FLEET_LINK_NOT_PENDING": "La solicitud de vínculo ya fue respondida.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "La galería está llena; elimine una foto antes de añadir otra.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Escriba una nota para rechazar.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Tipo de archivo no admitido; suba una imagen JPEG, PNG o WebP."
 }

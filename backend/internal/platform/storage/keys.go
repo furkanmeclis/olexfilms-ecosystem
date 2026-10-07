@@ -107,3 +107,9 @@ func WhatsAppMediaObjectKey(conversationUUID, messageUUID uuid.UUID) string {
 func CampaignMediaObjectKey(orgUUID, campaignUUID uuid.UUID, locale string, mediaUUID uuid.UUID, ext string) string {
 	return fmt.Sprintf("campaigns/%s/%s/%s/%s.%s", orgUUID.String(), campaignUUID.String(), locale, mediaUUID.String(), trimExt(ext))
 }
+
+// ShowcasePhotoObjectKey builds showcases/{org}/{photo}.{ext} (TEC-467).
+// The photo uuid is random, so a key is never reused for other bytes.
+func ShowcasePhotoObjectKey(orgUUID, photoUUID uuid.UUID, ext string) string {
+	return fmt.Sprintf("showcases/%s/%s.%s", orgUUID.String(), photoUUID.String(), trimExt(ext))
+}

@@ -54,6 +54,8 @@ type Service struct {
 	// TEC-316: set by WithTx; RegisterOrganization then runs in a savepoint
 	// of the caller's transaction.
 	tx pgx.Tx
+	// TEC-467: showcase block, nearby badges and sitemap dates (nil: F2).
+	showcases DealerShowcases
 }
 
 // New creates an organizations service.

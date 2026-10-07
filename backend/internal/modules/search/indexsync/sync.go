@@ -66,6 +66,8 @@ func Register(bus events.Bus, q Store, idx Indexer, log *slog.Logger) {
 	// TEC-473: a fleet document follows its dealer links (fleet.* events
 	// carry the fleet organization as entity).
 	bus.Subscribe("fleet.*", s.HandleOrganization)
+	// TEC-467: a published showcase sets has_showcase on the organization.
+	bus.Subscribe(events.ShowcasePublished, s.HandleOrganization)
 	bus.Subscribe("orders.*", s.HandleOrder)
 	bus.Subscribe("stock.*", s.HandleStock)
 }
