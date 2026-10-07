@@ -128,5 +128,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Rulo bu kuruluşun stokunda değil.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Rulo açık bir hizmette veya siparişte kullanılıyor.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Bu işlem anahtarı başka bir bölme için kullanıldı.",
-  "codes.LEADS_MODULE_DISABLED": "Lead modülü sistem genelinde kapalı; önce modülü açın."
+  "codes.LEADS_MODULE_DISABLED": "Lead modülü sistem genelinde kapalı; önce modülü açın.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "Galeri dolu; yeni fotoğraf eklemek için önce bir fotoğrafı silin.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Reddetmek için bir not yazın.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Dosya türü desteklenmiyor; JPEG, PNG veya WebP yükleyin."
 }

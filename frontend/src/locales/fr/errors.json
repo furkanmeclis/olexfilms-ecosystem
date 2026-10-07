@@ -128,5 +128,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Le rouleau n'est pas dans le stock de cette organisation.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Le rouleau est utilisé dans un service ou une commande en cours.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Cette clé d'idempotence a servi à un autre découpage.",
-  "codes.LEADS_MODULE_DISABLED": "Le module prospects est fermé pour tout le système ; activez d'abord le module."
+  "codes.LEADS_MODULE_DISABLED": "Le module prospects est fermé pour tout le système ; activez d'abord le module.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "La galerie est pleine ; supprimez une photo avant d'en ajouter une nouvelle.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Rédigez une remarque pour refuser.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Type de fichier non pris en charge ; importez une image JPEG, PNG ou WebP."
 }

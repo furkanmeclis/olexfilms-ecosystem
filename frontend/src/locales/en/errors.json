@@ -128,5 +128,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "The roll is not in this organization's stock.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "The roll is on an open service or order.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "This idempotency key was used for another split.",
-  "codes.LEADS_MODULE_DISABLED": "The leads module is closed system wide; open the module first."
+  "codes.LEADS_MODULE_DISABLED": "The leads module is closed system wide; open the module first.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "The gallery is full; delete a photo before adding a new one.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Write a note to reject.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Unsupported file type; upload a JPEG, PNG or WebP image."
 }

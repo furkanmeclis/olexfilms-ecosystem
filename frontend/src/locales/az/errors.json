@@ -128,5 +128,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Rulon bu təşkilatın stokunda deyil.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Rulon açıq xidmətdə və ya sifarişdə istifadə olunur.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Bu əməliyyat açarı başqa bölmə üçün istifadə olunub.",
-  "codes.LEADS_MODULE_DISABLED": "Potensial müştəri modulu sistem üzrə bağlıdır; əvvəlcə modulu açın."
+  "codes.LEADS_MODULE_DISABLED": "Potensial müştəri modulu sistem üzrə bağlıdır; əvvəlcə modulu açın.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "Qalereya doludur; yeni şəkil əlavə etməzdən əvvəl bir şəkli silin.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Rədd etmək üçün qeyd yazın.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Fayl növü dəstəklənmir; JPEG, PNG və ya WebP şəkli yükləyin."
 }

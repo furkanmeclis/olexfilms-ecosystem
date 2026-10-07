@@ -128,5 +128,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Рулону немає на складі цієї організації.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Рулон використовується у відкритій послузі чи замовленні.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Цей ключ ідемпотентності вже використано для іншого поділу.",
-  "codes.LEADS_MODULE_DISABLED": "Модуль лідів вимкнено для всієї системи; спочатку увімкніть модуль."
+  "codes.LEADS_MODULE_DISABLED": "Модуль лідів вимкнено для всієї системи; спочатку увімкніть модуль.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "Галерея заповнена; видаліть фото, перш ніж додати нове.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Щоб відхилити, напишіть примітку.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Непідтримуваний тип файлу; завантажте зображення JPEG, PNG або WebP."
 }

@@ -128,5 +128,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Ролката не е в наличността на тази организация.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Ролката се използва в отворена услуга или поръчка.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Този ключ за идемпотентност е използван за друго разделяне.",
-  "codes.LEADS_MODULE_DISABLED": "Модулът за потенциални клиенти е затворен за цялата система; първо включете модула."
+  "codes.LEADS_MODULE_DISABLED": "Модулът за потенциални клиенти е затворен за цялата система; първо включете модула.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "Галерията е пълна; изтрийте снимка, преди да добавите нова.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Напишете бележка, за да отхвърлите.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Неподдържан тип файл; качете JPEG, PNG или WebP изображение."
 }

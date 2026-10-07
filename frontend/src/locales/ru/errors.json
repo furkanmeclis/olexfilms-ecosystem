@@ -128,5 +128,8 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Рулона нет на складе этой организации.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Рулон используется в открытой услуге или заказе.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Этот ключ идемпотентности уже использован для другого разделения.",
-  "codes.LEADS_MODULE_DISABLED": "Модуль лидов отключён для всей системы; сначала включите модуль."
+  "codes.LEADS_MODULE_DISABLED": "Модуль лидов отключён для всей системы; сначала включите модуль.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "Галерея заполнена; удалите фото, прежде чем добавить новое.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Чтобы отклонить, напишите примечание.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Неподдерживаемый тип файла; загрузите изображение JPEG, PNG или WebP."
 }
