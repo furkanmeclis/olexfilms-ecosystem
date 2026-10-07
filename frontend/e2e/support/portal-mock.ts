@@ -106,6 +106,9 @@ export class PortalMock {
   appointments: Json[] = [];
   /** TEC-304: executed intake contracts of the owner (PortalContract). */
   contracts: Json[] = [];
+  /** TEC-353: admin review questions of the form and the posted reviews. */
+  reviewQuestions: Json[] = [];
+  reviews: Json[] = [];
 
   /** Latest code the fake WhatsApp sender delivered to `phone`. */
   lastCode(phone: string, purpose: string): string | undefined {
@@ -350,15 +353,44 @@ export class PortalMock {
     if (method === "GET" && service) {
       return owns ? ok(this.service(service)) : fail(404, "NOT_FOUND");
     }
-    // TEC-244: review state of the service (no review, dealer without a
-    // Google link); the card is not under test here.
+    // TEC-244 / TEC-353: review state of the service (dealer without a
+    // Google link, the admin questions, the service's product) and the
+    // posted review (stored as sent).
     const reviewed = SERVICES.find(
       (s) => path === `portal/services/${s.uuid}/review`,
     );
-    if (method === "GET" && reviewed) {
-      return owns
-        ? ok({ review: null, can_review: true, google_business_url: null })
-        : fail(404, "NOT_FOUND");
+    if (reviewed && (method === "GET" || method === "POST")) {
+      if (!owns) return fail(404, "NOT_FOUND");
+      const products = [
+        {
+          uuid: `${reviewed.uuid.slice(0, -4)}7777`,
+          sku: "OLX-1",
+          name: reviewed.product,
+        },
+      ];
+      let review: Json | null = null;
+      if (method === "POST") {
+        review = {
+          uuid: `${reviewed.uuid.slice(0, -4)}9999`,
+          comment: null,
+          answers: [],
+          source: "portal",
+          is_anonymous: false,
+          ...body,
+          created_at: "2026-10-07T10:00:00Z",
+        };
+        this.reviews.push(body);
+      }
+      return ok(
+        {
+          review,
+          can_review: review === null,
+          google_business_url: null,
+          questions: this.reviewQuestions,
+          products,
+        },
+        method === "POST" ? 201 : 200,
+      );
     }
     const transfers = `portal/vehicles/${PORTAL_VEHICLE}/transfers`;
     if (method === "GET" && path === transfers) {

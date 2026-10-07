@@ -86,5 +86,6 @@
   "nav_glorian_integration": "Glorian",
   "nav_service_catalog": "Κατάλογος υπηρεσιών",
   "nav_service_subscriptions": "Συνδρομές υπηρεσιών",
-  "nav_service_subscription_cancels": "Αιτήματα ακύρωσης"
+  "nav_service_subscription_cancels": "Αιτήματα ακύρωσης",
+  "nav_review_questions": "Ερωτήσεις αξιολόγησης"
 }

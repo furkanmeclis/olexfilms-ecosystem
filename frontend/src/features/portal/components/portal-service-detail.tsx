@@ -50,9 +50,12 @@ import { useLocale } from "@/providers/locale-provider";
 export function PortalServiceView({
   service,
   now,
+  reviewFromLink = false,
 }: {
   service: PortalService;
   now?: Date;
+  /** TEC-353: opened from the WhatsApp review link. */
+  reviewFromLink?: boolean;
 }) {
   const { t, format, locale } = useLocale();
   const [focused, setFocused] = useState<string | null>(null);
@@ -298,7 +301,10 @@ export function PortalServiceView({
         </CardContent>
       </Card>
 
-      <PortalServiceReview serviceUuid={service.uuid} />
+      <PortalServiceReview
+        serviceUuid={service.uuid}
+        fromLink={reviewFromLink}
+      />
     </div>
   );
 }
@@ -311,9 +317,12 @@ export function PortalServiceView({
 export function PortalServiceDetail({
   uuid,
   now,
+  reviewFromLink = false,
 }: {
   uuid: string;
   now?: Date;
+  /** TEC-353: `?source=whatsapp_link` (the WhatsApp review link). */
+  reviewFromLink?: boolean;
 }) {
   const { t } = useLocale();
   const detail = useQuery({
@@ -357,7 +366,11 @@ export function PortalServiceDetail({
           />
         )
       ) : service ? (
-        <PortalServiceView service={service} now={now} />
+        <PortalServiceView
+          service={service}
+          now={now}
+          reviewFromLink={reviewFromLink}
+        />
       ) : (
         <p className="text-muted-foreground text-sm">
           {t("portal.vehicles.loading")}
