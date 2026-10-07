@@ -704,6 +704,25 @@ export function tenantNav(slug: string) {
         ],
       },
       {
+        // TEC-333: center-managed document library (announcements module).
+        id: "library",
+        labelKey: "library.nav",
+        icon: FileText,
+        defaultOpen: true,
+        permission: permissions.library.read,
+        feature: "announcements",
+        items: [
+          {
+            id: "library-list",
+            titleKey: "library.nav_list",
+            href: routes.tenant.library.list(slug),
+            icon: FileText,
+            permission: permissions.library.read,
+            feature: "announcements",
+          },
+        ],
+      },
+      {
         // TEC-318: organization-scoped lead pipeline. The item has a live
         // follow-up badge and stays behind the leads module flag.
         id: "leads",

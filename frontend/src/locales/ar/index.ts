@@ -27,6 +27,7 @@ import integrations from "./integrations.json";
 import landing from "./landing.json";
 import layout from "./layout.json";
 import leads from "./leads.json";
+import library from "./library.json";
 import logs from "./logs.json";
 import measurements from "./measurements.json";
 import modules from "./modules.json";
@@ -80,6 +81,7 @@ const catalog: LocaleCatalog = {
   landing,
   layout,
   leads,
+  library,
   logs,
   measurements,
   modules,

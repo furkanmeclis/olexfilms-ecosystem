@@ -142,6 +142,8 @@ export const Permission = {
   TasksWrite: "tasks.write",
   AnnouncementsRead: "announcements.read",
   AnnouncementsWrite: "announcements.write",
+  LibraryRead: "library.read",
+  LibraryManage: "library.manage",
   /** TEC-290: contract template editor (brand scoped, intake_contracts). */
   ContractsTemplatesManage: "contracts.templates.manage",
   /** TEC-291: intake contract signing in the service wizard. */
@@ -378,6 +380,10 @@ export const permissions = {
   announcements: {
     read: Permission.AnnouncementsRead,
     write: Permission.AnnouncementsWrite,
+  },
+  library: {
+    read: Permission.LibraryRead,
+    manage: Permission.LibraryManage,
   },
   catalog: {
     read: Permission.CatalogRead,
