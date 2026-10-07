@@ -59,6 +59,7 @@ type Store interface {
 	GetLibraryFolderByUUID(ctx context.Context, argUuid uuid.UUID) (db.LibraryFolder, error)
 	ListLibraryFolders(ctx context.Context, organizationID int64) ([]db.LibraryFolder, error)
 	ListLibraryFoldersByBrand(ctx context.Context, brandID int64) ([]db.LibraryFolder, error)
+	ListVisibleLibraryFolders(ctx context.Context, arg db.ListVisibleLibraryFoldersParams) ([]db.LibraryFolder, error)
 	UpdateLibraryFolder(ctx context.Context, arg db.UpdateLibraryFolderParams) (db.LibraryFolder, error)
 	SoftDeleteLibraryFolder(ctx context.Context, arg db.SoftDeleteLibraryFolderParams) (int64, error)
 	CreateLibraryItem(ctx context.Context, arg db.CreateLibraryItemParams) (db.LibraryItem, error)
@@ -187,10 +188,12 @@ func ActorFrom(pr authctx.Principal, org orgctx.Scope) Actor {
 	return Actor{UserID: pr.UserInternal, OrganizationID: org.InternalID, BrandID: org.BrandID, OrgType: org.OrgType, Roles: pr.Roles}
 }
 
-// ListFolders returns the brand's folder tree: folders are managed by the
-// center and read by the whole network (items stay filtered per item).
+// ListFolders returns the folder tree readable by the viewer: the whole
+// brand tree for the center; for other organizations only folders holding
+// (directly or below) an item they may see, their ancestors and the
+// organization's own folders.
 func (s *Service) ListFolders(ctx context.Context, actor Actor) ([]FolderView, error) {
-	rows, err := s.q.ListLibraryFoldersByBrand(ctx, actor.BrandID)
+	rows, err := s.readableFolders(ctx, actor)
 	if err != nil {
 		return nil, err
 	}
@@ -539,13 +542,37 @@ func (s *Service) folder(ctx context.Context, actor Actor, id uuid.UUID) (db.Lib
 	return row, nil
 }
 
-// readableFolder resolves a folder of the viewer's brand (list filter).
+// readableFolders lists the folders the viewer may see (see ListFolders).
+func (s *Service) readableFolders(ctx context.Context, actor Actor) ([]db.LibraryFolder, error) {
+	if actor.OrgType == OrgCenter {
+		return s.q.ListLibraryFoldersByBrand(ctx, actor.BrandID)
+	}
+	return s.q.ListVisibleLibraryFolders(ctx, db.ListVisibleLibraryFoldersParams{
+		BrandID: actor.BrandID, OrganizationID: actor.OrganizationID,
+		AccessLevels: accessLevels(actor.OrgType), ViewerRoleSlugs: actor.Roles,
+	})
+}
+
+// readableFolder resolves a folder readable by the viewer (list filter); a
+// folder hidden from the viewer is 404.
 func (s *Service) readableFolder(ctx context.Context, actor Actor, id uuid.UUID) (db.LibraryFolder, error) {
 	row, err := s.q.GetLibraryFolderByUUID(ctx, id)
 	if err != nil || row.BrandID != actor.BrandID || row.DeletedAt.Valid {
 		return db.LibraryFolder{}, ErrNotFound
 	}
-	return row, nil
+	if actor.OrgType == OrgCenter {
+		return row, nil
+	}
+	rows, err := s.readableFolders(ctx, actor)
+	if err != nil {
+		return db.LibraryFolder{}, err
+	}
+	for _, f := range rows {
+		if f.ID == row.ID {
+			return row, nil
+		}
+	}
+	return db.LibraryFolder{}, ErrNotFound
 }
 
 func (s *Service) folderID(ctx context.Context, actor Actor, id *uuid.UUID) (*int64, error) {

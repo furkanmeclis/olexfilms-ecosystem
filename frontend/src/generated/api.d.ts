@@ -11145,7 +11145,7 @@ export interface paths {
         };
         /**
          * List document library folders
-         * @description The brand's folder tree (center-managed, readable by the whole network).
+         * @description The center sees the brand's folder tree; other organizations see only folders holding (directly or below) an item they may read, their ancestors and their own folders.
          */
         get: operations["listLibraryFolders"];
         put?: never;
@@ -40595,7 +40595,7 @@ export interface operations {
                 q?: components["parameters"]["Q"];
                 /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];
-                /** @description Folder of the viewer's brand (direct items only). */
+                /** @description Folder readable by the viewer (direct items only); a folder hidden from the viewer is 404. */
                 folder?: string;
                 /** @description Comma-separated tags; items carrying any of them. */
                 tag?: string;

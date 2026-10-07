@@ -18,10 +18,42 @@ WHERE organization_id = $1 AND deleted_at IS NULL
 ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id;
 
 -- name: ListLibraryFoldersByBrand :many
--- Reader view: the brand's folder tree (folders are center-managed; item
--- visibility is still filtered per item).
+-- Center reader view: the brand's whole folder tree (other organizations
+-- use ListVisibleLibraryFolders).
 SELECT * FROM library_folders
 WHERE brand_id = $1 AND deleted_at IS NULL
+ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id;
+
+-- name: ListVisibleLibraryFolders :many
+-- Reader view of a non-center organization: a brand folder is listed only
+-- if it (or a descendant folder) holds an item the viewer may see (same
+-- access_levels / viewer_role_slugs rule as ListLibraryItems), plus the
+-- ancestors needed to reach it. The viewer organization's own folders stay
+-- listed.
+WITH RECURSIVE visible AS (
+    SELECT f.id, f.parent_id
+    FROM library_folders f
+    WHERE f.brand_id = sqlc.arg(brand_id)::bigint
+      AND f.deleted_at IS NULL
+      AND (
+          f.organization_id = sqlc.arg(organization_id)::bigint
+          OR EXISTS (
+              SELECT 1 FROM library_items i
+              WHERE i.folder_id = f.id
+                AND i.brand_id = sqlc.arg(brand_id)::bigint
+                AND i.deleted_at IS NULL
+                AND i.access_level = ANY(sqlc.arg(access_levels)::text[])
+                AND (i.role_slug IS NULL OR i.role_slug = ANY(sqlc.arg(viewer_role_slugs)::text[]))
+          )
+      )
+    UNION
+    SELECT p.id, p.parent_id
+    FROM library_folders p
+    JOIN visible v ON p.id = v.parent_id
+    WHERE p.brand_id = sqlc.arg(brand_id)::bigint AND p.deleted_at IS NULL
+)
+SELECT library_folders.* FROM library_folders
+WHERE id IN (SELECT visible.id FROM visible)
 ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id;
 
 -- name: UpdateLibraryFolder :one

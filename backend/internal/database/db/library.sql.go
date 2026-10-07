@@ -400,8 +400,8 @@ WHERE brand_id = $1 AND deleted_at IS NULL
 ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id
 `
 
-// Reader view: the brand's folder tree (folders are center-managed; item
-// visibility is still filtered per item).
+// Center reader view: the brand's whole folder tree (other organizations
+// use ListVisibleLibraryFolders).
 func (q *Queries) ListLibraryFoldersByBrand(ctx context.Context, brandID int64) ([]LibraryFolder, error) {
 	rows, err := q.db.Query(ctx, listLibraryFoldersByBrand, brandID)
 	if err != nil {
@@ -570,6 +570,83 @@ func (q *Queries) ListLibraryItems(ctx context.Context, arg ListLibraryItemsPara
 			&i.Tags,
 			&i.AccessLevel,
 			&i.RoleSlug,
+			&i.CreatedByUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listVisibleLibraryFolders = `-- name: ListVisibleLibraryFolders :many
+WITH RECURSIVE visible AS (
+    SELECT f.id, f.parent_id
+    FROM library_folders f
+    WHERE f.brand_id = $1::bigint
+      AND f.deleted_at IS NULL
+      AND (
+          f.organization_id = $2::bigint
+          OR EXISTS (
+              SELECT 1 FROM library_items i
+              WHERE i.folder_id = f.id
+                AND i.brand_id = $1::bigint
+                AND i.deleted_at IS NULL
+                AND i.access_level = ANY($3::text[])
+                AND (i.role_slug IS NULL OR i.role_slug = ANY($4::text[]))
+          )
+      )
+    UNION
+    SELECT p.id, p.parent_id
+    FROM library_folders p
+    JOIN visible v ON p.id = v.parent_id
+    WHERE p.brand_id = $1::bigint AND p.deleted_at IS NULL
+)
+SELECT library_folders.id, library_folders.uuid, library_folders.organization_id, library_folders.brand_id, library_folders.parent_id, library_folders.name, library_folders.sort_order, library_folders.created_by_user_id, library_folders.created_at, library_folders.updated_at, library_folders.deleted_at FROM library_folders
+WHERE id IN (SELECT visible.id FROM visible)
+ORDER BY parent_id NULLS FIRST, sort_order, lower(name), id
+`
+
+type ListVisibleLibraryFoldersParams struct {
+	BrandID         int64    `json:"brand_id"`
+	OrganizationID  int64    `json:"organization_id"`
+	AccessLevels    []string `json:"access_levels"`
+	ViewerRoleSlugs []string `json:"viewer_role_slugs"`
+}
+
+// Reader view of a non-center organization: a brand folder is listed only
+// if it (or a descendant folder) holds an item the viewer may see (same
+// access_levels / viewer_role_slugs rule as ListLibraryItems), plus the
+// ancestors needed to reach it. The viewer organization's own folders stay
+// listed.
+func (q *Queries) ListVisibleLibraryFolders(ctx context.Context, arg ListVisibleLibraryFoldersParams) ([]LibraryFolder, error) {
+	rows, err := q.db.Query(ctx, listVisibleLibraryFolders,
+		arg.BrandID,
+		arg.OrganizationID,
+		arg.AccessLevels,
+		arg.ViewerRoleSlugs,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LibraryFolder{}
+	for rows.Next() {
+		var i LibraryFolder
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ParentID,
+			&i.Name,
+			&i.SortOrder,
 			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,

@@ -1366,8 +1366,8 @@ type Querier interface {
 	ListLegacyMessagesByUser(ctx context.Context, arg ListLegacyMessagesByUserParams) ([]ListLegacyMessagesByUserRow, error)
 	ListLegalTextVersions(ctx context.Context, arg ListLegalTextVersionsParams) ([]LegalText, error)
 	ListLibraryFolders(ctx context.Context, organizationID int64) ([]LibraryFolder, error)
-	// Reader view: the brand's folder tree (folders are center-managed; item
-	// visibility is still filtered per item).
+	// Center reader view: the brand's whole folder tree (other organizations
+	// use ListVisibleLibraryFolders).
 	ListLibraryFoldersByBrand(ctx context.Context, brandID int64) ([]LibraryFolder, error)
 	ListLibraryItemVersions(ctx context.Context, itemID int64) ([]LibraryItemVersion, error)
 	// Reader view in a brand. access_levels are the levels the viewer
@@ -1798,6 +1798,12 @@ type Querier interface {
 	// organization. locale picks the translation, falling back to the default
 	// text.
 	ListVisibleAnnouncements(ctx context.Context, arg ListVisibleAnnouncementsParams) ([]ListVisibleAnnouncementsRow, error)
+	// Reader view of a non-center organization: a brand folder is listed only
+	// if it (or a descendant folder) holds an item the viewer may see (same
+	// access_levels / viewer_role_slugs rule as ListLibraryItems), plus the
+	// ancestors needed to reach it. The viewer organization's own folders stay
+	// listed.
+	ListVisibleLibraryFolders(ctx context.Context, arg ListVisibleLibraryFoldersParams) ([]LibraryFolder, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
 	// ---------------------------------------------------------------------------

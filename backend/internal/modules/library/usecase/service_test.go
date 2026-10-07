@@ -223,6 +223,42 @@ func (f *fakeStore) ListLibraryFoldersByBrand(_ context.Context, brandID int64) 
 	}
 	return out, nil
 }
+func (f *fakeStore) ListVisibleLibraryFolders(_ context.Context, arg db.ListVisibleLibraryFoldersParams) ([]db.LibraryFolder, error) {
+	byID := map[int64]db.LibraryFolder{}
+	for _, row := range f.folders {
+		if row.BrandID == arg.BrandID && !row.DeletedAt.Valid {
+			byID[row.ID] = row
+		}
+	}
+	keep := map[int64]bool{}
+	mark := func(id int64) {
+		for row, ok := byID[id]; ok && !keep[row.ID]; row, ok = byID[row.ParentID.Int64] {
+			keep[row.ID] = true
+			if !row.ParentID.Valid {
+				break
+			}
+		}
+	}
+	for _, row := range byID {
+		if row.OrganizationID == arg.OrganizationID {
+			mark(row.ID)
+		}
+	}
+	for _, item := range f.items {
+		if item.BrandID == arg.BrandID && item.FolderID.Valid && !item.DeletedAt.Valid &&
+			contains(arg.AccessLevels, item.AccessLevel) &&
+			(!item.RoleSlug.Valid || contains(arg.ViewerRoleSlugs, item.RoleSlug.String)) {
+			mark(item.FolderID.Int64)
+		}
+	}
+	var out []db.LibraryFolder
+	for _, row := range f.folders {
+		if keep[row.ID] {
+			out = append(out, row)
+		}
+	}
+	return out, nil
+}
 func (f *fakeStore) CountLibraryItems(ctx context.Context, arg db.CountLibraryItemsParams) (int64, error) {
 	rows, err := f.ListLibraryItems(ctx, db.ListLibraryItemsParams{
 		BrandID: arg.BrandID, AccessLevels: arg.AccessLevels, ViewerRoleSlugs: arg.ViewerRoleSlugs,

@@ -21890,7 +21890,7 @@ paths:
       tags: [Library]
       operationId: listLibraryFolders
       summary: List document library folders
-      description: The brand's folder tree (center-managed, readable by the whole network).
+      description: The center sees the brand's folder tree; other organizations see only folders holding (directly or below) an item they may read, their ancestors and their own folders.
       responses:
         "200":
           description: Folders
@@ -21981,7 +21981,7 @@ paths:
         - $ref: "#/components/parameters/Sort"
         - name: folder
           in: query
-          description: Folder of the viewer's brand (direct items only).
+          description: Folder readable by the viewer (direct items only); a folder hidden from the viewer is 404.
           schema: { type: string, format: uuid }
         - name: tag
           in: query
