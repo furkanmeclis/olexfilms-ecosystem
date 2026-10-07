@@ -668,3 +668,36 @@ func TestCampaignGrants(t *testing.T) {
 		}
 	}
 }
+
+// TEC-466: dealer showcase. Dealer owner and distributor owner (subtree)
+// write, dealer staff and the center read, the center reviews; no
+// accounting, warehouse, distributor staff or portal role holds a showcase
+// permission.
+func TestShowcaseGrants(t *testing.T) {
+	for _, slug := range []string{PermShowcaseRead, PermShowcaseWrite, PermPlatformShowcaseReview} {
+		def, ok := PermissionBySlug(slug)
+		if !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+		if def.Module != "dealer_showcase" || def.SuperAdminOnly {
+			t.Fatalf("%s def = %+v", slug, def)
+		}
+	}
+	slugs := []string{PermShowcaseRead, PermShowcaseWrite, PermPlatformShowcaseReview}
+	want := map[string]map[string]Scope{
+		RoleSuperAdmin:       {PermShowcaseRead: ScopeAll, PermShowcaseWrite: ScopeAll, PermPlatformShowcaseReview: ScopeAll},
+		RoleCenterStaff:      {PermShowcaseRead: ScopeBrand, PermPlatformShowcaseReview: ScopeBrand},
+		RoleCenterSocial:     {PermShowcaseRead: ScopeBrand, PermPlatformShowcaseReview: ScopeBrand},
+		RoleDistributorOwner: {PermShowcaseRead: ScopeSubtree, PermShowcaseWrite: ScopeSubtree},
+		RoleDealerOwner:      {PermShowcaseRead: ScopeManaged, PermShowcaseWrite: ScopeManaged},
+		RoleDealerStaff:      {PermShowcaseRead: ScopeManaged},
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range slugs {
+			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
+				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
+			}
+		}
+	}
+}

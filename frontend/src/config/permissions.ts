@@ -190,6 +190,10 @@ export const Permission = {
   /** TEC-403: MCP connections (consent) and the platform client list. */
   McpConnect: "mcp.connect",
   McpClientsManage: "mcp.clients.manage",
+  /** TEC-466: dealer showcase (panel editor, center review queue). */
+  ShowcaseRead: "showcase.read",
+  ShowcaseWrite: "showcase.write",
+  PlatformShowcaseReview: "platform.showcase.review",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -556,5 +560,11 @@ export const permissions = {
   aiAdmin: {
     settingsManage: Permission.AiSettingsManage,
     usageRead: Permission.AiUsageRead,
+  },
+  /** TEC-466: dealer showcase editor and the center review queue. */
+  showcase: {
+    read: Permission.ShowcaseRead,
+    write: Permission.ShowcaseWrite,
+    review: Permission.PlatformShowcaseReview,
   },
 } as const;

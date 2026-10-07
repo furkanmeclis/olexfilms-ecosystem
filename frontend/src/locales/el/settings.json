@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "Έναρξη ωρών ησυχίας",
   "system.keys.campaigns_quiet_hours_start_hint": "Από αυτή την ώρα στη ζώνη ώρας του παραλήπτη τα μηνύματα WhatsApp καμπανιών αναμένουν (0–23).",
   "system.keys.campaigns_quiet_hours_end": "Λήξη ωρών ησυχίας",
-  "system.keys.campaigns_quiet_hours_end_hint": "Τα μηνύματα σε αναμονή αποστέλλονται αυτή την ώρα της ζώνης ώρας του παραλήπτη· ίδια τιμή με την έναρξη απενεργοποιεί τις ώρες ησυχίας (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "Τα μηνύματα σε αναμονή αποστέλλονται αυτή την ώρα της ζώνης ώρας του παραλήπτη· ίδια τιμή με την έναρξη απενεργοποιεί τις ώρες ησυχίας (0–23).",
+  "system.groups.showcase": "Βιτρίνα αντιπροσώπου",
+  "system.groups.showcase_hint": "Έγκριση δημοσίευσης και όριο συλλογής των βιτρινών αντιπροσώπων.",
+  "system.keys.showcase_approval_required": "Η δημοσίευση της βιτρίνας απαιτεί έγκριση του κέντρου",
+  "system.keys.showcase_approval_required_hint": "Όταν είναι ενεργό, η βιτρίνα δημοσιεύεται μόνο μετά από έγκριση του κέντρου· όταν είναι ανενεργό, ο αντιπρόσωπος δημοσιεύει απευθείας.",
+  "system.keys.showcase_max_photos": "Μέγιστος αριθμός φωτογραφιών ανά βιτρίνα",
+  "system.keys.showcase_max_photos_hint": "Πλήθος φωτογραφιών που μπορεί να έχει η συλλογή μιας βιτρίνας (1–50)."
 }

@@ -641,6 +641,20 @@ var Permissions = []PermissionDef{
 		Slug: PermCampaignsApprove, Name: "Approve campaigns", Module: "campaigns", Scopes: scopesTree,
 		Description: "Approve, reject or send back campaigns submitted to the organization for approval.",
 	},
+	// TEC-466: dealer showcase (F5-01). Appended last; migration 000111 seeds
+	// them.
+	{
+		Slug: PermShowcaseRead, Name: "Read showcase", Module: "dealer_showcase", Scopes: scopesTree,
+		Description: "Read the dealer showcase (profile, working hours, services, photos) of the organizations in scope.",
+	},
+	{
+		Slug: PermShowcaseWrite, Name: "Write showcase", Module: "dealer_showcase", Scopes: scopesTree,
+		Description: "Edit the dealer showcase and submit it for publication.",
+	},
+	{
+		Slug: PermPlatformShowcaseReview, Name: "Review showcases", Module: "dealer_showcase", Scopes: scopesSupplier,
+		Description: "Approve or reject dealer showcases submitted for publication.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -781,6 +795,9 @@ var Roles = []RoleDef{
 			PermAIUsageRead:      ScopeBrand,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-466 (000111).
+			PermShowcaseRead:           ScopeBrand,
+			PermPlatformShowcaseReview: ScopeBrand,
 		}),
 	},
 	{
@@ -893,6 +910,9 @@ var Roles = []RoleDef{
 			PermMCPConnect: ScopeOwn,
 			// TEC-404 (000107).
 			PermCampaignsApprove: ScopeBrand,
+			// TEC-466 (000111).
+			PermShowcaseRead:           ScopeBrand,
+			PermPlatformShowcaseReview: ScopeBrand,
 		}),
 	},
 	{
@@ -988,6 +1008,9 @@ var Roles = []RoleDef{
 			PermCampaignsRead:    ScopeSubtree,
 			PermCampaignsWrite:   ScopeManaged,
 			PermCampaignsApprove: ScopeSubtree,
+			// TEC-466 (000111): own showcase and those of its dealers.
+			PermShowcaseRead:  ScopeSubtree,
+			PermShowcaseWrite: ScopeSubtree,
 		}),
 	},
 	{
@@ -1164,6 +1187,9 @@ var Roles = []RoleDef{
 			// TEC-404 (000107): own campaigns, approved upstream.
 			PermCampaignsRead:  ScopeManaged,
 			PermCampaignsWrite: ScopeManaged,
+			// TEC-466 (000111).
+			PermShowcaseRead:  ScopeManaged,
+			PermShowcaseWrite: ScopeManaged,
 		}),
 	},
 	{
@@ -1207,6 +1233,8 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-466 (000111): reads the showcase, the owner edits it.
+			PermShowcaseRead: ScopeManaged,
 		}),
 	},
 	{

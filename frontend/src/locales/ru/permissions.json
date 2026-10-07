@@ -203,5 +203,9 @@
   "labels.leads.convert_org": "Конвертировать лид в организацию",
   "labels.quotes.read": "Просмотр предложений",
   "labels.quotes.write": "Управление предложениями",
-  "groups.quotes": "Предложения"
+  "groups.quotes": "Предложения",
+  "labels.showcase.read": "Просмотр витрины",
+  "labels.showcase.write": "Редактирование витрины",
+  "labels.platform.showcase.review": "Проверка витрин дилеров",
+  "groups.dealer_showcase": "Витрина дилера"
 }

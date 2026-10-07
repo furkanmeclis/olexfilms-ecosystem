@@ -203,5 +203,9 @@
   "labels.leads.convert_org": "تحويل العميل المحتمل إلى مؤسسة",
   "labels.quotes.read": "عرض عروض الأسعار",
   "labels.quotes.write": "إدارة عروض الأسعار",
-  "groups.quotes": "عروض الأسعار"
+  "groups.quotes": "عروض الأسعار",
+  "labels.showcase.read": "عرض الواجهة",
+  "labels.showcase.write": "تعديل الواجهة",
+  "labels.platform.showcase.review": "مراجعة واجهات الوكلاء",
+  "groups.dealer_showcase": "واجهة الوكيل"
 }

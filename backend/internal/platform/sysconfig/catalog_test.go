@@ -131,3 +131,21 @@ func TestWarrantyLaborSettings(t *testing.T) {
 		t.Errorf("labor rule default = %v, want dealer", d.Default)
 	}
 }
+
+// TEC-466: showcase approval is off by default (F5 S4) and the gallery holds
+// 12 photos unless the admin changes it.
+func TestShowcaseSettings(t *testing.T) {
+	d, ok := Lookup(KeyShowcaseApprovalRequired)
+	if !ok || d.Default != false || d.Group != GroupShowcase || d.Kind != KindBool {
+		t.Fatalf("showcase.approval_required = %+v", d)
+	}
+	d, ok = Lookup(KeyShowcaseMaxPhotos)
+	if !ok || d.Default != int64(12) || d.Group != GroupShowcase {
+		t.Fatalf("showcase.max_photos = %+v", d)
+	}
+	for raw, valid := range map[string]bool{`12`: true, `1`: true, `50`: true, `0`: false, `51`: false} {
+		if _, err := d.Validate([]byte(raw)); (err == nil) != valid {
+			t.Errorf("max_photos %s: err = %v, want ok=%v", raw, err, valid)
+		}
+	}
+}

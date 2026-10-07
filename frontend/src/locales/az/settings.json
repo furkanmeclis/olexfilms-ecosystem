@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "Sakit saatların başlanğıcı",
   "system.keys.campaigns_quiet_hours_start_hint": "Alıcının saat qurşağında bu saatdan etibarən kampaniya WhatsApp mesajları gözlədilir (0–23).",
   "system.keys.campaigns_quiet_hours_end": "Sakit saatların sonu",
-  "system.keys.campaigns_quiet_hours_end_hint": "Gözləyən mesajlar alıcının saatı ilə bu saatda göndərilir; başlanğıcla eyni olarsa sakit saatlar söndürülür (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "Gözləyən mesajlar alıcının saatı ilə bu saatda göndərilir; başlanğıcla eyni olarsa sakit saatlar söndürülür (0–23).",
+  "system.groups.showcase": "Diler vitrini",
+  "system.groups.showcase_hint": "Diler vitrinlərinin dərc təsdiqi və qalereya limiti.",
+  "system.keys.showcase_approval_required": "Vitrinin dərci mərkəzin təsdiqini tələb edir",
+  "system.keys.showcase_approval_required_hint": "Aktivdirsə, diler vitrini yalnız mərkəz təsdiq etdikdən sonra dərc olunur; deaktivdirsə, diler birbaşa dərc edir.",
+  "system.keys.showcase_max_photos": "Vitrin üzrə maksimum foto",
+  "system.keys.showcase_max_photos_hint": "Bir diler vitrininin qalereyasında saxlanıla bilən foto sayı (1–50)."
 }

@@ -203,5 +203,9 @@
   "labels.leads.convert_org": "Convertire un contatto in organizzazione",
   "labels.quotes.read": "Visualizzare i preventivi",
   "labels.quotes.write": "Gestire i preventivi",
-  "groups.quotes": "Preventivi"
+  "groups.quotes": "Preventivi",
+  "labels.showcase.read": "Visualizza vetrina",
+  "labels.showcase.write": "Modifica vetrina",
+  "labels.platform.showcase.review": "Approva le vetrine dei rivenditori",
+  "groups.dealer_showcase": "Vetrina del rivenditore"
 }

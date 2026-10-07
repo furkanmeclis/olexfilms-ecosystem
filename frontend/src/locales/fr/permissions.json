@@ -203,5 +203,9 @@
   "labels.leads.convert_org": "Convertir un prospect en organisation",
   "labels.quotes.read": "Voir les devis",
   "labels.quotes.write": "Gérer les devis",
-  "groups.quotes": "Devis"
+  "groups.quotes": "Devis",
+  "labels.showcase.read": "Voir la vitrine",
+  "labels.showcase.write": "Modifier la vitrine",
+  "labels.platform.showcase.review": "Valider les vitrines des revendeurs",
+  "groups.dealer_showcase": "Vitrine du revendeur"
 }

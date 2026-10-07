@@ -203,5 +203,9 @@
   "labels.leads.convert_org": "Преобразуване в организация",
   "labels.quotes.read": "Преглед на оферти",
   "labels.quotes.write": "Управление на оферти",
-  "groups.quotes": "Оферти"
+  "groups.quotes": "Оферти",
+  "labels.showcase.read": "Преглед на витрината",
+  "labels.showcase.write": "Редактиране на витрината",
+  "labels.platform.showcase.review": "Одобряване на витрините на дилърите",
+  "groups.dealer_showcase": "Витрина на дилъра"
 }
