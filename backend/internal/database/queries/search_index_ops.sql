@@ -5,20 +5,25 @@
 -- that scope, so the index is never the only access check.
 
 -- name: ListOrganizationsForIndex :many
+-- TEC-473: fleets are indexed with type fleet; linked_org_ids are the
+-- dealers with an active link (a dealer's search finds only its fleets).
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
-       p.name AS parent_name
+       p.name AS parent_name,
+       COALESCE((SELECT array_agg(l.dealer_org_id ORDER BY l.dealer_org_id) FROM fleet_dealer_links l
+                 WHERE l.fleet_org_id = o.id AND l.status = 'active'), '{}')::bigint[] AS linked_org_ids
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
-WHERE o.deleted_at IS NULL AND o.type <> 'fleet'
+WHERE o.deleted_at IS NULL
 ORDER BY o.id;
 
 -- name: GetOrganizationForIndex :one
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
-       p.name AS parent_name
+       p.name AS parent_name,
+       COALESCE((SELECT array_agg(l.dealer_org_id ORDER BY l.dealer_org_id) FROM fleet_dealer_links l
+                 WHERE l.fleet_org_id = o.id AND l.status = 'active'), '{}')::bigint[] AS linked_org_ids
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
--- TEC-472: fleets are not indexed (a stale document is removed).
-WHERE o.uuid = sqlc.arg(uuid) AND o.deleted_at IS NULL AND o.type <> 'fleet';
+WHERE o.uuid = sqlc.arg(uuid) AND o.deleted_at IS NULL;
 
 -- name: ListOrdersForIndex :many
 SELECT o.uuid, o.order_no, o.organization_id, o.buyer_org_id, o.brand_id, o.status,

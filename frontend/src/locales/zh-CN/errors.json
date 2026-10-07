@@ -128,5 +128,16 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "该卷材不在本组织库存中。",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "该卷材正用于未完成的服务或订单。",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "此幂等键已用于另一次分切。",
-  "codes.LEADS_MODULE_DISABLED": "潜在客户模块已在全系统关闭，请先开启该模块。"
+  "codes.LEADS_MODULE_DISABLED": "潜在客户模块已在全系统关闭，请先开启该模块。",
+  "codes.FLEET_ALREADY_EXISTS": "已存在使用该税号的车队；请向其发送关联请求。",
+  "codes.FLEET_INVALID_TAX_NUMBER": "税号无效（VKN 或 TCKN 校验未通过）。",
+  "codes.FLEET_LINK_EXISTS": "您与该车队已有一个未结束的关联。",
+  "codes.FLEET_LINK_STATE_CHANGED": "关联同时被更改；请重试。",
+  "codes.FLEET_PRIMARY_USER_REQUIRED": "请先邀请车队的第一位用户（车辆所有人）。",
+  "codes.FLEET_PRIMARY_USER_LOCKED": "车队主用户是车队车辆的所有人，无法停用。",
+  "codes.FLEET_USER_EMAIL_TAKEN": "该电子邮箱地址已有账户。",
+  "codes.FLEET_VEHICLE_EXISTS": "该车牌或车架号的车辆属于车队用户；您可以将其关联到车队。",
+  "codes.FLEET_VEHICLE_OTHER_OWNER": "该车辆属于其他客户或车队，无法添加。",
+  "codes.FLEET_NO_DEALER_LINK": "您的机构与该车队没有有效关联。",
+  "codes.FLEET_LINK_NOT_PENDING": "该关联请求已被处理。"
 }

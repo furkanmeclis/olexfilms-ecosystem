@@ -171,6 +171,11 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range CampaignEventCodes {
 		on(name, campaignDispatcher(code))
 	}
+	// TEC-473: fleet link requests and decisions, fleet user invitations
+	// (notify_user_ids).
+	for name, code := range FleetEventCodes {
+		on(name, fleetDispatcher(code))
+	}
 	// TEC-317: a public dealer application tells the receiving
 	// organization's lead readers (notify_user_ids).
 	on(events.LeadsApplicationReceived, leadApplicationDispatch)
