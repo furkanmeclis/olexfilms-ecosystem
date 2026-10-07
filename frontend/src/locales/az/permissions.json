@@ -199,5 +199,9 @@
   "labels.library.manage": "Sənəd kitabxanasını idarə et",
   "groups.announcements": "Elanlar",
   "groups.library": "Sənəd kitabxanası",
-  "labels.warranty_claims.read": "Zəmanət tələblərinə baxmaq"
+  "labels.warranty_claims.read": "Zəmanət tələblərinə baxmaq",
+  "labels.leads.convert_org": "Lead-i təşkilata çevir",
+  "labels.quotes.read": "Təklifləri gör",
+  "labels.quotes.write": "Təklifləri idarə et",
+  "groups.quotes": "Təkliflər"
 }

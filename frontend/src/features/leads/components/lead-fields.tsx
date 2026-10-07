@@ -18,11 +18,14 @@ export function LeadFields({
   values,
   errors,
   disabled,
+  targetTypes = LEAD_TARGET_TYPES,
   onChange,
 }: {
   values: LeadFormValues;
   errors?: Record<string, string>;
   disabled?: boolean;
+  /** Offered target types; the current value always stays selectable. */
+  targetTypes?: readonly LeadFormValues["target_type"][];
   onChange: (patch: Partial<LeadFormValues>) => void;
 }) {
   const { t } = useLocale();
@@ -81,7 +84,9 @@ export function LeadFields({
             setTarget(e.target.value as LeadFormValues["target_type"])
           }
         >
-          {LEAD_TARGET_TYPES.map((x) => (
+          {LEAD_TARGET_TYPES.filter(
+            (x) => x === values.target_type || targetTypes.includes(x),
+          ).map((x) => (
             <option key={x} value={x}>
               {t(`leads.target_type.${x}`)}
             </option>

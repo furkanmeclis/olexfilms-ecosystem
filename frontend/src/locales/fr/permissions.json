@@ -199,5 +199,9 @@
   "labels.library.manage": "Gérer la bibliothèque de documents",
   "groups.announcements": "Annonces",
   "groups.library": "Bibliothèque de documents",
-  "labels.warranty_claims.read": "Consulter les réclamations de garantie"
+  "labels.warranty_claims.read": "Consulter les réclamations de garantie",
+  "labels.leads.convert_org": "Convertir un prospect en organisation",
+  "labels.quotes.read": "Voir les devis",
+  "labels.quotes.write": "Gérer les devis",
+  "groups.quotes": "Devis"
 }

@@ -14,6 +14,16 @@ export const LEAD_TARGET_TYPES: LeadTargetType[] = [
   "dealer_candidate",
   "distributor_candidate",
 ];
+/**
+ * Target types a user may pick for a lead: a dealer never recruits a
+ * distributor, so the distributor candidate option is center/distributor
+ * only (TEC-319).
+ */
+export function leadTargetTypesFor(orgType: string | undefined) {
+  return orgType === "dealer"
+    ? LEAD_TARGET_TYPES.filter((x) => x !== "distributor_candidate")
+    : LEAD_TARGET_TYPES;
+}
 export const LEAD_SOURCES: LeadSource[] = [
   "incoming_call",
   "outgoing_call",

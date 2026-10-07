@@ -10193,7 +10193,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List the quotes of a lead (newest first) */
+        get: operations["listLeadQuotes"];
         put?: never;
         /** Create a draft quote for a lead */
         post: operations["createLeadQuote"];
@@ -18762,6 +18763,16 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["Quote"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeQuoteList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Quote"][];
+                /** Format: int64 */
+                total: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeQuoteSendResult: {
@@ -38524,6 +38535,31 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listLeadQuotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Quotes of the lead */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeQuoteList"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];

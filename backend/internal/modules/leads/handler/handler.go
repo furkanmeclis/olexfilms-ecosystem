@@ -123,6 +123,20 @@ func (h *Handler) CreateQuote(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, q)
 }
 
+// ListLeadQuotes (GET /v1/leads/{uuid}/quotes).
+func (h *Handler) ListLeadQuotes(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	items, err := h.svc.ListLeadQuotes(r.Context(), caller(r), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items, "total": int64(len(items))})
+}
+
 func quoteUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	id, err := uuid.Parse(r.PathValue("uuid"))
 	if err != nil {

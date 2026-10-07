@@ -199,5 +199,9 @@
   "labels.library.manage": "إدارة مكتبة المستندات",
   "groups.announcements": "الإعلانات",
   "groups.library": "مكتبة المستندات",
-  "labels.warranty_claims.read": "عرض مطالبات الضمان"
+  "labels.warranty_claims.read": "عرض مطالبات الضمان",
+  "labels.leads.convert_org": "تحويل العميل المحتمل إلى مؤسسة",
+  "labels.quotes.read": "عرض عروض الأسعار",
+  "labels.quotes.write": "إدارة عروض الأسعار",
+  "groups.quotes": "عروض الأسعار"
 }

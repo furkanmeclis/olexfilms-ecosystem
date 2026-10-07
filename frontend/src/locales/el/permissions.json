@@ -199,5 +199,9 @@
   "labels.library.manage": "Διαχείριση βιβλιοθήκης εγγράφων",
   "groups.announcements": "Ανακοινώσεις",
   "groups.library": "Βιβλιοθήκη εγγράφων",
-  "labels.warranty_claims.read": "Προβολή αιτημάτων εγγύησης"
+  "labels.warranty_claims.read": "Προβολή αιτημάτων εγγύησης",
+  "labels.leads.convert_org": "Μετατροπή υποψήφιου σε οργανισμό",
+  "labels.quotes.read": "Προβολή προσφορών",
+  "labels.quotes.write": "Διαχείριση προσφορών",
+  "groups.quotes": "Προσφορές"
 }
