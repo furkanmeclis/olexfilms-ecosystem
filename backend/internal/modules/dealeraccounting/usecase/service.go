@@ -215,22 +215,6 @@ type SupplierView struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func (s *Service) ListSuppliers(ctx context.Context, c Caller) ([]SupplierView, error) {
-	o, err := s.activeDealer(ctx, c)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := s.q.ListSuppliers(ctx, db.ListSuppliersParams{OrganizationID: o.ID, PageLimit: 100, PageOffset: 0})
-	if err != nil {
-		return nil, fmt.Errorf("dealer accounting: suppliers: %w", err)
-	}
-	out := make([]SupplierView, 0, len(rows))
-	for _, r := range rows {
-		out = append(out, supplierView(r))
-	}
-	return out, nil
-}
-
 func (s *Service) CreateSupplier(ctx context.Context, c Caller, in SupplierInput) (SupplierView, error) {
 	o, err := s.activeDealer(ctx, c)
 	if err != nil {

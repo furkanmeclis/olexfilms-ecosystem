@@ -8366,6 +8366,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/dealer-prices/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sale price catalog of the dealer (paged)
+         * @description TEC-348. The brand's active piece products plus every product the dealer already priced, with the dealer's own sale price, the recommended price and (with pricing.purchase.read) the dealer's purchase price and estimated profit (sale price, else recommended, minus purchase price). Sort: name (default), sku, sale_price, recommended_sale_price, updated_at. q searches name and sku.
+         */
+        get: operations["listDealerPriceCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/product-sales": {
         parameters: {
             query?: never;
@@ -8373,10 +8393,34 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List quick product sales (paged)
+         * @description TEC-348. Sort: sold_at (default -sold_at), total, payment_method. q searches customer name, note, product name and exact barcode. profit is null without pricing.purchase.read.
+         */
+        get: operations["listProductSales"];
         put?: never;
         /** Create a quick product sale */
         post: operations["createProductSale"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/product-sales/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve a barcode or product to the unit a quick sale would consume
+         * @description TEC-348. Same unit order as POST /v1/product-sales. Nothing held by the dealer → 422 STOCK_UNAVAILABLE. purchase_price is the cost the sale would snapshot (null without pricing.purchase.read).
+         */
+        get: operations["lookupProductSaleItem"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8407,7 +8451,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List suppliers */
+        /**
+         * List suppliers (paged)
+         * @description TEC-348: paged per docs/list-contract.md. Sort: name (default), created_at, updated_at. q searches name, tax number, phone and email.
+         */
         get: operations["listSuppliers"];
         put?: never;
         /** Create a supplier */
@@ -8442,7 +8489,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List external purchases (paged)
+         * @description TEC-348. Sort: purchased_on (default -purchased_on), amount, supplier_name, payment_method. q searches supplier name, note and line description.
+         */
+        get: operations["listPurchases"];
         put?: never;
         /** Create an external purchase expense */
         post: operations["createPurchase"];
@@ -20215,8 +20266,128 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["Supplier"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDealerPriceCatalogPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["DealerPriceCatalogItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeProductSalePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ProductSaleListItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePurchasePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PurchaseListItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeProductSaleLookup: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ProductSaleLookup"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        DealerPriceCatalogItem: {
+            /** Format: uuid */
+            product_uuid: string;
+            sku: string;
+            name: string;
+            uses_fixed_barcode: boolean;
+            currency: string;
+            /** @example 1200.00 */
+            sale_price: string | null;
+            /** @example 1500.00 */
+            recommended_sale_price: string | null;
+            /**
+             * @description null without pricing.purchase.read
+             * @example 800.00
+             */
+            purchase_price: string | null;
+            /** @example 400.00 */
+            estimated_profit: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        ProductSaleLookup: {
+            /** Format: uuid */
+            product_uuid: string;
+            sku: string;
+            name: string;
+            barcode: string;
+            unit_kind: string;
+            quantity_on_hand: number;
+            currency: string;
+            sale_price: string | null;
+            recommended_sale_price: string | null;
+            purchase_price: string | null;
+        };
+        ProductSaleListItem: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: date-time */
+            sold_at: string;
+            /** @enum {string} */
+            payment_method: "cash" | "card" | "cari";
+            currency: string;
+            /** @example 1200.00 */
+            total: string;
+            /** @example 400.00 */
+            profit: string | null;
+            /** Format: uuid */
+            customer_uuid: string | null;
+            customer_name: string | null;
+            /** @description Comma-joined product names */
+            products: string;
+            /** Format: int64 */
+            line_count: number;
+            note: string;
+            voided: boolean;
+        };
+        PurchaseListItem: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            supplier_uuid: string;
+            supplier_name: string;
+            /** @example 250.00 */
+            amount: string;
+            currency: string;
+            /** @enum {string} */
+            payment_method: "cash" | "card" | "bank_transfer" | "cari";
+            /** Format: date */
+            purchased_on: string;
+            description: string;
+            note: string;
+            /** Format: date-time */
+            created_at: string;
         };
         EnvelopePurchase: {
             /** @enum {boolean} */
@@ -35446,6 +35617,72 @@ export interface operations {
             };
         };
     };
+    listDealerPriceCatalog: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                priced?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalog page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDealerPriceCatalogPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listProductSales: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma-separated cash,card,cari */
+                payment_method?: string;
+                voided?: boolean;
+                sold_from?: string;
+                sold_to?: string;
+                total_min?: number;
+                total_max?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sales page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProductSalePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     createProductSale: {
         parameters: {
             query?: never;
@@ -35468,6 +35705,34 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeProductSale"];
                 };
             };
+        };
+    };
+    lookupProductSaleItem: {
+        parameters: {
+            query?: {
+                barcode?: string;
+                product_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sale item preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeProductSaleLookup"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     voidProductSale: {
@@ -35499,7 +35764,18 @@ export interface operations {
     };
     listSuppliers: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                active?: boolean;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -35515,6 +35791,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeSupplierList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
         };
     };
     createSupplier: {
@@ -35566,6 +35843,43 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeSupplier"];
                 };
             };
+        };
+    };
+    listPurchases: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma-separated supplier UUIDs */
+                supplier_uuid?: string;
+                /** @description Comma-separated cash,card,bank_transfer,cari */
+                payment_method?: string;
+                purchased_from?: string;
+                purchased_to?: string;
+                amount_min?: number;
+                amount_max?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Purchases page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePurchasePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createPurchase: {

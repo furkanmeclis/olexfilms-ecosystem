@@ -62,6 +62,13 @@ export const routes = {
       disputeDetail: (slug: string, uuid: string) =>
         `/t/${slug}/accounting/disputes/${uuid}`,
     },
+    /** TEC-348 dealer sale prices, quick sale, suppliers, purchases. */
+    dealerSales: {
+      prices: (slug: string) => `/t/${slug}/dealer-sales/prices`,
+      quickSale: (slug: string) => `/t/${slug}/dealer-sales/quick-sale`,
+      suppliers: (slug: string) => `/t/${slug}/dealer-sales/suppliers`,
+      purchases: (slug: string) => `/t/${slug}/dealer-sales/purchases`,
+    },
     /** TEC-181 service wizard, TEC-183 list and detail. */
     services: {
       list: (slug: string) => `/t/${slug}/services`,

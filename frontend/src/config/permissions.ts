@@ -163,6 +163,11 @@ export const Permission = {
   AppointmentsRead: "appointments.read",
   AppointmentsWrite: "appointments.write",
   AppointmentSettingsManage: "appointment_settings.manage",
+  /** TEC-348: dealer sale prices, quick sales, suppliers and purchases. */
+  DealerPricingWrite: "dealer_pricing.write",
+  ProductSalesWrite: "product_sales.write",
+  SuppliersManage: "suppliers.manage",
+  PurchasesWrite: "purchases.write",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -489,5 +494,11 @@ export const permissions = {
     read: Permission.AppointmentsRead,
     write: Permission.AppointmentsWrite,
     settingsManage: Permission.AppointmentSettingsManage,
+  },
+  dealerSales: {
+    pricingWrite: Permission.DealerPricingWrite,
+    salesWrite: Permission.ProductSalesWrite,
+    suppliersManage: Permission.SuppliersManage,
+    purchasesWrite: Permission.PurchasesWrite,
   },
 } as const;
