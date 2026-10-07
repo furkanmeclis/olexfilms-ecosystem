@@ -18328,6 +18328,37 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/warranty-claims/{uuid}/photos/{photo}:
+    get:
+      tags: [Warranties]
+      operationId: getWarrantyClaimPhoto
+      summary: Download a warranty claim photo
+      description: >-
+        TEC-339: streams the photo bytes inside the caller's
+        warranty_claims.read scope (404 outside it).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: photo
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Photo bytes
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+            image/png:
+              schema: { type: string, format: binary }
+            image/webp:
+              schema: { type: string, format: binary }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/warranty-claims/{uuid}/status:
     post:
       tags: [Warranties]
@@ -31281,6 +31312,36 @@ components:
         cost_summary: { $ref: "#/components/schemas/WarrantyClaimCostSummary" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+        organization_uuid:
+          type: string
+          format: uuid
+          description: Opening organization (TEC-339; list and detail).
+        organization_name: { type: string }
+        warranty_no: { type: string, description: Public code of the claimed warranty (TEC-339). }
+        product_name: { type: string, description: Warranted product (TEC-339). }
+        service_uuid: { type: string, format: uuid, description: Warranted service (TEC-339). }
+        service_no: { type: string }
+        plate: { type: [string, "null"] }
+        events:
+          type: array
+          description: Detail only (TEC-339); the append-only claim timeline, oldest first.
+          items: { $ref: "#/components/schemas/WarrantyClaimEvent" }
+        reapply_service:
+          $ref: "#/components/schemas/WarrantyClaimReapplyService"
+          description: Detail only (TEC-339); the linked re-application service.
+
+    WarrantyClaimEvent:
+      type: object
+      required: [uuid, event_type, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        event_type:
+          type: string
+          enum: [created, status_changed, note, part_added, photo_added, ai_triaged, reapply_linked]
+        from_status: { $ref: "#/components/schemas/WarrantyClaimStatus" }
+        to_status: { $ref: "#/components/schemas/WarrantyClaimStatus" }
+        note: { type: string, description: "Rejection reason of a rejected status change, or the note text." }
+        created_at: { type: string, format: date-time }
 
     WarrantyClaimCostSummary:
       type: object
@@ -31395,6 +31456,10 @@ components:
       required: [uuid, status, created_at, updated_at]
       properties:
         uuid: { type: string, format: uuid }
+        warranty_uuid:
+          type: string
+          format: uuid
+          description: The claimed warranty (TEC-339; GET /v1/portal/warranty-claims).
         status: { $ref: "#/components/schemas/WarrantyClaimStatus" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }

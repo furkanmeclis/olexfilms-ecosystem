@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -134,6 +135,33 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, item)
+}
+
+// Photo streams a claim photo (GET /v1/warranty-claims/{uuid}/photos/{photo},
+// TEC-339) inside the caller's warranty_claims.read scope.
+func (h *Handler) Photo(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	photo, ok := pathUUID(w, r, "photo")
+	if !ok {
+		return
+	}
+	rc, size, mimeType, err := h.svc.PhotoObject(r.Context(), caller(r), id, photo)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	defer func() { _ = rc.Close() }()
+	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Cache-Control", "private, max-age=3600")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if size > 0 {
+		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, rc)
 }
 
 func (h *Handler) PortalList(w http.ResponseWriter, r *http.Request) {

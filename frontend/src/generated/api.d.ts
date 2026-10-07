@@ -9424,6 +9424,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranty-claims/{uuid}/photos/{photo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a warranty claim photo
+         * @description TEC-339: streams the photo bytes inside the caller's warranty_claims.read scope (404 outside it).
+         */
+        get: operations["getWarrantyClaimPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warranty-claims/{uuid}/status": {
         parameters: {
             query?: never;
@@ -17960,6 +17980,39 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             updated_at: string;
+            /**
+             * Format: uuid
+             * @description Opening organization (TEC-339; list and detail).
+             */
+            organization_uuid?: string;
+            organization_name?: string;
+            /** @description Public code of the claimed warranty (TEC-339). */
+            warranty_no?: string;
+            /** @description Warranted product (TEC-339). */
+            product_name?: string;
+            /**
+             * Format: uuid
+             * @description Warranted service (TEC-339).
+             */
+            service_uuid?: string;
+            service_no?: string;
+            plate?: string | null;
+            /** @description Detail only (TEC-339); the append-only claim timeline, oldest first. */
+            events?: components["schemas"]["WarrantyClaimEvent"][];
+            /** @description Detail only (TEC-339); the linked re-application service. */
+            reapply_service?: components["schemas"]["WarrantyClaimReapplyService"];
+        };
+        WarrantyClaimEvent: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            event_type: "created" | "status_changed" | "note" | "part_added" | "photo_added" | "ai_triaged" | "reapply_linked";
+            from_status?: components["schemas"]["WarrantyClaimStatus"];
+            to_status?: components["schemas"]["WarrantyClaimStatus"];
+            /** @description Rejection reason of a rejected status change, or the note text. */
+            note?: string;
+            /** Format: date-time */
+            created_at: string;
         };
         /** @description The center's warranty cost of a booked claim (TEC-337): product cost (category warranty_cost) and the labor the center credited down the chain (category warranty_labor), in the center's currency at the frozen posting rate (K7). */
         WarrantyClaimCostSummary: {
@@ -18059,6 +18112,11 @@ export interface components {
         PortalWarrantyClaimStatus: {
             /** Format: uuid */
             uuid: string;
+            /**
+             * Format: uuid
+             * @description The claimed warranty (TEC-339; GET /v1/portal/warranty-claims).
+             */
+            warranty_uuid?: string;
             status: components["schemas"]["WarrantyClaimStatus"];
             /** Format: date-time */
             created_at: string;
@@ -37232,6 +37290,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeWarrantyClaimPhoto"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getWarrantyClaimPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                photo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Photo bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
                 };
             };
             400: components["responses"]["BadRequest"];

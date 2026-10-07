@@ -79,6 +79,35 @@ type ClaimView struct {
 	CostSummary     *CostSummary  `json:"cost_summary,omitempty"`
 	CreatedAt       time.Time     `json:"created_at"`
 	UpdatedAt       time.Time     `json:"updated_at"`
+	// TEC-339: list / detail context of the claim screens (opening
+	// organization, warranty code, product, warranted service).
+	OrganizationUUID *uuid.UUID `json:"organization_uuid,omitempty"`
+	OrganizationName string     `json:"organization_name,omitempty"`
+	WarrantyNo       string     `json:"warranty_no,omitempty"`
+	ProductName      string     `json:"product_name,omitempty"`
+	ServiceUUID      *uuid.UUID `json:"service_uuid,omitempty"`
+	ServiceNo        string     `json:"service_no,omitempty"`
+	Plate            *string    `json:"plate,omitempty"`
+	// Detail only: the event timeline and the linked re-application service.
+	Events         []EventView `json:"events,omitempty"`
+	ReapplyService *ServiceRef `json:"reapply_service,omitempty"`
+}
+
+// EventView is one row of the append-only claim timeline (TEC-339).
+type EventView struct {
+	UUID       uuid.UUID `json:"uuid"`
+	EventType  string    `json:"event_type"`
+	FromStatus *string   `json:"from_status,omitempty"`
+	ToStatus   *string   `json:"to_status,omitempty"`
+	Note       *string   `json:"note,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// ServiceRef is a short service reference (re-application service).
+type ServiceRef struct {
+	UUID      uuid.UUID `json:"uuid"`
+	ServiceNo string    `json:"service_no"`
+	Status    string    `json:"status"`
 }
 
 // CostSummary is the center's warranty cost of a claim (TEC-337): the
@@ -99,10 +128,12 @@ type ListView struct {
 }
 
 type PortalClaimView struct {
-	UUID      uuid.UUID `json:"uuid"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	UUID uuid.UUID `json:"uuid"`
+	// WarrantyUUID ties the status to the portal warranty card (TEC-339).
+	WarrantyUUID *uuid.UUID `json:"warranty_uuid,omitempty"`
+	Status       string     `json:"status"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 type ReportFilter struct {

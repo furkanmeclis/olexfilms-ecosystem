@@ -81,6 +81,7 @@ type Store interface {
 	ListWarrantyClaimParts(ctx context.Context, claimID int64) ([]db.WarrantyClaimPart, error)
 	ListWarrantyClaimPhotos(ctx context.Context, claimID int64) ([]db.WarrantyClaimPhoto, error)
 	ListWarrantyClaimEvents(ctx context.Context, claimID int64) ([]db.WarrantyClaimEvent, error)
+	GetWarrantyClaimReapplyService(ctx context.Context, arg db.GetWarrantyClaimReapplyServiceParams) (db.Service, error)
 	ListWarrantyClaimsInScope(ctx context.Context, arg db.ListWarrantyClaimsInScopeParams) ([]db.WarrantyClaim, error)
 	CountWarrantyClaimsInScope(ctx context.Context, arg db.CountWarrantyClaimsInScopeParams) (int64, error)
 	ListWarrantyClaimsByWarranty(ctx context.Context, arg db.ListWarrantyClaimsByWarrantyParams) ([]db.WarrantyClaim, error)
@@ -103,6 +104,7 @@ type txBeginner interface {
 
 type Storage interface {
 	Upload(ctx context.Context, file platstorage.File, path string) error
+	Download(ctx context.Context, path string) (io.ReadCloser, int64, error)
 }
 
 type txStore struct {
@@ -340,7 +342,11 @@ func (s *Service) PortalList(ctx context.Context, brandID, userID int64) ([]mode
 	}
 	out := make([]model.PortalClaimView, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, portalView(r))
+		v := portalView(r)
+		if w, err := s.q.GetWarrantyClaimOpenContext(ctx, db.GetWarrantyClaimOpenContextParams{ID: r.ID, BrandID: r.BrandID}); err == nil {
+			v.WarrantyUUID = &w.WarrantyUuid
+		}
+		out = append(out, v)
 	}
 	return out, nil
 }
@@ -752,6 +758,13 @@ func (s *Service) view(ctx context.Context, row db.WarrantyClaim, detail bool) (
 	w, err := s.q.GetWarrantyClaimOpenContext(ctx, db.GetWarrantyClaimOpenContextParams{ID: row.ID, BrandID: row.BrandID})
 	if err == nil {
 		v.WarrantyUUID = w.WarrantyUuid
+		v.OrganizationUUID = &w.OrganizationUuid
+		v.OrganizationName = w.OrganizationName
+		v.WarrantyNo = w.PublicCode
+		v.ProductName = w.ProductName
+		v.ServiceUUID = &w.ServiceUuid
+		v.ServiceNo = w.ServiceNo
+		v.Plate = textPtr(w.Plate)
 	}
 	v.RejectionReason = textPtr(row.RejectionReason)
 	v.AIDamageType = textPtr(row.AiDamageType)
@@ -779,7 +792,56 @@ func (s *Service) view(ctx context.Context, row db.WarrantyClaim, detail bool) (
 	for _, p := range photos {
 		v.Photos = append(v.Photos, photoView(p))
 	}
+	evs, err := s.q.ListWarrantyClaimEvents(ctx, row.ID)
+	if err != nil {
+		return v, err
+	}
+	v.Events = make([]model.EventView, 0, len(evs))
+	for _, e := range evs {
+		v.Events = append(v.Events, model.EventView{
+			UUID: e.Uuid, EventType: e.EventType, FromStatus: textPtr(e.FromStatus),
+			ToStatus: textPtr(e.ToStatus), Note: textPtr(e.Note), CreatedAt: e.CreatedAt.Time,
+		})
+	}
+	if row.ReapplyServiceID.Valid {
+		svc, err := s.q.GetWarrantyClaimReapplyService(ctx, db.GetWarrantyClaimReapplyServiceParams{
+			ReapplyServiceID: row.ReapplyServiceID.Int64, BrandID: row.BrandID, ClaimID: pgtype.Int8{Int64: row.ID, Valid: true},
+		})
+		if err == nil {
+			ref := serviceRef(svc)
+			v.ReapplyService = &ref
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return v, err
+		}
+	}
 	return v, nil
+}
+
+// PhotoObject opens a claim photo inside the caller's read scope
+// (GET /v1/warranty-claims/{uuid}/photos/{photo}, TEC-339).
+func (s *Service) PhotoObject(ctx context.Context, c Caller, id, photo uuid.UUID) (io.ReadCloser, int64, string, error) {
+	claim, err := s.claim(ctx, c, id, false)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	photos, err := s.q.ListWarrantyClaimPhotos(ctx, claim.ID)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	for _, p := range photos {
+		if p.Uuid != photo {
+			continue
+		}
+		if s.storage == nil {
+			return nil, 0, "", ErrNotFound
+		}
+		rc, size, err := s.storage.Download(ctx, p.StorageKey)
+		if err != nil {
+			return nil, 0, "", ErrNotFound
+		}
+		return rc, size, p.MimeType, nil
+	}
+	return nil, 0, "", ErrNotFound
 }
 
 func readPhoto(in PhotoInput) ([]byte, string, string, string, error) {
