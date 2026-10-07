@@ -2509,6 +2509,15 @@ type Querier interface {
 	// account name or the cari counterparty name; id is the tiebreak (an empty
 	// sort_key orders by id only, as the single-entry lookup does).
 	SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error)
+	ServiceActivityCarBrands(ctx context.Context, arg ServiceActivityCarBrandsParams) ([]ServiceActivityCarBrandsRow, error)
+	// TEC-385 (F4-01c): the AI assistant's activity summary of one period, in
+	// the caller's services.read scope (org_ids NULL = whole brand,
+	// created_by_user_id for own / assigned grants), parity with the legacy
+	// chatbot dealer/services/count, brand-breakdown and products/top. Created
+	// counts services opened in [from, to), completed those completed in it;
+	// the breakdowns read completed services only.
+	ServiceActivityCounts(ctx context.Context, arg ServiceActivityCountsParams) (ServiceActivityCountsRow, error)
+	ServiceActivityTopProducts(ctx context.Context, arg ServiceActivityTopProductsParams) ([]ServiceActivityTopProductsRow, error)
 	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
 	// publish_at is stamped with NOW() when a row is published without one.
 	SetAnnouncementStatus(ctx context.Context, arg SetAnnouncementStatusParams) (Announcement, error)

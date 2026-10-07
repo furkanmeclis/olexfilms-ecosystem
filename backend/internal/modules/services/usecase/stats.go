@@ -163,3 +163,93 @@ func (s *Service) TopVehicleModels(ctx context.Context, c Caller, period, group 
 	}
 	return out, nil
 }
+
+// TEC-385 (F4-01c): period activity summary for the AI assistant, parity
+// with the legacy chatbot dealer/services/count, brand-breakdown and
+// products/top. Unlike TopVehicleModels it is open to every services.read
+// grant: the caller's own scope (organization, subtree, brand, own)
+// applies, always inside the domain brand (K20).
+
+// ActivityLimit caps the brand and product breakdowns.
+const ActivityLimit = 10
+
+// ActivityCarBrand is one car brand row of the breakdown.
+type ActivityCarBrand struct {
+	UUID         uuid.UUID `json:"uuid"`
+	Name         string    `json:"name"`
+	ServiceCount int64     `json:"service_count"`
+}
+
+// ActivityProduct is one product row of the top list.
+type ActivityProduct struct {
+	UUID         uuid.UUID `json:"uuid"`
+	SKU          string    `json:"sku"`
+	Name         string    `json:"name"`
+	UnitType     string    `json:"unit_type"`
+	ServiceCount int64     `json:"service_count"`
+	Quantity     int64     `json:"quantity"`
+	Meters       string    `json:"meters"`
+}
+
+// Activity is the summary of [From, To).
+type Activity struct {
+	From           time.Time          `json:"from"`
+	To             time.Time          `json:"to"`
+	CreatedCount   int64              `json:"created_count"`
+	CompletedCount int64              `json:"completed_count"`
+	CarBrands      []ActivityCarBrand `json:"car_brands"`
+	TopProducts    []ActivityProduct  `json:"top_products"`
+}
+
+// ActivitySummary counts the services opened and completed in [from, to)
+// within the caller's services.read scope, with the completed services'
+// car brand breakdown and most used products.
+func (s *Service) ActivitySummary(ctx context.Context, c Caller, from, to time.Time) (Activity, error) {
+	if !to.After(from) {
+		return Activity{}, invalid("to", "must be after from")
+	}
+	if c.Org.BrandID == 0 || !c.Principal.HasPermission(rbac.PermServicesRead) {
+		return Activity{}, ErrForbidden
+	}
+	orgIDs := c.Filter.OrgIDsArg()
+	var createdBy pgtype.Int8
+	if c.Filter.UserOnly() {
+		createdBy = pgtype.Int8{Int64: c.Filter.UserID, Valid: true}
+	}
+	fromArg := pgtype.Timestamptz{Time: from, Valid: true}
+	toArg := pgtype.Timestamptz{Time: to, Valid: true}
+	counts, err := s.q.ServiceActivityCounts(ctx, db.ServiceActivityCountsParams{
+		PeriodFrom: fromArg, PeriodTo: toArg, BrandID: c.Org.BrandID, OrgIds: orgIDs, CreatedByUserID: createdBy,
+	})
+	if err != nil {
+		return Activity{}, fmt.Errorf("services: activity counts: %w", err)
+	}
+	brands, err := s.q.ServiceActivityCarBrands(ctx, db.ServiceActivityCarBrandsParams{
+		BrandID: c.Org.BrandID, OrgIds: orgIDs, CreatedByUserID: createdBy,
+		PeriodFrom: fromArg, PeriodTo: toArg, RowLimit: ActivityLimit,
+	})
+	if err != nil {
+		return Activity{}, fmt.Errorf("services: activity car brands: %w", err)
+	}
+	products, err := s.q.ServiceActivityTopProducts(ctx, db.ServiceActivityTopProductsParams{
+		BrandID: c.Org.BrandID, OrgIds: orgIDs, CreatedByUserID: createdBy,
+		PeriodFrom: fromArg, PeriodTo: toArg, RowLimit: ActivityLimit,
+	})
+	if err != nil {
+		return Activity{}, fmt.Errorf("services: activity products: %w", err)
+	}
+	out := Activity{
+		From: from, To: to, CreatedCount: counts.CreatedCount, CompletedCount: counts.CompletedCount,
+		CarBrands: make([]ActivityCarBrand, 0, len(brands)), TopProducts: make([]ActivityProduct, 0, len(products)),
+	}
+	for _, b := range brands {
+		out.CarBrands = append(out.CarBrands, ActivityCarBrand{UUID: b.CarBrandUuid, Name: b.CarBrandName, ServiceCount: b.ServiceCount})
+	}
+	for _, p := range products {
+		out.TopProducts = append(out.TopProducts, ActivityProduct{
+			UUID: p.ProductUuid, SKU: p.Sku, Name: p.ProductName, UnitType: p.UnitType,
+			ServiceCount: p.ServiceCount, Quantity: p.Quantity, Meters: p.Meters,
+		})
+	}
+	return out, nil
+}
