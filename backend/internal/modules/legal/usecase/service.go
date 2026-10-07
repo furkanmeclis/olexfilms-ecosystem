@@ -17,9 +17,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Kinds of legal texts.
+// Kinds of legal texts. marketing_consent (TEC-404) is the explicit opt-in
+// to campaign messages: it is never part of the blocking Pending prompt, the
+// user ticks it (unchecked by default) where it is offered.
 const (
-	KindAIGuidelines = "ai_guidelines"
+	KindAIGuidelines     = "ai_guidelines"
+	KindMarketingConsent = "marketing_consent"
 )
 
 // MaxBodyBytes bounds an admin text.
@@ -52,7 +55,7 @@ type Service struct {
 func New(store Store) *Service { return &Service{store: store} }
 
 // IsKind reports whether kind is a known legal text kind.
-func IsKind(kind string) bool { return kind == KindAIGuidelines }
+func IsKind(kind string) bool { return kind == KindAIGuidelines || kind == KindMarketingConsent }
 
 // Text is a published legal text version.
 type Text struct {

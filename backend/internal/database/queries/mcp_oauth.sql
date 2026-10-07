@@ -103,3 +103,132 @@ DELETE FROM oauth_clients c
 WHERE c.created_at < NOW() - INTERVAL '1 day'
   AND NOT EXISTS (SELECT 1 FROM oauth_grants g WHERE g.client_id = c.client_id)
   AND NOT EXISTS (SELECT 1 FROM oauth_auth_requests r WHERE r.client_id = c.client_id);
+
+-- TEC-401 (F4-03b): consent, connected apps, platform client list.
+
+-- name: ListOAuthSelectableOrgs :many
+-- The user's active organizations of the given types (consent org picker).
+SELECT o.id, o.uuid, o.name, o.type, o.brand_id
+FROM organization_members om
+JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+WHERE om.user_id = sqlc.arg(user_id)
+  AND o.status = 'active'
+  AND o.type = ANY (sqlc.arg(types)::text[])
+ORDER BY o.name ASC, o.id ASC;
+
+-- name: GetOAuthBrandCenter :one
+SELECT o.id, o.uuid, o.name, o.type, o.brand_id
+FROM organizations o
+WHERE o.brand_id = $1 AND o.type = 'center' AND o.deleted_at IS NULL
+ORDER BY o.id
+LIMIT 1;
+
+-- name: ListUserOAuthGrants :many
+-- Sort: docs/list-contract.md, keys from oauth usecase GrantsSortSpec.
+SELECT g.id, g.uuid, g.client_id, c.client_name, g.resource, g.scopes,
+       g.last_used_at, g.created_at,
+       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type
+FROM oauth_grants g
+JOIN oauth_clients c ON c.client_id = g.client_id
+JOIN organizations o ON o.id = g.organization_id
+WHERE g.user_id = sqlc.arg(user_id)
+  AND g.revoked_at IS NULL AND c.revoked_at IS NULL
+  AND (
+    COALESCE(cardinality(sqlc.narg(resources)::text[]), 0) = 0
+    OR g.resource = ANY (sqlc.narg(resources)::text[])
+  )
+  AND (sqlc.narg(q)::text IS NULL OR c.client_name ILIKE '%' || sqlc.narg(q)::text || '%' OR o.name ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'client_name' THEN c.client_name END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'client_name' THEN c.client_name END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN g.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN g.created_at END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'last_used_at' THEN g.last_used_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'last_used_at' THEN g.last_used_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN g.id END DESC,
+  g.id ASC
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: CountUserOAuthGrants :one
+SELECT COUNT(*)
+FROM oauth_grants g
+JOIN oauth_clients c ON c.client_id = g.client_id
+JOIN organizations o ON o.id = g.organization_id
+WHERE g.user_id = sqlc.arg(user_id)
+  AND g.revoked_at IS NULL AND c.revoked_at IS NULL
+  AND (
+    COALESCE(cardinality(sqlc.narg(resources)::text[]), 0) = 0
+    OR g.resource = ANY (sqlc.narg(resources)::text[])
+  )
+  AND (sqlc.narg(q)::text IS NULL OR c.client_name ILIKE '%' || sqlc.narg(q)::text || '%' OR o.name ILIKE '%' || sqlc.narg(q)::text || '%');
+
+-- name: RevokeUserOAuthGrant :one
+-- Disconnects one of the user's apps; no row when missing, foreign or revoked.
+UPDATE oauth_grants g
+SET revoked_at = NOW()
+FROM oauth_clients c
+WHERE g.uuid = sqlc.arg(uuid) AND g.user_id = sqlc.arg(user_id)
+  AND g.revoked_at IS NULL AND c.client_id = g.client_id
+RETURNING g.id, g.uuid, g.client_id, c.client_name, g.resource, g.organization_id;
+
+-- name: RevokeOAuthGrantTokens :exec
+-- Every token family of a grant; unused codes of the grant go too.
+WITH codes AS (
+    DELETE FROM oauth_codes WHERE oauth_codes.grant_id = sqlc.arg(grant_id) AND used_at IS NULL
+)
+UPDATE oauth_tokens SET revoked_at = NOW()
+WHERE oauth_tokens.grant_id = sqlc.arg(grant_id) AND revoked_at IS NULL;
+
+-- name: ListOAuthClients :many
+-- Sort: docs/list-contract.md, keys from oauth usecase ClientsSortSpec.
+SELECT c.id, c.uuid, c.client_id, c.client_name, c.redirect_uris, c.created_ip,
+       c.last_used_at, c.revoked_at, c.created_at,
+       (SELECT COUNT(*) FROM oauth_grants g WHERE g.client_id = c.client_id AND g.revoked_at IS NULL)::bigint AS active_grants
+FROM oauth_clients c
+WHERE (
+    sqlc.narg(status)::text IS NULL
+    OR (sqlc.narg(status)::text = 'active' AND c.revoked_at IS NULL)
+    OR (sqlc.narg(status)::text = 'revoked' AND c.revoked_at IS NOT NULL)
+  )
+  AND (sqlc.narg(q)::text IS NULL OR c.client_name ILIKE '%' || sqlc.narg(q)::text || '%' OR c.client_id ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'client_name' THEN c.client_name END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'client_name' THEN c.client_name END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN c.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN c.created_at END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'last_used_at' THEN c.last_used_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'last_used_at' THEN c.last_used_at END DESC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN c.id END DESC,
+  c.id ASC
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: CountOAuthClients :one
+SELECT COUNT(*)
+FROM oauth_clients c
+WHERE (
+    sqlc.narg(status)::text IS NULL
+    OR (sqlc.narg(status)::text = 'active' AND c.revoked_at IS NULL)
+    OR (sqlc.narg(status)::text = 'revoked' AND c.revoked_at IS NOT NULL)
+  )
+  AND (sqlc.narg(q)::text IS NULL OR c.client_name ILIKE '%' || sqlc.narg(q)::text || '%' OR c.client_id ILIKE '%' || sqlc.narg(q)::text || '%');
+
+-- name: GetOAuthClientByUUID :one
+SELECT * FROM oauth_clients WHERE uuid = $1;
+
+-- name: RevokeOAuthClient :exec
+-- Blocks the client and everything issued to it: grants, tokens, pending
+-- requests and unused codes.
+WITH c AS (
+    UPDATE oauth_clients SET revoked_at = COALESCE(revoked_at, NOW())
+    WHERE oauth_clients.client_id = sqlc.arg(client_id)
+    RETURNING client_id
+), g AS (
+    UPDATE oauth_grants SET revoked_at = NOW()
+    WHERE oauth_grants.client_id = sqlc.arg(client_id) AND revoked_at IS NULL
+), r AS (
+    DELETE FROM oauth_auth_requests WHERE oauth_auth_requests.client_id = sqlc.arg(client_id)
+), d AS (
+    DELETE FROM oauth_codes WHERE oauth_codes.client_id = sqlc.arg(client_id) AND used_at IS NULL
+)
+UPDATE oauth_tokens SET revoked_at = NOW()
+WHERE oauth_tokens.client_id = sqlc.arg(client_id) AND revoked_at IS NULL;

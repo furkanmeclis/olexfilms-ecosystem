@@ -156,6 +156,7 @@ import (
 	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	whatsapphandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/handler"
+	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authrevoke"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
@@ -236,6 +237,8 @@ type Server struct {
 	features *features.Service
 	// sysconfig is the global system settings store (TEC-215).
 	sysconfig *sysconfig.Service
+	// waMessaging is the WhatsApp conversation messaging use case (TEC-395).
+	waMessaging *whatsappusecase.Messaging
 	// aiTools is the AI assistant tool registry (TEC-385).
 	aiTools *aitools.Registry
 }
@@ -574,6 +577,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// revoke); the issuer is the frontend origin that proxies these paths.
 	oauthSvc := oauthmodule.New(deps.DB, featureSvc, ratelimit.New(deps.Redis, cfg.App.Env), cfg.Auth.FrontendURL, log)
 	oauthmodule.RegisterRoutes(mux, oauthSvc, log)
+	// TEC-401: authorize, consent decision, connected apps, platform clients.
+	oauthSvc.SetAccess(oauthmodule.AuthAccess{UC: uc})
+	oauthmodule.RegisterSessionRoutes(mux, oauthSvc, tokens, loader, log)
 	if s.worker != nil {
 		s.worker.WithOAuthCleanup(oauthSvc.Cleanup)
 	}
@@ -714,6 +720,24 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	s.documents = docSvc
 	if s.worker != nil {
 		s.worker.WithDocsRender(docSvc.ProcessRender)
+	}
+	// TEC-395: WhatsApp conversation messaging: outgoing queue (whatsapp:send),
+	// delivery receipts, inbound media storage and inbox realtime events.
+	// AI tools (F4-02c) and staff replies (F4-02f) queue through it.
+	waDeps := whatsappmodule.MessagingDeps{
+		Storage: deps.Storage, Limiter: ratelimit.New(deps.Redis, cfg.App.Env),
+		SendPerMinute: sysSvc.WhatsAppSendPerMinute, Publisher: deps.Realtime,
+	}
+	if deps.Queue != nil {
+		waDeps.Queue = queue.WhatsAppEnqueuer{Client: deps.Queue}
+	}
+	s.waMessaging = whatsappmodule.NewMessaging(waSvc, deps.DB, deps.Queries, waDeps, log)
+	s.waMessaging.SetDocuments(whatsappmodule.NewDocumentRenderer(
+		servicesusecase.NewPDFAdapter(servicePDF), warrantyusecase.NewCertificateAdapter(warrantyCert), pdfClient))
+	if s.worker != nil {
+		s.worker.WithWhatsAppMessaging(s.waMessaging.ProcessSend, s.waMessaging.StoreInboundMedia, func(ctx context.Context) (int, error) {
+			return s.waMessaging.RequeueStale(ctx, 2*time.Minute)
+		})
 	}
 	documentsmodule.RegisterRoutes(mux, dochandler.New(docSvc, ratelimit.New(deps.Redis, cfg.App.Env)), tokens, loader, deps.Queries)
 	contractsSvc := contractsusecase.New(contractsrepo.New(deps.DB, deps.Queries),

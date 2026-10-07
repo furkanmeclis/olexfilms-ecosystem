@@ -5,3 +5,6 @@
     - "#/paths/~1healthz/get/responses"
     - "#/paths/~1readyz/get/responses"
     - "#/paths/~1v1~1app~1config/get/responses"
+  # TEC-401: the OAuth authorization endpoint only redirects (302) or renders an error page.
+  operation-2xx-response:
+    - "#/paths/~1oauth~1authorize/get/responses"

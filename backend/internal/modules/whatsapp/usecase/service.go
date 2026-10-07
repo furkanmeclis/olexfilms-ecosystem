@@ -17,6 +17,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	notifmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
@@ -57,7 +58,7 @@ type Store interface {
 	ListWhatsAppConnectionEvents(ctx context.Context, limit int32) ([]db.WhatsappConnectionEvent, error)
 	ListLatestKVKKNotices(ctx context.Context) ([]db.KvkkNotice, error)
 	InsertKVKKNotice(ctx context.Context, arg db.InsertKVKKNoticeParams) (db.KvkkNotice, error)
-	UpdateMessageStatusByExternalIDs(ctx context.Context, arg db.UpdateMessageStatusByExternalIDsParams) (int64, error)
+	ApplyMessageReceipt(ctx context.Context, arg db.ApplyMessageReceiptParams) ([]db.Message, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]db.ListWhatsAppAlarmRecipientsRow, error)
 	GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (db.User, error)
 	WithTx(tx pgx.Tx) *db.Queries
@@ -94,6 +95,9 @@ type Service struct {
 	notifier Notifier
 	log      *slog.Logger
 	now      func() time.Time
+	// msgs publishes webhook messages/receipts and stores inbound media
+	// (TEC-395); nil leaves both off.
+	msgs *Messaging
 
 	mu    sync.Mutex
 	ready bool
@@ -110,8 +114,21 @@ func New(q Store, tx TxBeginner, gw Gateway, box SecretBox, outbox Outbox, notif
 // SetClock replaces the clock (tests).
 func (s *Service) SetClock(now func() time.Time) { s.now = now }
 
+// AttachMessaging connects the conversation messaging use case to the
+// webhook (realtime publish, inbound media storage, receipts).
+func (s *Service) AttachMessaging(m *Messaging) { s.msgs = m }
+
 // Provider exposes the gateway as a send provider (OTP sender, adapters).
 func (s *Service) Provider() whatsapp.Provider { return readyProvider{s} }
+
+// MediaDownloader exposes the gateway's inbound media download (nil when
+// the gateway cannot download).
+func (s *Service) MediaDownloader() whatsapp.MediaDownloader {
+	if _, ok := s.gw.(whatsapp.MediaDownloader); !ok || s.gw == nil {
+		return nil
+	}
+	return readyProvider{s}
+}
 
 // EnsureReady loads (or creates) the wuzapi instance user and its token.
 // Idempotent: the instance user is looked up by name before creating.
@@ -362,7 +379,7 @@ func (s *Service) SendTestMessage(ctx context.Context, rawPhone, body string) (T
 			Kind: whatsapp.KindMessage, ExternalID: ref.ID, To: n.E164, FromMe: true,
 			Timestamp: ref.Timestamp, Text: body,
 		}
-		if _, err := s.storeMessage(ctx, ev, "staff"); err != nil {
+		if _, err := s.storeMessage(ctx, ev, model.SenderStaff); err != nil {
 			s.log.Warn("whatsapp_test_message_store_failed", "error", err)
 		}
 	}
@@ -489,6 +506,17 @@ func (p readyProvider) SendImage(ctx context.Context, to string, img whatsapp.Me
 		return whatsapp.MsgRef{}, err
 	}
 	return p.s.gw.SendImage(ctx, to, img, opts)
+}
+
+func (p readyProvider) DownloadMedia(ctx context.Context, m whatsapp.InboundMedia, max int64) ([]byte, error) {
+	if err := p.s.EnsureReady(ctx); err != nil {
+		return nil, err
+	}
+	d, ok := p.s.gw.(whatsapp.MediaDownloader)
+	if !ok {
+		return nil, ErrNotConfigured
+	}
+	return d.DownloadMedia(ctx, m, max)
 }
 
 func (p readyProvider) ParseWebhook(header http.Header, body []byte) ([]whatsapp.InboundEvent, error) {

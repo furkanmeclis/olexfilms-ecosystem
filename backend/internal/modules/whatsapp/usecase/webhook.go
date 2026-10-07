@@ -44,19 +44,25 @@ func (s *Service) HandleWebhook(ctx context.Context, header http.Header, body []
 	for _, ev := range evs {
 		switch ev.Kind {
 		case whatsapp.KindMessage:
-			inserted, err := s.storeMessage(ctx, ev, "contact")
+			stored, err := s.storeMessage(ctx, ev, "contact")
 			if err != nil {
 				return res, err
 			}
-			if inserted {
+			if stored != nil {
 				res.Messages++
+				if s.msgs != nil {
+					s.msgs.AfterStored(ctx, stored.conv, stored.msg)
+				}
 			} else {
 				res.Duplicates++
 			}
 		case whatsapp.KindStatus:
-			if _, err := s.q.UpdateMessageStatusByExternalIDs(ctx, db.UpdateMessageStatusByExternalIDsParams{
-				Status: ev.Status, Channel: whatsapp.ChannelWhatsApp, ExternalIds: ev.MessageIDs,
-			}); err != nil {
+			// TEC-395: forward-only delivered/read + delivery_status_at.
+			if s.msgs != nil {
+				if _, err := s.msgs.ApplyReceipt(ctx, ev); err != nil {
+					return res, err
+				}
+			} else if _, err := applyReceipt(ctx, s.q, ev, s.now()); err != nil {
 				return res, err
 			}
 			res.Statuses++
@@ -74,11 +80,17 @@ func (s *Service) HandleWebhook(ctx context.Context, header http.Header, body []
 	return res, nil
 }
 
+// storedMessage is a message newly stored by storeMessage.
+type storedMessage struct {
+	conv db.Conversation
+	msg  db.Message
+}
+
 // storeMessage upserts the conversation and inserts the message once
 // (UNIQUE(channel, external_id) + ON CONFLICT DO NOTHING). An inbound
 // message also writes whatsapp.message.received to the outbox in the same
-// transaction.
-func (s *Service) storeMessage(ctx context.Context, ev whatsapp.InboundEvent, senderType string) (bool, error) {
+// transaction. It returns nil for a duplicate or an unusable event.
+func (s *Service) storeMessage(ctx context.Context, ev whatsapp.InboundEvent, senderType string) (*storedMessage, error) {
 	contact := ev.From
 	direction := "in"
 	status := "received"
@@ -89,11 +101,11 @@ func (s *Service) storeMessage(ctx context.Context, ev whatsapp.InboundEvent, se
 		}
 	}
 	if contact == "" || ev.ExternalID == "" {
-		return false, nil
+		return nil, nil
 	}
 	tx, err := s.tx.Begin(ctx)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	q := s.q.WithTx(tx)
@@ -102,7 +114,7 @@ func (s *Service) storeMessage(ctx context.Context, ev whatsapp.InboundEvent, se
 	if u, err := q.GetUserByPhone(ctx, text(contact)); err == nil {
 		userID = pgtype.Int8{Int64: u.ID, Valid: true}
 	} else if !errors.Is(err, pgx.ErrNoRows) {
-		return false, err
+		return nil, err
 	}
 	at := ev.Timestamp
 	if at.IsZero() {
@@ -113,7 +125,7 @@ func (s *Service) storeMessage(ctx context.Context, ev whatsapp.InboundEvent, se
 		UserID: userID, LastMessageAt: ts(at),
 	})
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	var media []byte
 	if ev.Media != nil {
@@ -126,19 +138,19 @@ func (s *Service) storeMessage(ctx context.Context, ev whatsapp.InboundEvent, se
 		Raw: rawJSON(ev.Raw), SentAt: ts(at),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil // duplicate delivery
+		return nil, nil // duplicate delivery
 	}
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	// TEC-393: inbox counters only for a newly stored message.
 	if direction == "in" {
-		_, err = q.TouchConversationInbound(ctx, db.TouchConversationInboundParams{ID: conv.ID, At: ts(at)})
+		conv, err = q.TouchConversationInbound(ctx, db.TouchConversationInboundParams{ID: conv.ID, At: ts(at)})
 	} else {
-		_, err = q.TouchConversationOutbound(ctx, db.TouchConversationOutboundParams{ID: conv.ID, At: ts(at)})
+		conv, err = q.TouchConversationOutbound(ctx, db.TouchConversationOutboundParams{ID: conv.ID, At: ts(at)})
 	}
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	if direction == "in" && s.outbox != nil {
 		e := events.New(events.WhatsAppMessageReceived)
@@ -156,13 +168,13 @@ func (s *Service) storeMessage(ctx context.Context, ev whatsapp.InboundEvent, se
 			e.Payload["user_id"] = userID.Int64
 		}
 		if err := s.outbox.Enqueue(ctx, tx, e); err != nil {
-			return false, err
+			return nil, err
 		}
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return false, err
+		return nil, err
 	}
-	return true, nil
+	return &storedMessage{conv: conv, msg: msg}, nil
 }
 
 func isAlarm(state string) bool {
