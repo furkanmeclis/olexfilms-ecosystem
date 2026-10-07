@@ -291,4 +291,50 @@ func TestLibrarySchemaConstraints(t *testing.T) {
 			return err
 		})
 	})
+
+	t.Run("list sort, filters and count (TEC-333)", func(t *testing.T) {
+		mk := func(name, access string, tags []string) db.LibraryItem {
+			it, err := f.q.CreateLibraryItem(ctx, db.CreateLibraryItemParams{
+				OrganizationID: f.centerID, BrandID: f.brandID, Name: name, Tags: tags, AccessLevel: access,
+			})
+			if err != nil {
+				t.Fatalf("item %s: %v", name, err)
+			}
+			return it
+		}
+		b := mk("t333 b", "dealers", []string{"t333-x"})
+		a := mk("T333 a", "all_network", []string{"t333-y"})
+		mk("t333 c", "center_only", []string{"t333-z"})
+		filter := db.CountLibraryItemsParams{
+			BrandID: f.brandID, AccessLevels: []string{"all_network", "dealers", "distributors", "center_only"},
+			Tags: []string{"t333-x", "t333-y"},
+		}
+		list := func(key string, desc bool, access []string) []db.LibraryItem {
+			rows, err := f.q.ListLibraryItems(ctx, db.ListLibraryItemsParams{
+				BrandID: filter.BrandID, AccessLevels: filter.AccessLevels, Tags: filter.Tags,
+				AccessFilter: access, SortKey: key, SortDesc: desc, PageLimit: 10,
+			})
+			if err != nil {
+				t.Fatalf("list %s: %v", key, err)
+			}
+			return rows
+		}
+		if rows := list("name", false, nil); len(rows) != 2 || rows[0].ID != a.ID || rows[1].ID != b.ID {
+			t.Fatalf("name asc = %+v, want a, b", rows)
+		}
+		if rows := list("name", true, nil); len(rows) != 2 || rows[0].ID != b.ID {
+			t.Fatalf("name desc = %+v, want b first", rows)
+		}
+		if rows := list("created_at", true, []string{"dealers"}); len(rows) != 1 || rows[0].ID != b.ID {
+			t.Fatalf("access filter = %+v, want b", rows)
+		}
+		total, err := f.q.CountLibraryItems(ctx, filter)
+		if err != nil || total != 2 {
+			t.Fatalf("count = %d, %v; want 2", total, err)
+		}
+		folders, err := f.q.ListLibraryFoldersByBrand(ctx, f.brandID)
+		if err != nil || len(folders) == 0 {
+			t.Fatalf("folders by brand = %d, %v", len(folders), err)
+		}
+	})
 }

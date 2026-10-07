@@ -19,6 +19,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	platstorage "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -57,6 +58,7 @@ type Store interface {
 	CreateLibraryFolder(ctx context.Context, arg db.CreateLibraryFolderParams) (db.LibraryFolder, error)
 	GetLibraryFolderByUUID(ctx context.Context, argUuid uuid.UUID) (db.LibraryFolder, error)
 	ListLibraryFolders(ctx context.Context, organizationID int64) ([]db.LibraryFolder, error)
+	ListLibraryFoldersByBrand(ctx context.Context, brandID int64) ([]db.LibraryFolder, error)
 	UpdateLibraryFolder(ctx context.Context, arg db.UpdateLibraryFolderParams) (db.LibraryFolder, error)
 	SoftDeleteLibraryFolder(ctx context.Context, arg db.SoftDeleteLibraryFolderParams) (int64, error)
 	CreateLibraryItem(ctx context.Context, arg db.CreateLibraryItemParams) (db.LibraryItem, error)
@@ -65,6 +67,7 @@ type Store interface {
 	UpdateLibraryItem(ctx context.Context, arg db.UpdateLibraryItemParams) (db.LibraryItem, error)
 	SoftDeleteLibraryItem(ctx context.Context, arg db.SoftDeleteLibraryItemParams) (int64, error)
 	ListLibraryItems(ctx context.Context, arg db.ListLibraryItemsParams) ([]db.LibraryItem, error)
+	CountLibraryItems(ctx context.Context, arg db.CountLibraryItemsParams) (int64, error)
 	NextLibraryItemVersionNo(ctx context.Context, arg db.NextLibraryItemVersionNoParams) (int32, error)
 	CreateLibraryItemVersion(ctx context.Context, arg db.CreateLibraryItemVersionParams) (db.LibraryItemVersion, error)
 	ListLibraryItemVersions(ctx context.Context, itemID int64) ([]db.LibraryItemVersion, error)
@@ -111,12 +114,29 @@ type UploadInput struct {
 
 type ListInput struct {
 	FolderUUID *uuid.UUID
-	Tag        string
-	Query      string
-	Locale     string
-	Limit      int32
-	Offset     int32
+	// Tags matches items carrying any of the tags (CSV `tag`).
+	Tags []string
+	// AccessLevels narrows the levels visible to the viewer (CSV `access_level`).
+	AccessLevels []string
+	Updated      apiquery.TimeRange
+	Query        string
+	Locale       string
+	SortKey      string
+	SortDesc     bool
+	Limit        int32
+	Offset       int32
 }
+
+// ItemsSortSpec is the sort whitelist of GET /v1/library (docs/list-contract.md).
+var ItemsSortSpec = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{
+		"name": "name", "access_level": "access_level", "created_at": "created_at", "updated_at": "updated_at",
+	},
+	Default: apiquery.SortField{Field: "name"},
+}
+
+// AccessLevelValues are the valid access_level values.
+var AccessLevelValues = []string{AccessAllNetwork, AccessDistributors, AccessDealers, AccessCenterOnly}
 
 type Actor struct {
 	UserID         int64
@@ -167,8 +187,10 @@ func ActorFrom(pr authctx.Principal, org orgctx.Scope) Actor {
 	return Actor{UserID: pr.UserInternal, OrganizationID: org.InternalID, BrandID: org.BrandID, OrgType: org.OrgType, Roles: pr.Roles}
 }
 
+// ListFolders returns the brand's folder tree: folders are managed by the
+// center and read by the whole network (items stay filtered per item).
 func (s *Service) ListFolders(ctx context.Context, actor Actor) ([]FolderView, error) {
-	rows, err := s.q.ListLibraryFolders(ctx, actor.OrganizationID)
+	rows, err := s.q.ListLibraryFoldersByBrand(ctx, actor.BrandID)
 	if err != nil {
 		return nil, err
 	}
@@ -371,29 +393,67 @@ func (s *Service) ArchiveItem(ctx context.Context, actor Actor, id uuid.UUID) er
 	return nil
 }
 
-func (s *Service) ListItems(ctx context.Context, actor Actor, in ListInput) ([]ItemView, error) {
-	folderID, err := s.folderID(ctx, actor, in.FolderUUID)
-	if err != nil {
-		return nil, err
+func (s *Service) ListItems(ctx context.Context, actor Actor, in ListInput) ([]ItemView, int64, error) {
+	var folderID *int64
+	if in.FolderUUID != nil {
+		row, err := s.readableFolder(ctx, actor, *in.FolderUUID)
+		if err != nil {
+			return nil, 0, err
+		}
+		folderID = &row.ID
 	}
 	limit := in.Limit
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	items, err := s.q.ListLibraryItems(ctx, db.ListLibraryItemsParams{
+	sortKey := in.SortKey
+	if sortKey == "" {
+		sortKey = ItemsSortSpec.Default.Field
+	}
+	tags := normalizeTags(in.Tags)
+	if len(tags) == 0 {
+		tags = nil
+	}
+	filter := db.CountLibraryItemsParams{
 		BrandID: actor.BrandID, AccessLevels: accessLevels(actor.OrgType), ViewerRoleSlugs: actor.Roles,
-		FolderID: int8Arg(folderID), Tag: textValue(strings.TrimSpace(in.Tag)), Q: textValue(strings.TrimSpace(in.Query)),
+		FolderID: int8Arg(folderID), Tags: tags, AccessFilter: in.AccessLevels,
+		UpdatedFrom: tsArg(in.Updated.From), UpdatedBefore: tsArg(in.Updated.Before),
+		Q: textValue(strings.TrimSpace(in.Query)),
+	}
+	items, err := s.q.ListLibraryItems(ctx, db.ListLibraryItemsParams{
+		BrandID: filter.BrandID, AccessLevels: filter.AccessLevels, ViewerRoleSlugs: filter.ViewerRoleSlugs,
+		FolderID: filter.FolderID, Tags: filter.Tags, AccessFilter: filter.AccessFilter,
+		UpdatedFrom: filter.UpdatedFrom, UpdatedBefore: filter.UpdatedBefore, Q: filter.Q,
+		SortKey: sortKey, SortDesc: in.SortDesc,
 		PageOffset: maxInt32(in.Offset, 0), PageLimit: limit,
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	total, err := s.q.CountLibraryItems(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	folders, err := s.q.ListLibraryFoldersByBrand(ctx, actor.BrandID)
+	if err != nil {
+		return nil, 0, err
+	}
+	folderUUIDs := make(map[int64]uuid.UUID, len(folders))
+	for _, f := range folders {
+		folderUUIDs[f.ID] = f.Uuid
 	}
 	locale := normalizeLocale(in.Locale)
 	out := make([]ItemView, 0, len(items))
 	for _, item := range items {
-		out = append(out, s.itemView(ctx, item, nil, locale))
+		var folderUUID *uuid.UUID
+		if item.FolderID.Valid {
+			if id, ok := folderUUIDs[item.FolderID.Int64]; ok {
+				folderUUID = &id
+			}
+		}
+		out = append(out, s.itemView(ctx, item, folderUUID, locale))
 	}
-	return out, nil
+	return out, total, nil
 }
 
 func (s *Service) AddVersion(ctx context.Context, actor Actor, itemID uuid.UUID, in UploadInput) (VersionView, error) {
@@ -474,6 +534,15 @@ func (s *Service) folder(ctx context.Context, actor Actor, id uuid.UUID) (db.Lib
 		return db.LibraryFolder{}, ErrNotFound
 	}
 	if row.OrganizationID != actor.OrganizationID || !row.DeletedAt.Time.IsZero() && row.DeletedAt.Valid {
+		return db.LibraryFolder{}, ErrNotFound
+	}
+	return row, nil
+}
+
+// readableFolder resolves a folder of the viewer's brand (list filter).
+func (s *Service) readableFolder(ctx context.Context, actor Actor, id uuid.UUID) (db.LibraryFolder, error) {
+	row, err := s.q.GetLibraryFolderByUUID(ctx, id)
+	if err != nil || row.BrandID != actor.BrandID || row.DeletedAt.Valid {
 		return db.LibraryFolder{}, ErrNotFound
 	}
 	return row, nil
@@ -757,6 +826,13 @@ func textValue(v string) pgtype.Text {
 		return pgtype.Text{}
 	}
 	return pgtype.Text{String: strings.TrimSpace(v), Valid: true}
+}
+
+func tsArg(t *time.Time) pgtype.Timestamptz {
+	if t == nil {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: *t, Valid: true}
 }
 
 func timeString(t pgtype.Timestamptz) string {

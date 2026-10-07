@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/library/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
 )
@@ -86,10 +86,13 @@ func (h *Handler) DeleteFolder(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, map[string]any{"deleted": true})
 }
 
+// ListItems handles GET /v1/library: folder, tag (CSV, any of),
+// access_level (CSV), updated_from/updated_to, q, locale, sort, limit, offset
+// (docs/list-contract.md).
 func (h *Handler) ListItems(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query()
+	qv := r.URL.Query()
 	var folderID *uuid.UUID
-	if raw := q.Get("folder"); raw != "" {
+	if raw := qv.Get("folder"); raw != "" {
 		id, err := uuid.Parse(raw)
 		if err != nil {
 			response.ValidationError(w, r, []response.Detail{{Field: "folder", Message: "must be a uuid"}})
@@ -97,21 +100,36 @@ func (h *Handler) ListItems(w http.ResponseWriter, r *http.Request) {
 		}
 		folderID = &id
 	}
-	limit := parseInt32(q.Get("limit"), 50)
-	offset := parseInt32(q.Get("offset"), 0)
-	out, err := h.svc.ListItems(r.Context(), actor(r), usecase.ListInput{
-		FolderUUID: folderID,
-		Tag:        q.Get("tag"),
-		Query:      q.Get("q"),
-		Locale:     q.Get("locale"),
-		Limit:      limit,
-		Offset:     offset,
-	})
+	q := apiquery.Parse(qv)
+	srt, err := apiquery.ResolveSort(q.Sort, usecase.ItemsSortSpec)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, map[string]any{"items": out})
+	in := usecase.ListInput{
+		FolderUUID: folderID,
+		Tags:       apiquery.CSVValues(qv, "tag"),
+		Query:      q.Q,
+		Locale:     qv.Get("locale"),
+		SortKey:    srt.Key,
+		SortDesc:   srt.Desc,
+		Limit:      q.Limit,
+		Offset:     q.Offset,
+	}
+	if in.AccessLevels, err = apiquery.EnumList(qv, "access_level", usecase.AccessLevelValues...); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	if in.Updated, err = apiquery.DateRange(qv, "updated"); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListItems(r.Context(), actor(r), in)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
 }
 
 func (h *Handler) CreateItem(w http.ResponseWriter, r *http.Request) {
@@ -234,20 +252,16 @@ func pathUUID(w http.ResponseWriter, r *http.Request, name string) (uuid.UUID, b
 	return id, true
 }
 
-func parseInt32(raw string, fallback int32) int32 {
-	if raw == "" {
-		return fallback
-	}
-	v, err := strconv.ParseInt(raw, 10, 32)
-	if err != nil {
-		return fallback
-	}
-	return int32(v)
-}
-
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *usecase.ValidationError
+	var qe *apiquery.ValidationError
 	switch {
+	case errors.As(err, &qe):
+		details := make([]response.Detail, 0, len(qe.Details))
+		for _, d := range qe.Details {
+			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
+		}
+		response.ValidationError(w, r, details)
 	case errors.As(err, &ve):
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
 	case errors.Is(err, usecase.ErrForbidden):

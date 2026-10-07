@@ -11062,7 +11062,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List document library folders */
+        /**
+         * List document library folders
+         * @description The brand's folder tree (center-managed, readable by the whole network).
+         */
         get: operations["listLibraryFolders"];
         put?: never;
         /** Create a document library folder */
@@ -11101,7 +11104,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List visible document library items */
+        /**
+         * List visible document library items
+         * @description `q` matches name, description and tags. `sort` name, access_level,
+         *     created_at, updated_at; default `name`, id tiebreak, unknown → 400
+         *     (docs/list-contract.md). `latest_version` is the newest version in
+         *     `locale` (falls back to tr, then any language).
+         */
         get: operations["listLibraryItems"];
         put?: never;
         post?: never;
@@ -19825,6 +19834,10 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["LibraryItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -40345,12 +40358,22 @@ export interface operations {
     listLibraryItems: {
         parameters: {
             query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Folder of the viewer's brand (direct items only). */
                 folder?: string;
+                /** @description Comma-separated tags; items carrying any of them. */
                 tag?: string;
-                q?: string;
+                /** @description Comma-separated access levels (all_network, distributors, dealers, center_only). Unknown value → 400. */
+                access_level?: string;
+                /** @description updated_at lower bound (YYYY-MM-DD or RFC3339) */
+                updated_from?: string;
+                /** @description updated_at upper bound (a date includes the whole day) */
+                updated_to?: string;
                 locale?: string;
-                limit?: number;
-                offset?: number;
             };
             header?: never;
             path?: never;
@@ -40367,6 +40390,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeLibraryItemList"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
