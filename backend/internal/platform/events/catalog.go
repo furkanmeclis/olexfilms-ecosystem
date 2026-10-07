@@ -668,6 +668,9 @@ func catalogConstants() []string {
 		AIQuotaThreshold,
 		CampaignsStarted,
 		CampaignsFinished,
+		ShowcaseReviewRequested,
+		ShowcasePublished,
+		ShowcaseRejected,
 	}
 }
 
@@ -721,3 +724,18 @@ const (
 // period, threshold (80 | 100), used_tokens, quota_tokens. The
 // notification template reaches the organization owners (F4-01g).
 const AIQuotaThreshold = "ai.quota.threshold"
+
+// Dealer showcase (TEC-467, F5-01b): written in the transaction that moves
+// the showcase. review_requested when an owner submits with
+// showcase.approval_required on (notify_user_ids: the brand center's
+// members holding platform.showcase.review); published when the snapshot is
+// written (direct publish or center approval; notify_user_ids: the owners
+// of the organization after an approval, empty on a direct publish);
+// rejected with the reviewer's note (notify_user_ids: the owners). Payload:
+// organization_uuid, organization_id, organization_name, brand_id, status,
+// reason. The organizations index refreshes has_showcase on published.
+const (
+	ShowcaseReviewRequested = "showcase.review_requested"
+	ShowcasePublished       = "showcase.published"
+	ShowcaseRejected        = "showcase.rejected"
+)

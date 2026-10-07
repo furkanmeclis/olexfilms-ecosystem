@@ -60,24 +60,28 @@ func (q *Queries) GetOrderForIndex(ctx context.Context, argUuid uuid.UUID) (GetO
 
 const getOrganizationForIndex = `-- name: GetOrganizationForIndex :one
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
-       p.name AS parent_name
+       p.name AS parent_name,
+       -- TEC-467: a published dealer showcase (the approved snapshot).
+       EXISTS (SELECT 1 FROM dealer_showcases s
+               WHERE s.organization_id = o.id AND s.published_content IS NOT NULL)::boolean AS has_showcase
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.uuid = $1 AND o.deleted_at IS NULL AND o.type <> 'fleet'
 `
 
 type GetOrganizationForIndexRow struct {
-	Uuid       uuid.UUID   `json:"uuid"`
-	ID         int64       `json:"id"`
-	Slug       string      `json:"slug"`
-	Name       string      `json:"name"`
-	Type       string      `json:"type"`
-	Status     string      `json:"status"`
-	BrandID    int64       `json:"brand_id"`
-	City       string      `json:"city"`
-	District   string      `json:"district"`
-	Phone      string      `json:"phone"`
-	ParentName pgtype.Text `json:"parent_name"`
+	Uuid        uuid.UUID   `json:"uuid"`
+	ID          int64       `json:"id"`
+	Slug        string      `json:"slug"`
+	Name        string      `json:"name"`
+	Type        string      `json:"type"`
+	Status      string      `json:"status"`
+	BrandID     int64       `json:"brand_id"`
+	City        string      `json:"city"`
+	District    string      `json:"district"`
+	Phone       string      `json:"phone"`
+	ParentName  pgtype.Text `json:"parent_name"`
+	HasShowcase bool        `json:"has_showcase"`
 }
 
 // TEC-472: fleets are not indexed (a stale document is removed).
@@ -96,6 +100,7 @@ func (q *Queries) GetOrganizationForIndex(ctx context.Context, argUuid uuid.UUID
 		&i.District,
 		&i.Phone,
 		&i.ParentName,
+		&i.HasShowcase,
 	)
 	return i, err
 }
@@ -246,7 +251,10 @@ func (q *Queries) ListOrdersForIndex(ctx context.Context) ([]ListOrdersForIndexR
 const listOrganizationsForIndex = `-- name: ListOrganizationsForIndex :many
 
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
-       p.name AS parent_name
+       p.name AS parent_name,
+       -- TEC-467: a published dealer showcase (the approved snapshot).
+       EXISTS (SELECT 1 FROM dealer_showcases s
+               WHERE s.organization_id = o.id AND s.published_content IS NOT NULL)::boolean AS has_showcase
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.deleted_at IS NULL AND o.type <> 'fleet'
@@ -254,17 +262,18 @@ ORDER BY o.id
 `
 
 type ListOrganizationsForIndexRow struct {
-	Uuid       uuid.UUID   `json:"uuid"`
-	ID         int64       `json:"id"`
-	Slug       string      `json:"slug"`
-	Name       string      `json:"name"`
-	Type       string      `json:"type"`
-	Status     string      `json:"status"`
-	BrandID    int64       `json:"brand_id"`
-	City       string      `json:"city"`
-	District   string      `json:"district"`
-	Phone      string      `json:"phone"`
-	ParentName pgtype.Text `json:"parent_name"`
+	Uuid        uuid.UUID   `json:"uuid"`
+	ID          int64       `json:"id"`
+	Slug        string      `json:"slug"`
+	Name        string      `json:"name"`
+	Type        string      `json:"type"`
+	Status      string      `json:"status"`
+	BrandID     int64       `json:"brand_id"`
+	City        string      `json:"city"`
+	District    string      `json:"district"`
+	Phone       string      `json:"phone"`
+	ParentName  pgtype.Text `json:"parent_name"`
+	HasShowcase bool        `json:"has_showcase"`
 }
 
 // TEC-210: organizations (name, dealer code = slug), orders (order number,
@@ -293,6 +302,7 @@ func (q *Queries) ListOrganizationsForIndex(ctx context.Context) ([]ListOrganiza
 			&i.District,
 			&i.Phone,
 			&i.ParentName,
+			&i.HasShowcase,
 		); err != nil {
 			return nil, err
 		}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 )
 
@@ -35,7 +36,7 @@ func (h *Handler) PublicDealerShowcase(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	dealer, err := h.svc.PublicDealerByCode(r.Context(), brand.ID, r.PathValue("code"))
+	dealer, err := h.svc.PublicDealerByCode(r.Context(), brand.ID, r.PathValue("code"), publicLocale(r))
 	if err != nil {
 		if errors.Is(err, orgusecase.ErrNotFound) {
 			response.NotFound(w, r, "Dealer was not found")
@@ -45,6 +46,18 @@ func (h *Handler) PublicDealerShowcase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, dealer)
+}
+
+// publicLocale is the requested showcase locale (TEC-467): ?locale=, then
+// the Accept-Language header; empty falls back to the organization locale.
+func publicLocale(r *http.Request) string {
+	if l, ok := i18n.Parse(r.URL.Query().Get("locale")); ok {
+		return string(l)
+	}
+	if l, ok := i18n.ParseAcceptLanguage(r.Header.Get("Accept-Language")); ok {
+		return string(l)
+	}
+	return ""
 }
 
 // TEC-251: per-IP limit of the public dealer code list (the sitemap reads

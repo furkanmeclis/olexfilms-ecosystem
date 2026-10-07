@@ -6,7 +6,10 @@
 
 -- name: ListOrganizationsForIndex :many
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
-       p.name AS parent_name
+       p.name AS parent_name,
+       -- TEC-467: a published dealer showcase (the approved snapshot).
+       EXISTS (SELECT 1 FROM dealer_showcases s
+               WHERE s.organization_id = o.id AND s.published_content IS NOT NULL)::boolean AS has_showcase
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.deleted_at IS NULL AND o.type <> 'fleet'
@@ -14,7 +17,10 @@ ORDER BY o.id;
 
 -- name: GetOrganizationForIndex :one
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
-       p.name AS parent_name
+       p.name AS parent_name,
+       -- TEC-467: a published dealer showcase (the approved snapshot).
+       EXISTS (SELECT 1 FROM dealer_showcases s
+               WHERE s.organization_id = o.id AND s.published_content IS NOT NULL)::boolean AS has_showcase
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
 -- TEC-472: fleets are not indexed (a stale document is removed).

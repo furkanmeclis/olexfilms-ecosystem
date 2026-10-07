@@ -61,6 +61,9 @@ import (
 	dealeraccountingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting"
 	dealeraccountinghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting/handler"
 	dealeraccountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting/usecase"
+	showcasemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase"
+	showcasehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase/handler"
+	showcaseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase/usecase"
 	documentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents"
 	dochandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/handler"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
@@ -867,6 +870,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	campaignsSvc := campaignsusecase.New(deps.DB, deps.Queries, campaignStorage)
 	campaignsSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-406: approval notifications
 	campaignsmodule.RegisterRoutes(mux, campaignshandler.New(campaignsSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-467 (F5-01b): dealer showcase editor, center review and the
+	// showcase block of the public dealer endpoints.
+	showcaseSvc := showcaseusecase.New(deps.DB, deps.Queries, featureSvc, sysSvc, outbox.NewStore(deps.DB, deps.Queries))
+	var showcaseStore showcasehandler.Store
+	if deps.Storage != nil {
+		showcaseSvc.SetStorage(deps.Storage)
+		showcaseStore = deps.Storage
+	}
+	orgSvc.SetShowcases(showcaseSvc)
+	showcasemodule.RegisterRoutes(mux, showcasehandler.New(showcaseSvc, showcaseStore), tokens, loader, deps.Queries, featureSvc)
 	// TEC-407: public unsubscribe of the campaign e-mail link.
 	campaignsmodule.RegisterPublicRoutes(mux, campaignshandler.NewUnsubscribe(
 		campaignsusecase.NewUnsubscriber(deps.Queries, []byte(cfg.JWT.AccessSecret)),

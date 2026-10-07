@@ -49,7 +49,7 @@ func (a *SearchAdapter) Spec() searchengine.Spec {
 		Permission: rbac.PermOrganizationsRead,
 		Icon:       "building",
 		Searchable: []string{"title", "subtitle", "keywords"},
-		Filterable: []string{"organization_ids", "brand_ids", "status", "org_type"},
+		Filterable: []string{"organization_ids", "brand_ids", "status", "org_type", "has_showcase"},
 		ListScoped: true,
 	}
 }
@@ -85,6 +85,7 @@ func (a *SearchAdapter) Document(ctx context.Context, id string) (searchengine.D
 }
 
 func organizationDocument(r db.GetOrganizationForIndexRow) searchengine.Document {
+	hasShowcase := r.HasShowcase
 	doc := searchengine.Document{
 		ID:              r.Uuid.String(),
 		Spec:            SearchSpec,
@@ -97,6 +98,7 @@ func organizationDocument(r db.GetOrganizationForIndexRow) searchengine.Document
 		BrandIDs:        []int64{r.BrandID},
 		Status:          r.Status,
 		OrgType:         r.Type,
+		HasShowcase:     &hasShowcase,
 	}
 	if p := r.Phone; strings.HasPrefix(p, "+") && len(p) > 4 {
 		doc.Keywords = append(doc.Keywords, strings.TrimPrefix(p, "+"))
