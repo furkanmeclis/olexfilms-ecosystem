@@ -95,5 +95,6 @@
   "names.reviews": "评价",
   "names.e_invoice": "电子发票（UBL-TR）",
   "names.short_url": "短链接",
-  "columns.slug": "短名称"
+  "columns.slug": "短名称",
+  "via_subscription": "订阅开通"
 }

@@ -16,12 +16,16 @@ function visiblePlatformIds(granted: string[]) {
   );
 }
 
-function visibleTenantIds(granted: string[], features: string[]) {
+function visibleTenantIds(
+  granted: string[],
+  features: string[],
+  type = "dealer",
+) {
   const access = {
     can: (p: string | string[]) =>
       (Array.isArray(p) ? p : [p]).every((x) => granted.includes(x)),
     canAny: (ps: string[]) => ps.some((x) => granted.includes(x)),
-    org: { type: "dealer", role: "owner", features },
+    org: { type, role: "owner", features },
   };
   return tenantNav("acme").groups.flatMap((group) =>
     visibleNavItems(group, access).map((item) => item.id),
@@ -53,5 +57,23 @@ describe("service catalog nav (TEC-310)", () => {
     expect(
       visibleTenantIds([Permission.ServiceCatalogRead], ["service_catalog"]),
     ).toContain("service-catalog");
+  });
+
+  it("links subscriptions and the center cancellation queue (TEC-311)", () => {
+    const items = tenantNav("acme").groups.flatMap((g) => g.items);
+    expect(items.find((i) => i.id === "service-subscriptions")?.href).toBe(
+      routes.tenant.serviceSubscriptions.list("acme"),
+    );
+    const read = [Permission.ServiceSubscriptionsRead];
+    expect(visibleTenantIds(read, ["service_catalog"])).toContain(
+      "service-subscriptions",
+    );
+    const approve = [...read, Permission.ServiceSubscriptionsCancelApprove];
+    expect(visibleTenantIds(approve, ["service_catalog"])).not.toContain(
+      "service-subscription-cancels",
+    );
+    expect(visibleTenantIds(approve, ["service_catalog"], "center")).toContain(
+      "service-subscription-cancels",
+    );
   });
 });

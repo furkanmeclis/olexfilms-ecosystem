@@ -48,6 +48,8 @@ import {
   Gauge,
   Cpu,
   CalendarClock,
+  Inbox,
+  Repeat,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -400,11 +402,16 @@ export function tenantNav(slug: string) {
         ],
       },
       {
+        // TEC-311: subscriptions (service_subscriptions.read) and the center
+        // cancellation queue (cancel_approve) live next to the catalog.
         id: "service-catalog",
         labelKey: "layout.nav_service_catalog",
         icon: ClipboardList,
         defaultOpen: true,
-        permission: permissions.serviceCatalog.read,
+        anyPermission: [
+          permissions.serviceCatalog.read,
+          permissions.serviceSubscriptions.read,
+        ],
         feature: "service_catalog",
         items: [
           {
@@ -414,6 +421,23 @@ export function tenantNav(slug: string) {
             icon: ClipboardList,
             permission: permissions.serviceCatalog.read,
             feature: "service_catalog",
+          },
+          {
+            id: "service-subscriptions",
+            titleKey: "layout.nav_service_subscriptions",
+            href: routes.tenant.serviceSubscriptions.list(slug),
+            icon: Repeat,
+            permission: permissions.serviceSubscriptions.read,
+            feature: "service_catalog",
+          },
+          {
+            id: "service-subscription-cancels",
+            titleKey: "layout.nav_service_subscription_cancels",
+            href: routes.tenant.serviceSubscriptions.cancelRequests(slug),
+            icon: Inbox,
+            permission: permissions.serviceSubscriptions.cancelApprove,
+            feature: "service_catalog",
+            orgTypes: ["center"],
           },
         ],
       },

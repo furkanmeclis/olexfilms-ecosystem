@@ -95,5 +95,6 @@
   "names.reviews": "Rəylər",
   "names.e_invoice": "Elektron faktura (UBL-TR)",
   "names.short_url": "Qısa linklər",
-  "columns.slug": "Qısa ad"
+  "columns.slug": "Qısa ad",
+  "via_subscription": "Abunəliklə aktiv"
 }

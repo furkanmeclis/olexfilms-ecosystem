@@ -139,6 +139,20 @@ export const DEALER_MODULE_SOURCES = [
 export const DEALER_MODULE_STATES = ["enabled", "disabled"] as const;
 const MODULE_LEVELS: ModuleLevel[] = ["core", "standard", "addon"];
 
+/**
+ * TEC-311: a module switched on by a module bundle subscription
+ * (source=service) is labelled "on by subscription".
+ */
+export function SubscriptionModuleBadge({ source }: { source?: string }) {
+  const { t } = useLocale();
+  if (source !== "service") return null;
+  return (
+    <Badge variant="secondary" data-testid="module-via-subscription">
+      {t("modules.via_subscription")}
+    </Badge>
+  );
+}
+
 function OwnModules({ slug }: { slug: string }) {
   const { t } = useLocale();
   const { can } = usePermission();
@@ -167,11 +181,14 @@ function OwnModules({ slug }: { slug: string }) {
         enableSorting: true,
         gridPrimary: true,
         cell: ({ row }) => (
-          <span
-            className="font-medium"
-            data-testid={`module-${row.original.key}`}
-          >
-            {moduleName(t, row.original.key)}
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <span
+              className="font-medium"
+              data-testid={`module-${row.original.key}`}
+            >
+              {moduleName(t, row.original.key)}
+            </span>
+            <SubscriptionModuleBadge source={row.original.source} />
           </span>
         ),
       }),
@@ -346,7 +363,10 @@ export function DealerModules({
           label: value,
         })),
         cell: ({ row }) => (
-          <StateBadge on={Boolean(entry(row.original)?.enabled)} />
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <StateBadge on={Boolean(entry(row.original)?.enabled)} />
+            <SubscriptionModuleBadge source={entry(row.original)?.source} />
+          </span>
         ),
       }),
       createColumn<DealerModuleRow>({

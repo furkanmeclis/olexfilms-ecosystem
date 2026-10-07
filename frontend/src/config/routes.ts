@@ -48,6 +48,14 @@ export const routes = {
       categories: (slug: string) => `/t/${slug}/catalog/categories`,
       services: (slug: string) => `/t/${slug}/service-catalog`,
     },
+    /** TEC-311 service subscriptions and the center cancellation queue. */
+    serviceSubscriptions: {
+      list: (slug: string) => `/t/${slug}/service-subscriptions`,
+      detail: (slug: string, uuid: string) =>
+        `/t/${slug}/service-subscriptions/${uuid}`,
+      cancelRequests: (slug: string) =>
+        `/t/${slug}/service-subscriptions/cancel-requests`,
+    },
     /** TEC-176 accounting; statement and disputes: TEC-195. */
     accounting: {
       root: (slug: string) => `/t/${slug}/accounting`,
