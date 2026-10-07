@@ -102,3 +102,18 @@ func TestParseWebhookLIDSender(t *testing.T) {
 		t.Fatalf("lid: %+v %v", evs, err)
 	}
 }
+
+// TEC-397: a shared location becomes location media with its coordinates.
+func TestParseWebhookLocation(t *testing.T) {
+	c := New(Config{HMACKey: testKey})
+	body := `{"type":"Message","event":{"Info":{"ID":"LOC1","Chat":"905551234567@s.whatsapp.net","Sender":"905551234567@s.whatsapp.net"},"Message":{"locationMessage":{"degreesLatitude":41.0082,"degreesLongitude":28.9784,"name":"Sultanahmet","address":"Fatih, İstanbul"}}}}`
+	evs, err := c.ParseWebhook(signed(body), []byte(body))
+	if err != nil || len(evs) != 1 {
+		t.Fatalf("location: %+v %v", evs, err)
+	}
+	m := evs[0].Media
+	if m == nil || m.Type != whatsapp.MediaLocation || m.Latitude == nil || *m.Latitude != 41.0082 ||
+		m.Longitude == nil || *m.Longitude != 28.9784 || m.Caption != "Sultanahmet Fatih, İstanbul" || len(m.Download) != 0 {
+		t.Fatalf("media = %+v", m)
+	}
+}

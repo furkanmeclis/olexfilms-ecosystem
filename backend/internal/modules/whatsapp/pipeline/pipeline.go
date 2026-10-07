@@ -16,8 +16,11 @@
 //	identity (F4-02b): panel user / customer / visitor; menu or fixed reply
 //	modules: whatsapp_gateway and ai_assistant of the center (and the
 //	  user's organization), a configured provider, ai.use for panel users
+//	location (TEC-397): a shared location → the nearest dealers, no AI
 //	consent (K22): no AI answer before EVET; EVET records the consent and
 //	  answers the question that waited for it
+//	visitor_limit (TEC-397): turns per visitor number and the visitor
+//	  token cap per day → fixed text with the dealer finder link
 //	quota: panel user → own organization; customer / visitor → the
 //	  center's system pool (QUESTIONS S1); spent → fixed text + handover
 //	confirmation: EVET / HAYIR on an open card → Confirm / Cancel (F4-01e)
@@ -182,6 +185,13 @@ type Deps struct {
 	// DefaultBrandSlug is the brand of contacts with no brand of their own.
 	DefaultBrandSlug string
 	Log              *slog.Logger
+	// TEC-397 visitor flow (each may be nil / empty): the dealer directory
+	// of shared locations, the visitor lead use case, the daily visitor
+	// token cap and the public frontend origin of the dealer links.
+	Dealers         aitools.DealerFinder
+	Leads           VisitorLeads
+	VisitorSettings VisitorSettings
+	FrontendURL     string
 }
 
 // Pipeline is the WhatsApp AI reply use case.
@@ -395,9 +405,19 @@ func (p *Pipeline) handle(ctx context.Context, r *run, batch []db.Message) error
 		return err
 	}
 
+	// A shared location: the nearest dealers (TEC-397, no model call).
+	if done, err := p.location(ctx, r, act, batch); done || err != nil {
+		return err
+	}
+
 	// Consent (K22).
 	turn, done, err := p.consent(ctx, r, act, batch)
 	if done || err != nil {
+		return err
+	}
+
+	// Visitor abuse limits (TEC-397).
+	if done, err := p.visitorLimits(ctx, r, act); done || err != nil {
 		return err
 	}
 
@@ -912,6 +932,13 @@ func (p *Pipeline) content(ctx context.Context, r *run, msgs []db.Message) ([]ll
 	for _, m := range msgs {
 		mm, hasMedia := mediaOf(m)
 		txt := messageText(m)
+		if loc, ok := locationOf(m); ok {
+			// TEC-397: a location followed by more messages goes to the
+			// model (find_nearest_dealers takes the coordinates).
+			blocks = append(blocks, llm.TextBlock(fmt.Sprintf("[The user shared a location: latitude %.6f, longitude %.6f %s]",
+				*loc.Latitude, *loc.Longitude, strings.TrimSpace(loc.Caption))))
+			continue
+		}
 		switch {
 		case hasMedia && mm.Type == "audio":
 			voice++
@@ -1007,6 +1034,10 @@ func (p *Pipeline) history(ctx context.Context, conv db.Conversation, first db.M
 
 func (p *Pipeline) answer(ctx context.Context, r *run, a actor, history []llm.Message, content []llm.Block) error {
 	a.facts.Locale = r.locale
+	if a.facts.Visitor {
+		// The visitor tools of this package read the conversation.
+		ctx = withVisitorTurn(ctx, &visitorTurn{p: p, r: r, a: a})
+	}
 	res, err := p.d.Agent.RunAgent(ctx, aiusecase.AgentInput{
 		Principal: a.principal, OrgID: a.quotaOrg, BrandID: a.brand.ID, Pool: a.pool,
 		Source: aimodel.SourceWhatsApp, SourceRef: r.conv.Uuid.String(),

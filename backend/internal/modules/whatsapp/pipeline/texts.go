@@ -28,6 +28,15 @@ const (
 	textNotifyTitle
 	textNotifyHandover
 	textNotifyQuota
+	// TEC-397 visitor flow: textLocationDealers heads the nearest dealers
+	// of a shared location; textLocationNone (%s: dealer finder link) when
+	// none is near; textVisitorLimit (%s: dealer finder link) answers above
+	// the daily visitor limits; textKVKKNotice (%s: the notice) precedes a
+	// lead request.
+	textLocationDealers
+	textLocationNone
+	textVisitorLimit
+	textKVKKNotice
 	textCount
 )
 
@@ -50,6 +59,10 @@ var texts = map[string][textCount]string{
 		"WhatsApp konuşması size devredildi",
 		"%s bir temsilciyle görüşmek istiyor.",
 		"%s için yapay zekâ kotası doldu; konuşma ekibe devredildi.",
+		"Paylaştığınız konuma en yakın bayilerimiz:",
+		"Paylaştığınız konuma yakın bir bayimiz bulunamadı. Tüm bayilerimizi buradan görebilirsiniz: %s",
+		"Bugünlük otomatik yanıt sınırına ulaşıldı. Size en yakın bayiyi buradan bulabilirsiniz: %s",
+		"Talebinizi bayimize iletmeden önce kişisel verilerinizin işlenmesine ilişkin bilgilendirme:\n\n%s\n\nBayimizin sizinle iletişime geçmesini onaylıyorsanız lütfen yanıt verin.",
 	},
 	"en": {
 		"Hello! Our AI assistant answers your questions. Before we continue, please accept the AI usage guidelines:\n\n%s\n\nReply *YES* to accept.",
@@ -69,6 +82,10 @@ var texts = map[string][textCount]string{
 		"WhatsApp conversation handed over to you",
 		"%s wants to talk to a representative.",
 		"The AI quota for %s is used up; the conversation was handed over to the team.",
+		"Our dealers nearest to the location you shared:",
+		"We could not find a dealer near the location you shared. You can see all our dealers here: %s",
+		"The daily limit for automatic replies has been reached. You can find your nearest dealer here: %s",
+		"Before we forward your request to our dealer, here is how we process your personal data:\n\n%s\n\nPlease reply to confirm that our dealer may contact you.",
 	},
 	"bg": {
 		"Здравейте! На въпросите ви отговаря нашият AI асистент. Преди да продължим, моля, приемете правилата за използване на AI:\n\n%s\n\nОтговорете с *ДА*, за да приемете.",
@@ -88,6 +105,10 @@ var texts = map[string][textCount]string{
 		"WhatsApp разговор е предаден на вас",
 		"%s иска да говори с представител.",
 		"AI квотата за %s е изчерпана; разговорът е предаден на екипа.",
+		"Нашите най-близки дилъри до местоположението, което споделихте:",
+		"Не открихме дилър близо до споделеното местоположение. Всички наши дилъри можете да видите тук: %s",
+		"Дневният лимит за автоматични отговори е достигнат. Най-близкия дилър можете да намерите тук: %s",
+		"Преди да препратим заявката ви към наш дилър, ето как обработваме личните ви данни:\n\n%s\n\nМоля, отговорете, за да потвърдите, че нашият дилър може да се свърже с вас.",
 	},
 	"de": {
 		"Hallo! Ihre Fragen beantwortet unser KI-Assistent. Bevor wir fortfahren, akzeptieren Sie bitte die KI-Nutzungsrichtlinien:\n\n%s\n\nAntworten Sie mit *JA*, um zuzustimmen.",
@@ -107,6 +128,10 @@ var texts = map[string][textCount]string{
 		"WhatsApp-Unterhaltung an Sie übergeben",
 		"%s möchte mit einem Mitarbeiter sprechen.",
 		"Das KI-Kontingent für %s ist aufgebraucht; die Unterhaltung wurde an das Team übergeben.",
+		"Unsere Händler in der Nähe des geteilten Standorts:",
+		"In der Nähe des geteilten Standorts haben wir keinen Händler gefunden. Alle unsere Händler finden Sie hier: %s",
+		"Das Tageslimit für automatische Antworten ist erreicht. Ihren nächsten Händler finden Sie hier: %s",
+		"Bevor wir Ihre Anfrage an unseren Händler weiterleiten, informieren wir Sie über die Verarbeitung Ihrer personenbezogenen Daten:\n\n%s\n\nBitte antworten Sie, um zu bestätigen, dass unser Händler Sie kontaktieren darf.",
 	},
 	"el": {
 		"Γεια σας! Στις ερωτήσεις σας απαντά ο βοηθός τεχνητής νοημοσύνης μας. Πριν συνεχίσουμε, αποδεχτείτε τις οδηγίες χρήσης της τεχνητής νοημοσύνης:\n\n%s\n\nΑπαντήστε *ΝΑΙ* για αποδοχή.",
@@ -126,6 +151,10 @@ var texts = map[string][textCount]string{
 		"Η συνομιλία WhatsApp σάς ανατέθηκε",
 		"Ο/Η %s θέλει να μιλήσει με εκπρόσωπο.",
 		"Το όριο τεχνητής νοημοσύνης για %s εξαντλήθηκε· η συνομιλία ανατέθηκε στην ομάδα.",
+		"Οι πλησιέστεροι αντιπρόσωποί μας στην τοποθεσία που κοινοποιήσατε:",
+		"Δεν βρήκαμε αντιπρόσωπο κοντά στην τοποθεσία που κοινοποιήσατε. Όλους τους αντιπροσώπους μας θα τους βρείτε εδώ: %s",
+		"Συμπληρώθηκε το ημερήσιο όριο αυτόματων απαντήσεων. Τον πλησιέστερο αντιπρόσωπο θα τον βρείτε εδώ: %s",
+		"Πριν προωθήσουμε το αίτημά σας στον αντιπρόσωπό μας, σας ενημερώνουμε για την επεξεργασία των προσωπικών σας δεδομένων:\n\n%s\n\nΠαρακαλούμε απαντήστε για να επιβεβαιώσετε ότι ο αντιπρόσωπός μας μπορεί να επικοινωνήσει μαζί σας.",
 	},
 	"uk": {
 		"Вітаємо! На ваші запитання відповідає наш AI-асистент. Перш ніж продовжити, прийміть правила використання AI:\n\n%s\n\nНапишіть *ТАК*, щоб погодитися.",
@@ -145,6 +174,10 @@ var texts = map[string][textCount]string{
 		"Розмову WhatsApp передано вам",
 		"%s хоче поговорити з представником.",
 		"AI-квоту для %s вичерпано; розмову передано команді.",
+		"Наші найближчі дилери до місця, яким ви поділилися:",
+		"Поблизу місця, яким ви поділилися, дилера не знайдено. Усіх наших дилерів можна переглянути тут: %s",
+		"Денний ліміт автоматичних відповідей вичерпано. Найближчого дилера можна знайти тут: %s",
+		"Перш ніж передати ваш запит нашому дилеру, повідомляємо, як ми обробляємо ваші персональні дані:\n\n%s\n\nБудь ласка, дайте відповідь, щоб підтвердити, що наш дилер може з вами зв’язатися.",
 	},
 	"ru": {
 		"Здравствуйте! На ваши вопросы отвечает наш AI-ассистент. Прежде чем продолжить, примите правила использования AI:\n\n%s\n\nНапишите *ДА*, чтобы согласиться.",
@@ -164,6 +197,10 @@ var texts = map[string][textCount]string{
 		"Разговор WhatsApp передан вам",
 		"%s хочет поговорить с представителем.",
 		"AI-квота для %s исчерпана; разговор передан команде.",
+		"Наши ближайшие дилеры к месту, которым вы поделились:",
+		"Рядом с местом, которым вы поделились, дилер не найден. Всех наших дилеров можно посмотреть здесь: %s",
+		"Дневной лимит автоматических ответов исчерпан. Ближайшего дилера можно найти здесь: %s",
+		"Прежде чем передать ваш запрос нашему дилеру, сообщаем, как мы обрабатываем ваши персональные данные:\n\n%s\n\nПожалуйста, ответьте, чтобы подтвердить, что наш дилер может с вами связаться.",
 	},
 	"fr": {
 		"Bonjour ! Notre assistant IA répond à vos questions. Avant de continuer, veuillez accepter les règles d'utilisation de l'IA :\n\n%s\n\nRépondez *OUI* pour accepter.",
@@ -183,6 +220,10 @@ var texts = map[string][textCount]string{
 		"Conversation WhatsApp qui vous est transférée",
 		"%s souhaite parler à un conseiller.",
 		"Le quota IA de %s est épuisé ; la conversation a été transférée à l'équipe.",
+		"Nos revendeurs les plus proches de la position partagée :",
+		"Nous n’avons trouvé aucun revendeur près de la position partagée. Retrouvez tous nos revendeurs ici : %s",
+		"La limite quotidienne de réponses automatiques est atteinte. Trouvez votre revendeur le plus proche ici : %s",
+		"Avant de transmettre votre demande à notre revendeur, voici comment nous traitons vos données personnelles :\n\n%s\n\nMerci de répondre pour confirmer que notre revendeur peut vous contacter.",
 	},
 	"es": {
 		"¡Hola! Nuestro asistente de IA responde a sus preguntas. Antes de continuar, acepte las normas de uso de la IA:\n\n%s\n\nResponda *SÍ* para aceptar.",
@@ -202,6 +243,10 @@ var texts = map[string][textCount]string{
 		"Conversación de WhatsApp transferida a usted",
 		"%s quiere hablar con un agente.",
 		"La cuota de IA de %s se ha agotado; la conversación se ha transferido al equipo.",
+		"Nuestros distribuidores más cercanos a la ubicación que compartió:",
+		"No encontramos ningún distribuidor cerca de la ubicación que compartió. Puede ver todos nuestros distribuidores aquí: %s",
+		"Se ha alcanzado el límite diario de respuestas automáticas. Puede encontrar su distribuidor más cercano aquí: %s",
+		"Antes de enviar su solicitud a nuestro distribuidor, le informamos de cómo tratamos sus datos personales:\n\n%s\n\nResponda, por favor, para confirmar que nuestro distribuidor puede contactarle.",
 	},
 	"it": {
 		"Salve! Alle sue domande risponde il nostro assistente IA. Prima di continuare, accetti le regole di utilizzo dell'IA:\n\n%s\n\nRisponda *SÌ* per accettare.",
@@ -221,6 +266,10 @@ var texts = map[string][textCount]string{
 		"Conversazione WhatsApp assegnata a lei",
 		"%s vuole parlare con un operatore.",
 		"La quota IA di %s è esaurita; la conversazione è stata passata al team.",
+		"I nostri rivenditori più vicini alla posizione condivisa:",
+		"Non abbiamo trovato rivenditori vicino alla posizione condivisa. Puoi vedere tutti i nostri rivenditori qui: %s",
+		"È stato raggiunto il limite giornaliero di risposte automatiche. Puoi trovare il rivenditore più vicino qui: %s",
+		"Prima di inoltrare la tua richiesta al nostro rivenditore, ecco come trattiamo i tuoi dati personali:\n\n%s\n\nRispondi per confermare che il nostro rivenditore può contattarti.",
 	},
 	"zh_CN": {
 		"您好！我们的 AI 助手将回答您的问题。继续之前，请先接受 AI 使用准则：\n\n%s\n\n回复 *是* 表示接受。",
@@ -240,6 +289,10 @@ var texts = map[string][textCount]string{
 		"WhatsApp 会话已转交给您",
 		"%s 希望与客服代表沟通。",
 		"%s 的 AI 配额已用完；会话已转交给团队。",
+		"距离您分享的位置最近的经销商：",
+		"在您分享的位置附近未找到经销商。您可以在这里查看我们所有的经销商：%s",
+		"今日自动回复次数已达上限。您可以在这里查找最近的经销商：%s",
+		"在将您的请求转给我们的经销商之前，请了解我们如何处理您的个人数据：\n\n%s\n\n如同意经销商与您联系，请回复确认。",
 	},
 	"az": {
 		"Salam! Suallarınızı süni intellekt köməkçimiz cavablandırır. Davam etməzdən əvvəl süni intellektdən istifadə qaydalarını qəbul edin:\n\n%s\n\nQəbul etmək üçün *BƏLİ* yazın.",
@@ -259,6 +312,10 @@ var texts = map[string][textCount]string{
 		"WhatsApp söhbəti sizə ötürüldü",
 		"%s nümayəndə ilə danışmaq istəyir.",
 		"%s üçün süni intellekt limiti bitdi; söhbət komandaya ötürüldü.",
+		"Paylaşdığınız məkana ən yaxın dilerlərimiz:",
+		"Paylaşdığınız məkanın yaxınlığında diler tapılmadı. Bütün dilerlərimizi burada görə bilərsiniz: %s",
+		"Avtomatik cavablar üçün gündəlik limitə çatıldı. Ən yaxın dileri burada tapa bilərsiniz: %s",
+		"Sorğunuzu dilerimizə ötürməzdən əvvəl şəxsi məlumatlarınızın necə emal edildiyi barədə məlumat:\n\n%s\n\nDilerimizin sizinlə əlaqə saxlamasını təsdiqləmək üçün zəhmət olmasa cavab yazın.",
 	},
 	"ar": {
 		"مرحبًا! يجيب مساعدنا بالذكاء الاصطناعي عن أسئلتك. قبل المتابعة، يرجى قبول إرشادات استخدام الذكاء الاصطناعي:\n\n%s\n\nأرسل *نعم* للموافقة.",
@@ -278,6 +335,10 @@ var texts = map[string][textCount]string{
 		"تمت إحالة محادثة واتساب إليك",
 		"يريد %s التحدث إلى ممثل.",
 		"نفدت حصة الذكاء الاصطناعي لـ %s؛ تمت إحالة المحادثة إلى الفريق.",
+		"أقرب وكلائنا إلى الموقع الذي شاركته:",
+		"لم نجد وكيلًا قريبًا من الموقع الذي شاركته. يمكنك الاطلاع على جميع وكلائنا هنا: %s",
+		"تم بلوغ الحد اليومي للردود التلقائية. يمكنك العثور على أقرب وكيل إليك هنا: %s",
+		"قبل إحالة طلبك إلى وكيلنا، إليك كيفية معالجة بياناتك الشخصية:\n\n%s\n\nيرجى الرد لتأكيد موافقتك على تواصل وكيلنا معك.",
 	},
 }
 

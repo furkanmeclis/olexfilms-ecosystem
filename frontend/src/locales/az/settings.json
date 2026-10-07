@@ -146,6 +146,8 @@
   "system.groups.whatsapp_hint": "WhatsApp söhbətləri, göndərmə sürəti və süni intellekt cavabları.",
   "system.keys.whatsapp_ai_staff_pause_minutes": "İşçi mesajından sonra süni intellekt fasiləsi (dəqiqə)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "İşçi bu müddət ərzində söhbətə yazıbsa, süni intellekt cavab vermir; 0 = fasilə yoxdur.",
+  "system.keys.ai_visitor_daily_token_cap": "WhatsApp ziyarətçi süni intellekti üçün gündəlik token limiti",
+  "system.keys.ai_visitor_daily_token_cap_hint": "Bütün tanınmamış WhatsApp ziyarətçilərinin sistem hovuzundan gündə istifadə edə biləcəyi token; limit keçildikdə diler axtarışı linki ilə sabit cavab göndərilir. 0 = limit yoxdur.",
   "system.keys.whatsapp_ai_guidelines_url": "Süni intellekt qaydaları linki",
   "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp razılıq sualı ilə göndərilən qaydalar linki (https); boşdursa, qaydaların mətni mesajda göndərilir."
 }

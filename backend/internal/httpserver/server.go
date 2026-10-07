@@ -920,6 +920,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			Access: uc, Features: featureSvc, Settings: sysSvc, Redis: deps.Redis, Env: cfg.App.Env,
 			Notifier: notifSvc, Media: waMedia, Downloader: waSvc.MediaDownloader(),
 			DefaultBrandSlug: cfg.App.DefaultBrandSlug, Log: log,
+			// TEC-397 (F4-02e): visitor flow (locations, limits, leads).
+			Tools: s.aiTools, Dealers: orgSvc, VisitorSettings: sysSvc, FrontendURL: cfg.Auth.FrontendURL,
+			Leads: leadsusecase.NewApplications(deps.DB, deps.Queries, geoSvc, featureSvc, sysSvc,
+				outbox.NewStore(deps.DB, deps.Queries)),
 		}).Process)
 	}
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
