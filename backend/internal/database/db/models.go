@@ -1192,6 +1192,21 @@ type FleetReport struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type FleetUser struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	FleetOrgID      int64              `json:"fleet_org_id"`
+	BrandID         int64              `json:"brand_id"`
+	UserID          int64              `json:"user_id"`
+	IsPrimary       bool               `json:"is_primary"`
+	Status          string             `json:"status"`
+	InvitedByOrgID  pgtype.Int8        `json:"invited_by_org_id"`
+	InvitedByUserID pgtype.Int8        `json:"invited_by_user_id"`
+	DisabledAt      pgtype.Timestamptz `json:"disabled_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type GithubAppSetting struct {
 	ID              int16              `json:"id"`
 	Enabled         bool               `json:"enabled"`
