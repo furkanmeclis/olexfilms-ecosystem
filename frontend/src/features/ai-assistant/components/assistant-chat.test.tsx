@@ -65,7 +65,7 @@ const CARD = {
   status: "pending",
   preview: {
     action: "create_task",
-    summary: "Create task",
+    summary: 'Acme için "Müşteriyi ara" görevi oluşturulsun.',
     fields: [{ key: "title", value: "Müşteriyi ara" }],
     edit: [
       { key: "title", type: "text", value: "Müşteriyi ara", required: true },
@@ -248,6 +248,8 @@ describe("AssistantChat", () => {
     expect(card).not.toBeNull();
     expect(card!.textContent).toContain("ai.actions.create_task");
     expect(card!.textContent).toContain("Müşteriyi ara");
+    // TEC-461: the backend summary (user's locale) is shown on the card.
+    expect(q("ai-card-summary")?.textContent).toBe(CARD.preview.summary);
     expect(q("ai-card-countdown")).not.toBeNull();
 
     await act(async () => {

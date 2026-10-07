@@ -217,7 +217,11 @@ func TestIntegrationMCPServer(t *testing.T) {
 		t.Fatalf("customer A read B's service: %+v %v", res, err)
 	}
 
-	// 4. Write tool: a pending action (source mcp), no lead.
+	// 4. Write tool: a pending action (source mcp), no lead. TEC-461: the
+	// "waiting for approval" summary is in the user's language.
+	if _, err := it.pool.Exec(ctx, `UPDATE users SET locale = 'tr' WHERE id = $1`, owner.ID); err != nil {
+		t.Fatal(err)
+	}
 	contact := "T402 " + it.suffix
 	res, err = dealerCS.CallTool(ctx, &mcpsdk.CallToolParams{Name: aitools.ToolCreateLead,
 		Arguments: map[string]any{"contact_name": contact, "phone": "+905321234567"}})
@@ -227,10 +231,14 @@ func TestIntegrationMCPServer(t *testing.T) {
 	var pa struct {
 		Status     string    `json:"status"`
 		ActionUUID uuid.UUID `json:"action_uuid"`
+		Summary    string    `json:"summary"`
 	}
 	raw, _ := json.Marshal(res.StructuredContent)
 	if json.Unmarshal(raw, &pa) != nil || pa.Status != mcpmodule.CodePendingApproval || pa.ActionUUID == uuid.Nil {
 		t.Fatalf("create_lead structured = %s", raw)
+	}
+	if want := contact + " için lead oluşturulsun."; pa.Summary != want || !strings.Contains(resultText(res), want) {
+		t.Fatalf("create_lead summary = %q, want %q", pa.Summary, want)
 	}
 	var source, status string
 	var userID, orgID int64

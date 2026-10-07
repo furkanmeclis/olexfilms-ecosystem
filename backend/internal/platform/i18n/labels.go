@@ -19,3 +19,18 @@ func ExportFormatLabel(locale Locale, format string) string {
 	}
 	return strings.ToUpper(format)
 }
+
+// TranslateParams resolves key like Translate and fills its {{name}}
+// placeholders from params in one pass (a value is never re-expanded).
+// Unknown placeholders are left as they are.
+func TranslateParams(locale Locale, key string, params map[string]string) string {
+	tpl := Translate(locale, key)
+	if len(params) == 0 {
+		return tpl
+	}
+	pairs := make([]string, 0, len(params)*2)
+	for k, v := range params {
+		pairs = append(pairs, "{{"+k+"}}", v)
+	}
+	return strings.NewReplacer(pairs...).Replace(tpl)
+}

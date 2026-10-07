@@ -13,6 +13,7 @@ import (
 	oauthmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -72,6 +73,8 @@ func (s StoreResolver) Resolve(ctx context.Context, tok oauthmodel.AccessToken) 
 		return aitools.Principal{}, ErrForbidden
 	}
 	auth := authctx.Principal{UserID: user.Uuid, UserInternal: user.ID, Email: user.Email.String}
+	// TEC-461: the "waiting for approval" summary is in the user's language.
+	locale := i18n.Resolve(i18n.Sources{UserLocale: user.Locale.String, OrgLocale: org.Locale}).Locale
 
 	if oauthmodel.RealmOf(tok.Resource) == oauthmodel.RealmCustomer {
 		// Customer tools read the customer's own records in the brand of the
@@ -82,7 +85,7 @@ func (s StoreResolver) Resolve(ctx context.Context, tok oauthmodel.AccessToken) 
 		}
 		fill(&auth, acc, jwt.AudiencePortal)
 		return aitools.Principal{
-			Auth: auth, Realm: aitools.RealmCustomer,
+			Auth: auth, Realm: aitools.RealmCustomer, Locale: locale,
 			Brand: &brandctx.Brand{ID: brand.ID, Slug: brand.Slug, Name: brand.Name, Status: brand.Status},
 		}, nil
 	}
@@ -114,7 +117,7 @@ func (s StoreResolver) Resolve(ctx context.Context, tok oauthmodel.AccessToken) 
 	orgUUID := org.Uuid
 	auth.OrganizationUUID = &orgUUID
 	return aitools.Principal{
-		Auth: auth, Realm: aitools.RealmPanel,
+		Auth: auth, Realm: aitools.RealmPanel, Locale: locale,
 		Org: &orgctx.Scope{
 			InternalID: org.ID, UUID: org.Uuid, Slug: org.Slug, Name: org.Name, MemberRole: memberRole,
 			Status: org.Status, OrgType: org.Type, BrandID: org.BrandID, BrandSlug: brand.Slug,

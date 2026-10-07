@@ -22643,7 +22643,7 @@ export interface components {
             source_ref?: string;
             /** @enum {string} */
             status: "pending" | "executing" | "confirmed" | "failed" | "cancelled" | "expired";
-            /** @description action, summary, fields [{key, value}], edit [{key, type, value, options?, required?}], warnings? */
+            /** @description action, summary (in the user's locale, TEC-461), summary_args? (values of the localized summary template), fields [{key, value}], edit [{key, type, value, options?, required?}], warnings? */
             preview: {
                 [key: string]: unknown;
             };

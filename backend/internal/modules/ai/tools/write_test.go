@@ -16,6 +16,7 @@ import (
 	ordersuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	svcuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	tasksuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
@@ -274,6 +275,61 @@ func TestWriteToolsRejectBadProposals(t *testing.T) {
 	for name, orgType := range map[string]string{ToolCreateOrderDraft: OrgCenter, ToolCreateTask: OrgDealer} {
 		if _, bad, err := r.Propose(ctx, superAdminOf(orgType), name, json.RawMessage(`{}`)); !errors.Is(err, ErrToolNotAllowed) || bad.Code != CodeToolNotAllowed {
 			t.Fatalf("%s as %s: %+v %v", name, orgType, bad, err)
+		}
+	}
+}
+
+// TEC-461: the card summary is written in the principal's locale for every
+// write tool and every catalog locale; an unknown or missing locale is en.
+func TestWriteCardSummaryLocalized(t *testing.T) {
+	ctx := context.Background()
+	summary := func(t *testing.T, name, input string, locale i18n.Locale) Preview {
+		t.Helper()
+		p := superAdminOf(OrgCenter)
+		for _, tc := range validWrites {
+			if tc.name == name {
+				p = superAdminOf(tc.orgType)
+			}
+		}
+		p.Locale = locale
+		prop, bad, err := writeRegistry(&writeLog{}, appointmentsuc.StatusScheduled).Propose(ctx, p, name, json.RawMessage(input))
+		if err != nil || bad != nil {
+			t.Fatalf("%s/%s: %+v %v", name, locale, bad, err)
+		}
+		return prop.Preview
+	}
+	for _, tc := range validWrites {
+		en := summary(t, tc.name, tc.input, i18n.LocaleEN).Summary
+		for _, l := range i18n.Supported {
+			pv := summary(t, tc.name, tc.input, l)
+			if pv.Summary == "" || strings.Contains(pv.Summary, "{{") || len(pv.SummaryArgs) == 0 {
+				t.Errorf("%s/%s: summary %q args %v", tc.name, l, pv.Summary, pv.SummaryArgs)
+			}
+			if l != i18n.LocaleEN && pv.Summary == en {
+				t.Errorf("%s/%s: summary is the English one: %q", tc.name, l, en)
+			}
+		}
+		for _, l := range []i18n.Locale{"", "ja", "pt-BR"} {
+			if got := summary(t, tc.name, tc.input, l).Summary; got != en {
+				t.Errorf("%s/%q: %q, want en %q", tc.name, l, got, en)
+			}
+		}
+	}
+
+	task := validWrites[0]
+	want := map[i18n.Locale]string{
+		i18n.LocaleTR: `Bayi A için "Ziyaret" görevi oluşturulsun.`,
+		i18n.LocaleAR: `إنشاء المهمة "Ziyaret" بخصوص Bayi A.`,
+		i18n.LocaleEN: `Create the task "Ziyaret" about Bayi A.`,
+	}
+	for l, w := range want {
+		pv := summary(t, task.name, task.input, l)
+		if pv.Summary != w {
+			t.Errorf("%s: %q, want %q", l, pv.Summary, w)
+		}
+		// A channel can render the stored card in another language.
+		if got := pv.LocalizedSummary(i18n.LocaleTR); got != want[i18n.LocaleTR] {
+			t.Errorf("re-render from %s: %q", l, got)
 		}
 	}
 }

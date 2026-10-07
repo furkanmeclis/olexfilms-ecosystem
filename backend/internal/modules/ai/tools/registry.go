@@ -23,6 +23,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 )
@@ -116,6 +117,9 @@ type Principal struct {
 	// brand on the portal, the conversation brand on WhatsApp); required in
 	// those realms, ignored in the panel realm (Org carries the brand).
 	Brand *brandctx.Brand
+	// Locale is the user's language (K10); write-tool card summaries are
+	// rendered in it (TEC-461). Empty or unknown falls back to en.
+	Locale i18n.Locale
 }
 
 // brandID is the brand the principal acts in.

@@ -870,11 +870,14 @@ func (p *Pipeline) decideCard(ctx context.Context, r *run, a actor, batch []db.M
 	}
 }
 
-// cardText renders a confirmation card as a WhatsApp question.
+// cardText renders a confirmation card as a WhatsApp question in the
+// conversation language (TEC-461): the summary and the field labels come
+// from the backend catalog, a language outside it gets en.
 func cardText(locale string, c aiusecase.Card) string {
+	loc := cardLocale(locale)
 	var sb strings.Builder
 	sb.WriteString(text(locale, textConfirmHeader))
-	if s := strings.TrimSpace(c.Preview.Summary); s != "" {
+	if s := strings.TrimSpace(c.Preview.LocalizedSummary(loc)); s != "" {
 		sb.WriteString("\n*")
 		sb.WriteString(s)
 		sb.WriteString("*")
@@ -883,7 +886,7 @@ func cardText(locale string, c aiusecase.Card) string {
 		if strings.TrimSpace(f.Value) == "" {
 			continue
 		}
-		fmt.Fprintf(&sb, "\n• %s: %s", strings.ReplaceAll(f.Key, "_", " "), f.Value)
+		fmt.Fprintf(&sb, "\n• %s: %s", aitools.FieldLabel(loc, f.Key), f.Value)
 	}
 	sb.WriteString("\n\n")
 	sb.WriteString(text(locale, textConfirmQuestion))
@@ -1034,6 +1037,8 @@ func (p *Pipeline) history(ctx context.Context, conv db.Conversation, first db.M
 
 func (p *Pipeline) answer(ctx context.Context, r *run, a actor, history []llm.Message, content []llm.Block) error {
 	a.facts.Locale = r.locale
+	// TEC-461: the confirmation card summary is written in this language.
+	a.principal.Locale = cardLocale(r.locale)
 	if a.facts.Visitor {
 		// The visitor tools of this package read the conversation.
 		ctx = withVisitorTurn(ctx, &visitorTurn{p: p, r: r, a: a})
@@ -1131,6 +1136,15 @@ func i18nLocale(conversationLocale string) i18n.Locale {
 		return i18n.DefaultLocale
 	}
 	return l
+}
+
+// cardLocale maps a conversation locale to the backend catalog locale;
+// unlike i18nLocale an unknown language is en (fallbackLocale), not tr.
+func cardLocale(conversationLocale string) i18n.Locale {
+	if l, ok := i18n.Parse(strings.ReplaceAll(conversationLocale, "_", "-")); ok {
+		return l
+	}
+	return i18n.Locale(fallbackLocale)
 }
 
 func firstNonEmpty(vals ...string) string {

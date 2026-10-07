@@ -107,6 +107,16 @@ export function ActionConfirmCard({
         ) : null}
       </div>
 
+      {/* TEC-461: the summary arrives in the user's language; it is the
+          title itself when the action has no label. */}
+      {preview.summary &&
+      preview.summary !==
+        actionLabel(t, preview.action ?? card.tool_name, preview.summary) ? (
+        <p className="text-sm" data-testid="ai-card-summary">
+          {preview.summary}
+        </p>
+      ) : null}
+
       {preview.fields?.length ? (
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           {preview.fields.map((f, i) => (
