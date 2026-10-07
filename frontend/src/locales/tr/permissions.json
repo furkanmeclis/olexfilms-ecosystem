@@ -93,6 +93,10 @@
   "labels.warehouse.write": "Depoyu yönet",
   "labels.campaigns.read": "Kampanyaları görüntüle",
   "labels.campaigns.write": "Kampanyaları yönet",
+  "labels.fleets.read": "Filoları görüntüle",
+  "labels.fleets.manage": "Filoları yönet",
+  "labels.fleets.plan": "Filo hizmetlerini planla",
+  "labels.fleet.portal.read": "Kendi filosunu görüntüle (portal)",
   "labels.leads.read": "Potansiyel müşterileri görüntüle",
   "labels.leads.write": "Potansiyel müşterileri yönet",
   "labels.social.read": "Sosyal medyayı görüntüle",
@@ -106,6 +110,7 @@
   "groups.accounting": "Muhasebe",
   "groups.warehouse": "Depo",
   "groups.campaigns": "Kampanyalar",
+  "groups.fleet": "Filolar",
   "groups.leads": "Potansiyel müşteriler",
   "groups.social": "Sosyal medya",
   "groups.privacy": "Gizlilik",
@@ -203,5 +208,9 @@
   "labels.leads.convert_org": "Lead'i organizasyona dönüştür",
   "labels.quotes.read": "Teklifleri görüntüle",
   "labels.quotes.write": "Teklifleri yönet",
-  "groups.quotes": "Teklifler"
+  "groups.quotes": "Teklifler",
+  "labels.showcase.read": "Vitrini görüntüle",
+  "labels.showcase.write": "Vitrini düzenle",
+  "labels.platform.showcase.review": "Bayi vitrinlerini onayla",
+  "groups.dealer_showcase": "Bayi vitrini"
 }

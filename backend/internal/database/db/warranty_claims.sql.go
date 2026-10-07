@@ -809,7 +809,7 @@ func (q *Queries) GetWarrantyClaimOpenContext(ctx context.Context, arg GetWarran
 }
 
 const getWarrantyClaimReapplyService = `-- name: GetWarrantyClaimReapplyService :one
-SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount FROM services
+SELECT id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount, performed_by_user_id FROM services
 WHERE id = $1
   AND brand_id = $2
   AND warranty_claim_id = $3
@@ -860,6 +860,7 @@ func (q *Queries) GetWarrantyClaimReapplyService(ctx context.Context, arg GetWar
 		&i.WarrantyClaimID,
 		&i.IncomeEntryID,
 		&i.IncomeAmount,
+		&i.PerformedByUserID,
 	)
 	return i, err
 }

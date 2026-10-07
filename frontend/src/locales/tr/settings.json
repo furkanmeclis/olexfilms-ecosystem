@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "Sessiz saat başlangıcı",
   "system.keys.campaigns_quiet_hours_start_hint": "Alıcının saat diliminde bu saatten itibaren kampanya WhatsApp mesajları bekletilir (0–23).",
   "system.keys.campaigns_quiet_hours_end": "Sessiz saat bitişi",
-  "system.keys.campaigns_quiet_hours_end_hint": "Bekleyen mesajlar alıcının saatiyle bu saatte gönderilir; başlangıçla aynıysa sessiz saat kapalıdır (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "Bekleyen mesajlar alıcının saatiyle bu saatte gönderilir; başlangıçla aynıysa sessiz saat kapalıdır (0–23).",
+  "system.groups.showcase": "Bayi vitrini",
+  "system.groups.showcase_hint": "Bayi vitrinlerinin yayın onayı ve galeri sınırı.",
+  "system.keys.showcase_approval_required": "Vitrin yayını merkez onayı gerektirir",
+  "system.keys.showcase_approval_required_hint": "Açıksa bayi vitrini merkez onaylamadan yayınlanmaz; kapalıysa bayi doğrudan yayınlar.",
+  "system.keys.showcase_max_photos": "Vitrin başına en çok fotoğraf",
+  "system.keys.showcase_max_photos_hint": "Bir bayi vitrininin galerisinde tutulabilecek fotoğraf sayısı (1–50)."
 }

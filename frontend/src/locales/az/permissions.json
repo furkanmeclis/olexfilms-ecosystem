@@ -93,6 +93,10 @@
   "labels.warehouse.write": "Anbarı idarə etmək",
   "labels.campaigns.read": "Kampaniyalara baxmaq",
   "labels.campaigns.write": "Kampaniyaları idarə etmək",
+  "labels.fleets.read": "Avtoparkları görmək",
+  "labels.fleets.manage": "Avtoparkları idarə etmək",
+  "labels.fleets.plan": "Avtopark xidmətlərini planlaşdırmaq",
+  "labels.fleet.portal.read": "Öz avtoparkını görmək (portal)",
   "labels.leads.read": "Potensial müştərilərə baxmaq",
   "labels.leads.write": "Potensial müştəriləri idarə etmək",
   "labels.social.read": "Sosial mediaya baxmaq",
@@ -106,6 +110,7 @@
   "groups.accounting": "Mühasibatlıq",
   "groups.warehouse": "Anbar",
   "groups.campaigns": "Kampaniyalar",
+  "groups.fleet": "Avtoparklar",
   "groups.leads": "Potensial müştərilər",
   "groups.social": "Sosial media",
   "groups.privacy": "Məxfilik",
@@ -203,5 +208,9 @@
   "labels.leads.convert_org": "Lead-i təşkilata çevir",
   "labels.quotes.read": "Təklifləri gör",
   "labels.quotes.write": "Təklifləri idarə et",
-  "groups.quotes": "Təkliflər"
+  "groups.quotes": "Təkliflər",
+  "labels.showcase.read": "Vitrinə bax",
+  "labels.showcase.write": "Vitrini redaktə et",
+  "labels.platform.showcase.review": "Diler vitrinlərini təsdiqlə",
+  "groups.dealer_showcase": "Diler vitrini"
 }

@@ -93,6 +93,10 @@
   "labels.warehouse.write": "Gestionar almacén",
   "labels.campaigns.read": "Ver campañas",
   "labels.campaigns.write": "Gestionar campañas",
+  "labels.fleets.read": "Ver flotas",
+  "labels.fleets.manage": "Gestionar flotas",
+  "labels.fleets.plan": "Planificar servicios de flota",
+  "labels.fleet.portal.read": "Ver la propia flota (portal)",
   "labels.leads.read": "Ver clientes potenciales",
   "labels.leads.write": "Gestionar clientes potenciales",
   "labels.social.read": "Ver redes sociales",
@@ -106,6 +110,7 @@
   "groups.accounting": "Contabilidad",
   "groups.warehouse": "Almacén",
   "groups.campaigns": "Campañas",
+  "groups.fleet": "Flotas",
   "groups.leads": "Clientes potenciales",
   "groups.social": "Redes sociales",
   "groups.privacy": "Privacidad",
@@ -203,5 +208,9 @@
   "labels.leads.convert_org": "Convertir cliente potencial en organización",
   "labels.quotes.read": "Ver presupuestos",
   "labels.quotes.write": "Gestionar presupuestos",
-  "groups.quotes": "Presupuestos"
+  "groups.quotes": "Presupuestos",
+  "labels.showcase.read": "Ver escaparate",
+  "labels.showcase.write": "Editar escaparate",
+  "labels.platform.showcase.review": "Revisar escaparates de distribuidores",
+  "groups.dealer_showcase": "Escaparate del distribuidor"
 }

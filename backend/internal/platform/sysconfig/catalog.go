@@ -50,6 +50,10 @@ const (
 	GroupMCP Group = "mcp"
 	// GroupCampaigns: campaign sending (TEC-407).
 	GroupCampaigns Group = "campaigns"
+	// GroupCertificates: certificate policy and expiry notices (TEC-479).
+	GroupCertificates Group = "certificates"
+	// GroupShowcase: dealer showcase publication (TEC-466).
+	GroupShowcase Group = "showcase"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -151,7 +155,21 @@ const (
 	// values switch the quiet hours off.
 	KeyCampaignsQuietHoursStart = "campaigns.quiet_hours_start"
 	KeyCampaignsQuietHoursEnd   = "campaigns.quiet_hours_end"
+
+	// Certificates (TEC-479/F5-03): customer notification is deliberately
+	// absent per F5 QUESTIONS S13; warnings stay internal.
+	KeyCertificatesRequireAdminApproval = "certificates.require_admin_approval"
+	KeyCertificatesExpiryNoticeDays     = "certificates.expiry_notice_days"
+	// KeyShowcaseApprovalRequired makes a dealer showcase wait for center
+	// review before it is published; off = the owner publishes directly
+	// (TEC-466, F5 QUESTIONS S4).
+	KeyShowcaseApprovalRequired = "showcase.approval_required"
+	// KeyShowcaseMaxPhotos caps the gallery photos of one showcase (TEC-466).
+	KeyShowcaseMaxPhotos = "showcase.max_photos"
 )
+
+// DefaultShowcaseMaxPhotos is the catalog default of KeyShowcaseMaxPhotos.
+const DefaultShowcaseMaxPhotos = 12
 
 // Catalog defaults of the campaign keys (F4 QUESTIONS S14).
 const (
@@ -176,6 +194,10 @@ const DefaultWhatsAppAIStaffPauseMinutes = 30
 // KeyAIVisitorDailyTokenCap (about a twentieth of the default 5M monthly
 // system pool).
 const DefaultAIVisitorDailyTokenCap = 250000
+
+// DefaultCertificatesExpiryNoticeDays is the catalog default for certificate
+// expiry notices.
+const DefaultCertificatesExpiryNoticeDays = 30
 
 // Values of KeyWarrantyClaimsLaborRule.
 const (
@@ -315,6 +337,14 @@ var catalog = []Definition{
 		Description: "Hour (recipient's time zone) from which campaign WhatsApp messages wait until the quiet hours end (TEC-407)"},
 	{Key: KeyCampaignsQuietHoursEnd, Group: GroupCampaigns, Kind: KindInt, Default: int64(DefaultCampaignsQuietHoursEnd), Min: i64(0), Max: i64(23),
 		Description: "Hour (recipient's time zone) at which campaign WhatsApp quiet hours end; equal to the start = no quiet hours (TEC-407)"},
+	{Key: KeyCertificatesRequireAdminApproval, Group: GroupCertificates, Kind: KindBool, Default: false,
+		Description: "Require center approval when a service with certificate warnings changes status (TEC-479)"},
+	{Key: KeyCertificatesExpiryNoticeDays, Group: GroupCertificates, Kind: KindInt, Default: int64(DefaultCertificatesExpiryNoticeDays), Min: i64(1), Max: i64(365),
+		Description: "Days before certificate expiry to enqueue the internal expiry notice (TEC-479)"},
+	{Key: KeyShowcaseApprovalRequired, Group: GroupShowcase, Kind: KindBool, Default: false,
+		Description: "Dealer showcases wait for center review before they are published; off = the owner publishes directly (TEC-466)"},
+	{Key: KeyShowcaseMaxPhotos, Group: GroupShowcase, Kind: KindInt, Default: int64(DefaultShowcaseMaxPhotos), Min: i64(1), Max: i64(50),
+		Description: "Gallery photos one dealer showcase may hold (TEC-466)"},
 }
 
 var byKey = func() map[string]Definition {

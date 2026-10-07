@@ -583,7 +583,7 @@ func (q *Queries) GetPublicWarrantyByCode(ctx context.Context, arg GetPublicWarr
 }
 
 const getVehicleByID = `-- name: GetVehicleByID :one
-SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at FROM vehicles
+SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at, fleet_org_id FROM vehicles
 WHERE id = $1
 `
 
@@ -608,6 +608,7 @@ func (q *Queries) GetVehicleByID(ctx context.Context, id int64) (Vehicle, error)
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.FleetOrgID,
 	)
 	return i, err
 }
@@ -1764,7 +1765,7 @@ const setVehicleOwner = `-- name: SetVehicleOwner :one
 UPDATE vehicles
 SET user_id = $1
 WHERE id = $2 AND user_id = $3 AND deleted_at IS NULL
-RETURNING id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at
+RETURNING id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at, fleet_org_id
 `
 
 type SetVehicleOwnerParams struct {
@@ -1794,6 +1795,7 @@ func (q *Queries) SetVehicleOwner(ctx context.Context, arg SetVehicleOwnerParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.FleetOrgID,
 	)
 	return i, err
 }

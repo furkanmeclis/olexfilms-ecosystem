@@ -93,6 +93,10 @@
   "labels.warehouse.write": "Gérer l'entrepôt",
   "labels.campaigns.read": "Voir les campagnes",
   "labels.campaigns.write": "Gérer les campagnes",
+  "labels.fleets.read": "Consulter les flottes",
+  "labels.fleets.manage": "Gérer les flottes",
+  "labels.fleets.plan": "Planifier les services de flotte",
+  "labels.fleet.portal.read": "Consulter sa propre flotte (portail)",
   "labels.leads.read": "Voir les prospects",
   "labels.leads.write": "Gérer les prospects",
   "labels.social.read": "Voir les réseaux sociaux",
@@ -106,6 +110,7 @@
   "groups.accounting": "Comptabilité",
   "groups.warehouse": "Entrepôt",
   "groups.campaigns": "Campagnes",
+  "groups.fleet": "Flottes",
   "groups.leads": "Prospects",
   "groups.social": "Réseaux sociaux",
   "groups.privacy": "Confidentialité",
@@ -203,5 +208,9 @@
   "labels.leads.convert_org": "Convertir un prospect en organisation",
   "labels.quotes.read": "Voir les devis",
   "labels.quotes.write": "Gérer les devis",
-  "groups.quotes": "Devis"
+  "groups.quotes": "Devis",
+  "labels.showcase.read": "Voir la vitrine",
+  "labels.showcase.write": "Modifier la vitrine",
+  "labels.platform.showcase.review": "Valider les vitrines des revendeurs",
+  "groups.dealer_showcase": "Vitrine du revendeur"
 }

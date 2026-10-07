@@ -551,6 +551,57 @@ type CariAccountBalance struct {
 	LastEntryAt    pgtype.Timestamptz `json:"last_entry_at"`
 }
 
+type Certificate struct {
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	UserID             int64              `json:"user_id"`
+	OrganizationID     int64              `json:"organization_id"`
+	BrandID            int64              `json:"brand_id"`
+	TypeID             int64              `json:"type_id"`
+	StorageKey         string             `json:"storage_key"`
+	Sha256             string             `json:"sha256"`
+	IssuedAt           pgtype.Timestamptz `json:"issued_at"`
+	ExpiresAt          pgtype.Timestamptz `json:"expires_at"`
+	Status             string             `json:"status"`
+	VerifiedByUserID   pgtype.Int8        `json:"verified_by_user_id"`
+	VerifiedByOrgID    pgtype.Int8        `json:"verified_by_org_id"`
+	VerifiedAt         pgtype.Timestamptz `json:"verified_at"`
+	RejectReason       pgtype.Text        `json:"reject_reason"`
+	ExpiryNoticeSentAt pgtype.Timestamptz `json:"expiry_notice_sent_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CertificateType struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Name           []byte             `json:"name"`
+	Description    []byte             `json:"description"`
+	ValidityMonths pgtype.Int4        `json:"validity_months"`
+	Active         bool               `json:"active"`
+	SortOrder      int32              `json:"sort_order"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CertificateTypeCategory struct {
+	TypeID         int64              `json:"type_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	CategoryID     int64              `json:"category_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type CertificateTypeProduct struct {
+	TypeID         int64              `json:"type_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ProductID      int64              `json:"product_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type ConnectionLocationMap struct {
 	ID                  int64              `json:"id"`
 	OrganizationID      int64              `json:"organization_id"`
@@ -824,6 +875,66 @@ type DealerProductPrice struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type DealerShowcase struct {
+	ID                    int64              `json:"id"`
+	Uuid                  uuid.UUID          `json:"uuid"`
+	OrganizationID        int64              `json:"organization_id"`
+	BrandID               int64              `json:"brand_id"`
+	Status                string             `json:"status"`
+	Content               []byte             `json:"content"`
+	WorkingHours          []byte             `json:"working_hours"`
+	SocialLinks           []byte             `json:"social_links"`
+	SeoKeywords           []string           `json:"seo_keywords"`
+	GooglePlaceID         pgtype.Text        `json:"google_place_id"`
+	GoogleRating          pgtype.Numeric     `json:"google_rating"`
+	GoogleReviewCount     pgtype.Int4        `json:"google_review_count"`
+	GoogleRatingSource    pgtype.Text        `json:"google_rating_source"`
+	GoogleRatingUpdatedAt pgtype.Timestamptz `json:"google_rating_updated_at"`
+	PublishedContent      []byte             `json:"published_content"`
+	PublishedAt           pgtype.Timestamptz `json:"published_at"`
+	SubmittedAt           pgtype.Timestamptz `json:"submitted_at"`
+	ReviewedBy            pgtype.Int8        `json:"reviewed_by"`
+	ReviewedAt            pgtype.Timestamptz `json:"reviewed_at"`
+	ReviewNote            pgtype.Text        `json:"review_note"`
+	CreatedByUserID       pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID       pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+type DealerShowcasePhoto struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	ShowcaseID      int64              `json:"showcase_id"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	StorageKey      string             `json:"storage_key"`
+	Mime            string             `json:"mime"`
+	SizeBytes       int64              `json:"size_bytes"`
+	Sha256          string             `json:"sha256"`
+	Caption         []byte             `json:"caption"`
+	SortOrder       int32              `json:"sort_order"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type DealerShowcaseService struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	ShowcaseID     int64              `json:"showcase_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Kind           string             `json:"kind"`
+	CategoryID     pgtype.Int8        `json:"category_id"`
+	Title          []byte             `json:"title"`
+	Description    []byte             `json:"description"`
+	SortOrder      int32              `json:"sort_order"`
+	Visible        bool               `json:"visible"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DevicePushToken struct {
 	ID         int64              `json:"id"`
 	Uuid       uuid.UUID          `json:"uuid"`
@@ -1027,6 +1138,58 @@ type FixedBarcodeHolding struct {
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	OwnerServiceID      pgtype.Int8        `json:"owner_service_id"`
+}
+
+type FleetDealerLink struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	FleetOrgID      int64              `json:"fleet_org_id"`
+	DealerOrgID     int64              `json:"dealer_org_id"`
+	BrandID         int64              `json:"brand_id"`
+	Status          string             `json:"status"`
+	CreatedByOrgID  int64              `json:"created_by_org_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CariAccountID   pgtype.Int8        `json:"cari_account_id"`
+	StartedAt       pgtype.Timestamptz `json:"started_at"`
+	EndedAt         pgtype.Timestamptz `json:"ended_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FleetProfile struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	TaxNumber       string             `json:"tax_number"`
+	TaxOffice       pgtype.Text        `json:"tax_office"`
+	LegalName       string             `json:"legal_name"`
+	ContactName     pgtype.Text        `json:"contact_name"`
+	ContactPhone    pgtype.Text        `json:"contact_phone"`
+	BillingEmail    pgtype.Text        `json:"billing_email"`
+	ReportFrequency string             `json:"report_frequency"`
+	ReportLocale    string             `json:"report_locale"`
+	PrimaryUserID   pgtype.Int8        `json:"primary_user_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FleetReport struct {
+	ID          int64              `json:"id"`
+	Uuid        uuid.UUID          `json:"uuid"`
+	FleetOrgID  int64              `json:"fleet_org_id"`
+	BrandID     int64              `json:"brand_id"`
+	PeriodKind  string             `json:"period_kind"`
+	PeriodStart pgtype.Date        `json:"period_start"`
+	PeriodEnd   pgtype.Date        `json:"period_end"`
+	Locale      string             `json:"locale"`
+	StorageKey  pgtype.Text        `json:"storage_key"`
+	Status      string             `json:"status"`
+	Error       pgtype.Text        `json:"error"`
+	EmailedAt   pgtype.Timestamptz `json:"emailed_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GithubAppSetting struct {
@@ -2234,6 +2397,7 @@ type Service struct {
 	WarrantyClaimID          pgtype.Int8        `json:"warranty_claim_id"`
 	IncomeEntryID            pgtype.Int8        `json:"income_entry_id"`
 	IncomeAmount             pgtype.Numeric     `json:"income_amount"`
+	PerformedByUserID        pgtype.Int8        `json:"performed_by_user_id"`
 }
 
 type ServiceCatalogItem struct {
@@ -2259,6 +2423,23 @@ type ServiceCatalogModule struct {
 	ItemCategory string             `json:"item_category"`
 	ModuleKey    string             `json:"module_key"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type ServiceCertificateWarning struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	ServiceID      int64              `json:"service_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	UserID         int64              `json:"user_id"`
+	TypeID         int64              `json:"type_id"`
+	Reason         string             `json:"reason"`
+	Decision       string             `json:"decision"`
+	DecidedBy      pgtype.Int8        `json:"decided_by"`
+	DecidedAt      pgtype.Timestamptz `json:"decided_at"`
+	Note           string             `json:"note"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ServiceImage struct {
@@ -3024,6 +3205,7 @@ type Vehicle struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+	FleetOrgID      pgtype.Int8        `json:"fleet_org_id"`
 }
 
 type VehicleTransfer struct {

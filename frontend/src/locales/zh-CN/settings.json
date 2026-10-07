@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "免打扰开始时间",
   "system.keys.campaigns_quiet_hours_start_hint": "从收件人所在时区的这一小时起，活动 WhatsApp 消息将暂缓发送（0–23）。",
   "system.keys.campaigns_quiet_hours_end": "免打扰结束时间",
-  "system.keys.campaigns_quiet_hours_end_hint": "暂缓的消息在收件人所在时区的这一小时发送；与开始时间相同则关闭免打扰（0–23）。"
+  "system.keys.campaigns_quiet_hours_end_hint": "暂缓的消息在收件人所在时区的这一小时发送；与开始时间相同则关闭免打扰（0–23）。",
+  "system.groups.showcase": "经销商展示页",
+  "system.groups.showcase_hint": "经销商展示页的发布审核与图库上限。",
+  "system.keys.showcase_approval_required": "展示页发布需总部审核",
+  "system.keys.showcase_approval_required_hint": "开启后，经销商展示页须经总部审核后才发布；关闭时由经销商直接发布。",
+  "system.keys.showcase_max_photos": "每个展示页的最多照片数",
+  "system.keys.showcase_max_photos_hint": "一个经销商展示页图库可保存的照片数量（1–50）。"
 }

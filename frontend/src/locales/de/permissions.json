@@ -93,6 +93,10 @@
   "labels.warehouse.write": "Lager verwalten",
   "labels.campaigns.read": "Kampagnen ansehen",
   "labels.campaigns.write": "Kampagnen verwalten",
+  "labels.fleets.read": "Flotten anzeigen",
+  "labels.fleets.manage": "Flotten verwalten",
+  "labels.fleets.plan": "Flottenservices planen",
+  "labels.fleet.portal.read": "Eigene Flotte anzeigen (Portal)",
   "labels.leads.read": "Interessenten ansehen",
   "labels.leads.write": "Interessenten verwalten",
   "labels.social.read": "Social Media ansehen",
@@ -106,6 +110,7 @@
   "groups.accounting": "Buchhaltung",
   "groups.warehouse": "Lager",
   "groups.campaigns": "Kampagnen",
+  "groups.fleet": "Flotten",
   "groups.leads": "Interessenten",
   "groups.social": "Social Media",
   "groups.privacy": "Datenschutz",
@@ -203,5 +208,9 @@
   "labels.leads.convert_org": "Lead in Organisation umwandeln",
   "labels.quotes.read": "Angebote anzeigen",
   "labels.quotes.write": "Angebote verwalten",
-  "groups.quotes": "Angebote"
+  "groups.quotes": "Angebote",
+  "labels.showcase.read": "Schaufenster anzeigen",
+  "labels.showcase.write": "Schaufenster bearbeiten",
+  "labels.platform.showcase.review": "Händler-Schaufenster prüfen",
+  "groups.dealer_showcase": "Händler-Schaufenster"
 }

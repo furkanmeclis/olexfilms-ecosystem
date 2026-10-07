@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "Начало на тихите часове",
   "system.keys.campaigns_quiet_hours_start_hint": "От този час в часовата зона на получателя WhatsApp съобщенията от кампании изчакват (0–23).",
   "system.keys.campaigns_quiet_hours_end": "Край на тихите часове",
-  "system.keys.campaigns_quiet_hours_end_hint": "Изчакващите съобщения се изпращат в този час по часовата зона на получателя; ако е равен на началото, тихите часове са изключени (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "Изчакващите съобщения се изпращат в този час по часовата зона на получателя; ако е равен на началото, тихите часове са изключени (0–23).",
+  "system.groups.showcase": "Витрина на дилъра",
+  "system.groups.showcase_hint": "Одобрение за публикуване и лимит на галерията на витрините на дилърите.",
+  "system.keys.showcase_approval_required": "Публикуването на витрината изисква одобрение от центъра",
+  "system.keys.showcase_approval_required_hint": "Когато е включено, витрината на дилъра се публикува само след одобрение от центъра; когато е изключено, дилърът публикува директно.",
+  "system.keys.showcase_max_photos": "Максимален брой снимки на витрина",
+  "system.keys.showcase_max_photos_hint": "Брой снимки, които галерията на една витрина може да съдържа (1–50)."
 }

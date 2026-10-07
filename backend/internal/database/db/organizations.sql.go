@@ -87,6 +87,7 @@ const countOrganizations = `-- name: CountOrganizations :one
 SELECT COUNT(*)::bigint
 FROM organizations o
 WHERE o.deleted_at IS NULL
+  AND o.type <> 'fleet'
   AND (
     COALESCE(cardinality($1::text[]), 0) = 0
     OR o.status = ANY ($1::text[])
@@ -708,7 +709,7 @@ SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.l
 FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
-WHERE o.uuid = $1 AND o.deleted_at IS NULL
+WHERE o.uuid = $1 AND o.deleted_at IS NULL AND o.type <> 'fleet'
 `
 
 type GetOrganizationTreeByUUIDRow struct {
@@ -1085,6 +1086,8 @@ FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.deleted_at IS NULL
+  -- TEC-472: fleets live outside the tree (their own list, F5-02b).
+  AND o.type <> 'fleet'
   AND (
     COALESCE(cardinality($1::text[]), 0) = 0
     OR o.status = ANY ($1::text[])
@@ -1249,6 +1252,7 @@ FROM organizations o
 JOIN brands b ON b.id = o.brand_id
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.deleted_at IS NULL
+  AND o.type <> 'fleet'
   AND ($1::bigint[] IS NULL OR o.id = ANY ($1::bigint[]))
   AND ($2::bigint IS NULL OR o.brand_id = $2)
   AND ($3::text IS NULL OR o.type = $3)

@@ -642,8 +642,70 @@ var Permissions = []PermissionDef{
 		Description: "Approve, reject or send back campaigns submitted to the organization for approval.",
 	},
 
+	// TEC-479: certificates addon (F5-03). Appended last; migration 000111
+	// seeds them.
+	{
+		Slug: PermCertificateTypesManage, Name: "Manage certificate types", Module: "certificates",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Create and update certificate types and their product/category bindings.",
+	},
+	{
+		Slug: PermCertificatesRead, Name: "Read certificates", Module: "certificates",
+		Scopes:      []Scope{ScopeManaged, ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Read user certificates and service certificate warnings in scope.",
+	},
+	{
+		Slug: PermCertificatesWrite, Name: "Write certificates", Module: "certificates",
+		Scopes:      []Scope{ScopeManaged, ScopeSubtree, ScopeAll},
+		Description: "Upload certificates for staff in the managed organization or subtree.",
+	},
+	{
+		Slug: PermCertificatesVerify, Name: "Verify certificates", Module: "certificates",
+		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Verify or reject certificates of the brand or distributor subtree.",
+	},
+	{
+		Slug: PermCertificatesApproveService, Name: "Approve certificate service warnings", Module: "certificates",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Approve or reject service status changes blocked by certificate warnings.",
+	},
+
+	// TEC-472: fleets (F5-02). Appended last; migration 000112 seeds them.
+	{
+		Slug: PermFleetsRead, Name: "Read fleets", Module: "fleet", Scopes: scopesTree,
+		Description: "Fleets linked to the organization, their vehicles, services and reports.",
+	},
+	{
+		Slug: PermFleetsManage, Name: "Manage fleets", Module: "fleet", Scopes: scopesTree,
+		Description: "Open fleets, invite fleet users, add vehicles and manage dealer links.",
+	},
+	{
+		Slug: PermFleetsPlan, Name: "Plan fleet services", Module: "fleet",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Bulk service plans and bulk vehicle intake for a linked fleet.",
+	},
+	{
+		Slug: PermFleetPortalRead, Name: "Read own fleet (portal)", Module: "fleet", Scopes: scopesSelf,
+		Description: "Fleet portal: vehicles, services, warranties, accounts and reports of one's own fleet.",
+	},
+
+	// TEC-466: dealer showcase (F5-01). Appended last; migration 000113 seeds
+	// them.
+	{
+		Slug: PermShowcaseRead, Name: "Read showcase", Module: "dealer_showcase", Scopes: scopesTree,
+		Description: "Read the dealer showcase (profile, working hours, services, photos) of the organizations in scope.",
+	},
+	{
+		Slug: PermShowcaseWrite, Name: "Write showcase", Module: "dealer_showcase", Scopes: scopesTree,
+		Description: "Edit the dealer showcase and submit it for publication.",
+	},
+	{
+		Slug: PermPlatformShowcaseReview, Name: "Review showcases", Module: "dealer_showcase", Scopes: scopesSupplier,
+		Description: "Approve or reject dealer showcases submitted for publication.",
+	},
+
 	// TEC-483: stock forecast schema and thresholds (F5-04a). Appended last;
-	// migration 000111 seeds them. Dealer/distributor owners manage only
+	// migration 000115 seeds them. Dealer/distributor owners manage only
 	// their own thresholds; network demand is center-only.
 	{
 		Slug: PermStockForecastRead, Name: "Read stock forecasts", Module: "stock_forecast",
@@ -794,13 +856,24 @@ var Roles = []RoleDef{
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:   ScopeBrand,
 			PermWarrantyClaimsDecide: ScopeBrand,
+			// TEC-479 (000111).
+			PermCertificateTypesManage:     ScopeBrand,
+			PermCertificatesRead:           ScopeBrand,
+			PermCertificatesVerify:         ScopeBrand,
+			PermCertificatesApproveService: ScopeBrand,
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
 			PermAIUsageRead:      ScopeBrand,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
-			// TEC-483 (000111).
+			// TEC-472 (000112).
+			PermFleetsRead:   ScopeBrand,
+			PermFleetsManage: ScopeBrand,
+			// TEC-466 (000113).
+			PermShowcaseRead:           ScopeBrand,
+			PermPlatformShowcaseReview: ScopeBrand,
+			// TEC-483 (000115).
 			PermStockForecastRead:        ScopeBrand,
 			PermStockForecastManage:      ScopeBrand,
 			PermStockForecastNetworkRead: ScopeBrand,
@@ -841,7 +914,7 @@ var Roles = []RoleDef{
 			PermAIActionsConfirm: ScopeOwn,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
-			// TEC-483 (000111).
+			// TEC-483 (000115).
 			PermStockForecastRead:        ScopeBrand,
 			PermStockForecastManage:      ScopeBrand,
 			PermStockForecastNetworkRead: ScopeBrand,
@@ -920,6 +993,9 @@ var Roles = []RoleDef{
 			PermMCPConnect: ScopeOwn,
 			// TEC-404 (000107).
 			PermCampaignsApprove: ScopeBrand,
+			// TEC-466 (000113).
+			PermShowcaseRead:           ScopeBrand,
+			PermPlatformShowcaseReview: ScopeBrand,
 		}),
 	},
 	{
@@ -1004,6 +1080,10 @@ var Roles = []RoleDef{
 			PermWarrantyClaimsRead:   ScopeSubtree,
 			PermWarrantyClaimsWrite:  ScopeManaged,
 			PermWarrantyClaimsReview: ScopeSubtree,
+			// TEC-479 (000111).
+			PermCertificatesRead:   ScopeSubtree,
+			PermCertificatesWrite:  ScopeSubtree,
+			PermCertificatesVerify: ScopeSubtree,
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
@@ -1015,7 +1095,14 @@ var Roles = []RoleDef{
 			PermCampaignsRead:    ScopeSubtree,
 			PermCampaignsWrite:   ScopeManaged,
 			PermCampaignsApprove: ScopeSubtree,
-			// TEC-483 (000111).
+			// TEC-472 (000112): fleets linked to the subtree; a serving
+			// distributor links a fleet itself.
+			PermFleetsRead:   ScopeSubtree,
+			PermFleetsManage: ScopeSubtree,
+			// TEC-466 (000113): own showcase and those of its dealers.
+			PermShowcaseRead:  ScopeSubtree,
+			PermShowcaseWrite: ScopeSubtree,
+			// TEC-483 (000115).
 			PermStockForecastRead:   ScopeSubtree,
 			PermStockForecastManage: ScopeManaged,
 		}),
@@ -1061,7 +1148,7 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
-			// TEC-483 (000111).
+			// TEC-483 (000115).
 			PermStockForecastRead: ScopeSubtree,
 		}),
 	},
@@ -1085,7 +1172,7 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
-			// TEC-483 (000111).
+			// TEC-483 (000115).
 			PermStockForecastRead: ScopeSubtree,
 		}),
 	},
@@ -1181,6 +1268,9 @@ var Roles = []RoleDef{
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:  ScopeManaged,
 			PermWarrantyClaimsWrite: ScopeManaged,
+			// TEC-479 (000111).
+			PermCertificatesRead:  ScopeManaged,
+			PermCertificatesWrite: ScopeManaged,
 			// TEC-341 (000093).
 			PermAccountingWrite:    ScopeManaged,
 			PermDealerPricingWrite: ScopeManaged,
@@ -1198,7 +1288,14 @@ var Roles = []RoleDef{
 			// TEC-404 (000107): own campaigns, approved upstream.
 			PermCampaignsRead:  ScopeManaged,
 			PermCampaignsWrite: ScopeManaged,
-			// TEC-483 (000111).
+			// TEC-472 (000112).
+			PermFleetsRead:   ScopeManaged,
+			PermFleetsManage: ScopeManaged,
+			PermFleetsPlan:   ScopeManaged,
+			// TEC-466 (000113).
+			PermShowcaseRead:  ScopeManaged,
+			PermShowcaseWrite: ScopeManaged,
+			// TEC-483 (000115).
 			PermStockForecastRead:   ScopeManaged,
 			PermStockForecastManage: ScopeManaged,
 		}),
@@ -1244,7 +1341,13 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
-			// TEC-483 (000111).
+			// TEC-472 (000112): reads linked fleets and runs bulk plans and
+			// intake; opening fleets is the owner's.
+			PermFleetsRead: ScopeManaged,
+			PermFleetsPlan: ScopeManaged,
+			// TEC-466 (000113): reads the showcase, the owner edits it.
+			PermShowcaseRead: ScopeManaged,
+			// TEC-483 (000115).
 			PermStockForecastRead: ScopeManaged,
 		}),
 	},
@@ -1299,6 +1402,8 @@ var Roles = []RoleDef{
 			PermCustomersRead:      ScopeCustomer,
 			PermVehiclesRead:       ScopeCustomer,
 			PermWarrantiesRead:     ScopeCustomer,
+			// TEC-472 (000112): own fleet organization in the portal.
+			PermFleetPortalRead: ScopeOwn,
 		}),
 	},
 }

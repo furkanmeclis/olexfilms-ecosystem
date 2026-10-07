@@ -93,6 +93,10 @@
   "labels.warehouse.write": "Gestire il magazzino",
   "labels.campaigns.read": "Vedere le campagne",
   "labels.campaigns.write": "Gestire le campagne",
+  "labels.fleets.read": "Visualizzare le flotte",
+  "labels.fleets.manage": "Gestire le flotte",
+  "labels.fleets.plan": "Pianificare i servizi della flotta",
+  "labels.fleet.portal.read": "Visualizzare la propria flotta (portale)",
   "labels.leads.read": "Vedere i contatti commerciali",
   "labels.leads.write": "Gestire i contatti commerciali",
   "labels.social.read": "Vedere i social media",
@@ -106,6 +110,7 @@
   "groups.accounting": "Contabilità",
   "groups.warehouse": "Magazzino",
   "groups.campaigns": "Campagne",
+  "groups.fleet": "Flotte",
   "groups.leads": "Contatti commerciali",
   "groups.social": "Social network",
   "groups.privacy": "Riservatezza",
@@ -203,5 +208,9 @@
   "labels.leads.convert_org": "Convertire un contatto in organizzazione",
   "labels.quotes.read": "Visualizzare i preventivi",
   "labels.quotes.write": "Gestire i preventivi",
-  "groups.quotes": "Preventivi"
+  "groups.quotes": "Preventivi",
+  "labels.showcase.read": "Visualizza vetrina",
+  "labels.showcase.write": "Modifica vetrina",
+  "labels.platform.showcase.review": "Approva le vetrine dei rivenditori",
+  "groups.dealer_showcase": "Vetrina del rivenditore"
 }

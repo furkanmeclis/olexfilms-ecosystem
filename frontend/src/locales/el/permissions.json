@@ -93,6 +93,10 @@
   "labels.warehouse.write": "Διαχείριση αποθήκης",
   "labels.campaigns.read": "Προβολή καμπανιών",
   "labels.campaigns.write": "Διαχείριση καμπανιών",
+  "labels.fleets.read": "Προβολή στόλων",
+  "labels.fleets.manage": "Διαχείριση στόλων",
+  "labels.fleets.plan": "Προγραμματισμός υπηρεσιών στόλου",
+  "labels.fleet.portal.read": "Προβολή του δικού σας στόλου (πύλη)",
   "labels.leads.read": "Προβολή υποψήφιων πελατών",
   "labels.leads.write": "Διαχείριση υποψήφιων πελατών",
   "labels.social.read": "Προβολή κοινωνικών δικτύων",
@@ -106,6 +110,7 @@
   "groups.accounting": "Λογιστήριο",
   "groups.warehouse": "Αποθήκη",
   "groups.campaigns": "Καμπάνιες",
+  "groups.fleet": "Στόλοι",
   "groups.leads": "Υποψήφιοι πελάτες",
   "groups.social": "Κοινωνικά δίκτυα",
   "groups.privacy": "Απόρρητο",
@@ -203,5 +208,9 @@
   "labels.leads.convert_org": "Μετατροπή υποψήφιου σε οργανισμό",
   "labels.quotes.read": "Προβολή προσφορών",
   "labels.quotes.write": "Διαχείριση προσφορών",
-  "groups.quotes": "Προσφορές"
+  "groups.quotes": "Προσφορές",
+  "labels.showcase.read": "Προβολή βιτρίνας",
+  "labels.showcase.write": "Επεξεργασία βιτρίνας",
+  "labels.platform.showcase.review": "Έγκριση βιτρινών αντιπροσώπων",
+  "groups.dealer_showcase": "Βιτρίνα αντιπροσώπου"
 }

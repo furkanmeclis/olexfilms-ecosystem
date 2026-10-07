@@ -93,6 +93,10 @@
   "labels.warehouse.write": "Управление на склада",
   "labels.campaigns.read": "Преглед на кампании",
   "labels.campaigns.write": "Управление на кампании",
+  "labels.fleets.read": "Преглед на автопаркове",
+  "labels.fleets.manage": "Управление на автопаркове",
+  "labels.fleets.plan": "Планиране на услуги за автопарк",
+  "labels.fleet.portal.read": "Преглед на собствения автопарк (портал)",
   "labels.leads.read": "Преглед на потенциални клиенти",
   "labels.leads.write": "Управление на потенциални клиенти",
   "labels.social.read": "Преглед на социалните мрежи",
@@ -106,6 +110,7 @@
   "groups.accounting": "Счетоводство",
   "groups.warehouse": "Склад",
   "groups.campaigns": "Кампании",
+  "groups.fleet": "Автопаркове",
   "groups.leads": "Потенциални клиенти",
   "groups.social": "Социални мрежи",
   "groups.privacy": "Поверителност",
@@ -203,5 +208,9 @@
   "labels.leads.convert_org": "Преобразуване в организация",
   "labels.quotes.read": "Преглед на оферти",
   "labels.quotes.write": "Управление на оферти",
-  "groups.quotes": "Оферти"
+  "groups.quotes": "Оферти",
+  "labels.showcase.read": "Преглед на витрината",
+  "labels.showcase.write": "Редактиране на витрината",
+  "labels.platform.showcase.review": "Одобряване на витрините на дилърите",
+  "groups.dealer_showcase": "Витрина на дилъра"
 }

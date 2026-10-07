@@ -605,6 +605,47 @@ func TestDealerAccountingGrants(t *testing.T) {
 	}
 }
 
+// TEC-479: certificate definitions are center-owned; certificate upload
+// belongs to dealer/distributor owners, and verification is center or
+// distributor subtree only. Service-warning approval stays center-only.
+func TestCertificateGrants(t *testing.T) {
+	for _, slug := range []string{
+		PermCertificateTypesManage, PermCertificatesRead, PermCertificatesWrite,
+		PermCertificatesVerify, PermCertificatesApproveService,
+	} {
+		if _, ok := PermissionBySlug(slug); !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+	}
+	center, _ := RoleBySlug(RoleCenterStaff)
+	if center.Grants[PermCertificateTypesManage] != ScopeBrand ||
+		center.Grants[PermCertificatesRead] != ScopeBrand ||
+		center.Grants[PermCertificatesVerify] != ScopeBrand ||
+		center.Grants[PermCertificatesApproveService] != ScopeBrand {
+		t.Fatalf("center certificate grants = %v", center.Grants)
+	}
+	dist, _ := RoleBySlug(RoleDistributorOwner)
+	if dist.Grants[PermCertificatesRead] != ScopeSubtree ||
+		dist.Grants[PermCertificatesWrite] != ScopeSubtree ||
+		dist.Grants[PermCertificatesVerify] != ScopeSubtree {
+		t.Fatalf("distributor certificate grants = %v", dist.Grants)
+	}
+	dealer, _ := RoleBySlug(RoleDealerOwner)
+	if dealer.Grants[PermCertificatesRead] != ScopeManaged || dealer.Grants[PermCertificatesWrite] != ScopeManaged {
+		t.Fatalf("dealer certificate grants = %v", dealer.Grants)
+	}
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin || r.Slug == RoleCenterStaff || r.Slug == RoleDistributorOwner || r.Slug == RoleDealerOwner {
+			continue
+		}
+		for _, p := range []string{PermCertificateTypesManage, PermCertificatesWrite, PermCertificatesVerify, PermCertificatesApproveService} {
+			if _, ok := r.Grants[p]; ok {
+				t.Fatalf("%s must not hold %s", r.Slug, p)
+			}
+		}
+	}
+}
+
 // TEC-383: every panel role uses the assistant and confirms its own actions;
 // usage is read by owners and the center; settings stay super_admin only;
 // portal roles get no AI permission (realm check instead).
@@ -701,6 +742,74 @@ func TestCampaignGrants(t *testing.T) {
 			PermCampaignsRead: ScopeSubtree, PermCampaignsWrite: ScopeManaged, PermCampaignsApprove: ScopeSubtree,
 		},
 		RoleDealerOwner: {PermCampaignsRead: ScopeManaged, PermCampaignsWrite: ScopeManaged},
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range slugs {
+			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
+				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
+			}
+		}
+	}
+}
+
+// TEC-472: fleets. Dealer owner/staff, the distributor owner (subtree) and
+// the center (center_staff, brand) read fleets; only owners and the center
+// manage them; dealer owner and staff plan; the fleet role reads its own
+// fleet in the portal. No other role holds a fleet permission.
+func TestFleetGrants(t *testing.T) {
+	slugs := []string{PermFleetsRead, PermFleetsManage, PermFleetsPlan, PermFleetPortalRead}
+	for _, slug := range slugs {
+		def, ok := PermissionBySlug(slug)
+		if !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+		if def.Module != "fleet" || def.SuperAdminOnly {
+			t.Fatalf("%s def = %+v", slug, def)
+		}
+	}
+	want := map[string]map[string]Scope{
+		RoleSuperAdmin: {
+			PermFleetsRead: ScopeAll, PermFleetsManage: ScopeAll, PermFleetsPlan: ScopeAll, PermFleetPortalRead: ScopeOwn,
+		},
+		RoleCenterStaff:      {PermFleetsRead: ScopeBrand, PermFleetsManage: ScopeBrand},
+		RoleDistributorOwner: {PermFleetsRead: ScopeSubtree, PermFleetsManage: ScopeSubtree},
+		RoleDealerOwner:      {PermFleetsRead: ScopeManaged, PermFleetsManage: ScopeManaged, PermFleetsPlan: ScopeManaged},
+		RoleDealerStaff:      {PermFleetsRead: ScopeManaged, PermFleetsPlan: ScopeManaged},
+		RoleFleet:            {PermFleetPortalRead: ScopeOwn},
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range slugs {
+			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
+				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
+			}
+		}
+	}
+}
+
+// TEC-466: dealer showcase. Dealer owner and distributor owner (subtree)
+// write, dealer staff and the center read, the center reviews; no
+// accounting, warehouse, distributor staff or portal role holds a showcase
+// permission.
+func TestShowcaseGrants(t *testing.T) {
+	for _, slug := range []string{PermShowcaseRead, PermShowcaseWrite, PermPlatformShowcaseReview} {
+		def, ok := PermissionBySlug(slug)
+		if !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+		if def.Module != "dealer_showcase" || def.SuperAdminOnly {
+			t.Fatalf("%s def = %+v", slug, def)
+		}
+	}
+	slugs := []string{PermShowcaseRead, PermShowcaseWrite, PermPlatformShowcaseReview}
+	want := map[string]map[string]Scope{
+		RoleSuperAdmin:       {PermShowcaseRead: ScopeAll, PermShowcaseWrite: ScopeAll, PermPlatformShowcaseReview: ScopeAll},
+		RoleCenterStaff:      {PermShowcaseRead: ScopeBrand, PermPlatformShowcaseReview: ScopeBrand},
+		RoleCenterSocial:     {PermShowcaseRead: ScopeBrand, PermPlatformShowcaseReview: ScopeBrand},
+		RoleDistributorOwner: {PermShowcaseRead: ScopeSubtree, PermShowcaseWrite: ScopeSubtree},
+		RoleDealerOwner:      {PermShowcaseRead: ScopeManaged, PermShowcaseWrite: ScopeManaged},
+		RoleDealerStaff:      {PermShowcaseRead: ScopeManaged},
 	}
 	for _, r := range Roles {
 		g := RoleGrants(r)

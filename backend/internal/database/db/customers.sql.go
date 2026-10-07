@@ -249,7 +249,7 @@ INSERT INTO vehicles (
     $5, $6, $7, $8,
     $9, $10
 )
-RETURNING id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at
+RETURNING id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at, fleet_org_id
 `
 
 type CreateVehicleParams struct {
@@ -295,6 +295,7 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (V
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.FleetOrgID,
 	)
 	return i, err
 }
@@ -388,7 +389,7 @@ func (q *Queries) FillCustomerIdentity(ctx context.Context, arg FillCustomerIden
 }
 
 const findVehiclesByPlate = `-- name: FindVehiclesByPlate :many
-SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at FROM vehicles
+SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at, fleet_org_id FROM vehicles
 WHERE plate_country = $1
   AND plate_normalized = $2
   AND deleted_at IS NULL
@@ -428,6 +429,7 @@ func (q *Queries) FindVehiclesByPlate(ctx context.Context, arg FindVehiclesByPla
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.FleetOrgID,
 		); err != nil {
 			return nil, err
 		}
@@ -440,7 +442,7 @@ func (q *Queries) FindVehiclesByPlate(ctx context.Context, arg FindVehiclesByPla
 }
 
 const findVehiclesByVIN = `-- name: FindVehiclesByVIN :many
-SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at FROM vehicles
+SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at, fleet_org_id FROM vehicles
 WHERE vin = $1
   AND deleted_at IS NULL
   AND ($2::bigint IS NULL OR brand_id = $2)
@@ -478,6 +480,7 @@ func (q *Queries) FindVehiclesByVIN(ctx context.Context, arg FindVehiclesByVINPa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.FleetOrgID,
 		); err != nil {
 			return nil, err
 		}
@@ -623,7 +626,7 @@ func (q *Queries) GetOrganizationCountryISO2(ctx context.Context, id int64) (str
 }
 
 const getVehicleByUUID = `-- name: GetVehicleByUUID :one
-SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at FROM vehicles WHERE uuid = $1 AND deleted_at IS NULL
+SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at, fleet_org_id FROM vehicles WHERE uuid = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (Vehicle, error) {
@@ -645,12 +648,13 @@ func (q *Queries) GetVehicleByUUID(ctx context.Context, argUuid uuid.UUID) (Vehi
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.FleetOrgID,
 	)
 	return i, err
 }
 
 const getVehicleByUUIDForUpdate = `-- name: GetVehicleByUUIDForUpdate :one
-SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at FROM vehicles WHERE uuid = $1 AND deleted_at IS NULL FOR UPDATE
+SELECT id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at, fleet_org_id FROM vehicles WHERE uuid = $1 AND deleted_at IS NULL FOR UPDATE
 `
 
 func (q *Queries) GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UUID) (Vehicle, error) {
@@ -672,12 +676,13 @@ func (q *Queries) GetVehicleByUUIDForUpdate(ctx context.Context, argUuid uuid.UU
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.FleetOrgID,
 	)
 	return i, err
 }
 
 const getVehicleViewByUUID = `-- name: GetVehicleViewByUUID :one
-SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, u.uuid AS customer_uuid,
+SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, v.fleet_org_id, u.uuid AS customer_uuid,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        cm.uuid AS car_model_uuid, cm.name AS car_model_name,
        o.uuid AS organization_uuid
@@ -719,6 +724,7 @@ func (q *Queries) GetVehicleViewByUUID(ctx context.Context, argUuid uuid.UUID) (
 		&i.Vehicle.CreatedAt,
 		&i.Vehicle.UpdatedAt,
 		&i.Vehicle.DeletedAt,
+		&i.Vehicle.FleetOrgID,
 		&i.CustomerUuid,
 		&i.CarBrandUuid,
 		&i.CarBrandName,
@@ -1107,7 +1113,7 @@ func (q *Queries) ListOrganizationsWithRawPhone(ctx context.Context) ([]ListOrga
 }
 
 const listScopedVehicles = `-- name: ListScopedVehicles :many
-SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, u.uuid AS customer_uuid,
+SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, v.fleet_org_id, u.uuid AS customer_uuid,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        cm.uuid AS car_model_uuid, cm.name AS car_model_name,
        o.uuid AS organization_uuid
@@ -1236,6 +1242,7 @@ func (q *Queries) ListScopedVehicles(ctx context.Context, arg ListScopedVehicles
 			&i.Vehicle.CreatedAt,
 			&i.Vehicle.UpdatedAt,
 			&i.Vehicle.DeletedAt,
+			&i.Vehicle.FleetOrgID,
 			&i.CustomerUuid,
 			&i.CarBrandUuid,
 			&i.CarBrandName,
@@ -1254,7 +1261,7 @@ func (q *Queries) ListScopedVehicles(ctx context.Context, arg ListScopedVehicles
 }
 
 const listVehiclesByUser = `-- name: ListVehiclesByUser :many
-SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, cb.name AS car_brand_name, cm.name AS car_model_name
+SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, v.fleet_org_id, cb.name AS car_brand_name, cm.name AS car_model_name
 FROM vehicles v
 LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
 LEFT JOIN car_models cm ON cm.id = v.car_model_id
@@ -1285,6 +1292,7 @@ type ListVehiclesByUserRow struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+	FleetOrgID      pgtype.Int8        `json:"fleet_org_id"`
 	CarBrandName    pgtype.Text        `json:"car_brand_name"`
 	CarModelName    pgtype.Text        `json:"car_model_name"`
 }
@@ -1314,6 +1322,7 @@ func (q *Queries) ListVehiclesByUser(ctx context.Context, arg ListVehiclesByUser
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.FleetOrgID,
 			&i.CarBrandName,
 			&i.CarModelName,
 		); err != nil {
@@ -1328,7 +1337,7 @@ func (q *Queries) ListVehiclesByUser(ctx context.Context, arg ListVehiclesByUser
 }
 
 const listVehiclesInScope = `-- name: ListVehiclesInScope :many
-SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, cb.name AS car_brand_name, cm.name AS car_model_name
+SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, v.fleet_org_id, cb.name AS car_brand_name, cm.name AS car_model_name
 FROM vehicles v
 LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
 LEFT JOIN car_models cm ON cm.id = v.car_model_id
@@ -1374,6 +1383,7 @@ type ListVehiclesInScopeRow struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+	FleetOrgID      pgtype.Int8        `json:"fleet_org_id"`
 	CarBrandName    pgtype.Text        `json:"car_brand_name"`
 	CarModelName    pgtype.Text        `json:"car_model_name"`
 }
@@ -1411,6 +1421,7 @@ func (q *Queries) ListVehiclesInScope(ctx context.Context, arg ListVehiclesInSco
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.FleetOrgID,
 			&i.CarBrandName,
 			&i.CarModelName,
 		); err != nil {
@@ -1657,7 +1668,7 @@ SET car_brand_id     = $1,
     plate_country    = $6,
     vin              = $7
 WHERE id = $8 AND deleted_at IS NULL
-RETURNING id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at
+RETURNING id, uuid, user_id, organization_id, brand_id, car_brand_id, car_model_id, model_year, plate, plate_normalized, plate_country, vin, created_at, updated_at, deleted_at, fleet_org_id
 `
 
 type UpdateVehicleParams struct {
@@ -1700,6 +1711,7 @@ func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (V
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.FleetOrgID,
 	)
 	return i, err
 }
