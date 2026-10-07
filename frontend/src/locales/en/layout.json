@@ -86,5 +86,6 @@
   "nav_glorian_integration": "Glorian",
   "nav_service_catalog": "Service catalog",
   "nav_service_subscriptions": "Service subscriptions",
-  "nav_service_subscription_cancels": "Cancellation requests"
+  "nav_service_subscription_cancels": "Cancellation requests",
+  "nav_review_questions": "Review questions"
 }
