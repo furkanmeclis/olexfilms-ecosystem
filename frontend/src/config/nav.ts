@@ -8,6 +8,7 @@ import {
   Car,
   ClipboardList,
   Blocks,
+  Bot,
   Boxes,
   Coins,
   Download,
@@ -382,6 +383,16 @@ export function tenantNav(slug: string) {
             titleKey: "layout.nav_features",
             href: routes.tenant.features.root(slug),
             icon: Blocks,
+          },
+          {
+            // TEC-390: AI assistant (ai_assistant module + ai.use; the
+            // header button opens the same chat in a sheet).
+            id: "assistant",
+            titleKey: "ai.nav_title",
+            href: routes.tenant.assistant(slug),
+            icon: Bot,
+            permission: permissions.ai.use,
+            feature: "ai_assistant",
           },
         ],
       },
