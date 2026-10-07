@@ -18,6 +18,9 @@ import {
 const PORT = Number(process.env.E2E_PORT ?? 3183);
 const baseURL = `http://127.0.0.1:${PORT}`;
 const upstreamURL = `http://127.0.0.1:${E2E_UPSTREAM_PORT}`;
+// e2e-screenshots workflow: a screenshot (and trace) for every test plus an
+// HTML report, uploaded as run artifacts. Off for the regular CI run.
+const capture = Boolean(process.env.E2E_CAPTURE);
 
 export default defineConfig({
   testDir: "./e2e",
@@ -28,12 +31,17 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
-  reporter: process.env.CI ? [["list"], ["github"]] : "list",
+  reporter: capture
+    ? [["list"], ["html", { open: "never" }]]
+    : process.env.CI
+      ? [["list"], ["github"]]
+      : "list",
   use: {
     baseURL,
     locale: "en-US",
     timezoneId: "Europe/Istanbul",
-    trace: "retain-on-failure",
+    trace: capture ? "on" : "retain-on-failure",
+    screenshot: capture ? "on" : "off",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
