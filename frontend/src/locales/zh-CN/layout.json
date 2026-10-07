@@ -86,5 +86,6 @@
   "nav_glorian_integration": "Glorian",
   "nav_service_catalog": "服务目录",
   "nav_service_subscriptions": "服务订阅",
-  "nav_service_subscription_cancels": "取消申请"
+  "nav_service_subscription_cancels": "取消申请",
+  "nav_review_questions": "评价问题"
 }

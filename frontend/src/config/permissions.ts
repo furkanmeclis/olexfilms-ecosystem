@@ -175,6 +175,9 @@ export const Permission = {
   ProductSalesWrite: "product_sales.write",
   SuppliersManage: "suppliers.manage",
   PurchasesWrite: "purchases.write",
+  /** TEC-353: admin review questions and service review reports. */
+  ReviewsQuestionsManage: "reviews.questions.manage",
+  ReviewsRead: "reviews.read",
   /** TEC-383: AI assistant (chat, usage report, platform settings, confirmations). */
   AiUse: "ai.use",
   AiUsageRead: "ai.usage.read",
@@ -522,5 +525,9 @@ export const permissions = {
     salesWrite: Permission.ProductSalesWrite,
     suppliersManage: Permission.SuppliersManage,
     purchasesWrite: Permission.PurchasesWrite,
+  },
+  reviews: {
+    questionsManage: Permission.ReviewsQuestionsManage,
+    read: Permission.ReviewsRead,
   },
 } as const;

@@ -86,5 +86,6 @@
   "nav_glorian_integration": "Glorian",
   "nav_service_catalog": "Каталог услуг",
   "nav_service_subscriptions": "Подписки на услуги",
-  "nav_service_subscription_cancels": "Запросы на расторжение"
+  "nav_service_subscription_cancels": "Запросы на расторжение",
+  "nav_review_questions": "Вопросы для отзывов"
 }

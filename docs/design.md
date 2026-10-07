@@ -167,6 +167,7 @@ Her modül için: seviye (Ç = çekirdek, S = standart, E = eklenti), kapsam ve 
 | Bayi muhasebesi (tam) | Kendi gelir/gider, hizmet başına gelir kaydı, sipariş → otomatik gider, cari, sabit barkodlu üründe kendi satış fiyatı ve kâr analizi, personel kartı + maaş/avans, prim (bayi → çalışan, hedef bazlı) | otopoly-go finance/cari (yukarıdaki); `product_sales`, `purchases`, `suppliers` (`migrations/000037,000038`) |
 | Hizmet kataloğu (ürün dışı) | Yalnızca merkezde; tek seferlik/aylık/yıllık, bitiş tarihi zorunlu; merkez → bayi doğrudan; distribütör kâr marjı olmadan alt bayiye tanımlar; distribütör bazlı özel fiyat; erken iptal bayi talep + admin onay; statik cayma bedeli; opsiyonel sözleşme; stok hareketi yok, sadece muhasebe; "modül paketi" tipi | otopoly-go `backend/internal/modules/billing` (plan/abonelik yaşam döngüsü referans) |
 | Bayiler arası transfer | Distribütör onaylı; ledger ve muhasebe kaydı | olexfilms `app/Models/StockTransfer.php` (mevcut bayi-bayi transfer) |
+| Değerlendirme | Google değerlendirme isteği (mevcut akış) + platform ve ürün kalitesi formu (admin soruları, anonim gönderim), işlenir ve raporlanır. Kullanıcı kararıyla (2026-10-07) standart modül; önceden eklenti listesindeydi, ücretsiz ve varsayılan açık (migration 000099) | olexfilms `app/Console/Commands` `services:send-review-request-sms`, `review_request_sms_sent_at` |
 
 ### 5.3 Eklenti (varsayılan kapalı, üst seviye açar, ücretli olabilir)
 
@@ -183,7 +184,6 @@ Her modül için: seviye (Ç = çekirdek, S = standart, E = eklenti), kapsam ve 
 | Verimlilik ve fire analizi | Parça başına metraj tüketimi, fire oranı, bayi karşılaştırması | Yeni; metraj ledger'ı üzerinden |
 | Kampanya gönderimi | Filtreli kitleye zamanlanmış push/WhatsApp/e-posta; onay zinciri (bayi → distribütör; merkez serbest); zorunlu lokalizasyon (kitle taranır, diller listelenir, her dile içerik + dosya/görsel); SMS yok | olexfilms `app/Services/Push/*`, `app/Jobs/SendPushCampaign*.php`, `docs/mobile-api/push-campaigns.md`, `app/Filament/Resources/BulkSms` |
 | Fotoğraf standardı | Araç kabulde zorunlu açılar, eksikse kabul tamamlanmaz, sözleşme PDF'ine gömülür; admin aç/kapa (varsayılan kapalı) | otopoly-go contracts `contract_media` (görsel ekleme deseni) |
-| Değerlendirme | Google değerlendirme isteği (mevcut akış) + platform ve ürün kalitesi formu, işlenir ve raporlanır | olexfilms `app/Console/Commands` `services:send-review-request-sms`, `review_request_sms_sent_at` |
 | E-fatura altyapısı (UBL-TR) | Admin tarafı UI'a dökülebilir; entegratör bağlantısı yok; bayi tarafında backend mapper hazır | go-ubltr (`builder`, `render`); otopoly-go `backend/internal/modules/billing/invoice/{mapper,render}.go`; technowide-ecosystem `backend/internal/modules/invoices`, `docs/UBLTR_PLAN.md` |
 | Kısa URL | `olexfilms.app/s/{token}` | olexfilms `app/Models/ShortUrl.php` |
 

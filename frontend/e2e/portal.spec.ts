@@ -242,3 +242,89 @@ test("portal: book an appointment and cancel it", async ({ page, context }) => {
   expect(api.appointments).toHaveLength(1);
   expect(api.unknown).toEqual([]);
 });
+
+/**
+ * TEC-353: the WhatsApp review link (`/portal/services/{uuid}/review
+ * ?source=whatsapp_link`) of a signed-out customer goes through the login
+ * and lands on the service with the review form in view; the admin
+ * questions (a required dealer rating, a required product rating per
+ * product) gate the submit button, and the body carries the answers,
+ * is_anonymous and source=whatsapp_link.
+ */
+test("portal: WhatsApp review link with admin questions, sent anonymously", async ({
+  page,
+  context,
+}) => {
+  const api = new PortalMock();
+  const { owner } = E2E_PORTAL;
+  const service = PORTAL_SERVICES.cankaya;
+  const staff = "0b9c4c1e-0000-4000-8000-000000003531";
+  const film = "0b9c4c1e-0000-4000-8000-000000003532";
+  api.reviewQuestions = [
+    {
+      uuid: film,
+      question_key: "film_quality",
+      question_type: "rating_1_5",
+      target: "product",
+      is_required: true,
+      sort_order: 20,
+      text: "Film quality",
+    },
+    {
+      uuid: staff,
+      question_key: "staff",
+      question_type: "rating_1_5",
+      target: "dealer",
+      is_required: true,
+      sort_order: 10,
+      text: "How was the staff?",
+    },
+  ];
+  await routePortal(context, api, owner);
+
+  await page.goto(`/portal/services/${service}/review?source=whatsapp_link`);
+  await expect(page).toHaveURL(/\/portal\/login\?next=/);
+  await page.locator("#portal-phone").fill(owner.typed);
+  await page.getByRole("button", { name: "Send code via WhatsApp" }).click();
+  await expect(page.locator("#portal-otp")).toBeVisible();
+  await page
+    .locator("#portal-otp")
+    .fill(api.lastCode(owner.phone, "customer_login") ?? "");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await expect(page).toHaveURL(
+    new RegExp(`/portal/services/${service}\\?source=whatsapp_link$`),
+  );
+  const form = page.getByTestId("portal-review-form");
+  await expect(form).toBeInViewport();
+  await expect(form).toContainText("How was the staff?");
+  await expect(form).toContainText("Film quality");
+  const submit = page.getByTestId("portal-review-submit");
+
+  await form.locator("[data-rating=platform] [data-star='4']").click();
+  await form.locator("[data-rating=product] [data-star='5']").click();
+  await expect(submit).toBeDisabled();
+  await form.locator(`[data-rating='${staff}'] [data-star='3']`).click();
+  const product = `${service.slice(0, -4)}7777`;
+  await form
+    .locator(`[data-rating='${film}:${product}'] [data-star='5']`)
+    .click();
+  await expect(submit).toBeEnabled();
+  await page.getByTestId("portal-review-anonymous").click();
+  await submit.click();
+
+  await expect(page.getByTestId("portal-review-done")).toBeVisible();
+  expect(api.reviews).toEqual([
+    {
+      platform_rating: 4,
+      product_rating: 5,
+      comment: null,
+      is_anonymous: true,
+      source: "whatsapp_link",
+      answers: [
+        { question_uuid: staff, rating: 3 },
+        { question_uuid: film, product_uuid: product, rating: 5 },
+      ],
+    },
+  ]);
+});

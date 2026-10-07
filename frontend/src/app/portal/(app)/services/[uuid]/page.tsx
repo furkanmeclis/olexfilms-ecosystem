@@ -6,9 +6,17 @@ export const metadata: Metadata = { title: "Portal" };
 
 export default async function PortalServiceDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ uuid: string }>;
+  searchParams: Promise<{ source?: string | string[] }>;
 }) {
   const { uuid } = await params;
-  return <PortalServiceDetail uuid={uuid} />;
+  const { source } = await searchParams;
+  return (
+    <PortalServiceDetail
+      uuid={uuid}
+      reviewFromLink={source === "whatsapp_link"}
+    />
+  );
 }

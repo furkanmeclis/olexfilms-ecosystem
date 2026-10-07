@@ -86,5 +86,6 @@
   "nav_glorian_integration": "Glorian",
   "nav_service_catalog": "كتالوج الخدمات",
   "nav_service_subscriptions": "اشتراكات الخدمات",
-  "nav_service_subscription_cancels": "طلبات الإلغاء"
+  "nav_service_subscription_cancels": "طلبات الإلغاء",
+  "nav_review_questions": "أسئلة التقييم"
 }

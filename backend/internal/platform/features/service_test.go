@@ -119,6 +119,33 @@ func TestMigrationMatchesModuleCatalog(t *testing.T) {
 	}
 }
 
+// Migration 000099 turns the seeded paid reviews add-on into a free standard
+// module, so a new dealer gets it without any flag.
+func TestReviewsStandardAfterMigration(t *testing.T) {
+	d := newDBTest(t)
+	rows, err := d.q.ListModules(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, r := range rows {
+		if r.Key == ModuleReviews {
+			found = true
+			if r.Level != string(LevelStandard) || !r.DefaultEnabled || r.IsPaid {
+				t.Fatalf("reviews row = %+v", r)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("reviews row missing")
+	}
+	dist := d.org("dist", OrgDistributor, d.center)
+	dealer := d.org("dealer", OrgDealer, dist)
+	if !d.enabled(dist, ModuleReviews) || !d.enabled(dealer, ModuleReviews) {
+		t.Fatal("reviews must be on by default")
+	}
+}
+
 // Acceptance 1: a standard module closed system wide cannot be opened by
 // any distributor (nor by the admin per organization), and the cached
 // "on" disappears without waiting for the TTL.
