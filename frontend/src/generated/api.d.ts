@@ -4031,6 +4031,251 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/oauth/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Authorization endpoint (browser, TEC-401)
+         * @description Validates the request (client, exact registered `redirect_uri`, PKCE
+         *     `code_challenge` with S256, `resource` naming an MCP endpoint, `state`)
+         *     and stores it for consent (15 minutes), then redirects (302) to the
+         *     frontend consent screen `/oauth/consent?request=<uuid>`. The consent
+         *     screen sends a signed-out user to the panel (or, for `/mcp/customer`,
+         *     the portal) login and back. An unknown client, an unregistered
+         *     `redirect_uri` or the rate limit (60 per hour per IP) renders an HTML
+         *     error page and never redirects; later errors redirect to the client
+         *     with `error`, `error_description`, `state` and `iss`.
+         */
+        get: operations["getOAuthAuthorize"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/oauth/requests/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consent screen data of a pending authorization request (panel)
+         * @description Client name, redirect host, MCP endpoint and the organizations the
+         *     caller may bind the token to. `/mcp/dealer`: distributor / dealer
+         *     organizations the caller is a member of and holds `mcp.connect` in;
+         *     `/mcp/user`: any panel organization with `mcp.connect` (the platform
+         *     admin also gets the brand center). Organizations with the `mcp` module
+         *     off are not offered. A `/mcp/customer` request is portal only (403).
+         */
+        get: operations["getOAuthConsentRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/oauth/requests/{uuid}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve or deny a pending authorization request (panel)
+         * @description `approve` needs `organization_uuid` (400 without it; 403 when the
+         *     organization is not selectable: no membership, no `mcp.connect`, wrong
+         *     type for the endpoint or the `mcp` module off). Approval records the
+         *     connected app and returns the client redirect with `code`, `state` and
+         *     `iss`; `deny` returns it with `error=access_denied`. The request is
+         *     consumed either way (a second decision is 404). Every decision is
+         *     written to the activity log (`oauth.consent_approved`,
+         *     `oauth.consent_denied`).
+         */
+        post: operations["decideOAuthConsentRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/oauth/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's connected apps (MCP grants)
+         * @description Live grants of live clients. Sort fields `created_at` (default
+         *     `-created_at`), `last_used_at` (never used last), `client_name`; `id`
+         *     tiebreak. `q` matches the client or organization name.
+         */
+        get: operations["listOAuthGrants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/oauth/grants/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect one of the caller's apps
+         * @description Revokes the grant and every token family issued under it (its access
+         *     tokens are rejected at once) and drops unused codes. Activity
+         *     `oauth.grant_revoked`. A foreign or revoked grant is 404.
+         */
+        delete: operations["revokeOAuthGrant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/oauth/requests/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consent screen data of a pending authorization request (customer portal)
+         * @description Same as the panel route for portal sessions. Only `/mcp/customer`
+         *     requests (403 otherwise); the token is bound to the brand center.
+         */
+        get: operations["getPortalOAuthConsentRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/oauth/requests/{uuid}/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve or deny a pending authorization request (customer portal)
+         * @description Same as the panel route for portal sessions; `organization_uuid` is
+         *     not needed (the brand center). Only `/mcp/customer` requests (403
+         *     otherwise).
+         */
+        post: operations["decidePortalOAuthConsentRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/oauth/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The customer's connected apps (same contract as /v1/oauth/grants) */
+        get: operations["listPortalOAuthGrants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/oauth/grants/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Disconnect one of the customer's apps */
+        delete: operations["revokePortalOAuthGrant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/oauth/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Registered MCP (OAuth) clients (mcp.clients.manage)
+         * @description Every dynamically registered client. Sort fields `created_at` (default
+         *     `-created_at`), `last_used_at` (never used last), `client_name`; `id`
+         *     tiebreak. `q` matches the client name or client_id.
+         */
+        get: operations["listPlatformOAuthClients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/oauth/clients/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a client and everything issued to it (mcp.clients.manage)
+         * @description Blocks the client (authorize and token answer invalid_client) and
+         *     revokes its grants and every token, deletes pending requests and
+         *     unused codes. Activity `oauth.client_revoked`. Idempotent.
+         */
+        delete: operations["revokePlatformOAuthClient"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/wuzapi": {
         parameters: {
             query?: never;
@@ -11634,6 +11879,116 @@ export interface components {
              */
             resource?: string;
             scope?: string;
+        };
+        OAuthConsentOrganization: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @enum {string} */
+            type: "platform" | "center" | "distributor" | "dealer";
+        };
+        OAuthConsent: {
+            /** Format: uuid */
+            request_uuid: string;
+            client_id: string;
+            client_name: string;
+            /** @description Host of the client redirect_uri */
+            redirect_host: string;
+            /** @enum {string} */
+            resource: "/mcp/dealer" | "/mcp/customer" | "/mcp/user";
+            /** Format: uri */
+            resource_url: string;
+            /** @enum {string} */
+            realm: "customer" | "dealer" | "user";
+            /** @description Selectable organizations (empty → the caller cannot connect) */
+            organizations: components["schemas"]["OAuthConsentOrganization"][];
+            /** Format: date-time */
+            expires_at: string;
+        };
+        EnvelopeOAuthConsent: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["OAuthConsent"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        OAuthDecideRequest: {
+            /** @enum {string} */
+            decision: "approve" | "deny";
+            /**
+             * Format: uuid
+             * @description Required to approve on the panel; ignored on the portal
+             */
+            organization_uuid?: string | null;
+        };
+        EnvelopeOAuthDecision: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                /** Format: uri */
+                redirect_url: string;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        OAuthGrant: {
+            /** Format: uuid */
+            uuid: string;
+            client_id: string;
+            client_name: string;
+            /** @enum {string} */
+            resource: "/mcp/dealer" | "/mcp/customer" | "/mcp/user";
+            /** @enum {string} */
+            realm: "customer" | "dealer" | "user";
+            scopes: string[];
+            /** Format: uuid */
+            organization_uuid: string;
+            organization_name: string;
+            organization_type: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            last_used_at: string | null;
+        };
+        EnvelopeOAuthGrantPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["OAuthGrant"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        OAuthClientSummary: {
+            /** Format: uuid */
+            uuid: string;
+            client_id: string;
+            client_name: string;
+            redirect_uris: string[];
+            created_ip: string | null;
+            /** @enum {string} */
+            status: "active" | "revoked";
+            /** Format: int64 */
+            active_grants: number;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            last_used_at: string | null;
+            /** Format: date-time */
+            revoked_at: string | null;
+        };
+        EnvelopeOAuthClientPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["OAuthClientSummary"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         OAuthTokenResponse: {
             access_token: string;
@@ -21077,6 +21432,9 @@ export interface components {
         };
     };
     parameters: {
+        /** @description Pending authorization request (the `request` of the consent screen URL) */
+        OAuthRequestUUID: string;
+        OAuthGrantUUID: string;
         /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
         AccountingOrganizationUUID: string;
         VehicleCatalogUUID: string;
@@ -28136,6 +28494,325 @@ export interface operations {
                     "application/json": components["schemas"]["OAuthError"];
                 };
             };
+        };
+    };
+    getOAuthAuthorize: {
+        parameters: {
+            query: {
+                client_id: string;
+                redirect_uri: string;
+                response_type: "code";
+                code_challenge: string;
+                code_challenge_method: "S256";
+                resource: string;
+                state?: string;
+                scope?: "mcp";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description To the consent screen, or to the client redirect_uri with an error */
+            302: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error page (unknown client or unregistered redirect_uri); no redirect */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            /** @description Error page (slow_down) */
+            429: {
+                headers: {
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+        };
+    };
+    getOAuthConsentRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Pending authorization request (the `request` of the consent screen URL) */
+                uuid: components["parameters"]["OAuthRequestUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Consent data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOAuthConsent"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    decideOAuthConsentRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Pending authorization request (the `request` of the consent screen URL) */
+                uuid: components["parameters"]["OAuthRequestUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthDecideRequest"];
+            };
+        };
+        responses: {
+            /** @description Where to send the browser */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOAuthDecision"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listOAuthGrants: {
+        parameters: {
+            query?: {
+                /** @description CSV of customer, dealer, user. Unknown value → 400. */
+                realm?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Connected apps */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOAuthGrantPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    revokeOAuthGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: components["parameters"]["OAuthGrantUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalOAuthConsentRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Pending authorization request (the `request` of the consent screen URL) */
+                uuid: components["parameters"]["OAuthRequestUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Consent data */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOAuthConsent"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    decidePortalOAuthConsentRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Pending authorization request (the `request` of the consent screen URL) */
+                uuid: components["parameters"]["OAuthRequestUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthDecideRequest"];
+            };
+        };
+        responses: {
+            /** @description Where to send the browser */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOAuthDecision"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalOAuthGrants: {
+        parameters: {
+            query?: {
+                /** @description CSV of customer, dealer, user. Unknown value → 400. */
+                realm?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Connected apps */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOAuthGrantPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+        };
+    };
+    revokePortalOAuthGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: components["parameters"]["OAuthGrantUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPlatformOAuthClients: {
+        parameters: {
+            query?: {
+                /** @description CSV of active, revoked. Unknown value → 400. */
+                status?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Clients */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOAuthClientPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    revokePlatformOAuthClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     postHooksWuzapi: {
