@@ -12,6 +12,183 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const serviceActivityCarBrands = `-- name: ServiceActivityCarBrands :many
+SELECT cb.uuid AS car_brand_uuid, cb.name AS car_brand_name, COUNT(*)::bigint AS service_count
+FROM services s
+JOIN car_brands cb ON cb.id = s.car_brand_id
+WHERE s.brand_id = $1
+  AND ($2::bigint[] IS NULL OR s.organization_id = ANY ($2::bigint[]))
+  AND ($3::bigint IS NULL OR s.created_by_user_id = $3)
+  AND s.completed_at >= $4::timestamptz
+  AND s.completed_at < $5::timestamptz
+GROUP BY cb.id, cb.uuid, cb.name
+ORDER BY service_count DESC, lower(cb.name), cb.id
+LIMIT $6
+`
+
+type ServiceActivityCarBrandsParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrgIds          []int64            `json:"org_ids"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	PeriodFrom      pgtype.Timestamptz `json:"period_from"`
+	PeriodTo        pgtype.Timestamptz `json:"period_to"`
+	RowLimit        int32              `json:"row_limit"`
+}
+
+type ServiceActivityCarBrandsRow struct {
+	CarBrandUuid uuid.UUID `json:"car_brand_uuid"`
+	CarBrandName string    `json:"car_brand_name"`
+	ServiceCount int64     `json:"service_count"`
+}
+
+func (q *Queries) ServiceActivityCarBrands(ctx context.Context, arg ServiceActivityCarBrandsParams) ([]ServiceActivityCarBrandsRow, error) {
+	rows, err := q.db.Query(ctx, serviceActivityCarBrands,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.CreatedByUserID,
+		arg.PeriodFrom,
+		arg.PeriodTo,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ServiceActivityCarBrandsRow{}
+	for rows.Next() {
+		var i ServiceActivityCarBrandsRow
+		if err := rows.Scan(&i.CarBrandUuid, &i.CarBrandName, &i.ServiceCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const serviceActivityCounts = `-- name: ServiceActivityCounts :one
+
+SELECT
+    COUNT(*) FILTER (WHERE s.created_at >= $1::timestamptz
+                       AND s.created_at < $2::timestamptz)::bigint AS created_count,
+    COUNT(*) FILTER (WHERE s.completed_at >= $1::timestamptz
+                       AND s.completed_at < $2::timestamptz)::bigint AS completed_count
+FROM services s
+WHERE s.brand_id = $3
+  AND ($4::bigint[] IS NULL OR s.organization_id = ANY ($4::bigint[]))
+  AND ($5::bigint IS NULL OR s.created_by_user_id = $5)
+  AND (
+    (s.created_at >= $1::timestamptz AND s.created_at < $2::timestamptz)
+    OR (s.completed_at >= $1::timestamptz AND s.completed_at < $2::timestamptz)
+  )
+`
+
+type ServiceActivityCountsParams struct {
+	PeriodFrom      pgtype.Timestamptz `json:"period_from"`
+	PeriodTo        pgtype.Timestamptz `json:"period_to"`
+	BrandID         int64              `json:"brand_id"`
+	OrgIds          []int64            `json:"org_ids"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+}
+
+type ServiceActivityCountsRow struct {
+	CreatedCount   int64 `json:"created_count"`
+	CompletedCount int64 `json:"completed_count"`
+}
+
+// TEC-385 (F4-01c): the AI assistant's activity summary of one period, in
+// the caller's services.read scope (org_ids NULL = whole brand,
+// created_by_user_id for own / assigned grants), parity with the legacy
+// chatbot dealer/services/count, brand-breakdown and products/top. Created
+// counts services opened in [from, to), completed those completed in it;
+// the breakdowns read completed services only.
+func (q *Queries) ServiceActivityCounts(ctx context.Context, arg ServiceActivityCountsParams) (ServiceActivityCountsRow, error) {
+	row := q.db.QueryRow(ctx, serviceActivityCounts,
+		arg.PeriodFrom,
+		arg.PeriodTo,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.CreatedByUserID,
+	)
+	var i ServiceActivityCountsRow
+	err := row.Scan(&i.CreatedCount, &i.CompletedCount)
+	return i, err
+}
+
+const serviceActivityTopProducts = `-- name: ServiceActivityTopProducts :many
+SELECT p.uuid AS product_uuid, p.sku, p.name AS product_name, p.unit_type,
+       COUNT(DISTINCT si.service_id)::bigint AS service_count,
+       COALESCE(SUM(si.quantity), 0)::bigint AS quantity,
+       COALESCE(SUM(si.meters), 0)::numeric(14,2)::text AS meters
+FROM service_items si
+JOIN services s ON s.id = si.service_id
+JOIN products p ON p.id = si.product_id
+WHERE s.brand_id = $1
+  AND ($2::bigint[] IS NULL OR s.organization_id = ANY ($2::bigint[]))
+  AND ($3::bigint IS NULL OR s.created_by_user_id = $3)
+  AND s.completed_at >= $4::timestamptz
+  AND s.completed_at < $5::timestamptz
+GROUP BY p.id, p.uuid, p.sku, p.name, p.unit_type
+ORDER BY service_count DESC, lower(p.name), p.id
+LIMIT $6
+`
+
+type ServiceActivityTopProductsParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrgIds          []int64            `json:"org_ids"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	PeriodFrom      pgtype.Timestamptz `json:"period_from"`
+	PeriodTo        pgtype.Timestamptz `json:"period_to"`
+	RowLimit        int32              `json:"row_limit"`
+}
+
+type ServiceActivityTopProductsRow struct {
+	ProductUuid  uuid.UUID `json:"product_uuid"`
+	Sku          string    `json:"sku"`
+	ProductName  string    `json:"product_name"`
+	UnitType     string    `json:"unit_type"`
+	ServiceCount int64     `json:"service_count"`
+	Quantity     int64     `json:"quantity"`
+	Meters       string    `json:"meters"`
+}
+
+func (q *Queries) ServiceActivityTopProducts(ctx context.Context, arg ServiceActivityTopProductsParams) ([]ServiceActivityTopProductsRow, error) {
+	rows, err := q.db.Query(ctx, serviceActivityTopProducts,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.CreatedByUserID,
+		arg.PeriodFrom,
+		arg.PeriodTo,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ServiceActivityTopProductsRow{}
+	for rows.Next() {
+		var i ServiceActivityTopProductsRow
+		if err := rows.Scan(
+			&i.ProductUuid,
+			&i.Sku,
+			&i.ProductName,
+			&i.UnitType,
+			&i.ServiceCount,
+			&i.Quantity,
+			&i.Meters,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const topServicedCarBrands = `-- name: TopServicedCarBrands :many
 
 WITH counts AS (
