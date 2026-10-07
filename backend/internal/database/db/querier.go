@@ -1191,6 +1191,9 @@ type Querier interface {
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
 	InvalidateActivePhoneOTPs(ctx context.Context, arg InvalidateActivePhoneOTPsParams) error
+	// A customer is a users row with a customer profile or an organization link
+	// (K11).
+	IsCustomerUser(ctx context.Context, userID int64) (bool, error)
 	// The watermark of the latest successful run of a kind that set one. The
 	// barcode PATCH runs share the push_barcodes kind without a watermark, so
 	// LastSucceededIntegrationSyncRun would lose the bulk push cursor.
@@ -2028,6 +2031,11 @@ type Querier interface {
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
 	ListWhatsAppConnectionEvents(ctx context.Context, limit int32) ([]WhatsappConnectionEvent, error)
+	// Identity resolution (TEC-394, F4-02b) ---------------------------------------
+	// Panel memberships of a contact's user with the organization state the
+	// resolver needs (access window, read_only, locale). Deleted organizations
+	// are skipped; suspended / expired / outside-window ones are filtered in Go.
+	ListWhatsAppIdentityMemberships(ctx context.Context, userID int64) ([]ListWhatsAppIdentityMembershipsRow, error)
 	// LockAccountingDispute locks a dispute addressed to the counterparty
 	// organization for its resolution.
 	LockAccountingDispute(ctx context.Context, arg LockAccountingDisputeParams) (AccountingDispute, error)

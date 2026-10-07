@@ -363,6 +363,9 @@ func main() {
 
 	rdb := redis.NewClient(&redis.Options{Addr: cfg.Redis.Addr, Password: cfg.Redis.Password, DB: cfg.Redis.DB})
 	defer func() { _ = rdb.Close() }()
+	// TEC-394: user / membership / organization events drop the WhatsApp
+	// identity cache.
+	whatsappmodule.RegisterIdentityInvalidation(eventBus, rdb, cfg.App.Env, log)
 
 	healthPath := os.Getenv("WORKER_HEALTH_FILE")
 	if healthPath == "" {
