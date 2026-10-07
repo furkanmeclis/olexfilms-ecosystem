@@ -113,7 +113,7 @@ func TestDealerAccountingSchemaConstraints(t *testing.T) {
 		pay := func(q *db.Queries, typ, period string) (db.StaffPayment, error) {
 			return q.CreateStaffPayment(ctx, db.CreateStaffPaymentParams{
 				OrganizationID: dealer.ID, BrandID: dealer.BrandID, StaffID: staff.ID, Type: typ,
-				Period: period, Amount: numeric(t, "1000.00"), Currency: "TRY", PaidOn: date(time.Now()),
+				Period: period, Amount: numeric(t, "1000.00"), Currency: "TRY", PaidOn: date(time.Now()), Status: "posted",
 			})
 		}
 		salary, err := pay(f.q, "salary", "2026-09")
@@ -152,7 +152,7 @@ func TestDealerAccountingSchemaConstraints(t *testing.T) {
 		f.expectCode(t, "staff of another organization", func(sp pgx.Tx) error {
 			_, err := db.New(sp).CreateStaffPayment(ctx, db.CreateStaffPaymentParams{
 				OrganizationID: f.dealer2.ID, BrandID: f.dealer2.BrandID, StaffID: staff.ID, Type: "bonus",
-				Period: "2026-09", Amount: numeric(t, "1"), Currency: "TRY", PaidOn: date(time.Now()),
+				Period: "2026-09", Amount: numeric(t, "1"), Currency: "TRY", PaidOn: date(time.Now()), Status: "posted",
 			})
 			return err
 		}, "23503")
