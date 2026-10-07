@@ -229,9 +229,12 @@ func TestIntegrationWhatsAppAdmin(t *testing.T) {
 			Locale  string `json:"locale"`
 			Version int32  `json:"version"`
 		} `json:"kvkk_notices"`
+		AIPipeline *struct {
+			WindowHours int `json:"window_hours"`
+		} `json:"ai_pipeline"` // TEC-409
 	}
 	_ = json.Unmarshal(env.Data, &ov)
-	if !ov.Configured || ov.Connected || len(ov.KVKK) < 2 {
+	if !ov.Configured || ov.Connected || len(ov.KVKK) < 2 || ov.AIPipeline == nil || ov.AIPipeline.WindowHours != 24 {
 		t.Fatalf("overview = %s", env.Data)
 	}
 	if code, env := it.do("POST", "/v1/platform/whatsapp/connect", hostOlex, tok, nil); code != http.StatusOK {

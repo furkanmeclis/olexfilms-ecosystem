@@ -60,6 +60,50 @@ func (q *Queries) AssignConversation(ctx context.Context, arg AssignConversation
 	return i, err
 }
 
+const conversationAIRunStatsBetween = `-- name: ConversationAIRunStatsBetween :one
+SELECT COUNT(*)::bigint AS total,
+       COUNT(*) FILTER (WHERE status = 'completed')::bigint AS completed,
+       COUNT(*) FILTER (WHERE status = 'failed')::bigint AS failed,
+       COUNT(*) FILTER (WHERE status = 'skipped')::bigint AS skipped,
+       COUNT(*) FILTER (WHERE status = 'running')::bigint AS running,
+       MAX(created_at)::timestamptz AS last_run_at,
+       MAX(created_at) FILTER (WHERE status = 'failed')::timestamptz AS last_failed_at
+FROM conversation_ai_runs
+WHERE created_at >= $1::timestamptz
+  AND created_at < $2::timestamptz
+`
+
+type ConversationAIRunStatsBetweenParams struct {
+	Since pgtype.Timestamptz `json:"since"`
+	Until pgtype.Timestamptz `json:"until"`
+}
+
+type ConversationAIRunStatsBetweenRow struct {
+	Total        int64              `json:"total"`
+	Completed    int64              `json:"completed"`
+	Failed       int64              `json:"failed"`
+	Skipped      int64              `json:"skipped"`
+	Running      int64              `json:"running"`
+	LastRunAt    pgtype.Timestamptz `json:"last_run_at"`
+	LastFailedAt pgtype.Timestamptz `json:"last_failed_at"`
+}
+
+// AI pipeline health (TEC-409): run counts by status in [since, until).
+func (q *Queries) ConversationAIRunStatsBetween(ctx context.Context, arg ConversationAIRunStatsBetweenParams) (ConversationAIRunStatsBetweenRow, error) {
+	row := q.db.QueryRow(ctx, conversationAIRunStatsBetween, arg.Since, arg.Until)
+	var i ConversationAIRunStatsBetweenRow
+	err := row.Scan(
+		&i.Total,
+		&i.Completed,
+		&i.Failed,
+		&i.Skipped,
+		&i.Running,
+		&i.LastRunAt,
+		&i.LastFailedAt,
+	)
+	return i, err
+}
+
 const countConversations = `-- name: CountConversations :one
 SELECT COUNT(*) FROM conversations c
 WHERE ($1::text IS NULL OR c.channel = $1::text)
