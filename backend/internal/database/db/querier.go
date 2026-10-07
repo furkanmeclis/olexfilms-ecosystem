@@ -61,6 +61,9 @@ type Querier interface {
 	// remote hub, so their remote-sourced fields are locked in the panel.
 	BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error)
 	CancelAIPendingAction(ctx context.Context, arg CancelAIPendingActionParams) (AiPendingAction, error)
+	// TEC-387: a new message of the user in the same conversation cancels the
+	// open confirmation cards of that conversation.
+	CancelAIPendingActionsForSource(ctx context.Context, arg CancelAIPendingActionsForSourceParams) ([]AiPendingAction, error)
 	CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error)
 	// CancelPlannedStaffPayment cancels a payment that is not booked yet; it
 	// never had a ledger row, and a cancelled salary frees its period.
@@ -76,7 +79,8 @@ type Querier interface {
 	// to the new owner in the transfer transaction.
 	ChangeWarrantyHolderByVehicle(ctx context.Context, arg ChangeWarrantyHolderByVehicleParams) ([]Warranty, error)
 	// Compare-and-set pending → executing: of two concurrent confirmations only
-	// one gets the row; the other gets pgx.ErrNoRows.
+	// one gets the row; the other gets pgx.ErrNoRows. input / preview replace
+	// the stored ones when the user edited the card (NULL keeps them).
 	ClaimAIPendingAction(ctx context.Context, arg ClaimAIPendingActionParams) (AiPendingAction, error)
 	ClaimAppointmentReminder24h(ctx context.Context, arg ClaimAppointmentReminder24hParams) (ClaimAppointmentReminder24hRow, error)
 	ClaimAppointmentReminder2h(ctx context.Context, arg ClaimAppointmentReminder2hParams) (ClaimAppointmentReminder2hRow, error)
@@ -611,6 +615,9 @@ type Querier interface {
 	EnsureOrganizationProductStock(ctx context.Context, arg EnsureOrganizationProductStockParams) error
 	EnsureQuoteSent(ctx context.Context, arg EnsureQuoteSentParams) (Quote, error)
 	ExecuteContractInstance(ctx context.Context, arg ExecuteContractInstanceParams) (ContractInstance, error)
+	// TEC-387: one pending action past its expiry becomes expired (a late
+	// confirmation); no row when it is no longer pending or not yet expired.
+	ExpireAIPendingAction(ctx context.Context, arg ExpireAIPendingActionParams) (AiPendingAction, error)
 	// Stale cleanup: pending actions past their expiry become expired.
 	ExpireAIPendingActions(ctx context.Context, now pgtype.Timestamptz) (int64, error)
 	ExpireDueQuotes(ctx context.Context, today pgtype.Date) ([]Quote, error)
@@ -620,6 +627,10 @@ type Querier interface {
 	ExpireDueWarranties(ctx context.Context, now pgtype.Timestamptz) ([]Warranty, error)
 	ExpireServiceSubscriptions(ctx context.Context, today pgtype.Date) ([]ServiceSubscription, error)
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
+	// TEC-387: actions left executing since before stale_before (the process
+	// stopped mid-run) become failed with an "outcome unknown" error.
+	// updated_at is the claim time (set_updated_at trigger).
+	FailStaleAIPendingActions(ctx context.Context, arg FailStaleAIPendingActionsParams) ([]AiPendingAction, error)
 	// TEC-160 (F1-08b): customer and vehicle API (/v1/customers, /v1/vehicles).
 	// Fill-only identity: a customer created by another organization keeps its
 	// name, e-mail and locale; only empty values are filled.
@@ -652,6 +663,8 @@ type Querier interface {
 	FinishMigrationRun(ctx context.Context, arg FinishMigrationRunParams) (MigrationRun, error)
 	GetAIConversationForUser(ctx context.Context, arg GetAIConversationForUserParams) (AiConversation, error)
 	GetAIOrgSettings(ctx context.Context, organizationID int64) (AiOrgSetting, error)
+	// TEC-387: a repeated proposal of the same tool_use returns the existing card.
+	GetAIPendingActionByIdempotencyKey(ctx context.Context, idempotencyKey string) (AiPendingAction, error)
 	GetAIPendingActionForUser(ctx context.Context, arg GetAIPendingActionForUserParams) (AiPendingAction, error)
 	// TEC-383 (F4-01a): AI assistant settings, conversations, messages, pending
 	// actions and the usage ledger with its monthly projection.

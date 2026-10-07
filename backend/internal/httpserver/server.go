@@ -23,7 +23,9 @@ import (
 	activitymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity"
 	activityhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/usecase"
+	airepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/repository"
 	aitools "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
+	aiusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/usecase"
 	announcementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements"
 	announcementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/handler"
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
@@ -241,6 +243,8 @@ type Server struct {
 	waMessaging *whatsappusecase.Messaging
 	// aiTools is the AI assistant tool registry (TEC-385).
 	aiTools *aitools.Registry
+	// aiActions is the write-tool confirmation flow (TEC-387).
+	aiActions *aiusecase.Actions
 }
 
 // New wires router and middleware for the API skeleton.
@@ -843,6 +847,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Stock: stockSvc, Orders: ordersSvc, Accounting: accountingSvc, Appointments: appointmentsSvc,
 		Leads: leadsSvc, Tasks: tasksSvc, Catalog: catalogSvc, Organizations: orgSvc,
 	})
+	// TEC-387 (F4-01e): write tools behind the confirmation card; every
+	// channel confirms through s.aiActions.
+	aitools.RegisterPanelWrite(s.aiTools, aitools.WriteDeps{
+		Tree: deps.Queries, Tasks: tasksSvc, Leads: leadsSvc, Appointments: appointmentsSvc,
+		Customers: customersSvc, Orders: ordersSvc, Products: catalogSvc, Services: servicesSvc,
+	})
+	s.aiActions = aiusecase.NewActions(airepo.New(deps.DB), s.aiTools, activityRec, log)
+	if s.worker != nil {
+		s.worker.WithAIActionSweep(s.aiActions.SweepTask)
+	}
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)

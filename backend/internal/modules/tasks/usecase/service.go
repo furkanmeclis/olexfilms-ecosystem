@@ -366,6 +366,22 @@ func (s *Service) subject(ctx context.Context, q *db.Queries, c Caller, id uuid.
 	return o.ID, nil
 }
 
+// Subject resolves a task subject organization (a distributor or dealer of
+// the active center's brand) for a preview (TEC-387, AI confirmation card).
+func (s *Service) Subject(ctx context.Context, c Caller, id uuid.UUID) (SubjectRef, error) {
+	if err := requireCenter(c); err != nil {
+		return SubjectRef{}, err
+	}
+	o, err := s.q.GetTaskSubjectOrg(ctx, db.GetTaskSubjectOrgParams{Uuid: id, BrandID: c.Org.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && o.Type != orgTypeDistributor && o.Type != orgTypeDealer) {
+		return SubjectRef{}, invalid("subject_organization_uuid", "must be a distributor or dealer of the brand")
+	}
+	if err != nil {
+		return SubjectRef{}, fmt.Errorf("tasks: subject: %w", err)
+	}
+	return SubjectRef{UUID: o.Uuid, Name: o.Name, Type: o.Type}, nil
+}
+
 // assignee resolves a member of the active center.
 func (s *Service) assignee(ctx context.Context, q *db.Queries, c Caller, id *uuid.UUID) (pgtype.Int8, error) {
 	if id == nil {

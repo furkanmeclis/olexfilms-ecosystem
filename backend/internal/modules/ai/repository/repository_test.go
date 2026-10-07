@@ -100,14 +100,14 @@ func TestClaimPendingActionCAS(t *testing.T) {
 	f := newFixture(t)
 	a := f.action(t, "cas", time.Hour)
 
-	if _, ok, err := f.store.ClaimPendingAction(f.ctx, a.Uuid, f.dealer.ID, f.other.ID); err != nil || ok {
+	if _, ok, err := f.store.ClaimPendingAction(f.ctx, a.Uuid, f.dealer.ID, f.other.ID, nil, nil); err != nil || ok {
 		t.Fatalf("foreign user claimed: ok=%v err=%v", ok, err)
 	}
-	got, ok, err := f.store.ClaimPendingAction(f.ctx, a.Uuid, f.dealer.ID, f.user.ID)
+	got, ok, err := f.store.ClaimPendingAction(f.ctx, a.Uuid, f.dealer.ID, f.user.ID, nil, nil)
 	if err != nil || !ok || got.Status != model.ActionExecuting {
 		t.Fatalf("first claim: ok=%v status=%q err=%v", ok, got.Status, err)
 	}
-	if _, ok, err := f.store.ClaimPendingAction(f.ctx, a.Uuid, f.dealer.ID, f.user.ID); err != nil || ok {
+	if _, ok, err := f.store.ClaimPendingAction(f.ctx, a.Uuid, f.dealer.ID, f.user.ID, nil, nil); err != nil || ok {
 		t.Fatalf("second claim must get 0 rows: ok=%v err=%v", ok, err)
 	}
 	tag, err := f.tx.Exec(f.ctx, `UPDATE ai_pending_actions SET status = 'executing'
@@ -134,7 +134,7 @@ func TestClaimPendingActionCAS(t *testing.T) {
 		SET created_at = NOW() - interval '2 hours', expires_at = NOW() - interval '1 minute' WHERE id = $1`, old.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok, err := f.store.ClaimPendingAction(f.ctx, old.Uuid, f.dealer.ID, f.user.ID); err != nil || ok {
+	if _, ok, err := f.store.ClaimPendingAction(f.ctx, old.Uuid, f.dealer.ID, f.user.ID, nil, nil); err != nil || ok {
 		t.Fatalf("expired claimed: ok=%v err=%v", ok, err)
 	}
 	if n, err := f.q.ExpireAIPendingActions(f.ctx, pgtype.Timestamptz{Time: time.Now(), Valid: true}); err != nil || n < 1 {
@@ -402,5 +402,90 @@ func TestAISettingsDefaults(t *testing.T) {
 	}
 	if _, err := f.tx.Exec(f.ctx, `INSERT INTO ai_settings (id) VALUES (2)`); err == nil {
 		t.Fatal("second ai_settings row accepted")
+	}
+}
+
+// TEC-387: a confirmation with edits stores the edited input and preview in
+// the same compare-and-set; a new message cancels only the user's pending
+// cards of that conversation.
+func TestClaimWithEditsAndCancelForSource(t *testing.T) {
+	f := newFixture(t)
+	a := f.action(t, "edit", time.Hour)
+	got, ok, err := f.store.ClaimPendingAction(f.ctx, a.Uuid, f.dealer.ID, f.user.ID,
+		[]byte(`{"title":"edited"}`), []byte(`{"summary":"edited"}`))
+	if err != nil || !ok || string(got.Input) != `{"title": "edited"}` || string(got.Preview) != `{"summary": "edited"}` {
+		t.Fatalf("claim with edits: ok=%v input=%s preview=%s err=%v", ok, got.Input, got.Preview, err)
+	}
+
+	open1, open2 := f.action(t, "src1", time.Hour), f.action(t, "src2", time.Hour)
+	executing := f.action(t, "src3", time.Hour)
+	if _, ok, _ := f.store.ClaimPendingAction(f.ctx, executing.Uuid, f.dealer.ID, f.user.ID, nil, nil); !ok {
+		t.Fatal("claim")
+	}
+	params := db.CancelAIPendingActionsForSourceParams{
+		Source: model.SourcePanel, SourceRef: pgtype.Text{String: "conv-1", Valid: true},
+		OrganizationID: f.dealer.ID, UserID: f.other.ID,
+	}
+	if rows, err := f.store.CancelPendingActionsForSource(f.ctx, params); err != nil || len(rows) != 0 {
+		t.Fatalf("other user's message cancelled %d cards (%v)", len(rows), err)
+	}
+	params.UserID = f.user.ID
+	rows, err := f.store.CancelPendingActionsForSource(f.ctx, params)
+	if err != nil || len(rows) != 2 {
+		t.Fatalf("cancel for source: %d rows, err %v", len(rows), err)
+	}
+	for _, r := range rows {
+		if (r.Uuid != open1.Uuid && r.Uuid != open2.Uuid) || r.Status != model.ActionCancelled || !r.ResolvedAt.Valid {
+			t.Fatalf("cancelled row: %+v", r)
+		}
+	}
+	if list, _ := f.store.ListPendingActions(f.ctx, f.dealer.ID, f.user.ID); len(list) != 0 {
+		t.Fatalf("pending after cancel: %d", len(list))
+	}
+}
+
+// TEC-387 acceptance: the sweep queries move each row once; running them
+// again changes nothing.
+func TestSweepQueriesTransitionOnce(t *testing.T) {
+	f := newFixture(t)
+	pending := f.action(t, "exp", time.Minute)
+	running := f.action(t, "stale", time.Hour)
+	if _, ok, _ := f.store.ClaimPendingAction(f.ctx, running.Uuid, f.dealer.ID, f.user.ID, nil, nil); !ok {
+		t.Fatal("claim")
+	}
+	later := time.Now().Add(2 * time.Minute)
+
+	if _, ok, err := f.store.ExpirePendingAction(f.ctx, pending.ID, time.Now().Add(-time.Hour)); err != nil || ok {
+		t.Fatalf("expired a card before its expiry: ok=%v err=%v", ok, err)
+	}
+	n, err := f.store.ExpirePendingActions(f.ctx, later)
+	if err != nil || n < 1 {
+		t.Fatalf("first expire: %d %v", n, err)
+	}
+	if n, err := f.store.ExpirePendingActions(f.ctx, later); err != nil || n != 0 {
+		t.Fatalf("second expire changed %d rows (%v)", n, err)
+	}
+	if _, ok, _ := f.store.ExpirePendingAction(f.ctx, pending.ID, later); ok {
+		t.Fatal("single expire after the sweep must find nothing")
+	}
+
+	stale, err := f.store.FailStalePendingActions(f.ctx, later, "outcome unknown")
+	if err != nil || len(stale) != 1 || stale[0].Uuid != running.Uuid || stale[0].Status != model.ActionFailed ||
+		stale[0].Error.String != "outcome unknown" || !stale[0].ResolvedAt.Valid {
+		t.Fatalf("first fail-stale: %+v %v", stale, err)
+	}
+	if again, err := f.store.FailStalePendingActions(f.ctx, later, "outcome unknown"); err != nil || len(again) != 0 {
+		t.Fatalf("second fail-stale changed %d rows (%v)", len(again), err)
+	}
+	row, ok, err := f.store.PendingActionForUser(f.ctx, pending.Uuid, f.dealer.ID, f.user.ID)
+	if err != nil || !ok || row.Status != model.ActionExpired {
+		t.Fatalf("pending row: %+v ok=%v err=%v", row, ok, err)
+	}
+	if _, ok, _ := f.store.PendingActionForUser(f.ctx, pending.Uuid, f.dealer.ID, f.other.ID); ok {
+		t.Fatal("another user's lookup found the action")
+	}
+	byKey, ok, err := f.store.PendingActionByKey(f.ctx, pending.IdempotencyKey)
+	if err != nil || !ok || byKey.Uuid != pending.Uuid {
+		t.Fatalf("by key: %+v %v %v", byKey, ok, err)
 	}
 }
