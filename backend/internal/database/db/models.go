@@ -1023,6 +1023,27 @@ type DocumentTemplate struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type EfficiencyFact struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ServiceID      int64              `json:"service_id"`
+	ServiceItemID  int64              `json:"service_item_id"`
+	UnitID         int64              `json:"unit_id"`
+	ProductID      int64              `json:"product_id"`
+	DealerOrgID    int64              `json:"dealer_org_id"`
+	StaffUserID    pgtype.Int8        `json:"staff_user_id"`
+	BodyType       pgtype.Text        `json:"body_type"`
+	PartKey        string             `json:"part_key"`
+	ActualMeters   pgtype.Numeric     `json:"actual_meters"`
+	ExpectedMeters pgtype.Numeric     `json:"expected_meters"`
+	WasteRatio     pgtype.Numeric     `json:"waste_ratio"`
+	ServiceDate    pgtype.Date        `json:"service_date"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type EodReport struct {
 	ID                int64              `json:"id"`
 	Uuid              uuid.UUID          `json:"uuid"`
@@ -2015,6 +2036,22 @@ type OutboxEvent struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type PartConsumptionExpectation struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ProductID      pgtype.Int8        `json:"product_id"`
+	CategoryID     pgtype.Int8        `json:"category_id"`
+	BodyType       pgtype.Text        `json:"body_type"`
+	PartKey        string             `json:"part_key"`
+	ExpectedMeters pgtype.Numeric     `json:"expected_meters"`
+	Source         string             `json:"source"`
+	SampleSize     int32              `json:"sample_size"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Permission struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -2325,6 +2362,24 @@ type RolePermission struct {
 	RoleID       int64  `json:"role_id"`
 	PermissionID int64  `json:"permission_id"`
 	Scope        string `json:"scope"`
+}
+
+type RollEfficiency struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	UnitID          int64              `json:"unit_id"`
+	ProductID       int64              `json:"product_id"`
+	InitialMeters   pgtype.Numeric     `json:"initial_meters"`
+	ConsumedMeters  pgtype.Numeric     `json:"consumed_meters"`
+	ExpectedMeters  pgtype.Numeric     `json:"expected_meters"`
+	WasteMeters     pgtype.Numeric     `json:"waste_meters"`
+	RemainingMeters pgtype.Numeric     `json:"remaining_meters"`
+	ServiceCount    int32              `json:"service_count"`
+	LastUsedAt      pgtype.Timestamptz `json:"last_used_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Room struct {

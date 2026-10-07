@@ -409,6 +409,9 @@ type Querier interface {
 	CreateOrderOutbound(ctx context.Context, arg CreateOrderOutboundParams) (OrderOutbound, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) (OrganizationMember, error)
+	// TEC-487: efficiency and waste analytics. These queries are intentionally
+	// read/projection focused; authorization scope is resolved by the usecase.
+	CreatePartConsumptionExpectation(ctx context.Context, arg CreatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
 	CreatePlateFormat(ctx context.Context, arg CreatePlateFormatParams) (PlateFormat, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
@@ -608,6 +611,7 @@ type Querier interface {
 	DeleteOrderItem(ctx context.Context, id int64) (int64, error)
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
+	DeletePartConsumptionExpectation(ctx context.Context, arg DeletePartConsumptionExpectationParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
 	DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error)
@@ -654,6 +658,9 @@ type Querier interface {
 	// Every organization below the given one (not including itself).
 	Descendants(ctx context.Context, id int64) ([]Organization, error)
 	EODReportExists(ctx context.Context, arg EODReportExistsParams) (bool, error)
+	EfficiencyComparison(ctx context.Context, arg EfficiencyComparisonParams) ([]EfficiencyComparisonRow, error)
+	EfficiencyMonthlyTrend(ctx context.Context, arg EfficiencyMonthlyTrendParams) ([]EfficiencyMonthlyTrendRow, error)
+	EfficiencySummary(ctx context.Context, arg EfficiencySummaryParams) ([]EfficiencySummaryRow, error)
 	// ---------------------------------------------------------------------------
 	// Product stock projections.
 	EnsureBinProductStock(ctx context.Context, arg EnsureBinProductStockParams) error
@@ -758,6 +765,7 @@ type Querier interface {
 	GetAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
 	GetBarcodeBatchByUUID(ctx context.Context, arg GetBarcodeBatchByUUIDParams) (BarcodeBatch, error)
+	GetBestPartExpectation(ctx context.Context, arg GetBestPartExpectationParams) (PartConsumptionExpectation, error)
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
 	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
@@ -1892,6 +1900,7 @@ type Querier interface {
 	// Territories of the brand that overlap an area: the same area, an ancestor
 	// (the country or the province of a district) or a descendant.
 	ListOverlappingTerritories(ctx context.Context, arg ListOverlappingTerritoriesParams) ([]ListOverlappingTerritoriesRow, error)
+	ListPartConsumptionExpectations(ctx context.Context, arg ListPartConsumptionExpectationsParams) ([]ListPartConsumptionExpectationsRow, error)
 	// Pending recipients of a sending campaign, in id pages; before (when set)
 	// keeps those not touched since then (the scheduler re-enqueues their task;
 	// a still queued task is deduplicated by its task id).
@@ -2003,6 +2012,7 @@ type Querier interface {
 	ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error)
 	ListRolesForExport(ctx context.Context, arg ListRolesForExportParams) ([]Role, error)
 	ListRolesForUserIDs(ctx context.Context, userIds []int64) ([]ListRolesForUserIDsRow, error)
+	ListRollEfficiency(ctx context.Context, arg ListRollEfficiencyParams) ([]ListRollEfficiencyRow, error)
 	// ---------------------------------------------------------------------------
 	// Typed locations (aisle, shelf, bin).
 	// The whole tree of a room, parents before children is not guaranteed:
@@ -2763,11 +2773,13 @@ type Querier interface {
 	PurgeNotificationDeliveriesBefore(ctx context.Context, arg PurgeNotificationDeliveriesBeforeParams) (int64, error)
 	PurgeNotificationsBefore(ctx context.Context, arg PurgeNotificationsBeforeParams) (int64, error)
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	RebuildRollEfficiency(ctx context.Context, unitID pgtype.Int8) (int64, error)
 	// Recomputes the subtotal from the lines (total = subtotal + tax_total).
 	RecalculateOrderTotals(ctx context.Context, id int64) (Order, error)
 	ReceiveTransferRequest(ctx context.Context, arg ReceiveTransferRequestParams) (StockTransferRequest, error)
 	// A failed attempt that will be retried: the recipient stays pending.
 	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
+	RefreshEfficiencyFactsForServiceItem(ctx context.Context, targetServiceItemID int64) (int64, error)
 	RejectCertificate(ctx context.Context, arg RejectCertificateParams) (Certificate, error)
 	// CAS pending_review → rejected with the reviewer's note. The previous
 	// published snapshot (if any) stays live.
@@ -3141,6 +3153,7 @@ type Querier interface {
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
+	UpdatePartConsumptionExpectation(ctx context.Context, arg UpdatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	// UpdatePlannedStaffPayment edits a payment that is not booked yet.
 	UpdatePlannedStaffPayment(ctx context.Context, arg UpdatePlannedStaffPaymentParams) (StaffPayment, error)
 	UpdatePlateFormat(ctx context.Context, arg UpdatePlateFormatParams) (PlateFormat, error)

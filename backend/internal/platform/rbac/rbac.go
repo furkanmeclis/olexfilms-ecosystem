@@ -304,6 +304,11 @@ const (
 	PermShowcaseRead           = "showcase.read"
 	PermShowcaseWrite          = "showcase.write"
 	PermPlatformShowcaseReview = "platform.showcase.review"
+	// TEC-487 (000115): efficiency and waste analytics (F5-06a). Dealers
+	// read their own data, distributors read subtree, center manages
+	// expected consumption definitions.
+	PermEfficiencyRead               = "efficiency.read"
+	PermEfficiencyExpectationsManage = "efficiency.expectations.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.
