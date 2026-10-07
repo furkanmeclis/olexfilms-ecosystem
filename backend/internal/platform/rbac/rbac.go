@@ -264,6 +264,13 @@ const (
 	PermAIUsageRead      = "ai.usage.read"
 	PermAISettingsManage = "ai.settings.manage"
 	PermAIActionsConfirm = "ai.actions.confirm"
+	// TEC-393 (000103): WhatsApp conversations (F4-02). Only the platform
+	// admin sees WhatsApp conversations (F4 user answer S2), so all three are
+	// super_admin only.
+	PermConversationsRead   = "conversations.read"
+	PermConversationsReply  = "conversations.reply"
+	PermConversationsManage = "conversations.manage"
+
 	// TEC-400 (000104): MCP OAuth (F4-03). mcp.connect goes to the owner and
 	// center roles; the customer MCP endpoint is gated by realm, not by a
 	// permission.

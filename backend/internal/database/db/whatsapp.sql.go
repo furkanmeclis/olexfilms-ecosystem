@@ -108,31 +108,40 @@ func (q *Queries) InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticePara
 const insertMessage = `-- name: InsertMessage :one
 INSERT INTO messages (
     conversation_id, organization_id, brand_id, channel, direction, sender_type,
-    external_id, body, media, status, raw, sent_at
+    external_id, body, media, status, raw, sent_at,
+    sender_user_id, ai_run_id, media_storage_key, media_mime, media_size
 ) VALUES (
     $1, $2, $3, $4,
     $5, $6, $7, $8, $9,
-    $10, $11, $12
+    $10, $11, $12,
+    $13, $14, $15, $16,
+    $17
 )
 ON CONFLICT (channel, external_id) DO NOTHING
-RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at
+RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at
 `
 
 type InsertMessageParams struct {
-	ConversationID int64              `json:"conversation_id"`
-	OrganizationID pgtype.Int8        `json:"organization_id"`
-	BrandID        pgtype.Int8        `json:"brand_id"`
-	Channel        string             `json:"channel"`
-	Direction      string             `json:"direction"`
-	SenderType     string             `json:"sender_type"`
-	ExternalID     string             `json:"external_id"`
-	Body           pgtype.Text        `json:"body"`
-	Media          []byte             `json:"media"`
-	Status         string             `json:"status"`
-	Raw            []byte             `json:"raw"`
-	SentAt         pgtype.Timestamptz `json:"sent_at"`
+	ConversationID  int64              `json:"conversation_id"`
+	OrganizationID  pgtype.Int8        `json:"organization_id"`
+	BrandID         pgtype.Int8        `json:"brand_id"`
+	Channel         string             `json:"channel"`
+	Direction       string             `json:"direction"`
+	SenderType      string             `json:"sender_type"`
+	ExternalID      string             `json:"external_id"`
+	Body            pgtype.Text        `json:"body"`
+	Media           []byte             `json:"media"`
+	Status          string             `json:"status"`
+	Raw             []byte             `json:"raw"`
+	SentAt          pgtype.Timestamptz `json:"sent_at"`
+	SenderUserID    pgtype.Int8        `json:"sender_user_id"`
+	AiRunID         pgtype.Int8        `json:"ai_run_id"`
+	MediaStorageKey pgtype.Text        `json:"media_storage_key"`
+	MediaMime       pgtype.Text        `json:"media_mime"`
+	MediaSize       pgtype.Int8        `json:"media_size"`
 }
 
+// TEC-393: sender_user_id (staff), ai_run_id and stored media are optional.
 func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (Message, error) {
 	row := q.db.QueryRow(ctx, insertMessage,
 		arg.ConversationID,
@@ -147,6 +156,11 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (M
 		arg.Status,
 		arg.Raw,
 		arg.SentAt,
+		arg.SenderUserID,
+		arg.AiRunID,
+		arg.MediaStorageKey,
+		arg.MediaMime,
+		arg.MediaSize,
 	)
 	var i Message
 	err := row.Scan(
@@ -165,6 +179,12 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (M
 		&i.Raw,
 		&i.SentAt,
 		&i.CreatedAt,
+		&i.SenderUserID,
+		&i.AiRunID,
+		&i.MediaStorageKey,
+		&i.MediaMime,
+		&i.MediaSize,
+		&i.DeliveryStatusAt,
 	)
 	return i, err
 }
@@ -373,7 +393,8 @@ func (q *Queries) SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled
 
 const updateMessageStatusByExternalIDs = `-- name: UpdateMessageStatusByExternalIDs :execrows
 UPDATE messages
-SET status = $1
+SET status = $1,
+    delivery_status_at = NOW()
 WHERE channel = $2
   AND external_id = ANY($3::text[])
   AND direction = 'out'
@@ -449,7 +470,7 @@ ON CONFLICT (channel, contact_e164) DO UPDATE SET
     contact_name = COALESCE(EXCLUDED.contact_name, conversations.contact_name),
     user_id = COALESCE(conversations.user_id, EXCLUDED.user_id),
     last_message_at = GREATEST(conversations.last_message_at, EXCLUDED.last_message_at)
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
 `
 
 type UpsertConversationParams struct {
@@ -481,6 +502,20 @@ func (q *Queries) UpsertConversation(ctx context.Context, arg UpsertConversation
 		&i.LastMessageAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Status,
+		&i.AiMode,
+		&i.AiPausedUntil,
+		&i.AssignedUserID,
+		&i.AssignedOrgID,
+		&i.IdentityKind,
+		&i.IdentityUserID,
+		&i.IdentityOrgID,
+		&i.IdentityResolvedAt,
+		&i.Locale,
+		&i.LastInboundAt,
+		&i.UnreadCount,
+		&i.AiConsentAt,
+		&i.VisitorLeadID,
 	)
 	return i, err
 }

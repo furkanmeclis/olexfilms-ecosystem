@@ -66,20 +66,25 @@ ON CONFLICT (channel, contact_e164) DO UPDATE SET
 RETURNING *;
 
 -- name: InsertMessage :one
+-- TEC-393: sender_user_id (staff), ai_run_id and stored media are optional.
 INSERT INTO messages (
     conversation_id, organization_id, brand_id, channel, direction, sender_type,
-    external_id, body, media, status, raw, sent_at
+    external_id, body, media, status, raw, sent_at,
+    sender_user_id, ai_run_id, media_storage_key, media_mime, media_size
 ) VALUES (
     sqlc.arg(conversation_id), sqlc.narg(organization_id), sqlc.narg(brand_id), sqlc.arg(channel),
     sqlc.arg(direction), sqlc.arg(sender_type), sqlc.arg(external_id), sqlc.narg(body), sqlc.narg(media),
-    sqlc.arg(status), sqlc.narg(raw), sqlc.narg(sent_at)
+    sqlc.arg(status), sqlc.narg(raw), sqlc.narg(sent_at),
+    sqlc.narg(sender_user_id), sqlc.narg(ai_run_id), sqlc.narg(media_storage_key), sqlc.narg(media_mime),
+    sqlc.narg(media_size)
 )
 ON CONFLICT (channel, external_id) DO NOTHING
 RETURNING *;
 
 -- name: UpdateMessageStatusByExternalIDs :execrows
 UPDATE messages
-SET status = sqlc.arg(status)
+SET status = sqlc.arg(status),
+    delivery_status_at = NOW()
 WHERE channel = sqlc.arg(channel)
   AND external_id = ANY(sqlc.arg(external_ids)::text[])
   AND direction = 'out'

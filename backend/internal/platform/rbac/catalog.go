@@ -608,6 +608,23 @@ var Permissions = []PermissionDef{
 		Description: "Confirm or cancel write actions proposed by the AI assistant for oneself.",
 	},
 
+	// TEC-393: WhatsApp conversations (F4-02). Appended last; migration
+	// 000103 seeds them. Platform admin only (F4 user answer S2).
+	{
+		Slug: PermConversationsRead, Name: "Read conversations", Module: "conversations",
+		Scopes: scopesAll, SuperAdminOnly: true,
+		Description: "Read WhatsApp conversations, their messages and AI runs.",
+	},
+	{
+		Slug: PermConversationsReply, Name: "Reply to conversations", Module: "conversations",
+		Scopes: scopesAll, SuperAdminOnly: true,
+		Description: "Send staff replies and attachments in WhatsApp conversations.",
+	},
+	{
+		Slug: PermConversationsManage, Name: "Manage conversations", Module: "conversations",
+		Scopes: scopesAll, SuperAdminOnly: true,
+		Description: "Assign, close and reopen WhatsApp conversations and change their AI mode.",
+	},
 	// TEC-400: MCP OAuth (F4-03). Appended last; migration 000104 seeds them.
 	{
 		Slug: PermMCPConnect, Name: "Connect MCP clients", Module: "mcp", Scopes: scopesSelf,
