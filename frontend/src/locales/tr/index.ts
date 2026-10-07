@@ -44,6 +44,7 @@ import roles from "./roles.json";
 import search from "./search.json";
 import services from "./services.json";
 import settings from "./settings.json";
+import staffReports from "./staff_reports.json";
 import stepup from "./stepup.json";
 import stock from "./stock.json";
 import storage from "./storage.json";
@@ -99,6 +100,7 @@ const catalog: LocaleCatalog = {
   search,
   services,
   settings,
+  staff_reports: staffReports,
   stepup,
   stock,
   storage,

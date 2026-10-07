@@ -59,6 +59,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { announcementsNavAdornment } from "@/features/announcements/nav";
 import { leadsNavItem } from "@/features/leads/nav";
+import { staffReportsNavGroup } from "@/features/staff-reports/nav";
 import { defineNav } from "@/features/nav-engine";
 import { usersNavItem } from "@/features/users/nav";
 
@@ -616,6 +617,8 @@ export function tenantNav(slug: string) {
           },
         ],
       },
+      // TEC-349: staff cards, payments and the own-book reports.
+      staffReportsNavGroup(slug),
       {
         // TEC-176: the book reads need accounting.read and the accounting
         // module (same gates as /v1/accounting); write controls inside the

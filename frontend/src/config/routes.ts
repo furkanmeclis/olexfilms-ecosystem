@@ -48,6 +48,12 @@ export const routes = {
       categories: (slug: string) => `/t/${slug}/catalog/categories`,
       services: (slug: string) => `/t/${slug}/service-catalog`,
     },
+    /** TEC-349 staff cards and payments, own-book reports. */
+    staff: {
+      list: (slug: string) => `/t/${slug}/staff`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/staff/${uuid}`,
+    },
+    accountingReports: (slug: string) => `/t/${slug}/accounting/reports`,
     /** TEC-176 accounting; statement and disputes: TEC-195. */
     accounting: {
       root: (slug: string) => `/t/${slug}/accounting`,
