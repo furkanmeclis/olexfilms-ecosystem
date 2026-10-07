@@ -47,6 +47,8 @@ func RegisterRoutes(
 	))
 	// TEC-337: claim detail with the center's cost summary.
 	mux.Handle("GET /v1/warranty-claims/{uuid}", tenant(h.Get, rbac.PermWarrantyClaimsRead))
+	// TEC-339: claim photo gallery of the detail page.
+	mux.Handle("GET /v1/warranty-claims/{uuid}/photos/{photo}", tenant(h.Photo, rbac.PermWarrantyClaimsRead))
 	mux.Handle("GET /v1/portal/warranty-claims", middleware.Chain(
 		http.HandlerFunc(h.PortalList), authn, middleware.RequirePermission(rbac.PermWarrantiesRead),
 	))

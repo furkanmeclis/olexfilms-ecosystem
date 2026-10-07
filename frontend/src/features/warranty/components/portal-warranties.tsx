@@ -12,6 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { routes } from "@/config/routes";
 import { portalApi } from "@/features/portal/lib/portal-client";
+import { PortalClaimBadge } from "@/features/warranty-claims/components/portal-claim-badge";
+import { latestClaimByWarranty } from "@/features/warranty-claims/lib/claims";
 import { WarrantyFilterBar } from "@/features/warranty/components/warranty-filter-bar";
 import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { WarrantyProgressBar } from "@/features/warranty/components/warranty-progress";
@@ -70,6 +72,16 @@ export function PortalWarranties() {
     queryFn: () => portalApi.listWarranties(query),
     placeholderData: keepPreviousData,
   });
+
+  // TEC-339: claim status per warranty (status + date only).
+  const claims = useQuery({
+    queryKey: ["portal", "warranty-claims"],
+    queryFn: () => portalApi.listWarrantyClaims(),
+  });
+  const claimByWarranty = useMemo(
+    () => latestClaimByWarranty(claims.data?.items ?? []),
+    [claims.data],
+  );
 
   const change = (patch: Partial<WarrantyListFilters>) => {
     setFilters((f) => ({ ...f, ...patch }));
@@ -173,6 +185,9 @@ export function PortalWarranties() {
                     />
                   </div>
                   <WarrantyProgressBar warranty={w} />
+                  {claimByWarranty.get(w.uuid) ? (
+                    <PortalClaimBadge claim={claimByWarranty.get(w.uuid)!} />
+                  ) : null}
                   {w.status === "active" ? (
                     <WarrantyCertificateButton
                       client={portalCertificateClient(w.service.uuid)}

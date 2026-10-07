@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { WarrantyClaimSection } from "@/features/warranty-claims/components/open-claim-section";
 import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { WarrantyProgressBar } from "@/features/warranty/components/warranty-progress";
 import {
@@ -174,7 +175,9 @@ export function WarrantyDetailPage({
       ]}
       actions={
         w ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* TEC-339: the live claim, or "open a claim". */}
+            <WarrantyClaimSection slug={slug} warranty={w} />
             {/* TEC-188: the certificate PDF of the service (active only). */}
             {w.status === "active" ? (
               <WarrantyCertificateButton

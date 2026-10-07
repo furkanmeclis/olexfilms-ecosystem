@@ -16,6 +16,8 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
+
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -34,11 +36,7 @@ const (
 
 var ErrReapplyOpen = errors.New("warranty claims: reapply service is still open")
 
-type ReapplyServiceView struct {
-	UUID      uuid.UUID `json:"uuid"`
-	ServiceNo string    `json:"service_no"`
-	Status    string    `json:"status"`
-}
+type ReapplyServiceView = model.ServiceRef
 
 func RegisterEventHandlers(bus events.Bus, pool txBeginner, q *db.Queries, out outbox.Enqueuer, log *slog.Logger) {
 	if bus == nil || pool == nil || q == nil {

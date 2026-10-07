@@ -31,6 +31,7 @@ import {
   Shield,
   ShoppingCart,
   SlidersHorizontal,
+  ShieldAlert,
   ShieldCheck,
   Upload,
   UserRound,
@@ -458,6 +459,15 @@ export function tenantNav(slug: string) {
             icon: ShieldCheck,
             permission: permissions.warranties.read,
             feature: "services",
+          },
+          {
+            // TEC-339: warranty claims (dealer, distributor, center).
+            id: "warranty-claims-list",
+            titleKey: "warranty.claims.nav",
+            href: routes.tenant.warrantyClaims.list(slug),
+            icon: ShieldAlert,
+            permission: permissions.warrantyClaims.read,
+            feature: "warranty_claims",
           },
           {
             // TEC-340: center / distributor warranty claim report.
