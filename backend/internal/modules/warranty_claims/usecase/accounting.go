@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -46,6 +47,13 @@ import (
 // Every row is converted at the rate of the posting day and keeps it (K7).
 // A claim that already has warranty_claim rows is skipped, and the posting
 // API itself is idempotent per (organization, source, role, revision).
+//
+// Cancelling the completed re-application service (TEC-382, F3-06h)
+// reverses every open warranty_claim row of the claim with the accounting
+// reversal pattern (posting.VoidBySourceTx: same amounts, opposite sign,
+// reversal_of_id to the original; nothing is deleted or updated) and adds a
+// note to the claim timeline. Rows already reversed are skipped, so a
+// repeated cancellation writes nothing. Stock is not touched here.
 const (
 	AccountingSourceType = "warranty_claim"
 	RoleWarrantyCost     = "warranty_cost"
@@ -58,6 +66,7 @@ type Poster interface {
 	PostExpense(ctx context.Context, tx pgx.Tx, e posting.Entry) (posting.Result, error)
 	PostIncome(ctx context.Context, tx pgx.Tx, e posting.Entry) (posting.Result, error)
 	PostStockReturnTx(ctx context.Context, tx pgx.Tx, r posting.StockReturn) (posting.SaleResult, error)
+	VoidBySourceTx(ctx context.Context, tx pgx.Tx, src posting.Source, reason string, actorUserID *int64) (posting.VoidResult, error)
 }
 
 // Settings reads the labor rule (*sysconfig.Service).
@@ -83,13 +92,14 @@ func NewAccounting(pool txBeginner, poster Poster, settings Settings, log *slog.
 }
 
 // RegisterAccountingHandlers subscribes the claim accounting to
-// service.completed (TEC-337).
+// service.completed (TEC-337) and service.cancelled (TEC-382).
 func RegisterAccountingHandlers(bus events.Bus, pool txBeginner, poster Poster, settings Settings, log *slog.Logger) {
 	if bus == nil || pool == nil || poster == nil {
 		return
 	}
 	a := NewAccounting(pool, poster, settings, log)
 	bus.Subscribe(events.ServiceCompleted, a.HandleServiceCompleted)
+	bus.Subscribe(events.ServiceCancelled, a.HandleServiceCancelled)
 }
 
 // HandleServiceCompleted is the bus handler of service.completed.
@@ -105,6 +115,27 @@ func (a *Accounting) HandleServiceCompleted(ctx context.Context, ev events.Event
 	_, err := a.PostReapplyService(ctx, serviceID, brandID, ev.ActorUserID)
 	if err != nil {
 		a.log.Error("warranty_claim_accounting_failed", "service_id", serviceID, "error", err)
+	}
+	return err
+}
+
+// HandleServiceCancelled is the bus handler of service.cancelled (TEC-382).
+func (a *Accounting) HandleServiceCancelled(ctx context.Context, ev events.Event) error {
+	serviceID, ok := payloadInt64(ev.Payload["service_id"])
+	if !ok && ev.EntityID != nil {
+		serviceID, ok = *ev.EntityID, *ev.EntityID > 0
+	}
+	if !ok {
+		return nil
+	}
+	brandID, ok := payloadInt64(ev.Payload["brand_id"])
+	if !ok {
+		return nil
+	}
+	reason, _ := ev.Payload["reason"].(string)
+	_, err := a.ReverseReapplyService(ctx, serviceID, brandID, reason, ev.ActorUserID)
+	if err != nil {
+		a.log.Error("warranty_claim_accounting_reversal_failed", "service_id", serviceID, "error", err)
 	}
 	return err
 }
@@ -191,6 +222,92 @@ func (a *Accounting) PostReapplyService(ctx context.Context, serviceID, brandID 
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return PostedClaim{}, fmt.Errorf("warranty claims: accounting commit: %w", err)
+	}
+	return out, nil
+}
+
+// EventNote is the claim timeline event type of the accounting reversal; the
+// payload carries ReversalEventKind as "kind".
+const (
+	EventNote         = "note"
+	ReversalEventKind = "accounting_reversed"
+)
+
+// ReversedClaim summarizes what ReverseReapplyService wrote.
+type ReversedClaim struct {
+	ClaimID     int64
+	Skipped     bool // nothing to do: not a claim service, or nothing open
+	ReversalIDs []int64
+}
+
+// ReverseReapplyService reverses the open warranty_claim rows of the claim
+// whose re-application service was cancelled, in one transaction, and adds
+// a timeline note. A service that is not cancelled, has no claim, is not the
+// claim's re-application service or whose claim has nothing open writes
+// nothing.
+func (a *Accounting) ReverseReapplyService(ctx context.Context, serviceID, brandID int64, reason string,
+	actor *int64) (ReversedClaim, error) {
+	tx, err := a.pool.Begin(ctx)
+	if err != nil {
+		return ReversedClaim{}, fmt.Errorf("warranty claims: reversal begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := db.New(tx)
+	svc, err := q.GetService(ctx, db.GetServiceParams{ID: serviceID, BrandID: brandID})
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (!svc.WarrantyClaimID.Valid || svc.Status != "cancelled")) {
+		return ReversedClaim{Skipped: true}, nil
+	}
+	if err != nil {
+		return ReversedClaim{}, fmt.Errorf("warranty claims: reversal service: %w", err)
+	}
+	claim, err := q.GetWarrantyClaimByIDForUpdate(ctx, db.GetWarrantyClaimByIDForUpdateParams{
+		ID: svc.WarrantyClaimID.Int64, BrandID: brandID,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ReversedClaim{Skipped: true}, nil
+	}
+	if err != nil {
+		return ReversedClaim{}, fmt.Errorf("warranty claims: reversal claim: %w", err)
+	}
+	out := ReversedClaim{ClaimID: claim.ID, Skipped: true}
+	if !claim.ReapplyServiceID.Valid || claim.ReapplyServiceID.Int64 != svc.ID {
+		return out, nil
+	}
+	reason = strings.TrimSpace(reason)
+	desc := fmt.Sprintf("Garanti talebi #%d iptal (hizmet %s)", claim.ClaimNo, svc.ServiceNo)
+	if reason != "" {
+		desc += ": " + reason
+	}
+	vr, err := a.poster.VoidBySourceTx(ctx, tx, posting.Source{Type: AccountingSourceType, UUID: claim.Uuid}, desc, actor)
+	if err != nil {
+		return ReversedClaim{}, fmt.Errorf("warranty claims: reverse claim rows: %w", err)
+	}
+	if len(vr.Reversals) == 0 {
+		return out, nil
+	}
+	out.Skipped = false
+	for _, r := range vr.Reversals {
+		out.ReversalIDs = append(out.ReversalIDs, r.ID)
+	}
+	payload, err := json.Marshal(map[string]any{
+		"kind": ReversalEventKind, "service_uuid": svc.Uuid.String(), "service_no": svc.ServiceNo,
+		"reason": reason, "reversal_ids": out.ReversalIDs,
+	})
+	if err != nil {
+		return ReversedClaim{}, fmt.Errorf("warranty claims: reversal event payload: %w", err)
+	}
+	var actorID pgtype.Int8
+	if actor != nil {
+		actorID = int8(*actor)
+	}
+	if _, err := q.AddWarrantyClaimEvent(ctx, db.AddWarrantyClaimEventParams{
+		ClaimID: claim.ID, OrganizationID: claim.OrganizationID, BrandID: claim.BrandID,
+		EventType: EventNote, Note: text(desc), Payload: payload, ActorUserID: actorID,
+	}); err != nil {
+		return ReversedClaim{}, fmt.Errorf("warranty claims: reversal event: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return ReversedClaim{}, fmt.Errorf("warranty claims: reversal commit: %w", err)
 	}
 	return out, nil
 }
@@ -424,7 +541,8 @@ func (s *Service) Get(ctx context.Context, c Caller, id uuid.UUID) (model.ClaimV
 }
 
 // costSummary sums the open warranty_claim rows of the center's book; nil
-// while the claim is not booked.
+// while the claim is not booked. A booked claim whose rows are all reversed
+// (TEC-382) nets to zero.
 func (s *Service) costSummary(ctx context.Context, row db.WarrantyClaim) (*model.CostSummary, error) {
 	center, err := s.q.GetBrandCenter(ctx, row.BrandID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -440,7 +558,13 @@ func (s *Service) costSummary(ctx context.Context, row db.WarrantyClaim) (*model
 		return nil, fmt.Errorf("warranty claims: cost summary: %w", err)
 	}
 	if len(entries) == 0 {
-		return nil, nil
+		n, err := s.q.CountWarrantyClaimFinanceEntries(ctx, row.Uuid)
+		if err != nil {
+			return nil, fmt.Errorf("warranty claims: cost summary rows: %w", err)
+		}
+		if n == 0 {
+			return nil, nil
+		}
 	}
 	product, labor := new(big.Rat), new(big.Rat)
 	for _, e := range entries {

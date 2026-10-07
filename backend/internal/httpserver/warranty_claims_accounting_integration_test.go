@@ -112,4 +112,43 @@ WHERE source_type = 'warranty_claim' AND source_uuid = $1 AND organization_id = 
 		view.CostSummary.Labor != "0.00" || view.CostSummary.Currency != "TRY" {
 		t.Fatalf("claim view = %s", env.Data)
 	}
+
+	// TEC-382: cancelling the completed re-application service reverses the
+	// claim rows through the server bus (twice: one reversal per row) and the
+	// cost summary nets to zero.
+	cancelled, err := it.q.CancelCompletedService(ctx, db.CancelCompletedServiceParams{
+		ID: completed.ID, CancelReason: pgtype.Text{String: "TEC-382 iptal", Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("cancel reapply service: %v", err)
+	}
+	cancelEv := serviceEvent(events.ServiceCancelled, cancelled)
+	delete(cancelEv.Payload, "service_id") // the cancel-completed payload has none
+	cancelEv.Payload["from_status"], cancelEv.Payload["reason"] = "completed", "TEC-382 iptal"
+	for i := 0; i < 2; i++ {
+		if err := it.srv.events.Publish(ctx, cancelEv); err != nil {
+			t.Fatalf("publish reapply cancelled: %v", err)
+		}
+	}
+	var originals, reversals int
+	var net string
+	if err := it.pool.QueryRow(ctx, `SELECT COUNT(*) FILTER (WHERE reversal_of_id IS NULL),
+       COUNT(*) FILTER (WHERE reversal_of_id IS NOT NULL), SUM(amount)::text
+FROM finance_entries WHERE source_type = 'warranty_claim' AND source_uuid = $1`, claim.Uuid).Scan(&originals, &reversals, &net); err != nil {
+		t.Fatalf("reversal rows: %v", err)
+	}
+	if originals == 0 || reversals != originals || net != "0.00" {
+		t.Fatalf("originals %d, reversals %d, net %s; want one reversal per row, net 0", originals, reversals, net)
+	}
+	code, env = it.do("GET", "/v1/warranty-claims/"+claim.Uuid.String(), hostOlex, it.loginOrg(staff, pw, center), nil)
+	if code != 200 {
+		t.Fatalf("GET claim after cancel: %d %s", code, errCode(env))
+	}
+	view.CostSummary = nil
+	if err := json.Unmarshal(env.Data, &view); err != nil {
+		t.Fatalf("claim payload: %s", env.Data)
+	}
+	if view.CostSummary == nil || view.CostSummary.ProductCost != "0.00" || view.CostSummary.Labor != "0.00" {
+		t.Fatalf("claim view after cancel = %s", env.Data)
+	}
 }
