@@ -95,6 +95,8 @@ type Worker struct {
 	contractPDF ContractPDFFunc
 	// TEC-298: measurement PDF (docs queue).
 	measurementPDF MeasurementPDFFunc
+	// TEC-393: 90-day retention of conversation AI runs.
+	purgeConversationAIRuns ConversationAIRunPurgeFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -178,6 +180,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskGlorianReconcile, w.handleGlorianReconcile)
 	mux.HandleFunc(TaskGlorianOutboundReplayOne, w.handleGlorianOutboundReplayOne)
 	mux.HandleFunc(TaskMeasurementPDF, w.handleMeasurementPDF)
+	mux.HandleFunc(TaskConversationAIRunPurge, w.handleConversationAIRunPurge)
 	return w
 }
 

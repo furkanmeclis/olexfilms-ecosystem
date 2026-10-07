@@ -131,6 +131,15 @@ func (s *Service) storeMessage(ctx context.Context, ev whatsapp.InboundEvent, se
 	if err != nil {
 		return false, err
 	}
+	// TEC-393: inbox counters only for a newly stored message.
+	if direction == "in" {
+		_, err = q.TouchConversationInbound(ctx, db.TouchConversationInboundParams{ID: conv.ID, At: ts(at)})
+	} else {
+		_, err = q.TouchConversationOutbound(ctx, db.TouchConversationOutboundParams{ID: conv.ID, At: ts(at)})
+	}
+	if err != nil {
+		return false, err
+	}
 	if direction == "in" && s.outbox != nil {
 		e := events.New(events.WhatsAppMessageReceived)
 		e.EntityType = "message"

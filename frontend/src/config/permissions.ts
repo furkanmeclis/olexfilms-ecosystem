@@ -183,6 +183,10 @@ export const Permission = {
   AiUsageRead: "ai.usage.read",
   AiSettingsManage: "ai.settings.manage",
   AiActionsConfirm: "ai.actions.confirm",
+  /** TEC-393: WhatsApp conversations (platform admin only). */
+  ConversationsRead: "conversations.read",
+  ConversationsReply: "conversations.reply",
+  ConversationsManage: "conversations.manage",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];

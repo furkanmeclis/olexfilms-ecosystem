@@ -48,6 +48,7 @@ import (
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
+	whatsapprepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/repository"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	bulkadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
@@ -342,6 +343,8 @@ func main() {
 			glorian.NewReconciler(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log).ReconcileTask,
 			glorianOrders.ReplayOneTask,
 		).
+		// TEC-393: 90-day retention of WhatsApp conversation AI runs.
+		WithConversationAIRunPurge(whatsapprepo.New(pool).PurgeExpiredAIRuns).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,
