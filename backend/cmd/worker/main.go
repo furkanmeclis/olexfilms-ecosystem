@@ -21,6 +21,7 @@ import (
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	campaignsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/campaigns/usecase"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
+	certificatesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/certificates/usecase"
 	contractsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts"
 	contractsrepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
 	contractsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/usecase"
@@ -313,6 +314,7 @@ func main() {
 	waSvc := whatsappmodule.NewService(cfg.Wuzapi, pool, queries, secretBox, notifSvc, log)
 	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
 	featureSvc := features.New(pool, queries, nil, log)
+	certificatesCron := certificatesusecase.NewCron(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
 
 	worker := queue.NewWorkerWithQueues(cfg, log, notifSvc.Deliver, queues).
 		WithWhatsAppPoll(waSvc.PollStatus).
@@ -368,6 +370,7 @@ func main() {
 		WithConversationAIRunPurge(whatsapprepo.New(pool).PurgeExpiredAIRuns).
 		// TEC-387: AI confirmation card expiry and stale run cleanup.
 		WithAIActionSweep(aiusecase.NewActions(airepo.New(pool), nil, nil, log).SweepTask).
+		WithCertificateExpiryScan(certificatesCron.ExpiryScanTask).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,

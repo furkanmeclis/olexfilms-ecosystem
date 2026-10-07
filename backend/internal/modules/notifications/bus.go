@@ -184,6 +184,10 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range ServiceSubscriptionEventCodes {
 		on(name, serviceSubscriptionDispatcher(code))
 	}
+	// TEC-481: internal staff certificate expiry notifications.
+	for name, code := range CertificateEventCodes {
+		on(name, certificateDispatcher(code))
+	}
 	// TEC-297: dealer owners review services with micron differences outside
 	// the configured tolerance.
 	on(events.MeasurementDiffCheckRequired, measurementDiffDispatch)

@@ -271,6 +271,7 @@ const (
 	CertificateUploaded       = "certificate.uploaded"
 	CertificateVerified       = "certificate.verified"
 	CertificateRejected       = "certificate.rejected"
+	CertificatesExpiring      = "certificates.expiring"
 	CertificateExpired        = "certificate.expired"
 	CertificateRevoked        = "certificate.revoked"
 	CertificateServiceWarning = "certificate.service_warning"
@@ -628,6 +629,7 @@ func catalogConstants() []string {
 		CertificateUploaded,
 		CertificateVerified,
 		CertificateRejected,
+		CertificatesExpiring,
 		CertificateExpired,
 		CertificateRevoked,
 		CertificateServiceWarning,
