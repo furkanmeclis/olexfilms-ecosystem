@@ -276,5 +276,7 @@
   "appointments.error.read_only": "حساب الأسطول للعرض فقط.",
   "appointments.error.not_found": "لم يتم العثور على الوكيل أو المركبة.",
   "appointments.error.invalid": "البيانات غير صالحة. تحقق من اختياراتك.",
-  "appointments.error.generic": "تعذر إتمام العملية. حاول مرة أخرى."
+  "appointments.error.generic": "تعذر إتمام العملية. حاول مرة أخرى.",
+  "preferences.campaign_marketing": "رسائل الحملات",
+  "preferences.campaign_marketing_hint": "استلام رسائل الحملات والتسويق. مغلق افتراضيًا؛ إيقافه يسحب الموافقة فورًا."
 }

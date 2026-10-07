@@ -276,5 +276,7 @@
   "appointments.error.read_only": "Park hesabı yalnız baxa bilər.",
   "appointments.error.not_found": "Diler və ya avtomobil tapılmadı.",
   "appointments.error.invalid": "Məlumatlar yanlışdır. Seçimlərinizi yoxlayın.",
-  "appointments.error.generic": "Əməliyyat tamamlanmadı. Yenidən cəhd edin."
+  "appointments.error.generic": "Əməliyyat tamamlanmadı. Yenidən cəhd edin.",
+  "preferences.campaign_marketing": "Kampaniya mesajları",
+  "preferences.campaign_marketing_hint": "Kampaniya və marketinq mesajlarını alın. Varsayılan olaraq bağlıdır; söndürmək razılığı dərhal geri çəkir."
 }

@@ -20,11 +20,12 @@ export const PORTAL_PREFERENCES_KEY = [
   "notification-preferences",
 ] as const;
 
-type Toggle = "email_enabled" | "inapp_enabled";
+type Toggle = "email_enabled" | "inapp_enabled" | "campaign_marketing_enabled";
 
 const TOGGLES: readonly { field: Toggle; key: string }[] = [
   { field: "email_enabled", key: "email" },
   { field: "inapp_enabled", key: "inapp" },
+  { field: "campaign_marketing_enabled", key: "campaign_marketing" },
 ];
 
 /**
@@ -80,8 +81,8 @@ export function PortalPreferences() {
             {TOGGLES.map(({ field, key }) => {
               const id = `portal-pref-${field}`;
               const checked = save.isPending
-                ? (save.variables?.[field] ?? prefs.data[field])
-                : prefs.data[field];
+                ? (save.variables?.[field] ?? prefs.data[field] ?? false)
+                : (prefs.data[field] ?? false);
               return (
                 <div
                   key={field}

@@ -11,6 +11,7 @@ import appointments from "./appointments.json";
 import auth from "./auth.json";
 import branding from "./branding.json";
 import bulk from "./bulk.json";
+import campaigns from "./campaigns.json";
 import catalogMessages from "./catalog.json";
 import chart from "./chart.json";
 import cms from "./cms.json";
@@ -71,6 +72,7 @@ const catalog: LocaleCatalog = {
   auth,
   branding,
   bulk,
+  campaigns,
   catalog: catalogMessages,
   chart,
   cms,

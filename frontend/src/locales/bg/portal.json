@@ -276,5 +276,7 @@
   "appointments.error.read_only": "Акаунтът за автопарк е само за преглед.",
   "appointments.error.not_found": "Дилърът или автомобилът не е намерен.",
   "appointments.error.invalid": "Данните са невалидни. Проверете избора си.",
-  "appointments.error.generic": "Действието не можа да бъде изпълнено. Опитайте отново."
+  "appointments.error.generic": "Действието не можа да бъде изпълнено. Опитайте отново.",
+  "preferences.campaign_marketing": "Кампанийни съобщения",
+  "preferences.campaign_marketing_hint": "Получавайте кампанийни и маркетингови съобщения. По подразбиране е изключено; изключването веднага оттегля съгласието."
 }

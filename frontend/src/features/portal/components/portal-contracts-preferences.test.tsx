@@ -231,6 +231,25 @@ describe("PortalPreferences", () => {
     expect(toasts.success).toHaveBeenCalledWith("portal.preferences.saved");
   });
 
+  it("starts campaign marketing messages switched off when the API omits consent", async () => {
+    portal.getNotificationPreferences.mockResolvedValue(prefs);
+    portal.updateNotificationPreferences.mockImplementation(
+      async (body: PortalNotificationPreferences) => body,
+    );
+    await render(createElement(PortalPreferences));
+
+    const marketing = container.querySelector(
+      '[data-testid="portal-pref-campaign_marketing_enabled"]',
+    );
+    expect(marketing?.getAttribute("aria-checked")).toBe("false");
+
+    await click(marketing);
+    expect(portal.updateNotificationPreferences).toHaveBeenCalledWith({
+      ...prefs,
+      campaign_marketing_enabled: true,
+    });
+  });
+
   it("keeps the saved value when the update fails", async () => {
     portal.getNotificationPreferences.mockResolvedValue(prefs);
     portal.updateNotificationPreferences.mockRejectedValue(new Error("boom"));

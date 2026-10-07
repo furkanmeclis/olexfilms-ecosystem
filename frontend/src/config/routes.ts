@@ -171,6 +171,13 @@ export const routes = {
     announcements: {
       list: (slug: string) => `/t/${slug}/announcements`,
     },
+    /** TEC-408 campaigns: list, wizard, detail and approval queue. */
+    campaigns: {
+      list: (slug: string) => `/t/${slug}/campaigns`,
+      create: (slug: string) => `/t/${slug}/campaigns/new`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/campaigns/${uuid}`,
+      approvals: (slug: string) => `/t/${slug}/campaigns/approvals`,
+    },
     /** TEC-333 document library: folders, items, language versions. */
     library: {
       list: (slug: string) => `/t/${slug}/library`,

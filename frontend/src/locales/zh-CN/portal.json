@@ -276,5 +276,7 @@
   "appointments.error.read_only": "车队账户只能查看。",
   "appointments.error.not_found": "未找到经销商或车辆。",
   "appointments.error.invalid": "信息无效，请检查您的选择。",
-  "appointments.error.generic": "操作未完成，请重试。"
+  "appointments.error.generic": "操作未完成，请重试。",
+  "preferences.campaign_marketing": "营销活动消息",
+  "preferences.campaign_marketing_hint": "接收营销活动和推广消息。默认关闭；关闭会立即撤回同意。"
 }
