@@ -49,6 +49,7 @@ func RegisterConversationRoutes(mux *http.ServeMux, h *handler.Conversations, to
 	route("GET /v1/conversations/{uuid}", h.Get, "")
 	route("PATCH /v1/conversations/{uuid}", h.Patch, rbac.PermConversationsManage)
 	route("GET /v1/conversations/{uuid}/messages", h.Messages, "")
+	route("GET /v1/platform/whatsapp/conversations/{uuid}/ai-runs", h.AIRuns, rbac.PermConversationsRead)
 	route("POST /v1/conversations/{uuid}/messages", h.Reply, rbac.PermConversationsReply)
 	route("GET /v1/conversations/{uuid}/messages/{message_uuid}/media", h.Media, "")
 	route("POST /v1/conversations/{uuid}/read", h.Read, "")

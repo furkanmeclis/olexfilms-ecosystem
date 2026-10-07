@@ -44,6 +44,7 @@
   "card.expires_in": "تنتهي خلال {{time}}",
   "card.expired": "انتهت صلاحية هذا الاقتراح. اسأل المساعد مرة أخرى.",
   "card.edit_hint": "يمكنك تغيير هذه الحقول قبل التأكيد.",
+  "card.confirm_permission": "يجب أن يوافق على هذا الإجراء مستخدم لديه صلاحية الموافقة.",
   "card.status_executing": "قيد التنفيذ",
   "card.status_confirmed": "تم التأكيد",
   "card.status_failed": "فشل",

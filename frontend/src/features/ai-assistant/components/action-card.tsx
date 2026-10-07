@@ -47,11 +47,13 @@ function formatCountdown(seconds: number) {
 export function ActionConfirmCard({
   card,
   disabled,
+  canConfirm = true,
   onConfirm,
   onCancel,
 }: {
   card: AIActionCard;
   disabled?: boolean;
+  canConfirm?: boolean;
   onConfirm: (edits: Record<string, unknown> | undefined) => void;
   onCancel: () => void;
 }) {
@@ -197,7 +199,13 @@ export function ActionConfirmCard({
         <p className="text-destructive text-sm">{t("ai.card.expired")}</p>
       ) : null}
 
-      {pending && !expired ? (
+      {pending && !expired && !canConfirm ? (
+        <Alert data-testid="ai-card-confirm-permission">
+          <AlertDescription>{t("ai.card.confirm_permission")}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {pending && !expired && canConfirm ? (
         <div className="flex flex-wrap justify-end gap-2">
           <Button
             variant="outline"

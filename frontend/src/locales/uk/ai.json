@@ -44,6 +44,7 @@
   "card.expires_in": "Спливає через {{time}}",
   "card.expired": "Термін дії пропозиції минув. Запитайте асистента ще раз.",
   "card.edit_hint": "Перед підтвердженням можна змінити ці поля.",
+  "card.confirm_permission": "Цю дію має підтвердити користувач із правом затвердження.",
   "card.status_executing": "Виконується",
   "card.status_confirmed": "Підтверджено",
   "card.status_failed": "Помилка",

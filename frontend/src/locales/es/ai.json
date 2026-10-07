@@ -44,6 +44,7 @@
   "card.expires_in": "Caduca en {{time}}",
   "card.expired": "Esta sugerencia ha caducado. Vuelva a preguntar al asistente.",
   "card.edit_hint": "Puede cambiar estos campos antes de confirmar.",
+  "card.confirm_permission": "Un usuario con permiso de aprobación debe aprobar esta acción.",
   "card.status_executing": "En ejecución",
   "card.status_confirmed": "Confirmada",
   "card.status_failed": "Fallida",

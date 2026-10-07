@@ -7,6 +7,8 @@ export const conversationsKeys = {
   detail: (uuid: string) => [...conversationsKeys.all, "detail", uuid] as const,
   messages: (uuid: string) =>
     [...conversationsKeys.all, "messages", uuid] as const,
+  aiRuns: (uuid: string) =>
+    [...conversationsKeys.all, "ai-runs", uuid] as const,
   unread: () => [...conversationsKeys.all, "unread"] as const,
   admins: () => [...conversationsKeys.all, "admins"] as const,
 };

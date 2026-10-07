@@ -44,6 +44,7 @@
   "card.expires_in": "{{time}} sonra bitir",
   "card.expired": "Bu təklifin müddəti bitib. Köməkçidən yenidən soruşun.",
   "card.edit_hint": "Təsdiqləməzdən əvvəl bu sahələri dəyişə bilərsiniz.",
+  "card.confirm_permission": "Bu əməliyyatı təsdiq səlahiyyəti olan istifadəçi təsdiqləməlidir.",
   "card.status_executing": "İcra olunur",
   "card.status_confirmed": "Təsdiqləndi",
   "card.status_failed": "Uğursuz oldu",

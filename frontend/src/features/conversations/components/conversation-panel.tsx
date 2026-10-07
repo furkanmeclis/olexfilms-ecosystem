@@ -16,6 +16,7 @@ import { StatusChip } from "@/components/common/status-chip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AIRunsSheet } from "@/features/conversations/components/ai-runs-sheet";
 import {
   Select,
   SelectContent,
@@ -73,6 +74,7 @@ export function ConversationPanel({
   const { t, format } = useLocale();
   const { can } = usePermission();
   const { user } = useAuth();
+  const canRead = can(permissions.conversations.read);
   const canReply = can(permissions.conversations.reply);
   const canManage = can(permissions.conversations.manage);
 
@@ -255,6 +257,8 @@ export function ConversationPanel({
               {conversation.assigned_user.name}
             </span>
           ) : null}
+
+          {canRead ? <AIRunsSheet conversationUuid={uuid} /> : null}
 
           {canManage ? (
             <>

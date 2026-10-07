@@ -24127,6 +24127,36 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/platform/whatsapp/conversations/{uuid}/ai-runs:
+    get:
+      tags: [WhatsApp]
+      operationId: listConversationAIRuns
+      summary: List AI pipeline runs of a WhatsApp conversation (TEC-465)
+      description: >-
+        conversations.read; only the platform/system admin can read WhatsApp
+        conversation AI run logs (S2). Other panel users without the permission
+        receive 403; a hidden or unknown conversation answers 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: AI run logs, newest first
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeConversationAIRunPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/ai/status:
     get:
       tags: [AI]
@@ -38436,6 +38466,23 @@ components:
             - { $ref: "#/components/schemas/ConversationUserRef" }
             - { type: "null" }
 
+    ConversationAIRun:
+      type: object
+      required: [uuid, status, model, tokens, input_tokens, output_tokens, cache_read_tokens,
+        cache_write_tokens, duration_ms, error, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { type: string, enum: [running, completed, failed, skipped] }
+        model: { type: string }
+        tokens: { type: integer, format: int64 }
+        input_tokens: { type: integer, format: int64 }
+        output_tokens: { type: integer, format: int64 }
+        cache_read_tokens: { type: integer, format: int64 }
+        cache_write_tokens: { type: integer, format: int64 }
+        duration_ms: { type: [integer, "null"], format: int32 }
+        error: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+
     ConversationReplyInput:
       type: object
       required: [body]
@@ -38511,6 +38558,20 @@ components:
               type: array
               items: { $ref: "#/components/schemas/ConversationMessage" }
             next_cursor: { type: [string, "null"] }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeConversationAIRunPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ConversationAIRun" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeConversationReply:

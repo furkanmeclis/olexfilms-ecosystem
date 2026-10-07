@@ -44,6 +44,7 @@
   "card.expires_in": "Scade tra {{time}}",
   "card.expired": "Questo suggerimento è scaduto. Chiedi di nuovo all'assistente.",
   "card.edit_hint": "Puoi modificare questi campi prima di confermare.",
+  "card.confirm_permission": "Un utente con autorizzazione all'approvazione deve approvare questa azione.",
   "card.status_executing": "In esecuzione",
   "card.status_confirmed": "Confermata",
   "card.status_failed": "Non riuscita",

@@ -11,9 +11,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // convIT is the conversation API fixture: a platform admin, a dealer owner
@@ -88,6 +91,54 @@ func (c *convIT) row(uuid string) (status, aiMode string, pausedUntil *time.Time
 		c.t.Fatal(err)
 	}
 	return
+}
+
+func (c *convIT) aiRun(conversationUUID, status string) {
+	c.t.Helper()
+	var conversationID int64
+	if err := c.pool.QueryRow(context.Background(),
+		"SELECT id FROM conversations WHERE uuid = $1", conversationUUID).Scan(&conversationID); err != nil {
+		c.t.Fatal(err)
+	}
+	msg, err := c.q.InsertMessage(context.Background(), db.InsertMessageParams{
+		ConversationID: conversationID,
+		Channel:        whatsapp.ChannelWhatsApp,
+		Direction:      "in",
+		SenderType:     "contact",
+		ExternalID:     fmt.Sprintf("ai-run-%s-%d", c.suffix, time.Now().UnixNano()),
+		Body:           pgtype.Text{String: "Merhaba", Valid: true},
+		Status:         "received",
+	})
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	run, err := c.q.CreateConversationAIRun(context.Background(), db.CreateConversationAIRunParams{
+		ConversationID:   conversationID,
+		TriggerMessageID: msg.ID,
+		Model:            "claude-sonnet-5-5",
+	})
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	if status == "running" {
+		return
+	}
+	_, err = c.q.FinishConversationAIRun(context.Background(), db.FinishConversationAIRunParams{
+		ID:               run.ID,
+		Status:           status,
+		Stages:           []byte("[]"),
+		ToolCalls:        []byte("[]"),
+		Model:            "claude-sonnet-5-5",
+		InputTokens:      12,
+		OutputTokens:     8,
+		CacheReadTokens:  3,
+		CacheWriteTokens: 2,
+		Error:            pgtype.Text{String: "model timeout", Valid: status == "failed"},
+		FinishedAt:       pgtype.Timestamptz{Time: time.Now(), Valid: true},
+	})
+	if err != nil {
+		c.t.Fatal(err)
+	}
 }
 
 // TEC-398 acceptance: list contract (unknown sort 400, multi-valued status,
@@ -184,6 +235,37 @@ func TestIntegrationConversationsVisibility(t *testing.T) {
 	// The platform admin sees it.
 	if code, env := c.do("GET", "/v1/conversations/"+id, hostOlex, c.adminTok, nil); code != http.StatusOK {
 		t.Fatalf("admin GET = %d %s", code, errCode(env))
+	}
+}
+
+// TEC-465 acceptance: only the platform/system admin can read the AI run
+// log of a WhatsApp conversation.
+func TestIntegrationConversationAIRunsVisibility(t *testing.T) {
+	c := newConvIT(t)
+	id := c.conv("open", 0, nil)
+	c.aiRun(id, "failed")
+
+	code, env := c.do("GET", "/v1/platform/whatsapp/conversations/"+id+"/ai-runs", hostOlex, c.adminTok, nil)
+	var page struct {
+		Items []struct {
+			Status     string `json:"status"`
+			Model      string `json:"model"`
+			Tokens     int64  `json:"tokens"`
+			DurationMS *int32 `json:"duration_ms"`
+			Error      string `json:"error"`
+			CreatedAt  string `json:"created_at"`
+		} `json:"items"`
+	}
+	_ = json.Unmarshal(env.Data, &page)
+	if code != http.StatusOK || len(page.Items) != 1 {
+		t.Fatalf("admin ai-runs = %d %s %+v", code, errCode(env), page)
+	}
+	got := page.Items[0]
+	if got.Status != "failed" || got.Model != "claude-sonnet-5-5" || got.Tokens != 25 || got.DurationMS == nil || got.Error == "" || got.CreatedAt == "" {
+		t.Fatalf("ai run fields = %+v", got)
+	}
+	if code, _ := c.do("GET", "/v1/platform/whatsapp/conversations/"+id+"/ai-runs", hostOlex, c.dealerTok, nil); code != http.StatusForbidden {
+		t.Fatalf("dealer ai-runs = %d, want 403", code)
 	}
 }
 

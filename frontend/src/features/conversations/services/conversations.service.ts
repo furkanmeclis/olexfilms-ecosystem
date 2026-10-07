@@ -9,6 +9,7 @@ type Schemas = components["schemas"];
 
 export type Conversation = Schemas["Conversation"];
 export type ConversationMessage = Schemas["ConversationMessage"];
+export type ConversationAIRun = Schemas["ConversationAIRun"];
 export type ConversationPatchInput = Schemas["ConversationPatchInput"];
 export type ConversationStatus = Conversation["status"];
 export type ConversationAIMode = Conversation["ai_mode"];
@@ -50,6 +51,10 @@ export type ConversationMessagePage = {
   next_cursor: string | null;
 };
 
+export type ConversationAIRunPage = {
+  items: ConversationAIRun[];
+};
+
 const enc = encodeURIComponent;
 
 function withFile(body: string, file: File | null | undefined, extra = {}) {
@@ -89,6 +94,13 @@ export const conversationsService = {
       "GET",
       `/v1/conversations/${enc(uuid)}/messages`,
       { query: { before: before ?? undefined, limit } },
+    );
+  },
+  aiRuns(uuid: string, limit = 50) {
+    return platformRequest<ConversationAIRunPage>(
+      "GET",
+      `/v1/platform/whatsapp/conversations/${enc(uuid)}/ai-runs`,
+      { query: { limit } },
     );
   },
   /** Staff reply: JSON for text, multipart when a file is attached. */

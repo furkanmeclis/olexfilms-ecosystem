@@ -63,6 +63,14 @@ export function useConversationMessages(uuid: string | null) {
   });
 }
 
+export function useConversationAIRuns(uuid: string | null, enabled = true) {
+  return useQuery({
+    queryKey: conversationsKeys.aiRuns(uuid ?? ""),
+    queryFn: () => conversationsService.aiRuns(uuid!),
+    enabled: Boolean(uuid) && enabled,
+  });
+}
+
 /** Number of conversations with unread messages (menu badge). */
 export function useUnreadConversations(enabled = true) {
   return useQuery({

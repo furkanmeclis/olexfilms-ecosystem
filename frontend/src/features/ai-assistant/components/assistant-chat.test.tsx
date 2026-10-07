@@ -4,6 +4,10 @@ import { act, createElement, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const state = vi.hoisted(() => ({
+  permissions: new Set<string>(["ai.actions.confirm"]),
+}));
+
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (k: string, p?: Record<string, string | number>) =>
@@ -12,6 +16,10 @@ vi.mock("@/providers/locale-provider", () => ({
     dir: "ltr",
     format: { dateTime: (v: string) => v },
   }),
+}));
+
+vi.mock("@/providers/permission-provider", () => ({
+  usePermission: () => ({ can: (p: string) => state.permissions.has(p) }),
 }));
 
 vi.mock("next/link", () => ({
@@ -171,6 +179,7 @@ describe("AssistantChat", () => {
     (
       globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
+    state.permissions = new Set(["ai.actions.confirm"]);
   });
 
   afterEach(() => {
@@ -268,6 +277,27 @@ describe("AssistantChat", () => {
     expect(outcome?.querySelector("a")?.getAttribute("href")).toBe(
       "/t/acme/tasks/t1",
     );
+  });
+
+  it("hides the confirm button and shows guidance without ai.actions.confirm", async () => {
+    state.permissions.delete("ai.actions.confirm");
+    const transport = fakeTransport({
+      sendMessage: vi.fn(async () =>
+        sse([
+          ["message_start", { conversation_uuid: "c1", message_uuid: "m1" }],
+          ["confirm", CARD],
+        ]),
+      ),
+    });
+    await mount(transport);
+    await send("Görev aç");
+
+    expect(q("ai-confirm-card")).not.toBeNull();
+    expect(q("ai-card-confirm")).toBeNull();
+    expect(q("ai-card-confirm-permission")?.textContent).toContain(
+      "ai.card.confirm_permission",
+    );
+    expect(transport.confirmAction).not.toHaveBeenCalled();
   });
 
   it("sends edited card fields with the confirmation", async () => {

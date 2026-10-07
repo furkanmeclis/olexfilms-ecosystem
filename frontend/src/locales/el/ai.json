@@ -44,6 +44,7 @@
   "card.expires_in": "Λήγει σε {{time}}",
   "card.expired": "Η πρόταση έληξε. Ρωτήστε ξανά τον βοηθό.",
   "card.edit_hint": "Μπορείτε να αλλάξετε αυτά τα πεδία πριν την επιβεβαίωση.",
+  "card.confirm_permission": "Ένας χρήστης με δικαίωμα έγκρισης πρέπει να εγκρίνει αυτή την ενέργεια.",
   "card.status_executing": "Εκτελείται",
   "card.status_confirmed": "Επιβεβαιώθηκε",
   "card.status_failed": "Απέτυχε",
