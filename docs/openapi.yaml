@@ -16173,7 +16173,70 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeDealerPrice" }
 
+  /v1/dealer-prices/catalog:
+    get:
+      tags: [Dealer accounting]
+      summary: Sale price catalog of the dealer (paged)
+      description: >-
+        TEC-348. The brand's active piece products plus every product the
+        dealer already priced, with the dealer's own sale price, the
+        recommended price and (with pricing.purchase.read) the dealer's
+        purchase price and estimated profit (sale price, else recommended,
+        minus purchase price). Sort: name (default), sku, sale_price,
+        recommended_sale_price, updated_at. q searches name and sku.
+      operationId: listDealerPriceCatalog
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: priced
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Catalog page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeDealerPriceCatalogPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/product-sales:
+    get:
+      tags: [Dealer accounting]
+      summary: List quick product sales (paged)
+      description: >-
+        TEC-348. Sort: sold_at (default -sold_at), total, payment_method. q
+        searches customer name, note, product name and exact barcode.
+        profit is null without pricing.purchase.read.
+      operationId: listProductSales
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: payment_method
+          in: query
+          description: Comma-separated cash,card,cari
+          schema: { type: string }
+        - name: voided
+          in: query
+          schema: { type: boolean }
+        - { name: sold_from, in: query, schema: { type: string } }
+        - { name: sold_to, in: query, schema: { type: string } }
+        - { name: total_min, in: query, schema: { type: number } }
+        - { name: total_max, in: query, schema: { type: number } }
+      responses:
+        "200":
+          description: Sales page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeProductSalePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Dealer accounting]
       summary: Create a quick product sale
@@ -16189,6 +16252,30 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeProductSale" }
+
+  /v1/product-sales/lookup:
+    get:
+      tags: [Dealer accounting]
+      summary: Resolve a barcode or product to the unit a quick sale would consume
+      description: >-
+        TEC-348. Same unit order as POST /v1/product-sales. Nothing held by
+        the dealer → 422 STOCK_UNAVAILABLE. purchase_price is the cost the
+        sale would snapshot (null without pricing.purchase.read).
+      operationId: lookupProductSaleItem
+      parameters:
+        - { name: barcode, in: query, schema: { type: string } }
+        - { name: product_uuid, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Sale item preview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeProductSaleLookup" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
   /v1/product-sales/{uuid}/void:
     post:
@@ -16212,14 +16299,26 @@ paths:
   /v1/suppliers:
     get:
       tags: [Dealer accounting]
-      summary: List suppliers
+      summary: List suppliers (paged)
+      description: >-
+        TEC-348: paged per docs/list-contract.md. Sort: name (default),
+        created_at, updated_at. q searches name, tax number, phone and email.
       operationId: listSuppliers
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - { name: active, in: query, schema: { type: boolean } }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
       responses:
         "200":
           description: Suppliers
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeSupplierList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
     post:
       tags: [Dealer accounting]
       summary: Create a supplier
@@ -16256,6 +16355,40 @@ paths:
               schema: { $ref: "#/components/schemas/EnvelopeSupplier" }
 
   /v1/purchases:
+    get:
+      tags: [Dealer accounting]
+      summary: List external purchases (paged)
+      description: >-
+        TEC-348. Sort: purchased_on (default -purchased_on), amount,
+        supplier_name, payment_method. q searches supplier name, note and
+        line description.
+      operationId: listPurchases
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: supplier_uuid
+          in: query
+          description: Comma-separated supplier UUIDs
+          schema: { type: string }
+        - name: payment_method
+          in: query
+          description: Comma-separated cash,card,bank_transfer,cari
+          schema: { type: string }
+        - { name: purchased_from, in: query, schema: { type: string } }
+        - { name: purchased_to, in: query, schema: { type: string } }
+        - { name: amount_min, in: query, schema: { type: number } }
+        - { name: amount_max, in: query, schema: { type: number } }
+      responses:
+        "200":
+          description: Purchases page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePurchasePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Dealer accounting]
       summary: Create an external purchase expense
@@ -33978,12 +34111,136 @@ components:
         success: { type: boolean, enum: [true] }
         data:
           type: object
-          required: [items]
+          required: [items, total, limit, offset]
           properties:
             items:
               type: array
               items: { $ref: "#/components/schemas/Supplier" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDealerPriceCatalogPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/DealerPriceCatalogItem" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeProductSalePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ProductSaleListItem" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePurchasePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PurchaseListItem" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeProductSaleLookup:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ProductSaleLookup" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    DealerPriceCatalogItem:
+      type: object
+      required: [product_uuid, sku, name, uses_fixed_barcode, currency, sale_price, recommended_sale_price, purchase_price, estimated_profit, updated_at]
+      properties:
+        product_uuid: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        uses_fixed_barcode: { type: boolean }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        sale_price: { type: [string, "null"], example: "1200.00" }
+        recommended_sale_price: { type: [string, "null"], example: "1500.00" }
+        purchase_price: { type: [string, "null"], example: "800.00", description: null without pricing.purchase.read }
+        estimated_profit: { type: [string, "null"], example: "400.00" }
+        updated_at: { type: [string, "null"], format: date-time }
+
+    ProductSaleLookup:
+      type: object
+      required: [product_uuid, sku, name, barcode, unit_kind, quantity_on_hand, currency, sale_price, recommended_sale_price, purchase_price]
+      properties:
+        product_uuid: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        barcode: { type: string }
+        unit_kind: { type: string }
+        quantity_on_hand: { type: integer }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        sale_price: { type: [string, "null"] }
+        recommended_sale_price: { type: [string, "null"] }
+        purchase_price: { type: [string, "null"] }
+
+    ProductSaleListItem:
+      type: object
+      required: [uuid, sold_at, payment_method, currency, total, profit, customer_uuid, customer_name, products, line_count, note, voided]
+      properties:
+        uuid: { type: string, format: uuid }
+        sold_at: { type: string, format: date-time }
+        payment_method: { type: string, enum: [cash, card, cari] }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        total: { type: string, example: "1200.00" }
+        profit: { type: [string, "null"], example: "400.00" }
+        customer_uuid: { type: [string, "null"], format: uuid }
+        customer_name: { type: [string, "null"] }
+        products: { type: string, description: Comma-joined product names }
+        line_count: { type: integer, format: int64 }
+        note: { type: string }
+        voided: { type: boolean }
+
+    PurchaseListItem:
+      type: object
+      required: [uuid, supplier_uuid, supplier_name, amount, currency, payment_method, purchased_on, description, note, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        supplier_uuid: { type: string, format: uuid }
+        supplier_name: { type: string }
+        amount: { type: string, example: "250.00" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        payment_method: { type: string, enum: [cash, card, bank_transfer, cari] }
+        purchased_on: { type: string, format: date }
+        description: { type: string }
+        note: { type: string }
+        created_at: { type: string, format: date-time }
 
     EnvelopePurchase:
       type: object
