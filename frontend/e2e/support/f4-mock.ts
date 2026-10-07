@@ -331,6 +331,10 @@ export class F4Mock {
         await ok(campaign("draft"), 201);
         return true;
       }
+      if (method === "PATCH" && path === `/v1/campaigns/${F4.campaign}`) {
+        await ok(campaign("draft", this.campaignContents));
+        return true;
+      }
       const content = path.match(/^\/v1\/campaigns\/[^/]+\/contents\/([^/]+)$/);
       if (method === "PUT" && content) {
         const item = {
@@ -377,7 +381,7 @@ export class F4Mock {
           ],
           unreachable: 4,
           excluded: { total: 3, no_consent: 2, opted_out: 1 },
-          missing_locales: [],
+          missing_locales: ["tr", "de"],
           sample: [],
         });
         return true;

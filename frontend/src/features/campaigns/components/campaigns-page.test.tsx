@@ -173,6 +173,13 @@ async function flush() {
   }
 }
 
+async function wait(ms: number) {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  });
+  await flush();
+}
+
 async function render(node: ReturnType<typeof createElement>) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -197,7 +204,12 @@ async function input(selector: string, value: string) {
     throw new Error(`input not found: ${selector}`);
   }
   await act(async () => {
-    el.value = value;
+    const proto =
+      el instanceof HTMLTextAreaElement
+        ? HTMLTextAreaElement.prototype
+        : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, "value")?.set;
+    setter?.call(el, value);
     el.dispatchEvent(new Event("input", { bubbles: true }));
   });
   await flush();
@@ -214,6 +226,8 @@ beforeEach(() => {
     limit: 20,
     offset: 0,
   });
+  service.create.mockResolvedValue(campaign({ status: "draft" }));
+  service.update.mockResolvedValue(campaign({ status: "draft" }));
   service.preview.mockResolvedValue({
     total: 12,
     locales: [{ locale: "tr", count: 12 }],
@@ -246,6 +260,53 @@ describe("CampaignWizardPage", () => {
       container.querySelector('[data-testid="campaign-missing-locales"]')
         ?.textContent,
     ).toContain("tr");
+  });
+
+  it("uses the live preview locales to keep submit disabled until every audience language has content", async () => {
+    service.preview.mockResolvedValueOnce({
+      total: 24,
+      locales: [
+        { locale: "tr", count: 16 },
+        { locale: "de", count: 8 },
+      ],
+      channels: [
+        { channel: "push", reachable: 20 },
+        { channel: "whatsapp", reachable: 18 },
+      ],
+      unreachable: 4,
+      excluded: { total: 3, no_consent: 2, opted_out: 1 },
+      missing_locales: ["tr", "de"],
+      sample: [],
+    } satisfies CampaignPreview);
+    await render(createElement(CampaignWizardPage, { slug: "olex" }));
+
+    await input("#campaign-name", "Sonbahar bakım kampanyası");
+    await wait(900);
+
+    expect(service.create).toHaveBeenCalledWith({
+      name: "Sonbahar bakım kampanyası",
+      channels: ["push"],
+      audience_filter: { audience_type: "customers" },
+    });
+    expect(service.preview).toHaveBeenCalledWith("c1");
+    expect(
+      container.querySelector('[data-testid="campaign-preview-total"]')
+        ?.textContent,
+    ).toContain("24");
+    expect(
+      container.querySelector('[data-testid="campaign-locale-tab-de"]'),
+    ).not.toBeNull();
+
+    await input("#campaign-title-tr", "Sonbahar bakımı");
+    await input("#campaign-body-tr", "Aracınız için bakım zamanı.");
+
+    expect(
+      container.querySelector('[data-testid="campaign-missing-locales"]')
+        ?.textContent,
+    ).toContain("de");
+    expect(
+      container.querySelector('[data-testid="campaign-submit"]'),
+    ).toHaveProperty("disabled", true);
   });
 
   it("shows Schedule for center users and errors when push title exceeds 65 characters", async () => {

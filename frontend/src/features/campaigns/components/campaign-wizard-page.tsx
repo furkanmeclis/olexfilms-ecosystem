@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -26,12 +33,19 @@ import {
   toZonedInput,
   type ContentIssue,
 } from "@/features/campaigns/lib/campaigns";
-import { useCampaignMutations } from "@/features/campaigns/hooks/use-campaigns";
+import {
+  useCampaignMutations,
+  useCampaignPreview,
+} from "@/features/campaigns/hooks/use-campaigns";
 import type {
   CampaignAudienceFilter,
   CampaignChannel,
   CampaignPreview,
   LocaleCode,
+} from "@/features/campaigns/services/campaigns.service";
+import {
+  campaignKeys,
+  campaignsService,
 } from "@/features/campaigns/services/campaigns.service";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -39,15 +53,12 @@ import { useLocale } from "@/providers/locale-provider";
 type ContentDraft = Record<LocaleCode, { title: string; body: string }>;
 
 const DEFAULT_PREVIEW: CampaignPreview = {
-  total: 24,
-  locales: [
-    { locale: "tr", count: 16 },
-    { locale: "de", count: 8 },
-  ],
+  total: 0,
+  locales: [],
   channels: [],
   unreachable: 0,
   excluded: { total: 0, no_consent: 0, opted_out: 0 },
-  missing_locales: ["tr", "de"],
+  missing_locales: [],
   sample: [],
 };
 
@@ -66,10 +77,26 @@ function issueText(issue: ContentIssue) {
     : `${issue.channel}.${field}.${issue.limit}`;
 }
 
+function useDebouncedValue<T>(value: T, delay: number) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [delay, value]);
+
+  return debounced;
+}
+
+function PreviewLine({ children }: { children: ReactNode }) {
+  return <div className="min-h-5">{children}</div>;
+}
+
 export function CampaignWizardPage({ slug }: { slug: string }) {
   const { t } = useLocale();
   const { user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const mutations = useCampaignMutations();
   const type = orgType(user);
   const direct = plansDirectly(type);
@@ -79,15 +106,79 @@ export function CampaignWizardPage({ slug }: { slug: string }) {
   const [audience, setAudience] = useState<CampaignAudienceFilter>(
     emptyAudience(audienceTypes[0] ?? "customers"),
   );
-  const preview = DEFAULT_PREVIEW;
+  const [draftUuid, setDraftUuid] = useState<string | null>(null);
+  const [draftSyncFailed, setDraftSyncFailed] = useState(false);
   const [contents, setContents] = useState<ContentDraft>({
     tr: { title: "", body: "" },
   } as ContentDraft);
   const [activeLocale, setActiveLocale] = useState<LocaleCode>("tr");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [draftSyncing, setDraftSyncing] = useState(false);
+  const draftInput = useMemo(
+    () => ({
+      name: name.trim(),
+      channels,
+      audience_filter: audience,
+    }),
+    [audience, channels, name],
+  );
+  const debouncedDraftInput = useDebouncedValue(draftInput, 400);
+  const canPreview =
+    debouncedDraftInput.name.length > 0 &&
+    debouncedDraftInput.channels.length > 0;
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!canPreview) return;
+
+    const sync = async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setDraftSyncFailed(false);
+      setDraftSyncing(true);
+      try {
+        const campaign = draftUuid
+          ? await campaignsService.update(draftUuid, debouncedDraftInput)
+          : await campaignsService.create(debouncedDraftInput);
+        if (!cancelled) {
+          setDraftUuid(campaign.uuid);
+          await queryClient.invalidateQueries({
+            queryKey: campaignKeys.preview(campaign.uuid),
+          });
+        }
+      } catch {
+        if (!cancelled) setDraftSyncFailed(true);
+      } finally {
+        if (!cancelled) setDraftSyncing(false);
+      }
+    };
+
+    void sync();
+    return () => {
+      cancelled = true;
+    };
+  }, [canPreview, debouncedDraftInput, draftUuid, queryClient]);
+
+  const previewQuery = useCampaignPreview(
+    draftUuid ?? "",
+    canPreview && Boolean(draftUuid) && !draftSyncFailed,
+  );
+  const preview = previewQuery.data ?? DEFAULT_PREVIEW;
+  const previewPending =
+    canPreview &&
+    (draftSyncing || previewQuery.isLoading || previewQuery.isFetching);
+  const previewFailed = draftSyncFailed || previewQuery.isError;
+
+  const previewLocales = useMemo(() => {
+    const counts = new Map(preview.locales.map((l) => [l.locale, l.count]));
+    for (const locale of preview.missing_locales) {
+      if (!counts.has(locale)) counts.set(locale, 0);
+    }
+    return Array.from(counts, ([locale, count]) => ({ locale, count }));
+  }, [preview.locales, preview.missing_locales]);
   const locales = requiredLocales(
-    preview.locales,
+    previewLocales,
     Object.keys(contents) as LocaleCode[],
   );
   const missingLocales = locales.filter(
@@ -100,7 +191,12 @@ export function CampaignWizardPage({ slug }: { slug: string }) {
     contents[activeLocale] ?? { title: "", body: "" },
   );
   const submitDisabled =
-    !name.trim() || channels.length === 0 || missingLocales.length > 0;
+    !name.trim() ||
+    channels.length === 0 ||
+    missingLocales.length > 0 ||
+    !canPreview ||
+    previewPending ||
+    previewFailed;
 
   const previewChannels = useMemo(
     () =>
@@ -140,11 +236,15 @@ export function CampaignWizardPage({ slug }: { slug: string }) {
     event.preventDefault();
     if (submitDisabled) return;
     try {
-      const campaign = await mutations.create.mutateAsync({
+      const input = {
         name: name.trim(),
         channels,
         audience_filter: audience,
-      });
+      };
+      const campaign = draftUuid
+        ? await mutations.update.mutateAsync({ uuid: draftUuid, body: input })
+        : await mutations.create.mutateAsync(input);
+      setDraftUuid(campaign.uuid);
       for (const locale of locales) {
         const content = contents[locale];
         if (!content) continue;
@@ -255,16 +355,18 @@ export function CampaignWizardPage({ slug }: { slug: string }) {
               </select>
             </div>
             <div className="bg-muted/40 rounded-md p-3 text-sm">
-              <div data-testid="campaign-preview-total">
-                {t("campaigns.preview.total", { count: preview.total })}
-              </div>
-              <div>
+              <PreviewLine>
+                <span data-testid="campaign-preview-total">
+                  {t("campaigns.preview.total", { count: preview.total })}
+                </span>
+              </PreviewLine>
+              <PreviewLine>
                 {t("campaigns.preview.languages")}:{" "}
                 {preview.locales
                   .map((l) => `${l.locale} ${l.count}`)
                   .join(", ")}
-              </div>
-              <div>
+              </PreviewLine>
+              <PreviewLine>
                 {t("campaigns.preview.reach")}:{" "}
                 {previewChannels
                   .map(
@@ -272,12 +374,28 @@ export function CampaignWizardPage({ slug }: { slug: string }) {
                       `${t(`campaigns.channel.${c.channel}`)} ${c.reachable}`,
                   )
                   .join(", ")}
-              </div>
-              <div>
+              </PreviewLine>
+              <PreviewLine>
                 {t("campaigns.preview.excluded", {
                   count: preview.excluded.total,
                 })}
-              </div>
+              </PreviewLine>
+              {previewPending ? (
+                <div
+                  className="text-muted-foreground mt-2"
+                  data-testid="campaign-preview-loading"
+                >
+                  {t("campaigns.preview.loading")}
+                </div>
+              ) : null}
+              {previewFailed ? (
+                <div
+                  className="text-destructive mt-2"
+                  data-testid="campaign-preview-error"
+                >
+                  {t("campaigns.preview.failed")}
+                </div>
+              ) : null}
             </div>
           </CardContent>
         </Card>
