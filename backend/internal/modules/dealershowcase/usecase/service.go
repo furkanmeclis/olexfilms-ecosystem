@@ -90,6 +90,7 @@ type Service struct {
 	settings Settings
 	out      Outbox
 	storage  Storage
+	places   PlacesClient
 	now      func() time.Time
 }
 
@@ -365,6 +366,9 @@ type snapshot struct {
 	SeoKeywords  []string          `json:"seo_keywords"`
 	Services     []snapshotService `json:"services"`
 	Photos       []snapshotPhoto   `json:"photos"`
+	// GoogleRating is the rating at publish time (TEC-469): the public page
+	// shows it for a manual rating while approval is on.
+	GoogleRating *snapshotRating `json:"google_rating"`
 }
 
 type snapshotService struct {
@@ -390,6 +394,7 @@ func buildSnapshot(ctx context.Context, q *db.Queries, row db.DealerShowcase) ([
 	snap := snapshot{
 		Content: row.Content, WorkingHours: row.WorkingHours, SocialLinks: row.SocialLinks,
 		SeoKeywords: row.SeoKeywords, Services: []snapshotService{}, Photos: []snapshotPhoto{},
+		GoogleRating: ratingOf(row.GoogleRating, row.GoogleReviewCount, row.GoogleRatingSource, row.GoogleRatingUpdatedAt),
 	}
 	if snap.SeoKeywords == nil {
 		snap.SeoKeywords = []string{}

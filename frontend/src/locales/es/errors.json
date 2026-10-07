@@ -142,5 +142,7 @@
   "codes.FLEET_LINK_NOT_PENDING": "La solicitud de vínculo ya fue respondida.",
   "codes.SHOWCASE_PHOTO_LIMIT": "La galería está llena; elimine una foto antes de añadir otra.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Escriba una nota para rechazar.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Introduzca una valoración entre 1,0 y 5,0 y un número de reseñas igual o superior a 0.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "La valoración de Google se actualiza desde Google Places; elimine el ID de lugar para introducirla a mano.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Tipo de archivo no admitido; suba una imagen JPEG, PNG o WebP."
 }

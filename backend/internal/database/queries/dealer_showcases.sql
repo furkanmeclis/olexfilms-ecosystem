@@ -269,11 +269,14 @@ WHERE uuid = sqlc.arg(uuid) AND showcase_id = sqlc.arg(showcase_id);
 
 -- name: ListPublishedDealerShowcaseBadges :many
 -- Nearby dealers list: which of the given organizations of the brand serve
--- a published showcase, with the live Google rating. The module flag is
--- checked by the caller.
+-- a published showcase, with the live Google rating and its source and the
+-- rating frozen in the snapshot (TEC-469: a manual rating under approval
+-- shows the published one). The module flag is checked by the caller.
 SELECT o.id AS organization_id,
        o.uuid AS organization_uuid,
-       s.google_rating
+       s.google_rating,
+       s.google_rating_source,
+       (s.published_content -> 'google_rating')::jsonb AS published_google_rating
 FROM dealer_showcases s
 JOIN organizations o ON o.id = s.organization_id
 WHERE s.brand_id = sqlc.arg(brand_id)
@@ -291,3 +294,34 @@ JOIN organizations o ON o.id = s.organization_id
 WHERE s.brand_id = sqlc.arg(brand_id)
   AND s.published_content IS NOT NULL
   AND o.deleted_at IS NULL;
+
+-- TEC-469 (F5-01d) -------------------------------------------------------------
+
+-- name: ListDealerShowcasesForPlacesRefresh :many
+-- Places worker: showcases with a Google place id whose rating did not come
+-- from Places since fresh_before (a second run the same day finds nothing).
+-- The module flag and the per-organization backoff are checked by the
+-- caller.
+SELECT s.id,
+       s.uuid,
+       s.organization_id,
+       s.google_place_id,
+       o.uuid AS organization_uuid
+FROM dealer_showcases s
+JOIN organizations o ON o.id = s.organization_id
+WHERE s.google_place_id IS NOT NULL
+  AND o.deleted_at IS NULL
+  AND (s.google_rating_source IS DISTINCT FROM 'places'
+       OR s.google_rating_updated_at IS NULL
+       OR s.google_rating_updated_at < sqlc.arg(fresh_before)::timestamptz)
+ORDER BY s.id;
+
+-- name: SetDealerShowcasePlacesRating :execrows
+-- Writes a Places answer. CAS on the place id: no row when the owner
+-- changed the place id meanwhile.
+UPDATE dealer_showcases
+SET google_rating            = sqlc.arg(google_rating),
+    google_review_count      = sqlc.arg(google_review_count),
+    google_rating_source     = 'places',
+    google_rating_updated_at = NOW()
+WHERE id = sqlc.arg(id) AND google_place_id = sqlc.arg(google_place_id);

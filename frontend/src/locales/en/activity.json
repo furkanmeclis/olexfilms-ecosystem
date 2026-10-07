@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "Finance transaction created",
   "actions.finance.transfer.create": "Finance transfer created",
   "actions.finance.transaction.void": "Finance transaction voided",
+  "actions.showcase.google_rating.refresh_failed": "Google rating refresh failed repeatedly",
   "resources.platform.users": "Users",
   "resources.platform.roles": "Roles",
   "resources.platform.notifications": "Notifications",

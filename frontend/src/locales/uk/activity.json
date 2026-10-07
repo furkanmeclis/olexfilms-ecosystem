@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "Створено фінансову операцію",
   "actions.finance.transfer.create": "Створено фінансовий переказ",
   "actions.finance.transaction.void": "Фінансову операцію анульовано",
+  "actions.showcase.google_rating.refresh_failed": "Оновлення оцінки Google кілька разів поспіль не вдалося",
   "resources.platform.users": "Користувачі",
   "resources.platform.roles": "Ролі",
   "resources.platform.notifications": "Сповіщення",

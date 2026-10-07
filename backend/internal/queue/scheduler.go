@@ -76,6 +76,8 @@ func Schedules() []Periodic {
 		{Cron: aiActionSweepCron, Type: TaskAIActionSweep, Queue: QueueMaintenance, Opts: aiActionSweepOpts(), New: NewAIActionSweepTask},
 		// TEC-407: campaign scheduler (due campaigns, finish, lost tasks).
 		{Cron: campaignTickCron, Type: TaskCampaignTick, Queue: QueueMaintenance, Opts: campaignTickOpts(), New: NewCampaignTickTask},
+		// TEC-469: daily showcase Google rating refresh (no-op without a Places key).
+		{Cron: showcaseGoogleRatingCron, Type: TaskShowcaseGoogleRating, Queue: QueueMaintenance, Opts: showcaseGoogleRatingOpts(), New: NewShowcaseGoogleRatingTask},
 	}
 }
 

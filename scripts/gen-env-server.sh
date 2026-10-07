@@ -203,6 +203,9 @@ set_kv AI_MODEL_FAST "$(keep AI_MODEL_FAST claude-haiku-4-5)"
 set_kv AI_ALLOWED_MODELS "$(keep AI_ALLOWED_MODELS claude-sonnet-5-5,claude-haiku-4-5)"
 set_kv AI_MAX_TOKENS "$(keep AI_MAX_TOKENS 8000)"
 set_kv AI_REQUEST_TIMEOUT "$(keep AI_REQUEST_TIMEOUT 120s)"
+# --- Dealer showcase Google rating (Places API New, optional, paid). Entered
+# by hand and kept on re-run; empty = manual rating entry only. ---
+set_kv GOOGLE_PLACES_API_KEY "$(keep GOOGLE_PLACES_API_KEY "")"
 # --- Queue: separate worker containers in production ---
 set_kv QUEUE_WORKER_INPROCESS false
 set_kv WORKER_QUEUES "$(keep WORKER_QUEUES critical,default,low)"
@@ -297,6 +300,7 @@ fi
 [ -n "$(grep -E '^SMTP_HOST=.' "$OUT" || true)" ] || echo "  ! SMTP_HOST empty: e-mail notifications will not be sent"
 echo "  migrator legacy DSNs (LEGACY_*_DSN) stay empty unless set by hand."
 [ -n "$(grep -E '^ANTHROPIC_API_KEY=.' "$OUT" || true)" ] || echo "  ! ANTHROPIC_API_KEY empty: AI assistant disabled (503 AI_UNAVAILABLE)"
+[ -n "$(grep -E '^GOOGLE_PLACES_API_KEY=.' "$OUT" || true)" ] || echo "  ! GOOGLE_PLACES_API_KEY empty: showcase Google rating is entered by hand"
 echo
 echo "Traefik / Dokploy domains (only these two services are public):"
 echo "  $APP_DOMAIN  → service frontend,   port 3000  ($APP_URL)"

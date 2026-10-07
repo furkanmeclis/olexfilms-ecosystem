@@ -142,5 +142,7 @@
   "codes.FLEET_LINK_NOT_PENDING": "The link request has already been answered.",
   "codes.SHOWCASE_PHOTO_LIMIT": "The gallery is full; delete a photo before adding a new one.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Write a note to reject.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Enter a rating between 1.0 and 5.0 and a review count of 0 or more.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "The Google rating is refreshed from Google Places; remove the place ID to enter it by hand.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Unsupported file type; upload a JPEG, PNG or WebP image."
 }

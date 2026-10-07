@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "Създадена финансова транзакция",
   "actions.finance.transfer.create": "Създаден финансов превод",
   "actions.finance.transaction.void": "Анулирана финансова транзакция",
+  "actions.showcase.google_rating.refresh_failed": "Обновяването на оценката в Google се провали многократно",
   "resources.platform.users": "Потребители",
   "resources.platform.roles": "Роли",
   "resources.platform.notifications": "Известия",

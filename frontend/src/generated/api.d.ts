@@ -1278,6 +1278,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/showcase/google-rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Enter the Google rating by hand
+         * @description TEC-469. Requires showcase.write. Accepted only while Google Places
+         *     is not configured (no GOOGLE_PLACES_API_KEY) or the showcase has no
+         *     `google_place_id`; otherwise the daily Places worker owns the rating
+         *     and the call is 409 SHOWCASE_RATING_MANAGED_BY_PLACES (see
+         *     `manual_rating_allowed` in the editor view). `rating` 1.0–5.0
+         *     (rounded to one decimal) and `review_count` ≥ 0 go together; outside
+         *     that range is 422 SHOWCASE_RATING_OUT_OF_RANGE; both null clear the
+         *     rating. The source becomes `manual`. With
+         *     `showcase.approval_required` on, the public page keeps the rating of
+         *     the published snapshot until the next approved submit; with it off
+         *     the value is public at once.
+         */
+        put: operations["setShowcaseGoogleRating"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/showcase/services": {
         parameters: {
             query?: never;
@@ -16344,7 +16374,7 @@ export interface components {
             whatsapp: string | null;
             /** @description TEC-467. A published showcase with the dealer_showcase module on */
             has_showcase: boolean;
-            /** @description TEC-467. Live Google rating of the showcase (null without one) */
+            /** @description TEC-467. Google rating of the showcase (null without one); TEC-469: same pick as the public showcase block */
             google_rating: number | null;
         };
         EnvelopeNearbyDealers: {
@@ -16514,6 +16544,22 @@ export interface components {
             max_photos: number;
             services: components["schemas"]["ShowcaseService"][];
             photos: components["schemas"]["ShowcasePhoto"][];
+            /** @description TEC-469. GOOGLE_PLACES_API_KEY is set (daily Places refresh of showcases with a place id). */
+            places_configured: boolean;
+            /** @description TEC-469. PUT /v1/showcase/google-rating is accepted (Places not configured or no place id). */
+            manual_rating_allowed: boolean;
+            /**
+             * @description TEC-469. Place id read from the organization's
+             *     google_business_url (place_id / placeid / query_place_id /
+             *     q=place_id:) while google_place_id is empty. No lookup is made, so
+             *     a cid-only or short link yields null and the owner enters the id.
+             */
+            google_place_id_suggestion: string | null;
+        };
+        /** @description TEC-469 manual Google rating; both null clear it. */
+        ShowcaseGoogleRatingInput: {
+            rating: number | null;
+            review_count: number | null;
         };
         EnvelopeShowcase: {
             /** @enum {boolean} */
@@ -16610,7 +16656,13 @@ export interface components {
             seo_keywords: string[];
             google_rating: number | null;
             google_review_count: number | null;
-            /** @enum {string|null} */
+            /**
+             * @description TEC-469. A Places rating is always live (refreshed daily without
+             *     review). A manual rating is live while showcase.approval_required is
+             *     off; with it on the page shows the rating frozen in the published
+             *     snapshot. JSON-LD aggregateRating is written only for `places`.
+             * @enum {string|null}
+             */
             google_rating_source: "places" | "manual" | null;
             google_place_id: string | null;
             /** @description The leads module is on for the dealer */
@@ -26945,6 +26997,43 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    setShowcaseGoogleRating: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseGoogleRatingInput"];
+            };
+        };
+        responses: {
+            /** @description Showcase with the new rating */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     listShowcaseServices: {

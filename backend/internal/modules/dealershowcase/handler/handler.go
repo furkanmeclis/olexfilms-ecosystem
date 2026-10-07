@@ -94,6 +94,7 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *usecase.ValidationError
 	var qe *apiquery.ValidationError
 	var le *repository.PhotoLimitError
+	var re *usecase.RatingRangeError
 	switch {
 	case errors.As(err, &qe):
 		response.QueryValidation(w, r, err)
@@ -102,6 +103,12 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.As(err, &le):
 		response.ErrorWithData(w, r, http.StatusUnprocessableEntity, usecase.CodePhotoLimit,
 			"The gallery is full", nil, map[string]any{"count": le.Count, "max": le.Max})
+	case errors.As(err, &re):
+		response.ErrorWithDetails(w, r, http.StatusUnprocessableEntity, usecase.CodeRatingOutOfRange,
+			"The Google rating is out of range", []response.Detail{{Field: re.Field, Message: re.Message}})
+	case errors.Is(err, usecase.ErrRatingManagedByPlaces):
+		response.Conflict(w, r, usecase.CodeRatingManagedByPlaces,
+			"The Google rating is refreshed from Google Places; clear the place id to enter it by hand")
 	case errors.Is(err, usecase.ErrNotFound):
 		response.NotFound(w, r, "Showcase not found")
 	case errors.Is(err, usecase.ErrFeatureDisabled):
@@ -146,6 +153,24 @@ func (h *Handler) Save(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := h.svc.Save(r.Context(), caller(r), org, body)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// SetGoogleRating serves PUT /v1/showcase/google-rating (TEC-469).
+func (h *Handler) SetGoogleRating(w http.ResponseWriter, r *http.Request) {
+	org, ok := targetOrg(w, r)
+	if !ok {
+		return
+	}
+	var body usecase.RatingInput
+	if !decode(w, r, &body) {
+		return
+	}
+	out, err := h.svc.SetGoogleRating(r.Context(), caller(r), org, body)
 	if err != nil {
 		writeErr(w, r, err)
 		return

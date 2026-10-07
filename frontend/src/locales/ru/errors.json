@@ -142,5 +142,7 @@
   "codes.FLEET_LINK_NOT_PENDING": "На запрос на связь уже ответили.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Галерея заполнена; удалите фото, прежде чем добавить новое.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Чтобы отклонить, напишите примечание.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Введите оценку от 1,0 до 5,0 и количество отзывов от 0.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Оценка Google обновляется из Google Places; удалите Place ID, чтобы ввести её вручную.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Неподдерживаемый тип файла; загрузите изображение JPEG, PNG или WebP."
 }

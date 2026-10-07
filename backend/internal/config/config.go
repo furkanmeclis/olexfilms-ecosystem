@@ -41,6 +41,14 @@ type Config struct {
 	ShortURLs  ShortURLsConfig
 	Leads      LeadsConfig
 	AI         AIConfig
+	Places     PlacesConfig
+}
+
+// PlacesConfig is the Google Places API (New) key of the dealer showcase
+// rating worker (TEC-469). Only from env; empty keeps the rating on manual
+// entry and the worker a no-op (F5 S7).
+type PlacesConfig struct {
+	APIKey string
 }
 
 // AIConfig is the LLM provider of the AI assistant (F4, platform/llm). The
@@ -474,6 +482,7 @@ func Load() (Config, error) {
 			MaxTokens:      getInt("AI_MAX_TOKENS", 8000),
 			RequestTimeout: getDuration("AI_REQUEST_TIMEOUT", 120*time.Second),
 		},
+		Places: PlacesConfig{APIKey: strings.TrimSpace(getEnv("GOOGLE_PLACES_API_KEY", ""))},
 	}
 
 	if err := cfg.validate(); err != nil {
