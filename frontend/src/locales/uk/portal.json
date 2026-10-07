@@ -276,5 +276,7 @@
   "appointments.error.read_only": "Обліковий запис автопарку доступний лише для перегляду.",
   "appointments.error.not_found": "Дилера або автомобіль не знайдено.",
   "appointments.error.invalid": "Дані неправильні. Перевірте свій вибір.",
-  "appointments.error.generic": "Не вдалося виконати дію. Спробуйте ще раз."
+  "appointments.error.generic": "Не вдалося виконати дію. Спробуйте ще раз.",
+  "preferences.campaign_marketing": "Повідомлення кампаній",
+  "preferences.campaign_marketing_hint": "Отримувати повідомлення кампаній і маркетингу. Типово вимкнено; вимкнення одразу відкликає згоду."
 }

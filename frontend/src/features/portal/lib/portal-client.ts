@@ -241,7 +241,10 @@ export function portalContractPdfUrl(contractUuid: string): string {
 
 /** TEC-245: the F0-10 notification preferences, as the portal reads them. */
 export type PortalNotificationPreferences =
-  components["schemas"]["NotificationPreferences"];
+  components["schemas"]["NotificationPreferences"] & {
+    /** TEC-408: opt-in for marketing campaign messages; missing means false. */
+    campaign_marketing_enabled?: boolean;
+  };
 
 /** TEC-327: portal appointments (F3-04c) and a dealer's bookable days. */
 export type PortalAppointment = components["schemas"]["PortalAppointment"];

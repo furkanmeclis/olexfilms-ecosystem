@@ -276,5 +276,7 @@
   "appointments.error.read_only": "Una cuenta de flota solo puede consultar.",
   "appointments.error.not_found": "No se encontró el distribuidor o el vehículo.",
   "appointments.error.invalid": "Los datos no son válidos. Revise su selección.",
-  "appointments.error.generic": "No se pudo completar la operación. Inténtelo de nuevo."
+  "appointments.error.generic": "No se pudo completar la operación. Inténtelo de nuevo.",
+  "preferences.campaign_marketing": "Mensajes de campaña",
+  "preferences.campaign_marketing_hint": "Recibir mensajes de campañas y marketing. Desactivado por defecto; al apagarlo se retira el consentimiento."
 }

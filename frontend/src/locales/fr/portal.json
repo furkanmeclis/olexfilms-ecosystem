@@ -276,5 +276,7 @@
   "appointments.error.read_only": "Un compte flotte peut seulement consulter.",
   "appointments.error.not_found": "Revendeur ou véhicule introuvable.",
   "appointments.error.invalid": "Les informations sont invalides. Vérifiez vos choix.",
-  "appointments.error.generic": "L'opération a échoué. Réessayez."
+  "appointments.error.generic": "L'opération a échoué. Réessayez.",
+  "preferences.campaign_marketing": "Messages de campagne",
+  "preferences.campaign_marketing_hint": "Recevoir les messages de campagne et marketing. Désactivé par défaut; la désactivation retire aussitôt le consentement."
 }

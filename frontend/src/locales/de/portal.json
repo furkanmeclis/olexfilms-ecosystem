@@ -276,5 +276,7 @@
   "appointments.error.read_only": "Ein Flottenkonto kann nur ansehen.",
   "appointments.error.not_found": "Händler oder Fahrzeug nicht gefunden.",
   "appointments.error.invalid": "Die Angaben sind ungültig. Prüfen Sie Ihre Auswahl.",
-  "appointments.error.generic": "Der Vorgang konnte nicht abgeschlossen werden. Versuchen Sie es erneut."
+  "appointments.error.generic": "Der Vorgang konnte nicht abgeschlossen werden. Versuchen Sie es erneut.",
+  "preferences.campaign_marketing": "Kampagnennachrichten",
+  "preferences.campaign_marketing_hint": "Kampagnen- und Marketingnachrichten erhalten. Standardmäßig aus; Ausschalten widerruft die Zustimmung sofort."
 }
