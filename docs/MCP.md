@@ -122,5 +122,5 @@ ziyaretçi akışında kullanılır. Kimliksiz MCP ucu yoktur.
 ## 8. Eski uç
 
 Eski hub'daki kimliksiz `/mcp/olex` ucu (olexfilms `app/Mcp/Servers/OlexSupportServer.php`, 12 tool) bu uçlarla
-değiştirilir. Eşleştirme [`docs/ai.md`](ai.md) §6 parite tablosundadır. Telefonla kimlik sorgusu (`PhoneLookupTool`) bilinçli
+değiştirilir. Eşleştirme [`docs/runbooks/f4-ai-cutover.md`](runbooks/f4-ai-cutover.md) §8 parite tablosundadır. Telefonla kimlik sorgusu (`PhoneLookupTool`) bilinçli
 olarak taşınmamıştır. Eski uç, eski sistem kapatılırken (F4-05) kaldırılır.

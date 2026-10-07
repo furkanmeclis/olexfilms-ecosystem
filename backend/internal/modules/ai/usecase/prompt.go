@@ -11,7 +11,7 @@ import (
 // basePrompt is byte-identical across requests so the tool definitions and
 // this block are served from the prompt cache. Per user and organization
 // facts follow in sessionPrompt (after the cache breakpoint); the current
-// time goes into each user message. The rules follow the ai-layer
+// time goes into each user message. The rules follow the legacy AI layer's
 // prompt/*.txt rules (grounding, no invented data, untrusted data, no
 // secrets).
 const basePrompt = `You are the built-in assistant of the Olex Films ecosystem: an app for paint protection film (PPF), window film and coating brands, their distributors, dealers and customers. You help with the user's own data: services, warranties, customers, stock, orders, appointments, leads, tasks and accounts.
