@@ -16024,18 +16024,105 @@ paths:
       tags: [ServiceCatalog]
       operationId: listServiceSubscriptions
       summary: List visible service subscriptions
+      description: >-
+        TEC-311: paged list contract (docs/list-contract.md). Sort fields
+        created_at (default -created_at), starts_on, ends_on, status, price,
+        organization_name, item_name; `q` matches organization and item names.
       security:
         - bearerAuth: []
       parameters:
         - name: status
           in: query
-          schema: { $ref: "#/components/schemas/ServiceSubscriptionStatus" }
+          description: CSV of active, cancel_requested, cancelled, expired.
+          schema: { type: string }
+        - name: organization_uuid
+          in: query
+          description: CSV of subscriber organization UUIDs.
+          schema: { type: string }
+        - name: item_uuid
+          in: query
+          description: CSV of service catalog item UUIDs.
+          schema: { type: string }
+        - name: ends_on_from
+          in: query
+          schema: { type: string, format: date }
+        - name: ends_on_to
+          in: query
+          schema: { type: string, format: date }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
       responses:
         "200":
           description: Subscriptions
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeServiceSubscriptionList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/service-subscriptions/price-preview:
+    get:
+      tags: [ServiceCatalog]
+      operationId: previewServiceSubscriptionPrice
+      summary: Price an assignment would freeze for the target organization
+      description: >-
+        TEC-311: same item and target rules as POST /v1/service-subscriptions
+        (center: distributor or dealer; distributor: own dealers).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: item_uuid
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: organization_uuid
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Effective price
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceSubscriptionPricePreview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/service-subscriptions/cancel-requests:
+    get:
+      tags: [ServiceCatalog]
+      operationId: listServiceSubscriptionCancelRequests
+      summary: Center queue of early cancellation requests
+      description: >-
+        TEC-311: center only (service_subscriptions.cancel_approve). Paged list
+        contract; sort fields created_at (default -created_at), status,
+        cancellation_fee, organization_name, item_name; `q` matches
+        organization, item and reason.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: CSV of pending, approved, rejected.
+          schema: { type: string }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Cancellation requests
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeServiceSubscriptionCancelQueue" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -29720,6 +29807,9 @@ components:
           description: Linked subscription contract summary. Pending means signatures are still expected.
           $ref: "#/components/schemas/ServiceSubscriptionContract"
         created_at: { type: string, format: date-time }
+        organization_name: { type: string }
+        item_name: { type: string }
+        item_category: { $ref: "#/components/schemas/ServiceCatalogCategory" }
 
     ServiceSubscriptionCancelInput:
       type: object
@@ -29762,11 +29852,60 @@ components:
         success: { type: boolean, enum: [true] }
         data:
           type: object
-          required: [items]
+          required: [items, total, limit, offset]
           properties:
             items:
               type: array
               items: { $ref: "#/components/schemas/ServiceSubscription" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ServiceSubscriptionCancelQueueItem:
+      allOf:
+        - $ref: "#/components/schemas/ServiceSubscriptionCancelRequest"
+        - type: object
+          required: [subscription_status, starts_on, ends_on, organization_uuid, organization_name, item_name]
+          properties:
+            subscription_status: { $ref: "#/components/schemas/ServiceSubscriptionStatus" }
+            starts_on: { type: string, format: date }
+            ends_on: { type: string, format: date }
+            organization_uuid: { type: string, format: uuid }
+            organization_name: { type: string }
+            item_name: { type: string }
+
+    EnvelopeServiceSubscriptionCancelQueue:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ServiceSubscriptionCancelQueueItem" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ServiceSubscriptionPricePreview:
+      type: object
+      required: [amount, currency, source]
+      properties:
+        amount: { type: string }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        source: { type: string, enum: [override, default] }
+
+    EnvelopeServiceSubscriptionPricePreview:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceSubscriptionPricePreview" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeServiceSubscriptionCancelRequest:

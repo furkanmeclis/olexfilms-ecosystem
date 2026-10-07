@@ -72,6 +72,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/service-catalog", read(h.ListVisible))
 	mux.Handle("POST /v1/service-subscriptions", assign(h.AssignSubscription))
 	mux.Handle("GET /v1/service-subscriptions", subRead(h.ListSubscriptions))
+	mux.Handle("GET /v1/service-subscriptions/price-preview", assign(h.PreviewPrice))
+	mux.Handle("GET /v1/service-subscriptions/cancel-requests", cancelApprove(h.ListCancelRequests))
 	mux.Handle("GET /v1/service-subscriptions/{uuid}", subRead(h.GetSubscription))
 	mux.Handle("POST /v1/service-subscriptions/{uuid}/cancel-request", cancelReq(h.RequestCancel))
 	mux.Handle("POST /v1/service-subscriptions/cancel-requests/{uuid}/approve", cancelApprove(h.ApproveCancel))
