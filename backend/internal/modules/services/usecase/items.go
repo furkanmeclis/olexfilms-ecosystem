@@ -223,6 +223,9 @@ func (s *Service) AddItem(ctx context.Context, c Caller, id uuid.UUID, in ItemIn
 		if err != nil {
 			return fmt.Errorf("services: create item: %w", err)
 		}
+		if err := s.evaluateCertificatePolicy(ctx, q, tx, svc, c); err != nil {
+			return err
+		}
 		updated = svc
 		return s.emit(ctx, tx, events.ServiceUpdated, svc, "", c, map[string]any{
 			"change": "item_added", "item_uuid": item.Uuid.String(), "unit_id": unit.ID,

@@ -195,6 +195,10 @@ export const Permission = {
   FleetsManage: "fleets.manage",
   FleetsPlan: "fleets.plan",
   FleetPortalRead: "fleet.portal.read",
+  /** TEC-466: dealer showcase (panel editor, center review queue). */
+  ShowcaseRead: "showcase.read",
+  ShowcaseWrite: "showcase.write",
+  PlatformShowcaseReview: "platform.showcase.review",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -568,5 +572,11 @@ export const permissions = {
     manage: Permission.FleetsManage,
     plan: Permission.FleetsPlan,
     portalRead: Permission.FleetPortalRead,
+  },
+  /** TEC-466: dealer showcase editor and the center review queue. */
+  showcase: {
+    read: Permission.ShowcaseRead,
+    write: Permission.ShowcaseWrite,
+    review: Permission.PlatformShowcaseReview,
   },
 } as const;

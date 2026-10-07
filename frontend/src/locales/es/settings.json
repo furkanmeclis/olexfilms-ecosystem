@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "Inicio de las horas de silencio",
   "system.keys.campaigns_quiet_hours_start_hint": "Desde esta hora en la zona horaria del destinatario, los mensajes de WhatsApp de campaña quedan en espera (0–23).",
   "system.keys.campaigns_quiet_hours_end": "Fin de las horas de silencio",
-  "system.keys.campaigns_quiet_hours_end_hint": "Los mensajes en espera salen a esta hora en la zona horaria del destinatario; si coincide con el inicio, no hay horas de silencio (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "Los mensajes en espera salen a esta hora en la zona horaria del destinatario; si coincide con el inicio, no hay horas de silencio (0–23).",
+  "system.groups.showcase": "Escaparate del distribuidor",
+  "system.groups.showcase_hint": "Aprobación de la publicación y límite de la galería de los escaparates.",
+  "system.keys.showcase_approval_required": "La publicación del escaparate requiere aprobación de la central",
+  "system.keys.showcase_approval_required_hint": "Si está activado, el escaparate se publica solo tras la aprobación de la central; si no, el distribuidor lo publica directamente.",
+  "system.keys.showcase_max_photos": "Máximo de fotos por escaparate",
+  "system.keys.showcase_max_photos_hint": "Número de fotos que puede contener la galería de un escaparate (1–50)."
 }

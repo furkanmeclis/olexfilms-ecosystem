@@ -208,5 +208,9 @@
   "labels.leads.convert_org": "Lead in Organisation umwandeln",
   "labels.quotes.read": "Angebote anzeigen",
   "labels.quotes.write": "Angebote verwalten",
-  "groups.quotes": "Angebote"
+  "groups.quotes": "Angebote",
+  "labels.showcase.read": "Schaufenster anzeigen",
+  "labels.showcase.write": "Schaufenster bearbeiten",
+  "labels.platform.showcase.review": "Händler-Schaufenster prüfen",
+  "groups.dealer_showcase": "Händler-Schaufenster"
 }

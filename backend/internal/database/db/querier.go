@@ -161,6 +161,7 @@ type Querier interface {
 	CountAppointmentsByOrganizations(ctx context.Context, arg CountAppointmentsByOrganizationsParams) (int64, error)
 	CountBarcodeBatches(ctx context.Context, arg CountBarcodeBatchesParams) (int64, error)
 	CountBinProductStockRows(ctx context.Context, arg CountBinProductStockRowsParams) (int64, error)
+	CountBlockingServiceCertificateWarnings(ctx context.Context, arg CountBlockingServiceCertificateWarningsParams) (int64, error)
 	// TEC-229: booked return lines of an order (a received return whose line
 	// was priced and not excluded); a dispute on that order's sale cannot then
 	// be resolved with a reversal.
@@ -194,6 +195,9 @@ type Querier interface {
 	// Same filter block as ListDealerFleets.
 	CountDealerFleets(ctx context.Context, arg CountDealerFleetsParams) (int64, error)
 	CountDealerPriceCatalog(ctx context.Context, arg CountDealerPriceCatalogParams) (int64, error)
+	// The usecase compares it with showcase.max_photos under LockDealerShowcase.
+	CountDealerShowcasePhotos(ctx context.Context, showcaseID int64) (int64, error)
+	CountDealerShowcaseReviews(ctx context.Context, arg CountDealerShowcaseReviewsParams) (int64, error)
 	CountDistributorOverrideDetails(ctx context.Context, arg CountDistributorOverrideDetailsParams) (int64, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
@@ -590,6 +594,9 @@ type Querier interface {
 	DeleteContractTemplate(ctx context.Context, arg DeleteContractTemplateParams) (int64, error)
 	DeleteContractTemplateLocale(ctx context.Context, arg DeleteContractTemplateLocaleParams) (int64, error)
 	DeleteDealerProductPrice(ctx context.Context, arg DeleteDealerProductPriceParams) (int64, error)
+	// Returns the storage key so the caller removes the object after commit.
+	DeleteDealerShowcasePhoto(ctx context.Context, arg DeleteDealerShowcasePhotoParams) (string, error)
+	DeleteDealerShowcaseService(ctx context.Context, arg DeleteDealerShowcaseServiceParams) (int64, error)
 	DeleteDistributorDealerPrice(ctx context.Context, arg DeleteDistributorDealerPriceParams) (int64, error)
 	DeleteDistributorPriceOverride(ctx context.Context, arg DeleteDistributorPriceOverrideParams) (int64, error)
 	DeleteDistrict(ctx context.Context, id int64) (int64, error)
@@ -841,6 +848,12 @@ type Querier interface {
 	GetCustomerProfile(ctx context.Context, userID int64) (CustomerProfile, error)
 	GetCustomerProfileForUpdate(ctx context.Context, userID int64) (CustomerProfile, error)
 	GetDealerProductPrice(ctx context.Context, arg GetDealerProductPriceParams) (DealerProductPrice, error)
+	// TEC-466 (F5-01a): dealer showcase. The usecase (F5-01b) checks the
+	// module flag, the organization scope and the transition graph
+	// (dealershowcase/model); these queries only guard the row state.
+	// Showcase --------------------------------------------------------------------
+	GetDealerShowcaseByOrg(ctx context.Context, organizationID int64) (DealerShowcase, error)
+	GetDealerShowcaseByUUID(ctx context.Context, arg GetDealerShowcaseByUUIDParams) (DealerShowcase, error)
 	GetDefaultContractTemplate(ctx context.Context, arg GetDefaultContractTemplateParams) (ContractTemplate, error)
 	GetDefaultLabelTemplate(ctx context.Context, arg GetDefaultLabelTemplateParams) (LabelTemplate, error)
 	GetDistributorPriceOverride(ctx context.Context, arg GetDistributorPriceOverrideParams) (GetDistributorPriceOverrideRow, error)
@@ -1046,6 +1059,12 @@ type Querier interface {
 	// merged into another warranty resolves through warranty_public_code_aliases
 	// to the kept warranty; the row carries that warranty's own public_code.
 	GetPublicWarrantyByCode(ctx context.Context, arg GetPublicWarrantyByCodeParams) (GetPublicWarrantyByCodeRow, error)
+	// Public read of /bayi/{code}: the approved snapshot of an active, serving
+	// dealer or distributor of the brand (same organization filters as
+	// GetPublicDealerBySlug). A showcase that was published once keeps serving
+	// its snapshot while a newer version waits for review or was rejected.
+	// The module flag is checked by the usecase. The Google rating is live.
+	GetPublishedDealerShowcase(ctx context.Context, arg GetPublishedDealerShowcaseParams) (GetPublishedDealerShowcaseRow, error)
 	GetPurchaseByUUID(ctx context.Context, arg GetPurchaseByUUIDParams) (Purchase, error)
 	GetQRLoginChallengeByCode(ctx context.Context, code string) (QrLoginChallenge, error)
 	GetQuoteByPublicToken(ctx context.Context, publicToken uuid.UUID) (Quote, error)
@@ -1084,6 +1103,7 @@ type Querier interface {
 	GetServiceCatalogItem(ctx context.Context, arg GetServiceCatalogItemParams) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByID(ctx context.Context, id int64) (ServiceCatalogItem, error)
 	GetServiceCatalogItemByUUID(ctx context.Context, arg GetServiceCatalogItemByUUIDParams) (ServiceCatalogItem, error)
+	GetServiceCertificateWarningByUUID(ctx context.Context, arg GetServiceCertificateWarningByUUIDParams) (ServiceCertificateWarning, error)
 	GetServiceConsumedPurchaseCost(ctx context.Context, arg GetServiceConsumedPurchaseCostParams) (pgtype.Numeric, error)
 	GetServiceContractSummary(ctx context.Context, id int64) (GetServiceContractSummaryRow, error)
 	GetServiceForContractByID(ctx context.Context, id int64) (GetServiceForContractByIDRow, error)
@@ -1257,6 +1277,10 @@ type Querier interface {
 	// Signatures (append-only).
 	InsertContractSignature(ctx context.Context, arg InsertContractSignatureParams) (ContractSignature, error)
 	InsertCustomerOrganization(ctx context.Context, arg InsertCustomerOrganizationParams) (CustomerOrganization, error)
+	// A new photo goes to the end of the gallery.
+	InsertDealerShowcasePhoto(ctx context.Context, arg InsertDealerShowcasePhotoParams) (DealerShowcasePhoto, error)
+	// A new service goes to the end of the list.
+	InsertDealerShowcaseService(ctx context.Context, arg InsertDealerShowcaseServiceParams) (DealerShowcaseService, error)
 	// Cron run: writes the report only when the scope and day has none (no
 	// row returned otherwise), so a rerun or a manual report wins.
 	InsertEODReportIfMissing(ctx context.Context, arg InsertEODReportIfMissingParams) (EodReport, error)
@@ -1370,6 +1394,7 @@ type Querier interface {
 	// The latest successful run of a kind; its watermark seeds the next
 	// incremental pull.
 	LastSucceededIntegrationSyncRun(ctx context.Context, arg LastSucceededIntegrationSyncRunParams) (IntegrationSyncRun, error)
+	LatestCertificateForUserType(ctx context.Context, arg LatestCertificateForUserTypeParams) (Certificate, error)
 	LatestExchangeRateDate(ctx context.Context, onDate pgtype.Date) (pgtype.Date, error)
 	LinkAppointmentLead(ctx context.Context, arg LinkAppointmentLeadParams) (Appointment, error)
 	// Idempotent link: a second call keeps the row and fills first_service_at
@@ -1614,6 +1639,15 @@ type Querier interface {
 	ListDealerPriceCatalog(ctx context.Context, arg ListDealerPriceCatalogParams) ([]ListDealerPriceCatalogRow, error)
 	ListDealerPricesForProducts(ctx context.Context, arg ListDealerPricesForProductsParams) ([]ListDealerPricesForProductsRow, error)
 	ListDealerProductPrices(ctx context.Context, arg ListDealerProductPricesParams) ([]DealerProductPrice, error)
+	// Photos ----------------------------------------------------------------------
+	ListDealerShowcasePhotos(ctx context.Context, showcaseID int64) ([]DealerShowcasePhoto, error)
+	// Center review queue (docs/list-contract.md): sort updated_at | name |
+	// status (flow rank) with an id tiebreak; statuses multi-valued (empty = all);
+	// q matches the organization name or city; updated_from / updated_before.
+	// organization_ids narrows to a scope (empty = whole brand).
+	ListDealerShowcaseReviews(ctx context.Context, arg ListDealerShowcaseReviewsParams) ([]ListDealerShowcaseReviewsRow, error)
+	// Services --------------------------------------------------------------------
+	ListDealerShowcaseServices(ctx context.Context, showcaseID int64) ([]DealerShowcaseService, error)
 	// Center view of the distributor-specific prices with product and
 	// distributor identities. TEC-369: sort keys from
 	// usecase.DistributorPriceSort (docs/list-contract.md); default product.
@@ -2039,6 +2073,7 @@ type Querier interface {
 	ListServiceCatalogItems(ctx context.Context, arg ListServiceCatalogItemsParams) ([]ServiceCatalogItem, error)
 	ListServiceCatalogModules(ctx context.Context, itemID int64) ([]string, error)
 	ListServiceCertificateWarnings(ctx context.Context, arg ListServiceCertificateWarningsParams) ([]ListServiceCertificateWarningsRow, error)
+	ListServiceCertificateWarningsByService(ctx context.Context, arg ListServiceCertificateWarningsByServiceParams) ([]ListServiceCertificateWarningsByServiceRow, error)
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
@@ -2347,6 +2382,9 @@ type Querier interface {
 	LockBinProductStock(ctx context.Context, arg LockBinProductStockParams) (BinProductStock, error)
 	LockBulkOperationForUndo(ctx context.Context, id int64) (BulkOperation, error)
 	LockCampaignRecipient(ctx context.Context, id int64) (CampaignRecipient, error)
+	// Serializes photo inserts and status moves of one showcase (the caller
+	// runs in a transaction).
+	LockDealerShowcase(ctx context.Context, id int64) (DealerShowcase, error)
 	// ---------------------------------------------------------------------------
 	// Fixed barcode holdings (quantity per unit and owner).
 	LockFixedBarcodeHolding(ctx context.Context, arg LockFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
@@ -2477,6 +2515,7 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	MarkServiceCertificateWarningsPending(ctx context.Context, arg MarkServiceCertificateWarningsPendingParams) (int64, error)
 	MarkServiceMeasurementChecked(ctx context.Context, arg MarkServiceMeasurementCheckedParams) (int64, error)
 	// Idempotent: an already processed review returns no row (pgx.ErrNoRows).
 	MarkServiceReviewProcessed(ctx context.Context, id int64) (ServiceReview, error)
@@ -2759,6 +2798,10 @@ type Querier interface {
 	// of the sold lines (lines without a cost snapshot count as zero cost and
 	// are reported separately).
 	ProductSaleProfitByProduct(ctx context.Context, arg ProductSaleProfitByProductParams) ([]ProductSaleProfitByProductRow, error)
+	// CAS from_status → published and writes the snapshot the public endpoint
+	// reads. reviewer_user_id is set when the center approved a pending
+	// showcase, NULL when the owner published directly (approval off).
+	PublishDealerShowcase(ctx context.Context, arg PublishDealerShowcaseParams) (DealerShowcase, error)
 	PublishDocumentTemplate(ctx context.Context, id int64) (DocumentTemplate, error)
 	// Retention (90 days, QUESTIONS #15): deletes one batch of old runs.
 	PurgeConversationAIRunsBefore(ctx context.Context, arg PurgeConversationAIRunsBeforeParams) (int64, error)
@@ -2771,6 +2814,9 @@ type Querier interface {
 	// A failed attempt that will be retried: the recipient stays pending.
 	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
 	RejectCertificate(ctx context.Context, arg RejectCertificateParams) (Certificate, error)
+	// CAS pending_review → rejected with the reviewer's note. The previous
+	// published snapshot (if any) stays live.
+	RejectDealerShowcase(ctx context.Context, arg RejectDealerShowcaseParams) (DealerShowcase, error)
 	RejectStockTransferRequest(ctx context.Context, arg RejectStockTransferRequestParams) (StockTransferRequest, error)
 	// Cancel: releases every active reservation of the order.
 	ReleaseReservationsByOrder(ctx context.Context, orderID int64) (int64, error)
@@ -2781,6 +2827,10 @@ type Querier interface {
 	// finance rows; the active reapply pointer is cleared so a new attempt can be
 	// opened later.
 	ReopenWarrantyClaim(ctx context.Context, arg ReopenWarrantyClaimParams) (WarrantyClaim, error)
+	ReorderDealerShowcasePhotos(ctx context.Context, arg ReorderDealerShowcasePhotosParams) (int64, error)
+	// Sets sort_order 10, 20, … in the given order; uuids of other showcases
+	// are ignored (the caller compares the row count with the list length).
+	ReorderDealerShowcaseServices(ctx context.Context, arg ReorderDealerShowcaseServicesParams) (int64, error)
 	// Optimistic replacement of the image list: no row when another request
 	// changed the list since it was read (expected).
 	ReplaceProductImages(ctx context.Context, arg ReplaceProductImagesParams) (Product, error)
@@ -2887,6 +2937,9 @@ type Querier interface {
 	// Ciphertext and mask are written together; NULL/NULL clears the value.
 	SetCustomerNationalID(ctx context.Context, arg SetCustomerNationalIDParams) (CustomerProfile, error)
 	SetCustomerTaxNo(ctx context.Context, arg SetCustomerTaxNoParams) (CustomerProfile, error)
+	// Writes the Google rating (Places worker or manual entry, F5-01d); NULL
+	// rating and count clear it.
+	SetDealerShowcaseGoogleRating(ctx context.Context, arg SetDealerShowcaseGoogleRatingParams) (DealerShowcase, error)
 	// Records the fleet cari in the dealer's ledger once (CAS on NULL).
 	SetFleetDealerLinkCari(ctx context.Context, arg SetFleetDealerLinkCariParams) (FleetDealerLink, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.
@@ -3015,6 +3068,9 @@ type Querier interface {
 	StartIntegrationSyncRun(ctx context.Context, arg StartIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	StartStockCount(ctx context.Context, arg StartStockCountParams) (StockCount, error)
 	StockCountSerialScanExists(ctx context.Context, arg StockCountSerialScanExistsParams) (bool, error)
+	// CAS from_status → pending_review (approval on). No row when the status
+	// moved meanwhile.
+	SubmitDealerShowcase(ctx context.Context, arg SubmitDealerShowcaseParams) (DealerShowcase, error)
 	// Fixed barcodes: total quantity actively reserved by the seller
 	// organization, checked against what that organization holds by the use
 	// case (sum <= on hand, under the unit row lock).
@@ -3085,6 +3141,7 @@ type Querier interface {
 	UpdateCarBrand(ctx context.Context, arg UpdateCarBrandParams) (CarBrand, error)
 	UpdateCarModel(ctx context.Context, arg UpdateCarModelParams) (CarModel, error)
 	UpdateCertificateExpiry(ctx context.Context, arg UpdateCertificateExpiryParams) (Certificate, error)
+	UpdateCertificateStorageKey(ctx context.Context, arg UpdateCertificateStorageKeyParams) (Certificate, error)
 	UpdateCertificateType(ctx context.Context, arg UpdateCertificateTypeParams) (CertificateType, error)
 	// Re-renders an open contract (draft or pending).
 	UpdateContractInstanceContent(ctx context.Context, arg UpdateContractInstanceContentParams) (ContractInstance, error)
@@ -3092,6 +3149,8 @@ type Querier interface {
 	// Stages and tool calls of a running run (whole arrays are replaced).
 	UpdateConversationAIRunProgress(ctx context.Context, arg UpdateConversationAIRunProgressParams) (ConversationAiRun, error)
 	UpdateCustomerProfile(ctx context.Context, arg UpdateCustomerProfileParams) (CustomerProfile, error)
+	UpdateDealerShowcasePhotoCaption(ctx context.Context, arg UpdateDealerShowcasePhotoCaptionParams) (DealerShowcasePhoto, error)
+	UpdateDealerShowcaseService(ctx context.Context, arg UpdateDealerShowcaseServiceParams) (DealerShowcaseService, error)
 	UpdateDocumentTemplateDraft(ctx context.Context, arg UpdateDocumentTemplateDraftParams) (DocumentTemplate, error)
 	UpdateFinanceAccount(ctx context.Context, arg UpdateFinanceAccountParams) (FinanceAccount, error)
 	// NULL keeps a column; the optional text columns are cleared by the
@@ -3202,6 +3261,10 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Dealer product prices.
 	UpsertDealerProductPrice(ctx context.Context, arg UpsertDealerProductPriceParams) (DealerProductPrice, error)
+	// Creates the organization's showcase or replaces its draft content. The
+	// status, the published snapshot and the Google rating are left alone: a
+	// draft edit never touches the live page.
+	UpsertDealerShowcase(ctx context.Context, arg UpsertDealerShowcaseParams) (DealerShowcase, error)
 	UpsertDevicePushToken(ctx context.Context, arg UpsertDevicePushTokenParams) (DevicePushToken, error)
 	// The database refuses an owner that is not a distributor of the brand.
 	UpsertDistributorDealerPrice(ctx context.Context, arg UpsertDistributorDealerPriceParams) (UpsertDistributorDealerPriceRow, error)

@@ -122,6 +122,27 @@ type ContractSummary struct {
 	PDFReady bool `json:"pdf_ready"`
 }
 
+type CertificateWarningView struct {
+	UUID      uuid.UUID       `json:"uuid"`
+	Reason    string          `json:"reason"`
+	Decision  string          `json:"decision"`
+	Type      LocalizedRef    `json:"type"`
+	User      CertificateUser `json:"user"`
+	Note      string          `json:"note"`
+	CreatedAt time.Time       `json:"created_at"`
+}
+
+type LocalizedRef struct {
+	UUID uuid.UUID       `json:"uuid"`
+	Name json.RawMessage `json:"name"`
+}
+
+type CertificateUser struct {
+	UUID    uuid.UUID `json:"uuid"`
+	Name    string    `json:"name"`
+	Surname string    `json:"surname"`
+}
+
 // ServiceView is a service as the API returns it.
 type ServiceView struct {
 	UUID             uuid.UUID        `json:"uuid"`
@@ -155,12 +176,13 @@ type ServiceView struct {
 	// ItemsEditable: the caller may add or remove items.
 	ItemsEditable bool `json:"items_editable"`
 	// AvailableTransitions are the statuses the caller may move the service to.
-	AvailableTransitions []string        `json:"available_transitions"`
-	Items                []ItemView      `json:"items,omitempty"`
-	Images               []ImageView     `json:"images,omitempty"`
-	StatusLogs           []StatusLogView `json:"status_logs,omitempty"`
-	Warranties           []WarrantyView  `json:"warranties,omitempty"`
-	IsWarrantyReapply    bool            `json:"is_warranty_reapply"`
+	AvailableTransitions []string                 `json:"available_transitions"`
+	Items                []ItemView               `json:"items,omitempty"`
+	Images               []ImageView              `json:"images,omitempty"`
+	StatusLogs           []StatusLogView          `json:"status_logs,omitempty"`
+	Warranties           []WarrantyView           `json:"warranties,omitempty"`
+	CertificateWarnings  []CertificateWarningView `json:"certificate_warnings,omitempty"`
+	IsWarrantyReapply    bool                     `json:"is_warranty_reapply"`
 }
 
 func tsPtr(t pgtype.Timestamptz) *time.Time {
@@ -331,6 +353,21 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, svc db.Serv
 			UUID: w.Uuid, PublicCode: w.PublicCode, ServiceItemUUID: item.UUID, ProductName: item.Product.Name,
 			ItemKind: w.ItemKind, Status: w.Status, StartAt: w.StartAt.Time, EndAt: w.EndAt.Time,
 			ExpiredAt: tsPtr(w.ExpiredAt), VoidedAt: tsPtr(w.VoidedAt),
+		})
+	}
+	warnings, err := q.ListServiceCertificateWarningsByService(ctx, db.ListServiceCertificateWarningsByServiceParams{
+		ServiceID: svc.ID, BrandID: svc.BrandID,
+	})
+	if err != nil {
+		return ServiceView{}, fmt.Errorf("services: certificate warnings: %w", err)
+	}
+	v.CertificateWarnings = make([]CertificateWarningView, 0, len(warnings))
+	for _, w := range warnings {
+		v.CertificateWarnings = append(v.CertificateWarnings, CertificateWarningView{
+			UUID: w.Uuid, Reason: w.Reason, Decision: w.Decision,
+			Type: LocalizedRef{UUID: w.TypeUuid, Name: json.RawMessage(w.TypeName)},
+			User: CertificateUser{UUID: w.UserUuid, Name: w.UserName, Surname: w.UserSurname},
+			Note: w.Note, CreatedAt: w.CreatedAt.Time,
 		})
 	}
 	return v, nil

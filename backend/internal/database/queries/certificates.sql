@@ -169,6 +169,12 @@ SET status = 'revoked',
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id) AND status IN ('pending', 'valid')
 RETURNING *;
 
+-- name: UpdateCertificateStorageKey :one
+UPDATE certificates
+SET storage_key = sqlc.arg(storage_key)
+WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
+RETURNING *;
+
 -- name: UpdateCertificateExpiry :one
 UPDATE certificates
 SET expires_at = sqlc.narg(expires_at)::timestamptz
@@ -340,11 +346,66 @@ VALUES (
 )
 ON CONFLICT (service_id, user_id, type_id) DO UPDATE
 SET reason = EXCLUDED.reason,
-    decision = EXCLUDED.decision,
-    decided_by = NULL,
-    decided_at = NULL,
+    decision = CASE
+        WHEN service_certificate_warnings.decision IN ('approved', 'rejected')
+            THEN service_certificate_warnings.decision
+        ELSE EXCLUDED.decision
+    END,
+    decided_by = CASE
+        WHEN service_certificate_warnings.decision IN ('approved', 'rejected')
+            THEN service_certificate_warnings.decided_by
+        ELSE NULL
+    END,
+    decided_at = CASE
+        WHEN service_certificate_warnings.decision IN ('approved', 'rejected')
+            THEN service_certificate_warnings.decided_at
+        ELSE NULL
+    END,
     note = EXCLUDED.note
 RETURNING *;
+
+-- name: MarkServiceCertificateWarningsPending :execrows
+UPDATE service_certificate_warnings
+SET decision = 'pending_approval'
+WHERE service_id = sqlc.arg(service_id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND decision = 'none';
+
+-- name: CountBlockingServiceCertificateWarnings :one
+SELECT COUNT(*)::bigint
+FROM service_certificate_warnings
+WHERE service_id = sqlc.arg(service_id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND decision IN ('none', 'pending_approval', 'rejected');
+
+-- name: ListServiceCertificateWarningsByService :many
+SELECT w.*, ct.uuid AS type_uuid, ct.name AS type_name,
+       u.uuid AS user_uuid, u.name AS user_name, u.surname AS user_surname
+FROM service_certificate_warnings w
+JOIN certificate_types ct ON ct.id = w.type_id
+JOIN users u ON u.id = w.user_id
+WHERE w.service_id = sqlc.arg(service_id)
+  AND w.brand_id = sqlc.arg(brand_id)
+ORDER BY w.created_at, w.id;
+
+-- name: GetServiceCertificateWarningByUUID :one
+SELECT *
+FROM service_certificate_warnings
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
+
+-- name: LatestCertificateForUserType :one
+SELECT *
+FROM certificates
+WHERE user_id = sqlc.arg(user_id)
+  AND organization_id = sqlc.arg(organization_id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND type_id = sqlc.arg(type_id)
+ORDER BY
+  CASE status WHEN 'valid' THEN 1 WHEN 'pending' THEN 2 WHEN 'expired' THEN 3 ELSE 4 END,
+  expires_at DESC NULLS LAST,
+  created_at DESC,
+  id DESC
+LIMIT 1;
 
 -- name: DecideServiceCertificateWarning :one
 UPDATE service_certificate_warnings

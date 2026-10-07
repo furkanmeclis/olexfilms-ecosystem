@@ -208,5 +208,9 @@
   "labels.leads.convert_org": "Μετατροπή υποψήφιου σε οργανισμό",
   "labels.quotes.read": "Προβολή προσφορών",
   "labels.quotes.write": "Διαχείριση προσφορών",
-  "groups.quotes": "Προσφορές"
+  "groups.quotes": "Προσφορές",
+  "labels.showcase.read": "Προβολή βιτρίνας",
+  "labels.showcase.write": "Επεξεργασία βιτρίνας",
+  "labels.platform.showcase.review": "Έγκριση βιτρινών αντιπροσώπων",
+  "groups.dealer_showcase": "Βιτρίνα αντιπροσώπου"
 }

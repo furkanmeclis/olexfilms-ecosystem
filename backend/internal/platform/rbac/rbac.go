@@ -298,6 +298,12 @@ const (
 	PermFleetsManage    = "fleets.manage"
 	PermFleetsPlan      = "fleets.plan"
 	PermFleetPortalRead = "fleet.portal.read"
+	// TEC-466 (000113): dealer showcase (F5-01). The dealer owner edits its
+	// own showcase, the distributor owner those of its subtree; the center
+	// reviews them when showcase.approval_required is on.
+	PermShowcaseRead           = "showcase.read"
+	PermShowcaseWrite          = "showcase.write"
+	PermPlatformShowcaseReview = "platform.showcase.review"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

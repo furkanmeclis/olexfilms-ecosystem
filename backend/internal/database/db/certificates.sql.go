@@ -76,6 +76,26 @@ func (q *Queries) AddCertificateTypeProduct(ctx context.Context, arg AddCertific
 	return i, err
 }
 
+const countBlockingServiceCertificateWarnings = `-- name: CountBlockingServiceCertificateWarnings :one
+SELECT COUNT(*)::bigint
+FROM service_certificate_warnings
+WHERE service_id = $1
+  AND brand_id = $2
+  AND decision IN ('none', 'pending_approval', 'rejected')
+`
+
+type CountBlockingServiceCertificateWarningsParams struct {
+	ServiceID int64 `json:"service_id"`
+	BrandID   int64 `json:"brand_id"`
+}
+
+func (q *Queries) CountBlockingServiceCertificateWarnings(ctx context.Context, arg CountBlockingServiceCertificateWarningsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countBlockingServiceCertificateWarnings, arg.ServiceID, arg.BrandID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countCertificateTypeBindings = `-- name: CountCertificateTypeBindings :one
 SELECT (
     (SELECT COUNT(*) FROM certificate_type_categories ctc WHERE ctc.type_id = $1 AND ctc.brand_id = $2)
@@ -610,6 +630,92 @@ func (q *Queries) GetCertificateTypeByUUID(ctx context.Context, arg GetCertifica
 		&i.ValidityMonths,
 		&i.Active,
 		&i.SortOrder,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getServiceCertificateWarningByUUID = `-- name: GetServiceCertificateWarningByUUID :one
+SELECT id, uuid, service_id, organization_id, brand_id, user_id, type_id, reason, decision, decided_by, decided_at, note, created_at, updated_at
+FROM service_certificate_warnings
+WHERE uuid = $1 AND brand_id = $2
+`
+
+type GetServiceCertificateWarningByUUIDParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+func (q *Queries) GetServiceCertificateWarningByUUID(ctx context.Context, arg GetServiceCertificateWarningByUUIDParams) (ServiceCertificateWarning, error) {
+	row := q.db.QueryRow(ctx, getServiceCertificateWarningByUUID, arg.Uuid, arg.BrandID)
+	var i ServiceCertificateWarning
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UserID,
+		&i.TypeID,
+		&i.Reason,
+		&i.Decision,
+		&i.DecidedBy,
+		&i.DecidedAt,
+		&i.Note,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const latestCertificateForUserType = `-- name: LatestCertificateForUserType :one
+SELECT id, uuid, user_id, organization_id, brand_id, type_id, storage_key, sha256, issued_at, expires_at, status, verified_by_user_id, verified_by_org_id, verified_at, reject_reason, expiry_notice_sent_at, created_at, updated_at
+FROM certificates
+WHERE user_id = $1
+  AND organization_id = $2
+  AND brand_id = $3
+  AND type_id = $4
+ORDER BY
+  CASE status WHEN 'valid' THEN 1 WHEN 'pending' THEN 2 WHEN 'expired' THEN 3 ELSE 4 END,
+  expires_at DESC NULLS LAST,
+  created_at DESC,
+  id DESC
+LIMIT 1
+`
+
+type LatestCertificateForUserTypeParams struct {
+	UserID         int64 `json:"user_id"`
+	OrganizationID int64 `json:"organization_id"`
+	BrandID        int64 `json:"brand_id"`
+	TypeID         int64 `json:"type_id"`
+}
+
+func (q *Queries) LatestCertificateForUserType(ctx context.Context, arg LatestCertificateForUserTypeParams) (Certificate, error) {
+	row := q.db.QueryRow(ctx, latestCertificateForUserType,
+		arg.UserID,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.TypeID,
+	)
+	var i Certificate
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.TypeID,
+		&i.StorageKey,
+		&i.Sha256,
+		&i.IssuedAt,
+		&i.ExpiresAt,
+		&i.Status,
+		&i.VerifiedByUserID,
+		&i.VerifiedByOrgID,
+		&i.VerifiedAt,
+		&i.RejectReason,
+		&i.ExpiryNoticeSentAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1176,6 +1282,84 @@ func (q *Queries) ListServiceCertificateWarnings(ctx context.Context, arg ListSe
 	return items, nil
 }
 
+const listServiceCertificateWarningsByService = `-- name: ListServiceCertificateWarningsByService :many
+SELECT w.id, w.uuid, w.service_id, w.organization_id, w.brand_id, w.user_id, w.type_id, w.reason, w.decision, w.decided_by, w.decided_at, w.note, w.created_at, w.updated_at, ct.uuid AS type_uuid, ct.name AS type_name,
+       u.uuid AS user_uuid, u.name AS user_name, u.surname AS user_surname
+FROM service_certificate_warnings w
+JOIN certificate_types ct ON ct.id = w.type_id
+JOIN users u ON u.id = w.user_id
+WHERE w.service_id = $1
+  AND w.brand_id = $2
+ORDER BY w.created_at, w.id
+`
+
+type ListServiceCertificateWarningsByServiceParams struct {
+	ServiceID int64 `json:"service_id"`
+	BrandID   int64 `json:"brand_id"`
+}
+
+type ListServiceCertificateWarningsByServiceRow struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	ServiceID      int64              `json:"service_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	UserID         int64              `json:"user_id"`
+	TypeID         int64              `json:"type_id"`
+	Reason         string             `json:"reason"`
+	Decision       string             `json:"decision"`
+	DecidedBy      pgtype.Int8        `json:"decided_by"`
+	DecidedAt      pgtype.Timestamptz `json:"decided_at"`
+	Note           string             `json:"note"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	TypeUuid       uuid.UUID          `json:"type_uuid"`
+	TypeName       []byte             `json:"type_name"`
+	UserUuid       uuid.UUID          `json:"user_uuid"`
+	UserName       string             `json:"user_name"`
+	UserSurname    string             `json:"user_surname"`
+}
+
+func (q *Queries) ListServiceCertificateWarningsByService(ctx context.Context, arg ListServiceCertificateWarningsByServiceParams) ([]ListServiceCertificateWarningsByServiceRow, error) {
+	rows, err := q.db.Query(ctx, listServiceCertificateWarningsByService, arg.ServiceID, arg.BrandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListServiceCertificateWarningsByServiceRow{}
+	for rows.Next() {
+		var i ListServiceCertificateWarningsByServiceRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.ServiceID,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.UserID,
+			&i.TypeID,
+			&i.Reason,
+			&i.Decision,
+			&i.DecidedBy,
+			&i.DecidedAt,
+			&i.Note,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.TypeUuid,
+			&i.TypeName,
+			&i.UserUuid,
+			&i.UserName,
+			&i.UserSurname,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listValidCertificatesForServiceUser = `-- name: ListValidCertificatesForServiceUser :many
 SELECT DISTINCT c.id, c.uuid, c.user_id, c.organization_id, c.brand_id, c.type_id, c.storage_key, c.sha256, c.issued_at, c.expires_at, c.status, c.verified_by_user_id, c.verified_by_org_id, c.verified_at, c.reject_reason, c.expiry_notice_sent_at, c.created_at, c.updated_at
 FROM certificates c
@@ -1275,6 +1459,27 @@ type MarkCertificateExpiryNoticeSentParams struct {
 
 func (q *Queries) MarkCertificateExpiryNoticeSent(ctx context.Context, arg MarkCertificateExpiryNoticeSentParams) (int64, error) {
 	result, err := q.db.Exec(ctx, markCertificateExpiryNoticeSent, arg.Now, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const markServiceCertificateWarningsPending = `-- name: MarkServiceCertificateWarningsPending :execrows
+UPDATE service_certificate_warnings
+SET decision = 'pending_approval'
+WHERE service_id = $1
+  AND brand_id = $2
+  AND decision = 'none'
+`
+
+type MarkServiceCertificateWarningsPendingParams struct {
+	ServiceID int64 `json:"service_id"`
+	BrandID   int64 `json:"brand_id"`
+}
+
+func (q *Queries) MarkServiceCertificateWarningsPending(ctx context.Context, arg MarkServiceCertificateWarningsPendingParams) (int64, error) {
+	result, err := q.db.Exec(ctx, markServiceCertificateWarningsPending, arg.ServiceID, arg.BrandID)
 	if err != nil {
 		return 0, err
 	}
@@ -1415,6 +1620,45 @@ func (q *Queries) UpdateCertificateExpiry(ctx context.Context, arg UpdateCertifi
 	return i, err
 }
 
+const updateCertificateStorageKey = `-- name: UpdateCertificateStorageKey :one
+UPDATE certificates
+SET storage_key = $1
+WHERE id = $2 AND brand_id = $3
+RETURNING id, uuid, user_id, organization_id, brand_id, type_id, storage_key, sha256, issued_at, expires_at, status, verified_by_user_id, verified_by_org_id, verified_at, reject_reason, expiry_notice_sent_at, created_at, updated_at
+`
+
+type UpdateCertificateStorageKeyParams struct {
+	StorageKey string `json:"storage_key"`
+	ID         int64  `json:"id"`
+	BrandID    int64  `json:"brand_id"`
+}
+
+func (q *Queries) UpdateCertificateStorageKey(ctx context.Context, arg UpdateCertificateStorageKeyParams) (Certificate, error) {
+	row := q.db.QueryRow(ctx, updateCertificateStorageKey, arg.StorageKey, arg.ID, arg.BrandID)
+	var i Certificate
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.TypeID,
+		&i.StorageKey,
+		&i.Sha256,
+		&i.IssuedAt,
+		&i.ExpiresAt,
+		&i.Status,
+		&i.VerifiedByUserID,
+		&i.VerifiedByOrgID,
+		&i.VerifiedAt,
+		&i.RejectReason,
+		&i.ExpiryNoticeSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateCertificateType = `-- name: UpdateCertificateType :one
 UPDATE certificate_types
 SET name = $1,
@@ -1474,9 +1718,21 @@ VALUES (
 )
 ON CONFLICT (service_id, user_id, type_id) DO UPDATE
 SET reason = EXCLUDED.reason,
-    decision = EXCLUDED.decision,
-    decided_by = NULL,
-    decided_at = NULL,
+    decision = CASE
+        WHEN service_certificate_warnings.decision IN ('approved', 'rejected')
+            THEN service_certificate_warnings.decision
+        ELSE EXCLUDED.decision
+    END,
+    decided_by = CASE
+        WHEN service_certificate_warnings.decision IN ('approved', 'rejected')
+            THEN service_certificate_warnings.decided_by
+        ELSE NULL
+    END,
+    decided_at = CASE
+        WHEN service_certificate_warnings.decision IN ('approved', 'rejected')
+            THEN service_certificate_warnings.decided_at
+        ELSE NULL
+    END,
     note = EXCLUDED.note
 RETURNING id, uuid, service_id, organization_id, brand_id, user_id, type_id, reason, decision, decided_by, decided_at, note, created_at, updated_at
 `
