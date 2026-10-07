@@ -70,6 +70,8 @@ func Schedules() []Periodic {
 		{Cron: conversationAIRunPurgeCron, Type: TaskConversationAIRunPurge, Queue: QueueMaintenance, New: NewConversationAIRunPurgeTask},
 		// TEC-400: hourly MCP OAuth cleanup (idempotent deletes).
 		{Cron: oauthCleanupCron, Type: TaskOAuthCleanup, Queue: QueueMaintenance, Opts: oauthCleanupOpts(), New: NewOAuthCleanupTask},
+		// TEC-387: AI confirmation card expiry and stale run cleanup (idempotent).
+		{Cron: aiActionSweepCron, Type: TaskAIActionSweep, Queue: QueueMaintenance, Opts: aiActionSweepOpts(), New: NewAIActionSweepTask},
 	}
 }
 

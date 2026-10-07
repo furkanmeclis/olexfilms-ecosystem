@@ -44,6 +44,7 @@ func (ListAppointments) Spec() Spec {
 }
 
 type appointmentRow struct {
+	UUID     uuid.UUID `json:"uuid"`
 	StartsAt time.Time `json:"starts_at"`
 	EndsAt   time.Time `json:"ends_at"`
 	Status   string    `json:"status"`
@@ -92,7 +93,7 @@ func (t ListAppointments) Run(ctx context.Context, env Env, raw json.RawMessage)
 	out := make([]appointmentRow, 0, len(rows))
 	for _, a := range rows {
 		out = append(out, appointmentRow{
-			StartsAt: a.StartsAt.In(loc), EndsAt: a.EndsAt.In(loc), Status: a.Status,
+			UUID: a.UUID, StartsAt: a.StartsAt.In(loc), EndsAt: a.EndsAt.In(loc), Status: a.Status,
 			Customer: dataText(a.CustomerName, maxNameChars), Plate: a.VehiclePlate,
 			Vehicle: textPtr(a.VehicleLabel, maxNameChars), Source: a.Source, Note: dataText(a.Note, maxTextChars),
 		})

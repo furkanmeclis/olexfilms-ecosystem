@@ -14,6 +14,8 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	accountingposting "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
 	accountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/usecase"
+	airepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/repository"
+	aiusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/usecase"
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	appointmentreminder "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/reminder"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
@@ -351,6 +353,8 @@ func main() {
 		).
 		// TEC-393: 90-day retention of WhatsApp conversation AI runs.
 		WithConversationAIRunPurge(whatsapprepo.New(pool).PurgeExpiredAIRuns).
+		// TEC-387: AI confirmation card expiry and stale run cleanup.
+		WithAIActionSweep(aiusecase.NewActions(airepo.New(pool), nil, nil, log).SweepTask).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,

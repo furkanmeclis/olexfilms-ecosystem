@@ -564,6 +564,16 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]Appointme
 	return out, total, nil
 }
 
+// Get returns one appointment within the caller's read scope (TEC-387,
+// AI confirmation card); ErrNotFound outside it.
+func (s *Service) Get(ctx context.Context, c Caller, id uuid.UUID) (Appointment, error) {
+	row, err := s.byUUID(ctx, c, id)
+	if err != nil {
+		return Appointment{}, err
+	}
+	return s.oneWithRefs(ctx, row)
+}
+
 func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Appointment, error) {
 	if !c.Principal.Can(rbac.PermAppointmentsWrite, rbac.ScopeManaged) {
 		return Appointment{}, ErrForbidden

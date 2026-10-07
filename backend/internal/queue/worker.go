@@ -101,6 +101,8 @@ type Worker struct {
 	staffPaymentsPostDue StaffPaymentsPostDueFunc
 	// TEC-393: 90-day retention of conversation AI runs.
 	purgeConversationAIRuns ConversationAIRunPurgeFunc
+	// TEC-387: AI confirmation card expiry and stale run cleanup.
+	aiActionSweep AIActionSweepFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -176,6 +178,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskQuoteExpire, w.handleQuoteExpire)
 	mux.HandleFunc(TaskQuoteReminder, w.handleQuoteReminder)
 	mux.HandleFunc(TaskOAuthCleanup, w.handleOAuthCleanup)
+	mux.HandleFunc(TaskAIActionSweep, w.handleAIActionSweep)
 	mux.HandleFunc(TaskWarehouseEODReports, w.handleWarehouseEOD)
 	mux.HandleFunc(TaskGlorianPullCatalog, w.handleGlorianPull)
 	mux.HandleFunc(TaskGlorianPushBarcodes, w.handleGlorianPush)

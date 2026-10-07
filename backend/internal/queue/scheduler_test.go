@@ -58,6 +58,8 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		// TEC-393.
 		{cron: conversationAIRunPurgeCron, taskType: TaskConversationAIRunPurge, queue: QueueMaintenance}: false,
 		{cron: oauthCleanupCron, taskType: TaskOAuthCleanup, queue: QueueMaintenance}:                     false,
+		// TEC-387.
+		{cron: aiActionSweepCron, taskType: TaskAIActionSweep, queue: QueueMaintenance}: false,
 	}
 	for _, e := range r.entries {
 		if _, ok := want[e]; !ok {
