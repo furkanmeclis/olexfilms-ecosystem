@@ -76,6 +76,25 @@ func TestDefaults(t *testing.T) {
 	}
 }
 
+// Reviews is a standard module (user decision 2026-10-07): free, on by
+// default for every organization that has no reviews flag of its own.
+func TestReviewsIsStandard(t *testing.T) {
+	m, ok := ModuleByKey(ModuleReviews)
+	if !ok || m.Level != LevelStandard || !m.DefaultEnabled || m.Paid {
+		t.Fatalf("reviews = %+v", m)
+	}
+	for _, org := range []OrgNode{dealerNode, distNode} {
+		if st := state(t, nil, org, ModuleReviews); !st.Enabled || !st.Visible || st.Source != FromDefault {
+			t.Fatalf("reviews default for %s = %+v", org.Type, st)
+		}
+	}
+	// A distributor's explicit "off" for its dealers is still honoured.
+	flags := []FlagRow{{Scope: ScopeDealerStandard, OrgID: distID, Key: ModuleReviews, Enabled: false, Source: SourceDistributor}}
+	if st := state(t, flags, dealerNode, ModuleReviews); st.Enabled {
+		t.Fatalf("reviews with dealer standard off = %+v", st)
+	}
+}
+
 // Acceptance: a module closed system wide is off everywhere, admin values
 // included.
 func TestSystemClosedHasNoException(t *testing.T) {
