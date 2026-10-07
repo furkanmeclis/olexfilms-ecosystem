@@ -27,14 +27,15 @@ import (
 
 // Error codes specific to services.
 const (
-	CodeInvalidTransition     = "SERVICE_INVALID_TRANSITION"
-	CodeNotEditable           = "SERVICE_NOT_EDITABLE"
-	CodeUnitInUse             = "SERVICE_UNIT_IN_USE"
-	CodeUnitNotAvailable      = "SERVICE_UNIT_NOT_AVAILABLE"
-	CodeTooManyImages         = "SERVICE_TOO_MANY_IMAGES"
-	CodeContractRequired      = "CONTRACT_REQUIRED"
-	CodeIncomeAlreadyRecorded = "SERVICE_INCOME_ALREADY_RECORDED"
-	CodeIncomeNotRecorded     = "SERVICE_INCOME_NOT_RECORDED"
+	CodeInvalidTransition           = "SERVICE_INVALID_TRANSITION"
+	CodeNotEditable                 = "SERVICE_NOT_EDITABLE"
+	CodeUnitInUse                   = "SERVICE_UNIT_IN_USE"
+	CodeUnitNotAvailable            = "SERVICE_UNIT_NOT_AVAILABLE"
+	CodeTooManyImages               = "SERVICE_TOO_MANY_IMAGES"
+	CodeContractRequired            = "CONTRACT_REQUIRED"
+	CodeCertificateApprovalRequired = "CERTIFICATE_APPROVAL_REQUIRED"
+	CodeIncomeAlreadyRecorded       = "SERVICE_INCOME_ALREADY_RECORDED"
+	CodeIncomeNotRecorded           = "SERVICE_INCOME_NOT_RECORDED"
 
 	// TEC-230: consumption correction.
 	CodeCorrectionWindowClosed   = "SERVICE_CORRECTION_WINDOW_CLOSED"
@@ -96,6 +97,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeTooManyImages, "The image limit of the service is reached")
 	case errors.Is(err, svcuc.ErrContractRequired):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeContractRequired, "An executed intake contract is required for this service transition")
+	case errors.Is(err, svcuc.ErrCertificateApprovalRequired):
+		response.Error(w, r, http.StatusUnprocessableEntity, CodeCertificateApprovalRequired, "Certificate warning approval is required for this service transition")
 	case errors.Is(err, svcuc.ErrIncomeAlreadyRecorded):
 		response.Conflict(w, r, CodeIncomeAlreadyRecorded, "Income is already recorded for this service")
 	case errors.Is(err, svcuc.ErrIncomeNotRecorded):

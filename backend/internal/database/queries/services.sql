@@ -11,7 +11,7 @@ INSERT INTO services (
     service_no, organization_id, brand_id, customer_user_id, vehicle_id,
     car_brand_id, car_model_id, model_year, plate, plate_country, vin, km,
     package, notes, has_measurement, measurement_result_id, contract_id,
-    status, created_by_user_id, updated_by_user_id, warranty_claim_id
+    status, created_by_user_id, updated_by_user_id, performed_by_user_id, warranty_claim_id
 )
 VALUES (
     sqlc.arg(service_no), sqlc.arg(organization_id), sqlc.arg(brand_id),
@@ -21,7 +21,7 @@ VALUES (
     sqlc.narg(package), sqlc.narg(notes), sqlc.arg(has_measurement),
     sqlc.narg(measurement_result_id), sqlc.narg(contract_id),
     sqlc.arg(status), sqlc.narg(created_by_user_id), sqlc.narg(created_by_user_id),
-    sqlc.narg(warranty_claim_id)
+    sqlc.narg(performed_by_user_id), sqlc.narg(warranty_claim_id)
 )
 RETURNING *;
 
@@ -69,6 +69,7 @@ SET customer_user_id      = sqlc.arg(customer_user_id),
     has_measurement       = sqlc.arg(has_measurement),
     measurement_result_id = sqlc.narg(measurement_result_id),
     contract_id           = sqlc.narg(contract_id),
+    performed_by_user_id  = sqlc.narg(performed_by_user_id),
     updated_by_user_id    = sqlc.narg(updated_by_user_id)
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;
