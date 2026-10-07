@@ -253,7 +253,10 @@ type session struct {
 	pool    string
 	source  string
 	channel string
-	tools   tools.Principal
+	// usage is the ai_usage channel when it differs from channel
+	// (WhatsApp turns, agent.go).
+	usage string
+	tools tools.Principal
 }
 
 func (c *Chat) session(ctx context.Context, caller Caller) (*session, error) {
@@ -636,6 +639,20 @@ type Turn struct {
 	limit    int64
 	text     string
 	outcome  *Outcome
+	// ref is the pending action source_ref when the turn has no
+	// ai_conversations row (WhatsApp, agent.go); readOnly hides the write
+	// tools; channelPrompt is appended to the cached system prompt.
+	ref           string
+	readOnly      bool
+	channelPrompt string
+}
+
+// sourceRef is the conversation reference of the turn's pending actions.
+func (t *Turn) sourceRef() string {
+	if t.ref != "" {
+		return t.ref
+	}
+	return t.conv.Uuid.String()
 }
 
 // ConversationUUID returns the conversation of the turn.
@@ -908,10 +925,16 @@ func (c *Chat) loop(ctx context.Context, t *Turn, ts *turnState, history []llm.M
 	byName := make(map[string]tools.Tool, len(available))
 	defs := make([]llm.ToolDef, 0, len(available))
 	for _, tl := range available {
+		if t.readOnly && tl.Spec().Kind == tools.KindWrite {
+			continue
+		}
 		byName[tl.Spec().Name] = tl
 		defs = append(defs, tl.Spec().Def())
 	}
-	system := []llm.SystemBlock{{Text: systemPrompt(t.facts.Customer, t.settings.ExtraInstructions), Cache: true}}
+	system := []llm.SystemBlock{{Text: systemPrompt(t.facts, t.settings.ExtraInstructions), Cache: true}}
+	if p := strings.TrimSpace(t.channelPrompt); p != "" {
+		system = append(system, llm.SystemBlock{Text: p, Cache: true})
+	}
 	if k := knowledgePrompt(t.settings.KnowledgeText); k != "" {
 		system = append(system, llm.SystemBlock{Text: k, Cache: true})
 	}
@@ -1064,7 +1087,7 @@ func (c *Chat) execTool(ctx context.Context, t *Turn, ts *turnState, byName map[
 			return finish(tools.ErrorResult("", resultOneCard)), false
 		}
 		out, err := c.Actions.Propose(ctx, ProposeCall{
-			Principal: t.s.tools, Source: t.s.source, SourceRef: t.conv.Uuid.String(),
+			Principal: t.s.tools, Source: t.s.source, SourceRef: t.sourceRef(),
 			ToolUseID: tu.ID, ToolName: tu.Name, Input: tu.Input,
 		})
 		if err != nil {
@@ -1096,13 +1119,19 @@ func (c *Chat) execTool(ctx context.Context, t *Turn, ts *turnState, byName map[
 // transaction. A booking failure is logged, never shown.
 func (c *Chat) record(ctx context.Context, t *Turn, purpose, modelID string, u llm.Usage) {
 	s := t.s
-	userID := s.caller.Auth.UserInternal
+	var userID *int64
+	if id := s.caller.Auth.UserInternal; id > 0 {
+		userID = &id
+	}
 	usageChannel := model.UsageChannelPanel
-	if s.channel == model.ChannelPortal {
+	switch {
+	case s.usage != "":
+		usageChannel = s.usage
+	case s.channel == model.ChannelPortal:
 		usageChannel = model.UsageChannelPortal
 	}
 	_, _, err := c.Store.RecordUsageEvents(ctx, repository.Usage{
-		OrganizationID: s.orgID, BrandID: s.brandID, Pool: s.pool, UserID: &userID,
+		OrganizationID: s.orgID, BrandID: s.brandID, Pool: s.pool, UserID: userID,
 		Channel: usageChannel, Purpose: purpose, Model: truncate(firstNonEmpty(modelID, "unknown"), 128),
 		InputTokens: u.InputTokens, OutputTokens: u.OutputTokens,
 		CacheReadTokens: u.CacheReadTokens, CacheWriteTokens: u.CacheWriteTokens,

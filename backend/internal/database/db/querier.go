@@ -1251,6 +1251,8 @@ type Querier interface {
 	// A customer is a users row with a customer profile or an organization link
 	// (K11).
 	IsCustomerUser(ctx context.Context, userID int64) (bool, error)
+	// Time of the newest message of one sender type (NULL = none).
+	LastConversationMessageAtBySender(ctx context.Context, arg LastConversationMessageAtBySenderParams) (pgtype.Timestamptz, error)
 	// The watermark of the latest successful run of a kind that set one. The
 	// barcode PATCH runs share the push_barcodes kind without a watermark, so
 	// LastSucceededIntegrationSyncRun would lose the bulk push cursor.
@@ -1573,6 +1575,10 @@ type Querier interface {
 	// for admins) and tenant jobs (organization_id). Sort:
 	// docs/list-contract.md, keys from imports/usecase.SortSpec.
 	ListImportJobsFiltered(ctx context.Context, arg ListImportJobsFilteredParams) ([]ListImportJobsFilteredRow, error)
+	// AI pipeline (TEC-396, F4-02c) -------------------------------------------------
+	// Inbound contact messages of a conversation newer than after_id and since,
+	// newest first (the pipeline turns them oldest first).
+	ListInboundMessagesAfter(ctx context.Context, arg ListInboundMessagesAfterParams) ([]Message, error)
 	ListIntegrationConnections(ctx context.Context, brandID int64) ([]IntegrationConnection, error)
 	ListIntegrationConnectionsByKey(ctx context.Context, key string) ([]IntegrationConnection, error)
 	ListIntegrationExternalParties(ctx context.Context, connectionID int64) ([]IntegrationExternalParty, error)
@@ -2317,6 +2323,10 @@ type Querier interface {
 	// Stamped in the notification transaction; a second run is a no-op.
 	MarkWarrantyNotified30(ctx context.Context, arg MarkWarrantyNotified30Params) (int64, error)
 	MarkWarrantyNotified7(ctx context.Context, arg MarkWarrantyNotified7Params) (int64, error)
+	// The newest message an AI run was started for (0 = none).
+	MaxConversationAIRunTrigger(ctx context.Context, conversationID int64) (int64, error)
+	// The newest message of one sender type (0 = none).
+	MaxConversationMessageIDBySender(ctx context.Context, arg MaxConversationMessageIDBySenderParams) (int64, error)
 	// Organization links the target already has: the target row keeps the
 	// earliest dates of both rows.
 	MergeConflictingCustomerOrganizations(ctx context.Context, arg MergeConflictingCustomerOrganizationsParams) (int64, error)

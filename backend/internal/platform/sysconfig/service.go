@@ -170,6 +170,18 @@ func (s *Service) WhatsAppSendPerMinute(ctx context.Context) int {
 	return int(s.Int(ctx, KeyWhatsAppSendPerMinute))
 }
 
+// WhatsAppAIStaffPauseMinutes is the typed accessor for
+// KeyWhatsAppAIStaffPauseMinutes.
+func (s *Service) WhatsAppAIStaffPauseMinutes(ctx context.Context) int {
+	return int(s.Int(ctx, KeyWhatsAppAIStaffPauseMinutes))
+}
+
+// WhatsAppAIGuidelinesURL is the typed accessor for
+// KeyWhatsAppAIGuidelinesURL.
+func (s *Service) WhatsAppAIGuidelinesURL(ctx context.Context) string {
+	return s.String(ctx, KeyWhatsAppAIGuidelinesURL)
+}
+
 // MCPRequestsPerHourPerOrg is the typed accessor for
 // KeyMCPRequestsPerHourPerOrg.
 func (s *Service) MCPRequestsPerHourPerOrg(ctx context.Context) int {

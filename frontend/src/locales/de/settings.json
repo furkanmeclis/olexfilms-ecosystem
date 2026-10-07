@@ -141,5 +141,11 @@
   "system.groups.mcp": "MCP-Verbindungen",
   "system.groups.mcp_hint": "Grenzen der MCP-Endpunkte, mit denen sich KI-Clients (Claude, ChatGPT) verbinden.",
   "system.keys.mcp_requests_per_hour_per_org": "MCP-Anfragen pro Organisation und Stunde",
-  "system.keys.mcp_requests_per_hour_per_org_hint": "Anfragen, die eine Organisation pro Stunde über alle verbundenen KI-Apps stellen darf; weitere Anfragen werden bis zum Ende des Zeitfensters abgelehnt."
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Anfragen, die eine Organisation pro Stunde über alle verbundenen KI-Apps stellen darf; weitere Anfragen werden bis zum Ende des Zeitfensters abgelehnt.",
+  "system.groups.whatsapp": "WhatsApp",
+  "system.groups.whatsapp_hint": "WhatsApp-Unterhaltungen, Sendetempo und KI-Antworten.",
+  "system.keys.whatsapp_ai_staff_pause_minutes": "KI-Pause nach einer Mitarbeiternachricht (Minuten)",
+  "system.keys.whatsapp_ai_staff_pause_minutes_hint": "Die KI antwortet nicht in einer Unterhaltung, in der ein Mitarbeiter innerhalb dieser Zeit geschrieben hat; 0 = keine Pause.",
+  "system.keys.whatsapp_ai_guidelines_url": "Link zu den KI-Richtlinien",
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Link (https) zu den Richtlinien, der mit der WhatsApp-Einwilligungsfrage gesendet wird; leer = der Richtlinientext wird in der Nachricht gesendet."
 }
