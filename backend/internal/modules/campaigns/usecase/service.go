@@ -9,12 +9,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	platstorage "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
@@ -133,24 +136,29 @@ type ContentInput struct {
 	Deeplink *string `json:"deeplink,omitempty"`
 }
 
-// Campaign is the API projection.
+// Campaign is the API projection. Times are UTC; timezone is the
+// organization's zone the panel shows them in (TEC-406).
 type Campaign struct {
-	UUID              uuid.UUID      `json:"uuid"`
-	OrganizationUUID  uuid.UUID      `json:"organization_uuid"`
-	Name              string         `json:"name"`
-	Channels          []string       `json:"channels"`
-	AudienceFilter    AudienceFilter `json:"audience_filter"`
-	Status            string         `json:"status"`
-	ScheduledAt       *time.Time     `json:"scheduled_at"`
-	StartedAt         *time.Time     `json:"started_at"`
-	FinishedAt        *time.Time     `json:"finished_at"`
-	RecipientsTotal   int32          `json:"recipients_total"`
-	RecipientsSent    int32          `json:"recipients_sent"`
-	RecipientsFailed  int32          `json:"recipients_failed"`
-	RecipientsSkipped int32          `json:"recipients_skipped"`
-	CreatedAt         time.Time      `json:"created_at"`
-	UpdatedAt         time.Time      `json:"updated_at"`
-	Contents          []Content      `json:"contents,omitempty"`
+	UUID                     uuid.UUID      `json:"uuid"`
+	OrganizationUUID         uuid.UUID      `json:"organization_uuid"`
+	OrganizationName         string         `json:"organization_name"`
+	Timezone                 string         `json:"timezone"`
+	ApproverOrganizationUUID *uuid.UUID     `json:"approver_organization_uuid"`
+	Name                     string         `json:"name"`
+	Channels                 []string       `json:"channels"`
+	AudienceFilter           AudienceFilter `json:"audience_filter"`
+	Status                   string         `json:"status"`
+	ScheduledAt              *time.Time     `json:"scheduled_at"`
+	StartedAt                *time.Time     `json:"started_at"`
+	FinishedAt               *time.Time     `json:"finished_at"`
+	RecipientsTotal          int32          `json:"recipients_total"`
+	RecipientsSent           int32          `json:"recipients_sent"`
+	RecipientsFailed         int32          `json:"recipients_failed"`
+	RecipientsSkipped        int32          `json:"recipients_skipped"`
+	CreatedAt                time.Time      `json:"created_at"`
+	UpdatedAt                time.Time      `json:"updated_at"`
+	Contents                 []Content      `json:"contents,omitempty"`
+	Events                   []Event        `json:"events,omitempty"`
 }
 
 // Content is the content of one locale with its media.
@@ -179,6 +187,7 @@ type Service struct {
 	pool    TxBeginner
 	q       *db.Queries
 	storage Storage
+	out     outbox.Enqueuer
 	now     func() time.Time
 }
 
@@ -190,13 +199,21 @@ func New(pool TxBeginner, q *db.Queries, storage Storage) *Service {
 // SetClock replaces the clock (tests).
 func (s *Service) SetClock(now func() time.Time) { s.now = now }
 
+// SetOutbox sets the outbox of the approval notifications (TEC-406); nil
+// writes none.
+func (s *Service) SetOutbox(out outbox.Enqueuer) { s.out = out }
+
 func (s *Service) inTx(ctx context.Context, fn func(q *db.Queries) error) error {
+	return s.inTxOut(ctx, func(_ pgx.Tx, q *db.Queries) error { return fn(q) })
+}
+
+func (s *Service) inTxOut(ctx context.Context, fn func(tx pgx.Tx, q *db.Queries) error) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	if err := fn(s.q.WithTx(tx)); err != nil {
+	if err := fn(tx, s.q.WithTx(tx)); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
@@ -237,58 +254,75 @@ func (s *Service) Create(ctx context.Context, c Caller, in Input) (Campaign, err
 	if err != nil {
 		return Campaign{}, err
 	}
-	return s.view(ctx, s.q, row, org.Uuid, false)
+	return s.view(ctx, s.q, row, &org, false)
 }
 
-// Get returns a campaign with its contents and media.
+// Get returns a campaign with its contents, media and history; the
+// approver organization reads it too (TEC-406).
 func (s *Service) Get(ctx context.Context, c Caller, id uuid.UUID) (Campaign, error) {
 	row, err := s.load(ctx, s.q, c, id)
+	if errors.Is(err, ErrNotFound) {
+		row, err = s.loadForApprover(ctx, c, id)
+	}
 	if err != nil {
 		return Campaign{}, err
 	}
-	return s.view(ctx, s.q, row, uuid.Nil, true)
+	return s.view(ctx, s.q, row, nil, true)
 }
 
-// Update changes name, channels or audience of a draft (409 otherwise).
+// Update changes name, channels or audience of a draft. An approved or
+// scheduled campaign returns to draft first when something changes
+// (TEC-406); other statuses answer 409.
 func (s *Service) Update(ctx context.Context, c Caller, id uuid.UUID, in PatchInput) (Campaign, error) {
 	var out db.Campaign
 	err := s.inTx(ctx, func(q *db.Queries) error {
-		row, err := s.lockDraft(ctx, q, c, id)
+		var name string
+		var channels []string
+		var rawFilter []byte
+		row, err := s.lockEditable(ctx, q, c, id, func(row db.Campaign) (bool, error) {
+			var err error
+			name, channels, rawFilter = row.Name, row.Channels, row.AudienceFilter
+			if in.Name != nil {
+				if name, err = validateName(*in.Name); err != nil {
+					return false, err
+				}
+			}
+			if in.Channels != nil {
+				if channels, err = validateChannels(in.Channels); err != nil {
+					return false, err
+				}
+				contents, err := q.ListCampaignContents(ctx, row.ID)
+				if err != nil {
+					return false, err
+				}
+				for _, ct := range contents {
+					if err := checkLimits(channels, ct.Title, ct.Body); err != nil {
+						return false, err
+					}
+				}
+			}
+			if in.AudienceFilter != nil {
+				org, err := q.GetOrganizationByID(ctx, row.OrganizationID)
+				if err != nil {
+					return false, err
+				}
+				filter, err := s.validateFilter(ctx, q, org, *in.AudienceFilter)
+				if err != nil {
+					return false, err
+				}
+				if rawFilter, err = json.Marshal(filter); err != nil {
+					return false, err
+				}
+			}
+			return name != row.Name || !slices.Equal(channels, row.Channels) ||
+				!jsonEqual(rawFilter, row.AudienceFilter), nil
+		})
 		if err != nil {
 			return err
 		}
-		name, channels, rawFilter := row.Name, row.Channels, row.AudienceFilter
-		if in.Name != nil {
-			if name, err = validateName(*in.Name); err != nil {
-				return err
-			}
-		}
-		if in.Channels != nil {
-			if channels, err = validateChannels(in.Channels); err != nil {
-				return err
-			}
-			contents, err := q.ListCampaignContents(ctx, row.ID)
-			if err != nil {
-				return err
-			}
-			for _, ct := range contents {
-				if err := checkLimits(channels, ct.Title, ct.Body); err != nil {
-					return err
-				}
-			}
-		}
-		if in.AudienceFilter != nil {
-			org, err := q.GetOrganizationByID(ctx, row.OrganizationID)
-			if err != nil {
-				return err
-			}
-			filter, err := s.validateFilter(ctx, q, org, *in.AudienceFilter)
-			if err != nil {
-				return err
-			}
-			if rawFilter, err = json.Marshal(filter); err != nil {
-				return err
-			}
+		if row.Status != StatusDraft {
+			out = row // approved / scheduled and nothing changed
+			return nil
 		}
 		out, err = q.UpdateCampaignDraft(ctx, db.UpdateCampaignDraftParams{
 			ID: row.ID, Name: name, Channels: channels, AudienceFilter: rawFilter, ActorUserID: pgInt8(c.UserID),
@@ -301,7 +335,7 @@ func (s *Service) Update(ctx context.Context, c Caller, id uuid.UUID, in PatchIn
 	if err != nil {
 		return Campaign{}, err
 	}
-	return s.view(ctx, s.q, out, uuid.Nil, true)
+	return s.view(ctx, s.q, out, nil, true)
 }
 
 // Delete removes a draft with its contents; stored media objects are
@@ -336,7 +370,8 @@ func (s *Service) Delete(ctx context.Context, c Caller, id uuid.UUID) error {
 	return nil
 }
 
-// PutContent creates or replaces the content of one locale of a draft.
+// PutContent creates or replaces the content of one locale of a draft; a
+// change of an approved or scheduled campaign returns it to draft.
 func (s *Service) PutContent(ctx context.Context, c Caller, id uuid.UUID, locale string, in ContentInput) (Content, error) {
 	if !i18n.IsSupported(locale) {
 		return Content{}, invalid("locale", "must be one of "+i18n.SupportedList())
@@ -359,11 +394,20 @@ func (s *Service) PutContent(ctx context.Context, c Caller, id uuid.UUID, locale
 	}
 	var out Content
 	err := s.inTx(ctx, func(q *db.Queries) error {
-		row, err := s.lockDraft(ctx, q, c, id)
+		row, err := s.lockEditable(ctx, q, c, id, func(row db.Campaign) (bool, error) {
+			if err := checkLimits(row.Channels, title, body); err != nil {
+				return false, err
+			}
+			cur, err := q.GetCampaignContent(ctx, db.GetCampaignContentParams{CampaignID: row.ID, Locale: locale})
+			if errors.Is(err, pgx.ErrNoRows) {
+				return true, nil
+			}
+			if err != nil {
+				return false, err
+			}
+			return cur.Title != title || cur.Body != body || cur.Deeplink != deeplink, nil
+		})
 		if err != nil {
-			return err
-		}
-		if err := checkLimits(row.Channels, title, body); err != nil {
 			return err
 		}
 		ct, err := q.UpsertCampaignContent(ctx, db.UpsertCampaignContentParams{
@@ -413,17 +457,28 @@ func (s *Service) lockDraft(ctx context.Context, q *db.Queries, c Caller, id uui
 	return row, nil
 }
 
-func (s *Service) view(ctx context.Context, q *db.Queries, row db.Campaign, orgUUID uuid.UUID, withContents bool) (Campaign, error) {
-	if orgUUID == uuid.Nil {
-		org, err := q.GetOrganizationByID(ctx, row.OrganizationID)
-		if err != nil {
-			return Campaign{}, err
-		}
-		orgUUID = org.Uuid
+// view builds the projection; org is the campaign organization when the
+// caller has it (nil loads it). withContents adds contents, media and the
+// event history.
+func (s *Service) view(ctx context.Context, q *db.Queries, row db.Campaign, org *db.Organization, withContents bool) (Campaign, error) {
+	orgs := map[int64]db.Organization{}
+	if org != nil {
+		orgs[org.ID] = *org
 	}
-	out := campaignView(row, orgUUID)
+	out, err := s.viewWith(ctx, q, row, orgs)
+	if err != nil {
+		return Campaign{}, err
+	}
 	if !withContents {
 		return out, nil
+	}
+	evs, err := q.ListCampaignEvents(ctx, row.ID)
+	if err != nil {
+		return Campaign{}, err
+	}
+	out.Events = make([]Event, 0, len(evs))
+	for _, e := range evs {
+		out.Events = append(out.Events, eventView(e))
 	}
 	contents, err := q.ListCampaignContents(ctx, row.ID)
 	if err != nil {
@@ -449,11 +504,56 @@ func (s *Service) removeObjects(ctx context.Context, keys ...string) {
 	}
 }
 
-func campaignView(row db.Campaign, orgUUID uuid.UUID) Campaign {
+// viewWith projects a row, loading the campaign and approver organizations
+// through the orgs cache.
+func (s *Service) viewWith(ctx context.Context, q *db.Queries, row db.Campaign, orgs map[int64]db.Organization) (Campaign, error) {
+	get := func(id int64) (db.Organization, error) {
+		if o, ok := orgs[id]; ok {
+			return o, nil
+		}
+		o, err := q.GetOrganizationByID(ctx, id)
+		if err != nil {
+			return db.Organization{}, err
+		}
+		orgs[id] = o
+		return o, nil
+	}
+	org, err := get(row.OrganizationID)
+	if err != nil {
+		return Campaign{}, err
+	}
+	out := campaignView(row, org)
+	if row.ApproverOrgID.Valid {
+		approver, err := get(row.ApproverOrgID.Int64)
+		if err != nil {
+			return Campaign{}, err
+		}
+		au := approver.Uuid
+		out.ApproverOrganizationUUID = &au
+	}
+	return out, nil
+}
+
+// views projects a page of rows.
+func (s *Service) views(ctx context.Context, rows []db.Campaign) ([]Campaign, error) {
+	orgs := map[int64]db.Organization{}
+	items := make([]Campaign, 0, len(rows))
+	for _, r := range rows {
+		v, err := s.viewWith(ctx, s.q, r, orgs)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, v)
+	}
+	return items, nil
+}
+
+func campaignView(row db.Campaign, org db.Organization) Campaign {
 	var filter AudienceFilter
 	_ = json.Unmarshal(row.AudienceFilter, &filter)
 	return Campaign{
-		UUID: row.Uuid, OrganizationUUID: orgUUID, Name: row.Name, Channels: row.Channels,
+		UUID: row.Uuid, OrganizationUUID: org.Uuid, OrganizationName: org.Name, Timezone: org.Timezone,
+		Name: row.Name, Channels: row.Channels,
 		AudienceFilter: filter.normalizedLists(), Status: row.Status,
 		ScheduledAt: ptrTime(row.ScheduledAt), StartedAt: ptrTime(row.StartedAt), FinishedAt: ptrTime(row.FinishedAt),
 		RecipientsTotal: row.RecipientsTotal, RecipientsSent: row.RecipientsSent,
@@ -572,6 +672,15 @@ func contains(xs []string, x string) bool {
 		}
 	}
 	return false
+}
+
+// jsonEqual compares two JSON documents by value.
+func jsonEqual(a, b []byte) bool {
+	var x, y any
+	if json.Unmarshal(a, &x) != nil || json.Unmarshal(b, &y) != nil {
+		return false
+	}
+	return reflect.DeepEqual(x, y)
 }
 
 func pgInt8(v int64) pgtype.Int8 { return pgtype.Int8{Int64: v, Valid: v != 0} }

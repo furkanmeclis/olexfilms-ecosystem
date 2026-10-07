@@ -1,4 +1,5 @@
-// Package campaigns mounts the F4 campaign API (TEC-405, F4-04b).
+// Package campaigns mounts the F4 campaign API (TEC-405, F4-04b; TEC-406,
+// F4-04c).
 package campaigns
 
 import (
@@ -22,6 +23,7 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	}
 	read := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermCampaignsRead) }
 	write := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermCampaignsWrite) }
+	approve := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermCampaignsApprove) }
 
 	mux.Handle("GET /v1/campaigns", read(h.List))
 	mux.Handle("POST /v1/campaigns", write(h.Create))
@@ -32,4 +34,14 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.Handle("POST /v1/campaigns/{uuid}/contents/{locale}/media", write(h.AddMedia))
 	mux.Handle("DELETE /v1/campaigns/{uuid}/contents/{locale}/media/{media}", write(h.DeleteMedia))
 	mux.Handle("POST /v1/campaigns/{uuid}/preview", read(h.Preview))
+	// TEC-406: approval chain (approver_org_id members with
+	// campaigns.approve) and scheduling (campaigns.write).
+	mux.Handle("POST /v1/campaigns/{uuid}/submit", write(h.Submit))
+	mux.Handle("POST /v1/campaigns/{uuid}/schedule", write(h.Schedule))
+	mux.Handle("POST /v1/campaigns/{uuid}/send-now", write(h.SendNow))
+	mux.Handle("POST /v1/campaigns/{uuid}/cancel", write(h.Cancel))
+	mux.Handle("GET /v1/campaigns/approvals", approve(h.Approvals))
+	mux.Handle("POST /v1/campaigns/{uuid}/approve", approve(h.Approve))
+	mux.Handle("POST /v1/campaigns/{uuid}/reject", approve(h.Reject))
+	mux.Handle("POST /v1/campaigns/{uuid}/request-changes", approve(h.RequestChanges))
 }

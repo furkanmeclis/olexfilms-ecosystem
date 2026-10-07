@@ -15,7 +15,6 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -92,19 +91,9 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) (apiquery.Pa
 	if err != nil {
 		return apiquery.Page[Campaign]{}, err
 	}
-	orgUUIDs := map[int64]uuid.UUID{}
-	items := make([]Campaign, 0, len(rows))
-	for _, r := range rows {
-		ou, ok := orgUUIDs[r.OrganizationID]
-		if !ok {
-			org, err := s.q.GetOrganizationByID(ctx, r.OrganizationID)
-			if err != nil {
-				return apiquery.Page[Campaign]{}, err
-			}
-			ou = org.Uuid
-			orgUUIDs[r.OrganizationID] = ou
-		}
-		items = append(items, campaignView(r, ou))
+	items, err := s.views(ctx, rows)
+	if err != nil {
+		return apiquery.Page[Campaign]{}, err
 	}
 	return apiquery.NewPage(items, total, f.Limit, f.Offset), nil
 }

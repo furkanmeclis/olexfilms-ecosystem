@@ -1,7 +1,9 @@
-// Package handler exposes the campaign authoring endpoints (TEC-405).
+// Package handler exposes the campaign authoring endpoints (TEC-405) and
+// the approval chain and scheduling (TEC-406).
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -169,6 +171,104 @@ func (h *Handler) Preview(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, out)
 }
 
+// Approvals lists the campaigns waiting for the active organization
+// (TEC-406).
+func (h *Handler) Approvals(w http.ResponseWriter, r *http.Request) {
+	f, err := usecase.ParseApprovalFilter(r.URL.Query())
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	out, err := h.svc.Approvals(r.Context(), caller(r), f)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
+	h.byID(w, r, func(c usecase.Caller, id uuid.UUID) (usecase.Campaign, error) {
+		return h.svc.Submit(r.Context(), c, id)
+	})
+}
+
+func (h *Handler) Approve(w http.ResponseWriter, r *http.Request) {
+	h.decision(w, r, h.svc.Approve, true)
+}
+
+func (h *Handler) Reject(w http.ResponseWriter, r *http.Request) {
+	h.decision(w, r, h.svc.Reject, false)
+}
+
+func (h *Handler) RequestChanges(w http.ResponseWriter, r *http.Request) {
+	h.decision(w, r, h.svc.RequestChanges, false)
+}
+
+func (h *Handler) Schedule(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var body usecase.ScheduleInput
+	if !decode(w, r, &body) {
+		return
+	}
+	out, err := h.svc.Schedule(r.Context(), caller(r), id, body)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) SendNow(w http.ResponseWriter, r *http.Request) {
+	h.byID(w, r, func(c usecase.Caller, id uuid.UUID) (usecase.Campaign, error) {
+		return h.svc.SendNow(r.Context(), c, id)
+	})
+}
+
+func (h *Handler) Cancel(w http.ResponseWriter, r *http.Request) {
+	h.byID(w, r, func(c usecase.Caller, id uuid.UUID) (usecase.Campaign, error) {
+		return h.svc.Cancel(r.Context(), c, id)
+	})
+}
+
+type decideFunc func(context.Context, usecase.Caller, uuid.UUID, usecase.DecisionInput) (usecase.Campaign, error)
+
+// decision reads the optional (approve) or required reason body.
+func (h *Handler) decision(w http.ResponseWriter, r *http.Request, fn decideFunc, emptyBody bool) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var body usecase.DecisionInput
+	if r.ContentLength != 0 || !emptyBody {
+		if !decode(w, r, &body) {
+			return
+		}
+	}
+	out, err := fn(r.Context(), caller(r), id, body)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) byID(w http.ResponseWriter, r *http.Request, fn func(usecase.Caller, uuid.UUID) (usecase.Campaign, error)) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	out, err := fn(caller(r), id)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
 func caller(r *http.Request) usecase.Caller {
 	p := authctx.MustPrincipal(r.Context())
 	org := orgctx.MustScope(r.Context())
@@ -229,6 +329,14 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "campaign not found")
 	case errors.Is(err, usecase.ErrNotDraft):
 		response.Conflict(w, r, usecase.CodeNotDraft, "only draft campaigns can be changed")
+	case errors.Is(err, usecase.ErrInvalidStatus):
+		response.Conflict(w, r, usecase.CodeInvalidStatus, "the action is not allowed in the campaign status")
+	case errors.Is(err, usecase.ErrOrgReadOnly):
+		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeOrganizationReadOnly,
+			"the organization cannot send campaigns")
+	case errors.Is(err, usecase.ErrScheduleSoon):
+		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodeScheduleTooSoon,
+			"scheduled_at must be at least 5 minutes from now")
 	default:
 		response.InternalErr(w, r, err, "campaign request failed")
 	}

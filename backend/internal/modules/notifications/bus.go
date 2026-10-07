@@ -162,6 +162,11 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range TaskEventCodes {
 		on(name, taskDispatcher(code))
 	}
+	// TEC-406: campaign approval chain (approvers on submission, the
+	// creator on the decision; notify_user_ids).
+	for name, code := range CampaignEventCodes {
+		on(name, campaignDispatcher(code))
+	}
 	// TEC-317: a public dealer application tells the receiving
 	// organization's lead readers (notify_user_ids).
 	on(events.LeadsApplicationReceived, leadApplicationDispatch)
