@@ -9038,13 +9038,13 @@ export interface paths {
         };
         /**
          * Payment history of one staff card (TEC-349)
-         * @description Requires `staff.manage`. Non-void salary, advance and bonus payments, newest payment day first. `type` and `period` narrow the list.
+         * @description Requires `staff.manage`. Non-void salary, advance and bonus payments (planned, posted and cancelled, TEC-381), newest payment day first. Sort fields: `paid_on` (default `-paid_on`), `amount`, `created_at`, `type`, `status`, `period`, `staff_name`. `total_amount` sums every matching payment.
          */
         get: operations["listStaffPayments"];
         put?: never;
         /**
          * Record salary, advance or bonus for one staff card
-         * @description Requires `staff_payments.write`. Writes a sourced expense row in the same transaction (`source_type=staff_payment`): `salary`, `staff_advance` or `staff_bonus`. Salary amount defaults to the staff card monthly salary. A second open salary for the same staff period returns 409 `STAFF_SALARY_EXISTS`. Salary responses include the same-period advances total.
+         * @description Requires `staff_payments.write`. A payment whose `paid_on` (default today in the organization's time zone) is today or past writes a sourced expense row dated `paid_on` in the same transaction (`source_type=staff_payment`): `salary`, `staff_advance` or `staff_bonus`. A future `paid_on` keeps the payment `planned` with no ledger row; the worker books it on that day (TEC-381). Salary amount defaults to the staff card monthly salary. A second open salary for the same staff period returns 409 `STAFF_SALARY_EXISTS`. Salary responses include the same-period advances total.
          */
         post: operations["createStaffPayment"];
         delete?: never;
@@ -9064,9 +9064,69 @@ export interface paths {
         put?: never;
         /**
          * Create salary payments for active staff in a period
-         * @description Requires `staff_payments.write`. Creates salary payments and sourced salary expense rows for active staff with a monthly salary. The operation is idempotent: staff who already have a non-void salary in the period are skipped.
+         * @description Requires `staff_payments.write`. Creates salary payments and sourced salary expense rows for active staff with a monthly salary. The operation is idempotent: staff who already have a non-void, non-cancelled salary in the period are skipped. `paid_on` (default today) is the payment day; a future day writes planned salaries booked on that day (TEC-381).
          */
         post: operations["runStaffPayroll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/staff-payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Staff payments of every staff card of the book (TEC-381)
+         * @description Requires `staff.manage`. Same filters, sort and `total_amount` as the staff card history; `status=planned` lists the upcoming payments.
+         */
+        get: operations["listBookStaffPayments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/staff-payments/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a planned staff payment (TEC-381)
+         * @description Requires `staff_payments.write`. Only a `planned` payment is edited; a posted one is undone by a reversal and answers 422 `STAFF_PAYMENT_NOT_PLANNED`. A `paid_on` moved to today or earlier books the payment at once on that day.
+         */
+        patch: operations["updateStaffPayment"];
+        trace?: never;
+    };
+    "/v1/staff-payments/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a planned staff payment (TEC-381)
+         * @description Requires `staff_payments.write`. A planned payment never reached the ledger, so cancelling it books nothing; a cancelled salary frees its period. A posted or cancelled payment answers 422 `STAFF_PAYMENT_NOT_PLANNED`.
+         */
+        post: operations["cancelStaffPayment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17257,11 +17317,20 @@ export interface components {
             monthly_salary?: components["schemas"]["AccountingAmountInput"] | null;
             active?: boolean;
         };
+        /**
+         * @description planned: paid_on is ahead, no ledger row yet; posted: booked on paid_on; cancelled: a planned payment called off (TEC-381).
+         * @enum {string}
+         */
+        StaffPaymentStatus: "planned" | "posted" | "cancelled";
         StaffPayment: {
             /** Format: uuid */
             uuid: string;
             /** Format: uuid */
             staff_uuid: string;
+            staff_name: string;
+            status: components["schemas"]["StaffPaymentStatus"];
+            /** Format: uuid */
+            account_uuid: string | null;
             type: components["schemas"]["StaffPaymentType"];
             period: string;
             amount: components["schemas"]["AccountingAmount"];
@@ -17270,8 +17339,11 @@ export interface components {
             paid_on: string;
             description: string | null;
             target_note: string | null;
-            /** Format: uuid */
-            finance_entry_uuid: string;
+            /**
+             * Format: uuid
+             * @description Ledger row; null while the payment is planned or cancelled.
+             */
+            finance_entry_uuid: string | null;
             period_advances: components["schemas"]["AccountingAmount"];
             /** Format: date-time */
             created_at: string;
@@ -17287,6 +17359,18 @@ export interface components {
              * @description Optional cash/bank account for the payment movement.
              */
             account_uuid?: string | null;
+            description?: string | null;
+            target_note?: string | null;
+            /** Format: date */
+            paid_on?: string;
+        };
+        StaffPaymentPatchInput: {
+            type?: components["schemas"]["StaffPaymentType"];
+            /** @example 2026-10 */
+            period?: string;
+            amount?: components["schemas"]["AccountingAmountInput"];
+            /** Format: uuid */
+            account_uuid?: string;
             description?: string | null;
             target_note?: string | null;
             /** Format: date */
@@ -17313,6 +17397,9 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+                /** @description Sum of every matching payment (all pages). */
+                total_amount: components["schemas"]["AccountingAmount"];
+                currency: string;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -37065,8 +37152,17 @@ export interface operations {
     listStaffPayments: {
         parameters: {
             query?: {
-                type?: components["schemas"]["StaffPaymentType"];
+                /** @description One or more payment types (CSV). */
+                type?: components["schemas"]["StaffPaymentType"][];
+                /** @description One or more payment states (CSV). */
+                status?: components["schemas"]["StaffPaymentStatus"][];
                 period?: string;
+                /** @description First payment day (inclusive). */
+                paid_on_from?: string;
+                /** @description Last payment day (inclusive). */
+                paid_on_to?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -37130,6 +37226,7 @@ export interface operations {
         parameters: {
             query: {
                 period: string;
+                paid_on?: string;
             };
             header?: never;
             path?: never;
@@ -37149,6 +37246,103 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listBookStaffPayments: {
+        parameters: {
+            query?: {
+                /** @description One or more payment types (CSV). */
+                type?: components["schemas"]["StaffPaymentType"][];
+                /** @description One or more payment states (CSV). */
+                status?: components["schemas"]["StaffPaymentStatus"][];
+                period?: string;
+                /** @description First payment day (inclusive). */
+                paid_on_from?: string;
+                /** @description Last payment day (inclusive). */
+                paid_on_to?: string;
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Staff payment page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStaffPaymentPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateStaffPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StaffPaymentPatchInput"];
+            };
+        };
+        responses: {
+            /** @description Staff payment updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStaffPayment"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    cancelStaffPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Staff payment cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStaffPayment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getAccountingPnlReport: {

@@ -23,6 +23,7 @@ import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { Money } from "@/features/accounting/components/shared";
 import { PayrollDialog } from "@/features/staff-reports/components/payroll-dialog";
+import { PlannedPayments } from "@/features/staff-reports/components/planned-payments";
 import { StaffFormDialog } from "@/features/staff-reports/components/staff-form-dialog";
 import { StaffPaymentDialog } from "@/features/staff-reports/components/staff-payment-dialog";
 import { useStaffAccess } from "@/features/staff-reports/hooks/use-staff-access";
@@ -51,7 +52,8 @@ const booleanFilter: FilterFn<StaffProfile> = (row, columnId, value) =>
  * pages without sort or search, so every page is read and the DataTable
  * sorts, filters and searches in the browser. Row actions edit the card,
  * add a payment or open the payment history; the header opens the
- * month-end payroll.
+ * month-end payroll. Below the cards, the planned payments still to go
+ * out (TEC-381).
  */
 export function StaffPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
@@ -303,6 +305,13 @@ export function StaffPage({ slug }: { slug: string }) {
               </div>
             )}
           />
+          <div className="mt-6">
+            <PlannedPayments
+              slug={slug}
+              orgUuid={access.orgUuid}
+              canPay={access.canPay}
+            />
+          </div>
         </div>
       )}
       <StaffFormDialog

@@ -331,6 +331,9 @@ func main() {
 		WithTasksDueScan(tasksusecase.NewCron(pool, queries, outbox.NewStore(pool, queries)).DueScanTask).
 		// TEC-207: hourly end-of-day warehouse reports (previous local day).
 		WithWarehouseEOD(eodSvc.DailyTask(log)).
+		// TEC-381: hourly booking of planned staff payments on their paid_on.
+		WithStaffPaymentsPostDue(accountingusecase.New(pool, queries,
+			accountingposting.New(queries, outboxStore, fxrates.New(queries, nil, log)), nil).PostDueStaffPaymentsTask).
 		// TEC-268: Glorian catalog and dealer pull (active connections only).
 		WithGlorianPull(glorian.NewPuller(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), searchIndexer, log).Task).
 		// TEC-270: Glorian barcode bulk push and outbound PATCH by barcode.

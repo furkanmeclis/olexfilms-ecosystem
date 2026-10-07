@@ -340,19 +340,22 @@ WHERE organization_id = sqlc.arg(organization_id)
 -- name: CreateStaffPayment :one
 INSERT INTO staff_payments (
     organization_id, brand_id, staff_id, type, period, amount, currency,
-    paid_on, description, created_by_user_id
+    paid_on, description, created_by_user_id, status, account_id
 ) VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(staff_id), sqlc.arg(type),
     sqlc.arg(period), sqlc.arg(amount), sqlc.arg(currency), sqlc.arg(paid_on),
-    sqlc.narg(description), sqlc.narg(created_by_user_id)
+    sqlc.narg(description), sqlc.narg(created_by_user_id), sqlc.arg(status),
+    sqlc.narg(account_id)
 )
 RETURNING *;
 
+-- SetStaffPaymentFinanceEntry links the ledger row of a payment and marks
+-- it posted (TEC-381: a planned payment is booked on its paid_on).
 -- name: SetStaffPaymentFinanceEntry :one
 UPDATE staff_payments
-SET finance_entry_id = sqlc.arg(finance_entry_id)
+SET finance_entry_id = sqlc.arg(finance_entry_id), status = 'posted'
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id)
-  AND finance_entry_id IS NULL
+  AND finance_entry_id IS NULL AND status IN ('planned', 'posted')
 RETURNING *;
 
 -- VoidStaffPayment marks a payment void after its ledger row was reversed;
@@ -368,23 +371,97 @@ RETURNING *;
 SELECT * FROM staff_payments
 WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
 
--- name: ListStaffPayments :many
+-- LockStaffPayment reads a payment for a status change (edit, cancel, post).
+-- name: LockStaffPayment :one
 SELECT * FROM staff_payments
-WHERE organization_id = sqlc.arg(organization_id)
-  AND (sqlc.narg(staff_id)::bigint IS NULL OR staff_id = sqlc.narg(staff_id)::bigint)
-  AND (sqlc.narg(period)::text IS NULL OR period = sqlc.narg(period)::text)
-  AND (sqlc.narg(type)::varchar IS NULL OR type = sqlc.narg(type)::varchar)
-  AND (sqlc.arg(include_voided)::boolean OR voided_at IS NULL)
-ORDER BY paid_on DESC, id DESC
+WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id)
+FOR UPDATE;
+
+-- UpdatePlannedStaffPayment edits a payment that is not booked yet.
+-- name: UpdatePlannedStaffPayment :one
+UPDATE staff_payments
+SET type = sqlc.arg(type),
+    period = sqlc.arg(period),
+    amount = sqlc.arg(amount),
+    paid_on = sqlc.arg(paid_on),
+    description = sqlc.narg(description),
+    account_id = sqlc.narg(account_id)
+WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id)
+  AND status = 'planned'
+RETURNING *;
+
+-- CancelPlannedStaffPayment cancels a payment that is not booked yet; it
+-- never had a ledger row, and a cancelled salary frees its period.
+-- name: CancelPlannedStaffPayment :one
+UPDATE staff_payments
+SET status = 'cancelled', cancelled_at = NOW()
+WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id)
+  AND status = 'planned'
+RETURNING *;
+
+-- ListDueStaffPayments is the scan of the posting job: planned payments
+-- whose paid_on has arrived in their organization's time zone.
+-- name: ListDueStaffPayments :many
+SELECT p.id, p.organization_id
+FROM staff_payments p
+JOIN organizations o ON o.id = p.organization_id
+WHERE p.status = 'planned'
+  AND p.paid_on <= (sqlc.arg(now)::timestamptz AT TIME ZONE o.timezone)::date
+ORDER BY p.paid_on, p.id
+LIMIT sqlc.arg(page_limit);
+
+-- ListStaffPayments: the payment history of one staff card or (staff_id
+-- NULL) the book; payment_id reads one payment back after a write. Sort:
+-- docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
+-- name: ListStaffPayments :many
+SELECT p.*, sp.uuid AS staff_uuid, sp.name AS staff_name, a.uuid AS account_uuid,
+       e.uuid AS finance_entry_uuid
+FROM staff_payments p
+JOIN staff_profiles sp ON sp.id = p.staff_id
+LEFT JOIN finance_accounts a ON a.id = p.account_id
+LEFT JOIN finance_entries e ON e.id = p.finance_entry_id
+WHERE p.organization_id = sqlc.arg(organization_id)
+  AND (sqlc.narg(payment_id)::bigint IS NULL OR p.id = sqlc.narg(payment_id)::bigint)
+  AND (sqlc.narg(staff_id)::bigint IS NULL OR p.staff_id = sqlc.narg(staff_id)::bigint)
+  AND (sqlc.narg(period)::text IS NULL OR p.period = sqlc.narg(period)::text)
+  AND (COALESCE(cardinality(sqlc.narg(types)::text[]), 0) = 0 OR p.type = ANY (sqlc.narg(types)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR p.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (sqlc.narg(paid_from)::date IS NULL OR p.paid_on >= sqlc.narg(paid_from)::date)
+  AND (sqlc.narg(paid_to)::date IS NULL OR p.paid_on <= sqlc.narg(paid_to)::date)
+  AND p.voided_at IS NULL
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'type' THEN p.type WHEN 'status' THEN p.status
+      WHEN 'period' THEN p.period::text WHEN 'staff_name' THEN sp.name END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'type' THEN p.type WHEN 'status' THEN p.status
+      WHEN 'period' THEN p.period::text WHEN 'staff_name' THEN sp.name END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'paid_on' THEN p.paid_on END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'paid_on' THEN p.paid_on END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'amount' THEN p.amount END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'amount' THEN p.amount END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN p.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN p.created_at END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN p.id END DESC,
+  p.id ASC
 LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 
+-- CountStaffPayments mirrors the filter of ListStaffPayments and sums the
+-- matching amounts (the "upcoming payments" total of the planned view).
 -- name: CountStaffPayments :one
-SELECT COUNT(*) FROM staff_payments
-WHERE organization_id = sqlc.arg(organization_id)
-  AND (sqlc.narg(staff_id)::bigint IS NULL OR staff_id = sqlc.narg(staff_id)::bigint)
-  AND (sqlc.narg(period)::text IS NULL OR period = sqlc.narg(period)::text)
-  AND (sqlc.narg(type)::varchar IS NULL OR type = sqlc.narg(type)::varchar)
-  AND (sqlc.arg(include_voided)::boolean OR voided_at IS NULL);
+SELECT COUNT(*) AS total, COALESCE(SUM(p.amount), 0)::NUMERIC(18,2) AS amount
+FROM staff_payments p
+WHERE p.organization_id = sqlc.arg(organization_id)
+  AND (sqlc.narg(payment_id)::bigint IS NULL OR p.id = sqlc.narg(payment_id)::bigint)
+  AND (sqlc.narg(staff_id)::bigint IS NULL OR p.staff_id = sqlc.narg(staff_id)::bigint)
+  AND (sqlc.narg(period)::text IS NULL OR p.period = sqlc.narg(period)::text)
+  AND (COALESCE(cardinality(sqlc.narg(types)::text[]), 0) = 0 OR p.type = ANY (sqlc.narg(types)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR p.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (sqlc.narg(paid_from)::date IS NULL OR p.paid_on >= sqlc.narg(paid_from)::date)
+  AND (sqlc.narg(paid_to)::date IS NULL OR p.paid_on <= sqlc.narg(paid_to)::date)
+  AND p.voided_at IS NULL;
 
 -- Period summary: per staff and type, the paid total of a period (voided
 -- payments excluded).
@@ -394,6 +471,7 @@ FROM staff_payments
 WHERE organization_id = sqlc.arg(organization_id)
   AND period = sqlc.arg(period)
   AND voided_at IS NULL
+  AND status <> 'cancelled'
 GROUP BY staff_id, type, currency
 ORDER BY staff_id, type;
 

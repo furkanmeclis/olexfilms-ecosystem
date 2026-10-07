@@ -11,6 +11,7 @@ import {
   CLIENT_SIDE_MANUAL,
   clientDateRangeFilter,
   EntityPage,
+  EntityRowActions,
   EntityTable,
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
@@ -19,15 +20,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { Money } from "@/features/accounting/components/shared";
+import { useCancelPaymentAction } from "@/features/staff-reports/components/planned-payments";
 import { StaffFormDialog } from "@/features/staff-reports/components/staff-form-dialog";
 import { StaffPaymentDialog } from "@/features/staff-reports/components/staff-payment-dialog";
 import { useStaffAccess } from "@/features/staff-reports/hooks/use-staff-access";
 import {
+  paymentStatusTone,
   periodDate,
   staffPatchInput,
   type StaffFormValues,
 } from "@/features/staff-reports/lib/staff";
 import {
+  STAFF_PAYMENT_STATUSES,
   STAFF_PAYMENT_TYPES,
   staffReportsKeys,
   staffReportsService,
@@ -49,7 +53,9 @@ const facetFilter: FilterFn<StaffPayment> = (row, columnId, value) =>
 /**
  * Tenant > Staff > card (TEC-349): the card summary, edit, "Add payment"
  * and the payment history (GET /v1/staff-profiles/{uuid}/payments, every
- * page; the DataTable sorts and filters in the browser).
+ * page; the DataTable sorts and filters in the browser). Each payment
+ * shows its state (TEC-381): planned ones (payment day ahead, not booked
+ * yet) can be cancelled.
  */
 export function StaffDetailPage({
   slug,
@@ -63,6 +69,9 @@ export function StaffDetailPage({
   const access = useStaffAccess(slug);
   const [formOpen, setFormOpen] = useState(false);
   const [paying, setPaying] = useState(false);
+  const { action: cancelAction, dialog: cancelDialog } = useCancelPaymentAction(
+    access.orgUuid,
+  );
   const enabled = access.canManage && Boolean(access.orgUuid);
 
   // There is no single-card read: the card comes from the (cached) list.
@@ -134,6 +143,24 @@ export function StaffDetailPage({
           ),
         }),
         createColumn<StaffPayment>({
+          accessorKey: "status",
+          labelKey: "staff_reports.fields.payment_status",
+          enableSorting: true,
+          filterVariant: "faceted",
+          filterFn: facetFilter,
+          filterOptions: STAFF_PAYMENT_STATUSES.map((value) => ({
+            value,
+            label: value,
+            labelKey: `staff_reports.payment_statuses.${value}`,
+          })),
+          cell: ({ row }) => (
+            <StatusChip
+              label={t(`staff_reports.payment_statuses.${row.original.status}`)}
+              tone={paymentStatusTone(row.original.status)}
+            />
+          ),
+        }),
+        createColumn<StaffPayment>({
           accessorKey: "period",
           labelKey: "staff_reports.fields.period",
           enableSorting: true,
@@ -199,8 +226,19 @@ export function StaffDetailPage({
           defaultHidden: true,
           cell: ({ row }) => format.dateTime(row.original.created_at),
         }),
+        createColumn<StaffPayment>({
+          id: "actions",
+          labelKey: "common.actions",
+          enableSorting: false,
+          enableHiding: false,
+          enableResizing: false,
+          cell: ({ row }) => {
+            const action = access.canPay ? cancelAction(row.original) : null;
+            return action ? <EntityRowActions actions={[action]} /> : null;
+          },
+        }),
       ] as ColumnDef<StaffPayment, unknown>[],
-    [format, t],
+    [access.canPay, cancelAction, format, t],
   );
 
   const title = staff?.name ?? t("staff_reports.staff.title");
@@ -324,6 +362,7 @@ export function StaffDetailPage({
         onOpenChange={setFormOpen}
         onSubmit={(values) => save.mutateAsync(values)}
       />
+      {cancelDialog}
       <StaffPaymentDialog
         orgUuid={access.orgUuid}
         staff={paying ? staff : null}
