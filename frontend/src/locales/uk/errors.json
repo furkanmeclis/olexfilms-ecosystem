@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "ШІ-асистента не налаштовано.",
   "codes.AI_ORG_DISABLED": "ШІ-асистента вимкнено для цієї організації.",
   "codes.AI_QUOTA_EXCEEDED": "Перевищено квоту використання ШІ.",
+  "codes.AI_UNAVAILABLE": "Помічник ШІ зараз недоступний.",
   "codes.AI_VOICE_DISABLED": "Голосового асистента вимкнено.",
   "codes.AI_VOICE_UNAVAILABLE": "Голосовий асистент зараз недоступний.",
   "codes.AUDIO_TOO_LARGE": "Запис завеликий.",

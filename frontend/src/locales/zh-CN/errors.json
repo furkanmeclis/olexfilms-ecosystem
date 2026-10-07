@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "AI 助手尚未配置。",
   "codes.AI_ORG_DISABLED": "此组织已禁用 AI 助手。",
   "codes.AI_QUOTA_EXCEEDED": "已超出 AI 使用配额。",
+  "codes.AI_UNAVAILABLE": "AI 助手当前不可用。",
   "codes.AI_VOICE_DISABLED": "语音助手已禁用。",
   "codes.AI_VOICE_UNAVAILABLE": "语音助手当前不可用。",
   "codes.AUDIO_TOO_LARGE": "录音文件过大。",

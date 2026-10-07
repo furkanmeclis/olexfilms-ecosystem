@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "El asistente de IA no está configurado.",
   "codes.AI_ORG_DISABLED": "El asistente de IA está desactivado para esta organización.",
   "codes.AI_QUOTA_EXCEEDED": "Se ha superado la cuota de uso de IA.",
+  "codes.AI_UNAVAILABLE": "El asistente de IA no está disponible en este momento.",
   "codes.AI_VOICE_DISABLED": "El asistente de voz está desactivado.",
   "codes.AI_VOICE_UNAVAILABLE": "El asistente de voz no está disponible en este momento.",
   "codes.AUDIO_TOO_LARGE": "La grabación es demasiado grande.",
