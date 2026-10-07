@@ -84,5 +84,7 @@
   "nav_exchange_rates": "Döviz kurları",
   "nav_legal_texts": "Yasal metinler",
   "nav_glorian_integration": "Glorian",
-  "nav_service_catalog": "Hizmet kataloğu"
+  "nav_service_catalog": "Hizmet kataloğu",
+  "nav_service_subscriptions": "Hizmet abonelikleri",
+  "nav_service_subscription_cancels": "İptal talepleri"
 }

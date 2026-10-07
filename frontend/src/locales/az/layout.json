@@ -84,5 +84,7 @@
   "nav_exchange_rates": "Valyuta məzənnələri",
   "nav_legal_texts": "Hüquqi mətnlər",
   "nav_glorian_integration": "Glorian",
-  "nav_service_catalog": "Xidmət kataloqu"
+  "nav_service_catalog": "Xidmət kataloqu",
+  "nav_service_subscriptions": "Xidmət abunəlikləri",
+  "nav_service_subscription_cancels": "Ləğv sorğuları"
 }

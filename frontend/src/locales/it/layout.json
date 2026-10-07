@@ -84,5 +84,7 @@
   "nav_exchange_rates": "Tassi di cambio",
   "nav_legal_texts": "Testi legali",
   "nav_glorian_integration": "Glorian",
-  "nav_service_catalog": "Catalogo servizi"
+  "nav_service_catalog": "Catalogo servizi",
+  "nav_service_subscriptions": "Abbonamenti ai servizi",
+  "nav_service_subscription_cancels": "Richieste di disdetta"
 }

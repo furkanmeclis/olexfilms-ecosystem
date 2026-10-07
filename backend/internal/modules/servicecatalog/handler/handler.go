@@ -324,12 +324,53 @@ func (h *Handler) AssignSubscription(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListSubscriptions(w http.ResponseWriter, r *http.Request) {
-	items, err := h.svc.ListSubscriptions(r.Context(), caller(r), r.URL.Query().Get("status"))
+	f, err := usecase.ParseSubscriptionListFilter(r.URL.Query())
+	if err != nil {
+		response.QueryValidation(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListSubscriptions(r.Context(), caller(r), f)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
+}
+
+// ListCancelRequests serves the center cancellation queue (TEC-311).
+func (h *Handler) ListCancelRequests(w http.ResponseWriter, r *http.Request) {
+	f, err := usecase.ParseCancelRequestListFilter(r.URL.Query())
+	if err != nil {
+		response.QueryValidation(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListCancelRequests(r.Context(), caller(r), f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
+}
+
+// PreviewPrice returns the price an assignment would freeze (TEC-311).
+func (h *Handler) PreviewPrice(w http.ResponseWriter, r *http.Request) {
+	values := r.URL.Query()
+	itemID, err := uuid.Parse(values.Get("item_uuid"))
+	if err != nil {
+		response.ValidationError(w, r, []response.Detail{{Field: "item_uuid", Message: "is invalid"}})
+		return
+	}
+	orgID, err := uuid.Parse(values.Get("organization_uuid"))
+	if err != nil {
+		response.ValidationError(w, r, []response.Detail{{Field: "organization_uuid", Message: "is invalid"}})
+		return
+	}
+	price, err := h.svc.PreviewPrice(r.Context(), caller(r), itemID, orgID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, price)
 }
 
 func (h *Handler) GetSubscription(w http.ResponseWriter, r *http.Request) {

@@ -84,5 +84,7 @@
   "nav_exchange_rates": "Taux de change",
   "nav_legal_texts": "Textes juridiques",
   "nav_glorian_integration": "Glorian",
-  "nav_service_catalog": "Catalogue de services"
+  "nav_service_catalog": "Catalogue de services",
+  "nav_service_subscriptions": "Abonnements de services",
+  "nav_service_subscription_cancels": "Demandes de résiliation"
 }

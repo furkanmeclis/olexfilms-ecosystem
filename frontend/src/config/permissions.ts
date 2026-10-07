@@ -123,6 +123,10 @@ export const Permission = {
   VehicleCatalogWrite: "vehicle_catalog.write",
   ServiceCatalogRead: "service_catalog.read",
   ServiceCatalogManage: "service_catalog.manage",
+  ServiceSubscriptionsAssign: "service_subscriptions.assign",
+  ServiceSubscriptionsRead: "service_subscriptions.read",
+  ServiceSubscriptionsCancelRequest: "service_subscriptions.cancel_request",
+  ServiceSubscriptionsCancelApprove: "service_subscriptions.cancel_approve",
 
   StockRead: "stock.read",
   StockWrite: "stock.write",
@@ -466,6 +470,12 @@ export const permissions = {
   serviceCatalog: {
     read: Permission.ServiceCatalogRead,
     manage: Permission.ServiceCatalogManage,
+  },
+  serviceSubscriptions: {
+    assign: Permission.ServiceSubscriptionsAssign,
+    read: Permission.ServiceSubscriptionsRead,
+    cancelRequest: Permission.ServiceSubscriptionsCancelRequest,
+    cancelApprove: Permission.ServiceSubscriptionsCancelApprove,
   },
   stock: {
     read: Permission.StockRead,

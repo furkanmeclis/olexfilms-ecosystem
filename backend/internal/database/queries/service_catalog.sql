@@ -134,19 +134,6 @@ SELECT * FROM service_subscriptions
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
 FOR UPDATE;
 
--- name: ListServiceSubscriptionsByOrgs :many
-SELECT * FROM service_subscriptions
-WHERE brand_id = sqlc.arg(brand_id)
-  AND organization_id = ANY(sqlc.arg(organization_ids)::bigint[])
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-ORDER BY created_at DESC, id DESC;
-
--- name: ListServiceSubscriptionsByBrand :many
-SELECT * FROM service_subscriptions
-WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-ORDER BY created_at DESC, id DESC;
-
 -- name: CountActiveServiceModuleSubscriptions :one
 SELECT count(*)
 FROM service_subscriptions s
@@ -220,12 +207,6 @@ RETURNING *;
 SELECT * FROM service_subscription_cancel_requests
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
 
--- name: ListServiceSubscriptionCancelRequests :many
-SELECT * FROM service_subscription_cancel_requests
-WHERE brand_id = sqlc.arg(brand_id)
-  AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
-ORDER BY created_at DESC, id DESC;
-
 -- name: DecideServiceSubscriptionCancelRequest :one
 UPDATE service_subscription_cancel_requests
 SET status = sqlc.arg(status)::text,
@@ -234,3 +215,96 @@ SET status = sqlc.arg(status)::text,
     decision_note = sqlc.narg(decision_note)
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id) AND status = 'pending'
 RETURNING *;
+
+-- TEC-311: paged subscription list (docs/list-contract.md). Sort keys from
+-- servicecatalog usecase SubscriptionsSortSpec; organization_ids NULL = no
+-- organization restriction (all/brand scope).
+-- name: ListServiceSubscriptionsPage :many
+SELECT sqlc.embed(s), o.uuid AS org_uuid, o.name AS organization_name,
+       i.uuid AS item_uuid, i.name AS item_name, i.category AS item_category
+FROM service_subscriptions s
+JOIN organizations o ON o.id = s.organization_id
+JOIN service_catalog_items i ON i.id = s.item_id AND i.brand_id = s.brand_id
+WHERE s.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(organization_ids)::bigint[] IS NULL OR s.organization_id = ANY (sqlc.narg(organization_ids)::bigint[]))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR s.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(org_uuids)::uuid[]), 0) = 0 OR o.uuid = ANY (sqlc.narg(org_uuids)::uuid[]))
+  AND (COALESCE(cardinality(sqlc.narg(item_uuids)::uuid[]), 0) = 0 OR i.uuid = ANY (sqlc.narg(item_uuids)::uuid[]))
+  AND (sqlc.narg(q)::text IS NULL OR o.name ILIKE '%' || sqlc.narg(q)::text || '%' OR i.name ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (sqlc.narg(ends_from)::date IS NULL OR s.ends_on >= sqlc.narg(ends_from)::date)
+  AND (sqlc.narg(ends_before)::date IS NULL OR s.ends_on < sqlc.narg(ends_before)::date)
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'status' THEN s.status WHEN 'organization_name' THEN o.name WHEN 'item_name' THEN i.name END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'status' THEN s.status WHEN 'organization_name' THEN o.name WHEN 'item_name' THEN i.name END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'starts_on' THEN s.starts_on WHEN 'ends_on' THEN s.ends_on END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'starts_on' THEN s.starts_on WHEN 'ends_on' THEN s.ends_on END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'price' THEN s.price END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'price' THEN s.price END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN s.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN s.created_at END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN s.id END DESC,
+  s.id ASC
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: CountServiceSubscriptionsPage :one
+SELECT count(*)
+FROM service_subscriptions s
+JOIN organizations o ON o.id = s.organization_id
+JOIN service_catalog_items i ON i.id = s.item_id AND i.brand_id = s.brand_id
+WHERE s.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(organization_ids)::bigint[] IS NULL OR s.organization_id = ANY (sqlc.narg(organization_ids)::bigint[]))
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR s.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(org_uuids)::uuid[]), 0) = 0 OR o.uuid = ANY (sqlc.narg(org_uuids)::uuid[]))
+  AND (COALESCE(cardinality(sqlc.narg(item_uuids)::uuid[]), 0) = 0 OR i.uuid = ANY (sqlc.narg(item_uuids)::uuid[]))
+  AND (sqlc.narg(q)::text IS NULL OR o.name ILIKE '%' || sqlc.narg(q)::text || '%' OR i.name ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (sqlc.narg(ends_from)::date IS NULL OR s.ends_on >= sqlc.narg(ends_from)::date)
+  AND (sqlc.narg(ends_before)::date IS NULL OR s.ends_on < sqlc.narg(ends_before)::date);
+
+-- TEC-311: center cancellation queue (docs/list-contract.md). Sort keys
+-- from servicecatalog usecase CancelRequestsSortSpec.
+-- name: ListServiceSubscriptionCancelRequestsPage :many
+SELECT sqlc.embed(r), s.uuid AS subscription_uuid, s.status AS subscription_status,
+       s.starts_on, s.ends_on, o.uuid AS org_uuid, o.name AS organization_name, i.name AS item_name
+FROM service_subscription_cancel_requests r
+JOIN service_subscriptions s ON s.id = r.subscription_id
+JOIN organizations o ON o.id = r.organization_id
+JOIN service_catalog_items i ON i.id = s.item_id AND i.brand_id = s.brand_id
+WHERE r.brand_id = sqlc.arg(brand_id)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR r.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (sqlc.narg(q)::text IS NULL OR o.name ILIKE '%' || sqlc.narg(q)::text || '%' OR i.name ILIKE '%' || sqlc.narg(q)::text || '%' OR r.reason ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR r.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR r.created_at < sqlc.narg(created_before)::timestamptz)
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'status' THEN r.status WHEN 'organization_name' THEN o.name WHEN 'item_name' THEN i.name END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'status' THEN r.status WHEN 'organization_name' THEN o.name WHEN 'item_name' THEN i.name END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'cancellation_fee' THEN r.cancellation_fee END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'cancellation_fee' THEN r.cancellation_fee END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN r.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN r.created_at END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN r.id END DESC,
+  r.id ASC
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: CountServiceSubscriptionCancelRequestsPage :one
+SELECT count(*)
+FROM service_subscription_cancel_requests r
+JOIN service_subscriptions s ON s.id = r.subscription_id
+JOIN organizations o ON o.id = r.organization_id
+JOIN service_catalog_items i ON i.id = s.item_id AND i.brand_id = s.brand_id
+WHERE r.brand_id = sqlc.arg(brand_id)
+  AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR r.status = ANY (sqlc.narg(statuses)::text[]))
+  AND (sqlc.narg(q)::text IS NULL OR o.name ILIKE '%' || sqlc.narg(q)::text || '%' OR i.name ILIKE '%' || sqlc.narg(q)::text || '%' OR r.reason ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (sqlc.narg(created_from)::timestamptz IS NULL OR r.created_at >= sqlc.narg(created_from)::timestamptz)
+  AND (sqlc.narg(created_before)::timestamptz IS NULL OR r.created_at < sqlc.narg(created_before)::timestamptz);

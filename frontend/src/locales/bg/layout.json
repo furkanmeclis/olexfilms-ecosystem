@@ -84,5 +84,7 @@
   "nav_exchange_rates": "Валутни курсове",
   "nav_legal_texts": "Правни текстове",
   "nav_glorian_integration": "Glorian",
-  "nav_service_catalog": "Каталог услуги"
+  "nav_service_catalog": "Каталог услуги",
+  "nav_service_subscriptions": "Абонаменти за услуги",
+  "nav_service_subscription_cancels": "Искания за прекратяване"
 }

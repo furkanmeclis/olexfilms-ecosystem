@@ -194,7 +194,9 @@ type Querier interface {
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
 	CountServiceReviewAnswersByQuestion(ctx context.Context, arg CountServiceReviewAnswersByQuestionParams) (int64, error)
 	CountServiceReviewsInScope(ctx context.Context, arg CountServiceReviewsInScopeParams) (int64, error)
+	CountServiceSubscriptionCancelRequestsPage(ctx context.Context, arg CountServiceSubscriptionCancelRequestsPageParams) (int64, error)
 	CountServiceSubscriptionsByItem(ctx context.Context, arg CountServiceSubscriptionsByItemParams) (int64, error)
+	CountServiceSubscriptionsPage(ctx context.Context, arg CountServiceSubscriptionsPageParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
 	CountStaffPayments(ctx context.Context, arg CountStaffPaymentsParams) (int64, error)
@@ -1668,10 +1670,14 @@ type Querier interface {
 	// matches the product name, SKU or barcode (TEC-182). The category's
 	// available_parts feeds the part list of the new item.
 	ListServiceStockUnits(ctx context.Context, arg ListServiceStockUnitsParams) ([]ListServiceStockUnitsRow, error)
-	ListServiceSubscriptionCancelRequests(ctx context.Context, arg ListServiceSubscriptionCancelRequestsParams) ([]ServiceSubscriptionCancelRequest, error)
+	// TEC-311: center cancellation queue (docs/list-contract.md). Sort keys
+	// from servicecatalog usecase CancelRequestsSortSpec.
+	ListServiceSubscriptionCancelRequestsPage(ctx context.Context, arg ListServiceSubscriptionCancelRequestsPageParams) ([]ListServiceSubscriptionCancelRequestsPageRow, error)
 	ListServiceSubscriptionPeriods(ctx context.Context, subscriptionID int64) ([]ServiceSubscriptionPeriod, error)
-	ListServiceSubscriptionsByBrand(ctx context.Context, arg ListServiceSubscriptionsByBrandParams) ([]ServiceSubscription, error)
-	ListServiceSubscriptionsByOrgs(ctx context.Context, arg ListServiceSubscriptionsByOrgsParams) ([]ServiceSubscription, error)
+	// TEC-311: paged subscription list (docs/list-contract.md). Sort keys from
+	// servicecatalog usecase SubscriptionsSortSpec; organization_ids NULL = no
+	// organization restriction (all/brand scope).
+	ListServiceSubscriptionsPage(ctx context.Context, arg ListServiceSubscriptionsPageParams) ([]ListServiceSubscriptionsPageRow, error)
 	// Services of a customer across brands' organizations in scope (portal and
 	// customer detail).
 	ListServicesByCustomer(ctx context.Context, arg ListServicesByCustomerParams) ([]Service, error)

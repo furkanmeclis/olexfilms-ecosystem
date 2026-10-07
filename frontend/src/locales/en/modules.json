@@ -95,5 +95,6 @@
   "names.reviews": "Reviews",
   "names.e_invoice": "E-invoice (UBL-TR)",
   "names.short_url": "Short URLs",
-  "columns.slug": "Slug"
+  "columns.slug": "Slug",
+  "via_subscription": "On by subscription"
 }

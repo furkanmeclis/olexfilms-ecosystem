@@ -84,5 +84,7 @@
   "nav_exchange_rates": "Exchange rates",
   "nav_legal_texts": "Legal texts",
   "nav_glorian_integration": "Glorian",
-  "nav_service_catalog": "Service catalog"
+  "nav_service_catalog": "Service catalog",
+  "nav_service_subscriptions": "Service subscriptions",
+  "nav_service_subscription_cancels": "Cancellation requests"
 }

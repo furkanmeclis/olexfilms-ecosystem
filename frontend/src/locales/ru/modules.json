@@ -95,5 +95,6 @@
   "names.reviews": "Отзывы",
   "names.e_invoice": "Электронный счёт (UBL-TR)",
   "names.short_url": "Короткие ссылки",
-  "columns.slug": "Короткое имя"
+  "columns.slug": "Короткое имя",
+  "via_subscription": "Включено подпиской"
 }

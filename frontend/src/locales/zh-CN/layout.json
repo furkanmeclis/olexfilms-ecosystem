@@ -84,5 +84,7 @@
   "nav_exchange_rates": "汇率",
   "nav_legal_texts": "法律文本",
   "nav_glorian_integration": "Glorian",
-  "nav_service_catalog": "服务目录"
+  "nav_service_catalog": "服务目录",
+  "nav_service_subscriptions": "服务订阅",
+  "nav_service_subscription_cancels": "取消申请"
 }
