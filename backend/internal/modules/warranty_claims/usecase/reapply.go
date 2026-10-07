@@ -224,6 +224,9 @@ func (s *Service) createReapplyServiceLocked(
 
 func (s *Service) handleReapplyServiceFinal(ctx context.Context, ev events.Event, target string) error {
 	serviceID, ok := payloadInt64(ev.Payload["service_id"])
+	if !ok && ev.EntityID != nil {
+		serviceID, ok = *ev.EntityID, *ev.EntityID > 0
+	}
 	if !ok {
 		return nil
 	}

@@ -659,6 +659,7 @@ func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, svc db.Servi
 	extra map[string]any) error {
 	id, uid := svc.ID, svc.Uuid
 	payload := map[string]any{
+		"service_id":      svc.ID,
 		"service_uuid":    svc.Uuid.String(),
 		"service_no":      svc.ServiceNo,
 		"status":          svc.Status,
