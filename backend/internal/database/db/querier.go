@@ -1312,6 +1312,11 @@ type Querier interface {
 	ListAppointmentRefs(ctx context.Context, ids []int64) ([]ListAppointmentRefsRow, error)
 	ListAppointmentSettingsByOrganizations(ctx context.Context, organizationIds []int64) ([]AppointmentSetting, error)
 	ListAppointmentsByOrganizations(ctx context.Context, arg ListAppointmentsByOrganizationsParams) ([]Appointment, error)
+	// TEC-386: active, serving (access window open, contract not expired)
+	// dealers and distributors of a brand in a city (and district), for the AI
+	// visitor tool. city / district match case- and Turkish-accent-insensitively
+	// against the organization's own text or its province / district name.
+	ListAreaDealers(ctx context.Context, arg ListAreaDealersParams) ([]ListAreaDealersRow, error)
 	// TEC-375: list contract (docs/list-contract.md), keys from stock usecase
 	// BarcodeBatchSort. q: prefix, first/last barcode, product name or sku, or
 	// any barcode of the batch.

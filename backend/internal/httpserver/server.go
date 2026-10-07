@@ -846,6 +846,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Tree: deps.Queries, Services: servicesSvc, Warranties: warrantyReader, Customers: customersSvc,
 		Stock: stockSvc, Orders: ordersSvc, Accounting: accountingSvc, Appointments: appointmentsSvc,
 		Leads: leadsSvc, Tasks: tasksSvc, Catalog: catalogSvc, Organizations: orgSvc,
+		Links: shorturlsmodule.NewLinker(deps.Queries, cfg.Auth.FrontendURL),
 	})
 	// TEC-387 (F4-01e): write tools behind the confirmation card; every
 	// channel confirms through s.aiActions.
@@ -923,6 +924,18 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	)
 	// TEC-238: customer portal vehicles, vehicle detail and service history.
 	portalvehiclesmodule.RegisterRoutes(mux, portalvehicleshandler.New(portalvehiclesusecase.New(deps.Queries)), tokens, loader)
+	// TEC-386 (F4-01d): AI customer (own records via the portal use cases)
+	// and visitor (public catalog, dealers, knowledge text, warranty lookup)
+	// tool sets.
+	aitools.RegisterCustomer(s.aiTools, aitools.CustomerDeps{
+		Portal: portalvehiclesusecase.New(deps.Queries), Services: servicesSvc, Warranties: warrantyReader,
+		Appointments: appointmentsSvc, Claims: warrantyClaimsSvc, Profile: uc,
+		Links: shorturlsmodule.NewLinker(deps.Queries, cfg.Auth.FrontendURL),
+	})
+	aitools.RegisterVisitor(s.aiTools, aitools.VisitorDeps{
+		Catalog: catalogSvc, Dealers: orgSvc, Settings: deps.Queries,
+		Warranties: warrantyusecase.NewPublicLookup(deps.Queries), FrontendURL: cfg.Auth.FrontendURL,
+	})
 	// TEC-273: Glorian admin API (connection settings, sync runs, outbound
 	// replay, reconcile); glorian.Store is wired here.
 	glorianadminmodule.RegisterRoutes(mux, glorianadminhandler.New(glorianadminusecase.New(deps.Queries, secretBox,

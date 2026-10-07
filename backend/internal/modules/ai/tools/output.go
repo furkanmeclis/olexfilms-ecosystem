@@ -20,6 +20,12 @@ const (
 	maxTextChars = 300
 )
 
+// ExportNotice answers requests for a full list or a CSV / XLSX file: the
+// tools never build files (TEC-386); the panel list screens export through
+// the io engine.
+const ExportNotice = "Tools do not create CSV / XLSX files: for a complete list or a file, " +
+	"use Export on the matching list screen in the panel."
+
 // List is the common envelope of list results. Total is the number of
 // matching records; Truncated tells the model there are more than it got.
 type List[T any] struct {
@@ -38,8 +44,8 @@ func NewList[T any](items []T, total int64) List[T] {
 	l := List[T]{Items: items, Returned: len(items), Total: total}
 	if total > int64(len(items)) {
 		l.Truncated = true
-		l.Hint = fmt.Sprintf("Showing %d of %d records. Narrow the search (more specific query or filters) instead of paging.",
-			len(items), total)
+		l.Hint = fmt.Sprintf("Showing %d of %d records. Narrow the search (more specific query or filters) instead of paging. ",
+			len(items), total) + ExportNotice
 	}
 	return l
 }
