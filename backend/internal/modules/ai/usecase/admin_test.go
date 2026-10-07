@@ -284,6 +284,15 @@ func TestUsageExportMatchesListTotal(t *testing.T) {
 	if ds.Rows[0]["tokens"] != "33" {
 		t.Fatalf("export sort: first row = %v", ds.Rows[0])
 	}
+	// TEC-391: the token range reaches the job query.
+	rq, err := UsageExportQuery(map[string]string{"tokens_min": "20", "tokens_max": "35"}, f.dealerA.ID)
+	if err != nil || rq["tokens_min"] != "20" || rq["tokens_max"] != "35" {
+		t.Fatalf("token range job query = %v %v", rq, err)
+	}
+	rq[ioengine.QueryOrganizationID] = strconv.FormatInt(f.dealerA.ID, 10)
+	if rds, err := NewUsageExportAdapter(f.admin).Export(f.ctx, rq, "tr"); err != nil || len(rds.Rows) != 2 {
+		t.Fatalf("token range export rows = %d %v", len(rds.Rows), err)
+	}
 
 	// Platform reach with the organization filter.
 	pv := map[string][]string{"organization": {f.dealerA.Uuid.String() + "," + f.dealerB.Uuid.String()}}
@@ -378,8 +387,16 @@ func TestUsageListContract(t *testing.T) {
 	if got := list("created_from=" + from); len(got) != 0 {
 		t.Fatalf("created_from filter = %d", len(got))
 	}
+	// TEC-391: tokens_min / tokens_max (inclusive).
+	if got := tokens(list("tokens_min=20&sort=tokens")); !slices.Equal(got, []int64{20, 30}) {
+		t.Fatalf("tokens_min filter = %v", got)
+	}
+	if got := tokens(list("tokens_min=10&tokens_max=20&sort=tokens")); !slices.Equal(got, []int64{10, 10, 20}) {
+		t.Fatalf("tokens range filter = %v", got)
+	}
 	var qe *apiquery.ValidationError
-	for _, bad := range []string{"sort=-model", "channel=fax", "user=x", "created_from=yesterday"} {
+	for _, bad := range []string{"sort=-model", "channel=fax", "user=x", "created_from=yesterday",
+		"tokens_min=abc", "tokens_min=30&tokens_max=10"} {
 		values, _ := urlValues(bad)
 		if _, err := ParseUsageQuery(values, false); !errors.As(err, &qe) {
 			t.Fatalf("%s: err = %v, want validation error", bad, err)

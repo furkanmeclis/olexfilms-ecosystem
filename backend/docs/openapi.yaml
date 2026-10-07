@@ -19410,6 +19410,41 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
+  /v1/warranty-claims/{uuid}/ai-triage:
+    post:
+      tags: [Warranties]
+      operationId: retriggerWarrantyClaimAITriage
+      summary: Re-run the AI first triage of a warranty claim
+      description: >-
+        TEC-392: needs `warranty_claims.decide` (and the claim in the caller's
+        `warranty_claims.read` scope, 404 outside it). The fast model reads the
+        description, parts and up to 6 photos and overwrites `ai_damage_type`,
+        `ai_summary` (Turkish), `ai_confidence` and `ai_triaged_at`; an
+        `ai_triaged` event is added. Suggestion only: the status never changes.
+        Usage is booked on the brand center's system pool (channel `triage`).
+        403 FEATURE_DISABLED when `ai_assistant` is off for the center, 403
+        AI_QUOTA_EXCEEDED when the system pool is used up.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Warranty claim detail with the new triage
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaim" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: AI_UNAVAILABLE, no model provider is configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /v1/portal/warranty-claims:
     get:
       tags: [Warranties]
@@ -25053,6 +25088,8 @@ paths:
         - $ref: "#/components/parameters/AIUsagePool"
         - $ref: "#/components/parameters/AIUsageModel"
         - $ref: "#/components/parameters/AIUsageUser"
+        - $ref: "#/components/parameters/AIUsageTokensMin"
+        - $ref: "#/components/parameters/AIUsageTokensMax"
         - name: organization
           in: query
           required: false
@@ -25119,7 +25156,7 @@ paths:
         when it is inside the caller's ai.usage.read scope; another or a
         missing organization is 404 alike. List contract: `sort` =
         created_at | tokens (default `-created_at`, id tiebreak; unknown →
-        400), `created_from` / `created_to`, multi-value `channel`,
+        400), `created_from` / `created_to`, `tokens_min` / `tokens_max`, multi-value `channel`,
         `purpose`, `pool`, `model`, `user` (user uuids). `tokens` is the
         quota count (input + output + cache write).
       security:
@@ -25135,6 +25172,8 @@ paths:
         - $ref: "#/components/parameters/AIUsagePool"
         - $ref: "#/components/parameters/AIUsageModel"
         - $ref: "#/components/parameters/AIUsageUser"
+        - $ref: "#/components/parameters/AIUsageTokensMin"
+        - $ref: "#/components/parameters/AIUsageTokensMax"
         - $ref: "#/components/parameters/AIUsageOrganization"
       responses:
         "200":
@@ -25342,6 +25381,18 @@ components:
       schema:
         type: array
         items: { type: string, format: uuid }
+    AIUsageTokensMin:
+      name: tokens_min
+      in: query
+      required: false
+      description: Inclusive lower bound of `tokens` (TEC-391).
+      schema: { type: integer, format: int64, minimum: 0 }
+    AIUsageTokensMax:
+      name: tokens_max
+      in: query
+      required: false
+      description: Inclusive upper bound of `tokens` (TEC-391).
+      schema: { type: integer, format: int64, minimum: 0 }
     AIUsageOrganization:
       name: organization
       in: query

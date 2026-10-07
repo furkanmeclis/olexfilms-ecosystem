@@ -146,6 +146,8 @@
   "system.groups.whatsapp_hint": "WhatsApp konuşmaları, gönderim hızı ve yapay zekâ yanıtları.",
   "system.keys.whatsapp_ai_staff_pause_minutes": "Personel mesajından sonra yapay zekâ beklemesi (dakika)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "Bir personel konuşmaya bu süre içinde yazdıysa yapay zekâ yanıt vermez; 0 = bekleme yok.",
+  "system.keys.ai_visitor_daily_token_cap": "Ziyaretçi WhatsApp AI günlük token tavanı",
+  "system.keys.ai_visitor_daily_token_cap_hint": "Tanımlanmamış WhatsApp ziyaretçilerinin sistem havuzundan günde toplam kullanabileceği token; aşılınca sabit mesaj ve bayi bul bağlantısı gönderilir. 0 = tavan yok.",
   "system.keys.whatsapp_ai_guidelines_url": "Yapay zekâ yönerge bağlantısı",
   "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp onay sorusunda gönderilen yönerge bağlantısı (https); boşsa yönerge metni mesajın içinde gönderilir.",
   "system.groups.campaigns": "Kampanyalar",

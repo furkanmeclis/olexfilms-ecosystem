@@ -125,6 +125,10 @@ const (
 	// KeyWhatsAppAIGuidelinesURL is the AI guidelines link of the WhatsApp
 	// consent question; empty = the guidelines text itself is sent (TEC-396).
 	KeyWhatsAppAIGuidelinesURL = "whatsapp.ai_guidelines_url"
+	// KeyAIVisitorDailyTokenCap caps the tokens all unidentified WhatsApp
+	// visitors may use per day on the center's system pool; 0 = no cap
+	// (TEC-397).
+	KeyAIVisitorDailyTokenCap = "ai.visitor_daily_token_cap"
 
 	// KeyMCPRequestsPerHourPerOrg caps the MCP requests of one organization
 	// per hour over every connected app and endpoint (TEC-402).
@@ -159,6 +163,11 @@ const DefaultWhatsAppSendPerMinute = 30
 // DefaultWhatsAppAIStaffPauseMinutes is the catalog default of
 // KeyWhatsAppAIStaffPauseMinutes.
 const DefaultWhatsAppAIStaffPauseMinutes = 30
+
+// DefaultAIVisitorDailyTokenCap is the catalog default of
+// KeyAIVisitorDailyTokenCap (about a twentieth of the default 5M monthly
+// system pool).
+const DefaultAIVisitorDailyTokenCap = 250000
 
 // Values of KeyWarrantyClaimsLaborRule.
 const (
@@ -282,6 +291,8 @@ var catalog = []Definition{
 		Description: "The WhatsApp AI does not answer a conversation in which a staff member wrote within this many minutes; 0 = no pause (TEC-396)"},
 	{Key: KeyWhatsAppAIGuidelinesURL, Group: GroupWhatsApp, Kind: KindString, Default: "", MaxLen: 500, check: checkHTTPSURL,
 		Description: "Link to the AI guidelines sent with the WhatsApp consent question; empty = the guidelines text is sent in the message (TEC-396)"},
+	{Key: KeyAIVisitorDailyTokenCap, Group: GroupWhatsApp, Kind: KindInt, Default: int64(DefaultAIVisitorDailyTokenCap), Min: i64(0), Max: i64(100000000),
+		Description: "Tokens all unidentified WhatsApp visitors may use per day from the system pool; above it they get a fixed reply with the dealer finder link; 0 = no cap (TEC-397)"},
 	{Key: KeyMCPRequestsPerHourPerOrg, Group: GroupMCP, Kind: KindInt, Default: int64(DefaultMCPRequestsPerHourPerOrg), Min: i64(1), Max: i64(100000),
 		Description: "MCP requests one organization may make per hour over all connected apps; further requests get 429 (TEC-402)"},
 	{Key: KeyCampaignsWhatsAppPerMinute, Group: GroupCampaigns, Kind: KindInt, Default: int64(DefaultCampaignsWhatsAppPerMinute), Min: i64(1), Max: i64(600),

@@ -146,6 +146,8 @@
   "system.groups.whatsapp_hint": "محادثات واتساب ومعدل الإرسال وردود الذكاء الاصطناعي.",
   "system.keys.whatsapp_ai_staff_pause_minutes": "إيقاف الذكاء الاصطناعي بعد رسالة موظف (بالدقائق)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "لا يرد الذكاء الاصطناعي في محادثة كتب فيها موظف خلال هذه المدة؛ 0 = دون إيقاف.",
+  "system.keys.ai_visitor_daily_token_cap": "الحد اليومي للرموز لذكاء زوار واتساب الاصطناعي",
+  "system.keys.ai_visitor_daily_token_cap_hint": "عدد الرموز التي يمكن لجميع زوار واتساب غير المعرّفين استخدامها يوميًا من رصيد النظام؛ عند تجاوزه يتلقون ردًا ثابتًا مع رابط البحث عن وكيل. 0 = دون حد.",
   "system.keys.whatsapp_ai_guidelines_url": "رابط إرشادات الذكاء الاصطناعي",
   "system.keys.whatsapp_ai_guidelines_url_hint": "رابط الإرشادات (https) المرسل مع سؤال الموافقة في واتساب؛ إذا كان فارغًا يُرسل نص الإرشادات في الرسالة.",
   "system.groups.campaigns": "الحملات",

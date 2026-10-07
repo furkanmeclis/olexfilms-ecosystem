@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "The AI assistant is not configured.",
   "codes.AI_ORG_DISABLED": "The AI assistant is disabled for this organization.",
   "codes.AI_QUOTA_EXCEEDED": "AI usage quota exceeded.",
+  "codes.AI_UNAVAILABLE": "The AI assistant is not available right now.",
   "codes.AI_VOICE_DISABLED": "The voice assistant is disabled.",
   "codes.AI_VOICE_UNAVAILABLE": "The voice assistant is unavailable right now.",
   "codes.AUDIO_TOO_LARGE": "The recording is too large.",

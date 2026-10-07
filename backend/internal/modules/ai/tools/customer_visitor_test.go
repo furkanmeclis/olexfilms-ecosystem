@@ -263,25 +263,6 @@ func TestChangeLanguageRunsWithoutConfirmation(t *testing.T) {
 	}
 }
 
-// visitorAllowedKeys is the complete field whitelist of the visitor tool
-// results: catalog facts, dealer business contact, list envelope and the
-// public warranty projection.
-var visitorAllowedKeys = map[string]bool{
-	// envelopes
-	"items": true, "returned": true, "total": true, "truncated": true, "hint": true, "note": true,
-	// recommend_products
-	"categories": true, "products": true, "name": true, "category": true, "warranty_months": true,
-	"micron_thickness": true, "description": true,
-	// find_nearest_dealers
-	"city": true, "district": true, "distance_km": true, "whatsapp": true, "accepts_appointments": true, "page_url": true,
-	// search_knowledge
-	"passages": true,
-	// lookup_warranty
-	"public_code": true, "status": true, "start_at": true, "end_at": true, "days_remaining": true, "product": true,
-	"dealer": true, "dealer_city": true, "vehicle": true, "brand": true, "model": true, "model_year": true,
-	"plate_masked": true, "vin_last4": true,
-}
-
 // TEC-386 acceptance: the visitor tools return no personal data field.
 // Every key of every visitor result is on the whitelist, none is a
 // personal data key of the public warranty page check (FindPIIKeys) and no
@@ -314,7 +295,7 @@ func TestVisitorToolsReturnNoPersonalData(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, k := range allKeys(doc) {
-				if !visitorAllowedKeys[k] {
+				if !VisitorOutputKeys[k] {
 					t.Errorf("%s(%s): field %q is not on the visitor whitelist", name, in, k)
 				}
 			}

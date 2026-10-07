@@ -60,6 +60,9 @@ type SendOptions struct {
 	ID string
 }
 
+// MediaLocation is the InboundMedia type of a shared location.
+const MediaLocation = "location"
+
 // InboundMedia describes media attached to an inbound message.
 type InboundMedia struct {
 	Type     string `json:"type"`
@@ -69,6 +72,11 @@ type InboundMedia struct {
 	URL      string `json:"url,omitempty"`
 	// Size is the file length the sender declared (0 = unknown).
 	Size int64 `json:"size,omitempty"`
+	// Latitude / Longitude are the coordinates of a shared location
+	// (Type MediaLocation; Caption is its name / address). A location has
+	// nothing to download (TEC-397).
+	Latitude  *float64 `json:"latitude,omitempty"`
+	Longitude *float64 `json:"longitude,omitempty"`
 	// Download is the provider's reference to fetch the encrypted media
 	// (wuzapi: directPath, mediaKey and hashes); MediaDownloader uses it.
 	Download json.RawMessage `json:"download,omitempty"`

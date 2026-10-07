@@ -146,6 +146,8 @@
   "system.groups.whatsapp_hint": "WhatsApp-Unterhaltungen, Sendetempo und KI-Antworten.",
   "system.keys.whatsapp_ai_staff_pause_minutes": "KI-Pause nach einer Mitarbeiternachricht (Minuten)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "Die KI antwortet nicht in einer Unterhaltung, in der ein Mitarbeiter innerhalb dieser Zeit geschrieben hat; 0 = keine Pause.",
+  "system.keys.ai_visitor_daily_token_cap": "Tägliches Token-Limit für die WhatsApp-Besucher-KI",
+  "system.keys.ai_visitor_daily_token_cap_hint": "Tokens, die alle nicht identifizierten WhatsApp-Besucher pro Tag aus dem Systemkontingent nutzen dürfen; darüber erhalten sie eine feste Antwort mit dem Link zur Händlersuche. 0 = keine Grenze.",
   "system.keys.whatsapp_ai_guidelines_url": "Link zu den KI-Richtlinien",
   "system.keys.whatsapp_ai_guidelines_url_hint": "Link (https) zu den Richtlinien, der mit der WhatsApp-Einwilligungsfrage gesendet wird; leer = der Richtlinientext wird in der Nachricht gesendet.",
   "system.groups.campaigns": "Kampagnen",

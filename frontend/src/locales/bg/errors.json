@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "AI асистентът не е настроен.",
   "codes.AI_ORG_DISABLED": "AI асистентът е изключен за тази организация.",
   "codes.AI_QUOTA_EXCEEDED": "Квотата за използване на AI е превишена.",
+  "codes.AI_UNAVAILABLE": "AI асистентът в момента не е наличен.",
   "codes.AI_VOICE_DISABLED": "Гласовият асистент е изключен.",
   "codes.AI_VOICE_UNAVAILABLE": "Гласовият асистент в момента не е наличен.",
   "codes.AUDIO_TOO_LARGE": "Записът е твърде голям.",

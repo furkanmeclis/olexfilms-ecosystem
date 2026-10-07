@@ -544,4 +544,9 @@ export const permissions = {
     reply: Permission.ConversationsReply,
     manage: Permission.ConversationsManage,
   },
+  /** TEC-391: AI administration (platform settings, quotas, usage report). */
+  aiAdmin: {
+    settingsManage: Permission.AiSettingsManage,
+    usageRead: Permission.AiUsageRead,
+  },
 } as const;

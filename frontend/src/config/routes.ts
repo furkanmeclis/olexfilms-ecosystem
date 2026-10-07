@@ -23,6 +23,8 @@ export const routes = {
       password: (slug: string) => `/t/${slug}/profile/password`,
       preferences: (slug: string) => `/t/${slug}/profile/preferences`,
     },
+    /** TEC-391: AI usage report of the organization (ai.usage.read). */
+    aiUsage: (slug: string) => `/t/${slug}/ai-usage`,
     exports: {
       root: (slug: string) => `/t/${slug}/exports`,
       detail: (slug: string, uuid: string) => `/t/${slug}/exports/${uuid}`,
@@ -302,6 +304,11 @@ export const routes = {
       glorian: "/platform/integrations/glorian",
     },
     legalTexts: "/platform/legal-texts",
+    /** TEC-391: AI settings, organization quotas and usage (super_admin). */
+    ai: {
+      root: "/platform/ai",
+      tab: (tab: string) => `/platform/ai?tab=${encodeURIComponent(tab)}`,
+    },
     conversations: {
       root: "/platform/conversations",
       detail: (uuid: string) =>

@@ -401,6 +401,9 @@ func (r *Registry) Call(ctx context.Context, p Principal, name string, input jso
 		r.log.ErrorContext(ctx, "ai tool failed", "tool", name, "err", err)
 		return failed(), err
 	}
+	if p.Realm == RealmVisitor {
+		res = r.visitorResult(ctx, name, res)
+	}
 	return capResult(res), nil
 }
 

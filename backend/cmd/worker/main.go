@@ -65,6 +65,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/anthropic"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
@@ -395,6 +396,16 @@ func main() {
 	worker.WithWhatsAppMessaging(waMsgs.ProcessSend, waMsgs.StoreInboundMedia, func(ctx context.Context) (int, error) {
 		return waMsgs.RequeueStale(ctx, 2*time.Minute)
 	})
+	// TEC-392 (F4-01j): AI first triage of warranty claims (default queue).
+	warrantyclaimsusecase.RegisterTriageHandlers(eventBus, queue.WarrantyTriageEnqueuer{Client: reviewQueue}, log)
+	var triagePhotos llm.ObjectReader
+	if store != nil {
+		triagePhotos = store
+	}
+	worker.WithWarrantyClaimTriage(warrantyclaimsusecase.NewTriage(warrantyclaimsusecase.TriageDeps{
+		Conn: pool, Provider: anthropic.NewFromConfig(cfg.AI), Models: llm.ModelsFromConfig(cfg.AI),
+		Features: featureSvc, Storage: triagePhotos, Log: log,
+	}).Auto)
 	// TEC-396 (F4-02c): WhatsApp AI pipeline (whatsapp queue).
 	worker.WithWhatsAppAIReply(newWhatsAppAIPipeline(whatsAppAIDeps{
 		cfg: cfg, pool: pool, queries: queries, features: featureSvc, activity: activityRec,

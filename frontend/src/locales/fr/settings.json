@@ -146,6 +146,8 @@
   "system.groups.whatsapp_hint": "Conversations WhatsApp, cadence d'envoi et réponses de l'IA.",
   "system.keys.whatsapp_ai_staff_pause_minutes": "Pause de l'IA après un message d'un collaborateur (minutes)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "L'IA ne répond pas dans une conversation où un collaborateur a écrit pendant ce délai ; 0 = aucune pause.",
+  "system.keys.ai_visitor_daily_token_cap": "Plafond quotidien de jetons de l’IA pour les visiteurs WhatsApp",
+  "system.keys.ai_visitor_daily_token_cap_hint": "Jetons que l’ensemble des visiteurs WhatsApp non identifiés peuvent consommer chaque jour sur la réserve système ; au-delà, ils reçoivent une réponse fixe avec le lien de recherche de revendeur. 0 = aucun plafond.",
   "system.keys.whatsapp_ai_guidelines_url": "Lien vers les règles d'utilisation de l'IA",
   "system.keys.whatsapp_ai_guidelines_url_hint": "Lien (https) vers les règles envoyé avec la demande de consentement WhatsApp ; vide = le texte des règles est envoyé dans le message.",
   "system.groups.campaigns": "Campagnes",

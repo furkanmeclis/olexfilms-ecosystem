@@ -589,6 +589,45 @@ func (q *Queries) GetWarrantyClaimByUUID(ctx context.Context, arg GetWarrantyCla
 	return i, err
 }
 
+const getWarrantyClaimByUUIDAnyBrand = `-- name: GetWarrantyClaimByUUIDAnyBrand :one
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+WHERE uuid = $1
+`
+
+// Background jobs (TEC-392 AI triage) that only carry the claim uuid.
+func (q *Queries) GetWarrantyClaimByUUIDAnyBrand(ctx context.Context, argUuid uuid.UUID) (WarrantyClaim, error) {
+	row := q.db.QueryRow(ctx, getWarrantyClaimByUUIDAnyBrand, argUuid)
+	var i WarrantyClaim
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ClaimNo,
+		&i.WarrantyID,
+		&i.ServiceID,
+		&i.VehicleID,
+		&i.CustomerUserID,
+		&i.Description,
+		&i.Status,
+		&i.RejectionReason,
+		&i.CoverageCheck,
+		&i.AiDamageType,
+		&i.AiSummary,
+		&i.AiConfidence,
+		&i.AiTriagedAt,
+		&i.ReapplyServiceID,
+		&i.DecidedByUserID,
+		&i.DecidedAt,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.ClosedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getWarrantyClaimByUUIDForUpdate = `-- name: GetWarrantyClaimByUUIDForUpdate :one
 SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
 WHERE uuid = $1

@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "ИИ-ассистент не настроен.",
   "codes.AI_ORG_DISABLED": "ИИ-ассистент отключён для этой организации.",
   "codes.AI_QUOTA_EXCEEDED": "Превышена квота использования ИИ.",
+  "codes.AI_UNAVAILABLE": "ИИ-ассистент сейчас недоступен.",
   "codes.AI_VOICE_DISABLED": "Голосовой ассистент отключён.",
   "codes.AI_VOICE_UNAVAILABLE": "Голосовой ассистент сейчас недоступен.",
   "codes.AUDIO_TOO_LARGE": "Запись слишком большая.",
