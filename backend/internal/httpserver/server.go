@@ -52,6 +52,9 @@ import (
 	catalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog"
 	cataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/handler"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
+	certificatesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/certificates"
+	certificateshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/certificates/handler"
+	certificatesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/certificates/usecase"
 	contractsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts"
 	contractshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/handler"
 	contractsrepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
@@ -535,14 +538,18 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		WithAccounting(accountingPoster)
 	transfersmodule.RegisterRoutes(mux, transfershandler.New(transfersSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-179: services (draft, items from stock, stock-free transitions, images).
+	certificatesSvc := certificatesusecase.New(deps.DB, deps.Queries, deps.Storage,
+		outbox.NewStore(deps.DB, deps.Queries), featureSvc, sysSvc)
 	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
 		WithContractRequirement(sysSvc, featureSvc).
-		WithCompletedCancelAccounting(accountingPoster)
+		WithCompletedCancelAccounting(accountingPoster).
+		WithCertificatePolicy(certificatesSvc)
 	if listFinder != nil {
 		servicesSvc.SetFinder(listFinder) // TEC-209
 	}
 	servicesH := serviceshandler.New(servicesSvc, deps.Storage)
 	servicesmodule.RegisterRoutes(mux, servicesH, tokens, loader, deps.Queries, featureSvc)
+	certificatesmodule.RegisterRoutes(mux, certificateshandler.New(certificatesSvc, deps.Queries), tokens, loader, deps.Queries, featureSvc)
 	// TEC-234: old hub mobile app aliases, /v1/mobile/legacy/* (MOBILE_LEGACY_ALIASES; F5'te kaldırılır).
 	legacymobile.RegisterRoutes(mux, cfg.Mobile.LegacyAliases, legacymobile.Handlers{
 		Login: mobileH.Login, Me: mobileH.Me, SwitchOrganization: mobileH.SwitchOrganization,

@@ -2265,6 +2265,7 @@ type Service struct {
 	WarrantyClaimID          pgtype.Int8        `json:"warranty_claim_id"`
 	IncomeEntryID            pgtype.Int8        `json:"income_entry_id"`
 	IncomeAmount             pgtype.Numeric     `json:"income_amount"`
+	PerformedByUserID        pgtype.Int8        `json:"performed_by_user_id"`
 }
 
 type ServiceCatalogItem struct {
