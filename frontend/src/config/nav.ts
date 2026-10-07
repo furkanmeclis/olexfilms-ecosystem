@@ -47,6 +47,7 @@ import {
   ChartColumn,
   Gauge,
   Cpu,
+  CalendarClock,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -508,6 +509,26 @@ export function tenantNav(slug: string) {
             icon: Car,
             permission: permissions.vehicles.read,
             feature: "customers",
+          },
+        ],
+      },
+      {
+        // TEC-326: the appointment calendar needs appointments.read and the
+        // appointments module (same gates as /v1/appointments).
+        id: "appointments",
+        labelKey: "appointments.nav",
+        icon: CalendarClock,
+        defaultOpen: true,
+        permission: permissions.appointments.read,
+        feature: "appointments",
+        items: [
+          {
+            id: "appointments-calendar",
+            titleKey: "appointments.nav_calendar",
+            href: routes.tenant.appointments.calendar(slug),
+            icon: CalendarClock,
+            permission: permissions.appointments.read,
+            feature: "appointments",
           },
         ],
       },

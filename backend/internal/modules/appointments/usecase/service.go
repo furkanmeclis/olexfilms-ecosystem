@@ -139,6 +139,13 @@ type Appointment struct {
 	CreatedByUserID  *int64     `json:"created_by_user_id,omitempty"`
 	CreatedAt        *time.Time `json:"created_at,omitempty"`
 	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
+	// Panel references (TEC-326): the panel works with UUIDs and labels.
+	CustomerUUID *uuid.UUID `json:"customer_uuid,omitempty"`
+	CustomerName string     `json:"customer_name,omitempty"`
+	VehicleUUID  *uuid.UUID `json:"vehicle_uuid,omitempty"`
+	VehiclePlate *string    `json:"vehicle_plate,omitempty"`
+	VehicleLabel *string    `json:"vehicle_label,omitempty"`
+	ServiceUUID  *uuid.UUID `json:"service_uuid,omitempty"`
 }
 
 // PortalAppointment is one row of the portal "my appointments" list
@@ -169,12 +176,16 @@ type Closure struct {
 }
 
 type CreateInput struct {
-	CustomerUserID   int64     `json:"customer_user_id"`
-	VehicleID        *int64    `json:"vehicle_id"`
-	StartsAt         time.Time `json:"starts_at"`
-	EstimatedMinutes *int32    `json:"estimated_minutes"`
-	Source           string    `json:"source"`
-	Note             string    `json:"note"`
+	CustomerUserID int64  `json:"customer_user_id"`
+	VehicleID      *int64 `json:"vehicle_id"`
+	// CustomerUUID / VehicleUUID (TEC-326) may replace the internal ids; a
+	// UUID wins over the id when both are sent.
+	CustomerUUID     *uuid.UUID `json:"customer_uuid"`
+	VehicleUUID      *uuid.UUID `json:"vehicle_uuid"`
+	StartsAt         time.Time  `json:"starts_at"`
+	EstimatedMinutes *int32     `json:"estimated_minutes"`
+	Source           string     `json:"source"`
+	Note             string     `json:"note"`
 }
 
 type PatchInput = CreateInput
@@ -495,6 +506,7 @@ func (s *Service) availabilityForOrg(
 		if err != nil {
 			return nil, invalid("working_hours", err.Error())
 		}
+		av.Timezone = loc.String()
 		out = append(out, av)
 	}
 	return out, nil
@@ -520,9 +532,9 @@ func (s *Service) List(ctx context.Context, c Caller, f ListFilter) ([]Appointme
 	if err != nil {
 		return nil, 0, fmt.Errorf("appointments: count: %w", err)
 	}
-	out := make([]Appointment, 0, len(rows))
-	for _, r := range rows {
-		out = append(out, appointmentView(r))
+	out, err := s.withRefs(ctx, rows...)
+	if err != nil {
+		return nil, 0, err
 	}
 	return out, total, nil
 }
@@ -531,11 +543,14 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Appoint
 	if !c.Principal.Can(rbac.PermAppointmentsWrite, rbac.ScopeManaged) {
 		return Appointment{}, ErrForbidden
 	}
+	if err := s.resolveParties(ctx, &in); err != nil {
+		return Appointment{}, err
+	}
 	row, err := s.save(ctx, c, c.Org.InternalID, db.Appointment{}, in, true)
 	if err != nil {
 		return Appointment{}, err
 	}
-	return appointmentView(row), nil
+	return s.oneWithRefs(ctx, row)
 }
 
 func (s *Service) Patch(ctx context.Context, c Caller, id uuid.UUID, in PatchInput) (Appointment, error) {
@@ -546,11 +561,14 @@ func (s *Service) Patch(ctx context.Context, c Caller, id uuid.UUID, in PatchInp
 	if !reschedulable(cur.Status) {
 		return Appointment{}, ErrInvalidTransition
 	}
+	if err := s.resolveParties(ctx, &in); err != nil {
+		return Appointment{}, err
+	}
 	row, err := s.save(ctx, c, cur.OrganizationID, cur, in, false)
 	if err != nil {
 		return Appointment{}, err
 	}
-	return appointmentView(row), nil
+	return s.oneWithRefs(ctx, row)
 }
 
 func (s *Service) SetStatus(ctx context.Context, c Caller, id uuid.UUID, in StatusInput) (Appointment, error) {
@@ -596,7 +614,7 @@ func (s *Service) SetStatus(ctx context.Context, c Caller, id uuid.UUID, in Stat
 	if err != nil {
 		return Appointment{}, err
 	}
-	return appointmentView(row), nil
+	return s.oneWithRefs(ctx, row)
 }
 
 // StartIntake opens the draft service of an appointment through the services
@@ -667,7 +685,7 @@ func (s *Service) StartIntake(ctx context.Context, c Caller, id uuid.UUID) (Appo
 	if err != nil {
 		return Appointment{}, err
 	}
-	return appointmentView(row), nil
+	return s.oneWithRefs(ctx, row)
 }
 
 // Occupancy reports the active booking count against the daily capacity of
@@ -1044,6 +1062,85 @@ func settingsView(r db.AppointmentSetting) Settings {
 
 func closureView(r db.AppointmentClosure) Closure {
 	return Closure{UUID: r.Uuid, OrganizationID: r.OrganizationID, ClosedOn: r.ClosedOn.Time.Format(time.DateOnly), Reason: r.Reason}
+}
+
+// resolveParties maps customer_uuid / vehicle_uuid of a panel request to the
+// internal ids; checkParties still enforces the brand boundary.
+func (s *Service) resolveParties(ctx context.Context, in *CreateInput) error {
+	if in.CustomerUUID != nil {
+		u, err := s.q.GetUserByUUID(ctx, *in.CustomerUUID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return invalid("customer_uuid", "customer not found")
+		}
+		if err != nil {
+			return fmt.Errorf("appointments: customer uuid: %w", err)
+		}
+		in.CustomerUserID = u.ID
+	}
+	if in.VehicleUUID != nil {
+		v, err := s.q.GetVehicleByUUID(ctx, *in.VehicleUUID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return invalid("vehicle_uuid", "vehicle not found for this customer")
+		}
+		if err != nil {
+			return fmt.Errorf("appointments: vehicle uuid: %w", err)
+		}
+		in.VehicleID = &v.ID
+	}
+	return nil
+}
+
+// withRefs builds the panel views with the customer, vehicle and service
+// references (TEC-326) in one query.
+func (s *Service) withRefs(ctx context.Context, rows ...db.Appointment) ([]Appointment, error) {
+	out := make([]Appointment, 0, len(rows))
+	if len(rows) == 0 {
+		return out, nil
+	}
+	ids := make([]int64, 0, len(rows))
+	for _, r := range rows {
+		ids = append(ids, r.ID)
+	}
+	refs, err := s.q.ListAppointmentRefs(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("appointments: refs: %w", err)
+	}
+	byID := make(map[int64]db.ListAppointmentRefsRow, len(refs))
+	for _, ref := range refs {
+		byID[ref.ID] = ref
+	}
+	for _, r := range rows {
+		view := appointmentView(r)
+		if ref, ok := byID[r.ID]; ok {
+			customer := ref.CustomerUuid
+			view.CustomerUUID = &customer
+			view.CustomerName = strings.TrimSpace(ref.CustomerName + " " + ref.CustomerSurname)
+			view.VehicleUUID = uuidPtr(ref.VehicleUuid)
+			view.VehiclePlate = textPtr(ref.VehiclePlate)
+			if label := strings.TrimSpace(ref.CarBrand.String + " " + ref.CarModel.String); label != "" {
+				view.VehicleLabel = &label
+			}
+			view.ServiceUUID = uuidPtr(ref.ServiceUuid)
+		}
+		out = append(out, view)
+	}
+	return out, nil
+}
+
+func (s *Service) oneWithRefs(ctx context.Context, row db.Appointment) (Appointment, error) {
+	out, err := s.withRefs(ctx, row)
+	if err != nil {
+		return Appointment{}, err
+	}
+	return out[0], nil
+}
+
+func uuidPtr(v pgtype.UUID) *uuid.UUID {
+	if !v.Valid {
+		return nil
+	}
+	id := uuid.UUID(v.Bytes)
+	return &id
 }
 
 func appointmentView(r db.Appointment) Appointment {

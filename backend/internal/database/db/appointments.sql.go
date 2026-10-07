@@ -885,6 +885,69 @@ func (q *Queries) ListAppointmentClosures(ctx context.Context, arg ListAppointme
 	return items, nil
 }
 
+const listAppointmentRefs = `-- name: ListAppointmentRefs :many
+SELECT a.id,
+       u.uuid AS customer_uuid,
+       u.name AS customer_name,
+       u.surname AS customer_surname,
+       v.uuid AS vehicle_uuid,
+       v.plate AS vehicle_plate,
+       cb.name AS car_brand,
+       cm.name AS car_model,
+       s.uuid AS service_uuid
+FROM appointments a
+JOIN users u ON u.id = a.customer_user_id
+LEFT JOIN vehicles v ON v.id = a.vehicle_id
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN services s ON s.id = a.service_id
+WHERE a.id = ANY($1::bigint[])
+`
+
+type ListAppointmentRefsRow struct {
+	ID              int64       `json:"id"`
+	CustomerUuid    uuid.UUID   `json:"customer_uuid"`
+	CustomerName    string      `json:"customer_name"`
+	CustomerSurname string      `json:"customer_surname"`
+	VehicleUuid     pgtype.UUID `json:"vehicle_uuid"`
+	VehiclePlate    pgtype.Text `json:"vehicle_plate"`
+	CarBrand        pgtype.Text `json:"car_brand"`
+	CarModel        pgtype.Text `json:"car_model"`
+	ServiceUuid     pgtype.UUID `json:"service_uuid"`
+}
+
+// Panel calendar references (TEC-326): customer, vehicle and linked service
+// UUIDs and labels of the given appointments.
+func (q *Queries) ListAppointmentRefs(ctx context.Context, ids []int64) ([]ListAppointmentRefsRow, error) {
+	rows, err := q.db.Query(ctx, listAppointmentRefs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAppointmentRefsRow{}
+	for rows.Next() {
+		var i ListAppointmentRefsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerUuid,
+			&i.CustomerName,
+			&i.CustomerSurname,
+			&i.VehicleUuid,
+			&i.VehiclePlate,
+			&i.CarBrand,
+			&i.CarModel,
+			&i.ServiceUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAppointmentSettingsByOrganizations = `-- name: ListAppointmentSettingsByOrganizations :many
 SELECT id, uuid, organization_id, brand_id, daily_vehicle_capacity, default_estimated_minutes, slot_interval_minutes, working_hours, portal_appointments_enabled, created_at, updated_at FROM appointment_settings
 WHERE organization_id = ANY($1::bigint[])

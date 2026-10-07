@@ -18903,11 +18903,16 @@ export interface components {
             /** Format: int64 */
             organization_id: number;
         };
+        /** @description customer_user_id or customer_uuid is required (TEC-326: the panel sends UUIDs; a UUID wins over the internal id when both are sent). */
         AppointmentInput: {
             /** Format: int64 */
-            customer_user_id: number;
+            customer_user_id?: number;
+            /** Format: uuid */
+            customer_uuid?: string | null;
             /** Format: int64 */
             vehicle_id?: number | null;
+            /** Format: uuid */
+            vehicle_uuid?: string | null;
             /** Format: date-time */
             starts_at: string;
             estimated_minutes?: number | null;
@@ -18951,6 +18956,23 @@ export interface components {
             created_at?: string | null;
             /** Format: date-time */
             updated_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Panel responses only (TEC-326)
+             */
+            customer_uuid?: string;
+            /** @description Panel responses only (TEC-326) */
+            customer_name?: string;
+            /** Format: uuid */
+            vehicle_uuid?: string | null;
+            vehicle_plate?: string | null;
+            /** @description Car brand and model */
+            vehicle_label?: string | null;
+            /**
+             * Format: uuid
+             * @description Draft service opened by start-intake
+             */
+            service_uuid?: string | null;
         };
         AppointmentStatusInput: {
             status: components["schemas"]["AppointmentStatus"];
@@ -18971,6 +18993,8 @@ export interface components {
             remaining_capacity: number;
             closed: boolean;
             slots: components["schemas"]["AppointmentSlot"][];
+            /** @description IANA zone of the organization the day is bounded in (TEC-326) */
+            timezone?: string;
         };
         AppointmentOccupancy: {
             /** Format: int64 */
