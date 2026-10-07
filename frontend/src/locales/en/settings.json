@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "Quiet hours start",
   "system.keys.campaigns_quiet_hours_start_hint": "From this hour in the recipient's time zone campaign WhatsApp messages wait (0–23).",
   "system.keys.campaigns_quiet_hours_end": "Quiet hours end",
-  "system.keys.campaigns_quiet_hours_end_hint": "Waiting messages go out at this hour of the recipient's time zone; equal to the start turns quiet hours off (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "Waiting messages go out at this hour of the recipient's time zone; equal to the start turns quiet hours off (0–23).",
+  "system.groups.showcase": "Dealer showcase",
+  "system.groups.showcase_hint": "Publication approval and gallery limit of dealer showcases.",
+  "system.keys.showcase_approval_required": "Showcase publication requires center approval",
+  "system.keys.showcase_approval_required_hint": "When on, a dealer showcase is published only after center approval; when off, the dealer publishes directly.",
+  "system.keys.showcase_max_photos": "Maximum photos per showcase",
+  "system.keys.showcase_max_photos_hint": "Number of photos one dealer showcase gallery may hold (1–50)."
 }

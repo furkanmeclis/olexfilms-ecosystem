@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "Inizio delle ore di silenzio",
   "system.keys.campaigns_quiet_hours_start_hint": "Da quest'ora nel fuso orario del destinatario i messaggi WhatsApp di campagna restano in attesa (0–23).",
   "system.keys.campaigns_quiet_hours_end": "Fine delle ore di silenzio",
-  "system.keys.campaigns_quiet_hours_end_hint": "I messaggi in attesa partono a quest'ora nel fuso orario del destinatario; un valore uguale all'inizio disattiva le ore di silenzio (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "I messaggi in attesa partono a quest'ora nel fuso orario del destinatario; un valore uguale all'inizio disattiva le ore di silenzio (0–23).",
+  "system.groups.showcase": "Vetrina del rivenditore",
+  "system.groups.showcase_hint": "Approvazione della pubblicazione e limite della galleria delle vetrine dei rivenditori.",
+  "system.keys.showcase_approval_required": "La pubblicazione della vetrina richiede l'approvazione della sede",
+  "system.keys.showcase_approval_required_hint": "Se attivo, la vetrina viene pubblicata solo dopo l'approvazione della sede; se disattivo, il rivenditore pubblica direttamente.",
+  "system.keys.showcase_max_photos": "Numero massimo di foto per vetrina",
+  "system.keys.showcase_max_photos_hint": "Numero di foto che la galleria di una vetrina può contenere (1–50)."
 }

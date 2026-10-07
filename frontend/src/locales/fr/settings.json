@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "Début des heures calmes",
   "system.keys.campaigns_quiet_hours_start_hint": "À partir de cette heure dans le fuseau du destinataire, les messages WhatsApp de campagne sont retenus (0–23).",
   "system.keys.campaigns_quiet_hours_end": "Fin des heures calmes",
-  "system.keys.campaigns_quiet_hours_end_hint": "Les messages retenus partent à cette heure dans le fuseau du destinataire ; une valeur égale au début désactive les heures calmes (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "Les messages retenus partent à cette heure dans le fuseau du destinataire ; une valeur égale au début désactive les heures calmes (0–23).",
+  "system.groups.showcase": "Vitrine du revendeur",
+  "system.groups.showcase_hint": "Validation de la publication et limite de la galerie des vitrines revendeurs.",
+  "system.keys.showcase_approval_required": "La publication de la vitrine exige la validation du siège",
+  "system.keys.showcase_approval_required_hint": "Activé : la vitrine d'un revendeur n'est publiée qu'après validation par le siège ; désactivé : le revendeur publie directement.",
+  "system.keys.showcase_max_photos": "Nombre maximal de photos par vitrine",
+  "system.keys.showcase_max_photos_hint": "Nombre de photos que peut contenir la galerie d'une vitrine (1–50)."
 }

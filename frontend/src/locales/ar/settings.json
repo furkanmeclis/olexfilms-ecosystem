@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "بداية ساعات الهدوء",
   "system.keys.campaigns_quiet_hours_start_hint": "بدءًا من هذه الساعة بتوقيت المستلم تُؤجَّل رسائل واتساب للحملات (0–23).",
   "system.keys.campaigns_quiet_hours_end": "نهاية ساعات الهدوء",
-  "system.keys.campaigns_quiet_hours_end_hint": "تُرسل الرسائل المؤجلة في هذه الساعة بتوقيت المستلم؛ إذا تساوت مع البداية تُعطَّل ساعات الهدوء (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "تُرسل الرسائل المؤجلة في هذه الساعة بتوقيت المستلم؛ إذا تساوت مع البداية تُعطَّل ساعات الهدوء (0–23).",
+  "system.groups.showcase": "واجهة الوكيل",
+  "system.groups.showcase_hint": "موافقة النشر وحد معرض الصور لواجهات الوكلاء.",
+  "system.keys.showcase_approval_required": "نشر الواجهة يتطلب موافقة المركز",
+  "system.keys.showcase_approval_required_hint": "عند التفعيل لا تُنشر واجهة الوكيل إلا بعد موافقة المركز؛ وعند الإيقاف ينشرها الوكيل مباشرة.",
+  "system.keys.showcase_max_photos": "الحد الأقصى للصور لكل واجهة",
+  "system.keys.showcase_max_photos_hint": "عدد الصور التي يمكن أن يضمها معرض واجهة الوكيل الواحدة (1–50)."
 }

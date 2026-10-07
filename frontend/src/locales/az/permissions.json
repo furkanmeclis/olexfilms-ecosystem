@@ -208,5 +208,9 @@
   "labels.leads.convert_org": "Lead-i təşkilata çevir",
   "labels.quotes.read": "Təklifləri gör",
   "labels.quotes.write": "Təklifləri idarə et",
-  "groups.quotes": "Təkliflər"
+  "groups.quotes": "Təkliflər",
+  "labels.showcase.read": "Vitrinə bax",
+  "labels.showcase.write": "Vitrini redaktə et",
+  "labels.platform.showcase.review": "Diler vitrinlərini təsdiqlə",
+  "groups.dealer_showcase": "Diler vitrini"
 }

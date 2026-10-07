@@ -208,5 +208,9 @@
   "labels.leads.convert_org": "Lead'i organizasyona dönüştür",
   "labels.quotes.read": "Teklifleri görüntüle",
   "labels.quotes.write": "Teklifleri yönet",
-  "groups.quotes": "Teklifler"
+  "groups.quotes": "Teklifler",
+  "labels.showcase.read": "Vitrini görüntüle",
+  "labels.showcase.write": "Vitrini düzenle",
+  "labels.platform.showcase.review": "Bayi vitrinlerini onayla",
+  "groups.dealer_showcase": "Bayi vitrini"
 }
