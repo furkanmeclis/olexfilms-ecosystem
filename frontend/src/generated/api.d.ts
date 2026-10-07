@@ -10017,6 +10017,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warranty-claims/{uuid}/ai-triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-run the AI first triage of a warranty claim
+         * @description TEC-392: needs `warranty_claims.decide` (and the claim in the caller's `warranty_claims.read` scope, 404 outside it). The fast model reads the description, parts and up to 6 photos and overwrites `ai_damage_type`, `ai_summary` (Turkish), `ai_confidence` and `ai_triaged_at`; an `ai_triaged` event is added. Suggestion only: the status never changes. Usage is booked on the brand center's system pool (channel `triage`). 403 FEATURE_DISABLED when `ai_assistant` is off for the center, 403 AI_QUOTA_EXCEEDED when the system pool is used up.
+         */
+        post: operations["retriggerWarrantyClaimAITriage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portal/warranty-claims": {
         parameters: {
             query?: never;
@@ -40991,6 +41011,42 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    retriggerWarrantyClaimAITriage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranty claim detail with the new triage */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarrantyClaim"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description AI_UNAVAILABLE, no model provider is configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listPortalWarrantyClaims: {

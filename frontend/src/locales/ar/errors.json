@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "المساعد الذكي غير مُعدّ.",
   "codes.AI_ORG_DISABLED": "المساعد الذكي معطّل لهذه المنشأة.",
   "codes.AI_QUOTA_EXCEEDED": "تجاوزت حصة استخدام الذكاء الاصطناعي.",
+  "codes.AI_UNAVAILABLE": "مساعد الذكاء الاصطناعي غير متاح حاليًا.",
   "codes.AI_VOICE_DISABLED": "المساعد الصوتي معطّل.",
   "codes.AI_VOICE_UNAVAILABLE": "المساعد الصوتي غير متاح حاليًا.",
   "codes.AUDIO_TOO_LARGE": "حجم التسجيل كبير جدًا.",

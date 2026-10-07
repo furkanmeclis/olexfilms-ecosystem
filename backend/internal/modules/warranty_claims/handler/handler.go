@@ -32,10 +32,32 @@ type Exporter interface {
 type Handler struct {
 	svc     *usecase.Service
 	exports Exporter
+	triage  *usecase.Triage
 }
 
 func New(svc *usecase.Service, exports Exporter) *Handler {
 	return &Handler{svc: svc, exports: exports}
+}
+
+// WithTriage sets the AI triage of the manual re-trigger (TEC-392).
+func (h *Handler) WithTriage(t *usecase.Triage) *Handler {
+	h.triage = t
+	return h
+}
+
+// AITriage is POST /v1/warranty-claims/{uuid}/ai-triage (TEC-392): re-runs
+// the AI first triage and overwrites the earlier result.
+func (h *Handler) AITriage(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	item, err := h.svc.Retrigger(r.Context(), h.triage, caller(r), id)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, item)
 }
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
@@ -394,6 +416,12 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.Error(w, r, http.StatusUnprocessableEntity, usecase.CodePhotoRequired, "at least one photo is required")
 	case errors.Is(err, usecase.ErrUnsupportedFlow):
 		response.Error(w, r, http.StatusUnprocessableEntity, "CLAIM_STATUS_FLOW", "status transition is not allowed")
+	case errors.Is(err, usecase.ErrTriageDisabled):
+		response.Error(w, r, http.StatusForbidden, "FEATURE_DISABLED", "the AI assistant is not enabled for the brand center")
+	case errors.Is(err, usecase.ErrTriageQuota):
+		response.Error(w, r, http.StatusForbidden, "AI_QUOTA_EXCEEDED", "the AI system pool of the brand center is used up")
+	case errors.Is(err, usecase.ErrTriageUnavailable):
+		response.Error(w, r, http.StatusServiceUnavailable, "AI_UNAVAILABLE", "the AI assistant is not available right now")
 	default:
 		response.InternalErr(w, r, err, "warranty claim request failed")
 	}

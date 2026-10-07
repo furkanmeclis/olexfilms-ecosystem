@@ -1111,6 +1111,8 @@ type Querier interface {
 	GetWarrantyClaimByID(ctx context.Context, arg GetWarrantyClaimByIDParams) (WarrantyClaim, error)
 	GetWarrantyClaimByIDForUpdate(ctx context.Context, arg GetWarrantyClaimByIDForUpdateParams) (WarrantyClaim, error)
 	GetWarrantyClaimByUUID(ctx context.Context, arg GetWarrantyClaimByUUIDParams) (WarrantyClaim, error)
+	// Background jobs (TEC-392 AI triage) that only carry the claim uuid.
+	GetWarrantyClaimByUUIDAnyBrand(ctx context.Context, argUuid uuid.UUID) (WarrantyClaim, error)
 	GetWarrantyClaimByUUIDForUpdate(ctx context.Context, arg GetWarrantyClaimByUUIDForUpdateParams) (WarrantyClaim, error)
 	GetWarrantyClaimCoverageContext(ctx context.Context, arg GetWarrantyClaimCoverageContextParams) (GetWarrantyClaimCoverageContextRow, error)
 	GetWarrantyClaimOpenContext(ctx context.Context, arg GetWarrantyClaimOpenContextParams) (GetWarrantyClaimOpenContextRow, error)

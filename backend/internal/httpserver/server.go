@@ -679,7 +679,28 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	ordersH.WithExports(exportSvc) // TEC-373
 	warrantymodule.RegisterListExportRoutes(mux, deps.Queries, tokens, loader, featureSvc,
 		warrantyhandler.NewListExport(exportSvc)) // TEC-377
-	warrantyclaimsmodule.RegisterRoutes(mux, warrantyclaimshandler.New(warrantyClaimsSvc, exportSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-392 (F4-01j): AI first triage of warranty claims (status event →
+	// warranty_claim:ai_triage on the default queue; manual re-trigger).
+	triageProvider := deps.LLM
+	if triageProvider == nil {
+		triageProvider = anthropic.NewFromConfig(cfg.AI)
+	}
+	var triagePhotos llm.ObjectReader
+	if deps.Storage != nil {
+		triagePhotos = deps.Storage
+	}
+	claimTriage := warrantyclaimsusecase.NewTriage(warrantyclaimsusecase.TriageDeps{
+		Conn: deps.DB, Provider: triageProvider, Models: llm.ModelsFromConfig(cfg.AI),
+		Features: featureSvc, Storage: triagePhotos, Log: log,
+	})
+	if deps.Queue != nil {
+		warrantyclaimsusecase.RegisterTriageHandlers(eventBus, queue.WarrantyTriageEnqueuer{Client: deps.Queue}, log)
+	}
+	if s.worker != nil {
+		s.worker.WithWarrantyClaimTriage(claimTriage.Auto)
+	}
+	warrantyclaimsmodule.RegisterRoutes(mux, warrantyclaimshandler.New(warrantyClaimsSvc, exportSvc).WithTriage(claimTriage),
+		tokens, loader, deps.Queries, featureSvc)
 	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	servicesmodule.RegisterPDFRoutes(mux, serviceshandler.NewPDF(servicePDF, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-239: portal service detail and PDF.

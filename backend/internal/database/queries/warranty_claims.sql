@@ -34,6 +34,11 @@ WHERE uuid = sqlc.arg(uuid)
   AND (sqlc.arg(organization_ids)::bigint[] IS NULL OR organization_id = ANY(sqlc.arg(organization_ids)::bigint[]))
 FOR UPDATE;
 
+-- name: GetWarrantyClaimByUUIDAnyBrand :one
+-- Background jobs (TEC-392 AI triage) that only carry the claim uuid.
+SELECT * FROM warranty_claims
+WHERE uuid = sqlc.arg(uuid);
+
 -- name: GetWarrantyClaimByID :one
 SELECT * FROM warranty_claims
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id);
