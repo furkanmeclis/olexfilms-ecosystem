@@ -15,6 +15,7 @@ import { SearchTrigger } from "@/features/search-engine";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationInbox } from "@/features/notifications";
+import { AssistantHeaderButton } from "@/features/ai-assistant/components/assistant-header-button";
 import { cn } from "@/lib/utils";
 
 type HeaderProps = HTMLAttributes<HTMLElement> & {
@@ -61,6 +62,7 @@ export function Header({
         <div className="flex min-w-0 flex-1 items-center">{children}</div>
         <div className="ms-auto flex items-center gap-1">
           <SearchTrigger compact className="md:hidden" />
+          <AssistantHeaderButton />
           <NotificationInbox />
           <OrganizationSwitcher />
           <LocaleSwitch />
