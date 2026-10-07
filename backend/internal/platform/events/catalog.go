@@ -668,6 +668,12 @@ func catalogConstants() []string {
 		AIQuotaThreshold,
 		CampaignsStarted,
 		CampaignsFinished,
+		FleetCreated,
+		FleetLinkRequested,
+		FleetLinked,
+		FleetLinkRejected,
+		FleetVehicleAdded,
+		FleetUserInvited,
 	}
 }
 
@@ -721,3 +727,19 @@ const (
 // period, threshold (80 | 100), used_tokens, quota_tokens. The
 // notification template reaches the organization owners (F4-01g).
 const AIQuotaThreshold = "ai.quota.threshold"
+
+// Fleet management (TEC-473, F5-02b): written in the transaction that opens
+// a fleet, requests or decides a dealer link, adds a vehicle to a fleet or
+// invites a fleet user. tenant is the acting organization (the fleet for a
+// portal decision); payload: fleet_uuid, fleet_id, brand_id, fleet_name
+// and, per event, link_uuid / dealer_org_id / dealer_name, vehicle_uuid,
+// notify_user_ids (link requests reach the fleet users, decisions the
+// requesting user). The search sync refreshes the fleet document.
+const (
+	FleetCreated       = "fleet.created"
+	FleetLinkRequested = "fleet.link_requested"
+	FleetLinked        = "fleet.linked"
+	FleetLinkRejected  = "fleet.link_rejected"
+	FleetVehicleAdded  = "fleet.vehicle_added"
+	FleetUserInvited   = "fleet.user_invited"
+)

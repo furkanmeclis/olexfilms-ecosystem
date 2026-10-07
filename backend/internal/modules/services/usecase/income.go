@@ -10,6 +10,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
+	fleetrepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/repository"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -128,6 +129,23 @@ func (s *Service) RecordIncome(ctx context.Context, c Caller, id uuid.UUID, in I
 			}
 			e.AccountID = account.ID
 		case PaymentCari:
+			// TEC-473: a fleet vehicle's service books on the fleet cari in
+			// this organization's ledger (one cari for every fleet vehicle).
+			vehicle, err := q.GetVehicleByID(ctx, locked.VehicleID)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("services: income vehicle: %w", err)
+			}
+			if err == nil && vehicle.FleetOrgID.Valid {
+				cari, err := fleetrepo.EnsureFleetCari(ctx, q, org, vehicle.FleetOrgID.Int64)
+				if err != nil {
+					return fmt.Errorf("services: income fleet cari: %w", err)
+				}
+				if !cari.Active {
+					return invalid("payment_method", "the fleet cari is inactive")
+				}
+				e.CariID = cari.ID
+				break
+			}
 			cari, err := q.CreateCariForUserIfMissing(ctx, db.CreateCariForUserIfMissingParams{
 				OrganizationID: locked.OrganizationID,
 				BrandID:        locked.BrandID, CounterpartyUserID: locked.CustomerUserID, Currency: org.Currency,

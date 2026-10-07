@@ -63,6 +63,9 @@ func Register(bus events.Bus, q Store, idx Indexer, log *slog.Logger) {
 	bus.Subscribe(events.CustomerMerged, s.HandleCustomerMerged)
 	// TEC-210: organizations, orders, stock units (ledger movements).
 	bus.Subscribe("organization.*", s.HandleOrganization)
+	// TEC-473: a fleet document follows its dealer links (fleet.* events
+	// carry the fleet organization as entity).
+	bus.Subscribe("fleet.*", s.HandleOrganization)
 	bus.Subscribe("orders.*", s.HandleOrder)
 	bus.Subscribe("stock.*", s.HandleStock)
 }

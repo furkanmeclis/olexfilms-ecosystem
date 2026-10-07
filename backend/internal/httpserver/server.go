@@ -70,6 +70,9 @@ import (
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	featuremodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/features"
 	featurehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/features/handler"
+	fleetmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet"
+	fleethandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/handler"
+	fleetusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/usecase"
 	geomodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/geo"
 	geohandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/geo/handler"
 	importmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports"
@@ -619,6 +622,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-389 (F4-01g): AI settings, quotas and usage report; the tool
 	// registry is attached once it is built (below).
 	aiAdmin := aiusecase.NewAdmin(airepo.New(deps.DB), llm.ModelsFromConfig(cfg.AI), nil)
+	// TEC-473 (F5-02b): fleet management; the invitation reuses the
+	// password reset flow, vehicle writes the geo plate check.
+	fleetSvc := fleetusecase.New(deps.DB)
+	fleetSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries))
+	fleetSvc.SetPlates(geoSvc)
+	fleetSvc.SetInviter(uc)
 	ioReg := ioengine.NewRegistry(
 		// TEC-211: price columns behind pricing.* grants.
 		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries).WithPrices(pricingSvc),
@@ -670,6 +679,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		warrantyusecase.NewListExportAdapter(warrantyReader),
 		// TEC-389: AI usage report export (read only).
 		aiusecase.NewUsageExportAdapter(aiAdmin),
+		// TEC-473: fleet statement export and staged fleet vehicle import.
+		fleetusecase.NewStatementAdapter(fleetSvc),
+		fleetusecase.NewImporter(fleetSvc),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -712,6 +724,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		importQueue = deps.Queue
 	}
 	importSvc := importusecase.New(deps.Queries, deps.Storage, ioReg, importQueue, notifSvc, activityRec, log)
+	fleetmodule.RegisterRoutes(mux, fleethandler.New(fleetSvc, exportSvc, importSvc), tokens, loader, deps.Queries, featureSvc)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),

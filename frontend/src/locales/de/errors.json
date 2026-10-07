@@ -128,5 +128,16 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Die Rolle ist nicht im Bestand dieser Organisation.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Die Rolle wird in einem offenen Service oder Auftrag verwendet.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Dieser Idempotenzschlüssel wurde für eine andere Teilung verwendet.",
-  "codes.LEADS_MODULE_DISABLED": "Das Lead-Modul ist systemweit deaktiviert; aktivieren Sie zuerst das Modul."
+  "codes.LEADS_MODULE_DISABLED": "Das Lead-Modul ist systemweit deaktiviert; aktivieren Sie zuerst das Modul.",
+  "codes.FLEET_ALREADY_EXISTS": "Eine Flotte mit dieser Steuernummer existiert bereits; senden Sie eine Verknüpfungsanfrage.",
+  "codes.FLEET_INVALID_TAX_NUMBER": "Die Steuernummer ist ungültig (Prüfziffer von VKN oder TCKN stimmt nicht).",
+  "codes.FLEET_LINK_EXISTS": "Sie haben bereits eine offene Verknüpfung mit dieser Flotte.",
+  "codes.FLEET_LINK_STATE_CHANGED": "Die Verknüpfung wurde gleichzeitig geändert; bitte versuchen Sie es erneut.",
+  "codes.FLEET_PRIMARY_USER_REQUIRED": "Laden Sie zuerst den ersten Benutzer der Flotte (den Fahrzeughalter) ein.",
+  "codes.FLEET_PRIMARY_USER_LOCKED": "Der Hauptbenutzer der Flotte ist Halter der Flottenfahrzeuge und kann nicht deaktiviert werden.",
+  "codes.FLEET_USER_EMAIL_TAKEN": "Für diese E-Mail-Adresse existiert bereits ein Konto.",
+  "codes.FLEET_VEHICLE_EXISTS": "Ein Fahrzeug mit diesem Kennzeichen oder dieser FIN gehört den Benutzern der Flotte; Sie können es mit der Flotte verknüpfen.",
+  "codes.FLEET_VEHICLE_OTHER_OWNER": "Das Fahrzeug gehört einem anderen Kunden oder einer anderen Flotte und kann nicht hinzugefügt werden.",
+  "codes.FLEET_NO_DEALER_LINK": "Ihre Organisation hat keine aktive Verknüpfung mit dieser Flotte.",
+  "codes.FLEET_LINK_NOT_PENDING": "Die Verknüpfungsanfrage wurde bereits beantwortet."
 }
