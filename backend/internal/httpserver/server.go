@@ -23,6 +23,7 @@ import (
 	activitymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity"
 	activityhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/handler"
 	activityusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/activity/usecase"
+	aitools "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
 	announcementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements"
 	announcementshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/handler"
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
@@ -234,6 +235,8 @@ type Server struct {
 	features *features.Service
 	// sysconfig is the global system settings store (TEC-215).
 	sysconfig *sysconfig.Service
+	// aiTools is the AI assistant tool registry (TEC-385).
+	aiTools *aitools.Registry
 }
 
 // New wires router and middleware for the API skeleton.
@@ -800,6 +803,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	appointmentsSvc.SetFeatureChecker(featureSvc)
 	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
 	appointmentsmodule.RegisterPortalRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader)
+	// TEC-385 (F4-01c): AI assistant tool registry over the module use
+	// cases; the chat (F4-01f), WhatsApp (F4-02c) and MCP (F4-03c) use it.
+	s.aiTools = aitools.NewRegistry(featureSvc).WithToggles(aitools.SettingsToggles{Q: deps.Queries}).WithLogger(log)
+	aitools.RegisterPanel(s.aiTools, aitools.Deps{
+		Tree: deps.Queries, Services: servicesSvc, Warranties: warrantyReader, Customers: customersSvc,
+		Stock: stockSvc, Orders: ordersSvc, Accounting: accountingSvc, Appointments: appointmentsSvc,
+		Leads: leadsSvc, Tasks: tasksSvc, Catalog: catalogSvc, Organizations: orgSvc,
+	})
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(
 		vehiclecatalogusecase.New(deps.Queries), deps.Storage, activityRec), tokens, loader)
