@@ -13550,6 +13550,11 @@ export interface components {
             longitude?: number | null;
         };
         NearbyDealer: {
+            /**
+             * Format: uuid
+             * @description TEC-327. Organization uuid for portal appointment booking
+             */
+            uuid: string;
             slug: string;
             name: string;
             city: string;
@@ -18926,6 +18931,25 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["Appointment"][];
+                /** Format: int64 */
+                total: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description TEC-327. A portal appointment with its dealer and vehicle labels. */
+        PortalAppointment: components["schemas"]["Appointment"] & {
+            /** Format: uuid */
+            dealer_uuid: string;
+            dealer_name: string;
+            /** Format: uuid */
+            vehicle_uuid: string | null;
+            vehicle_plate: string | null;
+        };
+        EnvelopePortalAppointmentPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PortalAppointment"][];
                 /** Format: int64 */
                 total: number;
             };
@@ -38917,7 +38941,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["EnvelopeAppointmentPage"];
+                    "application/json": components["schemas"]["EnvelopePortalAppointmentPage"];
                 };
             };
             400: components["responses"]["BadRequest"];

@@ -996,9 +996,12 @@ func (q *Queries) ListAppointmentsByOrganizations(ctx context.Context, arg ListA
 }
 
 const listPortalAppointments = `-- name: ListPortalAppointments :many
-SELECT a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at
+SELECT a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at,
+       o.uuid AS dealer_uuid, o.name AS dealer_name,
+       v.uuid AS vehicle_uuid, v.plate AS vehicle_plate
 FROM appointments a
 JOIN organizations o ON o.id = a.organization_id
+LEFT JOIN vehicles v ON v.id = a.vehicle_id
 WHERE a.customer_user_id = $1::bigint
   AND a.brand_id = $2::bigint
   AND a.deleted_at IS NULL
@@ -1021,7 +1024,16 @@ type ListPortalAppointmentsParams struct {
 	PageLimit      int32              `json:"page_limit"`
 }
 
-func (q *Queries) ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]Appointment, error) {
+type ListPortalAppointmentsRow struct {
+	Appointment  Appointment `json:"appointment"`
+	DealerUuid   uuid.UUID   `json:"dealer_uuid"`
+	DealerName   string      `json:"dealer_name"`
+	VehicleUuid  pgtype.UUID `json:"vehicle_uuid"`
+	VehiclePlate pgtype.Text `json:"vehicle_plate"`
+}
+
+// TEC-327: the dealer and vehicle labels the portal list shows.
+func (q *Queries) ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]ListPortalAppointmentsRow, error) {
 	rows, err := q.db.Query(ctx, listPortalAppointments,
 		arg.CustomerUserID,
 		arg.BrandID,
@@ -1035,31 +1047,35 @@ func (q *Queries) ListPortalAppointments(ctx context.Context, arg ListPortalAppo
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Appointment{}
+	items := []ListPortalAppointmentsRow{}
 	for rows.Next() {
-		var i Appointment
+		var i ListPortalAppointmentsRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.OrganizationID,
-			&i.BrandID,
-			&i.CustomerUserID,
-			&i.VehicleID,
-			&i.StartsAt,
-			&i.EndsAt,
-			&i.EstimatedMinutes,
-			&i.Source,
-			&i.Status,
-			&i.CancelReason,
-			&i.LeadID,
-			&i.ServiceID,
-			&i.Note,
-			&i.CreatedByUserID,
-			&i.Reminded24hAt,
-			&i.Reminded2hAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DeletedAt,
+			&i.Appointment.ID,
+			&i.Appointment.Uuid,
+			&i.Appointment.OrganizationID,
+			&i.Appointment.BrandID,
+			&i.Appointment.CustomerUserID,
+			&i.Appointment.VehicleID,
+			&i.Appointment.StartsAt,
+			&i.Appointment.EndsAt,
+			&i.Appointment.EstimatedMinutes,
+			&i.Appointment.Source,
+			&i.Appointment.Status,
+			&i.Appointment.CancelReason,
+			&i.Appointment.LeadID,
+			&i.Appointment.ServiceID,
+			&i.Appointment.Note,
+			&i.Appointment.CreatedByUserID,
+			&i.Appointment.Reminded24hAt,
+			&i.Appointment.Reminded2hAt,
+			&i.Appointment.CreatedAt,
+			&i.Appointment.UpdatedAt,
+			&i.Appointment.DeletedAt,
+			&i.DealerUuid,
+			&i.DealerName,
+			&i.VehicleUuid,
+			&i.VehiclePlate,
 		); err != nil {
 			return nil, err
 		}
