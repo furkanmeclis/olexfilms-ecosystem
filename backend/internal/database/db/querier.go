@@ -759,6 +759,8 @@ type Querier interface {
 	// Quota check: tokens of one pool in one month (no row = nothing used).
 	GetAIUsageMonthly(ctx context.Context, arg GetAIUsageMonthlyParams) (int64, error)
 	GetAccountingDisputeView(ctx context.Context, arg GetAccountingDisputeViewParams) (GetAccountingDisputeViewRow, error)
+	// TEC-468: helper lookups for public showcase lead / WhatsApp referral.
+	GetActiveDealerBySlug(ctx context.Context, arg GetActiveDealerBySlugParams) (GetActiveDealerBySlugRow, error)
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
 	// Full-unit duplicate guard before creation (decision 3); the partial
 	// unique index uq_warranties_active_full_unit is the final barrier.
@@ -985,6 +987,8 @@ type Querier interface {
 	GetOTPByUUID(ctx context.Context, argUuid uuid.UUID) (OtpCode, error)
 	// The pending or active link of (fleet, dealer), if any.
 	GetOpenFleetDealerLink(ctx context.Context, arg GetOpenFleetDealerLinkParams) (FleetDealerLink, error)
+	// TEC-468: one open public showcase lead per dealer + phone.
+	GetOpenWebsiteLeadByPhone(ctx context.Context, arg GetOpenWebsiteLeadByPhoneParams) (Lead, error)
 	GetOrder(ctx context.Context, arg GetOrderParams) (Order, error)
 	GetOrderByExternalReference(ctx context.Context, arg GetOrderByExternalReferenceParams) (Order, error)
 	GetOrderByUUID(ctx context.Context, arg GetOrderByUUIDParams) (Order, error)
@@ -1136,6 +1140,9 @@ type Querier interface {
 	// Tells an expired token of the brand apart from an unknown one.
 	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
 	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
+	// TEC-468: public lead form is accepted only when the dealer showcase add-on
+	// is enabled and the showcase has a published snapshot.
+	GetShowcaseLeadTargetBySlug(ctx context.Context, arg GetShowcaseLeadTargetBySlugParams) (GetShowcaseLeadTargetBySlugRow, error)
 	GetStaffPaymentByUUID(ctx context.Context, arg GetStaffPaymentByUUIDParams) (StaffPayment, error)
 	GetStaffProfileByUUID(ctx context.Context, arg GetStaffProfileByUUIDParams) (StaffProfile, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
@@ -2928,6 +2935,9 @@ type Querier interface {
 	SetConversationAIMode(ctx context.Context, arg SetConversationAIModeParams) (Conversation, error)
 	SetConversationIdentity(ctx context.Context, arg SetConversationIdentityParams) (Conversation, error)
 	SetConversationLocale(ctx context.Context, arg SetConversationLocaleParams) (Conversation, error)
+	// TEC-468: #dealer-code in the first public WhatsApp message routes the
+	// visitor lead to that dealer while the conversation stays system-owned.
+	SetConversationReferredDealer(ctx context.Context, arg SetConversationReferredDealerParams) (Conversation, error)
 	SetConversationStatus(ctx context.Context, arg SetConversationStatusParams) (Conversation, error)
 	SetConversationVisitorLead(ctx context.Context, arg SetConversationVisitorLeadParams) (Conversation, error)
 	SetCountryActive(ctx context.Context, arg SetCountryActiveParams) (Country, error)

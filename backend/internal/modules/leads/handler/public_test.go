@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
@@ -46,6 +47,18 @@ func (f *fakeApps) Submit(_ context.Context, _ int64, app usecase.Application) (
 		f.submitted++
 	}
 	return usecase.ApplicationResult{}, nil
+}
+
+func (f *fakeApps) ShowcaseLeadConfig(context.Context, int64, string, string, string, string) (usecase.ShowcaseLeadConfig, error) {
+	return usecase.ShowcaseLeadConfig{}, nil
+}
+
+func (f *fakeApps) ValidateShowcaseLead(context.Context, int64, string, usecase.ShowcaseLeadInput) (usecase.ShowcaseLead, db.GetShowcaseLeadTargetBySlugRow, error) {
+	return usecase.ShowcaseLead{}, db.GetShowcaseLeadTargetBySlugRow{}, nil
+}
+
+func (f *fakeApps) SubmitShowcaseLead(context.Context, db.GetShowcaseLeadTargetBySlugRow, usecase.ShowcaseLead) (usecase.ShowcaseLeadResult, error) {
+	return usecase.ShowcaseLeadResult{}, nil
 }
 
 // countLimiter is an in-memory fixed window.

@@ -146,6 +146,7 @@ WHERE s.brand_id = sqlc.arg(brand_id)
 -- its snapshot while a newer version waits for review or was rejected.
 -- The module flag is checked by the usecase. The Google rating is live.
 SELECT s.published_content,
+       s.id AS showcase_id,
        s.published_at,
        s.google_place_id,
        s.google_rating,
@@ -158,6 +159,31 @@ FROM dealer_showcases s
 JOIN organizations o ON o.id = s.organization_id
 WHERE o.slug = sqlc.arg(slug)
   AND s.brand_id = sqlc.arg(brand_id)
+  AND s.published_content IS NOT NULL
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type IN ('dealer', 'distributor')
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+  AND (o.contract_valid_until IS NULL OR o.contract_valid_until >= CURRENT_DATE);
+
+-- name: GetShowcaseLeadTargetBySlug :one
+-- TEC-468: public lead form is accepted only when the dealer showcase add-on
+-- is enabled and the showcase has a published snapshot.
+SELECT o.id AS organization_id,
+       o.brand_id,
+       o.slug,
+       o.name,
+       o.locale,
+       o.country_id,
+       c.iso2 AS country_iso2,
+       s.id AS showcase_id,
+       s.published_at
+FROM organizations o
+JOIN dealer_showcases s ON s.organization_id = o.id AND s.brand_id = o.brand_id
+LEFT JOIN countries c ON c.id = o.country_id
+WHERE o.slug = sqlc.arg(slug)
+  AND o.brand_id = sqlc.arg(brand_id)
   AND s.published_content IS NOT NULL
   AND o.deleted_at IS NULL
   AND o.status = 'active'

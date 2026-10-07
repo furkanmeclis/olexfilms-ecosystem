@@ -59,7 +59,10 @@ type VisitorLeadInput struct {
 	Language string
 	// ConversationUUID links the timeline event to the conversation.
 	ConversationUUID string
-	Notice           *KVKKNotice
+	// ReferredDealerOrgID overrides public territory routing for WhatsApp
+	// click-to-chat links carrying #dealer-code.
+	ReferredDealerOrgID int64
+	Notice              *KVKKNotice
 }
 
 // VisitorLeadResult is the stored lead.
@@ -216,7 +219,16 @@ func (a *Applications) UpsertVisitorLead(ctx context.Context, brandID int64, in 
 		org    db.Organization
 		routed string
 	)
-	if v.address != nil {
+	if in.ReferredDealerOrgID > 0 {
+		org, err = a.q.GetOrganizationByID(ctx, in.ReferredDealerOrgID)
+		routed = "dealer_referral"
+		if err != nil {
+			return VisitorLeadResult{}, fmt.Errorf("leads: referred dealer: %w", err)
+		}
+		if org.BrandID != brandID || org.Status != "active" || org.DeletedAt.Valid {
+			return VisitorLeadResult{}, ErrNotFound
+		}
+	} else if v.address != nil {
 		org, routed, err = a.target(ctx, brandID, app)
 	} else {
 		org, err = a.q.GetBrandCenter(ctx, brandID)
