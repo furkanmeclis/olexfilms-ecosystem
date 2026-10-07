@@ -17373,6 +17373,35 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
 
   /v1/staff-profiles/{uuid}/payments:
+    get:
+      tags: [Accounting]
+      operationId: listStaffPayments
+      summary: Payment history of one staff card (TEC-349)
+      description: >-
+        Requires `staff.manage`. Non-void salary, advance and bonus payments,
+        newest payment day first. `type` and `period` narrow the list.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: type
+          in: query
+          schema: { $ref: "#/components/schemas/StaffPaymentType" }
+        - name: period
+          in: query
+          schema: { type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$', example: "2026-10" }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Staff payment page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStaffPaymentPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     post:
       tags: [Accounting]
       operationId: createStaffPayment
@@ -30279,6 +30308,23 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/StaffProfile" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStaffPaymentPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StaffPayment" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStaffProfilePage:

@@ -8942,7 +8942,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Payment history of one staff card (TEC-349)
+         * @description Requires `staff.manage`. Non-void salary, advance and bonus payments, newest payment day first. `type` and `period` narrow the list.
+         */
+        get: operations["listStaffPayments"];
         put?: never;
         /**
          * Record salary, advance or bonus for one staff card
@@ -17162,6 +17166,18 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["StaffProfile"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStaffPaymentPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StaffPayment"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeStaffProfilePage: {
@@ -36564,6 +36580,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeStaffProfile"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStaffPayments: {
+        parameters: {
+            query?: {
+                type?: components["schemas"]["StaffPaymentType"];
+                period?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Staff payment page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStaffPaymentPage"];
                 };
             };
             400: components["responses"]["BadRequest"];

@@ -161,6 +161,28 @@ func (h *Handler) CreateStaffPayment(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, p)
 }
 
+// ListStaffPayments (GET /v1/staff-profiles/{uuid}/payments?type&period&limit&offset).
+func (h *Handler) ListStaffPayments(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	q := apiquery.Parse(r.URL.Query())
+	f := acc.StaffPaymentFilter{Limit: q.Limit, Offset: q.Offset}
+	if v := strings.TrimSpace(r.URL.Query().Get("type")); v != "" {
+		f.Type = &v
+	}
+	if v := strings.TrimSpace(r.URL.Query().Get("period")); v != "" {
+		f.Period = &v
+	}
+	items, total, err := h.svc.ListStaffPayments(r.Context(), caller(r), id, f)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+}
+
 // RunPayroll (POST /v1/staff-payments/payroll?period=YYYY-MM).
 func (h *Handler) RunPayroll(w http.ResponseWriter, r *http.Request) {
 	p, err := h.svc.RunPayroll(r.Context(), caller(r), r.URL.Query().Get("period"))
