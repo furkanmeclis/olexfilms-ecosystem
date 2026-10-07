@@ -732,8 +732,10 @@ type Querier interface {
 	GetCampaignByUUID(ctx context.Context, arg GetCampaignByUUIDParams) (Campaign, error)
 	GetCampaignContent(ctx context.Context, arg GetCampaignContentParams) (CampaignContent, error)
 	GetCampaignMediaByUUID(ctx context.Context, arg GetCampaignMediaByUUIDParams) (CampaignMedium, error)
+	GetCampaignRecipientByID(ctx context.Context, id int64) (CampaignRecipient, error)
 	// Current contact data of a recipient user (time zone for quiet hours).
 	GetCampaignRecipientContact(ctx context.Context, id int64) (GetCampaignRecipientContactRow, error)
+	GetCampaignUserOptOutState(ctx context.Context, arg GetCampaignUserOptOutStateParams) (CampaignUserOptOutState, error)
 	GetCarBrandByID(ctx context.Context, id int64) (CarBrand, error)
 	GetCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (CarBrand, error)
 	GetCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (CarModel, error)
@@ -1172,6 +1174,8 @@ type Querier interface {
 	// target_address, push_token_count, status, reason}. An existing
 	// (campaign, user, channel) row is kept.
 	InsertCampaignRecipientSnapshot(ctx context.Context, arg InsertCampaignRecipientSnapshotParams) (int64, error)
+	// Append-only; the AFTER INSERT trigger updates campaign_user_opt_out_state.
+	InsertCampaignUserOptOut(ctx context.Context, arg InsertCampaignUserOptOutParams) (CampaignUserOptOut, error)
 	InsertConsent(ctx context.Context, arg InsertConsentParams) (Consent, error)
 	// Opt-outs ---------------------------------------------------------------------
 	// Append-only; the AFTER INSERT trigger updates contact_opt_out_state.
@@ -1667,7 +1671,8 @@ type Querier interface {
 	// Marketing reachability ----------------------------------------------------
 	// Per user: the latest marketing_consent decision (any text version; a
 	// decline or no record means no consent) and whether the user's phone is
-	// opted out of marketing in contact_opt_out_state (000103).
+	// opted out of marketing in contact_opt_out_state (000103) or the user
+	// identity is opted out through a campaign e-mail unsubscribe (000109).
 	ListMarketingReachability(ctx context.Context, userIds []int64) ([]ListMarketingReachabilityRow, error)
 	ListMeasurementDevices(ctx context.Context, organizationID int64) ([]MeasurementDevice, error)
 	// Unlinked accepted measurements of the organization with the VIN; the

@@ -436,6 +436,65 @@ func TestCampaignCancelStopsRemainingRecipients(t *testing.T) {
 	}
 }
 
+// Acceptance: cancellation and the last recipient task take locks in the
+// same campaign -> recipient order, so repeated concurrent runs do not
+// deadlock. Run this test with -race for the TEC-463 check.
+func TestCampaignCancelAndLastRecipientNoDeadlock(t *testing.T) {
+	for i := 0; i < 5; i++ {
+		e := newSenderEnv(t)
+		u := e.customerWithConsent(t, fmt.Sprintf("last-%d", i))
+		camp := e.scheduled(t, ChannelEmail)
+		e.tick(t)
+		r := e.recipientOf(t, camp.ID, u.ID, ChannelEmail)
+		if err := e.tx.Commit(e.ctx); err != nil {
+			t.Fatalf("commit setup: %v", err)
+		}
+
+		pool := testPool(t)
+		q := db.New(pool)
+		svc := New(pool, q, e.store)
+		svc.SetClock(func() time.Time { return e.now })
+		sender := NewSender(svc, SenderDeps{
+			Email:             fakeEmail{e.ch},
+			UnsubscribeSecret: []byte("test-secret"),
+			FrontendURL:       "https://app.example.test",
+		})
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		var wg sync.WaitGroup
+		errs := make(chan error, 2)
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			errs <- sender.ProcessRecipient(ctx, r.ID, false)
+		}()
+		go func() {
+			defer wg.Done()
+			_, err := svc.Cancel(ctx, e.dealerC, camp.Uuid)
+			if errors.Is(err, ErrInvalidStatus) {
+				err = nil
+			}
+			errs <- err
+		}()
+		wg.Wait()
+		close(errs)
+		for err := range errs {
+			if err != nil {
+				t.Fatalf("iteration %d concurrent send/cancel: %v", i, err)
+			}
+		}
+
+		var pending int
+		if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM campaign_recipients WHERE campaign_id = $1 AND status = 'pending'`, camp.ID).Scan(&pending); err != nil {
+			t.Fatalf("pending count: %v", err)
+		}
+		if pending != 0 {
+			t.Fatalf("iteration %d pending recipients = %d", i, pending)
+		}
+	}
+}
+
 // Acceptance: the statistics projection equals the recipient table over
 // sent, failed (permanent error, retries exhausted) and skipped rows; a
 // failed recipient makes the campaign partially_failed. Transient errors
@@ -490,12 +549,12 @@ func TestCampaignStatisticsMatchRecipients(t *testing.T) {
 	}
 	// 4 users x 3 channels; ok: 3 sent; perm + flaky: push/whatsapp failed
 	// (e-mail fails too: same user errors); nophone: push skipped (no
-	// token), whatsapp skipped (no phone), e-mail skipped (no unsubscribe).
-	if total != 12 || sent != 3 || failed != 6 || skipped != 3 {
+	// token), whatsapp skipped (no phone), e-mail sent through user opt-out.
+	if total != 12 || sent != 4 || failed != 6 || skipped != 2 {
 		t.Fatalf("table = %d/%d/%d/%d", total, sent, failed, skipped)
 	}
-	if r := e.recipientOf(t, camp.ID, noPhone.ID, ChannelEmail); r.Reason != SkipNoUnsubscribe {
-		t.Fatalf("no phone e-mail = %+v", r)
+	if r := e.recipientOf(t, camp.ID, noPhone.ID, ChannelEmail); r.Status != RecipientSent {
+		t.Fatalf("no phone e-mail = %+v, want sent", r)
 	}
 	if row.Status != StatusPartiallyFailed || !row.FinishedAt.Valid {
 		t.Fatalf("campaign = %s, want partially_failed", row.Status)
@@ -504,8 +563,40 @@ func TestCampaignStatisticsMatchRecipients(t *testing.T) {
 	if finished.Payload["recipients_failed"] != int32(6) {
 		t.Fatalf("finished payload = %v", finished.Payload)
 	}
-	if len(e.ch.email) != 1 || !strings.Contains(e.ch.email[0].UnsubscribeURL, "https://app.example.test"+UnsubscribePath) {
+	if len(e.ch.email) != 2 || !strings.Contains(e.ch.email[0].UnsubscribeURL, "https://app.example.test"+UnsubscribePath) ||
+		!strings.Contains(e.ch.email[1].UnsubscribeURL, "https://app.example.test"+UnsubscribePath) {
 		t.Fatalf("e-mails = %+v", e.ch.email)
+	}
+}
+
+// Acceptance: an e-mail-only customer is sent to, the unsubscribe link writes
+// a user opt-out, and later campaigns exclude that user.
+func TestCampaignEmailOnlyRecipientCanUnsubscribe(t *testing.T) {
+	e := newSenderEnv(t)
+	emailOnly := e.customerWithConsent(t, "emailonly")
+	e.exec(t, `UPDATE users SET phone_e164 = NULL WHERE id = $1`, emailOnly.ID)
+
+	camp := e.scheduled(t, ChannelEmail)
+	e.tick(t)
+	e.mustProcess(t, e.recipientOf(t, camp.ID, emailOnly.ID, ChannelEmail).ID)
+	if len(e.ch.email) != 1 || e.ch.email[0].To != emailOnly.Email.String {
+		t.Fatalf("e-mails = %+v", e.ch.email)
+	}
+
+	unsub := NewUnsubscriber(e.q, []byte("test-secret"))
+	token := strings.TrimPrefix(e.ch.email[0].UnsubscribeURL, "https://app.example.test"+UnsubscribePath)
+	if err := unsub.Unsubscribe(e.ctx, token); err != nil {
+		t.Fatalf("unsubscribe: %v", err)
+	}
+	if n := e.count(t, `SELECT COUNT(*) FROM campaign_user_opt_outs WHERE user_id = $1 AND scope = 'marketing' AND source = 'campaign'`,
+		emailOnly.ID); n != 1 {
+		t.Fatalf("user opt-out rows = %d, want 1", n)
+	}
+
+	next := e.scheduled(t, ChannelEmail)
+	e.tick(t)
+	if rs := e.recipients(t, next.ID); len(rs) != 0 {
+		t.Fatalf("recipients after unsubscribe = %+v, want none", rs)
 	}
 }
 
@@ -531,6 +622,10 @@ func TestCampaignMarketingOptOut(t *testing.T) {
 	if n := e.count(t, `SELECT COUNT(*) FROM contact_opt_outs WHERE contact_e164 = $1 AND scope = 'marketing' AND source = 'campaign'`,
 		leave.PhoneE164.String); n != 1 {
 		t.Fatalf("opt-out rows = %d, want 1", n)
+	}
+	if n := e.count(t, `SELECT COUNT(*) FROM campaign_user_opt_outs WHERE user_id = $1 AND scope = 'marketing' AND source = 'campaign'`,
+		leave.ID); n != 1 {
+		t.Fatalf("user opt-out rows = %d, want 1", n)
 	}
 
 	camp := e.scheduled(t, ChannelWhatsApp)

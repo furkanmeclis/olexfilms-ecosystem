@@ -105,8 +105,10 @@ SELECT u.id AS user_id,
        COALESCE((SELECT mc.accepted FROM consents mc
                  WHERE mc.user_id = u.id AND mc.kind = 'marketing_consent'
                  ORDER BY mc.decided_at DESC, mc.id DESC LIMIT 1), false)::bool AS marketing_accepted,
-       COALESCE((SELECT oo.opted_out FROM contact_opt_out_state oo
-                 WHERE oo.contact_e164 = u.phone_e164 AND oo.scope = 'marketing'), false)::bool AS marketing_opted_out
+       (COALESCE((SELECT oo.opted_out FROM contact_opt_out_state oo
+                  WHERE oo.contact_e164 = u.phone_e164 AND oo.scope = 'marketing'), false)
+        OR COALESCE((SELECT uoo.opted_out FROM campaign_user_opt_out_state uoo
+                     WHERE uoo.user_id = u.id AND uoo.scope = 'marketing'), false))::bool AS marketing_opted_out
 FROM candidates c
 JOIN users u ON u.id = c.user_id
 WHERE u.deleted_at IS NULL

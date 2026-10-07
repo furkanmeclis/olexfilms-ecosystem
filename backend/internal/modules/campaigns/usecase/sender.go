@@ -403,10 +403,6 @@ func (s *Sender) snapshotRows(ctx context.Context, q *db.Queries, row db.Campaig
 					reason = SkipChannelDisabled
 				case r.MarketingOptedOut:
 					reason = SkipOptedOut
-				case phone == "":
-					// The unsubscribe link writes the marketing opt-out of
-					// the phone number; without one it could not work.
-					reason = SkipNoUnsubscribe
 				}
 				if email != "" {
 					e := email
@@ -469,6 +465,21 @@ func (s *Sender) ProcessRecipient(ctx context.Context, recipientID int64, final 
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	q := s.svc.q.WithTx(tx)
+	pre, err := q.GetCampaignRecipientByID(ctx, recipientID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	cur, err := q.GetCampaignByID(ctx, pre.CampaignID)
+	if err != nil {
+		return err
+	}
+	row, err := q.GetCampaignByIDForUpdate(ctx, db.GetCampaignByIDForUpdateParams{ID: pre.CampaignID, BrandID: cur.BrandID})
+	if err != nil {
+		return err
+	}
 	r, err := q.LockCampaignRecipient(ctx, recipientID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
@@ -478,10 +489,6 @@ func (s *Sender) ProcessRecipient(ctx context.Context, recipientID int64, final 
 	}
 	if r.Status != RecipientPending {
 		return nil
-	}
-	row, err := q.GetCampaignByID(ctx, r.CampaignID)
-	if err != nil {
-		return err
 	}
 	if row.Status != StatusSending {
 		return s.end(ctx, tx, q, r, RecipientSkipped, SkipCampaignNotSending)
@@ -664,8 +671,14 @@ func (s *Sender) send(ctx context.Context, q *db.Queries, row db.Campaign, r db.
 		if !r.TargetAddress.Valid {
 			return ErrNoAddress
 		}
-		if contact.PhoneE164 == "" {
-			return &skipError{reason: SkipNoUnsubscribe}
+		st, err := q.GetCampaignUserOptOutState(ctx, db.GetCampaignUserOptOutStateParams{
+			UserID: contact.ID, Scope: "marketing",
+		})
+		if err == nil && st.OptedOut {
+			return &skipError{reason: SkipOptedOut}
+		}
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return err
 		}
 		return s.d.Email.SendCampaignEmail(ctx, EmailMessage{
 			To: r.TargetAddress.String, BrandID: row.BrandID, Locale: r.Locale, Subject: ct.Title,
