@@ -41,10 +41,17 @@ const nextConfig: NextConfig = {
    * TEC-249: the old hub served short links at `/_/{token}`; migrated tokens
    * keep their value (TEC-263), so links already sent by SMS / WhatsApp go
    * to the new resolver route `/s/{token}`.
+   * TEC-320: Go sends quote links (or short links resolving to them) as
+   * `/portal/quotes/{token}`; the public read-only page is `/teklif/{token}`.
    */
   async redirects() {
     return [
       { source: "/_/:token", destination: "/s/:token", permanent: false },
+      {
+        source: "/portal/quotes/:token",
+        destination: "/teklif/:token",
+        permanent: false,
+      },
     ];
   },
 };

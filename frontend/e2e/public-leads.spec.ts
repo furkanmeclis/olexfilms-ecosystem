@@ -33,6 +33,14 @@ test("quote link shows the quote without contact details", async ({ page }) => {
   );
 });
 
+test("Go's /portal/quotes/{token} link opens the public page", async ({
+  page,
+}) => {
+  await page.goto(`/portal/quotes/${E2E_QUOTE.ok}`);
+  await expect(page).toHaveURL(new RegExp(`/teklif/${E2E_QUOTE.ok}$`));
+  await expect(page.locator('[data-screen="quote"]')).toBeVisible();
+});
+
 test("unknown quote token is a 404 page", async ({ page }) => {
   const res = await page.goto(`/teklif/${E2E_QUOTE.missing}`);
   expect(res?.status()).toBe(404);
