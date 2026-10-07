@@ -281,10 +281,11 @@ WHERE r.campaign_id = sqlc.arg(campaign_id)
 -- name: ListMarketingReachability :many
 -- Per user: the latest marketing_consent decision (any text version; a
 -- decline or no record means no consent) and whether the user's phone is
--- opted out of marketing in contact_opt_out_state (000103).
+-- opted out of marketing in contact_opt_out_state (000103) or the user
+-- identity is opted out through a campaign e-mail unsubscribe (000109).
 SELECT u.id AS user_id,
        COALESCE(mc.accepted, false)::bool AS marketing_accepted,
-       COALESCE(oo.opted_out, false)::bool AS marketing_opted_out
+       (COALESCE(oo.opted_out, false) OR COALESCE(uoo.opted_out, false))::bool AS marketing_opted_out
 FROM users u
 LEFT JOIN LATERAL (
     SELECT c.accepted
@@ -295,6 +296,8 @@ LEFT JOIN LATERAL (
 ) mc ON true
 LEFT JOIN contact_opt_out_state oo
     ON oo.contact_e164 = u.phone_e164 AND oo.scope = 'marketing'
+LEFT JOIN campaign_user_opt_out_state uoo
+    ON uoo.user_id = u.id AND uoo.scope = 'marketing'
 WHERE u.id = ANY(sqlc.arg(user_ids)::bigint[]);
 
 -- Sending (TEC-407, F4-04d) -------------------------------------------------
@@ -316,6 +319,10 @@ ON CONFLICT (campaign_id, user_id, channel) DO NOTHING;
 SELECT * FROM campaign_recipients
 WHERE id = sqlc.arg(id)
 FOR UPDATE;
+
+-- name: GetCampaignRecipientByID :one
+SELECT * FROM campaign_recipients
+WHERE id = sqlc.arg(id);
 
 -- name: RecordCampaignRecipientAttempt :one
 -- A failed attempt that will be retried: the recipient stays pending.
@@ -352,6 +359,17 @@ SELECT u.id, u.uuid, u.name, u.surname, COALESCE(u.email, '')::text AS email,
        COALESCE(u.phone_e164, '')::text AS phone_e164, COALESCE(u.timezone, '')::text AS timezone
 FROM users u
 WHERE u.id = sqlc.arg(id);
+
+-- name: InsertCampaignUserOptOut :one
+-- Append-only; the AFTER INSERT trigger updates campaign_user_opt_out_state.
+INSERT INTO campaign_user_opt_outs (user_id, scope, action, source, created_by_user_id, note)
+VALUES (sqlc.arg(user_id), sqlc.arg(scope), sqlc.arg(action), sqlc.arg(source),
+        sqlc.narg(created_by_user_id), sqlc.narg(note))
+RETURNING *;
+
+-- name: GetCampaignUserOptOutState :one
+SELECT * FROM campaign_user_opt_out_state
+WHERE user_id = sqlc.arg(user_id) AND scope = sqlc.arg(scope);
 
 -- name: CountWebPushSubscriptionsByUsers :many
 SELECT user_id, COUNT(*)::int AS subscriptions

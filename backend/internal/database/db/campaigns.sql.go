@@ -478,6 +478,34 @@ func (q *Queries) GetCampaignMediaByUUID(ctx context.Context, arg GetCampaignMed
 	return i, err
 }
 
+const getCampaignRecipientByID = `-- name: GetCampaignRecipientByID :one
+SELECT id, campaign_id, organization_id, brand_id, user_id, channel, locale, target_address, push_token_count, status, reason, attempts, sent_at, created_at, updated_at FROM campaign_recipients
+WHERE id = $1
+`
+
+func (q *Queries) GetCampaignRecipientByID(ctx context.Context, id int64) (CampaignRecipient, error) {
+	row := q.db.QueryRow(ctx, getCampaignRecipientByID, id)
+	var i CampaignRecipient
+	err := row.Scan(
+		&i.ID,
+		&i.CampaignID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UserID,
+		&i.Channel,
+		&i.Locale,
+		&i.TargetAddress,
+		&i.PushTokenCount,
+		&i.Status,
+		&i.Reason,
+		&i.Attempts,
+		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getCampaignRecipientContact = `-- name: GetCampaignRecipientContact :one
 SELECT u.id, u.uuid, u.name, u.surname, COALESCE(u.email, '')::text AS email,
        COALESCE(u.phone_e164, '')::text AS phone_e164, COALESCE(u.timezone, '')::text AS timezone
@@ -507,6 +535,30 @@ func (q *Queries) GetCampaignRecipientContact(ctx context.Context, id int64) (Ge
 		&i.Email,
 		&i.PhoneE164,
 		&i.Timezone,
+	)
+	return i, err
+}
+
+const getCampaignUserOptOutState = `-- name: GetCampaignUserOptOutState :one
+SELECT user_id, scope, opted_out, last_entry_id, source, changed_at FROM campaign_user_opt_out_state
+WHERE user_id = $1 AND scope = $2
+`
+
+type GetCampaignUserOptOutStateParams struct {
+	UserID int64  `json:"user_id"`
+	Scope  string `json:"scope"`
+}
+
+func (q *Queries) GetCampaignUserOptOutState(ctx context.Context, arg GetCampaignUserOptOutStateParams) (CampaignUserOptOutState, error) {
+	row := q.db.QueryRow(ctx, getCampaignUserOptOutState, arg.UserID, arg.Scope)
+	var i CampaignUserOptOutState
+	err := row.Scan(
+		&i.UserID,
+		&i.Scope,
+		&i.OptedOut,
+		&i.LastEntryID,
+		&i.Source,
+		&i.ChangedAt,
 	)
 	return i, err
 }
@@ -708,6 +760,47 @@ func (q *Queries) InsertCampaignRecipientSnapshot(ctx context.Context, arg Inser
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const insertCampaignUserOptOut = `-- name: InsertCampaignUserOptOut :one
+INSERT INTO campaign_user_opt_outs (user_id, scope, action, source, created_by_user_id, note)
+VALUES ($1, $2, $3, $4,
+        $5, $6)
+RETURNING id, uuid, user_id, scope, action, source, created_by_user_id, note, created_at
+`
+
+type InsertCampaignUserOptOutParams struct {
+	UserID          int64       `json:"user_id"`
+	Scope           string      `json:"scope"`
+	Action          string      `json:"action"`
+	Source          string      `json:"source"`
+	CreatedByUserID pgtype.Int8 `json:"created_by_user_id"`
+	Note            pgtype.Text `json:"note"`
+}
+
+// Append-only; the AFTER INSERT trigger updates campaign_user_opt_out_state.
+func (q *Queries) InsertCampaignUserOptOut(ctx context.Context, arg InsertCampaignUserOptOutParams) (CampaignUserOptOut, error) {
+	row := q.db.QueryRow(ctx, insertCampaignUserOptOut,
+		arg.UserID,
+		arg.Scope,
+		arg.Action,
+		arg.Source,
+		arg.CreatedByUserID,
+		arg.Note,
+	)
+	var i CampaignUserOptOut
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.Scope,
+		&i.Action,
+		&i.Source,
+		&i.CreatedByUserID,
+		&i.Note,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const listCampaignApprovals = `-- name: ListCampaignApprovals :many
@@ -1202,7 +1295,7 @@ const listMarketingReachability = `-- name: ListMarketingReachability :many
 
 SELECT u.id AS user_id,
        COALESCE(mc.accepted, false)::bool AS marketing_accepted,
-       COALESCE(oo.opted_out, false)::bool AS marketing_opted_out
+       (COALESCE(oo.opted_out, false) OR COALESCE(uoo.opted_out, false))::bool AS marketing_opted_out
 FROM users u
 LEFT JOIN LATERAL (
     SELECT c.accepted
@@ -1213,6 +1306,8 @@ LEFT JOIN LATERAL (
 ) mc ON true
 LEFT JOIN contact_opt_out_state oo
     ON oo.contact_e164 = u.phone_e164 AND oo.scope = 'marketing'
+LEFT JOIN campaign_user_opt_out_state uoo
+    ON uoo.user_id = u.id AND uoo.scope = 'marketing'
 WHERE u.id = ANY($1::bigint[])
 `
 
@@ -1225,7 +1320,8 @@ type ListMarketingReachabilityRow struct {
 // Marketing reachability ----------------------------------------------------
 // Per user: the latest marketing_consent decision (any text version; a
 // decline or no record means no consent) and whether the user's phone is
-// opted out of marketing in contact_opt_out_state (000103).
+// opted out of marketing in contact_opt_out_state (000103) or the user
+// identity is opted out through a campaign e-mail unsubscribe (000109).
 func (q *Queries) ListMarketingReachability(ctx context.Context, userIds []int64) ([]ListMarketingReachabilityRow, error) {
 	rows, err := q.db.Query(ctx, listMarketingReachability, userIds)
 	if err != nil {

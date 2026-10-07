@@ -71,10 +71,11 @@ func NewUnsubscriber(q *db.Queries, secret []byte) *Unsubscriber {
 	return &Unsubscriber{q: q, secret: secret}
 }
 
-// Unsubscribe writes a marketing opt-out (source campaign) for the phone
-// number of the token's user, the same opt-out a WhatsApp DUR reply
-// writes; later campaigns leave the number out. An invalid token or an
-// unknown user is ErrNotFound; repeating it is a no-op.
+// Unsubscribe writes a campaign marketing opt-out for the token's user.
+// When the user still has a phone number it also writes the phone opt-out
+// used by WhatsApp DUR replies; phone-less e-mail recipients are still
+// excluded by the user opt-out state. An invalid token or an unknown user is
+// ErrNotFound; repeating it is a no-op.
 func (u *Unsubscriber) Unsubscribe(ctx context.Context, token string) error {
 	id, ok := ParseUnsubscribeToken(u.secret, token)
 	if !ok {
@@ -87,8 +88,24 @@ func (u *Unsubscriber) Unsubscribe(ctx context.Context, token string) error {
 	if err != nil {
 		return err
 	}
-	if user.DeletedAt.Valid || !user.PhoneE164.Valid || !e164Re.MatchString(user.PhoneE164.String) {
+	if user.DeletedAt.Valid {
 		return ErrNotFound
+	}
+	ust, err := u.q.GetCampaignUserOptOutState(ctx, db.GetCampaignUserOptOutStateParams{UserID: user.ID, Scope: "marketing"})
+	userOptedOut := err == nil && ust.OptedOut
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	if !userOptedOut {
+		if _, err := u.q.InsertCampaignUserOptOut(ctx, db.InsertCampaignUserOptOutParams{
+			UserID: user.ID, Scope: "marketing", Action: "out", Source: "campaign",
+			Note: pgtype.Text{String: "e-mail unsubscribe link", Valid: true},
+		}); err != nil {
+			return err
+		}
+	}
+	if !user.PhoneE164.Valid || !e164Re.MatchString(user.PhoneE164.String) {
+		return nil
 	}
 	phone := user.PhoneE164.String
 	st, err := u.q.GetContactOptOutState(ctx, db.GetContactOptOutStateParams{ContactE164: phone, Scope: "marketing"})

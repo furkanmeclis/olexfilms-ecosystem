@@ -476,6 +476,27 @@ type CampaignRecipient struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type CampaignUserOptOut struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	UserID          int64              `json:"user_id"`
+	Scope           string             `json:"scope"`
+	Action          string             `json:"action"`
+	Source          string             `json:"source"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	Note            pgtype.Text        `json:"note"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type CampaignUserOptOutState struct {
+	UserID      int64              `json:"user_id"`
+	Scope       string             `json:"scope"`
+	OptedOut    bool               `json:"opted_out"`
+	LastEntryID int64              `json:"last_entry_id"`
+	Source      string             `json:"source"`
+	ChangedAt   pgtype.Timestamptz `json:"changed_at"`
+}
+
 type CarBrand struct {
 	ID            int64              `json:"id"`
 	Uuid          uuid.UUID          `json:"uuid"`
