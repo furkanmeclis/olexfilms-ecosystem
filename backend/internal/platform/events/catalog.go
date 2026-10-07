@@ -690,6 +690,7 @@ func catalogConstants() []string {
 		FleetLinkRejected,
 		FleetVehicleAdded,
 		FleetUserInvited,
+		FleetServicePlanCreated,
 	}
 }
 
@@ -752,10 +753,11 @@ const AIQuotaThreshold = "ai.quota.threshold"
 // notify_user_ids (link requests reach the fleet users, decisions the
 // requesting user). The search sync refreshes the fleet document.
 const (
-	FleetCreated       = "fleet.created"
-	FleetLinkRequested = "fleet.link_requested"
-	FleetLinked        = "fleet.linked"
-	FleetLinkRejected  = "fleet.link_rejected"
-	FleetVehicleAdded  = "fleet.vehicle_added"
-	FleetUserInvited   = "fleet.user_invited"
+	FleetCreated            = "fleet.created"
+	FleetLinkRequested      = "fleet.link_requested"
+	FleetLinked             = "fleet.linked"
+	FleetLinkRejected       = "fleet.link_rejected"
+	FleetVehicleAdded       = "fleet.vehicle_added"
+	FleetUserInvited        = "fleet.user_invited"
+	FleetServicePlanCreated = "fleet.service_plan_created"
 )

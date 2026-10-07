@@ -31,12 +31,16 @@ func RegisterRoutes(
 	authn := middleware.Authenticate(tokens, loader)
 	org := middleware.RequireOrganization(tokens, q)
 	module := middleware.RequireFeature(checker, features.ModuleFleet)
+	appointmentsModule := middleware.RequireFeature(checker, features.ModuleAppointments)
 	with := func(perm string) func(http.HandlerFunc) http.Handler {
 		return func(fn http.HandlerFunc) http.Handler {
 			return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, perm))
 		}
 	}
 	read, manage := with(rbac.PermFleetsRead), with(rbac.PermFleetsManage)
+	plan := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, appointmentsModule, middleware.RequireScope(q, rbac.PermFleetsPlan))
+	}
 
 	mux.Handle("GET /v1/fleets", read(h.List))
 	mux.Handle("POST /v1/fleets", manage(h.Open))
@@ -53,6 +57,10 @@ func RegisterRoutes(
 	mux.Handle("DELETE /v1/fleets/{uuid}/vehicles/{vehicle_uuid}", manage(h.RemoveVehicle))
 	mux.Handle("GET /v1/fleets/{uuid}/statement", read(h.Statement))
 	mux.Handle("POST /v1/fleets/{uuid}/statement/export", read(h.ExportStatement))
+	mux.Handle("POST /v1/fleets/{uuid}/service-plans/preview", plan(h.PreviewServicePlan))
+	mux.Handle("POST /v1/fleets/{uuid}/service-plans", plan(h.CreateServicePlan))
+	mux.Handle("POST /v1/fleets/{uuid}/service-plans/{plan}/cancel", plan(h.CancelServicePlan))
+	mux.Handle("POST /v1/fleets/{uuid}/service-plans/{plan}/start-intake", plan(h.StartServicePlanIntake))
 
 	portal := func(fn http.HandlerFunc) http.Handler {
 		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermFleetPortalRead))
