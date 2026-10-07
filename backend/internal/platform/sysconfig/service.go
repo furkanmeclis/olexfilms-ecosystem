@@ -206,6 +206,18 @@ func (s *Service) CampaignsQuietHours(ctx context.Context) (int, int) {
 	return int(s.Int(ctx, KeyCampaignsQuietHoursStart)), int(s.Int(ctx, KeyCampaignsQuietHoursEnd))
 }
 
+// CertificatesRequireAdminApproval is the certificate service-warning policy
+// switch. Customer notification is intentionally not configurable (F5 S13).
+func (s *Service) CertificatesRequireAdminApproval(ctx context.Context) bool {
+	return s.Bool(ctx, KeyCertificatesRequireAdminApproval)
+}
+
+// CertificatesExpiryNoticeDays is the internal certificate expiry notice
+// window.
+func (s *Service) CertificatesExpiryNoticeDays(ctx context.Context) int {
+	return int(s.Int(ctx, KeyCertificatesExpiryNoticeDays))
+}
+
 // SMTP groups the smtp.* keys. Empty Host / zero Port mean "use the
 // environment configuration".
 type SMTP struct {

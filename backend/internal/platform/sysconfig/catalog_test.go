@@ -42,6 +42,10 @@ func TestValidate(t *testing.T) {
 		{KeyMobileAppStoreURLIOS, `"http://apps.apple.com/app/id1"`, ""},
 		{KeyMobileAppStoreURLAndroid, `"play.google.com/store"`, ""},
 		{KeyMobileAppVersionRequired, "true", "true"},
+		{KeyCertificatesRequireAdminApproval, "false", "false"},
+		{KeyCertificatesExpiryNoticeDays, "30", "30"},
+		{KeyCertificatesExpiryNoticeDays, "0", ""},
+		{KeyCertificatesExpiryNoticeDays, "366", ""},
 	}
 	for _, c := range cases {
 		d, ok := Lookup(c.key)
@@ -72,6 +76,15 @@ func TestCatalogDefaults(t *testing.T) {
 	}
 	if d, _ := Lookup(KeySMTPPassword); !d.Secret {
 		t.Fatal("smtp.password must be secret")
+	}
+	if d, _ := Lookup(KeyCertificatesRequireAdminApproval); d.Default != false || d.Group != GroupCertificates {
+		t.Fatalf("certificate approval default/group = %v/%s, want false/certificates", d.Default, d.Group)
+	}
+	if d, _ := Lookup(KeyCertificatesExpiryNoticeDays); d.Default != int64(DefaultCertificatesExpiryNoticeDays) {
+		t.Fatalf("certificate notice default = %v, want %d", d.Default, DefaultCertificatesExpiryNoticeDays)
+	}
+	if _, ok := Lookup("certificates.notify_customer"); ok {
+		t.Fatal("certificates.notify_customer must not exist per F5 S13")
 	}
 	if _, ok := Lookup("nope"); ok {
 		t.Fatal("unknown key found")

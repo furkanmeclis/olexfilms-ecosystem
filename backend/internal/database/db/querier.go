@@ -17,6 +17,8 @@ type Querier interface {
 	AddAnnouncementAudience(ctx context.Context, arg AddAnnouncementAudienceParams) (AnnouncementAudience, error)
 	// Signed deltas; the CHECK rejects negative stock.
 	AddBinProductStock(ctx context.Context, arg AddBinProductStockParams) (BinProductStock, error)
+	AddCertificateTypeCategory(ctx context.Context, arg AddCertificateTypeCategoryParams) (CertificateTypeCategory, error)
+	AddCertificateTypeProduct(ctx context.Context, arg AddCertificateTypeProductParams) (CertificateTypeProduct, error)
 	// The CHECK rejects a negative result.
 	AddFixedBarcodeHolding(ctx context.Context, arg AddFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
 	AddLeadEvent(ctx context.Context, arg AddLeadEventParams) (LeadEvent, error)
@@ -173,6 +175,9 @@ type Querier interface {
 	CountCarModels(ctx context.Context, arg CountCarModelsParams) (int64, error)
 	CountCarModelsByBrand(ctx context.Context, carBrandID int64) (int64, error)
 	CountCariAccountsWithBalance(ctx context.Context, arg CountCariAccountsWithBalanceParams) (int64, error)
+	CountCertificateTypeBindings(ctx context.Context, arg CountCertificateTypeBindingsParams) (int64, error)
+	CountCertificateTypes(ctx context.Context, arg CountCertificateTypesParams) (int64, error)
+	CountCertificates(ctx context.Context, arg CountCertificatesParams) (int64, error)
 	CountConsentsOfUser(ctx context.Context, userID int64) (int64, error)
 	CountContractInstances(ctx context.Context, arg CountContractInstancesParams) (int64, error)
 	// TEC-397 (F4-02e): WhatsApp visitor flow — abuse limits, the KVKK notice
@@ -240,6 +245,7 @@ type Querier interface {
 	CountRoles(ctx context.Context, arg CountRolesParams) (int64, error)
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
+	CountServiceCertificateWarnings(ctx context.Context, arg CountServiceCertificateWarningsParams) (int64, error)
 	CountServiceReviewAnswersByQuestion(ctx context.Context, arg CountServiceReviewAnswersByQuestionParams) (int64, error)
 	CountServiceReviewsInScope(ctx context.Context, arg CountServiceReviewsInScopeParams) (int64, error)
 	CountServiceSubscriptionCancelRequestsPage(ctx context.Context, arg CountServiceSubscriptionCancelRequestsPageParams) (int64, error)
@@ -315,6 +321,16 @@ type Querier interface {
 	// customer. When it already exists no row is returned (pgx.ErrNoRows) and
 	// the caller reads it with GetCariAccountByCounterpartyUser.
 	CreateCariForUserIfMissing(ctx context.Context, arg CreateCariForUserIfMissingParams) (CariAccount, error)
+	// ---------------------------------------------------------------------------
+	// Certificates.
+	CreateCertificate(ctx context.Context, arg CreateCertificateParams) (Certificate, error)
+	// TEC-479 (F5-03a): certificate types, user certificates and service
+	// certificate warnings. API/usecase layers enforce the "at least one
+	// product/category binding" rule by checking CountCertificateTypeBindings
+	// in the same transaction that edits bindings.
+	// ---------------------------------------------------------------------------
+	// Certificate types.
+	CreateCertificateType(ctx context.Context, arg CreateCertificateTypeParams) (CertificateType, error)
 	// ---------------------------------------------------------------------------
 	// Instances.
 	CreateContractInstance(ctx context.Context, arg CreateContractInstanceParams) (ContractInstance, error)
@@ -513,6 +529,7 @@ type Querier interface {
 	CustomerLinkedToBrand(ctx context.Context, arg CustomerLinkedToBrandParams) (bool, error)
 	DeactivateDocumentTemplates(ctx context.Context, arg DeactivateDocumentTemplatesParams) error
 	DecideQRLoginChallenge(ctx context.Context, arg DecideQRLoginChallengeParams) (QrLoginChallenge, error)
+	DecideServiceCertificateWarning(ctx context.Context, arg DecideServiceCertificateWarningParams) (ServiceCertificateWarning, error)
 	DecideServiceSubscriptionCancelRequest(ctx context.Context, arg DecideServiceSubscriptionCancelRequestParams) (ServiceSubscriptionCancelRequest, error)
 	DecideStockReclassification(ctx context.Context, arg DecideStockReclassificationParams) (StockReclassification, error)
 	DecideTransferRequest(ctx context.Context, arg DecideTransferRequestParams) (StockTransferRequest, error)
@@ -537,6 +554,9 @@ type Querier interface {
 	// Fails with a restrict/foreign key violation while models still use the brand.
 	DeleteCarBrand(ctx context.Context, id int64) (int64, error)
 	DeleteCarModel(ctx context.Context, id int64) (int64, error)
+	DeleteCertificateType(ctx context.Context, arg DeleteCertificateTypeParams) (int64, error)
+	DeleteCertificateTypeCategories(ctx context.Context, arg DeleteCertificateTypeCategoriesParams) (int64, error)
+	DeleteCertificateTypeProducts(ctx context.Context, arg DeleteCertificateTypeProductsParams) (int64, error)
 	DeleteConnectionLocationMap(ctx context.Context, arg DeleteConnectionLocationMapParams) (int64, error)
 	// Only an open contract without signatures can be deleted (triggers and
 	// FKs); signers and media go first.
@@ -637,6 +657,7 @@ type Querier interface {
 	ExpireAIPendingAction(ctx context.Context, arg ExpireAIPendingActionParams) (AiPendingAction, error)
 	// Stale cleanup: pending actions past their expiry become expired.
 	ExpireAIPendingActions(ctx context.Context, now pgtype.Timestamptz) (int64, error)
+	ExpireDueCertificates(ctx context.Context, now pgtype.Timestamptz) ([]Certificate, error)
 	ExpireDueQuotes(ctx context.Context, today pgtype.Date) ([]Quote, error)
 	ExpireDueVehicleTransfers(ctx context.Context, now pgtype.Timestamptz) ([]VehicleTransfer, error)
 	// Daily cron (decision 4/5): end_at is the end of the last covered day in
@@ -758,6 +779,10 @@ type Querier interface {
 	GetCariStatementOpening(ctx context.Context, arg GetCariStatementOpeningParams) (pgtype.Numeric, error)
 	// A user that is a member of the given (center) organization.
 	GetCenterMemberByUUID(ctx context.Context, arg GetCenterMemberByUUIDParams) (GetCenterMemberByUUIDRow, error)
+	GetCertificate(ctx context.Context, arg GetCertificateParams) (Certificate, error)
+	GetCertificateByUUID(ctx context.Context, arg GetCertificateByUUIDParams) (Certificate, error)
+	GetCertificateType(ctx context.Context, arg GetCertificateTypeParams) (CertificateType, error)
+	GetCertificateTypeByUUID(ctx context.Context, arg GetCertificateTypeByUUIDParams) (CertificateType, error)
 	GetConnectionLocationMapByRemote(ctx context.Context, arg GetConnectionLocationMapByRemoteParams) (ConnectionLocationMap, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetContactOptOutState(ctx context.Context, arg GetContactOptOutStateParams) (ContactOptOutState, error)
@@ -1459,6 +1484,13 @@ type Querier interface {
 	ListCariStatementLines(ctx context.Context, arg ListCariStatementLinesParams) ([]ListCariStatementLinesRow, error)
 	// TEC-221: assignee picker of the task form (members of the center).
 	ListCenterMembers(ctx context.Context, organizationID int64) ([]ListCenterMembersRow, error)
+	ListCertificateTypeCategories(ctx context.Context, arg ListCertificateTypeCategoriesParams) ([]CertificateTypeCategory, error)
+	ListCertificateTypeProducts(ctx context.Context, arg ListCertificateTypeProductsParams) ([]CertificateTypeProduct, error)
+	ListCertificateTypes(ctx context.Context, arg ListCertificateTypesParams) ([]CertificateType, error)
+	// Sort keys follow docs/list-contract.md: expires_at, issued_at, status,
+	// user_name and created_at. Default is expires_at; id is the tiebreak.
+	ListCertificates(ctx context.Context, arg ListCertificatesParams) ([]ListCertificatesRow, error)
+	ListCertificatesDueForExpiryNotice(ctx context.Context, arg ListCertificatesDueForExpiryNoticeParams) ([]Certificate, error)
 	ListConnectionLocationMaps(ctx context.Context, connectionID int64) ([]ConnectionLocationMap, error)
 	ListContactOptOutHistory(ctx context.Context, arg ListContactOptOutHistoryParams) ([]ContactOptOut, error)
 	ListContactOptOutStates(ctx context.Context, contactE164 string) ([]ContactOptOutState, error)
@@ -1883,6 +1915,8 @@ type Querier interface {
 	// as organization/trash owner (every later owner of the unit at that
 	// organization follows from such a movement), or a projection row it holds.
 	ListRebuildUnitIDsByOrganization(ctx context.Context, organizationID int64) ([]int64, error)
+	// Required certificate types for the products/categories used by a service.
+	ListRequiredCertificateTypesForService(ctx context.Context, arg ListRequiredCertificateTypesForServiceParams) ([]CertificateType, error)
 	ListReservationsByOrder(ctx context.Context, orderID int64) ([]StockReservation, error)
 	ListReviewQuestionLocales(ctx context.Context, questionID int64) ([]ReviewQuestionLocale, error)
 	// Batch load for a question list (avoids N+1).
@@ -1925,6 +1959,7 @@ type Querier interface {
 	// name and description. Full array (small brand list, client-side table).
 	ListServiceCatalogItems(ctx context.Context, arg ListServiceCatalogItemsParams) ([]ServiceCatalogItem, error)
 	ListServiceCatalogModules(ctx context.Context, itemID int64) ([]string, error)
+	ListServiceCertificateWarnings(ctx context.Context, arg ListServiceCertificateWarningsParams) ([]ListServiceCertificateWarningsRow, error)
 	ListServiceImages(ctx context.Context, serviceID int64) ([]ServiceImage, error)
 	ListServiceItemCorrections(ctx context.Context, serviceID int64) ([]ListServiceItemCorrectionsRow, error)
 	ListServiceItems(ctx context.Context, serviceID int64) ([]ServiceItem, error)
@@ -2104,6 +2139,7 @@ type Querier interface {
 	// id as the unique tiebreak in the same direction.
 	ListUsersFiltered(ctx context.Context, arg ListUsersFilteredParams) ([]User, error)
 	ListUsersForExport(ctx context.Context, arg ListUsersForExportParams) ([]User, error)
+	ListValidCertificatesForServiceUser(ctx context.Context, arg ListValidCertificatesForServiceUserParams) ([]Certificate, error)
 	ListVehicleTransfersByVehicle(ctx context.Context, arg ListVehicleTransfersByVehicleParams) ([]VehicleTransfer, error)
 	ListVehiclesByUser(ctx context.Context, arg ListVehiclesByUserParams) ([]ListVehiclesByUserRow, error)
 	// Vehicles: organization_ids are the owner's customer_organizations of the
@@ -2321,6 +2357,7 @@ type Querier interface {
 	MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error)
 	MarkBulkJobRolledBack(ctx context.Context, arg MarkBulkJobRolledBackParams) (BulkJob, error)
 	MarkBulkOperationUndone(ctx context.Context, arg MarkBulkOperationUndoneParams) (BulkOperation, error)
+	MarkCertificateExpiryNoticeSent(ctx context.Context, arg MarkCertificateExpiryNoticeSentParams) (int64, error)
 	MarkContractSignerSigned(ctx context.Context, id int64) (ContractSigner, error)
 	MarkConversationRead(ctx context.Context, id int64) (Conversation, error)
 	MarkCustomerFirstService(ctx context.Context, arg MarkCustomerFirstServiceParams) (int64, error)
@@ -2651,6 +2688,7 @@ type Querier interface {
 	ReceiveTransferRequest(ctx context.Context, arg ReceiveTransferRequestParams) (StockTransferRequest, error)
 	// A failed attempt that will be retried: the recipient stays pending.
 	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
+	RejectCertificate(ctx context.Context, arg RejectCertificateParams) (Certificate, error)
 	RejectStockTransferRequest(ctx context.Context, arg RejectStockTransferRequestParams) (StockTransferRequest, error)
 	// Cancel: releases every active reservation of the order.
 	ReleaseReservationsByOrder(ctx context.Context, orderID int64) (int64, error)
@@ -2688,6 +2726,7 @@ type Querier interface {
 	ReviewQuestionHasAnswers(ctx context.Context, questionID int64) (bool, error)
 	RevokeAllDevicePushTokensForUser(ctx context.Context, userID int64) (int64, error)
 	RevokeAllRefreshTokensForUser(ctx context.Context, userID int64) error
+	RevokeCertificate(ctx context.Context, arg RevokeCertificateParams) (Certificate, error)
 	RevokeDevicePushToken(ctx context.Context, arg RevokeDevicePushTokenParams) (int64, error)
 	// TEC-91: mobile sign-out drops the device's Expo tokens.
 	RevokeDevicePushTokensForDevice(ctx context.Context, arg RevokeDevicePushTokensForDeviceParams) (int64, error)
@@ -2954,6 +2993,8 @@ type Querier interface {
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	UpdateCarBrand(ctx context.Context, arg UpdateCarBrandParams) (CarBrand, error)
 	UpdateCarModel(ctx context.Context, arg UpdateCarModelParams) (CarModel, error)
+	UpdateCertificateExpiry(ctx context.Context, arg UpdateCertificateExpiryParams) (Certificate, error)
+	UpdateCertificateType(ctx context.Context, arg UpdateCertificateTypeParams) (CertificateType, error)
 	// Re-renders an open contract (draft or pending).
 	UpdateContractInstanceContent(ctx context.Context, arg UpdateContractInstanceContentParams) (ContractInstance, error)
 	UpdateContractTemplate(ctx context.Context, arg UpdateContractTemplateParams) (ContractTemplate, error)
@@ -3099,6 +3140,9 @@ type Querier interface {
 	UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (ProductPrice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
 	UpsertReviewQuestionLocale(ctx context.Context, arg UpsertReviewQuestionLocaleParams) (ReviewQuestionLocale, error)
+	// ---------------------------------------------------------------------------
+	// Service warnings.
+	UpsertServiceCertificateWarning(ctx context.Context, arg UpsertServiceCertificateWarningParams) (ServiceCertificateWarning, error)
 	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
@@ -3109,6 +3153,7 @@ type Querier interface {
 	// Marking the code used is the claim; an expired or used code returns no row.
 	UseOAuthCode(ctx context.Context, arg UseOAuthCodeParams) (OauthCode, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
+	VerifyCertificate(ctx context.Context, arg VerifyCertificateParams) (Certificate, error)
 	VoidContractInstance(ctx context.Context, arg VoidContractInstanceParams) (ContractInstance, error)
 	// VoidStaffPayment marks a payment void after its ledger row was reversed;
 	// a voided salary frees its period.
