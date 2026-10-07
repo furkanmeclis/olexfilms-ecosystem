@@ -276,6 +276,11 @@ const (
 	// permission.
 	PermMCPConnect       = "mcp.connect"
 	PermMCPClientsManage = "mcp.clients.manage"
+
+	// TEC-404 (000107): campaign approval (F4-04). The center approves
+	// distributor and distributor-less dealer campaigns, a distributor those
+	// of its dealers (F4 user answer S4).
+	PermCampaignsApprove = "campaigns.approve"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

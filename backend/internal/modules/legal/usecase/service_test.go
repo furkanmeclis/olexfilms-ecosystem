@@ -147,3 +147,24 @@ func TestAdminPublishValidation(t *testing.T) {
 		t.Fatalf("empty body: %v", err)
 	}
 }
+
+// TEC-404: marketing_consent is an editable, answerable kind but never part
+// of the blocking pending prompt (explicit opt-in, unchecked by default).
+func TestMarketingConsentKind(t *testing.T) {
+	if !IsKind(KindMarketingConsent) || IsKind("newsletter") {
+		t.Fatal("IsKind")
+	}
+	ctx := context.Background()
+	svc := New(&memStore{})
+	if _, _, err := svc.AdminPublish(ctx, KindMarketingConsent, "tr", "izin metni", nil); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := svc.Pending(ctx, 7, i18n.Locale("tr"))
+	if err != nil || len(pending) != 0 {
+		t.Fatalf("pending = %+v %v", pending, err)
+	}
+	c, err := svc.Decide(ctx, 7, DecideInput{Kind: KindMarketingConsent, Locale: "tr", Version: 1, Accepted: true})
+	if err != nil || c.Kind != KindMarketingConsent || !c.Accepted {
+		t.Fatalf("decide = %+v %v", c, err)
+	}
+}

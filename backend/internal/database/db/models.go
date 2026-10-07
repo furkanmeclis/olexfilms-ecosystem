@@ -393,6 +393,89 @@ type BulkOperation struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Campaign struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	Name              string             `json:"name"`
+	Channels          []string           `json:"channels"`
+	AudienceFilter    []byte             `json:"audience_filter"`
+	Status            string             `json:"status"`
+	ScheduledAt       pgtype.Timestamptz `json:"scheduled_at"`
+	ApproverOrgID     pgtype.Int8        `json:"approver_org_id"`
+	StartedAt         pgtype.Timestamptz `json:"started_at"`
+	FinishedAt        pgtype.Timestamptz `json:"finished_at"`
+	RecipientsTotal   int32              `json:"recipients_total"`
+	RecipientsSent    int32              `json:"recipients_sent"`
+	RecipientsFailed  int32              `json:"recipients_failed"`
+	RecipientsSkipped int32              `json:"recipients_skipped"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID   pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CampaignContent struct {
+	ID         int64              `json:"id"`
+	Uuid       uuid.UUID          `json:"uuid"`
+	CampaignID int64              `json:"campaign_id"`
+	Locale     string             `json:"locale"`
+	Title      string             `json:"title"`
+	Body       string             `json:"body"`
+	Deeplink   pgtype.Text        `json:"deeplink"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CampaignEvent struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	CampaignID     int64              `json:"campaign_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	EventType      string             `json:"event_type"`
+	FromStatus     pgtype.Text        `json:"from_status"`
+	ToStatus       pgtype.Text        `json:"to_status"`
+	ActorUserID    pgtype.Int8        `json:"actor_user_id"`
+	ActorOrgID     pgtype.Int8        `json:"actor_org_id"`
+	Reason         pgtype.Text        `json:"reason"`
+	Payload        []byte             `json:"payload"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type CampaignMedium struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	ContentID       int64              `json:"content_id"`
+	Kind            string             `json:"kind"`
+	StorageKey      string             `json:"storage_key"`
+	MimeType        string             `json:"mime_type"`
+	SizeBytes       int64              `json:"size_bytes"`
+	FileName        pgtype.Text        `json:"file_name"`
+	SortOrder       int32              `json:"sort_order"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
+type CampaignRecipient struct {
+	ID             int64              `json:"id"`
+	CampaignID     int64              `json:"campaign_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	UserID         int64              `json:"user_id"`
+	Channel        string             `json:"channel"`
+	Locale         string             `json:"locale"`
+	TargetAddress  pgtype.Text        `json:"target_address"`
+	PushTokenCount pgtype.Int4        `json:"push_token_count"`
+	Status         string             `json:"status"`
+	Reason         pgtype.Text        `json:"reason"`
+	Attempts       int32              `json:"attempts"`
+	SentAt         pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type CarBrand struct {
 	ID            int64              `json:"id"`
 	Uuid          uuid.UUID          `json:"uuid"`

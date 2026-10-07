@@ -13698,7 +13698,7 @@ paths:
         required: true
         schema:
           type: string
-          enum: [ai_guidelines]
+          enum: [ai_guidelines, marketing_consent]
     get:
       tags: [Portal]
       operationId: getPlatformLegalTexts
@@ -29438,7 +29438,7 @@ components:
       required: [uuid, kind, locale, version, body, created_at]
       properties:
         uuid: { type: string, format: uuid }
-        kind: { type: string, enum: [ai_guidelines] }
+        kind: { type: string, enum: [ai_guidelines, marketing_consent] }
         locale: { type: string }
         version: { type: integer }
         body: { type: string, description: Markdown }
@@ -29484,7 +29484,7 @@ components:
       type: object
       required: [kind, locale, version, accepted]
       properties:
-        kind: { type: string, enum: [ai_guidelines] }
+        kind: { type: string, enum: [ai_guidelines, marketing_consent] }
         locale: { type: string, description: Locale of the text shown (from pending) }
         version: { type: integer }
         accepted: { type: boolean }
