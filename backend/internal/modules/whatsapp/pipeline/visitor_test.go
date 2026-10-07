@@ -226,6 +226,48 @@ func TestVisitorLeadAfterKVKKNotice(t *testing.T) {
 	}
 }
 
+// TEC-464 acceptance: an Arabic visitor receives the Arabic KVKK notice,
+// not the English or Turkish fallback.
+func TestVisitorLeadUsesArabicKVKKNotice(t *testing.T) {
+	f := newFixture(t)
+	phone := f.phone()
+	c := f.consented(f.conversation(phone))
+	var err error
+	c, err = f.q.SetConversationLocale(f.ctx, db.SetConversationLocaleParams{
+		ID: c.ID, Locale: pgtype.Text{String: "ar", Valid: true},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f.inbound(c, "أريد حجز موعد. اسمي أحمد كايا، إسطنبول، تويوتا كورولا 2023.")
+	f.llm.Push(leadCall("ar1"), fake.Text("أرسلت نص الإخطار؛ هل توافق؟", llm.Usage{InputTokens: 10}))
+	f.process(c)
+
+	arNotice, err := f.q.GetLatestKVKKNotice(f.ctx, "ar")
+	if err != nil {
+		t.Fatal(err)
+	}
+	enNotice, err := f.q.GetLatestKVKKNotice(f.ctx, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	trNotice, err := f.q.GetLatestKVKKNotice(f.ctx, "tr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := f.outgoing(c)
+	if len(out) != 2 || out[0].SenderType != model.SenderSystem ||
+		!strings.Contains(out[0].Body.String, arNotice.Body) ||
+		strings.Contains(out[0].Body.String, enNotice.Body) ||
+		strings.Contains(out[0].Body.String, trNotice.Body) {
+		t.Fatalf("outgoing = %q, want Arabic KVKK without fallback", bodies(out))
+	}
+	if runs := f.runs(c); len(runs) != 1 || !strings.Contains(string(runs[0].Stages), `"locale": "ar"`) {
+		t.Fatalf("run stages = %+v", runs)
+	}
+}
+
 // TEC-397 acceptance: a second request of the number within 30 days opens
 // no new lead; the existing one is updated.
 func TestVisitorSecondRequestWithin30DaysUpdatesLead(t *testing.T) {
