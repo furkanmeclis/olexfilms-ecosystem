@@ -191,8 +191,8 @@ WHERE e.organization_id = sqlc.arg(organization_id)
 ORDER BY c.id, e.created_at DESC, e.id DESC;
 
 -- ListStaffCostTotals is the salary/advance/bonus total per staff card of
--- the book over the non-void payments paid in the period (paid_on, both
--- days inclusive).
+-- the book over the non-void booked payments paid in the period (paid_on,
+-- both days inclusive). Planned payments are not costs yet (TEC-381).
 -- name: ListStaffCostTotals :many
 SELECT sp.uuid, sp.name, sp.title, sp.active,
        COALESCE(SUM(p.amount) FILTER (WHERE p.type = 'salary'), 0)::NUMERIC(18,2) AS salary,
@@ -204,6 +204,7 @@ FROM staff_profiles sp
 JOIN staff_payments p ON p.staff_id = sp.id
                      AND p.organization_id = sp.organization_id
                      AND p.voided_at IS NULL
+                     AND p.status = 'posted'
                      AND (sqlc.narg(paid_from)::date IS NULL OR p.paid_on >= sqlc.narg(paid_from)::date)
                      AND (sqlc.narg(paid_to)::date IS NULL OR p.paid_on <= sqlc.narg(paid_to)::date)
 WHERE sp.organization_id = sqlc.arg(organization_id)

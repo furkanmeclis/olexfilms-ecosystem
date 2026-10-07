@@ -11,8 +11,8 @@ import (
 // abandoned client registrations (TEC-400).
 const TaskOAuthCleanup = "oauth:cleanup"
 
-// Hourly at minute 23, away from the other maintenance jobs.
-const oauthCleanupCron = "23 * * * *"
+// Hourly at minute 31, away from the other maintenance jobs.
+const oauthCleanupCron = "31 * * * *"
 
 // OAuthCleanupFunc runs one cleanup pass.
 type OAuthCleanupFunc func(ctx context.Context) error

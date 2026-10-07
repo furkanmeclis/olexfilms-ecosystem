@@ -9,6 +9,12 @@ export type StaffProfilePatchInput = Schemas["StaffProfilePatchInput"];
 export type StaffPayment = Schemas["StaffPayment"];
 export type StaffPaymentType = Schemas["StaffPaymentType"];
 export type StaffPaymentCreateInput = Schemas["StaffPaymentCreateInput"];
+export type StaffPaymentStatus = Schemas["StaffPaymentStatus"];
+export type StaffPaymentPatchInput = Schemas["StaffPaymentPatchInput"];
+/** A payment list page with the amount total of every matching payment. */
+export type StaffPaymentPage = Schemas["EnvelopeStaffPaymentPage"]["data"];
+/** List contract query of GET /v1/staff-payments (docs/list-contract.md). */
+export type StaffPaymentListQuery = Record<string, string | number | undefined>;
 export type StaffPayrollResult = Schemas["StaffPayrollResult"];
 export type PnlReport = Schemas["AccountingPnlReport"];
 export type PnlLine = Schemas["AccountingPnlLine"];
@@ -30,6 +36,16 @@ export const STAFF_PAYMENT_TYPES: StaffPaymentType[] = [
   "advance",
   "bonus",
 ];
+
+/** Payment states (TEC-381): planned until paid_on, then posted. */
+export const STAFF_PAYMENT_STATUSES: StaffPaymentStatus[] = [
+  "planned",
+  "posted",
+  "cancelled",
+];
+
+/** Rows of the "upcoming staff payments" summary of the reports page. */
+export const UPCOMING_PREVIEW_LIMIT = 5;
 
 /** The four report pages of the own book (TEC-346 endpoints). */
 export const REPORT_KINDS = [
@@ -132,11 +148,49 @@ export const staffReportsService = {
     );
   },
 
-  runPayroll(period: string) {
+  /**
+   * Month-end payroll; a future paid_on writes planned salaries that are
+   * booked on that day (TEC-381).
+   */
+  runPayroll(period: string, paidOn?: string) {
     return platformRequest<StaffPayrollResult>(
       "POST",
       "/v1/staff-payments/payroll",
-      { query: { period } },
+      { query: compact({ period, paid_on: paidOn }) },
+    );
+  },
+
+  /** Payments of every staff card of the book (server list, TEC-381). */
+  listBookPayments(query: StaffPaymentListQuery) {
+    return platformRequest<StaffPaymentPage>("GET", "/v1/staff-payments", {
+      query: compact(query),
+    });
+  },
+
+  /** The next planned payments and the total still to go out. */
+  upcomingPayments() {
+    return platformRequest<StaffPaymentPage>("GET", "/v1/staff-payments", {
+      query: {
+        status: "planned",
+        sort: "paid_on",
+        limit: UPCOMING_PREVIEW_LIMIT,
+      },
+    });
+  },
+
+  updatePayment(uuid: string, body: StaffPaymentPatchInput) {
+    return platformRequest<StaffPayment>(
+      "PATCH",
+      `/v1/staff-payments/${encodeURIComponent(uuid)}`,
+      { body },
+    );
+  },
+
+  /** Cancels a planned payment; it never reached the ledger. */
+  cancelPayment(uuid: string) {
+    return platformRequest<StaffPayment>(
+      "POST",
+      `/v1/staff-payments/${encodeURIComponent(uuid)}/cancel`,
     );
   },
 
@@ -207,4 +261,7 @@ export const staffReportsKeys = {
     ["staff-reports", org, "payments", staff] as const,
   report: (org: string, kind: ReportKind, query: unknown) =>
     ["staff-reports", org, "report", kind, query] as const,
+  planned: (org: string, query: unknown) =>
+    ["staff-reports", org, "planned", query] as const,
+  upcoming: (org: string) => ["staff-reports", org, "upcoming"] as const,
 };

@@ -530,6 +530,7 @@ FROM staff_profiles sp
 JOIN staff_payments p ON p.staff_id = sp.id
                      AND p.organization_id = sp.organization_id
                      AND p.voided_at IS NULL
+                     AND p.status = 'posted'
                      AND ($1::date IS NULL OR p.paid_on >= $1::date)
                      AND ($2::date IS NULL OR p.paid_on <= $2::date)
 WHERE sp.organization_id = $3
@@ -556,8 +557,8 @@ type ListStaffCostTotalsRow struct {
 }
 
 // ListStaffCostTotals is the salary/advance/bonus total per staff card of
-// the book over the non-void payments paid in the period (paid_on, both
-// days inclusive).
+// the book over the non-void booked payments paid in the period (paid_on,
+// both days inclusive). Planned payments are not costs yet (TEC-381).
 func (q *Queries) ListStaffCostTotals(ctx context.Context, arg ListStaffCostTotalsParams) ([]ListStaffCostTotalsRow, error) {
 	rows, err := q.db.Query(ctx, listStaffCostTotals, arg.PaidFrom, arg.PaidTo, arg.OrganizationID)
 	if err != nil {

@@ -17779,18 +17779,43 @@ paths:
       operationId: listStaffPayments
       summary: Payment history of one staff card (TEC-349)
       description: >-
-        Requires `staff.manage`. Non-void salary, advance and bonus payments,
-        newest payment day first. `type` and `period` narrow the list.
+        Requires `staff.manage`. Non-void salary, advance and bonus payments
+        (planned, posted and cancelled, TEC-381), newest payment day first.
+        Sort fields: `paid_on` (default `-paid_on`), `amount`, `created_at`,
+        `type`, `status`, `period`, `staff_name`. `total_amount` sums every
+        matching payment.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/ResourceUUID"
         - name: type
           in: query
-          schema: { $ref: "#/components/schemas/StaffPaymentType" }
+          description: One or more payment types (CSV).
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/StaffPaymentType" }
+        - name: status
+          in: query
+          description: One or more payment states (CSV).
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/StaffPaymentStatus" }
         - name: period
           in: query
           schema: { type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$', example: "2026-10" }
+        - name: paid_on_from
+          in: query
+          description: First payment day (inclusive).
+          schema: { type: string, format: date }
+        - name: paid_on_to
+          in: query
+          description: Last payment day (inclusive).
+          schema: { type: string, format: date }
+        - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
       responses:
@@ -17808,8 +17833,11 @@ paths:
       operationId: createStaffPayment
       summary: Record salary, advance or bonus for one staff card
       description: >-
-        Requires `staff_payments.write`. Writes a sourced expense row in the same transaction
-        (`source_type=staff_payment`): `salary`, `staff_advance` or `staff_bonus`. Salary amount
+        Requires `staff_payments.write`. A payment whose `paid_on` (default today in the
+        organization's time zone) is today or past writes a sourced expense row dated `paid_on` in
+        the same transaction (`source_type=staff_payment`): `salary`, `staff_advance` or
+        `staff_bonus`. A future `paid_on` keeps the payment `planned` with no ledger row; the
+        worker books it on that day (TEC-381). Salary amount
         defaults to the staff card monthly salary. A second open salary for the same staff period
         returns 409 `STAFF_SALARY_EXISTS`. Salary responses include the same-period advances total.
       security:
@@ -17841,7 +17869,8 @@ paths:
       description: >-
         Requires `staff_payments.write`. Creates salary payments and sourced salary expense rows
         for active staff with a monthly salary. The operation is idempotent: staff who already have
-        a non-void salary in the period are skipped.
+        a non-void, non-cancelled salary in the period are skipped. `paid_on` (default today) is
+        the payment day; a future day writes planned salaries booked on that day (TEC-381).
       security:
         - bearerAuth: []
       parameters:
@@ -17849,6 +17878,9 @@ paths:
           in: query
           required: true
           schema: { type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$', example: "2026-10" }
+        - name: paid_on
+          in: query
+          schema: { type: string, format: date }
       responses:
         "201":
           description: Payroll result
@@ -17858,6 +17890,114 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/staff-payments:
+    get:
+      tags: [Accounting]
+      operationId: listBookStaffPayments
+      summary: Staff payments of every staff card of the book (TEC-381)
+      description: >-
+        Requires `staff.manage`. Same filters, sort and `total_amount` as the
+        staff card history; `status=planned` lists the upcoming payments.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          description: One or more payment types (CSV).
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/StaffPaymentType" }
+        - name: status
+          in: query
+          description: One or more payment states (CSV).
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/StaffPaymentStatus" }
+        - name: period
+          in: query
+          schema: { type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$', example: "2026-10" }
+        - name: paid_on_from
+          in: query
+          description: First payment day (inclusive).
+          schema: { type: string, format: date }
+        - name: paid_on_to
+          in: query
+          description: Last payment day (inclusive).
+          schema: { type: string, format: date }
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Staff payment page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStaffPaymentPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/staff-payments/{uuid}:
+    patch:
+      tags: [Accounting]
+      operationId: updateStaffPayment
+      summary: Edit a planned staff payment (TEC-381)
+      description: >-
+        Requires `staff_payments.write`. Only a `planned` payment is edited;
+        a posted one is undone by a reversal and answers 422
+        `STAFF_PAYMENT_NOT_PLANNED`. A `paid_on` moved to today or earlier
+        books the payment at once on that day.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StaffPaymentPatchInput" }
+      responses:
+        "200":
+          description: Staff payment updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStaffPayment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/staff-payments/{uuid}/cancel:
+    post:
+      tags: [Accounting]
+      operationId: cancelStaffPayment
+      summary: Cancel a planned staff payment (TEC-381)
+      description: >-
+        Requires `staff_payments.write`. A planned payment never reached the
+        ledger, so cancelling it books nothing; a cancelled salary frees its
+        period. A posted or cancelled payment answers 422
+        `STAFF_PAYMENT_NOT_PLANNED`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Staff payment cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStaffPayment" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
   /v1/accounting/reports/pnl:
     get:
@@ -30777,11 +30917,21 @@ components:
             - type: "null"
         active: { type: boolean }
 
+    StaffPaymentStatus:
+      type: string
+      description: >-
+        planned: paid_on is ahead, no ledger row yet; posted: booked on
+        paid_on; cancelled: a planned payment called off (TEC-381).
+      enum: [planned, posted, cancelled]
+
     StaffPayment:
       type: object
       required:
         - uuid
         - staff_uuid
+        - staff_name
+        - status
+        - account_uuid
         - type
         - period
         - amount
@@ -30795,6 +30945,9 @@ components:
       properties:
         uuid: { type: string, format: uuid }
         staff_uuid: { type: string, format: uuid }
+        staff_name: { type: string }
+        status: { $ref: "#/components/schemas/StaffPaymentStatus" }
+        account_uuid: { type: [string, "null"], format: uuid }
         type: { $ref: "#/components/schemas/StaffPaymentType" }
         period: { type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$' }
         amount: { $ref: "#/components/schemas/AccountingAmount" }
@@ -30802,7 +30955,10 @@ components:
         paid_on: { type: string, format: date }
         description: { type: [string, "null"] }
         target_note: { type: [string, "null"] }
-        finance_entry_uuid: { type: string, format: uuid }
+        finance_entry_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: Ledger row; null while the payment is planned or cancelled.
         period_advances: { $ref: "#/components/schemas/AccountingAmount" }
         created_at: { type: string, format: date-time }
 
@@ -30821,6 +30977,18 @@ components:
           type: [string, "null"]
           format: uuid
           description: Optional cash/bank account for the payment movement.
+        description: { type: [string, "null"], maxLength: 1500 }
+        target_note: { type: [string, "null"], maxLength: 400 }
+        paid_on: { type: string, format: date }
+
+    StaffPaymentPatchInput:
+      type: object
+      additionalProperties: false
+      properties:
+        type: { $ref: "#/components/schemas/StaffPaymentType" }
+        period: { type: string, pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$', example: "2026-10" }
+        amount: { $ref: "#/components/schemas/AccountingAmountInput" }
+        account_uuid: { type: string, format: uuid }
         description: { type: [string, "null"], maxLength: 1500 }
         target_note: { type: [string, "null"], maxLength: 400 }
         paid_on: { type: string, format: date }
@@ -30851,7 +31019,7 @@ components:
         success: { type: boolean, enum: [true] }
         data:
           type: object
-          required: [items, total, limit, offset]
+          required: [items, total, limit, offset, total_amount, currency]
           properties:
             items:
               type: array
@@ -30859,6 +31027,11 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+            total_amount:
+              description: Sum of every matching payment (all pages).
+              allOf:
+                - $ref: "#/components/schemas/AccountingAmount"
+            currency: { type: string, minLength: 3, maxLength: 3 }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStaffProfilePage:

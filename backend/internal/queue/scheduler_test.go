@@ -54,6 +54,7 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		{cron: glorianPullCron, taskType: TaskGlorianPullCatalog, queue: QueueMaintenance}:              false,
 		{cron: glorianPushCron, taskType: TaskGlorianPushBarcodes, queue: QueueMaintenance}:             false,
 		{cron: glorianOrderReplayCron, taskType: TaskGlorianOrderReplay, queue: QueueMaintenance}:       false,
+		{cron: staffPaymentsPostDueCron, taskType: TaskStaffPaymentsPostDue, queue: QueueMaintenance}:   false,
 		{cron: oauthCleanupCron, taskType: TaskOAuthCleanup, queue: QueueMaintenance}:                   false,
 	}
 	for _, e := range r.entries {

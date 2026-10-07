@@ -212,7 +212,7 @@ func TestStaffPayments_PayrollIdempotentForActiveStaff(t *testing.T) {
 		t.Fatalf("staff 2: %v", err)
 	}
 
-	pay, err := svc.RunPayroll(e.ctx, caller(e.dealer, rbac.PermStaffPaymentsWrite), "2026-10")
+	pay, err := svc.RunPayroll(e.ctx, caller(e.dealer, rbac.PermStaffPaymentsWrite), "2026-10", nil)
 	if err != nil {
 		t.Fatalf("payroll: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestStaffPayments_PayrollIdempotentForActiveStaff(t *testing.T) {
 		t.Fatalf("salary expense total = %s", total)
 	}
 
-	again, err := svc.RunPayroll(e.ctx, caller(e.dealer, rbac.PermStaffPaymentsWrite), "2026-10")
+	again, err := svc.RunPayroll(e.ctx, caller(e.dealer, rbac.PermStaffPaymentsWrite), "2026-10", nil)
 	if err != nil {
 		t.Fatalf("payroll second: %v", err)
 	}
@@ -268,7 +268,7 @@ func TestStaffPayments_PayrollSkipsInactiveStaff(t *testing.T) {
 	if err != nil {
 		t.Fatalf("inactive staff: %v", err)
 	}
-	pay, err := svc.RunPayroll(e.ctx, caller(e.dealer, rbac.PermStaffPaymentsWrite), "2026-11")
+	pay, err := svc.RunPayroll(e.ctx, caller(e.dealer, rbac.PermStaffPaymentsWrite), "2026-11", nil)
 	if err != nil {
 		t.Fatalf("payroll: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestStaffPayments_AdvanceAndSalarySamePeriod(t *testing.T) {
 	if err != nil {
 		t.Fatalf("account: %v", err)
 	}
-	paidOn := time.Date(2026, 12, 5, 0, 0, 0, 0, time.UTC)
+	paidOn := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
 	advance, err := svc.CreateStaffPayment(e.ctx, caller(e.dealer, rbac.PermStaffPaymentsWrite), staff.UUID, acc.StaffPaymentInput{
 		Type: acc.StaffPaymentAdvance, Period: "2026-12", Amount: strPtr("300"), AccountUUID: &cash.UUID,
 		Description: strPtr("Yol avansı"), PaidOn: &paidOn,
