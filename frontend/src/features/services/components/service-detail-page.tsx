@@ -47,6 +47,8 @@ import {
 } from "@/features/services/components/service-detail-tables";
 import { ServiceContractCard } from "@/features/services/components/service-contract-card";
 import { ServicePdfButton } from "@/features/services/components/service-pdf-button";
+import { ServiceMeasurementsSection } from "@/features/measurements/components/service-measurements-section";
+import { useFeature } from "@/features/modules/hooks/use-features";
 import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
 import { panelCertificateClient } from "@/features/warranty/services/certificate.service";
 import { isApiError } from "@/lib/api";
@@ -320,6 +322,8 @@ function StatusHistory({ service }: { service: Service }) {
  * Service detail (TEC-183): vehicle and customer, items with their parts,
  * images, warranties and the status history. A draft the caller may still
  * edit links back to the wizard; "PDF" downloads the service PDF (TEC-196).
+ * TEC-300: a service expecting a measurement shows the before/after
+ * section while the measurements module and measurements.link are on.
  */
 export function ServiceDetailPage({
   slug,
@@ -331,6 +335,7 @@ export function ServiceDetailPage({
   const { t, format, locale } = useLocale();
   const { can } = usePermission();
   const access = resolveServiceListAccess(can);
+  const measurements = useFeature(slug, "measurements");
 
   const service = useQuery({
     queryKey: serviceWizardKeys.service(uuid),
@@ -457,6 +462,16 @@ export function ServiceDetailPage({
         </Card>
       ) : null}
       {s.contract ? <ServiceContractCard contract={s.contract} /> : null}
+      {s.has_measurement &&
+      measurements.enabled &&
+      can(permissions.measurements.link) ? (
+        <ServiceMeasurementsSection
+          slug={slug}
+          serviceUuid={s.uuid}
+          editable={s.status !== "cancelled"}
+          canOpen={can(permissions.measurements.read)}
+        />
+      ) : null}
       <Items service={s} />
       <Warranties service={s} slug={slug} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

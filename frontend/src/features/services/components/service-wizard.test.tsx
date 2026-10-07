@@ -18,6 +18,10 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (key: string, params?: Record<string, string | number>) =>
       params ? `${key} ${JSON.stringify(params)}` : key,
+    format: {
+      number: (v: number) => String(v),
+      dateTime: (v: string) => `dt(${v})`,
+    },
   }),
 }));
 vi.mock("@/providers/toast-provider", () => ({
@@ -27,6 +31,24 @@ vi.mock("@/providers/toast-provider", () => ({
     warning: vi.fn(),
     info: vi.fn(),
   },
+}));
+const gate = vi.hoisted(() => ({
+  grants: new Set<string>(),
+  features: [] as string[],
+  request: vi.fn(),
+}));
+vi.mock("@/providers/permission-provider", () => ({
+  usePermission: () => ({ can: (p: string) => gate.grants.has(p) }),
+}));
+vi.mock("@/features/modules/hooks/use-features", () => ({
+  useFeature: (_slug: string, key: string) => ({
+    enabled: gate.features.includes(key),
+    isLoading: false,
+    isError: false,
+  }),
+}));
+vi.mock("@/lib/api/platform-request", () => ({
+  platformRequest: gate.request,
 }));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
@@ -73,6 +95,8 @@ afterEach(() => {
   act(() => root.unmount());
   container.remove();
   vi.clearAllMocks();
+  gate.grants = new Set();
+  gate.features = [];
 });
 
 async function flush() {
@@ -379,6 +403,7 @@ describe("Step 3: measurement and VIN", () => {
     const onSaved = vi.fn();
     await render(
       createElement(MeasurementStep, {
+        slug: "acme",
         service: service(),
         onSaved,
         onBack: vi.fn(),
@@ -412,6 +437,7 @@ describe("Step 3: measurement and VIN", () => {
     const onSaved = vi.fn();
     await render(
       createElement(MeasurementStep, {
+        slug: "acme",
         service: service(),
         onSaved,
         onBack: vi.fn(),
@@ -432,6 +458,7 @@ describe("Step 3: measurement and VIN", () => {
     api.updateService.mockResolvedValue(service());
     await render(
       createElement(MeasurementStep, {
+        slug: "acme",
         service: service({ has_measurement: true, vin: "WVWZZZ1JZ3W386752" }),
         onSaved: vi.fn(),
         onBack: vi.fn(),
@@ -458,6 +485,7 @@ describe("Step 3: measurement and VIN", () => {
     const onSaved = vi.fn();
     await render(
       createElement(MeasurementStep, {
+        slug: "acme",
         service: service(),
         onSaved,
         onBack: vi.fn(),
@@ -469,5 +497,120 @@ describe("Step 3: measurement and VIN", () => {
       "services.vin.errors.server",
     );
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  describe("before report selection (TEC-300)", () => {
+    const VIN = "WVWZZZ1JZ3W386752";
+    const brief = (uuid: string, at: string) => ({
+      uuid,
+      vin: VIN,
+      status: "accepted" as const,
+      source: "mobile" as const,
+      device_serial: `SN-${uuid}`,
+      measured_at: at,
+      created_at: at,
+    });
+    const reports = {
+      service_uuid: "s1",
+      vin: VIN,
+      has_measurement: true,
+      status: "draft",
+      links: [],
+      suggestions: [
+        { phase: "before", measurement: brief("m1", "2026-10-05T10:00:00Z") },
+      ],
+      candidates: [brief("m2", "2026-09-01T10:00:00Z")],
+    };
+
+    function routeRequests(linked = reports) {
+      gate.request.mockImplementation((method: string, path: string) => {
+        if (method === "GET" && path === "/v1/services/s1/measurements") {
+          return Promise.resolve(reports);
+        }
+        if (method === "POST" && path === "/v1/services/s1/measurements") {
+          return Promise.resolve(linked);
+        }
+        return Promise.reject(new Error(`unexpected ${method} ${path}`));
+      });
+    }
+
+    it("lists the VIN's measurements and POSTs the picked one as before", async () => {
+      gate.grants = new Set(["measurements.link"]);
+      gate.features = ["measurements"];
+      routeRequests();
+      const saved = service({ has_measurement: true, vin: VIN });
+      api.updateService.mockResolvedValue(saved);
+      const onSaved = vi.fn();
+      await render(
+        createElement(MeasurementStep, {
+          slug: "acme",
+          service: service({ has_measurement: true, vin: VIN }),
+          onSaved,
+          onBack: vi.fn(),
+        }),
+      );
+      const options = $$("[data-testid=measurement-option]");
+      expect(options.map((o) => o.getAttribute("data-uuid"))).toEqual([
+        "m1",
+        "m2",
+      ]);
+      expect($("[data-testid=measurement-reports-warning]")).not.toBeNull();
+
+      await click(options[1]);
+      expect(options[1]?.getAttribute("aria-checked")).toBe("true");
+      expect($("[data-testid=measurement-reports-warning]")).toBeNull();
+
+      await click($("[data-testid=measurement-save]"));
+      expect(api.updateService).toHaveBeenCalledWith("s1", {
+        vin: VIN,
+        has_measurement: true,
+      });
+      expect(gate.request).toHaveBeenCalledWith(
+        "POST",
+        "/v1/services/s1/measurements",
+        { body: { measurement_uuid: "m2", phase: "before" } },
+      );
+      expect(onSaved).toHaveBeenCalledWith(saved);
+    });
+
+    it("warns without a pick but saves and continues without a link", async () => {
+      gate.grants = new Set(["measurements.link"]);
+      gate.features = ["measurements"];
+      routeRequests();
+      const saved = service({ has_measurement: true, vin: VIN });
+      api.updateService.mockResolvedValue(saved);
+      const onSaved = vi.fn();
+      await render(
+        createElement(MeasurementStep, {
+          slug: "acme",
+          service: service({ has_measurement: true, vin: VIN }),
+          onSaved,
+          onBack: vi.fn(),
+        }),
+      );
+      expect($("[data-testid=measurement-reports-warning]")).not.toBeNull();
+      await click($("[data-testid=measurement-save]"));
+      expect(onSaved).toHaveBeenCalledWith(saved);
+      expect(gate.request).not.toHaveBeenCalledWith(
+        "POST",
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it("lists nothing while the module is off", async () => {
+      gate.grants = new Set(["measurements.link"]);
+      routeRequests();
+      await render(
+        createElement(MeasurementStep, {
+          slug: "acme",
+          service: service({ has_measurement: true, vin: VIN }),
+          onSaved: vi.fn(),
+          onBack: vi.fn(),
+        }),
+      );
+      expect($("[data-testid=measurement-reports]")).toBeNull();
+      expect(gate.request).not.toHaveBeenCalled();
+    });
   });
 });

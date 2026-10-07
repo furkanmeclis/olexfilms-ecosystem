@@ -64,7 +64,7 @@
   "measurement.no": "Xeyr",
   "measurement.vin_required": "Ölçmə VIN ilə uyğunlaşdırılır, buna görə VIN mütləqdir.",
   "measurement.vin_optional": "Ölçmə yoxdursa VIN könüllüdür.",
-  "measurement.report_placeholder": "Ölçmə hesabatının seçimi sonra əlavə olunacaq; hesabatın uyğunlaşdırılması üçün VIN indi saxlanılır.",
+  "measurement.report_auto": "VIN yadda saxlanılır; yüklənən ölçmə xidmətlə avtomatik uyğunlaşacaq.",
   "vin.label": "VIN (şassi nömrəsi)",
   "vin.hint": "17 hərf və ya rəqəm; I, O və Q istifadə olunmur.",
   "vin.errors.required": "Ölçmə üçün VIN mütləqdir.",

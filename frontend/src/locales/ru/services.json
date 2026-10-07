@@ -64,7 +64,7 @@
   "measurement.no": "Нет",
   "measurement.vin_required": "Замер сопоставляется по VIN, поэтому VIN обязателен.",
   "measurement.vin_optional": "Без замера VIN необязателен.",
-  "measurement.report_placeholder": "Выбор отчёта о замерах появится позже; VIN сохраняется сейчас, чтобы отчёт можно было сопоставить.",
+  "measurement.report_auto": "VIN сохраняется; загруженный замер будет сопоставлен с услугой автоматически.",
   "vin.label": "VIN (номер шасси)",
   "vin.hint": "17 букв или цифр; I, O и Q не используются.",
   "vin.errors.required": "Для замера VIN обязателен.",

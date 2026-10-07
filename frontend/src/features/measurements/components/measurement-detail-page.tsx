@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { FileDown, Gauge } from "lucide-react";
+import { Gauge } from "lucide-react";
 import Link from "next/link";
 import { useMemo, type ReactNode } from "react";
 
@@ -12,7 +12,6 @@ import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
 import { PageHeader } from "@/components/layout/page-header";
 import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
@@ -20,9 +19,9 @@ import {
   MeasurementStatusBadge,
   MeasurementVin,
 } from "@/features/measurements/components/measurement-status-badge";
+import { MeasurementPdfButton } from "@/features/measurements/components/measurement-pdf-button";
 import { MeasurementVinForm } from "@/features/measurements/components/measurement-vin-form";
 import { PartMap } from "@/features/measurements/components/part-map";
-import { useMeasurementPdf } from "@/features/measurements/hooks/use-measurement-pdf";
 import {
   interpretationColor,
   interpretationLevel,
@@ -84,7 +83,6 @@ export function MeasurementDetailPage({
   const canRead = can(permissions.measurements.read);
   const canLink = can(permissions.measurements.link);
   const canServices = can(permissions.services.read);
-  const pdf = useMeasurementPdf();
 
   const query = useQuery({
     queryKey: measurementKeys.detail(uuid),
@@ -248,20 +246,7 @@ export function MeasurementDetailPage({
         { label: title },
       ]}
       actions={
-        m ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={m.status !== "accepted" || pdf.isPending}
-            onClick={() => pdf.mutate(m.uuid)}
-            data-testid="measurement-pdf"
-          >
-            <FileDown className="size-4" />
-            {pdf.isPending
-              ? t("measurements.pdf.preparing")
-              : t("measurements.pdf.download")}
-          </Button>
-        ) : null
+        m ? <MeasurementPdfButton uuid={m.uuid} status={m.status} /> : null
       }
     />
   );

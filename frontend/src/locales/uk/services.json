@@ -64,7 +64,7 @@
   "measurement.no": "Ні",
   "measurement.vin_required": "Замір зіставляється за VIN, тому VIN обов'язковий.",
   "measurement.vin_optional": "Без заміру VIN необов'язковий.",
-  "measurement.report_placeholder": "Вибір звіту про заміри буде додано пізніше; VIN зберігається зараз, щоб звіт можна було зіставити.",
+  "measurement.report_auto": "VIN зберігається; завантажений замір буде зіставлено з послугою автоматично.",
   "vin.label": "VIN (номер шасі)",
   "vin.hint": "17 літер або цифр; I, O та Q не використовуються.",
   "vin.errors.required": "Для заміру VIN обов'язковий.",
