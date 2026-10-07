@@ -562,6 +562,47 @@ func TestDealerAccountingGrants(t *testing.T) {
 	}
 }
 
+// TEC-479: certificate definitions are center-owned; certificate upload
+// belongs to dealer/distributor owners, and verification is center or
+// distributor subtree only. Service-warning approval stays center-only.
+func TestCertificateGrants(t *testing.T) {
+	for _, slug := range []string{
+		PermCertificateTypesManage, PermCertificatesRead, PermCertificatesWrite,
+		PermCertificatesVerify, PermCertificatesApproveService,
+	} {
+		if _, ok := PermissionBySlug(slug); !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+	}
+	center, _ := RoleBySlug(RoleCenterStaff)
+	if center.Grants[PermCertificateTypesManage] != ScopeBrand ||
+		center.Grants[PermCertificatesRead] != ScopeBrand ||
+		center.Grants[PermCertificatesVerify] != ScopeBrand ||
+		center.Grants[PermCertificatesApproveService] != ScopeBrand {
+		t.Fatalf("center certificate grants = %v", center.Grants)
+	}
+	dist, _ := RoleBySlug(RoleDistributorOwner)
+	if dist.Grants[PermCertificatesRead] != ScopeSubtree ||
+		dist.Grants[PermCertificatesWrite] != ScopeSubtree ||
+		dist.Grants[PermCertificatesVerify] != ScopeSubtree {
+		t.Fatalf("distributor certificate grants = %v", dist.Grants)
+	}
+	dealer, _ := RoleBySlug(RoleDealerOwner)
+	if dealer.Grants[PermCertificatesRead] != ScopeManaged || dealer.Grants[PermCertificatesWrite] != ScopeManaged {
+		t.Fatalf("dealer certificate grants = %v", dealer.Grants)
+	}
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin || r.Slug == RoleCenterStaff || r.Slug == RoleDistributorOwner || r.Slug == RoleDealerOwner {
+			continue
+		}
+		for _, p := range []string{PermCertificateTypesManage, PermCertificatesWrite, PermCertificatesVerify, PermCertificatesApproveService} {
+			if _, ok := r.Grants[p]; ok {
+				t.Fatalf("%s must not hold %s", r.Slug, p)
+			}
+		}
+	}
+}
+
 // TEC-383: every panel role uses the assistant and confirms its own actions;
 // usage is read by owners and the center; settings stay super_admin only;
 // portal roles get no AI permission (realm check instead).

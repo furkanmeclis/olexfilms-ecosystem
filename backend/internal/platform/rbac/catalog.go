@@ -641,6 +641,34 @@ var Permissions = []PermissionDef{
 		Slug: PermCampaignsApprove, Name: "Approve campaigns", Module: "campaigns", Scopes: scopesTree,
 		Description: "Approve, reject or send back campaigns submitted to the organization for approval.",
 	},
+
+	// TEC-479: certificates addon (F5-03). Appended last; migration 000111
+	// seeds them.
+	{
+		Slug: PermCertificateTypesManage, Name: "Manage certificate types", Module: "certificates",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Create and update certificate types and their product/category bindings.",
+	},
+	{
+		Slug: PermCertificatesRead, Name: "Read certificates", Module: "certificates",
+		Scopes:      []Scope{ScopeManaged, ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Read user certificates and service certificate warnings in scope.",
+	},
+	{
+		Slug: PermCertificatesWrite, Name: "Write certificates", Module: "certificates",
+		Scopes:      []Scope{ScopeManaged, ScopeSubtree, ScopeAll},
+		Description: "Upload certificates for staff in the managed organization or subtree.",
+	},
+	{
+		Slug: PermCertificatesVerify, Name: "Verify certificates", Module: "certificates",
+		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Verify or reject certificates of the brand or distributor subtree.",
+	},
+	{
+		Slug: PermCertificatesApproveService, Name: "Approve certificate service warnings", Module: "certificates",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Approve or reject service status changes blocked by certificate warnings.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -775,6 +803,11 @@ var Roles = []RoleDef{
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:   ScopeBrand,
 			PermWarrantyClaimsDecide: ScopeBrand,
+			// TEC-479 (000111).
+			PermCertificateTypesManage:     ScopeBrand,
+			PermCertificatesRead:           ScopeBrand,
+			PermCertificatesVerify:         ScopeBrand,
+			PermCertificatesApproveService: ScopeBrand,
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
@@ -977,6 +1010,10 @@ var Roles = []RoleDef{
 			PermWarrantyClaimsRead:   ScopeSubtree,
 			PermWarrantyClaimsWrite:  ScopeManaged,
 			PermWarrantyClaimsReview: ScopeSubtree,
+			// TEC-479 (000111).
+			PermCertificatesRead:   ScopeSubtree,
+			PermCertificatesWrite:  ScopeSubtree,
+			PermCertificatesVerify: ScopeSubtree,
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
@@ -1147,6 +1184,9 @@ var Roles = []RoleDef{
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:  ScopeManaged,
 			PermWarrantyClaimsWrite: ScopeManaged,
+			// TEC-479 (000111).
+			PermCertificatesRead:  ScopeManaged,
+			PermCertificatesWrite: ScopeManaged,
 			// TEC-341 (000093).
 			PermAccountingWrite:    ScopeManaged,
 			PermDealerPricingWrite: ScopeManaged,
