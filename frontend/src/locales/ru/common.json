@@ -56,5 +56,15 @@
   "short_link.not_found_body": "Такой ссылки не существует. Проверьте, что она скопирована полностью.",
   "short_link.error_title": "Не удалось открыть ссылку",
   "short_link.error_body": "Что-то пошло не так. Попробуйте ещё раз через минуту.",
-  "short_link.home": "На главную"
+  "short_link.home": "На главную",
+  "campaign_unsubscribe.page_title": "Отписаться",
+  "campaign_unsubscribe.title": "Отписаться от сообщений об акциях?",
+  "campaign_unsubscribe.body": "Если вы подтвердите, мы больше не будем присылать вам акции, скидки и объявления (WhatsApp, push-уведомления, электронная почта). Уведомления об услугах, записях и гарантиях сохранятся.",
+  "campaign_unsubscribe.confirm": "Отписаться",
+  "campaign_unsubscribe.done_title": "Вы отписались",
+  "campaign_unsubscribe.done_body": "Вы больше не будете получать сообщения об акциях.",
+  "campaign_unsubscribe.invalid_title": "Недействительная ссылка",
+  "campaign_unsubscribe.invalid_body": "Эта ссылка для отписки недействительна. Убедитесь, что скопировали ссылку полностью.",
+  "campaign_unsubscribe.error": "Произошла ошибка. Попробуйте ещё раз чуть позже.",
+  "campaign_unsubscribe.home": "На главную страницу"
 }

@@ -171,3 +171,46 @@ func TestExpoProviderAgainstHTTPTest(t *testing.T) {
 		t.Fatalf("no tokens: %v", err)
 	}
 }
+
+// TEC-407: a campaign push carries its image (payload image_url, https
+// only) to web push ("image") and Expo ("richContent.image").
+func TestPushProvidersCarryImage(t *testing.T) {
+	n := db.Notification{
+		Uuid: uuid.New(), Title: "T", Body: "B", UserID: pgtype.Int8{Int64: 1, Valid: true},
+		Payload: []byte(`{"image_url":"https://cdn.example.test/a.png"}`),
+	}
+	var web map[string]any
+	wp := WebPushProvider{
+		Store: &fakeWebPushStore{subs: []db.PushSubscription{{Endpoint: "https://push/ok"}}},
+		VAPID: VAPID{PublicKey: "pub", PrivateKey: "priv"},
+		Send: func(msg []byte, _ *webpush.Subscription, _ *webpush.Options) (*http.Response, error) {
+			_ = json.Unmarshal(msg, &web)
+			return &http.Response{StatusCode: http.StatusCreated, Body: io.NopCloser(strings.NewReader(""))}, nil
+		},
+	}
+	if _, err := wp.Deliver(context.Background(), n, nil); err != nil {
+		t.Fatal(err)
+	}
+	if web["image"] != "https://cdn.example.test/a.png" {
+		t.Fatalf("web push payload = %v", web)
+	}
+	var got []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		_, _ = io.WriteString(w, `{"data":[{"status":"ok","id":"t"}]}`)
+	}))
+	defer srv.Close()
+	ep := ExpoProvider{Store: &fakeExpoStore{tokens: []db.DevicePushToken{{ExpoToken: "ExponentPushToken[a]"}}}, URL: srv.URL, HTTP: srv.Client()}
+	if _, err := ep.Deliver(context.Background(), n, nil); err != nil {
+		t.Fatal(err)
+	}
+	rich, _ := got[0]["richContent"].(map[string]any)
+	if rich["image"] != "https://cdn.example.test/a.png" {
+		t.Fatalf("expo message = %v", got[0])
+	}
+	n.Payload = []byte(`{"image_url":"http://insecure.test/a.png"}`)
+	web = nil
+	if _, err := wp.Deliver(context.Background(), n, nil); err != nil || web["image"] != nil {
+		t.Fatalf("non-https image must be dropped: %v %v", web, err)
+	}
+}

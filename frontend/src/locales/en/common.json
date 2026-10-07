@@ -54,5 +54,15 @@
   "short_link.not_found_body": "This link does not exist. Check that it was copied completely.",
   "short_link.error_title": "The link could not be opened",
   "short_link.error_body": "Something went wrong. Please try again in a moment.",
-  "short_link.home": "Go to homepage"
+  "short_link.home": "Go to homepage",
+  "campaign_unsubscribe.page_title": "Unsubscribe",
+  "campaign_unsubscribe.title": "Unsubscribe from campaign messages?",
+  "campaign_unsubscribe.body": "If you confirm, we will no longer send you campaigns, discounts or announcements (WhatsApp, push notifications, e-mail). Service, appointment and warranty notifications are not affected.",
+  "campaign_unsubscribe.confirm": "Unsubscribe",
+  "campaign_unsubscribe.done_title": "You have unsubscribed",
+  "campaign_unsubscribe.done_body": "You will no longer receive campaign messages.",
+  "campaign_unsubscribe.invalid_title": "Invalid link",
+  "campaign_unsubscribe.invalid_body": "This unsubscribe link is not valid. Make sure you copied the whole link.",
+  "campaign_unsubscribe.error": "Something went wrong. Please try again in a moment.",
+  "campaign_unsubscribe.home": "Go to homepage"
 }

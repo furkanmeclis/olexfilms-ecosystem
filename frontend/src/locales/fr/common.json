@@ -54,5 +54,15 @@
   "short_link.not_found_body": "Ce lien n'existe pas. Vérifiez qu'il a été copié en entier.",
   "short_link.error_title": "Impossible d'ouvrir le lien",
   "short_link.error_body": "Une erreur s'est produite. Veuillez réessayer dans un instant.",
-  "short_link.home": "Aller à l'accueil"
+  "short_link.home": "Aller à l'accueil",
+  "campaign_unsubscribe.page_title": "Se désabonner",
+  "campaign_unsubscribe.title": "Ne plus recevoir nos offres ?",
+  "campaign_unsubscribe.body": "Si vous confirmez, nous ne vous enverrons plus d'offres, de remises ni d'annonces (WhatsApp, notifications push, e-mail). Les notifications de service, de rendez-vous et de garantie ne changent pas.",
+  "campaign_unsubscribe.confirm": "Se désabonner",
+  "campaign_unsubscribe.done_title": "Vous êtes désabonné",
+  "campaign_unsubscribe.done_body": "Vous ne recevrez plus nos messages promotionnels.",
+  "campaign_unsubscribe.invalid_title": "Lien non valide",
+  "campaign_unsubscribe.invalid_body": "Ce lien de désabonnement n'est pas valide. Vérifiez que vous avez copié le lien en entier.",
+  "campaign_unsubscribe.error": "Un problème est survenu. Veuillez réessayer dans un instant.",
+  "campaign_unsubscribe.home": "Aller à l'accueil"
 }

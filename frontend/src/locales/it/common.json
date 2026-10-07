@@ -54,5 +54,15 @@
   "short_link.not_found_body": "Questo link non esiste. Verifica che sia stato copiato per intero.",
   "short_link.error_title": "Impossibile aprire il link",
   "short_link.error_body": "Qualcosa è andato storto. Riprova tra un momento.",
-  "short_link.home": "Vai alla home page"
+  "short_link.home": "Vai alla home page",
+  "campaign_unsubscribe.page_title": "Annulla l'iscrizione",
+  "campaign_unsubscribe.title": "Vuoi annullare l'iscrizione ai messaggi promozionali?",
+  "campaign_unsubscribe.body": "Se confermi, non ti invieremo più campagne, sconti e annunci (WhatsApp, notifiche push, e-mail). Le notifiche su servizi, appuntamenti e garanzie restano attive.",
+  "campaign_unsubscribe.confirm": "Annulla l'iscrizione",
+  "campaign_unsubscribe.done_title": "Iscrizione annullata",
+  "campaign_unsubscribe.done_body": "Non riceverai più messaggi promozionali.",
+  "campaign_unsubscribe.invalid_title": "Link non valido",
+  "campaign_unsubscribe.invalid_body": "Questo link di annullamento non è valido. Assicurati di aver copiato il link completo.",
+  "campaign_unsubscribe.error": "Si è verificato un problema. Riprova tra poco.",
+  "campaign_unsubscribe.home": "Vai alla home page"
 }

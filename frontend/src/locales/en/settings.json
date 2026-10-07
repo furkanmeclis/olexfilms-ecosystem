@@ -149,5 +149,13 @@
   "system.keys.ai_visitor_daily_token_cap": "Daily token cap for WhatsApp visitor AI",
   "system.keys.ai_visitor_daily_token_cap_hint": "Tokens all unidentified WhatsApp visitors may use per day from the system pool; above it they get a fixed reply with the dealer finder link. 0 = no cap.",
   "system.keys.whatsapp_ai_guidelines_url": "AI guidelines link",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "Guidelines link (https) sent with the WhatsApp consent question; empty = the guidelines text is sent in the message."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Guidelines link (https) sent with the WhatsApp consent question; empty = the guidelines text is sent in the message.",
+  "system.groups.campaigns": "Campaigns",
+  "system.groups.campaigns_hint": "WhatsApp rate and quiet hours of campaign sending.",
+  "system.keys.campaigns_whatsapp_per_minute": "Campaign WhatsApp messages per minute",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Campaign WhatsApp messages sent per minute over all recipients; further messages wait in the queue.",
+  "system.keys.campaigns_quiet_hours_start": "Quiet hours start",
+  "system.keys.campaigns_quiet_hours_start_hint": "From this hour in the recipient's time zone campaign WhatsApp messages wait (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Quiet hours end",
+  "system.keys.campaigns_quiet_hours_end_hint": "Waiting messages go out at this hour of the recipient's time zone; equal to the start turns quiet hours off (0–23)."
 }

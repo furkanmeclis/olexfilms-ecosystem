@@ -194,6 +194,18 @@ func (s *Service) MCPRequestsPerHourPerOrg(ctx context.Context) int {
 	return int(s.Int(ctx, KeyMCPRequestsPerHourPerOrg))
 }
 
+// CampaignsWhatsAppPerMinute is the typed accessor for
+// KeyCampaignsWhatsAppPerMinute.
+func (s *Service) CampaignsWhatsAppPerMinute(ctx context.Context) int {
+	return int(s.Int(ctx, KeyCampaignsWhatsAppPerMinute))
+}
+
+// CampaignsQuietHours returns the campaign WhatsApp quiet hours (start,
+// end hour of day; equal = off).
+func (s *Service) CampaignsQuietHours(ctx context.Context) (int, int) {
+	return int(s.Int(ctx, KeyCampaignsQuietHoursStart)), int(s.Int(ctx, KeyCampaignsQuietHoursEnd))
+}
+
 // SMTP groups the smtp.* keys. Empty Host / zero Port mean "use the
 // environment configuration".
 type SMTP struct {

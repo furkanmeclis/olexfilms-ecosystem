@@ -149,5 +149,13 @@
   "system.keys.ai_visitor_daily_token_cap": "Дневен лимит на токени за AI с посетители в WhatsApp",
   "system.keys.ai_visitor_daily_token_cap_hint": "Токени, които всички неидентифицирани посетители в WhatsApp могат да използват на ден от системния пул; над него получават фиксиран отговор с връзка за търсене на дилър. 0 = без лимит.",
   "system.keys.whatsapp_ai_guidelines_url": "Връзка към правилата за AI",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "Връзка (https) към правилата, изпращана с въпроса за съгласие в WhatsApp; празно = текстът на правилата се изпраща в съобщението."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Връзка (https) към правилата, изпращана с въпроса за съгласие в WhatsApp; празно = текстът на правилата се изпраща в съобщението.",
+  "system.groups.campaigns": "Кампании",
+  "system.groups.campaigns_hint": "Скорост на WhatsApp и тихи часове при изпращане на кампании.",
+  "system.keys.campaigns_whatsapp_per_minute": "WhatsApp съобщения от кампании на минута",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Брой WhatsApp съобщения от кампании на минута за всички получатели; останалите изчакват на опашка.",
+  "system.keys.campaigns_quiet_hours_start": "Начало на тихите часове",
+  "system.keys.campaigns_quiet_hours_start_hint": "От този час в часовата зона на получателя WhatsApp съобщенията от кампании изчакват (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Край на тихите часове",
+  "system.keys.campaigns_quiet_hours_end_hint": "Изчакващите съобщения се изпращат в този час по часовата зона на получателя; ако е равен на началото, тихите часове са изключени (0–23)."
 }

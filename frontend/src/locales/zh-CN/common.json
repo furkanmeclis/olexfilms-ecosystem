@@ -53,5 +53,15 @@
   "short_link.not_found_body": "此链接不存在。请检查是否已完整复制。",
   "short_link.error_title": "无法打开链接",
   "short_link.error_body": "出现问题。请稍后重试。",
-  "short_link.home": "前往首页"
+  "short_link.home": "前往首页",
+  "campaign_unsubscribe.page_title": "退订",
+  "campaign_unsubscribe.title": "要退订活动消息吗？",
+  "campaign_unsubscribe.body": "确认后，我们将不再向您发送活动、折扣和公告（WhatsApp、推送通知、电子邮件）。服务、预约和质保通知不受影响。",
+  "campaign_unsubscribe.confirm": "退订",
+  "campaign_unsubscribe.done_title": "您已退订",
+  "campaign_unsubscribe.done_body": "您将不再收到活动消息。",
+  "campaign_unsubscribe.invalid_title": "链接无效",
+  "campaign_unsubscribe.invalid_body": "此退订链接无效。请确认您复制了完整链接。",
+  "campaign_unsubscribe.error": "出现问题，请稍后再试。",
+  "campaign_unsubscribe.home": "返回首页"
 }

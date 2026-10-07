@@ -149,5 +149,13 @@
   "system.keys.ai_visitor_daily_token_cap": "Денний ліміт токенів ШІ для відвідувачів WhatsApp",
   "system.keys.ai_visitor_daily_token_cap_hint": "Скільки токенів на день усі неідентифіковані відвідувачі WhatsApp можуть використати із системного пулу; понад це вони отримують фіксовану відповідь із посиланням на пошук дилера. 0 = без ліміту.",
   "system.keys.whatsapp_ai_guidelines_url": "Посилання на правила AI",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "Посилання (https) на правила, що надсилається з питанням про згоду в WhatsApp; порожньо = текст правил надсилається в повідомленні."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Посилання (https) на правила, що надсилається з питанням про згоду в WhatsApp; порожньо = текст правил надсилається в повідомленні.",
+  "system.groups.campaigns": "Кампанії",
+  "system.groups.campaigns_hint": "Швидкість WhatsApp і тихі години під час розсилання кампаній.",
+  "system.keys.campaigns_whatsapp_per_minute": "WhatsApp-повідомлень кампаній за хвилину",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Кількість WhatsApp-повідомлень кампаній за хвилину для всіх одержувачів; решта чекає в черзі.",
+  "system.keys.campaigns_quiet_hours_start": "Початок тихих годин",
+  "system.keys.campaigns_quiet_hours_start_hint": "З цієї години за часовим поясом одержувача WhatsApp-повідомлення кампаній чекають (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Кінець тихих годин",
+  "system.keys.campaigns_quiet_hours_end_hint": "Відкладені повідомлення надсилаються о цій годині за часовим поясом одержувача; значення, рівне початку, вимикає тихі години (0–23)."
 }

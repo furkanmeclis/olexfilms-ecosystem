@@ -74,6 +74,8 @@ func Schedules() []Periodic {
 		{Cron: whatsAppQueueSweepCron, Type: TaskWhatsAppQueueSweep, Queue: QueueMaintenance, New: NewWhatsAppQueueSweepTask},
 		// TEC-387: AI confirmation card expiry and stale run cleanup (idempotent).
 		{Cron: aiActionSweepCron, Type: TaskAIActionSweep, Queue: QueueMaintenance, Opts: aiActionSweepOpts(), New: NewAIActionSweepTask},
+		// TEC-407: campaign scheduler (due campaigns, finish, lost tasks).
+		{Cron: campaignTickCron, Type: TaskCampaignTick, Queue: QueueMaintenance, Opts: campaignTickOpts(), New: NewCampaignTickTask},
 	}
 }
 

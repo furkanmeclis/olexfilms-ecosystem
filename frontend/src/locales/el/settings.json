@@ -149,5 +149,13 @@
   "system.keys.ai_visitor_daily_token_cap": "Ημερήσιο όριο tokens για την τεχνητή νοημοσύνη επισκεπτών WhatsApp",
   "system.keys.ai_visitor_daily_token_cap_hint": "Tokens που μπορούν να χρησιμοποιήσουν ημερησίως όλοι οι μη ταυτοποιημένοι επισκέπτες WhatsApp από το κοινό απόθεμα του συστήματος· πάνω από αυτό λαμβάνουν σταθερή απάντηση με τον σύνδεσμο εύρεσης αντιπροσώπου. 0 = χωρίς όριο.",
   "system.keys.whatsapp_ai_guidelines_url": "Σύνδεσμος οδηγιών τεχνητής νοημοσύνης",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "Σύνδεσμος (https) των οδηγιών που αποστέλλεται με την ερώτηση συγκατάθεσης στο WhatsApp· κενό = αποστέλλεται το κείμενο των οδηγιών στο μήνυμα."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "Σύνδεσμος (https) των οδηγιών που αποστέλλεται με την ερώτηση συγκατάθεσης στο WhatsApp· κενό = αποστέλλεται το κείμενο των οδηγιών στο μήνυμα.",
+  "system.groups.campaigns": "Καμπάνιες",
+  "system.groups.campaigns_hint": "Ρυθμός WhatsApp και ώρες ησυχίας κατά την αποστολή καμπανιών.",
+  "system.keys.campaigns_whatsapp_per_minute": "Μηνύματα WhatsApp καμπανιών ανά λεπτό",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "Μηνύματα WhatsApp καμπανιών ανά λεπτό για όλους τους παραλήπτες· τα υπόλοιπα περιμένουν στην ουρά.",
+  "system.keys.campaigns_quiet_hours_start": "Έναρξη ωρών ησυχίας",
+  "system.keys.campaigns_quiet_hours_start_hint": "Από αυτή την ώρα στη ζώνη ώρας του παραλήπτη τα μηνύματα WhatsApp καμπανιών αναμένουν (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "Λήξη ωρών ησυχίας",
+  "system.keys.campaigns_quiet_hours_end_hint": "Τα μηνύματα σε αναμονή αποστέλλονται αυτή την ώρα της ζώνης ώρας του παραλήπτη· ίδια τιμή με την έναρξη απενεργοποιεί τις ώρες ησυχίας (0–23)."
 }

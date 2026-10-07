@@ -54,5 +54,15 @@
   "short_link.not_found_body": "Dieser Link existiert nicht. Prüfen Sie, ob er vollständig kopiert wurde.",
   "short_link.error_title": "Der Link konnte nicht geöffnet werden",
   "short_link.error_body": "Etwas ist schiefgelaufen. Bitte versuchen Sie es gleich noch einmal.",
-  "short_link.home": "Zur Startseite"
+  "short_link.home": "Zur Startseite",
+  "campaign_unsubscribe.page_title": "Abmelden",
+  "campaign_unsubscribe.title": "Von Kampagnennachrichten abmelden?",
+  "campaign_unsubscribe.body": "Wenn Sie bestätigen, senden wir Ihnen keine Kampagnen, Rabatte oder Ankündigungen mehr (WhatsApp, Push-Benachrichtigungen, E-Mail). Service-, Termin- und Garantiebenachrichtigungen bleiben bestehen.",
+  "campaign_unsubscribe.confirm": "Abmelden",
+  "campaign_unsubscribe.done_title": "Sie haben sich abgemeldet",
+  "campaign_unsubscribe.done_body": "Sie erhalten künftig keine Kampagnennachrichten mehr.",
+  "campaign_unsubscribe.invalid_title": "Ungültiger Link",
+  "campaign_unsubscribe.invalid_body": "Dieser Abmeldelink ist ungültig. Prüfen Sie, ob Sie den vollständigen Link kopiert haben.",
+  "campaign_unsubscribe.error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es gleich noch einmal.",
+  "campaign_unsubscribe.home": "Zur Startseite"
 }

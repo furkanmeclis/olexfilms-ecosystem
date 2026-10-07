@@ -27,7 +27,25 @@ func pushData(n db.Notification) map[string]any {
 	if n.TemplateCode.Valid && n.TemplateCode.String != "" {
 		data["event_code"] = n.TemplateCode.String
 	}
+	if img := pushImage(n); img != "" {
+		data["image_url"] = img
+	}
 	return data
+}
+
+// pushImage is the https image URL of a push (payload image_url, set by
+// campaign pushes, TEC-407), or "".
+func pushImage(n db.Notification) string {
+	if len(n.Payload) == 0 {
+		return ""
+	}
+	var p struct {
+		ImageURL string `json:"image_url"`
+	}
+	if json.Unmarshal(n.Payload, &p) != nil || !strings.HasPrefix(p.ImageURL, "https://") {
+		return ""
+	}
+	return p.ImageURL
 }
 
 // WebPushStore is the persistence used by WebPushProvider.
@@ -74,9 +92,13 @@ func (p WebPushProvider) Deliver(ctx context.Context, n db.Notification, _ *uuid
 	if send == nil {
 		send = webpush.SendNotification
 	}
-	payload, _ := json.Marshal(map[string]any{
+	msg := map[string]any{
 		"title": n.Title, "body": msgtemplate.MarkdownToText(n.Body), "data": pushData(n),
-	})
+	}
+	if img := pushImage(n); img != "" {
+		msg["image"] = img
+	}
+	payload, _ := json.Marshal(msg)
 	sent := 0
 	var lastErr error
 	for _, sub := range subs {
@@ -137,6 +159,12 @@ type expoMessage struct {
 	Data     map[string]any `json:"data,omitempty"`
 	Sound    string         `json:"sound,omitempty"`
 	Priority string         `json:"priority,omitempty"`
+	// RichContent carries the notification image (TEC-407).
+	RichContent *expoRichContent `json:"richContent,omitempty"`
+}
+
+type expoRichContent struct {
+	Image string `json:"image"`
 }
 
 type expoTicket struct {
@@ -163,11 +191,15 @@ func (p ExpoProvider) Deliver(ctx context.Context, n db.Notification, _ *uuid.UU
 	if n.Priority == model.PriorityHigh || n.Priority == model.PriorityCritical {
 		priority = "high"
 	}
+	var rich *expoRichContent
+	if img := pushImage(n); img != "" {
+		rich = &expoRichContent{Image: img}
+	}
 	msgs := make([]expoMessage, 0, len(tokens))
 	for _, t := range tokens {
 		msgs = append(msgs, expoMessage{
 			To: t.ExpoToken, Title: n.Title, Body: msgtemplate.MarkdownToText(n.Body),
-			Data: pushData(n), Sound: "default", Priority: priority,
+			Data: pushData(n), Sound: "default", Priority: priority, RichContent: rich,
 		})
 	}
 	body, _ := json.Marshal(msgs)

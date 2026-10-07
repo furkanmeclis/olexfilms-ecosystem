@@ -111,6 +111,9 @@ type Worker struct {
 	warrantyClaimTriage WarrantyClaimTriageFunc
 	// TEC-387: AI confirmation card expiry and stale run cleanup.
 	aiActionSweep AIActionSweepFunc
+	// TEC-407: campaign scheduler tick and recipient sends.
+	campaignTick CampaignTickFunc
+	campaignSend CampaignRecipientFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -131,6 +134,7 @@ func DefaultQueues() map[string]int {
 		QueueMaintenance:   1,
 		QueueDocs:          2,
 		QueueWhatsApp:      2,
+		QueueCampaigns:     1,
 	}
 }
 
@@ -206,6 +210,8 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskWhatsAppQueueSweep, w.handleWhatsAppQueueSweep)
 	mux.HandleFunc(TaskWhatsAppAIReply, w.handleWhatsAppAIReply)
 	mux.HandleFunc(TaskWarrantyClaimTriage, w.handleWarrantyClaimTriage)
+	mux.HandleFunc(TaskCampaignTick, w.handleCampaignTick)
+	mux.HandleFunc(TaskCampaignSendRecipient, w.handleCampaignSendRecipient)
 	return w
 }
 

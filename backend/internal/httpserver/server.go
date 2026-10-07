@@ -867,6 +867,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	campaignsSvc := campaignsusecase.New(deps.DB, deps.Queries, campaignStorage)
 	campaignsSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-406: approval notifications
 	campaignsmodule.RegisterRoutes(mux, campaignshandler.New(campaignsSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-407: public unsubscribe of the campaign e-mail link.
+	campaignsmodule.RegisterPublicRoutes(mux, campaignshandler.NewUnsubscribe(
+		campaignsusecase.NewUnsubscriber(deps.Queries, []byte(cfg.JWT.AccessSecret)),
+		ratelimit.New(deps.Redis, cfg.App.Env), campaignsmodule.UnsubscribeRateLimit, campaignsmodule.UnsubscribeRateWindow))
 	// TEC-313: leads and follow-up queue.
 	leadsSvc := leadsusecase.New(deps.DB, deps.Queries, tasksSvc)
 	var quoteQueue leadsusecase.TaskEnqueuer

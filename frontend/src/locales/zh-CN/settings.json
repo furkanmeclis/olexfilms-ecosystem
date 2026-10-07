@@ -149,5 +149,13 @@
   "system.keys.ai_visitor_daily_token_cap": "WhatsApp 访客 AI 每日令牌上限",
   "system.keys.ai_visitor_daily_token_cap_hint": "所有未识别的 WhatsApp 访客每天可从系统额度中使用的令牌总数；超出后将收到附带经销商查找链接的固定回复。0 = 不设上限。",
   "system.keys.whatsapp_ai_guidelines_url": "AI 使用准则链接",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp 同意询问中发送的准则链接（https）；留空则在消息中直接发送准则文本。"
+  "system.keys.whatsapp_ai_guidelines_url_hint": "WhatsApp 同意询问中发送的准则链接（https）；留空则在消息中直接发送准则文本。",
+  "system.groups.campaigns": "活动",
+  "system.groups.campaigns_hint": "活动发送的 WhatsApp 速率和免打扰时段。",
+  "system.keys.campaigns_whatsapp_per_minute": "每分钟活动 WhatsApp 消息数",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "所有收件人每分钟发送的活动 WhatsApp 消息数；超出部分在队列中等待。",
+  "system.keys.campaigns_quiet_hours_start": "免打扰开始时间",
+  "system.keys.campaigns_quiet_hours_start_hint": "从收件人所在时区的这一小时起，活动 WhatsApp 消息将暂缓发送（0–23）。",
+  "system.keys.campaigns_quiet_hours_end": "免打扰结束时间",
+  "system.keys.campaigns_quiet_hours_end_hint": "暂缓的消息在收件人所在时区的这一小时发送；与开始时间相同则关闭免打扰（0–23）。"
 }

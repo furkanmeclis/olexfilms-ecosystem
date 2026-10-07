@@ -73,3 +73,25 @@ func emailBrand(q *db.Queries, cfg config.NotifyConfig) func(context.Context, in
 		return out
 	}
 }
+
+// PushProviders returns the web push (nil without VAPID keys) and Expo
+// providers configured like the notification center's, for senders that
+// push outside a notification row (campaigns, TEC-407).
+func PushProviders(cfg config.Config, q *db.Queries) (web, expo providers.Provider) {
+	if cfg.VAPID.PublicKey != "" && cfg.VAPID.PrivateKey != "" {
+		web = providers.WebPushProvider{
+			Store: q,
+			VAPID: providers.VAPID{PublicKey: cfg.VAPID.PublicKey, PrivateKey: cfg.VAPID.PrivateKey, Subject: cfg.VAPID.Subject},
+		}
+	}
+	expo = providers.ExpoProvider{
+		Store: q, URL: cfg.Notify.ExpoPushURL, AccessToken: cfg.Notify.ExpoAccessToken,
+		HTTP: &http.Client{Timeout: 10 * time.Second},
+	}
+	return web, expo
+}
+
+// EmailBrandFunc is the e-mail frame lookup of the notification center.
+func EmailBrandFunc(q *db.Queries, cfg config.Config) func(context.Context, int64) providers.EmailBrand {
+	return emailBrand(q, cfg.Notify)
+}

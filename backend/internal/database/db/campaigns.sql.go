@@ -166,6 +166,50 @@ func (q *Queries) CountCampaigns(ctx context.Context, arg CountCampaignsParams) 
 	return count, err
 }
 
+const countPendingCampaignRecipients = `-- name: CountPendingCampaignRecipients :one
+SELECT COUNT(*) FROM campaign_recipients
+WHERE campaign_id = $1 AND status = 'pending'
+`
+
+func (q *Queries) CountPendingCampaignRecipients(ctx context.Context, campaignID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countPendingCampaignRecipients, campaignID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countWebPushSubscriptionsByUsers = `-- name: CountWebPushSubscriptionsByUsers :many
+SELECT user_id, COUNT(*)::int AS subscriptions
+FROM push_subscriptions
+WHERE user_id = ANY($1::bigint[])
+GROUP BY user_id
+`
+
+type CountWebPushSubscriptionsByUsersRow struct {
+	UserID        int64 `json:"user_id"`
+	Subscriptions int32 `json:"subscriptions"`
+}
+
+func (q *Queries) CountWebPushSubscriptionsByUsers(ctx context.Context, userIds []int64) ([]CountWebPushSubscriptionsByUsersRow, error) {
+	rows, err := q.db.Query(ctx, countWebPushSubscriptionsByUsers, userIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountWebPushSubscriptionsByUsersRow{}
+	for rows.Next() {
+		var i CountWebPushSubscriptionsByUsersRow
+		if err := rows.Scan(&i.UserID, &i.Subscriptions); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createCampaign = `-- name: CreateCampaign :one
 
 INSERT INTO campaigns (organization_id, brand_id, name, channels, audience_filter,
@@ -264,6 +308,39 @@ func (q *Queries) DeleteDraftCampaign(ctx context.Context, id int64) (int64, err
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const getCampaignByID = `-- name: GetCampaignByID :one
+SELECT id, uuid, organization_id, brand_id, name, channels, audience_filter, status, scheduled_at, approver_org_id, started_at, finished_at, recipients_total, recipients_sent, recipients_failed, recipients_skipped, created_by_user_id, updated_by_user_id, created_at, updated_at FROM campaigns
+WHERE id = $1
+`
+
+func (q *Queries) GetCampaignByID(ctx context.Context, id int64) (Campaign, error) {
+	row := q.db.QueryRow(ctx, getCampaignByID, id)
+	var i Campaign
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Name,
+		&i.Channels,
+		&i.AudienceFilter,
+		&i.Status,
+		&i.ScheduledAt,
+		&i.ApproverOrgID,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.RecipientsTotal,
+		&i.RecipientsSent,
+		&i.RecipientsFailed,
+		&i.RecipientsSkipped,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getCampaignByIDForUpdate = `-- name: GetCampaignByIDForUpdate :one
@@ -397,6 +474,39 @@ func (q *Queries) GetCampaignMediaByUUID(ctx context.Context, arg GetCampaignMed
 		&i.SortOrder,
 		&i.CreatedByUserID,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getCampaignRecipientContact = `-- name: GetCampaignRecipientContact :one
+SELECT u.id, u.uuid, u.name, u.surname, COALESCE(u.email, '')::text AS email,
+       COALESCE(u.phone_e164, '')::text AS phone_e164, COALESCE(u.timezone, '')::text AS timezone
+FROM users u
+WHERE u.id = $1
+`
+
+type GetCampaignRecipientContactRow struct {
+	ID        int64     `json:"id"`
+	Uuid      uuid.UUID `json:"uuid"`
+	Name      string    `json:"name"`
+	Surname   string    `json:"surname"`
+	Email     string    `json:"email"`
+	PhoneE164 string    `json:"phone_e164"`
+	Timezone  string    `json:"timezone"`
+}
+
+// Current contact data of a recipient user (time zone for quiet hours).
+func (q *Queries) GetCampaignRecipientContact(ctx context.Context, id int64) (GetCampaignRecipientContactRow, error) {
+	row := q.db.QueryRow(ctx, getCampaignRecipientContact, id)
+	var i GetCampaignRecipientContactRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Name,
+		&i.Surname,
+		&i.Email,
+		&i.PhoneE164,
+		&i.Timezone,
 	)
 	return i, err
 }
@@ -562,6 +672,42 @@ func (q *Queries) InsertCampaignRecipient(ctx context.Context, arg InsertCampaig
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const insertCampaignRecipientSnapshot = `-- name: InsertCampaignRecipientSnapshot :execrows
+
+INSERT INTO campaign_recipients (campaign_id, organization_id, brand_id, user_id, channel, locale,
+                                 target_address, push_token_count, status, reason)
+SELECT $1, $2, $3, r.user_id, r.channel, r.locale,
+       r.target_address, r.push_token_count, r.status, r.reason
+FROM jsonb_to_recordset($4::jsonb) AS r (
+    user_id BIGINT, channel TEXT, locale TEXT, target_address TEXT, push_token_count INT, status TEXT, reason TEXT)
+ON CONFLICT (campaign_id, user_id, channel) DO NOTHING
+`
+
+type InsertCampaignRecipientSnapshotParams struct {
+	CampaignID     int64  `json:"campaign_id"`
+	OrganizationID int64  `json:"organization_id"`
+	BrandID        int64  `json:"brand_id"`
+	Rows           []byte `json:"rows"`
+}
+
+// Sending (TEC-407, F4-04d) -------------------------------------------------
+// The recipient snapshot of a campaign in one statement (one statistics
+// projection update). rows is a JSON array of {user_id, channel, locale,
+// target_address, push_token_count, status, reason}. An existing
+// (campaign, user, channel) row is kept.
+func (q *Queries) InsertCampaignRecipientSnapshot(ctx context.Context, arg InsertCampaignRecipientSnapshotParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertCampaignRecipientSnapshot,
+		arg.CampaignID,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.Rows,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const listCampaignApprovals = `-- name: ListCampaignApprovals :many
@@ -1098,6 +1244,164 @@ func (q *Queries) ListMarketingReachability(ctx context.Context, userIds []int64
 		return nil, err
 	}
 	return items, nil
+}
+
+const listPendingCampaignRecipientIDs = `-- name: ListPendingCampaignRecipientIDs :many
+SELECT id FROM campaign_recipients
+WHERE campaign_id = $1 AND status = 'pending'
+  AND ($2::timestamptz IS NULL OR updated_at < $2::timestamptz)
+  AND id > $3
+ORDER BY id
+LIMIT $4
+`
+
+type ListPendingCampaignRecipientIDsParams struct {
+	CampaignID int64              `json:"campaign_id"`
+	Before     pgtype.Timestamptz `json:"before"`
+	AfterID    int64              `json:"after_id"`
+	PageLimit  int32              `json:"page_limit"`
+}
+
+// Pending recipients of a sending campaign, in id pages; before (when set)
+// keeps those not touched since then (the scheduler re-enqueues their task;
+// a still queued task is deduplicated by its task id).
+func (q *Queries) ListPendingCampaignRecipientIDs(ctx context.Context, arg ListPendingCampaignRecipientIDsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listPendingCampaignRecipientIDs,
+		arg.CampaignID,
+		arg.Before,
+		arg.AfterID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSendingCampaigns = `-- name: ListSendingCampaigns :many
+SELECT id, uuid, organization_id, brand_id, name, channels, audience_filter, status, scheduled_at, approver_org_id, started_at, finished_at, recipients_total, recipients_sent, recipients_failed, recipients_skipped, created_by_user_id, updated_by_user_id, created_at, updated_at FROM campaigns
+WHERE status = 'sending'
+ORDER BY started_at, id
+LIMIT $1
+`
+
+func (q *Queries) ListSendingCampaigns(ctx context.Context, pageLimit int32) ([]Campaign, error) {
+	rows, err := q.db.Query(ctx, listSendingCampaigns, pageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Campaign{}
+	for rows.Next() {
+		var i Campaign
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.Name,
+			&i.Channels,
+			&i.AudienceFilter,
+			&i.Status,
+			&i.ScheduledAt,
+			&i.ApproverOrgID,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.RecipientsTotal,
+			&i.RecipientsSent,
+			&i.RecipientsFailed,
+			&i.RecipientsSkipped,
+			&i.CreatedByUserID,
+			&i.UpdatedByUserID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockCampaignRecipient = `-- name: LockCampaignRecipient :one
+SELECT id, campaign_id, organization_id, brand_id, user_id, channel, locale, target_address, push_token_count, status, reason, attempts, sent_at, created_at, updated_at FROM campaign_recipients
+WHERE id = $1
+FOR UPDATE
+`
+
+func (q *Queries) LockCampaignRecipient(ctx context.Context, id int64) (CampaignRecipient, error) {
+	row := q.db.QueryRow(ctx, lockCampaignRecipient, id)
+	var i CampaignRecipient
+	err := row.Scan(
+		&i.ID,
+		&i.CampaignID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UserID,
+		&i.Channel,
+		&i.Locale,
+		&i.TargetAddress,
+		&i.PushTokenCount,
+		&i.Status,
+		&i.Reason,
+		&i.Attempts,
+		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const recordCampaignRecipientAttempt = `-- name: RecordCampaignRecipientAttempt :one
+UPDATE campaign_recipients
+SET attempts = attempts + 1,
+    reason   = $1::text
+WHERE id = $2 AND status = 'pending'
+RETURNING id, campaign_id, organization_id, brand_id, user_id, channel, locale, target_address, push_token_count, status, reason, attempts, sent_at, created_at, updated_at
+`
+
+type RecordCampaignRecipientAttemptParams struct {
+	Reason pgtype.Text `json:"reason"`
+	ID     int64       `json:"id"`
+}
+
+// A failed attempt that will be retried: the recipient stays pending.
+func (q *Queries) RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error) {
+	row := q.db.QueryRow(ctx, recordCampaignRecipientAttempt, arg.Reason, arg.ID)
+	var i CampaignRecipient
+	err := row.Scan(
+		&i.ID,
+		&i.CampaignID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UserID,
+		&i.Channel,
+		&i.Locale,
+		&i.TargetAddress,
+		&i.PushTokenCount,
+		&i.Status,
+		&i.Reason,
+		&i.Attempts,
+		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const setCampaignRecipientStatus = `-- name: SetCampaignRecipientStatus :one

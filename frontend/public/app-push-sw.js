@@ -3,11 +3,19 @@ self.addEventListener("push", (event) => {
   let title = "Notification";
   let body = "";
   let data = {};
+  let image;
   try {
     const payload = event.data ? event.data.json() : {};
     title = payload.title || title;
     body = payload.body || "";
     data = payload.data || {};
+    // TEC-407: campaign pushes carry an https image.
+    if (
+      typeof payload.image === "string" &&
+      payload.image.startsWith("https://")
+    ) {
+      image = payload.image;
+    }
   } catch {
     body = event.data ? event.data.text() : "";
   }
@@ -15,6 +23,7 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body,
       data,
+      ...(image ? { image } : {}),
     }),
   );
 });

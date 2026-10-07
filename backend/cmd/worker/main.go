@@ -19,6 +19,7 @@ import (
 	announcementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/announcements/usecase"
 	appointmentreminder "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/reminder"
 	bulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/usecase"
+	campaignsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/campaigns/usecase"
 	catalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/catalog/usecase"
 	contractsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts"
 	contractsrepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
@@ -411,6 +412,24 @@ func main() {
 		notifier: notifSvc, messaging: waMsgs, downloader: waSvc.MediaDownloader(), store: store,
 		rdb: rdb, log: log,
 	}).Process)
+
+	// TEC-407 (F4-04d): campaign scheduler tick and recipient sends.
+	campaignSvc := campaignsusecase.New(pool, queries, store)
+	campaignSvc.SetOutbox(outboxStore)
+	pushWeb, pushExpo := notifmodule.PushProviders(cfg, queries)
+	campaignSender := campaignsusecase.NewSender(campaignSvc, campaignsusecase.SenderDeps{
+		Push:              campaignsusecase.NotificationPush{Web: pushWeb, Expo: pushExpo},
+		Email:             campaignsusecase.MailEmail{Mail: mail.NewSMTPSender(cfg.SMTP), Brand: notifmodule.EmailBrandFunc(queries, cfg)},
+		WhatsApp:          campaignsusecase.ConversationWhatsApp{Queries: queries, Messaging: waMsgs},
+		Media:             store,
+		Queue:             queue.CampaignEnqueuer{Client: reviewQueue},
+		Limiter:           ratelimit.New(rdb, cfg.App.Env),
+		Settings:          sysconfig.New(queries, sysconfig.NoCache{}),
+		UnsubscribeSecret: []byte(cfg.JWT.AccessSecret),
+		FrontendURL:       cfg.Auth.FrontendURL,
+		Log:               log,
+	})
+	worker.WithCampaigns(campaignSender.Tick, campaignSender.ProcessRecipient)
 
 	healthPath := os.Getenv("WORKER_HEALTH_FILE")
 	if healthPath == "" {

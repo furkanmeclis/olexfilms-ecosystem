@@ -62,6 +62,8 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		{cron: whatsAppQueueSweepCron, taskType: TaskWhatsAppQueueSweep, queue: QueueMaintenance}: false,
 		// TEC-387.
 		{cron: aiActionSweepCron, taskType: TaskAIActionSweep, queue: QueueMaintenance}: false,
+		// TEC-407.
+		{cron: campaignTickCron, taskType: TaskCampaignTick, queue: QueueMaintenance}: false,
 	}
 	for _, e := range r.entries {
 		if _, ok := want[e]; !ok {

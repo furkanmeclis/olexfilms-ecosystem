@@ -54,5 +54,15 @@
   "short_link.not_found_body": "Тази връзка не съществува. Проверете дали е копирана изцяло.",
   "short_link.error_title": "Връзката не можа да бъде отворена",
   "short_link.error_body": "Нещо се обърка. Опитайте отново след малко.",
-  "short_link.home": "Към началната страница"
+  "short_link.home": "Към началната страница",
+  "campaign_unsubscribe.page_title": "Отписване",
+  "campaign_unsubscribe.title": "Да се отпишете ли от съобщенията за кампании?",
+  "campaign_unsubscribe.body": "Ако потвърдите, повече няма да ви изпращаме кампании, отстъпки и съобщения (WhatsApp, push известия, имейл). Известията за услуги, часове и гаранции не се засягат.",
+  "campaign_unsubscribe.confirm": "Отписване",
+  "campaign_unsubscribe.done_title": "Отписахте се",
+  "campaign_unsubscribe.done_body": "Повече няма да получавате съобщения за кампании.",
+  "campaign_unsubscribe.invalid_title": "Невалидна връзка",
+  "campaign_unsubscribe.invalid_body": "Тази връзка за отписване не е валидна. Уверете се, че сте копирали цялата връзка.",
+  "campaign_unsubscribe.error": "Възникна проблем. Моля, опитайте отново след малко.",
+  "campaign_unsubscribe.home": "Към началната страница"
 }

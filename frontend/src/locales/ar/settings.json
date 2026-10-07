@@ -149,5 +149,13 @@
   "system.keys.ai_visitor_daily_token_cap": "الحد اليومي للرموز لذكاء زوار واتساب الاصطناعي",
   "system.keys.ai_visitor_daily_token_cap_hint": "عدد الرموز التي يمكن لجميع زوار واتساب غير المعرّفين استخدامها يوميًا من رصيد النظام؛ عند تجاوزه يتلقون ردًا ثابتًا مع رابط البحث عن وكيل. 0 = دون حد.",
   "system.keys.whatsapp_ai_guidelines_url": "رابط إرشادات الذكاء الاصطناعي",
-  "system.keys.whatsapp_ai_guidelines_url_hint": "رابط الإرشادات (https) المرسل مع سؤال الموافقة في واتساب؛ إذا كان فارغًا يُرسل نص الإرشادات في الرسالة."
+  "system.keys.whatsapp_ai_guidelines_url_hint": "رابط الإرشادات (https) المرسل مع سؤال الموافقة في واتساب؛ إذا كان فارغًا يُرسل نص الإرشادات في الرسالة.",
+  "system.groups.campaigns": "الحملات",
+  "system.groups.campaigns_hint": "معدل واتساب وساعات الهدوء لإرسال الحملات.",
+  "system.keys.campaigns_whatsapp_per_minute": "رسائل واتساب للحملات في الدقيقة",
+  "system.keys.campaigns_whatsapp_per_minute_hint": "عدد رسائل واتساب للحملات المرسلة في الدقيقة لجميع المستلمين؛ تنتظر الرسائل الإضافية في قائمة الانتظار.",
+  "system.keys.campaigns_quiet_hours_start": "بداية ساعات الهدوء",
+  "system.keys.campaigns_quiet_hours_start_hint": "بدءًا من هذه الساعة بتوقيت المستلم تُؤجَّل رسائل واتساب للحملات (0–23).",
+  "system.keys.campaigns_quiet_hours_end": "نهاية ساعات الهدوء",
+  "system.keys.campaigns_quiet_hours_end_hint": "تُرسل الرسائل المؤجلة في هذه الساعة بتوقيت المستلم؛ إذا تساوت مع البداية تُعطَّل ساعات الهدوء (0–23)."
 }
