@@ -182,6 +182,7 @@ type Querier interface {
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
+	CountOAuthClients(ctx context.Context, arg CountOAuthClientsParams) (int64, error)
 	CountOpenFinanceEntriesBySource(ctx context.Context, arg CountOpenFinanceEntriesBySourceParams) (int64, error)
 	// A unit is on at most one open (requested or approved) request; the
 	// caller holds the unit row lock.
@@ -246,6 +247,7 @@ type Querier interface {
 	// Customer cari accounts are ledgers (append-only spirit): they are not
 	// moved, only reported.
 	CountUserCariAccounts(ctx context.Context, userID pgtype.Int8) (int64, error)
+	CountUserOAuthGrants(ctx context.Context, arg CountUserOAuthGrantsParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error)
@@ -835,7 +837,9 @@ type Querier interface {
 	GetOAuthAccountByUserProvider(ctx context.Context, arg GetOAuthAccountByUserProviderParams) (GetOAuthAccountByUserProviderRow, error)
 	// A pending request that has not expired, with its client.
 	GetOAuthAuthRequest(ctx context.Context, id uuid.UUID) (GetOAuthAuthRequestRow, error)
+	GetOAuthBrandCenter(ctx context.Context, brandID int64) (GetOAuthBrandCenterRow, error)
 	GetOAuthClient(ctx context.Context, clientID string) (OauthClient, error)
+	GetOAuthClientByUUID(ctx context.Context, argUuid uuid.UUID) (OauthClient, error)
 	GetOAuthProviderSettings(ctx context.Context, provider string) (OauthProviderSetting, error)
 	GetOAuthTokenAnyState(ctx context.Context, arg GetOAuthTokenAnyStateParams) (OauthToken, error)
 	GetOTPByUUID(ctx context.Context, argUuid uuid.UUID) (OtpCode, error)
@@ -1556,7 +1560,12 @@ type Querier interface {
 	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]Notification, error)
 	ListOAuthAccountsByUserID(ctx context.Context, userID int64) ([]ListOAuthAccountsByUserIDRow, error)
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
+	// Sort: docs/list-contract.md, keys from oauth usecase ClientsSortSpec.
+	ListOAuthClients(ctx context.Context, arg ListOAuthClientsParams) ([]ListOAuthClientsRow, error)
 	ListOAuthProviderSettings(ctx context.Context) ([]OauthProviderSetting, error)
+	// TEC-401 (F4-03b): consent, connected apps, platform client list.
+	// The user's active organizations of the given types (consent org picker).
+	ListOAuthSelectableOrgs(ctx context.Context, arg ListOAuthSelectableOrgsParams) ([]ListOAuthSelectableOrgsRow, error)
 	// ListOpenFinanceEntriesBySource lists the original rows of one source that
 	// have not been reversed yet, locked for the reversing transaction.
 	ListOpenFinanceEntriesBySource(ctx context.Context, arg ListOpenFinanceEntriesBySourceParams) ([]FinanceEntry, error)
@@ -1927,6 +1936,8 @@ type Querier interface {
 	ListUnparsedMeasurementResultIDs(ctx context.Context, arg ListUnparsedMeasurementResultIDsParams) ([]int64, error)
 	ListUnprocessedServiceReviews(ctx context.Context, pageLimit int32) ([]ServiceReview, error)
 	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
+	// Sort: docs/list-contract.md, keys from oauth usecase GrantsSortSpec.
+	ListUserOAuthGrants(ctx context.Context, arg ListUserOAuthGrantsParams) ([]ListUserOAuthGrantsRow, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
 	ListUserRolesByUserUUID(ctx context.Context, argUuid uuid.UUID) ([]Role, error)
@@ -2511,7 +2522,12 @@ type Querier interface {
 	// TEC-91: mobile sign-out drops the device's Expo tokens.
 	RevokeDevicePushTokensForDevice(ctx context.Context, arg RevokeDevicePushTokensForDeviceParams) (int64, error)
 	RevokeMobileSessionsForDevice(ctx context.Context, arg RevokeMobileSessionsForDeviceParams) (int64, error)
+	// Blocks the client and everything issued to it: grants, tokens, pending
+	// requests and unused codes.
+	RevokeOAuthClient(ctx context.Context, clientID string) error
 	RevokeOAuthFamily(ctx context.Context, family uuid.UUID) error
+	// Every token family of a grant; unused codes of the grant go too.
+	RevokeOAuthGrantTokens(ctx context.Context, grantID int64) error
 	// Revoking is the claim: of two concurrent refreshes only one wins.
 	RevokeOAuthToken(ctx context.Context, id int64) (int64, error)
 	RevokeOtherRefreshTokensForUser(ctx context.Context, arg RevokeOtherRefreshTokensForUserParams) error
@@ -2519,6 +2535,8 @@ type Querier interface {
 	RevokeRefreshTokenByUUIDForUser(ctx context.Context, arg RevokeRefreshTokenByUUIDForUserParams) (int64, error)
 	RevokeRefreshTokenFamily(ctx context.Context, familyID pgtype.UUID) (int64, error)
 	RevokeStorageLink(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
+	// Disconnects one of the user's apps; no row when missing, foreign or revoked.
+	RevokeUserOAuthGrant(ctx context.Context, arg RevokeUserOAuthGrantParams) (RevokeUserOAuthGrantRow, error)
 	// TEC-91: mobile refresh chains (rotation, reuse detection, device sign-out).
 	RotateRefreshTokenByHash(ctx context.Context, tokenHash string) (int64, error)
 	// SearchFinanceEntries is the filtered, paged ledger of one organization.

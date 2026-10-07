@@ -577,6 +577,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// revoke); the issuer is the frontend origin that proxies these paths.
 	oauthSvc := oauthmodule.New(deps.DB, featureSvc, ratelimit.New(deps.Redis, cfg.App.Env), cfg.Auth.FrontendURL, log)
 	oauthmodule.RegisterRoutes(mux, oauthSvc, log)
+	// TEC-401: authorize, consent decision, connected apps, platform clients.
+	oauthSvc.SetAccess(oauthmodule.AuthAccess{UC: uc})
+	oauthmodule.RegisterSessionRoutes(mux, oauthSvc, tokens, loader, log)
 	if s.worker != nil {
 		s.worker.WithOAuthCleanup(oauthSvc.Cleanup)
 	}
