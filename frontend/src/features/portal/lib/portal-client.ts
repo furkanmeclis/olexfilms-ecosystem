@@ -214,6 +214,15 @@ export function portalContractPdfUrl(contractUuid: string): string {
 export type PortalNotificationPreferences =
   components["schemas"]["NotificationPreferences"];
 
+/** TEC-327: portal appointments (F3-04c) and a dealer's bookable days. */
+export type PortalAppointment = components["schemas"]["PortalAppointment"];
+export type PortalAppointmentInput =
+  components["schemas"]["PortalAppointmentInput"];
+export type AppointmentAvailabilityDay =
+  components["schemas"]["AppointmentAvailabilityDay"];
+export type AppointmentSlot = components["schemas"]["AppointmentSlot"];
+export type PortalAppointmentPeriod = "upcoming" | "past";
+
 export type PortalPage<T> = {
   items: T[];
   total: number;
@@ -327,6 +336,34 @@ export const portalApi = {
     return portalRequest<PortalNotificationPreferences>(
       "portal/notification-preferences",
       { method: "PUT", body },
+    );
+  },
+  /** Own appointments, upcoming (soonest first) or past (TEC-327). */
+  listAppointments(
+    period: PortalAppointmentPeriod,
+    limit: number,
+    offset: number,
+  ) {
+    return portalRequest<{ items: PortalAppointment[]; total: number }>(
+      `portal/appointments?period=${period}&limit=${limit}&offset=${offset}`,
+    );
+  },
+  createAppointment(body: PortalAppointmentInput) {
+    return portalRequest<PortalAppointment>("portal/appointments", {
+      method: "POST",
+      body,
+    });
+  },
+  cancelAppointment(uuid: string) {
+    return portalRequest<PortalAppointment>(
+      `portal/appointments/${encodeURIComponent(uuid)}/cancel`,
+      { method: "POST", body: {} },
+    );
+  },
+  /** Days and free slots of a dealer between two dates (inclusive). */
+  dealerAvailability(dealerUuid: string, from: string, to: string) {
+    return portalRequest<AppointmentAvailabilityDay[]>(
+      `portal/dealers/${encodeURIComponent(dealerUuid)}/availability?from=${from}&to=${to}`,
     );
   },
   forgotPassword(email: string) {

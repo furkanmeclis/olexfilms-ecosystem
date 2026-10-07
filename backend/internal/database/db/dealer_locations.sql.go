@@ -75,9 +75,10 @@ func (q *Queries) GetPublicDealerBySlug(ctx context.Context, arg GetPublicDealer
 }
 
 const listNearbyDealers = `-- name: ListNearbyDealers :many
-SELECT n.slug, n.name, n.city, n.district, n.latitude, n.longitude, n.phone, n.distance_km, n.accepts_appointments
+SELECT n.uuid, n.slug, n.name, n.city, n.district, n.latitude, n.longitude, n.phone, n.distance_km, n.accepts_appointments
 FROM (
-    SELECT o.slug,
+    SELECT o.uuid,
+           o.slug,
            o.name,
            COALESCE(NULLIF(btrim(o.city), ''), p.name, '')::text AS city,
            COALESCE(NULLIF(btrim(o.district), ''), d.name, '')::text AS district,
@@ -135,15 +136,16 @@ type ListNearbyDealersParams struct {
 }
 
 type ListNearbyDealersRow struct {
-	Slug                string  `json:"slug"`
-	Name                string  `json:"name"`
-	City                string  `json:"city"`
-	District            string  `json:"district"`
-	Latitude            float64 `json:"latitude"`
-	Longitude           float64 `json:"longitude"`
-	Phone               string  `json:"phone"`
-	DistanceKm          float64 `json:"distance_km"`
-	AcceptsAppointments bool    `json:"accepts_appointments"`
+	Uuid                uuid.UUID `json:"uuid"`
+	Slug                string    `json:"slug"`
+	Name                string    `json:"name"`
+	City                string    `json:"city"`
+	District            string    `json:"district"`
+	Latitude            float64   `json:"latitude"`
+	Longitude           float64   `json:"longitude"`
+	Phone               string    `json:"phone"`
+	DistanceKm          float64   `json:"distance_km"`
+	AcceptsAppointments bool      `json:"accepts_appointments"`
 }
 
 // Active, serving (access window open) dealers and distributors of a brand
@@ -165,6 +167,7 @@ func (q *Queries) ListNearbyDealers(ctx context.Context, arg ListNearbyDealersPa
 	for rows.Next() {
 		var i ListNearbyDealersRow
 		if err := rows.Scan(
+			&i.Uuid,
 			&i.Slug,
 			&i.Name,
 			&i.City,

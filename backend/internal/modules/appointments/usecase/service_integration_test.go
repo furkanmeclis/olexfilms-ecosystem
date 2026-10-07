@@ -409,6 +409,18 @@ func TestPortalCancelWindow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("later create: %v", err)
 	}
+	// TEC-327: the portal list carries the dealer and vehicle labels.
+	items, total, err := f.svc.PortalList(f.ctx, c, PortalListFilter{Period: "upcoming", Limit: 10})
+	if err != nil || total != 2 || len(items) != 2 {
+		t.Fatalf("portal list = %d/%d, %v", len(items), total, err)
+	}
+	if items[0].UUID != soon.UUID || items[0].DealerUUID != f.dealer.Uuid || items[0].DealerName != f.dealer.Name {
+		t.Fatalf("portal list dealer = %+v", items[0])
+	}
+	if items[0].VehicleUUID == nil || *items[0].VehicleUUID != vehicle.Uuid ||
+		items[0].VehiclePlate == nil || *items[0].VehiclePlate != vehicle.Plate.String {
+		t.Fatalf("portal list vehicle = %+v", items[0])
+	}
 	cancelled, err := f.svc.PortalCancel(f.ctx, c, later.UUID)
 	if err != nil {
 		t.Fatalf("three-hour cancel: %v", err)

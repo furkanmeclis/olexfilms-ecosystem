@@ -154,3 +154,91 @@ test("portal: two dealers' services in one list, then vehicle transfer", async (
 
   expect(api.unknown).toEqual([]);
 });
+
+/**
+ * TEC-327: the owner books an appointment (dealer from the nearby list,
+ * the only vehicle, a free slot; the full first day offers none), lands on
+ * "my appointments" and cancels it.
+ */
+test("portal: book an appointment and cancel it", async ({ page, context }) => {
+  const api = new PortalMock();
+  const { owner } = E2E_PORTAL;
+  await routePortal(context, api, owner);
+  const dealer = PORTAL_DEALERS.kadikoy;
+  await context.route("**/portal/dealers/nearby**", (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          items: [
+            {
+              uuid: dealer.uuid,
+              slug: "kadikoy",
+              name: dealer.name,
+              city: dealer.city,
+              district: dealer.district,
+              latitude: 40.99,
+              longitude: 29.03,
+              distance_km: 3.2,
+              accepts_appointments: true,
+              whatsapp: dealer.whatsapp,
+            },
+            {
+              uuid: PORTAL_DEALERS.cankaya.uuid,
+              slug: "cankaya",
+              name: PORTAL_DEALERS.cankaya.name,
+              city: "Ankara",
+              district: "Çankaya",
+              latitude: 39.9,
+              longitude: 32.86,
+              distance_km: 350,
+              accepts_appointments: false,
+              whatsapp: null,
+            },
+          ],
+        },
+      },
+    }),
+  );
+
+  await signInWithOTP(page, api, owner);
+  await page
+    .getByTestId("portal-nav")
+    .getByRole("link", { name: "My appointments" })
+    .click();
+  await expect(page.getByTestId("portal-appointments-empty")).toBeVisible();
+  await page.getByTestId("portal-appointment-book").click();
+  await expect(page).toHaveURL(/\/portal\/appointments\/new$/);
+
+  // Only the dealer that takes portal bookings is offered.
+  const dealers = page.getByTestId("booking-dealer");
+  await expect(dealers).toHaveCount(1);
+  await dealers.first().getByRole("button").click();
+  await expect(page.getByTestId("booking-dealer-selected")).toContainText(
+    dealer.name,
+  );
+  await expect(page.getByTestId("booking-vehicle")).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+
+  // The first day is full: no slot; the next day has two.
+  const days = page.getByTestId("booking-day");
+  await expect(days.first()).toBeDisabled();
+  await days.nth(1).click();
+  await expect(page.getByTestId("booking-slot")).toHaveCount(2);
+  await page.getByTestId("booking-slot").nth(1).click();
+  await page.getByTestId("booking-submit").click();
+
+  await expect(page).toHaveURL(/\/portal\/appointments$/);
+  const card = page.getByTestId("portal-appointment");
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText(dealer.name);
+  await expect(card).toContainText("Scheduled");
+
+  await card.getByTestId("portal-appointment-cancel").click();
+  await page.getByTestId("portal-appointment-cancel-confirm").click();
+  await expect(card).toContainText("Cancelled");
+  expect(api.appointments).toHaveLength(1);
+  expect(api.unknown).toEqual([]);
+});

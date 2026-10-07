@@ -12,9 +12,10 @@ RETURNING *;
 -- Active, serving (access window open) dealers and distributors of a brand
 -- with coordinates, within radius_km of (lat, lng). Distance is the
 -- haversine great-circle distance in km (mean Earth radius 6371.0088).
-SELECT n.slug, n.name, n.city, n.district, n.latitude, n.longitude, n.phone, n.distance_km, n.accepts_appointments
+SELECT n.uuid, n.slug, n.name, n.city, n.district, n.latitude, n.longitude, n.phone, n.distance_km, n.accepts_appointments
 FROM (
-    SELECT o.slug,
+    SELECT o.uuid,
+           o.slug,
            o.name,
            COALESCE(NULLIF(btrim(o.city), ''), p.name, '')::text AS city,
            COALESCE(NULLIF(btrim(o.district), ''), d.name, '')::text AS district,

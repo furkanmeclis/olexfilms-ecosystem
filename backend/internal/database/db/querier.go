@@ -1500,7 +1500,8 @@ type Querier interface {
 	// category and direction. Reversal rows carry negated amounts, so a voided
 	// row nets out.
 	ListPnlSums(ctx context.Context, arg ListPnlSumsParams) ([]ListPnlSumsRow, error)
-	ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]Appointment, error)
+	// TEC-327: the dealer and vehicle labels the portal list shows.
+	ListPortalAppointments(ctx context.Context, arg ListPortalAppointmentsParams) ([]ListPortalAppointmentsRow, error)
 	// TEC-288 (F3-01d): the user's executed vehicle intake contracts. The
 	// ownership rule stays identical to portal services: the service customer or
 	// warranty holder sees it, within the domain brand, excluding Glorian.

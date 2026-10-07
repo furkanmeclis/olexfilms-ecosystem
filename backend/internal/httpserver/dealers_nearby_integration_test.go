@@ -87,6 +87,7 @@ func TestIntegrationDealersNearby(t *testing.T) {
 	}
 
 	type item struct {
+		UUID                string  `json:"uuid"`
 		Slug                string  `json:"slug"`
 		DistanceKm          float64 `json:"distance_km"`
 		WhatsApp            *string `json:"whatsapp"`
@@ -121,6 +122,10 @@ func TestIntegrationDealersNearby(t *testing.T) {
 		if got[i].Slug != w {
 			t.Fatalf("nearby[%d] = %s, want %s (%+v)", i, got[i].Slug, w, got)
 		}
+	}
+	// TEC-327: the portal books appointments with the organization uuid.
+	if got[0].UUID != near.Uuid.String() {
+		t.Fatalf("nearby[0] uuid = %q, want %s", got[0].UUID, near.Uuid)
 	}
 	if !(got[0].DistanceKm < got[1].DistanceKm && got[1].DistanceKm < got[2].DistanceKm) {
 		t.Fatalf("distances not ascending: %+v", got)

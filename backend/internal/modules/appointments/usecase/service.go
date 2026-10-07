@@ -141,6 +141,16 @@ type Appointment struct {
 	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
 }
 
+// PortalAppointment is one row of the portal "my appointments" list
+// (TEC-327): the appointment with its dealer and vehicle labels.
+type PortalAppointment struct {
+	Appointment
+	DealerUUID   uuid.UUID  `json:"dealer_uuid"`
+	DealerName   string     `json:"dealer_name"`
+	VehicleUUID  *uuid.UUID `json:"vehicle_uuid"`
+	VehiclePlate *string    `json:"vehicle_plate"`
+}
+
 type Settings struct {
 	UUID                      uuid.UUID      `json:"uuid"`
 	OrganizationID            int64          `json:"organization_id"`
@@ -348,7 +358,7 @@ func (s *Service) PortalCreate(ctx context.Context, c PortalCaller, in PortalCre
 	return appointmentView(row), nil
 }
 
-func (s *Service) PortalList(ctx context.Context, c PortalCaller, f PortalListFilter) ([]Appointment, int64, error) {
+func (s *Service) PortalList(ctx context.Context, c PortalCaller, f PortalListFilter) ([]PortalAppointment, int64, error) {
 	upcoming, past, err := portalPeriod(f.Period)
 	if err != nil {
 		return nil, 0, err
@@ -368,9 +378,18 @@ func (s *Service) PortalList(ctx context.Context, c PortalCaller, f PortalListFi
 	if err != nil {
 		return nil, 0, fmt.Errorf("appointments: portal count: %w", err)
 	}
-	out := make([]Appointment, 0, len(rows))
+	out := make([]PortalAppointment, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, appointmentView(r))
+		item := PortalAppointment{
+			Appointment: appointmentView(r.Appointment),
+			DealerUUID:  r.DealerUuid, DealerName: r.DealerName,
+			VehiclePlate: textPtr(r.VehiclePlate),
+		}
+		if r.VehicleUuid.Valid {
+			v := uuid.UUID(r.VehicleUuid.Bytes)
+			item.VehicleUUID = &v
+		}
+		out = append(out, item)
 	}
 	return out, total, nil
 }

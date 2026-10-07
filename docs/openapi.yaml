@@ -20507,7 +20507,7 @@ paths:
           description: Portal appointments
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/EnvelopeAppointmentPage" }
+              schema: { $ref: "#/components/schemas/EnvelopePortalAppointmentPage" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
     post:
@@ -25628,8 +25628,9 @@ components:
 
     NearbyDealer:
       type: object
-      required: [slug, name, city, district, latitude, longitude, distance_km, accepts_appointments, whatsapp]
+      required: [uuid, slug, name, city, district, latitude, longitude, distance_km, accepts_appointments, whatsapp]
       properties:
+        uuid: { type: string, format: uuid, description: "TEC-327. Organization uuid for portal appointment booking" }
         slug: { type: string }
         name: { type: string }
         city: { type: string }
@@ -32551,6 +32552,33 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/Appointment" }
+            total: { type: integer, format: int64 }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PortalAppointment:
+      description: TEC-327. A portal appointment with its dealer and vehicle labels.
+      allOf:
+        - $ref: "#/components/schemas/Appointment"
+        - type: object
+          required: [dealer_uuid, dealer_name, vehicle_uuid, vehicle_plate]
+          properties:
+            dealer_uuid: { type: string, format: uuid }
+            dealer_name: { type: string }
+            vehicle_uuid: { type: [string, "null"], format: uuid }
+            vehicle_plate: { type: [string, "null"] }
+
+    EnvelopePortalAppointmentPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PortalAppointment" }
             total: { type: integer, format: int64 }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
