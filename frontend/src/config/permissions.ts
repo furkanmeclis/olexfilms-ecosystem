@@ -175,6 +175,11 @@ export const Permission = {
   ProductSalesWrite: "product_sales.write",
   SuppliersManage: "suppliers.manage",
   PurchasesWrite: "purchases.write",
+  /** TEC-383: AI assistant (chat, usage report, platform settings, confirmations). */
+  AiUse: "ai.use",
+  AiUsageRead: "ai.usage.read",
+  AiSettingsManage: "ai.settings.manage",
+  AiActionsConfirm: "ai.actions.confirm",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];

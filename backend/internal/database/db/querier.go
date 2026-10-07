@@ -12,6 +12,8 @@ import (
 )
 
 type Querier interface {
+	// Projection of one ledger row (period = YYYY-MM of created_at, UTC).
+	AddAIUsageMonthly(ctx context.Context, arg AddAIUsageMonthlyParams) (AiUsageMonthly, error)
 	AddAnnouncementAudience(ctx context.Context, arg AddAnnouncementAudienceParams) (AnnouncementAudience, error)
 	// Signed deltas; the CHECK rejects negative stock.
 	AddBinProductStock(ctx context.Context, arg AddBinProductStockParams) (BinProductStock, error)
@@ -53,6 +55,7 @@ type Querier interface {
 	// A brand with an integration connection takes its categories from the
 	// remote hub, so their remote-sourced fields are locked in the panel.
 	BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error)
+	CancelAIPendingAction(ctx context.Context, arg CancelAIPendingActionParams) (AiPendingAction, error)
 	CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error)
 	CancelService(ctx context.Context, arg CancelServiceParams) (Service, error)
 	CancelStockCount(ctx context.Context, id int64) (StockCount, error)
@@ -64,6 +67,9 @@ type Querier interface {
 	// Vehicle transfer (decision 6): the active warranties of the vehicle move
 	// to the new owner in the transfer transaction.
 	ChangeWarrantyHolderByVehicle(ctx context.Context, arg ChangeWarrantyHolderByVehicleParams) ([]Warranty, error)
+	// Compare-and-set pending → executing: of two concurrent confirmations only
+	// one gets the row; the other gets pgx.ErrNoRows.
+	ClaimAIPendingAction(ctx context.Context, arg ClaimAIPendingActionParams) (AiPendingAction, error)
 	ClaimAppointmentReminder24h(ctx context.Context, arg ClaimAppointmentReminder24hParams) (ClaimAppointmentReminder24hRow, error)
 	ClaimAppointmentReminder2h(ctx context.Context, arg ClaimAppointmentReminder2hParams) (ClaimAppointmentReminder2hRow, error)
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
@@ -112,6 +118,8 @@ type Querier interface {
 	ConsumeOTPAt(ctx context.Context, arg ConsumeOTPAtParams) error
 	ConsumeQRLoginChallenge(ctx context.Context, code string) (QrLoginChallenge, error)
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
+	CountAIConversations(ctx context.Context, arg CountAIConversationsParams) (int64, error)
+	CountAIUsage(ctx context.Context, arg CountAIUsageParams) (int64, error)
 	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
 	CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error)
 	CountActiveAppointmentsForOrganization(ctx context.Context, arg CountActiveAppointmentsForOrganizationParams) (int64, error)
@@ -230,6 +238,12 @@ type Querier interface {
 	CountWarrantyClaimPhotos(ctx context.Context, claimID int64) (int64, error)
 	CountWarrantyClaimsInScope(ctx context.Context, arg CountWarrantyClaimsInScopeParams) (int64, error)
 	CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsParams) (int64, error)
+	// Conversations ----------------------------------------------------------------
+	CreateAIConversation(ctx context.Context, arg CreateAIConversationParams) (AiConversation, error)
+	// Messages ---------------------------------------------------------------------
+	CreateAIMessage(ctx context.Context, arg CreateAIMessageParams) (AiMessage, error)
+	// Pending actions --------------------------------------------------------------
+	CreateAIPendingAction(ctx context.Context, arg CreateAIPendingActionParams) (AiPendingAction, error)
 	// TEC-329 (F3-05a): announcements, their translations, audiences and read
 	// receipts (migration 000086).
 	CreateAnnouncement(ctx context.Context, arg CreateAnnouncementParams) (Announcement, error)
@@ -554,6 +568,8 @@ type Querier interface {
 	EnsureOrganizationProductStock(ctx context.Context, arg EnsureOrganizationProductStockParams) error
 	EnsureQuoteSent(ctx context.Context, arg EnsureQuoteSentParams) (Quote, error)
 	ExecuteContractInstance(ctx context.Context, arg ExecuteContractInstanceParams) (ContractInstance, error)
+	// Stale cleanup: pending actions past their expiry become expired.
+	ExpireAIPendingActions(ctx context.Context, now pgtype.Timestamptz) (int64, error)
 	ExpireDueQuotes(ctx context.Context, today pgtype.Date) ([]Quote, error)
 	ExpireDueVehicleTransfers(ctx context.Context, now pgtype.Timestamptz) ([]VehicleTransfer, error)
 	// Daily cron (decision 4/5): end_at is the end of the last covered day in
@@ -585,8 +601,19 @@ type Querier interface {
 	FindVehiclesByPlate(ctx context.Context, arg FindVehiclesByPlateParams) ([]Vehicle, error)
 	// Duplicate-VIN warning (VIN is not unique; ownership transfer is F1-06).
 	FindVehiclesByVIN(ctx context.Context, arg FindVehiclesByVINParams) ([]Vehicle, error)
+	// Completes a pending assistant turn (complete, error or cancelled).
+	FinishAIMessage(ctx context.Context, arg FinishAIMessageParams) (AiMessage, error)
 	FinishIntegrationSyncRun(ctx context.Context, arg FinishIntegrationSyncRunParams) (IntegrationSyncRun, error)
 	FinishMigrationRun(ctx context.Context, arg FinishMigrationRunParams) (MigrationRun, error)
+	GetAIConversationForUser(ctx context.Context, arg GetAIConversationForUserParams) (AiConversation, error)
+	GetAIOrgSettings(ctx context.Context, organizationID int64) (AiOrgSetting, error)
+	GetAIPendingActionForUser(ctx context.Context, arg GetAIPendingActionForUserParams) (AiPendingAction, error)
+	// TEC-383 (F4-01a): AI assistant settings, conversations, messages, pending
+	// actions and the usage ledger with its monthly projection.
+	// Settings ---------------------------------------------------------------------
+	GetAISettings(ctx context.Context) (AiSetting, error)
+	// Quota check: tokens of one pool in one month (no row = nothing used).
+	GetAIUsageMonthly(ctx context.Context, arg GetAIUsageMonthlyParams) (int64, error)
 	GetAccountingDisputeView(ctx context.Context, arg GetAccountingDisputeViewParams) (GetAccountingDisputeViewRow, error)
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
 	// Full-unit duplicate guard before creation (decision 3); the partial
@@ -1000,6 +1027,10 @@ type Querier interface {
 	IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, error)
 	// A wrong code: one more attempt (the use case cancels at the limit).
 	IncrementVehicleTransferAttempts(ctx context.Context, id int64) (VehicleTransfer, error)
+	// Usage ledger -----------------------------------------------------------------
+	// Append-only. Always call through ai/repository.RecordUsage, which upserts
+	// ai_usage_monthly in the same transaction.
+	InsertAIUsage(ctx context.Context, arg InsertAIUsageParams) (AiUsage, error)
 	// TEC-174 (F1-07d): cari disputes (K24). A dispute is visible to the
 	// disputing organization (organization_id) and to the parent it addresses
 	// (counterparty_org_id); org_ids NULL means the whole brand (brand/all
@@ -1133,6 +1164,14 @@ type Querier interface {
 	// Links the re-application service to an approved claim and moves it to
 	// reapplied. The reverse link is SetServiceWarrantyClaim.
 	LinkWarrantyClaimReapplyService(ctx context.Context, arg LinkWarrantyClaimReapplyServiceParams) (WarrantyClaim, error)
+	// Sort: docs/list-contract.md, keys from ai/repository.ConversationSort.
+	ListAIConversations(ctx context.Context, arg ListAIConversationsParams) ([]AiConversation, error)
+	ListAIMessages(ctx context.Context, conversationID int64) ([]AiMessage, error)
+	ListAIPendingActionsForUser(ctx context.Context, arg ListAIPendingActionsForUserParams) ([]AiPendingAction, error)
+	// Sort: docs/list-contract.md, keys from ai/repository.UsageSort.
+	ListAIUsage(ctx context.Context, arg ListAIUsageParams) ([]AiUsage, error)
+	// Monthly totals of a brand for the quota report.
+	ListAIUsageMonthly(ctx context.Context, arg ListAIUsageMonthlyParams) ([]AiUsageMonthly, error)
 	// TEC-379 (DT-BE-8): list contract (docs/list-contract.md). status sorts by
 	// rank (open, resolved_reversal, resolved_revision, rejected), organization
 	// by the disputing organization name, amount by the disputed amount in the
@@ -2345,6 +2384,8 @@ type Querier interface {
 	// Replaces an unconfirmed link of the phase with a manually chosen one.
 	ReplaceServiceMeasurement(ctx context.Context, arg ReplaceServiceMeasurementParams) (int64, error)
 	ReplaceUserRoles(ctx context.Context, userID int64) error
+	// Finishes a claimed action: executing → confirmed | failed.
+	ResolveAIPendingAction(ctx context.Context, arg ResolveAIPendingActionParams) (AiPendingAction, error)
 	ResolveAccountingDispute(ctx context.Context, arg ResolveAccountingDisputeParams) (AccountingDispute, error)
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone
 	// written by the API in the meantime is kept (only phone_raw is cleared).
@@ -2508,6 +2549,7 @@ type Querier interface {
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
 	ShipWarehouseTransfer(ctx context.Context, arg ShipWarehouseTransferParams) (WarehouseTransfer, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
+	SoftDeleteAIConversation(ctx context.Context, arg SoftDeleteAIConversationParams) (int64, error)
 	SoftDeleteAppointment(ctx context.Context, arg SoftDeleteAppointmentParams) (int64, error)
 	SoftDeleteLead(ctx context.Context, arg SoftDeleteLeadParams) (int64, error)
 	// Only an empty folder (no live subfolder or item) is removed.
@@ -2551,7 +2593,11 @@ type Querier interface {
 	// index. since NULL means all time. Ties sort by name.
 	TopServicedCarBrands(ctx context.Context, arg TopServicedCarBrandsParams) ([]TopServicedCarBrandsRow, error)
 	TopServicedCarModels(ctx context.Context, arg TopServicedCarModelsParams) ([]TopServicedCarModelsRow, error)
+	// Counts a newly stored message and moves the conversation to the top.
+	TouchAIConversation(ctx context.Context, id int64) (AiConversation, error)
 	UnlinkServiceMeasurement(ctx context.Context, arg UnlinkServiceMeasurementParams) (int64, error)
+	UpdateAIConversationTitle(ctx context.Context, arg UpdateAIConversationTitleParams) (AiConversation, error)
+	UpdateAISettings(ctx context.Context, arg UpdateAISettingsParams) (AiSetting, error)
 	// Content and flags of an announcement written by the organization.
 	UpdateAnnouncement(ctx context.Context, arg UpdateAnnouncementParams) (Announcement, error)
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
@@ -2649,6 +2695,7 @@ type Querier interface {
 	UpdateWebAuthnCredentialCounter(ctx context.Context, arg UpdateWebAuthnCredentialCounterParams) error
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
+	UpsertAIOrgSettings(ctx context.Context, arg UpsertAIOrgSettingsParams) (AiOrgSetting, error)
 	UpsertAnnouncementLocale(ctx context.Context, arg UpsertAnnouncementLocaleParams) (AnnouncementLocale, error)
 	// TEC-322 (F3-04a): appointment schema (migration 000090). Reads are
 	// bounded by resolved organization ids; the API layer owns scope resolution.
