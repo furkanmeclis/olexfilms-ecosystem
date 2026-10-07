@@ -91,5 +91,13 @@
   "params.lead_status.lost": "Kaybedildi",
   "params.lost_reason": "Kayıp nedeni",
   "actions.stock_units.print_labels": "Etiketleri yazdır",
-  "actions.warehouse_count_lines.set_resolution": "Çözüm uygula: {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "Çözüm uygula: {{resolution}}",
+  "actions.conversations.assign": "Ata",
+  "actions.conversations.close": "Kapat",
+  "actions.conversations.set_ai_mode": "AI modunu değiştir",
+  "confirm.conversations.close": "Seçili konuşmalar kapatılsın mı?",
+  "params.ai_mode": "AI modu",
+  "params.ai_mode.auto": "Otomatik",
+  "params.ai_mode.paused": "Duraklatıldı",
+  "params.ai_mode.off": "Kapalı"
 }

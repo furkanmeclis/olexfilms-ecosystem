@@ -91,5 +91,13 @@
   "params.lead_status.lost": "Lost",
   "params.lost_reason": "Loss reason",
   "actions.stock_units.print_labels": "Print labels",
-  "actions.warehouse_count_lines.set_resolution": "Set resolution: {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "Set resolution: {{resolution}}",
+  "actions.conversations.assign": "Assign",
+  "actions.conversations.close": "Close",
+  "actions.conversations.set_ai_mode": "Change AI mode",
+  "confirm.conversations.close": "Close the selected conversations?",
+  "params.ai_mode": "AI mode",
+  "params.ai_mode.auto": "Automatic",
+  "params.ai_mode.paused": "Paused",
+  "params.ai_mode.off": "Off"
 }

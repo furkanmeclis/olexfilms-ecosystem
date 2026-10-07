@@ -91,5 +91,13 @@
   "params.lead_status.lost": "Verloren",
   "params.lost_reason": "Verlustgrund",
   "actions.stock_units.print_labels": "Etiketten drucken",
-  "actions.warehouse_count_lines.set_resolution": "Lösung festlegen: {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "Lösung festlegen: {{resolution}}",
+  "actions.conversations.assign": "Zuweisen",
+  "actions.conversations.close": "Schließen",
+  "actions.conversations.set_ai_mode": "KI-Modus ändern",
+  "confirm.conversations.close": "Ausgewählte Unterhaltungen schließen?",
+  "params.ai_mode": "KI-Modus",
+  "params.ai_mode.auto": "Automatisch",
+  "params.ai_mode.paused": "Pausiert",
+  "params.ai_mode.off": "Aus"
 }

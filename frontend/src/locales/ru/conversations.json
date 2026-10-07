@@ -1,0 +1,13 @@
+{
+  "ai_mode": "Режим ИИ",
+  "assigned_user": "Ответственный",
+  "channel": "Канал",
+  "contact_e164": "Телефон",
+  "contact_name": "Контакт",
+  "created_at": "Создан",
+  "identity_kind": "Тип идентификации",
+  "last_message_at": "Последнее сообщение",
+  "status": "Статус",
+  "unread_count": "Непрочитанные",
+  "unread": "Только непрочитанные"
+}
