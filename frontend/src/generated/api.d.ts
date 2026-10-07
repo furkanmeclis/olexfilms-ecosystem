@@ -3929,6 +3929,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/.well-known/oauth-authorization-server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Authorization server metadata (RFC 8414) */
+        get: operations["getOAuthAuthorizationServerMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/.well-known/oauth-protected-resource/mcp/{endpoint}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Protected resource metadata of an MCP endpoint (RFC 9728) */
+        get: operations["getOAuthProtectedResourceMetadata"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dynamic client registration (RFC 7591, public clients)
+         * @description redirect_uris: 1 to 10, https or http on a loopback host, no
+         *     fragment. Only `token_endpoint_auth_method=none`, the
+         *     authorization_code / refresh_token grants and the `mcp` scope.
+         *     Registrations never connected are deleted after a day.
+         */
+        post: operations["postOAuthRegister"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Token endpoint (authorization_code + PKCE S256, refresh_token)
+         * @description authorization_code: `client_id`, `code`, `redirect_uri`,
+         *     `code_verifier` and `resource` (the MCP endpoint URL of the
+         *     authorization) are required. refresh_token: `client_id` and
+         *     `refresh_token`; `resource` is optional and must match. Every
+         *     refresh rotates both tokens; the old pair stops working.
+         */
+        post: operations["postOAuthToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/oauth/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Token revocation (RFC 7009)
+         * @description Revokes the whole token family of an access or refresh token. Unknown
+         *     tokens and tokens of another client answer 200 as well.
+         */
+        post: operations["postOAuthRevoke"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/hooks/wuzapi": {
         parameters: {
             query?: never;
@@ -11402,6 +11504,87 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        OAuthError: {
+            /** @example invalid_grant */
+            error: string;
+            error_description?: string;
+        };
+        OAuthAuthorizationServerMetadata: {
+            /** Format: uri */
+            issuer: string;
+            /** Format: uri */
+            authorization_endpoint: string;
+            /** Format: uri */
+            token_endpoint: string;
+            /** Format: uri */
+            registration_endpoint: string;
+            /** Format: uri */
+            revocation_endpoint?: string;
+            response_types_supported?: string[];
+            response_modes_supported?: string[];
+            grant_types_supported?: string[];
+            code_challenge_methods_supported: "S256"[];
+            token_endpoint_auth_methods_supported?: string[];
+            revocation_endpoint_auth_methods_supported?: string[];
+            scopes_supported?: string[];
+            authorization_response_iss_parameter_supported?: boolean;
+        };
+        OAuthProtectedResourceMetadata: {
+            /** Format: uri */
+            resource: string;
+            authorization_servers: string[];
+            scopes_supported?: string[];
+            bearer_methods_supported?: string[];
+            resource_name?: string;
+        };
+        OAuthClientRegistrationRequest: {
+            client_name?: string;
+            redirect_uris: string[];
+            grant_types?: ("authorization_code" | "refresh_token")[];
+            response_types?: "code"[];
+            /** @enum {string} */
+            token_endpoint_auth_method?: "none";
+            /** @example mcp */
+            scope?: string;
+        };
+        OAuthClientRegistration: {
+            client_id: string;
+            /** Format: int64 */
+            client_id_issued_at: number;
+            client_name: string;
+            redirect_uris: string[];
+            grant_types?: string[];
+            response_types?: string[];
+            /** @enum {string} */
+            token_endpoint_auth_method: "none";
+            scope?: string;
+        };
+        OAuthTokenRequest: {
+            /** @enum {string} */
+            grant_type: "authorization_code" | "refresh_token";
+            client_id: string;
+            code?: string;
+            /** Format: uri */
+            redirect_uri?: string;
+            code_verifier?: string;
+            refresh_token?: string;
+            /**
+             * Format: uri
+             * @example https://olexfilms.app/mcp/dealer
+             */
+            resource?: string;
+            scope?: string;
+        };
+        OAuthTokenResponse: {
+            access_token: string;
+            /** @enum {string} */
+            token_type: "Bearer";
+            /** @example 3600 */
+            expires_in: number;
+            refresh_token: string;
+            /** @example mcp */
+            scope: string;
+        };
         /** @enum {string} */
         LocaleCode: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh-CN" | "az" | "ar";
         /** @enum {string} */
@@ -27673,6 +27856,197 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getOAuthAuthorizationServerMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Metadata document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthAuthorizationServerMetadata"];
+                };
+            };
+        };
+    };
+    getOAuthProtectedResourceMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpoint: "dealer" | "customer" | "user";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Metadata document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthProtectedResourceMetadata"];
+                };
+            };
+            /** @description Unknown MCP endpoint */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthError"];
+                };
+            };
+        };
+    };
+    postOAuthRegister: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthClientRegistrationRequest"];
+            };
+        };
+        responses: {
+            /** @description Registered client */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthClientRegistration"];
+                };
+            };
+            /** @description invalid_redirect_uri / invalid_client_metadata */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthError"];
+                };
+            };
+            /** @description slow_down (20 per hour per IP) */
+            429: {
+                headers: {
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthError"];
+                };
+            };
+        };
+    };
+    postOAuthToken: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": components["schemas"]["OAuthTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Token pair */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthTokenResponse"];
+                };
+            };
+            /** @description invalid_request / invalid_grant / invalid_target / unsupported_grant_type / invalid_scope */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthError"];
+                };
+            };
+            /** @description invalid_client (unknown or revoked client) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthError"];
+                };
+            };
+            /** @description slow_down (120 per hour per IP) */
+            429: {
+                headers: {
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthError"];
+                };
+            };
+        };
+    };
+    postOAuthRevoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/x-www-form-urlencoded": {
+                    token: string;
+                    /** @enum {string} */
+                    token_type_hint?: "access_token" | "refresh_token";
+                    client_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Revoked (or unknown) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description invalid_request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthError"];
+                };
+            };
+            /** @description slow_down (120 per hour per IP) */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthError"];
                 };
             };
         };

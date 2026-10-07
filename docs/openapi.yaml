@@ -189,6 +189,23 @@ tags:
       revoke, logout-all, a password change or deactivation end it at once.
       Only the legacy aliases accept it; every other route answers 401.
 
+  - name: OAuth
+    description: |
+      MCP OAuth 2.1 authorization server (TEC-400, F4-03a). Outside `/v1`
+      at the paths MCP clients expect; the frontend proxies `/oauth/*`,
+      `/.well-known/*` and `/mcp/*` to Go (only the frontend is public).
+      The issuer is the frontend origin (`FRONTEND_URL`). Bodies follow the
+      OAuth RFCs (`error`, `error_description`), not the `/v1` envelope.
+      Public clients only (RFC 7591 DCR, `token_endpoint_auth_method=none`),
+      authorization code + PKCE `S256` (plain is rejected), rotating
+      refresh tokens (reuse of a rotated refresh token or a used code
+      revokes the whole token family), RFC 8707 `resource` bound to one MCP
+      endpoint (`/mcp/dealer`, `/mcp/customer`, `/mcp/user`). Access tokens
+      live 1 hour, refresh tokens 30 days, codes 5 minutes. Per-IP limits
+      per hour: register 20, authorize 60, token 120, revoke 120 (429
+      `slow_down` with `Retry-After`). The `mcp` module must be on for the
+      token's organization at issue and on every use.
+
 paths:
   /healthz:
     get:
@@ -7258,6 +7275,170 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /.well-known/oauth-authorization-server:
+    get:
+      tags: [OAuth]
+      operationId: getOAuthAuthorizationServerMetadata
+      summary: Authorization server metadata (RFC 8414)
+      security: []
+      responses:
+        "200":
+          description: Metadata document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthAuthorizationServerMetadata"
+
+  /.well-known/oauth-protected-resource/mcp/{endpoint}:
+    get:
+      tags: [OAuth]
+      operationId: getOAuthProtectedResourceMetadata
+      summary: Protected resource metadata of an MCP endpoint (RFC 9728)
+      security: []
+      parameters:
+        - name: endpoint
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [dealer, customer, user]
+      responses:
+        "200":
+          description: Metadata document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthProtectedResourceMetadata"
+        "404":
+          description: Unknown MCP endpoint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+
+  /oauth/register:
+    post:
+      tags: [OAuth]
+      operationId: postOAuthRegister
+      summary: Dynamic client registration (RFC 7591, public clients)
+      description: |
+        redirect_uris: 1 to 10, https or http on a loopback host, no
+        fragment. Only `token_endpoint_auth_method=none`, the
+        authorization_code / refresh_token grants and the `mcp` scope.
+        Registrations never connected are deleted after a day.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthClientRegistrationRequest"
+      responses:
+        "201":
+          description: Registered client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthClientRegistration"
+        "400":
+          description: invalid_redirect_uri / invalid_client_metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+        "429":
+          description: slow_down (20 per hour per IP)
+          headers:
+            Retry-After:
+              schema: { type: integer }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+
+  /oauth/token:
+    post:
+      tags: [OAuth]
+      operationId: postOAuthToken
+      summary: Token endpoint (authorization_code + PKCE S256, refresh_token)
+      description: |
+        authorization_code: `client_id`, `code`, `redirect_uri`,
+        `code_verifier` and `resource` (the MCP endpoint URL of the
+        authorization) are required. refresh_token: `client_id` and
+        `refresh_token`; `resource` is optional and must match. Every
+        refresh rotates both tokens; the old pair stops working.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/OAuthTokenRequest"
+      responses:
+        "200":
+          description: Token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthTokenResponse"
+        "400":
+          description: invalid_request / invalid_grant / invalid_target / unsupported_grant_type / invalid_scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+        "401":
+          description: invalid_client (unknown or revoked client)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+        "429":
+          description: slow_down (120 per hour per IP)
+          headers:
+            Retry-After:
+              schema: { type: integer }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+
+  /oauth/revoke:
+    post:
+      tags: [OAuth]
+      operationId: postOAuthRevoke
+      summary: Token revocation (RFC 7009)
+      description: |
+        Revokes the whole token family of an access or refresh token. Unknown
+        tokens and tokens of another client answer 200 as well.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+                token_type_hint: { type: string, enum: [access_token, refresh_token] }
+                client_id: { type: string }
+      responses:
+        "200":
+          description: Revoked (or unknown)
+        "400":
+          description: invalid_request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
+        "429":
+          description: slow_down (120 per hour per IP)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthError"
 
   /hooks/wuzapi:
     post:
@@ -22688,6 +22869,87 @@ components:
             $ref: "#/components/schemas/Error"
 
   schemas:
+    OAuthError:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, example: invalid_grant }
+        error_description: { type: string }
+    OAuthAuthorizationServerMetadata:
+      type: object
+      required: [issuer, authorization_endpoint, token_endpoint, registration_endpoint, code_challenge_methods_supported]
+      properties:
+        issuer: { type: string, format: uri }
+        authorization_endpoint: { type: string, format: uri }
+        token_endpoint: { type: string, format: uri }
+        registration_endpoint: { type: string, format: uri }
+        revocation_endpoint: { type: string, format: uri }
+        response_types_supported: { type: array, items: { type: string } }
+        response_modes_supported: { type: array, items: { type: string } }
+        grant_types_supported: { type: array, items: { type: string } }
+        code_challenge_methods_supported:
+          type: array
+          items: { type: string, enum: [S256] }
+        token_endpoint_auth_methods_supported: { type: array, items: { type: string } }
+        revocation_endpoint_auth_methods_supported: { type: array, items: { type: string } }
+        scopes_supported: { type: array, items: { type: string } }
+        authorization_response_iss_parameter_supported: { type: boolean }
+    OAuthProtectedResourceMetadata:
+      type: object
+      required: [resource, authorization_servers]
+      properties:
+        resource: { type: string, format: uri }
+        authorization_servers: { type: array, items: { type: string, format: uri } }
+        scopes_supported: { type: array, items: { type: string } }
+        bearer_methods_supported: { type: array, items: { type: string } }
+        resource_name: { type: string }
+    OAuthClientRegistrationRequest:
+      type: object
+      required: [redirect_uris]
+      properties:
+        client_name: { type: string, maxLength: 200 }
+        redirect_uris:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items: { type: string, format: uri }
+        grant_types: { type: array, items: { type: string, enum: [authorization_code, refresh_token] } }
+        response_types: { type: array, items: { type: string, enum: [code] } }
+        token_endpoint_auth_method: { type: string, enum: [none] }
+        scope: { type: string, example: mcp }
+    OAuthClientRegistration:
+      type: object
+      required: [client_id, client_id_issued_at, client_name, redirect_uris, token_endpoint_auth_method]
+      properties:
+        client_id: { type: string }
+        client_id_issued_at: { type: integer, format: int64 }
+        client_name: { type: string }
+        redirect_uris: { type: array, items: { type: string, format: uri } }
+        grant_types: { type: array, items: { type: string } }
+        response_types: { type: array, items: { type: string } }
+        token_endpoint_auth_method: { type: string, enum: [none] }
+        scope: { type: string }
+    OAuthTokenRequest:
+      type: object
+      required: [grant_type, client_id]
+      properties:
+        grant_type: { type: string, enum: [authorization_code, refresh_token] }
+        client_id: { type: string }
+        code: { type: string }
+        redirect_uri: { type: string, format: uri }
+        code_verifier: { type: string, minLength: 43, maxLength: 128 }
+        refresh_token: { type: string }
+        resource: { type: string, format: uri, example: "https://olexfilms.app/mcp/dealer" }
+        scope: { type: string }
+    OAuthTokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in, refresh_token, scope]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, enum: [Bearer] }
+        expires_in: { type: integer, example: 3600 }
+        refresh_token: { type: string }
+        scope: { type: string, example: mcp }
     LocaleCode:
       type: string
       enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh-CN, az, ar]

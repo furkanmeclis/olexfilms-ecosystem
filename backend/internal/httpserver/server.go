@@ -96,6 +96,7 @@ import (
 	notifhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	oauthmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth"
 	ordersmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders"
 	ordershandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/handler"
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
@@ -566,6 +567,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-249: public short URL resolver behind the frontend /s/{token}.
 	shorturlsmodule.RegisterPublicRoutes(mux, shorturlsmodule.New(deps.Queries), ratelimit.New(deps.Redis, cfg.App.Env),
 		cfg.ShortURLs.PublicRateLimit, cfg.ShortURLs.PublicRateWindow)
+	// TEC-400: MCP OAuth 2.1 authorization server (metadata, DCR, token,
+	// revoke); the issuer is the frontend origin that proxies these paths.
+	oauthSvc := oauthmodule.New(deps.DB, featureSvc, ratelimit.New(deps.Redis, cfg.App.Env), cfg.Auth.FrontendURL, log)
+	oauthmodule.RegisterRoutes(mux, oauthSvc, log)
+	if s.worker != nil {
+		s.worker.WithOAuthCleanup(oauthSvc.Cleanup)
+	}
 	// TEC-191: panel / portal warranty list and detail, center void.
 	warrantyReader := warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
 		tokens, loader, featureSvc, stepUpSvc, listFinder)
