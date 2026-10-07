@@ -64,7 +64,7 @@
   "measurement.no": "Hayır",
   "measurement.vin_required": "Ölçüm VIN ile eşleşir; bu yüzden VIN zorunludur.",
   "measurement.vin_optional": "Ölçüm yoksa VIN isteğe bağlıdır.",
-  "measurement.report_placeholder": "Ölçüm raporu seçimi daha sonra eklenecek; rapor eşleşebilsin diye VIN şimdi kaydedilir.",
+  "measurement.report_auto": "VIN kaydedilir; ölçüm yüklendiğinde hizmetle otomatik eşleşir.",
   "vin.label": "VIN (şasi numarası)",
   "vin.hint": "17 harf veya rakam; I, O ve Q kullanılmaz.",
   "vin.errors.required": "Ölçüm için VIN zorunludur.",

@@ -64,7 +64,7 @@
   "measurement.no": "No",
   "measurement.vin_required": "La medición se asocia por VIN, así que el VIN es obligatorio.",
   "measurement.vin_optional": "Sin medición, el VIN es opcional.",
-  "measurement.report_placeholder": "La selección del informe de medición se añadirá más adelante; el VIN se guarda ahora para poder asociar el informe.",
+  "measurement.report_auto": "El VIN se guarda; una medición subida se vinculará al servicio automáticamente.",
   "vin.label": "VIN (número de bastidor)",
   "vin.hint": "17 letras o dígitos; no se usan I, O ni Q.",
   "vin.errors.required": "El VIN es obligatorio para una medición.",

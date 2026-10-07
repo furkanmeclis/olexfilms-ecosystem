@@ -64,7 +64,7 @@
   "measurement.no": "Non",
   "measurement.vin_required": "Une mesure est associée par VIN : le VIN est donc obligatoire.",
   "measurement.vin_optional": "Sans mesure, le VIN est facultatif.",
-  "measurement.report_placeholder": "Le choix du rapport de mesure sera ajouté plus tard ; le VIN est enregistré dès maintenant pour associer le rapport.",
+  "measurement.report_auto": "Le VIN est enregistré ; une mesure envoyée sera associée automatiquement au service.",
   "vin.label": "VIN (numéro de châssis)",
   "vin.hint": "17 lettres ou chiffres ; I, O et Q ne sont pas utilisés.",
   "vin.errors.required": "Le VIN est obligatoire pour une mesure.",
