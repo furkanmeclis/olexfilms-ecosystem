@@ -71,3 +71,15 @@ func NewMessaging(svc *usecase.Service, pool *pgxpool.Pool, q *db.Queries, d Mes
 	svc.AttachMessaging(m)
 	return m
 }
+
+// NewInbox builds the panel conversation use case (TEC-398) on the
+// messaging queue.
+func NewInbox(m *usecase.Messaging, pool *pgxpool.Pool, q *db.Queries, storage usecase.ObjectStore, pub realtime.Publisher) *usecase.Inbox {
+	var tx usecase.TxBeginner
+	if pool != nil {
+		tx = pool
+	}
+	return usecase.NewInbox(usecase.InboxDeps{
+		Queries: q, Tx: tx, Messaging: m, Storage: storage, Outbox: outbox.NewStore(pool, q), Publisher: pub,
+	})
+}

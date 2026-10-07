@@ -25,6 +25,12 @@ func New(conn db.DBTX) *Store {
 	return &Store{q: db.New(conn)}
 }
 
+// FromQueries creates a repository on an existing query set (a pool or a
+// transaction).
+func FromQueries(q *db.Queries) *Store {
+	return &Store{q: q}
+}
+
 // Queries returns the generated query set.
 func (s *Store) Queries() *db.Queries { return s.q }
 
