@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "Der KI-Assistent ist nicht eingerichtet.",
   "codes.AI_ORG_DISABLED": "Der KI-Assistent ist für diese Organisation deaktiviert.",
   "codes.AI_QUOTA_EXCEEDED": "KI-Nutzungskontingent überschritten.",
+  "codes.AI_UNAVAILABLE": "Der KI-Assistent ist derzeit nicht verfügbar.",
   "codes.AI_VOICE_DISABLED": "Der Sprachassistent ist deaktiviert.",
   "codes.AI_VOICE_UNAVAILABLE": "Der Sprachassistent ist derzeit nicht verfügbar.",
   "codes.AUDIO_TOO_LARGE": "Die Aufnahme ist zu groß.",

@@ -49,6 +49,12 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/warranty-claims/{uuid}", tenant(h.Get, rbac.PermWarrantyClaimsRead))
 	// TEC-339: claim photo gallery of the detail page.
 	mux.Handle("GET /v1/warranty-claims/{uuid}/photos/{photo}", tenant(h.Photo, rbac.PermWarrantyClaimsRead))
+	// TEC-392: manual re-run of the AI first triage.
+	mux.Handle("POST /v1/warranty-claims/{uuid}/ai-triage", middleware.Chain(
+		http.HandlerFunc(h.AITriage), authn, org, module,
+		middleware.RequireScope(q, rbac.PermWarrantyClaimsDecide),
+		middleware.RequireScope(q, rbac.PermWarrantyClaimsRead),
+	))
 	mux.Handle("GET /v1/portal/warranty-claims", middleware.Chain(
 		http.HandlerFunc(h.PortalList), authn, middleware.RequirePermission(rbac.PermWarrantiesRead),
 	))

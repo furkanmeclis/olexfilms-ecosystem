@@ -146,6 +146,8 @@
   "system.groups.whatsapp_hint": "Conversazioni WhatsApp, velocità di invio e risposte dell'IA.",
   "system.keys.whatsapp_ai_staff_pause_minutes": "Pausa dell'IA dopo un messaggio del personale (minuti)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "L'IA non risponde in una conversazione in cui un operatore ha scritto entro questo tempo; 0 = nessuna pausa.",
+  "system.keys.ai_visitor_daily_token_cap": "Limite giornaliero di token dell’IA per i visitatori WhatsApp",
+  "system.keys.ai_visitor_daily_token_cap_hint": "Token che tutti i visitatori WhatsApp non identificati possono usare ogni giorno dalla riserva di sistema; oltre, ricevono una risposta fissa con il link per trovare un rivenditore. 0 = nessun limite.",
   "system.keys.whatsapp_ai_guidelines_url": "Link alle regole di utilizzo dell'IA",
   "system.keys.whatsapp_ai_guidelines_url_hint": "Link (https) alle regole inviato con la richiesta di consenso su WhatsApp; vuoto = il testo delle regole viene inviato nel messaggio."
 }

@@ -85,6 +85,19 @@ func newReapplyFixture(t *testing.T) *reapplyFixture {
 
 func (f *reapplyFixture) claim(t *testing.T) db.WarrantyClaim {
 	t.Helper()
+	claim := f.openClaim(t)
+	approved, err := f.q.SetWarrantyClaimStatus(f.ctx, db.SetWarrantyClaimStatusParams{
+		ID: claim.ID, BrandID: claim.BrandID, FromStatus: StatusOpen, Status: StatusApproved,
+	})
+	if err != nil {
+		t.Fatalf("approve claim: %v", err)
+	}
+	return approved
+}
+
+// openClaim creates an open claim with one part (body_kaput).
+func (f *reapplyFixture) openClaim(t *testing.T) db.WarrantyClaim {
+	t.Helper()
 	q, ctx := f.q, f.ctx
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	var carBrand, carModel int64
@@ -165,13 +178,7 @@ func (f *reapplyFixture) claim(t *testing.T) db.WarrantyClaim {
 	}); err != nil {
 		t.Fatalf("claim part: %v", err)
 	}
-	approved, err := q.SetWarrantyClaimStatus(ctx, db.SetWarrantyClaimStatusParams{
-		ID: claim.ID, BrandID: claim.BrandID, FromStatus: StatusOpen, Status: StatusApproved,
-	})
-	if err != nil {
-		t.Fatalf("approve claim: %v", err)
-	}
-	return approved
+	return claim
 }
 
 func (f *reapplyFixture) publishClaimApproved(t *testing.T, claim db.WarrantyClaim) {

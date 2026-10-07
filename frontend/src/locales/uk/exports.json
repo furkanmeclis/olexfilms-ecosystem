@@ -77,5 +77,6 @@
   "resources.stock.units": "Одиниці запасу",
   "resources.leads.list": "Ліди",
   "resources.services.list": "Послуги",
-  "resources.warranties.list": "Гарантії"
+  "resources.warranties.list": "Гарантії",
+  "resources.ai.usage": "Використання ШІ"
 }

@@ -552,4 +552,9 @@ export const permissions = {
     connect: Permission.McpConnect,
     clientsManage: Permission.McpClientsManage,
   },
+  /** TEC-391: AI administration (platform settings, quotas, usage report). */
+  aiAdmin: {
+    settingsManage: Permission.AiSettingsManage,
+    usageRead: Permission.AiUsageRead,
+  },
 } as const;

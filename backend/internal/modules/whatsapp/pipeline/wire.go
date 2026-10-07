@@ -7,6 +7,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	aimodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/model"
 	airepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/repository"
+	aitools "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/tools"
 	aiusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/usecase"
 	legal "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/legal/usecase"
 	wausecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
@@ -35,6 +36,13 @@ type WireDeps struct {
 	Downloader       whatsapp.MediaDownloader
 	DefaultBrandSlug string
 	Log              *slog.Logger
+	// TEC-397 visitor flow: Tools gets request_dealer_contact when Leads is
+	// set.
+	Tools           *aitools.Registry
+	Dealers         aitools.DealerFinder
+	Leads           VisitorLeads
+	VisitorSettings VisitorSettings
+	FrontendURL     string
 }
 
 // Wire builds the pipeline with the identity resolver (Redis cache,
@@ -48,6 +56,9 @@ func Wire(d WireDeps) *Pipeline {
 		cache = wausecase.NewRedisIdentityCache(d.Redis, d.Env, d.Log)
 		locker = NewRedisLocker(d.Redis, d.Env)
 	}
+	if d.Tools != nil && d.Leads != nil {
+		d.Tools.Register(RequestDealerContact{})
+	}
 	identity := wausecase.NewIdentityResolver(d.Queries, cache, d.Provider, d.Models, d.Log).
 		WithUsageRecorder(LocaleUsage{Store: d.AIStore, Queries: d.Queries, DefaultBrandSlug: d.DefaultBrandSlug})
 	return New(Deps{
@@ -55,6 +66,7 @@ func Wire(d WireDeps) *Pipeline {
 		Consents: legal.New(d.Queries), Access: d.Access, Features: d.Features, Settings: d.Settings,
 		Locker: locker, Notifier: d.Notifier, Media: d.Media, Downloader: d.Downloader,
 		DefaultBrandSlug: d.DefaultBrandSlug, Log: d.Log,
+		Dealers: d.Dealers, Leads: d.Leads, VisitorSettings: d.VisitorSettings, FrontendURL: d.FrontendURL,
 	})
 }
 

@@ -146,6 +146,8 @@
   "system.groups.whatsapp_hint": "WhatsApp conversations, send rate and AI replies.",
   "system.keys.whatsapp_ai_staff_pause_minutes": "AI pause after a staff message (minutes)",
   "system.keys.whatsapp_ai_staff_pause_minutes_hint": "The AI does not answer a conversation a staff member wrote in within this time; 0 = no pause.",
+  "system.keys.ai_visitor_daily_token_cap": "Daily token cap for WhatsApp visitor AI",
+  "system.keys.ai_visitor_daily_token_cap_hint": "Tokens all unidentified WhatsApp visitors may use per day from the system pool; above it they get a fixed reply with the dealer finder link. 0 = no cap.",
   "system.keys.whatsapp_ai_guidelines_url": "AI guidelines link",
   "system.keys.whatsapp_ai_guidelines_url_hint": "Guidelines link (https) sent with the WhatsApp consent question; empty = the guidelines text is sent in the message."
 }

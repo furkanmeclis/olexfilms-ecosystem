@@ -12,7 +12,8 @@ const RESOURCE_LABEL_KEYS: Record<IoResource, string> = {
 /**
  * Export jobs of endpoints outside `IoResource` (their own export path,
  * e.g. POST /v1/orders/export (TEC-374), POST /v1/leads/export (TEC-372),
- * POST /v1/services/export and /v1/warranties/export (TEC-378);
+ * POST /v1/services/export and /v1/warranties/export (TEC-378),
+ * POST /v1/ai/usage/export and /v1/platform/ai/usage/export (TEC-389);
  * label at `exports.resources.*`.
  */
 const EXPORT_ONLY_RESOURCES = new Set<string>([
@@ -21,6 +22,7 @@ const EXPORT_ONLY_RESOURCES = new Set<string>([
   "stock.units",
   "services.list",
   "warranties.list",
+  "ai.usage",
 ]);
 
 export function resourceLabelKey(resource: string): string | null {

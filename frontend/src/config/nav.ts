@@ -62,6 +62,7 @@ import { githubNavIcon } from "@/components/icons/github-icon";
 import { googleNavIcon } from "@/components/icons/google-icon";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { aiPlatformNavItem, aiUsageNavItem } from "@/features/ai-admin/nav";
 import { announcementsNavAdornment } from "@/features/announcements/nav";
 import { conversationsNavItem } from "@/features/conversations/nav";
 import { pendingActionsNavItem } from "@/features/mcp/nav";
@@ -236,6 +237,8 @@ export const platformNav = defineNav({
           icon: SlidersHorizontal,
           permission: permissions.settings.read,
         },
+        // TEC-391: AI settings, organization quotas and usage report.
+        aiPlatformNavItem,
       ],
     },
     {
@@ -409,6 +412,8 @@ export function tenantNav(slug: string) {
           },
           // TEC-403: MCP / WhatsApp write tools waiting for approval.
           pendingActionsNavItem(slug),
+          // TEC-391: the organization's AI usage report (ai.usage.read).
+          aiUsageNavItem(slug),
         ],
       },
       {

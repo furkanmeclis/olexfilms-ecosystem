@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "L'assistant IA n'est pas configuré.",
   "codes.AI_ORG_DISABLED": "L'assistant IA est désactivé pour cette organisation.",
   "codes.AI_QUOTA_EXCEEDED": "Quota d'utilisation de l'IA dépassé.",
+  "codes.AI_UNAVAILABLE": "L'assistant IA n'est pas disponible pour le moment.",
   "codes.AI_VOICE_DISABLED": "L'assistant vocal est désactivé.",
   "codes.AI_VOICE_UNAVAILABLE": "L'assistant vocal est indisponible pour le moment.",
   "codes.AUDIO_TOO_LARGE": "L'enregistrement est trop volumineux.",

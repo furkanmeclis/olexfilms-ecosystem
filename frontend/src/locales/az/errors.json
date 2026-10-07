@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "AI köməkçisi qurulmayıb.",
   "codes.AI_ORG_DISABLED": "AI köməkçisi bu təşkilat üçün deaktivdir.",
   "codes.AI_QUOTA_EXCEEDED": "AI istifadə kvotası aşılıb.",
+  "codes.AI_UNAVAILABLE": "Süni intellekt köməkçisi hazırda əlçatan deyil.",
   "codes.AI_VOICE_DISABLED": "Səsli köməkçi deaktivdir.",
   "codes.AI_VOICE_UNAVAILABLE": "Səsli köməkçi hazırda əlçatan deyil.",
   "codes.AUDIO_TOO_LARGE": "Səs yazısı çox böyükdür.",

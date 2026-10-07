@@ -42,6 +42,7 @@
   "codes.AI_NOT_CONFIGURED": "Yapay zekâ asistanı yapılandırılmamış.",
   "codes.AI_ORG_DISABLED": "Yapay zekâ asistanı bu işletmede kapalı.",
   "codes.AI_QUOTA_EXCEEDED": "Yapay zekâ kullanım kotası doldu.",
+  "codes.AI_UNAVAILABLE": "Yapay zekâ asistanı şu an kullanılamıyor.",
   "codes.AI_VOICE_DISABLED": "Sesli asistan kapalı.",
   "codes.AI_VOICE_UNAVAILABLE": "Sesli asistan şu an kullanılamıyor.",
   "codes.AUDIO_TOO_LARGE": "Ses kaydı çok büyük.",

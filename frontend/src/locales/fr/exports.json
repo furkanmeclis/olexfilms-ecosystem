@@ -77,5 +77,6 @@
   "resources.stock.units": "Unités de stock",
   "resources.leads.list": "Prospects",
   "resources.services.list": "Services",
-  "resources.warranties.list": "Garanties"
+  "resources.warranties.list": "Garanties",
+  "resources.ai.usage": "Utilisation de l'IA"
 }
