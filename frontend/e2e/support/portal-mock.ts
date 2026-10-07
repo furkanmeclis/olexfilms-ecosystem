@@ -104,6 +104,8 @@ export class PortalMock {
   unknown: string[] = [];
   /** TEC-327: appointments booked through the portal. */
   appointments: Json[] = [];
+  /** TEC-304: executed intake contracts of the owner (PortalContract). */
+  contracts: Json[] = [];
 
   /** Latest code the fake WhatsApp sender delivered to `phone`. */
   lastCode(phone: string, purpose: string): string | undefined {
@@ -424,6 +426,11 @@ export class PortalMock {
         this.owner = this.transferTo;
       }
       return ok(t);
+    }
+
+    if (method === "GET" && path === "portal/contracts") {
+      const items = owns ? this.contracts : [];
+      return ok({ items, total: items.length, limit: 20, offset: 0 });
     }
 
     const appointment = this.handleAppointments(method, path, url, body);

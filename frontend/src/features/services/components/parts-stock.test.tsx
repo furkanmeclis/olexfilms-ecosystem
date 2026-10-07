@@ -104,6 +104,7 @@ async function render(node: ReturnType<typeof createElement>) {
     root.render(createElement(QueryClientProvider, { client }, node));
   });
   await flush();
+  return client;
 }
 
 async function type(el: Element | null, value: string) {
@@ -527,9 +528,12 @@ describe("Wizard flow: parts, roll and pieces, completion", () => {
       }),
     );
 
-    await render(
+    const client = await render(
       createElement(ServiceWizardPage, { slug: "acme", uuid: "s1" }),
     );
+    // TEC-304: links the measurement step cached for this draft.
+    const links = ["service-measurements", "links", "s1"];
+    client.setQueryData(links, { links: [] });
     // Step 2 opens first for an existing draft.
     expect($('[data-testid="parts-step"]')).not.toBeNull();
     await click($('path[data-part="body_kaput"]'));
@@ -570,5 +574,7 @@ describe("Wizard flow: parts, roll and pieces, completion", () => {
     expect(api.transition).toHaveBeenCalledWith("s1", "completed");
     expect(router.push).toHaveBeenCalledWith("/t/acme/services/s1");
     expect(window.sessionStorage.getItem("service-wizard-parts:s1")).toBeNull();
+    // The completion's before/after match must be refetched on the detail.
+    expect(client.getQueryState(links)?.isInvalidated).toBe(true);
   });
 });
