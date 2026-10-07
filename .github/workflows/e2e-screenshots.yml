@@ -1,0 +1,68 @@
+name: e2e-screenshots
+
+# Manual only: runs the mocked Playwright suite with a screenshot and trace
+# for every test and uploads them (plus the HTML report) as artifacts.
+on:
+  workflow_dispatch:
+    inputs:
+      grep:
+        description: "Only tests matching this pattern (empty = all)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: E2E with screenshots
+        env:
+          E2E_CAPTURE: "1"
+          GREP: ${{ inputs.grep }}
+        run: |
+          if [ -n "$GREP" ]; then pnpm test:e2e --grep "$GREP"; else pnpm test:e2e; fi
+      - name: Collect screenshots
+        if: always()
+        run: |
+          mkdir -p screenshots
+          find test-results -name '*.png' | while read -r f; do
+            cp "$f" "screenshots/$(dirname "$f" | xargs basename)-$(basename "$f")"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: frontend/screenshots
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-html-report
+          path: frontend/playwright-report
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: frontend/test-results
+          retention-days: 14
