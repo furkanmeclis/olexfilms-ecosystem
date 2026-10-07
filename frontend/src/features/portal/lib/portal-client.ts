@@ -97,6 +97,33 @@ export async function portalRequest<T>(
 }
 
 /**
+ * Raw portal BFF request that keeps the response body as a stream (the AI
+ * chat SSE, TEC-390). A 401 refreshes the portal session once and retries.
+ */
+export async function portalStream(
+  path: string,
+  init: { method?: string; body?: unknown; signal?: AbortSignal } = {},
+): Promise<Response> {
+  const send = () =>
+    fetch(`${PORTAL_API_BASE}/${path.replace(/^\//, "")}`, {
+      method: init.method ?? "POST",
+      credentials: "include",
+      cache: "no-store",
+      signal: init.signal,
+      headers: {
+        Accept: "text/event-stream",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(init.body ?? {}),
+    });
+  let response = await send();
+  if (response.status === 401) {
+    if (await refreshPortalSession()) response = await send();
+  }
+  return response;
+}
+
+/**
  * Credentials sign-in against the portal Auth.js instance (the same calls
  * as the Auth.js client `signIn`, pinned to /api/portal-auth). Returns the
  * error code (`CredentialsSignin` subtype code) or null on success.

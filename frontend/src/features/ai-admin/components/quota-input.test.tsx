@@ -22,11 +22,20 @@ import { aiSettingsSchema } from "@/features/ai-admin/lib/settings-form";
 let container: HTMLDivElement;
 let root: Root;
 let lastValue: number | null = null;
+const record = (value: number | null) => {
+  lastValue = value;
+};
 
 function Harness({ initial }: { initial: number | null }) {
   const [value, setValue] = useState<number | null>(initial);
-  lastValue = value;
-  return createElement(QuotaInput, { id: "quota", value, onChange: setValue });
+  return createElement(QuotaInput, {
+    id: "quota",
+    value,
+    onChange: (next: number | null) => {
+      record(next);
+      setValue(next);
+    },
+  });
 }
 
 function render(initial: number | null) {

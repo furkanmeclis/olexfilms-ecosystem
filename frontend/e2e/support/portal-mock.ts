@@ -339,6 +339,15 @@ export class PortalMock {
     if (method === "GET" && path === "portal/consents/pending") {
       return ok({ items: [] });
     }
+    // TEC-390: the portal menu asks whether the assistant is on (off here).
+    if (method === "GET" && path === "portal/ai/status") {
+      return ok({
+        enabled: false,
+        allowed: true,
+        consent_required: false,
+        quota: { period: "2026-10", limit: 0, used: 0, remaining: null },
+      });
+    }
     if (method === "GET" && path === "portal/vehicles") {
       const items = owns ? [this.vehicle()] : [];
       return ok({ items, total: items.length, limit: 12, offset: 0 });

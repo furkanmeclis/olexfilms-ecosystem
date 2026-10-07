@@ -2,6 +2,7 @@
 
 import {
   BellRing,
+  Bot,
   CalendarClock,
   Car,
   FileSignature,
@@ -13,6 +14,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { routes } from "@/config/routes";
+import { usePortalAssistantVisible } from "@/features/ai-assistant/hooks/use-portal-assistant-visible";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -42,6 +44,13 @@ const ITEMS = [
   },
 ] as const;
 
+/** TEC-390: shown only while the assistant is on for the customer. */
+const ASSISTANT_ITEM = {
+  href: routes.portal.assistant,
+  key: "ai.nav_title",
+  icon: Bot,
+} as const;
+
 /** Whether a nav item is the current section (home matches only itself). */
 export function isPortalNavActive(href: string, pathname: string): boolean {
   if (href === routes.portal.home) return pathname === href;
@@ -61,6 +70,8 @@ export function isPortalNavActive(href: string, pathname: string): boolean {
 export function PortalNav() {
   const { t } = useLocale();
   const pathname = usePathname() ?? "";
+  const assistant = usePortalAssistantVisible();
+  const items = assistant ? [...ITEMS, ASSISTANT_ITEM] : ITEMS;
   return (
     <nav
       aria-label={t("portal.nav.label")}
@@ -68,7 +79,7 @@ export function PortalNav() {
       data-testid="portal-nav"
     >
       <ul className="mx-auto flex w-full max-w-3xl gap-1 overflow-x-auto px-4 py-2">
-        {ITEMS.map(({ href, key, icon: Icon }) => {
+        {items.map(({ href, key, icon: Icon }) => {
           const active = isPortalNavActive(href, pathname);
           return (
             <li key={href}>

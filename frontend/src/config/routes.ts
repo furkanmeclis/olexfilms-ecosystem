@@ -175,6 +175,8 @@ export const routes = {
     library: {
       list: (slug: string) => `/t/${slug}/library`,
     },
+    /** TEC-390: AI assistant full page (the header opens it as a sheet). */
+    assistant: (slug: string) => `/t/${slug}/assistant`,
     /** TEC-318 lead pipeline: list, new, detail + timeline. */
     leads: {
       list: (slug: string) => `/t/${slug}/leads`,
@@ -222,6 +224,8 @@ export const routes = {
     /** TEC-245: signed contracts and notification preferences. */
     contracts: "/portal/contracts",
     preferences: "/portal/preferences",
+    /** TEC-390: AI assistant (customer realm). */
+    assistant: "/portal/assistant",
     /** TEC-327: my appointments and the booking flow (optional preselection). */
     appointments: "/portal/appointments",
     newAppointment: (preset?: {
