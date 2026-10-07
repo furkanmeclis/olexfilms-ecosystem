@@ -67,6 +67,11 @@ type InboundMedia struct {
 	FileName string `json:"file_name,omitempty"`
 	Caption  string `json:"caption,omitempty"`
 	URL      string `json:"url,omitempty"`
+	// Size is the file length the sender declared (0 = unknown).
+	Size int64 `json:"size,omitempty"`
+	// Download is the provider's reference to fetch the encrypted media
+	// (wuzapi: directPath, mediaKey and hashes); MediaDownloader uses it.
+	Download json.RawMessage `json:"download,omitempty"`
 }
 
 // InboundEvent is one normalized webhook event.

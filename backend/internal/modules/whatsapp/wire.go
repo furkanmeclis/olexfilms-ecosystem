@@ -1,6 +1,7 @@
 package whatsapp
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
@@ -8,6 +9,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp/wuzapi"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -25,4 +27,30 @@ func NewService(cfg config.WuzapiConfig, pool *pgxpool.Pool, q *db.Queries, box 
 		tx = pool
 	}
 	return usecase.New(q, tx, gw, box, outbox.NewStore(pool, q), notifier, log)
+}
+
+// MessagingDeps are the outside services of conversation messaging; any
+// may be nil.
+type MessagingDeps struct {
+	Storage       usecase.ObjectStore
+	Queue         usecase.SendQueue
+	Limiter       usecase.SendLimiter
+	SendPerMinute func(ctx context.Context) int
+	Publisher     realtime.Publisher
+}
+
+// NewMessaging builds the conversation messaging use case (TEC-395) on the
+// service's gateway and attaches it to the webhook.
+func NewMessaging(svc *usecase.Service, pool *pgxpool.Pool, q *db.Queries, d MessagingDeps, log *slog.Logger) *usecase.Messaging {
+	var tx usecase.TxBeginner
+	if pool != nil {
+		tx = pool
+	}
+	m := usecase.NewMessaging(usecase.MessagingDeps{
+		Queries: q, Tx: tx, Provider: svc.Provider(), Downloader: svc.MediaDownloader(),
+		Storage: d.Storage, Queue: d.Queue, Limiter: d.Limiter, SendPerMinute: d.SendPerMinute,
+		Publisher: d.Publisher, Log: log,
+	})
+	svc.AttachMessaging(m)
+	return m
 }

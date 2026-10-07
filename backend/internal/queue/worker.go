@@ -99,6 +99,10 @@ type Worker struct {
 	staffPaymentsPostDue StaffPaymentsPostDueFunc
 	// TEC-393: 90-day retention of conversation AI runs.
 	purgeConversationAIRuns ConversationAIRunPurgeFunc
+	// TEC-395: WhatsApp outgoing send, inbound media storage, queue sweep.
+	whatsAppSend  WhatsAppMessageFunc
+	whatsAppMedia WhatsAppMessageFunc
+	whatsAppSweep WhatsAppQueueSweepFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -118,6 +122,7 @@ func DefaultQueues() map[string]int {
 		QueueSearch:        2,
 		QueueMaintenance:   1,
 		QueueDocs:          2,
+		QueueWhatsApp:      2,
 	}
 }
 
@@ -184,6 +189,9 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskMeasurementPDF, w.handleMeasurementPDF)
 	mux.HandleFunc(TaskStaffPaymentsPostDue, w.handleStaffPaymentsPostDue)
 	mux.HandleFunc(TaskConversationAIRunPurge, w.handleConversationAIRunPurge)
+	mux.HandleFunc(TaskWhatsAppSend, w.handleWhatsAppSend)
+	mux.HandleFunc(TaskWhatsAppMediaStore, w.handleWhatsAppMediaStore)
+	mux.HandleFunc(TaskWhatsAppQueueSweep, w.handleWhatsAppQueueSweep)
 	return w
 }
 

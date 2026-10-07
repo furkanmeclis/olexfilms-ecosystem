@@ -404,7 +404,7 @@ func (q *Queries) GetConversationByUUID(ctx context.Context, argUuid uuid.UUID) 
 
 const getMessageByUUID = `-- name: GetMessageByUUID :one
 
-SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at FROM messages WHERE uuid = $1
+SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason FROM messages WHERE uuid = $1
 `
 
 // Messages (timeline) ----------------------------------------------------------
@@ -433,6 +433,8 @@ func (q *Queries) GetMessageByUUID(ctx context.Context, argUuid uuid.UUID) (Mess
 		&i.MediaMime,
 		&i.MediaSize,
 		&i.DeliveryStatusAt,
+		&i.SendAttempts,
+		&i.FailureReason,
 	)
 	return i, err
 }
@@ -613,7 +615,7 @@ func (q *Queries) ListConversationAIRuns(ctx context.Context, arg ListConversati
 }
 
 const listConversationMessagesAfter = `-- name: ListConversationMessagesAfter :many
-SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at FROM messages m
+SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason FROM messages m
 WHERE m.conversation_id = $1
   AND (m.created_at, m.id) > ($2::timestamptz, $3::bigint)
 ORDER BY m.created_at ASC, m.id ASC
@@ -665,6 +667,8 @@ func (q *Queries) ListConversationMessagesAfter(ctx context.Context, arg ListCon
 			&i.MediaMime,
 			&i.MediaSize,
 			&i.DeliveryStatusAt,
+			&i.SendAttempts,
+			&i.FailureReason,
 		); err != nil {
 			return nil, err
 		}
@@ -677,7 +681,7 @@ func (q *Queries) ListConversationMessagesAfter(ctx context.Context, arg ListCon
 }
 
 const listConversationMessagesBefore = `-- name: ListConversationMessagesBefore :many
-SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at FROM messages m
+SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason FROM messages m
 WHERE m.conversation_id = $1
   AND ($2::timestamptz IS NULL
        OR (m.created_at, m.id) < ($2::timestamptz, $3::bigint))
@@ -730,6 +734,8 @@ func (q *Queries) ListConversationMessagesBefore(ctx context.Context, arg ListCo
 			&i.MediaMime,
 			&i.MediaSize,
 			&i.DeliveryStatusAt,
+			&i.SendAttempts,
+			&i.FailureReason,
 		); err != nil {
 			return nil, err
 		}
@@ -1249,7 +1255,7 @@ func (q *Queries) SetConversationVisitorLead(ctx context.Context, arg SetConvers
 const setMessageAIRun = `-- name: SetMessageAIRun :one
 UPDATE messages SET ai_run_id = $1
 WHERE id = $2
-RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at
+RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason
 `
 
 type SetMessageAIRunParams struct {
@@ -1282,6 +1288,8 @@ func (q *Queries) SetMessageAIRun(ctx context.Context, arg SetMessageAIRunParams
 		&i.MediaMime,
 		&i.MediaSize,
 		&i.DeliveryStatusAt,
+		&i.SendAttempts,
+		&i.FailureReason,
 	)
 	return i, err
 }
@@ -1292,7 +1300,7 @@ SET media_storage_key = $1,
     media_mime = $2,
     media_size = $3
 WHERE id = $4
-RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at
+RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason
 `
 
 type SetMessageMediaParams struct {
@@ -1333,6 +1341,8 @@ func (q *Queries) SetMessageMedia(ctx context.Context, arg SetMessageMediaParams
 		&i.MediaMime,
 		&i.MediaSize,
 		&i.DeliveryStatusAt,
+		&i.SendAttempts,
+		&i.FailureReason,
 	)
 	return i, err
 }
