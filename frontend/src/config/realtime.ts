@@ -14,6 +14,8 @@ export const realtimeConfig = {
   platformRoles: ["super_admin"] as const,
   channels: {
     systemNotifications: "system.notifications",
+    /** WhatsApp inbox events (platform admins only, TEC-395/398). */
+    systemConversations: "system.conversations",
     tenant: (tenantUuid: string) => `tenant:${tenantUuid}`,
     user: (userId: number | string) => `user:${userId}`,
     workspace: (workspaceUuid: string) => `workspace:${workspaceUuid}`,
