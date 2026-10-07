@@ -96,7 +96,7 @@ func (l *clockLimiter) Allow(_ context.Context, action, subject string, limit in
 
 type fakeSettings struct{ perMinute, start, end int }
 
-func (s fakeSettings) CampaignsWhatsAppPerMinute(context.Context) int  { return s.perMinute }
+func (s fakeSettings) CampaignsWhatsAppPerMinute(context.Context) int { return s.perMinute }
 func (s fakeSettings) CampaignsQuietHours(context.Context) (int, int) { return s.start, s.end }
 
 type senderEnv struct {
@@ -119,8 +119,8 @@ func newSenderEnv(t *testing.T) *senderEnv {
 	f.svc.SetClock(func() time.Time { return e.now })
 	e.sender = NewSender(f.svc, SenderDeps{
 		Push: e.ch, Email: fakeEmail{e.ch}, WhatsApp: fakeWhatsApp{e.ch}, Queue: e.queue,
-		Limiter:  &clockLimiter{now: func() time.Time { return e.now }, counts: map[string]int{}},
-		Settings: fakeSettings{perMinute: 20, start: 21, end: 9},
+		Limiter:           &clockLimiter{now: func() time.Time { return e.now }, counts: map[string]int{}},
+		Settings:          fakeSettings{perMinute: 20, start: 21, end: 9},
 		UnsubscribeSecret: []byte("test-secret"), FrontendURL: "https://app.example.test",
 	})
 	return e

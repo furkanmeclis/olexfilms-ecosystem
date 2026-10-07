@@ -22,6 +22,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sysconfig"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -52,7 +53,8 @@ const (
 	SkipCampaignNotSending = "campaign_not_sending"
 )
 
-// FailQuietHoursExhausted: the last retry could not be deferred.
+// FailDeferralExhausted: the last retry could not be deferred again
+// (quiet hours / rate limit), so the recipient fails.
 const FailDeferralExhausted = "deferral_exhausted"
 
 const (
@@ -728,13 +730,13 @@ func (s *Sender) whatsAppPerMinute(ctx context.Context) int {
 			return n
 		}
 	}
-	return 20
+	return sysconfig.DefaultCampaignsWhatsAppPerMinute
 }
 
 // quietWait is how long the recipient's quiet hours still last (0 =
 // outside). Zone: the user's, else the campaign organization's.
 func (s *Sender) quietWait(ctx context.Context, q *db.Queries, row db.Campaign, contact db.GetCampaignRecipientContactRow) time.Duration {
-	start, end := 21, 9
+	start, end := sysconfig.DefaultCampaignsQuietHoursStart, sysconfig.DefaultCampaignsQuietHoursEnd
 	if s.d.Settings != nil {
 		start, end = s.d.Settings.CampaignsQuietHours(ctx)
 	}
