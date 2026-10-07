@@ -91,5 +91,13 @@
   "params.lead_status.lost": "خسارة",
   "params.lost_reason": "سبب الخسارة",
   "actions.stock_units.print_labels": "طباعة الملصقات",
-  "actions.warehouse_count_lines.set_resolution": "تعيين المعالجة: {{resolution}}"
+  "actions.warehouse_count_lines.set_resolution": "تعيين المعالجة: {{resolution}}",
+  "actions.conversations.assign": "تعيين",
+  "actions.conversations.close": "إغلاق",
+  "actions.conversations.set_ai_mode": "تغيير وضع الذكاء الاصطناعي",
+  "confirm.conversations.close": "هل تريد إغلاق المحادثات المحددة؟",
+  "params.ai_mode": "وضع الذكاء الاصطناعي",
+  "params.ai_mode.auto": "تلقائي",
+  "params.ai_mode.paused": "متوقف مؤقتًا",
+  "params.ai_mode.off": "معطّل"
 }

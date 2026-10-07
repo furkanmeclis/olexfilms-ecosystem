@@ -1,0 +1,13 @@
+{
+  "ai_mode": "Λειτουργία AI",
+  "assigned_user": "Υπεύθυνος",
+  "channel": "Κανάλι",
+  "contact_e164": "Τηλέφωνο",
+  "contact_name": "Επαφή",
+  "created_at": "Δημιουργήθηκε",
+  "identity_kind": "Τύπος ταυτότητας",
+  "last_message_at": "Τελευταίο μήνυμα",
+  "status": "Κατάσταση",
+  "unread_count": "Μη αναγνωσμένα",
+  "unread": "Μόνο μη αναγνωσμένες"
+}

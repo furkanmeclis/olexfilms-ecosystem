@@ -1,0 +1,13 @@
+{
+  "ai_mode": "AI mode",
+  "assigned_user": "Assignee",
+  "channel": "Channel",
+  "contact_e164": "Phone",
+  "contact_name": "Contact",
+  "created_at": "Created",
+  "identity_kind": "Identity type",
+  "last_message_at": "Last message",
+  "status": "Status",
+  "unread_count": "Unread",
+  "unread": "Unread only"
+}

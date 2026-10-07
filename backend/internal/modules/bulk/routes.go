@@ -7,6 +7,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	bulkhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/handler"
 	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
+	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
@@ -50,6 +51,11 @@ func RegisterRoutes(
 	))
 	mux.Handle("POST /v1/platform/vehicle-catalog/models/bulk", middleware.Chain(
 		h.ExecutePlatform(adapters.ResourceVehicleModels), authn, require(rbac.PermVehicleCatalogWrite),
+	))
+	// TEC-398: WhatsApp conversations (close, assign, AI mode); platform
+	// admins only (S2).
+	mux.Handle("POST /v1/conversations/bulk", middleware.Chain(
+		h.ExecutePlatform(whatsappusecase.ResourceBulk), authn, require(rbac.PermConversationsManage),
 	))
 	// TEC-212: undo of a platform operation (users / roles).
 	mux.Handle("POST /v1/platform/bulk-operations/{uuid}/undo", middleware.Chain(

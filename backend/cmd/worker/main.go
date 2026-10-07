@@ -52,6 +52,7 @@ import (
 	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
 	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
 	whatsapprepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/repository"
+	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
 	bulkadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
@@ -272,6 +273,8 @@ func main() {
 		bulkadapters.NewVehicleModels(queries),
 		// TEC-371: leads (assign, set status).
 		leadsusecase.NewBulkAdapter(queries),
+		// TEC-398: conversations (close, assign, AI mode).
+		whatsappusecase.NewBulkAdapter(queries),
 	)
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log).
 		WithPool(pool).WithUndoWindow(sysconfig.New(queries, sysconfig.NoCache{}).BulkUndoWindowHours)

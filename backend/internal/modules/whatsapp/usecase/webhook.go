@@ -167,6 +167,12 @@ func (s *Service) storeMessage(ctx context.Context, ev whatsapp.InboundEvent, se
 		if userID.Valid {
 			e.Payload["user_id"] = userID.Int64
 		}
+		// TEC-398: the assigned user is notified (conversation.inbound).
+		if conv.AssignedUserID.Valid {
+			e.Payload["assigned_user_id"] = conv.AssignedUserID.Int64
+			e.Payload["contact_name"] = contactLabel(conv)
+			e.Payload["preview"] = messagePreview(ev.Text, ev.Media != nil)
+		}
 		if err := s.outbox.Enqueue(ctx, tx, e); err != nil {
 			return nil, err
 		}
@@ -310,4 +316,28 @@ func (s *Service) PollStatus(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// contactLabel is the contact's name, else the number.
+func contactLabel(c db.Conversation) string {
+	if name := strings.TrimSpace(c.ContactName.String); name != "" {
+		return name
+	}
+	return c.ContactE164
+}
+
+// previewRunes bounds the message preview of the inbound notification.
+const previewRunes = 120
+
+// messagePreview is the start of an inbound text ("📎" for a media message
+// without a caption).
+func messagePreview(body string, hasMedia bool) string {
+	body = strings.Join(strings.Fields(body), " ")
+	if body == "" && hasMedia {
+		return "📎"
+	}
+	if r := []rune(body); len(r) > previewRunes {
+		return string(r[:previewRunes-1]) + "…"
+	}
+	return body
 }

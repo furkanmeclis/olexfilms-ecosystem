@@ -1,0 +1,13 @@
+{
+  "ai_mode": "Режим ШІ",
+  "assigned_user": "Відповідальний",
+  "channel": "Канал",
+  "contact_e164": "Телефон",
+  "contact_name": "Контакт",
+  "created_at": "Створено",
+  "identity_kind": "Тип ідентифікації",
+  "last_message_at": "Останнє повідомлення",
+  "status": "Статус",
+  "unread_count": "Непрочитані",
+  "unread": "Лише непрочитані"
+}
