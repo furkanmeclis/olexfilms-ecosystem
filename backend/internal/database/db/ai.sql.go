@@ -294,6 +294,37 @@ func (q *Queries) CountAIOrgQuotas(ctx context.Context, arg CountAIOrgQuotasPara
 	return count, err
 }
 
+const countAIPendingActionsPage = `-- name: CountAIPendingActionsPage :one
+SELECT COUNT(*) FROM ai_pending_actions
+WHERE organization_id = $1
+  AND user_id = $2
+  AND status = 'pending'
+  AND expires_at > NOW()
+  AND source = ANY ($3::text[])
+  AND ($4::text IS NULL
+       OR tool_name ILIKE '%' || $4::text || '%'
+       OR preview->>'summary' ILIKE '%' || $4::text || '%')
+`
+
+type CountAIPendingActionsPageParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	UserID         int64       `json:"user_id"`
+	Sources        []string    `json:"sources"`
+	Q              pgtype.Text `json:"q"`
+}
+
+func (q *Queries) CountAIPendingActionsPage(ctx context.Context, arg CountAIPendingActionsPageParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAIPendingActionsPage,
+		arg.OrganizationID,
+		arg.UserID,
+		arg.Sources,
+		arg.Q,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countAIUsage = `-- name: CountAIUsage :one
 SELECT COUNT(*) FROM ai_usage u
 WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
@@ -1354,6 +1385,91 @@ type ListAIPendingActionsForUserParams struct {
 
 func (q *Queries) ListAIPendingActionsForUser(ctx context.Context, arg ListAIPendingActionsForUserParams) ([]AiPendingAction, error) {
 	rows, err := q.db.Query(ctx, listAIPendingActionsForUser, arg.OrganizationID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AiPendingAction{}
+	for rows.Next() {
+		var i AiPendingAction
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.UserID,
+			&i.Source,
+			&i.SourceRef,
+			&i.ToolUseID,
+			&i.ToolName,
+			&i.Input,
+			&i.Preview,
+			&i.Status,
+			&i.Result,
+			&i.Error,
+			&i.IdempotencyKey,
+			&i.ExpiresAt,
+			&i.ResolvedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAIPendingActionsPage = `-- name: ListAIPendingActionsPage :many
+SELECT id, uuid, organization_id, brand_id, user_id, source, source_ref, tool_use_id, tool_name, input, preview, status, result, error, idempotency_key, expires_at, resolved_at, created_at, updated_at FROM ai_pending_actions
+WHERE organization_id = $1
+  AND user_id = $2
+  AND status = 'pending'
+  AND expires_at > NOW()
+  AND source = ANY ($3::text[])
+  AND ($4::text IS NULL
+       OR tool_name ILIKE '%' || $4::text || '%'
+       OR preview->>'summary' ILIKE '%' || $4::text || '%')
+ORDER BY
+  CASE WHEN NOT $5::bool AND $6::text = 'tool_name' THEN tool_name END ASC,
+  CASE WHEN $5::bool AND $6::text = 'tool_name' THEN tool_name END DESC,
+  CASE WHEN NOT $5::bool AND $6::text = 'created_at' THEN created_at END ASC,
+  CASE WHEN $5::bool AND $6::text = 'created_at' THEN created_at END DESC,
+  CASE WHEN NOT $5::bool AND $6::text = 'expires_at' THEN expires_at END ASC,
+  CASE WHEN $5::bool AND $6::text = 'expires_at' THEN expires_at END DESC,
+  CASE WHEN $5::bool THEN id END DESC,
+  id ASC
+LIMIT $8 OFFSET $7
+`
+
+type ListAIPendingActionsPageParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	UserID         int64       `json:"user_id"`
+	Sources        []string    `json:"sources"`
+	Q              pgtype.Text `json:"q"`
+	SortDesc       bool        `json:"sort_desc"`
+	SortKey        string      `json:"sort_key"`
+	RowOffset      int32       `json:"row_offset"`
+	RowLimit       int32       `json:"row_limit"`
+}
+
+// TEC-403: the "pending AI actions" screen of the panel: the caller's open,
+// unexpired actions of the given sources. Sort: docs/list-contract.md, keys
+// from ai usecase PendingActionsSortSpec.
+func (q *Queries) ListAIPendingActionsPage(ctx context.Context, arg ListAIPendingActionsPageParams) ([]AiPendingAction, error) {
+	rows, err := q.db.Query(ctx, listAIPendingActionsPage,
+		arg.OrganizationID,
+		arg.UserID,
+		arg.Sources,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

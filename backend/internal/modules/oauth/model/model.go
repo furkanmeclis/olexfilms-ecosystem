@@ -239,6 +239,9 @@ type ConsentOrganization struct {
 	UUID uuid.UUID `json:"uuid"`
 	Name string    `json:"name"`
 	Type string    `json:"type"`
+	// ToolCount is the number of MCP tools the user gets there through
+	// the requested endpoint (TEC-403); nil when not computed.
+	ToolCount *int `json:"tool_count"`
 }
 
 // Consent is what the consent screen shows for a pending request.

@@ -29,7 +29,7 @@ const CodePendingApproval = "PENDING_APPROVAL"
 
 // ApprovalsPath is the panel screen of the pending AI actions (F4-03d)
 // under the tenant prefix; ?action=<uuid> opens one card.
-const ApprovalsPath = "/ai/approvals"
+const ApprovalsPath = "/assistant/approvals"
 
 // ApprovalURL is the panel link of one pending action.
 func ApprovalURL(frontendURL, orgSlug string, action uuid.UUID) string {

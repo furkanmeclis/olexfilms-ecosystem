@@ -250,6 +250,41 @@ WHERE source = sqlc.arg(source)
   AND status = 'pending'
 RETURNING *;
 
+-- name: ListAIPendingActionsPage :many
+-- TEC-403: the "pending AI actions" screen of the panel: the caller's open,
+-- unexpired actions of the given sources. Sort: docs/list-contract.md, keys
+-- from ai usecase PendingActionsSortSpec.
+SELECT * FROM ai_pending_actions
+WHERE organization_id = sqlc.arg(organization_id)
+  AND user_id = sqlc.arg(user_id)
+  AND status = 'pending'
+  AND expires_at > NOW()
+  AND source = ANY (sqlc.arg(sources)::text[])
+  AND (sqlc.narg(q)::text IS NULL
+       OR tool_name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR preview->>'summary' ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'tool_name' THEN tool_name END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'tool_name' THEN tool_name END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN created_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'created_at' THEN created_at END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'expires_at' THEN expires_at END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'expires_at' THEN expires_at END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: CountAIPendingActionsPage :one
+SELECT COUNT(*) FROM ai_pending_actions
+WHERE organization_id = sqlc.arg(organization_id)
+  AND user_id = sqlc.arg(user_id)
+  AND status = 'pending'
+  AND expires_at > NOW()
+  AND source = ANY (sqlc.arg(sources)::text[])
+  AND (sqlc.narg(q)::text IS NULL
+       OR tool_name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR preview->>'summary' ILIKE '%' || sqlc.narg(q)::text || '%');
+
 -- Usage ledger -----------------------------------------------------------------
 
 -- name: InsertAIUsage :one

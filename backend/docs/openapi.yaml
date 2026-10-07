@@ -25078,6 +25078,119 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/ai/pending-actions:
+    get:
+      tags: [AI]
+      operationId: listAiPendingActions
+      summary: The caller's pending MCP / WhatsApp actions (TEC-403)
+      description: |
+        "Pending AI actions" screen: write tools proposed through an MCP
+        client or WhatsApp in the active organization, waiting for the
+        caller's approval (open and not expired; chat cards stay in their
+        conversation). Needs `ai.actions.confirm`. Sort fields `created_at`
+        (default `-created_at`), `expires_at`, `tool_name`; `id` tiebreak.
+        `q` matches the tool name or the preview summary. `total` is the
+        pending count of the navigation badge.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: source
+          in: query
+          description: CSV of mcp, whatsapp. Unknown value → 400.
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Pending actions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIActionCardPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/ai/pending-actions/{uuid}/confirm:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [AI]
+      operationId: confirmAiPendingAction
+      summary: Confirm a pending MCP / WhatsApp action (TEC-403)
+      description: |
+        Runs the caller's own action once (F4-01e flow): permission, module
+        and scope of the tool are checked again; a revoked permission fails
+        the action (403). A failed run answers 200 with status `failed`.
+        Chat actions (panel / portal) are 404 here.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Outcome
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIActionOutcome"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: AI_ACTION_RESOLVED (already confirmed, cancelled or running)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: AI_ACTION_EXPIRED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/ai/pending-actions/{uuid}/cancel:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [AI]
+      operationId: cancelAiPendingAction
+      summary: Cancel a pending MCP / WhatsApp action (TEC-403)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Outcome (status cancelled)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeAIActionOutcome"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: AI_ACTION_RESOLVED (already confirmed, cancelled or running)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /v1/ai/usage:
     get:
       tags: [AI]
@@ -25659,6 +25772,9 @@ components:
         uuid: { type: string, format: uuid }
         name: { type: string }
         type: { type: string, enum: [platform, center, distributor, dealer] }
+        tool_count:
+          type: [integer, "null"]
+          description: MCP tools the caller gets there through the requested endpoint (TEC-403)
 
     OAuthConsent:
       type: object
@@ -38282,6 +38398,31 @@ components:
           description: action, summary, fields [{key, value}], edit [{key, type, value, options?, required?}], warnings?
         expires_at: { type: string, format: date-time }
         created_at: { type: string, format: date-time }
+
+    EnvelopeAIActionCardPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/AIActionCard" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeAIActionOutcome:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/AIActionOutcome" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     AIActionOutcome:
       type: object

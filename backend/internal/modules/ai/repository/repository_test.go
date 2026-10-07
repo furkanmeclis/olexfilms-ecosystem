@@ -495,3 +495,87 @@ func TestSweepQueriesTransitionOnce(t *testing.T) {
 		t.Fatalf("by key: %+v %v %v", byKey, ok, err)
 	}
 }
+
+// TEC-403: the approvals screen page: only the user's open, unexpired
+// cards of the requested sources; q matches the tool name or summary; sort
+// whitelist keys with id tiebreak; total is the badge count.
+func TestPendingActionsPage(t *testing.T) {
+	f := newFixture(t)
+	mk := func(key, source, tool, summary string, expires time.Duration) db.AiPendingAction {
+		a, err := f.q.CreateAIPendingAction(f.ctx, db.CreateAIPendingActionParams{
+			OrganizationID: f.dealer.ID, BrandID: f.brand.ID, UserID: f.user.ID,
+			Source: source, SourceRef: pgtype.Text{String: "ref-" + key, Valid: true},
+			ToolUseID: "toolu_" + key, ToolName: tool, Input: []byte(`{}`),
+			Preview:        []byte(`{"summary":"` + summary + `"}`),
+			IdempotencyKey: "tec403-" + key + fmt.Sprint(time.Now().UnixNano()),
+			ExpiresAt:      pgtype.Timestamptz{Time: time.Now().Add(expires), Valid: true},
+		})
+		if err != nil {
+			t.Fatalf("create %s: %v", key, err)
+		}
+		return a
+	}
+	lead := mk("lead", model.SourceMCP, "create_lead", "Lead for Ayşe", 20*time.Minute)
+	task := mk("task", model.SourceMCP, "create_task", "Call the dealer", 10*time.Minute)
+	wa := mk("wa", model.SourceWhatsApp, "add_service_note", "Note on service", 30*time.Minute)
+	mk("chat", model.SourcePanel, "create_task", "Chat card", 30*time.Minute)
+	gone := mk("gone", model.SourceMCP, "create_task", "Cancelled", 30*time.Minute)
+	if _, ok, err := f.store.CancelPendingAction(f.ctx, gone.Uuid, f.dealer.ID, f.user.ID); err != nil || !ok {
+		t.Fatalf("cancel: %v", err)
+	}
+	if _, err := f.tx.Exec(f.ctx, `UPDATE ai_pending_actions SET created_at = NOW() - interval '2 hours',
+		expires_at = NOW() - interval '1 minute' WHERE uuid = $1`, mk("old", model.SourceMCP, "create_task", "Old", time.Hour).Uuid); err != nil {
+		t.Fatalf("age: %v", err)
+	}
+
+	page := func(p db.ListAIPendingActionsPageParams) ([]string, int64) {
+		t.Helper()
+		p.OrganizationID, p.UserID = f.dealer.ID, f.user.ID
+		if p.Sources == nil {
+			p.Sources = []string{model.SourceMCP, model.SourceWhatsApp}
+		}
+		if p.RowLimit == 0 {
+			p.RowLimit = 20
+		}
+		rows, total, err := f.store.PendingActionsPage(f.ctx, p)
+		if err != nil {
+			t.Fatalf("page: %v", err)
+		}
+		out := make([]string, 0, len(rows))
+		for _, r := range rows {
+			out = append(out, r.ToolName)
+		}
+		return out, total
+	}
+	eq := func(got []string, want ...string) bool { return fmt.Sprint(got) == fmt.Sprint(want) }
+
+	if got, total := page(db.ListAIPendingActionsPageParams{SortKey: "expires_at"}); total != 3 ||
+		!eq(got, task.ToolName, lead.ToolName, wa.ToolName) {
+		t.Fatalf("expires_at asc: %v total %d", got, total)
+	}
+	if got, _ := page(db.ListAIPendingActionsPageParams{SortKey: "tool_name", SortDesc: true}); !eq(got, "create_task", "create_lead", "add_service_note") {
+		t.Fatalf("tool_name desc: %v", got)
+	}
+	if got, total := page(db.ListAIPendingActionsPageParams{SortKey: "created_at", Sources: []string{model.SourceWhatsApp}}); total != 1 ||
+		!eq(got, "add_service_note") {
+		t.Fatalf("source whatsapp: %v %d", got, total)
+	}
+	if got, total := page(db.ListAIPendingActionsPageParams{SortKey: "created_at", Q: pgtype.Text{String: "ayşe", Valid: true}}); total != 1 ||
+		!eq(got, "create_lead") {
+		t.Fatalf("q summary: %v %d", got, total)
+	}
+	if got, total := page(db.ListAIPendingActionsPageParams{SortKey: "created_at", Q: pgtype.Text{String: "service_note", Valid: true}}); total != 1 ||
+		!eq(got, "add_service_note") {
+		t.Fatalf("q tool: %v %d", got, total)
+	}
+	if got, total := page(db.ListAIPendingActionsPageParams{SortKey: "expires_at", RowLimit: 1, RowOffset: 1}); total != 3 || !eq(got, "create_lead") {
+		t.Fatalf("paging: %v %d", got, total)
+	}
+	rows, total, err := f.store.PendingActionsPage(f.ctx, db.ListAIPendingActionsPageParams{
+		OrganizationID: f.dealer.ID, UserID: f.other.ID, Sources: []string{model.SourceMCP, model.SourceWhatsApp},
+		SortKey: "created_at", RowLimit: 20,
+	})
+	if err != nil || total != 0 || len(rows) != 0 {
+		t.Fatalf("another user's page: %d %d %v", len(rows), total, err)
+	}
+}

@@ -250,7 +250,7 @@ func TestToResultAndSummary(t *testing.T) {
 	if !e.IsError || e.StructuredContent.(map[string]any)["error"].(map[string]string)["code"] != aitools.CodeNotFound {
 		t.Fatalf("error result = %+v", e)
 	}
-	if u := ApprovalURL("https://olex.test", "bayi-1", uuid.Nil); u != "https://olex.test/t/bayi-1/ai/approvals?action=00000000-0000-0000-0000-000000000000" {
+	if u := ApprovalURL("https://olex.test", "bayi-1", uuid.Nil); u != "https://olex.test/t/bayi-1/assistant/approvals?action=00000000-0000-0000-0000-000000000000" {
 		t.Fatalf("approval url = %q", u)
 	}
 }

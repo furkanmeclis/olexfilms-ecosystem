@@ -141,6 +141,7 @@ type Querier interface {
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
 	CountAIConversations(ctx context.Context, arg CountAIConversationsParams) (int64, error)
 	CountAIOrgQuotas(ctx context.Context, arg CountAIOrgQuotasParams) (int64, error)
+	CountAIPendingActionsPage(ctx context.Context, arg CountAIPendingActionsPageParams) (int64, error)
 	CountAIUsage(ctx context.Context, arg CountAIUsageParams) (int64, error)
 	CountAccountingDisputes(ctx context.Context, arg CountAccountingDisputesParams) (int64, error)
 	CountActiveAppointmentsByOrganization(ctx context.Context, arg CountActiveAppointmentsByOrganizationParams) ([]CountActiveAppointmentsByOrganizationRow, error)
@@ -1288,6 +1289,10 @@ type Querier interface {
 	ListAIOrganizationIDsByUUIDs(ctx context.Context, uuids []uuid.UUID) ([]int64, error)
 	ListAIOrganizationsByIDs(ctx context.Context, ids []int64) ([]ListAIOrganizationsByIDsRow, error)
 	ListAIPendingActionsForUser(ctx context.Context, arg ListAIPendingActionsForUserParams) ([]AiPendingAction, error)
+	// TEC-403: the "pending AI actions" screen of the panel: the caller's open,
+	// unexpired actions of the given sources. Sort: docs/list-contract.md, keys
+	// from ai usecase PendingActionsSortSpec.
+	ListAIPendingActionsPage(ctx context.Context, arg ListAIPendingActionsPageParams) ([]AiPendingAction, error)
 	// Recipients of ai.quota.threshold: for the org pool the organization's
 	// members holding ai.usage.read; for the system pool the global role
 	// holders of ai.settings.manage (platform admins).
