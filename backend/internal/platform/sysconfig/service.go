@@ -170,6 +170,12 @@ func (s *Service) WhatsAppSendPerMinute(ctx context.Context) int {
 	return int(s.Int(ctx, KeyWhatsAppSendPerMinute))
 }
 
+// MCPRequestsPerHourPerOrg is the typed accessor for
+// KeyMCPRequestsPerHourPerOrg.
+func (s *Service) MCPRequestsPerHourPerOrg(ctx context.Context) int {
+	return int(s.Int(ctx, KeyMCPRequestsPerHourPerOrg))
+}
+
 // SMTP groups the smtp.* keys. Empty Host / zero Port mean "use the
 // environment configuration".
 type SMTP struct {

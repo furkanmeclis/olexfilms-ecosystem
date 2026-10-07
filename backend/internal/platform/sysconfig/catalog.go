@@ -46,6 +46,8 @@ const (
 	GroupWarrantyClaims Group = "warranty_claims"
 	// GroupWhatsApp: WhatsApp conversation messaging (TEC-395).
 	GroupWhatsApp Group = "whatsapp"
+	// GroupMCP: MCP endpoints (TEC-402).
+	GroupMCP Group = "mcp"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -115,7 +117,15 @@ const (
 	// staff, system) per recipient number per minute (TEC-395); campaigns
 	// have their own limit.
 	KeyWhatsAppSendPerMinute = "whatsapp.send_per_minute"
+
+	// KeyMCPRequestsPerHourPerOrg caps the MCP requests of one organization
+	// per hour over every connected app and endpoint (TEC-402).
+	KeyMCPRequestsPerHourPerOrg = "mcp.requests_per_hour_per_org"
 )
+
+// DefaultMCPRequestsPerHourPerOrg is the catalog default of
+// KeyMCPRequestsPerHourPerOrg.
+const DefaultMCPRequestsPerHourPerOrg = 600
 
 // DefaultWhatsAppSendPerMinute is the catalog default of
 // KeyWhatsAppSendPerMinute.
@@ -239,6 +249,8 @@ var catalog = []Definition{
 		Description: "Percent of the labor amount the center credits under the shared rule (TEC-337)"},
 	{Key: KeyWhatsAppSendPerMinute, Group: GroupWhatsApp, Kind: KindInt, Default: int64(DefaultWhatsAppSendPerMinute), Min: i64(1), Max: i64(600),
 		Description: "Outgoing WhatsApp conversation messages per recipient number per minute; further messages wait in the queue (TEC-395)"},
+	{Key: KeyMCPRequestsPerHourPerOrg, Group: GroupMCP, Kind: KindInt, Default: int64(DefaultMCPRequestsPerHourPerOrg), Min: i64(1), Max: i64(100000),
+		Description: "MCP requests one organization may make per hour over all connected apps; further requests get 429 (TEC-402)"},
 }
 
 var byKey = func() map[string]Definition {

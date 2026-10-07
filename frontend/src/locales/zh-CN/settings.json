@@ -137,5 +137,9 @@
   "system.groups.leads": "潜在客户",
   "system.groups.leads_hint": "潜在客户管道和公开的经销商申请表。",
   "system.keys.leads_dealer_application_enabled": "经销商申请表",
-  "system.keys.leads_dealer_application_enabled_hint": "开启后，公开申请表 /bayi-basvuru 上线并加入站点地图。仅当潜在客户模块在全系统开启时才能开启。"
+  "system.keys.leads_dealer_application_enabled_hint": "开启后，公开申请表 /bayi-basvuru 上线并加入站点地图。仅当潜在客户模块在全系统开启时才能开启。",
+  "system.groups.mcp": "MCP 连接",
+  "system.groups.mcp_hint": "AI 客户端（Claude、ChatGPT）所连接的 MCP 端点的限制。",
+  "system.keys.mcp_requests_per_hour_per_org": "每个组织每小时的 MCP 请求数",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "一个组织每小时通过所有已连接的 AI 应用可发出的请求数；超出的请求在时间窗口结束前将被拒绝。"
 }

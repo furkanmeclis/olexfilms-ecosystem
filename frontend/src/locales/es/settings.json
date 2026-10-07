@@ -137,5 +137,9 @@
   "system.groups.leads": "Clientes potenciales",
   "system.groups.leads_hint": "Embudo de oportunidades y formulario público de solicitud de distribuidor.",
   "system.keys.leads_dealer_application_enabled": "Formulario de solicitud de distribuidor",
-  "system.keys.leads_dealer_application_enabled_hint": "Activado, el formulario público /bayi-basvuru está publicado y aparece en el mapa del sitio. Solo puede activarse mientras el módulo de oportunidades esté abierto en todo el sistema."
+  "system.keys.leads_dealer_application_enabled_hint": "Activado, el formulario público /bayi-basvuru está publicado y aparece en el mapa del sitio. Solo puede activarse mientras el módulo de oportunidades esté abierto en todo el sistema.",
+  "system.groups.mcp": "Conexiones MCP",
+  "system.groups.mcp_hint": "Límites de los puntos de acceso MCP a los que se conectan los clientes de IA (Claude, ChatGPT).",
+  "system.keys.mcp_requests_per_hour_per_org": "Solicitudes MCP por organización y hora",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Solicitudes que una organización puede hacer por hora a través de todas las aplicaciones de IA conectadas; las demás se rechazan hasta que termine el periodo."
 }

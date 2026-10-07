@@ -194,5 +194,7 @@
   "actions.stock.split.created": "Rotolo diviso",
   "resources.stock.split": "Divisione del rotolo",
   "filters.actor": "Filtra per utente",
-  "resources.platform.organizations": "Organizzazioni"
+  "resources.platform.organizations": "Organizzazioni",
+  "actions.mcp.tool_called": "Strumento MCP richiamato",
+  "resources.mcp_tool": "Strumento MCP"
 }

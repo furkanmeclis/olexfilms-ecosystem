@@ -194,5 +194,7 @@
   "actions.stock.split.created": "Rolle geteilt",
   "resources.stock.split": "Rollenteilung",
   "filters.actor": "Nach Benutzer filtern",
-  "resources.platform.organizations": "Organisationen"
+  "resources.platform.organizations": "Organisationen",
+  "actions.mcp.tool_called": "MCP-Werkzeug aufgerufen",
+  "resources.mcp_tool": "MCP-Werkzeug"
 }

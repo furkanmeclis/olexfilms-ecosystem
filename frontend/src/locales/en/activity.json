@@ -194,5 +194,7 @@
   "actions.stock.split.created": "Roll split",
   "resources.stock.split": "Roll split",
   "filters.actor": "Filter by user",
-  "resources.platform.organizations": "Organizations"
+  "resources.platform.organizations": "Organizations",
+  "actions.mcp.tool_called": "MCP tool called",
+  "resources.mcp_tool": "MCP tool"
 }

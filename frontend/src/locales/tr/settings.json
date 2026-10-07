@@ -137,5 +137,9 @@
   "system.groups.leads": "Lead'ler",
   "system.groups.leads_hint": "Lead hattı ve herkese açık bayi başvuru formu.",
   "system.keys.leads_dealer_application_enabled": "Bayi başvuru formu",
-  "system.keys.leads_dealer_application_enabled_hint": "Açıkken /bayi-basvuru herkese açık başvuru formu yayında olur ve site haritasına eklenir. Yalnızca lead modülü sistem genelinde açıkken açılabilir."
+  "system.keys.leads_dealer_application_enabled_hint": "Açıkken /bayi-basvuru herkese açık başvuru formu yayında olur ve site haritasına eklenir. Yalnızca lead modülü sistem genelinde açıkken açılabilir.",
+  "system.groups.mcp": "MCP bağlantıları",
+  "system.groups.mcp_hint": "AI istemcilerinin (Claude, ChatGPT) bağlandığı MCP uçlarının sınırları.",
+  "system.keys.mcp_requests_per_hour_per_org": "Kuruluş başına saatlik MCP isteği",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Bir kuruluşun bağlı tüm AI uygulamaları üzerinden saatte yapabileceği istek sayısı; aşan istekler süre dolana kadar reddedilir."
 }

@@ -654,6 +654,18 @@ func (u *AuthUseCase) LoadUserByUUID(ctx context.Context, id uuid.UUID) (model.U
 	return user, nil
 }
 
+// ResolveStoredAccess resolves a user's access inside an organization from
+// the stored global roles instead of session claims; callers without a
+// session (MCP Bearer tokens, TEC-402) use it on every request so role
+// changes apply at once.
+func (u *AuthUseCase) ResolveStoredAccess(ctx context.Context, userID int64, orgUUID *uuid.UUID) (Access, error) {
+	roles, err := u.repo.ListUserRoleSlugs(ctx, userID)
+	if err != nil {
+		return Access{}, err
+	}
+	return u.ResolveAccess(ctx, userID, roles, orgUUID)
+}
+
 func (u *AuthUseCase) resolveUserAccess(ctx context.Context, userID int64) ([]string, bool, []string, error) {
 	roles, err := u.repo.ListUserRoleSlugs(ctx, userID)
 	if err != nil {

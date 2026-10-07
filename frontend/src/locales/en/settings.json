@@ -137,5 +137,9 @@
   "system.groups.leads": "Leads",
   "system.groups.leads_hint": "Lead pipeline and the public dealer application form.",
   "system.keys.leads_dealer_application_enabled": "Dealer application form",
-  "system.keys.leads_dealer_application_enabled_hint": "When on, the public application form at /bayi-basvuru is live and listed in the sitemap. It can only be switched on while the leads module is open system wide."
+  "system.keys.leads_dealer_application_enabled_hint": "When on, the public application form at /bayi-basvuru is live and listed in the sitemap. It can only be switched on while the leads module is open system wide.",
+  "system.groups.mcp": "MCP connections",
+  "system.groups.mcp_hint": "Limits of the MCP endpoints that AI clients (Claude, ChatGPT) connect to.",
+  "system.keys.mcp_requests_per_hour_per_org": "MCP requests per organization per hour",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Requests one organization may make per hour over all connected AI apps; further requests are refused until the window ends."
 }
