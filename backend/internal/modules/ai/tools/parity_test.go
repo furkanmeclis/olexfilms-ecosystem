@@ -8,19 +8,21 @@ import (
 	"testing"
 )
 
-// TEC-386 acceptance: the parity table in docs/ai.md maps every legacy
-// ai-layer tool, hub /mcp/olex tool and M2M chatbot endpoint to new tool
-// names or to "bilinçli olarak yok" with a reason, and every new name is a
-// registered tool.
+// parityDoc holds the parity table (moved from docs/ai.md by TEC-409).
+const parityDoc = "docs/runbooks/f4-ai-cutover.md"
+
+// TEC-386 acceptance: the parity table maps every legacy AI layer tool, hub
+// /mcp/olex tool and M2M chatbot endpoint to new tool names or to "bilinçli
+// olarak yok" with a reason, and every new name is a registered tool.
 func TestParityTableNamesAreRegistered(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", "docs", "ai.md"))
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..", parityDoc))
 	if err != nil {
 		t.Fatal(err)
 	}
 	doc := string(raw)
 	start, end := strings.Index(doc, "<!-- parity:start -->"), strings.Index(doc, "<!-- parity:end -->")
 	if start < 0 || end < start {
-		t.Fatal("docs/ai.md: parity markers missing")
+		t.Fatal(parityDoc + ": parity markers missing")
 	}
 	r := testRegistry(nil)
 	name := regexp.MustCompile("`([^`]+)`")
@@ -63,9 +65,9 @@ func TestParityTableNamesAreRegistered(t *testing.T) {
 			mapped++
 		}
 	}
-	// ai-layer: 18 always registered + 3 document tools; hub /mcp/olex: 12
-	// tools; M2M chatbot: 16 endpoints.
-	want := map[string]int{"ai-layer": 21, "hub-mcp": 12, "m2m": 16}
+	// Legacy AI layer: 18 always registered + 3 document tools; hub
+	// /mcp/olex: 12 tools; M2M chatbot: 16 endpoints.
+	want := map[string]int{"eski-ai": 21, "hub-mcp": 12, "m2m": 16}
 	for src, n := range want {
 		if counts[src] != n {
 			t.Errorf("%s rows = %d, want %d", src, counts[src], n)

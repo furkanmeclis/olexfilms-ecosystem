@@ -5,7 +5,7 @@ Claude Code cloud oturumu başlatmadan önce Furkan'ın tamamlayacağı adımlar
 ## A. GitHub
 
 - [ ] `furkanmeclis/olexfilms-ecosystem` reposu cloud ortamında seçili ve **yazma** izni var (Claude GitHub App bu repoya yetkili).
-- [ ] Referans repolar Claude GitHub App'e **okuma** izniyle açık: `otopoly-go`, `technowide-ecosystem`, `nextjs-go-boilerplate`, `olexfilms`, `olexfilms-warehouse`, `olexfilms-ai-layer-go`, `glorian`, `go-ubltr`. (Ajan bunları klonlamayacak, `gh api`/raw ile dosya çekecek; izin yoksa 404 alır.)
+- [ ] Referans repolar Claude GitHub App'e **okuma** izniyle açık: `otopoly-go`, `technowide-ecosystem`, `nextjs-go-boilerplate`, `olexfilms`, `olexfilms-warehouse`, `glorian`, `go-ubltr`. (Ajan bunları klonlamayacak, `gh api`/raw ile dosya çekecek; izin yoksa 404 alır.)
 - [ ] Repo ayarları doğrulandı (bu oturumda yapıldı): auto-merge açık, yalnızca squash, merge sonrası branch silinir, `main` ruleset'i `ci` check'ini zorunlu kılar, review zorunlu değil.
 - [ ] `gh` cloud ortamında kimlikli: oturumda `gh auth status` çalışıyor ve `gh pr create` / `gh pr merge --auto --squash` yetkisi var.
 - [ ] GitHub Actions dakikaları yeterli (her PR'da Go + pnpm build koşacak).

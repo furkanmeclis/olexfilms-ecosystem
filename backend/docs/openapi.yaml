@@ -29901,8 +29901,9 @@ components:
 
     WhatsAppOverview:
       type: object
-      required: [provider, configured, status, connected, logged_in, sms_fallback_enabled, webhook_configured, kvkk_notices, events]
+      required: [provider, configured, status, connected, logged_in, sms_fallback_enabled, webhook_configured, kvkk_notices, events, ai_pipeline]
       properties:
+        ai_pipeline: { $ref: "#/components/schemas/WhatsAppAIPipelineStats" }
         provider: { type: string, example: wuzapi }
         configured: { type: boolean }
         status: { type: string, enum: [unknown, disconnected, connecting, qr, connected, logged_out, banned] }
@@ -29922,6 +29923,24 @@ components:
         events:
           type: array
           items: { $ref: "#/components/schemas/WhatsAppConnectionLog" }
+
+    WhatsAppAIPipelineStats:
+      type: object
+      description: >
+        WhatsApp AI pipeline health of the last `window_hours` hours (TEC-409, AI cutover
+        runbook check). Counts runs started in the window by status; `error_rate` is
+        failed / (completed + failed), 0 when no run finished.
+      required: [window_hours, runs, completed, failed, skipped, running, error_rate]
+      properties:
+        window_hours: { type: integer, example: 24 }
+        runs: { type: integer, format: int64 }
+        completed: { type: integer, format: int64 }
+        failed: { type: integer, format: int64 }
+        skipped: { type: integer, format: int64 }
+        running: { type: integer, format: int64 }
+        error_rate: { type: number, minimum: 0, maximum: 1, example: 0.02 }
+        last_run_at: { type: string, format: date-time }
+        last_failed_at: { type: string, format: date-time }
 
     WhatsAppQR:
       type: object

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strings"
 	"sync"
@@ -61,6 +62,7 @@ type Store interface {
 	ApplyMessageReceipt(ctx context.Context, arg db.ApplyMessageReceiptParams) ([]db.Message, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]db.ListWhatsAppAlarmRecipientsRow, error)
 	GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (db.User, error)
+	ConversationAIRunStatsBetween(ctx context.Context, arg db.ConversationAIRunStatsBetweenParams) (db.ConversationAIRunStatsBetweenRow, error)
 	WithTx(tx pgx.Tx) *db.Queries
 }
 
@@ -198,6 +200,27 @@ type Overview struct {
 	KVKK               []KVKKNotice    `json:"kvkk_notices"`
 	Events             []ConnectionLog `json:"events"`
 	GatewayError       string          `json:"gateway_error,omitempty"`
+	AIPipeline         AIPipelineStats `json:"ai_pipeline"`
+}
+
+// AIPipelineWindow is the look-back window of the AI pipeline health.
+const AIPipelineWindow = 24 * time.Hour
+
+// AIPipelineStats is the WhatsApp AI pipeline health of the last 24 hours
+// (TEC-409, cutover runbook check): runs started in the window by status.
+// ErrorRate is failed / (completed + failed); skipped runs (opt-out, human
+// takeover, no consent) and still running ones are not counted, 0 when no
+// run finished.
+type AIPipelineStats struct {
+	WindowHours  int        `json:"window_hours"`
+	Runs         int64      `json:"runs"`
+	Completed    int64      `json:"completed"`
+	Failed       int64      `json:"failed"`
+	Skipped      int64      `json:"skipped"`
+	Running      int64      `json:"running"`
+	ErrorRate    float64    `json:"error_rate"`
+	LastRunAt    *time.Time `json:"last_run_at,omitempty"`
+	LastFailedAt *time.Time `json:"last_failed_at,omitempty"`
 }
 
 // KVKKNotice is the latest notice version of a locale.
@@ -259,6 +282,30 @@ func (s *Service) Overview(ctx context.Context) (Overview, error) {
 	out.Events = make([]ConnectionLog, 0, len(rows))
 	for _, r := range rows {
 		out.Events = append(out.Events, ConnectionLog{Type: r.Type, Reason: r.Reason.String, Alarm: r.Alarm, CreatedAt: r.CreatedAt.Time})
+	}
+	out.AIPipeline, err = s.AIPipelineHealth(ctx)
+	if err != nil {
+		return Overview{}, err
+	}
+	return out, nil
+}
+
+// AIPipelineHealth counts the AI runs of the last AIPipelineWindow.
+func (s *Service) AIPipelineHealth(ctx context.Context) (AIPipelineStats, error) {
+	now := s.now()
+	row, err := s.q.ConversationAIRunStatsBetween(ctx, db.ConversationAIRunStatsBetweenParams{
+		Since: ts(now.Add(-AIPipelineWindow)), Until: ts(now.Add(time.Second)),
+	})
+	if err != nil {
+		return AIPipelineStats{}, err
+	}
+	out := AIPipelineStats{
+		WindowHours: int(AIPipelineWindow / time.Hour),
+		Runs:        row.Total, Completed: row.Completed, Failed: row.Failed, Skipped: row.Skipped, Running: row.Running,
+		LastRunAt: tsPtr(row.LastRunAt), LastFailedAt: tsPtr(row.LastFailedAt),
+	}
+	if finished := row.Completed + row.Failed; finished > 0 {
+		out.ErrorRate = math.Round(float64(row.Failed)/float64(finished)*10000) / 10000
 	}
 	return out, nil
 }

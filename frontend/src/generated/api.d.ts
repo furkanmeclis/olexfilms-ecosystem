@@ -16024,6 +16024,7 @@ export interface components {
             created_at: string;
         };
         WhatsAppOverview: {
+            ai_pipeline: components["schemas"]["WhatsAppAIPipelineStats"];
             /** @example wuzapi */
             provider: string;
             configured: boolean;
@@ -16044,6 +16045,27 @@ export interface components {
             gateway_error?: string;
             kvkk_notices: components["schemas"]["WhatsAppKVKKNotice"][];
             events: components["schemas"]["WhatsAppConnectionLog"][];
+        };
+        /** @description WhatsApp AI pipeline health of the last `window_hours` hours (TEC-409, AI cutover runbook check). Counts runs started in the window by status; `error_rate` is failed / (completed + failed), 0 when no run finished. */
+        WhatsAppAIPipelineStats: {
+            /** @example 24 */
+            window_hours: number;
+            /** Format: int64 */
+            runs: number;
+            /** Format: int64 */
+            completed: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            skipped: number;
+            /** Format: int64 */
+            running: number;
+            /** @example 0.02 */
+            error_rate: number;
+            /** Format: date-time */
+            last_run_at?: string;
+            /** Format: date-time */
+            last_failed_at?: string;
         };
         WhatsAppQR: {
             connected: boolean;

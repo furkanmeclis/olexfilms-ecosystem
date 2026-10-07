@@ -16,7 +16,7 @@ Bu repo bir Claude Code cloud oturumu tarafından sıfırdan inşa edilir. Tek k
 
 - Her işe **temiz bağlamla** başla: önce `docs/design.md`'nin ilgili bölümünü ve Linear işini oku, tüm dokümanı her seferinde yükleme.
 - Büyük dosyaları tamamen okuma; `grep`/`rg` ile ilgili kısmı bul, yalnızca gereken aralığı oku.
-- Referans repolarda (otopoly-go, technowide-ecosystem, olexfilms, olexfilms-warehouse, olexfilms-ai-layer-go) ihtiyacın olan dosyayı `gh api` veya raw URL ile çek, repoyu klonlama.
+- Referans repolarda (otopoly-go, technowide-ecosystem, olexfilms, olexfilms-warehouse) ihtiyacın olan dosyayı `gh api` veya raw URL ile çek, repoyu klonlama.
 - Uzun süren araştırmayı alt ajana (subagent) ver ve sadece özetini al.
 - Bir iş 3 saatten uzun sürüyorsa böl: Linear'da alt iş (`parentId`) aç, PR'ı küçük tut.
 - Test ve lint çıktısının yalnızca başarısız kısmını oku.

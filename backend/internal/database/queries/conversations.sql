@@ -221,6 +221,19 @@ WHERE conversation_id = sqlc.arg(conversation_id)
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(limit_count);
 
+-- name: ConversationAIRunStatsBetween :one
+-- AI pipeline health (TEC-409): run counts by status in [since, until).
+SELECT COUNT(*)::bigint AS total,
+       COUNT(*) FILTER (WHERE status = 'completed')::bigint AS completed,
+       COUNT(*) FILTER (WHERE status = 'failed')::bigint AS failed,
+       COUNT(*) FILTER (WHERE status = 'skipped')::bigint AS skipped,
+       COUNT(*) FILTER (WHERE status = 'running')::bigint AS running,
+       MAX(created_at)::timestamptz AS last_run_at,
+       MAX(created_at) FILTER (WHERE status = 'failed')::timestamptz AS last_failed_at
+FROM conversation_ai_runs
+WHERE created_at >= sqlc.arg(since)::timestamptz
+  AND created_at < sqlc.arg(until)::timestamptz;
+
 -- name: PurgeConversationAIRunsBefore :execrows
 -- Retention (90 days, QUESTIONS #15): deletes one batch of old runs.
 DELETE FROM conversation_ai_runs

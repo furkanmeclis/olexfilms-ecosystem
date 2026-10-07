@@ -139,6 +139,8 @@ type Querier interface {
 	ConsumeOTPAt(ctx context.Context, arg ConsumeOTPAtParams) error
 	ConsumeQRLoginChallenge(ctx context.Context, code string) (QrLoginChallenge, error)
 	ConsumeStockReservation(ctx context.Context, id int64) (StockReservation, error)
+	// AI pipeline health (TEC-409): run counts by status in [since, until).
+	ConversationAIRunStatsBetween(ctx context.Context, arg ConversationAIRunStatsBetweenParams) (ConversationAIRunStatsBetweenRow, error)
 	CountAIConversations(ctx context.Context, arg CountAIConversationsParams) (int64, error)
 	CountAIOrgQuotas(ctx context.Context, arg CountAIOrgQuotasParams) (int64, error)
 	CountAIUsage(ctx context.Context, arg CountAIUsageParams) (int64, error)
