@@ -22,10 +22,12 @@ import (
 )
 
 // UsageQuery is the usage list query (list contract): created_from/_to,
-// channel, purpose, model, pool, user (uuid CSV) and, on the platform list,
+// tokens_min/_max (TEC-391), channel, purpose, model, pool, user (uuid CSV) and, on the platform list,
 // organization (uuid CSV); sort created_at | tokens (default -created_at).
 type UsageQuery struct {
 	Created       apiquery.TimeRange
+	TokensMin     *int64
+	TokensMax     *int64
 	Channels      []string
 	Purposes      []string
 	Models        []string
@@ -54,6 +56,11 @@ func ParseUsageQuery(values url.Values, platform bool) (UsageQuery, error) {
 	if out.Created, err = apiquery.DateRange(values, "created"); err != nil {
 		return UsageQuery{}, err
 	}
+	tokens, err := apiquery.NumRange(values, "tokens")
+	if err != nil {
+		return UsageQuery{}, err
+	}
+	out.TokensMin, out.TokensMax = int64Bound(tokens.Min), int64Bound(tokens.Max)
 	if out.Channels, err = apiquery.EnumList(values, "channel", model.UsageChannels...); err != nil {
 		return UsageQuery{}, err
 	}
@@ -73,6 +80,15 @@ func ParseUsageQuery(values url.Values, platform bool) (UsageQuery, error) {
 		}
 	}
 	return out, nil
+}
+
+// int64Bound truncates a token bound to a whole number.
+func int64Bound(v *float64) *int64 {
+	if v == nil {
+		return nil
+	}
+	n := int64(*v)
+	return &n
 }
 
 func uuidList(values url.Values, key string) ([]uuid.UUID, error) {
@@ -129,7 +145,8 @@ func (a *Admin) ResolveUsageOrg(ctx context.Context, f scopefilter.Filter, activ
 func (a *Admin) ListUsage(ctx context.Context, orgIDs []int64, q UsageQuery) ([]UsageRow, int64, error) {
 	f := repository.UsageFilter{
 		OrganizationIDs: orgIDs, Pools: q.Pools, Channels: q.Channels, Purposes: q.Purposes, Models: q.Models,
-		Created: q.Created, Sort: q.Sort, Limit: q.Limit, Offset: q.Offset,
+		Created: q.Created, TokensMin: q.TokensMin, TokensMax: q.TokensMax,
+		Sort: q.Sort, Limit: q.Limit, Offset: q.Offset,
 	}
 	if _, err := apiquery.ResolveSort(q.Sort, UsageSort); err != nil {
 		return nil, 0, err
