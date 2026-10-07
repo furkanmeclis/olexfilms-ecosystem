@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"time"
 
 	"github.com/google/uuid"
@@ -113,6 +114,35 @@ func (e WhatsAppEnqueuer) enqueue(typ string, id int64, u uuid.UUID, opts []asyn
 func (w *Worker) WithWhatsAppMessaging(send, media WhatsAppMessageFunc, sweep WhatsAppQueueSweepFunc) *Worker {
 	w.whatsAppSend, w.whatsAppMedia, w.whatsAppSweep = send, media, sweep
 	return w
+}
+
+// RetryAfterError is implemented by handler errors that defer a task
+// rather than fail it (e.g. the WhatsApp per-number rate limit): the task
+// runs again after RetryAfter and the retry counter is not incremented.
+type RetryAfterError interface {
+	error
+	RetryAfter() time.Duration
+}
+
+// minRetryAfter keeps a zero or tiny deferral from spinning.
+const minRetryAfter = time.Second
+
+// IsTaskFailure is the server's IsFailure predicate: a deferral is not a
+// failure, so it does not consume a retry.
+func IsTaskFailure(err error) bool {
+	var ra RetryAfterError
+	return !errors.As(err, &ra)
+}
+
+// TaskRetryDelay is the server's RetryDelayFunc: a deferral waits its own
+// delay plus up to a second of jitter (a burst to one number does not
+// wake at once); other errors use the asynq default backoff.
+func TaskRetryDelay(n int, err error, task *asynq.Task) time.Duration {
+	var ra RetryAfterError
+	if !errors.As(err, &ra) {
+		return asynq.DefaultRetryDelayFunc(n, err, task)
+	}
+	return max(ra.RetryAfter(), minRetryAfter) + time.Duration(rand.Int64N(int64(time.Second)))
 }
 
 // finalAttempt reports whether the running task has no retry left.

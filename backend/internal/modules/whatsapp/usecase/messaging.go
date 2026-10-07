@@ -61,6 +61,30 @@ const (
 // per-minute budget is used up; the task is retried later.
 var ErrRateLimited = errors.New("whatsapp: send rate limit reached")
 
+// FailureRateLimited is the failure reason of a message the rate limit
+// deferred for longer than MaxRateLimitDeferral.
+const FailureRateLimited = "rate_limited"
+
+// MaxRateLimitDeferral caps how long (since queueing) a rate limited
+// message waits for a free window before it is marked failed.
+const MaxRateLimitDeferral = time.Hour
+
+// RateLimitedError defers a send until the recipient's window frees. It
+// is not a delivery failure: the task queue reschedules the same task
+// after RetryAfter without consuming one of its retries.
+type RateLimitedError struct {
+	Wait time.Duration
+}
+
+func (e *RateLimitedError) Error() string {
+	return fmt.Sprintf("%s: retry in %s", ErrRateLimited, e.Wait)
+}
+
+func (e *RateLimitedError) Unwrap() error { return ErrRateLimited }
+
+// RetryAfter is the delay before the next run (queue.RetryAfterError).
+func (e *RateLimitedError) RetryAfter() time.Duration { return e.Wait }
+
 // SendQueue enqueues the background tasks of a message.
 type SendQueue interface {
 	EnqueueSend(ctx context.Context, messageID int64, messageUUID uuid.UUID) error
@@ -307,7 +331,9 @@ func (m *Messaging) QueueDocument(ctx context.Context, in DocumentMessage) (db.M
 // is locked while the provider is called, so a second run of the same task
 // (or a concurrent one) sends nothing. final is true on the last retry: a
 // failure then marks the message failed; earlier failures keep it queued
-// with the reason and return the error so the task is retried.
+// with the reason and return the error so the task is retried. A rate
+// limit deferral returns *RateLimitedError (no retry consumed) until the
+// message has waited MaxRateLimitDeferral, then fails as rate_limited.
 func (m *Messaging) ProcessSend(ctx context.Context, messageID int64, final bool) error {
 	tx, err := m.d.Tx.Begin(ctx)
 	if err != nil {
@@ -328,10 +354,12 @@ func (m *Messaging) ProcessSend(ctx context.Context, messageID int64, final bool
 	}
 	if m.d.Limiter != nil {
 		if ok, wait := m.d.Limiter.Allow(ctx, "whatsapp_send", conv.ContactE164, m.sendPerMinute(ctx), time.Minute); !ok {
-			if !final {
-				return fmt.Errorf("%w: retry in %s", ErrRateLimited, wait)
+			// The last retry cannot be deferred (asynq archives an
+			// exhausted task whatever the error), so it fails too.
+			if final || m.now().Sub(msg.CreatedAt.Time) >= MaxRateLimitDeferral {
+				return m.sendFailed(ctx, tx, q, conv, msg, errors.New(FailureRateLimited), true)
 			}
-			return m.sendFailed(ctx, tx, q, conv, msg, ErrRateLimited, true)
+			return &RateLimitedError{Wait: wait}
 		}
 	}
 	ref, sendErr := m.send(ctx, conv.ContactE164, msg)

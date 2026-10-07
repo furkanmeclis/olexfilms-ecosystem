@@ -104,15 +104,30 @@ func (p *fakePublisher) last(channel, typ string, id uuid.UUID) (usecase.Message
 }
 
 // fakeLimiter allows while Deny is false and records the limit it saw.
+// With Now set it is a fixed-window limiter on that clock instead.
 type fakeLimiter struct {
 	Deny    bool
+	Now     func() time.Time
 	limit   int
 	subject string
+	window  time.Time
+	used    int
 }
 
-func (l *fakeLimiter) Allow(_ context.Context, _, subject string, limit int, _ time.Duration) (bool, time.Duration) {
+func (l *fakeLimiter) Allow(_ context.Context, _, subject string, limit int, window time.Duration) (bool, time.Duration) {
 	l.limit, l.subject = limit, subject
-	return !l.Deny, 30 * time.Second
+	if l.Now == nil {
+		return !l.Deny, 30 * time.Second
+	}
+	now := l.Now()
+	if start := now.Truncate(window); !start.Equal(l.window) {
+		l.window, l.used = start, 0
+	}
+	if l.used >= limit {
+		return false, l.window.Add(window).Sub(now)
+	}
+	l.used++
+	return true, 0
 }
 
 // fakeDocs renders a fixed "PDF".
@@ -320,8 +335,13 @@ func TestMessagingRateLimitDefersSend(t *testing.T) {
 	conv := f.conversation(t)
 	msg := f.queueText(t, conv, "limit")
 	f.lim.Deny = true
-	if err := f.m.ProcessSend(f.ctx, msg.ID, false); !errors.Is(err, usecase.ErrRateLimited) {
-		t.Fatalf("err = %v, want ErrRateLimited", err)
+	err := f.m.ProcessSend(f.ctx, msg.ID, false)
+	var rl *usecase.RateLimitedError
+	if !errors.Is(err, usecase.ErrRateLimited) || !errors.As(err, &rl) || rl.RetryAfter() != 30*time.Second {
+		t.Fatalf("err = %v, want RateLimitedError (30s)", err)
+	}
+	if queue.IsTaskFailure(err) {
+		t.Fatal("a rate limit deferral must not count as a task failure (retry)")
 	}
 	if got := f.get(t, msg.ID); got.Status != "queued" || got.SendAttempts != 0 || len(f.wa.Sent()) != 0 {
 		t.Fatalf("rate limited: status=%s attempts=%d sends=%d", got.Status, got.SendAttempts, len(f.wa.Sent()))
@@ -329,6 +349,88 @@ func TestMessagingRateLimitDefersSend(t *testing.T) {
 	f.lim.Deny = false
 	if err := f.m.ProcessSend(f.ctx, msg.ID, false); err != nil || len(f.wa.Sent()) != 1 {
 		t.Fatalf("after window: err=%v sends=%d", err, len(f.wa.Sent()))
+	}
+
+	// Deferred for longer than MaxRateLimitDeferral since queueing: failed
+	// as rate_limited, nothing sent.
+	late := f.queueText(t, conv, "late")
+	f.lim.Deny = true
+	f.m.SetClock(func() time.Time { return late.CreatedAt.Time.Add(usecase.MaxRateLimitDeferral) })
+	if err := f.m.ProcessSend(f.ctx, late.ID, false); err != nil {
+		t.Fatalf("expired deferral is recorded, not retried: %v", err)
+	}
+	if got := f.get(t, late.ID); got.Status != "failed" || got.FailureReason.String != usecase.FailureRateLimited || len(f.wa.Sent()) != 1 {
+		t.Fatalf("expired: status=%s reason=%q sends=%d", got.Status, got.FailureReason.String, len(f.wa.Sent()))
+	}
+}
+
+// A burst of 35 messages to one number with a limit of 30/min: the five
+// over the limit are deferred to the next window without consuming a
+// delivery retry, so none fails and each is sent exactly once. The loop
+// mirrors asynq: the retry counter only grows when IsFailure says so and
+// the next run waits TaskRetryDelay.
+func TestMessagingRateLimitBurstNeverFails(t *testing.T) {
+	f := newMsgFixture(t)
+	conv := f.conversation(t)
+	clock := time.Now().Truncate(time.Minute).Add(50 * time.Second)
+	now := func() time.Time { return clock }
+	f.m.SetClock(now)
+	f.lim.Now = now
+
+	type task struct {
+		id      int64
+		retried int
+		runAt   time.Time
+	}
+	var tasks []*task
+	var ids []int64
+	for i := range 35 {
+		msg := f.queueText(t, conv, fmt.Sprintf("burst %d", i))
+		tasks = append(tasks, &task{id: msg.ID, runAt: clock})
+		ids = append(ids, msg.ID)
+	}
+	deferrals := 0
+	for runs := 0; len(tasks) > 0; runs++ {
+		if runs > 200 {
+			t.Fatalf("burst did not drain: %d tasks left", len(tasks))
+		}
+		next := 0
+		for i, tk := range tasks {
+			if tk.runAt.Before(tasks[next].runAt) {
+				next = i
+			}
+		}
+		tk := tasks[next]
+		clock = tk.runAt
+		err := f.m.ProcessSend(f.ctx, tk.id, tk.retried >= queue.WhatsAppSendMaxRetry)
+		if err == nil {
+			tasks = append(tasks[:next], tasks[next+1:]...)
+			continue
+		}
+		if !errors.Is(err, usecase.ErrRateLimited) {
+			t.Fatalf("message %d: %v", tk.id, err)
+		}
+		deferrals++
+		if queue.IsTaskFailure(err) {
+			t.Fatalf("message %d: a deferral consumed a delivery retry", tk.id)
+		}
+		tk.runAt = clock.Add(queue.TaskRetryDelay(tk.retried, err, nil))
+	}
+	if deferrals != 5 {
+		t.Fatalf("deferrals = %d, want 5", deferrals)
+	}
+	sends := map[string]int{}
+	for _, s := range f.wa.Sent() {
+		sends[s.ID]++
+	}
+	if len(f.wa.Sent()) != 35 {
+		t.Fatalf("sends = %d, want 35", len(f.wa.Sent()))
+	}
+	for _, id := range ids {
+		got := f.get(t, id)
+		if got.Status != "sent" || sends[got.ExternalID] != 1 || got.FailureReason.Valid {
+			t.Fatalf("message %d: status=%s sends=%d reason=%q", id, got.Status, sends[got.ExternalID], got.FailureReason.String)
+		}
 	}
 }
 

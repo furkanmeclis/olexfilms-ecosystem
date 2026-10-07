@@ -3,7 +3,10 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
@@ -81,5 +84,30 @@ func TestWhatsAppSendHandlerFinalFlag(t *testing.T) {
 	}
 	if len(finals) != 1 || finals[0] {
 		t.Fatalf("finals = %v (no retry metadata = not final)", finals)
+	}
+}
+
+type deferErr struct{ d time.Duration }
+
+func (e deferErr) Error() string             { return "deferred" }
+func (e deferErr) RetryAfter() time.Duration { return e.d }
+
+// A RetryAfterError (also wrapped) is not a failure and waits its own
+// delay (at least a second, plus under a second of jitter); other errors
+// fail and use the default backoff.
+func TestTaskRetryDelayAndIsFailure(t *testing.T) {
+	wrapped := fmt.Errorf("send: %w", deferErr{d: 20 * time.Second})
+	if IsTaskFailure(wrapped) || !IsTaskFailure(errors.New("boom")) {
+		t.Fatal("IsTaskFailure: deferral must not be a failure, other errors must")
+	}
+	if d := TaskRetryDelay(0, wrapped, nil); d < 20*time.Second || d >= 21*time.Second {
+		t.Fatalf("deferral delay = %s", d)
+	}
+	if d := TaskRetryDelay(0, deferErr{}, nil); d < time.Second || d >= 2*time.Second {
+		t.Fatalf("zero deferral delay = %s, want ≥1s", d)
+	}
+	task, _ := newWhatsAppMessageTask(TaskWhatsAppSend, 1, uuid.New())
+	if d := TaskRetryDelay(1, errors.New("boom"), task); d < 15*time.Second {
+		t.Fatalf("default backoff = %s", d)
 	}
 }
