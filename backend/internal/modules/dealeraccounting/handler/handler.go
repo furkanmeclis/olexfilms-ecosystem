@@ -113,15 +113,6 @@ func (h *Handler) SetDealerPrice(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, v)
 }
 
-func (h *Handler) ListSuppliers(w http.ResponseWriter, r *http.Request) {
-	items, err := h.svc.ListSuppliers(r.Context(), caller(r))
-	if err != nil {
-		writeError(w, r, err)
-		return
-	}
-	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
-}
-
 type supplierBody struct {
 	Name      string  `json:"name"`
 	TaxNo     *string `json:"tax_no"`

@@ -48,6 +48,14 @@ export const routes = {
       categories: (slug: string) => `/t/${slug}/catalog/categories`,
       services: (slug: string) => `/t/${slug}/service-catalog`,
     },
+    /** TEC-311 service subscriptions and the center cancellation queue. */
+    serviceSubscriptions: {
+      list: (slug: string) => `/t/${slug}/service-subscriptions`,
+      detail: (slug: string, uuid: string) =>
+        `/t/${slug}/service-subscriptions/${uuid}`,
+      cancelRequests: (slug: string) =>
+        `/t/${slug}/service-subscriptions/cancel-requests`,
+    },
     /** TEC-349 staff cards and payments, own-book reports. */
     staff: {
       list: (slug: string) => `/t/${slug}/staff`,
@@ -67,6 +75,13 @@ export const routes = {
       disputes: (slug: string) => `/t/${slug}/accounting/disputes`,
       disputeDetail: (slug: string, uuid: string) =>
         `/t/${slug}/accounting/disputes/${uuid}`,
+    },
+    /** TEC-348 dealer sale prices, quick sale, suppliers, purchases. */
+    dealerSales: {
+      prices: (slug: string) => `/t/${slug}/dealer-sales/prices`,
+      quickSale: (slug: string) => `/t/${slug}/dealer-sales/quick-sale`,
+      suppliers: (slug: string) => `/t/${slug}/dealer-sales/suppliers`,
+      purchases: (slug: string) => `/t/${slug}/dealer-sales/purchases`,
     },
     /** TEC-181 service wizard, TEC-183 list and detail. */
     services: {

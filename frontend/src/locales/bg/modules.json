@@ -95,5 +95,6 @@
   "names.reviews": "Отзиви",
   "names.e_invoice": "Електронна фактура (UBL-TR)",
   "names.short_url": "Кратки URL адреси",
-  "columns.slug": "Кратко име"
+  "columns.slug": "Кратко име",
+  "via_subscription": "Включен с абонамент"
 }

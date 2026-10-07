@@ -84,5 +84,7 @@
   "nav_exchange_rates": "Wechselkurse",
   "nav_legal_texts": "Rechtstexte",
   "nav_glorian_integration": "Glorian",
-  "nav_service_catalog": "Leistungskatalog"
+  "nav_service_catalog": "Leistungskatalog",
+  "nav_service_subscriptions": "Service-Abonnements",
+  "nav_service_subscription_cancels": "Kündigungsanträge"
 }

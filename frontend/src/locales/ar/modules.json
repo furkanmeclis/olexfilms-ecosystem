@@ -95,5 +95,6 @@
   "names.reviews": "التقييمات",
   "names.e_invoice": "الفاتورة الإلكترونية (UBL-TR)",
   "names.short_url": "الروابط المختصرة",
-  "columns.slug": "المعرّف"
+  "columns.slug": "المعرّف",
+  "via_subscription": "مفعّل بالاشتراك"
 }

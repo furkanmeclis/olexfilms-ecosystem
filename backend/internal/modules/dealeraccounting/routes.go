@@ -35,4 +35,9 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/suppliers", route(h.CreateSupplier, rbac.PermSuppliersManage))
 	mux.Handle("PATCH /v1/suppliers/{uuid}", route(h.UpdateSupplier, rbac.PermSuppliersManage))
 	mux.Handle("POST /v1/purchases", route(h.CreatePurchase, rbac.PermPurchasesWrite))
+	// TEC-348 (F3-07h): list reads of the dealer sales screens.
+	mux.Handle("GET /v1/dealer-prices/catalog", route(h.ListPriceCatalog, rbac.PermDealerPricingWrite))
+	mux.Handle("GET /v1/product-sales", route(h.ListProductSales, rbac.PermProductSalesWrite))
+	mux.Handle("GET /v1/product-sales/lookup", route(h.LookupSaleItem, rbac.PermProductSalesWrite))
+	mux.Handle("GET /v1/purchases", route(h.ListPurchases, rbac.PermPurchasesWrite))
 }

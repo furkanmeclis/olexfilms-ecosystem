@@ -140,6 +140,7 @@ type Querier interface {
 	CountContractInstances(ctx context.Context, arg CountContractInstancesParams) (int64, error)
 	CountCustomerCariAccounts(ctx context.Context, organizationID int64) (int64, error)
 	CountCustomerOrganizationLinks(ctx context.Context, arg CountCustomerOrganizationLinksParams) (CountCustomerOrganizationLinksRow, error)
+	CountDealerPriceCatalog(ctx context.Context, arg CountDealerPriceCatalogParams) (int64, error)
 	CountDistributorOverrideDetails(ctx context.Context, arg CountDistributorOverrideDetailsParams) (int64, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
@@ -184,14 +185,18 @@ type Querier interface {
 	CountPricedProducts(ctx context.Context, arg CountPricedProductsParams) (int64, error)
 	CountProductCategories(ctx context.Context, arg CountProductCategoriesParams) (int64, error)
 	CountProductSales(ctx context.Context, arg CountProductSalesParams) (int64, error)
+	CountProductSalesPage(ctx context.Context, arg CountProductSalesPageParams) (int64, error)
 	CountProducts(ctx context.Context, arg CountProductsParams) (int64, error)
 	CountPurchases(ctx context.Context, arg CountPurchasesParams) (int64, error)
+	CountPurchasesPage(ctx context.Context, arg CountPurchasesPageParams) (int64, error)
 	CountRoles(ctx context.Context, arg CountRolesParams) (int64, error)
 	CountScopedVehicles(ctx context.Context, arg CountScopedVehiclesParams) (int64, error)
 	CountSearchFinanceEntries(ctx context.Context, arg CountSearchFinanceEntriesParams) (int64, error)
 	CountServiceReviewAnswersByQuestion(ctx context.Context, arg CountServiceReviewAnswersByQuestionParams) (int64, error)
 	CountServiceReviewsInScope(ctx context.Context, arg CountServiceReviewsInScopeParams) (int64, error)
+	CountServiceSubscriptionCancelRequestsPage(ctx context.Context, arg CountServiceSubscriptionCancelRequestsPageParams) (int64, error)
 	CountServiceSubscriptionsByItem(ctx context.Context, arg CountServiceSubscriptionsByItemParams) (int64, error)
+	CountServiceSubscriptionsPage(ctx context.Context, arg CountServiceSubscriptionsPageParams) (int64, error)
 	CountServicesInScope(ctx context.Context, arg CountServicesInScopeParams) (int64, error)
 	CountServicesOfUser(ctx context.Context, customerUserID int64) (int64, error)
 	CountStaffPayments(ctx context.Context, arg CountStaffPaymentsParams) (int64, error)
@@ -206,6 +211,7 @@ type Querier interface {
 	CountStorageActivity(ctx context.Context, objectKey string) (int64, error)
 	CountStorageTrash(ctx context.Context) (int64, error)
 	CountSuppliers(ctx context.Context, arg CountSuppliersParams) (int64, error)
+	CountSuppliersPage(ctx context.Context, arg CountSuppliersPageParams) (int64, error)
 	CountTaskComments(ctx context.Context, taskID int64) (int64, error)
 	CountTasks(ctx context.Context, arg CountTasksParams) (int64, error)
 	CountTransferRequestItems(ctx context.Context, requestID int64) (int64, error)
@@ -1250,6 +1256,15 @@ type Querier interface {
 	// at least one organization; anonymized, merged and deleted users never
 	// enter the index. organization_ids / brand_ids drive the scope filter.
 	ListCustomersForIndex(ctx context.Context) ([]ListCustomersForIndexRow, error)
+	// TEC-348 (F3-07h): paged list reads of the dealer sales screens (sale
+	// prices, quick sales, suppliers, purchases). Sort keys come from the
+	// dealeraccounting handler specs (docs/list-contract.md); every read is
+	// bounded by the dealer organization the API layer resolved.
+	// ---------------------------------------------------------------------------
+	// Sale price catalog: the brand's active piece products (plus any product
+	// the dealer already priced) with the dealer's own price and the brand's
+	// recommended price.
+	ListDealerPriceCatalog(ctx context.Context, arg ListDealerPriceCatalogParams) ([]ListDealerPriceCatalogRow, error)
 	ListDealerPricesForProducts(ctx context.Context, arg ListDealerPricesForProductsParams) ([]ListDealerPricesForProductsRow, error)
 	ListDealerProductPrices(ctx context.Context, arg ListDealerProductPricesParams) ([]DealerProductPrice, error)
 	// Center view of the distributor-specific prices with product and
@@ -1549,6 +1564,9 @@ type Querier interface {
 	ListProductSaleLinesBySales(ctx context.Context, arg ListProductSaleLinesBySalesParams) ([]ProductSaleLine, error)
 	ListProductSaleStockCandidates(ctx context.Context, arg ListProductSaleStockCandidatesParams) ([]ListProductSaleStockCandidatesRow, error)
 	ListProductSales(ctx context.Context, arg ListProductSalesParams) ([]ProductSale, error)
+	// ---------------------------------------------------------------------------
+	// Quick sales. voided: the sale's income entry was reversed.
+	ListProductSalesPage(ctx context.Context, arg ListProductSalesPageParams) ([]ListProductSalesPageRow, error)
 	// TEC-369: sort keys from model.ProductSort (docs/list-contract.md);
 	// default name. category sorts by the category name.
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
@@ -1563,6 +1581,9 @@ type Querier interface {
 	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
 	ListPurchaseLines(ctx context.Context, arg ListPurchaseLinesParams) ([]PurchaseLine, error)
 	ListPurchases(ctx context.Context, arg ListPurchasesParams) ([]Purchase, error)
+	// ---------------------------------------------------------------------------
+	// Purchases with the supplier name and the (single) line description.
+	ListPurchasesPage(ctx context.Context, arg ListPurchasesPageParams) ([]ListPurchasesPageRow, error)
 	ListPushSubscriptionsByUser(ctx context.Context, userID int64) ([]PushSubscription, error)
 	ListQuoteDeliveries(ctx context.Context, quoteID int64) ([]QuoteDelivery, error)
 	ListQuoteLines(ctx context.Context, quoteID int64) ([]QuoteLine, error)
@@ -1649,10 +1670,14 @@ type Querier interface {
 	// matches the product name, SKU or barcode (TEC-182). The category's
 	// available_parts feeds the part list of the new item.
 	ListServiceStockUnits(ctx context.Context, arg ListServiceStockUnitsParams) ([]ListServiceStockUnitsRow, error)
-	ListServiceSubscriptionCancelRequests(ctx context.Context, arg ListServiceSubscriptionCancelRequestsParams) ([]ServiceSubscriptionCancelRequest, error)
+	// TEC-311: center cancellation queue (docs/list-contract.md). Sort keys
+	// from servicecatalog usecase CancelRequestsSortSpec.
+	ListServiceSubscriptionCancelRequestsPage(ctx context.Context, arg ListServiceSubscriptionCancelRequestsPageParams) ([]ListServiceSubscriptionCancelRequestsPageRow, error)
 	ListServiceSubscriptionPeriods(ctx context.Context, subscriptionID int64) ([]ServiceSubscriptionPeriod, error)
-	ListServiceSubscriptionsByBrand(ctx context.Context, arg ListServiceSubscriptionsByBrandParams) ([]ServiceSubscription, error)
-	ListServiceSubscriptionsByOrgs(ctx context.Context, arg ListServiceSubscriptionsByOrgsParams) ([]ServiceSubscription, error)
+	// TEC-311: paged subscription list (docs/list-contract.md). Sort keys from
+	// servicecatalog usecase SubscriptionsSortSpec; organization_ids NULL = no
+	// organization restriction (all/brand scope).
+	ListServiceSubscriptionsPage(ctx context.Context, arg ListServiceSubscriptionsPageParams) ([]ListServiceSubscriptionsPageRow, error)
 	// Services of a customer across brands' organizations in scope (portal and
 	// customer detail).
 	ListServicesByCustomer(ctx context.Context, arg ListServicesByCustomerParams) ([]Service, error)
@@ -1731,6 +1756,9 @@ type Querier interface {
 	ListStorageTrash(ctx context.Context, arg ListStorageTrashParams) ([]StorageTrash, error)
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
 	ListSuppliers(ctx context.Context, arg ListSuppliersParams) ([]Supplier, error)
+	// ---------------------------------------------------------------------------
+	// Suppliers.
+	ListSuppliersPage(ctx context.Context, arg ListSuppliersPageParams) ([]Supplier, error)
 	ListSystemSettings(ctx context.Context) ([]SystemSetting, error)
 	ListTaskComments(ctx context.Context, arg ListTaskCommentsParams) ([]ListTaskCommentsRow, error)
 	// TEC-379: "select all matching" of the task bulk actions (same filters).

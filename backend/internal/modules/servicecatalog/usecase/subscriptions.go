@@ -114,6 +114,12 @@ type SubscriptionView struct {
 	Status           string             `json:"status"`
 	Contract         *ContractSummary   `json:"contract,omitempty"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	// TEC-311: display names for the subscription screens.
+	OrganizationName string `json:"organization_name"`
+	ItemName         string `json:"item_name"`
+	ItemCategory     string `json:"item_category"`
+
+	contractID pgtype.Int8
 }
 
 type ContractSummary struct {
@@ -194,22 +200,6 @@ func (s *Service) Assign(ctx context.Context, c Caller, in SubscriptionInput) (S
 	}
 	s.invalidateModules(ctx, sub, item)
 	return s.subscriptionView(ctx, sub)
-}
-
-func (s *Service) ListSubscriptions(ctx context.Context, c Caller, status string) ([]SubscriptionView, error) {
-	rows, err := s.listRows(ctx, c, status)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]SubscriptionView, 0, len(rows))
-	for _, row := range rows {
-		v, err := s.subscriptionView(ctx, row)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, v)
-	}
-	return out, nil
 }
 
 func (s *Service) GetSubscription(ctx context.Context, c Caller, id uuid.UUID) (SubscriptionView, error) {
@@ -387,21 +377,6 @@ func (s *Service) targetOrg(ctx context.Context, c Caller, id uuid.UUID) (db.Org
 	}
 }
 
-func (s *Service) listRows(ctx context.Context, c Caller, status string) ([]db.ServiceSubscription, error) {
-	st := nullableTextArg(nil)
-	if status != "" {
-		st = pgtype.Text{String: status, Valid: true}
-	}
-	if c.Filter.Scope == rbac.ScopeAll || c.Filter.Scope == rbac.ScopeBrand {
-		return s.q.ListServiceSubscriptionsByBrand(ctx, db.ListServiceSubscriptionsByBrandParams{
-			BrandID: c.Org.BrandID, Status: st,
-		})
-	}
-	return s.q.ListServiceSubscriptionsByOrgs(ctx, db.ListServiceSubscriptionsByOrgsParams{
-		BrandID: c.Org.BrandID, OrganizationIds: c.Filter.OrgIDsArg(), Status: st,
-	})
-}
-
 func (s *Service) rateSnapshot(ctx context.Context, on time.Time, base, quote string) ([]byte, error) {
 	snap, err := s.rates.ResolveRate(ctx, on, base, quote)
 	if errors.Is(err, fxrates.ErrRateNotFound) {
@@ -523,9 +498,30 @@ func (s *Service) subscriptionView(ctx context.Context, sub db.ServiceSubscripti
 		Recurrence: sub.Recurrence, Price: numText(sub.Price), Currency: sub.Currency,
 		RateSnapshot: json.RawMessage(sub.RateSnapshot), CancellationFee: numText(sub.CancellationFee),
 		Status: sub.Status, CreatedAt: sub.CreatedAt,
+		OrganizationName: org.Name, ItemName: item.Name, ItemCategory: item.Category,
+		contractID: sub.ContractID,
 	}
-	if sub.ContractID.Valid {
-		inst, err := s.q.GetContractInstanceByID(ctx, sub.ContractID.Int64)
+	return s.withContract(ctx, view)
+}
+
+// subscriptionRowView builds a list row view from the joined page row.
+func (s *Service) subscriptionRowView(ctx context.Context, row db.ListServiceSubscriptionsPageRow) (SubscriptionView, error) {
+	sub := row.ServiceSubscription
+	view := SubscriptionView{
+		UUID: sub.Uuid, OrganizationUUID: row.OrgUuid, ItemUUID: row.ItemUuid, AssignedByOrgID: sub.AssignedByOrgID,
+		StartsOn: sub.StartsOn.Time.Format(time.DateOnly), EndsOn: sub.EndsOn.Time.Format(time.DateOnly),
+		Recurrence: sub.Recurrence, Price: numText(sub.Price), Currency: sub.Currency,
+		RateSnapshot: json.RawMessage(sub.RateSnapshot), CancellationFee: numText(sub.CancellationFee),
+		Status: sub.Status, CreatedAt: sub.CreatedAt,
+		OrganizationName: row.OrganizationName, ItemName: row.ItemName, ItemCategory: row.ItemCategory,
+		contractID: sub.ContractID,
+	}
+	return s.withContract(ctx, view)
+}
+
+func (s *Service) withContract(ctx context.Context, view SubscriptionView) (SubscriptionView, error) {
+	if view.contractID.Valid {
+		inst, err := s.q.GetContractInstanceByID(ctx, view.contractID.Int64)
 		if err != nil {
 			return SubscriptionView{}, err
 		}

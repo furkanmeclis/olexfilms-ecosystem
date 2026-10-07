@@ -49,6 +49,8 @@ import {
   Gauge,
   Cpu,
   CalendarClock,
+  Inbox,
+  Repeat,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -58,6 +60,7 @@ import { googleNavIcon } from "@/components/icons/google-icon";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { announcementsNavAdornment } from "@/features/announcements/nav";
+import { dealerSalesNavGroup } from "@/features/dealer-sales/nav";
 import { leadsNavItem } from "@/features/leads/nav";
 import { staffReportsNavGroup } from "@/features/staff-reports/nav";
 import { defineNav } from "@/features/nav-engine";
@@ -402,11 +405,16 @@ export function tenantNav(slug: string) {
         ],
       },
       {
+        // TEC-311: subscriptions (service_subscriptions.read) and the center
+        // cancellation queue (cancel_approve) live next to the catalog.
         id: "service-catalog",
         labelKey: "layout.nav_service_catalog",
         icon: ClipboardList,
         defaultOpen: true,
-        permission: permissions.serviceCatalog.read,
+        anyPermission: [
+          permissions.serviceCatalog.read,
+          permissions.serviceSubscriptions.read,
+        ],
         feature: "service_catalog",
         items: [
           {
@@ -416,6 +424,23 @@ export function tenantNav(slug: string) {
             icon: ClipboardList,
             permission: permissions.serviceCatalog.read,
             feature: "service_catalog",
+          },
+          {
+            id: "service-subscriptions",
+            titleKey: "layout.nav_service_subscriptions",
+            href: routes.tenant.serviceSubscriptions.list(slug),
+            icon: Repeat,
+            permission: permissions.serviceSubscriptions.read,
+            feature: "service_catalog",
+          },
+          {
+            id: "service-subscription-cancels",
+            titleKey: "layout.nav_service_subscription_cancels",
+            href: routes.tenant.serviceSubscriptions.cancelRequests(slug),
+            icon: Inbox,
+            permission: permissions.serviceSubscriptions.cancelApprove,
+            feature: "service_catalog",
+            orgTypes: ["center"],
           },
         ],
       },
@@ -666,6 +691,8 @@ export function tenantNav(slug: string) {
           },
         ],
       },
+      // TEC-348: dealer sale prices, quick sale, suppliers, purchases.
+      dealerSalesNavGroup(slug),
       {
         // TEC-197: stock transfer requests between sibling dealers or
         // distributors (K13); same gates as /v1/stock-transfers (the

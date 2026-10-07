@@ -84,5 +84,7 @@
   "nav_exchange_rates": "أسعار الصرف",
   "nav_legal_texts": "النصوص القانونية",
   "nav_glorian_integration": "Glorian",
-  "nav_service_catalog": "كتالوج الخدمات"
+  "nav_service_catalog": "كتالوج الخدمات",
+  "nav_service_subscriptions": "اشتراكات الخدمات",
+  "nav_service_subscription_cancels": "طلبات الإلغاء"
 }

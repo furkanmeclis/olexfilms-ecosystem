@@ -95,5 +95,6 @@
   "names.reviews": "Bewertungen",
   "names.e_invoice": "E-Rechnung (UBL-TR)",
   "names.short_url": "Kurz-URLs",
-  "columns.slug": "Kurzname"
+  "columns.slug": "Kurzname",
+  "via_subscription": "Per Abonnement aktiv"
 }

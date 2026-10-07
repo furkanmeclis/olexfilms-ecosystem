@@ -51,6 +51,40 @@ func (q *Queries) CountActiveServiceModuleSubscriptions(ctx context.Context, arg
 	return count, err
 }
 
+const countServiceSubscriptionCancelRequestsPage = `-- name: CountServiceSubscriptionCancelRequestsPage :one
+SELECT count(*)
+FROM service_subscription_cancel_requests r
+JOIN service_subscriptions s ON s.id = r.subscription_id
+JOIN organizations o ON o.id = r.organization_id
+JOIN service_catalog_items i ON i.id = s.item_id AND i.brand_id = s.brand_id
+WHERE r.brand_id = $1
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR r.status = ANY ($2::text[]))
+  AND ($3::text IS NULL OR o.name ILIKE '%' || $3::text || '%' OR i.name ILIKE '%' || $3::text || '%' OR r.reason ILIKE '%' || $3::text || '%')
+  AND ($4::timestamptz IS NULL OR r.created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR r.created_at < $5::timestamptz)
+`
+
+type CountServiceSubscriptionCancelRequestsPageParams struct {
+	BrandID       int64              `json:"brand_id"`
+	Statuses      []string           `json:"statuses"`
+	Q             pgtype.Text        `json:"q"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+}
+
+func (q *Queries) CountServiceSubscriptionCancelRequestsPage(ctx context.Context, arg CountServiceSubscriptionCancelRequestsPageParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countServiceSubscriptionCancelRequestsPage,
+		arg.BrandID,
+		arg.Statuses,
+		arg.Q,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countServiceSubscriptionsByItem = `-- name: CountServiceSubscriptionsByItem :one
 SELECT count(*) FROM service_subscriptions
 WHERE item_id = $1 AND brand_id = $2
@@ -63,6 +97,48 @@ type CountServiceSubscriptionsByItemParams struct {
 
 func (q *Queries) CountServiceSubscriptionsByItem(ctx context.Context, arg CountServiceSubscriptionsByItemParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countServiceSubscriptionsByItem, arg.ItemID, arg.BrandID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countServiceSubscriptionsPage = `-- name: CountServiceSubscriptionsPage :one
+SELECT count(*)
+FROM service_subscriptions s
+JOIN organizations o ON o.id = s.organization_id
+JOIN service_catalog_items i ON i.id = s.item_id AND i.brand_id = s.brand_id
+WHERE s.brand_id = $1
+  AND ($2::bigint[] IS NULL OR s.organization_id = ANY ($2::bigint[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR s.status = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0 OR o.uuid = ANY ($4::uuid[]))
+  AND (COALESCE(cardinality($5::uuid[]), 0) = 0 OR i.uuid = ANY ($5::uuid[]))
+  AND ($6::text IS NULL OR o.name ILIKE '%' || $6::text || '%' OR i.name ILIKE '%' || $6::text || '%')
+  AND ($7::date IS NULL OR s.ends_on >= $7::date)
+  AND ($8::date IS NULL OR s.ends_on < $8::date)
+`
+
+type CountServiceSubscriptionsPageParams struct {
+	BrandID         int64       `json:"brand_id"`
+	OrganizationIds []int64     `json:"organization_ids"`
+	Statuses        []string    `json:"statuses"`
+	OrgUuids        []uuid.UUID `json:"org_uuids"`
+	ItemUuids       []uuid.UUID `json:"item_uuids"`
+	Q               pgtype.Text `json:"q"`
+	EndsFrom        pgtype.Date `json:"ends_from"`
+	EndsBefore      pgtype.Date `json:"ends_before"`
+}
+
+func (q *Queries) CountServiceSubscriptionsPage(ctx context.Context, arg CountServiceSubscriptionsPageParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countServiceSubscriptionsPage,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.Statuses,
+		arg.OrgUuids,
+		arg.ItemUuids,
+		arg.Q,
+		arg.EndsFrom,
+		arg.EndsBefore,
+	)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -845,44 +921,102 @@ func (q *Queries) ListServicePriceOverridesForItems(ctx context.Context, arg Lis
 	return items, nil
 }
 
-const listServiceSubscriptionCancelRequests = `-- name: ListServiceSubscriptionCancelRequests :many
-SELECT id, uuid, subscription_id, organization_id, brand_id, requested_by_user_id, requested_by_org_id, reason, status, cancellation_fee, currency, decided_by_user_id, decided_at, decision_note, created_at, updated_at FROM service_subscription_cancel_requests
-WHERE brand_id = $1
-  AND ($2::text IS NULL OR status = $2::text)
-ORDER BY created_at DESC, id DESC
+const listServiceSubscriptionCancelRequestsPage = `-- name: ListServiceSubscriptionCancelRequestsPage :many
+SELECT r.id, r.uuid, r.subscription_id, r.organization_id, r.brand_id, r.requested_by_user_id, r.requested_by_org_id, r.reason, r.status, r.cancellation_fee, r.currency, r.decided_by_user_id, r.decided_at, r.decision_note, r.created_at, r.updated_at, s.uuid AS subscription_uuid, s.status AS subscription_status,
+       s.starts_on, s.ends_on, o.uuid AS org_uuid, o.name AS organization_name, i.name AS item_name
+FROM service_subscription_cancel_requests r
+JOIN service_subscriptions s ON s.id = r.subscription_id
+JOIN organizations o ON o.id = r.organization_id
+JOIN service_catalog_items i ON i.id = s.item_id AND i.brand_id = s.brand_id
+WHERE r.brand_id = $1
+  AND (COALESCE(cardinality($2::text[]), 0) = 0 OR r.status = ANY ($2::text[]))
+  AND ($3::text IS NULL OR o.name ILIKE '%' || $3::text || '%' OR i.name ILIKE '%' || $3::text || '%' OR r.reason ILIKE '%' || $3::text || '%')
+  AND ($4::timestamptz IS NULL OR r.created_at >= $4::timestamptz)
+  AND ($5::timestamptz IS NULL OR r.created_at < $5::timestamptz)
+ORDER BY
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text WHEN 'status' THEN r.status WHEN 'organization_name' THEN o.name WHEN 'item_name' THEN i.name END
+  END ASC,
+  CASE WHEN $6::bool THEN
+    CASE $7::text WHEN 'status' THEN r.status WHEN 'organization_name' THEN o.name WHEN 'item_name' THEN i.name END
+  END DESC,
+  CASE WHEN NOT $6::bool AND $7::text = 'cancellation_fee' THEN r.cancellation_fee END ASC,
+  CASE WHEN $6::bool AND $7::text = 'cancellation_fee' THEN r.cancellation_fee END DESC,
+  CASE WHEN NOT $6::bool AND $7::text = 'created_at' THEN r.created_at END ASC,
+  CASE WHEN $6::bool AND $7::text = 'created_at' THEN r.created_at END DESC,
+  CASE WHEN $6::bool THEN r.id END DESC,
+  r.id ASC
+LIMIT $9 OFFSET $8
 `
 
-type ListServiceSubscriptionCancelRequestsParams struct {
-	BrandID int64       `json:"brand_id"`
-	Status  pgtype.Text `json:"status"`
+type ListServiceSubscriptionCancelRequestsPageParams struct {
+	BrandID       int64              `json:"brand_id"`
+	Statuses      []string           `json:"statuses"`
+	Q             pgtype.Text        `json:"q"`
+	CreatedFrom   pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore pgtype.Timestamptz `json:"created_before"`
+	SortDesc      bool               `json:"sort_desc"`
+	SortKey       string             `json:"sort_key"`
+	OffsetCount   int32              `json:"offset_count"`
+	LimitCount    int32              `json:"limit_count"`
 }
 
-func (q *Queries) ListServiceSubscriptionCancelRequests(ctx context.Context, arg ListServiceSubscriptionCancelRequestsParams) ([]ServiceSubscriptionCancelRequest, error) {
-	rows, err := q.db.Query(ctx, listServiceSubscriptionCancelRequests, arg.BrandID, arg.Status)
+type ListServiceSubscriptionCancelRequestsPageRow struct {
+	ServiceSubscriptionCancelRequest ServiceSubscriptionCancelRequest `json:"service_subscription_cancel_request"`
+	SubscriptionUuid                 uuid.UUID                        `json:"subscription_uuid"`
+	SubscriptionStatus               string                           `json:"subscription_status"`
+	StartsOn                         pgtype.Date                      `json:"starts_on"`
+	EndsOn                           pgtype.Date                      `json:"ends_on"`
+	OrgUuid                          uuid.UUID                        `json:"org_uuid"`
+	OrganizationName                 string                           `json:"organization_name"`
+	ItemName                         string                           `json:"item_name"`
+}
+
+// TEC-311: center cancellation queue (docs/list-contract.md). Sort keys
+// from servicecatalog usecase CancelRequestsSortSpec.
+func (q *Queries) ListServiceSubscriptionCancelRequestsPage(ctx context.Context, arg ListServiceSubscriptionCancelRequestsPageParams) ([]ListServiceSubscriptionCancelRequestsPageRow, error) {
+	rows, err := q.db.Query(ctx, listServiceSubscriptionCancelRequestsPage,
+		arg.BrandID,
+		arg.Statuses,
+		arg.Q,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ServiceSubscriptionCancelRequest{}
+	items := []ListServiceSubscriptionCancelRequestsPageRow{}
 	for rows.Next() {
-		var i ServiceSubscriptionCancelRequest
+		var i ListServiceSubscriptionCancelRequestsPageRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.SubscriptionID,
-			&i.OrganizationID,
-			&i.BrandID,
-			&i.RequestedByUserID,
-			&i.RequestedByOrgID,
-			&i.Reason,
-			&i.Status,
-			&i.CancellationFee,
-			&i.Currency,
-			&i.DecidedByUserID,
-			&i.DecidedAt,
-			&i.DecisionNote,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.ServiceSubscriptionCancelRequest.ID,
+			&i.ServiceSubscriptionCancelRequest.Uuid,
+			&i.ServiceSubscriptionCancelRequest.SubscriptionID,
+			&i.ServiceSubscriptionCancelRequest.OrganizationID,
+			&i.ServiceSubscriptionCancelRequest.BrandID,
+			&i.ServiceSubscriptionCancelRequest.RequestedByUserID,
+			&i.ServiceSubscriptionCancelRequest.RequestedByOrgID,
+			&i.ServiceSubscriptionCancelRequest.Reason,
+			&i.ServiceSubscriptionCancelRequest.Status,
+			&i.ServiceSubscriptionCancelRequest.CancellationFee,
+			&i.ServiceSubscriptionCancelRequest.Currency,
+			&i.ServiceSubscriptionCancelRequest.DecidedByUserID,
+			&i.ServiceSubscriptionCancelRequest.DecidedAt,
+			&i.ServiceSubscriptionCancelRequest.DecisionNote,
+			&i.ServiceSubscriptionCancelRequest.CreatedAt,
+			&i.ServiceSubscriptionCancelRequest.UpdatedAt,
+			&i.SubscriptionUuid,
+			&i.SubscriptionStatus,
+			&i.StartsOn,
+			&i.EndsOn,
+			&i.OrgUuid,
+			&i.OrganizationName,
+			&i.ItemName,
 		); err != nil {
 			return nil, err
 		}
@@ -929,105 +1063,118 @@ func (q *Queries) ListServiceSubscriptionPeriods(ctx context.Context, subscripti
 	return items, nil
 }
 
-const listServiceSubscriptionsByBrand = `-- name: ListServiceSubscriptionsByBrand :many
-SELECT id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at FROM service_subscriptions
-WHERE brand_id = $1
-  AND ($2::text IS NULL OR status = $2::text)
-ORDER BY created_at DESC, id DESC
+const listServiceSubscriptionsPage = `-- name: ListServiceSubscriptionsPage :many
+SELECT s.id, s.uuid, s.organization_id, s.brand_id, s.seller_org_id, s.item_id, s.assigned_by_org_id, s.assigned_by_user_id, s.starts_on, s.ends_on, s.recurrence, s.price, s.currency, s.rate_snapshot, s.cancellation_fee, s.status, s.contract_id, s.cancelled_at, s.expired_at, s.created_at, s.updated_at, o.uuid AS org_uuid, o.name AS organization_name,
+       i.uuid AS item_uuid, i.name AS item_name, i.category AS item_category
+FROM service_subscriptions s
+JOIN organizations o ON o.id = s.organization_id
+JOIN service_catalog_items i ON i.id = s.item_id AND i.brand_id = s.brand_id
+WHERE s.brand_id = $1
+  AND ($2::bigint[] IS NULL OR s.organization_id = ANY ($2::bigint[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR s.status = ANY ($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0 OR o.uuid = ANY ($4::uuid[]))
+  AND (COALESCE(cardinality($5::uuid[]), 0) = 0 OR i.uuid = ANY ($5::uuid[]))
+  AND ($6::text IS NULL OR o.name ILIKE '%' || $6::text || '%' OR i.name ILIKE '%' || $6::text || '%')
+  AND ($7::date IS NULL OR s.ends_on >= $7::date)
+  AND ($8::date IS NULL OR s.ends_on < $8::date)
+ORDER BY
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'status' THEN s.status WHEN 'organization_name' THEN o.name WHEN 'item_name' THEN i.name END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'status' THEN s.status WHEN 'organization_name' THEN o.name WHEN 'item_name' THEN i.name END
+  END DESC,
+  CASE WHEN NOT $9::bool THEN
+    CASE $10::text WHEN 'starts_on' THEN s.starts_on WHEN 'ends_on' THEN s.ends_on END
+  END ASC,
+  CASE WHEN $9::bool THEN
+    CASE $10::text WHEN 'starts_on' THEN s.starts_on WHEN 'ends_on' THEN s.ends_on END
+  END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'price' THEN s.price END ASC,
+  CASE WHEN $9::bool AND $10::text = 'price' THEN s.price END DESC,
+  CASE WHEN NOT $9::bool AND $10::text = 'created_at' THEN s.created_at END ASC,
+  CASE WHEN $9::bool AND $10::text = 'created_at' THEN s.created_at END DESC,
+  CASE WHEN $9::bool THEN s.id END DESC,
+  s.id ASC
+LIMIT $12 OFFSET $11
 `
 
-type ListServiceSubscriptionsByBrandParams struct {
-	BrandID int64       `json:"brand_id"`
-	Status  pgtype.Text `json:"status"`
-}
-
-func (q *Queries) ListServiceSubscriptionsByBrand(ctx context.Context, arg ListServiceSubscriptionsByBrandParams) ([]ServiceSubscription, error) {
-	rows, err := q.db.Query(ctx, listServiceSubscriptionsByBrand, arg.BrandID, arg.Status)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ServiceSubscription{}
-	for rows.Next() {
-		var i ServiceSubscription
-		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.OrganizationID,
-			&i.BrandID,
-			&i.SellerOrgID,
-			&i.ItemID,
-			&i.AssignedByOrgID,
-			&i.AssignedByUserID,
-			&i.StartsOn,
-			&i.EndsOn,
-			&i.Recurrence,
-			&i.Price,
-			&i.Currency,
-			&i.RateSnapshot,
-			&i.CancellationFee,
-			&i.Status,
-			&i.ContractID,
-			&i.CancelledAt,
-			&i.ExpiredAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listServiceSubscriptionsByOrgs = `-- name: ListServiceSubscriptionsByOrgs :many
-SELECT id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at FROM service_subscriptions
-WHERE brand_id = $1
-  AND organization_id = ANY($2::bigint[])
-  AND ($3::text IS NULL OR status = $3::text)
-ORDER BY created_at DESC, id DESC
-`
-
-type ListServiceSubscriptionsByOrgsParams struct {
+type ListServiceSubscriptionsPageParams struct {
 	BrandID         int64       `json:"brand_id"`
 	OrganizationIds []int64     `json:"organization_ids"`
-	Status          pgtype.Text `json:"status"`
+	Statuses        []string    `json:"statuses"`
+	OrgUuids        []uuid.UUID `json:"org_uuids"`
+	ItemUuids       []uuid.UUID `json:"item_uuids"`
+	Q               pgtype.Text `json:"q"`
+	EndsFrom        pgtype.Date `json:"ends_from"`
+	EndsBefore      pgtype.Date `json:"ends_before"`
+	SortDesc        bool        `json:"sort_desc"`
+	SortKey         string      `json:"sort_key"`
+	OffsetCount     int32       `json:"offset_count"`
+	LimitCount      int32       `json:"limit_count"`
 }
 
-func (q *Queries) ListServiceSubscriptionsByOrgs(ctx context.Context, arg ListServiceSubscriptionsByOrgsParams) ([]ServiceSubscription, error) {
-	rows, err := q.db.Query(ctx, listServiceSubscriptionsByOrgs, arg.BrandID, arg.OrganizationIds, arg.Status)
+type ListServiceSubscriptionsPageRow struct {
+	ServiceSubscription ServiceSubscription `json:"service_subscription"`
+	OrgUuid             uuid.UUID           `json:"org_uuid"`
+	OrganizationName    string              `json:"organization_name"`
+	ItemUuid            uuid.UUID           `json:"item_uuid"`
+	ItemName            string              `json:"item_name"`
+	ItemCategory        string              `json:"item_category"`
+}
+
+// TEC-311: paged subscription list (docs/list-contract.md). Sort keys from
+// servicecatalog usecase SubscriptionsSortSpec; organization_ids NULL = no
+// organization restriction (all/brand scope).
+func (q *Queries) ListServiceSubscriptionsPage(ctx context.Context, arg ListServiceSubscriptionsPageParams) ([]ListServiceSubscriptionsPageRow, error) {
+	rows, err := q.db.Query(ctx, listServiceSubscriptionsPage,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.Statuses,
+		arg.OrgUuids,
+		arg.ItemUuids,
+		arg.Q,
+		arg.EndsFrom,
+		arg.EndsBefore,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ServiceSubscription{}
+	items := []ListServiceSubscriptionsPageRow{}
 	for rows.Next() {
-		var i ServiceSubscription
+		var i ListServiceSubscriptionsPageRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.OrganizationID,
-			&i.BrandID,
-			&i.SellerOrgID,
-			&i.ItemID,
-			&i.AssignedByOrgID,
-			&i.AssignedByUserID,
-			&i.StartsOn,
-			&i.EndsOn,
-			&i.Recurrence,
-			&i.Price,
-			&i.Currency,
-			&i.RateSnapshot,
-			&i.CancellationFee,
-			&i.Status,
-			&i.ContractID,
-			&i.CancelledAt,
-			&i.ExpiredAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.ServiceSubscription.ID,
+			&i.ServiceSubscription.Uuid,
+			&i.ServiceSubscription.OrganizationID,
+			&i.ServiceSubscription.BrandID,
+			&i.ServiceSubscription.SellerOrgID,
+			&i.ServiceSubscription.ItemID,
+			&i.ServiceSubscription.AssignedByOrgID,
+			&i.ServiceSubscription.AssignedByUserID,
+			&i.ServiceSubscription.StartsOn,
+			&i.ServiceSubscription.EndsOn,
+			&i.ServiceSubscription.Recurrence,
+			&i.ServiceSubscription.Price,
+			&i.ServiceSubscription.Currency,
+			&i.ServiceSubscription.RateSnapshot,
+			&i.ServiceSubscription.CancellationFee,
+			&i.ServiceSubscription.Status,
+			&i.ServiceSubscription.ContractID,
+			&i.ServiceSubscription.CancelledAt,
+			&i.ServiceSubscription.ExpiredAt,
+			&i.ServiceSubscription.CreatedAt,
+			&i.ServiceSubscription.UpdatedAt,
+			&i.OrgUuid,
+			&i.OrganizationName,
+			&i.ItemUuid,
+			&i.ItemName,
+			&i.ItemCategory,
 		); err != nil {
 			return nil, err
 		}

@@ -126,6 +126,10 @@ export const Permission = {
   VehicleCatalogWrite: "vehicle_catalog.write",
   ServiceCatalogRead: "service_catalog.read",
   ServiceCatalogManage: "service_catalog.manage",
+  ServiceSubscriptionsAssign: "service_subscriptions.assign",
+  ServiceSubscriptionsRead: "service_subscriptions.read",
+  ServiceSubscriptionsCancelRequest: "service_subscriptions.cancel_request",
+  ServiceSubscriptionsCancelApprove: "service_subscriptions.cancel_approve",
 
   StockRead: "stock.read",
   StockWrite: "stock.write",
@@ -166,6 +170,11 @@ export const Permission = {
   AppointmentsRead: "appointments.read",
   AppointmentsWrite: "appointments.write",
   AppointmentSettingsManage: "appointment_settings.manage",
+  /** TEC-348: dealer sale prices, quick sales, suppliers and purchases. */
+  DealerPricingWrite: "dealer_pricing.write",
+  ProductSalesWrite: "product_sales.write",
+  SuppliersManage: "suppliers.manage",
+  PurchasesWrite: "purchases.write",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -469,6 +478,12 @@ export const permissions = {
     read: Permission.ServiceCatalogRead,
     manage: Permission.ServiceCatalogManage,
   },
+  serviceSubscriptions: {
+    assign: Permission.ServiceSubscriptionsAssign,
+    read: Permission.ServiceSubscriptionsRead,
+    cancelRequest: Permission.ServiceSubscriptionsCancelRequest,
+    cancelApprove: Permission.ServiceSubscriptionsCancelApprove,
+  },
   stock: {
     read: Permission.StockRead,
     write: Permission.StockWrite,
@@ -496,5 +511,11 @@ export const permissions = {
     read: Permission.AppointmentsRead,
     write: Permission.AppointmentsWrite,
     settingsManage: Permission.AppointmentSettingsManage,
+  },
+  dealerSales: {
+    pricingWrite: Permission.DealerPricingWrite,
+    salesWrite: Permission.ProductSalesWrite,
+    suppliersManage: Permission.SuppliersManage,
+    purchasesWrite: Permission.PurchasesWrite,
   },
 } as const;

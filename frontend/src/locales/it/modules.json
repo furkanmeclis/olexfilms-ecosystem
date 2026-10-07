@@ -95,5 +95,6 @@
   "names.reviews": "Recensioni",
   "names.e_invoice": "Fattura elettronica (UBL-TR)",
   "names.short_url": "URL brevi",
-  "columns.slug": "Identificativo"
+  "columns.slug": "Identificativo",
+  "via_subscription": "Attivo tramite abbonamento"
 }

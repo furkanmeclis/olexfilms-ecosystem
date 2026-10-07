@@ -95,5 +95,6 @@
   "names.reviews": "Değerlendirme",
   "names.e_invoice": "E-fatura altyapısı (UBL-TR)",
   "names.short_url": "Kısa URL",
-  "columns.slug": "Kısa ad"
+  "columns.slug": "Kısa ad",
+  "via_subscription": "Abonelikle açık"
 }
