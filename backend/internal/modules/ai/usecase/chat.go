@@ -673,6 +673,8 @@ func (c *Chat) prepare(ctx context.Context, caller Caller, checkQuota bool) (*Tu
 	if err != nil {
 		return nil, err
 	}
+	// TEC-461: confirmation cards are summarized in the user's language.
+	s.tools.Locale = i18n.Locale(f.Locale)
 	if txt, err := c.consent(ctx, s, f); err != nil {
 		return nil, err
 	} else if txt != nil {

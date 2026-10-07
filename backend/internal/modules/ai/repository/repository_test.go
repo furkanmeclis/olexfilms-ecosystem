@@ -475,12 +475,24 @@ func TestSweepQueriesTransitionOnce(t *testing.T) {
 		t.Fatal("single expire after the sweep must find nothing")
 	}
 
+	// The shared test database may hold committed rows from other tests;
+	// only this fixture's organization is asserted on.
+	ours := func(rows []db.AiPendingAction) []db.AiPendingAction {
+		var out []db.AiPendingAction
+		for _, r := range rows {
+			if r.OrganizationID == f.dealer.ID {
+				out = append(out, r)
+			}
+		}
+		return out
+	}
 	stale, err := f.store.FailStalePendingActions(f.ctx, later, "outcome unknown")
+	stale = ours(stale)
 	if err != nil || len(stale) != 1 || stale[0].Uuid != running.Uuid || stale[0].Status != model.ActionFailed ||
 		stale[0].Error.String != "outcome unknown" || !stale[0].ResolvedAt.Valid {
 		t.Fatalf("first fail-stale: %+v %v", stale, err)
 	}
-	if again, err := f.store.FailStalePendingActions(f.ctx, later, "outcome unknown"); err != nil || len(again) != 0 {
+	if again, err := f.store.FailStalePendingActions(f.ctx, later, "outcome unknown"); err != nil || len(ours(again)) != 0 {
 		t.Fatalf("second fail-stale changed %d rows (%v)", len(again), err)
 	}
 	row, ok, err := f.store.PendingActionForUser(f.ctx, pending.Uuid, f.dealer.ID, f.user.ID)

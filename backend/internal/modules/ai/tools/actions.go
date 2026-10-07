@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 )
 
 // Write tools (TEC-387, F4-01e) never run from Call: Propose validates the
@@ -25,16 +26,43 @@ var ErrConfirmationRequired = errors.New("ai tools: write tool needs confirmatio
 
 // Preview is the confirmation card of a proposed write. Action is the tool
 // name; the UI resolves ai.actions.<action> and ai.actions.fields.<key>.
-// Summary is a short English sentence for text channels (WhatsApp, MCP).
+// Summary is a short sentence in the principal's locale (TEC-461) for the
+// card and the text channels (WhatsApp, MCP); SummaryArgs fills the
+// ai.actions.summary.<action> template of the backend catalog, so a
+// channel can render it in another locale (LocalizedSummary).
 type Preview struct {
-	Action  string  `json:"action"`
-	Summary string  `json:"summary"`
-	Fields  []Field `json:"fields"`
+	Action      string            `json:"action"`
+	Summary     string            `json:"summary"`
+	SummaryArgs map[string]string `json:"summary_args,omitempty"`
+	Fields      []Field           `json:"fields"`
 	// Edit lists the fields the user may change on the card before
 	// confirming; Key is the tool input property it writes.
 	Edit []EditField `json:"edit,omitempty"`
 	// Warnings are i18n keys (ai.actions.warnings.<key>).
 	Warnings []string `json:"warnings,omitempty"`
+}
+
+// summaryKeyPrefix + action is the catalog key of a preview summary.
+const summaryKeyPrefix = "ai.actions.summary."
+
+// LocalizedSummary renders the summary in the locale; a locale outside the
+// catalogs gets en. A preview without a catalog template keeps Summary.
+func (pv Preview) LocalizedSummary(locale i18n.Locale) string {
+	key := summaryKeyPrefix + pv.Action
+	if pv.Action == "" || pv.SummaryArgs == nil || i18n.Translate(locale, key) == key {
+		return pv.Summary
+	}
+	return i18n.TranslateParams(locale, key, pv.SummaryArgs)
+}
+
+// FieldLabel is the localized label of a preview field key; a key outside
+// the catalog is shown with spaces for underscores.
+func FieldLabel(locale i18n.Locale, key string) string {
+	k := "ai.actions.fields." + key
+	if label := i18n.Translate(locale, k); label != k {
+		return label
+	}
+	return strings.ReplaceAll(key, "_", " ")
 }
 
 // Field is one "label: value" row of a preview.
@@ -103,6 +131,7 @@ func (r *Registry) Propose(ctx context.Context, p Principal, name string, input 
 		return nil, bad, nil
 	}
 	prop.Preview.Action = name
+	prop.Preview.Summary = prop.Preview.LocalizedSummary(p.Locale)
 	if len(prop.Input) == 0 {
 		prop.Input = input
 	}

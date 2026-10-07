@@ -78,6 +78,25 @@ func (writeTool) Propose(_ context.Context, _ aitools.Env, input json.RawMessage
 	}}, nil, nil
 }
 
+// cardTool previews like the real create_task tool: its summary is the
+// ai.actions.summary.create_task catalog template (TEC-461).
+type cardTool struct{ writeTool }
+
+func (cardTool) Spec() aitools.Spec {
+	s := writeTool{}.Spec()
+	s.Name = "create_task"
+	return s
+}
+
+func (cardTool) Propose(_ context.Context, _ aitools.Env, input json.RawMessage) (aitools.Proposal, *aitools.Result, error) {
+	var in struct{ Title string }
+	_ = json.Unmarshal(input, &in)
+	return aitools.Proposal{Input: input, Preview: aitools.Preview{
+		SummaryArgs: map[string]string{"title": in.Title, "subject": "Olex Merkez"},
+		Fields:      []aitools.Field{{Key: "title", Value: in.Title}},
+	}}, nil, nil
+}
+
 // --- fixture -------------------------------------------------------------------
 
 type fixture struct {
@@ -128,6 +147,7 @@ func newFixture(t *testing.T) *fixture {
 	models := llm.Models{Default: "claude-sonnet-5-5", Fast: "claude-haiku-4-5"}
 	reg := aitools.NewRegistry(nil)
 	reg.Register(writeTool{runs: &f.toolRuns})
+	reg.Register(cardTool{writeTool{runs: &f.toolRuns}})
 	// TEC-397: the visitor lead tool and a visitor tool leaking prices.
 	reg.Register(pipeline.RequestDealerContact{})
 	reg.Register(priceProbe{})
@@ -534,6 +554,56 @@ func TestWriteToolConfirmAndCancel(t *testing.T) {
 	out = f.outgoing(c)
 	if last := out[len(out)-1].Body.String; !strings.Contains(last, "iptal") {
 		t.Fatalf("cancel reply = %q", last)
+	}
+}
+
+// TEC-461: the WhatsApp confirmation card (summary and field labels) is
+// in the user's language: tr for a Turkish user, ar for an Arabic one.
+func TestWriteCardInUserLanguage(t *testing.T) {
+	cases := []struct {
+		locale string
+		want   []string
+		absent []string
+	}{
+		{locale: "tr", want: []string{`*Olex Merkez için "Ahmet'i ara" görevi oluşturulsun.*`, "• Başlık: Ahmet'i ara", "EVET"},
+			absent: []string{"Create the task", "• title:"}},
+		{locale: "ar", want: []string{`*إنشاء المهمة "Ahmet'i ara" بخصوص Olex Merkez.*`, "• العنوان: Ahmet'i ara"},
+			absent: []string{"Create the task", "görevi oluşturulsun", "• title:"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.locale, func(t *testing.T) {
+			f := newFixture(t)
+			phone := f.phone()
+			u, _ := f.panelUser(phone)
+			f.exec(`UPDATE users SET locale = $1 WHERE id = $2`, tc.locale, u.ID)
+			c := f.conversation(phone)
+
+			f.inbound(c, "Ahmet'i arama görevi oluştur")
+			f.llm.Push(fake.ToolCall("tu-1", "create_task", map[string]any{"title": "Ahmet'i ara"}, llm.Usage{InputTokens: 5}))
+			f.process(c)
+
+			out := f.outgoing(c)
+			if len(out) != 1 {
+				t.Fatalf("messages = %v", bodies(out))
+			}
+			body := out[0].Body.String
+			for _, w := range tc.want {
+				if !strings.Contains(body, w) {
+					t.Fatalf("card lacks %q:\n%s", w, body)
+				}
+			}
+			for _, a := range tc.absent {
+				if strings.Contains(body, a) {
+					t.Fatalf("card has %q:\n%s", a, body)
+				}
+			}
+			// The stored card (panel list, MCP) carries the same summary.
+			var summary string
+			if err := f.tx.QueryRow(f.ctx, `SELECT preview->>'summary' FROM ai_pending_actions WHERE source = 'whatsapp' AND source_ref = $1`,
+				c.Uuid.String()).Scan(&summary); err != nil || !strings.Contains(body, "*"+summary+"*") {
+				t.Fatalf("stored summary %q %v", summary, err)
+			}
+		})
 	}
 }
 

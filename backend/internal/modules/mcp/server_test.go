@@ -15,6 +15,7 @@ import (
 	authusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/auth/usecase"
 	oauthmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth/model"
 	oauthusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -170,10 +171,11 @@ func TestServerGate(t *testing.T) {
 type fakeQ struct {
 	org    db.Organization
 	member bool
+	locale string
 }
 
 func (f fakeQ) GetUserByID(_ context.Context, id int64) (db.User, error) {
-	return db.User{ID: id, Uuid: uuid.New(), Status: "active"}, nil
+	return db.User{ID: id, Uuid: uuid.New(), Status: "active", Locale: pgtype.Text{String: f.locale, Valid: f.locale != ""}}, nil
 }
 func (f fakeQ) GetOrganizationByID(context.Context, int64) (db.Organization, error) {
 	return f.org, nil
@@ -211,6 +213,18 @@ func TestStoreResolver(t *testing.T) {
 	p, err = StoreResolver{Q: fakeQ{org: center}, Access: fakeAccess{}}.Resolve(ctx, tok(oauthmodel.ResourceCustomer))
 	if err != nil || p.Realm != aitools.RealmCustomer || p.Org != nil || p.Brand == nil || p.Brand.ID != 1 {
 		t.Fatalf("customer principal = %+v %v", p, err)
+	}
+
+	// TEC-461: the principal carries the user's locale, else the org's.
+	dealer.Locale = "tr"
+	for _, c := range []struct {
+		user string
+		want i18n.Locale
+	}{{"ar", i18n.LocaleAR}, {"", i18n.LocaleTR}} {
+		p, err = StoreResolver{Q: fakeQ{org: dealer, member: true, locale: c.user}, Access: fakeAccess{connect}}.Resolve(ctx, tok(oauthmodel.ResourceDealer))
+		if err != nil || p.Locale != c.want {
+			t.Fatalf("user locale %q: principal locale %q %v, want %q", c.user, p.Locale, err, c.want)
+		}
 	}
 
 	suspended := dealer

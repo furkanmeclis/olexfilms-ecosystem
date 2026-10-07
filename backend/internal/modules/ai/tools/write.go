@@ -242,8 +242,8 @@ func (t CreateTask) Propose(ctx context.Context, env Env, raw json.RawMessage) (
 	fields = append(fields, Field{Key: "priority", Value: in.Priority})
 	fields = fieldIf(fields, "due_date", in.DueDate)
 	return proposal(in, Preview{
-		Summary: fmt.Sprintf("Create the task %q about %s.", in.Title, subject.Name),
-		Fields:  fields,
+		SummaryArgs: map[string]string{"title": in.Title, "subject": subject.Name},
+		Fields:      fields,
 		Edit: []EditField{
 			{Key: "title", Type: EditText, Value: in.Title, Required: true},
 			{Key: "description", Type: EditTextarea, Value: in.Description},
@@ -368,8 +368,8 @@ func (t CreateLead) Propose(_ context.Context, env Env, raw json.RawMessage) (Pr
 	fields = fieldIf(fields, "follow_up_date", in.FollowUpDate)
 	fields = fieldIf(fields, "notes", in.Notes)
 	return proposal(in, Preview{
-		Summary: fmt.Sprintf("Create a lead for %s.", name),
-		Fields:  fields,
+		SummaryArgs: map[string]string{"name": name},
+		Fields:      fields,
 		Edit: []EditField{
 			{Key: "contact_name", Type: EditText, Value: in.ContactName},
 			{Key: "company_name", Type: EditText, Value: in.CompanyName},
@@ -473,9 +473,9 @@ func (t SetLeadFollowUp) Propose(ctx context.Context, env Env, raw json.RawMessa
 	fields = fieldIf(fields, "current_follow_up_date", current)
 	fields = append(fields, Field{Key: "follow_up_date", Value: in.FollowUpDate})
 	return proposal(in, Preview{
-		Summary: fmt.Sprintf("Set the follow-up date of %s to %s.", name, in.FollowUpDate),
-		Fields:  fields,
-		Edit:    []EditField{{Key: "follow_up_date", Type: EditDate, Value: in.FollowUpDate, Required: true}},
+		SummaryArgs: map[string]string{"name": name, "date": in.FollowUpDate},
+		Fields:      fields,
+		Edit:        []EditField{{Key: "follow_up_date", Type: EditDate, Value: in.FollowUpDate, Required: true}},
 	})
 }
 
@@ -615,8 +615,8 @@ func (t CreateAppointment) Propose(ctx context.Context, env Env, raw json.RawMes
 		minutes = strconv.Itoa(in.EstimatedMinutes)
 	}
 	return proposal(in, Preview{
-		Summary: fmt.Sprintf("Book an appointment for %s on %s at %s.", name, in.Date, in.Time),
-		Fields:  fields,
+		SummaryArgs: map[string]string{"name": name, "date": in.Date, "time": in.Time},
+		Fields:      fields,
 		Edit: []EditField{
 			{Key: "date", Type: EditDate, Value: in.Date, Required: true},
 			{Key: "time", Type: EditTime, Value: in.Time, Required: true},
@@ -719,9 +719,9 @@ func (t CancelAppointment) Propose(ctx context.Context, env Env, raw json.RawMes
 	}
 	fields = append(fields, Field{Key: "reason", Value: in.Reason})
 	return proposal(in, Preview{
-		Summary: fmt.Sprintf("Cancel the appointment of %s on %s.", customer, starts),
-		Fields:  fields,
-		Edit:    []EditField{{Key: "reason", Type: EditTextarea, Value: in.Reason, Required: true}},
+		SummaryArgs: map[string]string{"name": customer, "starts_at": starts},
+		Fields:      fields,
+		Edit:        []EditField{{Key: "reason", Type: EditTextarea, Value: in.Reason, Required: true}},
 	})
 }
 
@@ -826,10 +826,10 @@ func (t CreateOrderDraft) Propose(ctx context.Context, env Env, raw json.RawMess
 	}
 	fields = fieldIf(fields, "note", in.Note)
 	return proposal(in, Preview{
-		Summary:  fmt.Sprintf("Create a draft order with %d line(s); it is not submitted.", len(in.Items)),
-		Fields:   fields,
-		Edit:     []EditField{{Key: "note", Type: EditTextarea, Value: in.Note}},
-		Warnings: []string{"order_draft_not_submitted"},
+		SummaryArgs: map[string]string{"count": strconv.Itoa(len(in.Items))},
+		Fields:      fields,
+		Edit:        []EditField{{Key: "note", Type: EditTextarea, Value: in.Note}},
+		Warnings:    []string{"order_draft_not_submitted"},
 	})
 }
 
@@ -928,9 +928,9 @@ func (t AddServiceNote) Propose(ctx context.Context, env Env, raw json.RawMessag
 		return rejected(serviceErrs(), err)
 	}
 	return proposal(in, Preview{
-		Summary: fmt.Sprintf("Add a note to service %s.", v.ServiceNo),
-		Fields:  []Field{{Key: "service_no", Value: v.ServiceNo}, {Key: "note", Value: in.Note}},
-		Edit:    []EditField{{Key: "note", Type: EditTextarea, Value: in.Note, Required: true}},
+		SummaryArgs: map[string]string{"service_no": v.ServiceNo},
+		Fields:      []Field{{Key: "service_no", Value: v.ServiceNo}, {Key: "note", Value: in.Note}},
+		Edit:        []EditField{{Key: "note", Type: EditTextarea, Value: in.Note, Required: true}},
 	})
 }
 
