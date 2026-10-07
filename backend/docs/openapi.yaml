@@ -19410,6 +19410,37 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
+  /v1/warranty-claims/{uuid}/reopen:
+    post:
+      tags: [Warranties]
+      operationId: reopenWarrantyClaim
+      summary: Reopen a closed warranty claim
+      description: >-
+        TEC-462. Only platform super admins may move a closed claim back to
+        approved. The reason is required and stored in the claim timeline as
+        `reopened`; existing accounting rows and reversals are not changed.
+        Non-super-admin roles receive 403, and non-closed claims return 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarrantyClaimReopenInput" }
+      responses:
+        "200":
+          description: Reopened warranty claim
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeWarrantyClaim" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /v1/warranty-claims/{uuid}/ai-triage:
     post:
       tags: [Warranties]
@@ -34975,6 +35006,13 @@ components:
         status: { $ref: "#/components/schemas/WarrantyClaimStatus" }
         rejection_reason: { type: string, maxLength: 5000 }
 
+    WarrantyClaimReopenInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 5000 }
+
     WarrantyClaimPart:
       type: object
       required: [uuid, part_key]
@@ -35041,7 +35079,7 @@ components:
         uuid: { type: string, format: uuid }
         event_type:
           type: string
-          enum: [created, status_changed, note, part_added, photo_added, ai_triaged, reapply_linked]
+          enum: [created, status_changed, note, part_added, photo_added, ai_triaged, reapply_linked, reopened]
         from_status: { $ref: "#/components/schemas/WarrantyClaimStatus" }
         to_status: { $ref: "#/components/schemas/WarrantyClaimStatus" }
         note: { type: string, description: "Rejection reason of a rejected status change, or the note text." }

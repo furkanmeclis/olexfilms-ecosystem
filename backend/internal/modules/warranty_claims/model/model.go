@@ -24,6 +24,10 @@ type TransitionInput struct {
 	RejectionReason string `json:"rejection_reason"`
 }
 
+type ReopenInput struct {
+	Reason string `json:"reason"`
+}
+
 // ListFilter narrows GET /v1/warranty-claims. CreatedFrom is inclusive,
 // CreatedTo exclusive. TEC-377: Statuses / OrganizationUUIDs are
 // multi-value; SortKey / SortDesc come from usecase.ListSort (empty: the

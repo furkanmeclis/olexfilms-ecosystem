@@ -144,6 +144,23 @@ func (h *Handler) ReapplyService(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, item)
 }
 
+func (h *Handler) Reopen(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var body model.ReopenInput
+	if !decode(w, r, &body) {
+		return
+	}
+	item, err := h.svc.Reopen(r.Context(), caller(r), id, body)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, item)
+}
+
 // Get is GET /v1/warranty-claims/{uuid} (TEC-337: detail with the center's
 // cost summary).
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
@@ -410,6 +427,8 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.Forbidden(w, r, "")
 	case errors.Is(err, usecase.ErrConflict):
 		response.Conflict(w, r, "WARRANTY_CLAIM_EXISTS", "warranty already has a live claim")
+	case errors.Is(err, usecase.ErrReopenConflict):
+		response.Conflict(w, r, "WARRANTY_CLAIM_REOPEN_STATUS", "only closed warranty claims can be reopened")
 	case errors.Is(err, usecase.ErrReapplyOpen):
 		response.Conflict(w, r, "WARRANTY_CLAIM_REAPPLY_OPEN", "re-application service is still open")
 	case errors.Is(err, usecase.ErrPhotoRequired):

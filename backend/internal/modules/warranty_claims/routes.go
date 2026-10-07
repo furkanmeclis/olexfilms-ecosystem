@@ -45,6 +45,11 @@ func RegisterRoutes(
 		middleware.RequireScope(q, rbac.PermWarrantyClaimsWrite),
 		middleware.RequireScope(q, rbac.PermWarrantyClaimsRead),
 	))
+	mux.Handle("POST /v1/warranty-claims/{uuid}/reopen", middleware.Chain(
+		http.HandlerFunc(h.Reopen), authn, org, module,
+		middleware.RequireSuperAdmin,
+		middleware.RequireScope(q, rbac.PermWarrantyClaimsRead),
+	))
 	// TEC-337: claim detail with the center's cost summary.
 	mux.Handle("GET /v1/warranty-claims/{uuid}", tenant(h.Get, rbac.PermWarrantyClaimsRead))
 	// TEC-339: claim photo gallery of the detail page.

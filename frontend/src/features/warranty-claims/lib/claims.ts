@@ -77,6 +77,7 @@ export type ClaimGrants = {
   write: boolean;
   review: boolean;
   decide: boolean;
+  superAdmin?: boolean;
 };
 
 export type ClaimActions = {
@@ -86,6 +87,8 @@ export type ClaimActions = {
   forward: boolean;
   /** center_review → approved / rejected (center only). */
   decide: boolean;
+  /** closed → approved; platform super_admin only (TEC-462). */
+  reopen: boolean;
 };
 
 /**
@@ -106,6 +109,7 @@ export function claimActions(
       (status === "dealer_review" ||
         (status === "open" && orgType === "distributor")),
     decide: status === "center_review" && grants.decide,
+    reopen: status === "closed" && grants.superAdmin === true,
   };
 }
 

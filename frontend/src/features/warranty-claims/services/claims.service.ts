@@ -77,6 +77,13 @@ export const claimsService = {
       },
     );
   },
+  reopen(uuid: string, reason: string) {
+    return platformRequest<WarrantyClaim>(
+      "POST",
+      `/v1/warranty-claims/${enc(uuid)}/reopen`,
+      { body: { reason } },
+    );
+  },
 };
 
 export const claimKeys = {

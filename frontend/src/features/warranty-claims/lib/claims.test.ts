@@ -58,7 +58,18 @@ describe("claimActions", () => {
       submitReview: false,
       forward: false,
       decide: false,
+      reopen: false,
     });
+  });
+
+  it("only lets a super admin reopen closed claims", () => {
+    expect(claimActions("closed", all, "center").reopen).toBe(false);
+    expect(
+      claimActions("closed", { ...all, superAdmin: true }, "center").reopen,
+    ).toBe(true);
+    expect(
+      claimActions("approved", { ...all, superAdmin: true }, "center").reopen,
+    ).toBe(false);
   });
 });
 

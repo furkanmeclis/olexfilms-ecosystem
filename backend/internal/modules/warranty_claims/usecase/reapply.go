@@ -48,7 +48,8 @@ func RegisterEventHandlers(bus events.Bus, pool txBeginner, q *db.Queries, out o
 	}
 	bus.Subscribe(events.WarrantyClaimStatusChanged, func(ctx context.Context, ev events.Event) error {
 		to, _ := ev.Payload["to"].(string)
-		if to != StatusApproved {
+		action, _ := ev.Payload["action"].(string)
+		if to != StatusApproved || action == EventActionReopened {
 			return nil
 		}
 		claimID, ok := eventID(ev)
