@@ -763,6 +763,21 @@ var trCatalog = map[string]string{
 	"measurements.interpretations.second_layer": "İkinci kat boya",
 	"measurements.interpretations.thin_putty":   "İnce macun tabakası",
 	"measurements.interpretations.thick_putty":  "Kalın macun tabakası",
+	// TEC-389: AI usage report export.
+	"export.title.ai.usage":              "AI kullanım raporu",
+	"resources.ai.usage":                 "AI kullanımı",
+	"ai.usage.export.created_at":         "Oluşturma tarihi",
+	"ai.usage.export.organization":       "Organizasyon",
+	"ai.usage.export.user":               "Kullanıcı",
+	"ai.usage.export.pool":               "Kota havuzu",
+	"ai.usage.export.channel":            "Kanal",
+	"ai.usage.export.purpose":            "Amaç",
+	"ai.usage.export.model":              "AI modeli",
+	"ai.usage.export.input_tokens":       "Girdi token",
+	"ai.usage.export.output_tokens":      "Çıktı token",
+	"ai.usage.export.cache_read_tokens":  "Önbellek okuma token",
+	"ai.usage.export.cache_write_tokens": "Önbellek yazma token",
+	"ai.usage.export.tokens":             "Kota token",
 }
 
 var enCatalog = map[string]string{
@@ -1495,4 +1510,19 @@ var enCatalog = map[string]string{
 	"measurements.interpretations.second_layer": "Second paint layer",
 	"measurements.interpretations.thin_putty":   "Thin putty layer",
 	"measurements.interpretations.thick_putty":  "Thick putty layer",
+	// TEC-389: AI usage report export.
+	"export.title.ai.usage":              "AI usage report",
+	"resources.ai.usage":                 "AI usage",
+	"ai.usage.export.created_at":         "Created at",
+	"ai.usage.export.organization":       "Organization",
+	"ai.usage.export.user":               "User",
+	"ai.usage.export.pool":               "Quota pool",
+	"ai.usage.export.channel":            "Channel",
+	"ai.usage.export.purpose":            "Purpose",
+	"ai.usage.export.model":              "AI model",
+	"ai.usage.export.input_tokens":       "Input tokens",
+	"ai.usage.export.output_tokens":      "Output tokens",
+	"ai.usage.export.cache_read_tokens":  "Cache read tokens",
+	"ai.usage.export.cache_write_tokens": "Cache write tokens",
+	"ai.usage.export.tokens":             "Quota tokens",
 }

@@ -12559,6 +12559,204 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/ai/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Platform AI settings (TEC-389)
+         * @description ai.settings.manage (super_admin). Models, the allow list
+         *     (`AI_ALLOWED_MODELS`, else the env default and fast models), the
+         *     default and system pool monthly quotas (0 = unlimited), the tool
+         *     switches with every registered tool, the extra instructions and the
+         *     Markdown knowledge text.
+         */
+        get: operations["getPlatformAiSettings"];
+        /**
+         * Change the platform AI settings (TEC-389)
+         * @description Fields left out keep their value. Models must be on the allow list,
+         *     tool_toggles keys must be registered tools (only `false` values are
+         *     stored; a missing tool is enabled), the knowledge text is at most
+         *     20 KB and the extra instructions 20 000 characters; otherwise 400
+         *     VALIDATION_ERROR.
+         */
+        put: operations["updatePlatformAiSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/ai/orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Organization AI quota table (TEC-389)
+         * @description ai.settings.manage. One row per organization: override, effective
+         *     monthly quota (override, else the platform default; 0 = unlimited),
+         *     org-pool usage of `period` and percent (null when unlimited).
+         *     List contract: `sort` = usage | quota | name (default `-usage`, id
+         *     tiebreak; unlimited sorts as the largest quota), `org_type`
+         *     (multi-value), `q` (name / slug), `period` (YYYY-MM, default the
+         *     current UTC month). Only the center sets quotas; a distributor does
+         *     not hand out quota to its dealers.
+         */
+        get: operations["listPlatformAiOrgQuotas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/ai/orgs/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set an organization's AI quota override and switch (TEC-389)
+         * @description `monthly_token_quota` null (or absent) returns the organization to
+         *     the platform default; 0 = unlimited. `enabled` absent keeps the
+         *     current switch. Returns the organization's row of the current month.
+         */
+        put: operations["updatePlatformAiOrgQuota"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/ai/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI usage ledger of every organization (TEC-389)
+         * @description ai.settings.manage. Same filters and sort as `GET /v1/ai/usage`
+         *     plus `organization` (multi-value organization uuids).
+         */
+        get: operations["listPlatformAiUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/ai/usage/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue an AI usage export of every organization (CSV or XLSX)
+         * @description TEC-389. ai.settings.manage. Resource `ai.usage`; `query` takes the
+         *     `GET /v1/platform/ai/usage` parameters (without limit / offset), a
+         *     bad value is 400 at request time. Poll and download through
+         *     /v1/platform/exports/{uuid}.
+         */
+        post: operations["requestPlatformAiUsageExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AI usage ledger of one organization (TEC-389)
+         * @description ai.usage.read. The active organization, or `organization` (uuid)
+         *     when it is inside the caller's ai.usage.read scope; another or a
+         *     missing organization is 404 alike. List contract: `sort` =
+         *     created_at | tokens (default `-created_at`, id tiebreak; unknown →
+         *     400), `created_from` / `created_to`, multi-value `channel`,
+         *     `purpose`, `pool`, `model`, `user` (user uuids). `tokens` is the
+         *     quota count (input + output + cache write).
+         */
+        get: operations["listAiUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/usage/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Monthly AI usage summary of one organization (TEC-389)
+         * @description ai.usage.read, same organization rule as `GET /v1/ai/usage`.
+         *     `period` YYYY-MM (default the current UTC month; the monthly reset
+         *     is the period key). The org-pool quota, the brand center's system
+         *     pool (center only), totals and the user and channel breakdown.
+         */
+        get: operations["getAiUsageSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ai/usage/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue an AI usage export of one organization (CSV or XLSX)
+         * @description TEC-389. ai.usage.read; resource `ai.usage`. `query` takes the
+         *     `GET /v1/ai/usage` parameters (without limit / offset), including
+         *     `organization` with the same 404 rule. The job stores the reported
+         *     organization and the worker re-authorizes it against the job
+         *     organization. Poll and download through /v1/tenant/exports/{uuid}.
+         */
+        post: operations["requestAiUsageExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/consents/pending": {
         parameters: {
             query?: never;
@@ -22569,6 +22767,226 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        AIUserRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            surname: string;
+        };
+        AIOrgRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @enum {string} */
+            type: "center" | "distributor" | "dealer";
+        };
+        AIToolInfo: {
+            name: string;
+            /** @enum {string} */
+            kind: "read" | "write" | "self";
+            /** @enum {string} */
+            realm: "panel" | "customer" | "visitor";
+            enabled: boolean;
+        };
+        AISettings: {
+            default_model: string;
+            fast_model: string;
+            allowed_models: string[];
+            /**
+             * Format: int64
+             * @description 0 = unlimited
+             */
+            default_monthly_token_quota: number;
+            /**
+             * Format: int64
+             * @description 0 = unlimited
+             */
+            system_pool_monthly_quota: number;
+            /** @description Switched-off tools ({"name": false}); a missing tool is enabled. */
+            tool_toggles: {
+                [key: string]: boolean;
+            };
+            tools: components["schemas"]["AIToolInfo"][];
+            extra_instructions: string;
+            /** @description Markdown, at most 20 KB */
+            knowledge_text: string;
+            /** Format: date-time */
+            updated_at: string;
+            updated_by: components["schemas"]["AIUserRef"] | null;
+        };
+        AISettingsUpdate: {
+            default_model?: string;
+            fast_model?: string;
+            /** Format: int64 */
+            default_monthly_token_quota?: number;
+            /** Format: int64 */
+            system_pool_monthly_quota?: number;
+            tool_toggles?: {
+                [key: string]: boolean;
+            };
+            extra_instructions?: string;
+            knowledge_text?: string;
+        };
+        AIOrgQuota: {
+            organization: components["schemas"]["AIOrgRef"];
+            status: string;
+            enabled: boolean;
+            /**
+             * Format: int64
+             * @description null = platform default
+             */
+            quota_override: number | null;
+            /**
+             * Format: int64
+             * @description Effective monthly quota; 0 = unlimited
+             */
+            quota: number;
+            /** @description YYYY-MM (UTC) */
+            period: string;
+            /** Format: int64 */
+            used: number;
+            /** @description null when unlimited */
+            percent: number | null;
+            /** Format: int64 */
+            request_count: number;
+            /**
+             * Format: int64
+             * @description System pool usage (brand center only)
+             */
+            system_used: number;
+        };
+        AIOrgQuotaUpdate: {
+            enabled?: boolean;
+            /** Format: int64 */
+            monthly_token_quota?: number | null;
+        };
+        AIUsageRow: {
+            /** Format: int64 */
+            id: number;
+            /** Format: date-time */
+            created_at: string;
+            organization: components["schemas"]["AIOrgRef"];
+            user: components["schemas"]["AIUserRef"] | null;
+            /** @enum {string} */
+            pool: "org" | "system";
+            /** @enum {string} */
+            channel: "panel" | "portal" | "whatsapp" | "mcp" | "triage";
+            /** @enum {string} */
+            purpose: "chat" | "title" | "triage" | "locale";
+            model: string;
+            /** Format: int64 */
+            input_tokens: number;
+            /** Format: int64 */
+            output_tokens: number;
+            /** Format: int64 */
+            cache_read_tokens: number;
+            /** Format: int64 */
+            cache_write_tokens: number;
+            /**
+             * Format: int64
+             * @description Quota count (input + output + cache write)
+             */
+            tokens: number;
+        };
+        AIQuotaUsage: {
+            /**
+             * Format: int64
+             * @description 0 = unlimited
+             */
+            limit: number;
+            /** Format: int64 */
+            used: number;
+            /** Format: int64 */
+            remaining: number | null;
+            percent: number | null;
+        };
+        AIUsageTotals: {
+            /** Format: int64 */
+            tokens: number;
+            /** Format: int64 */
+            input_tokens: number;
+            /** Format: int64 */
+            output_tokens: number;
+            /** Format: int64 */
+            cache_read_tokens: number;
+            /** Format: int64 */
+            cache_write_tokens: number;
+            /** Format: int64 */
+            requests: number;
+        };
+        AIUsageSummary: {
+            period: string;
+            organization: components["schemas"]["AIOrgRef"];
+            enabled: boolean;
+            quota: components["schemas"]["AIQuotaUsage"];
+            system_pool: components["schemas"]["AIQuotaUsage"] | null;
+            totals: components["schemas"]["AIUsageTotals"];
+            by_user: {
+                user: components["schemas"]["AIUserRef"] | null;
+                /** Format: int64 */
+                tokens: number;
+                /** Format: int64 */
+                input_tokens: number;
+                /** Format: int64 */
+                output_tokens: number;
+                /** Format: int64 */
+                requests: number;
+            }[];
+            by_channel: (components["schemas"]["AIUsageTotals"] & {
+                channel: string;
+                pool: string;
+            })[];
+        };
+        AIUsageExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx";
+            query?: {
+                [key: string]: string;
+            };
+            locale?: string;
+        };
+        EnvelopeAISettings: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AISettings"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAIOrgQuota: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AIOrgQuota"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAIOrgQuotaPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["AIOrgQuota"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAIUsagePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["AIUsageRow"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeAIUsageSummary: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["AIUsageSummary"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
         /** @description 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version) or 426 UPDATE_REQUIRED (X-App-Version below the minimum, TEC-236; `data` carries the minimum and the store links). Either way the app asks the user to update. */
@@ -22708,6 +23126,14 @@ export interface components {
         };
     };
     parameters: {
+        AIUsageChannel: ("panel" | "portal" | "whatsapp" | "mcp" | "triage")[];
+        AIUsagePurpose: ("chat" | "title" | "triage" | "locale")[];
+        AIUsagePool: ("org" | "system")[];
+        AIUsageModel: string[];
+        /** @description User uuids; unknown ones match nothing. */
+        AIUsageUser: string[];
+        /** @description Organization inside the caller's ai.usage.read scope (default the active one); otherwise 404. */
+        AIUsageOrganization: string;
         /** @description Pending authorization request (the `request` of the consent screen URL) */
         OAuthRequestUUID: string;
         OAuthGrantUUID: string;
@@ -45643,6 +46069,286 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    getPlatformAiSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAISettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updatePlatformAiSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AISettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAISettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listPlatformAiOrgQuotas: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                org_type?: ("center" | "distributor" | "dealer")[];
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIOrgQuotaPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    updatePlatformAiOrgQuota: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIOrgQuotaUpdate"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIOrgQuota"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    listPlatformAiUsage: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+                channel?: components["parameters"]["AIUsageChannel"];
+                purpose?: components["parameters"]["AIUsagePurpose"];
+                pool?: components["parameters"]["AIUsagePool"];
+                model?: components["parameters"]["AIUsageModel"];
+                /** @description User uuids; unknown ones match nothing. */
+                user?: components["parameters"]["AIUsageUser"];
+                organization?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIUsagePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    requestPlatformAiUsageExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIUsageExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listAiUsage: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+                channel?: components["parameters"]["AIUsageChannel"];
+                purpose?: components["parameters"]["AIUsagePurpose"];
+                pool?: components["parameters"]["AIUsagePool"];
+                model?: components["parameters"]["AIUsageModel"];
+                /** @description User uuids; unknown ones match nothing. */
+                user?: components["parameters"]["AIUsageUser"];
+                /** @description Organization inside the caller's ai.usage.read scope (default the active one); otherwise 404. */
+                organization?: components["parameters"]["AIUsageOrganization"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIUsagePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getAiUsageSummary: {
+        parameters: {
+            query?: {
+                period?: string;
+                /** @description Organization inside the caller's ai.usage.read scope (default the active one); otherwise 404. */
+                organization?: components["parameters"]["AIUsageOrganization"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAIUsageSummary"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    requestAiUsageExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIUsageExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getPendingConsents: {

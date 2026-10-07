@@ -14,6 +14,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/ai/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 )
 
 // RegisterRoutes mounts the panel and portal routes.
@@ -53,4 +54,29 @@ func RegisterPortalRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Ma
 	mux.Handle("POST /v1/portal/ai/conversations/{uuid}/messages", route(h.SendMessage))
 	mux.Handle("POST /v1/portal/ai/actions/{uuid}/confirm", route(h.ConfirmAction))
 	mux.Handle("POST /v1/portal/ai/actions/{uuid}/cancel", route(h.CancelAction))
+}
+
+// RegisterAdminRoutes mounts the TEC-389 (F4-01g) routes: the platform
+// settings, the organization quota table and the platform usage report
+// (ai.settings.manage, super_admin only), and the panel usage report of one
+// organization inside the caller's ai.usage.read scope.
+func RegisterAdminRoutes(mux *http.ServeMux, h *handler.Admin, tokens *jwt.Manager, loader middleware.IdentityLoader, q *db.Queries) {
+	authn := middleware.Authenticate(tokens, loader)
+	platform := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, middleware.RequirePermission(rbac.PermAISettingsManage))
+	}
+	mux.Handle("GET /v1/platform/ai/settings", platform(h.GetSettings))
+	mux.Handle("PUT /v1/platform/ai/settings", platform(h.PutSettings))
+	mux.Handle("GET /v1/platform/ai/orgs", platform(h.ListOrgs))
+	mux.Handle("PUT /v1/platform/ai/orgs/{uuid}", platform(h.PutOrg))
+	mux.Handle("GET /v1/platform/ai/usage", platform(h.PlatformListUsage))
+	mux.Handle("POST /v1/platform/ai/usage/export", platform(h.PlatformExportUsage))
+
+	usage := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, middleware.RequireOrganization(tokens, q),
+			middleware.RequireScope(q, rbac.PermAIUsageRead))
+	}
+	mux.Handle("GET /v1/ai/usage", usage(h.ListUsage))
+	mux.Handle("GET /v1/ai/usage/summary", usage(h.UsageSummary))
+	mux.Handle("POST /v1/ai/usage/export", usage(h.ExportUsage))
 }
