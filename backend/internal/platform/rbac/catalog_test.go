@@ -636,3 +636,35 @@ func TestConversationGrants(t *testing.T) {
 		}
 	}
 }
+
+// TEC-404: campaigns. The center (super_admin, center_social) and the
+// distributor owner approve; the dealer owner writes but never approves; no
+// staff, accounting, warehouse or portal role holds a campaign permission.
+func TestCampaignGrants(t *testing.T) {
+	def, ok := PermissionBySlug(PermCampaignsApprove)
+	if !ok {
+		t.Fatalf("catalog misses %s", PermCampaignsApprove)
+	}
+	if def.Module != "campaigns" || def.SuperAdminOnly {
+		t.Fatalf("campaigns.approve def = %+v", def)
+	}
+	slugs := []string{PermCampaignsRead, PermCampaignsWrite, PermCampaignsApprove}
+	want := map[string]map[string]Scope{
+		RoleSuperAdmin: {PermCampaignsRead: ScopeAll, PermCampaignsWrite: ScopeAll, PermCampaignsApprove: ScopeAll},
+		RoleCenterSocial: {
+			PermCampaignsRead: ScopeBrand, PermCampaignsWrite: ScopeBrand, PermCampaignsApprove: ScopeBrand,
+		},
+		RoleDistributorOwner: {
+			PermCampaignsRead: ScopeSubtree, PermCampaignsWrite: ScopeManaged, PermCampaignsApprove: ScopeSubtree,
+		},
+		RoleDealerOwner: {PermCampaignsRead: ScopeManaged, PermCampaignsWrite: ScopeManaged},
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range slugs {
+			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
+				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
+			}
+		}
+	}
+}

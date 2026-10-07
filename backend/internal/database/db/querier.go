@@ -61,6 +61,9 @@ type Querier interface {
 	// remote hub, so their remote-sourced fields are locked in the panel.
 	BrandHasIntegrationConnection(ctx context.Context, brandID int64) (bool, error)
 	CancelAIPendingAction(ctx context.Context, arg CancelAIPendingActionParams) (AiPendingAction, error)
+	// TEC-387: a new message of the user in the same conversation cancels the
+	// open confirmation cards of that conversation.
+	CancelAIPendingActionsForSource(ctx context.Context, arg CancelAIPendingActionsForSourceParams) ([]AiPendingAction, error)
 	CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error)
 	// CancelPlannedStaffPayment cancels a payment that is not booked yet; it
 	// never had a ledger row, and a cancelled salary frees its period.
@@ -76,11 +79,14 @@ type Querier interface {
 	// to the new owner in the transfer transaction.
 	ChangeWarrantyHolderByVehicle(ctx context.Context, arg ChangeWarrantyHolderByVehicleParams) ([]Warranty, error)
 	// Compare-and-set pending → executing: of two concurrent confirmations only
-	// one gets the row; the other gets pgx.ErrNoRows.
+	// one gets the row; the other gets pgx.ErrNoRows. input / preview replace
+	// the stored ones when the user edited the card (NULL keeps them).
 	ClaimAIPendingAction(ctx context.Context, arg ClaimAIPendingActionParams) (AiPendingAction, error)
 	ClaimAppointmentReminder24h(ctx context.Context, arg ClaimAppointmentReminder24hParams) (ClaimAppointmentReminder24hRow, error)
 	ClaimAppointmentReminder2h(ctx context.Context, arg ClaimAppointmentReminder2hParams) (ClaimAppointmentReminder2hRow, error)
 	ClaimOutboxEvents(ctx context.Context, arg ClaimOutboxEventsParams) ([]OutboxEvent, error)
+	// Next pending recipients of a sending campaign for the worker (F4-04d).
+	ClaimPendingCampaignRecipients(ctx context.Context, arg ClaimPendingCampaignRecipientsParams) ([]CampaignRecipient, error)
 	// TEC-192 (F1-06h): review request 24 hours after a service is completed.
 	// Stamps review_request_sent_at when every send condition holds: the
 	// service is still completed, the request was not sent yet, and the
@@ -155,6 +161,9 @@ type Querier interface {
 	CountBookedReturnItemsOfOrder(ctx context.Context, orderID int64) (int64, error)
 	CountBulkJobsForActor(ctx context.Context, actorID int64) (int64, error)
 	CountBulkOperationsForOrganization(ctx context.Context, organizationID pgtype.Int8) (int64, error)
+	CountCampaignApprovals(ctx context.Context, arg CountCampaignApprovalsParams) (int64, error)
+	CountCampaignRecipients(ctx context.Context, arg CountCampaignRecipientsParams) (int64, error)
+	CountCampaigns(ctx context.Context, arg CountCampaignsParams) (int64, error)
 	CountCarBrands(ctx context.Context, arg CountCarBrandsParams) (int64, error)
 	CountCarModels(ctx context.Context, arg CountCarModelsParams) (int64, error)
 	CountCarModelsByBrand(ctx context.Context, carBrandID int64) (int64, error)
@@ -182,6 +191,7 @@ type Querier interface {
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
+	CountOAuthClients(ctx context.Context, arg CountOAuthClientsParams) (int64, error)
 	CountOpenFinanceEntriesBySource(ctx context.Context, arg CountOpenFinanceEntriesBySourceParams) (int64, error)
 	// A unit is on at most one open (requested or approved) request; the
 	// caller holds the unit row lock.
@@ -246,6 +256,7 @@ type Querier interface {
 	// Customer cari accounts are ledgers (append-only spirit): they are not
 	// moved, only reported.
 	CountUserCariAccounts(ctx context.Context, userID pgtype.Int8) (int64, error)
+	CountUserOAuthGrants(ctx context.Context, arg CountUserOAuthGrantsParams) (int64, error)
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error)
@@ -270,6 +281,10 @@ type Querier interface {
 	CreateBarcodeBatch(ctx context.Context, arg CreateBarcodeBatchParams) (BarcodeBatch, error)
 	CreateBatchUnit(ctx context.Context, arg CreateBatchUnitParams) (Unit, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
+	// TEC-404 (F4-04a): campaigns, contents, media, events, recipient snapshot
+	// and the marketing reachability read. Scope: organization_ids NULL = whole
+	// brand (center), otherwise the organizations the caller reaches.
+	CreateCampaign(ctx context.Context, arg CreateCampaignParams) (Campaign, error)
 	// TEC-149: vehicle catalog (car brands and models). Global reference data:
 	// no organization/brand filter; only super_admin writes (use case + route).
 	CreateCarBrand(ctx context.Context, arg CreateCarBrandParams) (CarBrand, error)
@@ -502,6 +517,8 @@ type Querier interface {
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
 	DeleteAppointmentClosure(ctx context.Context, arg DeleteAppointmentClosureParams) (int64, error)
 	DeleteAppointmentClosureByUUID(ctx context.Context, arg DeleteAppointmentClosureByUUIDParams) (int64, error)
+	DeleteCampaignContent(ctx context.Context, arg DeleteCampaignContentParams) (int64, error)
+	DeleteCampaignMedia(ctx context.Context, id int64) (int64, error)
 	// Fails with a restrict/foreign key violation while models still use the brand.
 	DeleteCarBrand(ctx context.Context, id int64) (int64, error)
 	DeleteCarModel(ctx context.Context, id int64) (int64, error)
@@ -519,6 +536,7 @@ type Querier interface {
 	DeleteDistributorDealerPrice(ctx context.Context, arg DeleteDistributorDealerPriceParams) (int64, error)
 	DeleteDistributorPriceOverride(ctx context.Context, arg DeleteDistributorPriceOverrideParams) (int64, error)
 	DeleteDistrict(ctx context.Context, id int64) (int64, error)
+	DeleteDraftCampaign(ctx context.Context, id int64) (int64, error)
 	// Draft deletion (items, images and logs must be gone first).
 	DeleteDraftService(ctx context.Context, arg DeleteDraftServiceParams) (int64, error)
 	DeleteFixedBarcodeHoldingForRepair(ctx context.Context, id int64) error
@@ -597,6 +615,9 @@ type Querier interface {
 	EnsureOrganizationProductStock(ctx context.Context, arg EnsureOrganizationProductStockParams) error
 	EnsureQuoteSent(ctx context.Context, arg EnsureQuoteSentParams) (Quote, error)
 	ExecuteContractInstance(ctx context.Context, arg ExecuteContractInstanceParams) (ContractInstance, error)
+	// TEC-387: one pending action past its expiry becomes expired (a late
+	// confirmation); no row when it is no longer pending or not yet expired.
+	ExpireAIPendingAction(ctx context.Context, arg ExpireAIPendingActionParams) (AiPendingAction, error)
 	// Stale cleanup: pending actions past their expiry become expired.
 	ExpireAIPendingActions(ctx context.Context, now pgtype.Timestamptz) (int64, error)
 	ExpireDueQuotes(ctx context.Context, today pgtype.Date) ([]Quote, error)
@@ -606,6 +627,10 @@ type Querier interface {
 	ExpireDueWarranties(ctx context.Context, now pgtype.Timestamptz) ([]Warranty, error)
 	ExpireServiceSubscriptions(ctx context.Context, today pgtype.Date) ([]ServiceSubscription, error)
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
+	// TEC-387: actions left executing since before stale_before (the process
+	// stopped mid-run) become failed with an "outcome unknown" error.
+	// updated_at is the claim time (set_updated_at trigger).
+	FailStaleAIPendingActions(ctx context.Context, arg FailStaleAIPendingActionsParams) ([]AiPendingAction, error)
 	// TEC-160 (F1-08b): customer and vehicle API (/v1/customers, /v1/vehicles).
 	// Fill-only identity: a customer created by another organization keeps its
 	// name, e-mail and locale; only empty values are filled.
@@ -638,6 +663,8 @@ type Querier interface {
 	FinishMigrationRun(ctx context.Context, arg FinishMigrationRunParams) (MigrationRun, error)
 	GetAIConversationForUser(ctx context.Context, arg GetAIConversationForUserParams) (AiConversation, error)
 	GetAIOrgSettings(ctx context.Context, organizationID int64) (AiOrgSetting, error)
+	// TEC-387: a repeated proposal of the same tool_use returns the existing card.
+	GetAIPendingActionByIdempotencyKey(ctx context.Context, idempotencyKey string) (AiPendingAction, error)
 	GetAIPendingActionForUser(ctx context.Context, arg GetAIPendingActionForUserParams) (AiPendingAction, error)
 	// TEC-383 (F4-01a): AI assistant settings, conversations, messages, pending
 	// actions and the usage ledger with its monthly projection.
@@ -674,6 +701,10 @@ type Querier interface {
 	// An operation visible from the given scope: a tenant operation of that
 	// organization, or (organization_id NULL in the query) a platform operation.
 	GetBulkOperationByUUID(ctx context.Context, arg GetBulkOperationByUUIDParams) (BulkOperation, error)
+	GetCampaignByIDForUpdate(ctx context.Context, arg GetCampaignByIDForUpdateParams) (Campaign, error)
+	GetCampaignByUUID(ctx context.Context, arg GetCampaignByUUIDParams) (Campaign, error)
+	GetCampaignContent(ctx context.Context, arg GetCampaignContentParams) (CampaignContent, error)
+	GetCampaignMediaByUUID(ctx context.Context, arg GetCampaignMediaByUUIDParams) (CampaignMedium, error)
 	GetCarBrandByID(ctx context.Context, id int64) (CarBrand, error)
 	GetCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (CarBrand, error)
 	GetCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (CarModel, error)
@@ -835,7 +866,9 @@ type Querier interface {
 	GetOAuthAccountByUserProvider(ctx context.Context, arg GetOAuthAccountByUserProviderParams) (GetOAuthAccountByUserProviderRow, error)
 	// A pending request that has not expired, with its client.
 	GetOAuthAuthRequest(ctx context.Context, id uuid.UUID) (GetOAuthAuthRequestRow, error)
+	GetOAuthBrandCenter(ctx context.Context, brandID int64) (GetOAuthBrandCenterRow, error)
 	GetOAuthClient(ctx context.Context, clientID string) (OauthClient, error)
+	GetOAuthClientByUUID(ctx context.Context, argUuid uuid.UUID) (OauthClient, error)
 	GetOAuthProviderSettings(ctx context.Context, provider string) (OauthProviderSetting, error)
 	GetOAuthTokenAnyState(ctx context.Context, arg GetOAuthTokenAnyStateParams) (OauthToken, error)
 	GetOTPByUUID(ctx context.Context, argUuid uuid.UUID) (OtpCode, error)
@@ -1093,6 +1126,12 @@ type Querier interface {
 	InsertBulkChange(ctx context.Context, arg InsertBulkChangeParams) (BulkChange, error)
 	// TEC-212: bulk operation log + undo.
 	InsertBulkOperation(ctx context.Context, arg InsertBulkOperationParams) (BulkOperation, error)
+	// Events --------------------------------------------------------------------
+	InsertCampaignEvent(ctx context.Context, arg InsertCampaignEventParams) (CampaignEvent, error)
+	// Media ---------------------------------------------------------------------
+	InsertCampaignMedia(ctx context.Context, arg InsertCampaignMediaParams) (CampaignMedium, error)
+	// Recipients ----------------------------------------------------------------
+	InsertCampaignRecipient(ctx context.Context, arg InsertCampaignRecipientParams) (CampaignRecipient, error)
 	InsertConsent(ctx context.Context, arg InsertConsentParams) (Consent, error)
 	// Opt-outs ---------------------------------------------------------------------
 	// Append-only; the AFTER INSERT trigger updates contact_opt_out_state.
@@ -1286,6 +1325,24 @@ type Querier interface {
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
 	ListBulkJobsForActor(ctx context.Context, arg ListBulkJobsForActorParams) ([]BulkJob, error)
 	ListBulkOperationsForOrganization(ctx context.Context, arg ListBulkOperationsForOrganizationParams) ([]BulkOperation, error)
+	// Approval queue: pending campaigns whose approver is one of
+	// approver_org_ids (the caller's organizations holding campaigns.approve).
+	// Sort created_at | scheduled_at | name, default created_at (oldest first is
+	// chosen by the handler); channels multi-valued; q matches the name.
+	ListCampaignApprovals(ctx context.Context, arg ListCampaignApprovalsParams) ([]Campaign, error)
+	ListCampaignContents(ctx context.Context, campaignID int64) ([]CampaignContent, error)
+	ListCampaignEvents(ctx context.Context, campaignID int64) ([]CampaignEvent, error)
+	// Every medium of the campaign with the locale of its content.
+	ListCampaignMedia(ctx context.Context, campaignID int64) ([]ListCampaignMediaRow, error)
+	// Recipient list of a campaign: statuses, channels and locales are
+	// multi-valued; q matches the target address or the user's name. Sort
+	// created_at | sent_at | status | channel | locale, default created_at.
+	ListCampaignRecipients(ctx context.Context, arg ListCampaignRecipientsParams) ([]ListCampaignRecipientsRow, error)
+	// List contract (docs/list-contract.md): sort created_at | scheduled_at |
+	// name | status (flow rank), default -created_at; statuses and channels are
+	// multi-valued (channels match on overlap); scheduled_from / scheduled_to;
+	// q matches the name.
+	ListCampaigns(ctx context.Context, arg ListCampaignsParams) ([]Campaign, error)
 	// TEC-369: sort keys from model.BrandSort (docs/list-contract.md); default name.
 	ListCarBrands(ctx context.Context, arg ListCarBrandsParams) ([]ListCarBrandsRow, error)
 	// TEC-369: faceted filter options of the model list (distinct free-text
@@ -1393,6 +1450,7 @@ type Querier interface {
 	// Secondary order keeps the catalog grouping (kind, brand, language, version DESC).
 	ListDocumentTemplates(ctx context.Context, arg ListDocumentTemplatesParams) ([]ListDocumentTemplatesRow, error)
 	ListDueQuoteReminders(ctx context.Context, arg ListDueQuoteRemindersParams) ([]QuoteReminder, error)
+	ListDueScheduledCampaigns(ctx context.Context, arg ListDueScheduledCampaignsParams) ([]Campaign, error)
 	// ListDueStaffPayments is the scan of the posting job: planned payments
 	// whose paid_on has arrived in their organization's time zone.
 	ListDueStaffPayments(ctx context.Context, arg ListDueStaffPaymentsParams) ([]ListDueStaffPaymentsRow, error)
@@ -1519,6 +1577,11 @@ type Querier interface {
 	// income row reversed) is left out; lines without a cost snapshot are
 	// counted so the report can flag an incomplete cost.
 	ListMarginProductSales(ctx context.Context, arg ListMarginProductSalesParams) ([]ListMarginProductSalesRow, error)
+	// Marketing reachability ----------------------------------------------------
+	// Per user: the latest marketing_consent decision (any text version; a
+	// decline or no record means no consent) and whether the user's phone is
+	// opted out of marketing in contact_opt_out_state (000103).
+	ListMarketingReachability(ctx context.Context, userIds []int64) ([]ListMarketingReachabilityRow, error)
 	ListMeasurementDevices(ctx context.Context, organizationID int64) ([]MeasurementDevice, error)
 	// Unlinked accepted measurements of the organization with the VIN; the
 	// matching rule (usecase.Match) decides the phase from measured_at (device
@@ -1556,7 +1619,12 @@ type Querier interface {
 	ListNotificationsForUser(ctx context.Context, arg ListNotificationsForUserParams) ([]Notification, error)
 	ListOAuthAccountsByUserID(ctx context.Context, userID int64) ([]ListOAuthAccountsByUserIDRow, error)
 	ListOAuthAccountsForUserIDs(ctx context.Context, userIds []int64) ([]ListOAuthAccountsForUserIDsRow, error)
+	// Sort: docs/list-contract.md, keys from oauth usecase ClientsSortSpec.
+	ListOAuthClients(ctx context.Context, arg ListOAuthClientsParams) ([]ListOAuthClientsRow, error)
 	ListOAuthProviderSettings(ctx context.Context) ([]OauthProviderSetting, error)
+	// TEC-401 (F4-03b): consent, connected apps, platform client list.
+	// The user's active organizations of the given types (consent org picker).
+	ListOAuthSelectableOrgs(ctx context.Context, arg ListOAuthSelectableOrgsParams) ([]ListOAuthSelectableOrgsRow, error)
 	// ListOpenFinanceEntriesBySource lists the original rows of one source that
 	// have not been reversed yet, locked for the reversing transaction.
 	ListOpenFinanceEntriesBySource(ctx context.Context, arg ListOpenFinanceEntriesBySourceParams) ([]FinanceEntry, error)
@@ -1927,6 +1995,8 @@ type Querier interface {
 	ListUnparsedMeasurementResultIDs(ctx context.Context, arg ListUnparsedMeasurementResultIDsParams) ([]int64, error)
 	ListUnprocessedServiceReviews(ctx context.Context, pageLimit int32) ([]ServiceReview, error)
 	ListUserIDsByRoleSlug(ctx context.Context, slug string) ([]int64, error)
+	// Sort: docs/list-contract.md, keys from oauth usecase GrantsSortSpec.
+	ListUserOAuthGrants(ctx context.Context, arg ListUserOAuthGrantsParams) ([]ListUserOAuthGrantsRow, error)
 	ListUserRoleSlugs(ctx context.Context, userID int64) ([]string, error)
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
 	ListUserRolesByUserUUID(ctx context.Context, argUuid uuid.UUID) ([]Role, error)
@@ -2511,7 +2581,12 @@ type Querier interface {
 	// TEC-91: mobile sign-out drops the device's Expo tokens.
 	RevokeDevicePushTokensForDevice(ctx context.Context, arg RevokeDevicePushTokensForDeviceParams) (int64, error)
 	RevokeMobileSessionsForDevice(ctx context.Context, arg RevokeMobileSessionsForDeviceParams) (int64, error)
+	// Blocks the client and everything issued to it: grants, tokens, pending
+	// requests and unused codes.
+	RevokeOAuthClient(ctx context.Context, clientID string) error
 	RevokeOAuthFamily(ctx context.Context, family uuid.UUID) error
+	// Every token family of a grant; unused codes of the grant go too.
+	RevokeOAuthGrantTokens(ctx context.Context, grantID int64) error
 	// Revoking is the claim: of two concurrent refreshes only one wins.
 	RevokeOAuthToken(ctx context.Context, id int64) (int64, error)
 	RevokeOtherRefreshTokensForUser(ctx context.Context, arg RevokeOtherRefreshTokensForUserParams) error
@@ -2519,6 +2594,8 @@ type Querier interface {
 	RevokeRefreshTokenByUUIDForUser(ctx context.Context, arg RevokeRefreshTokenByUUIDForUserParams) (int64, error)
 	RevokeRefreshTokenFamily(ctx context.Context, familyID pgtype.UUID) (int64, error)
 	RevokeStorageLink(ctx context.Context, argUuid uuid.UUID) (StorageLink, error)
+	// Disconnects one of the user's apps; no row when missing, foreign or revoked.
+	RevokeUserOAuthGrant(ctx context.Context, arg RevokeUserOAuthGrantParams) (RevokeUserOAuthGrantRow, error)
 	// TEC-91: mobile refresh chains (rotation, reuse detection, device sign-out).
 	RotateRefreshTokenByHash(ctx context.Context, tokenHash string) (int64, error)
 	// SearchFinanceEntries is the filtered, paged ledger of one organization.
@@ -2544,6 +2621,13 @@ type Querier interface {
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
 	SetAppointmentStatus(ctx context.Context, arg SetAppointmentStatusParams) (Appointment, error)
 	SetBarcodeCounter(ctx context.Context, arg SetBarcodeCounterParams) error
+	// Ends a pending recipient (sent stamps sent_at); no row when it is no
+	// longer pending.
+	SetCampaignRecipientStatus(ctx context.Context, arg SetCampaignRecipientStatusParams) (CampaignRecipient, error)
+	// Moves the campaign from from_status to status (no row when it moved
+	// meanwhile). approver_org_id and scheduled_at are replaced by the given
+	// values; sending stamps started_at, the end states stamp finished_at.
+	SetCampaignStatus(ctx context.Context, arg SetCampaignStatusParams) (Campaign, error)
 	// TEC-369 bulk activate/deactivate.
 	SetCarBrandActiveByUUID(ctx context.Context, arg SetCarBrandActiveByUUIDParams) (CarBrand, error)
 	SetCarBrandHero(ctx context.Context, arg SetCarBrandHeroParams) (CarBrand, error)
@@ -2681,6 +2765,8 @@ type Querier interface {
 	SetWhatsAppSMSFallback(ctx context.Context, smsFallbackEnabled bool) (WhatsappSetting, error)
 	ShipTransferRequest(ctx context.Context, arg ShipTransferRequestParams) (StockTransferRequest, error)
 	ShipWarehouseTransfer(ctx context.Context, arg ShipWarehouseTransferParams) (WarehouseTransfer, error)
+	// Cancellation while sending: the remaining pending recipients are skipped.
+	SkipPendingCampaignRecipients(ctx context.Context, arg SkipPendingCampaignRecipientsParams) (int64, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	SoftDeleteAIConversation(ctx context.Context, arg SoftDeleteAIConversationParams) (int64, error)
 	SoftDeleteAppointment(ctx context.Context, arg SoftDeleteAppointmentParams) (int64, error)
@@ -2744,6 +2830,8 @@ type Querier interface {
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
 	UpdateAppointment(ctx context.Context, arg UpdateAppointmentParams) (Appointment, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
+	// Name, channels and audience of a draft (no row once it left draft).
+	UpdateCampaignDraft(ctx context.Context, arg UpdateCampaignDraftParams) (Campaign, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).
 	UpdateCarBrand(ctx context.Context, arg UpdateCarBrandParams) (CarBrand, error)
 	UpdateCarModel(ctx context.Context, arg UpdateCarModelParams) (CarModel, error)
@@ -2846,6 +2934,8 @@ type Querier interface {
 	// bounded by resolved organization ids; the API layer owns scope resolution.
 	UpsertAppointmentSettings(ctx context.Context, arg UpsertAppointmentSettingsParams) (AppointmentSetting, error)
 	UpsertBinProductStockForRepair(ctx context.Context, arg UpsertBinProductStockForRepairParams) error
+	// Contents ------------------------------------------------------------------
+	UpsertCampaignContent(ctx context.Context, arg UpsertCampaignContentParams) (CampaignContent, error)
 	UpsertConnectionLocationMap(ctx context.Context, arg UpsertConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// ---------------------------------------------------------------------------
 	// Signers.

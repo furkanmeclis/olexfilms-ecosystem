@@ -7447,6 +7447,340 @@ paths:
               schema:
                 $ref: "#/components/schemas/OAuthError"
 
+  /oauth/authorize:
+    get:
+      tags: [OAuth]
+      operationId: getOAuthAuthorize
+      summary: Authorization endpoint (browser, TEC-401)
+      description: |
+        Validates the request (client, exact registered `redirect_uri`, PKCE
+        `code_challenge` with S256, `resource` naming an MCP endpoint, `state`)
+        and stores it for consent (15 minutes), then redirects (302) to the
+        frontend consent screen `/oauth/consent?request=<uuid>`. The consent
+        screen sends a signed-out user to the panel (or, for `/mcp/customer`,
+        the portal) login and back. An unknown client, an unregistered
+        `redirect_uri` or the rate limit (60 per hour per IP) renders an HTML
+        error page and never redirects; later errors redirect to the client
+        with `error`, `error_description`, `state` and `iss`.
+      security: []
+      parameters:
+        - { name: client_id, in: query, required: true, schema: { type: string } }
+        - { name: redirect_uri, in: query, required: true, schema: { type: string } }
+        - { name: response_type, in: query, required: true, schema: { type: string, enum: [code] } }
+        - { name: code_challenge, in: query, required: true, schema: { type: string } }
+        - { name: code_challenge_method, in: query, required: true, schema: { type: string, enum: [S256] } }
+        - { name: resource, in: query, required: true, schema: { type: string, format: uri } }
+        - { name: state, in: query, schema: { type: string } }
+        - { name: scope, in: query, schema: { type: string, enum: [mcp] } }
+      responses:
+        "302":
+          description: To the consent screen, or to the client redirect_uri with an error
+          headers:
+            Location:
+              schema: { type: string }
+        "400":
+          description: Error page (unknown client or unregistered redirect_uri); no redirect
+          content:
+            text/html:
+              schema: { type: string }
+        "429":
+          description: Error page (slow_down)
+          headers:
+            Retry-After:
+              schema: { type: integer }
+          content:
+            text/html:
+              schema: { type: string }
+
+  /v1/oauth/requests/{uuid}:
+    get:
+      tags: [OAuth]
+      operationId: getOAuthConsentRequest
+      summary: Consent screen data of a pending authorization request (panel)
+      description: |
+        Client name, redirect host, MCP endpoint and the organizations the
+        caller may bind the token to. `/mcp/dealer`: distributor / dealer
+        organizations the caller is a member of and holds `mcp.connect` in;
+        `/mcp/user`: any panel organization with `mcp.connect` (the platform
+        admin also gets the brand center). Organizations with the `mcp` module
+        off are not offered. A `/mcp/customer` request is portal only (403).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OAuthRequestUUID"
+      responses:
+        "200":
+          description: Consent data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthConsent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/oauth/requests/{uuid}/decide:
+    post:
+      tags: [OAuth]
+      operationId: decideOAuthConsentRequest
+      summary: Approve or deny a pending authorization request (panel)
+      description: |
+        `approve` needs `organization_uuid` (400 without it; 403 when the
+        organization is not selectable: no membership, no `mcp.connect`, wrong
+        type for the endpoint or the `mcp` module off). Approval records the
+        connected app and returns the client redirect with `code`, `state` and
+        `iss`; `deny` returns it with `error=access_denied`. The request is
+        consumed either way (a second decision is 404). Every decision is
+        written to the activity log (`oauth.consent_approved`,
+        `oauth.consent_denied`).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OAuthRequestUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthDecideRequest"
+      responses:
+        "200":
+          description: Where to send the browser
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthDecision"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/oauth/grants:
+    get:
+      tags: [OAuth]
+      operationId: listOAuthGrants
+      summary: The caller's connected apps (MCP grants)
+      description: |
+        Live grants of live clients. Sort fields `created_at` (default
+        `-created_at`), `last_used_at` (never used last), `client_name`; `id`
+        tiebreak. `q` matches the client or organization name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: realm
+          in: query
+          description: CSV of customer, dealer, user. Unknown value → 400.
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Connected apps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthGrantPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/oauth/grants/{uuid}:
+    delete:
+      tags: [OAuth]
+      operationId: revokeOAuthGrant
+      summary: Disconnect one of the caller's apps
+      description: |
+        Revokes the grant and every token family issued under it (its access
+        tokens are rejected at once) and drops unused codes. Activity
+        `oauth.grant_revoked`. A foreign or revoked grant is 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OAuthGrantUUID"
+      responses:
+        "204":
+          description: Revoked
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/portal/oauth/requests/{uuid}:
+    get:
+      tags: [OAuth]
+      operationId: getPortalOAuthConsentRequest
+      summary: Consent screen data of a pending authorization request (customer portal)
+      description: |
+        Same as the panel route for portal sessions. Only `/mcp/customer`
+        requests (403 otherwise); the token is bound to the brand center.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OAuthRequestUUID"
+      responses:
+        "200":
+          description: Consent data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthConsent"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/portal/oauth/requests/{uuid}/decide:
+    post:
+      tags: [OAuth]
+      operationId: decidePortalOAuthConsentRequest
+      summary: Approve or deny a pending authorization request (customer portal)
+      description: |
+        Same as the panel route for portal sessions; `organization_uuid` is
+        not needed (the brand center). Only `/mcp/customer` requests (403
+        otherwise).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OAuthRequestUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthDecideRequest"
+      responses:
+        "200":
+          description: Where to send the browser
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthDecision"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/portal/oauth/grants:
+    get:
+      tags: [OAuth]
+      operationId: listPortalOAuthGrants
+      summary: The customer's connected apps (same contract as /v1/oauth/grants)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: realm
+          in: query
+          description: CSV of customer, dealer, user. Unknown value → 400.
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Connected apps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthGrantPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+
+  /v1/portal/oauth/grants/{uuid}:
+    delete:
+      tags: [OAuth]
+      operationId: revokePortalOAuthGrant
+      summary: Disconnect one of the customer's apps
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OAuthGrantUUID"
+      responses:
+        "204":
+          description: Revoked
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/oauth/clients:
+    get:
+      tags: [OAuth]
+      operationId: listPlatformOAuthClients
+      summary: Registered MCP (OAuth) clients (mcp.clients.manage)
+      description: |
+        Every dynamically registered client. Sort fields `created_at` (default
+        `-created_at`), `last_used_at` (never used last), `client_name`; `id`
+        tiebreak. `q` matches the client name or client_id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: CSV of active, revoked. Unknown value → 400.
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Clients
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOAuthClientPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/oauth/clients/{uuid}:
+    delete:
+      tags: [OAuth]
+      operationId: revokePlatformOAuthClient
+      summary: Revoke a client and everything issued to it (mcp.clients.manage)
+      description: |
+        Blocks the client (authorize and token answer invalid_client) and
+        revokes its grants and every token, deletes pending requests and
+        unused codes. Activity `oauth.client_revoked`. Idempotent.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Revoked
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /hooks/wuzapi:
     post:
       tags: [WhatsApp]
@@ -13705,7 +14039,7 @@ paths:
         required: true
         schema:
           type: string
-          enum: [ai_guidelines]
+          enum: [ai_guidelines, marketing_consent]
     get:
       tags: [Portal]
       operationId: getPlatformLegalTexts
@@ -23068,6 +23402,17 @@ components:
       bearerFormat: JWT
 
   parameters:
+    OAuthRequestUUID:
+      name: uuid
+      in: path
+      required: true
+      description: Pending authorization request (the `request` of the consent screen URL)
+      schema: { type: string, format: uuid }
+    OAuthGrantUUID:
+      name: uuid
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     AccountingOrganizationUUID:
       name: organization_uuid
       in: query
@@ -23392,6 +23737,126 @@ components:
         refresh_token: { type: string }
         resource: { type: string, format: uri, example: "https://olexfilms.app/mcp/dealer" }
         scope: { type: string }
+    OAuthConsentOrganization:
+      type: object
+      required: [uuid, name, type]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [platform, center, distributor, dealer] }
+
+    OAuthConsent:
+      type: object
+      required: [request_uuid, client_id, client_name, redirect_host, resource, resource_url, realm, organizations, expires_at]
+      properties:
+        request_uuid: { type: string, format: uuid }
+        client_id: { type: string }
+        client_name: { type: string }
+        redirect_host: { type: string, description: Host of the client redirect_uri }
+        resource: { type: string, enum: [/mcp/dealer, /mcp/customer, /mcp/user] }
+        resource_url: { type: string, format: uri }
+        realm: { type: string, enum: [customer, dealer, user] }
+        organizations:
+          type: array
+          description: Selectable organizations (empty → the caller cannot connect)
+          items: { $ref: "#/components/schemas/OAuthConsentOrganization" }
+        expires_at: { type: string, format: date-time }
+
+    EnvelopeOAuthConsent:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/OAuthConsent" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    OAuthDecideRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approve, deny] }
+        organization_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: Required to approve on the panel; ignored on the portal
+
+    EnvelopeOAuthDecision:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [redirect_url]
+          properties:
+            redirect_url: { type: string, format: uri }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    OAuthGrant:
+      type: object
+      required: [uuid, client_id, client_name, resource, realm, scopes, organization_uuid, organization_name, organization_type, created_at, last_used_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        client_id: { type: string }
+        client_name: { type: string }
+        resource: { type: string, enum: [/mcp/dealer, /mcp/customer, /mcp/user] }
+        realm: { type: string, enum: [customer, dealer, user] }
+        scopes: { type: array, items: { type: string } }
+        organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+        organization_type: { type: string }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: [string, "null"], format: date-time }
+
+    EnvelopeOAuthGrantPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/OAuthGrant" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    OAuthClientSummary:
+      type: object
+      required: [uuid, client_id, client_name, redirect_uris, created_ip, status, active_grants, created_at, last_used_at, revoked_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        client_id: { type: string }
+        client_name: { type: string }
+        redirect_uris: { type: array, items: { type: string } }
+        created_ip: { type: [string, "null"] }
+        status: { type: string, enum: [active, revoked] }
+        active_grants: { type: integer, format: int64 }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: [string, "null"], format: date-time }
+        revoked_at: { type: [string, "null"], format: date-time }
+
+    EnvelopeOAuthClientPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/OAuthClientSummary" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     OAuthTokenResponse:
       type: object
       required: [access_token, token_type, expires_in, refresh_token, scope]
@@ -29749,7 +30214,7 @@ components:
       required: [uuid, kind, locale, version, body, created_at]
       properties:
         uuid: { type: string, format: uuid }
-        kind: { type: string, enum: [ai_guidelines] }
+        kind: { type: string, enum: [ai_guidelines, marketing_consent] }
         locale: { type: string }
         version: { type: integer }
         body: { type: string, description: Markdown }
@@ -29795,7 +30260,7 @@ components:
       type: object
       required: [kind, locale, version, accepted]
       properties:
-        kind: { type: string, enum: [ai_guidelines] }
+        kind: { type: string, enum: [ai_guidelines, marketing_consent] }
         locale: { type: string, description: Locale of the text shown (from pending) }
         version: { type: integer }
         accepted: { type: boolean }

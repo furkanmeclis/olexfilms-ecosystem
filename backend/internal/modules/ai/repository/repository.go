@@ -195,13 +195,83 @@ func (s *Store) MonthlyTokens(ctx context.Context, orgID int64, pool string, at 
 	})
 }
 
+// CreatePendingAction stores a proposed write-tool call (TEC-387).
+func (s *Store) CreatePendingAction(ctx context.Context, p db.CreateAIPendingActionParams) (db.AiPendingAction, error) {
+	return s.q.CreateAIPendingAction(ctx, p)
+}
+
+// PendingActionByKey returns the action of an idempotency key; ok is false
+// when there is none.
+func (s *Store) PendingActionByKey(ctx context.Context, key string) (db.AiPendingAction, bool, error) {
+	return oneRow(s.q.GetAIPendingActionByIdempotencyKey(ctx, key))
+}
+
+// PendingActionForUser returns the caller's own action; ok is false when it
+// does not exist or belongs to another user or organization.
+func (s *Store) PendingActionForUser(ctx context.Context, id uuid.UUID, orgID, userID int64) (db.AiPendingAction, bool, error) {
+	return oneRow(s.q.GetAIPendingActionForUser(ctx, db.GetAIPendingActionForUserParams{
+		Uuid: id, OrganizationID: orgID, UserID: userID,
+	}))
+}
+
+// ListPendingActions returns the user's open, unexpired actions.
+func (s *Store) ListPendingActions(ctx context.Context, orgID, userID int64) ([]db.AiPendingAction, error) {
+	return s.q.ListAIPendingActionsForUser(ctx, db.ListAIPendingActionsForUserParams{OrganizationID: orgID, UserID: userID})
+}
+
 // ClaimPendingAction moves the caller's pending, unexpired action to
 // executing with a single compare-and-set UPDATE. ok is false when another
-// request already claimed it, it was resolved or it expired.
-func (s *Store) ClaimPendingAction(ctx context.Context, id uuid.UUID, orgID, userID int64) (db.AiPendingAction, bool, error) {
-	a, err := s.q.ClaimAIPendingAction(ctx, db.ClaimAIPendingActionParams{
+// request already claimed it, it was resolved or it expired. Non-nil input
+// and preview replace the stored ones (edited confirmation card).
+func (s *Store) ClaimPendingAction(ctx context.Context, id uuid.UUID, orgID, userID int64, input, preview []byte) (db.AiPendingAction, bool, error) {
+	return oneRow(s.q.ClaimAIPendingAction(ctx, db.ClaimAIPendingActionParams{
+		Uuid: id, OrganizationID: orgID, UserID: userID, Input: input, Preview: preview,
+	}))
+}
+
+// ResolvePendingAction finishes a claimed action: executing → confirmed |
+// failed.
+func (s *Store) ResolvePendingAction(ctx context.Context, p db.ResolveAIPendingActionParams) (db.AiPendingAction, error) {
+	return s.q.ResolveAIPendingAction(ctx, p)
+}
+
+// CancelPendingAction cancels the caller's pending action; ok is false when
+// it is no longer pending.
+func (s *Store) CancelPendingAction(ctx context.Context, id uuid.UUID, orgID, userID int64) (db.AiPendingAction, bool, error) {
+	return oneRow(s.q.CancelAIPendingAction(ctx, db.CancelAIPendingActionParams{
 		Uuid: id, OrganizationID: orgID, UserID: userID,
+	}))
+}
+
+// CancelPendingActionsForSource cancels the user's pending actions of one
+// conversation.
+func (s *Store) CancelPendingActionsForSource(ctx context.Context, p db.CancelAIPendingActionsForSourceParams) ([]db.AiPendingAction, error) {
+	return s.q.CancelAIPendingActionsForSource(ctx, p)
+}
+
+// ExpirePendingAction expires one pending action past its expiry; ok is
+// false when it is no longer pending or not yet expired.
+func (s *Store) ExpirePendingAction(ctx context.Context, id int64, now time.Time) (db.AiPendingAction, bool, error) {
+	return oneRow(s.q.ExpireAIPendingAction(ctx, db.ExpireAIPendingActionParams{
+		ID: id, Now: pgtype.Timestamptz{Time: now, Valid: true},
+	}))
+}
+
+// ExpirePendingActions expires every pending action past its expiry and
+// returns how many changed.
+func (s *Store) ExpirePendingActions(ctx context.Context, now time.Time) (int64, error) {
+	return s.q.ExpireAIPendingActions(ctx, pgtype.Timestamptz{Time: now, Valid: true})
+}
+
+// FailStalePendingActions fails actions executing since before staleBefore.
+func (s *Store) FailStalePendingActions(ctx context.Context, staleBefore time.Time, errText string) ([]db.AiPendingAction, error) {
+	return s.q.FailStaleAIPendingActions(ctx, db.FailStaleAIPendingActionsParams{
+		Error: pgtype.Text{String: errText, Valid: true}, StaleBefore: pgtype.Timestamptz{Time: staleBefore, Valid: true},
 	})
+}
+
+// oneRow turns pgx.ErrNoRows into ok = false.
+func oneRow(a db.AiPendingAction, err error) (db.AiPendingAction, bool, error) {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return db.AiPendingAction{}, false, nil
 	}

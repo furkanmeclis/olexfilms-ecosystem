@@ -116,27 +116,103 @@ func (q *Queries) CancelAIPendingAction(ctx context.Context, arg CancelAIPending
 	return i, err
 }
 
+const cancelAIPendingActionsForSource = `-- name: CancelAIPendingActionsForSource :many
+UPDATE ai_pending_actions
+SET status = 'cancelled', resolved_at = NOW()
+WHERE source = $1
+  AND source_ref = $2
+  AND organization_id = $3
+  AND user_id = $4
+  AND status = 'pending'
+RETURNING id, uuid, organization_id, brand_id, user_id, source, source_ref, tool_use_id, tool_name, input, preview, status, result, error, idempotency_key, expires_at, resolved_at, created_at, updated_at
+`
+
+type CancelAIPendingActionsForSourceParams struct {
+	Source         string      `json:"source"`
+	SourceRef      pgtype.Text `json:"source_ref"`
+	OrganizationID int64       `json:"organization_id"`
+	UserID         int64       `json:"user_id"`
+}
+
+// TEC-387: a new message of the user in the same conversation cancels the
+// open confirmation cards of that conversation.
+func (q *Queries) CancelAIPendingActionsForSource(ctx context.Context, arg CancelAIPendingActionsForSourceParams) ([]AiPendingAction, error) {
+	rows, err := q.db.Query(ctx, cancelAIPendingActionsForSource,
+		arg.Source,
+		arg.SourceRef,
+		arg.OrganizationID,
+		arg.UserID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AiPendingAction{}
+	for rows.Next() {
+		var i AiPendingAction
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.UserID,
+			&i.Source,
+			&i.SourceRef,
+			&i.ToolUseID,
+			&i.ToolName,
+			&i.Input,
+			&i.Preview,
+			&i.Status,
+			&i.Result,
+			&i.Error,
+			&i.IdempotencyKey,
+			&i.ExpiresAt,
+			&i.ResolvedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const claimAIPendingAction = `-- name: ClaimAIPendingAction :one
 UPDATE ai_pending_actions
-SET status = 'executing'
-WHERE uuid = $1
-  AND organization_id = $2
-  AND user_id = $3
+SET status = 'executing',
+    input = COALESCE($1::jsonb, input),
+    preview = COALESCE($2::jsonb, preview)
+WHERE uuid = $3
+  AND organization_id = $4
+  AND user_id = $5
   AND status = 'pending'
   AND expires_at > NOW()
 RETURNING id, uuid, organization_id, brand_id, user_id, source, source_ref, tool_use_id, tool_name, input, preview, status, result, error, idempotency_key, expires_at, resolved_at, created_at, updated_at
 `
 
 type ClaimAIPendingActionParams struct {
+	Input          []byte    `json:"input"`
+	Preview        []byte    `json:"preview"`
 	Uuid           uuid.UUID `json:"uuid"`
 	OrganizationID int64     `json:"organization_id"`
 	UserID         int64     `json:"user_id"`
 }
 
 // Compare-and-set pending → executing: of two concurrent confirmations only
-// one gets the row; the other gets pgx.ErrNoRows.
+// one gets the row; the other gets pgx.ErrNoRows. input / preview replace
+// the stored ones when the user edited the card (NULL keeps them).
 func (q *Queries) ClaimAIPendingAction(ctx context.Context, arg ClaimAIPendingActionParams) (AiPendingAction, error) {
-	row := q.db.QueryRow(ctx, claimAIPendingAction, arg.Uuid, arg.OrganizationID, arg.UserID)
+	row := q.db.QueryRow(ctx, claimAIPendingAction,
+		arg.Input,
+		arg.Preview,
+		arg.Uuid,
+		arg.OrganizationID,
+		arg.UserID,
+	)
 	var i AiPendingAction
 	err := row.Scan(
 		&i.ID,
@@ -412,6 +488,49 @@ func (q *Queries) CreateAIPendingAction(ctx context.Context, arg CreateAIPending
 	return i, err
 }
 
+const expireAIPendingAction = `-- name: ExpireAIPendingAction :one
+UPDATE ai_pending_actions
+SET status = 'expired', resolved_at = NOW()
+WHERE id = $1
+  AND status = 'pending'
+  AND expires_at <= $2::timestamptz
+RETURNING id, uuid, organization_id, brand_id, user_id, source, source_ref, tool_use_id, tool_name, input, preview, status, result, error, idempotency_key, expires_at, resolved_at, created_at, updated_at
+`
+
+type ExpireAIPendingActionParams struct {
+	ID  int64              `json:"id"`
+	Now pgtype.Timestamptz `json:"now"`
+}
+
+// TEC-387: one pending action past its expiry becomes expired (a late
+// confirmation); no row when it is no longer pending or not yet expired.
+func (q *Queries) ExpireAIPendingAction(ctx context.Context, arg ExpireAIPendingActionParams) (AiPendingAction, error) {
+	row := q.db.QueryRow(ctx, expireAIPendingAction, arg.ID, arg.Now)
+	var i AiPendingAction
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UserID,
+		&i.Source,
+		&i.SourceRef,
+		&i.ToolUseID,
+		&i.ToolName,
+		&i.Input,
+		&i.Preview,
+		&i.Status,
+		&i.Result,
+		&i.Error,
+		&i.IdempotencyKey,
+		&i.ExpiresAt,
+		&i.ResolvedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const expireAIPendingActions = `-- name: ExpireAIPendingActions :execrows
 UPDATE ai_pending_actions
 SET status = 'expired', resolved_at = NOW()
@@ -425,6 +544,62 @@ func (q *Queries) ExpireAIPendingActions(ctx context.Context, now pgtype.Timesta
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const failStaleAIPendingActions = `-- name: FailStaleAIPendingActions :many
+UPDATE ai_pending_actions
+SET status = 'failed', error = $1, resolved_at = NOW()
+WHERE status = 'executing'
+  AND updated_at <= $2::timestamptz
+RETURNING id, uuid, organization_id, brand_id, user_id, source, source_ref, tool_use_id, tool_name, input, preview, status, result, error, idempotency_key, expires_at, resolved_at, created_at, updated_at
+`
+
+type FailStaleAIPendingActionsParams struct {
+	Error       pgtype.Text        `json:"error"`
+	StaleBefore pgtype.Timestamptz `json:"stale_before"`
+}
+
+// TEC-387: actions left executing since before stale_before (the process
+// stopped mid-run) become failed with an "outcome unknown" error.
+// updated_at is the claim time (set_updated_at trigger).
+func (q *Queries) FailStaleAIPendingActions(ctx context.Context, arg FailStaleAIPendingActionsParams) ([]AiPendingAction, error) {
+	rows, err := q.db.Query(ctx, failStaleAIPendingActions, arg.Error, arg.StaleBefore)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AiPendingAction{}
+	for rows.Next() {
+		var i AiPendingAction
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.UserID,
+			&i.Source,
+			&i.SourceRef,
+			&i.ToolUseID,
+			&i.ToolName,
+			&i.Input,
+			&i.Preview,
+			&i.Status,
+			&i.Result,
+			&i.Error,
+			&i.IdempotencyKey,
+			&i.ExpiresAt,
+			&i.ResolvedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const finishAIMessage = `-- name: FinishAIMessage :one
@@ -539,6 +714,39 @@ func (q *Queries) GetAIOrgSettings(ctx context.Context, organizationID int64) (A
 		&i.Enabled,
 		&i.MonthlyTokenQuota,
 		&i.UpdatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAIPendingActionByIdempotencyKey = `-- name: GetAIPendingActionByIdempotencyKey :one
+SELECT id, uuid, organization_id, brand_id, user_id, source, source_ref, tool_use_id, tool_name, input, preview, status, result, error, idempotency_key, expires_at, resolved_at, created_at, updated_at FROM ai_pending_actions
+WHERE idempotency_key = $1
+`
+
+// TEC-387: a repeated proposal of the same tool_use returns the existing card.
+func (q *Queries) GetAIPendingActionByIdempotencyKey(ctx context.Context, idempotencyKey string) (AiPendingAction, error) {
+	row := q.db.QueryRow(ctx, getAIPendingActionByIdempotencyKey, idempotencyKey)
+	var i AiPendingAction
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UserID,
+		&i.Source,
+		&i.SourceRef,
+		&i.ToolUseID,
+		&i.ToolName,
+		&i.Input,
+		&i.Preview,
+		&i.Status,
+		&i.Result,
+		&i.Error,
+		&i.IdempotencyKey,
+		&i.ExpiresAt,
+		&i.ResolvedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

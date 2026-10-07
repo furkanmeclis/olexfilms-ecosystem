@@ -144,6 +144,11 @@ WHERE uuid = sqlc.arg(uuid)
   AND organization_id = sqlc.arg(organization_id)
   AND user_id = sqlc.arg(user_id);
 
+-- name: GetAIPendingActionByIdempotencyKey :one
+-- TEC-387: a repeated proposal of the same tool_use returns the existing card.
+SELECT * FROM ai_pending_actions
+WHERE idempotency_key = sqlc.arg(idempotency_key);
+
 -- name: ListAIPendingActionsForUser :many
 SELECT * FROM ai_pending_actions
 WHERE organization_id = sqlc.arg(organization_id)
@@ -154,9 +159,12 @@ ORDER BY created_at DESC, id DESC;
 
 -- name: ClaimAIPendingAction :one
 -- Compare-and-set pending → executing: of two concurrent confirmations only
--- one gets the row; the other gets pgx.ErrNoRows.
+-- one gets the row; the other gets pgx.ErrNoRows. input / preview replace
+-- the stored ones when the user edited the card (NULL keeps them).
 UPDATE ai_pending_actions
-SET status = 'executing'
+SET status = 'executing',
+    input = COALESCE(sqlc.narg(input)::jsonb, input),
+    preview = COALESCE(sqlc.narg(preview)::jsonb, preview)
 WHERE uuid = sqlc.arg(uuid)
   AND organization_id = sqlc.arg(organization_id)
   AND user_id = sqlc.arg(user_id)
@@ -190,6 +198,38 @@ RETURNING *;
 UPDATE ai_pending_actions
 SET status = 'expired', resolved_at = NOW()
 WHERE status = 'pending' AND expires_at <= sqlc.arg(now)::timestamptz;
+
+-- name: ExpireAIPendingAction :one
+-- TEC-387: one pending action past its expiry becomes expired (a late
+-- confirmation); no row when it is no longer pending or not yet expired.
+UPDATE ai_pending_actions
+SET status = 'expired', resolved_at = NOW()
+WHERE id = sqlc.arg(id)
+  AND status = 'pending'
+  AND expires_at <= sqlc.arg(now)::timestamptz
+RETURNING *;
+
+-- name: FailStaleAIPendingActions :many
+-- TEC-387: actions left executing since before stale_before (the process
+-- stopped mid-run) become failed with an "outcome unknown" error.
+-- updated_at is the claim time (set_updated_at trigger).
+UPDATE ai_pending_actions
+SET status = 'failed', error = sqlc.arg(error), resolved_at = NOW()
+WHERE status = 'executing'
+  AND updated_at <= sqlc.arg(stale_before)::timestamptz
+RETURNING *;
+
+-- name: CancelAIPendingActionsForSource :many
+-- TEC-387: a new message of the user in the same conversation cancels the
+-- open confirmation cards of that conversation.
+UPDATE ai_pending_actions
+SET status = 'cancelled', resolved_at = NOW()
+WHERE source = sqlc.arg(source)
+  AND source_ref = sqlc.arg(source_ref)
+  AND organization_id = sqlc.arg(organization_id)
+  AND user_id = sqlc.arg(user_id)
+  AND status = 'pending'
+RETURNING *;
 
 -- Usage ledger -----------------------------------------------------------------
 

@@ -139,6 +139,8 @@ type Result struct {
 	IsError bool
 	// Code is set on errors (Code* constants).
 	Code string
+	// Link is the record a confirmed write created or changed.
+	Link *Link
 }
 
 // Block converts the result to a tool_result block.
@@ -337,6 +339,11 @@ func (r *Registry) Call(ctx context.Context, p Principal, name string, input jso
 	}
 	if !allowed {
 		return notAllowed(name), ErrToolNotAllowed
+	}
+	// TEC-387: a write tool only runs through the confirmation card
+	// (Propose → actions use case → RunConfirmed).
+	if spec.Kind == KindWrite {
+		return confirmationRequired(name), ErrConfirmationRequired
 	}
 	if err := Validate(spec.InputSchema, input); err != nil {
 		return ErrorResult(CodeInvalidInput, "invalid input for "+name+": "+err.Error()+

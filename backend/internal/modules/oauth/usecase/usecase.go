@@ -72,6 +72,7 @@ type Service struct {
 	q        *db.Queries
 	features FeatureChecker
 	limiter  Limiter
+	access   AccessChecker
 	issuer   string
 	log      *slog.Logger
 	now      func() time.Time
@@ -364,6 +365,12 @@ func (s *Service) GetAuthRequest(ctx context.Context, id uuid.UUID) (model.AuthR
 // state and iss (RFC 9207). The caller has checked realm, membership and
 // permissions. The mcp module must be on for the organization.
 func (s *Service) IssueCode(ctx context.Context, in model.IssueCodeInput) (string, error) {
+	return s.issueCode(ctx, in, nil)
+}
+
+// issueCode is IssueCode with an optional hook that runs in the same
+// transaction once the grant exists (the consent decision's activity row).
+func (s *Service) issueCode(ctx context.Context, in model.IssueCodeInput, after func(q *db.Queries, grant db.OauthGrant) error) (string, error) {
 	on, err := s.mcpEnabled(ctx, in.OrganizationID)
 	if err != nil {
 		return "", err
@@ -391,6 +398,11 @@ func (s *Service) IssueCode(ctx context.Context, in model.IssueCodeInput) (strin
 		})
 		if err != nil {
 			return err
+		}
+		if after != nil {
+			if err := after(q, grant); err != nil {
+				return err
+			}
 		}
 		if err := q.CreateOAuthCode(ctx, db.CreateOAuthCodeParams{
 			CodeHash: HashToken(code), GrantID: grant.ID, ClientID: req.ClientID, UserID: in.UserID,
