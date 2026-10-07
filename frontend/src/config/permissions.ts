@@ -150,6 +150,10 @@ export const Permission = {
   MeasurementsLink: "measurements.link",
   MeasurementsWrite: "measurements.write",
   MeasurementDevicesManage: "measurement_devices.manage",
+  /** TEC-326: appointment calendar and capacity settings. */
+  AppointmentsRead: "appointments.read",
+  AppointmentsWrite: "appointments.write",
+  AppointmentSettingsManage: "appointment_settings.manage",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -459,5 +463,10 @@ export const permissions = {
     link: Permission.MeasurementsLink,
     write: Permission.MeasurementsWrite,
     devicesManage: Permission.MeasurementDevicesManage,
+  },
+  appointments: {
+    read: Permission.AppointmentsRead,
+    write: Permission.AppointmentsWrite,
+    settingsManage: Permission.AppointmentSettingsManage,
   },
 } as const;

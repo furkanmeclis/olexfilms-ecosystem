@@ -105,6 +105,10 @@ export const routes = {
       list: (slug: string) => `/t/${slug}/vehicles`,
       detail: (slug: string, uuid: string) => `/t/${slug}/vehicles/${uuid}`,
     },
+    /** TEC-326 appointment calendar (day / week) and settings tab. */
+    appointments: {
+      calendar: (slug: string) => `/t/${slug}/appointments`,
+    },
     /** TEC-299 measurements: list, detail (part map, VIN, PDF), devices. */
     measurements: {
       list: (slug: string) => `/t/${slug}/measurements`,
