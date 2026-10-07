@@ -94,6 +94,13 @@ type Querier interface {
 	// never claimed. The overdue pass also stamps due_soon so a missed run does
 	// not send a stale "due soon" after the deadline.
 	ClaimTasksOverdue(ctx context.Context, arg ClaimTasksOverdueParams) ([]ClaimTasksOverdueRow, error)
+	CleanupOAuthAuthRequests(ctx context.Context) (int64, error)
+	// Registrations never connected within a day (abandoned DCR attempts).
+	CleanupOAuthClients(ctx context.Context) (int64, error)
+	// Used codes stay one day past expiry so a late replay still revokes.
+	CleanupOAuthCodes(ctx context.Context) (int64, error)
+	// Rotated refresh tokens stay until they expire, for reuse detection.
+	CleanupOAuthTokens(ctx context.Context) (int64, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
 	// Run before setting a new default in the same transaction.
 	ClearDefaultContractTemplate(ctx context.Context, arg ClearDefaultContractTemplateParams) error
@@ -317,6 +324,11 @@ type Querier interface {
 	CreateMigrationRun(ctx context.Context, arg CreateMigrationRunParams) (MigrationRun, error)
 	CreateNotification(ctx context.Context, arg CreateNotificationParams) (Notification, error)
 	CreateOAuthAccount(ctx context.Context, arg CreateOAuthAccountParams) (OauthAccount, error)
+	CreateOAuthAuthRequest(ctx context.Context, arg CreateOAuthAuthRequestParams) (OauthAuthRequest, error)
+	// TEC-400 (F4-03a): MCP OAuth 2.1 authorization server.
+	CreateOAuthClient(ctx context.Context, arg CreateOAuthClientParams) (OauthClient, error)
+	CreateOAuthCode(ctx context.Context, arg CreateOAuthCodeParams) error
+	CreateOAuthToken(ctx context.Context, arg CreateOAuthTokenParams) error
 	CreateOTPCode(ctx context.Context, arg CreateOTPCodeParams) (OtpCode, error)
 	// TEC-165 (F1-04a): orders, order lines, assigned units, status history,
 	// stock reservations and sibling transfer requests (migration 000049).
@@ -519,6 +531,8 @@ type Querier interface {
 	DeleteNotificationPreferenceRow(ctx context.Context, arg DeleteNotificationPreferenceRowParams) error
 	DeleteOAuthAccountByProviderAccount(ctx context.Context, arg DeleteOAuthAccountByProviderAccountParams) error
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
+	// Deleting is the claim: a concurrent second decision finds nothing.
+	DeleteOAuthAuthRequest(ctx context.Context, id uuid.UUID) (int64, error)
 	DeleteOrderItem(ctx context.Context, id int64) (int64, error)
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
@@ -633,6 +647,8 @@ type Querier interface {
 	// Full-unit duplicate guard before creation (decision 3); the partial
 	// unique index uq_warranties_active_full_unit is the final barrier.
 	GetActiveFullWarrantyByVehicleUnit(ctx context.Context, arg GetActiveFullWarrantyByVehicleUnitParams) (Warranty, error)
+	// A live token of a live grant and client, with the user's status.
+	GetActiveOAuthToken(ctx context.Context, arg GetActiveOAuthTokenParams) (GetActiveOAuthTokenRow, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
 	GetActivePhoneOTP(ctx context.Context, arg GetActivePhoneOTPParams) (OtpCode, error)
 	// Public image route: the active product (any brand) that lists the key.
@@ -813,7 +829,11 @@ type Querier interface {
 	GetNotificationRecipient(ctx context.Context, arg GetNotificationRecipientParams) (GetNotificationRecipientRow, error)
 	GetOAuthAccountByProviderAccount(ctx context.Context, arg GetOAuthAccountByProviderAccountParams) (GetOAuthAccountByProviderAccountRow, error)
 	GetOAuthAccountByUserProvider(ctx context.Context, arg GetOAuthAccountByUserProviderParams) (GetOAuthAccountByUserProviderRow, error)
+	// A pending request that has not expired, with its client.
+	GetOAuthAuthRequest(ctx context.Context, id uuid.UUID) (GetOAuthAuthRequestRow, error)
+	GetOAuthClient(ctx context.Context, clientID string) (OauthClient, error)
 	GetOAuthProviderSettings(ctx context.Context, provider string) (OauthProviderSetting, error)
+	GetOAuthTokenAnyState(ctx context.Context, arg GetOAuthTokenAnyStateParams) (OauthToken, error)
 	GetOTPByUUID(ctx context.Context, argUuid uuid.UUID) (OtpCode, error)
 	GetOrder(ctx context.Context, arg GetOrderParams) (Order, error)
 	GetOrderByExternalReference(ctx context.Context, arg GetOrderByExternalReferenceParams) (Order, error)
@@ -996,6 +1016,7 @@ type Querier interface {
 	// TEC-223: the price a unit was sold at to buyer by seller (its latest
 	// order line with the unit assigned, the order not cancelled), in currency.
 	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
+	GetUsedOAuthCodeFamily(ctx context.Context, codeHash string) (pgtype.UUID, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (User, error)
@@ -2462,6 +2483,9 @@ type Querier interface {
 	// TEC-91: mobile sign-out drops the device's Expo tokens.
 	RevokeDevicePushTokensForDevice(ctx context.Context, arg RevokeDevicePushTokensForDeviceParams) (int64, error)
 	RevokeMobileSessionsForDevice(ctx context.Context, arg RevokeMobileSessionsForDeviceParams) (int64, error)
+	RevokeOAuthFamily(ctx context.Context, family uuid.UUID) error
+	// Revoking is the claim: of two concurrent refreshes only one wins.
+	RevokeOAuthToken(ctx context.Context, id int64) (int64, error)
 	RevokeOtherRefreshTokensForUser(ctx context.Context, arg RevokeOtherRefreshTokensForUserParams) error
 	RevokeRefreshTokenByHash(ctx context.Context, tokenHash string) (int64, error)
 	RevokeRefreshTokenByUUIDForUser(ctx context.Context, arg RevokeRefreshTokenByUUIDForUserParams) (int64, error)
@@ -2669,6 +2693,9 @@ type Querier interface {
 	TouchConversationInbound(ctx context.Context, arg TouchConversationInboundParams) (Conversation, error)
 	// Counters of a newly stored outbound (staff, AI, system) message.
 	TouchConversationOutbound(ctx context.Context, arg TouchConversationOutboundParams) (Conversation, error)
+	TouchOAuthClient(ctx context.Context, clientID string) error
+	// Last use of the token and its grant (connected apps list).
+	TouchOAuthToken(ctx context.Context, id int64) error
 	UnlinkServiceMeasurement(ctx context.Context, arg UnlinkServiceMeasurementParams) (int64, error)
 	UpdateAIConversationTitle(ctx context.Context, arg UpdateAIConversationTitleParams) (AiConversation, error)
 	UpdateAISettings(ctx context.Context, arg UpdateAISettingsParams) (AiSetting, error)
@@ -2810,6 +2837,8 @@ type Querier interface {
 	UpsertNotificationEvent(ctx context.Context, arg UpsertNotificationEventParams) error
 	UpsertNotificationPreferenceRow(ctx context.Context, arg UpsertNotificationPreferenceRowParams) (NotificationPreference, error)
 	UpsertNotificationTemplate(ctx context.Context, arg UpsertNotificationTemplateParams) (NotificationTemplate, error)
+	// Consent creates the user's connected app or brings a revoked one back.
+	UpsertOAuthGrant(ctx context.Context, arg UpsertOAuthGrantParams) (OauthGrant, error)
 	UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error)
 	UpsertOrganizationProductStockForRepair(ctx context.Context, arg UpsertOrganizationProductStockForRepairParams) error
 	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
@@ -2828,6 +2857,8 @@ type Querier interface {
 	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)
 	UpsertUnitCurrentStateForRepair(ctx context.Context, arg UpsertUnitCurrentStateForRepairParams) error
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
+	// Marking the code used is the claim; an expired or used code returns no row.
+	UseOAuthCode(ctx context.Context, arg UseOAuthCodeParams) (OauthCode, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
 	VoidContractInstance(ctx context.Context, arg VoidContractInstanceParams) (ContractInstance, error)
 	// VoidStaffPayment marks a payment void after its ledger row was reversed;

@@ -270,6 +270,12 @@ const (
 	PermConversationsRead   = "conversations.read"
 	PermConversationsReply  = "conversations.reply"
 	PermConversationsManage = "conversations.manage"
+
+	// TEC-400 (000104): MCP OAuth (F4-03). mcp.connect goes to the owner and
+	// center roles; the customer MCP endpoint is gated by realm, not by a
+	// permission.
+	PermMCPConnect       = "mcp.connect"
+	PermMCPClientsManage = "mcp.clients.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.
