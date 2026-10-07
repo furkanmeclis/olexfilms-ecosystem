@@ -52,6 +52,8 @@ const (
 	GroupCampaigns Group = "campaigns"
 	// GroupCertificates: certificate policy and expiry notices (TEC-479).
 	GroupCertificates Group = "certificates"
+	// GroupShowcase: dealer showcase publication (TEC-466).
+	GroupShowcase Group = "showcase"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -150,7 +152,16 @@ const (
 	// absent per F5 QUESTIONS S13; warnings stay internal.
 	KeyCertificatesRequireAdminApproval = "certificates.require_admin_approval"
 	KeyCertificatesExpiryNoticeDays     = "certificates.expiry_notice_days"
+	// KeyShowcaseApprovalRequired makes a dealer showcase wait for center
+	// review before it is published; off = the owner publishes directly
+	// (TEC-466, F5 QUESTIONS S4).
+	KeyShowcaseApprovalRequired = "showcase.approval_required"
+	// KeyShowcaseMaxPhotos caps the gallery photos of one showcase (TEC-466).
+	KeyShowcaseMaxPhotos = "showcase.max_photos"
 )
+
+// DefaultShowcaseMaxPhotos is the catalog default of KeyShowcaseMaxPhotos.
+const DefaultShowcaseMaxPhotos = 12
 
 // Catalog defaults of the campaign keys (F4 QUESTIONS S14).
 const (
@@ -316,6 +327,10 @@ var catalog = []Definition{
 		Description: "Require center approval when a service with certificate warnings changes status (TEC-479)"},
 	{Key: KeyCertificatesExpiryNoticeDays, Group: GroupCertificates, Kind: KindInt, Default: int64(DefaultCertificatesExpiryNoticeDays), Min: i64(1), Max: i64(365),
 		Description: "Days before certificate expiry to enqueue the internal expiry notice (TEC-479)"},
+	{Key: KeyShowcaseApprovalRequired, Group: GroupShowcase, Kind: KindBool, Default: false,
+		Description: "Dealer showcases wait for center review before they are published; off = the owner publishes directly (TEC-466)"},
+	{Key: KeyShowcaseMaxPhotos, Group: GroupShowcase, Kind: KindInt, Default: int64(DefaultShowcaseMaxPhotos), Min: i64(1), Max: i64(50),
+		Description: "Gallery photos one dealer showcase may hold (TEC-466)"},
 }
 
 var byKey = func() map[string]Definition {

@@ -157,5 +157,11 @@
   "system.keys.campaigns_quiet_hours_start": "Beginn der Ruhezeit",
   "system.keys.campaigns_quiet_hours_start_hint": "Ab dieser Stunde in der Zeitzone des Empfängers warten Kampagnen-WhatsApp-Nachrichten (0–23).",
   "system.keys.campaigns_quiet_hours_end": "Ende der Ruhezeit",
-  "system.keys.campaigns_quiet_hours_end_hint": "Wartende Nachrichten gehen zu dieser Stunde in der Zeitzone des Empfängers raus; gleich dem Beginn schaltet die Ruhezeit ab (0–23)."
+  "system.keys.campaigns_quiet_hours_end_hint": "Wartende Nachrichten gehen zu dieser Stunde in der Zeitzone des Empfängers raus; gleich dem Beginn schaltet die Ruhezeit ab (0–23).",
+  "system.groups.showcase": "Händler-Schaufenster",
+  "system.groups.showcase_hint": "Freigabe der Veröffentlichung und Galeriegrenze der Händler-Schaufenster.",
+  "system.keys.showcase_approval_required": "Veröffentlichung erfordert Freigabe durch die Zentrale",
+  "system.keys.showcase_approval_required_hint": "Wenn aktiv, wird ein Händler-Schaufenster erst nach Freigabe durch die Zentrale veröffentlicht; sonst veröffentlicht der Händler direkt.",
+  "system.keys.showcase_max_photos": "Maximale Fotos pro Schaufenster",
+  "system.keys.showcase_max_photos_hint": "Anzahl der Fotos, die die Galerie eines Händler-Schaufensters enthalten darf (1–50)."
 }

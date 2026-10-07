@@ -16048,7 +16048,7 @@ export interface components {
             /** @example contract_grace_days */
             key: string;
             /** @enum {string} */
-            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims" | "whatsapp" | "mcp" | "campaigns";
+            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims" | "whatsapp" | "mcp" | "campaigns" | "showcase";
             /** @enum {string} */
             kind: "int" | "bool" | "string";
             default: components["schemas"]["SystemSettingValue"];

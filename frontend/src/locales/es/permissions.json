@@ -208,5 +208,9 @@
   "labels.leads.convert_org": "Convertir cliente potencial en organización",
   "labels.quotes.read": "Ver presupuestos",
   "labels.quotes.write": "Gestionar presupuestos",
-  "groups.quotes": "Presupuestos"
+  "groups.quotes": "Presupuestos",
+  "labels.showcase.read": "Ver escaparate",
+  "labels.showcase.write": "Editar escaparate",
+  "labels.platform.showcase.review": "Revisar escaparates de distribuidores",
+  "groups.dealer_showcase": "Escaparate del distribuidor"
 }

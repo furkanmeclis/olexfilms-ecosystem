@@ -208,5 +208,9 @@
   "labels.leads.convert_org": "Convert lead to organization",
   "labels.quotes.read": "View quotes",
   "labels.quotes.write": "Manage quotes",
-  "groups.quotes": "Quotes"
+  "groups.quotes": "Quotes",
+  "labels.showcase.read": "View showcase",
+  "labels.showcase.write": "Edit showcase",
+  "labels.platform.showcase.review": "Review dealer showcases",
+  "groups.dealer_showcase": "Dealer showcase"
 }
