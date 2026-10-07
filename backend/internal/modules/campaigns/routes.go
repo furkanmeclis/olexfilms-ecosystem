@@ -4,6 +4,7 @@ package campaigns
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
@@ -45,3 +46,16 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.Handle("POST /v1/campaigns/{uuid}/reject", approve(h.Reject))
 	mux.Handle("POST /v1/campaigns/{uuid}/request-changes", approve(h.RequestChanges))
 }
+
+// RegisterPublicRoutes mounts the public unsubscribe endpoint of the
+// campaign e-mail link (TEC-407): no authentication, limit hits per window
+// per client IP.
+func RegisterPublicRoutes(mux *http.ServeMux, h *handler.Unsubscribe) {
+	mux.Handle("POST /v1/public/campaigns/unsubscribe", http.HandlerFunc(h.Post))
+}
+
+// UnsubscribeRateLimit is the per-IP limit of the public unsubscribe.
+const (
+	UnsubscribeRateLimit  = 20
+	UnsubscribeRateWindow = time.Minute
+)

@@ -48,6 +48,8 @@ const (
 	GroupWhatsApp Group = "whatsapp"
 	// GroupMCP: MCP endpoints (TEC-402).
 	GroupMCP Group = "mcp"
+	// GroupCampaigns: campaign sending (TEC-407).
+	GroupCampaigns Group = "campaigns"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -127,6 +129,23 @@ const (
 	// KeyMCPRequestsPerHourPerOrg caps the MCP requests of one organization
 	// per hour over every connected app and endpoint (TEC-402).
 	KeyMCPRequestsPerHourPerOrg = "mcp.requests_per_hour_per_org"
+
+	// KeyCampaignsWhatsAppPerMinute caps the campaign WhatsApp messages over
+	// all recipients per minute (TEC-407); conversation messages keep
+	// KeyWhatsAppSendPerMinute.
+	KeyCampaignsWhatsAppPerMinute = "campaigns.whatsapp_per_minute"
+	// Campaign WhatsApp quiet hours in the recipient's time zone (TEC-407):
+	// from quiet_hours_start:00 to quiet_hours_end:00 messages wait; equal
+	// values switch the quiet hours off.
+	KeyCampaignsQuietHoursStart = "campaigns.quiet_hours_start"
+	KeyCampaignsQuietHoursEnd   = "campaigns.quiet_hours_end"
+)
+
+// Catalog defaults of the campaign keys (F4 QUESTIONS S14).
+const (
+	DefaultCampaignsWhatsAppPerMinute = 20
+	DefaultCampaignsQuietHoursStart   = 21
+	DefaultCampaignsQuietHoursEnd     = 9
 )
 
 // DefaultMCPRequestsPerHourPerOrg is the catalog default of
@@ -265,6 +284,12 @@ var catalog = []Definition{
 		Description: "Link to the AI guidelines sent with the WhatsApp consent question; empty = the guidelines text is sent in the message (TEC-396)"},
 	{Key: KeyMCPRequestsPerHourPerOrg, Group: GroupMCP, Kind: KindInt, Default: int64(DefaultMCPRequestsPerHourPerOrg), Min: i64(1), Max: i64(100000),
 		Description: "MCP requests one organization may make per hour over all connected apps; further requests get 429 (TEC-402)"},
+	{Key: KeyCampaignsWhatsAppPerMinute, Group: GroupCampaigns, Kind: KindInt, Default: int64(DefaultCampaignsWhatsAppPerMinute), Min: i64(1), Max: i64(600),
+		Description: "Campaign WhatsApp messages per minute over all recipients; further recipients wait (TEC-407)"},
+	{Key: KeyCampaignsQuietHoursStart, Group: GroupCampaigns, Kind: KindInt, Default: int64(DefaultCampaignsQuietHoursStart), Min: i64(0), Max: i64(23),
+		Description: "Hour (recipient's time zone) from which campaign WhatsApp messages wait until the quiet hours end (TEC-407)"},
+	{Key: KeyCampaignsQuietHoursEnd, Group: GroupCampaigns, Kind: KindInt, Default: int64(DefaultCampaignsQuietHoursEnd), Min: i64(0), Max: i64(23),
+		Description: "Hour (recipient's time zone) at which campaign WhatsApp quiet hours end; equal to the start = no quiet hours (TEC-407)"},
 }
 
 var byKey = func() map[string]Definition {

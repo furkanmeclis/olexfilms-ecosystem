@@ -111,3 +111,32 @@ func TestTaskRetryDelayAndIsFailure(t *testing.T) {
 		t.Fatalf("default backoff = %s", d)
 	}
 }
+
+// TEC-407: campaigns:send_recipient runs on the campaigns queue, one task
+// per recipient row, three retries; a pending task id is not an error.
+func TestCampaignEnqueuer(t *testing.T) {
+	c := &fakeEnqueueClient{}
+	e := CampaignEnqueuer{Client: c}
+	if err := e.EnqueueRecipient(context.Background(), 77); err != nil {
+		t.Fatal(err)
+	}
+	var p CampaignRecipientPayload
+	if err := json.Unmarshal(c.tasks[0].Payload(), &p); err != nil || p.RecipientID != 77 || c.tasks[0].Type() != TaskCampaignSendRecipient {
+		t.Fatalf("task %s payload %+v %v", c.tasks[0].Type(), p, err)
+	}
+	want := map[asynq.OptionType]any{
+		asynq.QueueOpt: QueueCampaigns, asynq.TaskIDOpt: "campaign-rcpt-77", asynq.MaxRetryOpt: CampaignSendMaxRetry,
+	}
+	for _, o := range c.opts[0] {
+		if v, ok := want[o.Type()]; ok && o.Value() == v {
+			delete(want, o.Type())
+		}
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing options %v", want)
+	}
+	c.err = asynq.ErrTaskIDConflict
+	if err := e.EnqueueRecipient(context.Background(), 77); err != nil {
+		t.Fatalf("task id conflict must be ignored: %v", err)
+	}
+}

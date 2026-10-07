@@ -12147,6 +12147,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/campaigns/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unsubscribe from campaign messages (e-mail link)
+         * @description TEC-407. No authentication. The token comes from the unsubscribe
+         *     link of a campaign e-mail (frontend `/abonelik-iptal/{token}`, signed
+         *     user id, no expiry). Writes the marketing opt-out
+         *     (`contact_opt_outs`, scope `marketing`, source `campaign`) of the
+         *     user's phone number, the same opt-out a WhatsApp DUR reply writes;
+         *     later campaigns leave the user out on every channel. Repeating it
+         *     answers 200 again. An invalid token or a user without a phone number
+         *     is 404. Rate limited per client IP (20 per minute); over the limit
+         *     429 with Retry-After.
+         */
+        post: operations["unsubscribeCampaignMessages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/conversations/meta": {
         parameters: {
             query?: never;
@@ -15888,7 +15916,7 @@ export interface components {
             /** @example contract_grace_days */
             key: string;
             /** @enum {string} */
-            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims" | "whatsapp" | "mcp";
+            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims" | "whatsapp" | "mcp" | "campaigns";
             /** @enum {string} */
             kind: "int" | "bool" | "string";
             default: components["schemas"]["SystemSettingValue"];
@@ -22442,6 +22470,18 @@ export interface components {
                 locale: components["schemas"]["LocaleCode"];
                 channels: components["schemas"]["CampaignChannel"][];
             }[];
+        };
+        CampaignUnsubscribeInput: {
+            token: string;
+        };
+        EnvelopeCampaignUnsubscribe: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                /** @enum {boolean} */
+                unsubscribed: true;
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeCampaign: {
             /** @enum {boolean} */
@@ -44921,6 +44961,33 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    unsubscribeCampaignMessages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CampaignUnsubscribeInput"];
+            };
+        };
+        responses: {
+            /** @description Opted out */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCampaignUnsubscribe"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getConversationsMeta: {

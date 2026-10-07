@@ -14,7 +14,7 @@ import (
 //	critical  user-facing delivery (notifications: OTP, WhatsApp, e-mail;
 //	          WhatsApp conversation sends and inbound media, TEC-395)
 //	default   imports, bulk actions, search indexing, untagged tasks
-//	low       maintenance sweeps (log purge)
+//	low       maintenance sweeps (log purge), campaign sends (TEC-407)
 //	docs      PDF documents (Gotenberg) and exports, run by worker-docs
 var queueGroups = map[string]map[string]int{
 	"critical": {queue.QueueNotifications: 6, queue.QueueWhatsApp: 6},
@@ -24,7 +24,7 @@ var queueGroups = map[string]map[string]int{
 		queue.QueueBulk:    3,
 		queue.QueueSearch:  3,
 	},
-	"low":  {queue.QueueMaintenance: 1},
+	"low":  {queue.QueueMaintenance: 1, queue.QueueCampaigns: 1},
 	"docs": {queue.QueueDocs: 4, queue.QueueExports: 2},
 }
 

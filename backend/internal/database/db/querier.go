@@ -208,6 +208,7 @@ type Querier interface {
 	// Same filter block as ListOrganizationsFiltered.
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
+	CountPendingCampaignRecipients(ctx context.Context, campaignID int64) (int64, error)
 	// Open (pending) vehicle transfers that involve the user; the transfer's
 	// current owner is immutable, so a merge waits until they are closed.
 	CountPendingVehicleTransfersForUser(ctx context.Context, userID int64) (int64, error)
@@ -269,6 +270,7 @@ type Querier interface {
 	CountWarrantyClaimPhotos(ctx context.Context, claimID int64) (int64, error)
 	CountWarrantyClaimsInScope(ctx context.Context, arg CountWarrantyClaimsInScopeParams) (int64, error)
 	CountWarrantyRows(ctx context.Context, arg CountWarrantyRowsParams) (int64, error)
+	CountWebPushSubscriptionsByUsers(ctx context.Context, userIds []int64) ([]CountWebPushSubscriptionsByUsersRow, error)
 	// Conversations ----------------------------------------------------------------
 	CreateAIConversation(ctx context.Context, arg CreateAIConversationParams) (AiConversation, error)
 	// Messages ---------------------------------------------------------------------
@@ -709,10 +711,13 @@ type Querier interface {
 	// An operation visible from the given scope: a tenant operation of that
 	// organization, or (organization_id NULL in the query) a platform operation.
 	GetBulkOperationByUUID(ctx context.Context, arg GetBulkOperationByUUIDParams) (BulkOperation, error)
+	GetCampaignByID(ctx context.Context, id int64) (Campaign, error)
 	GetCampaignByIDForUpdate(ctx context.Context, arg GetCampaignByIDForUpdateParams) (Campaign, error)
 	GetCampaignByUUID(ctx context.Context, arg GetCampaignByUUIDParams) (Campaign, error)
 	GetCampaignContent(ctx context.Context, arg GetCampaignContentParams) (CampaignContent, error)
 	GetCampaignMediaByUUID(ctx context.Context, arg GetCampaignMediaByUUIDParams) (CampaignMedium, error)
+	// Current contact data of a recipient user (time zone for quiet hours).
+	GetCampaignRecipientContact(ctx context.Context, id int64) (GetCampaignRecipientContactRow, error)
 	GetCarBrandByID(ctx context.Context, id int64) (CarBrand, error)
 	GetCarBrandByUUID(ctx context.Context, argUuid uuid.UUID) (CarBrand, error)
 	GetCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (CarModel, error)
@@ -1140,6 +1145,12 @@ type Querier interface {
 	InsertCampaignMedia(ctx context.Context, arg InsertCampaignMediaParams) (CampaignMedium, error)
 	// Recipients ----------------------------------------------------------------
 	InsertCampaignRecipient(ctx context.Context, arg InsertCampaignRecipientParams) (CampaignRecipient, error)
+	// Sending (TEC-407, F4-04d) -------------------------------------------------
+	// The recipient snapshot of a campaign in one statement (one statistics
+	// projection update). rows is a JSON array of {user_id, channel, locale,
+	// target_address, push_token_count, status, reason}. An existing
+	// (campaign, user, channel) row is kept.
+	InsertCampaignRecipientSnapshot(ctx context.Context, arg InsertCampaignRecipientSnapshotParams) (int64, error)
 	InsertConsent(ctx context.Context, arg InsertConsentParams) (Consent, error)
 	// Opt-outs ---------------------------------------------------------------------
 	// Append-only; the AFTER INSERT trigger updates contact_opt_out_state.
@@ -1751,6 +1762,10 @@ type Querier interface {
 	// Territories of the brand that overlap an area: the same area, an ancestor
 	// (the country or the province of a district) or a descendant.
 	ListOverlappingTerritories(ctx context.Context, arg ListOverlappingTerritoriesParams) ([]ListOverlappingTerritoriesRow, error)
+	// Pending recipients of a sending campaign, in id pages; before (when set)
+	// keeps those not touched since then (the scheduler re-enqueues their task;
+	// a still queued task is deduplicated by its task id).
+	ListPendingCampaignRecipientIDs(ctx context.Context, arg ListPendingCampaignRecipientIDsParams) ([]int64, error)
 	ListPermissionSlugsByRoleID(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
@@ -1875,6 +1890,7 @@ type Querier interface {
 	// lose the personal data) and after an ownership transfer.
 	ListSearchUuidsByCustomer(ctx context.Context, argUuid uuid.UUID) (ListSearchUuidsByCustomerRow, error)
 	ListSearchUuidsByUserID(ctx context.Context, userID int64) (ListSearchUuidsByUserIDRow, error)
+	ListSendingCampaigns(ctx context.Context, pageLimit int32) ([]Campaign, error)
 	// TEC-369: category / recurrence are CSV multi-value filters; q matches
 	// name and description. Full array (small brand list, client-side table).
 	ListServiceCatalogItems(ctx context.Context, arg ListServiceCatalogItemsParams) ([]ServiceCatalogItem, error)
@@ -2185,6 +2201,7 @@ type Querier interface {
 	LockBarcodeCounter(ctx context.Context, arg LockBarcodeCounterParams) (BarcodeCounter, error)
 	LockBinProductStock(ctx context.Context, arg LockBinProductStockParams) (BinProductStock, error)
 	LockBulkOperationForUndo(ctx context.Context, id int64) (BulkOperation, error)
+	LockCampaignRecipient(ctx context.Context, id int64) (CampaignRecipient, error)
 	// ---------------------------------------------------------------------------
 	// Fixed barcode holdings (quantity per unit and owner).
 	LockFixedBarcodeHolding(ctx context.Context, arg LockFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
@@ -2602,6 +2619,8 @@ type Querier interface {
 	// Recomputes the subtotal from the lines (total = subtotal + tax_total).
 	RecalculateOrderTotals(ctx context.Context, id int64) (Order, error)
 	ReceiveTransferRequest(ctx context.Context, arg ReceiveTransferRequestParams) (StockTransferRequest, error)
+	// A failed attempt that will be retried: the recipient stays pending.
+	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
 	RejectStockTransferRequest(ctx context.Context, arg RejectStockTransferRequestParams) (StockTransferRequest, error)
 	// Cancel: releases every active reservation of the order.
 	ReleaseReservationsByOrder(ctx context.Context, orderID int64) (int64, error)

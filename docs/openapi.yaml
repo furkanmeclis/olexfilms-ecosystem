@@ -23726,6 +23726,37 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /v1/public/campaigns/unsubscribe:
+    post:
+      tags: [Public]
+      operationId: unsubscribeCampaignMessages
+      summary: Unsubscribe from campaign messages (e-mail link)
+      description: |
+        TEC-407. No authentication. The token comes from the unsubscribe
+        link of a campaign e-mail (frontend `/abonelik-iptal/{token}`, signed
+        user id, no expiry). Writes the marketing opt-out
+        (`contact_opt_outs`, scope `marketing`, source `campaign`) of the
+        user's phone number, the same opt-out a WhatsApp DUR reply writes;
+        later campaigns leave the user out on every channel. Repeating it
+        answers 200 again. An invalid token or a user without a phone number
+        is 404. Rate limited per client IP (20 per minute); over the limit
+        429 with Retry-After.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CampaignUnsubscribeInput" }
+      responses:
+        "200":
+          description: Opted out
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCampaignUnsubscribe" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/TooManyRequests" }
+
   /v1/conversations/meta:
     get:
       tags: [Conversations]
@@ -29736,7 +29767,7 @@ components:
       required: [key, group, kind, default, description, value, is_default, schema_version]
       properties:
         key: { type: string, example: contract_grace_days }
-        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads, warranty_claims, whatsapp, mcp] }
+        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads, warranty_claims, whatsapp, mcp, campaigns] }
         kind: { type: string, enum: [int, bool, string] }
         default: { $ref: "#/components/schemas/SystemSettingValue" }
         description: { type: string }
@@ -38038,6 +38069,23 @@ components:
               email: { type: [string, "null"], example: "a***@e***.com" }
               locale: { $ref: "#/components/schemas/LocaleCode" }
               channels: { type: array, items: { $ref: "#/components/schemas/CampaignChannel" } }
+    CampaignUnsubscribeInput:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token: { type: string, minLength: 1, maxLength: 64 }
+    EnvelopeCampaignUnsubscribe:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [unsubscribed]
+          properties:
+            unsubscribed: { type: boolean, enum: [true] }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
     EnvelopeCampaign:
       type: object
       required: [success, data, meta]

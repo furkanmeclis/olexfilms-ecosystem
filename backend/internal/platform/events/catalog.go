@@ -666,6 +666,8 @@ func catalogConstants() []string {
 		CampaignsRejected,
 		CampaignsChangesRequested,
 		AIQuotaThreshold,
+		CampaignsStarted,
+		CampaignsFinished,
 	}
 }
 
@@ -701,6 +703,15 @@ const (
 	CampaignsApproved         = "campaigns.approved"
 	CampaignsRejected         = "campaigns.rejected"
 	CampaignsChangesRequested = "campaigns.changes_requested"
+)
+
+// Campaign sending (TEC-407, F4-04d): started is written when the scheduler
+// moves a due campaign to sending and takes the recipient snapshot;
+// finished when the last recipient ends (sent / partially_failed). Payload:
+// campaign_uuid, brand_id, organization_id, status, recipients_* counters.
+const (
+	CampaignsStarted  = "campaigns.started"
+	CampaignsFinished = "campaigns.finished"
 )
 
 // AIQuotaThreshold (TEC-388) is written in the usage transaction when a

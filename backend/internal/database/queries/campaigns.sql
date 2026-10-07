@@ -296,3 +296,69 @@ LEFT JOIN LATERAL (
 LEFT JOIN contact_opt_out_state oo
     ON oo.contact_e164 = u.phone_e164 AND oo.scope = 'marketing'
 WHERE u.id = ANY(sqlc.arg(user_ids)::bigint[]);
+
+-- Sending (TEC-407, F4-04d) -------------------------------------------------
+
+-- name: InsertCampaignRecipientSnapshot :execrows
+-- The recipient snapshot of a campaign in one statement (one statistics
+-- projection update). rows is a JSON array of {user_id, channel, locale,
+-- target_address, push_token_count, status, reason}. An existing
+-- (campaign, user, channel) row is kept.
+INSERT INTO campaign_recipients (campaign_id, organization_id, brand_id, user_id, channel, locale,
+                                 target_address, push_token_count, status, reason)
+SELECT sqlc.arg(campaign_id), sqlc.arg(organization_id), sqlc.arg(brand_id), r.user_id, r.channel, r.locale,
+       r.target_address, r.push_token_count, r.status, r.reason
+FROM jsonb_to_recordset(sqlc.arg(rows)::jsonb) AS r (
+    user_id BIGINT, channel TEXT, locale TEXT, target_address TEXT, push_token_count INT, status TEXT, reason TEXT)
+ON CONFLICT (campaign_id, user_id, channel) DO NOTHING;
+
+-- name: LockCampaignRecipient :one
+SELECT * FROM campaign_recipients
+WHERE id = sqlc.arg(id)
+FOR UPDATE;
+
+-- name: RecordCampaignRecipientAttempt :one
+-- A failed attempt that will be retried: the recipient stays pending.
+UPDATE campaign_recipients
+SET attempts = attempts + 1,
+    reason   = sqlc.narg(reason)::text
+WHERE id = sqlc.arg(id) AND status = 'pending'
+RETURNING *;
+
+-- name: CountPendingCampaignRecipients :one
+SELECT COUNT(*) FROM campaign_recipients
+WHERE campaign_id = sqlc.arg(campaign_id) AND status = 'pending';
+
+-- name: ListSendingCampaigns :many
+SELECT * FROM campaigns
+WHERE status = 'sending'
+ORDER BY started_at, id
+LIMIT sqlc.arg(page_limit);
+
+-- name: ListPendingCampaignRecipientIDs :many
+-- Pending recipients of a sending campaign, in id pages; before (when set)
+-- keeps those not touched since then (the scheduler re-enqueues their task;
+-- a still queued task is deduplicated by its task id).
+SELECT id FROM campaign_recipients
+WHERE campaign_id = sqlc.arg(campaign_id) AND status = 'pending'
+  AND (sqlc.narg(before)::timestamptz IS NULL OR updated_at < sqlc.narg(before)::timestamptz)
+  AND id > sqlc.arg(after_id)
+ORDER BY id
+LIMIT sqlc.arg(page_limit);
+
+-- name: GetCampaignRecipientContact :one
+-- Current contact data of a recipient user (time zone for quiet hours).
+SELECT u.id, u.uuid, u.name, u.surname, COALESCE(u.email, '')::text AS email,
+       COALESCE(u.phone_e164, '')::text AS phone_e164, COALESCE(u.timezone, '')::text AS timezone
+FROM users u
+WHERE u.id = sqlc.arg(id);
+
+-- name: CountWebPushSubscriptionsByUsers :many
+SELECT user_id, COUNT(*)::int AS subscriptions
+FROM push_subscriptions
+WHERE user_id = ANY(sqlc.arg(user_ids)::bigint[])
+GROUP BY user_id;
+
+-- name: GetCampaignByID :one
+SELECT * FROM campaigns
+WHERE id = sqlc.arg(id);

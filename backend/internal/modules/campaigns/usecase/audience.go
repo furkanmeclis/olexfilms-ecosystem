@@ -247,6 +247,11 @@ type Recipient struct {
 	PushTokens int32
 	// Channels the user is reachable on among the campaign channels.
 	Channels []string
+	// Channel preferences (customer_profiles.notification_prefs) and the
+	// marketing opt-out of the phone number (the snapshot records why a
+	// channel is skipped).
+	PrefPush, PrefWhatsApp, PrefEmail bool
+	MarketingOptedOut                 bool
 }
 
 // Audience is the resolved audience of a campaign.
@@ -316,6 +321,8 @@ func (s *Service) ResolveAudience(ctx context.Context, q *db.Queries, row db.Cam
 		rc := Recipient{
 			UserID: r.UserID, UserUUID: r.UserUuid, Name: r.Name, Surname: r.Surname, Email: r.Email,
 			PhoneE164: r.PhoneE164, Locale: r.Locale, PushTokens: r.PushTokens, Channels: []string{},
+			PrefPush: r.PrefPush, PrefWhatsApp: r.PrefWhatsapp, PrefEmail: r.PrefEmail,
+			MarketingOptedOut: r.MarketingOptedOut,
 		}
 		for _, ch := range row.Channels {
 			ok := false
