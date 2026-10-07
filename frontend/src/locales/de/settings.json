@@ -137,5 +137,9 @@
   "system.groups.leads": "Leads",
   "system.groups.leads_hint": "Lead-Pipeline und das öffentliche Händlerbewerbungsformular.",
   "system.keys.leads_dealer_application_enabled": "Händlerbewerbungsformular",
-  "system.keys.leads_dealer_application_enabled_hint": "Wenn aktiv, ist das öffentliche Bewerbungsformular unter /bayi-basvuru online und in der Sitemap. Es lässt sich nur aktivieren, solange das Lead-Modul systemweit aktiv ist."
+  "system.keys.leads_dealer_application_enabled_hint": "Wenn aktiv, ist das öffentliche Bewerbungsformular unter /bayi-basvuru online und in der Sitemap. Es lässt sich nur aktivieren, solange das Lead-Modul systemweit aktiv ist.",
+  "system.groups.mcp": "MCP-Verbindungen",
+  "system.groups.mcp_hint": "Grenzen der MCP-Endpunkte, mit denen sich KI-Clients (Claude, ChatGPT) verbinden.",
+  "system.keys.mcp_requests_per_hour_per_org": "MCP-Anfragen pro Organisation und Stunde",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Anfragen, die eine Organisation pro Stunde über alle verbundenen KI-Apps stellen darf; weitere Anfragen werden bis zum Ende des Zeitfensters abgelehnt."
 }

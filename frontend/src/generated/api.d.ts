@@ -4059,6 +4059,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/mcp/{endpoint}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * MCP Streamable HTTP endpoint (TEC-402)
+         * @description JSON-RPC 2.0 messages of the Model Context Protocol (stateless
+         *     Streamable HTTP; GET and DELETE answer 405). Needs a Bearer access
+         *     token issued for this endpoint (`resource`). `tools/list` returns the
+         *     AI tool registry tools the token's user may use in the token's
+         *     organization (`listChanged: false`); `tools/call` checks the same
+         *     again. Write tools create a pending action (source `mcp`) approved in
+         *     the panel instead of running. Limits: 60 requests per minute per
+         *     connection and `mcp.requests_per_hour_per_org` (system setting,
+         *     default 600) per organization. See docs/MCP.md.
+         */
+        post: operations["postMCPMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/oauth/requests/{uuid}": {
         parameters: {
             query?: never;
@@ -14879,11 +14907,23 @@ export interface components {
         };
         /** @description A JSON scalar matching the setting kind (integer, boolean or string). */
         SystemSettingValue: number | boolean | string;
+        /** @description JSON-RPC error response of the MCP HTTP gate (TEC-402). */
+        MCPJSONRPCError: {
+            /** @enum {string} */
+            jsonrpc: "2.0";
+            /** @description Id of the rejected request; null when unknown */
+            id: string | number | null;
+            error: {
+                /** @description -32001 unauthorized, -32003 forbidden, -32029 rate limited, -32603 internal */
+                code: number;
+                message: string;
+            };
+        };
         SystemSetting: {
             /** @example contract_grace_days */
             key: string;
             /** @enum {string} */
-            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims";
+            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims" | "whatsapp" | "mcp";
             /** @enum {string} */
             kind: "int" | "bool" | "string";
             default: components["schemas"]["SystemSettingValue"];
@@ -28539,6 +28579,76 @@ export interface operations {
                 };
                 content: {
                     "text/html": string;
+                };
+            };
+        };
+    };
+    postMCPMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpoint: "dealer" | "customer" | "user";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description JSON-RPC response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Notification accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /**
+             * @description Missing, invalid, expired or foreign-audience token. The
+             *     `WWW-Authenticate` header carries `resource_metadata` (RFC 9728)
+             *     and, for a presented token, `error="invalid_token"`.
+             */
+            401: {
+                headers: {
+                    "WWW-Authenticate"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MCPJSONRPCError"];
+                };
+            };
+            /** @description The mcp module is off for the token's organization, or the user lost the membership / mcp.connect */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MCPJSONRPCError"];
+                };
+            };
+            /** @description Connection or organization request limit exceeded */
+            429: {
+                headers: {
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MCPJSONRPCError"];
                 };
             };
         };

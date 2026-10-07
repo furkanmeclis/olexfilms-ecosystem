@@ -137,5 +137,9 @@
   "system.groups.leads": "Contatti commerciali",
   "system.groups.leads_hint": "Pipeline dei contatti e modulo pubblico di candidatura rivenditore.",
   "system.keys.leads_dealer_application_enabled": "Modulo di candidatura rivenditore",
-  "system.keys.leads_dealer_application_enabled_hint": "Se attivo, il modulo pubblico /bayi-basvuru è online e incluso nella mappa del sito. Si può attivare solo mentre il modulo contatti è aperto in tutto il sistema."
+  "system.keys.leads_dealer_application_enabled_hint": "Se attivo, il modulo pubblico /bayi-basvuru è online e incluso nella mappa del sito. Si può attivare solo mentre il modulo contatti è aperto in tutto il sistema.",
+  "system.groups.mcp": "Connessioni MCP",
+  "system.groups.mcp_hint": "Limiti degli endpoint MCP a cui si collegano i client di IA (Claude, ChatGPT).",
+  "system.keys.mcp_requests_per_hour_per_org": "Richieste MCP per organizzazione all’ora",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Richieste che un’organizzazione può effettuare ogni ora tramite tutte le app di IA collegate; quelle in eccesso vengono rifiutate fino alla fine della finestra."
 }

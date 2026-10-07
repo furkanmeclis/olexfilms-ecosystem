@@ -194,5 +194,7 @@
   "actions.stock.split.created": "Рулон поділено",
   "resources.stock.split": "Поділ рулону",
   "filters.actor": "Фільтр за користувачем",
-  "resources.platform.organizations": "Організації"
+  "resources.platform.organizations": "Організації",
+  "actions.mcp.tool_called": "Викликано інструмент MCP",
+  "resources.mcp_tool": "Інструмент MCP"
 }

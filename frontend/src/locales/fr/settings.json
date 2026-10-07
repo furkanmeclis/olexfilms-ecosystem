@@ -137,5 +137,9 @@
   "system.groups.leads": "Prospects",
   "system.groups.leads_hint": "Pipeline de prospects et formulaire public de candidature revendeur.",
   "system.keys.leads_dealer_application_enabled": "Formulaire de candidature revendeur",
-  "system.keys.leads_dealer_application_enabled_hint": "Activé, le formulaire public /bayi-basvuru est en ligne et figure dans le plan du site. Il ne peut être activé que si le module prospects est ouvert pour tout le système."
+  "system.keys.leads_dealer_application_enabled_hint": "Activé, le formulaire public /bayi-basvuru est en ligne et figure dans le plan du site. Il ne peut être activé que si le module prospects est ouvert pour tout le système.",
+  "system.groups.mcp": "Connexions MCP",
+  "system.groups.mcp_hint": "Limites des points de terminaison MCP auxquels se connectent les clients d’IA (Claude, ChatGPT).",
+  "system.keys.mcp_requests_per_hour_per_org": "Requêtes MCP par organisation et par heure",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Nombre de requêtes qu’une organisation peut effectuer par heure via toutes les applications d’IA connectées ; au-delà, les requêtes sont refusées jusqu’à la fin de la période."
 }

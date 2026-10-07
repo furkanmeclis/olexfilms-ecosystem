@@ -137,5 +137,9 @@
   "system.groups.leads": "Лиды",
   "system.groups.leads_hint": "Воронка лидов и публичная форма заявки дилера.",
   "system.keys.leads_dealer_application_enabled": "Форма заявки дилера",
-  "system.keys.leads_dealer_application_enabled_hint": "Если включено, публичная форма /bayi-basvuru доступна и попадает в карту сайта. Включить можно, только когда модуль лидов открыт для всей системы."
+  "system.keys.leads_dealer_application_enabled_hint": "Если включено, публичная форма /bayi-basvuru доступна и попадает в карту сайта. Включить можно, только когда модуль лидов открыт для всей системы.",
+  "system.groups.mcp": "Подключения MCP",
+  "system.groups.mcp_hint": "Ограничения конечных точек MCP, к которым подключаются ИИ-клиенты (Claude, ChatGPT).",
+  "system.keys.mcp_requests_per_hour_per_org": "Запросов MCP на организацию в час",
+  "system.keys.mcp_requests_per_hour_per_org_hint": "Сколько запросов организация может выполнить за час через все подключённые ИИ-приложения; лишние запросы отклоняются до конца окна."
 }

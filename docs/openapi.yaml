@@ -7485,6 +7485,75 @@ paths:
             text/html:
               schema: { type: string }
 
+  /mcp/{endpoint}:
+    post:
+      tags: [OAuth]
+      operationId: postMCPMessage
+      summary: MCP Streamable HTTP endpoint (TEC-402)
+      description: |
+        JSON-RPC 2.0 messages of the Model Context Protocol (stateless
+        Streamable HTTP; GET and DELETE answer 405). Needs a Bearer access
+        token issued for this endpoint (`resource`). `tools/list` returns the
+        AI tool registry tools the token's user may use in the token's
+        organization (`listChanged: false`); `tools/call` checks the same
+        again. Write tools create a pending action (source `mcp`) approved in
+        the panel instead of running. Limits: 60 requests per minute per
+        connection and `mcp.requests_per_hour_per_org` (system setting,
+        default 600) per organization. See docs/MCP.md.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: endpoint
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [dealer, customer, user]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: JSON-RPC response
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "202":
+          description: Notification accepted
+        "401":
+          description: |
+            Missing, invalid, expired or foreign-audience token. The
+            `WWW-Authenticate` header carries `resource_metadata` (RFC 9728)
+            and, for a presented token, `error="invalid_token"`.
+          headers:
+            WWW-Authenticate:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MCPJSONRPCError"
+        "403":
+          description: The mcp module is off for the token's organization, or the user lost the membership / mcp.connect
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MCPJSONRPCError"
+        "429":
+          description: Connection or organization request limit exceeded
+          headers:
+            Retry-After:
+              schema: { type: integer }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MCPJSONRPCError"
+
   /v1/oauth/requests/{uuid}:
     get:
       tags: [OAuth]
@@ -27487,12 +27556,30 @@ components:
         - type: boolean
         - type: string
 
+    MCPJSONRPCError:
+      type: object
+      description: JSON-RPC error response of the MCP HTTP gate (TEC-402).
+      required: [jsonrpc, id, error]
+      properties:
+        jsonrpc: { type: string, enum: ["2.0"] }
+        id:
+          description: Id of the rejected request; null when unknown
+          type: [string, integer, "null"]
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: integer
+              description: -32001 unauthorized, -32003 forbidden, -32029 rate limited, -32603 internal
+            message: { type: string }
+
     SystemSetting:
       type: object
       required: [key, group, kind, default, description, value, is_default, schema_version]
       properties:
         key: { type: string, example: contract_grace_days }
-        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads, warranty_claims] }
+        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads, warranty_claims, whatsapp, mcp] }
         kind: { type: string, enum: [int, bool, string] }
         default: { $ref: "#/components/schemas/SystemSettingValue" }
         description: { type: string }
