@@ -61,3 +61,22 @@ export function resolveAccountingAccess({
     readOnlyDealer: canRead && orgType === "dealer" && !dealerWrites,
   };
 }
+
+/**
+ * Edit (void) a ledger row: only an open manual entry of the book
+ * (TEC-342). Rows another module or the parent posted (order, service,
+ * transfer…) are never reversed here; a child disputes them instead.
+ */
+export function isEntryVoidable(entry: {
+  source_type: string | null;
+  voided: boolean;
+  reversal_of_uuid: string | null;
+  reversed_by_uuid: string | null;
+}): boolean {
+  return (
+    entry.source_type === "manual" &&
+    !entry.voided &&
+    !entry.reversal_of_uuid &&
+    !entry.reversed_by_uuid
+  );
+}

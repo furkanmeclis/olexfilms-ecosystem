@@ -15,6 +15,10 @@ export type FinanceAccountUpdateInput = Schemas["FinanceAccountUpdateInput"];
 export type CariAccount = Schemas["CariAccount"];
 export type FinanceEntry = Schemas["FinanceEntry"];
 export type FinanceSettlementInput = Schemas["FinanceSettlementInput"];
+export type FinanceEntryInput = Schemas["FinanceEntryInput"];
+export type ManualDirection = FinanceEntryInput["direction"];
+export type CariOpenInput = Schemas["CariOpenInput"];
+export type CustomerSummary = Schemas["CustomerSummary"];
 export type FinanceAccountOpeningInput = Schemas["FinanceAccountOpeningInput"];
 export type Currency = Schemas["Currency"];
 export type CariStatement = Schemas["CariStatement"];
@@ -50,6 +54,13 @@ export const ACCOUNTING_DIRECTIONS: AccountingDirection[] = [
   "collection",
   "payment",
   "opening",
+];
+
+/** Directions of a manual entry (POST /v1/accounting/entries). */
+export const MANUAL_DIRECTIONS: ManualDirection[] = [
+  "income",
+  "expense",
+  "charge",
 ];
 
 /** Settlement directions (POST /v1/accounting/collections | payments). */
@@ -220,7 +231,48 @@ export const accountingService = {
     );
   },
 
-  /** Collection or payment; a repeated idempotency_key answers the same row. */
+  /**
+   * Manual income, expense or cari charge (TEC-342: cari_uuid may name a
+   * customer cari). A repeated idempotency_key answers the same row.
+   */
+  createEntry(body: FinanceEntryInput) {
+    return platformRequest<FinanceEntry>("POST", "/v1/accounting/entries", {
+      body,
+    });
+  },
+
+  /**
+   * Reverses an open manual entry (step-up; 409 ENTRY_NOT_VOIDABLE for a
+   * row another module or the parent posted).
+   */
+  voidEntry(uuid: string, reason: string) {
+    return platformRequest<FinanceEntry>(
+      "POST",
+      `${path("/v1/accounting/entries", uuid)}/void`,
+      { body: { reason } },
+    );
+  },
+
+  /** Active customers of the organization for the customer cari picker. */
+  searchCustomers(q: string) {
+    return platformRequest<AccountingPage<CustomerSummary>>(
+      "GET",
+      "/v1/customers",
+      { query: { status: "active", limit: 10, offset: 0, q: q || undefined } },
+    );
+  },
+
+  /** Opens (201) or returns (200) the cari of a served customer (TEC-342). */
+  openCustomerCari(customerUuid: string) {
+    const body: CariOpenInput = {
+      counterparty_type: "user",
+      counterparty_uuid: customerUuid,
+    };
+    return platformRequest<CariAccount>("POST", "/v1/accounting/cari", {
+      body,
+    });
+  },
+
   /**
    * One-off cash/bank opening balance (TEC-198, step-up): moves the
    * account balance only, never income/expense. 409 OPENING_BALANCE_EXISTS

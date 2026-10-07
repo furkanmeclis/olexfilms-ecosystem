@@ -13,7 +13,7 @@ import {
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
@@ -27,6 +27,7 @@ import { routes } from "@/config/routes";
 import {
   canContinueWizard,
   canDownloadWarrantyCertificate,
+  resolveServiceIncomeAccess,
   resolveServiceListAccess,
 } from "@/features/services/lib/access";
 import {
@@ -45,8 +46,14 @@ import {
   ServiceItemsTable,
   ServiceWarrantiesTable,
 } from "@/features/services/components/service-detail-tables";
+import {
+  ServiceIncomeDialog,
+  ServiceIncomeReverseDialog,
+  ServiceProfitCard,
+} from "@/features/services/components/service-income";
 import { ServiceContractCard } from "@/features/services/components/service-contract-card";
 import { ServicePdfButton } from "@/features/services/components/service-pdf-button";
+import { useAccountingAccess } from "@/features/accounting/hooks/use-accounting-access";
 import { ServiceMeasurementsSection } from "@/features/measurements/components/service-measurements-section";
 import { useFeature } from "@/features/modules/hooks/use-features";
 import { WarrantyCertificateButton } from "@/features/warranty/components/warranty-certificate-button";
@@ -271,6 +278,63 @@ function Warranties({ service, slug }: { service: Service; slug: string }) {
   );
 }
 
+/**
+ * Income and profit of a completed service (TEC-343): the profit card when
+ * the caller reads accounting data (the API sends `profit` only then), with
+ * "Record income" / "Reverse income" for the service organization's own
+ * accounting writers.
+ */
+function IncomeProfit({ service, slug }: { service: Service; slug: string }) {
+  const { t } = useLocale();
+  const accounting = useAccountingAccess(slug);
+  const income = resolveServiceIncomeAccess(service, accounting);
+  const [dialog, setDialog] = useState<"record" | "reverse" | null>(null);
+  if (service.status !== "completed" || !service.profit) return null;
+  return (
+    <>
+      <ServiceProfitCard
+        profit={service.profit}
+        actions={
+          income.canRecord ? (
+            <Button
+              size="sm"
+              onClick={() => setDialog("record")}
+              data-testid="service-income-open"
+            >
+              {t("services.income.record")}
+            </Button>
+          ) : income.canReverse ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setDialog("reverse")}
+              data-testid="service-income-reverse"
+            >
+              {t("services.income.reverse")}
+            </Button>
+          ) : null
+        }
+      />
+      {dialog === "record" ? (
+        <ServiceIncomeDialog
+          service={service}
+          orgUuid={accounting.orgUuid}
+          open
+          onOpenChange={(open) => setDialog(open ? "record" : null)}
+        />
+      ) : null}
+      {dialog === "reverse" ? (
+        <ServiceIncomeReverseDialog
+          service={service}
+          orgUuid={accounting.orgUuid}
+          open
+          onOpenChange={(open) => setDialog(open ? "reverse" : null)}
+        />
+      ) : null}
+    </>
+  );
+}
+
 function StatusHistory({ service }: { service: Service }) {
   const { t, format } = useLocale();
   const logs = sortedStatusLogs(service.status_logs);
@@ -462,6 +526,7 @@ export function ServiceDetailPage({
         </Card>
       ) : null}
       {s.contract ? <ServiceContractCard contract={s.contract} /> : null}
+      <IncomeProfit service={s} slug={slug} />
       {s.has_measurement &&
       measurements.enabled &&
       can(permissions.measurements.link) ? (

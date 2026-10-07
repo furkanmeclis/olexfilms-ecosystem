@@ -2,7 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowDownLeft, ArrowUpRight, Eye, FileText } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Eye,
+  FileText,
+  UserPlus,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -18,10 +24,13 @@ import {
   type EntityRowAction,
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
+import { Button } from "@/components/ui/button";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { CustomerCariDialog } from "@/features/accounting/components/customer-cari-dialog";
 import { SettlementDialog } from "@/features/accounting/components/settlement-dialog";
 import { BalanceLabel, Money } from "@/features/accounting/components/shared";
+import { ReadOnlyNotice } from "@/features/accounting/components/statement-page";
 import {
   accountingKeys,
   useAccountingAccess,
@@ -34,6 +43,7 @@ import {
   type SettlementKind,
 } from "@/features/accounting/services/accounting.service";
 import { useLocale } from "@/providers/locale-provider";
+import { usePermission } from "@/providers/permission-provider";
 
 export const CARI_PERSIST_KEY = "tenant-accounting-cari-v2";
 
@@ -58,6 +68,11 @@ export function CariPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
   const router = useRouter();
   const access = useAccountingAccess(slug);
+  const { can } = usePermission();
+  // Customer cari (TEC-342): a write gate plus the customer picker's read.
+  const canOpenCustomerCari =
+    access.canWrite && can(permissions.customers.read);
+  const [customerCari, setCustomerCari] = useState(false);
   const [settle, setSettle] = useState<{
     kind: SettlementKind;
     cari: CariAccount;
@@ -250,7 +265,19 @@ export function CariPage({ slug }: { slug: string }) {
         { label: t("accounting.nav") },
         { label: t("accounting.cari.title") },
       ]}
+      actions={
+        canOpenCustomerCari ? (
+          <Button
+            onClick={() => setCustomerCari(true)}
+            data-testid="customer-cari-open"
+          >
+            <UserPlus className="size-4" />
+            {t("accounting.customer_cari.new")}
+          </Button>
+        ) : null
+      }
     >
+      {access.readOnlyDealer ? <ReadOnlyNotice /> : null}
       <EntityTable
         columns={columns}
         data={list.data?.items ?? []}
@@ -285,6 +312,16 @@ export function CariPage({ slug }: { slug: string }) {
           onOpenChange={(open) => {
             if (!open) setSettle(null);
           }}
+        />
+      ) : null}
+      {customerCari ? (
+        <CustomerCariDialog
+          orgUuid={access.orgUuid}
+          open
+          onOpenChange={setCustomerCari}
+          onOpened={(cari) =>
+            router.push(routes.tenant.accounting.cariDetail(slug, cari.uuid))
+          }
         />
       ) : null}
     </EntityPage>

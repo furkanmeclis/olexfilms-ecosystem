@@ -6,6 +6,15 @@ import { platformRequest } from "@/lib/api/platform-request";
 type Schemas = components["schemas"];
 
 export type Service = Schemas["Service"];
+export type ServiceProfit = Schemas["ServiceProfit"];
+export type ServiceIncomeInput = Schemas["ServiceIncomeInput"];
+export type ServiceIncomeResult = Schemas["ServiceIncomeResult"];
+export type ServiceIncomePaymentMethod = Schemas["ServiceIncomePaymentMethod"];
+export const SERVICE_INCOME_METHODS: ServiceIncomePaymentMethod[] = [
+  "cash",
+  "card",
+  "cari",
+];
 export type ServiceCreateInput = Schemas["ServiceCreateInput"];
 export type ServiceUpdateInput = Schemas["ServiceUpdateInput"];
 export type CustomerSummary = Schemas["CustomerSummary"];
@@ -104,6 +113,26 @@ export const serviceWizardService = {
     return platformRequest<Service>(
       "DELETE",
       `/v1/services/${enc(uuid)}/items/${enc(item)}`,
+    );
+  },
+  /**
+   * Income of a completed service (TEC-343): cash (cash account), card
+   * (bank account) or cari (the customer's cari, no account). 409 when one
+   * is already recorded; a warranty re-apply service answers a warning.
+   */
+  recordIncome(uuid: string, body: ServiceIncomeInput) {
+    return platformRequest<ServiceIncomeResult>(
+      "POST",
+      `/v1/services/${enc(uuid)}/income`,
+      { body },
+    );
+  },
+  /** Reverses the recorded income (append-only reversal rows). */
+  deleteIncome(uuid: string, reason?: string) {
+    return platformRequest<ServiceIncomeResult>(
+      "DELETE",
+      `/v1/services/${enc(uuid)}/income`,
+      { body: reason ? { reason } : {} },
     );
   },
   transition(uuid: string, status: ServiceStatus, note?: string) {

@@ -57,6 +57,9 @@ vi.mock("@/providers/locale-provider", () => ({
 vi.mock("@/providers/toast-provider", () => ({
   appToast: { success: vi.fn(), error: vi.fn() },
 }));
+vi.mock("@/providers/permission-provider", () => ({
+  usePermission: () => ({ can: () => true }),
+}));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));
