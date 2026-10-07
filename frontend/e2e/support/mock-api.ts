@@ -27,7 +27,7 @@ export const PERMISSIONS = [
   "catalog.read",
 ];
 
-type Json = Record<string, unknown>;
+export type Json = Record<string, unknown>;
 type Item = Json & { uuid: string };
 type Log = {
   from_status: string | null;
@@ -100,7 +100,7 @@ export const membership = {
   parent: null,
 };
 
-function me(memberships: Json[], activeOrg: string) {
+function me(memberships: Json[], activeOrg: string, perms: string[]) {
   return {
     effective_locale: "en",
     effective_timezone: "Europe/Istanbul",
@@ -116,8 +116,8 @@ function me(memberships: Json[], activeOrg: string) {
       timezone: "Europe/Istanbul",
     },
     roles: [],
-    permissions: PERMISSIONS,
-    grants: Object.fromEntries(PERMISSIONS.map((p) => [p, "organization"])),
+    permissions: perms,
+    grants: Object.fromEntries(perms.map((p) => [p, "organization"])),
     active_organization_uuid: activeOrg,
     organization_roles: ["owner"],
     organizations: memberships,
@@ -131,8 +131,34 @@ function me(memberships: Json[], activeOrg: string) {
   };
 }
 
+/** One BFF call as an extra handler sees it (TEC-304). */
+export type MockCall = {
+  method: string;
+  path: string;
+  url: URL;
+  body: Json | undefined;
+  ok: (data: unknown, status?: number) => Promise<void>;
+  route: Route;
+};
+
 export class MockApi {
   service: Json | null = null;
+  /** Caller permissions and enabled modules (TEC-304: a spec may add). */
+  permissions: string[] = [...PERMISSIONS];
+  features: string[] = ["services", "catalog"];
+  /** VIN of the picked vehicle; the draft snapshots it (TEC-304). */
+  vehicleVin: string | null = null;
+  /** contracts.intake_required of the organization (TEC-291). */
+  contractRequired = false;
+  /** The service's intake contract summary (ServiceContractSummary). */
+  contract: Json | null = null;
+  /**
+   * Extra routes tried before the 404 fallback (TEC-304); a handler
+   * returns true once it answered the call.
+   */
+  extra: ((call: MockCall) => Promise<boolean> | boolean)[] = [];
+  /** Called after a status transition (TEC-304), e.g. auto links. */
+  onTransition: ((to: string) => void) | null = null;
   items: Item[] = [];
   logs: Log[] = [];
   warranties: Json[] = [];
@@ -162,6 +188,8 @@ export class MockApi {
       images: [],
       status_logs: this.logs,
       warranties: this.warranties,
+      contract_required: this.contractRequired,
+      contract: this.contract,
     };
   }
 
@@ -185,7 +213,7 @@ export class MockApi {
       model_year: vehicle.model_year,
       plate: vehicle.plate,
       plate_country: vehicle.plate_country,
-      vin: null,
+      vin: this.vehicleVin,
       km,
       package: null,
       notes: null,
@@ -236,7 +264,7 @@ export class MockApi {
       });
     }
     if (method === "GET" && path === "/v1/auth/me") {
-      return ok(me(this.memberships, this.activeOrg));
+      return ok(me(this.memberships, this.activeOrg, this.permissions));
     }
     if (method === "POST" && path === "/v1/auth/organization-context") {
       const target = this.memberships.find(
@@ -258,7 +286,7 @@ export class MockApi {
       return ok({
         organization_type: "dealer",
         items: [],
-        enabled: ["services", "catalog"],
+        enabled: this.features,
       });
     }
     if (method === "GET" && path === "/v1/me/organizations") {
@@ -267,7 +295,9 @@ export class MockApi {
     if (method === "GET" && path === "/v1/customers") {
       return page(url.searchParams.get("q") ? [customer] : []);
     }
-    if (method === "GET" && path === "/v1/vehicles") return page([vehicle]);
+    if (method === "GET" && path === "/v1/vehicles") {
+      return page([{ ...vehicle, vin: this.vehicleVin }]);
+    }
     if (method === "GET" && path === "/v1/catalog/categories") {
       return page([
         {
@@ -361,6 +391,7 @@ export class MockApi {
           voided_at: null,
         }));
       }
+      this.onTransition?.(to);
       return ok(this.view());
     }
     if (method === "GET" && path === "/v1/services") {
@@ -383,6 +414,10 @@ export class MockApi {
     }
     if (method === "GET" && path === "/v1/search/specs") {
       return ok({ items: [], enabled: false });
+    }
+
+    for (const handler of this.extra) {
+      if (await handler({ method, path, url, body, ok, route })) return;
     }
 
     this.unknown.push(`${method} ${path}`);

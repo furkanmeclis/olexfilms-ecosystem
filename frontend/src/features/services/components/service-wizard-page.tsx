@@ -17,6 +17,7 @@ import { CustomerVehicleStep } from "@/features/services/components/customer-veh
 import { MeasurementStep } from "@/features/services/components/measurement-step";
 import { PartsStep } from "@/features/services/components/parts-step";
 import { StockStep } from "@/features/services/components/stock-step";
+import { serviceMeasurementKeys } from "@/features/measurements/services/service-measurements.service";
 import { useFeature } from "@/features/modules/hooks/use-features";
 import { resolveServiceWizardAccess } from "@/features/services/lib/access";
 import { partsFromItems } from "@/features/services/lib/car-parts";
@@ -279,6 +280,14 @@ export function ServiceWizardPage({
         onCompleted={(saved) => {
           stored(saved);
           storeParts(saved.uuid, null);
+          // TEC-304: completion re-runs the before/after match; the links
+          // the measurement step cached must not stay on the detail page.
+          void queryClient.invalidateQueries({
+            queryKey: serviceMeasurementKeys.links(saved.uuid),
+          });
+          void queryClient.invalidateQueries({
+            queryKey: serviceMeasurementKeys.diff(saved.uuid),
+          });
           router.push(routes.tenant.services.detail(slug, saved.uuid));
         }}
       />
