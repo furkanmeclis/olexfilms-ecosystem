@@ -62,6 +62,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
@@ -132,7 +133,8 @@ func main() {
 	eventBus := events.NewBus(log)
 	outboxStore := outbox.NewStore(pool, queries)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log,
-		notifmodule.WithAnnouncementFanout(queries, reviewQueue))
+		notifmodule.WithAnnouncementFanout(queries, reviewQueue),
+		notifmodule.WithAIQuotaRecipients(queries)) // TEC-389
 	// TEC-186: service.completed opens one warranty per service item.
 	warrantymodule.RegisterEventHandlers(eventBus, pool, queries, cfg.Auth.FrontendURL, log)
 	// TEC-336: approved claims open and track their re-application service.
@@ -235,6 +237,8 @@ func main() {
 		// TEC-377: service and warranty list exports (read only).
 		servicesusecase.NewListExportAdapter(servicesusecase.New(pool, queries, nil)),
 		warrantyusecase.NewListExportAdapter(warrantyusecase.NewReader(pool, queries, nil, cfg.Auth.FrontendURL)),
+		// TEC-389: AI usage report export (read only).
+		aiusecase.NewUsageExportAdapter(aiusecase.NewAdmin(airepo.New(pool), llm.ModelsFromConfig(cfg.AI), nil)),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})

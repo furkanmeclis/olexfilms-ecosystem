@@ -322,14 +322,12 @@ func (c *Chat) quota(ctx context.Context, s *session, settings db.AiSetting) (li
 	if s.pool == model.PoolSystem {
 		limit = settings.SystemPoolMonthlyQuota
 	} else {
-		limit = settings.DefaultMonthlyTokenQuota
-		os, ok, err := c.Store.OrgSettings(ctx, s.orgID)
+		os, _, err := c.Store.OrgSettings(ctx, s.orgID)
 		if err != nil {
 			return 0, 0, err
 		}
-		if ok && os.MonthlyTokenQuota.Valid {
-			limit = os.MonthlyTokenQuota.Int64
-		}
+		// No override row: os is zero, so the platform default applies.
+		limit = EffectiveQuota(settings, os.MonthlyTokenQuota)
 	}
 	used, err = c.Store.MonthlyTokens(ctx, s.orgID, s.pool, c.now())
 	return limit, used, err
@@ -1119,9 +1117,22 @@ func (c *Chat) record(ctx context.Context, t *Turn, purpose, modelID string, u l
 // QuotaThresholds are the notified percentages of the monthly quota.
 var QuotaThresholds = []int64{80, 100}
 
+// thresholdEventNamespace scopes ThresholdEventID.
+var thresholdEventNamespace = uuid.MustParse("6f0b8a52-3c1e-5d7a-9f43-0a1c2e4b6d89")
+
+// ThresholdEventID is the event id of a threshold of one organization pool
+// and month (TEC-389). It is the notification idempotency key, so a
+// threshold crossed again in the same month (e.g. after the quota was
+// raised) notifies nobody twice.
+func ThresholdEventID(orgID int64, pool, period string, threshold int64) uuid.UUID {
+	return uuid.NewSHA1(thresholdEventNamespace,
+		[]byte(fmt.Sprintf("%s:%d:%s:%s:%d", events.AIQuotaThreshold, orgID, pool, period, threshold)))
+}
+
 // thresholdEvents returns an ai.quota.threshold event per threshold the
 // booked row crossed. The projection only grows within a month, so each
-// threshold is crossed (and notified) once per pool and month.
+// threshold is crossed once per pool and month; ThresholdEventID keeps a
+// re-crossing after a quota change from notifying again.
 func thresholdEvents(limit int64, row db.AiUsage, month db.AiUsageMonthly) []events.Event {
 	if limit <= 0 || row.QuotaTokens <= 0 {
 		return nil
@@ -1135,6 +1146,7 @@ func thresholdEvents(limit int64, row db.AiUsage, month db.AiUsageMonthly) []eve
 				"organization_id": month.OrganizationID, "brand_id": month.BrandID, "pool": month.Pool,
 				"period": month.Period, "threshold": pct, "used_tokens": after, "quota_tokens": limit,
 			})
+			ev.EventID = ThresholdEventID(month.OrganizationID, month.Pool, month.Period, pct)
 			out = append(out, ev)
 		}
 	}

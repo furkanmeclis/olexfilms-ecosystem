@@ -272,6 +272,28 @@ func (q *Queries) CountAIConversations(ctx context.Context, arg CountAIConversat
 	return count, err
 }
 
+const countAIOrgQuotas = `-- name: CountAIOrgQuotas :one
+SELECT COUNT(*) FROM organizations o
+WHERE o.deleted_at IS NULL
+  AND ($1::text[] IS NULL OR o.type = ANY($1::text[]))
+  AND ($2::bigint[] IS NULL OR o.id = ANY($2::bigint[]))
+  AND ($3::text IS NULL OR o.name ILIKE '%' || $3::text || '%'
+       OR o.slug ILIKE '%' || $3::text || '%')
+`
+
+type CountAIOrgQuotasParams struct {
+	OrgTypes        []string    `json:"org_types"`
+	OrganizationIds []int64     `json:"organization_ids"`
+	Q               pgtype.Text `json:"q"`
+}
+
+func (q *Queries) CountAIOrgQuotas(ctx context.Context, arg CountAIOrgQuotasParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAIOrgQuotas, arg.OrgTypes, arg.OrganizationIds, arg.Q)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countAIUsage = `-- name: CountAIUsage :one
 SELECT COUNT(*) FROM ai_usage u
 WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
@@ -780,6 +802,56 @@ func (q *Queries) GetAIOrgSettings(ctx context.Context, organizationID int64) (A
 	return i, err
 }
 
+const getAIOrganizationByUUID = `-- name: GetAIOrganizationByUUID :one
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude FROM organizations WHERE uuid = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetAIOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (Organization, error) {
+	row := q.db.QueryRow(ctx, getAIOrganizationByUUID, argUuid)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+	)
+	return i, err
+}
+
 const getAIPendingActionByIdempotencyKey = `-- name: GetAIPendingActionByIdempotencyKey :one
 SELECT id, uuid, organization_id, brand_id, user_id, source, source_ref, tool_use_id, tool_name, input, preview, status, result, error, idempotency_key, expires_at, resolved_at, created_at, updated_at FROM ai_pending_actions
 WHERE idempotency_key = $1
@@ -1092,6 +1164,180 @@ func (q *Queries) ListAIMessages(ctx context.Context, conversationID int64) ([]A
 	return items, nil
 }
 
+const listAIOrgQuotas = `-- name: ListAIOrgQuotas :many
+
+SELECT o.id, o.uuid, o.name, o.type, o.status, o.brand_id,
+       COALESCE(s.enabled, TRUE)::bool AS enabled,
+       s.monthly_token_quota AS quota_override,
+       COALESCE(s.monthly_token_quota, $1::bigint)::bigint AS quota,
+       COALESCE(m.quota_tokens, 0)::bigint AS used,
+       COALESCE(m.request_count, 0)::bigint AS request_count,
+       COALESCE(sp.quota_tokens, 0)::bigint AS system_used
+FROM organizations o
+LEFT JOIN ai_org_settings s ON s.organization_id = o.id
+LEFT JOIN ai_usage_monthly m ON m.organization_id = o.id AND m.pool = 'org' AND m.period = $2::text
+LEFT JOIN ai_usage_monthly sp ON sp.organization_id = o.id AND sp.pool = 'system' AND sp.period = $2::text
+WHERE o.deleted_at IS NULL
+  AND ($3::text[] IS NULL OR o.type = ANY($3::text[]))
+  AND ($4::bigint[] IS NULL OR o.id = ANY($4::bigint[]))
+  AND ($5::text IS NULL OR o.name ILIKE '%' || $5::text || '%'
+       OR o.slug ILIKE '%' || $5::text || '%')
+ORDER BY
+  CASE WHEN NOT $6::bool AND $7::text = 'name' THEN o.name END ASC,
+  CASE WHEN $6::bool AND $7::text = 'name' THEN o.name END DESC,
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text
+      WHEN 'usage' THEN COALESCE(m.quota_tokens, 0)
+      WHEN 'quota' THEN NULLIF(COALESCE(s.monthly_token_quota, $1::bigint), 0)
+    END
+  END ASC NULLS LAST,
+  CASE WHEN $6::bool THEN
+    CASE $7::text
+      WHEN 'usage' THEN COALESCE(m.quota_tokens, 0)
+      WHEN 'quota' THEN NULLIF(COALESCE(s.monthly_token_quota, $1::bigint), 0)
+    END
+  END DESC NULLS FIRST,
+  CASE WHEN $6::bool THEN o.id END DESC,
+  o.id ASC
+LIMIT $9 OFFSET $8
+`
+
+type ListAIOrgQuotasParams struct {
+	DefaultQuota    int64       `json:"default_quota"`
+	Period          string      `json:"period"`
+	OrgTypes        []string    `json:"org_types"`
+	OrganizationIds []int64     `json:"organization_ids"`
+	Q               pgtype.Text `json:"q"`
+	SortDesc        bool        `json:"sort_desc"`
+	SortKey         string      `json:"sort_key"`
+	OffsetCount     int32       `json:"offset_count"`
+	LimitCount      int32       `json:"limit_count"`
+}
+
+type ListAIOrgQuotasRow struct {
+	ID            int64       `json:"id"`
+	Uuid          uuid.UUID   `json:"uuid"`
+	Name          string      `json:"name"`
+	Type          string      `json:"type"`
+	Status        string      `json:"status"`
+	BrandID       int64       `json:"brand_id"`
+	Enabled       bool        `json:"enabled"`
+	QuotaOverride pgtype.Int8 `json:"quota_override"`
+	Quota         int64       `json:"quota"`
+	Used          int64       `json:"used"`
+	RequestCount  int64       `json:"request_count"`
+	SystemUsed    int64       `json:"system_used"`
+}
+
+// TEC-389 (F4-01g): platform org quota table, usage report and quota
+// threshold recipients --------------------------------------------------------
+// Platform quota table: one row per organization with its override, the
+// effective quota (override, else default_quota; 0 = unlimited) and the
+// org-pool usage of period. Sort: docs/list-contract.md, keys from
+// ai/repository.OrgQuotaSort (unlimited sorts as the largest quota).
+func (q *Queries) ListAIOrgQuotas(ctx context.Context, arg ListAIOrgQuotasParams) ([]ListAIOrgQuotasRow, error) {
+	rows, err := q.db.Query(ctx, listAIOrgQuotas,
+		arg.DefaultQuota,
+		arg.Period,
+		arg.OrgTypes,
+		arg.OrganizationIds,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAIOrgQuotasRow{}
+	for rows.Next() {
+		var i ListAIOrgQuotasRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Name,
+			&i.Type,
+			&i.Status,
+			&i.BrandID,
+			&i.Enabled,
+			&i.QuotaOverride,
+			&i.Quota,
+			&i.Used,
+			&i.RequestCount,
+			&i.SystemUsed,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAIOrganizationIDsByUUIDs = `-- name: ListAIOrganizationIDsByUUIDs :many
+SELECT id FROM organizations WHERE uuid = ANY($1::uuid[]) AND deleted_at IS NULL
+`
+
+func (q *Queries) ListAIOrganizationIDsByUUIDs(ctx context.Context, uuids []uuid.UUID) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listAIOrganizationIDsByUUIDs, uuids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAIOrganizationsByIDs = `-- name: ListAIOrganizationsByIDs :many
+SELECT id, uuid, name, type FROM organizations WHERE id = ANY($1::bigint[])
+`
+
+type ListAIOrganizationsByIDsRow struct {
+	ID   int64     `json:"id"`
+	Uuid uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+	Type string    `json:"type"`
+}
+
+func (q *Queries) ListAIOrganizationsByIDs(ctx context.Context, ids []int64) ([]ListAIOrganizationsByIDsRow, error) {
+	rows, err := q.db.Query(ctx, listAIOrganizationsByIDs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAIOrganizationsByIDsRow{}
+	for rows.Next() {
+		var i ListAIOrganizationsByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Name,
+			&i.Type,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAIPendingActionsForUser = `-- name: ListAIPendingActionsForUser :many
 SELECT id, uuid, organization_id, brand_id, user_id, source, source_ref, tool_use_id, tool_name, input, preview, status, result, error, idempotency_key, expires_at, resolved_at, created_at, updated_at FROM ai_pending_actions
 WHERE organization_id = $1
@@ -1139,6 +1385,56 @@ func (q *Queries) ListAIPendingActionsForUser(ctx context.Context, arg ListAIPen
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAIQuotaNotifyUserIDs = `-- name: ListAIQuotaNotifyUserIDs :many
+SELECT DISTINCT x.user_id FROM (
+    SELECT om.user_id
+    FROM organization_members om
+    JOIN organization_member_roles mr ON mr.member_id = om.id
+    JOIN role_permissions rp ON rp.role_id = mr.role_id
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE $1::text = 'org'
+      AND om.organization_id = $2
+      AND p.slug = 'ai.usage.read'
+    UNION
+    SELECT ur.user_id
+    FROM user_roles ur
+    JOIN role_permissions rp ON rp.role_id = ur.role_id
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE $1::text = 'system'
+      AND p.slug = 'ai.settings.manage'
+) x
+JOIN users usr ON usr.id = x.user_id AND usr.deleted_at IS NULL
+ORDER BY x.user_id
+`
+
+type ListAIQuotaNotifyUserIDsParams struct {
+	Pool           string `json:"pool"`
+	OrganizationID int64  `json:"organization_id"`
+}
+
+// Recipients of ai.quota.threshold: for the org pool the organization's
+// members holding ai.usage.read; for the system pool the global role
+// holders of ai.settings.manage (platform admins).
+func (q *Queries) ListAIQuotaNotifyUserIDs(ctx context.Context, arg ListAIQuotaNotifyUserIDsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listAIQuotaNotifyUserIDs, arg.Pool, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var user_id int64
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1300,6 +1596,66 @@ func (q *Queries) ListAIUsageMonthly(ctx context.Context, arg ListAIUsageMonthly
 	return items, nil
 }
 
+const listAIUserIDsByUUIDs = `-- name: ListAIUserIDsByUUIDs :many
+SELECT id FROM users WHERE uuid = ANY($1::uuid[])
+`
+
+func (q *Queries) ListAIUserIDsByUUIDs(ctx context.Context, uuids []uuid.UUID) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listAIUserIDsByUUIDs, uuids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAIUsersByIDs = `-- name: ListAIUsersByIDs :many
+SELECT id, uuid, name, surname FROM users WHERE id = ANY($1::bigint[])
+`
+
+type ListAIUsersByIDsRow struct {
+	ID      int64     `json:"id"`
+	Uuid    uuid.UUID `json:"uuid"`
+	Name    string    `json:"name"`
+	Surname string    `json:"surname"`
+}
+
+func (q *Queries) ListAIUsersByIDs(ctx context.Context, ids []int64) ([]ListAIUsersByIDsRow, error) {
+	rows, err := q.db.Query(ctx, listAIUsersByIDs, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAIUsersByIDsRow{}
+	for rows.Next() {
+		var i ListAIUsersByIDsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Name,
+			&i.Surname,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const resolveAIPendingAction = `-- name: ResolveAIPendingAction :one
 UPDATE ai_pending_actions
 SET status = $1,
@@ -1372,6 +1728,125 @@ func (q *Queries) SoftDeleteAIConversation(ctx context.Context, arg SoftDeleteAI
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const summarizeAIUsageByChannel = `-- name: SummarizeAIUsageByChannel :many
+SELECT u.channel, u.pool,
+       SUM(u.quota_tokens)::bigint AS tokens,
+       SUM(u.input_tokens)::bigint AS input_tokens,
+       SUM(u.output_tokens)::bigint AS output_tokens,
+       SUM(u.cache_read_tokens)::bigint AS cache_read_tokens,
+       SUM(u.cache_write_tokens)::bigint AS cache_write_tokens,
+       COUNT(*)::bigint AS requests
+FROM ai_usage u
+WHERE u.organization_id = $1
+  AND u.created_at >= $2::timestamptz
+  AND u.created_at < $3::timestamptz
+GROUP BY u.channel, u.pool
+ORDER BY tokens DESC, u.channel ASC, u.pool ASC
+`
+
+type SummarizeAIUsageByChannelParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+}
+
+type SummarizeAIUsageByChannelRow struct {
+	Channel          string `json:"channel"`
+	Pool             string `json:"pool"`
+	Tokens           int64  `json:"tokens"`
+	InputTokens      int64  `json:"input_tokens"`
+	OutputTokens     int64  `json:"output_tokens"`
+	CacheReadTokens  int64  `json:"cache_read_tokens"`
+	CacheWriteTokens int64  `json:"cache_write_tokens"`
+	Requests         int64  `json:"requests"`
+}
+
+// Usage summary of one organization per channel and pool.
+func (q *Queries) SummarizeAIUsageByChannel(ctx context.Context, arg SummarizeAIUsageByChannelParams) ([]SummarizeAIUsageByChannelRow, error) {
+	rows, err := q.db.Query(ctx, summarizeAIUsageByChannel, arg.OrganizationID, arg.CreatedFrom, arg.CreatedBefore)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SummarizeAIUsageByChannelRow{}
+	for rows.Next() {
+		var i SummarizeAIUsageByChannelRow
+		if err := rows.Scan(
+			&i.Channel,
+			&i.Pool,
+			&i.Tokens,
+			&i.InputTokens,
+			&i.OutputTokens,
+			&i.CacheReadTokens,
+			&i.CacheWriteTokens,
+			&i.Requests,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const summarizeAIUsageByUser = `-- name: SummarizeAIUsageByUser :many
+SELECT u.user_id,
+       SUM(u.quota_tokens)::bigint AS tokens,
+       SUM(u.input_tokens)::bigint AS input_tokens,
+       SUM(u.output_tokens)::bigint AS output_tokens,
+       COUNT(*)::bigint AS requests
+FROM ai_usage u
+WHERE u.organization_id = $1
+  AND u.created_at >= $2::timestamptz
+  AND u.created_at < $3::timestamptz
+GROUP BY u.user_id
+ORDER BY tokens DESC, u.user_id ASC NULLS LAST
+`
+
+type SummarizeAIUsageByUserParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
+}
+
+type SummarizeAIUsageByUserRow struct {
+	UserID       pgtype.Int8 `json:"user_id"`
+	Tokens       int64       `json:"tokens"`
+	InputTokens  int64       `json:"input_tokens"`
+	OutputTokens int64       `json:"output_tokens"`
+	Requests     int64       `json:"requests"`
+}
+
+// Usage summary of one organization in [created_from, created_before):
+// totals per user (NULL user = no user, e.g. visitors).
+func (q *Queries) SummarizeAIUsageByUser(ctx context.Context, arg SummarizeAIUsageByUserParams) ([]SummarizeAIUsageByUserRow, error) {
+	rows, err := q.db.Query(ctx, summarizeAIUsageByUser, arg.OrganizationID, arg.CreatedFrom, arg.CreatedBefore)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SummarizeAIUsageByUserRow{}
+	for rows.Next() {
+		var i SummarizeAIUsageByUserRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Tokens,
+			&i.InputTokens,
+			&i.OutputTokens,
+			&i.Requests,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const touchAIConversation = `-- name: TouchAIConversation :one

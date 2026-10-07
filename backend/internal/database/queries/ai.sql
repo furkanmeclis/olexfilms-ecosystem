@@ -350,3 +350,124 @@ WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::
   AND (sqlc.narg(created_before)::timestamptz IS NULL OR u.created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(tokens_min)::bigint IS NULL OR u.quota_tokens >= sqlc.narg(tokens_min)::bigint)
   AND (sqlc.narg(tokens_max)::bigint IS NULL OR u.quota_tokens <= sqlc.narg(tokens_max)::bigint);
+
+-- TEC-389 (F4-01g): platform org quota table, usage report and quota
+-- threshold recipients --------------------------------------------------------
+
+-- name: ListAIOrgQuotas :many
+-- Platform quota table: one row per organization with its override, the
+-- effective quota (override, else default_quota; 0 = unlimited) and the
+-- org-pool usage of period. Sort: docs/list-contract.md, keys from
+-- ai/repository.OrgQuotaSort (unlimited sorts as the largest quota).
+SELECT o.id, o.uuid, o.name, o.type, o.status, o.brand_id,
+       COALESCE(s.enabled, TRUE)::bool AS enabled,
+       s.monthly_token_quota AS quota_override,
+       COALESCE(s.monthly_token_quota, sqlc.arg(default_quota)::bigint)::bigint AS quota,
+       COALESCE(m.quota_tokens, 0)::bigint AS used,
+       COALESCE(m.request_count, 0)::bigint AS request_count,
+       COALESCE(sp.quota_tokens, 0)::bigint AS system_used
+FROM organizations o
+LEFT JOIN ai_org_settings s ON s.organization_id = o.id
+LEFT JOIN ai_usage_monthly m ON m.organization_id = o.id AND m.pool = 'org' AND m.period = sqlc.arg(period)::text
+LEFT JOIN ai_usage_monthly sp ON sp.organization_id = o.id AND sp.pool = 'system' AND sp.period = sqlc.arg(period)::text
+WHERE o.deleted_at IS NULL
+  AND (sqlc.narg(org_types)::text[] IS NULL OR o.type = ANY(sqlc.narg(org_types)::text[]))
+  AND (sqlc.narg(organization_ids)::bigint[] IS NULL OR o.id = ANY(sqlc.narg(organization_ids)::bigint[]))
+  AND (sqlc.narg(q)::text IS NULL OR o.name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.slug ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'name' THEN o.name END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'name' THEN o.name END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'usage' THEN COALESCE(m.quota_tokens, 0)
+      WHEN 'quota' THEN NULLIF(COALESCE(s.monthly_token_quota, sqlc.arg(default_quota)::bigint), 0)
+    END
+  END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'usage' THEN COALESCE(m.quota_tokens, 0)
+      WHEN 'quota' THEN NULLIF(COALESCE(s.monthly_token_quota, sqlc.arg(default_quota)::bigint), 0)
+    END
+  END DESC NULLS FIRST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN o.id END DESC,
+  o.id ASC
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: CountAIOrgQuotas :one
+SELECT COUNT(*) FROM organizations o
+WHERE o.deleted_at IS NULL
+  AND (sqlc.narg(org_types)::text[] IS NULL OR o.type = ANY(sqlc.narg(org_types)::text[]))
+  AND (sqlc.narg(organization_ids)::bigint[] IS NULL OR o.id = ANY(sqlc.narg(organization_ids)::bigint[]))
+  AND (sqlc.narg(q)::text IS NULL OR o.name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR o.slug ILIKE '%' || sqlc.narg(q)::text || '%');
+
+-- name: GetAIOrganizationByUUID :one
+SELECT * FROM organizations WHERE uuid = sqlc.arg(uuid) AND deleted_at IS NULL;
+
+-- name: ListAIOrganizationsByIDs :many
+SELECT id, uuid, name, type FROM organizations WHERE id = ANY(sqlc.arg(ids)::bigint[]);
+
+-- name: ListAIOrganizationIDsByUUIDs :many
+SELECT id FROM organizations WHERE uuid = ANY(sqlc.arg(uuids)::uuid[]) AND deleted_at IS NULL;
+
+-- name: ListAIUsersByIDs :many
+SELECT id, uuid, name, surname FROM users WHERE id = ANY(sqlc.arg(ids)::bigint[]);
+
+-- name: ListAIUserIDsByUUIDs :many
+SELECT id FROM users WHERE uuid = ANY(sqlc.arg(uuids)::uuid[]);
+
+-- name: SummarizeAIUsageByUser :many
+-- Usage summary of one organization in [created_from, created_before):
+-- totals per user (NULL user = no user, e.g. visitors).
+SELECT u.user_id,
+       SUM(u.quota_tokens)::bigint AS tokens,
+       SUM(u.input_tokens)::bigint AS input_tokens,
+       SUM(u.output_tokens)::bigint AS output_tokens,
+       COUNT(*)::bigint AS requests
+FROM ai_usage u
+WHERE u.organization_id = sqlc.arg(organization_id)
+  AND u.created_at >= sqlc.arg(created_from)::timestamptz
+  AND u.created_at < sqlc.arg(created_before)::timestamptz
+GROUP BY u.user_id
+ORDER BY tokens DESC, u.user_id ASC NULLS LAST;
+
+-- name: SummarizeAIUsageByChannel :many
+-- Usage summary of one organization per channel and pool.
+SELECT u.channel, u.pool,
+       SUM(u.quota_tokens)::bigint AS tokens,
+       SUM(u.input_tokens)::bigint AS input_tokens,
+       SUM(u.output_tokens)::bigint AS output_tokens,
+       SUM(u.cache_read_tokens)::bigint AS cache_read_tokens,
+       SUM(u.cache_write_tokens)::bigint AS cache_write_tokens,
+       COUNT(*)::bigint AS requests
+FROM ai_usage u
+WHERE u.organization_id = sqlc.arg(organization_id)
+  AND u.created_at >= sqlc.arg(created_from)::timestamptz
+  AND u.created_at < sqlc.arg(created_before)::timestamptz
+GROUP BY u.channel, u.pool
+ORDER BY tokens DESC, u.channel ASC, u.pool ASC;
+
+-- name: ListAIQuotaNotifyUserIDs :many
+-- Recipients of ai.quota.threshold: for the org pool the organization's
+-- members holding ai.usage.read; for the system pool the global role
+-- holders of ai.settings.manage (platform admins).
+SELECT DISTINCT x.user_id FROM (
+    SELECT om.user_id
+    FROM organization_members om
+    JOIN organization_member_roles mr ON mr.member_id = om.id
+    JOIN role_permissions rp ON rp.role_id = mr.role_id
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE sqlc.arg(pool)::text = 'org'
+      AND om.organization_id = sqlc.arg(organization_id)
+      AND p.slug = 'ai.usage.read'
+    UNION
+    SELECT ur.user_id
+    FROM user_roles ur
+    JOIN role_permissions rp ON rp.role_id = ur.role_id
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE sqlc.arg(pool)::text = 'system'
+      AND p.slug = 'ai.settings.manage'
+) x
+JOIN users usr ON usr.id = x.user_id AND usr.deleted_at IS NULL
+ORDER BY x.user_id;
