@@ -2,6 +2,7 @@
 
 import {
   BellRing,
+  CalendarClock,
   Car,
   FileSignature,
   House,
@@ -22,6 +23,11 @@ const ITEMS = [
     href: routes.portal.warranties,
     key: "portal.nav.warranties",
     icon: ShieldCheck,
+  },
+  {
+    href: routes.portal.appointments,
+    key: "portal.nav.appointments",
+    icon: CalendarClock,
   },
   { href: routes.portal.dealers, key: "portal.nav.dealers", icon: Store },
   {
@@ -50,7 +56,7 @@ export function isPortalNavActive(href: string, pathname: string): boolean {
 
 /**
  * Portal top navigation (TEC-241): home, my vehicles, my warranties; TEC-245
- * adds my contracts and notification preferences.
+ * adds my contracts and notification preferences, TEC-327 my appointments.
  */
 export function PortalNav() {
   const { t } = useLocale();

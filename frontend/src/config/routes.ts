@@ -168,6 +168,21 @@ export const routes = {
     /** TEC-245: signed contracts and notification preferences. */
     contracts: "/portal/contracts",
     preferences: "/portal/preferences",
+    /** TEC-327: my appointments and the booking flow (optional preselection). */
+    appointments: "/portal/appointments",
+    newAppointment: (preset?: {
+      dealer?: { uuid: string; name: string };
+      vehicle?: string;
+    }) => {
+      const q = new URLSearchParams();
+      if (preset?.dealer) {
+        q.set("dealer", preset.dealer.uuid);
+        q.set("dealer_name", preset.dealer.name);
+      }
+      if (preset?.vehicle) q.set("vehicle", preset.vehicle);
+      const qs = q.toString();
+      return `/portal/appointments/new${qs ? `?${qs}` : ""}`;
+    },
   },
   guest: {
     login: "/platform/login",

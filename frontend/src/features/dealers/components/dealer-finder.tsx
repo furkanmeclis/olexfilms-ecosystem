@@ -1,6 +1,13 @@
 "use client";
 
-import { LocateFixed, MapPin, MessageCircle, Store } from "lucide-react";
+import {
+  CalendarPlus,
+  LocateFixed,
+  MapPin,
+  MessageCircle,
+  Store,
+} from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LeafletMap, type MapMarker } from "@/components/common/leaflet-map";
@@ -15,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { mapConfig, type LatLng } from "@/config/map";
+import { routes } from "@/config/routes";
 import {
   FALLBACK_RADIUS_KM,
   LOCATED_RADIUS_KM,
@@ -30,6 +38,7 @@ import {
   type RadiusKm,
 } from "@/features/dealers/lib/dealers";
 import { PortalPage } from "@/features/portal/components/portal-page";
+import { usePortalReadOnly } from "@/features/portal/lib/use-portal-read-only";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -71,6 +80,8 @@ export function DealerFinder() {
   } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
+  // TEC-327: a fleet session cannot book, so no "book" shortcut.
+  const canBook = !usePortalReadOnly();
 
   const applyPosition = useCallback((pos: PositionResult) => {
     setCenter(pos.center);
@@ -237,6 +248,7 @@ export function DealerFinder() {
         selected={selected}
         onSelect={setSelected}
         onRetry={() => setRetry((n) => n + 1)}
+        canBook={canBook}
       />
     </PortalPage>
   );
@@ -249,6 +261,7 @@ function DealerResults({
   selected,
   onSelect,
   onRetry,
+  canBook,
 }: {
   loading: boolean;
   result: NearbyResult | null;
@@ -256,6 +269,7 @@ function DealerResults({
   selected: string | null;
   onSelect: (slug: string) => void;
   onRetry: () => void;
+  canBook: boolean;
 }) {
   const { t } = useLocale();
   if (loading || !result) {
@@ -329,6 +343,19 @@ function DealerResults({
                       <MapPin className="size-4" aria-hidden />
                       {t("portal.dealers.show_on_map")}
                     </Button>
+                    {canBook && d.accepts_appointments && d.uuid ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          href={routes.portal.newAppointment({
+                            dealer: { uuid: d.uuid, name: d.name },
+                          })}
+                          data-testid="dealer-book"
+                        >
+                          <CalendarPlus className="size-4" aria-hidden />
+                          {t("portal.appointments.book")}
+                        </Link>
+                      </Button>
+                    ) : null}
                     {wa ? (
                       <Button asChild size="sm">
                         <a

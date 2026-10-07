@@ -248,6 +248,7 @@ describe("PortalNav", () => {
       "/portal",
       "/portal/vehicles",
       "/portal/warranties",
+      "/portal/appointments",
       "/portal/dealers",
       "/portal/contracts",
       "/portal/preferences",
@@ -400,6 +401,12 @@ describe("PortalVehicleDetail", () => {
     expect(
       container.querySelector('[data-testid="portal-transfer-open"]'),
     ).not.toBeNull();
+    // TEC-327: and book an appointment for this vehicle.
+    expect(
+      container
+        .querySelector('[data-testid="portal-vehicle-book"]')
+        ?.getAttribute("href"),
+    ).toBe("/portal/appointments/new?vehicle=v-1");
     expect(container.querySelector('[data-testid="portal-read-only"]')).toBe(
       null,
     );
@@ -421,6 +428,10 @@ describe("PortalVehicleDetail", () => {
     await render(createElement(PortalVehicleDetail, { uuid: "v-1" }));
     expect(
       container.querySelector('[data-testid="portal-transfer-open"]'),
+    ).toBeNull();
+    // TEC-327: no "book an appointment" for a fleet session either.
+    expect(
+      container.querySelector('[data-testid="portal-vehicle-book"]'),
     ).toBeNull();
     expect(
       container.querySelector('[data-testid="portal-read-only"]')?.textContent,

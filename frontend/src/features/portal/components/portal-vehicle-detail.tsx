@@ -1,11 +1,18 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Car, ChevronRight, ShieldCheck, Wrench } from "lucide-react";
+import {
+  CalendarPlus,
+  Car,
+  ChevronRight,
+  ShieldCheck,
+  Wrench,
+} from "lucide-react";
 import Link from "next/link";
 
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { PortalPage } from "@/features/portal/components/portal-page";
@@ -203,7 +210,16 @@ export function PortalVehicleDetail({
               {t("portal.read_only.notice")}
             </p>
           ) : (
-            <div className="flex justify-end">
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button asChild variant="outline">
+                <Link
+                  href={routes.portal.newAppointment({ vehicle: v.uuid })}
+                  data-testid="portal-vehicle-book"
+                >
+                  <CalendarPlus className="size-4" />
+                  {t("portal.appointments.book")}
+                </Link>
+              </Button>
               <PortalVehicleTransferDialog vehicleUuid={v.uuid} />
             </div>
           )}
