@@ -263,3 +263,22 @@ WHERE scope = sqlc.arg(scope)
   AND opted_out
   AND contact_e164 = ANY (sqlc.arg(contacts)::text[])
 ORDER BY contact_e164;
+
+-- Identity resolution (TEC-394, F4-02b) ---------------------------------------
+
+-- name: ListWhatsAppIdentityMemberships :many
+-- Panel memberships of a contact's user with the organization state the
+-- resolver needs (access window, read_only, locale). Deleted organizations
+-- are skipped; suspended / expired / outside-window ones are filtered in Go.
+SELECT o.id AS organization_id, o.brand_id, o.name, o.type, o.status,
+       o.access_starts_at, o.access_ends_at, o.locale, om.role
+FROM organization_members om
+JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+WHERE om.user_id = sqlc.arg(user_id)
+ORDER BY o.name ASC, o.id ASC;
+
+-- name: IsCustomerUser :one
+-- A customer is a users row with a customer profile or an organization link
+-- (K11).
+SELECT (EXISTS (SELECT 1 FROM customer_profiles cp WHERE cp.user_id = sqlc.arg(user_id))
+     OR EXISTS (SELECT 1 FROM customer_organizations co WHERE co.user_id = sqlc.arg(user_id)))::boolean AS is_customer;

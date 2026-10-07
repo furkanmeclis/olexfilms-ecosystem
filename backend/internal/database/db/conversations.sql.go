@@ -485,6 +485,20 @@ func (q *Queries) InsertContactOptOut(ctx context.Context, arg InsertContactOptO
 	return i, err
 }
 
+const isCustomerUser = `-- name: IsCustomerUser :one
+SELECT (EXISTS (SELECT 1 FROM customer_profiles cp WHERE cp.user_id = $1)
+     OR EXISTS (SELECT 1 FROM customer_organizations co WHERE co.user_id = $1))::boolean AS is_customer
+`
+
+// A customer is a users row with a customer profile or an organization link
+// (K11).
+func (q *Queries) IsCustomerUser(ctx context.Context, userID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, isCustomerUser, userID)
+	var is_customer bool
+	err := row.Scan(&is_customer)
+	return is_customer, err
+}
+
 const listContactOptOutHistory = `-- name: ListContactOptOutHistory :many
 SELECT id, uuid, contact_e164, scope, action, source, conversation_id, created_by_user_id, note, created_at FROM contact_opt_outs
 WHERE contact_e164 = $1
@@ -884,6 +898,62 @@ func (q *Queries) ListOptedOutContacts(ctx context.Context, arg ListOptedOutCont
 			return nil, err
 		}
 		items = append(items, contact_e164)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWhatsAppIdentityMemberships = `-- name: ListWhatsAppIdentityMemberships :many
+
+SELECT o.id AS organization_id, o.brand_id, o.name, o.type, o.status,
+       o.access_starts_at, o.access_ends_at, o.locale, om.role
+FROM organization_members om
+JOIN organizations o ON o.id = om.organization_id AND o.deleted_at IS NULL
+WHERE om.user_id = $1
+ORDER BY o.name ASC, o.id ASC
+`
+
+type ListWhatsAppIdentityMembershipsRow struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Name           string             `json:"name"`
+	Type           string             `json:"type"`
+	Status         string             `json:"status"`
+	AccessStartsAt pgtype.Timestamptz `json:"access_starts_at"`
+	AccessEndsAt   pgtype.Timestamptz `json:"access_ends_at"`
+	Locale         string             `json:"locale"`
+	Role           string             `json:"role"`
+}
+
+// Identity resolution (TEC-394, F4-02b) ---------------------------------------
+// Panel memberships of a contact's user with the organization state the
+// resolver needs (access window, read_only, locale). Deleted organizations
+// are skipped; suspended / expired / outside-window ones are filtered in Go.
+func (q *Queries) ListWhatsAppIdentityMemberships(ctx context.Context, userID int64) ([]ListWhatsAppIdentityMembershipsRow, error) {
+	rows, err := q.db.Query(ctx, listWhatsAppIdentityMemberships, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListWhatsAppIdentityMembershipsRow{}
+	for rows.Next() {
+		var i ListWhatsAppIdentityMembershipsRow
+		if err := rows.Scan(
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.Name,
+			&i.Type,
+			&i.Status,
+			&i.AccessStartsAt,
+			&i.AccessEndsAt,
+			&i.Locale,
+			&i.Role,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

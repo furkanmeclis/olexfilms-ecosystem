@@ -61,8 +61,8 @@ func (r *DocumentRenderer) Render(ctx context.Context, kind string, ref usecase.
 	}
 	loc := i18n.Normalize(ref.Locale)
 	q := ioengine.ExportQuery{
-		"service_uuid":                ref.ServiceUUID.String(),
-		"brand_id":                    strconv.FormatInt(ref.BrandID, 10),
+		"service_uuid":               ref.ServiceUUID.String(),
+		"brand_id":                   strconv.FormatInt(ref.BrandID, 10),
 		ioengine.QueryOrganizationID: strconv.FormatInt(ref.OrganizationID, 10),
 	}
 	ds, err := a.Export(ctx, q, loc)

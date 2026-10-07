@@ -33,6 +33,7 @@ import (
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	oauthmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth"
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
@@ -330,6 +331,8 @@ func main() {
 		// TEC-314: daily quote expiry (valid_until passed).
 		WithQuoteExpire(leadsSvc.ExpireDueQuotesTask).
 		WithQuoteReminder(leadsSvc.QuoteReminderTask).
+		// TEC-400: hourly MCP OAuth cleanup (expired rows, abandoned clients).
+		WithOAuthCleanup(oauthmodule.New(pool, featureSvc, nil, cfg.Auth.FrontendURL, log).Cleanup).
 		WithTasksDueScan(tasksusecase.NewCron(pool, queries, outbox.NewStore(pool, queries)).DueScanTask).
 		// TEC-207: hourly end-of-day warehouse reports (previous local day).
 		WithWarehouseEOD(eodSvc.DailyTask(log)).
@@ -361,6 +364,9 @@ func main() {
 
 	rdb := redis.NewClient(&redis.Options{Addr: cfg.Redis.Addr, Password: cfg.Redis.Password, DB: cfg.Redis.DB})
 	defer func() { _ = rdb.Close() }()
+	// TEC-394: user / membership / organization events drop the WhatsApp
+	// identity cache.
+	whatsappmodule.RegisterIdentityInvalidation(eventBus, rdb, cfg.App.Env, log)
 
 	// TEC-395: WhatsApp outgoing queue, inbound media storage, receipts.
 	waMsgs := whatsappmodule.NewMessaging(waSvc, pool, queries, whatsappmodule.MessagingDeps{
