@@ -561,3 +561,48 @@ func TestDealerAccountingGrants(t *testing.T) {
 		}
 	}
 }
+
+// TEC-383: every panel role uses the assistant and confirms its own actions;
+// usage is read by owners and the center; settings stay super_admin only;
+// portal roles get no AI permission (realm check instead).
+func TestAIGrants(t *testing.T) {
+	for _, slug := range []string{PermAIUse, PermAIUsageRead, PermAISettingsManage, PermAIActionsConfirm} {
+		if _, ok := PermissionBySlug(slug); !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+	}
+	if !SuperAdminOnly(PermAISettingsManage) {
+		t.Fatal("ai.settings.manage must be super_admin only")
+	}
+	usage := map[string]Scope{
+		RoleCenterStaff: ScopeBrand, RoleCenterAccounting: ScopeBrand,
+		RoleDistributorOwner: ScopeManaged, RoleDealerOwner: ScopeManaged,
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		switch r.OrgType {
+		case OrgTypeCenter, OrgTypeDistributor, OrgTypeDealer:
+			if g[PermAIUse] != ScopeOwn || g[PermAIActionsConfirm] != ScopeOwn {
+				t.Fatalf("%s ai.use=%q ai.actions.confirm=%q, want own", r.Slug, g[PermAIUse], g[PermAIActionsConfirm])
+			}
+			if g[PermAIUsageRead] != usage[r.Slug] {
+				t.Fatalf("%s ai.usage.read = %q, want %q", r.Slug, g[PermAIUsageRead], usage[r.Slug])
+			}
+		case OrgTypePlatform:
+			if g[PermAISettingsManage] != ScopeAll || g[PermAIUsageRead] != ScopeAll {
+				t.Fatalf("super_admin AI grants: %v", g)
+			}
+		default:
+			for _, p := range []string{PermAIUse, PermAIUsageRead, PermAIActionsConfirm} {
+				if _, ok := g[p]; ok {
+					t.Fatalf("%s must not hold %s", r.Slug, p)
+				}
+			}
+		}
+		if r.Slug != RoleSuperAdmin {
+			if _, ok := g[PermAISettingsManage]; ok {
+				t.Fatalf("%s must not hold ai.settings.manage", r.Slug)
+			}
+		}
+	}
+}

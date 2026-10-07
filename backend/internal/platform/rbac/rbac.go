@@ -257,6 +257,13 @@ const (
 	PermPurchasesWrite     = "purchases.write"
 	PermStaffManage        = "staff.manage"
 	PermStaffPaymentsWrite = "staff_payments.write"
+	// TEC-383 (000101): AI assistant (F4-01). ai.use and ai.actions.confirm
+	// are granted together to every panel role; customers are gated by realm,
+	// not by a permission.
+	PermAIUse            = "ai.use"
+	PermAIUsageRead      = "ai.usage.read"
+	PermAISettingsManage = "ai.settings.manage"
+	PermAIActionsConfirm = "ai.actions.confirm"
 )
 
 // IsSystemRole reports whether slug is a protected system role.
