@@ -25022,6 +25022,8 @@ paths:
         - $ref: "#/components/parameters/AIUsagePool"
         - $ref: "#/components/parameters/AIUsageModel"
         - $ref: "#/components/parameters/AIUsageUser"
+        - $ref: "#/components/parameters/AIUsageTokensMin"
+        - $ref: "#/components/parameters/AIUsageTokensMax"
         - name: organization
           in: query
           required: false
@@ -25088,7 +25090,7 @@ paths:
         when it is inside the caller's ai.usage.read scope; another or a
         missing organization is 404 alike. List contract: `sort` =
         created_at | tokens (default `-created_at`, id tiebreak; unknown →
-        400), `created_from` / `created_to`, multi-value `channel`,
+        400), `created_from` / `created_to`, `tokens_min` / `tokens_max`, multi-value `channel`,
         `purpose`, `pool`, `model`, `user` (user uuids). `tokens` is the
         quota count (input + output + cache write).
       security:
@@ -25104,6 +25106,8 @@ paths:
         - $ref: "#/components/parameters/AIUsagePool"
         - $ref: "#/components/parameters/AIUsageModel"
         - $ref: "#/components/parameters/AIUsageUser"
+        - $ref: "#/components/parameters/AIUsageTokensMin"
+        - $ref: "#/components/parameters/AIUsageTokensMax"
         - $ref: "#/components/parameters/AIUsageOrganization"
       responses:
         "200":
@@ -25311,6 +25315,18 @@ components:
       schema:
         type: array
         items: { type: string, format: uuid }
+    AIUsageTokensMin:
+      name: tokens_min
+      in: query
+      required: false
+      description: Inclusive lower bound of `tokens` (TEC-391).
+      schema: { type: integer, format: int64, minimum: 0 }
+    AIUsageTokensMax:
+      name: tokens_max
+      in: query
+      required: false
+      description: Inclusive upper bound of `tokens` (TEC-391).
+      schema: { type: integer, format: int64, minimum: 0 }
     AIUsageOrganization:
       name: organization
       in: query

@@ -77,5 +77,6 @@
   "resources.stock.units": "Stok birimleri",
   "resources.leads.list": "Lead'ler",
   "resources.services.list": "Hizmetler",
-  "resources.warranties.list": "Garantiler"
+  "resources.warranties.list": "Garantiler",
+  "resources.ai.usage": "AI kullanımı"
 }
