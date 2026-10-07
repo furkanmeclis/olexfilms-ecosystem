@@ -128,5 +128,16 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "اللفة ليست في مخزون هذه المؤسسة.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "اللفة مستخدمة في خدمة أو طلب مفتوح.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "استُخدم مفتاح منع التكرار هذا لتقسيم آخر.",
-  "codes.LEADS_MODULE_DISABLED": "وحدة العملاء المحتملين مغلقة على مستوى النظام؛ فعّل الوحدة أولًا."
+  "codes.LEADS_MODULE_DISABLED": "وحدة العملاء المحتملين مغلقة على مستوى النظام؛ فعّل الوحدة أولًا.",
+  "codes.FLEET_ALREADY_EXISTS": "يوجد أسطول بهذا الرقم الضريبي بالفعل؛ أرسل إليه طلب ربط.",
+  "codes.FLEET_INVALID_TAX_NUMBER": "الرقم الضريبي غير صالح (فشل التحقق من VKN أو TCKN).",
+  "codes.FLEET_LINK_EXISTS": "لديك بالفعل ربط مفتوح مع هذا الأسطول.",
+  "codes.FLEET_LINK_STATE_CHANGED": "تغيّر الربط في الوقت نفسه؛ يرجى المحاولة مرة أخرى.",
+  "codes.FLEET_PRIMARY_USER_REQUIRED": "ادعُ أولًا المستخدم الأول للأسطول (مالك المركبات).",
+  "codes.FLEET_PRIMARY_USER_LOCKED": "المستخدم الرئيسي للأسطول هو مالك مركبات الأسطول ولا يمكن تعطيله.",
+  "codes.FLEET_USER_EMAIL_TAKEN": "يوجد حساب بعنوان البريد الإلكتروني هذا بالفعل.",
+  "codes.FLEET_VEHICLE_EXISTS": "مركبة بهذه اللوحة أو رقم الهيكل تخص مستخدمي الأسطول؛ يمكنك ربطها بالأسطول.",
+  "codes.FLEET_VEHICLE_OTHER_OWNER": "المركبة تخص عميلًا آخر أو أسطولًا آخر ولا يمكن إضافتها.",
+  "codes.FLEET_NO_DEALER_LINK": "ليس لدى مؤسستك ربط نشط مع هذا الأسطول.",
+  "codes.FLEET_LINK_NOT_PENDING": "تمت الإجابة على طلب الربط بالفعل."
 }

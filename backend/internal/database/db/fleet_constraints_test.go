@@ -360,16 +360,19 @@ func TestFleetOutsideOrganizationTree(t *testing.T) {
 			t.Fatal("fleet listed as a child of the center")
 		}
 	}
-	if _, err := f.q.GetOrganizationForIndex(ctx, fleet.Uuid); !errors.Is(err, pgx.ErrNoRows) {
-		t.Fatalf("index document of a fleet: err = %v", err)
+	// TEC-473: a fleet is indexed with type fleet; its organization ids are
+	// the dealers with an active link (none here), never the tree.
+	doc, err := f.q.GetOrganizationForIndex(ctx, fleet.Uuid)
+	if err != nil || doc.Type != "fleet" || len(doc.LinkedOrgIds) != 0 {
+		t.Fatalf("index document of a fleet = %+v, %v", doc, err)
 	}
 	all, err := f.q.ListOrganizationsForIndex(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, r := range all {
-		if r.ID == fleet.ID {
-			t.Fatal("fleet in the organization index")
+		if r.ID == fleet.ID && (r.Type != "fleet" || len(r.LinkedOrgIds) != 0) {
+			t.Fatalf("fleet index row = %+v", r)
 		}
 	}
 

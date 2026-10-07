@@ -118,7 +118,7 @@ func TestIntegrationSystemSettings(t *testing.T) {
 	if err := json.Unmarshal(env.Data, &e); err != nil {
 		t.Fatal(err)
 	}
-	if !e.IsDefault || string(e.Value) != "30" {
-		t.Fatalf("reset entry = %+v, want default 30", e)
+	if !e.IsDefault || string(e.Value) != "90" {
+		t.Fatalf("reset entry = %+v, want default 90", e)
 	}
 }
