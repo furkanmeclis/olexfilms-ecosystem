@@ -517,6 +517,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	pricingSvc := pricingusecase.New(deps.Queries)
 	pricingmodule.RegisterRoutes(mux, pricinghandler.New(pricingSvc, activityRec),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
+	// TEC-506: recommended price publication, effective-date tick, price
+	// discipline and the price list PDF (docs queue).
+	recommendedSvc := pricingusecase.NewRecommended(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), sysSvc, log)
+	if deps.Queue != nil {
+		recommendedSvc.SetPriceListQueue(queue.PriceListEnqueuer{Client: deps.Queue})
+	}
 	// TEC-306: service catalog, distributor overrides and effective service prices.
 	serviceCatalogSvc := servicecatalogusecase.New(deps.Queries).
 		WithLifecycle(deps.DB, outbox.NewStore(deps.DB, deps.Queries), ratesSvc, featureSvc)
@@ -612,6 +618,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-488: service completion and consumption correction rebuild
 	// efficiency facts even when the module is disabled for reads.
 	efficiencymodule.RegisterEventHandlers(eventBus, deps.Queries, log)
+	// TEC-506: a recommended price publication queues its price list PDFs.
+	pricingmodule.RegisterEventHandlers(eventBus, recommendedSvc)
 	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
 	indexsync.Register(eventBus, deps.Queries, searchIndexer, log)
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.
@@ -725,6 +733,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		efficiencyusecase.NewSummaryExportAdapter(efficiencyusecase.New(deps.Queries)),
 		efficiencyusecase.NewRollsExportAdapter(efficiencyusecase.New(deps.Queries)),
 		efficiencyusecase.NewExpectationsImportAdapter(efficiencyusecase.New(deps.Queries)),
+		// TEC-506: recommended price import (staged) and discipline export.
+		pricingusecase.NewRecommendedImporter(recommendedSvc),
+		pricingusecase.NewDisciplineExportAdapter(recommendedSvc, pricingusecase.ParseDisciplineFilter),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -771,6 +782,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	fleetmodule.RegisterRoutes(mux, fleethandler.New(fleetSvc, exportSvc, importSvc), tokens, loader, deps.Queries, featureSvc)
 	efficiencySvc := efficiencyusecase.New(deps.Queries)
 	efficiencymodule.RegisterRoutes(mux, efficiencyhandler.New(efficiencySvc, exportSvc, importSvc).WithSettings(sysSvc), tokens, loader, deps.Queries, featureSvc)
+	pricingmodule.RegisterRecommendedRoutes(mux, pricinghandler.NewRecommended(recommendedSvc, exportSvc, importSvc, activityRec),
+		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
@@ -828,6 +841,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	s.documents = docSvc
 	if s.worker != nil {
 		s.worker.WithDocsRender(docSvc.ProcessRender)
+	}
+	// TEC-506: price_list document source and its library publication.
+	priceListPublisher := pricingusecase.NewPriceListPublisher(deps.Queries, docSvc,
+		libraryusecase.New(deps.Queries, deps.Storage), featureSvc, log)
+	_ = docSvc.RegisterLoader(docmodel.KindPriceList, priceListPublisher.DocumentLoader())
+	if s.worker != nil {
+		s.worker.WithPricing(recommendedSvc.DailyTask, priceListPublisher.Task)
 	}
 	// TEC-395: WhatsApp conversation messaging: outgoing queue (whatsapp:send),
 	// delivery receipts, inbound media storage and inbox realtime events.

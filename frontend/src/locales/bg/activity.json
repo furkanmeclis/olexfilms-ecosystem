@@ -197,5 +197,6 @@
   "filters.actor": "Филтър по потребител",
   "resources.platform.organizations": "Организации",
   "actions.mcp.tool_called": "Извикан MCP инструмент",
-  "resources.mcp_tool": "MCP инструмент"
+  "resources.mcp_tool": "MCP инструмент",
+  "actions.pricing.recommended_published": "Публикувани препоръчителни цени"
 }

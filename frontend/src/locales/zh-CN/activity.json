@@ -197,5 +197,6 @@
   "filters.actor": "按用户筛选",
   "resources.platform.organizations": "组织",
   "actions.mcp.tool_called": "已调用 MCP 工具",
-  "resources.mcp_tool": "MCP 工具"
+  "resources.mcp_tool": "MCP 工具",
+  "actions.pricing.recommended_published": "已发布建议价格"
 }

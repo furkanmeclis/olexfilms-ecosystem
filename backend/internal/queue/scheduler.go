@@ -92,6 +92,8 @@ func Schedules() []Periodic {
 		{Cron: fleetReportsScheduleCron, Type: TaskFleetReportsSchedule, Queue: QueueMaintenance, Opts: fleetReportsScheduleOpts(), New: NewFleetReportsScheduleTask},
 		// TEC-469: daily showcase Google rating refresh (no-op without a Places key).
 		{Cron: showcaseGoogleRatingCron, Type: TaskShowcaseGoogleRating, Queue: QueueMaintenance, Opts: showcaseGoogleRatingOpts(), New: NewShowcaseGoogleRatingTask},
+		// TEC-506: hourly pricing tick (effective dates, discipline snapshot, weekly digest).
+		{Cron: pricingDailyCron, Type: TaskPricingDaily, Queue: QueueMaintenance, Opts: pricingDailyOpts(), New: NewPricingDailyTask},
 	}
 }
 

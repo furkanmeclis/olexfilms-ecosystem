@@ -235,6 +235,18 @@ func (s *Service) CertificatesExpiryNoticeDays(ctx context.Context) int {
 	return int(s.Int(ctx, KeyCertificatesExpiryNoticeDays))
 }
 
+// PricingDeviationWarningPct is the typed accessor for
+// KeyPricingDeviationWarningPct (TEC-506: price discipline threshold).
+func (s *Service) PricingDeviationWarningPct(ctx context.Context) int {
+	return int(s.Int(ctx, KeyPricingDeviationWarningPct))
+}
+
+// PricingPriceListAutoPublish is the typed accessor for
+// KeyPricingPriceListAutoPublish (TEC-506: price list PDF to the library).
+func (s *Service) PricingPriceListAutoPublish(ctx context.Context) bool {
+	return s.Bool(ctx, KeyPricingPriceListAutoPublish)
+}
+
 // EfficiencyNetworkWindowDays is the history window for network expectations.
 func (s *Service) EfficiencyNetworkWindowDays(ctx context.Context) int {
 	return int(s.Int(ctx, KeyEfficiencyNetworkWindowDays))

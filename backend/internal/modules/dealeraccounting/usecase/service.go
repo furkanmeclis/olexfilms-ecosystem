@@ -72,6 +72,9 @@ type Caller struct {
 	UserID int64
 	Org    orgctx.Scope
 	Filter scopefilter.Filter
+	// RecommendedRead: the caller holds pricing.recommended.read; only then
+	// the price views carry the recommended block (TEC-506).
+	RecommendedRead bool
 }
 
 func (c Caller) actor() *int64 {
@@ -132,6 +135,11 @@ type DealerPriceView struct {
 	Currency             string    `json:"currency"`
 	RecommendedSalePrice *string   `json:"recommended_sale_price,omitempty"`
 	UpdatedAt            time.Time `json:"updated_at"`
+	// Recommended (TEC-506): the recommended price in force for the
+	// dealer's country (else currency-wide) and the deviation of the sale
+	// price from it; only with pricing.recommended.read.
+	Recommended  *usecase.RecommendedRef `json:"recommended,omitempty"`
+	DeviationPct *string                 `json:"deviation_pct,omitempty"`
 }
 
 func (s *Service) ListDealerPrices(ctx context.Context, c Caller) ([]DealerPriceView, error) {
@@ -151,7 +159,30 @@ func (s *Service) ListDealerPrices(ctx context.Context, c Caller) ([]DealerPrice
 		}
 		out = append(out, s.priceView(ctx, o, p.Uuid, r.ProductID, r.SalePrice, r.Currency, r.UpdatedAt.Time))
 	}
+	if c.RecommendedRead && len(rows) > 0 {
+		ids := make([]int64, 0, len(rows))
+		for _, r := range rows {
+			ids = append(ids, r.ProductID)
+		}
+		refs, err := usecase.ApplicableRecommended(ctx, s.q, o.BrandID, o.CountryID, ids, nil)
+		if err != nil {
+			return nil, fmt.Errorf("dealer accounting: %w", err)
+		}
+		for i, r := range rows {
+			withRecommended(&out[i], refs, r.ProductID)
+		}
+	}
 	return out, nil
+}
+
+// withRecommended sets the recommended block of a price view (TEC-506).
+func withRecommended(v *DealerPriceView, refs map[usecase.RecommendedKey]usecase.RecommendedRef, productID int64) {
+	ref, ok := refs[usecase.RecommendedKey{ProductID: productID, Currency: strings.TrimSpace(v.Currency)}]
+	if !ok {
+		return
+	}
+	v.Recommended = &ref
+	v.DeviationPct = usecase.DeviationPct(v.SalePrice, ref.Price)
 }
 
 func (s *Service) SetDealerPrice(ctx context.Context, c Caller, in DealerPriceInput) (DealerPriceView, error) {
@@ -181,7 +212,15 @@ func (s *Service) SetDealerPrice(ctx context.Context, c Caller, in DealerPriceIn
 	if err != nil {
 		return DealerPriceView{}, fmt.Errorf("dealer accounting: set price: %w", err)
 	}
-	return s.priceView(ctx, o, product.Uuid, product.ID, row.SalePrice, row.Currency, row.UpdatedAt.Time), nil
+	view := s.priceView(ctx, o, product.Uuid, product.ID, row.SalePrice, row.Currency, row.UpdatedAt.Time)
+	if c.RecommendedRead {
+		refs, err := usecase.ApplicableRecommended(ctx, s.q, o.BrandID, o.CountryID, []int64{product.ID}, nil)
+		if err != nil {
+			return DealerPriceView{}, fmt.Errorf("dealer accounting: %w", err)
+		}
+		withRecommended(&view, refs, product.ID)
+	}
+	return view, nil
 }
 
 func (s *Service) priceView(ctx context.Context, o db.Organization, productUUID uuid.UUID, productID int64, price pgtype.Numeric, currency string, updated time.Time) DealerPriceView {

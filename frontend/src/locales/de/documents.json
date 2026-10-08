@@ -44,6 +44,7 @@
   "kinds.invoice_view": "Rechnungsansicht",
   "kinds.warranty": "Garantiezertifikat",
   "kinds.fleet_report": "Flottenbericht",
+  "kinds.price_list": "Preisliste (Preisempfehlungen)",
   "languages.tr": "Türkisch",
   "languages.en": "Englisch",
   "languages.bg": "Bulgarisch",
@@ -69,5 +70,6 @@
   "variable_groups.warranty": "Garantie",
   "variable_groups.totals": "Summen",
   "variable_groups.fleet_report": "Flottenbericht",
+  "variable_groups.price_list": "Preisliste (Preisempfehlungen)",
   "fields.updated_at": "Aktualisiert"
 }

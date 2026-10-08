@@ -20,6 +20,8 @@ const (
 // list price is brand master data); distributor and dealer grants only need
 // to cover their own organization.
 type Viewer struct {
+	// UserID is the internal user id (publisher of recommended prices).
+	UserID  int64
 	OrgID   int64
 	OrgType string
 	BrandID int64
@@ -38,6 +40,7 @@ func ViewerFrom(p authctx.Principal, org orgctx.Scope) Viewer {
 		need = rbac.ScopeBrand
 	}
 	return Viewer{
+		UserID:           p.UserInternal,
 		OrgID:            org.InternalID,
 		OrgType:          org.OrgType,
 		BrandID:          org.BrandID,
