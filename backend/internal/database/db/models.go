@@ -324,6 +324,51 @@ type BinProductStock struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type BonusAccrual struct {
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	UserID           int64              `json:"user_id"`
+	Period           string             `json:"period"`
+	RuleID           int64              `json:"rule_id"`
+	AchievementPct   pgtype.Numeric     `json:"achievement_pct"`
+	Amount           pgtype.Numeric     `json:"amount"`
+	Currency         string             `json:"currency"`
+	Status           string             `json:"status"`
+	StaffPaymentID   pgtype.Int8        `json:"staff_payment_id"`
+	ApprovedByUserID pgtype.Int8        `json:"approved_by_user_id"`
+	ApprovedAt       pgtype.Timestamptz `json:"approved_at"`
+	CancelledAt      pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type BonusRule struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	Name            string             `json:"name"`
+	Metric          string             `json:"metric"`
+	ThresholdPct    pgtype.Numeric     `json:"threshold_pct"`
+	Kind            string             `json:"kind"`
+	Amount          pgtype.Numeric     `json:"amount"`
+	Percent         pgtype.Numeric     `json:"percent"`
+	Currency        pgtype.Text        `json:"currency"`
+	Active          bool               `json:"active"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type BonusSetting struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	PayoutDay      int16              `json:"payout_day"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Brand struct {
 	ID        int64              `json:"id"`
 	Uuid      uuid.UUID          `json:"uuid"`
@@ -2112,6 +2157,38 @@ type PartConsumptionExpectation struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PerformanceMetricsMonthly struct {
+	ID             int64              `json:"id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Period         string             `json:"period"`
+	Metric         string             `json:"metric"`
+	Value          pgtype.Numeric     `json:"value"`
+	Numerator      pgtype.Numeric     `json:"numerator"`
+	Denominator    pgtype.Numeric     `json:"denominator"`
+	Currency       pgtype.Text        `json:"currency"`
+	ComputedAt     pgtype.Timestamptz `json:"computed_at"`
+}
+
+type PerformanceTarget struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	TargetOrgID     int64              `json:"target_org_id"`
+	Metric          string             `json:"metric"`
+	PeriodKind      string             `json:"period_kind"`
+	PeriodStart     pgtype.Date        `json:"period_start"`
+	PeriodEnd       pgtype.Date        `json:"period_end"`
+	Value           pgtype.Numeric     `json:"value"`
+	Currency        pgtype.Text        `json:"currency"`
+	ContractRef     pgtype.Date        `json:"contract_ref"`
+	Note            pgtype.Text        `json:"note"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Permission struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -2761,6 +2838,21 @@ type StaffProfile struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StaffTarget struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	UserID          int64              `json:"user_id"`
+	Period          string             `json:"period"`
+	Metric          string             `json:"metric"`
+	Value           pgtype.Numeric     `json:"value"`
+	Currency        pgtype.Text        `json:"currency"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type StepupSetting struct {
 	ID                        int16              `json:"id"`
 	TtlHours                  int32              `json:"ttl_hours"`
@@ -3184,6 +3276,8 @@ type Task struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	DueSoonNotifiedAt pgtype.Timestamptz `json:"due_soon_notified_at"`
 	OverdueNotifiedAt pgtype.Timestamptz `json:"overdue_notified_at"`
+	AutoRuleID        pgtype.Int8        `json:"auto_rule_id"`
+	AutoPeriod        pgtype.Text        `json:"auto_period"`
 }
 
 type TaskComment struct {
@@ -3499,6 +3593,24 @@ type WarrantyPublicCodeAlias struct {
 	BrandID        int64              `json:"brand_id"`
 	Reason         string             `json:"reason"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type WeakDealerRule struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	Name            string             `json:"name"`
+	Metric          string             `json:"metric"`
+	Operator        string             `json:"operator"`
+	Threshold       pgtype.Numeric     `json:"threshold"`
+	CreateTask      bool               `json:"create_task"`
+	Notify          bool               `json:"notify"`
+	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
+	Active          bool               `json:"active"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type WebauthnCredential struct {
