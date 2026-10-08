@@ -722,6 +722,18 @@ var Permissions = []PermissionDef{
 		Scopes:      []Scope{ScopeBrand, ScopeAll},
 		Description: "Read center network demand forecasts for the brand.",
 	},
+
+	// TEC-487: efficiency and waste analytics (F5-06a). Appended last;
+	// migration 000116 seeds them.
+	{
+		Slug: PermEfficiencyRead, Name: "Read efficiency analytics", Module: "efficiency", Scopes: scopesTree,
+		Description: "Read part consumption, roll efficiency and waste analytics in scope.",
+	},
+	{
+		Slug: PermEfficiencyExpectationsManage, Name: "Manage efficiency expectations", Module: "efficiency",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Create and update expected part consumption definitions.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -877,6 +889,9 @@ var Roles = []RoleDef{
 			PermStockForecastRead:        ScopeBrand,
 			PermStockForecastManage:      ScopeBrand,
 			PermStockForecastNetworkRead: ScopeBrand,
+			// TEC-487 (000116).
+			PermEfficiencyRead:               ScopeBrand,
+			PermEfficiencyExpectationsManage: ScopeBrand,
 		}),
 	},
 	{
@@ -1105,6 +1120,8 @@ var Roles = []RoleDef{
 			// TEC-483 (000115).
 			PermStockForecastRead:   ScopeSubtree,
 			PermStockForecastManage: ScopeManaged,
+			// TEC-487 (000116): subtree comparison and roll analytics.
+			PermEfficiencyRead: ScopeSubtree,
 		}),
 	},
 	{
@@ -1298,6 +1315,8 @@ var Roles = []RoleDef{
 			// TEC-483 (000115).
 			PermStockForecastRead:   ScopeManaged,
 			PermStockForecastManage: ScopeManaged,
+			// TEC-487 (000116).
+			PermEfficiencyRead: ScopeManaged,
 		}),
 	},
 	{
