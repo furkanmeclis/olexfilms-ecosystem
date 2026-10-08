@@ -40,7 +40,9 @@ LIMIT 1;
 -- name: ListPartConsumptionExpectations :many
 SELECT e.*,
        p.name AS product_name,
+       p.uuid AS product_uuid,
        c.name AS category_name,
+       c.uuid AS category_uuid,
        COUNT(*) OVER()::bigint AS total_count
 FROM part_consumption_expectations e
 LEFT JOIN products p ON p.id = e.product_id
@@ -96,6 +98,24 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 DELETE FROM part_consumption_expectations
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id);
 
+-- name: GetPartConsumptionExpectationByUUID :one
+SELECT * FROM part_consumption_expectations
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
+
+-- name: ListEfficiencyServiceItems :many
+SELECT si.id
+FROM service_items si
+JOIN services s ON s.id = si.service_id
+WHERE s.status = 'completed'
+  AND si.kind = 'partial'
+  AND jsonb_array_length(si.applied_parts) > 0
+  AND (sqlc.narg(after_id)::bigint IS NULL OR si.id > sqlc.narg(after_id)::bigint)
+ORDER BY si.id
+LIMIT sqlc.arg(row_limit);
+
+-- name: GetEfficiencyServiceItemUnit :one
+SELECT unit_id FROM service_items WHERE id = sqlc.arg(service_item_id);
+
 -- name: RefreshEfficiencyFactsForServiceItem :execrows
 WITH deleted AS (
     DELETE FROM efficiency_facts WHERE efficiency_facts.service_item_id = sqlc.arg(target_service_item_id)
@@ -120,8 +140,8 @@ src AS (
     JOIN car_models cm ON cm.id = s.car_model_id
     WHERE si.id = sqlc.arg(target_service_item_id)
       AND si.kind = 'partial'
+      AND s.status = 'completed'
       AND jsonb_array_length(si.applied_parts) > 0
-      AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
 ),
 parts AS (
     SELECT src.*,
@@ -165,6 +185,9 @@ FROM weighted;
 WITH affected AS (
     SELECT DISTINCT unit_id FROM efficiency_facts
     WHERE sqlc.narg(unit_id)::bigint IS NULL OR unit_id = sqlc.narg(unit_id)::bigint
+    UNION
+    SELECT sqlc.narg(unit_id)::bigint
+    WHERE sqlc.narg(unit_id)::bigint IS NOT NULL
 ),
 deleted AS (
     DELETE FROM roll_efficiency r
@@ -207,6 +230,7 @@ JOIN units u ON u.id = r.unit_id
 JOIN products p ON p.id = r.product_id
 WHERE r.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR r.organization_id = ANY(sqlc.narg(org_ids)::bigint[]))
+  AND (sqlc.narg(unit_uuid)::uuid IS NULL OR u.uuid = sqlc.narg(unit_uuid)::uuid)
   AND (sqlc.narg(q)::text IS NULL OR u.barcode ILIKE '%' || sqlc.narg(q)::text || '%' OR p.name ILIKE '%' || sqlc.narg(q)::text || '%')
   AND (COALESCE(cardinality(sqlc.narg(product_ids)::bigint[]), 0) = 0 OR r.product_id = ANY(sqlc.narg(product_ids)::bigint[]))
   AND (sqlc.narg(waste_ratio_min)::numeric IS NULL OR (CASE WHEN r.expected_meters > 0 THEN (r.consumed_meters / r.expected_meters) - 1 ELSE NULL END) >= sqlc.narg(waste_ratio_min)::numeric)
@@ -252,7 +276,8 @@ SELECT CASE sqlc.arg(dimension)::text
        COUNT(DISTINCT f.service_id)::bigint AS service_count,
        SUM(f.actual_meters)::numeric(14,2) AS actual_meters,
        SUM(f.expected_meters)::numeric(14,2) AS expected_meters,
-       AVG(f.waste_ratio)::numeric(12,6) AS avg_waste_ratio
+       AVG(f.waste_ratio)::numeric(12,6) AS avg_waste_ratio,
+       COUNT(*) OVER()::bigint AS total_count
 FROM efficiency_facts f
 LEFT JOIN organizations o ON o.id = f.dealer_org_id
 LEFT JOIN users u ON u.id = f.staff_user_id
@@ -262,7 +287,22 @@ WHERE f.brand_id = sqlc.arg(brand_id)
   AND f.service_date >= sqlc.arg(date_from)::date
   AND f.service_date < sqlc.arg(date_to)::date
 GROUP BY dimension_key, dimension_label
-ORDER BY avg_waste_ratio DESC NULLS LAST, actual_meters DESC, dimension_label ASC
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'waste_ratio' THEN AVG(f.waste_ratio)
+      WHEN 'meters' THEN SUM(f.actual_meters)
+      WHEN 'services' THEN COUNT(DISTINCT f.service_id)::numeric
+    END
+  END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text
+      WHEN 'waste_ratio' THEN AVG(f.waste_ratio)
+      WHEN 'meters' THEN SUM(f.actual_meters)
+      WHEN 'services' THEN COUNT(DISTINCT f.service_id)::numeric
+    END
+  END DESC NULLS LAST,
+  dimension_label ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: EfficiencyMonthlyTrend :many
@@ -302,3 +342,95 @@ WHERE service_date >= sqlc.arg(date_from)::date
   AND service_date < sqlc.arg(date_to)::date
 GROUP BY bucket
 ORDER BY CASE bucket WHEN 'organization' THEN 1 WHEN 'subtree' THEN 2 ELSE 3 END;
+
+-- name: RefreshNetworkPartExpectations :execrows
+WITH center_org AS (
+    SELECT id, brand_id
+    FROM organizations
+    WHERE organizations.brand_id = sqlc.arg(brand_id) AND type = 'center' AND deleted_at IS NULL
+    ORDER BY id
+    LIMIT 1
+),
+deleted AS (
+    DELETE FROM part_consumption_expectations e
+    USING center_org c
+    WHERE e.brand_id = sqlc.arg(brand_id)
+      AND e.organization_id = c.id
+      AND e.source = 'network'
+    RETURNING 1
+),
+samples AS (
+    SELECT f.brand_id,
+           f.product_id,
+           p.category_id,
+           f.body_type,
+           f.part_key,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY f.actual_meters)::numeric(10,2) AS median_meters,
+           COUNT(*)::integer AS sample_size
+    FROM efficiency_facts f
+    JOIN products p ON p.id = f.product_id
+    WHERE f.brand_id = sqlc.arg(brand_id)
+      AND f.service_date >= sqlc.arg(from_date)::date
+      AND f.service_date < sqlc.arg(to_date)::date
+    GROUP BY f.brand_id, f.product_id, p.category_id, f.body_type, f.part_key
+    HAVING COUNT(*) >= sqlc.arg(min_samples)::integer
+),
+category_samples AS (
+    SELECT f.brand_id,
+           p.category_id,
+           f.body_type,
+           f.part_key,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY f.actual_meters)::numeric(10,2) AS median_meters,
+           COUNT(*)::integer AS sample_size
+    FROM efficiency_facts f
+    JOIN products p ON p.id = f.product_id
+    WHERE f.brand_id = sqlc.arg(brand_id)
+      AND f.service_date >= sqlc.arg(from_date)::date
+      AND f.service_date < sqlc.arg(to_date)::date
+      AND p.category_id IS NOT NULL
+    GROUP BY f.brand_id, p.category_id, f.body_type, f.part_key
+    HAVING COUNT(*) >= sqlc.arg(min_samples)::integer
+),
+eligible_product AS (
+    SELECT s.*
+    FROM samples s
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM part_consumption_expectations manual
+        WHERE manual.brand_id = s.brand_id
+          AND manual.source = 'manual'
+          AND manual.part_key = s.part_key
+          AND manual.product_id = s.product_id
+          AND manual.body_type IS NOT DISTINCT FROM s.body_type
+    )
+),
+eligible_category AS (
+    SELECT s.*
+    FROM category_samples s
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM part_consumption_expectations manual
+        WHERE manual.brand_id = s.brand_id
+          AND manual.source = 'manual'
+          AND manual.part_key = s.part_key
+          AND manual.category_id = s.category_id
+          AND manual.body_type IS NOT DISTINCT FROM s.body_type
+    )
+)
+INSERT INTO part_consumption_expectations (
+    organization_id, brand_id, product_id, category_id, body_type,
+    part_key, expected_meters, source, sample_size
+)
+SELECT c.id, e.brand_id, e.product_id, NULL::bigint, e.body_type,
+       e.part_key, e.median_meters, 'network', e.sample_size
+FROM eligible_product e
+CROSS JOIN center_org c
+CROSS JOIN (SELECT COUNT(*) FROM deleted) deleted_once
+WHERE e.median_meters > 0
+UNION ALL
+SELECT c.id, e.brand_id, NULL::bigint, e.category_id, e.body_type,
+       e.part_key, e.median_meters, 'network', e.sample_size
+FROM eligible_category e
+CROSS JOIN center_org c
+CROSS JOIN (SELECT COUNT(*) FROM deleted) deleted_once
+WHERE e.median_meters > 0;

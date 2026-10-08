@@ -82,6 +82,8 @@ func Schedules() []Periodic {
 		{Cron: stockForecastDailyCron, Type: TaskStockForecastDaily, Queue: QueueLow, Opts: stockForecastDailyOpts(), New: func() (*asynq.Task, error) {
 			return NewStockForecastDailyTask(0, time.Time{})
 		}},
+		// TEC-488: weekly network medians for efficiency expectations.
+		{Cron: efficiencyNetworkRefreshCron, Type: TaskEfficiencyNetworkRefresh, Queue: QueueMaintenance, Opts: efficiencyNetworkRefreshOpts(), New: NewEfficiencyNetworkRefreshTask},
 		// TEC-476: hourly fleet report schedule (07:00 local on the period's first day).
 		{Cron: fleetReportsScheduleCron, Type: TaskFleetReportsSchedule, Queue: QueueMaintenance, Opts: fleetReportsScheduleOpts(), New: NewFleetReportsScheduleTask},
 		// TEC-469: daily showcase Google rating refresh (no-op without a Places key).
