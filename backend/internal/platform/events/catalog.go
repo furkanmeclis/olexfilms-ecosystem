@@ -798,6 +798,11 @@ const (
 	StockForecastLow      = "stock.forecast_low"
 )
 
-// Performance add-on events (TEC-491/F5-05b): written after an organization
-// month is recomputed.
-const PerformanceComputed = "performance.computed"
+// Performance add-on events (TEC-492/F5-05c): computed triggers weak-dealer
+// rule evaluation; weak_dealer reaches center and distributor owners;
+// below_target reaches the dealer with neutral text.
+const (
+	PerformanceComputed    = "performance.computed"
+	PerformanceWeakDealer  = "performance.weak_dealer"
+	PerformanceBelowTarget = "performance.below_target"
+)

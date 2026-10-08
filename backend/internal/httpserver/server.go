@@ -123,6 +123,9 @@ import (
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	performancemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance"
+	performancehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/handler"
+	performanceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/usecase"
 	photostandardmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard"
 	photostandardhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/handler"
 	photostandardusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/usecase"
@@ -776,6 +779,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	fleetmodule.RegisterRoutes(mux, fleethandler.New(fleetSvc, exportSvc, importSvc), tokens, loader, deps.Queries, featureSvc)
 	efficiencySvc := efficiencyusecase.New(deps.Queries)
 	efficiencymodule.RegisterRoutes(mux, efficiencyhandler.New(efficiencySvc, exportSvc, importSvc).WithSettings(sysSvc), tokens, loader, deps.Queries, featureSvc)
+	performanceSvc := performanceusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
+		WithPanelURL(cfg.Auth.FrontendURL)
+	performancemodule.RegisterRoutes(mux, performancehandler.New(performanceSvc), tokens, loader, deps.Queries, featureSvc)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
@@ -981,8 +987,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Tree: deps.Queries, Services: servicesSvc, Warranties: warrantyReader, Customers: customersSvc,
 		Stock: stockSvc, Orders: ordersSvc, Accounting: accountingSvc, Appointments: appointmentsSvc,
 		Leads: leadsSvc, Tasks: tasksSvc, Catalog: catalogSvc, Organizations: orgSvc,
-		Links:      shorturlsmodule.NewLinker(deps.Queries, cfg.Auth.FrontendURL),
-		Extensions: aitools.NewStockForecastTools(stockForecastSvc, deps.Queries),
+		Links: shorturlsmodule.NewLinker(deps.Queries, cfg.Auth.FrontendURL),
+		Extensions: append(
+			aitools.NewStockForecastTools(stockForecastSvc, deps.Queries),
+			aitools.NewPerformanceTools(performanceSvc, deps.Queries)...,
+		),
 	})
 	// TEC-387 (F4-01e): write tools behind the confirmation card; every
 	// channel confirms through s.aiActions.

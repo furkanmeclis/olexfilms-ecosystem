@@ -871,6 +871,7 @@ type Querier interface {
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
 	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
+	GetBrandCenterOrganization(ctx context.Context, brandID int64) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
 	GetBulkOperationByJobID(ctx context.Context, jobID pgtype.Int8) (BulkOperation, error)
@@ -2155,6 +2156,7 @@ type Querier interface {
 	// performance/repository.RankingSort (metric keys | name); metric columns
 	// sort NULLS LAST in both directions; id tiebreak.
 	ListPerformanceRanking(ctx context.Context, arg ListPerformanceRankingParams) ([]ListPerformanceRankingRow, error)
+	ListPerformanceRuleEvaluations(ctx context.Context, arg ListPerformanceRuleEvaluationsParams) ([]ListPerformanceRuleEvaluationsRow, error)
 	ListPerformanceSubtreeOrgIDs(ctx context.Context, rootOrgID int64) ([]int64, error)
 	// Targets with their achievement: the target metric summed over the months
 	// of the target period (same currency for order volume). Sort keys from

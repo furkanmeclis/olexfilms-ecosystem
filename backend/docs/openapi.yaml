@@ -21238,6 +21238,281 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/performance/dashboard:
+    get:
+      tags: [Performance]
+      operationId: getPerformanceDashboard
+      summary: Performance dashboard metrics and targets
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Performance dashboard
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceDashboard" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/ranking:
+    get:
+      tags: [Performance]
+      operationId: listPerformanceRanking
+      summary: Network performance ranking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: period
+          in: query
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, enum: [distributor, dealer] }
+      responses:
+        "200":
+          description: Ranking page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceRankingPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/benchmark:
+    get:
+      tags: [Performance]
+      operationId: getPerformanceBenchmark
+      summary: Dealer benchmark without peer names
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: period
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Dealer benchmark
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBenchmark" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/targets:
+    get:
+      tags: [Performance]
+      operationId: listPerformanceTargets
+      summary: Performance targets with achievement percentage
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Target page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceTargetPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Performance]
+      operationId: createPerformanceTarget
+      summary: Create a performance target
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceTargetInput" }
+      responses:
+        "201":
+          description: Created target
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceTarget" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/performance/targets/{uuid}:
+    put:
+      tags: [Performance]
+      operationId: updatePerformanceTarget
+      summary: Update a performance target
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceTargetInput" }
+      responses:
+        "200":
+          description: Updated target
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceTarget" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Performance]
+      operationId: deletePerformanceTarget
+      summary: Delete a performance target
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/performance/staff-targets:
+    get:
+      tags: [Performance]
+      operationId: listPerformanceStaffTargets
+      summary: Dealer staff targets
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Staff targets
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceStaffTargets" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Performance]
+      operationId: upsertPerformanceStaffTarget
+      summary: Create or update a dealer staff target
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceStaffTargetInput" }
+      responses:
+        "200":
+          description: Staff target
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceStaffTarget" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/staff-targets/{uuid}:
+    delete:
+      tags: [Performance]
+      operationId: deletePerformanceStaffTarget
+      summary: Delete a staff target
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/performance/rules:
+    get:
+      tags: [Performance]
+      operationId: listPerformanceRules
+      summary: Weak dealer rules
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Rules
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceRules" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Performance]
+      operationId: createPerformanceRule
+      summary: Create a weak dealer rule
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceRuleInput" }
+      responses:
+        "201":
+          description: Rule
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceRule" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/rules/{uuid}:
+    put:
+      tags: [Performance]
+      operationId: updatePerformanceRule
+      summary: Update a weak dealer rule
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceRuleInput" }
+      responses:
+        "200":
+          description: Rule
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceRule" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Performance]
+      operationId: deletePerformanceRule
+      summary: Delete or deactivate a weak dealer rule
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/orders:
     get:
       tags: [Orders]
@@ -28431,6 +28706,214 @@ components:
             $ref: "#/components/schemas/Error"
 
   schemas:
+    PerformanceMetricValue:
+      type: object
+      properties:
+        value: { type: string }
+        currency: { type: [string, "null"] }
+        computed_at: { type: [string, "null"], format: date-time }
+    PerformanceRankingRow:
+      type: object
+      properties:
+        rank: { type: integer }
+        organization_uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string }
+        currency: { type: string }
+        metrics:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/PerformanceMetricValue" }
+        computed_at: { type: [string, "null"], format: date-time }
+    PerformanceBenchmark:
+      type: object
+      properties:
+        period: { type: string }
+        own: { $ref: "#/components/schemas/PerformanceRankingRow" }
+        network_average:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/PerformanceMetricValue" }
+    PerformanceDashboard:
+      type: object
+      properties:
+        period: { type: string }
+        organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+        metrics:
+          type: object
+          additionalProperties: { type: object }
+        trend:
+          type: array
+          items:
+            type: object
+            properties:
+              period: { type: string }
+              metrics:
+                type: object
+                additionalProperties: { $ref: "#/components/schemas/PerformanceMetricValue" }
+        targets:
+          type: array
+          items: { $ref: "#/components/schemas/PerformanceTarget" }
+        subtree:
+          type: array
+          items:
+            type: object
+            properties:
+              organization_uuid: { type: string, format: uuid }
+              name: { type: string }
+              type: { type: string }
+              metrics:
+                type: object
+                additionalProperties: { $ref: "#/components/schemas/PerformanceMetricValue" }
+    PerformanceTarget:
+      type: object
+      properties:
+        uuid: { type: string, format: uuid }
+        target_name: { type: string }
+        target_type: { type: string }
+        metric: { type: string, enum: [services_count, order_volume] }
+        period_kind: { type: string, enum: [monthly, quarterly, yearly] }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        value: { type: string }
+        currency: { type: [string, "null"] }
+        contract_ref: { type: [string, "null"], format: date }
+        note: { type: [string, "null"] }
+        actual: { type: [string, "null"] }
+        achievement_pct: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PerformanceTargetInput:
+      type: object
+      required: [target_organization_uuid, metric, period_kind, period_start, value]
+      properties:
+        target_organization_uuid: { type: string, format: uuid }
+        metric: { type: string, enum: [services_count, order_volume] }
+        period_kind: { type: string, enum: [monthly, quarterly, yearly] }
+        period_start: { type: string, format: date }
+        value: { type: string }
+        currency: { type: [string, "null"] }
+        contract_ref: { type: [string, "null"], format: date }
+        note: { type: [string, "null"] }
+    PerformanceStaffTarget:
+      type: object
+      properties:
+        uuid: { type: string, format: uuid }
+        user_id: { type: integer, format: int64 }
+        user_name: { type: string }
+        period: { type: string }
+        metric: { type: string, enum: [services_count, service_revenue] }
+        value: { type: string }
+        currency: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PerformanceStaffTargetInput:
+      type: object
+      required: [user_uuid, period, metric, value]
+      properties:
+        user_uuid: { type: string, format: uuid }
+        period: { type: string }
+        metric: { type: string, enum: [services_count, service_revenue] }
+        value: { type: string }
+        currency: { type: [string, "null"] }
+    PerformanceRule:
+      type: object
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        metric: { type: string }
+        operator: { type: string, enum: [lt, lte, gt, gte, below_median_pct] }
+        threshold: { type: string }
+        create_task: { type: boolean }
+        notify: { type: boolean }
+        assignee_user_id: { type: [integer, "null"], format: int64 }
+        active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PerformanceRuleInput:
+      type: object
+      required: [name, metric, operator, threshold]
+      properties:
+        name: { type: string }
+        metric: { type: string }
+        operator: { type: string, enum: [lt, lte, gt, gte, below_median_pct] }
+        threshold: { type: string }
+        create_task: { type: boolean }
+        notify: { type: boolean }
+        assignee_user_id: { type: [integer, "null"], format: int64 }
+        active: { type: boolean }
+    EnvelopePerformanceDashboard:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceDashboard" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceBenchmark:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceBenchmark" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceRankingPage:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PerformanceRankingRow" } }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceTargetPage:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PerformanceTarget" } }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceTarget:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceTarget" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceStaffTargets:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PerformanceStaffTarget" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceStaffTarget:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceStaffTarget" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceRules:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PerformanceRule" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceRule:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceRule" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     CertificateTypeInput:
       type: object
       additionalProperties: false
