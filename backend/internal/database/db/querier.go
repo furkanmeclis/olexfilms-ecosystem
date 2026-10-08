@@ -215,6 +215,7 @@ type Querier interface {
 	CountFleetPortalVehicles(ctx context.Context, arg CountFleetPortalVehiclesParams) (int64, error)
 	// Same filter block as ListFleetPortalWarranties.
 	CountFleetPortalWarranties(ctx context.Context, arg CountFleetPortalWarrantiesParams) (int64, error)
+	CountFleetReportVehicles(ctx context.Context, fleetOrgID int64) (int64, error)
 	CountFleetReports(ctx context.Context, arg CountFleetReportsParams) (int64, error)
 	CountFleetServices(ctx context.Context, arg CountFleetServicesParams) (int64, error)
 	// Same filter block as ListFleetUsers.
@@ -384,6 +385,9 @@ type Querier interface {
 	// TEC-472 (F5-02a): fleets. A fleet is an organization of type 'fleet'
 	// with a fleet_profiles row; dealers reach it through fleet_dealer_links.
 	CreateFleetProfile(ctx context.Context, arg CreateFleetProfileParams) (FleetProfile, error)
+	// The scheduled report of a period: no row when the period already has one
+	// (whatever its status), so two ticks create a single report.
+	CreateFleetReportIfAbsent(ctx context.Context, arg CreateFleetReportIfAbsentParams) (FleetReport, error)
 	// TEC-475 (F5-02d): fleet service plans.
 	CreateFleetServicePlan(ctx context.Context, arg CreateFleetServicePlanParams) (FleetServicePlan, error)
 	// TEC-473 (F5-02b): fleet management API. Fleet users, the dealer's access
@@ -762,6 +766,22 @@ type Querier interface {
 	// The balance of the same rows (service income adds, collections subtract)
 	// before a point in time.
 	FleetPortalCariBalanceBefore(ctx context.Context, arg FleetPortalCariBalanceBeforeParams) (pgtype.Numeric, error)
+	// Part distribution: applied_parts keys of the period's service items,
+	// counted per key.
+	FleetReportParts(ctx context.Context, arg FleetReportPartsParams) ([]FleetReportPartsRow, error)
+	// Products used: items, pieces and meters per product.
+	FleetReportProducts(ctx context.Context, arg FleetReportProductsParams) ([]FleetReportProductsRow, error)
+	// Services completed in [period_from, period_to) on the fleet's vehicles,
+	// per dealer.
+	FleetReportServicesByDealer(ctx context.Context, arg FleetReportServicesByDealerParams) ([]FleetReportServicesByDealerRow, error)
+	// Same services per vehicle (plate, car brand / model).
+	FleetReportServicesByVehicle(ctx context.Context, arg FleetReportServicesByVehicleParams) ([]FleetReportServicesByVehicleRow, error)
+	// Warranties still running at period_to that end before until.
+	FleetReportUpcomingExpirations(ctx context.Context, arg FleetReportUpcomingExpirationsParams) ([]FleetReportUpcomingExpirationsRow, error)
+	// Warranty state at the end of the period (period_to): active (started,
+	// not void, not past end_at), expired (ended by period_to, not void) and
+	// started within the period.
+	FleetReportWarrantyCounts(ctx context.Context, arg FleetReportWarrantyCountsParams) (FleetReportWarrantyCountsRow, error)
 	// TEC-388: prompt context of a chat turn: the user, the conversation's
 	// organization, its brand and the brand center (K10 locale / time zone).
 	GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error)
@@ -904,6 +924,7 @@ type Querier interface {
 	GetFleetCarModelByID(ctx context.Context, id int64) (CarModel, error)
 	GetFleetDealerLinkByUUID(ctx context.Context, argUuid uuid.UUID) (FleetDealerLink, error)
 	GetFleetProfileByOrg(ctx context.Context, organizationID int64) (FleetProfile, error)
+	GetFleetReportByID(ctx context.Context, id int64) (FleetReport, error)
 	GetFleetReportByUUID(ctx context.Context, argUuid uuid.UUID) (FleetReport, error)
 	GetFleetServicePlanByIdempotency(ctx context.Context, arg GetFleetServicePlanByIdempotencyParams) (FleetServicePlan, error)
 	GetFleetServicePlanByUUID(ctx context.Context, arg GetFleetServicePlanByUUIDParams) (FleetServicePlan, error)
@@ -1474,6 +1495,8 @@ type Querier interface {
 	// every organization of the brand). A dealer reaches a fleet only through
 	// an active link.
 	ListActiveFleetLinksInScope(ctx context.Context, arg ListActiveFleetLinksInScopeParams) ([]FleetDealerLink, error)
+	// E-mail addresses of the fleet's active users (report recipients).
+	ListActiveFleetUserEmails(ctx context.Context, fleetOrgID int64) ([]string, error)
 	// Recipients of fleet notifications (link requests).
 	ListActiveFleetUserIDs(ctx context.Context, fleetOrgID int64) ([]int64, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
@@ -1785,6 +1808,14 @@ type Querier interface {
 	// plate | car_brand | last_service_at | active_warranty_count | created_at,
 	// default plate.
 	ListFleetVehicles(ctx context.Context, arg ListFleetVehiclesParams) ([]ListFleetVehiclesRow, error)
+	// TEC-476 (F5-02e): periodic fleet reports. The scheduler (worker-core)
+	// walks the fleets with a report frequency, creates one fleet_reports row
+	// per (fleet, period) and the docs worker renders it. The report content
+	// reads the services, warranties and parts of the dealers that have the
+	// fleet module (dealer_ids).
+	// Fleets with a report frequency (monthly / quarterly), keyset by
+	// organization id.
+	ListFleetsDueForReport(ctx context.Context, arg ListFleetsDueForReportParams) ([]ListFleetsDueForReportRow, error)
 	// Serial units assigned to the order's lines whose product is synced from
 	// a connection, in line order. Olex and local products have no connection
 	// and never appear.
@@ -2216,6 +2247,10 @@ type Querier interface {
 	// docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
 	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]ListStaffPaymentsRow, error)
 	ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error)
+	// Pending reports whose generation task may have been lost (enqueue
+	// failure): the scheduler enqueues them again (task id dedupe). Database
+	// clock: older than 15 minutes.
+	ListStalePendingFleetReports(ctx context.Context, limitCount int32) ([]int64, error)
 	// Queued messages older than the cutoff whose send task may have been lost
 	// (enqueue failure, Redis flush); the sweep enqueues them again.
 	ListStaleQueuedMessages(ctx context.Context, arg ListStaleQueuedMessagesParams) ([]ListStaleQueuedMessagesRow, error)

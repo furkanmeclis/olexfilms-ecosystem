@@ -43,6 +43,7 @@
   "kinds.order_slip": "Bolla d'ordine",
   "kinds.invoice_view": "Vista fattura",
   "kinds.warranty": "Certificato di garanzia",
+  "kinds.fleet_report": "Report della flotta",
   "languages.tr": "Turco",
   "languages.en": "Inglese",
   "languages.bg": "Bulgaro",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "Fattura",
   "variable_groups.warranty": "Garanzia",
   "variable_groups.totals": "Totali",
+  "variable_groups.fleet_report": "Report della flotta",
   "fields.updated_at": "Aggiornato"
 }

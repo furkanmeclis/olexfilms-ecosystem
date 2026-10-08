@@ -43,6 +43,7 @@
   "kinds.order_slip": "Sipariş fişi",
   "kinds.invoice_view": "Fatura görünümü",
   "kinds.warranty": "Garanti belgesi",
+  "kinds.fleet_report": "Filo raporu",
   "languages.tr": "Türkçe",
   "languages.en": "İngilizce",
   "languages.bg": "Bulgarca",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "Fatura",
   "variable_groups.warranty": "Garanti",
   "variable_groups.totals": "Tutarlar",
+  "variable_groups.fleet_report": "Filo raporu",
   "fields.updated_at": "Güncellendi"
 }

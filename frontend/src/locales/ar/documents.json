@@ -43,6 +43,7 @@
   "kinds.order_slip": "إيصال الطلب",
   "kinds.invoice_view": "عرض الفاتورة",
   "kinds.warranty": "شهادة الضمان",
+  "kinds.fleet_report": "تقرير الأسطول",
   "languages.tr": "التركية",
   "languages.en": "الإنجليزية",
   "languages.bg": "البلغارية",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "الفاتورة",
   "variable_groups.warranty": "الضمان",
   "variable_groups.totals": "الإجماليات",
+  "variable_groups.fleet_report": "تقرير الأسطول",
   "fields.updated_at": "تاريخ التحديث"
 }

@@ -43,6 +43,7 @@
   "kinds.order_slip": "Δελτίο παραγγελίας",
   "kinds.invoice_view": "Προβολή τιμολογίου",
   "kinds.warranty": "Πιστοποιητικό εγγύησης",
+  "kinds.fleet_report": "Αναφορά στόλου",
   "languages.tr": "Τουρκικά",
   "languages.en": "Αγγλικά",
   "languages.bg": "Βουλγαρικά",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "Τιμολόγιο",
   "variable_groups.warranty": "Εγγύηση",
   "variable_groups.totals": "Σύνολα",
+  "variable_groups.fleet_report": "Αναφορά στόλου",
   "fields.updated_at": "Ενημερώθηκε"
 }

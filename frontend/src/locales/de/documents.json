@@ -43,6 +43,7 @@
   "kinds.order_slip": "Bestellschein",
   "kinds.invoice_view": "Rechnungsansicht",
   "kinds.warranty": "Garantiezertifikat",
+  "kinds.fleet_report": "Flottenbericht",
   "languages.tr": "Türkisch",
   "languages.en": "Englisch",
   "languages.bg": "Bulgarisch",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "Rechnung",
   "variable_groups.warranty": "Garantie",
   "variable_groups.totals": "Summen",
+  "variable_groups.fleet_report": "Flottenbericht",
   "fields.updated_at": "Aktualisiert"
 }

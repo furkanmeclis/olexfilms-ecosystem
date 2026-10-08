@@ -82,6 +82,7 @@ type Service struct {
 	appointments AppointmentStarter
 	modules      ModuleChecker
 	files        ReportFiles
+	reports      ReportConfig
 }
 
 // New creates the fleet usecase.

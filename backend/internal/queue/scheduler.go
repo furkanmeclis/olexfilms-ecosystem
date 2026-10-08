@@ -78,6 +78,8 @@ func Schedules() []Periodic {
 		{Cron: campaignTickCron, Type: TaskCampaignTick, Queue: QueueMaintenance, Opts: campaignTickOpts(), New: NewCampaignTickTask},
 		// TEC-481: hourly certificate notices/expiry in each org's timezone.
 		{Cron: certificateExpiryScanCron, Type: TaskCertificateExpiryScan, Queue: QueueMaintenance, Opts: certificateExpiryScanOpts(), New: NewCertificateExpiryScanTask},
+		// TEC-476: hourly fleet report schedule (07:00 local on the period's first day).
+		{Cron: fleetReportsScheduleCron, Type: TaskFleetReportsSchedule, Queue: QueueMaintenance, Opts: fleetReportsScheduleOpts(), New: NewFleetReportsScheduleTask},
 	}
 }
 
