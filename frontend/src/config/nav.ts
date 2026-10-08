@@ -45,6 +45,7 @@ import {
   Warehouse,
   ScanLine,
   PackagePlus,
+  TrendingUp,
   Barcode,
   ClipboardCheck,
   BadgeCheck,
@@ -178,6 +179,13 @@ export const platformNav = defineNav({
           href: routes.platform.modules.root,
           icon: Blocks,
           permission: permissions.modules.platformRead,
+        },
+        {
+          id: "showcases",
+          titleKey: "showcase.queue.nav",
+          href: routes.platform.showcases.root,
+          icon: BadgeCheck,
+          permission: permissions.showcase.review,
         },
         {
           id: "certificate-types",
@@ -409,6 +417,15 @@ export function tenantNav(slug: string) {
             titleKey: "layout.nav_features",
             href: routes.tenant.features.root(slug),
             icon: Blocks,
+          },
+          {
+            id: "showcase",
+            titleKey: "showcase.nav",
+            href: routes.tenant.showcase.root(slug),
+            icon: BadgeCheck,
+            permission: permissions.showcase.read,
+            feature: "dealer_showcase",
+            orgTypes: ["dealer", "distributor"],
           },
           {
             // TEC-390: AI assistant (ai_assistant module + ai.use; the
@@ -860,6 +877,14 @@ export function tenantNav(slug: string) {
             permission: permissions.stock.read,
             feature: "stock",
             orgTypes: ["distributor", "dealer"],
+          },
+          {
+            id: "stock-forecast",
+            titleKey: "stock_forecast.nav",
+            href: routes.tenant.stockForecast.list(slug),
+            icon: TrendingUp,
+            permission: permissions.stockForecast.read,
+            feature: "stock_forecast",
           },
         ],
       },

@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout";
 import { RecentAnnouncementsWidget } from "@/features/announcements";
 import { NetworkOccupancyWidget } from "@/features/appointments";
 import { StockSummaryWidget } from "@/features/stock";
+import { StockForecastWidget } from "@/features/stock-forecast";
 import { TopVehicleModelsWidget } from "@/features/vehicle-catalog";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -22,6 +23,7 @@ export default function TenantHomePage() {
         <RecentAnnouncementsWidget slug={params.slug} />
         <TopVehicleModelsWidget slug={params.slug} />
         <StockSummaryWidget slug={params.slug} />
+        <StockForecastWidget slug={params.slug} />
         <NetworkOccupancyWidget slug={params.slug} />
       </div>
     </div>
