@@ -235,6 +235,7 @@ type Querier interface {
 	CountLibraryItems(ctx context.Context, arg CountLibraryItemsParams) (int64, error)
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
+	CountNetworkDemandForecasts(ctx context.Context, arg CountNetworkDemandForecastsParams) (int64, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
 	CountOAuthClients(ctx context.Context, arg CountOAuthClientsParams) (int64, error)
@@ -289,6 +290,7 @@ type Querier interface {
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
 	CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error)
 	CountStockEntryLines(ctx context.Context, entryID int64) (int64, error)
+	CountStockForecasts(ctx context.Context, arg CountStockForecastsParams) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error)
 	CountStockSplitsBySource(ctx context.Context, sourceUnitID int64) (int64, error)
@@ -633,6 +635,7 @@ type Querier interface {
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
 	// Deleting is the claim: a concurrent second decision finds nothing.
 	DeleteOAuthAuthRequest(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteOldStockForecastSnapshots(ctx context.Context, cutoffOn pgtype.Date) (int64, error)
 	DeleteOrderItem(ctx context.Context, id int64) (int64, error)
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
@@ -967,6 +970,7 @@ type Querier interface {
 	// Portal legal texts and consents (TEC-90).
 	GetLatestLegalText(ctx context.Context, arg GetLatestLegalTextParams) (LegalText, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
+	GetLatestStockForecast(ctx context.Context, arg GetLatestStockForecastParams) (StockForecast, error)
 	GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead, error)
 	// TEC-316: lead conversion serializes on the lead row.
 	GetLeadByIDForUpdate(ctx context.Context, arg GetLeadByIDForUpdateParams) (Lead, error)
@@ -1194,6 +1198,7 @@ type Querier interface {
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
 	GetStockEntryByImportBatch(ctx context.Context, importBatchID pgtype.Int8) (StockEntry, error)
 	GetStockEntryByUUID(ctx context.Context, arg GetStockEntryByUUIDParams) (StockEntry, error)
+	GetStockForecastThreshold(ctx context.Context, arg GetStockForecastThresholdParams) (StockForecastThreshold, error)
 	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
 	GetStockImportBatchByJob(ctx context.Context, importJobID pgtype.Int8) (StockImportBatch, error)
 	GetStockImportBatchUUID(ctx context.Context, id int64) (uuid.UUID, error)
@@ -1939,6 +1944,7 @@ type Querier interface {
 	// with coordinates, within radius_km of (lat, lng). Distance is the
 	// haversine great-circle distance in km (mean Earth radius 6371.0088).
 	ListNearbyDealers(ctx context.Context, arg ListNearbyDealersParams) ([]ListNearbyDealersRow, error)
+	ListNetworkDemandForecasts(ctx context.Context, arg ListNetworkDemandForecastsParams) ([]ListNetworkDemandForecastsRow, error)
 	ListNotificationChannelSettings(ctx context.Context) ([]NotificationChannelSetting, error)
 	// Sort: docs/list-contract.md, keys from usecase.DeliveriesSortSpec.
 	ListNotificationDeliveries(ctx context.Context, arg ListNotificationDeliveriesParams) ([]ListNotificationDeliveriesRow, error)
@@ -2082,6 +2088,7 @@ type Querier interface {
 	// TEC-369: category order and bulk actions.
 	// Every category of the brand in display order (reorder input).
 	ListProductCategoryOrder(ctx context.Context, brandID int64) ([]ListProductCategoryOrderRow, error)
+	ListProductConsumptionSeries(ctx context.Context, arg ListProductConsumptionSeriesParams) ([]ListProductConsumptionSeriesRow, error)
 	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ProductPrice, error)
 	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
 	ListProductSaleLines(ctx context.Context, arg ListProductSaleLinesParams) ([]ProductSaleLine, error)
@@ -2269,6 +2276,12 @@ type Querier interface {
 	// entries have none and come last). q: note, warehouse name or code.
 	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error)
 	ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error)
+	ListStockForecastHistory(ctx context.Context, arg ListStockForecastHistoryParams) ([]StockForecast, error)
+	ListStockForecastThresholds(ctx context.Context, organizationID int64) ([]ListStockForecastThresholdsRow, error)
+	// List contract: sort=days_left|-days_left|depletion_date|-depletion_date|
+	// product_name|-product_name|avg_daily_30|-avg_daily_30|status|-status;
+	// default days_left NULLS LAST. product_id is the stable tiebreak.
+	ListStockForecasts(ctx context.Context, arg ListStockForecastsParams) ([]ListStockForecastsRow, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
 	ListStockImportRows(ctx context.Context, arg ListStockImportRowsParams) ([]StockImportRow, error)
 	ListStockMovementsByOrganization(ctx context.Context, arg ListStockMovementsByOrganizationParams) ([]StockMovement, error)
@@ -3394,6 +3407,7 @@ type Querier interface {
 	// Catalog sync: level and sort order follow the Go catalog; admin-edited
 	// default_enabled / is_paid survive (a core module is always on).
 	UpsertModuleCatalog(ctx context.Context, arg UpsertModuleCatalogParams) error
+	UpsertNetworkDemandForecast(ctx context.Context, arg UpsertNetworkDemandForecastParams) (NetworkDemandForecast, error)
 	UpsertNotificationEvent(ctx context.Context, arg UpsertNotificationEventParams) error
 	UpsertNotificationPreferenceRow(ctx context.Context, arg UpsertNotificationPreferenceRowParams) (NotificationPreference, error)
 	UpsertNotificationTemplate(ctx context.Context, arg UpsertNotificationTemplateParams) (NotificationTemplate, error)
@@ -3415,6 +3429,11 @@ type Querier interface {
 	UpsertServiceCertificateWarning(ctx context.Context, arg UpsertServiceCertificateWarningParams) (ServiceCertificateWarning, error)
 	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
+	// TEC-483 (F5-04a): stock forecast snapshots, thresholds and center network
+	// demand. Worker/API layers arrive in F5-04b/c; these queries are the
+	// repository contract for daily snapshots and list screens.
+	UpsertStockForecastSnapshot(ctx context.Context, arg UpsertStockForecastSnapshotParams) (StockForecast, error)
+	UpsertStockForecastThreshold(ctx context.Context, arg UpsertStockForecastThresholdParams) (StockForecastThreshold, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
 	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)
