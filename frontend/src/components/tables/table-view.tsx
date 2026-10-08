@@ -64,6 +64,7 @@ type TableViewProps<TData> = {
   onEditingCellChange?: (cell: EditingCell) => void;
   onCellEdit?: (payload: CellEditPayload<TData>) => void;
   onRowClick?: (row: TData) => void;
+  getRowClassName?: (row: TData) => string | undefined;
 };
 
 export function TableView<TData>({
@@ -79,6 +80,7 @@ export function TableView<TData>({
   onEditingCellChange,
   onCellEdit,
   onRowClick,
+  getRowClassName,
 }: TableViewProps<TData>) {
   const cellPad = densityCell[density];
   const leafColumns = table.getVisibleLeafColumns();
@@ -264,6 +266,7 @@ export function TableView<TData>({
                   onEditingCellChange={onEditingCellChange}
                   onCellEdit={onCellEdit}
                   onRowClick={onRowClick}
+                  getRowClassName={getRowClassName}
                 />
               ),
             )
@@ -303,6 +306,7 @@ type RowProps<TData> = {
   onEditingCellChange?: (cell: EditingCell) => void;
   onCellEdit?: (payload: CellEditPayload<TData>) => void;
   onRowClick?: (row: TData) => void;
+  getRowClassName?: (row: TData) => string | undefined;
 };
 
 function StaticTableRow<TData>({
@@ -314,12 +318,14 @@ function StaticTableRow<TData>({
   onEditingCellChange,
   onCellEdit,
   onRowClick,
+  getRowClassName,
 }: RowProps<TData>) {
   return (
     <tr
       className={cn(
         "border-border hover:bg-muted/30 data-[state=selected]:bg-muted/50 border-b last:border-0",
         onRowClick && "cursor-pointer",
+        getRowClassName?.(row.original),
       )}
       data-state={row.getIsSelected() ? "selected" : undefined}
       onClick={
