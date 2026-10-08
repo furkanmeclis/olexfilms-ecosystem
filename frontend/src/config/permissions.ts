@@ -195,6 +195,12 @@ export const Permission = {
   FleetsManage: "fleets.manage",
   FleetsPlan: "fleets.plan",
   FleetPortalRead: "fleet.portal.read",
+  /** TEC-479/482: certificate add-on definitions, uploads and approvals. */
+  CertificateTypesManage: "certificate_types.manage",
+  CertificatesRead: "certificates.read",
+  CertificatesWrite: "certificates.write",
+  CertificatesVerify: "certificates.verify",
+  CertificatesApproveService: "certificates.approve_service",
   /** TEC-466: dealer showcase (panel editor, center review queue). */
   ShowcaseRead: "showcase.read",
   ShowcaseWrite: "showcase.write",
@@ -507,6 +513,13 @@ export const permissions = {
     read: Permission.ServiceSubscriptionsRead,
     cancelRequest: Permission.ServiceSubscriptionsCancelRequest,
     cancelApprove: Permission.ServiceSubscriptionsCancelApprove,
+  },
+  certificates: {
+    typesManage: Permission.CertificateTypesManage,
+    read: Permission.CertificatesRead,
+    write: Permission.CertificatesWrite,
+    verify: Permission.CertificatesVerify,
+    approveService: Permission.CertificatesApproveService,
   },
   stock: {
     read: Permission.StockRead,

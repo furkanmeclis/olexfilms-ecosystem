@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Blocks,
   BellRing,
+  BadgeCheck,
   Coins,
   FileText,
   KeyRound,
@@ -164,6 +165,14 @@ export const HUB_LINKS: HubLink[] = [
     descriptionKey: "settings.system.hub.document_templates",
     icon: FileText,
     permission: permissions.documentTemplates.read,
+  },
+  {
+    id: "certificate-types",
+    href: routes.platform.certificateTypes.root,
+    titleKey: "certificates.types.nav",
+    descriptionKey: "settings.system.hub.certificates",
+    icon: BadgeCheck,
+    permission: permissions.certificates.typesManage,
   },
 ];
 
