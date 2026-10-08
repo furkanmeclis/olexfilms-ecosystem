@@ -703,6 +703,25 @@ var Permissions = []PermissionDef{
 		Slug: PermPlatformShowcaseReview, Name: "Review showcases", Module: "dealer_showcase", Scopes: scopesSupplier,
 		Description: "Approve or reject dealer showcases submitted for publication.",
 	},
+
+	// TEC-483: stock forecast schema and thresholds (F5-04a). Appended last;
+	// migration 000115 seeds them. Dealer/distributor owners manage only
+	// their own thresholds; network demand is center-only.
+	{
+		Slug: PermStockForecastRead, Name: "Read stock forecasts", Module: "stock_forecast",
+		Scopes:      []Scope{ScopeManaged, ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Read stock forecast snapshots and product history.",
+	},
+	{
+		Slug: PermStockForecastManage, Name: "Manage stock forecast thresholds", Module: "stock_forecast",
+		Scopes:      []Scope{ScopeManaged, ScopeBrand, ScopeAll},
+		Description: "Edit stock forecast warning and cover thresholds.",
+	},
+	{
+		Slug: PermStockForecastNetworkRead, Name: "Read network stock demand forecasts", Module: "stock_forecast",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Read center network demand forecasts for the brand.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -854,6 +873,10 @@ var Roles = []RoleDef{
 			// TEC-466 (000113).
 			PermShowcaseRead:           ScopeBrand,
 			PermPlatformShowcaseReview: ScopeBrand,
+			// TEC-483 (000115).
+			PermStockForecastRead:        ScopeBrand,
+			PermStockForecastManage:      ScopeBrand,
+			PermStockForecastNetworkRead: ScopeBrand,
 		}),
 	},
 	{
@@ -891,6 +914,10 @@ var Roles = []RoleDef{
 			PermAIActionsConfirm: ScopeOwn,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-483 (000115).
+			PermStockForecastRead:        ScopeBrand,
+			PermStockForecastManage:      ScopeBrand,
+			PermStockForecastNetworkRead: ScopeBrand,
 		}),
 	},
 	{
@@ -1075,6 +1102,9 @@ var Roles = []RoleDef{
 			// TEC-466 (000113): own showcase and those of its dealers.
 			PermShowcaseRead:  ScopeSubtree,
 			PermShowcaseWrite: ScopeSubtree,
+			// TEC-483 (000115).
+			PermStockForecastRead:   ScopeSubtree,
+			PermStockForecastManage: ScopeManaged,
 		}),
 	},
 	{
@@ -1118,6 +1148,8 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-483 (000115).
+			PermStockForecastRead: ScopeSubtree,
 		}),
 	},
 	{
@@ -1140,6 +1172,8 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-483 (000115).
+			PermStockForecastRead: ScopeSubtree,
 		}),
 	},
 	{
@@ -1261,6 +1295,9 @@ var Roles = []RoleDef{
 			// TEC-466 (000113).
 			PermShowcaseRead:  ScopeManaged,
 			PermShowcaseWrite: ScopeManaged,
+			// TEC-483 (000115).
+			PermStockForecastRead:   ScopeManaged,
+			PermStockForecastManage: ScopeManaged,
 		}),
 	},
 	{
@@ -1310,6 +1347,8 @@ var Roles = []RoleDef{
 			PermFleetsPlan: ScopeManaged,
 			// TEC-466 (000113): reads the showcase, the owner edits it.
 			PermShowcaseRead: ScopeManaged,
+			// TEC-483 (000115).
+			PermStockForecastRead: ScopeManaged,
 		}),
 	},
 	{

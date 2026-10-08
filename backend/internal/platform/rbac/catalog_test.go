@@ -149,6 +149,49 @@ func TestStockGrants(t *testing.T) {
 	}
 }
 
+// TEC-483: stock forecast grants. Network demand is center-only; threshold
+// management is owner/center only while staff can read forecasts.
+func TestStockForecastGrants(t *testing.T) {
+	for _, slug := range []string{RoleCenterStaff, RoleCenterWarehouse} {
+		r, _ := RoleBySlug(slug)
+		if r.Grants[PermStockForecastRead] != ScopeBrand ||
+			r.Grants[PermStockForecastManage] != ScopeBrand ||
+			r.Grants[PermStockForecastNetworkRead] != ScopeBrand {
+			t.Fatalf("%s stock forecast grants = %v", slug, r.Grants)
+		}
+	}
+	distOwner, _ := RoleBySlug(RoleDistributorOwner)
+	if distOwner.Grants[PermStockForecastRead] != ScopeSubtree ||
+		distOwner.Grants[PermStockForecastManage] != ScopeManaged {
+		t.Fatalf("distributor_owner stock forecast grants = %v", distOwner.Grants)
+	}
+	dealerOwner, _ := RoleBySlug(RoleDealerOwner)
+	if dealerOwner.Grants[PermStockForecastRead] != ScopeManaged ||
+		dealerOwner.Grants[PermStockForecastManage] != ScopeManaged {
+		t.Fatalf("dealer_owner stock forecast grants = %v", dealerOwner.Grants)
+	}
+	for _, slug := range []string{RoleDistributorStaff, RoleDistributorWarehouseStaff, RoleDealerStaff} {
+		r, _ := RoleBySlug(slug)
+		if _, ok := r.Grants[PermStockForecastManage]; ok {
+			t.Fatalf("%s must not manage stock forecast thresholds", slug)
+		}
+		if _, ok := r.Grants[PermStockForecastNetworkRead]; ok {
+			t.Fatalf("%s must not read network stock forecasts", slug)
+		}
+		if _, ok := r.Grants[PermStockForecastRead]; !ok {
+			t.Fatalf("%s must read stock forecasts", slug)
+		}
+	}
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin || r.OrgType == OrgTypeCenter {
+			continue
+		}
+		if _, ok := r.Grants[PermStockForecastNetworkRead]; ok {
+			t.Fatalf("%s must not hold stock_forecast.network.read", r.Slug)
+		}
+	}
+}
+
 // TEC-171 (TEC-99 decision 7, K9/K24): dealer roles read their ledger and
 // dispute entries posted by the parent. TEC-341 (F3-07) opens manual writes
 // of the dealer's own book to dealer_owner and dealer_accounting (the use
