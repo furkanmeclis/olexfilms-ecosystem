@@ -734,6 +734,33 @@ var Permissions = []PermissionDef{
 		Scopes:      []Scope{ScopeBrand, ScopeAll},
 		Description: "Create and update expected part consumption definitions.",
 	},
+
+	// TEC-490: performance and targets (F5-05a). Appended last; migration
+	// 000123 seeds them.
+	{
+		Slug: PermPerformanceRead, Name: "Read performance", Module: "performance", Scopes: scopesTree,
+		Description: "Read monthly performance metrics, rankings and target achievement in scope.",
+	},
+	{
+		Slug: PermPerformanceTargetsManage, Name: "Manage performance targets", Module: "performance",
+		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Set service count and order volume targets for the organizations below.",
+	},
+	{
+		Slug: PermPerformanceStaffTargetsManage, Name: "Manage staff targets", Module: "performance",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Set monthly individual targets for the staff of the organization.",
+	},
+	{
+		Slug: PermPerformanceBonusManage, Name: "Manage staff bonuses", Module: "performance",
+		Scopes:      []Scope{ScopeManaged, ScopeAll},
+		Description: "Define target-based bonus rules and approve bonus accruals of the organization.",
+	},
+	{
+		Slug: PermPerformanceRulesManage, Name: "Manage weak dealer rules", Module: "performance",
+		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Define weak dealer rules that open tasks or send notifications.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -892,6 +919,10 @@ var Roles = []RoleDef{
 			// TEC-487 (000116).
 			PermEfficiencyRead:               ScopeBrand,
 			PermEfficiencyExpectationsManage: ScopeBrand,
+			// TEC-490 (000123).
+			PermPerformanceRead:          ScopeBrand,
+			PermPerformanceTargetsManage: ScopeBrand,
+			PermPerformanceRulesManage:   ScopeBrand,
 		}),
 	},
 	{
@@ -1122,6 +1153,11 @@ var Roles = []RoleDef{
 			PermStockForecastManage: ScopeManaged,
 			// TEC-487 (000116): subtree comparison and roll analytics.
 			PermEfficiencyRead: ScopeSubtree,
+			// TEC-490 (000123): targets and weak dealer rules for the dealers
+			// below (the usecase excludes the distributor itself).
+			PermPerformanceRead:          ScopeSubtree,
+			PermPerformanceTargetsManage: ScopeSubtree,
+			PermPerformanceRulesManage:   ScopeSubtree,
 		}),
 	},
 	{
@@ -1167,6 +1203,8 @@ var Roles = []RoleDef{
 			PermAIActionsConfirm: ScopeOwn,
 			// TEC-483 (000115).
 			PermStockForecastRead: ScopeSubtree,
+			// TEC-490 (000123).
+			PermPerformanceRead: ScopeSubtree,
 		}),
 	},
 	{
@@ -1317,6 +1355,10 @@ var Roles = []RoleDef{
 			PermStockForecastManage: ScopeManaged,
 			// TEC-487 (000116).
 			PermEfficiencyRead: ScopeManaged,
+			// TEC-490 (000123).
+			PermPerformanceRead:               ScopeManaged,
+			PermPerformanceStaffTargetsManage: ScopeManaged,
+			PermPerformanceBonusManage:        ScopeManaged,
 		}),
 	},
 	{
@@ -1399,6 +1441,8 @@ var Roles = []RoleDef{
 			// TEC-383 (000101).
 			PermAIUse:            ScopeOwn,
 			PermAIActionsConfirm: ScopeOwn,
+			// TEC-490 (000123): bonus accruals feed staff payments.
+			PermPerformanceBonusManage: ScopeManaged,
 		}),
 	},
 	{
