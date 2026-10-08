@@ -4,8 +4,13 @@ import {
   dealerLocality,
   dealerLogoSrc,
   dealerMapHref,
+  dealerJsonLd,
+  dealerOgImage,
+  dealerPhotoSrc,
   dealerPosition,
   fetchPublicDealer,
+  fetchLeadFormConfig,
+  googleProfileHref,
   normalizeDealerCode,
   type PublicDealer,
 } from "./dealer-showcase";
@@ -21,6 +26,29 @@ const DEALER: PublicDealer = {
   latitude: 40.99,
   longitude: 29.03,
   whatsapp: "+905321234567",
+};
+
+const SHOWCASE: NonNullable<PublicDealer["showcase"]> = {
+  locale: "en",
+  headline: "Premium PPF",
+  about: "Paint protection specialists.",
+  working_hours: [
+    { day: "monday", windows: [{ start: "09:00", end: "18:00" }] },
+    { day: "tuesday", windows: [] },
+  ],
+  open_now: true,
+  timezone: "Europe/Istanbul",
+  services: [{ kind: "custom", title: "PPF", description: "Full body" }],
+  photos: [{ url: "/v1/public/dealers/olex-kadikoy/photos/1", caption: "" }],
+  social_links: { instagram: "https://instagram.com/olex" },
+  seo_keywords: ["ppf"],
+  google_rating: 4.8,
+  google_review_count: 128,
+  google_rating_source: "places",
+  google_place_id: "places-1",
+  lead_form_enabled: true,
+  whatsapp_chat_url: "https://wa.me/905321234567?text=showcase",
+  published_at: "2026-10-08T09:00:00Z",
 };
 
 function upstream(status: number, body: unknown, headers?: HeadersInit) {
@@ -130,8 +158,62 @@ describe("helpers", () => {
   it("builds the logo and map links", () => {
     expect(dealerLogoSrc(DEALER)).toBe(`/api${DEALER.logo_url}`);
     expect(dealerLogoSrc({ ...DEALER, logo_url: null })).toBeNull();
+    expect(dealerPhotoSrc("/v1/public/dealers/x/photos/1")).toBe(
+      "/api/v1/public/dealers/x/photos/1",
+    );
     expect(dealerMapHref({ lat: 40.99, lng: 29.03 })).toBe(
       "https://www.openstreetmap.org/?mlat=40.990000&mlon=29.030000#map=17/40.990000/29.030000",
+    );
+  });
+
+  it("builds SEO helpers and JSON-LD rating only for Places", () => {
+    const dealer = { ...DEALER, showcase: SHOWCASE };
+    expect(dealerOgImage(dealer)).toBe(
+      "/api/v1/public/dealers/olex-kadikoy/photos/1",
+    );
+    expect(googleProfileHref(SHOWCASE)).toContain("query_place_id=places-1");
+    expect(dealerJsonLd(dealer).aggregateRating).toEqual({
+      "@type": "AggregateRating",
+      ratingValue: 4.8,
+      reviewCount: 128,
+    });
+    expect(
+      dealerJsonLd({
+        ...dealer,
+        showcase: { ...SHOWCASE, google_rating_source: "manual" },
+      }).aggregateRating,
+    ).toBeUndefined();
+  });
+});
+
+describe("fetchLeadFormConfig", () => {
+  it("reads the public lead form config through the BFF", async () => {
+    const config = {
+      dealer_code: "olex-kadikoy",
+      dealer_name: "Olex Kadıköy",
+      fields: ["name"],
+      kvkk_text_version: 1,
+      kvkk_text: "KVKK",
+      services: [],
+      whatsapp_chat_url: "https://wa.me/905321234567",
+      form_token: "token",
+      min_fill_seconds: 1,
+      default_phone_country: "TR",
+      preferred_locales: ["tr", "en"],
+    };
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: config }), {
+        status: 200,
+      }),
+    );
+    await expect(
+      fetchLeadFormConfig("OLEX-KADIKOY", "en", fetcher),
+    ).resolves.toEqual({
+      kind: "ok",
+      config,
+    });
+    expect(fetcher.mock.calls[0]![0]).toBe(
+      "/api/v1/public/dealers/olex-kadikoy/lead-form/config?lang=en",
     );
   });
 });

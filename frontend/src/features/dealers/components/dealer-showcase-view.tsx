@@ -1,10 +1,15 @@
 import {
   CircleAlert,
   Clock3,
+  ExternalLink,
+  Globe2,
+  Images,
   MapPin,
   MessageCircle,
   SearchX,
+  Star,
   Store,
+  Wrench,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -18,16 +23,22 @@ import {
 } from "@/config/i18n";
 import { mapConfig } from "@/config/map";
 import {
+  dealerPhotoSrc,
   dealerLocality,
   dealerLogoSrc,
   dealerMapHref,
   dealerPosition,
+  googleProfileHref,
   type PublicDealer,
   type PublicDealerResult,
+  type PublicDealerShowcase,
 } from "@/features/dealers/lib/dealer-showcase";
 import { whatsappHref } from "@/features/dealers/lib/dealers";
 import { translate } from "@/lib/i18n/messages";
 import { cn } from "@/lib/utils";
+
+import { ShowcaseBookingSlot } from "./showcase-booking-slot";
+import { ShowcaseLeadForm } from "./showcase-lead-form";
 
 /** Dealer finder (TEC-242): "find another dealer" goes here. */
 export const DEALER_FINDER_PATH = "/portal/dealers";
@@ -58,7 +69,7 @@ export function DealerShowcaseView({
   let body: ReactNode;
   switch (result.kind) {
     case "ok":
-      body = <DealerCard dealer={result.dealer} t={t} />;
+      body = <DealerCard dealer={result.dealer} locale={locale} t={t} />;
       break;
     case "not_found":
       body = (
@@ -138,18 +149,29 @@ export function DealerShowcaseView({
   );
 }
 
-function DealerCard({ dealer, t }: { dealer: PublicDealer; t: T }) {
+function DealerCard({
+  dealer,
+  locale,
+  t,
+}: {
+  dealer: PublicDealer;
+  locale: AppLocale;
+  t: T;
+}) {
   const position = dealerPosition(dealer);
   const locality = dealerLocality(dealer);
   const logo = dealerLogoSrc(dealer);
-  const wa = whatsappHref(
-    dealer.whatsapp,
-    t("portal.dealer_page.whatsapp_text", { name: dealer.name }),
-  );
+  const showcase = dealer.showcase;
+  const wa =
+    showcase?.whatsapp_chat_url ??
+    whatsappHref(
+      dealer.whatsapp,
+      t("portal.dealer_page.whatsapp_text", { name: dealer.name }),
+    );
   return (
     <section
       data-screen="dealer"
-      className="bg-card flex flex-col gap-5 rounded-2xl border p-5 shadow-sm"
+      className="bg-card flex flex-col gap-5 rounded-lg border p-5 shadow-sm"
     >
       <header className="flex items-center gap-4">
         {logo ? (
@@ -179,8 +201,24 @@ function DealerCard({ dealer, t }: { dealer: PublicDealer; t: T }) {
           {locality ? (
             <span className="text-muted-foreground text-sm">{locality}</span>
           ) : null}
+          {showcase ? <Rating showcase={showcase} t={t} /> : null}
         </div>
       </header>
+
+      {showcase?.headline || showcase?.about ? (
+        <section className="space-y-2" data-slot="showcase-intro">
+          {showcase.headline ? (
+            <p className="text-lg font-semibold">{showcase.headline}</p>
+          ) : null}
+          {showcase.about ? (
+            <p className="text-muted-foreground text-sm whitespace-pre-line">
+              {showcase.about}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {showcase ? <Hours showcase={showcase} t={t} /> : null}
 
       {dealer.address ? (
         <div className="flex flex-col gap-1 text-sm">
@@ -249,6 +287,212 @@ function DealerCard({ dealer, t }: { dealer: PublicDealer; t: T }) {
           {t("portal.dealer_page.whatsapp")}
         </a>
       ) : null}
+
+      {showcase?.services?.length ? (
+        <section className="space-y-3" data-slot="showcase-services">
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            <Wrench className="size-4" aria-hidden />
+            {t("portal.dealer_page.services")}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {showcase.services.map((service, index) => (
+              <article
+                key={`${service.kind}-${service.title}-${index}`}
+                className="border-border rounded-lg border p-3"
+              >
+                <h3 className="text-sm font-semibold">{service.title}</h3>
+                {service.description ? (
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {service.description}
+                  </p>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {showcase?.photos?.length ? (
+        <Gallery dealer={dealer} showcase={showcase} t={t} />
+      ) : null}
+
+      {showcase?.social_links && Object.keys(showcase.social_links).length ? (
+        <SocialLinks links={showcase.social_links} t={t} />
+      ) : null}
+
+      {showcase?.lead_form_enabled ? (
+        <ShowcaseLeadForm code={dealer.code} locale={locale} t={t} />
+      ) : null}
+
+      <ShowcaseBookingSlot />
+    </section>
+  );
+}
+
+function Rating({ showcase, t }: { showcase: PublicDealerShowcase; t: T }) {
+  if (typeof showcase.google_rating !== "number") return null;
+  const href = googleProfileHref(showcase);
+  const label = t("portal.dealer_page.google_rating", {
+    rating: showcase.google_rating.toFixed(1),
+    count: showcase.google_review_count ?? 0,
+  });
+  const content = (
+    <>
+      <span className="flex text-amber-500" aria-hidden>
+        {Array.from({ length: 5 }, (_, i) => (
+          <Star
+            key={i}
+            className={cn(
+              "size-3.5",
+              i < Math.round(showcase.google_rating ?? 0) && "fill-current",
+            )}
+          />
+        ))}
+      </span>
+      <span>{label}</span>
+      {href ? <ExternalLink className="size-3" aria-hidden /> : null}
+    </>
+  );
+  return href ? (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-slot="google-rating"
+      className="text-muted-foreground hover:text-foreground flex flex-wrap items-center gap-1 text-xs"
+    >
+      {content}
+    </a>
+  ) : (
+    <span
+      data-slot="google-rating"
+      className="text-muted-foreground flex flex-wrap items-center gap-1 text-xs"
+    >
+      {content}
+    </span>
+  );
+}
+
+function Hours({ showcase, t }: { showcase: PublicDealerShowcase; t: T }) {
+  const dayLabels: Record<
+    PublicDealerShowcase["working_hours"][number]["day"],
+    string
+  > = {
+    monday: t("portal.dealer_page.day_monday"),
+    tuesday: t("portal.dealer_page.day_tuesday"),
+    wednesday: t("portal.dealer_page.day_wednesday"),
+    thursday: t("portal.dealer_page.day_thursday"),
+    friday: t("portal.dealer_page.day_friday"),
+    saturday: t("portal.dealer_page.day_saturday"),
+    sunday: t("portal.dealer_page.day_sunday"),
+  };
+  return (
+    <section data-slot="showcase-hours" className="space-y-2 text-sm">
+      <h2 className="flex items-center gap-2 text-base font-semibold">
+        <Clock3 className="size-4" aria-hidden />
+        {t("portal.dealer_page.hours")}
+      </h2>
+      {showcase.open_now !== null ? (
+        <p
+          data-slot="showcase-open-now"
+          className={cn(
+            "w-fit rounded-full px-2 py-1 text-xs font-medium",
+            showcase.open_now
+              ? "bg-emerald-100 text-emerald-800"
+              : "bg-muted text-muted-foreground",
+          )}
+        >
+          {showcase.open_now
+            ? t("portal.dealer_page.open_now")
+            : t("portal.dealer_page.closed_now")}
+        </p>
+      ) : null}
+      <dl className="grid gap-1">
+        {showcase.working_hours.map((day) => (
+          <div key={day.day} className="grid grid-cols-[7rem_1fr] gap-3">
+            <dt className="text-muted-foreground">{dayLabels[day.day]}</dt>
+            <dd>
+              {day.windows.length
+                ? day.windows.map((w) => `${w.start}-${w.end}`).join(", ")
+                : t("portal.dealer_page.closed")}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function Gallery({
+  dealer,
+  showcase,
+  t,
+}: {
+  dealer: PublicDealer;
+  showcase: PublicDealerShowcase;
+  t: T;
+}) {
+  return (
+    <section data-slot="showcase-gallery" className="space-y-3">
+      <h2 className="flex items-center gap-2 text-base font-semibold">
+        <Images className="size-4" aria-hidden />
+        {t("portal.dealer_page.gallery")}
+      </h2>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {showcase.photos.map((photo, index) => {
+          const src = dealerPhotoSrc(photo.url);
+          const id = `photo-${index + 1}`;
+          const alt =
+            photo.caption ||
+            t("portal.dealer_page.gallery_alt", { name: dealer.name });
+          return (
+            <a key={photo.url} href={`#${id}`} className="group">
+              {/* eslint-disable-next-line @next/next/no-img-element -- public showcase image through BFF */}
+              <img
+                src={src}
+                alt={alt}
+                className="aspect-square w-full rounded-md object-cover"
+                loading="lazy"
+              />
+              <span
+                id={id}
+                className="pointer-events-none fixed inset-0 z-50 hidden bg-black/80 p-4 target:flex target:items-center target:justify-center"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- lightbox target */}
+                <img
+                  src={src}
+                  alt={alt}
+                  className="max-h-[90dvh] max-w-[90vw] rounded-md object-contain"
+                />
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function SocialLinks({ links, t }: { links: Record<string, string>; t: T }) {
+  return (
+    <section data-slot="showcase-social" className="space-y-2">
+      <h2 className="flex items-center gap-2 text-base font-semibold">
+        <Globe2 className="size-4" aria-hidden />
+        {t("portal.dealer_page.social")}
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        {Object.entries(links).map(([name, href]) => (
+          <a
+            key={name}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="border-border hover:bg-muted rounded-md border px-3 py-1 text-sm capitalize"
+          >
+            {name}
+          </a>
+        ))}
+      </div>
     </section>
   );
 }
