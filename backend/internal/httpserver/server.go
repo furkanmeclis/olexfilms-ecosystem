@@ -123,6 +123,9 @@ import (
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	photostandardmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard"
+	photostandardhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/handler"
+	photostandardusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/usecase"
 	portalvehiclesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/portalvehicles"
 	portalvehicleshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/portalvehicles/handler"
 	portalvehiclesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/portalvehicles/usecase"
@@ -567,6 +570,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	servicesH := serviceshandler.New(servicesSvc, deps.Storage)
 	servicesmodule.RegisterRoutes(mux, servicesH, tokens, loader, deps.Queries, featureSvc)
+	photoStandardSvc := photostandardusecase.New(deps.DB, deps.Queries)
+	photostandardmodule.RegisterRoutes(mux, photostandardhandler.New(photoStandardSvc, deps.Storage), tokens, loader, deps.Queries, featureSvc)
 	certificatesmodule.RegisterRoutes(mux, certificateshandler.New(certificatesSvc, deps.Queries), tokens, loader, deps.Queries, featureSvc)
 	// TEC-234: old hub mobile app aliases, /v1/mobile/legacy/* (MOBILE_LEGACY_ALIASES; F5'te kaldırılır).
 	legacymobile.RegisterRoutes(mux, cfg.Mobile.LegacyAliases, legacymobile.Handlers{
