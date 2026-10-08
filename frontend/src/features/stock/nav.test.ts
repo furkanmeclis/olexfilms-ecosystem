@@ -25,9 +25,9 @@ describe("tenant nav: my stock (TEC-224)", () => {
   it("links the stock page", () => {
     const group = tenantNav("acme").groups.find((g) => g.id === "stock");
     expect(group?.feature).toBe("stock");
-    expect(group?.items.map((i) => i.href)).toEqual([
+    expect(group?.items.find((i) => i.id === "stock-mine")?.href).toBe(
       routes.tenant.stock.root("acme"),
-    ]);
+    );
   });
 
   it("shows the page to a dealer and a distributor with stock.read", () => {
@@ -45,5 +45,21 @@ describe("tenant nav: my stock (TEC-224)", () => {
     expect(visibleIds([Permission.StockRead], "center")).not.toContain(
       "stock-mine",
     );
+  });
+
+  it("shows the forecast add-on only with its module and permission", () => {
+    expect(
+      visibleIds(
+        [Permission.StockRead, Permission.StockForecastRead],
+        "dealer",
+        ["stock", "stock_forecast"],
+      ),
+    ).toContain("stock-forecast");
+    expect(
+      visibleIds([Permission.StockRead, Permission.StockForecastRead]),
+    ).not.toContain("stock-forecast");
+    expect(
+      visibleIds([Permission.StockRead], "dealer", ["stock", "stock_forecast"]),
+    ).not.toContain("stock-forecast");
   });
 });
