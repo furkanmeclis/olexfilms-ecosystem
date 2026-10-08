@@ -3357,7 +3357,9 @@ paths:
       summary: Service PDF of the signed-in customer
       description: >-
         TEC-239. Portal session (services.read, scope customer); same
-        ownership rule as GET /v1/portal/services/{uuid} (else 404). Uses the
+        ownership rule as GET /v1/portal/services/{uuid} (else 404). TEC-474:
+        a fleet user also reads the services of their fleet's vehicles at the
+        dealers the fleet portal shows (the fleet's warranties are printed). Uses the
         service PDF render (TEC-196) and prints only the warranties the user
         holds. A completed render of the same locale, newer than the last
         service change and younger than 24 hours, answers 200 with its
@@ -26935,6 +26937,282 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /v1/portal/fleet/overview:
+    get:
+      tags: [Fleets]
+      operationId: getPortalFleetOverview
+      summary: Fleet portal overview (vehicles, period services, warranties, appointments, dealers)
+      description: >-
+        TEC-474 (F5-02c): the signed-in fleet user's fleet. Every figure
+        counts only the dealers the fleet worked with (an active or ended
+        link) whose fleet module is on; a dealer that turns the module off is
+        hidden (its history is kept). With no actively linked dealer that has
+        the module the fleet portal reads answer 403 FEATURE_DISABLED
+        (/v1/portal/fleet/links stays open). service_count runs over
+        date_from / date_to (default: the current month).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD or RFC3339" }
+        - name: date_to
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD (whole day) or RFC3339" }
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalOverview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/vehicles:
+    get:
+      tags: [Fleets]
+      operationId: listPortalFleetVehicles
+      summary: Vehicles of the signed-in user's fleet
+      description: >-
+        TEC-474. List contract (docs/list-contract.md): q (plate / VIN),
+        brand (car brand uuids, CSV), has_active_warranty (true|false), sort
+        plate | last_service_at | warranty_until (default plate, id
+        tiebreak). Counts and dates use the visible dealers only.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: brand
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: has_active_warranty
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Vehicles
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalVehiclePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/vehicles/{uuid}:
+    get:
+      tags: [Fleets]
+      operationId: getPortalFleetVehicle
+      summary: A fleet vehicle with its service history and warranties from every visible dealer
+      description: >-
+        TEC-474. A vehicle outside the user's fleet is 404. The embedded
+        history holds the latest 100 services (page the rest through
+        /v1/portal/fleet/services?vehicle=); the service PDF is the existing
+        /v1/portal/services/{uuid}/pdf.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Vehicle
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalVehicleDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/services:
+    get:
+      tags: [Fleets]
+      operationId: listPortalFleetServices
+      summary: Service history of the fleet's vehicles across the visible dealers
+      description: >-
+        TEC-474. Drafts are never listed. q (service no / plate), status
+        (CSV), dealer (dealer uuids, CSV), vehicle (uuid), date_from /
+        date_to (created_at), sort created_at | completed_at | service_no |
+        status (default -created_at).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: status
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [pending, processing, ready, completed, cancelled] }
+        - name: dealer
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: vehicle
+          in: query
+          schema: { type: string, format: uuid }
+        - name: date_from
+          in: query
+          schema: { type: string }
+        - name: date_to
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Services
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalServicePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/warranties:
+    get:
+      tags: [Fleets]
+      operationId: listPortalFleetWarranties
+      summary: Warranties on the fleet's vehicles (active / expired)
+      description: >-
+        TEC-474. state is the effective status: active (not past end_at),
+        expired (expired or past end_at) or void. Filters state (CSV),
+        dealer (CSV), vehicle, q (plate / code / product); sort end_at |
+        start_at (default end_at).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: state
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [active, expired, void] }
+        - name: dealer
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: vehicle
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Warranties
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalWarrantyPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/accounting:
+    get:
+      tags: [Fleets]
+      operationId: getPortalFleetAccounting
+      summary: The fleet's account at each visible dealer (service income and collections only)
+      description: >-
+        TEC-474 (F5 Q11). For every visible dealer the fleet cari in the
+        dealer's ledger, restricted to the service income billed to the fleet
+        (finance_entries source service_income) and the collections; the
+        dealer's other records never appear. Balances are computed from
+        those rows only. date_from / date_to: inclusive days in each dealer's
+        timezone, both or neither (default: the current month), at most 366
+        days.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Accounts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalAccounting" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/reports:
+    get:
+      tags: [Fleets]
+      operationId: listPortalFleetReports
+      summary: Ready periodic reports of the fleet
+      description: >-
+        TEC-474. The ready reports of F5-02e; period_kind (CSV), sort
+        period_start (default -period_start).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: period_kind
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [monthly, quarterly] }
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalReportPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/reports/{uuid}/file:
+    get:
+      tags: [Fleets]
+      operationId: downloadPortalFleetReport
+      summary: Download a ready fleet report (PDF)
+      description: TEC-474. A pending report or another fleet's report is 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: The report PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: Report storage is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -41378,6 +41656,268 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/FleetLink" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    FleetPortalDealer:
+      type: object
+      required: [uuid, name, link_status, started_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        link_status: { type: string, enum: [active, ended] }
+        started_at: { type: [string, "null"], format: date-time }
+
+    FleetPortalAppointment:
+      type: object
+      required: [uuid, starts_at, ends_at, status, dealer, vehicle_uuid, plate]
+      properties:
+        uuid: { type: string, format: uuid }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        status: { type: string, enum: [scheduled, confirmed] }
+        dealer: { $ref: "#/components/schemas/FleetPartyRef" }
+        vehicle_uuid: { type: string, format: uuid }
+        plate: { type: [string, "null"] }
+
+    FleetPortalOverview:
+      type: object
+      required: [fleet, period_from, period_to, vehicle_count, service_count, active_warranty_count, upcoming_appointment_count, upcoming_appointments, dealers, pending_link_count]
+      properties:
+        fleet: { $ref: "#/components/schemas/FleetPartyRef" }
+        period_from: { type: string, format: date }
+        period_to: { type: string, format: date }
+        vehicle_count: { type: integer, format: int64 }
+        service_count: { type: integer, format: int64, description: Services created in the period }
+        active_warranty_count: { type: integer, format: int64 }
+        upcoming_appointment_count: { type: integer, format: int64 }
+        upcoming_appointments:
+          type: array
+          description: The next five
+          items: { $ref: "#/components/schemas/FleetPortalAppointment" }
+        dealers:
+          type: array
+          items: { $ref: "#/components/schemas/FleetPortalDealer" }
+        pending_link_count: { type: integer, format: int64 }
+
+    FleetPortalVehicle:
+      type: object
+      required: [uuid, plate, plate_country, vin, model_year, car_brand, car_model, service_count, last_service_at, active_warranty_count, warranty_until, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        plate: { type: [string, "null"] }
+        plate_country: { type: [string, "null"] }
+        vin: { type: [string, "null"] }
+        model_year: { type: [integer, "null"] }
+        car_brand:
+          oneOf:
+            - $ref: "#/components/schemas/FleetCatalogRef"
+            - type: "null"
+        car_model:
+          oneOf:
+            - $ref: "#/components/schemas/FleetCatalogRef"
+            - type: "null"
+        service_count: { type: integer, format: int64 }
+        last_service_at: { type: [string, "null"], format: date-time }
+        active_warranty_count: { type: integer, format: int64 }
+        warranty_until: { type: [string, "null"], format: date-time, description: Latest end of an active warranty }
+        created_at: { type: string, format: date-time }
+
+    FleetPortalService:
+      type: object
+      required: [uuid, service_no, status, package, dealer, vehicle_uuid, plate, car_brand_name, car_model_name, completed_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        status: { type: string }
+        package: { type: [string, "null"] }
+        dealer: { $ref: "#/components/schemas/FleetPartyRef" }
+        vehicle_uuid: { type: string, format: uuid }
+        plate: { type: [string, "null"] }
+        car_brand_name: { type: string }
+        car_model_name: { type: string }
+        completed_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    FleetPortalWarranty:
+      type: object
+      required: [uuid, public_code, state, start_at, end_at, days_left, product_name, product_sku, service_uuid, service_no, dealer, vehicle_uuid, plate]
+      properties:
+        uuid: { type: string, format: uuid }
+        public_code: { type: string }
+        state: { type: string, enum: [active, expired, void] }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        days_left: { type: integer }
+        product_name: { type: string }
+        product_sku: { type: string }
+        service_uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        dealer: { $ref: "#/components/schemas/FleetPartyRef" }
+        vehicle_uuid: { type: string, format: uuid }
+        plate: { type: [string, "null"] }
+
+    FleetPortalVehicleDetail:
+      allOf:
+        - $ref: "#/components/schemas/FleetPortalVehicle"
+        - type: object
+          required: [services, warranties]
+          properties:
+            services:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalService" }
+            warranties:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalWarranty" }
+
+    FleetPortalAccountLine:
+      type: object
+      required: [uuid, date, kind, debit, credit, balance, is_reversal, service]
+      properties:
+        uuid: { type: string, format: uuid }
+        date: { type: string, format: date-time }
+        kind: { type: string, enum: [service_income, collection] }
+        debit: { type: string }
+        credit: { type: string }
+        balance: { type: string }
+        is_reversal: { type: boolean }
+        service:
+          oneOf:
+            - type: object
+              required: [uuid, service_no, plate, vehicle_uuid, completed_at]
+              properties:
+                uuid: { type: string, format: uuid }
+                service_no: { type: string }
+                plate: { type: [string, "null"] }
+                vehicle_uuid: { type: [string, "null"], format: uuid }
+                completed_at: { type: [string, "null"], format: date-time }
+            - type: "null"
+
+    FleetPortalDealerAccount:
+      type: object
+      required: [dealer, link_status, currency, opening_balance, service_income_total, collection_total, closing_balance, lines]
+      properties:
+        dealer: { $ref: "#/components/schemas/FleetPartyRef" }
+        link_status: { type: string, enum: [active, ended] }
+        currency: { type: string }
+        opening_balance: { type: string }
+        service_income_total: { type: string }
+        collection_total: { type: string }
+        closing_balance: { type: string, description: "> 0: the fleet owes the dealer" }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/FleetPortalAccountLine" }
+
+    FleetPortalAccounting:
+      type: object
+      required: [period_from, period_to, dealers]
+      properties:
+        period_from: { type: string, format: date }
+        period_to: { type: string, format: date }
+        dealers:
+          type: array
+          items: { $ref: "#/components/schemas/FleetPortalDealerAccount" }
+
+    FleetPortalReport:
+      type: object
+      required: [uuid, period_kind, period_start, period_end, locale, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        period_kind: { type: string, enum: [monthly, quarterly] }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        locale: { type: string }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeFleetPortalOverview:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetPortalOverview" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalVehicleDetail:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetPortalVehicleDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalAccounting:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetPortalAccounting" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalVehiclePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalVehicle" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalServicePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalService" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalWarrantyPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalWarranty" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalReportPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalReport" }
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
