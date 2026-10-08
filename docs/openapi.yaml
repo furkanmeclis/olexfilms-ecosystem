@@ -26365,6 +26365,37 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/FleetExistsError" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/export:
+    post:
+      tags: [Fleets]
+      operationId: requestFleetListExport
+      summary: Queue a fleet list export (CSV, XLSX or PDF)
+      description: >-
+        TEC-477. fleets.read with the list's scope and the fleet add-on (403
+        FEATURE_DISABLED): the job (worker-docs, exports queue, resource
+        `tenant.fleets`) exports the fleet links the list shows for `query`
+        (every GET /v1/fleets parameter except limit and offset, including
+        `q` and `sort`; a bad value is 400 at request time). Columns: name,
+        legal name, tax number, vehicle count, last service date, link
+        status, dealer, link start date. The job stores the resolved scope
+        and the worker re-authorizes it against the job organization. Poll
+        and download through /v1/tenant/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FleetListExportInput" }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/fleets/lookup:
     get:
       tags: [Fleets]
@@ -30794,6 +30825,21 @@ components:
           type: object
           description: >-
             List parameters of GET /v1/services as strings (q, sort, status, organization_uuid, customer_uuid, vehicle_uuid, created_from, created_to, completed_from, completed_to).
+          additionalProperties: { type: string }
+        locale:
+          type: string
+          description: Document language (defaults to the request locale).
+    FleetListExportInput:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx, pdf]
+        query:
+          type: object
+          description: >-
+            List parameters of GET /v1/fleets as strings (q, sort, status, vehicle_count_min, vehicle_count_max).
           additionalProperties: { type: string }
         locale:
           type: string

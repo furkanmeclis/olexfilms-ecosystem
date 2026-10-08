@@ -95,6 +95,26 @@ func TestIntegrationFleetReportRequest(t *testing.T) {
 		t.Fatalf("lookup = %+v", found)
 	}
 	it.fleetDo("GET", "/v1/fleets/lookup", n.tokB, nil, http.StatusBadRequest)
+
+	// TEC-477: the fleet list export queues a tenant.fleets job with the
+	// list parameters and the caller's scope; a bad format or filter is 400.
+	type exportJob struct {
+		UUID     string `json:"uuid"`
+		Resource string `json:"resource"`
+		Status   string `json:"status"`
+	}
+	exportBody := map[string]any{"format": "xlsx", "query": map[string]string{"status": "active", "sort": "-name"}, "locale": "en"}
+	job := decodeData[exportJob](t, it.fleetDo("POST", "/v1/fleets/export", n.tokA, exportBody, http.StatusAccepted))
+	if job.Resource != "tenant.fleets" || job.UUID == "" {
+		t.Fatalf("export job = %+v", job)
+	}
+	if jq := it.exportJobQuery(job.UUID); jq["status"] != "active" || jq["sort"] != "-name" || jq["_scope"] == "" {
+		t.Fatalf("export query = %v", jq)
+	}
+	it.fleetDo("POST", "/v1/fleets/export", n.tokA, map[string]any{"format": "docx"}, http.StatusBadRequest)
+	it.fleetDo("POST", "/v1/fleets/export", n.tokA, map[string]any{
+		"format": "csv", "query": map[string]string{"status": "closed"},
+	}, http.StatusBadRequest)
 	if _, err := it.srv.features.ClearByAdmin(ctx, n.dealerA.ID, "fleet"); err != nil {
 		t.Fatal(err)
 	}

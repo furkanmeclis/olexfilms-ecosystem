@@ -47,6 +47,8 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/fleets", manage(h.Open))
 	mux.Handle("GET /v1/fleets/vehicle-import/sample", manage(h.ImportSample))
 	mux.Handle("GET /v1/fleets/lookup", manage(h.Lookup))
+	// TEC-477: list export (I/O engine) with the list's scope and filters.
+	mux.Handle("POST /v1/fleets/export", read(h.RequestListExport))
 	mux.Handle("GET /v1/fleets/{uuid}", read(h.Card))
 	mux.Handle("POST /v1/fleets/{uuid}/links", manage(h.RequestLink))
 	mux.Handle("GET /v1/fleets/{uuid}/users", read(h.ListUsers))

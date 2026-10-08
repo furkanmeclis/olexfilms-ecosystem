@@ -254,6 +254,7 @@ func main() {
 		aiusecase.NewUsageExportAdapter(aiusecase.NewAdmin(airepo.New(pool), llm.ModelsFromConfig(cfg.AI), nil)),
 		// TEC-473: fleet statement export and staged fleet vehicle import.
 		fleetusecase.NewStatementAdapter(workerFleet),
+		fleetusecase.NewListExportAdapter(workerFleet),
 		fleetusecase.NewImporter(workerFleet),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)

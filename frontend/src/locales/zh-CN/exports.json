@@ -77,6 +77,8 @@
   "resources.stock.units": "库存单元",
   "resources.leads.list": "线索",
   "resources.services.list": "服务",
+  "resources.tenant.fleets": "车队",
+  "resources.tenant.fleet.statement": "车队对账单",
   "resources.warranties.list": "质保",
   "resources.ai.usage": "AI 使用情况"
 }

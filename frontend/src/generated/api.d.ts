@@ -13548,6 +13548,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fleets/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a fleet list export (CSV, XLSX or PDF)
+         * @description TEC-477. fleets.read with the list's scope and the fleet add-on (403 FEATURE_DISABLED): the job (worker-docs, exports queue, resource `tenant.fleets`) exports the fleet links the list shows for `query` (every GET /v1/fleets parameter except limit and offset, including `q` and `sort`; a bad value is 400 at request time). Columns: name, legal name, tax number, vehicle count, last service date, link status, dealer, link start date. The job stores the resolved scope and the worker re-authorizes it against the job organization. Poll and download through /v1/tenant/exports/{uuid}.
+         */
+        post: operations["requestFleetListExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fleets/lookup": {
         parameters: {
             query?: never;
@@ -16354,6 +16374,16 @@ export interface components {
             /** @enum {string} */
             format: "csv" | "xlsx" | "pdf";
             /** @description List parameters of GET /v1/services as strings (q, sort, status, organization_uuid, customer_uuid, vehicle_uuid, created_from, created_to, completed_from, completed_to). */
+            query?: {
+                [key: string]: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
+        FleetListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List parameters of GET /v1/fleets as strings (q, sort, status, vehicle_count_min, vehicle_count_max). */
             query?: {
                 [key: string]: string;
             };
@@ -50271,6 +50301,33 @@ export interface operations {
                 };
             };
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    requestFleetListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     lookupFleet: {
