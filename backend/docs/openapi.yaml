@@ -63,6 +63,8 @@ tags:
     description: "Duyuru API: authoring, feed, read receipts and unread badge"
   - name: Fleets
     description: "Filo yönetimi: filo açma, bayi bağı, kullanıcılar, araçlar, içe aktarma, filo kartı ve ekstre (F5-02)"
+  - name: Efficiency
+    description: "Verimlilik ve fire analizi: olgular, özet, karşılaştırma, rulolar ve beklentiler (F5-06)"
   - name: Showcase
     description: "Bayi vitrini API: panel editor, gallery, center review queue (F5-01b)"
   - name: Campaigns
@@ -27250,6 +27252,147 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /v1/efficiency/summary:
+    get:
+      tags: [Efficiency]
+      operationId: listEfficiencySummary
+      summary: Efficiency summary by dealer, staff, product, body type or part
+      description: Requires `efficiency` feature and `efficiency.read`; list-contract sort `waste_ratio|meters|services`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: dimension
+          in: query
+          schema: { type: string, enum: [dealer, staff, product, body_type, part], default: dealer }
+        - name: period_from
+          in: query
+          schema: { type: string, format: date }
+        - name: period_to
+          in: query
+          schema: { type: string, format: date }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: sort
+          in: query
+          schema: { type: string, enum: [waste_ratio, -waste_ratio, meters, -meters, services, -services], default: -waste_ratio }
+      responses:
+        "200": { description: Summary page }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/efficiency/summary/export:
+    post:
+      tags: [Efficiency]
+      operationId: exportEfficiencySummary
+      summary: Export efficiency summary with the same filters
+      security: [{ bearerAuth: [] }]
+      responses:
+        "202": { description: Export job queued }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/efficiency/trend:
+    get:
+      tags: [Efficiency]
+      operationId: getEfficiencyTrend
+      summary: Monthly efficiency trend
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Monthly rows }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/efficiency/compare:
+    get:
+      tags: [Efficiency]
+      operationId: compareEfficiency
+      summary: Compare active organization, subtree and network averages
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Comparison buckets }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/efficiency/rolls:
+    get:
+      tags: [Efficiency]
+      operationId: listEfficiencyRolls
+      summary: Roll efficiency list
+      description: Requires `efficiency` feature and `efficiency.read`; list-contract sort `waste_ratio|consumed_meters|remaining_meters|last_used_at`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: sort
+          in: query
+          schema: { type: string, enum: [waste_ratio, -waste_ratio, consumed_meters, -consumed_meters, remaining_meters, -remaining_meters, last_used_at, -last_used_at], default: -waste_ratio }
+      responses:
+        "200": { description: Roll page }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/efficiency/rolls/export:
+    post:
+      tags: [Efficiency]
+      operationId: exportEfficiencyRolls
+      summary: Export roll efficiency list
+      security: [{ bearerAuth: [] }]
+      responses:
+        "202": { description: Export job queued }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/efficiency/rolls/{unit_uuid}:
+    get:
+      tags: [Efficiency]
+      operationId: getEfficiencyRoll
+      summary: Roll efficiency detail
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: unit_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Roll row }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/platform/part-consumption-expectations:
+    get:
+      tags: [Efficiency]
+      operationId: listPartConsumptionExpectations
+      summary: List expected part consumption definitions
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Expectations page }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Efficiency]
+      operationId: createPartConsumptionExpectation
+      summary: Create a manual expected part consumption definition
+      security: [{ bearerAuth: [] }]
+      responses:
+        "201": { description: Expectation created }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/platform/part-consumption-expectations/{uuid}:
+    put:
+      tags: [Efficiency]
+      operationId: updatePartConsumptionExpectation
+      summary: Update a manual expected part consumption definition
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200": { description: Expectation updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Efficiency]
+      operationId: deletePartConsumptionExpectation
+      summary: Delete an expected part consumption definition
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "204": { description: Expectation deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
 components:
   securitySchemes:

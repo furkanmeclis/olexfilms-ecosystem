@@ -194,14 +194,118 @@ func (f *fixture) service(t *testing.T, modelID int64) db.Service {
 
 func (f *fixture) serviceItem(t *testing.T, p db.Product, unit db.Unit, parts string, meters string) db.ServiceItem {
 	t.Helper()
+	svc := f.service(t, f.sedan)
 	item, err := f.q.CreateServiceItem(f.ctx, db.CreateServiceItemParams{
-		ServiceID: f.service(t, f.sedan).ID, ProductID: p.ID, UnitID: unit.ID,
+		ServiceID: svc.ID, ProductID: p.ID, UnitID: unit.ID,
 		Kind: "partial", Meters: numeric(t, meters), AppliedParts: []byte(parts),
 	})
 	if err != nil {
 		t.Fatalf("service item: %v", err)
 	}
+	if _, err := f.tx.Exec(f.ctx, `UPDATE services SET status = 'completed', completed_at = NOW(), completed_by_user_id = $2 WHERE id = $1`, svc.ID, f.staff.ID); err != nil {
+		t.Fatalf("complete service: %v", err)
+	}
 	return item
+}
+
+func TestRefreshFactsAllocatesThreePartsByExpectedRatio(t *testing.T) {
+	f := newFixture(t)
+	if _, err := f.tx.Exec(f.ctx, `UPDATE product_categories SET available_parts = '["a","b","c"]'::jsonb WHERE id = $1`, f.category.ID); err != nil {
+		t.Fatalf("parts: %v", err)
+	}
+	productID := f.film.ID
+	f.expectation(t, &productID, nil, "sedan", "a", "1.00")
+	f.expectation(t, &productID, nil, "sedan", "b", "2.00")
+	f.expectation(t, &productID, nil, "sedan", "c", "3.00")
+
+	unit := f.unit(t, f.film, "20.00")
+	item := f.serviceItem(t, f.film, unit, `["a","b","c"]`, "6.00")
+	if err := f.store.RefreshServiceItem(f.ctx, item.ID); err != nil {
+		t.Fatalf("refresh facts: %v", err)
+	}
+	rows, err := f.tx.Query(f.ctx, `SELECT part_key, actual_meters FROM efficiency_facts WHERE service_item_id = $1 ORDER BY part_key`, item.ID)
+	if err != nil {
+		t.Fatalf("facts query: %v", err)
+	}
+	defer rows.Close()
+	got := map[string]string{}
+	for rows.Next() {
+		var part string
+		var actual pgtype.Numeric
+		if err := rows.Scan(&part, &actual); err != nil {
+			t.Fatal(err)
+		}
+		got[part] = ntext(actual)
+	}
+	if fmt.Sprint(got) != "map[a:1.00 b:2.00 c:3.00]" {
+		t.Fatalf("facts = %#v", got)
+	}
+}
+
+func TestRefreshFactsWithoutExpectationLeavesWasteNull(t *testing.T) {
+	f := newFixture(t)
+	unit := f.unit(t, f.film, "20.00")
+	item := f.serviceItem(t, f.film, unit, `["hood"]`, "2.00")
+	if err := f.store.RefreshServiceItem(f.ctx, item.ID); err != nil {
+		t.Fatalf("refresh facts: %v", err)
+	}
+	var expected, waste pgtype.Numeric
+	if err := f.tx.QueryRow(f.ctx, `SELECT expected_meters, waste_ratio FROM efficiency_facts WHERE service_item_id = $1`, item.ID).Scan(&expected, &waste); err != nil {
+		t.Fatal(err)
+	}
+	if expected.Valid || waste.Valid {
+		t.Fatalf("expected=%v waste=%v; want nulls", expected.Valid, waste.Valid)
+	}
+}
+
+func TestNetworkMedianNeedsTwentySamplesAndKeepsManual(t *testing.T) {
+	f := newFixture(t)
+	for i := 0; i < 19; i++ {
+		unit := f.unit(t, f.film, "20.00")
+		item := f.serviceItem(t, f.film, unit, `["hood"]`, "2.00")
+		if err := f.store.RefreshServiceItem(f.ctx, item.ID); err != nil {
+			t.Fatalf("refresh %d: %v", i, err)
+		}
+	}
+	params := db.RefreshNetworkPartExpectationsParams{
+		BrandID: f.brandID, FromDate: date(2026, time.January, 1), ToDate: date(2099, time.January, 1), MinSamples: 20,
+	}
+	if n, err := f.q.RefreshNetworkPartExpectations(f.ctx, params); err != nil || n != 0 {
+		t.Fatalf("19 samples network = %d, %v; want 0", n, err)
+	}
+	unit := f.unit(t, f.film, "20.00")
+	item := f.serviceItem(t, f.film, unit, `["hood"]`, "4.00")
+	if err := f.store.RefreshServiceItem(f.ctx, item.ID); err != nil {
+		t.Fatalf("refresh 20: %v", err)
+	}
+	if n, err := f.q.RefreshNetworkPartExpectations(f.ctx, params); err != nil || n != 1 {
+		t.Fatalf("20 samples network = %d, %v; want 1", n, err)
+	}
+	var got string
+	if err := f.tx.QueryRow(f.ctx, `SELECT expected_meters::text FROM part_consumption_expectations WHERE source='network' AND product_id=$1 AND part_key='hood'`, f.film.ID).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != "2.00" {
+		t.Fatalf("network median = %s, want 2.00", got)
+	}
+
+	f.expectation(t, &f.film.ID, nil, "sedan", "roof", "7.00")
+	unit = f.unit(t, f.film, "20.00")
+	item = f.serviceItem(t, f.film, unit, `["roof"]`, "9.00")
+	if err := f.store.RefreshServiceItem(f.ctx, item.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.q.RefreshNetworkPartExpectations(f.ctx, db.RefreshNetworkPartExpectationsParams{
+		BrandID: f.brandID, FromDate: date(2026, time.January, 1), ToDate: date(2099, time.January, 1), MinSamples: 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.tx.QueryRow(f.ctx, `SELECT expected_meters::text FROM part_consumption_expectations WHERE source='manual' AND product_id=$1 AND part_key='roof'`, f.film.ID).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != "7.00" {
+		t.Fatalf("manual expected = %s, want 7.00", got)
+	}
 }
 
 func TestExpectationPriority(t *testing.T) {
@@ -329,6 +433,10 @@ func numeric(t *testing.T, raw string) pgtype.Numeric {
 		t.Fatalf("numeric %s: %v", raw, err)
 	}
 	return n
+}
+
+func date(y int, m time.Month, d int) pgtype.Date {
+	return pgtype.Date{Time: time.Date(y, m, d, 0, 0, 0, 0, time.UTC), Valid: true}
 }
 
 func ntext(n pgtype.Numeric) string {
