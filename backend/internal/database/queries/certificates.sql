@@ -193,6 +193,28 @@ WHERE status = 'valid'
   AND expires_at <= sqlc.arg(now)::timestamptz
 RETURNING *;
 
+-- name: ListCertificatesDueForExpiry :many
+SELECT c.*
+FROM certificates c
+WHERE c.status = 'valid'
+  AND c.expires_at IS NOT NULL
+  AND c.expires_at <= sqlc.arg(now)::timestamptz
+ORDER BY c.expires_at, c.id
+LIMIT sqlc.arg(row_limit);
+
+-- name: MarkCertificateExpired :one
+UPDATE certificates
+SET status = 'expired',
+    verified_by_user_id = NULL,
+    verified_by_org_id = NULL,
+    verified_at = NULL,
+    reject_reason = NULL
+WHERE id = sqlc.arg(id)
+  AND status = 'valid'
+  AND expires_at IS NOT NULL
+  AND expires_at <= sqlc.arg(now)::timestamptz
+RETURNING *;
+
 -- name: ListCertificates :many
 -- Sort keys follow docs/list-contract.md: expires_at, issued_at, status,
 -- user_name and created_at. Default is expires_at; id is the tiebreak.
@@ -319,19 +341,89 @@ WHERE c.brand_id = sqlc.arg(brand_id)
 ORDER BY c.expires_at ASC NULLS LAST, c.id ASC;
 
 -- name: ListCertificatesDueForExpiryNotice :many
-SELECT * FROM certificates
-WHERE status = 'valid'
-  AND expiry_notice_sent_at IS NULL
-  AND expires_at IS NOT NULL
-  AND expires_at > sqlc.arg(now)::timestamptz
-  AND expires_at <= sqlc.arg(now)::timestamptz + (sqlc.arg(days)::int || ' days')::interval
-ORDER BY expires_at, id
+SELECT c.*
+FROM certificates c
+JOIN organizations o ON o.id = c.organization_id
+WHERE c.status = 'valid'
+  AND c.expiry_notice_sent_at IS NULL
+  AND c.expires_at IS NOT NULL
+  AND (c.expires_at AT TIME ZONE o.timezone)::date =
+      ((sqlc.arg(now)::timestamptz AT TIME ZONE o.timezone)::date + sqlc.arg(days)::int)
+ORDER BY c.expires_at, c.id
 LIMIT sqlc.arg(row_limit);
 
 -- name: MarkCertificateExpiryNoticeSent :execrows
 UPDATE certificates
 SET expiry_notice_sent_at = sqlc.arg(now)::timestamptz
 WHERE id = sqlc.arg(id) AND status = 'valid' AND expiry_notice_sent_at IS NULL;
+
+-- name: ListOpenServicesRequiringCertificate :many
+SELECT DISTINCT s.*
+FROM services s
+WHERE s.organization_id = sqlc.arg(organization_id)
+  AND s.brand_id = sqlc.arg(brand_id)
+  AND s.status NOT IN ('completed', 'cancelled')
+  AND COALESCE(s.performed_by_user_id, s.created_by_user_id) = sqlc.arg(user_id)::bigint
+  AND (
+    EXISTS (
+      SELECT 1
+      FROM certificate_type_products ctp
+      JOIN service_items si ON si.product_id = ctp.product_id AND si.brand_id = ctp.brand_id
+      WHERE ctp.type_id = sqlc.arg(type_id)
+        AND ctp.brand_id = sqlc.arg(brand_id)
+        AND si.service_id = s.id
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM certificate_type_categories ctc
+      JOIN products p ON p.category_id = ctc.category_id AND p.brand_id = ctc.brand_id
+      JOIN service_items si ON si.product_id = p.id AND si.brand_id = p.brand_id
+      WHERE ctc.type_id = sqlc.arg(type_id)
+        AND ctc.brand_id = sqlc.arg(brand_id)
+        AND si.service_id = s.id
+    )
+  )
+ORDER BY s.id;
+
+-- name: GetCertificateCoverageByOrg :one
+WITH required AS (
+  SELECT DISTINCT ct.id
+  FROM certificate_types ct
+  WHERE ct.brand_id = sqlc.arg(brand_id)
+    AND ct.active = true
+    AND (
+      EXISTS (
+        SELECT 1
+        FROM certificate_type_products ctp
+        JOIN service_items si ON si.product_id = ctp.product_id AND si.brand_id = ctp.brand_id
+        JOIN services s ON s.id = si.service_id
+        WHERE ctp.type_id = ct.id
+          AND s.organization_id = sqlc.arg(organization_id)
+          AND s.brand_id = sqlc.arg(brand_id)
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM certificate_type_categories ctc
+        JOIN products p ON p.category_id = ctc.category_id AND p.brand_id = ctc.brand_id
+        JOIN service_items si ON si.product_id = p.id AND si.brand_id = p.brand_id
+        JOIN services s ON s.id = si.service_id
+        WHERE ctc.type_id = ct.id
+          AND s.organization_id = sqlc.arg(organization_id)
+          AND s.brand_id = sqlc.arg(brand_id)
+      )
+    )
+),
+valid AS (
+  SELECT DISTINCT c.type_id
+  FROM certificates c
+  JOIN required r ON r.id = c.type_id
+  WHERE c.organization_id = sqlc.arg(organization_id)
+    AND c.brand_id = sqlc.arg(brand_id)
+    AND c.status = 'valid'
+    AND (c.expires_at IS NULL OR c.expires_at > sqlc.arg(now)::timestamptz)
+)
+SELECT (SELECT COUNT(*) FROM valid)::bigint AS valid_count,
+       (SELECT COUNT(*) FROM required)::bigint AS required_count;
 
 -- ---------------------------------------------------------------------------
 -- Service warnings.

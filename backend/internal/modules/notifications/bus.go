@@ -184,6 +184,8 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	// TEC-317: a public dealer application tells the receiving
 	// organization's lead readers (notify_user_ids).
 	on(events.LeadsApplicationReceived, leadApplicationDispatch)
+	// TEC-468: a public showcase lead tells the dealer owner/readers.
+	on(events.LeadsWebsiteReceived, leadWebsiteDispatch)
 	bus.Subscribe(events.QuoteSent, func(ctx context.Context, event events.Event) error {
 		if err := quoteSentNotify(ctx, svc, event); err != nil {
 			log.Error("quote_sent_notification_failed", "event_id", event.EventID, "error", err)
@@ -193,6 +195,10 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	// TEC-307: service subscription assignment and cancellation lifecycle.
 	for name, code := range ServiceSubscriptionEventCodes {
 		on(name, serviceSubscriptionDispatcher(code))
+	}
+	// TEC-481: internal staff certificate expiry notifications.
+	for name, code := range CertificateEventCodes {
+		on(name, certificateDispatcher(code))
 	}
 	// TEC-297: dealer owners review services with micron differences outside
 	// the configured tolerance.

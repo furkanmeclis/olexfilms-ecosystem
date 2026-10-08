@@ -179,3 +179,48 @@ ORDER BY id LIMIT 1;
 
 -- name: GetFleetCarModelByID :one
 SELECT * FROM car_models WHERE id = sqlc.arg(id);
+
+-- TEC-475 (F5-02d): fleet service plans.
+
+-- name: CreateFleetServicePlan :one
+INSERT INTO fleet_service_plans (
+    organization_id, brand_id, fleet_org_id, fleet_link_id, title, service_type,
+    note, start_date, daily_vehicle_limit, preferred_times, idempotency_key,
+    created_by_user_id
+) VALUES (
+    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(fleet_org_id),
+    sqlc.arg(fleet_link_id), sqlc.arg(title), sqlc.arg(service_type),
+    sqlc.arg(note), sqlc.arg(start_date), sqlc.arg(daily_vehicle_limit),
+    sqlc.arg(preferred_times), sqlc.narg(idempotency_key), sqlc.narg(created_by_user_id)
+)
+RETURNING *;
+
+-- name: GetFleetServicePlanByIdempotency :one
+SELECT * FROM fleet_service_plans
+WHERE organization_id = sqlc.arg(organization_id)::bigint
+  AND idempotency_key = sqlc.arg(idempotency_key)::text;
+
+-- name: GetFleetServicePlanByUUID :one
+SELECT * FROM fleet_service_plans
+WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id)::bigint;
+
+-- name: CancelFleetServicePlan :one
+UPDATE fleet_service_plans
+SET status = 'cancelled',
+    cancel_reason = sqlc.narg(cancel_reason),
+    cancelled_by_user_id = sqlc.narg(cancelled_by_user_id),
+    cancelled_at = NOW()
+WHERE id = sqlc.arg(id)::bigint
+  AND organization_id = sqlc.arg(organization_id)::bigint
+  AND status = 'scheduled'
+RETURNING *;
+
+-- name: ListFleetPlanVehicles :many
+SELECT v.*, u.uuid AS customer_uuid
+FROM vehicles v
+JOIN fleet_users fu ON fu.user_id = v.user_id AND fu.fleet_org_id = v.fleet_org_id AND fu.status = 'active'
+JOIN users u ON u.id = v.user_id AND u.deleted_at IS NULL
+WHERE v.fleet_org_id = sqlc.arg(fleet_org_id)::bigint
+  AND v.uuid = ANY(sqlc.arg(vehicle_uuids)::uuid[])
+  AND v.deleted_at IS NULL
+ORDER BY array_position(sqlc.arg(vehicle_uuids)::uuid[], v.uuid);

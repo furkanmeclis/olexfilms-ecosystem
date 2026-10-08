@@ -932,6 +932,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-323: appointments, capacity, availability and intake start.
 	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
 	appointmentsSvc.SetFeatureChecker(featureSvc)
+	fleetSvc.SetAppointments(appointmentsSvc)
 	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
 	appointmentsmodule.RegisterPortalRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader)
 	// TEC-385 (F4-01c): AI assistant tool registry over the module use
@@ -1003,7 +1004,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	sysSvc.SetGuard(sysconfig.KeyLeadsDealerApplicationEnabled, dealerApps.SettingGuard)
 	leadsmodule.RegisterPublicRoutes(mux, leadshandler.NewPublic(dealerApps, ratelimit.New(deps.Redis, cfg.App.Env),
 		leadshandler.RateLimits{IPLimit: cfg.Leads.ApplicationIPLimit, PhoneLimit: cfg.Leads.ApplicationPhoneLimit,
-			Window: cfg.Leads.ApplicationRateWindow}).WithQuotes(leadsSvc, docSvc))
+			Window: cfg.Leads.ApplicationRateWindow}).WithShowcaseSecret(cfg.JWT.AccessSecret).WithQuotes(leadsSvc, docSvc))
 	bulkSvc.WithUndoWindow(sysSvc.BulkUndoWindowHours)
 	// TEC-206: stock counts (scans through the TEC-203 resolver, approval via the ledger).
 	warehousemodule.RegisterCountRoutes(mux, warehousehandler.NewCounts(warehouseusecase.NewCounts(deps.DB, deps.Queries,

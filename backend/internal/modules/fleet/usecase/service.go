@@ -74,13 +74,14 @@ type Conn interface {
 
 // Service is the fleet usecase.
 type Service struct {
-	conn    Conn
-	now     func() time.Time
-	out     outbox.Enqueuer
-	plates  PlateValidator
-	inviter PasswordInviter
-	modules ModuleChecker
-	files   ReportFiles
+	conn         Conn
+	now          func() time.Time
+	out          outbox.Enqueuer
+	plates       PlateValidator
+	inviter      PasswordInviter
+	appointments AppointmentStarter
+	modules      ModuleChecker
+	files        ReportFiles
 }
 
 // New creates the fleet usecase.

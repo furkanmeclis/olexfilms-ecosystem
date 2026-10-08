@@ -17,7 +17,7 @@ UPDATE conversations
 SET assigned_user_id = $1,
     assigned_org_id = $2
 WHERE id = $3
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type AssignConversationParams struct {
@@ -56,6 +56,7 @@ func (q *Queries) AssignConversation(ctx context.Context, arg AssignConversation
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -370,7 +371,7 @@ func (q *Queries) GetConversationAIRunByUUID(ctx context.Context, argUuid uuid.U
 const getConversationByID = `-- name: GetConversationByID :one
 
 
-SELECT id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id FROM conversations WHERE id = $1
+SELECT id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id FROM conversations WHERE id = $1
 `
 
 // TEC-393 (F4-02a): WhatsApp conversation inbox (list contract, cursor
@@ -405,12 +406,13 @@ func (q *Queries) GetConversationByID(ctx context.Context, id int64) (Conversati
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
 
 const getConversationByUUID = `-- name: GetConversationByUUID :one
-SELECT id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id FROM conversations WHERE uuid = $1
+SELECT id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id FROM conversations WHERE uuid = $1
 `
 
 func (q *Queries) GetConversationByUUID(ctx context.Context, argUuid uuid.UUID) (Conversation, error) {
@@ -442,6 +444,7 @@ func (q *Queries) GetConversationByUUID(ctx context.Context, argUuid uuid.UUID) 
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -825,7 +828,7 @@ func (q *Queries) ListConversationMessagesBefore(ctx context.Context, arg ListCo
 }
 
 const listConversations = `-- name: ListConversations :many
-SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.channel, c.contact_e164, c.contact_name, c.user_id, c.last_message_at, c.created_at, c.updated_at, c.status, c.ai_mode, c.ai_paused_until, c.assigned_user_id, c.assigned_org_id, c.identity_kind, c.identity_user_id, c.identity_org_id, c.identity_resolved_at, c.locale, c.last_inbound_at, c.unread_count, c.ai_consent_at, c.visitor_lead_id FROM conversations c
+SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.channel, c.contact_e164, c.contact_name, c.user_id, c.last_message_at, c.created_at, c.updated_at, c.status, c.ai_mode, c.ai_paused_until, c.assigned_user_id, c.assigned_org_id, c.identity_kind, c.identity_user_id, c.identity_org_id, c.identity_resolved_at, c.locale, c.last_inbound_at, c.unread_count, c.ai_consent_at, c.visitor_lead_id, c.referred_dealer_org_id FROM conversations c
 WHERE ($1::text IS NULL OR c.channel = $1::text)
   AND (COALESCE(cardinality($2::text[]), 0) = 0 OR c.status = ANY ($2::text[]))
   AND (COALESCE(cardinality($3::text[]), 0) = 0 OR c.identity_kind = ANY ($3::text[]))
@@ -922,6 +925,7 @@ func (q *Queries) ListConversations(ctx context.Context, arg ListConversationsPa
 			&i.UnreadCount,
 			&i.AiConsentAt,
 			&i.VisitorLeadID,
+			&i.ReferredDealerOrgID,
 		); err != nil {
 			return nil, err
 		}
@@ -1098,7 +1102,7 @@ func (q *Queries) ListWhatsAppIdentityMemberships(ctx context.Context, userID in
 const markConversationRead = `-- name: MarkConversationRead :one
 UPDATE conversations SET unread_count = 0
 WHERE id = $1
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 func (q *Queries) MarkConversationRead(ctx context.Context, id int64) (Conversation, error) {
@@ -1130,6 +1134,7 @@ func (q *Queries) MarkConversationRead(ctx context.Context, id int64) (Conversat
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -1211,7 +1216,7 @@ func (q *Queries) ResumeExpiredAIPauses(ctx context.Context, now pgtype.Timestam
 const setConversationAIConsent = `-- name: SetConversationAIConsent :one
 UPDATE conversations SET ai_consent_at = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type SetConversationAIConsentParams struct {
@@ -1248,6 +1253,7 @@ func (q *Queries) SetConversationAIConsent(ctx context.Context, arg SetConversat
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -1257,7 +1263,7 @@ UPDATE conversations
 SET ai_mode = $1::text,
     ai_paused_until = CASE WHEN $1::text = 'paused' THEN $2::timestamptz END
 WHERE id = $3
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type SetConversationAIModeParams struct {
@@ -1296,6 +1302,7 @@ func (q *Queries) SetConversationAIMode(ctx context.Context, arg SetConversation
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -1307,7 +1314,7 @@ SET identity_kind = $1,
     identity_org_id = $3,
     identity_resolved_at = $4
 WHERE id = $5
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type SetConversationIdentityParams struct {
@@ -1353,6 +1360,7 @@ func (q *Queries) SetConversationIdentity(ctx context.Context, arg SetConversati
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -1360,7 +1368,7 @@ func (q *Queries) SetConversationIdentity(ctx context.Context, arg SetConversati
 const setConversationLocale = `-- name: SetConversationLocale :one
 UPDATE conversations SET locale = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type SetConversationLocaleParams struct {
@@ -1397,6 +1405,54 @@ func (q *Queries) SetConversationLocale(ctx context.Context, arg SetConversation
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
+	)
+	return i, err
+}
+
+const setConversationReferredDealer = `-- name: SetConversationReferredDealer :one
+UPDATE conversations SET referred_dealer_org_id = $1
+WHERE id = $2
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
+`
+
+type SetConversationReferredDealerParams struct {
+	ReferredDealerOrgID pgtype.Int8 `json:"referred_dealer_org_id"`
+	ID                  int64       `json:"id"`
+}
+
+// TEC-468: #dealer-code in the first public WhatsApp message routes the
+// visitor lead to that dealer while the conversation stays system-owned.
+func (q *Queries) SetConversationReferredDealer(ctx context.Context, arg SetConversationReferredDealerParams) (Conversation, error) {
+	row := q.db.QueryRow(ctx, setConversationReferredDealer, arg.ReferredDealerOrgID, arg.ID)
+	var i Conversation
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Channel,
+		&i.ContactE164,
+		&i.ContactName,
+		&i.UserID,
+		&i.LastMessageAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+		&i.AiMode,
+		&i.AiPausedUntil,
+		&i.AssignedUserID,
+		&i.AssignedOrgID,
+		&i.IdentityKind,
+		&i.IdentityUserID,
+		&i.IdentityOrgID,
+		&i.IdentityResolvedAt,
+		&i.Locale,
+		&i.LastInboundAt,
+		&i.UnreadCount,
+		&i.AiConsentAt,
+		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -1404,7 +1460,7 @@ func (q *Queries) SetConversationLocale(ctx context.Context, arg SetConversation
 const setConversationStatus = `-- name: SetConversationStatus :one
 UPDATE conversations SET status = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type SetConversationStatusParams struct {
@@ -1441,6 +1497,7 @@ func (q *Queries) SetConversationStatus(ctx context.Context, arg SetConversation
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -1448,7 +1505,7 @@ func (q *Queries) SetConversationStatus(ctx context.Context, arg SetConversation
 const setConversationVisitorLead = `-- name: SetConversationVisitorLead :one
 UPDATE conversations SET visitor_lead_id = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type SetConversationVisitorLeadParams struct {
@@ -1485,6 +1542,7 @@ func (q *Queries) SetConversationVisitorLead(ctx context.Context, arg SetConvers
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -1591,7 +1649,7 @@ SET unread_count = unread_count + 1,
     last_message_at = GREATEST(last_message_at, $1::timestamptz),
     status = CASE WHEN status = 'closed' THEN 'open' ELSE status END
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type TouchConversationInboundParams struct {
@@ -1630,6 +1688,7 @@ func (q *Queries) TouchConversationInbound(ctx context.Context, arg TouchConvers
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }
@@ -1638,7 +1697,7 @@ const touchConversationOutbound = `-- name: TouchConversationOutbound :one
 UPDATE conversations
 SET last_message_at = GREATEST(last_message_at, $1::timestamptz)
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type TouchConversationOutboundParams struct {
@@ -1676,6 +1735,7 @@ func (q *Queries) TouchConversationOutbound(ctx context.Context, arg TouchConver
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }

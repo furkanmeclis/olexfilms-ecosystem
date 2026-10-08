@@ -1212,6 +1212,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/dealers/{code}/lead-form/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public dealer showcase lead form config
+         * @description TEC-468. No authentication. Returns the lead form fields, current KVKK
+         *     text version, showcase services and WhatsApp click-to-chat URL for a
+         *     published dealer showcase. Dealers without the module enabled or without
+         *     a published showcase return 404.
+         */
+        get: operations["getPublicDealerLeadFormConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/dealers/{code}/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit public dealer showcase lead
+         * @description TEC-468. No authentication. Accepts website leads for a published dealer
+         *     showcase. Stores accepted leads under the dealer organization with
+         *     `source=website`; an open lead with the same phone is updated with a
+         *     timeline note instead of creating a duplicate. The endpoint enforces a
+         *     16 KB body limit, HMAC form token, minimum fill time, honeypot, 5/hour
+         *     IP limit and 3/day phone limit.
+         */
+        post: operations["submitPublicDealerLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/showcase": {
         parameters: {
             query?: never;
@@ -13706,6 +13754,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fleets/{uuid}/service-plans/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a capacity-aware fleet service appointment series
+         * @description TEC-475: schedules the selected fleet vehicles from start_date using appointment settings, closures and existing active appointments. Closed days and full days are skipped; warnings flag vehicles with another active appointment on the proposed day.
+         */
+        post: operations["previewFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create the fleet service plan and all appointments atomically
+         * @description Uses Idempotency-Key per dealer organization. If capacity changed after preview, answers 409 FLEET_SERVICE_PLAN_STALE and writes no plan or appointments.
+         */
+        post: operations["createFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/{plan}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a fleet service plan and its scheduled appointments */
+        post: operations["cancelFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/{plan}/start-intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start draft service intake for plan appointments row by row
+         * @description Selected appointments are attempted independently through the existing appointment start-intake flow. One row failure does not stop the others.
+         */
+        post: operations["startFleetServicePlanIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portal/fleet/links": {
         parameters: {
             query?: never;
@@ -16541,6 +16666,49 @@ export interface components {
             success: true;
             data: components["schemas"]["PublicDealer"];
             meta: components["schemas"]["ResponseMeta"];
+        };
+        PublicDealerLeadFormService: {
+            /** Format: uuid */
+            uuid: string;
+            kind: string;
+            title: string;
+            description?: string;
+        };
+        PublicDealerLeadFormConfig: {
+            dealer_code: string;
+            dealer_name: string;
+            fields: string[];
+            /** Format: int32 */
+            kvkk_text_version: number;
+            kvkk_text: string;
+            services: components["schemas"]["PublicDealerLeadFormService"][];
+            /** Format: uri */
+            whatsapp_chat_url: string;
+            form_token: string;
+            min_fill_seconds: number;
+            default_phone_country: string;
+            preferred_locales: string[];
+        };
+        PublicDealerLeadRequest: {
+            name: string;
+            phone: string;
+            /** Format: email */
+            email?: string;
+            vehicle_brand?: string;
+            vehicle_model?: string;
+            interested_services: string[];
+            message?: string;
+            /** @enum {string} */
+            preferred_channel?: "phone" | "email" | "whatsapp";
+            kvkk_consent: boolean;
+            language: string;
+            form_token: string;
+            /** @description Hidden honeypot field; legitimate clients submit an empty value. */
+            website?: string;
+        };
+        PublicDealerLeadAccepted: {
+            /** @enum {boolean} */
+            received: true;
         };
         /** @enum {string} */
         ShowcaseStatus: "draft" | "pending_review" | "published" | "rejected";
@@ -22135,7 +22303,7 @@ export interface components {
         /** @enum {string} */
         AppointmentStatus: "scheduled" | "confirmed" | "arrived" | "no_show" | "cancelled";
         /** @enum {string} */
-        AppointmentSource: "panel" | "portal" | "assistant" | "lead";
+        AppointmentSource: "panel" | "portal" | "assistant" | "lead" | "fleet_plan";
         AppointmentSettingsInput: {
             daily_vehicle_capacity: number;
             default_estimated_minutes: number;
@@ -24713,6 +24881,75 @@ export interface components {
             service_count: number;
             lines: components["schemas"]["FleetStatementLine"][];
         };
+        FleetPlanAppointment: {
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** Format: date-time */
+            starts_at: string;
+        };
+        FleetServicePlanWarning: {
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** Format: date */
+            date: string;
+            /** @example FLEET_PLAN_VEHICLE_DAY_CONFLICT */
+            code: string;
+            message: string;
+        };
+        FleetServicePlanRequest: {
+            vehicle_uuids: string[];
+            service_type: string;
+            note?: string;
+            /** Format: date */
+            start_date: string;
+            daily_max_vehicles?: number;
+            preferred_times?: string[];
+            /** @description Optional edited preview to commit. */
+            appointments?: components["schemas"]["FleetPlanAppointment"][];
+        };
+        FleetServicePlanPreview: {
+            /** Format: uuid */
+            fleet_uuid: string;
+            /** Format: uuid */
+            dealer_uuid: string;
+            service_type: string;
+            note: string;
+            appointments: components["schemas"]["FleetPlanAppointment"][];
+            warnings: components["schemas"]["FleetServicePlanWarning"][];
+        };
+        FleetServicePlan: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            fleet_uuid: string;
+            /** Format: uuid */
+            dealer_uuid: string;
+            /** @enum {string} */
+            status: "scheduled" | "cancelled";
+            service_type: string;
+            note: string;
+            appointments: components["schemas"]["Appointment"][];
+            warnings?: components["schemas"]["FleetServicePlanWarning"][];
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetServicePlanIntakeRequest: {
+            /** @description Empty or absent means every appointment of the plan. */
+            appointment_uuids?: string[];
+        };
+        FleetServicePlanIntake: {
+            /** Format: uuid */
+            plan_uuid: string;
+            results: {
+                /** Format: uuid */
+                appointment_uuid: string;
+                /** Format: uuid */
+                service_uuid?: string | null;
+                ok: boolean;
+                code?: string;
+                message?: string;
+            }[];
+        };
         EnvelopeFleet: {
             /** @enum {boolean} */
             success: true;
@@ -24747,6 +24984,24 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["FleetStatement"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetServicePlanPreview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetServicePlanPreview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetServicePlan: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetServicePlan"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetServicePlanIntake: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetServicePlanIntake"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeFleetListPage: {
@@ -25238,6 +25493,8 @@ export interface components {
         FleetVehicleUUID: string;
         /** @description Fleet-dealer link uuid */
         FleetLinkUUID: string;
+        /** @description Fleet service plan uuid */
+        FleetServicePlanUUID: string;
     };
     requestBodies: never;
     headers: never;
@@ -27239,6 +27496,88 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    getPublicDealerLeadFormConfig: {
+        parameters: {
+            query?: {
+                lang?: string;
+            };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead form configuration */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDealerLeadFormConfig"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    submitPublicDealerLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicDealerLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description Lead accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDealerLeadAccepted"];
+                };
+            };
+            /** @description Honeypot submission accepted without storing a lead */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            /** @description KVKK consent is required */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited by IP or phone */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
         };
     };
     getShowcase: {
@@ -50186,6 +50525,143 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    previewFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetServicePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlanPreview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    createFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetServicePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Plan created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlan"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    cancelFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet service plan uuid */
+                plan: components["parameters"]["FleetServicePlanUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Plan cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlan"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    startFleetServicePlanIntake: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet service plan uuid */
+                plan: components["parameters"]["FleetServicePlanUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetServicePlanIntakeRequest"];
+            };
+        };
+        responses: {
+            /** @description Row results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlanIntake"];
                 };
             };
             400: components["responses"]["BadRequest"];

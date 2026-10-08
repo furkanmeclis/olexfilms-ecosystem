@@ -53,6 +53,11 @@ const (
 	CodeNoDealerLink = "FLEET_NO_DEALER_LINK"
 	// CodeLinkNotPending: only a pending link is accepted or rejected (409).
 	CodeLinkNotPending = "FLEET_LINK_NOT_PENDING"
+	// CodeServicePlanStale: the appointment capacity changed after the
+	// preview; the client must preview again (409).
+	CodeServicePlanStale = "FLEET_SERVICE_PLAN_STALE"
+	// CodeServicePlanCancelled: the plan was already cancelled (409).
+	CodeServicePlanCancelled = "FLEET_SERVICE_PLAN_CANCELLED"
 )
 
 // Fleet user statuses (fleet_users.status).

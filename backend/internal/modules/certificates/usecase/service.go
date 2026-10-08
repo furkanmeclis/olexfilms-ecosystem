@@ -45,6 +45,7 @@ type FeatureChecker interface {
 
 type Settings interface {
 	CertificatesRequireAdminApproval(ctx context.Context) bool
+	CertificatesExpiryNoticeDays(ctx context.Context) int
 }
 
 type Caller struct {
