@@ -66,6 +66,8 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		{cron: campaignTickCron, taskType: TaskCampaignTick, queue: QueueMaintenance}: false,
 		// TEC-481.
 		{cron: certificateExpiryScanCron, taskType: TaskCertificateExpiryScan, queue: QueueMaintenance}: false,
+		// TEC-484.
+		{cron: stockForecastDailyCron, taskType: TaskStockForecastDaily, queue: QueueLow}: false,
 	}
 	for _, e := range r.entries {
 		if _, ok := want[e]; !ok {

@@ -156,6 +156,281 @@ func (q *Queries) GetLatestStockForecast(ctx context.Context, arg GetLatestStock
 	return i, err
 }
 
+const getStockForecastConsumptionTotals = `-- name: GetStockForecastConsumptionTotals :one
+SELECT
+  COALESCE(SUM(
+    CASE
+      WHEN sm.type IN ('consumption', 'partial_consumption', 'sale')
+        THEN GREATEST(-sm.quantity_delta, 0)
+      WHEN $1::bool AND sm.type = 'order_out'
+        THEN GREATEST(-sm.quantity_delta, 0)
+      WHEN sm.type IN ('return', 'void')
+        THEN -GREATEST(sm.quantity_delta, 0)
+      WHEN $1::bool AND sm.type = 'order_cancel_restore'
+        THEN -GREATEST(sm.quantity_delta, 0)
+      ELSE 0
+    END
+  ), 0)::numeric AS qty,
+  COALESCE(SUM(
+    CASE
+      WHEN sm.type IN ('consumption', 'partial_consumption', 'sale')
+        THEN GREATEST(-sm.meters_delta, 0)
+      WHEN $1::bool AND sm.type = 'order_out'
+        THEN GREATEST(-sm.meters_delta, 0)
+      WHEN sm.type IN ('return', 'void')
+        THEN -GREATEST(sm.meters_delta, 0)
+      WHEN $1::bool AND sm.type = 'order_cancel_restore'
+        THEN -GREATEST(sm.meters_delta, 0)
+      ELSE 0
+    END
+  ), 0)::numeric AS meters
+FROM stock_movements sm
+WHERE sm.brand_id = $2
+  AND sm.product_id = $3
+  AND (
+    sm.organization_id = $4
+    OR (
+      $1::bool
+      AND sm.type = 'order_cancel_restore'
+      AND EXISTS (
+        SELECT 1 FROM stock_movements out_sm
+        WHERE out_sm.organization_id = $4
+          AND out_sm.brand_id = sm.brand_id
+          AND out_sm.product_id = sm.product_id
+          AND out_sm.unit_id = sm.unit_id
+          AND out_sm.type = 'order_out'
+          AND out_sm.reference_type IS NOT DISTINCT FROM sm.reference_type
+          AND out_sm.reference_id IS NOT DISTINCT FROM sm.reference_id
+      )
+    )
+  )
+  AND sm.created_at >= $5::timestamptz
+  AND sm.created_at < $6::timestamptz
+`
+
+type GetStockForecastConsumptionTotalsParams struct {
+	IncludeOrderOut bool               `json:"include_order_out"`
+	BrandID         int64              `json:"brand_id"`
+	ProductID       int64              `json:"product_id"`
+	OrganizationID  int64              `json:"organization_id"`
+	FromAt          pgtype.Timestamptz `json:"from_at"`
+	ToAt            pgtype.Timestamptz `json:"to_at"`
+}
+
+type GetStockForecastConsumptionTotalsRow struct {
+	Qty    pgtype.Numeric `json:"qty"`
+	Meters pgtype.Numeric `json:"meters"`
+}
+
+func (q *Queries) GetStockForecastConsumptionTotals(ctx context.Context, arg GetStockForecastConsumptionTotalsParams) (GetStockForecastConsumptionTotalsRow, error) {
+	row := q.db.QueryRow(ctx, getStockForecastConsumptionTotals,
+		arg.IncludeOrderOut,
+		arg.BrandID,
+		arg.ProductID,
+		arg.OrganizationID,
+		arg.FromAt,
+		arg.ToAt,
+	)
+	var i GetStockForecastConsumptionTotalsRow
+	err := row.Scan(&i.Qty, &i.Meters)
+	return i, err
+}
+
+const getStockForecastFirstMovementDate = `-- name: GetStockForecastFirstMovementDate :one
+SELECT MIN(created_at)::date
+FROM stock_movements
+WHERE organization_id = $1
+  AND brand_id = $2
+`
+
+type GetStockForecastFirstMovementDateParams struct {
+	OrganizationID int64 `json:"organization_id"`
+	BrandID        int64 `json:"brand_id"`
+}
+
+func (q *Queries) GetStockForecastFirstMovementDate(ctx context.Context, arg GetStockForecastFirstMovementDateParams) (pgtype.Date, error) {
+	row := q.db.QueryRow(ctx, getStockForecastFirstMovementDate, arg.OrganizationID, arg.BrandID)
+	var column_1 pgtype.Date
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const getStockForecastOnHand = `-- name: GetStockForecastOnHand :one
+SELECT COALESCE(quantity, 0)::int AS quantity,
+       COALESCE(meters, 0)::numeric(14,2) AS meters
+FROM organization_product_stocks
+WHERE organization_id = $1
+  AND product_id = $2
+`
+
+type GetStockForecastOnHandParams struct {
+	OrganizationID int64 `json:"organization_id"`
+	ProductID      int64 `json:"product_id"`
+}
+
+type GetStockForecastOnHandRow struct {
+	Quantity int32          `json:"quantity"`
+	Meters   pgtype.Numeric `json:"meters"`
+}
+
+func (q *Queries) GetStockForecastOnHand(ctx context.Context, arg GetStockForecastOnHandParams) (GetStockForecastOnHandRow, error) {
+	row := q.db.QueryRow(ctx, getStockForecastOnHand, arg.OrganizationID, arg.ProductID)
+	var i GetStockForecastOnHandRow
+	err := row.Scan(&i.Quantity, &i.Meters)
+	return i, err
+}
+
+const getStockForecastOpenIncomingOrders = `-- name: GetStockForecastOpenIncomingOrders :one
+SELECT
+  COALESCE(SUM(oi.quantity), 0)::int AS qty,
+  COALESCE(SUM(oi.meters), 0)::numeric(14,2) AS meters
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+WHERE o.buyer_org_id = $1
+  AND o.brand_id = $2
+  AND oi.product_id = $3
+  AND o.status IN ('submitted', 'approved', 'preparing', 'ready', 'processing', 'shipped', 'delivered')
+`
+
+type GetStockForecastOpenIncomingOrdersParams struct {
+	OrganizationID int64 `json:"organization_id"`
+	BrandID        int64 `json:"brand_id"`
+	ProductID      int64 `json:"product_id"`
+}
+
+type GetStockForecastOpenIncomingOrdersRow struct {
+	Qty    int32          `json:"qty"`
+	Meters pgtype.Numeric `json:"meters"`
+}
+
+func (q *Queries) GetStockForecastOpenIncomingOrders(ctx context.Context, arg GetStockForecastOpenIncomingOrdersParams) (GetStockForecastOpenIncomingOrdersRow, error) {
+	row := q.db.QueryRow(ctx, getStockForecastOpenIncomingOrders, arg.OrganizationID, arg.BrandID, arg.ProductID)
+	var i GetStockForecastOpenIncomingOrdersRow
+	err := row.Scan(&i.Qty, &i.Meters)
+	return i, err
+}
+
+const getStockForecastPartialMetersAndServices = `-- name: GetStockForecastPartialMetersAndServices :one
+SELECT
+  COALESCE((
+    SELECT SUM(GREATEST(-sm.meters_delta, 0))
+    FROM stock_movements sm
+    WHERE sm.organization_id = $1
+      AND sm.brand_id = $2
+      AND sm.product_id = $3
+      AND sm.type = 'partial_consumption'
+      AND sm.created_at >= $4::timestamptz
+      AND sm.created_at < $5::timestamptz
+  ), 0)::numeric AS meters,
+  COALESCE((
+    SELECT COUNT(*)::bigint
+    FROM services s
+    WHERE s.organization_id = $1
+      AND s.brand_id = $2
+      AND s.status = 'completed'
+      AND s.completed_at >= $4::timestamptz
+      AND s.completed_at < $5::timestamptz
+  ), 0)::bigint AS services
+`
+
+type GetStockForecastPartialMetersAndServicesParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ProductID      int64              `json:"product_id"`
+	FromAt         pgtype.Timestamptz `json:"from_at"`
+	ToAt           pgtype.Timestamptz `json:"to_at"`
+}
+
+type GetStockForecastPartialMetersAndServicesRow struct {
+	Meters   pgtype.Numeric `json:"meters"`
+	Services int64          `json:"services"`
+}
+
+func (q *Queries) GetStockForecastPartialMetersAndServices(ctx context.Context, arg GetStockForecastPartialMetersAndServicesParams) (GetStockForecastPartialMetersAndServicesRow, error) {
+	row := q.db.QueryRow(ctx, getStockForecastPartialMetersAndServices,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.ProductID,
+		arg.FromAt,
+		arg.ToAt,
+	)
+	var i GetStockForecastPartialMetersAndServicesRow
+	err := row.Scan(&i.Meters, &i.Services)
+	return i, err
+}
+
+const getStockForecastSeasonalityTotals = `-- name: GetStockForecastSeasonalityTotals :one
+SELECT
+  COALESCE(SUM(CASE WHEN month_match THEN consumption ELSE 0 END), 0)::numeric AS same_month,
+  COALESCE(SUM(consumption), 0)::numeric AS year_total
+FROM (
+  SELECT date_trunc('month', sm.created_at)::date = $1::date AS month_match,
+         CASE
+           WHEN sm.type IN ('consumption', 'partial_consumption', 'sale')
+             THEN GREATEST(-sm.quantity_delta, 0)::numeric + GREATEST(-sm.meters_delta, 0)
+           WHEN $2::bool AND sm.type = 'order_out'
+             THEN GREATEST(-sm.quantity_delta, 0)::numeric + GREATEST(-sm.meters_delta, 0)
+           WHEN sm.type IN ('return', 'void')
+             THEN -(GREATEST(sm.quantity_delta, 0)::numeric + GREATEST(sm.meters_delta, 0))
+           WHEN $2::bool AND sm.type = 'order_cancel_restore'
+             THEN -(GREATEST(sm.quantity_delta, 0)::numeric + GREATEST(sm.meters_delta, 0))
+           ELSE 0
+         END AS consumption
+  FROM stock_movements sm
+  WHERE sm.brand_id = $3
+    AND sm.product_id = $4
+    AND (
+      sm.organization_id = $5
+      OR (
+        $2::bool
+        AND sm.type = 'order_cancel_restore'
+        AND EXISTS (
+          SELECT 1 FROM stock_movements out_sm
+          WHERE out_sm.organization_id = $5
+            AND out_sm.brand_id = sm.brand_id
+            AND out_sm.product_id = sm.product_id
+            AND out_sm.unit_id = sm.unit_id
+            AND out_sm.type = 'order_out'
+            AND out_sm.reference_type IS NOT DISTINCT FROM sm.reference_type
+            AND out_sm.reference_id IS NOT DISTINCT FROM sm.reference_id
+        )
+      )
+    )
+    AND sm.created_at >= $6::timestamptz
+    AND sm.created_at < $7::timestamptz
+) s
+`
+
+type GetStockForecastSeasonalityTotalsParams struct {
+	SameMonth       pgtype.Date        `json:"same_month"`
+	IncludeOrderOut bool               `json:"include_order_out"`
+	BrandID         int64              `json:"brand_id"`
+	ProductID       int64              `json:"product_id"`
+	OrganizationID  int64              `json:"organization_id"`
+	FromAt          pgtype.Timestamptz `json:"from_at"`
+	ToAt            pgtype.Timestamptz `json:"to_at"`
+}
+
+type GetStockForecastSeasonalityTotalsRow struct {
+	SameMonth pgtype.Numeric `json:"same_month"`
+	YearTotal pgtype.Numeric `json:"year_total"`
+}
+
+func (q *Queries) GetStockForecastSeasonalityTotals(ctx context.Context, arg GetStockForecastSeasonalityTotalsParams) (GetStockForecastSeasonalityTotalsRow, error) {
+	row := q.db.QueryRow(ctx, getStockForecastSeasonalityTotals,
+		arg.SameMonth,
+		arg.IncludeOrderOut,
+		arg.BrandID,
+		arg.ProductID,
+		arg.OrganizationID,
+		arg.FromAt,
+		arg.ToAt,
+	)
+	var i GetStockForecastSeasonalityTotalsRow
+	err := row.Scan(&i.SameMonth, &i.YearTotal)
+	return i, err
+}
+
 const getStockForecastThreshold = `-- name: GetStockForecastThreshold :one
 SELECT id, uuid, organization_id, brand_id, product_id, warning_days, cover_days, created_at, updated_at FROM stock_forecast_thresholds
 WHERE organization_id = $1
@@ -415,6 +690,346 @@ func (q *Queries) ListStockForecastHistory(ctx context.Context, arg ListStockFor
 			&i.Status,
 			&i.SuggestedQty,
 			&i.SuggestedMeters,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStockForecastNetworkInputs = `-- name: ListStockForecastNetworkInputs :many
+WITH months AS (
+  SELECT date_trunc('month', $3::date + (n || ' months')::interval)::date AS forecast_month,
+         EXTRACT(day FROM (
+           date_trunc('month', $3::date + ((n + 1) || ' months')::interval)
+           - date_trunc('month', $3::date + (n || ' months')::interval)
+         ))::numeric AS days_in_month
+  FROM generate_series(1, 3) AS n
+),
+latest AS (
+  SELECT sf.organization_id, sf.brand_id, sf.product_id, p.unit_type,
+         (sf.avg_daily_30 * 0.6 + sf.avg_daily_90 * 0.4) AS base_daily,
+         sf.data_days, o.type AS organization_type
+  FROM stock_forecasts sf
+  JOIN products p ON p.id = sf.product_id AND p.brand_id = sf.brand_id
+  JOIN organizations o ON o.id = sf.organization_id
+  WHERE sf.brand_id = $2
+    AND sf.is_latest
+    AND sf.status <> 'insufficient_data'
+),
+demand AS (
+  SELECT l.product_id, m.forecast_month,
+         CEIL(COALESCE(SUM(
+           CASE WHEN l.unit_type = 'roll_meter' THEN 0
+                ELSE l.base_daily * f.factor * m.days_in_month
+           END
+         ), 0))::int AS expected_qty,
+         COALESCE(SUM(
+           CASE WHEN l.unit_type = 'roll_meter' THEN l.base_daily * f.factor * m.days_in_month
+                ELSE 0
+           END
+         ), 0)::numeric(14,2) AS expected_meters
+  FROM latest l
+  CROSS JOIN months m
+  CROSS JOIN LATERAL (
+    SELECT CASE
+      WHEN l.data_days >= 365 AND totals.year_total > 0
+        THEN LEAST(2.0, GREATEST(0.5, totals.same_month / (totals.year_total / 12)))
+      ELSE 1.0
+    END AS factor
+    FROM (
+      SELECT
+        COALESCE(SUM(CASE WHEN date_trunc('month', sm.created_at)::date = (m.forecast_month - interval '1 year')::date
+          THEN movement.consumption ELSE 0 END), 0)::numeric AS same_month,
+        COALESCE(SUM(movement.consumption), 0)::numeric AS year_total
+      FROM stock_movements sm
+      CROSS JOIN LATERAL (
+        SELECT CASE
+          WHEN sm.type IN ('consumption', 'partial_consumption', 'sale')
+            THEN GREATEST(-sm.quantity_delta, 0)::numeric + GREATEST(-sm.meters_delta, 0)
+          WHEN l.organization_type IN ('center', 'distributor') AND sm.type = 'order_out'
+            THEN GREATEST(-sm.quantity_delta, 0)::numeric + GREATEST(-sm.meters_delta, 0)
+          WHEN sm.type IN ('return', 'void')
+            THEN -(GREATEST(sm.quantity_delta, 0)::numeric + GREATEST(sm.meters_delta, 0))
+          WHEN l.organization_type IN ('center', 'distributor') AND sm.type = 'order_cancel_restore'
+            THEN -(GREATEST(sm.quantity_delta, 0)::numeric + GREATEST(sm.meters_delta, 0))
+          ELSE 0
+        END AS consumption
+      ) movement
+      WHERE sm.organization_id = l.organization_id
+        AND sm.brand_id = l.brand_id
+        AND sm.product_id = l.product_id
+        AND sm.created_at >= date_trunc('year', m.forecast_month - interval '1 year')
+        AND sm.created_at < date_trunc('year', m.forecast_month - interval '1 year') + interval '1 year'
+    ) totals
+  ) f
+  GROUP BY l.product_id, m.forecast_month
+),
+products_in_scope AS (
+  SELECT p.id AS product_id
+  FROM products p
+  WHERE p.brand_id = $2
+    AND p.active
+    AND (
+      EXISTS (SELECT 1 FROM latest l WHERE l.product_id = p.id)
+      OR EXISTS (
+        SELECT 1 FROM organization_product_stocks ops
+        WHERE ops.organization_id = $1
+          AND ops.product_id = p.id
+          AND (ops.quantity > 0 OR ops.meters > 0)
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM orders o
+        JOIN order_items oi ON oi.order_id = o.id
+        WHERE o.buyer_org_id = $1
+          AND o.brand_id = $2
+          AND oi.product_id = p.id
+          AND o.status IN ('submitted', 'approved', 'preparing', 'ready', 'processing', 'shipped', 'delivered')
+      )
+    )
+)
+SELECT p.product_id, m.forecast_month,
+       COALESCE(d.expected_qty, 0)::int AS expected_qty,
+       COALESCE(d.expected_meters, 0)::numeric(14,2) AS expected_meters,
+       COALESCE(ops.quantity, 0)::int AS network_on_hand_qty,
+       COALESCE(ops.meters, 0)::numeric(14,2) AS network_on_hand_meters,
+       COALESCE(open_orders.qty, 0)::int AS open_order_qty,
+       COALESCE(open_orders.meters, 0)::numeric(14,2) AS open_order_meters
+FROM products_in_scope p
+CROSS JOIN months m
+LEFT JOIN demand d ON d.product_id = p.product_id AND d.forecast_month = m.forecast_month
+LEFT JOIN organization_product_stocks ops
+  ON ops.organization_id = $1
+ AND ops.product_id = p.product_id
+LEFT JOIN LATERAL (
+  SELECT COALESCE(SUM(oi.quantity), 0)::int AS qty,
+         COALESCE(SUM(oi.meters), 0)::numeric(14,2) AS meters
+  FROM orders o
+  JOIN order_items oi ON oi.order_id = o.id
+  WHERE o.buyer_org_id = $1
+    AND o.brand_id = $2
+    AND oi.product_id = p.product_id
+    AND o.status IN ('submitted', 'approved', 'preparing', 'ready', 'processing', 'shipped', 'delivered')
+) open_orders ON true
+ORDER BY p.product_id, m.forecast_month
+`
+
+type ListStockForecastNetworkInputsParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	BrandID        int64       `json:"brand_id"`
+	ComputedOn     pgtype.Date `json:"computed_on"`
+}
+
+type ListStockForecastNetworkInputsRow struct {
+	ProductID           int64          `json:"product_id"`
+	ForecastMonth       pgtype.Date    `json:"forecast_month"`
+	ExpectedQty         int32          `json:"expected_qty"`
+	ExpectedMeters      pgtype.Numeric `json:"expected_meters"`
+	NetworkOnHandQty    int32          `json:"network_on_hand_qty"`
+	NetworkOnHandMeters pgtype.Numeric `json:"network_on_hand_meters"`
+	OpenOrderQty        int32          `json:"open_order_qty"`
+	OpenOrderMeters     pgtype.Numeric `json:"open_order_meters"`
+}
+
+func (q *Queries) ListStockForecastNetworkInputs(ctx context.Context, arg ListStockForecastNetworkInputsParams) ([]ListStockForecastNetworkInputsRow, error) {
+	rows, err := q.db.Query(ctx, listStockForecastNetworkInputs, arg.OrganizationID, arg.BrandID, arg.ComputedOn)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStockForecastNetworkInputsRow{}
+	for rows.Next() {
+		var i ListStockForecastNetworkInputsRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.ForecastMonth,
+			&i.ExpectedQty,
+			&i.ExpectedMeters,
+			&i.NetworkOnHandQty,
+			&i.NetworkOnHandMeters,
+			&i.OpenOrderQty,
+			&i.OpenOrderMeters,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStockForecastNotifyUserIDs = `-- name: ListStockForecastNotifyUserIDs :many
+SELECT DISTINCT om.user_id
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+LEFT JOIN organization_member_roles mr ON mr.member_id = om.id
+LEFT JOIN roles r ON r.id = mr.role_id
+WHERE om.organization_id = $1
+  AND (om.role = 'owner' OR r.slug LIKE '%warehouse%')
+ORDER BY om.user_id
+`
+
+func (q *Queries) ListStockForecastNotifyUserIDs(ctx context.Context, organizationID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listStockForecastNotifyUserIDs, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var user_id int64
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStockForecastOrganizations = `-- name: ListStockForecastOrganizations :many
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude
+FROM organizations
+WHERE deleted_at IS NULL
+  AND status = 'active'
+  AND type IN ('center', 'distributor', 'dealer')
+  AND ($1::bigint IS NULL OR id = $1::bigint)
+ORDER BY brand_id, id
+`
+
+func (q *Queries) ListStockForecastOrganizations(ctx context.Context, organizationID pgtype.Int8) ([]Organization, error) {
+	rows, err := q.db.Query(ctx, listStockForecastOrganizations, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Organization{}
+	for rows.Next() {
+		var i Organization
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Slug,
+			&i.Name,
+			&i.City,
+			&i.District,
+			&i.Phone,
+			&i.Address,
+			&i.LogoObjectKey,
+			&i.Status,
+			&i.PlanCode,
+			&i.AccessStartsAt,
+			&i.AccessEndsAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Email,
+			&i.Website,
+			&i.Tagline,
+			&i.FooterText,
+			&i.PaperSize,
+			&i.PrimaryColor,
+			&i.Type,
+			&i.ParentID,
+			&i.BrandID,
+			&i.Currency,
+			&i.Locale,
+			&i.Timezone,
+			&i.CountryID,
+			&i.ContractPdfKey,
+			&i.ContractValidUntil,
+			&i.Settings,
+			&i.ProvinceID,
+			&i.DistrictID,
+			&i.PhoneRaw,
+			&i.GoogleBusinessUrl,
+			&i.Latitude,
+			&i.Longitude,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listStockForecastProductsForOrg = `-- name: ListStockForecastProductsForOrg :many
+SELECT DISTINCT p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at
+FROM products p
+WHERE p.brand_id = $1
+  AND p.active
+  AND (
+    EXISTS (
+      SELECT 1 FROM organization_product_stocks ops
+      WHERE ops.organization_id = $2
+        AND ops.product_id = p.id
+        AND (ops.quantity > 0 OR ops.meters > 0)
+    )
+    OR EXISTS (
+      SELECT 1 FROM stock_movements sm
+      WHERE sm.organization_id = $2
+        AND sm.brand_id = $1
+        AND sm.product_id = p.id
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM orders o
+      JOIN order_items oi ON oi.order_id = o.id
+      WHERE o.buyer_org_id = $2
+        AND o.brand_id = $1
+        AND oi.product_id = p.id
+        AND o.status IN ('submitted', 'approved', 'preparing', 'ready', 'processing', 'shipped', 'delivered')
+    )
+  )
+ORDER BY p.id
+`
+
+type ListStockForecastProductsForOrgParams struct {
+	BrandID        int64 `json:"brand_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+func (q *Queries) ListStockForecastProductsForOrg(ctx context.Context, arg ListStockForecastProductsForOrgParams) ([]Product, error) {
+	rows, err := q.db.Query(ctx, listStockForecastProductsForOrg, arg.BrandID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Product{}
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.CategoryID,
+			&i.Sku,
+			&i.Name,
+			&i.DescriptionMd,
+			&i.WarrantyDurationMonths,
+			&i.MicronThickness,
+			&i.Images,
+			&i.UnitType,
+			&i.UsesFixedBarcode,
+			&i.Active,
+			&i.ExternalID,
+			&i.ConnectionID,
+			&i.LockedFields,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
