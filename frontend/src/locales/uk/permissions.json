@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "Зміна цін продажу",
   "labels.pricing.recommended.read": "Перегляд рекомендованих цін",
   "labels.pricing.recommended.write": "Публікація рекомендованих цін",
+  "labels.pricing.discipline.read": "Перегляд цінової дисципліни",
   "labels.accounting.read": "Перегляд бухгалтерії",
   "labels.accounting.write": "Керування бухгалтерією",
   "labels.accounting.dispute": "Оскарження бухгалтерських записів",

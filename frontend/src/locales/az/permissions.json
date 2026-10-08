@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "Satış qiymətlərini dəyişmək",
   "labels.pricing.recommended.read": "Tövsiyə olunan qiymətlərə baxmaq",
   "labels.pricing.recommended.write": "Tövsiyə olunan qiymətləri dərc etmək",
+  "labels.pricing.discipline.read": "Qiymət intizamına baxmaq",
   "labels.accounting.read": "Mühasibatlığa baxmaq",
   "labels.accounting.write": "Mühasibatlığı idarə etmək",
   "labels.accounting.dispute": "Mühasibat qeydlərinə etiraz etmək",
