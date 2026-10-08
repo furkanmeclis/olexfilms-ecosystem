@@ -13754,6 +13754,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fleets/{uuid}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request the periodic report of a closed period (TEC-476)
+         * @description A linked dealer (fleets.manage) asks for the fleet report of a closed month (period YYYY-MM) or quarter (YYYY-Qn). 202 with the report: pending (worker-docs renders the PDF, stores it and e-mails it to the fleet users and the billing address in the fleet's report language), or ready when the period already has a report. A failed report runs again. Only dealers with the fleet module contribute data. 400 when the period has not ended in the fleet's timezone.
+         */
+        post: operations["requestFleetReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fleets/{uuid}/service-plans/preview": {
         parameters: {
             query?: never;
@@ -16968,7 +16988,7 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
-        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote";
+        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote" | "fleet_report";
         DocumentVariable: {
             /** @example customer_name */
             key: string;
@@ -25216,6 +25236,29 @@ export interface components {
             locale: string;
             /** Format: date-time */
             created_at: string;
+        };
+        FleetReport: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            period_kind: "monthly" | "quarterly";
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            locale: string;
+            /** @enum {string} */
+            status: "pending" | "ready" | "failed";
+            /** Format: date-time */
+            emailed_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeFleetReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetReport"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeFleetPortalOverview: {
             /** @enum {boolean} */
@@ -50532,6 +50575,45 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    requestFleetReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    period_kind: "monthly" | "quarterly";
+                    /**
+                     * @description YYYY-MM (monthly) or YYYY-Qn (quarterly)
+                     * @example 2026-09
+                     */
+                    period: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Report queued (or already present) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     previewFleetServicePlan: {

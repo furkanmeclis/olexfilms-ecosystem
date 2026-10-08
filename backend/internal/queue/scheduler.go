@@ -82,6 +82,8 @@ func Schedules() []Periodic {
 		{Cron: stockForecastDailyCron, Type: TaskStockForecastDaily, Queue: QueueLow, Opts: stockForecastDailyOpts(), New: func() (*asynq.Task, error) {
 			return NewStockForecastDailyTask(0, time.Time{})
 		}},
+		// TEC-476: hourly fleet report schedule (07:00 local on the period's first day).
+		{Cron: fleetReportsScheduleCron, Type: TaskFleetReportsSchedule, Queue: QueueMaintenance, Opts: fleetReportsScheduleOpts(), New: NewFleetReportsScheduleTask},
 	}
 }
 

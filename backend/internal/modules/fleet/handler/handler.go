@@ -175,6 +175,27 @@ func (h *Handler) InviteUser(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, out)
 }
 
+// RequestReport is POST /v1/fleets/{uuid}/reports (TEC-476): the report of
+// a closed period (period_kind monthly | quarterly, period YYYY-MM |
+// YYYY-Qn) is generated on worker-docs and e-mailed to the fleet. 202 with
+// the report (status pending, or ready when it already exists).
+func (h *Handler) RequestReport(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var in usecase.RequestReportInput
+	if !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.RequestReport(r.Context(), caller(r), id, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusAccepted, out)
+}
+
 // DisableUser is POST /v1/fleets/{uuid}/users/{user_uuid}/disable.
 func (h *Handler) DisableUser(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathUUID(w, r, "uuid")
@@ -600,6 +621,8 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "fleet not found")
 	case errors.Is(err, usecase.ErrForbidden):
 		response.Forbidden(w, r, "only a dealer or a distributor does this")
+	case errors.Is(err, usecase.ErrReportQueueUnavailable):
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "report generation is not configured")
 	case errors.Is(err, usecase.ErrReportFilesUnavailable):
 		response.ServiceUnavailable(w, r, response.CodeInternalError, "report storage is not configured")
 	case errors.Is(err, repository.ErrLinkStale):

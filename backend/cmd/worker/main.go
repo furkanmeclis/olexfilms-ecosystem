@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -326,6 +327,25 @@ func main() {
 	featureSvc := features.New(pool, queries, nil, log)
 	certificatesCron := certificatesusecase.NewCron(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	stockForecastSvc := stockforecastusecase.New(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
+	// TEC-476: periodic fleet reports. The schedule runs on worker-core, the
+	// PDF (fleet_report document template) and its e-mail on worker-docs.
+	workerFleet.SetModules(featureSvc)
+	workerFleet.SetReportFiles(store)
+	if err := docSvc.RegisterLoader(docmodel.KindFleetReport, workerFleet.ReportDocumentLoader()); err != nil {
+		log.Error("documents_loader_failed", "kind", docmodel.KindFleetReport, "error", err)
+		os.Exit(1)
+	}
+	fleetMailBrand := notifmodule.EmailBrandFunc(queries, cfg)
+	workerFleet.SetReports(fleetusecase.ReportConfig{
+		Renderer: docSvc, Storage: store, Queue: queue.FleetReportEnqueuer{Client: reviewQueue},
+		Mail: mail.NewSMTPSender(cfg.SMTP),
+		Brand: func(ctx context.Context, brandID int64) fleetusecase.MailBrand {
+			b := fleetMailBrand(ctx, brandID)
+			return fleetusecase.MailBrand{Name: b.Name, LogoURL: b.LogoURL, Color: b.Color}
+		},
+		PortalURL: strings.TrimRight(cfg.Auth.FrontendURL, "/") + "/portal/fleet/reports",
+		Log:       log,
+	})
 
 	worker := queue.NewWorkerWithQueues(cfg, log, notifSvc.Deliver, queues).
 		WithWhatsAppPoll(waSvc.PollStatus).
@@ -383,6 +403,7 @@ func main() {
 		WithAIActionSweep(aiusecase.NewActions(airepo.New(pool), nil, nil, log).SweepTask).
 		WithCertificateExpiryScan(certificatesCron.ExpiryScanTask).
 		WithStockForecastDaily(stockForecastSvc.DailyTask).
+		WithFleetReports(workerFleet.ScheduleReportsTask, workerFleet.GenerateReport).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,

@@ -118,6 +118,9 @@ type Worker struct {
 	certificateExpiryScan CertificateExpiryScanFunc
 	// TEC-484: stock forecast daily snapshots and low-stock transitions.
 	stockForecastDaily StockForecastDailyFunc
+	// TEC-476: periodic fleet report schedule and generation.
+	fleetReportsSchedule FleetReportsScheduleFunc
+	fleetReportGenerate  FleetReportGenerateFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -219,6 +222,8 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskCampaignSendRecipient, w.handleCampaignSendRecipient)
 	mux.HandleFunc(TaskCertificateExpiryScan, w.handleCertificateExpiryScan)
 	mux.HandleFunc(TaskStockForecastDaily, w.handleStockForecastDaily)
+	mux.HandleFunc(TaskFleetReportsSchedule, w.handleFleetReportsSchedule)
+	mux.HandleFunc(TaskFleetReportGenerate, w.handleFleetReportGenerate)
 	return w
 }
 

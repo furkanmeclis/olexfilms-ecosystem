@@ -43,6 +43,7 @@
   "kinds.order_slip": "Бланк замовлення",
   "kinds.invoice_view": "Перегляд рахунку",
   "kinds.warranty": "Гарантійний сертифікат",
+  "kinds.fleet_report": "Звіт автопарку",
   "languages.tr": "Турецька",
   "languages.en": "Англійська",
   "languages.bg": "Болгарська",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "Рахунок",
   "variable_groups.warranty": "Гарантія",
   "variable_groups.totals": "Підсумки",
+  "variable_groups.fleet_report": "Звіт автопарку",
   "fields.updated_at": "Оновлено"
 }

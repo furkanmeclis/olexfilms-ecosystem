@@ -26754,6 +26754,44 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/{uuid}/reports:
+    post:
+      tags: [Fleets]
+      operationId: requestFleetReport
+      summary: Request the periodic report of a closed period (TEC-476)
+      description: >-
+        A linked dealer (fleets.manage) asks for the fleet report of a
+        closed month (period YYYY-MM) or quarter (YYYY-Qn). 202 with the
+        report: pending (worker-docs renders the PDF, stores it and e-mails
+        it to the fleet users and the billing address in the fleet's report
+        language), or ready when the period already has a report. A failed
+        report runs again. Only dealers with the fleet module contribute
+        data. 400 when the period has not ended in the fleet's timezone.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period_kind, period]
+              additionalProperties: false
+              properties:
+                period_kind: { type: string, enum: [monthly, quarterly] }
+                period: { type: string, example: "2026-09", description: "YYYY-MM (monthly) or YYYY-Qn (quarterly)" }
+      responses:
+        "202":
+          description: Report queued (or already present)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /v1/fleets/{uuid}/service-plans/preview:
     post:
       tags: [Fleets]
@@ -31488,7 +31526,7 @@ components:
 
     DocumentKind:
       type: string
-      enum: [service, measurement, contract, order_slip, invoice_view, warranty, quote]
+      enum: [service, measurement, contract, order_slip, invoice_view, warranty, quote, fleet_report]
 
     DocumentVariable:
       type: object
@@ -41830,6 +41868,27 @@ components:
         period_end: { type: string, format: date }
         locale: { type: string }
         created_at: { type: string, format: date-time }
+
+    FleetReport:
+      type: object
+      required: [uuid, period_kind, period_start, period_end, locale, status, emailed_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        period_kind: { type: string, enum: [monthly, quarterly] }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        locale: { type: string }
+        status: { type: string, enum: [pending, ready, failed] }
+        emailed_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeFleetReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeFleetPortalOverview:
       type: object

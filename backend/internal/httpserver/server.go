@@ -643,6 +643,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// detail / PDF serves a fleet user's fleet vehicles.
 	fleetSvc.SetModules(featureSvc)
 	fleetSvc.SetReportFiles(deps.Storage)
+	// TEC-476: POST /v1/fleets/{uuid}/reports enqueues the generation on
+	// worker-docs (no queue: 503).
+	if deps.Queue != nil {
+		fleetSvc.SetReports(fleetusecase.ReportConfig{Queue: queue.FleetReportEnqueuer{Client: deps.Queue}, Log: log})
+	}
 	servicesSvc.WithFleetPortal(fleetSvc)
 	ioReg := ioengine.NewRegistry(
 		// TEC-211: price columns behind pricing.* grants.

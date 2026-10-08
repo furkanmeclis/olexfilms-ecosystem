@@ -24,6 +24,8 @@ const (
 	KindInvoiceView = "invoice_view"
 	KindWarranty    = "warranty"
 	KindQuote       = "quote"
+	// KindFleetReport is the periodic fleet report (TEC-476, F5-02e).
+	KindFleetReport = "fleet_report"
 )
 
 // Languages a template may be written in (K10: 12 languages + Arabic).
@@ -242,6 +244,29 @@ var specs = map[string]KindSpec{
 		block("quote", "items_table", "Teklif kalemleri tablosu", "Quote line items table"),
 		text("totals", "discount_total", "İndirim", "Discount", "500,00 TRY", "TRY 500.00"),
 	})},
+	// TEC-476: the periodic fleet report. The company variables are the
+	// fleet's letterhead; the tables are built by the fleet loader in the
+	// report language.
+	KindFleetReport: {Kind: KindFleetReport, Variables: join(companyVars, documentVars, []Variable{
+		text("fleet_report", "fleet_name", "Filo adı", "Fleet name", "Örnek Lojistik", "Sample Logistics"),
+		text("fleet_report", "fleet_legal_name", "Filo unvanı", "Fleet legal name", "Örnek Lojistik A.Ş.", "Sample Logistics Inc."),
+		text("fleet_report", "fleet_tax_number", "Vergi no", "Tax number", "1234567890", "1234567890"),
+		text("fleet_report", "period_label", "Dönem", "Period", "Eylül 2026", "September 2026"),
+		text("fleet_report", "period_start", "Dönem başı", "Period start", "01.09.2026", "2026-09-01"),
+		text("fleet_report", "period_end", "Dönem sonu", "Period end", "30.09.2026", "2026-09-30"),
+		text("fleet_report", "vehicle_count", "Araç sayısı", "Vehicle count", "24", "24"),
+		text("fleet_report", "service_count", "Hizmet sayısı", "Service count", "9", "9"),
+		text("fleet_report", "dealer_count", "Bayi sayısı", "Dealer count", "2", "2"),
+		text("fleet_report", "warranty_active_count", "Aktif garanti", "Active warranties", "31", "31"),
+		text("fleet_report", "warranty_expired_count", "Biten garanti", "Expired warranties", "3", "3"),
+		text("fleet_report", "warranty_started_count", "Dönemde başlayan garanti", "Warranties started in period", "9", "9"),
+		block("fleet_report", "dealer_services_table", "Bayi bazında hizmetler", "Services by dealer"),
+		block("fleet_report", "vehicle_services_table", "Araç bazında hizmetler", "Services by vehicle"),
+		block("fleet_report", "parts_table", "Parça dağılımı", "Part distribution"),
+		block("fleet_report", "products_table", "Kullanılan ürünler", "Products used"),
+		block("fleet_report", "upcoming_expirations_table", "Yaklaşan garanti bitişleri", "Upcoming warranty expirations"),
+		block("fleet_report", "accounts_table", "Hizmet tutarı ve ödemeler", "Service amounts and payments"),
+	})},
 }
 
 func init() {
@@ -263,7 +288,7 @@ func init() {
 }
 
 // Kinds lists the document kinds in display order.
-var Kinds = []string{KindService, KindMeasurement, KindContract, KindOrderSlip, KindInvoiceView, KindWarranty, KindQuote}
+var Kinds = []string{KindService, KindMeasurement, KindContract, KindOrderSlip, KindInvoiceView, KindWarranty, KindQuote, KindFleetReport}
 
 // Spec returns the schema of a kind.
 func Spec(kind string) (KindSpec, bool) {
@@ -346,6 +371,43 @@ var sampleBlocks = map[string]func(tr bool) string{
 	},
 	"media_html": func(bool) string {
 		return `<figure><svg xmlns="http://www.w3.org/2000/svg" width="180" height="90"><rect width="180" height="90" fill="#e5e7eb"/><text x="90" y="50" text-anchor="middle" font-family="sans-serif" font-size="12">MEDIA</text></svg></figure>`
+	},
+	// TEC-476: fleet report tables.
+	"dealer_services_table": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "Bayi"}, {Label: "Hizmet", Numeric: true}}, [][]string{{"Olex Kadıköy", "6"}, {"Olex Ankara", "3"}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "Dealer"}, {Label: "Services", Numeric: true}}, [][]string{{"Olex Kadikoy", "6"}, {"Olex Ankara", "3"}})
+	},
+	"vehicle_services_table": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "Plaka"}, {Label: "Araç"}, {Label: "Hizmet", Numeric: true}}, [][]string{{"34 ABC 123", "Ford Transit", "2"}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "Plate"}, {Label: "Vehicle"}, {Label: "Services", Numeric: true}}, [][]string{{"34 ABC 123", "Ford Transit", "2"}})
+	},
+	"parts_table": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "Parça"}, {Label: "Adet", Numeric: true}}, [][]string{{"Kaput", "7"}, {"Ön tampon", "5"}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "Part"}, {Label: "Count", Numeric: true}}, [][]string{{"Hood", "7"}, {"Front bumper", "5"}})
+	},
+	"products_table": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "Ürün"}, {Label: "Kalem", Numeric: true}, {Label: "Metre", Numeric: true}}, [][]string{{"Olex PPF Ultra 190µ", "9", "54,50"}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "Product"}, {Label: "Items", Numeric: true}, {Label: "Meters", Numeric: true}}, [][]string{{"Olex PPF Ultra 190µ", "9", "54.50"}})
+	},
+	"upcoming_expirations_table": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "Plaka"}, {Label: "Ürün"}, {Label: "Bitiş"}}, [][]string{{"34 ABC 123", "Olex PPF Ultra 190µ", "15.11.2026"}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "Plate"}, {Label: "Product"}, {Label: "Ends"}}, [][]string{{"34 ABC 123", "Olex PPF Ultra 190µ", "2026-11-15"}})
+	},
+	"accounts_table": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "Bayi"}, {Label: "Hizmet tutarı", Numeric: true}, {Label: "Ödeme", Numeric: true}, {Label: "Bakiye", Numeric: true}}, [][]string{{"Olex Kadıköy", "45.000,00 TRY", "30.000,00 TRY", "15.000,00 TRY"}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "Dealer"}, {Label: "Service amount", Numeric: true}, {Label: "Payments", Numeric: true}, {Label: "Balance", Numeric: true}}, [][]string{{"Olex Kadikoy", "TRY 45,000.00", "TRY 30,000.00", "TRY 15,000.00"}})
 	},
 	"qr_code": func(bool) string {
 		return `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 8 8"><rect width="8" height="8" fill="#fff"/><path d="M0 0h3v3H0zM5 0h3v3H5zM0 5h3v3H0zM4 4h1v1H4zM6 5h1v2H6zM4 6h1v2H4z" fill="#000"/></svg>`

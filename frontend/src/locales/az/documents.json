@@ -43,6 +43,7 @@
   "kinds.order_slip": "Sifariş qəbzi",
   "kinds.invoice_view": "Faktura görünüşü",
   "kinds.warranty": "Zəmanət sertifikatı",
+  "kinds.fleet_report": "Avtopark hesabatı",
   "languages.tr": "Türk dili",
   "languages.en": "İngilis dili",
   "languages.bg": "Bolqar dili",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "Faktura",
   "variable_groups.warranty": "Zəmanət",
   "variable_groups.totals": "Yekunlar",
+  "variable_groups.fleet_report": "Avtopark hesabatı",
   "fields.updated_at": "Yenilənib"
 }

@@ -215,6 +215,7 @@ type Querier interface {
 	CountFleetPortalVehicles(ctx context.Context, arg CountFleetPortalVehiclesParams) (int64, error)
 	// Same filter block as ListFleetPortalWarranties.
 	CountFleetPortalWarranties(ctx context.Context, arg CountFleetPortalWarrantiesParams) (int64, error)
+	CountFleetReportVehicles(ctx context.Context, fleetOrgID int64) (int64, error)
 	CountFleetReports(ctx context.Context, arg CountFleetReportsParams) (int64, error)
 	CountFleetServices(ctx context.Context, arg CountFleetServicesParams) (int64, error)
 	// Same filter block as ListFleetUsers.
@@ -386,6 +387,9 @@ type Querier interface {
 	// TEC-472 (F5-02a): fleets. A fleet is an organization of type 'fleet'
 	// with a fleet_profiles row; dealers reach it through fleet_dealer_links.
 	CreateFleetProfile(ctx context.Context, arg CreateFleetProfileParams) (FleetProfile, error)
+	// The scheduled report of a period: no row when the period already has one
+	// (whatever its status), so two ticks create a single report.
+	CreateFleetReportIfAbsent(ctx context.Context, arg CreateFleetReportIfAbsentParams) (FleetReport, error)
 	// TEC-475 (F5-02d): fleet service plans.
 	CreateFleetServicePlan(ctx context.Context, arg CreateFleetServicePlanParams) (FleetServicePlan, error)
 	// TEC-473 (F5-02b): fleet management API. Fleet users, the dealer's access
@@ -435,6 +439,9 @@ type Querier interface {
 	CreateOrderOutbound(ctx context.Context, arg CreateOrderOutboundParams) (OrderOutbound, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) (OrganizationMember, error)
+	// TEC-487: efficiency and waste analytics. These queries are intentionally
+	// read/projection focused; authorization scope is resolved by the usecase.
+	CreatePartConsumptionExpectation(ctx context.Context, arg CreatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
 	CreatePlateFormat(ctx context.Context, arg CreatePlateFormatParams) (PlateFormat, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
@@ -635,6 +642,7 @@ type Querier interface {
 	DeleteOrderItem(ctx context.Context, id int64) (int64, error)
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
+	DeletePartConsumptionExpectation(ctx context.Context, arg DeletePartConsumptionExpectationParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
 	DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error)
@@ -682,6 +690,9 @@ type Querier interface {
 	Descendants(ctx context.Context, id int64) ([]Organization, error)
 	DisableFleetUser(ctx context.Context, id int64) (FleetUser, error)
 	EODReportExists(ctx context.Context, arg EODReportExistsParams) (bool, error)
+	EfficiencyComparison(ctx context.Context, arg EfficiencyComparisonParams) ([]EfficiencyComparisonRow, error)
+	EfficiencyMonthlyTrend(ctx context.Context, arg EfficiencyMonthlyTrendParams) ([]EfficiencyMonthlyTrendRow, error)
+	EfficiencySummary(ctx context.Context, arg EfficiencySummaryParams) ([]EfficiencySummaryRow, error)
 	// ---------------------------------------------------------------------------
 	// Product stock projections.
 	EnsureBinProductStock(ctx context.Context, arg EnsureBinProductStockParams) error
@@ -765,6 +776,22 @@ type Querier interface {
 	// The balance of the same rows (service income adds, collections subtract)
 	// before a point in time.
 	FleetPortalCariBalanceBefore(ctx context.Context, arg FleetPortalCariBalanceBeforeParams) (pgtype.Numeric, error)
+	// Part distribution: applied_parts keys of the period's service items,
+	// counted per key.
+	FleetReportParts(ctx context.Context, arg FleetReportPartsParams) ([]FleetReportPartsRow, error)
+	// Products used: items, pieces and meters per product.
+	FleetReportProducts(ctx context.Context, arg FleetReportProductsParams) ([]FleetReportProductsRow, error)
+	// Services completed in [period_from, period_to) on the fleet's vehicles,
+	// per dealer.
+	FleetReportServicesByDealer(ctx context.Context, arg FleetReportServicesByDealerParams) ([]FleetReportServicesByDealerRow, error)
+	// Same services per vehicle (plate, car brand / model).
+	FleetReportServicesByVehicle(ctx context.Context, arg FleetReportServicesByVehicleParams) ([]FleetReportServicesByVehicleRow, error)
+	// Warranties still running at period_to that end before until.
+	FleetReportUpcomingExpirations(ctx context.Context, arg FleetReportUpcomingExpirationsParams) ([]FleetReportUpcomingExpirationsRow, error)
+	// Warranty state at the end of the period (period_to): active (started,
+	// not void, not past end_at), expired (ended by period_to, not void) and
+	// started within the period.
+	FleetReportWarrantyCounts(ctx context.Context, arg FleetReportWarrantyCountsParams) (FleetReportWarrantyCountsRow, error)
 	// TEC-388: prompt context of a chat turn: the user, the conversation's
 	// organization, its brand and the brand center (K10 locale / time zone).
 	GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error)
@@ -802,6 +829,7 @@ type Querier interface {
 	GetAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
 	GetBarcodeBatchByUUID(ctx context.Context, arg GetBarcodeBatchByUUIDParams) (BarcodeBatch, error)
+	GetBestPartExpectation(ctx context.Context, arg GetBestPartExpectationParams) (PartConsumptionExpectation, error)
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
 	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
@@ -907,6 +935,7 @@ type Querier interface {
 	GetFleetCarModelByID(ctx context.Context, id int64) (CarModel, error)
 	GetFleetDealerLinkByUUID(ctx context.Context, argUuid uuid.UUID) (FleetDealerLink, error)
 	GetFleetProfileByOrg(ctx context.Context, organizationID int64) (FleetProfile, error)
+	GetFleetReportByID(ctx context.Context, id int64) (FleetReport, error)
 	GetFleetReportByUUID(ctx context.Context, argUuid uuid.UUID) (FleetReport, error)
 	GetFleetServicePlanByIdempotency(ctx context.Context, arg GetFleetServicePlanByIdempotencyParams) (FleetServicePlan, error)
 	GetFleetServicePlanByUUID(ctx context.Context, arg GetFleetServicePlanByUUIDParams) (FleetServicePlan, error)
@@ -1485,6 +1514,8 @@ type Querier interface {
 	// every organization of the brand). A dealer reaches a fleet only through
 	// an active link.
 	ListActiveFleetLinksInScope(ctx context.Context, arg ListActiveFleetLinksInScopeParams) ([]FleetDealerLink, error)
+	// E-mail addresses of the fleet's active users (report recipients).
+	ListActiveFleetUserEmails(ctx context.Context, fleetOrgID int64) ([]string, error)
 	// Recipients of fleet notifications (link requests).
 	ListActiveFleetUserIDs(ctx context.Context, fleetOrgID int64) ([]int64, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
@@ -1796,6 +1827,14 @@ type Querier interface {
 	// plate | car_brand | last_service_at | active_warranty_count | created_at,
 	// default plate.
 	ListFleetVehicles(ctx context.Context, arg ListFleetVehiclesParams) ([]ListFleetVehiclesRow, error)
+	// TEC-476 (F5-02e): periodic fleet reports. The scheduler (worker-core)
+	// walks the fleets with a report frequency, creates one fleet_reports row
+	// per (fleet, period) and the docs worker renders it. The report content
+	// reads the services, warranties and parts of the dealers that have the
+	// fleet module (dealer_ids).
+	// Fleets with a report frequency (monthly / quarterly), keyset by
+	// organization id.
+	ListFleetsDueForReport(ctx context.Context, arg ListFleetsDueForReportParams) ([]ListFleetsDueForReportRow, error)
 	// Serial units assigned to the order's lines whose product is synced from
 	// a connection, in line order. Olex and local products have no connection
 	// and never appear.
@@ -2013,6 +2052,7 @@ type Querier interface {
 	// Territories of the brand that overlap an area: the same area, an ancestor
 	// (the country or the province of a district) or a descendant.
 	ListOverlappingTerritories(ctx context.Context, arg ListOverlappingTerritoriesParams) ([]ListOverlappingTerritoriesRow, error)
+	ListPartConsumptionExpectations(ctx context.Context, arg ListPartConsumptionExpectationsParams) ([]ListPartConsumptionExpectationsRow, error)
 	// Pending recipients of a sending campaign, in id pages; before (when set)
 	// keeps those not touched since then (the scheduler re-enqueues their task;
 	// a still queued task is deduplicated by its task id).
@@ -2132,6 +2172,7 @@ type Querier interface {
 	ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error)
 	ListRolesForExport(ctx context.Context, arg ListRolesForExportParams) ([]Role, error)
 	ListRolesForUserIDs(ctx context.Context, userIds []int64) ([]ListRolesForUserIDsRow, error)
+	ListRollEfficiency(ctx context.Context, arg ListRollEfficiencyParams) ([]ListRollEfficiencyRow, error)
 	// ---------------------------------------------------------------------------
 	// Typed locations (aisle, shelf, bin).
 	// The whole tree of a room, parents before children is not guaranteed:
@@ -2229,6 +2270,10 @@ type Querier interface {
 	// docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
 	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]ListStaffPaymentsRow, error)
 	ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error)
+	// Pending reports whose generation task may have been lost (enqueue
+	// failure): the scheduler enqueues them again (task id dedupe). Database
+	// clock: older than 15 minutes.
+	ListStalePendingFleetReports(ctx context.Context, limitCount int32) ([]int64, error)
 	// Queued messages older than the cutoff whose send task may have been lost
 	// (enqueue failure, Redis flush); the sweep enqueues them again.
 	ListStaleQueuedMessages(ctx context.Context, arg ListStaleQueuedMessagesParams) ([]ListStaleQueuedMessagesRow, error)
@@ -2903,11 +2948,13 @@ type Querier interface {
 	PurgeNotificationDeliveriesBefore(ctx context.Context, arg PurgeNotificationDeliveriesBeforeParams) (int64, error)
 	PurgeNotificationsBefore(ctx context.Context, arg PurgeNotificationsBeforeParams) (int64, error)
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	RebuildRollEfficiency(ctx context.Context, unitID pgtype.Int8) (int64, error)
 	// Recomputes the subtotal from the lines (total = subtotal + tax_total).
 	RecalculateOrderTotals(ctx context.Context, id int64) (Order, error)
 	ReceiveTransferRequest(ctx context.Context, arg ReceiveTransferRequestParams) (StockTransferRequest, error)
 	// A failed attempt that will be retried: the recipient stays pending.
 	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
+	RefreshEfficiencyFactsForServiceItem(ctx context.Context, targetServiceItemID int64) (int64, error)
 	RejectCertificate(ctx context.Context, arg RejectCertificateParams) (Certificate, error)
 	// CAS pending_review → rejected with the reviewer's note. The previous
 	// published snapshot (if any) stays live.
@@ -3284,6 +3331,7 @@ type Querier interface {
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
+	UpdatePartConsumptionExpectation(ctx context.Context, arg UpdatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	// UpdatePlannedStaffPayment edits a payment that is not booked yet.
 	UpdatePlannedStaffPayment(ctx context.Context, arg UpdatePlannedStaffPaymentParams) (StaffPayment, error)
 	UpdatePlateFormat(ctx context.Context, arg UpdatePlateFormatParams) (PlateFormat, error)

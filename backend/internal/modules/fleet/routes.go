@@ -58,6 +58,8 @@ func RegisterRoutes(
 	mux.Handle("DELETE /v1/fleets/{uuid}/vehicles/{vehicle_uuid}", manage(h.RemoveVehicle))
 	mux.Handle("GET /v1/fleets/{uuid}/statement", read(h.Statement))
 	mux.Handle("POST /v1/fleets/{uuid}/statement/export", read(h.ExportStatement))
+	// TEC-476: periodic report of a closed period, on demand.
+	mux.Handle("POST /v1/fleets/{uuid}/reports", manage(h.RequestReport))
 	mux.Handle("POST /v1/fleets/{uuid}/service-plans/preview", plan(h.PreviewServicePlan))
 	mux.Handle("POST /v1/fleets/{uuid}/service-plans", plan(h.CreateServicePlan))
 	mux.Handle("POST /v1/fleets/{uuid}/service-plans/{plan}/cancel", plan(h.CancelServicePlan))

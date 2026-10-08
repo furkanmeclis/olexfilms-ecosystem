@@ -235,6 +235,22 @@ func (s *Service) CertificatesExpiryNoticeDays(ctx context.Context) int {
 	return int(s.Int(ctx, KeyCertificatesExpiryNoticeDays))
 }
 
+// EfficiencyNetworkWindowDays is the history window for network expectations.
+func (s *Service) EfficiencyNetworkWindowDays(ctx context.Context) int {
+	return int(s.Int(ctx, KeyEfficiencyNetworkWindowDays))
+}
+
+// EfficiencyNetworkMinSamples is the minimum reliable network sample size.
+func (s *Service) EfficiencyNetworkMinSamples(ctx context.Context) int {
+	return int(s.Int(ctx, KeyEfficiencyNetworkMinSamples))
+}
+
+// EfficiencyWarningWasteRatio is stored as a decimal string to preserve the
+// exact threshold used in SQL/API filters.
+func (s *Service) EfficiencyWarningWasteRatio(ctx context.Context) string {
+	return s.String(ctx, KeyEfficiencyWarningWasteRatio)
+}
+
 // SMTP groups the smtp.* keys. Empty Host / zero Port mean "use the
 // environment configuration".
 type SMTP struct {
