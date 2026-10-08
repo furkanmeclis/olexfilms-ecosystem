@@ -28208,6 +28208,26 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/tenant/pricing/recommended/settings:
+    get:
+      tags: [Pricing]
+      operationId: getRecommendedPriceSettings
+      summary: Recommended price settings visible to the price screens
+      description: >-
+        TEC-507. Any organization with pricing.recommended.read.
+        deviation_warning_pct is pricing.deviation_warning_pct: the
+        distributor and dealer price screens flag a deviation at or above it
+        (either way).
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeRecommendedPriceSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/pricing/discipline:
     get:
       tags: [Pricing]
@@ -43731,6 +43751,19 @@ components:
             offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    RecommendedPriceSettings:
+      type: object
+      additionalProperties: false
+      required: [deviation_warning_pct]
+      properties:
+        deviation_warning_pct: { type: integer, example: 15 }
+    EnvelopeRecommendedPriceSettings:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/RecommendedPriceSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
     EnvelopePriceDisciplineSummary:
       type: object
       required: [success, data, meta]

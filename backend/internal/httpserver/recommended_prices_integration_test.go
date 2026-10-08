@@ -110,6 +110,14 @@ func TestIntegrationRecommendedPrices(t *testing.T) {
 		t.Fatalf("current = %+v", cur)
 	}
 
+	// The price screens read the deviation threshold (TEC-507).
+	settings := decodeData[struct {
+		DeviationWarningPct int `json:"deviation_warning_pct"`
+	}](t, mustDo(t, it, "GET", "/v1/tenant/pricing/recommended/settings", dealerTok, nil, http.StatusOK))
+	if settings.DeviationWarningPct != 15 {
+		t.Fatalf("settings = %+v", settings)
+	}
+
 	// The dealer's price screens carry the block and the deviation.
 	mustDo(t, it, "PUT", "/v1/dealer-prices", dealerTok, map[string]any{"product_uuid": pid, "sale_price": "1150"}, http.StatusOK)
 	prices := decodeData[struct {

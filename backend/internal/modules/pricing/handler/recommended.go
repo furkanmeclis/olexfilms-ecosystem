@@ -306,6 +306,12 @@ func (h *RecommendedHandler) Current(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
 }
 
+// Settings (GET /v1/tenant/pricing/recommended/settings): the deviation
+// threshold the price screens color their badge with.
+func (h *RecommendedHandler) Settings(w http.ResponseWriter, r *http.Request) {
+	response.JSON(w, r, http.StatusOK, map[string]int{"deviation_warning_pct": h.svc.ThresholdPct(r.Context())})
+}
+
 // disciplineScope is the caller's reach of pricing.discipline.read.
 func disciplineScope(r *http.Request) (pricing.DisciplineScope, bool) {
 	org := orgctx.MustScope(r.Context())
