@@ -39,6 +39,9 @@ export const routes = {
     features: {
       root: (slug: string) => `/t/${slug}/features`,
     },
+    showcase: {
+      root: (slug: string) => `/t/${slug}/showcase`,
+    },
     /** TEC-147. Search hits link `/catalog/products/{uuid}` (TEC-145). */
     catalog: {
       products: (slug: string) => `/t/${slug}/catalog/products`,
@@ -365,6 +368,9 @@ export const routes = {
     },
     certificateTypes: {
       root: "/platform/certificate-types",
+    },
+    showcases: {
+      root: "/platform/showcases",
     },
     activity: {
       root: "/platform/activity",
