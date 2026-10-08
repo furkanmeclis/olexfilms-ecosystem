@@ -164,5 +164,11 @@
   "system.keys.showcase_approval_required": "Публікація вітрини потребує схвалення центру",
   "system.keys.showcase_approval_required_hint": "Якщо увімкнено, вітрина дилера публікується лише після схвалення центром; якщо вимкнено, дилер публікує її сам.",
   "system.keys.showcase_max_photos": "Максимум фото на вітрину",
-  "system.keys.showcase_max_photos_hint": "Кількість фото, яку може містити галерея однієї вітрини (1–50)."
+  "system.keys.showcase_max_photos_hint": "Кількість фото, яку може містити галерея однієї вітрини (1–50).",
+  "system.groups.pricing": "Ціноутворення",
+  "system.groups.pricing_hint": "Рекомендовані ціни продажу та цінова дисципліна дилерів.",
+  "system.keys.pricing_deviation_warning_pct": "Поріг попередження про відхилення (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "Кінцева ціна дилера або дистриб'ютора, що відхиляється від рекомендованої на стільки відсотків (у будь-який бік), перевищує поріг.",
+  "system.keys.pricing_price_list_auto_publish": "Автоматично публікувати прайс-лист",
+  "system.keys.pricing_price_list_auto_publish_hint": "Якщо увімкнено, після кожної публікації рекомендованих цін PDF прайс-листа завантажується до центру документів як нова версія."
 }

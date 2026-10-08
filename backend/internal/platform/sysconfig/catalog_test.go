@@ -54,6 +54,10 @@ func TestValidate(t *testing.T) {
 		{KeyEfficiencyWarningWasteRatio, `"0.15"`, `"0.15"`},
 		{KeyEfficiencyWarningWasteRatio, `"1.2345"`, `"1.2345"`},
 		{KeyEfficiencyWarningWasteRatio, `"-0.1"`, ""},
+		{KeyPricingDeviationWarningPct, "15", "15"},
+		{KeyPricingDeviationWarningPct, "0", ""},
+		{KeyPricingDeviationWarningPct, "1001", ""},
+		{KeyPricingPriceListAutoPublish, "false", "false"},
 	}
 	for _, c := range cases {
 		d, ok := Lookup(c.key)
@@ -111,6 +115,12 @@ func TestCatalogDefaults(t *testing.T) {
 	}
 	if d, _ := Lookup(KeyEfficiencyWarningWasteRatio); d.Default != DefaultEfficiencyWarningWasteRatio || d.Group != GroupEfficiency {
 		t.Fatalf("efficiency warning ratio = %v/%s", d.Default, d.Group)
+	}
+	if d, _ := Lookup(KeyPricingDeviationWarningPct); d.Default != int64(15) || d.Group != GroupPricing || d.Kind != KindInt {
+		t.Fatalf("pricing deviation warning = %v/%s/%s, want 15/pricing/int", d.Default, d.Group, d.Kind)
+	}
+	if d, _ := Lookup(KeyPricingPriceListAutoPublish); d.Default != true || d.Group != GroupPricing || d.Kind != KindBool {
+		t.Fatalf("pricing auto publish = %v/%s/%s, want true/pricing/bool", d.Default, d.Group, d.Kind)
 	}
 	if _, ok := Lookup("certificates.notify_customer"); ok {
 		t.Fatal("certificates.notify_customer must not exist per F5 S13")

@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "Промяна на продажните цени",
   "labels.pricing.recommended.read": "Преглед на препоръчителните цени",
   "labels.pricing.recommended.write": "Публикуване на препоръчителни цени",
+  "labels.pricing.discipline.read": "Преглед на ценовата дисциплина",
   "labels.accounting.read": "Преглед на счетоводството",
   "labels.accounting.write": "Управление на счетоводството",
   "labels.accounting.dispute": "Оспорване на счетоводни записи",

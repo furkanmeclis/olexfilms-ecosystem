@@ -324,6 +324,10 @@ const (
 	PermPerformanceStaffTargetsManage = "performance.staff_targets.manage"
 	PermPerformanceBonusManage        = "performance.bonus.manage"
 	PermPerformanceRulesManage        = "performance.rules.manage"
+	// TEC-505 (000124): price discipline report (F5-09a): dealer and
+	// distributor end-customer prices against the recommended price.
+	// Publishing stays on PermPricingRecommendedWrite.
+	PermPricingDisciplineRead = "pricing.discipline.read"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

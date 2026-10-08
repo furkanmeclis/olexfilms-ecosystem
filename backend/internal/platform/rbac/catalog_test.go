@@ -898,3 +898,32 @@ func TestPerformanceGrants(t *testing.T) {
 		}
 	}
 }
+
+// TEC-505: price discipline is read by the center (brand) and the
+// distributor owner (subtree); publishing stays on the existing step-up
+// pricing.recommended.write.
+func TestPricingDisciplineGrants(t *testing.T) {
+	def, ok := PermissionBySlug(PermPricingDisciplineRead)
+	if !ok {
+		t.Fatalf("catalog misses %s", PermPricingDisciplineRead)
+	}
+	if def.Module != "pricing" || def.SuperAdminOnly || def.Sensitive {
+		t.Fatalf("%s def = %+v", PermPricingDisciplineRead, def)
+	}
+	if last := Permissions[len(Permissions)-1]; last.Slug != PermPricingDisciplineRead {
+		t.Fatalf("catalog is append-only; last = %s", last.Slug)
+	}
+	if w, ok := PermissionBySlug(PermPricingRecommendedWrite); !ok || !w.Sensitive {
+		t.Fatalf("%s must stay a step-up permission: %+v", PermPricingRecommendedWrite, w)
+	}
+	want := map[string]Scope{
+		RoleSuperAdmin:       ScopeAll,
+		RoleCenterStaff:      ScopeBrand,
+		RoleDistributorOwner: ScopeSubtree,
+	}
+	for _, r := range Roles {
+		if got := RoleGrants(r)[PermPricingDisciplineRead]; got != want[r.Slug] {
+			t.Fatalf("%s %s = %q, want %q", r.Slug, PermPricingDisciplineRead, got, want[r.Slug])
+		}
+	}
+}
