@@ -48,6 +48,7 @@ import (
 	shorturlsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
+	stockforecastusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast/usecase"
 	tasksusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/glorian"
 	warehouseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
@@ -326,6 +327,7 @@ func main() {
 	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
 	featureSvc := features.New(pool, queries, nil, log)
 	certificatesCron := certificatesusecase.NewCron(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
+	stockForecastSvc := stockforecastusecase.New(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	// TEC-476: periodic fleet reports. The schedule runs on worker-core, the
 	// PDF (fleet_report document template) and its e-mail on worker-docs.
 	workerFleet.SetModules(featureSvc)
@@ -401,6 +403,7 @@ func main() {
 		// TEC-387: AI confirmation card expiry and stale run cleanup.
 		WithAIActionSweep(aiusecase.NewActions(airepo.New(pool), nil, nil, log).SweepTask).
 		WithCertificateExpiryScan(certificatesCron.ExpiryScanTask).
+		WithStockForecastDaily(stockForecastSvc.DailyTask).
 		WithFleetReports(workerFleet.ScheduleReportsTask, workerFleet.GenerateReport).
 		WithSearch(
 			searchIndexer.ProcessUpsert,

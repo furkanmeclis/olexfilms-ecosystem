@@ -17,7 +17,7 @@ func TestParseWorkerQueues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, q := range []string{queue.QueueNotifications, queue.QueueWhatsApp, "default", queue.QueueImports, queue.QueueBulk, queue.QueueSearch, queue.QueueMaintenance} {
+	for _, q := range []string{queue.QueueNotifications, queue.QueueWhatsApp, "default", queue.QueueImports, queue.QueueBulk, queue.QueueSearch, queue.QueueMaintenance, queue.QueueLow} {
 		if core[q] == 0 {
 			t.Errorf("core worker misses queue %q", q)
 		}

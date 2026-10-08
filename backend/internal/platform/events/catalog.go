@@ -697,6 +697,8 @@ func catalogConstants() []string {
 		ShowcaseReviewRequested,
 		ShowcasePublished,
 		ShowcaseRejected,
+		StockForecastComputed,
+		StockForecastLow,
 	}
 }
 
@@ -785,4 +787,12 @@ const (
 	ShowcaseReviewRequested = "showcase.review_requested"
 	ShowcasePublished       = "showcase.published"
 	ShowcaseRejected        = "showcase.rejected"
+)
+
+// Stock forecast add-on events (TEC-484/F5-04b): computed is consumed by AI
+// and performance readers; low reaches organization owners and warehouse
+// roles on ok->warning or warning->critical transitions.
+const (
+	StockForecastComputed = "stock.forecast_computed"
+	StockForecastLow      = "stock.forecast_low"
 )

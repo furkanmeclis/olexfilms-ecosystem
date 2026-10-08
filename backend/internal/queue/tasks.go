@@ -29,6 +29,7 @@ const (
 	QueueBulk                = "bulk"
 	QueueSearch              = "search"
 	QueueMaintenance         = "maintenance"
+	QueueLow                 = "low"
 	QueueDocs                = "docs"
 )
 
