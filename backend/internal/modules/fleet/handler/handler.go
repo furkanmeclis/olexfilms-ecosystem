@@ -600,6 +600,8 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "fleet not found")
 	case errors.Is(err, usecase.ErrForbidden):
 		response.Forbidden(w, r, "only a dealer or a distributor does this")
+	case errors.Is(err, usecase.ErrReportFilesUnavailable):
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "report storage is not configured")
 	case errors.Is(err, repository.ErrLinkStale):
 		response.Conflict(w, r, model.CodeLinkStale, "the link changed concurrently")
 	default:

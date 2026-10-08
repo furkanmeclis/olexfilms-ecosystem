@@ -194,6 +194,7 @@ type Service struct {
 	settings          SettingReader
 	features          FeatureChecker
 	certificatePolicy CertificatePolicy
+	fleetPortal       FleetPortal // TEC-474: fleet users on the portal detail / PDF
 }
 
 // New creates the service.

@@ -80,6 +80,8 @@ type Service struct {
 	plates       PlateValidator
 	inviter      PasswordInviter
 	appointments AppointmentStarter
+	modules      ModuleChecker
+	files        ReportFiles
 }
 
 // New creates the fleet usecase.
