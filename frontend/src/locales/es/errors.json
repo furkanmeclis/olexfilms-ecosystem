@@ -140,6 +140,8 @@
   "codes.FLEET_VEHICLE_OTHER_OWNER": "El vehículo pertenece a otro cliente o a otra flota y no se puede añadir.",
   "codes.FLEET_NO_DEALER_LINK": "Su organización no tiene un vínculo activo con esta flota.",
   "codes.FLEET_LINK_NOT_PENDING": "La solicitud de vínculo ya fue respondida.",
+  "codes.FLEET_SERVICE_PLAN_STALE": "La capacidad de citas cambió tras la vista previa; vuelva a previsualizar el plan.",
+  "codes.FLEET_SERVICE_PLAN_CANCELLED": "El plan de servicio ya está cancelado.",
   "codes.SHOWCASE_PHOTO_LIMIT": "La galería está llena; elimine una foto antes de añadir otra.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Escriba una nota para rechazar.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Introduzca una valoración entre 1,0 y 5,0 y un número de reseñas igual o superior a 0.",

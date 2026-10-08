@@ -48,6 +48,7 @@
   "system.hub.notification_center": "Канали сповіщень, резервні SMS і шаблони.",
   "system.hub.auth_settings": "Способи входу, правила паролів і OTP.",
   "system.hub.document_templates": "Шаблони PDF-документів.",
+  "system.hub.certificates": "Типи сертифікатів, чинність і зв'язки товарів/категорій.",
   "system.load_failed": "Не вдалося завантажити системні налаштування.",
   "system.read_only": "Лише перегляд — для змін потрібне право запису налаштувань.",
   "system.groups.general": "Загальні",

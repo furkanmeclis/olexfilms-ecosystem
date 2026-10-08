@@ -64,6 +64,12 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		{cron: aiActionSweepCron, taskType: TaskAIActionSweep, queue: QueueMaintenance}: false,
 		// TEC-407.
 		{cron: campaignTickCron, taskType: TaskCampaignTick, queue: QueueMaintenance}: false,
+		// TEC-481.
+		{cron: certificateExpiryScanCron, taskType: TaskCertificateExpiryScan, queue: QueueMaintenance}: false,
+		// TEC-484.
+		{cron: stockForecastDailyCron, taskType: TaskStockForecastDaily, queue: QueueLow}: false,
+		// TEC-476.
+		{cron: fleetReportsScheduleCron, taskType: TaskFleetReportsSchedule, queue: QueueMaintenance}: false,
 		// TEC-469.
 		{cron: showcaseGoogleRatingCron, taskType: TaskShowcaseGoogleRating, queue: QueueMaintenance}: false,
 	}

@@ -140,6 +140,8 @@
   "codes.FLEET_VEHICLE_OTHER_OWNER": "该车辆属于其他客户或车队，无法添加。",
   "codes.FLEET_NO_DEALER_LINK": "您的机构与该车队没有有效关联。",
   "codes.FLEET_LINK_NOT_PENDING": "该关联请求已被处理。",
+  "codes.FLEET_SERVICE_PLAN_STALE": "预览后预约容量已变化，请重新预览计划。",
+  "codes.FLEET_SERVICE_PLAN_CANCELLED": "该服务计划已取消。",
   "codes.SHOWCASE_PHOTO_LIMIT": "图库已满；请先删除一张照片再添加新照片。",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "拒绝时请填写备注。",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "请输入 1.0 到 5.0 之间的评分，评价数量不得小于 0。",

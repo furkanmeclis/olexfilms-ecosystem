@@ -77,6 +77,8 @@
   "resources.stock.units": "Unità di magazzino",
   "resources.leads.list": "Contatti commerciali",
   "resources.services.list": "Servizi",
+  "resources.tenant.fleets": "Flotte",
+  "resources.tenant.fleet.statement": "Estratto conto della flotta",
   "resources.warranties.list": "Garanzie",
   "resources.ai.usage": "Utilizzo dell'IA"
 }

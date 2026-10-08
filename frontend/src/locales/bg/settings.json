@@ -48,6 +48,7 @@
   "system.hub.notification_center": "Канали за известия, резервни SMS и шаблони.",
   "system.hub.auth_settings": "Методи за вход, правила за парола и OTP.",
   "system.hub.document_templates": "Шаблони за PDF документи.",
+  "system.hub.certificates": "Типове сертификати, валидност и връзки продукт/категория.",
   "system.load_failed": "Системните настройки не можаха да се заредят.",
   "system.read_only": "Само преглед — за редакция е нужно право за запис на настройки.",
   "system.groups.general": "Общи",

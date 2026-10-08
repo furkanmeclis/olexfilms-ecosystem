@@ -47,6 +47,8 @@ import {
   PackagePlus,
   Barcode,
   ClipboardCheck,
+  BadgeCheck,
+  Truck,
   Sunset,
   ChartColumn,
   Gauge,
@@ -176,6 +178,13 @@ export const platformNav = defineNav({
           href: routes.platform.modules.root,
           icon: Blocks,
           permission: permissions.modules.platformRead,
+        },
+        {
+          id: "certificate-types",
+          titleKey: "certificates.types.nav",
+          href: routes.platform.certificateTypes.root,
+          icon: BadgeCheck,
+          permission: permissions.certificates.typesManage,
         },
         {
           id: "territories",
@@ -486,6 +495,45 @@ export function tenantNav(slug: string) {
         ],
       },
       {
+        id: "certificates",
+        labelKey: "certificates.nav",
+        icon: BadgeCheck,
+        defaultOpen: true,
+        anyPermission: [
+          permissions.certificates.read,
+          permissions.certificates.approveService,
+        ],
+        feature: "certificates",
+        items: [
+          {
+            id: "certificates-list",
+            titleKey: "certificates.nav_list",
+            href: routes.tenant.certificates.list(slug),
+            icon: BadgeCheck,
+            permission: permissions.certificates.read,
+            feature: "certificates",
+          },
+          {
+            id: "certificate-verification",
+            titleKey: "certificates.verification.nav",
+            href: routes.tenant.certificates.verification(slug),
+            icon: Inbox,
+            permission: permissions.certificates.verify,
+            feature: "certificates",
+            orgTypes: ["center", "distributor"],
+          },
+          {
+            id: "certificate-approvals",
+            titleKey: "certificates.approvals.nav",
+            href: routes.tenant.certificates.approvals(slug),
+            icon: ShieldCheck,
+            permission: permissions.certificates.approveService,
+            feature: "certificates",
+            orgTypes: ["center"],
+          },
+        ],
+      },
+      {
         // TEC-181: the service wizard needs services.write plus reading the
         // customers and vehicles it picks from (same gates as the API).
         // TEC-183: the list needs services.read only.
@@ -586,6 +634,26 @@ export function tenantNav(slug: string) {
             icon: Car,
             permission: permissions.vehicles.read,
             feature: "customers",
+          },
+        ],
+      },
+      {
+        // TEC-477: fleets need fleets.read and the fleet add-on (same gates
+        // as /v1/fleets).
+        id: "fleets",
+        labelKey: "fleets.nav",
+        icon: Truck,
+        defaultOpen: true,
+        permission: permissions.fleets.read,
+        feature: "fleet",
+        items: [
+          {
+            id: "fleets-list",
+            titleKey: "fleets.nav_list",
+            href: routes.tenant.fleets.list(slug),
+            icon: Truck,
+            permission: permissions.fleets.read,
+            feature: "fleet",
           },
         ],
       },

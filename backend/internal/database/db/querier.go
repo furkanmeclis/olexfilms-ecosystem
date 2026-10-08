@@ -67,6 +67,7 @@ type Querier interface {
 	// open confirmation cards of that conversation.
 	CancelAIPendingActionsForSource(ctx context.Context, arg CancelAIPendingActionsForSourceParams) ([]AiPendingAction, error)
 	CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error)
+	CancelFleetServicePlan(ctx context.Context, arg CancelFleetServicePlanParams) (FleetServicePlan, error)
 	// CancelPlannedStaffPayment cancels a payment that is not booked yet; it
 	// never had a ledger row, and a cancelled salary frees its period.
 	CancelPlannedStaffPayment(ctx context.Context, arg CancelPlannedStaffPaymentParams) (StaffPayment, error)
@@ -206,7 +207,18 @@ type Querier interface {
 	// Active warranties on the fleet's vehicles; service_org_ids limits them
 	// to the warranties of those organizations (NULL: all).
 	CountFleetActiveWarranties(ctx context.Context, arg CountFleetActiveWarrantiesParams) (int64, error)
+	CountFleetPortalReports(ctx context.Context, arg CountFleetPortalReportsParams) (int64, error)
+	// Same filter block as ListFleetPortalServices.
+	CountFleetPortalServices(ctx context.Context, arg CountFleetPortalServicesParams) (int64, error)
+	CountFleetPortalUpcomingAppointments(ctx context.Context, arg CountFleetPortalUpcomingAppointmentsParams) (int64, error)
+	// Same filter block as ListFleetPortalVehicles.
+	CountFleetPortalVehicles(ctx context.Context, arg CountFleetPortalVehiclesParams) (int64, error)
+	// Same filter block as ListFleetPortalWarranties.
+	CountFleetPortalWarranties(ctx context.Context, arg CountFleetPortalWarrantiesParams) (int64, error)
+	CountFleetReportVehicles(ctx context.Context, fleetOrgID int64) (int64, error)
 	CountFleetReports(ctx context.Context, arg CountFleetReportsParams) (int64, error)
+	CountFleetReportsFiltered(ctx context.Context, arg CountFleetReportsFilteredParams) (int64, error)
+	CountFleetServicePlansOfOrg(ctx context.Context, arg CountFleetServicePlansOfOrgParams) (int64, error)
 	CountFleetServices(ctx context.Context, arg CountFleetServicesParams) (int64, error)
 	// Same filter block as ListFleetUsers.
 	CountFleetUsers(ctx context.Context, arg CountFleetUsersParams) (int64, error)
@@ -225,6 +237,7 @@ type Querier interface {
 	CountLibraryItems(ctx context.Context, arg CountLibraryItemsParams) (int64, error)
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
+	CountNetworkDemandForecasts(ctx context.Context, arg CountNetworkDemandForecastsParams) (int64, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
 	CountOAuthClients(ctx context.Context, arg CountOAuthClientsParams) (int64, error)
@@ -279,6 +292,7 @@ type Querier interface {
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
 	CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error)
 	CountStockEntryLines(ctx context.Context, entryID int64) (int64, error)
+	CountStockForecasts(ctx context.Context, arg CountStockForecastsParams) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error)
 	CountStockSplitsBySource(ctx context.Context, sourceUnitID int64) (int64, error)
@@ -375,6 +389,11 @@ type Querier interface {
 	// TEC-472 (F5-02a): fleets. A fleet is an organization of type 'fleet'
 	// with a fleet_profiles row; dealers reach it through fleet_dealer_links.
 	CreateFleetProfile(ctx context.Context, arg CreateFleetProfileParams) (FleetProfile, error)
+	// The scheduled report of a period: no row when the period already has one
+	// (whatever its status), so two ticks create a single report.
+	CreateFleetReportIfAbsent(ctx context.Context, arg CreateFleetReportIfAbsentParams) (FleetReport, error)
+	// TEC-475 (F5-02d): fleet service plans.
+	CreateFleetServicePlan(ctx context.Context, arg CreateFleetServicePlanParams) (FleetServicePlan, error)
 	// TEC-473 (F5-02b): fleet management API. Fleet users, the dealer's access
 	// to a fleet (its active links), the fleet card aggregates and the fleet
 	// statement (the fleet cari in the dealer's ledger).
@@ -422,6 +441,9 @@ type Querier interface {
 	CreateOrderOutbound(ctx context.Context, arg CreateOrderOutboundParams) (OrderOutbound, error)
 	CreateOrganization(ctx context.Context, arg CreateOrganizationParams) (Organization, error)
 	CreateOrganizationMember(ctx context.Context, arg CreateOrganizationMemberParams) (OrganizationMember, error)
+	// TEC-487: efficiency and waste analytics. These queries are intentionally
+	// read/projection focused; authorization scope is resolved by the usecase.
+	CreatePartConsumptionExpectation(ctx context.Context, arg CreatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
 	CreatePlateFormat(ctx context.Context, arg CreatePlateFormatParams) (PlateFormat, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
@@ -618,9 +640,11 @@ type Querier interface {
 	DeleteOAuthAccountByUserProvider(ctx context.Context, arg DeleteOAuthAccountByUserProviderParams) error
 	// Deleting is the claim: a concurrent second decision finds nothing.
 	DeleteOAuthAuthRequest(ctx context.Context, id uuid.UUID) (int64, error)
+	DeleteOldStockForecastSnapshots(ctx context.Context, cutoffOn pgtype.Date) (int64, error)
 	DeleteOrderItem(ctx context.Context, id int64) (int64, error)
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
+	DeletePartConsumptionExpectation(ctx context.Context, arg DeletePartConsumptionExpectationParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
 	DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error)
@@ -668,6 +692,9 @@ type Querier interface {
 	Descendants(ctx context.Context, id int64) ([]Organization, error)
 	DisableFleetUser(ctx context.Context, id int64) (FleetUser, error)
 	EODReportExists(ctx context.Context, arg EODReportExistsParams) (bool, error)
+	EfficiencyComparison(ctx context.Context, arg EfficiencyComparisonParams) ([]EfficiencyComparisonRow, error)
+	EfficiencyMonthlyTrend(ctx context.Context, arg EfficiencyMonthlyTrendParams) ([]EfficiencyMonthlyTrendRow, error)
+	EfficiencySummary(ctx context.Context, arg EfficiencySummaryParams) ([]EfficiencySummaryRow, error)
 	// ---------------------------------------------------------------------------
 	// Product stock projections.
 	EnsureBinProductStock(ctx context.Context, arg EnsureBinProductStockParams) error
@@ -748,6 +775,25 @@ type Querier interface {
 	// The cari balance (income/charge/payment add, expense/collection
 	// subtract, like cari_account_balances) before a point in time.
 	FleetCariBalanceBefore(ctx context.Context, arg FleetCariBalanceBeforeParams) (pgtype.Numeric, error)
+	// The balance of the same rows (service income adds, collections subtract)
+	// before a point in time.
+	FleetPortalCariBalanceBefore(ctx context.Context, arg FleetPortalCariBalanceBeforeParams) (pgtype.Numeric, error)
+	// Part distribution: applied_parts keys of the period's service items,
+	// counted per key.
+	FleetReportParts(ctx context.Context, arg FleetReportPartsParams) ([]FleetReportPartsRow, error)
+	// Products used: items, pieces and meters per product.
+	FleetReportProducts(ctx context.Context, arg FleetReportProductsParams) ([]FleetReportProductsRow, error)
+	// Services completed in [period_from, period_to) on the fleet's vehicles,
+	// per dealer.
+	FleetReportServicesByDealer(ctx context.Context, arg FleetReportServicesByDealerParams) ([]FleetReportServicesByDealerRow, error)
+	// Same services per vehicle (plate, car brand / model).
+	FleetReportServicesByVehicle(ctx context.Context, arg FleetReportServicesByVehicleParams) ([]FleetReportServicesByVehicleRow, error)
+	// Warranties still running at period_to that end before until.
+	FleetReportUpcomingExpirations(ctx context.Context, arg FleetReportUpcomingExpirationsParams) ([]FleetReportUpcomingExpirationsRow, error)
+	// Warranty state at the end of the period (period_to): active (started,
+	// not void, not past end_at), expired (ended by period_to, not void) and
+	// started within the period.
+	FleetReportWarrantyCounts(ctx context.Context, arg FleetReportWarrantyCountsParams) (FleetReportWarrantyCountsRow, error)
 	// TEC-388: prompt context of a chat turn: the user, the conversation's
 	// organization, its brand and the brand center (K10 locale / time zone).
 	GetAIChatContext(ctx context.Context, arg GetAIChatContextParams) (GetAIChatContextRow, error)
@@ -785,6 +831,7 @@ type Querier interface {
 	GetAppointmentSettings(ctx context.Context, organizationID int64) (AppointmentSetting, error)
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
 	GetBarcodeBatchByUUID(ctx context.Context, arg GetBarcodeBatchByUUIDParams) (BarcodeBatch, error)
+	GetBestPartExpectation(ctx context.Context, arg GetBestPartExpectationParams) (PartConsumptionExpectation, error)
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
 	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
@@ -827,6 +874,7 @@ type Querier interface {
 	GetCenterMemberByUUID(ctx context.Context, arg GetCenterMemberByUUIDParams) (GetCenterMemberByUUIDRow, error)
 	GetCertificate(ctx context.Context, arg GetCertificateParams) (Certificate, error)
 	GetCertificateByUUID(ctx context.Context, arg GetCertificateByUUIDParams) (Certificate, error)
+	GetCertificateCoverageByOrg(ctx context.Context, arg GetCertificateCoverageByOrgParams) (GetCertificateCoverageByOrgRow, error)
 	GetCertificateType(ctx context.Context, arg GetCertificateTypeParams) (CertificateType, error)
 	GetCertificateTypeByUUID(ctx context.Context, arg GetCertificateTypeByUUIDParams) (CertificateType, error)
 	GetConnectionLocationMapByRemote(ctx context.Context, arg GetConnectionLocationMapByRemoteParams) (ConnectionLocationMap, error)
@@ -889,7 +937,10 @@ type Querier interface {
 	GetFleetCarModelByID(ctx context.Context, id int64) (CarModel, error)
 	GetFleetDealerLinkByUUID(ctx context.Context, argUuid uuid.UUID) (FleetDealerLink, error)
 	GetFleetProfileByOrg(ctx context.Context, organizationID int64) (FleetProfile, error)
+	GetFleetReportByID(ctx context.Context, id int64) (FleetReport, error)
 	GetFleetReportByUUID(ctx context.Context, argUuid uuid.UUID) (FleetReport, error)
+	GetFleetServicePlanByIdempotency(ctx context.Context, arg GetFleetServicePlanByIdempotencyParams) (FleetServicePlan, error)
+	GetFleetServicePlanByUUID(ctx context.Context, arg GetFleetServicePlanByUUIDParams) (FleetServicePlan, error)
 	GetFleetUserByUUID(ctx context.Context, arg GetFleetUserByUUIDParams) (FleetUser, error)
 	// The fleet of a signed-in fleet user (portal).
 	GetFleetUserByUserID(ctx context.Context, userID int64) (GetFleetUserByUserIDRow, error)
@@ -929,6 +980,7 @@ type Querier interface {
 	// Portal legal texts and consents (TEC-90).
 	GetLatestLegalText(ctx context.Context, arg GetLatestLegalTextParams) (LegalText, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
+	GetLatestStockForecast(ctx context.Context, arg GetLatestStockForecastParams) (StockForecast, error)
 	GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead, error)
 	// TEC-316: lead conversion serializes on the lead row.
 	GetLeadByIDForUpdate(ctx context.Context, arg GetLeadByIDForUpdateParams) (Lead, error)
@@ -1156,6 +1208,13 @@ type Querier interface {
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
 	GetStockEntryByImportBatch(ctx context.Context, importBatchID pgtype.Int8) (StockEntry, error)
 	GetStockEntryByUUID(ctx context.Context, arg GetStockEntryByUUIDParams) (StockEntry, error)
+	GetStockForecastConsumptionTotals(ctx context.Context, arg GetStockForecastConsumptionTotalsParams) (GetStockForecastConsumptionTotalsRow, error)
+	GetStockForecastFirstMovementDate(ctx context.Context, arg GetStockForecastFirstMovementDateParams) (pgtype.Date, error)
+	GetStockForecastOnHand(ctx context.Context, arg GetStockForecastOnHandParams) (GetStockForecastOnHandRow, error)
+	GetStockForecastOpenIncomingOrders(ctx context.Context, arg GetStockForecastOpenIncomingOrdersParams) (GetStockForecastOpenIncomingOrdersRow, error)
+	GetStockForecastPartialMetersAndServices(ctx context.Context, arg GetStockForecastPartialMetersAndServicesParams) (GetStockForecastPartialMetersAndServicesRow, error)
+	GetStockForecastSeasonalityTotals(ctx context.Context, arg GetStockForecastSeasonalityTotalsParams) (GetStockForecastSeasonalityTotalsRow, error)
+	GetStockForecastThreshold(ctx context.Context, arg GetStockForecastThresholdParams) (StockForecastThreshold, error)
 	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
 	GetStockImportBatchByJob(ctx context.Context, importJobID pgtype.Int8) (StockImportBatch, error)
 	GetStockImportBatchUUID(ctx context.Context, id int64) (uuid.UUID, error)
@@ -1457,6 +1516,8 @@ type Querier interface {
 	// every organization of the brand). A dealer reaches a fleet only through
 	// an active link.
 	ListActiveFleetLinksInScope(ctx context.Context, arg ListActiveFleetLinksInScopeParams) ([]FleetDealerLink, error)
+	// E-mail addresses of the fleet's active users (report recipients).
+	ListActiveFleetUserEmails(ctx context.Context, fleetOrgID int64) ([]string, error)
 	// Recipients of fleet notifications (link requests).
 	ListActiveFleetUserIDs(ctx context.Context, fleetOrgID int64) ([]int64, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
@@ -1491,6 +1552,7 @@ type Querier interface {
 	ListAppointmentRefs(ctx context.Context, ids []int64) ([]ListAppointmentRefsRow, error)
 	ListAppointmentSettingsByOrganizations(ctx context.Context, organizationIds []int64) ([]AppointmentSetting, error)
 	ListAppointmentsByOrganizations(ctx context.Context, arg ListAppointmentsByOrganizationsParams) ([]Appointment, error)
+	ListAppointmentsByPlan(ctx context.Context, arg ListAppointmentsByPlanParams) ([]Appointment, error)
 	// TEC-386: active, serving (access window open, contract not expired)
 	// dealers and distributors of a brand in a city (and district), for the AI
 	// visitor tool. city / district match case- and Turkish-accent-insensitively
@@ -1579,6 +1641,7 @@ type Querier interface {
 	// Sort keys follow docs/list-contract.md: expires_at, issued_at, status,
 	// user_name and created_at. Default is expires_at; id is the tiebreak.
 	ListCertificates(ctx context.Context, arg ListCertificatesParams) ([]ListCertificatesRow, error)
+	ListCertificatesDueForExpiry(ctx context.Context, arg ListCertificatesDueForExpiryParams) ([]Certificate, error)
 	ListCertificatesDueForExpiryNotice(ctx context.Context, arg ListCertificatesDueForExpiryNoticeParams) ([]Certificate, error)
 	ListConnectionLocationMaps(ctx context.Context, connectionID int64) ([]ConnectionLocationMap, error)
 	ListContactOptOutHistory(ctx context.Context, arg ListContactOptOutHistoryParams) ([]ContactOptOut, error)
@@ -1723,10 +1786,51 @@ type Querier interface {
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
 	// Links of a fleet with the dealer names (fleet card, portal).
 	ListFleetDealerLinks(ctx context.Context, arg ListFleetDealerLinksParams) ([]ListFleetDealerLinksRow, error)
+	// Vehicle and draft service references of a plan's appointments (plan
+	// detail).
+	ListFleetPlanAppointmentRefs(ctx context.Context, arg ListFleetPlanAppointmentRefsParams) ([]ListFleetPlanAppointmentRefsRow, error)
+	ListFleetPlanVehicles(ctx context.Context, arg ListFleetPlanVehiclesParams) ([]ListFleetPlanVehiclesRow, error)
+	// The fleet's view of its cari in one dealer's ledger: only service income
+	// (source service_income) and collections; the dealer's other cari
+	// movements never leave the dealer. Reversals stay as their own rows.
+	ListFleetPortalCariEntries(ctx context.Context, arg ListFleetPortalCariEntriesParams) ([]ListFleetPortalCariEntriesRow, error)
+	// Ready reports of the fleet (the portal downloads them). Sort
+	// period_start, default -period_start.
+	ListFleetPortalReports(ctx context.Context, arg ListFleetPortalReportsParams) ([]FleetReport, error)
+	// Services on the fleet's vehicles at the visible dealers (drafts stay
+	// dealer internal). Filters: vehicle, status, dealer (organization uuid),
+	// created_at range, q (service no / plate). Sort keys created_at |
+	// completed_at | service_no | status, default -created_at.
+	ListFleetPortalServices(ctx context.Context, arg ListFleetPortalServicesParams) ([]ListFleetPortalServicesRow, error)
+	// Scheduled / confirmed appointments of the fleet's vehicles at the visible
+	// dealers from now on.
+	ListFleetPortalUpcomingAppointments(ctx context.Context, arg ListFleetPortalUpcomingAppointmentsParams) ([]ListFleetPortalUpcomingAppointmentsRow, error)
+	// TEC-474 (F5-02c): fleet portal reads. Every query is bounded by the
+	// signed-in user's fleet (fleet_org_id) and by dealer_ids: the dealers the
+	// fleet worked with (an active or ended link) whose fleet module is still
+	// on. A dealer that turns the module off drops out of dealer_ids, so its
+	// services, warranties, appointments and cari disappear from the portal
+	// (nothing is deleted).
+	// Vehicles of the fleet with the last service, the service count, the
+	// active warranty count and the latest active warranty end of the visible
+	// dealers. Sort keys plate | last_service_at | warranty_until, default plate.
+	ListFleetPortalVehicles(ctx context.Context, arg ListFleetPortalVehiclesParams) ([]ListFleetPortalVehiclesRow, error)
+	// Warranties on the fleet's vehicles issued by the visible dealers. state
+	// is the effective status: active (active and not past end_at), expired
+	// (expired, or active past end_at) or void. Sort keys end_at | start_at,
+	// default end_at.
+	ListFleetPortalWarranties(ctx context.Context, arg ListFleetPortalWarrantiesParams) ([]ListFleetPortalWarrantiesRow, error)
 	// The latest services on the fleet's vehicles, limited to service_org_ids
 	// (NULL: all organizations).
 	ListFleetRecentServices(ctx context.Context, arg ListFleetRecentServicesParams) ([]ListFleetRecentServicesRow, error)
 	ListFleetReports(ctx context.Context, arg ListFleetReportsParams) ([]FleetReport, error)
+	// Reports of the fleet for the panel (every status). Sort period_start,
+	// default -period_start; id tiebreak.
+	ListFleetReportsSorted(ctx context.Context, arg ListFleetReportsSortedParams) ([]FleetReport, error)
+	// TEC-477 (F5-02f): the panel reads its plans of a fleet.
+	// Plans of one fleet made by the organization. Sort created_at (default
+	// -created_at) or start_date; id tiebreak.
+	ListFleetServicePlansOfOrg(ctx context.Context, arg ListFleetServicePlansOfOrgParams) ([]ListFleetServicePlansOfOrgRow, error)
 	// The ledger rows of one fleet cari in [period_from, period_to): service
 	// income with its service and vehicle, collections and the other cari
 	// movements. Reversals stay as their own (negative) rows.
@@ -1741,6 +1845,14 @@ type Querier interface {
 	// plate | car_brand | last_service_at | active_warranty_count | created_at,
 	// default plate.
 	ListFleetVehicles(ctx context.Context, arg ListFleetVehiclesParams) ([]ListFleetVehiclesRow, error)
+	// TEC-476 (F5-02e): periodic fleet reports. The scheduler (worker-core)
+	// walks the fleets with a report frequency, creates one fleet_reports row
+	// per (fleet, period) and the docs worker renders it. The report content
+	// reads the services, warranties and parts of the dealers that have the
+	// fleet module (dealer_ids).
+	// Fleets with a report frequency (monthly / quarterly), keyset by
+	// organization id.
+	ListFleetsDueForReport(ctx context.Context, arg ListFleetsDueForReportParams) ([]ListFleetsDueForReportRow, error)
 	// Serial units assigned to the order's lines whose product is synced from
 	// a connection, in line order. Olex and local products have no connection
 	// and never appear.
@@ -1864,6 +1976,7 @@ type Querier interface {
 	// with coordinates, within radius_km of (lat, lng). Distance is the
 	// haversine great-circle distance in km (mean Earth radius 6371.0088).
 	ListNearbyDealers(ctx context.Context, arg ListNearbyDealersParams) ([]ListNearbyDealersRow, error)
+	ListNetworkDemandForecasts(ctx context.Context, arg ListNetworkDemandForecastsParams) ([]ListNetworkDemandForecastsRow, error)
 	ListNotificationChannelSettings(ctx context.Context) ([]NotificationChannelSetting, error)
 	// Sort: docs/list-contract.md, keys from usecase.DeliveriesSortSpec.
 	ListNotificationDeliveries(ctx context.Context, arg ListNotificationDeliveriesParams) ([]ListNotificationDeliveriesRow, error)
@@ -1885,6 +1998,7 @@ type Querier interface {
 	// Other open services holding the same unit (draft check; the ledger has
 	// the final word on completion).
 	ListOpenServicesByUnit(ctx context.Context, arg ListOpenServicesByUnitParams) ([]ListOpenServicesByUnitRow, error)
+	ListOpenServicesRequiringCertificate(ctx context.Context, arg ListOpenServicesRequiringCertificateParams) ([]Service, error)
 	// The subset of contacts that are currently opted out of a scope (campaign
 	// audience and pipeline guard).
 	ListOptedOutContacts(ctx context.Context, arg ListOptedOutContactsParams) ([]string, error)
@@ -1956,6 +2070,7 @@ type Querier interface {
 	// Territories of the brand that overlap an area: the same area, an ancestor
 	// (the country or the province of a district) or a descendant.
 	ListOverlappingTerritories(ctx context.Context, arg ListOverlappingTerritoriesParams) ([]ListOverlappingTerritoriesRow, error)
+	ListPartConsumptionExpectations(ctx context.Context, arg ListPartConsumptionExpectationsParams) ([]ListPartConsumptionExpectationsRow, error)
 	// Pending recipients of a sending campaign, in id pages; before (when set)
 	// keeps those not touched since then (the scheduler re-enqueues their task;
 	// a still queued task is deduplicated by its task id).
@@ -2006,6 +2121,7 @@ type Querier interface {
 	// TEC-369: category order and bulk actions.
 	// Every category of the brand in display order (reorder input).
 	ListProductCategoryOrder(ctx context.Context, brandID int64) ([]ListProductCategoryOrderRow, error)
+	ListProductConsumptionSeries(ctx context.Context, arg ListProductConsumptionSeriesParams) ([]ListProductConsumptionSeriesRow, error)
 	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ProductPrice, error)
 	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
 	ListProductSaleLines(ctx context.Context, arg ListProductSaleLinesParams) ([]ProductSaleLine, error)
@@ -2075,6 +2191,7 @@ type Querier interface {
 	ListRolesFiltered(ctx context.Context, arg ListRolesFilteredParams) ([]Role, error)
 	ListRolesForExport(ctx context.Context, arg ListRolesForExportParams) ([]Role, error)
 	ListRolesForUserIDs(ctx context.Context, userIds []int64) ([]ListRolesForUserIDsRow, error)
+	ListRollEfficiency(ctx context.Context, arg ListRollEfficiencyParams) ([]ListRollEfficiencyRow, error)
 	// ---------------------------------------------------------------------------
 	// Typed locations (aisle, shelf, bin).
 	// The whole tree of a room, parents before children is not guaranteed:
@@ -2172,6 +2289,10 @@ type Querier interface {
 	// docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
 	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]ListStaffPaymentsRow, error)
 	ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error)
+	// Pending reports whose generation task may have been lost (enqueue
+	// failure): the scheduler enqueues them again (task id dedupe). Database
+	// clock: older than 15 minutes.
+	ListStalePendingFleetReports(ctx context.Context, limitCount int32) ([]int64, error)
 	// Queued messages older than the cutoff whose send task may have been lost
 	// (enqueue failure, Redis flush); the sweep enqueues them again.
 	ListStaleQueuedMessages(ctx context.Context, arg ListStaleQueuedMessagesParams) ([]ListStaleQueuedMessagesRow, error)
@@ -2190,6 +2311,16 @@ type Querier interface {
 	// entries have none and come last). q: note, warehouse name or code.
 	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error)
 	ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error)
+	ListStockForecastHistory(ctx context.Context, arg ListStockForecastHistoryParams) ([]StockForecast, error)
+	ListStockForecastNetworkInputs(ctx context.Context, arg ListStockForecastNetworkInputsParams) ([]ListStockForecastNetworkInputsRow, error)
+	ListStockForecastNotifyUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
+	ListStockForecastOrganizations(ctx context.Context, organizationID pgtype.Int8) ([]Organization, error)
+	ListStockForecastProductsForOrg(ctx context.Context, arg ListStockForecastProductsForOrgParams) ([]Product, error)
+	ListStockForecastThresholds(ctx context.Context, organizationID int64) ([]ListStockForecastThresholdsRow, error)
+	// List contract: sort=days_left|-days_left|depletion_date|-depletion_date|
+	// product_name|-product_name|avg_daily_30|-avg_daily_30|status|-status;
+	// default days_left NULLS LAST. product_id is the stable tiebreak.
+	ListStockForecasts(ctx context.Context, arg ListStockForecastsParams) ([]ListStockForecastsRow, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
 	ListStockImportRows(ctx context.Context, arg ListStockImportRowsParams) ([]StockImportRow, error)
 	ListStockMovementsByOrganization(ctx context.Context, arg ListStockMovementsByOrganizationParams) ([]StockMovement, error)
@@ -2501,6 +2632,7 @@ type Querier interface {
 	MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error)
 	MarkBulkJobRolledBack(ctx context.Context, arg MarkBulkJobRolledBackParams) (BulkJob, error)
 	MarkBulkOperationUndone(ctx context.Context, arg MarkBulkOperationUndoneParams) (BulkOperation, error)
+	MarkCertificateExpired(ctx context.Context, arg MarkCertificateExpiredParams) (Certificate, error)
 	MarkCertificateExpiryNoticeSent(ctx context.Context, arg MarkCertificateExpiryNoticeSentParams) (int64, error)
 	MarkContractSignerSigned(ctx context.Context, id int64) (ContractSigner, error)
 	MarkConversationRead(ctx context.Context, id int64) (Conversation, error)
@@ -2835,11 +2967,13 @@ type Querier interface {
 	PurgeNotificationDeliveriesBefore(ctx context.Context, arg PurgeNotificationDeliveriesBeforeParams) (int64, error)
 	PurgeNotificationsBefore(ctx context.Context, arg PurgeNotificationsBeforeParams) (int64, error)
 	QueueImportJob(ctx context.Context, argUuid uuid.UUID) (ImportJob, error)
+	RebuildRollEfficiency(ctx context.Context, unitID pgtype.Int8) (int64, error)
 	// Recomputes the subtotal from the lines (total = subtotal + tax_total).
 	RecalculateOrderTotals(ctx context.Context, id int64) (Order, error)
 	ReceiveTransferRequest(ctx context.Context, arg ReceiveTransferRequestParams) (StockTransferRequest, error)
 	// A failed attempt that will be retried: the recipient stays pending.
 	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
+	RefreshEfficiencyFactsForServiceItem(ctx context.Context, targetServiceItemID int64) (int64, error)
 	RejectCertificate(ctx context.Context, arg RejectCertificateParams) (Certificate, error)
 	// CAS pending_review → rejected with the reviewer's note. The previous
 	// published snapshot (if any) stays live.
@@ -3219,6 +3353,7 @@ type Querier interface {
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
+	UpdatePartConsumptionExpectation(ctx context.Context, arg UpdatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	// UpdatePlannedStaffPayment edits a payment that is not booked yet.
 	UpdatePlannedStaffPayment(ctx context.Context, arg UpdatePlannedStaffPaymentParams) (StaffPayment, error)
 	UpdatePlateFormat(ctx context.Context, arg UpdatePlateFormatParams) (PlateFormat, error)
@@ -3317,6 +3452,7 @@ type Querier interface {
 	// Catalog sync: level and sort order follow the Go catalog; admin-edited
 	// default_enabled / is_paid survive (a core module is always on).
 	UpsertModuleCatalog(ctx context.Context, arg UpsertModuleCatalogParams) error
+	UpsertNetworkDemandForecast(ctx context.Context, arg UpsertNetworkDemandForecastParams) (NetworkDemandForecast, error)
 	UpsertNotificationEvent(ctx context.Context, arg UpsertNotificationEventParams) error
 	UpsertNotificationPreferenceRow(ctx context.Context, arg UpsertNotificationPreferenceRowParams) (NotificationPreference, error)
 	UpsertNotificationTemplate(ctx context.Context, arg UpsertNotificationTemplateParams) (NotificationTemplate, error)
@@ -3338,6 +3474,11 @@ type Querier interface {
 	UpsertServiceCertificateWarning(ctx context.Context, arg UpsertServiceCertificateWarningParams) (ServiceCertificateWarning, error)
 	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
+	// TEC-483 (F5-04a): stock forecast snapshots, thresholds and center network
+	// demand. Worker/API layers arrive in F5-04b/c; these queries are the
+	// repository contract for daily snapshots and list screens.
+	UpsertStockForecastSnapshot(ctx context.Context, arg UpsertStockForecastSnapshotParams) (StockForecast, error)
+	UpsertStockForecastThreshold(ctx context.Context, arg UpsertStockForecastThresholdParams) (StockForecastThreshold, error)
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
 	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)
@@ -3346,6 +3487,7 @@ type Querier interface {
 	// Marking the code used is the claim; an expired or used code returns no row.
 	UseOAuthCode(ctx context.Context, arg UseOAuthCodeParams) (OauthCode, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
+	VehicleHasActiveAppointmentOnDay(ctx context.Context, arg VehicleHasActiveAppointmentOnDayParams) (bool, error)
 	VehicleHasServices(ctx context.Context, vehicleID int64) (bool, error)
 	VerifyCertificate(ctx context.Context, arg VerifyCertificateParams) (Certificate, error)
 	VoidContractInstance(ctx context.Context, arg VoidContractInstanceParams) (ContractInstance, error)

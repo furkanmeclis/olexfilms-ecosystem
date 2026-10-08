@@ -48,6 +48,7 @@
   "system.hub.notification_center": "Κανάλια ειδοποιήσεων, εφεδρικά SMS και πρότυπα.",
   "system.hub.auth_settings": "Μέθοδοι σύνδεσης, κανόνες κωδικού και OTP.",
   "system.hub.document_templates": "Πρότυπα εγγράφων PDF.",
+  "system.hub.certificates": "Τύποι πιστοποιητικών, ισχύς και συνδέσεις προϊόντων/κατηγοριών.",
   "system.load_failed": "Δεν ήταν δυνατή η φόρτωση των ρυθμίσεων συστήματος.",
   "system.read_only": "Μόνο προβολή — για επεξεργασία απαιτείται δικαίωμα εγγραφής ρυθμίσεων.",
   "system.groups.general": "Γενικά",

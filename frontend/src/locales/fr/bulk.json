@@ -92,6 +92,8 @@
   "params.lost_reason": "Motif de perte",
   "actions.stock_units.print_labels": "Imprimer les étiquettes",
   "actions.warehouse_count_lines.set_resolution": "Appliquer la résolution : {{resolution}}",
+  "actions.fleet_vehicles.create_plan": "Créer un plan d'entretien",
+  "actions.fleet_plan_appointments.start_intake": "Réceptionner la sélection",
   "actions.conversations.assign": "Attribuer",
   "actions.conversations.close": "Fermer",
   "actions.conversations.set_ai_mode": "Changer le mode IA",

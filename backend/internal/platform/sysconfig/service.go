@@ -155,6 +155,23 @@ func (s *Service) ForecastMinDays(ctx context.Context) int {
 	return int(s.Int(ctx, KeyForecastMinDays))
 }
 
+// ForecastDefaultWarningDays is the typed accessor for
+// KeyForecastDefaultWarningDays.
+func (s *Service) ForecastDefaultWarningDays(ctx context.Context) int {
+	return int(s.Int(ctx, KeyForecastDefaultWarningDays))
+}
+
+// ForecastCriticalDays is the typed accessor for KeyForecastCriticalDays.
+func (s *Service) ForecastCriticalDays(ctx context.Context) int {
+	return int(s.Int(ctx, KeyForecastCriticalDays))
+}
+
+// ForecastDefaultCoverDays is the typed accessor for
+// KeyForecastDefaultCoverDays.
+func (s *Service) ForecastDefaultCoverDays(ctx context.Context) int {
+	return int(s.Int(ctx, KeyForecastDefaultCoverDays))
+}
+
 // BulkUndoWindowHours is the typed accessor for KeyBulkUndoWindowHours.
 func (s *Service) BulkUndoWindowHours(ctx context.Context) int {
 	return int(s.Int(ctx, KeyBulkUndoWindowHours))
@@ -216,6 +233,22 @@ func (s *Service) CertificatesRequireAdminApproval(ctx context.Context) bool {
 // window.
 func (s *Service) CertificatesExpiryNoticeDays(ctx context.Context) int {
 	return int(s.Int(ctx, KeyCertificatesExpiryNoticeDays))
+}
+
+// EfficiencyNetworkWindowDays is the history window for network expectations.
+func (s *Service) EfficiencyNetworkWindowDays(ctx context.Context) int {
+	return int(s.Int(ctx, KeyEfficiencyNetworkWindowDays))
+}
+
+// EfficiencyNetworkMinSamples is the minimum reliable network sample size.
+func (s *Service) EfficiencyNetworkMinSamples(ctx context.Context) int {
+	return int(s.Int(ctx, KeyEfficiencyNetworkMinSamples))
+}
+
+// EfficiencyWarningWasteRatio is stored as a decimal string to preserve the
+// exact threshold used in SQL/API filters.
+func (s *Service) EfficiencyWarningWasteRatio(ctx context.Context) string {
+	return s.String(ctx, KeyEfficiencyWarningWasteRatio)
 }
 
 // SMTP groups the smtp.* keys. Empty Host / zero Port mean "use the

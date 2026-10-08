@@ -92,6 +92,8 @@
   "params.lost_reason": "İtirmə səbəbi",
   "actions.stock_units.print_labels": "Etiketləri çap et",
   "actions.warehouse_count_lines.set_resolution": "Həll təyin et: {{resolution}}",
+  "actions.fleet_vehicles.create_plan": "Xidmət planı yarat",
+  "actions.fleet_plan_appointments.start_intake": "Seçilənləri qəbula götür",
   "actions.conversations.assign": "Təyin et",
   "actions.conversations.close": "Bağla",
   "actions.conversations.set_ai_mode": "Sİ rejimini dəyiş",

@@ -158,6 +158,12 @@ const (
 	PermStockReclassify = "stock.reclassify"
 	PermStockImport     = "stock.import"
 
+	// Stock forecast (TEC-483, F5-04a): algorithmic stock depletion and
+	// center network demand snapshots (K15).
+	PermStockForecastRead        = "stock_forecast.read"
+	PermStockForecastManage      = "stock_forecast.manage"
+	PermStockForecastNetworkRead = "stock_forecast.network.read"
+
 	// Accounting disputes (TEC-171, K24): a lower level never writes its
 	// parent's ledger; it opens a dispute on an entry the parent posted.
 	PermAccountingDispute = "accounting.dispute"
@@ -304,6 +310,11 @@ const (
 	PermShowcaseRead           = "showcase.read"
 	PermShowcaseWrite          = "showcase.write"
 	PermPlatformShowcaseReview = "platform.showcase.review"
+	// TEC-487 (000116): efficiency and waste analytics (F5-06a). Dealers
+	// read their own data, distributors read subtree, center manages
+	// expected consumption definitions.
+	PermEfficiencyRead               = "efficiency.read"
+	PermEfficiencyExpectationsManage = "efficiency.expectations.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

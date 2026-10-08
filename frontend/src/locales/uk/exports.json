@@ -77,6 +77,8 @@
   "resources.stock.units": "Одиниці запасу",
   "resources.leads.list": "Ліди",
   "resources.services.list": "Послуги",
+  "resources.tenant.fleets": "Автопарки",
+  "resources.tenant.fleet.statement": "Виписка автопарку",
   "resources.warranties.list": "Гарантії",
   "resources.ai.usage": "Використання ШІ"
 }

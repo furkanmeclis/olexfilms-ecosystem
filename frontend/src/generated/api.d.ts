@@ -1903,7 +1903,7 @@ export interface paths {
         };
         /**
          * Service PDF of the signed-in customer
-         * @description TEC-239. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). Uses the service PDF render (TEC-196) and prints only the warranties the user holds. A completed render of the same locale, newer than the last service change and younger than 24 hours, answers 200 with its download_url; otherwise a running job (younger than 15 minutes) is returned or a new one is queued, with 202. Poll and download through /v1/portal/exports/{uuid}.
+         * @description TEC-239. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). TEC-474: a fleet user also reads the services of their fleet's vehicles at the dealers the fleet portal shows (the fleet's warranties are printed). Uses the service PDF render (TEC-196) and prints only the warranties the user holds. A completed render of the same locale, newer than the last service change and younger than 24 hours, answers 200 with its download_url; otherwise a running job (younger than 15 minutes) is returned or a new one is queued, with 202. Poll and download through /v1/portal/exports/{uuid}.
          */
         get: operations["getPortalServicePdf"];
         put?: never;
@@ -13578,6 +13578,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fleets/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a fleet list export (CSV, XLSX or PDF)
+         * @description TEC-477. fleets.read with the list's scope and the fleet add-on (403 FEATURE_DISABLED): the job (worker-docs, exports queue, resource `tenant.fleets`) exports the fleet links the list shows for `query` (every GET /v1/fleets parameter except limit and offset, including `q` and `sort`; a bad value is 400 at request time). Columns: name, legal name, tax number, vehicle count, last service date, link status, dealer, link start date. The job stores the resolved scope and the worker re-authorizes it against the job organization. Poll and download through /v1/tenant/exports/{uuid}.
+         */
+        post: operations["requestFleetListExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find the brand's fleet of a tax number (TEC-477)
+         * @description The panel's new fleet dialog asks for the VKN/TCKN first. 200 names the fleet and the caller's open link (pending | active, empty without one): the dialog offers a link request. 404 when the brand has no fleet with that number: the dialog shows the opening form. A wrong checksum is 422 FLEET_INVALID_TAX_NUMBER. Only dealers and distributors (403). Needs fleets.manage.
+         */
+        get: operations["lookupFleet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fleets/vehicle-import/sample": {
         parameters: {
             query?: never;
@@ -13784,6 +13824,151 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fleets/{uuid}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Periodic reports of a fleet (panel, TEC-477)
+         * @description Every report of the fleet (pending, ready, failed). `sort` is period_start (default -period_start); id tiebreak. `status` and `period_kind` are comma separated filters; unknown value → 400.
+         */
+        get: operations["listFleetReports"];
+        put?: never;
+        /**
+         * Request the periodic report of a closed period (TEC-476)
+         * @description A linked dealer (fleets.manage) asks for the fleet report of a closed month (period YYYY-MM) or quarter (YYYY-Qn). 202 with the report: pending (worker-docs renders the PDF, stores it and e-mails it to the fleet users and the billing address in the fleet's report language), or ready when the period already has a report. A failed report runs again. Only dealers with the fleet module contribute data. 400 when the period has not ended in the fleet's timezone.
+         */
+        post: operations["requestFleetReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/reports/{report}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * PDF of a ready fleet report (panel, TEC-477)
+         * @description A pending or failed report is 404.
+         */
+        get: operations["getFleetReportFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a capacity-aware fleet service appointment series
+         * @description TEC-475: schedules the selected fleet vehicles from start_date using appointment settings, closures and existing active appointments. Closed days and full days are skipped; warnings flag vehicles with another active appointment on the proposed day.
+         */
+        post: operations["previewFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller organization's service plans of a fleet (TEC-477)
+         * @description `sort` is one of created_at (default -created_at), start_date; id tiebreak. `status` is a comma separated filter (scheduled, cancelled).
+         */
+        get: operations["listFleetServicePlans"];
+        put?: never;
+        /**
+         * Create the fleet service plan and all appointments atomically
+         * @description Uses Idempotency-Key per dealer organization. If capacity changed after preview, answers 409 FLEET_SERVICE_PLAN_STALE and writes no plan or appointments.
+         */
+        post: operations["createFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/{plan}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fleet service plan detail (TEC-477)
+         * @description The plan with its appointments; each carries vehicle_uuid, vehicle_plate, vehicle_label and the service_uuid of the draft service opened by start-intake.
+         */
+        get: operations["getFleetServicePlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/{plan}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a fleet service plan and its scheduled appointments */
+        post: operations["cancelFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/{plan}/start-intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start draft service intake for plan appointments row by row
+         * @description Selected appointments are attempted independently through the existing appointment start-intake flow. One row failure does not stop the others.
+         */
+        post: operations["startFleetServicePlanIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portal/fleet/links": {
         parameters: {
             query?: never;
@@ -13832,6 +14017,166 @@ export interface paths {
         put?: never;
         /** Reject a pending dealer link (fleet user) */
         post: operations["rejectPortalFleetLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fleet portal overview (vehicles, period services, warranties, appointments, dealers)
+         * @description TEC-474 (F5-02c): the signed-in fleet user's fleet. Every figure counts only the dealers the fleet worked with (an active or ended link) whose fleet module is on; a dealer that turns the module off is hidden (its history is kept). With no actively linked dealer that has the module the fleet portal reads answer 403 FEATURE_DISABLED (/v1/portal/fleet/links stays open). service_count runs over date_from / date_to (default: the current month).
+         */
+        get: operations["getPortalFleetOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vehicles of the signed-in user's fleet
+         * @description TEC-474. List contract (docs/list-contract.md): q (plate / VIN), brand (car brand uuids, CSV), has_active_warranty (true|false), sort plate | last_service_at | warranty_until (default plate, id tiebreak). Counts and dates use the visible dealers only.
+         */
+        get: operations["listPortalFleetVehicles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/vehicles/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A fleet vehicle with its service history and warranties from every visible dealer
+         * @description TEC-474. A vehicle outside the user's fleet is 404. The embedded history holds the latest 100 services (page the rest through /v1/portal/fleet/services?vehicle=); the service PDF is the existing /v1/portal/services/{uuid}/pdf.
+         */
+        get: operations["getPortalFleetVehicle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Service history of the fleet's vehicles across the visible dealers
+         * @description TEC-474. Drafts are never listed. q (service no / plate), status (CSV), dealer (dealer uuids, CSV), vehicle (uuid), date_from / date_to (created_at), sort created_at | completed_at | service_no | status (default -created_at).
+         */
+        get: operations["listPortalFleetServices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/warranties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Warranties on the fleet's vehicles (active / expired)
+         * @description TEC-474. state is the effective status: active (not past end_at), expired (expired or past end_at) or void. Filters state (CSV), dealer (CSV), vehicle, q (plate / code / product); sort end_at | start_at (default end_at).
+         */
+        get: operations["listPortalFleetWarranties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/accounting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The fleet's account at each visible dealer (service income and collections only)
+         * @description TEC-474 (F5 Q11). For every visible dealer the fleet cari in the dealer's ledger, restricted to the service income billed to the fleet (finance_entries source service_income) and the collections; the dealer's other records never appear. Balances are computed from those rows only. date_from / date_to: inclusive days in each dealer's timezone, both or neither (default: the current month), at most 366 days.
+         */
+        get: operations["getPortalFleetAccounting"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready periodic reports of the fleet
+         * @description TEC-474. The ready reports of F5-02e; period_kind (CSV), sort period_start (default -period_start).
+         */
+        get: operations["listPortalFleetReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/reports/{uuid}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a ready fleet report (PDF)
+         * @description TEC-474. A pending report or another fleet's report is 404.
+         */
+        get: operations["downloadPortalFleetReport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -16065,6 +16410,16 @@ export interface components {
             /** @description Document language (defaults to the request locale). */
             locale?: string;
         };
+        FleetListExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List parameters of GET /v1/fleets as strings (q, sort, status, vehicle_count_min, vehicle_count_max). */
+            query?: {
+                [key: string]: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
         WarrantyListExportInput: {
             /** @enum {string} */
             format: "csv" | "xlsx" | "pdf";
@@ -16783,7 +17138,7 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
-        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote";
+        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote" | "fleet_report";
         DocumentVariable: {
             /** @example customer_name */
             key: string;
@@ -22118,7 +22473,7 @@ export interface components {
         /** @enum {string} */
         AppointmentStatus: "scheduled" | "confirmed" | "arrived" | "no_show" | "cancelled";
         /** @enum {string} */
-        AppointmentSource: "panel" | "portal" | "assistant" | "lead";
+        AppointmentSource: "panel" | "portal" | "assistant" | "lead" | "fleet_plan";
         AppointmentSettingsInput: {
             daily_vehicle_capacity: number;
             default_estimated_minutes: number;
@@ -24696,6 +25051,75 @@ export interface components {
             service_count: number;
             lines: components["schemas"]["FleetStatementLine"][];
         };
+        FleetPlanAppointment: {
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** Format: date-time */
+            starts_at: string;
+        };
+        FleetServicePlanWarning: {
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** Format: date */
+            date: string;
+            /** @example FLEET_PLAN_VEHICLE_DAY_CONFLICT */
+            code: string;
+            message: string;
+        };
+        FleetServicePlanRequest: {
+            vehicle_uuids: string[];
+            service_type: string;
+            note?: string;
+            /** Format: date */
+            start_date: string;
+            daily_max_vehicles?: number;
+            preferred_times?: string[];
+            /** @description Optional edited preview to commit. */
+            appointments?: components["schemas"]["FleetPlanAppointment"][];
+        };
+        FleetServicePlanPreview: {
+            /** Format: uuid */
+            fleet_uuid: string;
+            /** Format: uuid */
+            dealer_uuid: string;
+            service_type: string;
+            note: string;
+            appointments: components["schemas"]["FleetPlanAppointment"][];
+            warnings: components["schemas"]["FleetServicePlanWarning"][];
+        };
+        FleetServicePlan: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            fleet_uuid: string;
+            /** Format: uuid */
+            dealer_uuid: string;
+            /** @enum {string} */
+            status: "scheduled" | "cancelled";
+            service_type: string;
+            note: string;
+            appointments: components["schemas"]["Appointment"][];
+            warnings?: components["schemas"]["FleetServicePlanWarning"][];
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetServicePlanIntakeRequest: {
+            /** @description Empty or absent means every appointment of the plan. */
+            appointment_uuids?: string[];
+        };
+        FleetServicePlanIntake: {
+            /** Format: uuid */
+            plan_uuid: string;
+            results: {
+                /** Format: uuid */
+                appointment_uuid: string;
+                /** Format: uuid */
+                service_uuid?: string | null;
+                ok: boolean;
+                code?: string;
+                message?: string;
+            }[];
+        };
         EnvelopeFleet: {
             /** @enum {boolean} */
             success: true;
@@ -24730,6 +25154,82 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["FleetStatement"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetServicePlanPreview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetServicePlanPreview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetServicePlan: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetServicePlan"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        FleetMatch: {
+            /** Format: uuid */
+            fleet_uuid: string;
+            name: string;
+            legal_name: string;
+            /** @description The caller's open link (pending | active), empty without one. */
+            link_status: string;
+        };
+        EnvelopeFleetMatch: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetMatch"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        FleetServicePlanSummary: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            status: "scheduled" | "cancelled";
+            service_type: string;
+            note: string;
+            /** Format: date */
+            start_date: string;
+            daily_vehicle_limit: number;
+            /** Format: int64 */
+            appointment_count: number;
+            /**
+             * Format: int64
+             * @description Appointments with a draft service
+             */
+            intake_count: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeFleetServicePlanSummaryPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetServicePlanSummary"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetReportPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetReport"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetServicePlanIntake: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetServicePlanIntake"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeFleetListPage: {
@@ -24773,6 +25273,260 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["FleetLink"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        FleetPortalDealer: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @enum {string} */
+            link_status: "active" | "ended";
+            /** Format: date-time */
+            started_at: string | null;
+        };
+        FleetPortalAppointment: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: date-time */
+            starts_at: string;
+            /** Format: date-time */
+            ends_at: string;
+            /** @enum {string} */
+            status: "scheduled" | "confirmed";
+            dealer: components["schemas"]["FleetPartyRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            plate: string | null;
+        };
+        FleetPortalOverview: {
+            fleet: components["schemas"]["FleetPartyRef"];
+            /** Format: date */
+            period_from: string;
+            /** Format: date */
+            period_to: string;
+            /** Format: int64 */
+            vehicle_count: number;
+            /**
+             * Format: int64
+             * @description Services created in the period
+             */
+            service_count: number;
+            /** Format: int64 */
+            active_warranty_count: number;
+            /** Format: int64 */
+            upcoming_appointment_count: number;
+            /** @description The next five */
+            upcoming_appointments: components["schemas"]["FleetPortalAppointment"][];
+            dealers: components["schemas"]["FleetPortalDealer"][];
+            /** Format: int64 */
+            pending_link_count: number;
+        };
+        FleetPortalVehicle: {
+            /** Format: uuid */
+            uuid: string;
+            plate: string | null;
+            plate_country: string | null;
+            vin: string | null;
+            model_year: number | null;
+            car_brand: components["schemas"]["FleetCatalogRef"] | null;
+            car_model: components["schemas"]["FleetCatalogRef"] | null;
+            /** Format: int64 */
+            service_count: number;
+            /** Format: date-time */
+            last_service_at: string | null;
+            /** Format: int64 */
+            active_warranty_count: number;
+            /**
+             * Format: date-time
+             * @description Latest end of an active warranty
+             */
+            warranty_until: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetPortalService: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            status: string;
+            package: string | null;
+            dealer: components["schemas"]["FleetPartyRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            plate: string | null;
+            car_brand_name: string;
+            car_model_name: string;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetPortalWarranty: {
+            /** Format: uuid */
+            uuid: string;
+            public_code: string;
+            /** @enum {string} */
+            state: "active" | "expired" | "void";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            days_left: number;
+            product_name: string;
+            product_sku: string;
+            /** Format: uuid */
+            service_uuid: string;
+            service_no: string;
+            dealer: components["schemas"]["FleetPartyRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            plate: string | null;
+        };
+        FleetPortalVehicleDetail: components["schemas"]["FleetPortalVehicle"] & {
+            services: components["schemas"]["FleetPortalService"][];
+            warranties: components["schemas"]["FleetPortalWarranty"][];
+        };
+        FleetPortalAccountLine: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: date-time */
+            date: string;
+            /** @enum {string} */
+            kind: "service_income" | "collection";
+            debit: string;
+            credit: string;
+            balance: string;
+            is_reversal: boolean;
+            service: {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+                plate: string | null;
+                /** Format: uuid */
+                vehicle_uuid: string | null;
+                /** Format: date-time */
+                completed_at: string | null;
+            } | null;
+        };
+        FleetPortalDealerAccount: {
+            dealer: components["schemas"]["FleetPartyRef"];
+            /** @enum {string} */
+            link_status: "active" | "ended";
+            currency: string;
+            opening_balance: string;
+            service_income_total: string;
+            collection_total: string;
+            /** @description > 0: the fleet owes the dealer */
+            closing_balance: string;
+            lines: components["schemas"]["FleetPortalAccountLine"][];
+        };
+        FleetPortalAccounting: {
+            /** Format: date */
+            period_from: string;
+            /** Format: date */
+            period_to: string;
+            dealers: components["schemas"]["FleetPortalDealerAccount"][];
+        };
+        FleetPortalReport: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            period_kind: "monthly" | "quarterly";
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            locale: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetReport: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            period_kind: "monthly" | "quarterly";
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            locale: string;
+            /** @enum {string} */
+            status: "pending" | "ready" | "failed";
+            /** Format: date-time */
+            emailed_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeFleetReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalOverview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetPortalOverview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalVehicleDetail: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetPortalVehicleDetail"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalAccounting: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetPortalAccounting"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalVehiclePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetPortalVehicle"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalServicePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetPortalService"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalWarrantyPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetPortalWarranty"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalReportPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetPortalReport"][];
                 /** Format: int64 */
                 total: number;
                 limit: number;
@@ -24990,6 +25744,8 @@ export interface components {
         FleetVehicleUUID: string;
         /** @description Fleet-dealer link uuid */
         FleetLinkUUID: string;
+        /** @description Fleet service plan uuid */
+        FleetServicePlanUUID: string;
     };
     requestBodies: never;
     headers: never;
@@ -49636,6 +50392,60 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    requestFleetListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetListExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    lookupFleet: {
+        parameters: {
+            query: {
+                tax_number: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The fleet of the tax number */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetMatch"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
     getFleetVehicleImportSample: {
         parameters: {
             query?: {
@@ -50066,6 +50876,305 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    listFleetReports: {
+        parameters: {
+            query?: {
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                status?: ("pending" | "ready" | "failed")[];
+                period_kind?: ("monthly" | "quarterly")[];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetReportPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestFleetReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    period_kind: "monthly" | "quarterly";
+                    /**
+                     * @description YYYY-MM (monthly) or YYYY-Qn (quarterly)
+                     * @example 2026-09
+                     */
+                    period: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Report queued (or already present) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getFleetReportFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet report uuid */
+                report: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    previewFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetServicePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlanPreview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listFleetServicePlans: {
+        parameters: {
+            query?: {
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                status?: ("scheduled" | "cancelled")[];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlanSummaryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetServicePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Plan created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlan"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet service plan uuid */
+                plan: components["parameters"]["FleetServicePlanUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlan"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    cancelFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet service plan uuid */
+                plan: components["parameters"]["FleetServicePlanUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Plan cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlan"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    startFleetServicePlanIntake: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet service plan uuid */
+                plan: components["parameters"]["FleetServicePlanUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetServicePlanIntakeRequest"];
+            };
+        };
+        responses: {
+            /** @description Row results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlanIntake"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
     listPortalFleetLinks: {
         parameters: {
             query?: never;
@@ -50141,6 +51250,252 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getPortalFleetOverview: {
+        parameters: {
+            query?: {
+                date_from?: string;
+                date_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Overview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalOverview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalFleetVehicles: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                brand?: string[];
+                has_active_warranty?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalVehiclePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalFleetVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicle */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalVehicleDetail"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalFleetServices: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                status?: ("pending" | "processing" | "ready" | "completed" | "cancelled")[];
+                dealer?: string[];
+                vehicle?: string;
+                date_from?: string;
+                date_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalServicePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalFleetWarranties: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                state?: ("active" | "expired" | "void")[];
+                dealer?: string[];
+                vehicle?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranties */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalWarrantyPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalFleetAccounting: {
+        parameters: {
+            query?: {
+                date_from?: string;
+                date_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalAccounting"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalFleetReports: {
+        parameters: {
+            query?: {
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                period_kind?: ("monthly" | "quarterly")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalReportPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadPortalFleetReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Report storage is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
 }

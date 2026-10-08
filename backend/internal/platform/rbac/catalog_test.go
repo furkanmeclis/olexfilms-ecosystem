@@ -149,6 +149,49 @@ func TestStockGrants(t *testing.T) {
 	}
 }
 
+// TEC-483: stock forecast grants. Network demand is center-only; threshold
+// management is owner/center only while staff can read forecasts.
+func TestStockForecastGrants(t *testing.T) {
+	for _, slug := range []string{RoleCenterStaff, RoleCenterWarehouse} {
+		r, _ := RoleBySlug(slug)
+		if r.Grants[PermStockForecastRead] != ScopeBrand ||
+			r.Grants[PermStockForecastManage] != ScopeBrand ||
+			r.Grants[PermStockForecastNetworkRead] != ScopeBrand {
+			t.Fatalf("%s stock forecast grants = %v", slug, r.Grants)
+		}
+	}
+	distOwner, _ := RoleBySlug(RoleDistributorOwner)
+	if distOwner.Grants[PermStockForecastRead] != ScopeSubtree ||
+		distOwner.Grants[PermStockForecastManage] != ScopeManaged {
+		t.Fatalf("distributor_owner stock forecast grants = %v", distOwner.Grants)
+	}
+	dealerOwner, _ := RoleBySlug(RoleDealerOwner)
+	if dealerOwner.Grants[PermStockForecastRead] != ScopeManaged ||
+		dealerOwner.Grants[PermStockForecastManage] != ScopeManaged {
+		t.Fatalf("dealer_owner stock forecast grants = %v", dealerOwner.Grants)
+	}
+	for _, slug := range []string{RoleDistributorStaff, RoleDistributorWarehouseStaff, RoleDealerStaff} {
+		r, _ := RoleBySlug(slug)
+		if _, ok := r.Grants[PermStockForecastManage]; ok {
+			t.Fatalf("%s must not manage stock forecast thresholds", slug)
+		}
+		if _, ok := r.Grants[PermStockForecastNetworkRead]; ok {
+			t.Fatalf("%s must not read network stock forecasts", slug)
+		}
+		if _, ok := r.Grants[PermStockForecastRead]; !ok {
+			t.Fatalf("%s must read stock forecasts", slug)
+		}
+	}
+	for _, r := range Roles {
+		if r.Slug == RoleSuperAdmin || r.OrgType == OrgTypeCenter {
+			continue
+		}
+		if _, ok := r.Grants[PermStockForecastNetworkRead]; ok {
+			t.Fatalf("%s must not hold stock_forecast.network.read", r.Slug)
+		}
+	}
+}
+
 // TEC-171 (TEC-99 decision 7, K9/K24): dealer roles read their ledger and
 // dispute entries posted by the parent. TEC-341 (F3-07) opens manual writes
 // of the dealer's own book to dealer_owner and dealer_accounting (the use
@@ -771,6 +814,35 @@ func TestShowcaseGrants(t *testing.T) {
 	for _, r := range Roles {
 		g := RoleGrants(r)
 		for _, slug := range slugs {
+			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
+				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
+			}
+		}
+	}
+}
+
+// TEC-487: efficiency analytics. Dealer owner reads own organization,
+// distributor owner reads the subtree, center staff manages expected part
+// consumption. No staff/accounting/warehouse role holds the add-on grants.
+func TestEfficiencyGrants(t *testing.T) {
+	for _, slug := range []string{PermEfficiencyRead, PermEfficiencyExpectationsManage} {
+		def, ok := PermissionBySlug(slug)
+		if !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+		if def.Module != "efficiency" || def.SuperAdminOnly {
+			t.Fatalf("%s def = %+v", slug, def)
+		}
+	}
+	want := map[string]map[string]Scope{
+		RoleSuperAdmin:       {PermEfficiencyRead: ScopeAll, PermEfficiencyExpectationsManage: ScopeAll},
+		RoleCenterStaff:      {PermEfficiencyRead: ScopeBrand, PermEfficiencyExpectationsManage: ScopeBrand},
+		RoleDistributorOwner: {PermEfficiencyRead: ScopeSubtree},
+		RoleDealerOwner:      {PermEfficiencyRead: ScopeManaged},
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range []string{PermEfficiencyRead, PermEfficiencyExpectationsManage} {
 			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
 				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
 			}

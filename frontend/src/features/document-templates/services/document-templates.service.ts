@@ -56,6 +56,7 @@ export const DOCUMENT_KINDS: readonly DocumentKind[] = [
   "order_slip",
   "invoice_view",
   "warranty",
+  "fleet_report",
 ];
 
 const base = "/v1/platform/document-templates";

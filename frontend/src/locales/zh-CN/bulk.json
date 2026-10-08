@@ -92,6 +92,8 @@
   "params.lost_reason": "丢单原因",
   "actions.stock_units.print_labels": "打印标签",
   "actions.warehouse_count_lines.set_resolution": "设置处理方式：{{resolution}}",
+  "actions.fleet_vehicles.create_plan": "创建服务计划",
+  "actions.fleet_plan_appointments.start_intake": "接收所选车辆",
   "actions.conversations.assign": "分配",
   "actions.conversations.close": "关闭",
   "actions.conversations.set_ai_mode": "更改 AI 模式",

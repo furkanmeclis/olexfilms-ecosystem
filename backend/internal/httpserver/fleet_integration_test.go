@@ -335,6 +335,24 @@ func TestIntegrationFleetManagement(t *testing.T) {
 	}
 }
 
+func TestIntegrationFleetServicePlansRequireAppointmentsFeature(t *testing.T) {
+	it := newIntegration(t)
+	n := it.fleetNet("t475-gate")
+	it.enableFleet(n.dealerA)
+	if _, err := it.q.UpsertOrgModuleFlag(context.Background(), db.UpsertOrgModuleFlagParams{
+		Scope: "org", OrganizationID: pgtype.Int8{Int64: n.dealerA.ID, Valid: true},
+		ModuleKey: features.ModuleAppointments, Enabled: false, Source: "admin",
+	}); err != nil {
+		t.Fatalf("disable appointments: %v", err)
+	}
+	code, env := it.do("POST", "/v1/fleets/"+uuid.NewString()+"/service-plans/preview", hostOlex, n.tokA, map[string]any{
+		"vehicle_uuids": []string{uuid.NewString()}, "service_type": "PPF", "start_date": "2026-10-05",
+	})
+	if code != http.StatusForbidden || errCode(env) != "FEATURE_DISABLED" {
+		t.Fatalf("appointments module off = %d %s", code, errCode(env))
+	}
+}
+
 type fleetImportJob struct {
 	UUID           string            `json:"uuid"`
 	Status         string            `json:"status"`

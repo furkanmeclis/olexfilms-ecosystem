@@ -48,6 +48,7 @@
   "system.hub.notification_center": "Benachrichtigungskanäle, SMS-Ausweichweg und Vorlagen.",
   "system.hub.auth_settings": "Anmeldemethoden, Passwort- und OTP-Regeln.",
   "system.hub.document_templates": "PDF-Dokumentvorlagen.",
+  "system.hub.certificates": "Zertifikatstypen, Gültigkeit und Produkt-/Kategoriebindungen.",
   "system.load_failed": "Systemeinstellungen konnten nicht geladen werden.",
   "system.read_only": "Nur Ansicht — zum Bearbeiten ist die Schreibberechtigung für Einstellungen nötig.",
   "system.groups.general": "Allgemein",

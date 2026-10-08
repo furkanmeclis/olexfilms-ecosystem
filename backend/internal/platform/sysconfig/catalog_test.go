@@ -20,6 +20,9 @@ func TestValidate(t *testing.T) {
 		{KeyContractGraceDays, "true", ""},
 		{KeyForecastMinDays, "0", ""},
 		{KeyForecastMinDays, "90", "90"},
+		{KeyForecastDefaultWarningDays, "14", "14"},
+		{KeyForecastCriticalDays, "7", "7"},
+		{KeyForecastDefaultCoverDays, "30", "30"},
 		{KeyPhotoStandardEnabled, "true", "true"},
 		{KeyPhotoStandardEnabled, "1", ""},
 		{KeyPhotoStandardEnabled, `"yes"`, ""},
@@ -46,6 +49,11 @@ func TestValidate(t *testing.T) {
 		{KeyCertificatesExpiryNoticeDays, "30", "30"},
 		{KeyCertificatesExpiryNoticeDays, "0", ""},
 		{KeyCertificatesExpiryNoticeDays, "366", ""},
+		{KeyEfficiencyNetworkWindowDays, "180", "180"},
+		{KeyEfficiencyNetworkMinSamples, "20", "20"},
+		{KeyEfficiencyWarningWasteRatio, `"0.15"`, `"0.15"`},
+		{KeyEfficiencyWarningWasteRatio, `"1.2345"`, `"1.2345"`},
+		{KeyEfficiencyWarningWasteRatio, `"-0.1"`, ""},
 	}
 	for _, c := range cases {
 		d, ok := Lookup(c.key)
@@ -74,6 +82,18 @@ func TestCatalogDefaults(t *testing.T) {
 	if d, _ := Lookup(KeyPhotoStandardEnabled); d.Default != false {
 		t.Fatalf("photo_standard_enabled default = %v, want false", d.Default)
 	}
+	if d, _ := Lookup(KeyForecastMinDays); d.Default != int64(90) {
+		t.Fatalf("forecast_min_days default = %v, want 90", d.Default)
+	}
+	if d, _ := Lookup(KeyForecastDefaultWarningDays); d.Default != int64(14) {
+		t.Fatalf("forecast.default_warning_days default = %v, want 14", d.Default)
+	}
+	if d, _ := Lookup(KeyForecastCriticalDays); d.Default != int64(7) {
+		t.Fatalf("forecast.critical_days default = %v, want 7", d.Default)
+	}
+	if d, _ := Lookup(KeyForecastDefaultCoverDays); d.Default != int64(30) {
+		t.Fatalf("forecast.default_cover_days default = %v, want 30", d.Default)
+	}
 	if d, _ := Lookup(KeySMTPPassword); !d.Secret {
 		t.Fatal("smtp.password must be secret")
 	}
@@ -82,6 +102,15 @@ func TestCatalogDefaults(t *testing.T) {
 	}
 	if d, _ := Lookup(KeyCertificatesExpiryNoticeDays); d.Default != int64(DefaultCertificatesExpiryNoticeDays) {
 		t.Fatalf("certificate notice default = %v, want %d", d.Default, DefaultCertificatesExpiryNoticeDays)
+	}
+	if d, _ := Lookup(KeyEfficiencyNetworkWindowDays); d.Default != int64(DefaultEfficiencyNetworkWindowDays) || d.Group != GroupEfficiency {
+		t.Fatalf("efficiency network window = %v/%s", d.Default, d.Group)
+	}
+	if d, _ := Lookup(KeyEfficiencyNetworkMinSamples); d.Default != int64(DefaultEfficiencyNetworkMinSamples) || d.Group != GroupEfficiency {
+		t.Fatalf("efficiency min samples = %v/%s", d.Default, d.Group)
+	}
+	if d, _ := Lookup(KeyEfficiencyWarningWasteRatio); d.Default != DefaultEfficiencyWarningWasteRatio || d.Group != GroupEfficiency {
+		t.Fatalf("efficiency warning ratio = %v/%s", d.Default, d.Group)
 	}
 	if _, ok := Lookup("certificates.notify_customer"); ok {
 		t.Fatal("certificates.notify_customer must not exist per F5 S13")

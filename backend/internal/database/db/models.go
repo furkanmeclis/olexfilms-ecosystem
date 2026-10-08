@@ -251,6 +251,7 @@ type Appointment struct {
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	PlanID           pgtype.Int8        `json:"plan_id"`
 }
 
 type AppointmentClosure struct {
@@ -1024,6 +1025,27 @@ type DocumentTemplate struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type EfficiencyFact struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ServiceID      int64              `json:"service_id"`
+	ServiceItemID  int64              `json:"service_item_id"`
+	UnitID         int64              `json:"unit_id"`
+	ProductID      int64              `json:"product_id"`
+	DealerOrgID    int64              `json:"dealer_org_id"`
+	StaffUserID    pgtype.Int8        `json:"staff_user_id"`
+	BodyType       pgtype.Text        `json:"body_type"`
+	PartKey        string             `json:"part_key"`
+	ActualMeters   pgtype.Numeric     `json:"actual_meters"`
+	ExpectedMeters pgtype.Numeric     `json:"expected_meters"`
+	WasteRatio     pgtype.Numeric     `json:"waste_ratio"`
+	ServiceDate    pgtype.Date        `json:"service_date"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type EodReport struct {
 	ID                int64              `json:"id"`
 	Uuid              uuid.UUID          `json:"uuid"`
@@ -1191,6 +1213,29 @@ type FleetReport struct {
 	EmailedAt   pgtype.Timestamptz `json:"emailed_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FleetServicePlan struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	FleetOrgID        int64              `json:"fleet_org_id"`
+	FleetLinkID       int64              `json:"fleet_link_id"`
+	Title             string             `json:"title"`
+	ServiceType       string             `json:"service_type"`
+	Note              string             `json:"note"`
+	StartDate         pgtype.Date        `json:"start_date"`
+	DailyVehicleLimit int32              `json:"daily_vehicle_limit"`
+	PreferredTimes    []byte             `json:"preferred_times"`
+	Status            string             `json:"status"`
+	IdempotencyKey    pgtype.Text        `json:"idempotency_key"`
+	CancelReason      pgtype.Text        `json:"cancel_reason"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	CancelledByUserID pgtype.Int8        `json:"cancelled_by_user_id"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type FleetUser struct {
@@ -1605,6 +1650,26 @@ type ModuleFlag struct {
 	Note           pgtype.Text        `json:"note"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type NetworkDemandForecast struct {
+	ID                        int64              `json:"id"`
+	Uuid                      uuid.UUID          `json:"uuid"`
+	OrganizationID            int64              `json:"organization_id"`
+	BrandID                   int64              `json:"brand_id"`
+	ProductID                 int64              `json:"product_id"`
+	ForecastMonth             pgtype.Date        `json:"forecast_month"`
+	ExpectedQty               int32              `json:"expected_qty"`
+	ExpectedMeters            pgtype.Numeric     `json:"expected_meters"`
+	NetworkOnHandQty          int32              `json:"network_on_hand_qty"`
+	NetworkOnHandMeters       pgtype.Numeric     `json:"network_on_hand_meters"`
+	OpenOrderQty              int32              `json:"open_order_qty"`
+	OpenOrderMeters           pgtype.Numeric     `json:"open_order_meters"`
+	SuggestedProductionQty    int32              `json:"suggested_production_qty"`
+	SuggestedProductionMeters pgtype.Numeric     `json:"suggested_production_meters"`
+	ComputedAt                pgtype.Timestamptz `json:"computed_at"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Notification struct {
@@ -2031,6 +2096,22 @@ type OutboxEvent struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type PartConsumptionExpectation struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ProductID      pgtype.Int8        `json:"product_id"`
+	CategoryID     pgtype.Int8        `json:"category_id"`
+	BodyType       pgtype.Text        `json:"body_type"`
+	PartKey        string             `json:"part_key"`
+	ExpectedMeters pgtype.Numeric     `json:"expected_meters"`
+	Source         string             `json:"source"`
+	SampleSize     int32              `json:"sample_size"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Permission struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -2341,6 +2422,24 @@ type RolePermission struct {
 	RoleID       int64  `json:"role_id"`
 	PermissionID int64  `json:"permission_id"`
 	Scope        string `json:"scope"`
+}
+
+type RollEfficiency struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	UnitID          int64              `json:"unit_id"`
+	ProductID       int64              `json:"product_id"`
+	InitialMeters   pgtype.Numeric     `json:"initial_meters"`
+	ConsumedMeters  pgtype.Numeric     `json:"consumed_meters"`
+	ExpectedMeters  pgtype.Numeric     `json:"expected_meters"`
+	WasteMeters     pgtype.Numeric     `json:"waste_meters"`
+	RemainingMeters pgtype.Numeric     `json:"remaining_meters"`
+	ServiceCount    int32              `json:"service_count"`
+	LastUsedAt      pgtype.Timestamptz `json:"last_used_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Room struct {
@@ -2765,6 +2864,43 @@ type StockEntryLine struct {
 	PlacementMovementID pgtype.Int8        `json:"placement_movement_id"`
 	UndoMovementID      pgtype.Int8        `json:"undo_movement_id"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+}
+
+type StockForecast struct {
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	OrganizationID      int64              `json:"organization_id"`
+	BrandID             int64              `json:"brand_id"`
+	ProductID           int64              `json:"product_id"`
+	ComputedOn          pgtype.Date        `json:"computed_on"`
+	IsLatest            bool               `json:"is_latest"`
+	OnHandQty           int32              `json:"on_hand_qty"`
+	OnHandMeters        pgtype.Numeric     `json:"on_hand_meters"`
+	AvgDaily30          pgtype.Numeric     `json:"avg_daily_30"`
+	AvgDaily90          pgtype.Numeric     `json:"avg_daily_90"`
+	SeasonalityFactor   pgtype.Numeric     `json:"seasonality_factor"`
+	AvgMetersPerVehicle pgtype.Numeric     `json:"avg_meters_per_vehicle"`
+	VehiclesLeft        pgtype.Numeric     `json:"vehicles_left"`
+	DaysLeft            pgtype.Numeric     `json:"days_left"`
+	DepletionDate       pgtype.Date        `json:"depletion_date"`
+	DataDays            int32              `json:"data_days"`
+	Status              string             `json:"status"`
+	SuggestedQty        pgtype.Int4        `json:"suggested_qty"`
+	SuggestedMeters     pgtype.Numeric     `json:"suggested_meters"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockForecastThreshold struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ProductID      pgtype.Int8        `json:"product_id"`
+	WarningDays    int32              `json:"warning_days"`
+	CoverDays      int32              `json:"cover_days"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type StockImportBatch struct {

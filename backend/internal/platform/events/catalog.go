@@ -271,6 +271,7 @@ const (
 	CertificateUploaded       = "certificate.uploaded"
 	CertificateVerified       = "certificate.verified"
 	CertificateRejected       = "certificate.rejected"
+	CertificatesExpiring      = "certificates.expiring"
 	CertificateExpired        = "certificate.expired"
 	CertificateRevoked        = "certificate.revoked"
 	CertificateServiceWarning = "certificate.service_warning"
@@ -628,6 +629,7 @@ func catalogConstants() []string {
 		CertificateUploaded,
 		CertificateVerified,
 		CertificateRejected,
+		CertificatesExpiring,
 		CertificateExpired,
 		CertificateRevoked,
 		CertificateServiceWarning,
@@ -691,9 +693,12 @@ func catalogConstants() []string {
 		FleetLinkRejected,
 		FleetVehicleAdded,
 		FleetUserInvited,
+		FleetServicePlanCreated,
 		ShowcaseReviewRequested,
 		ShowcasePublished,
 		ShowcaseRejected,
+		StockForecastComputed,
+		StockForecastLow,
 	}
 }
 
@@ -760,12 +765,13 @@ const AIQuotaThreshold = "ai.quota.threshold"
 // notify_user_ids (link requests reach the fleet users, decisions the
 // requesting user). The search sync refreshes the fleet document.
 const (
-	FleetCreated       = "fleet.created"
-	FleetLinkRequested = "fleet.link_requested"
-	FleetLinked        = "fleet.linked"
-	FleetLinkRejected  = "fleet.link_rejected"
-	FleetVehicleAdded  = "fleet.vehicle_added"
-	FleetUserInvited   = "fleet.user_invited"
+	FleetCreated            = "fleet.created"
+	FleetLinkRequested      = "fleet.link_requested"
+	FleetLinked             = "fleet.linked"
+	FleetLinkRejected       = "fleet.link_rejected"
+	FleetVehicleAdded       = "fleet.vehicle_added"
+	FleetUserInvited        = "fleet.user_invited"
+	FleetServicePlanCreated = "fleet.service_plan_created"
 )
 
 // Dealer showcase (TEC-467, F5-01b): written in the transaction that moves
@@ -781,4 +787,12 @@ const (
 	ShowcaseReviewRequested = "showcase.review_requested"
 	ShowcasePublished       = "showcase.published"
 	ShowcaseRejected        = "showcase.rejected"
+)
+
+// Stock forecast add-on events (TEC-484/F5-04b): computed is consumed by AI
+// and performance readers; low reaches organization owners and warehouse
+// roles on ok->warning or warning->critical transitions.
+const (
+	StockForecastComputed = "stock.forecast_computed"
+	StockForecastLow      = "stock.forecast_low"
 )

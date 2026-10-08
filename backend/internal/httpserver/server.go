@@ -639,6 +639,17 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	fleetSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries))
 	fleetSvc.SetPlates(geoSvc)
 	fleetSvc.SetInviter(uc)
+	// TEC-474 (F5-02c): the fleet portal reads follow each dealer's fleet
+	// module, download the report PDFs from storage, and the portal service
+	// detail / PDF serves a fleet user's fleet vehicles.
+	fleetSvc.SetModules(featureSvc)
+	fleetSvc.SetReportFiles(deps.Storage)
+	// TEC-476: POST /v1/fleets/{uuid}/reports enqueues the generation on
+	// worker-docs (no queue: 503).
+	if deps.Queue != nil {
+		fleetSvc.SetReports(fleetusecase.ReportConfig{Queue: queue.FleetReportEnqueuer{Client: deps.Queue}, Log: log})
+	}
+	servicesSvc.WithFleetPortal(fleetSvc)
 	ioReg := ioengine.NewRegistry(
 		// TEC-211: price columns behind pricing.* grants.
 		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries).WithPrices(pricingSvc),
@@ -692,6 +703,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		aiusecase.NewUsageExportAdapter(aiAdmin),
 		// TEC-473: fleet statement export and staged fleet vehicle import.
 		fleetusecase.NewStatementAdapter(fleetSvc),
+		fleetusecase.NewListExportAdapter(fleetSvc),
 		fleetusecase.NewImporter(fleetSvc),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
@@ -930,6 +942,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-323: appointments, capacity, availability and intake start.
 	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
 	appointmentsSvc.SetFeatureChecker(featureSvc)
+	fleetSvc.SetAppointments(appointmentsSvc)
 	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
 	appointmentsmodule.RegisterPortalRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader)
 	// TEC-385 (F4-01c): AI assistant tool registry over the module use

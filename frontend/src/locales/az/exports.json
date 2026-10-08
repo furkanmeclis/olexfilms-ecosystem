@@ -77,6 +77,8 @@
   "resources.stock.units": "Stok vahidləri",
   "resources.leads.list": "Potensial müştərilər",
   "resources.services.list": "Xidmətlər",
+  "resources.tenant.fleets": "Avtoparklar",
+  "resources.tenant.fleet.statement": "Avtopark çıxarışı",
   "resources.warranties.list": "Zəmanətlər",
   "resources.ai.usage": "Süni intellekt istifadəsi"
 }

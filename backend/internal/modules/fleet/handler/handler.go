@@ -55,40 +55,24 @@ func caller(r *http.Request) usecase.Caller {
 	p := authctx.MustPrincipal(r.Context())
 	org := orgctx.MustScope(r.Context())
 	f, _ := scopefilter.From(r.Context())
-	return usecase.Caller{UserID: p.UserInternal, OrgID: org.InternalID, BrandID: org.BrandID, OrgType: org.OrgType, Filter: f}
+	return usecase.Caller{Principal: p, Org: org, UserID: p.UserInternal, OrgID: org.InternalID, BrandID: org.BrandID, OrgType: org.OrgType, Filter: f}
 }
 
 // List is GET /v1/fleets (docs/list-contract.md): q, status (link status,
 // CSV), vehicle_count_min/_max, sort name | vehicle_count |
 // last_service_at | created_at (default name).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	values := r.URL.Query()
-	q := apiquery.Parse(values)
-	statuses, err := apiquery.EnumList(values, "status", model.LinkPending, model.LinkActive, model.LinkEnded)
+	f, err := usecase.ParseListValues(r.URL.Query())
 	if err != nil {
 		writeErr(w, r, err)
 		return
-	}
-	rng, err := apiquery.NumRange(values, "vehicle_count")
-	if err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	f := usecase.ListFilter{Statuses: statuses, Q: q.Q, Sort: q.Sort, Limit: q.Limit, Offset: q.Offset}
-	if rng.Min != nil {
-		v := int64(*rng.Min)
-		f.VehicleCountMin = &v
-	}
-	if rng.Max != nil {
-		v := int64(*rng.Max)
-		f.VehicleCountMax = &v
 	}
 	items, total, err := h.svc.List(r.Context(), caller(r), f)
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // Open is POST /v1/fleets.
@@ -173,6 +157,27 @@ func (h *Handler) InviteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusCreated, out)
+}
+
+// RequestReport is POST /v1/fleets/{uuid}/reports (TEC-476): the report of
+// a closed period (period_kind monthly | quarterly, period YYYY-MM |
+// YYYY-Qn) is generated on worker-docs and e-mailed to the fleet. 202 with
+// the report (status pending, or ready when it already exists).
+func (h *Handler) RequestReport(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var in usecase.RequestReportInput
+	if !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.RequestReport(r.Context(), caller(r), id, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusAccepted, out)
 }
 
 // DisableUser is POST /v1/fleets/{uuid}/users/{user_uuid}/disable.
@@ -456,6 +461,86 @@ func (h *Handler) ExportStatement(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusAccepted, job)
 }
 
+func (h *Handler) PreviewServicePlan(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var in usecase.ServicePlanInput
+	if !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.PreviewServicePlan(r.Context(), caller(r), id, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) CreateServicePlan(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var in usecase.ServicePlanInput
+	if !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.CreateServicePlan(r.Context(), caller(r), id, in, r.Header.Get("Idempotency-Key"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, out)
+}
+
+type cancelPlanBody struct {
+	Reason string `json:"reason"`
+}
+
+func (h *Handler) CancelServicePlan(w http.ResponseWriter, r *http.Request) {
+	fleetID, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	planID, ok := pathUUID(w, r, "plan")
+	if !ok {
+		return
+	}
+	var in cancelPlanBody
+	if r.ContentLength != 0 && !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.CancelServicePlan(r.Context(), caller(r), fleetID, planID, in.Reason)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) StartServicePlanIntake(w http.ResponseWriter, r *http.Request) {
+	fleetID, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	planID, ok := pathUUID(w, r, "plan")
+	if !ok {
+		return
+	}
+	var in usecase.IntakeInput
+	if !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.StartServicePlanIntake(r.Context(), caller(r), fleetID, planID, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
 // --- Portal --------------------------------------------------------------------
 
 // PortalLinks is GET /v1/portal/fleet/links.
@@ -520,6 +605,10 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "fleet not found")
 	case errors.Is(err, usecase.ErrForbidden):
 		response.Forbidden(w, r, "only a dealer or a distributor does this")
+	case errors.Is(err, usecase.ErrReportQueueUnavailable):
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "report generation is not configured")
+	case errors.Is(err, usecase.ErrReportFilesUnavailable):
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "report storage is not configured")
 	case errors.Is(err, repository.ErrLinkStale):
 		response.Conflict(w, r, model.CodeLinkStale, "the link changed concurrently")
 	default:

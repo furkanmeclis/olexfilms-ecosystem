@@ -20,6 +20,7 @@ const VARIABLE_GROUPS = [
   "invoice",
   "warranty",
   "totals",
+  "fleet_report",
 ];
 
 describe("documents locale keys", () => {

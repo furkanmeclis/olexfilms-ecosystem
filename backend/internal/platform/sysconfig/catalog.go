@@ -54,6 +54,8 @@ const (
 	GroupCertificates Group = "certificates"
 	// GroupShowcase: dealer showcase publication (TEC-466).
 	GroupShowcase Group = "showcase"
+	// GroupEfficiency: efficiency and waste analytics (TEC-487).
+	GroupEfficiency Group = "efficiency"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -65,6 +67,14 @@ const (
 	// KeyForecastMinDays is the minimum data window (days) before the stock
 	// forecast proposes anything (K15).
 	KeyForecastMinDays = "forecast_min_days"
+	// KeyForecastDefaultWarningDays is the fallback warning threshold when an
+	// organization/product override does not exist (TEC-483).
+	KeyForecastDefaultWarningDays = "forecast.default_warning_days"
+	// KeyForecastCriticalDays is the global critical threshold (TEC-483).
+	KeyForecastCriticalDays = "forecast.critical_days"
+	// KeyForecastDefaultCoverDays is the fallback suggested cover window
+	// when an organization/product override does not exist (TEC-483).
+	KeyForecastDefaultCoverDays = "forecast.default_cover_days"
 	// KeyContractGraceDays is the read-only grace after a contract expires
 	// (design §4). Default 0 keeps K23 ("grace yok"); raising it is a product
 	// decision.
@@ -158,10 +168,26 @@ const (
 	KeyShowcaseApprovalRequired = "showcase.approval_required"
 	// KeyShowcaseMaxPhotos caps the gallery photos of one showcase (TEC-466).
 	KeyShowcaseMaxPhotos = "showcase.max_photos"
+	// KeyEfficiencyNetworkWindowDays is the service-history window used when
+	// deriving network expectations.
+	KeyEfficiencyNetworkWindowDays = "efficiency.network_window_days"
+	// KeyEfficiencyNetworkMinSamples is the minimum sample size before a
+	// network expectation is considered reliable.
+	KeyEfficiencyNetworkMinSamples = "efficiency.network_min_samples"
+	// KeyEfficiencyWarningWasteRatio is the waste ratio threshold for
+	// warnings; 0.15 means 15% over expected.
+	KeyEfficiencyWarningWasteRatio = "efficiency.warning_waste_ratio"
 )
 
 // DefaultShowcaseMaxPhotos is the catalog default of KeyShowcaseMaxPhotos.
 const DefaultShowcaseMaxPhotos = 12
+
+// Catalog defaults for efficiency analysis (TEC-487).
+const (
+	DefaultEfficiencyNetworkWindowDays = 180
+	DefaultEfficiencyNetworkMinSamples = 20
+	DefaultEfficiencyWarningWasteRatio = "0.15"
+)
 
 // Catalog defaults of the campaign keys (F4 QUESTIONS S14).
 const (
@@ -215,6 +241,15 @@ func checkLaborAmount(s string) string {
 	return ""
 }
 
+var decimalRatioRe = regexp.MustCompile(`^[0-9]{1,3}(\.[0-9]{1,4})?$`)
+
+func checkNonNegativeDecimal(s string) string {
+	if !decimalRatioRe.MatchString(s) {
+		return "must be a non-negative decimal, e.g. 0.15"
+	}
+	return ""
+}
+
 // DefaultBulkUndoWindowHours is the catalog default of KeyBulkUndoWindowHours.
 const DefaultBulkUndoWindowHours = 24
 
@@ -261,8 +296,14 @@ func checkHTTPSURL(s string) string {
 func i64(v int64) *int64 { return &v }
 
 var catalog = []Definition{
-	{Key: KeyForecastMinDays, Group: GroupForecast, Kind: KindInt, Default: int64(30), Min: i64(1), Max: i64(3650),
+	{Key: KeyForecastMinDays, Group: GroupForecast, Kind: KindInt, Default: int64(90), Min: i64(1), Max: i64(3650),
 		Description: "Minimum days of movement history before the stock forecast proposes anything (K15)"},
+	{Key: KeyForecastDefaultWarningDays, Group: GroupForecast, Kind: KindInt, Default: int64(14), Min: i64(1), Max: i64(3650),
+		Description: "Default days-left threshold for stock forecast warning status (TEC-483)"},
+	{Key: KeyForecastCriticalDays, Group: GroupForecast, Kind: KindInt, Default: int64(7), Min: i64(1), Max: i64(3650),
+		Description: "Days-left threshold for stock forecast critical status (TEC-483)"},
+	{Key: KeyForecastDefaultCoverDays, Group: GroupForecast, Kind: KindInt, Default: int64(30), Min: i64(1), Max: i64(3650),
+		Description: "Default cover days used for stock forecast suggested quantities (TEC-483)"},
 	{Key: KeyContractGraceDays, Group: GroupContracts, Kind: KindInt, Default: int64(0), Min: i64(0), Max: i64(365),
 		Description: "Read-only grace period after a contract expires; 0 = no grace (K23)"},
 	{Key: KeyContractsIntakeRequired, Group: GroupContracts, Kind: KindBool, Default: false,
@@ -331,6 +372,12 @@ var catalog = []Definition{
 		Description: "Dealer showcases wait for center review before they are published; off = the owner publishes directly (TEC-466)"},
 	{Key: KeyShowcaseMaxPhotos, Group: GroupShowcase, Kind: KindInt, Default: int64(DefaultShowcaseMaxPhotos), Min: i64(1), Max: i64(50),
 		Description: "Gallery photos one dealer showcase may hold (TEC-466)"},
+	{Key: KeyEfficiencyNetworkWindowDays, Group: GroupEfficiency, Kind: KindInt, Default: int64(DefaultEfficiencyNetworkWindowDays), Min: i64(1), Max: i64(3650),
+		Description: "Days of recent service history used to derive network expected consumption (TEC-487)"},
+	{Key: KeyEfficiencyNetworkMinSamples, Group: GroupEfficiency, Kind: KindInt, Default: int64(DefaultEfficiencyNetworkMinSamples), Min: i64(1), Max: i64(100000),
+		Description: "Minimum network sample size before expected consumption is trusted (TEC-487)"},
+	{Key: KeyEfficiencyWarningWasteRatio, Group: GroupEfficiency, Kind: KindString, Default: DefaultEfficiencyWarningWasteRatio, MaxLen: 16, check: checkNonNegativeDecimal,
+		Description: "Waste ratio warning threshold; 0.15 means 15% over expected (TEC-487)"},
 }
 
 var byKey = func() map[string]Definition {

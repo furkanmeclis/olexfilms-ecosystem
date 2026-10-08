@@ -77,6 +77,8 @@
   "resources.stock.units": "Bestandseinheiten",
   "resources.leads.list": "Leads",
   "resources.services.list": "Services",
+  "resources.tenant.fleets": "Flotten",
+  "resources.tenant.fleet.statement": "Flottenauszug",
   "resources.warranties.list": "Garantien",
   "resources.ai.usage": "KI-Nutzung"
 }

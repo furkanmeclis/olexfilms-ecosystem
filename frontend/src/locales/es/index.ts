@@ -13,6 +13,7 @@ import branding from "./branding.json";
 import bulk from "./bulk.json";
 import campaigns from "./campaigns.json";
 import catalogMessages from "./catalog.json";
+import certificates from "./certificates.json";
 import chart from "./chart.json";
 import cms from "./cms.json";
 import common from "./common.json";
@@ -26,6 +27,7 @@ import editor from "./editor.json";
 import entity from "./entity.json";
 import errors from "./errors.json";
 import exports from "./exports.json";
+import fleets from "./fleets.json";
 import form from "./form.json";
 import geo from "./geo.json";
 import imports from "./imports.json";
@@ -75,6 +77,7 @@ const catalog: LocaleCatalog = {
   bulk,
   campaigns,
   catalog: catalogMessages,
+  certificates,
   chart,
   cms,
   common,
@@ -88,6 +91,7 @@ const catalog: LocaleCatalog = {
   entity,
   errors,
   exports,
+  fleets,
   form,
   geo,
   imports,

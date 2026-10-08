@@ -48,6 +48,7 @@
   "system.hub.notification_center": "قنوات الإشعارات والرسائل النصية الاحتياطية والقوالب.",
   "system.hub.auth_settings": "طرق تسجيل الدخول وقواعد كلمة المرور وOTP.",
   "system.hub.document_templates": "قوالب مستندات PDF.",
+  "system.hub.certificates": "أنواع الشهادات والصلاحية وروابط المنتجات/الفئات.",
   "system.load_failed": "تعذّر تحميل إعدادات النظام.",
   "system.read_only": "عرض فقط — يتطلب التعديل صلاحية كتابة الإعدادات.",
   "system.groups.general": "عام",
