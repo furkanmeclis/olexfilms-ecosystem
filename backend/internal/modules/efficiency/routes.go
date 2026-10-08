@@ -34,6 +34,8 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 
 	mux.Handle("GET /v1/platform/part-consumption-expectations", tenantManage(h.Expectations))
 	mux.Handle("POST /v1/platform/part-consumption-expectations", tenantManage(h.CreateExpectation))
+	mux.Handle("POST /v1/platform/part-consumption-expectations/import", tenantManage(h.ImportExpectations))
+	mux.Handle("GET /v1/platform/part-consumption-expectations/import/sample", tenantManage(h.ImportExpectationsSample))
 	mux.Handle("PUT /v1/platform/part-consumption-expectations/{uuid}", tenantManage(h.UpdateExpectation))
 	mux.Handle("DELETE /v1/platform/part-consumption-expectations/{uuid}", tenantManage(h.DeleteExpectation))
 }

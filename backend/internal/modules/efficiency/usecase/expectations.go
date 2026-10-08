@@ -7,9 +7,13 @@ import (
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -221,4 +225,162 @@ func scanPositive(raw string) (pgtype.Numeric, error) {
 		return n, errors.New("not positive")
 	}
 	return n, nil
+}
+
+type ExpectationsImportAdapter struct{ svc *Service }
+
+func NewExpectationsImportAdapter(s *Service) *ExpectationsImportAdapter {
+	return &ExpectationsImportAdapter{svc: s}
+}
+
+func (a *ExpectationsImportAdapter) Resource() string { return ResourceExpectations }
+
+func (a *ExpectationsImportAdapter) ExportColumns() []ioengine.Column { return nil }
+
+func (a *ExpectationsImportAdapter) Export(context.Context, ioengine.ExportQuery, i18n.Locale) (ioengine.Dataset, error) {
+	return ioengine.Dataset{}, errors.New("expectations import is import only")
+}
+
+func (a *ExpectationsImportAdapter) ImportSchema() []ioengine.ImportField {
+	return []ioengine.ImportField{
+		{Key: "uuid", LabelKey: "catalog.products.uuid", Type: ioengine.ColumnTypeUUID},
+		{Key: "product_sku", LabelKey: "stock_import.product_sku", Type: ioengine.ColumnTypeString},
+		{Key: "category", LabelKey: "catalog.products.category", Type: ioengine.ColumnTypeString},
+		{Key: "body_type", LabelKey: "measurements.pdf.body_type", Type: ioengine.ColumnTypeString},
+		{Key: "part_key", LabelKey: "warranty_claims.reports.part_key", Type: ioengine.ColumnTypeString, Required: true},
+		{Key: "expected_meters", LabelKey: "warehouse.eod.meters_out", Type: ioengine.ColumnTypeString, Required: true},
+	}
+}
+
+func (a *ExpectationsImportAdapter) SampleRows() []map[string]any {
+	return []map[string]any{
+		{"product_sku": "PPF-GLOSS", "category": "", "body_type": "sedan", "part_key": "hood", "expected_meters": "2.40"},
+		{"product_sku": "", "category": "PPF", "body_type": "", "part_key": "roof", "expected_meters": "3.10"},
+	}
+}
+
+func (a *ExpectationsImportAdapter) ApplyRow(ctx context.Context, row map[string]any, _ map[string]any) (ioengine.RowResult, error) {
+	org, ok := orgctx.ScopeFrom(ctx)
+	if !ok {
+		return ioengine.RowResult{OK: false, Error: "organization is required"}, nil
+	}
+	c := Caller{Org: org}
+	idRaw := importCell(row, "uuid")
+	in, perr := a.importInput(ctx, c, row)
+	if perr != "" {
+		return ioengine.RowResult{OK: false, Error: perr}, nil
+	}
+	if idRaw == "" {
+		created, err := a.svc.CreateExpectation(ctx, c, in)
+		if err != nil {
+			return expectationRowError(err)
+		}
+		return ioengine.RowResult{OK: true, EntityType: ResourceExpectations, EntityUUID: created.UUID.String(), Op: "create"}, nil
+	}
+	id, err := uuid.Parse(idRaw)
+	if err != nil {
+		return ioengine.RowResult{OK: false, Error: "uuid is invalid"}, nil
+	}
+	cur, err := a.svc.getExpectation(ctx, c, id)
+	if errors.Is(err, ErrNotFound) {
+		return ioengine.RowResult{OK: false, Error: "expectation not found"}, nil
+	}
+	if err != nil {
+		return ioengine.RowResult{}, err
+	}
+	updated, err := a.svc.UpdateExpectation(ctx, c, id, in)
+	if err != nil {
+		return expectationRowError(err)
+	}
+	return ioengine.RowResult{
+		OK: true, EntityType: ResourceExpectations, EntityUUID: updated.UUID.String(), Op: "update",
+		Previous: map[string]any{"body_type": textPtr(cur.BodyType), "expected_meters": numeric(cur.ExpectedMeters)},
+	}, nil
+}
+
+func (a *ExpectationsImportAdapter) RevertRow(ctx context.Context, entityType, entityUUID string, previous map[string]any) error {
+	if entityType != ResourceExpectations {
+		return fmt.Errorf("unsupported entity")
+	}
+	org, ok := orgctx.ScopeFrom(ctx)
+	if !ok {
+		return ErrForbidden
+	}
+	c := Caller{Org: org}
+	id, err := uuid.Parse(entityUUID)
+	if err != nil {
+		return err
+	}
+	if len(previous) == 0 {
+		err := a.svc.DeleteExpectation(ctx, c, id)
+		if errors.Is(err, ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	body, _ := previous["body_type"].(string)
+	meters, _ := previous["expected_meters"].(string)
+	in := ExpectationInput{BodyType: &body, ExpectedMeters: meters}
+	_, err = a.svc.UpdateExpectation(ctx, c, id, in)
+	return err
+}
+
+func (a *ExpectationsImportAdapter) importInput(ctx context.Context, c Caller, row map[string]any) (ExpectationInput, string) {
+	part := importCell(row, "part_key")
+	meters := importCell(row, "expected_meters")
+	body := importCell(row, "body_type")
+	productSKU := importCell(row, "product_sku")
+	categoryName := importCell(row, "category")
+	if part == "" || meters == "" {
+		return ExpectationInput{}, "part_key and expected_meters are required"
+	}
+	if (productSKU == "") == (categoryName == "") {
+		return ExpectationInput{}, "exactly one of product_sku or category is required"
+	}
+	in := ExpectationInput{PartKey: part, ExpectedMeters: meters}
+	if body != "" {
+		in.BodyType = &body
+	}
+	if productSKU != "" {
+		p, err := a.svc.q.GetProductBySKU(ctx, db.GetProductBySKUParams{BrandID: c.Org.BrandID, Sku: productSKU})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ExpectationInput{}, "unknown product_sku: " + productSKU
+		}
+		if err != nil {
+			return ExpectationInput{}, err.Error()
+		}
+		in.ProductUUID = &p.Uuid
+		return in, ""
+	}
+	cat, err := a.svc.q.GetProductCategoryByName(ctx, db.GetProductCategoryByNameParams{BrandID: c.Org.BrandID, Name: categoryName})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ExpectationInput{}, "unknown category: " + categoryName
+	}
+	if err != nil {
+		return ExpectationInput{}, err.Error()
+	}
+	in.CategoryUUID = &cat.Uuid
+	return in, ""
+}
+
+func expectationRowError(err error) (ioengine.RowResult, error) {
+	var ve *ValidationError
+	var pgErr *pgconn.PgError
+	switch {
+	case errors.As(err, &ve):
+		return ioengine.RowResult{OK: false, Error: ve.Error()}, nil
+	case errors.Is(err, ErrNotFound):
+		return ioengine.RowResult{OK: false, Error: "referenced record not found"}, nil
+	case errors.As(err, &pgErr) && pgErr.Code == "23505":
+		return ioengine.RowResult{OK: false, Error: "expectation already exists"}, nil
+	default:
+		return ioengine.RowResult{}, err
+	}
+}
+
+func importCell(row map[string]any, key string) string {
+	if row == nil || row[key] == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(row[key]))
 }

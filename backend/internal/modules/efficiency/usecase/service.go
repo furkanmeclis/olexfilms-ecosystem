@@ -21,6 +21,7 @@ import (
 const (
 	ResourceSummaryExport = "efficiency.summary"
 	ResourceRollsExport   = "efficiency.rolls"
+	ResourceExpectations  = "platform.part_consumption_expectations"
 
 	DefaultNetworkWindowDays = 180
 	DefaultNetworkMinSamples = 20

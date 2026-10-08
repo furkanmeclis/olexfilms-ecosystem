@@ -27595,6 +27595,36 @@ paths:
         "201": { description: Expectation created }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/platform/part-consumption-expectations/import:
+    post:
+      tags: [Efficiency]
+      operationId: importPartConsumptionExpectations
+      summary: Upload expected part consumption definitions for import
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, tsv, xlsx, json] }
+                locale: { type: string }
+      responses:
+        "201": { description: Import job created }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/platform/part-consumption-expectations/import/sample:
+    get:
+      tags: [Efficiency]
+      operationId: samplePartConsumptionExpectationsImport
+      summary: Download expected part consumption import sample
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Import sample file }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/platform/part-consumption-expectations/{uuid}:
     put:
       tags: [Efficiency]

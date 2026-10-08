@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
+	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
@@ -25,13 +27,20 @@ type Exporter interface {
 		format ioengine.ExportFormat, query ioengine.ExportQuery, locale string) (exportusecase.ExportJobView, error)
 }
 
+type Importer interface {
+	Upload(ctx context.Context, actorID int64, organizationID *int64, resource string,
+		format ioengine.ImportFormat, locale string, filename string, r io.Reader) (importusecase.ImportJobView, error)
+	Sample(ctx context.Context, resource string, format ioengine.ImportFormat, locale string) ([]byte, string, error)
+}
+
 type Handler struct {
 	svc     *usecase.Service
 	exports Exporter
+	imports Importer
 }
 
-func New(svc *usecase.Service, exports Exporter) *Handler {
-	return &Handler{svc: svc, exports: exports}
+func New(svc *usecase.Service, exports Exporter, imports Importer) *Handler {
+	return &Handler{svc: svc, exports: exports, imports: imports}
 }
 
 func caller(r *http.Request) usecase.Caller {
@@ -186,6 +195,64 @@ func (h *Handler) DeleteExpectation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) ImportExpectations(w http.ResponseWriter, r *http.Request) {
+	if h.imports == nil {
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "imports are not configured")
+		return
+	}
+	p := authctx.MustPrincipal(r.Context())
+	org := orgctx.MustScope(r.Context())
+	r.Body = http.MaxBytesReader(w, r.Body, (10<<20)+(1<<20))
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "file is required")
+		return
+	}
+	defer func() { _ = file.Close() }()
+	format := ioengine.ImportFormat(strings.ToLower(strings.TrimSpace(r.FormValue("format"))))
+	if format == "" {
+		format = ioengine.ImportCSV
+	}
+	locale := strings.TrimSpace(r.FormValue("locale"))
+	if locale == "" {
+		locale = "tr"
+	}
+	orgID := org.InternalID
+	job, err := h.imports.Upload(r.Context(), p.UserInternal, &orgID, usecase.ResourceExpectations, format, locale, header.Filename, file)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, job)
+}
+
+func (h *Handler) ImportExpectationsSample(w http.ResponseWriter, r *http.Request) {
+	if h.imports == nil {
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "imports are not configured")
+		return
+	}
+	format := ioengine.ImportFormat(strings.ToLower(strings.TrimSpace(r.URL.Query().Get("format"))))
+	if format == "" {
+		format = ioengine.ImportXLSX
+	}
+	locale := strings.TrimSpace(r.URL.Query().Get("locale"))
+	if locale == "" {
+		locale = "tr"
+	}
+	data, ct, err := h.imports.Sample(r.Context(), usecase.ResourceExpectations, format, locale)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", ct)
+	w.Header().Set("Content-Disposition", "attachment; filename=\"part-consumption-expectations-sample."+string(format)+"\"")
+	_, _ = w.Write(data)
 }
 
 func (h *Handler) ExportSummary(w http.ResponseWriter, r *http.Request) {

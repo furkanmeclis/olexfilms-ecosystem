@@ -714,6 +714,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-488: efficiency list exports.
 		efficiencyusecase.NewSummaryExportAdapter(efficiencyusecase.New(deps.Queries)),
 		efficiencyusecase.NewRollsExportAdapter(efficiencyusecase.New(deps.Queries)),
+		efficiencyusecase.NewExpectationsImportAdapter(efficiencyusecase.New(deps.Queries)),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -758,7 +759,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	importSvc := importusecase.New(deps.Queries, deps.Storage, ioReg, importQueue, notifSvc, activityRec, log)
 	fleetmodule.RegisterRoutes(mux, fleethandler.New(fleetSvc, exportSvc, importSvc), tokens, loader, deps.Queries, featureSvc)
 	efficiencySvc := efficiencyusecase.New(deps.Queries)
-	efficiencymodule.RegisterRoutes(mux, efficiencyhandler.New(efficiencySvc, exportSvc), tokens, loader, deps.Queries, featureSvc)
+	efficiencymodule.RegisterRoutes(mux, efficiencyhandler.New(efficiencySvc, exportSvc, importSvc), tokens, loader, deps.Queries, featureSvc)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
