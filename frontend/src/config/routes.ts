@@ -58,6 +58,12 @@ export const routes = {
       cancelRequests: (slug: string) =>
         `/t/${slug}/service-subscriptions/cancel-requests`,
     },
+    /** TEC-482: staff certificates and center / distributor approvals. */
+    certificates: {
+      list: (slug: string) => `/t/${slug}/certificates`,
+      verification: (slug: string) => `/t/${slug}/certificates/verification`,
+      approvals: (slug: string) => `/t/${slug}/certificates/approvals`,
+    },
     /** TEC-349 staff cards and payments, own-book reports. */
     staff: {
       list: (slug: string) => `/t/${slug}/staff`,
@@ -334,6 +340,9 @@ export const routes = {
     documentTemplates: {
       root: "/platform/document-templates",
       edit: (uuid: string) => `/platform/document-templates/${uuid}`,
+    },
+    certificateTypes: {
+      root: "/platform/certificate-types",
     },
     activity: {
       root: "/platform/activity",

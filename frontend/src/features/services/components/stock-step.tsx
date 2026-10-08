@@ -11,6 +11,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { permissions } from "@/config/permissions";
+import {
+  CertificateWarningBand,
+  blockingCertificateWarnings,
+  completionBlockedReason,
+} from "@/features/certificates/components/certificate-status";
 import { isKnownPart, partsForItem } from "@/features/services/lib/car-parts";
 import {
   normalizeMeters,
@@ -40,6 +45,7 @@ export type StockStepProps = {
   onChanged: (service: Service) => void;
   onBack: () => void;
   onCompleted: (service: Service) => void;
+  showCertificateWarnings?: boolean;
 };
 
 function useErrorText() {
@@ -349,6 +355,7 @@ export function StockStep({
   onChanged,
   onBack,
   onCompleted,
+  showCertificateWarnings = true,
 }: StockStepProps) {
   const { t } = useLocale();
   const { can } = usePermission();
@@ -404,7 +411,12 @@ export function StockStep({
 
   const canComplete =
     can(permissions.services.complete) &&
-    service.available_transitions.includes("completed");
+    service.available_transitions.includes("completed") &&
+    (!showCertificateWarnings ||
+      blockingCertificateWarnings(service).length === 0);
+  const certificateBlock = showCertificateWarnings
+    ? completionBlockedReason(service)
+    : null;
   const complete = useMutation({
     mutationFn: () =>
       serviceWizardService.transition(service.uuid, "completed"),
@@ -611,16 +623,29 @@ export function StockStep({
           {t("services.complete.no_permission")}
         </p>
       ) : null}
+      <CertificateWarningBand
+        service={service}
+        compact
+        enabled={showCertificateWarnings}
+      />
+      {certificateBlock ? (
+        <p
+          className="text-muted-foreground text-sm"
+          data-testid="complete-hint"
+        >
+          {t(certificateBlock)}
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap justify-between gap-2">
         <Button type="button" variant="outline" onClick={onBack}>
           {t("services.wizard.back")}
         </Button>
-        {canComplete ? (
+        {can(permissions.services.complete) ? (
           <Button
             type="button"
             data-testid="complete-service"
-            disabled={items.length === 0 || complete.isPending}
+            disabled={!canComplete || items.length === 0 || complete.isPending}
             onClick={() => complete.mutate()}
           >
             <CheckCircle2 className="size-4" />

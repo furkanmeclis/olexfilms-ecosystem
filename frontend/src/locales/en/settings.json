@@ -48,6 +48,7 @@
   "system.hub.notification_center": "Notification channels, SMS fallback and templates.",
   "system.hub.auth_settings": "Sign-in methods, password and OTP rules.",
   "system.hub.document_templates": "PDF document templates.",
+  "system.hub.certificates": "Certificate types, validity and product/category bindings.",
   "system.load_failed": "System settings could not be loaded.",
   "system.read_only": "View only — editing requires the settings write permission.",
   "system.groups.general": "General",

@@ -51,6 +51,7 @@ import {
   ServiceIncomeReverseDialog,
   ServiceProfitCard,
 } from "@/features/services/components/service-income";
+import { CertificateWarningBand } from "@/features/certificates";
 import { ServiceContractCard } from "@/features/services/components/service-contract-card";
 import { ServicePdfButton } from "@/features/services/components/service-pdf-button";
 import { useAccountingAccess } from "@/features/accounting/hooks/use-accounting-access";
@@ -400,6 +401,7 @@ export function ServiceDetailPage({
   const { can } = usePermission();
   const access = resolveServiceListAccess(can);
   const measurements = useFeature(slug, "measurements");
+  const certificates = useFeature(slug, "certificates");
 
   const service = useQuery({
     queryKey: serviceWizardKeys.service(uuid),
@@ -498,6 +500,7 @@ export function ServiceDetailPage({
   return (
     <div className="space-y-6" data-testid="service-detail">
       {header}
+      <CertificateWarningBand service={s} enabled={certificates.enabled} />
       {s.status === "cancelled" && s.cancel_reason ? (
         <p
           className="border-destructive/40 bg-destructive/5 rounded-lg border p-3 text-sm"

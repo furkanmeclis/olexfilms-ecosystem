@@ -48,6 +48,7 @@
   "system.hub.notification_center": "Canali di notifica, SMS di riserva e modelli.",
   "system.hub.auth_settings": "Metodi di accesso, regole per password e OTP.",
   "system.hub.document_templates": "Modelli di documenti PDF.",
+  "system.hub.certificates": "Tipi di certificato, validità e collegamenti prodotto/categoria.",
   "system.load_failed": "Impossibile caricare le impostazioni di sistema.",
   "system.read_only": "Sola lettura — per modificare serve il permesso di scrittura delle impostazioni.",
   "system.groups.general": "Generale",
