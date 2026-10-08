@@ -762,8 +762,29 @@ var Permissions = []PermissionDef{
 		Description: "Define weak dealer rules that open tasks or send notifications.",
 	},
 
+	// TEC-501: e-Invoice archive and settings (F5-08a). Appended last;
+	// migration 000124 seeds them. Archive/manage is center accounting;
+	// settings are super_admin-only because they define the seller profile.
+	{
+		Slug: PermEinvoiceRead, Name: "Read e-invoices", Module: "einvoice",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Read UBL-TR e-invoice settings, counters and archived invoices.",
+	},
+	{
+		Slug: PermEinvoiceManage, Name: "Manage e-invoices", Module: "einvoice",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Sensitive:   true,
+		Description: "Archive, void and repair UBL-TR e-invoices. Requires step-up.",
+	},
+	{
+		Slug: PermEinvoiceSettings, Name: "Manage e-invoice settings", Module: "einvoice",
+		Scopes:         scopesAll,
+		SuperAdminOnly: true,
+		Description:    "Edit the center seller profile, UBL series and XSLT settings.",
+	},
+
 	// TEC-505: recommended price versions (F5-09a). Appended last; migration
-	// 000124 seeds it.
+	// 000125 seeds it.
 	{
 		Slug: PermPricingDisciplineRead, Name: "Read price discipline", Module: "pricing",
 		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
@@ -931,7 +952,7 @@ var Roles = []RoleDef{
 			PermPerformanceRead:          ScopeBrand,
 			PermPerformanceTargetsManage: ScopeBrand,
 			PermPerformanceRulesManage:   ScopeBrand,
-			// TEC-505 (000124).
+			// TEC-505 (000125).
 			PermPricingDisciplineRead: ScopeBrand,
 		}),
 	},
@@ -1009,6 +1030,9 @@ var Roles = []RoleDef{
 			PermAIUsageRead:      ScopeBrand,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-501 (000124).
+			PermEinvoiceRead:   ScopeBrand,
+			PermEinvoiceManage: ScopeBrand,
 		}),
 	},
 	{
@@ -1168,7 +1192,7 @@ var Roles = []RoleDef{
 			PermPerformanceRead:          ScopeSubtree,
 			PermPerformanceTargetsManage: ScopeSubtree,
 			PermPerformanceRulesManage:   ScopeSubtree,
-			// TEC-505 (000124): deviations of the subtree.
+			// TEC-505 (000125): deviations of the subtree.
 			PermPricingDisciplineRead: ScopeSubtree,
 		}),
 	},

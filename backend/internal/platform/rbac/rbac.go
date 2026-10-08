@@ -324,7 +324,15 @@ const (
 	PermPerformanceStaffTargetsManage = "performance.staff_targets.manage"
 	PermPerformanceBonusManage        = "performance.bonus.manage"
 	PermPerformanceRulesManage        = "performance.rules.manage"
-	// TEC-505 (000124): price discipline report (F5-09a): dealer and
+
+	// TEC-501 (000124): e-Invoice (UBL-TR) archive, numbering and settings.
+	// The center accounting team reads and manages brand invoices; settings
+	// stay super_admin-only.
+	PermEinvoiceRead     = "einvoice.read"
+	PermEinvoiceManage   = "einvoice.manage"
+	PermEinvoiceSettings = "einvoice.settings"
+
+	// TEC-505 (000125): price discipline report (F5-09a): dealer and
 	// distributor end-customer prices against the recommended price.
 	// Publishing stays on PermPricingRecommendedWrite.
 	PermPricingDisciplineRead = "pricing.discipline.read"

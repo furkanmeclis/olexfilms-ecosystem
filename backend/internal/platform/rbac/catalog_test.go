@@ -899,6 +899,42 @@ func TestPerformanceGrants(t *testing.T) {
 	}
 }
 
+// TEC-501: e-Invoice settings are super_admin-only; the archive and void
+// workflow is held by center accounting (and super_admin through the catalog).
+// No dealer, distributor, social, warehouse or portal role receives it.
+func TestEinvoiceGrants(t *testing.T) {
+	slugs := []string{PermEinvoiceRead, PermEinvoiceManage, PermEinvoiceSettings}
+	for _, slug := range slugs {
+		def, ok := PermissionBySlug(slug)
+		if !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+		if def.Module != "einvoice" {
+			t.Fatalf("%s def = %+v", slug, def)
+		}
+		if slug == PermEinvoiceSettings && !def.SuperAdminOnly {
+			t.Fatalf("%s must be super_admin-only: %+v", slug, def)
+		}
+		if slug == PermEinvoiceManage && !def.Sensitive {
+			t.Fatalf("%s must be sensitive: %+v", slug, def)
+		}
+	}
+	want := map[string]map[string]Scope{
+		RoleSuperAdmin: {
+			PermEinvoiceRead: ScopeAll, PermEinvoiceManage: ScopeAll, PermEinvoiceSettings: ScopeAll,
+		},
+		RoleCenterAccounting: {PermEinvoiceRead: ScopeBrand, PermEinvoiceManage: ScopeBrand},
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range slugs {
+			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
+				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
+			}
+		}
+	}
+}
+
 // TEC-505: price discipline is read by the center (brand) and the
 // distributor owner (subtree); publishing stays on the existing step-up
 // pricing.recommended.write.

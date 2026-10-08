@@ -459,7 +459,7 @@ func TestPriceListWriteIsRecordedAsVersion(t *testing.T) {
 // on the migration day, without changing product_prices.
 func TestMigrationCarriesOverRecommendedPrices(t *testing.T) {
 	f := newFixture(t)
-	raw, err := os.ReadFile("../../../../migrations/000124_recommended_price_versions.up.sql")
+	raw, err := os.ReadFile("../../../../migrations/000125_recommended_price_versions.up.sql")
 	if err != nil {
 		t.Fatalf("read migration: %v", err)
 	}

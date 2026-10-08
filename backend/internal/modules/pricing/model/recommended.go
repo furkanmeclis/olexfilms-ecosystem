@@ -8,7 +8,7 @@ const (
 	// SourcePriceList: a direct write of product_prices.recommended_sale_price
 	// through the price list, recorded by the sync trigger.
 	SourcePriceList = "price_list"
-	// SourceMigration: carried over from product_prices by migration 000124.
+	// SourceMigration: carried over from product_prices by migration 000125.
 	SourceMigration = "migration"
 )
 
