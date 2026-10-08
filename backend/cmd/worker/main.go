@@ -250,6 +250,8 @@ func main() {
 		// TEC-373: order list and stock unit list exports (read only).
 		ordersusecase.NewListExportAdapter(ordersusecase.New(pool, queries, nil, nil)),
 		stockusecase.NewUnitsExportAdapter(stockusecase.New(queries)),
+		// TEC-485: center network demand forecast export.
+		stockforecastusecase.NewNetworkExportAdapter(stockforecastusecase.New(pool, queries, outboxStore, nil, sysconfig.New(queries, sysconfig.NoCache{}), log)),
 		// TEC-377: service and warranty list exports (read only).
 		servicesusecase.NewListExportAdapter(servicesusecase.New(pool, queries, nil)),
 		warrantyusecase.NewListExportAdapter(warrantyusecase.NewReader(pool, queries, nil, cfg.Auth.FrontendURL)),

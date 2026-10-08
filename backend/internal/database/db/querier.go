@@ -294,6 +294,7 @@ type Querier interface {
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
 	CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error)
 	CountStockEntryLines(ctx context.Context, entryID int64) (int64, error)
+	CountStockForecastSubtreeSummary(ctx context.Context, arg CountStockForecastSubtreeSummaryParams) (int64, error)
 	CountStockForecasts(ctx context.Context, arg CountStockForecastsParams) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
 	CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error)
@@ -763,6 +764,7 @@ type Querier interface {
 	// The first upload of a repeated idempotency key or client_measurement_id.
 	FindMeasurementResultByKeys(ctx context.Context, arg FindMeasurementResultByKeysParams) (MeasurementResult, error)
 	FindOpenCustomerLeadForAppointment(ctx context.Context, arg FindOpenCustomerLeadForAppointmentParams) (Lead, error)
+	FindOpenDraftOrderForBuyerSeller(ctx context.Context, arg FindOpenDraftOrderForBuyerSellerParams) (Order, error)
 	// Another draft entry (or, for serial units, a confirmed one whose line
 	// was not undone) already holding the unit.
 	FindOpenStockEntryForUnit(ctx context.Context, arg FindOpenStockEntryForUnitParams) (FindOpenStockEntryForUnitRow, error)
@@ -997,6 +999,7 @@ type Querier interface {
 	GetLatestLegalText(ctx context.Context, arg GetLatestLegalTextParams) (LegalText, error)
 	GetLatestPhoneOTP(ctx context.Context, arg GetLatestPhoneOTPParams) (OtpCode, error)
 	GetLatestStockForecast(ctx context.Context, arg GetLatestStockForecastParams) (StockForecast, error)
+	GetLatestStockForecastByProductUUID(ctx context.Context, arg GetLatestStockForecastByProductUUIDParams) (GetLatestStockForecastByProductUUIDRow, error)
 	GetLeadByID(ctx context.Context, arg GetLeadByIDParams) (Lead, error)
 	// TEC-316: lead conversion serializes on the lead row.
 	GetLeadByIDForUpdate(ctx context.Context, arg GetLeadByIDForUpdateParams) (Lead, error)
@@ -2353,6 +2356,7 @@ type Querier interface {
 	ListStockForecastNotifyUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
 	ListStockForecastOrganizations(ctx context.Context, organizationID pgtype.Int8) ([]Organization, error)
 	ListStockForecastProductsForOrg(ctx context.Context, arg ListStockForecastProductsForOrgParams) ([]Product, error)
+	ListStockForecastSubtreeSummary(ctx context.Context, arg ListStockForecastSubtreeSummaryParams) ([]ListStockForecastSubtreeSummaryRow, error)
 	ListStockForecastThresholds(ctx context.Context, organizationID int64) ([]ListStockForecastThresholdsRow, error)
 	// List contract: sort=days_left|-days_left|depletion_date|-depletion_date|
 	// product_name|-product_name|avg_daily_30|-avg_daily_30|status|-status;
@@ -3047,6 +3051,7 @@ type Querier interface {
 	// written by the API in the meantime is kept (only phone_raw is cleared).
 	ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOrganizationRawPhoneParams) (int64, error)
 	ResolveStockCountLine(ctx context.Context, arg ResolveStockCountLineParams) (StockCountLine, error)
+	ResolveStockForecastThresholdProduct(ctx context.Context, arg ResolveStockForecastThresholdProductParams) (ResolveStockForecastThresholdProductRow, error)
 	// The most specific territory covering an address (district > province >
 	// country) whose distributor is live.
 	ResolveTerritory(ctx context.Context, arg ResolveTerritoryParams) (ResolveTerritoryRow, error)
