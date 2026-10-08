@@ -472,7 +472,7 @@ ON CONFLICT (channel, contact_e164) DO UPDATE SET
     contact_name = COALESCE(EXCLUDED.contact_name, conversations.contact_name),
     user_id = COALESCE(conversations.user_id, EXCLUDED.user_id),
     last_message_at = GREATEST(conversations.last_message_at, EXCLUDED.last_message_at)
-RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id
+RETURNING id, uuid, organization_id, brand_id, channel, contact_e164, contact_name, user_id, last_message_at, created_at, updated_at, status, ai_mode, ai_paused_until, assigned_user_id, assigned_org_id, identity_kind, identity_user_id, identity_org_id, identity_resolved_at, locale, last_inbound_at, unread_count, ai_consent_at, visitor_lead_id, referred_dealer_org_id
 `
 
 type UpsertConversationParams struct {
@@ -518,6 +518,7 @@ func (q *Queries) UpsertConversation(ctx context.Context, arg UpsertConversation
 		&i.UnreadCount,
 		&i.AiConsentAt,
 		&i.VisitorLeadID,
+		&i.ReferredDealerOrgID,
 	)
 	return i, err
 }

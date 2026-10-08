@@ -2280,6 +2280,95 @@ paths:
             image/webp: { schema: { type: string, format: binary } }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/public/dealers/{code}/lead-form/config:
+    get:
+      tags: [Public]
+      operationId: getPublicDealerLeadFormConfig
+      summary: Public dealer showcase lead form config
+      description: |
+        TEC-468. No authentication. Returns the lead form fields, current KVKK
+        text version, showcase services and WhatsApp click-to-chat URL for a
+        published dealer showcase. Dealers without the module enabled or without
+        a published showcase return 404.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, maxLength: 100 }
+        - name: lang
+          in: query
+          required: false
+          schema: { type: string, maxLength: 16 }
+      responses:
+        "200":
+          description: Lead form configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicDealerLeadFormConfig"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/public/dealers/{code}/leads:
+    post:
+      tags: [Public]
+      operationId: submitPublicDealerLead
+      summary: Submit public dealer showcase lead
+      description: |
+        TEC-468. No authentication. Accepts website leads for a published dealer
+        showcase. Stores accepted leads under the dealer organization with
+        `source=website`; an open lead with the same phone is updated with a
+        timeline note instead of creating a duplicate. The endpoint enforces a
+        16 KB body limit, HMAC form token, minimum fill time, honeypot, 5/hour
+        IP limit and 3/day phone limit.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublicDealerLeadRequest"
+      responses:
+        "202":
+          description: Lead accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicDealerLeadAccepted"
+        "204":
+          description: Honeypot submission accepted without storing a lead
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: KVKK consent is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limited by IP or phone
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/showcase:
     get:
       tags: [Showcase]
@@ -30742,6 +30831,67 @@ components:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PublicDealer" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PublicDealerLeadFormService:
+      type: object
+      required: [uuid, kind, title]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string }
+        title: { type: string }
+        description: { type: string }
+
+    PublicDealerLeadFormConfig:
+      type: object
+      required:
+        [dealer_code, dealer_name, fields, kvkk_text_version, kvkk_text, services, whatsapp_chat_url, form_token, min_fill_seconds, default_phone_country, preferred_locales]
+      properties:
+        dealer_code: { type: string }
+        dealer_name: { type: string }
+        fields:
+          type: array
+          items: { type: string }
+        kvkk_text_version: { type: integer, format: int32 }
+        kvkk_text: { type: string }
+        services:
+          type: array
+          items: { $ref: "#/components/schemas/PublicDealerLeadFormService" }
+        whatsapp_chat_url: { type: string, format: uri }
+        form_token: { type: string }
+        min_fill_seconds: { type: integer, minimum: 0 }
+        default_phone_country: { type: string, minLength: 2, maxLength: 2 }
+        preferred_locales:
+          type: array
+          items: { type: string }
+
+    PublicDealerLeadRequest:
+      type: object
+      required: [name, phone, interested_services, kvkk_consent, language, form_token]
+      properties:
+        name: { type: string, maxLength: 160 }
+        phone: { type: string, maxLength: 32 }
+        email: { type: string, format: email, maxLength: 254 }
+        vehicle_brand: { type: string, maxLength: 120 }
+        vehicle_model: { type: string, maxLength: 120 }
+        interested_services:
+          type: array
+          items: { type: string, format: uuid }
+        message: { type: string, maxLength: 5000 }
+        preferred_channel:
+          type: string
+          enum: [phone, email, whatsapp]
+        kvkk_consent: { type: boolean }
+        language: { type: string, maxLength: 16 }
+        form_token: { type: string }
+        website:
+          type: string
+          description: Hidden honeypot field; legitimate clients submit an empty value.
+
+    PublicDealerLeadAccepted:
+      type: object
+      required: [received]
+      properties:
+        received: { type: boolean, enum: [true] }
 
     ShowcaseStatus:
       type: string

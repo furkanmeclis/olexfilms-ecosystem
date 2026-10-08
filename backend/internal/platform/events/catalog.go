@@ -675,6 +675,7 @@ func catalogConstants() []string {
 		OrganizationUpdated,
 		QuoteSent,
 		LeadsApplicationReceived,
+		LeadsWebsiteReceived,
 		MeasurementMatchSuggested,
 		MeasurementDiffCheckRequired,
 		CampaignsSubmitted,
@@ -710,6 +711,10 @@ const (
 // (territory distributor or brand center) and notify_user_ids its members
 // holding leads.read.
 const LeadsApplicationReceived = "leads.application_received"
+
+// LeadsWebsiteReceived (TEC-468) is written when the public dealer showcase
+// form opens or updates a customer lead in that dealer's list.
+const LeadsWebsiteReceived = "leads.website_received"
 
 // QuoteSent (TEC-315) is written when a quote is sent or reminded over
 // WhatsApp. Payload carries the recipient phone and public quote URL.
