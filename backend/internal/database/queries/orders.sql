@@ -33,6 +33,16 @@ WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
 SELECT * FROM orders
 WHERE brand_id = sqlc.arg(brand_id) AND external_reference = sqlc.arg(external_reference);
 
+-- name: FindOpenDraftOrderForBuyerSeller :one
+SELECT * FROM orders
+WHERE brand_id = sqlc.arg(brand_id)
+  AND buyer_org_id = sqlc.arg(buyer_org_id)
+  AND seller_org_id = sqlc.arg(seller_org_id)
+  AND status = 'draft'
+ORDER BY created_at ASC, id ASC
+LIMIT 1
+FOR UPDATE;
+
 -- name: LockOrder :one
 SELECT * FROM orders
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)

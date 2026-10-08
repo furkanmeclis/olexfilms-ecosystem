@@ -705,6 +705,66 @@ func (q *Queries) DeleteOrderItemUnit(ctx context.Context, id int64) (int64, err
 	return result.RowsAffected(), nil
 }
 
+const findOpenDraftOrderForBuyerSeller = `-- name: FindOpenDraftOrderForBuyerSeller :one
+SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at FROM orders
+WHERE brand_id = $1
+  AND buyer_org_id = $2
+  AND seller_org_id = $3
+  AND status = 'draft'
+ORDER BY created_at ASC, id ASC
+LIMIT 1
+FOR UPDATE
+`
+
+type FindOpenDraftOrderForBuyerSellerParams struct {
+	BrandID     int64 `json:"brand_id"`
+	BuyerOrgID  int64 `json:"buyer_org_id"`
+	SellerOrgID int64 `json:"seller_org_id"`
+}
+
+func (q *Queries) FindOpenDraftOrderForBuyerSeller(ctx context.Context, arg FindOpenDraftOrderForBuyerSellerParams) (Order, error) {
+	row := q.db.QueryRow(ctx, findOpenDraftOrderForBuyerSeller, arg.BrandID, arg.BuyerOrgID, arg.SellerOrgID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrderNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.BuyerOrgID,
+		&i.SellerWarehouseLocationID,
+		&i.BuyerWarehouseLocationID,
+		&i.Status,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.TryRate,
+		&i.Subtotal,
+		&i.TaxTotal,
+		&i.Total,
+		&i.DeliveryMode,
+		&i.TrackingNo,
+		&i.ShippingDocumentKey,
+		&i.ReceiptDocumentKey,
+		&i.ExternalReference,
+		&i.Note,
+		&i.CancelReason,
+		&i.CreatedByUserID,
+		&i.ApprovedByUserID,
+		&i.SubmittedAt,
+		&i.ApprovedAt,
+		&i.ReadyAt,
+		&i.ShippedAt,
+		&i.DeliveredAt,
+		&i.ReceivedAt,
+		&i.CancelRequestedAt,
+		&i.CancelledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getOrder = `-- name: GetOrder :one
 SELECT id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at FROM orders
 WHERE id = $1 AND brand_id = $2
