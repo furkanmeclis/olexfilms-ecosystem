@@ -162,5 +162,11 @@
   "system.keys.showcase_approval_required": "Vitrin yayını merkez onayı gerektirir",
   "system.keys.showcase_approval_required_hint": "Açıksa bayi vitrini merkez onaylamadan yayınlanmaz; kapalıysa bayi doğrudan yayınlar.",
   "system.keys.showcase_max_photos": "Vitrin başına en çok fotoğraf",
-  "system.keys.showcase_max_photos_hint": "Bir bayi vitrininin galerisinde tutulabilecek fotoğraf sayısı (1–50)."
+  "system.keys.showcase_max_photos_hint": "Bir bayi vitrininin galerisinde tutulabilecek fotoğraf sayısı (1–50).",
+  "system.groups.pricing": "Fiyatlandırma",
+  "system.groups.pricing_hint": "Tavsiye satış fiyatları ve bayi fiyat disiplini.",
+  "system.keys.pricing_deviation_warning_pct": "Sapma uyarı eşiği (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "Bayi veya distribütör son müşteri fiyatı tavsiye fiyattan bu yüzde kadar (iki yönde) saparsa eşik aşılmış sayılır.",
+  "system.keys.pricing_price_list_auto_publish": "Fiyat listesini otomatik yayınla",
+  "system.keys.pricing_price_list_auto_publish_hint": "Açıkken her tavsiye fiyat yayınından sonra fiyat listesi PDF'i doküman merkezine yeni sürüm olarak yüklenir."
 }

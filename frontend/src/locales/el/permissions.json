@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "Αλλαγή τιμών πώλησης",
   "labels.pricing.recommended.read": "Προβολή προτεινόμενων τιμών",
   "labels.pricing.recommended.write": "Δημοσίευση προτεινόμενων τιμών",
+  "labels.pricing.discipline.read": "Προβολή πειθαρχίας τιμών",
   "labels.accounting.read": "Προβολή λογιστηρίου",
   "labels.accounting.write": "Διαχείριση λογιστηρίου",
   "labels.accounting.dispute": "Αμφισβήτηση λογιστικών εγγραφών",

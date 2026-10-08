@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "Satış fiyatlarını değiştir",
   "labels.pricing.recommended.read": "Tavsiye fiyatları görüntüle",
   "labels.pricing.recommended.write": "Tavsiye fiyat yayınla",
+  "labels.pricing.discipline.read": "Fiyat disiplinini görüntüle",
   "labels.accounting.read": "Muhasebeyi görüntüle",
   "labels.accounting.write": "Muhasebeyi yönet",
   "labels.accounting.dispute": "Muhasebe kaydına itiraz et",

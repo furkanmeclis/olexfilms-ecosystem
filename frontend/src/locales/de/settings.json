@@ -162,5 +162,11 @@
   "system.keys.showcase_approval_required": "Veröffentlichung erfordert Freigabe durch die Zentrale",
   "system.keys.showcase_approval_required_hint": "Wenn aktiv, wird ein Händler-Schaufenster erst nach Freigabe durch die Zentrale veröffentlicht; sonst veröffentlicht der Händler direkt.",
   "system.keys.showcase_max_photos": "Maximale Fotos pro Schaufenster",
-  "system.keys.showcase_max_photos_hint": "Anzahl der Fotos, die die Galerie eines Händler-Schaufensters enthalten darf (1–50)."
+  "system.keys.showcase_max_photos_hint": "Anzahl der Fotos, die die Galerie eines Händler-Schaufensters enthalten darf (1–50).",
+  "system.groups.pricing": "Preisgestaltung",
+  "system.groups.pricing_hint": "Empfohlene Verkaufspreise und Preisdisziplin der Händler.",
+  "system.keys.pricing_deviation_warning_pct": "Warnschwelle für Abweichung (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "Ein Endkundenpreis eines Händlers oder Distributors, der um so viele Prozent (in beide Richtungen) von der Preisempfehlung abweicht, überschreitet die Schwelle.",
+  "system.keys.pricing_price_list_auto_publish": "Preisliste automatisch veröffentlichen",
+  "system.keys.pricing_price_list_auto_publish_hint": "Wenn aktiviert, wird die Preisliste als PDF nach jeder Veröffentlichung von Preisempfehlungen als neue Version im Dokumentenzentrum abgelegt."
 }

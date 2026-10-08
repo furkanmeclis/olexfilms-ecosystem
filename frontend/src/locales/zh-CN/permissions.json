@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "更改销售价",
   "labels.pricing.recommended.read": "查看建议价",
   "labels.pricing.recommended.write": "发布建议价",
+  "labels.pricing.discipline.read": "查看价格纪律",
   "labels.accounting.read": "查看财务",
   "labels.accounting.write": "管理财务",
   "labels.accounting.dispute": "对财务记录提出异议",

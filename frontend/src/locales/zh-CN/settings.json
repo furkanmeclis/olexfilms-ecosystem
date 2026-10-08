@@ -162,5 +162,11 @@
   "system.keys.showcase_approval_required": "展示页发布需总部审核",
   "system.keys.showcase_approval_required_hint": "开启后，经销商展示页须经总部审核后才发布；关闭时由经销商直接发布。",
   "system.keys.showcase_max_photos": "每个展示页的最多照片数",
-  "system.keys.showcase_max_photos_hint": "一个经销商展示页图库可保存的照片数量（1–50）。"
+  "system.keys.showcase_max_photos_hint": "一个经销商展示页图库可保存的照片数量（1–50）。",
+  "system.groups.pricing": "定价",
+  "system.groups.pricing_hint": "建议零售价与经销商价格纪律。",
+  "system.keys.pricing_deviation_warning_pct": "偏差预警阈值（%）",
+  "system.keys.pricing_deviation_warning_pct_hint": "经销商或分销商的终端客户价格偏离建议价达到该百分比（任一方向）即视为超过阈值。",
+  "system.keys.pricing_price_list_auto_publish": "自动发布价目表",
+  "system.keys.pricing_price_list_auto_publish_hint": "开启后，每次发布建议价后，价目表 PDF 会作为新版本上传到文档中心。"
 }

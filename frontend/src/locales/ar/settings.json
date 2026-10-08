@@ -162,5 +162,11 @@
   "system.keys.showcase_approval_required": "نشر الواجهة يتطلب موافقة المركز",
   "system.keys.showcase_approval_required_hint": "عند التفعيل لا تُنشر واجهة الوكيل إلا بعد موافقة المركز؛ وعند الإيقاف ينشرها الوكيل مباشرة.",
   "system.keys.showcase_max_photos": "الحد الأقصى للصور لكل واجهة",
-  "system.keys.showcase_max_photos_hint": "عدد الصور التي يمكن أن يضمها معرض واجهة الوكيل الواحدة (1–50)."
+  "system.keys.showcase_max_photos_hint": "عدد الصور التي يمكن أن يضمها معرض واجهة الوكيل الواحدة (1–50).",
+  "system.groups.pricing": "التسعير",
+  "system.groups.pricing_hint": "أسعار البيع الموصى بها وانضباط أسعار الوكلاء.",
+  "system.keys.pricing_deviation_warning_pct": "حد التنبيه للانحراف (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "يتجاوز سعر الوكيل أو الموزع للعميل النهائي الحد إذا ابتعد عن السعر الموصى به بهذه النسبة المئوية (في أي اتجاه).",
+  "system.keys.pricing_price_list_auto_publish": "نشر قائمة الأسعار تلقائيًا",
+  "system.keys.pricing_price_list_auto_publish_hint": "عند التفعيل، تُرفع قائمة الأسعار بصيغة PDF كإصدار جديد إلى مركز المستندات بعد كل نشر للأسعار الموصى بها."
 }

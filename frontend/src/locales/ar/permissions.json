@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "تغيير أسعار البيع",
   "labels.pricing.recommended.read": "عرض الأسعار الموصى بها",
   "labels.pricing.recommended.write": "نشر الأسعار الموصى بها",
+  "labels.pricing.discipline.read": "عرض انضباط الأسعار",
   "labels.accounting.read": "عرض المحاسبة",
   "labels.accounting.write": "إدارة المحاسبة",
   "labels.accounting.dispute": "الاعتراض على القيود المحاسبية",

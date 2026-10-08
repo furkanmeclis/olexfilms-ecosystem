@@ -162,5 +162,11 @@
   "system.keys.showcase_approval_required": "Публикуването на витрината изисква одобрение от центъра",
   "system.keys.showcase_approval_required_hint": "Когато е включено, витрината на дилъра се публикува само след одобрение от центъра; когато е изключено, дилърът публикува директно.",
   "system.keys.showcase_max_photos": "Максимален брой снимки на витрина",
-  "system.keys.showcase_max_photos_hint": "Брой снимки, които галерията на една витрина може да съдържа (1–50)."
+  "system.keys.showcase_max_photos_hint": "Брой снимки, които галерията на една витрина може да съдържа (1–50).",
+  "system.groups.pricing": "Ценообразуване",
+  "system.groups.pricing_hint": "Препоръчителни продажни цени и ценова дисциплина на дилърите.",
+  "system.keys.pricing_deviation_warning_pct": "Праг за предупреждение при отклонение (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "Крайна цена на дилър или дистрибутор, която се отклонява с толкова процента от препоръчителната (в двете посоки), надхвърля прага.",
+  "system.keys.pricing_price_list_auto_publish": "Автоматично публикуване на ценовата листа",
+  "system.keys.pricing_price_list_auto_publish_hint": "Когато е включено, след всяко публикуване на препоръчителни цени PDF ценовата листа се качва като нова версия в центъра за документи."
 }

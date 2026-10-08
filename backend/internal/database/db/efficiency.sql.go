@@ -252,35 +252,39 @@ WHERE f.brand_id = $2
   AND f.service_date >= $4::date
   AND f.service_date < $5::date
 GROUP BY dimension_key, dimension_label
+HAVING ($6::numeric IS NULL OR AVG(f.waste_ratio) >= $6::numeric)
+   AND ($7::numeric IS NULL OR AVG(f.waste_ratio) <= $7::numeric)
 ORDER BY
-  CASE WHEN NOT $6::bool THEN
-    CASE $7::text
+  CASE WHEN NOT $8::bool THEN
+    CASE $9::text
       WHEN 'waste_ratio' THEN AVG(f.waste_ratio)
       WHEN 'meters' THEN SUM(f.actual_meters)
       WHEN 'services' THEN COUNT(DISTINCT f.service_id)::numeric
     END
   END ASC NULLS LAST,
-  CASE WHEN $6::bool THEN
-    CASE $7::text
+  CASE WHEN $8::bool THEN
+    CASE $9::text
       WHEN 'waste_ratio' THEN AVG(f.waste_ratio)
       WHEN 'meters' THEN SUM(f.actual_meters)
       WHEN 'services' THEN COUNT(DISTINCT f.service_id)::numeric
     END
   END DESC NULLS LAST,
   dimension_label ASC
-LIMIT $9 OFFSET $8
+LIMIT $11 OFFSET $10
 `
 
 type EfficiencySummaryParams struct {
-	Dimension string      `json:"dimension"`
-	BrandID   int64       `json:"brand_id"`
-	OrgIds    []int64     `json:"org_ids"`
-	DateFrom  pgtype.Date `json:"date_from"`
-	DateTo    pgtype.Date `json:"date_to"`
-	SortDesc  bool        `json:"sort_desc"`
-	SortKey   string      `json:"sort_key"`
-	RowOffset int32       `json:"row_offset"`
-	RowLimit  int32       `json:"row_limit"`
+	Dimension     string         `json:"dimension"`
+	BrandID       int64          `json:"brand_id"`
+	OrgIds        []int64        `json:"org_ids"`
+	DateFrom      pgtype.Date    `json:"date_from"`
+	DateTo        pgtype.Date    `json:"date_to"`
+	WasteRatioMin pgtype.Numeric `json:"waste_ratio_min"`
+	WasteRatioMax pgtype.Numeric `json:"waste_ratio_max"`
+	SortDesc      bool           `json:"sort_desc"`
+	SortKey       string         `json:"sort_key"`
+	RowOffset     int32          `json:"row_offset"`
+	RowLimit      int32          `json:"row_limit"`
 }
 
 type EfficiencySummaryRow struct {
@@ -300,6 +304,8 @@ func (q *Queries) EfficiencySummary(ctx context.Context, arg EfficiencySummaryPa
 		arg.OrgIds,
 		arg.DateFrom,
 		arg.DateTo,
+		arg.WasteRatioMin,
+		arg.WasteRatioMax,
 		arg.SortDesc,
 		arg.SortKey,
 		arg.RowOffset,
@@ -724,6 +730,70 @@ func (q *Queries) ListRollEfficiency(ctx context.Context, arg ListRollEfficiency
 			&i.ProductName,
 			&i.WasteRatio,
 			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRollEfficiencyServices = `-- name: ListRollEfficiencyServices :many
+SELECT s.uuid,
+       s.service_no,
+       MAX(f.service_date)::date AS service_date,
+       o.name AS dealer_name,
+       SUM(f.actual_meters)::numeric(14,2) AS actual_meters,
+       SUM(f.expected_meters)::numeric(14,2) AS expected_meters,
+       AVG(f.waste_ratio)::numeric(12,6) AS avg_waste_ratio
+FROM efficiency_facts f
+JOIN services s ON s.id = f.service_id
+JOIN organizations o ON o.id = f.dealer_org_id
+WHERE f.unit_id = $1
+  AND f.brand_id = $2
+  AND ($3::bigint[] IS NULL OR f.dealer_org_id = ANY($3::bigint[]))
+GROUP BY s.id, s.uuid, s.service_no, o.name
+ORDER BY MAX(f.service_date) DESC, s.id DESC
+LIMIT 200
+`
+
+type ListRollEfficiencyServicesParams struct {
+	UnitID  int64   `json:"unit_id"`
+	BrandID int64   `json:"brand_id"`
+	OrgIds  []int64 `json:"org_ids"`
+}
+
+type ListRollEfficiencyServicesRow struct {
+	Uuid           uuid.UUID      `json:"uuid"`
+	ServiceNo      string         `json:"service_no"`
+	ServiceDate    pgtype.Date    `json:"service_date"`
+	DealerName     string         `json:"dealer_name"`
+	ActualMeters   pgtype.Numeric `json:"actual_meters"`
+	ExpectedMeters pgtype.Numeric `json:"expected_meters"`
+	AvgWasteRatio  pgtype.Numeric `json:"avg_waste_ratio"`
+}
+
+// TEC-489: services that consumed a roll (roll detail), newest first.
+func (q *Queries) ListRollEfficiencyServices(ctx context.Context, arg ListRollEfficiencyServicesParams) ([]ListRollEfficiencyServicesRow, error) {
+	rows, err := q.db.Query(ctx, listRollEfficiencyServices, arg.UnitID, arg.BrandID, arg.OrgIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListRollEfficiencyServicesRow{}
+	for rows.Next() {
+		var i ListRollEfficiencyServicesRow
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.ServiceNo,
+			&i.ServiceDate,
+			&i.DealerName,
+			&i.ActualMeters,
+			&i.ExpectedMeters,
+			&i.AvgWasteRatio,
 		); err != nil {
 			return nil, err
 		}

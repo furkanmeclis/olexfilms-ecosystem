@@ -162,5 +162,11 @@
   "system.keys.showcase_approval_required": "La publication de la vitrine exige la validation du siège",
   "system.keys.showcase_approval_required_hint": "Activé : la vitrine d'un revendeur n'est publiée qu'après validation par le siège ; désactivé : le revendeur publie directement.",
   "system.keys.showcase_max_photos": "Nombre maximal de photos par vitrine",
-  "system.keys.showcase_max_photos_hint": "Nombre de photos que peut contenir la galerie d'une vitrine (1–50)."
+  "system.keys.showcase_max_photos_hint": "Nombre de photos que peut contenir la galerie d'une vitrine (1–50).",
+  "system.groups.pricing": "Tarification",
+  "system.groups.pricing_hint": "Prix de vente conseillés et discipline tarifaire des revendeurs.",
+  "system.keys.pricing_deviation_warning_pct": "Seuil d'alerte d'écart (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "Un prix client final d'un revendeur ou distributeur qui s'écarte de ce pourcentage du prix conseillé (dans un sens ou dans l'autre) dépasse le seuil.",
+  "system.keys.pricing_price_list_auto_publish": "Publier la liste de prix automatiquement",
+  "system.keys.pricing_price_list_auto_publish_hint": "Si activé, le PDF de la liste de prix est déposé comme nouvelle version dans le centre de documents après chaque publication de prix conseillés."
 }

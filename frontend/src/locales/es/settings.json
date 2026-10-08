@@ -162,5 +162,11 @@
   "system.keys.showcase_approval_required": "La publicación del escaparate requiere aprobación de la central",
   "system.keys.showcase_approval_required_hint": "Si está activado, el escaparate se publica solo tras la aprobación de la central; si no, el distribuidor lo publica directamente.",
   "system.keys.showcase_max_photos": "Máximo de fotos por escaparate",
-  "system.keys.showcase_max_photos_hint": "Número de fotos que puede contener la galería de un escaparate (1–50)."
+  "system.keys.showcase_max_photos_hint": "Número de fotos que puede contener la galería de un escaparate (1–50).",
+  "system.groups.pricing": "Precios",
+  "system.groups.pricing_hint": "Precios de venta recomendados y disciplina de precios de los concesionarios.",
+  "system.keys.pricing_deviation_warning_pct": "Umbral de aviso de desviación (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "Un precio al cliente final de un concesionario o distribuidor que se aleja ese porcentaje del precio recomendado (en cualquier sentido) supera el umbral.",
+  "system.keys.pricing_price_list_auto_publish": "Publicar la lista de precios automáticamente",
+  "system.keys.pricing_price_list_auto_publish_hint": "Si está activado, tras cada publicación de precios recomendados el PDF de la lista de precios se sube como nueva versión al centro de documentos."
 }

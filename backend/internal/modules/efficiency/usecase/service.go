@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -25,6 +26,9 @@ const (
 
 	DefaultNetworkWindowDays = 180
 	DefaultNetworkMinSamples = 20
+	// DefaultWarningWasteRatio mirrors the sysconfig default of
+	// efficiency.warning_waste_ratio.
+	DefaultWarningWasteRatio = "0.15"
 )
 
 var (
@@ -63,6 +67,10 @@ type AnalyticsFilter struct {
 	Limit  int32
 	Offset int32
 	Sort   []apiquery.SortField
+	// WasteRatioMin/Max filter summary rows on their average waste ratio
+	// (TEC-489).
+	WasteRatioMin *float64
+	WasteRatioMax *float64
 }
 
 type RollFilter struct {
@@ -102,6 +110,23 @@ type CompareRow struct {
 	WasteRatio     *string `json:"waste_ratio"`
 }
 
+// RollService is one service that consumed a roll (roll detail, TEC-489).
+type RollService struct {
+	UUID           uuid.UUID `json:"uuid"`
+	ServiceNo      string    `json:"service_no"`
+	ServiceDate    string    `json:"service_date"`
+	DealerName     string    `json:"dealer_name"`
+	ActualMeters   string    `json:"actual_meters"`
+	ExpectedMeters *string   `json:"expected_meters"`
+	WasteRatio     *string   `json:"waste_ratio"`
+}
+
+// RollDetail is a roll row plus the services that used it.
+type RollDetail struct {
+	RollRow
+	Services []RollService `json:"services"`
+}
+
 type RollRow struct {
 	UUID            uuid.UUID `json:"uuid"`
 	UnitID          int64     `json:"-"`
@@ -128,6 +153,7 @@ func (s *Service) Summary(ctx context.Context, c Caller, dimension string, f Ana
 	rows, err := s.q.EfficiencySummary(ctx, db.EfficiencySummaryParams{
 		Dimension: dimension, BrandID: c.Org.BrandID, OrgIds: c.Filter.OrgIDsArg(),
 		DateFrom: date(f.From), DateTo: date(f.To), SortKey: sort.Key, SortDesc: sort.Desc,
+		WasteRatioMin: numPtr(f.WasteRatioMin), WasteRatioMax: numPtr(f.WasteRatioMax),
 		RowLimit: f.Limit, RowOffset: f.Offset,
 	})
 	if err != nil {
@@ -162,16 +188,9 @@ func (s *Service) Trend(ctx context.Context, c Caller, f AnalyticsFilter) ([]Tre
 }
 
 func (s *Service) Compare(ctx context.Context, c Caller, f AnalyticsFilter) ([]CompareRow, error) {
-	subtree := c.Filter.OrgIDsArg()
-	if subtree == nil {
-		orgs, err := s.q.Descendants(ctx, c.Org.InternalID)
-		if err != nil {
-			return nil, fmt.Errorf("efficiency compare descendants: %w", err)
-		}
-		subtree = []int64{c.Org.InternalID}
-		for _, o := range orgs {
-			subtree = append(subtree, o.ID)
-		}
+	subtree, err := s.compareSubtree(ctx, c)
+	if err != nil {
+		return nil, err
 	}
 	rows, err := s.q.EfficiencyComparison(ctx, db.EfficiencyComparisonParams{
 		OrgID: c.Org.InternalID, SubtreeOrgIds: subtree, BrandID: c.Org.BrandID, DateFrom: date(f.From), DateTo: date(f.To),
@@ -183,6 +202,56 @@ func (s *Service) Compare(ctx context.Context, c Caller, f AnalyticsFilter) ([]C
 	for _, r := range rows {
 		out = append(out, CompareRow{Bucket: r.Bucket, Services: r.ServiceCount, Meters: numeric(r.ActualMeters),
 			ExpectedMeters: numericPtr(r.ExpectedMeters), WasteRatio: numericPtr(r.AvgWasteRatio)})
+	}
+	return out, nil
+}
+
+// compareSubtree is the middle comparison bucket: a dealer is compared with
+// its supplier's network (the distributor and its dealers, TEC-489); other
+// organizations with their own scope.
+func (s *Service) compareSubtree(ctx context.Context, c Caller) ([]int64, error) {
+	root := c.Org.InternalID
+	if c.Org.OrgType == rbac.OrgTypeDealer {
+		parent, err := s.q.SupplierOf(ctx, c.Org.InternalID)
+		switch {
+		case err == nil:
+			root = parent.ID
+		case !errors.Is(err, pgx.ErrNoRows):
+			return nil, fmt.Errorf("efficiency compare supplier: %w", err)
+		}
+	} else if ids := c.Filter.OrgIDsArg(); ids != nil {
+		return ids, nil
+	}
+	orgs, err := s.q.Descendants(ctx, root)
+	if err != nil {
+		return nil, fmt.Errorf("efficiency compare descendants: %w", err)
+	}
+	subtree := []int64{root}
+	for _, o := range orgs {
+		subtree = append(subtree, o.ID)
+	}
+	return subtree, nil
+}
+
+// Roll is one roll with the services that consumed it.
+func (s *Service) Roll(ctx context.Context, c Caller, unit uuid.UUID) (RollDetail, error) {
+	rows, _, err := s.Rolls(ctx, c, RollFilter{Limit: 1}, &unit)
+	if err != nil {
+		return RollDetail{}, err
+	}
+	services, err := s.q.ListRollEfficiencyServices(ctx, db.ListRollEfficiencyServicesParams{
+		UnitID: rows[0].UnitID, BrandID: c.Org.BrandID, OrgIds: c.Filter.OrgIDsArg(),
+	})
+	if err != nil {
+		return RollDetail{}, fmt.Errorf("efficiency roll services: %w", err)
+	}
+	out := RollDetail{RollRow: rows[0], Services: make([]RollService, 0, len(services))}
+	for _, r := range services {
+		out.Services = append(out.Services, RollService{
+			UUID: r.Uuid, ServiceNo: r.ServiceNo, ServiceDate: r.ServiceDate.Time.Format(time.DateOnly),
+			DealerName: r.DealerName, ActualMeters: numeric(r.ActualMeters),
+			ExpectedMeters: numericPtr(r.ExpectedMeters), WasteRatio: numericPtr(r.AvgWasteRatio),
+		})
 	}
 	return out, nil
 }

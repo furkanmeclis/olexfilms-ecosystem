@@ -1091,6 +1091,81 @@ type EfficiencyFact struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Einvoice struct {
+	ID                 int64              `json:"id"`
+	Uuid               uuid.UUID          `json:"uuid"`
+	OrganizationID     int64              `json:"organization_id"`
+	BrandID            int64              `json:"brand_id"`
+	Number             string             `json:"number"`
+	Profile            string             `json:"profile"`
+	InvoiceType        string             `json:"invoice_type"`
+	SourceType         string             `json:"source_type"`
+	SourceUuid         uuid.UUID          `json:"source_uuid"`
+	BuyerOrgID         pgtype.Int8        `json:"buyer_org_id"`
+	Buyer              []byte             `json:"buyer"`
+	Seller             []byte             `json:"seller"`
+	Lines              []byte             `json:"lines"`
+	Currency           string             `json:"currency"`
+	RateSnapshot       []byte             `json:"rate_snapshot"`
+	LineExtension      pgtype.Numeric     `json:"line_extension"`
+	TaxExclusive       pgtype.Numeric     `json:"tax_exclusive"`
+	TaxTotal           pgtype.Numeric     `json:"tax_total"`
+	Payable            pgtype.Numeric     `json:"payable"`
+	TaxBreakdown       []byte             `json:"tax_breakdown"`
+	XmlStorageKey      pgtype.Text        `json:"xml_storage_key"`
+	XmlSha256          pgtype.Text        `json:"xml_sha256"`
+	PdfStorageKey      pgtype.Text        `json:"pdf_storage_key"`
+	ValidationStatus   string             `json:"validation_status"`
+	ValidationMessages []byte             `json:"validation_messages"`
+	Status             string             `json:"status"`
+	Error              pgtype.Text        `json:"error"`
+	VoidedAt           pgtype.Timestamptz `json:"voided_at"`
+	VoidedBy           pgtype.Int8        `json:"voided_by"`
+	VoidReason         pgtype.Text        `json:"void_reason"`
+	IssueDate          pgtype.Date        `json:"issue_date"`
+	CreatedBy          pgtype.Int8        `json:"created_by"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type EinvoiceCounter struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Series         string             `json:"series"`
+	Year           int32              `json:"year"`
+	LastNo         int64              `json:"last_no"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type EinvoiceSetting struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	Vkn             string             `json:"vkn"`
+	TaxOffice       string             `json:"tax_office"`
+	LegalName       string             `json:"legal_name"`
+	Address         string             `json:"address"`
+	City            string             `json:"city"`
+	District        string             `json:"district"`
+	Country         string             `json:"country"`
+	Iban            pgtype.Text        `json:"iban"`
+	Email           pgtype.Text        `json:"email"`
+	Phone           pgtype.Text        `json:"phone"`
+	Website         pgtype.Text        `json:"website"`
+	TradeRegistryNo pgtype.Text        `json:"trade_registry_no"`
+	MersisNo        pgtype.Text        `json:"mersis_no"`
+	DefaultNote     pgtype.Text        `json:"default_note"`
+	EarchiveSeries  string             `json:"earchive_series"`
+	EfaturaSeries   string             `json:"efatura_series"`
+	XsltStorageKey  pgtype.Text        `json:"xslt_storage_key"`
+	XsltSha1        pgtype.Text        `json:"xslt_sha1"`
+	PdfEnabled      bool               `json:"pdf_enabled"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type EodReport struct {
 	ID                int64              `json:"id"`
 	Uuid              uuid.UUID          `json:"uuid"`
@@ -2091,6 +2166,13 @@ type Organization struct {
 	GoogleBusinessUrl  pgtype.Text        `json:"google_business_url"`
 	Latitude           pgtype.Numeric     `json:"latitude"`
 	Longitude          pgtype.Numeric     `json:"longitude"`
+	InvoiceVkn         pgtype.Text        `json:"invoice_vkn"`
+	InvoiceTckn        pgtype.Text        `json:"invoice_tckn"`
+	InvoiceTaxOffice   pgtype.Text        `json:"invoice_tax_office"`
+	InvoiceLegalName   pgtype.Text        `json:"invoice_legal_name"`
+	EinvoiceRegistered bool               `json:"einvoice_registered"`
+	EinvoiceAlias      pgtype.Text        `json:"einvoice_alias"`
+	InvoiceEmail       pgtype.Text        `json:"invoice_email"`
 }
 
 type OrganizationMember struct {
@@ -2191,6 +2273,7 @@ type PerformanceMetricsMonthly struct {
 	Denominator    pgtype.Numeric     `json:"denominator"`
 	Currency       pgtype.Text        `json:"currency"`
 	ComputedAt     pgtype.Timestamptz `json:"computed_at"`
+	Scope          string             `json:"scope"`
 }
 
 type PerformanceTarget struct {
@@ -2273,6 +2356,23 @@ type PlateFormat struct {
 	SortOrder       int32              `json:"sort_order"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PriceDisciplineSnapshot struct {
+	ID                   int64              `json:"id"`
+	SnapshotDate         pgtype.Date        `json:"snapshot_date"`
+	OrganizationID       int64              `json:"organization_id"`
+	BrandID              int64              `json:"brand_id"`
+	ProductID            int64              `json:"product_id"`
+	CountryID            pgtype.Int8        `json:"country_id"`
+	Currency             string             `json:"currency"`
+	RecommendedVersionID pgtype.Int8        `json:"recommended_version_id"`
+	RecommendedPrice     pgtype.Numeric     `json:"recommended_price"`
+	ListPrice            pgtype.Numeric     `json:"list_price"`
+	DeviationPct         pgtype.Numeric     `json:"deviation_pct"`
+	AvgSalePrice         pgtype.Numeric     `json:"avg_sale_price"`
+	SalesQuantity        pgtype.Numeric     `json:"sales_quantity"`
+	ComputedAt           pgtype.Timestamptz `json:"computed_at"`
 }
 
 type Product struct {
@@ -2490,6 +2590,37 @@ type QuoteReminder struct {
 	ScheduledAt    pgtype.Timestamptz `json:"scheduled_at"`
 	SentAt         pgtype.Timestamptz `json:"sent_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type RecommendedPriceVersion struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	ProductID         int64              `json:"product_id"`
+	CountryID         pgtype.Int8        `json:"country_id"`
+	Currency          string             `json:"currency"`
+	Price             pgtype.Numeric     `json:"price"`
+	EffectiveFrom     pgtype.Date        `json:"effective_from"`
+	Source            string             `json:"source"`
+	PublishedByUserID pgtype.Int8        `json:"published_by_user_id"`
+	PublishedAt       pgtype.Timestamptz `json:"published_at"`
+	BatchID           pgtype.UUID        `json:"batch_id"`
+	Note              string             `json:"note"`
+	SupersededAt      pgtype.Timestamptz `json:"superseded_at"`
+}
+
+type RecommendedPricesCurrent struct {
+	ID             int64              `json:"id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ProductID      int64              `json:"product_id"`
+	CountryID      pgtype.Int8        `json:"country_id"`
+	Currency       string             `json:"currency"`
+	VersionID      int64              `json:"version_id"`
+	Price          pgtype.Numeric     `json:"price"`
+	EffectiveFrom  pgtype.Date        `json:"effective_from"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type RefreshToken struct {
@@ -2835,6 +2966,7 @@ type ServiceSubscriptionPeriod struct {
 	PeriodEnd      pgtype.Date        `json:"period_end"`
 	PostedAt       pgtype.Timestamptz `json:"posted_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	Uuid           uuid.UUID          `json:"uuid"`
 }
 
 type ShortUrl struct {

@@ -27870,6 +27870,14 @@ paths:
         - name: period_to
           in: query
           schema: { type: string, format: date }
+        - name: waste_ratio_min
+          in: query
+          description: Minimum average waste ratio of a row (TEC-489).
+          schema: { type: number }
+        - name: waste_ratio_max
+          in: query
+          description: Maximum average waste ratio of a row (TEC-489).
+          schema: { type: number }
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
         - name: sort
@@ -27899,11 +27907,36 @@ paths:
       responses:
         "200": { description: Monthly rows }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/efficiency/settings:
+    get:
+      tags: [Efficiency]
+      operationId: getEfficiencySettings
+      summary: Read-only efficiency settings for the screens
+      description: |
+        TEC-489. `warning_waste_ratio` is the system setting
+        `efficiency.warning_waste_ratio` (decimal string); rows above it are
+        highlighted.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Efficiency settings
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [warning_waste_ratio]
+                properties:
+                  warning_waste_ratio: { type: string, example: "0.15" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /v1/efficiency/compare:
     get:
       tags: [Efficiency]
       operationId: compareEfficiency
       summary: Compare active organization, subtree and network averages
+      description: |
+        Buckets `organization`, `subtree` and `network`. For a dealer the
+        `subtree` bucket is its supplier's network (distributor and its
+        dealers, TEC-489).
       security: [{ bearerAuth: [] }]
       responses:
         "200": { description: Comparison buckets }
@@ -27941,6 +27974,7 @@ paths:
       tags: [Efficiency]
       operationId: getEfficiencyRoll
       summary: Roll efficiency detail
+      description: The roll row plus `services`, the services that consumed it (newest first, max 200; TEC-489).
       security: [{ bearerAuth: [] }]
       parameters:
         - name: unit_uuid
@@ -32980,7 +33014,7 @@ components:
       required: [key, group, kind, default, description, value, is_default, schema_version]
       properties:
         key: { type: string, example: contract_grace_days }
-        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads, warranty_claims, whatsapp, mcp, campaigns, showcase] }
+        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads, warranty_claims, whatsapp, mcp, campaigns, showcase, pricing] }
         kind: { type: string, enum: [int, bool, string] }
         default: { $ref: "#/components/schemas/SystemSettingValue" }
         description: { type: string }

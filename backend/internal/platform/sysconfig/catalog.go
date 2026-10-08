@@ -56,6 +56,8 @@ const (
 	GroupShowcase Group = "showcase"
 	// GroupEfficiency: efficiency and waste analytics (TEC-487).
 	GroupEfficiency Group = "efficiency"
+	// GroupPricing: recommended prices and price discipline (TEC-505).
+	GroupPricing Group = "pricing"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -174,6 +176,14 @@ const (
 	// KeyEfficiencyWarningWasteRatio is the waste ratio threshold for
 	// warnings; 0.15 means 15% over expected.
 	KeyEfficiencyWarningWasteRatio = "efficiency.warning_waste_ratio"
+
+	// KeyPricingDeviationWarningPct is the price discipline threshold: a
+	// dealer or distributor end-customer price this many percent away from
+	// the recommended price (either way) is over the threshold (TEC-505).
+	KeyPricingDeviationWarningPct = "pricing.deviation_warning_pct"
+	// KeyPricingPriceListAutoPublish publishes the recommended price list
+	// PDF to the document center after every publication (TEC-505).
+	KeyPricingPriceListAutoPublish = "pricing.price_list_auto_publish"
 )
 
 // DefaultShowcaseMaxPhotos is the catalog default of KeyShowcaseMaxPhotos.
@@ -185,6 +195,10 @@ const (
 	DefaultEfficiencyNetworkMinSamples = 20
 	DefaultEfficiencyWarningWasteRatio = "0.15"
 )
+
+// DefaultPricingDeviationWarningPct is the catalog default of
+// KeyPricingDeviationWarningPct (F5 QUESTIONS S35).
+const DefaultPricingDeviationWarningPct = 15
 
 // Catalog defaults of the campaign keys (F4 QUESTIONS S14).
 const (
@@ -373,6 +387,10 @@ var catalog = []Definition{
 		Description: "Minimum network sample size before expected consumption is trusted (TEC-487)"},
 	{Key: KeyEfficiencyWarningWasteRatio, Group: GroupEfficiency, Kind: KindString, Default: DefaultEfficiencyWarningWasteRatio, MaxLen: 16, check: checkNonNegativeDecimal,
 		Description: "Waste ratio warning threshold; 0.15 means 15% over expected (TEC-487)"},
+	{Key: KeyPricingDeviationWarningPct, Group: GroupPricing, Kind: KindInt, Default: int64(DefaultPricingDeviationWarningPct), Min: i64(1), Max: i64(1000),
+		Description: "Percent deviation from the recommended price that flags a dealer or distributor price (TEC-505)"},
+	{Key: KeyPricingPriceListAutoPublish, Group: GroupPricing, Kind: KindBool, Default: true,
+		Description: "Publish the recommended price list PDF to the document center after each publication (TEC-505)"},
 }
 
 var byKey = func() map[string]Definition {
