@@ -255,12 +255,42 @@ export type AppointmentAvailabilityDay =
 export type AppointmentSlot = components["schemas"]["AppointmentSlot"];
 export type PortalAppointmentPeriod = "upcoming" | "past";
 
+/** TEC-474: fleet portal projections. */
+export type FleetLink = components["schemas"]["FleetLink"];
+export type FleetPortalOverview = components["schemas"]["FleetPortalOverview"];
+export type FleetPortalVehicle = components["schemas"]["FleetPortalVehicle"];
+export type FleetPortalVehicleDetail =
+  components["schemas"]["FleetPortalVehicleDetail"];
+export type FleetPortalService = components["schemas"]["FleetPortalService"];
+export type FleetPortalWarranty = components["schemas"]["FleetPortalWarranty"];
+export type FleetPortalAccounting =
+  components["schemas"]["FleetPortalAccounting"];
+export type FleetPortalDealerAccount =
+  components["schemas"]["FleetPortalDealerAccount"];
+export type FleetPortalAccountLine =
+  components["schemas"]["FleetPortalAccountLine"];
+export type FleetPortalReport = components["schemas"]["FleetPortalReport"];
+
 export type PortalPage<T> = {
   items: T[];
   total: number;
   limit: number;
   offset: number;
 };
+
+function queryString(query: Record<string, unknown>) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === "") continue;
+    params.set(key, Array.isArray(value) ? value.join(",") : String(value));
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export function portalFleetReportUrl(uuid: string): string {
+  return `${PORTAL_API_BASE}/portal/fleet/reports/${encodeURIComponent(uuid)}/file`;
+}
 
 export const portalApi = {
   requestOTP(phone: string, country: string, locale: string) {
@@ -415,5 +445,58 @@ export const portalApi = {
       method: "POST",
       body: { email, code, password },
     });
+  },
+  /** Pending / active dealer links for the signed-in fleet. */
+  listFleetLinks() {
+    return portalRequest<PortalPage<FleetLink>>("portal/fleet/links");
+  },
+  acceptFleetLink(uuid: string) {
+    return portalRequest<FleetLink>(
+      `portal/fleet/links/${encodeURIComponent(uuid)}/accept`,
+      { method: "POST", body: {} },
+    );
+  },
+  rejectFleetLink(uuid: string) {
+    return portalRequest<FleetLink>(
+      `portal/fleet/links/${encodeURIComponent(uuid)}/reject`,
+      { method: "POST", body: {} },
+    );
+  },
+  getFleetOverview(query: { date_from?: string; date_to?: string } = {}) {
+    return portalRequest<FleetPortalOverview>(
+      `portal/fleet/overview${queryString(query)}`,
+    );
+  },
+  listFleetVehicles(
+    query: Record<string, string | number | boolean | undefined>,
+  ) {
+    return portalRequest<PortalPage<FleetPortalVehicle>>(
+      `portal/fleet/vehicles${queryString(query)}`,
+    );
+  },
+  getFleetVehicle(uuid: string) {
+    return portalRequest<FleetPortalVehicleDetail>(
+      `portal/fleet/vehicles/${encodeURIComponent(uuid)}`,
+    );
+  },
+  listFleetServices(query: Record<string, string | number | undefined>) {
+    return portalRequest<PortalPage<FleetPortalService>>(
+      `portal/fleet/services${queryString(query)}`,
+    );
+  },
+  listFleetWarranties(query: Record<string, string | number | undefined>) {
+    return portalRequest<PortalPage<FleetPortalWarranty>>(
+      `portal/fleet/warranties${queryString(query)}`,
+    );
+  },
+  getFleetAccounting(query: { date_from?: string; date_to?: string } = {}) {
+    return portalRequest<FleetPortalAccounting>(
+      `portal/fleet/accounting${queryString(query)}`,
+    );
+  },
+  listFleetReports(query: Record<string, string | number | undefined>) {
+    return portalRequest<PortalPage<FleetPortalReport>>(
+      `portal/fleet/reports${queryString(query)}`,
+    );
   },
 };

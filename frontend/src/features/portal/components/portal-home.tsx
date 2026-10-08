@@ -15,7 +15,9 @@ import {
 } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { AIConsentDialog } from "@/features/portal/components/ai-consent-dialog";
+import { PortalFleetHome } from "@/features/portal/components/portal-fleet";
 import { portalApi, portalSignOut } from "@/features/portal/lib/portal-client";
+import { isPortalReadOnly } from "@/features/portal/lib/portal-vehicles";
 import { useLocale } from "@/providers/locale-provider";
 
 /** Portal landing page (F1 fills it with services and warranties). */
@@ -23,6 +25,7 @@ export function PortalHome() {
   const { t } = useLocale();
   const router = useRouter();
   const [name, setName] = useState<string | null>(null);
+  const [fleet, setFleet] = useState(false);
 
   useEffect(() => {
     portalApi
@@ -32,6 +35,7 @@ export function PortalHome() {
           .filter((v) => v && v.trim())
           .join(" ");
         setName(full || null);
+        setFleet(isPortalReadOnly(me.roles));
       })
       .catch(() => undefined);
   }, []);
@@ -42,6 +46,8 @@ export function PortalHome() {
     router.replace(routes.portal.login);
     router.refresh();
   };
+
+  if (fleet) return <PortalFleetHome />;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
