@@ -204,7 +204,7 @@ func (f *cronFixture) openService(t *testing.T) db.Service {
 	}
 	if _, err := f.q.CreateServiceItem(f.ctx, db.CreateServiceItemParams{
 		ServiceID: svc.ID, ProductID: f.product.ID, UnitID: unit.ID, Kind: "full",
-		Quantity: pgtype.Int4{Int32: 1, Valid: true}, AppliedParts: []byte(`[]`),
+		AppliedParts: []byte(`[]`),
 	}); err != nil {
 		t.Fatalf("service item: %v", err)
 	}
