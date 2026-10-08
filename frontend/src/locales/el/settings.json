@@ -164,5 +164,11 @@
   "system.keys.showcase_approval_required": "Η δημοσίευση της βιτρίνας απαιτεί έγκριση του κέντρου",
   "system.keys.showcase_approval_required_hint": "Όταν είναι ενεργό, η βιτρίνα δημοσιεύεται μόνο μετά από έγκριση του κέντρου· όταν είναι ανενεργό, ο αντιπρόσωπος δημοσιεύει απευθείας.",
   "system.keys.showcase_max_photos": "Μέγιστος αριθμός φωτογραφιών ανά βιτρίνα",
-  "system.keys.showcase_max_photos_hint": "Πλήθος φωτογραφιών που μπορεί να έχει η συλλογή μιας βιτρίνας (1–50)."
+  "system.keys.showcase_max_photos_hint": "Πλήθος φωτογραφιών που μπορεί να έχει η συλλογή μιας βιτρίνας (1–50).",
+  "system.groups.pricing": "Τιμολόγηση",
+  "system.groups.pricing_hint": "Προτεινόμενες τιμές πώλησης και πειθαρχία τιμών των αντιπροσώπων.",
+  "system.keys.pricing_deviation_warning_pct": "Όριο προειδοποίησης απόκλισης (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "Τελική τιμή αντιπροσώπου ή διανομέα που αποκλίνει τόσο τοις εκατό από την προτεινόμενη τιμή (προς οποιαδήποτε κατεύθυνση) υπερβαίνει το όριο.",
+  "system.keys.pricing_price_list_auto_publish": "Αυτόματη δημοσίευση τιμοκαταλόγου",
+  "system.keys.pricing_price_list_auto_publish_hint": "Όταν είναι ενεργό, το PDF του τιμοκαταλόγου ανεβαίνει ως νέα έκδοση στο κέντρο εγγράφων μετά από κάθε δημοσίευση προτεινόμενων τιμών."
 }

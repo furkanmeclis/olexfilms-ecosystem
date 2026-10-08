@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "Modificare i prezzi di vendita",
   "labels.pricing.recommended.read": "Vedere i prezzi consigliati",
   "labels.pricing.recommended.write": "Pubblicare i prezzi consigliati",
+  "labels.pricing.discipline.read": "Vedere la disciplina dei prezzi",
   "labels.accounting.read": "Vedere la contabilità",
   "labels.accounting.write": "Gestire la contabilità",
   "labels.accounting.dispute": "Contestare registrazioni contabili",

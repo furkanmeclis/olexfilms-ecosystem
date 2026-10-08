@@ -2305,6 +2305,23 @@ type PlateFormat struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PriceDisciplineSnapshot struct {
+	ID                   int64              `json:"id"`
+	SnapshotDate         pgtype.Date        `json:"snapshot_date"`
+	OrganizationID       int64              `json:"organization_id"`
+	BrandID              int64              `json:"brand_id"`
+	ProductID            int64              `json:"product_id"`
+	CountryID            pgtype.Int8        `json:"country_id"`
+	Currency             string             `json:"currency"`
+	RecommendedVersionID pgtype.Int8        `json:"recommended_version_id"`
+	RecommendedPrice     pgtype.Numeric     `json:"recommended_price"`
+	ListPrice            pgtype.Numeric     `json:"list_price"`
+	DeviationPct         pgtype.Numeric     `json:"deviation_pct"`
+	AvgSalePrice         pgtype.Numeric     `json:"avg_sale_price"`
+	SalesQuantity        pgtype.Numeric     `json:"sales_quantity"`
+	ComputedAt           pgtype.Timestamptz `json:"computed_at"`
+}
+
 type Product struct {
 	ID                     int64              `json:"id"`
 	Uuid                   uuid.UUID          `json:"uuid"`
@@ -2520,6 +2537,37 @@ type QuoteReminder struct {
 	ScheduledAt    pgtype.Timestamptz `json:"scheduled_at"`
 	SentAt         pgtype.Timestamptz `json:"sent_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type RecommendedPriceVersion struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	ProductID         int64              `json:"product_id"`
+	CountryID         pgtype.Int8        `json:"country_id"`
+	Currency          string             `json:"currency"`
+	Price             pgtype.Numeric     `json:"price"`
+	EffectiveFrom     pgtype.Date        `json:"effective_from"`
+	Source            string             `json:"source"`
+	PublishedByUserID pgtype.Int8        `json:"published_by_user_id"`
+	PublishedAt       pgtype.Timestamptz `json:"published_at"`
+	BatchID           pgtype.UUID        `json:"batch_id"`
+	Note              string             `json:"note"`
+	SupersededAt      pgtype.Timestamptz `json:"superseded_at"`
+}
+
+type RecommendedPricesCurrent struct {
+	ID             int64              `json:"id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	ProductID      int64              `json:"product_id"`
+	CountryID      pgtype.Int8        `json:"country_id"`
+	Currency       string             `json:"currency"`
+	VersionID      int64              `json:"version_id"`
+	Price          pgtype.Numeric     `json:"price"`
+	EffectiveFrom  pgtype.Date        `json:"effective_from"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type RefreshToken struct {

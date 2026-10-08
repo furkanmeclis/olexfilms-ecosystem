@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "Verkaufspreise ändern",
   "labels.pricing.recommended.read": "Preisempfehlungen ansehen",
   "labels.pricing.recommended.write": "Preisempfehlungen veröffentlichen",
+  "labels.pricing.discipline.read": "Preisdisziplin ansehen",
   "labels.accounting.read": "Buchhaltung ansehen",
   "labels.accounting.write": "Buchhaltung verwalten",
   "labels.accounting.dispute": "Buchungen beanstanden",
