@@ -578,6 +578,65 @@ func (q *Queries) GetCertificateByUUID(ctx context.Context, arg GetCertificateBy
 	return i, err
 }
 
+const getCertificateCoverageByOrg = `-- name: GetCertificateCoverageByOrg :one
+WITH required AS (
+  SELECT DISTINCT ct.id
+  FROM certificate_types ct
+  WHERE ct.brand_id = $1
+    AND ct.active = true
+    AND (
+      EXISTS (
+        SELECT 1
+        FROM certificate_type_products ctp
+        JOIN service_items si ON si.product_id = ctp.product_id AND si.brand_id = ctp.brand_id
+        JOIN services s ON s.id = si.service_id
+        WHERE ctp.type_id = ct.id
+          AND s.organization_id = $2
+          AND s.brand_id = $1
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM certificate_type_categories ctc
+        JOIN products p ON p.category_id = ctc.category_id AND p.brand_id = ctc.brand_id
+        JOIN service_items si ON si.product_id = p.id AND si.brand_id = p.brand_id
+        JOIN services s ON s.id = si.service_id
+        WHERE ctc.type_id = ct.id
+          AND s.organization_id = $2
+          AND s.brand_id = $1
+      )
+    )
+),
+valid AS (
+  SELECT DISTINCT c.type_id
+  FROM certificates c
+  JOIN required r ON r.id = c.type_id
+  WHERE c.organization_id = $2
+    AND c.brand_id = $1
+    AND c.status = 'valid'
+    AND (c.expires_at IS NULL OR c.expires_at > $3::timestamptz)
+)
+SELECT (SELECT COUNT(*) FROM valid)::bigint AS valid_count,
+       (SELECT COUNT(*) FROM required)::bigint AS required_count
+`
+
+type GetCertificateCoverageByOrgParams struct {
+	BrandID        int64              `json:"brand_id"`
+	OrganizationID int64              `json:"organization_id"`
+	Now            pgtype.Timestamptz `json:"now"`
+}
+
+type GetCertificateCoverageByOrgRow struct {
+	ValidCount    int64 `json:"valid_count"`
+	RequiredCount int64 `json:"required_count"`
+}
+
+func (q *Queries) GetCertificateCoverageByOrg(ctx context.Context, arg GetCertificateCoverageByOrgParams) (GetCertificateCoverageByOrgRow, error) {
+	row := q.db.QueryRow(ctx, getCertificateCoverageByOrg, arg.BrandID, arg.OrganizationID, arg.Now)
+	var i GetCertificateCoverageByOrgRow
+	err := row.Scan(&i.ValidCount, &i.RequiredCount)
+	return i, err
+}
+
 const getCertificateType = `-- name: GetCertificateType :one
 SELECT id, uuid, organization_id, brand_id, name, description, validity_months, active, sort_order, created_at, updated_at FROM certificate_types
 WHERE id = $1 AND brand_id = $2
@@ -1026,14 +1085,70 @@ func (q *Queries) ListCertificates(ctx context.Context, arg ListCertificatesPara
 	return items, nil
 }
 
+const listCertificatesDueForExpiry = `-- name: ListCertificatesDueForExpiry :many
+SELECT c.id, c.uuid, c.user_id, c.organization_id, c.brand_id, c.type_id, c.storage_key, c.sha256, c.issued_at, c.expires_at, c.status, c.verified_by_user_id, c.verified_by_org_id, c.verified_at, c.reject_reason, c.expiry_notice_sent_at, c.created_at, c.updated_at
+FROM certificates c
+WHERE c.status = 'valid'
+  AND c.expires_at IS NOT NULL
+  AND c.expires_at <= $1::timestamptz
+ORDER BY c.expires_at, c.id
+LIMIT $2
+`
+
+type ListCertificatesDueForExpiryParams struct {
+	Now      pgtype.Timestamptz `json:"now"`
+	RowLimit int32              `json:"row_limit"`
+}
+
+func (q *Queries) ListCertificatesDueForExpiry(ctx context.Context, arg ListCertificatesDueForExpiryParams) ([]Certificate, error) {
+	rows, err := q.db.Query(ctx, listCertificatesDueForExpiry, arg.Now, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Certificate{}
+	for rows.Next() {
+		var i Certificate
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.UserID,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.TypeID,
+			&i.StorageKey,
+			&i.Sha256,
+			&i.IssuedAt,
+			&i.ExpiresAt,
+			&i.Status,
+			&i.VerifiedByUserID,
+			&i.VerifiedByOrgID,
+			&i.VerifiedAt,
+			&i.RejectReason,
+			&i.ExpiryNoticeSentAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCertificatesDueForExpiryNotice = `-- name: ListCertificatesDueForExpiryNotice :many
-SELECT id, uuid, user_id, organization_id, brand_id, type_id, storage_key, sha256, issued_at, expires_at, status, verified_by_user_id, verified_by_org_id, verified_at, reject_reason, expiry_notice_sent_at, created_at, updated_at FROM certificates
-WHERE status = 'valid'
-  AND expiry_notice_sent_at IS NULL
-  AND expires_at IS NOT NULL
-  AND expires_at > $1::timestamptz
-  AND expires_at <= $1::timestamptz + ($2::int || ' days')::interval
-ORDER BY expires_at, id
+SELECT c.id, c.uuid, c.user_id, c.organization_id, c.brand_id, c.type_id, c.storage_key, c.sha256, c.issued_at, c.expires_at, c.status, c.verified_by_user_id, c.verified_by_org_id, c.verified_at, c.reject_reason, c.expiry_notice_sent_at, c.created_at, c.updated_at
+FROM certificates c
+JOIN organizations o ON o.id = c.organization_id
+WHERE c.status = 'valid'
+  AND c.expiry_notice_sent_at IS NULL
+  AND c.expires_at IS NOT NULL
+  AND (c.expires_at AT TIME ZONE o.timezone)::date =
+      (($1::timestamptz AT TIME ZONE o.timezone)::date + $2::int)
+ORDER BY c.expires_at, c.id
 LIMIT $3
 `
 
@@ -1071,6 +1186,104 @@ func (q *Queries) ListCertificatesDueForExpiryNotice(ctx context.Context, arg Li
 			&i.ExpiryNoticeSentAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOpenServicesRequiringCertificate = `-- name: ListOpenServicesRequiringCertificate :many
+SELECT DISTINCT s.id, s.uuid, s.service_no, s.organization_id, s.brand_id, s.customer_user_id, s.vehicle_id, s.car_brand_id, s.car_model_id, s.model_year, s.plate, s.plate_country, s.vin, s.km, s.package, s.notes, s.has_measurement, s.measurement_result_id, s.contract_id, s.status, s.created_by_user_id, s.updated_by_user_id, s.completed_by_user_id, s.cancelled_by_user_id, s.cancel_reason, s.completed_at, s.cancelled_at, s.review_request_sent_at, s.created_at, s.updated_at, s.measurement_check_required, s.measurement_checked_at, s.warranty_claim_id, s.income_entry_id, s.income_amount, s.performed_by_user_id
+FROM services s
+WHERE s.organization_id = $1
+  AND s.brand_id = $2
+  AND s.status NOT IN ('completed', 'cancelled')
+  AND COALESCE(s.performed_by_user_id, s.created_by_user_id) = $3::bigint
+  AND (
+    EXISTS (
+      SELECT 1
+      FROM certificate_type_products ctp
+      JOIN service_items si ON si.product_id = ctp.product_id AND si.brand_id = ctp.brand_id
+      WHERE ctp.type_id = $4
+        AND ctp.brand_id = $2
+        AND si.service_id = s.id
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM certificate_type_categories ctc
+      JOIN products p ON p.category_id = ctc.category_id AND p.brand_id = ctc.brand_id
+      JOIN service_items si ON si.product_id = p.id AND si.brand_id = p.brand_id
+      WHERE ctc.type_id = $4
+        AND ctc.brand_id = $2
+        AND si.service_id = s.id
+    )
+  )
+ORDER BY s.id
+`
+
+type ListOpenServicesRequiringCertificateParams struct {
+	OrganizationID int64 `json:"organization_id"`
+	BrandID        int64 `json:"brand_id"`
+	UserID         int64 `json:"user_id"`
+	TypeID         int64 `json:"type_id"`
+}
+
+func (q *Queries) ListOpenServicesRequiringCertificate(ctx context.Context, arg ListOpenServicesRequiringCertificateParams) ([]Service, error) {
+	rows, err := q.db.Query(ctx, listOpenServicesRequiringCertificate,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.UserID,
+		arg.TypeID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Service{}
+	for rows.Next() {
+		var i Service
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.ServiceNo,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.CustomerUserID,
+			&i.VehicleID,
+			&i.CarBrandID,
+			&i.CarModelID,
+			&i.ModelYear,
+			&i.Plate,
+			&i.PlateCountry,
+			&i.Vin,
+			&i.Km,
+			&i.Package,
+			&i.Notes,
+			&i.HasMeasurement,
+			&i.MeasurementResultID,
+			&i.ContractID,
+			&i.Status,
+			&i.CreatedByUserID,
+			&i.UpdatedByUserID,
+			&i.CompletedByUserID,
+			&i.CancelledByUserID,
+			&i.CancelReason,
+			&i.CompletedAt,
+			&i.CancelledAt,
+			&i.ReviewRequestSentAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.MeasurementCheckRequired,
+			&i.MeasurementCheckedAt,
+			&i.WarrantyClaimID,
+			&i.IncomeEntryID,
+			&i.IncomeAmount,
+			&i.PerformedByUserID,
 		); err != nil {
 			return nil, err
 		}
@@ -1444,6 +1657,51 @@ func (q *Queries) ListValidCertificatesForServiceUser(ctx context.Context, arg L
 		return nil, err
 	}
 	return items, nil
+}
+
+const markCertificateExpired = `-- name: MarkCertificateExpired :one
+UPDATE certificates
+SET status = 'expired',
+    verified_by_user_id = NULL,
+    verified_by_org_id = NULL,
+    verified_at = NULL,
+    reject_reason = NULL
+WHERE id = $1
+  AND status = 'valid'
+  AND expires_at IS NOT NULL
+  AND expires_at <= $2::timestamptz
+RETURNING id, uuid, user_id, organization_id, brand_id, type_id, storage_key, sha256, issued_at, expires_at, status, verified_by_user_id, verified_by_org_id, verified_at, reject_reason, expiry_notice_sent_at, created_at, updated_at
+`
+
+type MarkCertificateExpiredParams struct {
+	ID  int64              `json:"id"`
+	Now pgtype.Timestamptz `json:"now"`
+}
+
+func (q *Queries) MarkCertificateExpired(ctx context.Context, arg MarkCertificateExpiredParams) (Certificate, error) {
+	row := q.db.QueryRow(ctx, markCertificateExpired, arg.ID, arg.Now)
+	var i Certificate
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.TypeID,
+		&i.StorageKey,
+		&i.Sha256,
+		&i.IssuedAt,
+		&i.ExpiresAt,
+		&i.Status,
+		&i.VerifiedByUserID,
+		&i.VerifiedByOrgID,
+		&i.VerifiedAt,
+		&i.RejectReason,
+		&i.ExpiryNoticeSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const markCertificateExpiryNoticeSent = `-- name: MarkCertificateExpiryNoticeSent :execrows

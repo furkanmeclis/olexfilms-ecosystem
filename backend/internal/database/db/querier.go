@@ -830,6 +830,7 @@ type Querier interface {
 	GetCenterMemberByUUID(ctx context.Context, arg GetCenterMemberByUUIDParams) (GetCenterMemberByUUIDRow, error)
 	GetCertificate(ctx context.Context, arg GetCertificateParams) (Certificate, error)
 	GetCertificateByUUID(ctx context.Context, arg GetCertificateByUUIDParams) (Certificate, error)
+	GetCertificateCoverageByOrg(ctx context.Context, arg GetCertificateCoverageByOrgParams) (GetCertificateCoverageByOrgRow, error)
 	GetCertificateType(ctx context.Context, arg GetCertificateTypeParams) (CertificateType, error)
 	GetCertificateTypeByUUID(ctx context.Context, arg GetCertificateTypeByUUIDParams) (CertificateType, error)
 	GetConnectionLocationMapByRemote(ctx context.Context, arg GetConnectionLocationMapByRemoteParams) (ConnectionLocationMap, error)
@@ -1585,6 +1586,7 @@ type Querier interface {
 	// Sort keys follow docs/list-contract.md: expires_at, issued_at, status,
 	// user_name and created_at. Default is expires_at; id is the tiebreak.
 	ListCertificates(ctx context.Context, arg ListCertificatesParams) ([]ListCertificatesRow, error)
+	ListCertificatesDueForExpiry(ctx context.Context, arg ListCertificatesDueForExpiryParams) ([]Certificate, error)
 	ListCertificatesDueForExpiryNotice(ctx context.Context, arg ListCertificatesDueForExpiryNoticeParams) ([]Certificate, error)
 	ListConnectionLocationMaps(ctx context.Context, connectionID int64) ([]ConnectionLocationMap, error)
 	ListContactOptOutHistory(ctx context.Context, arg ListContactOptOutHistoryParams) ([]ContactOptOut, error)
@@ -1886,6 +1888,7 @@ type Querier interface {
 	// Other open services holding the same unit (draft check; the ledger has
 	// the final word on completion).
 	ListOpenServicesByUnit(ctx context.Context, arg ListOpenServicesByUnitParams) ([]ListOpenServicesByUnitRow, error)
+	ListOpenServicesRequiringCertificate(ctx context.Context, arg ListOpenServicesRequiringCertificateParams) ([]Service, error)
 	// The subset of contacts that are currently opted out of a scope (campaign
 	// audience and pipeline guard).
 	ListOptedOutContacts(ctx context.Context, arg ListOptedOutContactsParams) ([]string, error)
@@ -2501,6 +2504,7 @@ type Querier interface {
 	MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error)
 	MarkBulkJobRolledBack(ctx context.Context, arg MarkBulkJobRolledBackParams) (BulkJob, error)
 	MarkBulkOperationUndone(ctx context.Context, arg MarkBulkOperationUndoneParams) (BulkOperation, error)
+	MarkCertificateExpired(ctx context.Context, arg MarkCertificateExpiredParams) (Certificate, error)
 	MarkCertificateExpiryNoticeSent(ctx context.Context, arg MarkCertificateExpiryNoticeSentParams) (int64, error)
 	MarkContractSignerSigned(ctx context.Context, id int64) (ContractSigner, error)
 	MarkConversationRead(ctx context.Context, id int64) (Conversation, error)
