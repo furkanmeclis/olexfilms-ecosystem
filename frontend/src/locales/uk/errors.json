@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Щоб відхилити, напишіть примітку.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Введіть оцінку від 1,0 до 5,0 і кількість відгуків від 0.",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Оцінка Google оновлюється з Google Places; видаліть Place ID, щоб ввести її вручну.",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "Непідтримуваний тип файлу; завантажте зображення JPEG, PNG або WebP."
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Непідтримуваний тип файлу; завантажте зображення JPEG, PNG або WebP.",
+  "codes.EINVOICE_INVALID_TAX_ID": "VKN або TCKN недійсний (VKN — 10 цифр, TCKN — 11, з правильною контрольною цифрою).",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "Електронні рахунки виставляються лише в TRY покупцям у Туреччині.",
+  "codes.EINVOICE_INVALID_DOCUMENT": "Дані рахунку неповні або хибні.",
+  "codes.EINVOICE_INVALID_VAT_RATE": "Ставка ПДВ недійсна; для 0% потрібен код звільнення.",
+  "codes.EINVOICE_INVALID_STYLESHEET": "Таблиця стилів XSLT недійсна."
 }

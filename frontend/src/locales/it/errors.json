@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Scriva una nota per rifiutare.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Inserisca una valutazione tra 1,0 e 5,0 e un numero di recensioni pari o superiore a 0.",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "La valutazione Google viene aggiornata da Google Places; rimuova l'ID luogo per inserirla manualmente.",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "Tipo di file non supportato; carichi un'immagine JPEG, PNG o WebP."
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Tipo di file non supportato; carichi un'immagine JPEG, PNG o WebP.",
+  "codes.EINVOICE_INVALID_TAX_ID": "Il VKN o TCKN non è valido (VKN di 10 cifre, TCKN di 11, con cifra di controllo corretta).",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "Le fatture elettroniche possono essere emesse solo in TRY ad acquirenti in Turchia.",
+  "codes.EINVOICE_INVALID_DOCUMENT": "I dati della fattura sono incompleti o errati.",
+  "codes.EINVOICE_INVALID_VAT_RATE": "L’aliquota IVA non è valida; lo 0% richiede un codice di esenzione.",
+  "codes.EINVOICE_INVALID_STYLESHEET": "Il foglio di stile XSLT non è valido."
 }

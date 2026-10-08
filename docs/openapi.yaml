@@ -32814,7 +32814,7 @@ components:
       required: [key, group, kind, default, description, value, is_default, schema_version]
       properties:
         key: { type: string, example: contract_grace_days }
-        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads, warranty_claims, whatsapp, mcp, campaigns, showcase, pricing] }
+        group: { type: string, enum: [general, contracts, forecast, services, smtp, warehouse, scanning, mobile, leads, warranty_claims, whatsapp, mcp, campaigns, showcase, pricing, einvoice] }
         kind: { type: string, enum: [int, bool, string] }
         default: { $ref: "#/components/schemas/SystemSettingValue" }
         description: { type: string }

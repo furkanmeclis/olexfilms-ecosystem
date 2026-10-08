@@ -58,6 +58,8 @@ const (
 	GroupEfficiency Group = "efficiency"
 	// GroupPricing: recommended prices and price discipline (TEC-505).
 	GroupPricing Group = "pricing"
+	// GroupEinvoice: UBL-TR e-invoices (TEC-502).
+	GroupEinvoice Group = "einvoice"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -187,6 +189,10 @@ const (
 	// KeyPricingPriceListAutoPublish publishes the recommended price list
 	// PDF to the document center after every publication (TEC-505).
 	KeyPricingPriceListAutoPublish = "pricing.price_list_auto_publish"
+
+	// KeyEinvoiceDefaultVATRate is the KDV percent of an invoice line whose
+	// product or category has no rate (TEC-502).
+	KeyEinvoiceDefaultVATRate = "einvoice.default_vat_rate"
 )
 
 // DefaultShowcaseMaxPhotos is the catalog default of KeyShowcaseMaxPhotos.
@@ -202,6 +208,10 @@ const (
 // DefaultPricingDeviationWarningPct is the catalog default of
 // KeyPricingDeviationWarningPct (F5 QUESTIONS S35).
 const DefaultPricingDeviationWarningPct = 15
+
+// DefaultEinvoiceDefaultVATRate is the catalog default of
+// KeyEinvoiceDefaultVATRate (general KDV rate).
+const DefaultEinvoiceDefaultVATRate = 20
 
 // Catalog defaults of the campaign keys (F4 QUESTIONS S14).
 const (
@@ -396,6 +406,8 @@ var catalog = []Definition{
 		Description: "Percent deviation from the recommended price that flags a dealer or distributor price (TEC-505)"},
 	{Key: KeyPricingPriceListAutoPublish, Group: GroupPricing, Kind: KindBool, Default: true,
 		Description: "Publish the recommended price list PDF to the document center after each publication (TEC-505)"},
+	{Key: KeyEinvoiceDefaultVATRate, Group: GroupEinvoice, Kind: KindInt, Default: int64(DefaultEinvoiceDefaultVATRate), Min: i64(1), Max: i64(100),
+		Description: "KDV percent of an e-invoice line whose product or category has no rate; 0% needs an exemption code and is not allowed here (TEC-502)"},
 }
 
 var byKey = func() map[string]Definition {

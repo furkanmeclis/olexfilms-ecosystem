@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Reddetmek için bir not yazın.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "1,0 ile 5,0 arasında bir puan ve 0 veya daha büyük bir yorum sayısı girin.",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Google puanı Google Places'tan güncelleniyor; elle girmek için Place ID'yi kaldırın.",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "Dosya türü desteklenmiyor; JPEG, PNG veya WebP yükleyin."
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Dosya türü desteklenmiyor; JPEG, PNG veya WebP yükleyin.",
+  "codes.EINVOICE_INVALID_TAX_ID": "VKN veya TCKN geçersiz (VKN 10, TCKN 11 hane ve doğru kontrol hanesi olmalı).",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "e-Fatura yalnız Türkiye'deki alıcılara ve TRY ile kesilebilir.",
+  "codes.EINVOICE_INVALID_DOCUMENT": "Fatura bilgileri eksik veya hatalı.",
+  "codes.EINVOICE_INVALID_VAT_RATE": "KDV oranı geçersiz; %0 için istisna kodu gerekir.",
+  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT görünüm dosyası geçersiz."
 }

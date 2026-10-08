@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Rədd etmək üçün qeyd yazın.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "1,0 ilə 5,0 arasında reytinq və 0 və ya daha çox rəy sayı daxil edin.",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Google reytinqi Google Places-dən yenilənir; əl ilə daxil etmək üçün Place ID-ni silin.",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "Fayl növü dəstəklənmir; JPEG, PNG və ya WebP şəkli yükləyin."
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Fayl növü dəstəklənmir; JPEG, PNG və ya WebP şəkli yükləyin.",
+  "codes.EINVOICE_INVALID_TAX_ID": "VKN və ya TCKN etibarsızdır (VKN 10, TCKN 11 rəqəm və düzgün yoxlama rəqəmi olmalıdır).",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "E-faktura yalnız Türkiyədəki alıcılara və TRY ilə kəsilə bilər.",
+  "codes.EINVOICE_INVALID_DOCUMENT": "Faktura məlumatları natamam və ya səhvdir.",
+  "codes.EINVOICE_INVALID_VAT_RATE": "ƏDV dərəcəsi etibarsızdır; 0% üçün azadolma kodu lazımdır.",
+  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT üslub faylı etibarsızdır."
 }

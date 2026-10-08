@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Write a note to reject.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Enter a rating between 1.0 and 5.0 and a review count of 0 or more.",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "The Google rating is refreshed from Google Places; remove the place ID to enter it by hand.",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "Unsupported file type; upload a JPEG, PNG or WebP image."
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Unsupported file type; upload a JPEG, PNG or WebP image.",
+  "codes.EINVOICE_INVALID_TAX_ID": "The VKN or TCKN is invalid (VKN has 10 digits, TCKN 11, with valid check digits).",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "e-Invoices can only be issued in TRY to buyers in Türkiye.",
+  "codes.EINVOICE_INVALID_DOCUMENT": "The invoice data is incomplete or invalid.",
+  "codes.EINVOICE_INVALID_VAT_RATE": "The VAT rate is invalid; 0% needs an exemption code.",
+  "codes.EINVOICE_INVALID_STYLESHEET": "The XSLT stylesheet is invalid."
 }
