@@ -706,7 +706,7 @@ INSERT INTO service_subscription_periods (subscription_id, organization_id, bran
 VALUES ($1, $2, $3,
         $4, $5)
 ON CONFLICT (subscription_id, period_start) DO NOTHING
-RETURNING id, subscription_id, organization_id, brand_id, period_start, period_end, posted_at, created_at
+RETURNING id, subscription_id, organization_id, brand_id, period_start, period_end, posted_at, created_at, uuid
 `
 
 type InsertServiceSubscriptionPeriodParams struct {
@@ -736,6 +736,7 @@ func (q *Queries) InsertServiceSubscriptionPeriod(ctx context.Context, arg Inser
 		&i.PeriodEnd,
 		&i.PostedAt,
 		&i.CreatedAt,
+		&i.Uuid,
 	)
 	return i, err
 }
@@ -1029,7 +1030,7 @@ func (q *Queries) ListServiceSubscriptionCancelRequestsPage(ctx context.Context,
 }
 
 const listServiceSubscriptionPeriods = `-- name: ListServiceSubscriptionPeriods :many
-SELECT id, subscription_id, organization_id, brand_id, period_start, period_end, posted_at, created_at FROM service_subscription_periods
+SELECT id, subscription_id, organization_id, brand_id, period_start, period_end, posted_at, created_at, uuid FROM service_subscription_periods
 WHERE subscription_id = $1
 ORDER BY period_start
 `
@@ -1052,6 +1053,7 @@ func (q *Queries) ListServiceSubscriptionPeriods(ctx context.Context, subscripti
 			&i.PeriodEnd,
 			&i.PostedAt,
 			&i.CreatedAt,
+			&i.Uuid,
 		); err != nil {
 			return nil, err
 		}
@@ -1230,7 +1232,7 @@ const markServiceSubscriptionPeriodPosted = `-- name: MarkServiceSubscriptionPer
 UPDATE service_subscription_periods
 SET posted_at = NOW()
 WHERE id = $1 AND posted_at IS NULL
-RETURNING id, subscription_id, organization_id, brand_id, period_start, period_end, posted_at, created_at
+RETURNING id, subscription_id, organization_id, brand_id, period_start, period_end, posted_at, created_at, uuid
 `
 
 func (q *Queries) MarkServiceSubscriptionPeriodPosted(ctx context.Context, id int64) (ServiceSubscriptionPeriod, error) {
@@ -1245,6 +1247,7 @@ func (q *Queries) MarkServiceSubscriptionPeriodPosted(ctx context.Context, id in
 		&i.PeriodEnd,
 		&i.PostedAt,
 		&i.CreatedAt,
+		&i.Uuid,
 	)
 	return i, err
 }

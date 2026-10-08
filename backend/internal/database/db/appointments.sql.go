@@ -699,7 +699,7 @@ func (q *Queries) GetPortalAppointmentByUUID(ctx context.Context, arg GetPortalA
 }
 
 const getPortalAppointmentDealer = `-- name: GetPortalAppointmentDealer :one
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, s.portal_appointments_enabled
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, s.portal_appointments_enabled
 FROM organizations o
 JOIN appointment_settings s ON s.organization_id = o.id
 WHERE o.uuid = $1
@@ -756,6 +756,13 @@ type GetPortalAppointmentDealerRow struct {
 	GoogleBusinessUrl         pgtype.Text        `json:"google_business_url"`
 	Latitude                  pgtype.Numeric     `json:"latitude"`
 	Longitude                 pgtype.Numeric     `json:"longitude"`
+	InvoiceVkn                pgtype.Text        `json:"invoice_vkn"`
+	InvoiceTckn               pgtype.Text        `json:"invoice_tckn"`
+	InvoiceTaxOffice          pgtype.Text        `json:"invoice_tax_office"`
+	InvoiceLegalName          pgtype.Text        `json:"invoice_legal_name"`
+	EinvoiceRegistered        bool               `json:"einvoice_registered"`
+	EinvoiceAlias             pgtype.Text        `json:"einvoice_alias"`
+	InvoiceEmail              pgtype.Text        `json:"invoice_email"`
 	PortalAppointmentsEnabled bool               `json:"portal_appointments_enabled"`
 }
 
@@ -803,6 +810,13 @@ func (q *Queries) GetPortalAppointmentDealer(ctx context.Context, arg GetPortalA
 		&i.GoogleBusinessUrl,
 		&i.Latitude,
 		&i.Longitude,
+		&i.InvoiceVkn,
+		&i.InvoiceTckn,
+		&i.InvoiceTaxOffice,
+		&i.InvoiceLegalName,
+		&i.EinvoiceRegistered,
+		&i.EinvoiceAlias,
+		&i.InvoiceEmail,
 		&i.PortalAppointmentsEnabled,
 	)
 	return i, err
