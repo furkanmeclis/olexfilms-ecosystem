@@ -23,12 +23,41 @@ import {
   type PublicDealerLeadRequest,
 } from "../lib/dealer-showcase";
 
-type T = (key: string, params?: Record<string, string | number>) => string;
+export type ShowcaseLeadFormLabels = {
+  title: string;
+  loading: string;
+  name: string;
+  country: string;
+  phone: string;
+  email: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  services: string;
+  message: string;
+  channel: string;
+  channelWhatsapp: string;
+  channelPhone: string;
+  channelEmail: string;
+  honeypot: string;
+  kvkk: string;
+  submit: string;
+  submitting: string;
+  required: string;
+  phoneInvalid: string;
+  emailInvalid: string;
+  kvkkRequired: string;
+  validation: string;
+  rateLimited: string;
+  failed: string;
+  successTitle: string;
+  successBody: string;
+  retryAfter: string;
+};
 
 export type ShowcaseLeadFormProps = {
   code: string;
   locale: AppLocale;
-  t: T;
+  labels: ShowcaseLeadFormLabels;
   fetchImpl?: typeof fetch;
 };
 
@@ -74,7 +103,7 @@ type Errors = Partial<Record<Field, string>>;
 export function ShowcaseLeadForm({
   code,
   locale,
-  t,
+  labels,
   fetchImpl,
 }: ShowcaseLeadFormProps) {
   const doFetch = fetchImpl ?? fetch;
@@ -126,20 +155,20 @@ export function ShowcaseLeadForm({
 
   const validate = () => {
     const found: Errors = {};
-    if (!values.name.trim()) found.name = t("portal.dealer_page.form_required");
+    if (!values.name.trim()) found.name = labels.required;
     if (!values.phone.trim()) {
-      found.phone = t("portal.dealer_page.form_required");
+      found.phone = labels.required;
     } else if (!normalizePhone(values.phone, values.country)) {
-      found.phone = t("portal.dealer_page.form_phone_invalid");
+      found.phone = labels.phoneInvalid;
     }
     if (!values.kvkk_consent) {
-      found.kvkk_consent = t("portal.dealer_page.form_kvkk_required");
+      found.kvkk_consent = labels.kvkkRequired;
     }
     if (
       values.email.trim() &&
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)
     ) {
-      found.email = t("portal.dealer_page.form_email_invalid");
+      found.email = labels.emailInvalid;
     }
     return found;
   };
@@ -182,21 +211,22 @@ export function ShowcaseLeadForm({
     if (result.kind === "validation") {
       const next: Errors = {};
       for (const field of result.fields) {
-        if (field === "phone")
-          next.phone = t("portal.dealer_page.form_phone_invalid");
-        if (field === "kvkk_consent")
-          next.kvkk_consent = t("portal.dealer_page.form_kvkk_required");
+        if (field === "phone") next.phone = labels.phoneInvalid;
+        if (field === "kvkk_consent") next.kvkk_consent = labels.kvkkRequired;
       }
       setErrors(next);
-      setNotice(t("portal.dealer_page.form_validation"));
+      setNotice(labels.validation);
       return;
     }
     setNotice(
       result.kind === "rate_limited"
         ? result.retryAfter
-          ? t("warranty.public.retry_after", { seconds: result.retryAfter })
-          : t("portal.dealer_page.form_rate_limited")
-        : t("portal.dealer_page.form_failed"),
+          ? labels.retryAfter.replaceAll(
+              "{{seconds}}",
+              String(result.retryAfter),
+            )
+          : labels.rateLimited
+        : labels.failed,
     );
   };
 
@@ -207,11 +237,9 @@ export function ShowcaseLeadForm({
         className="border-border bg-card rounded-lg border p-4"
       >
         <CircleCheck className="text-primary mb-2 size-5" aria-hidden />
-        <h2 className="font-semibold">
-          {t("portal.dealer_page.form_success_title")}
-        </h2>
+        <h2 className="font-semibold">{labels.successTitle}</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          {t("portal.dealer_page.form_success_body")}
+          {labels.successBody}
         </p>
       </section>
     );
@@ -221,20 +249,12 @@ export function ShowcaseLeadForm({
 
   return (
     <section data-slot="showcase-lead-form" className="space-y-3">
-      <h2 className="text-base font-semibold">
-        {t("portal.dealer_page.form_title")}
-      </h2>
+      <h2 className="text-base font-semibold">{labels.title}</h2>
       {!config ? (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.dealer_page.form_loading")}
-        </p>
+        <p className="text-muted-foreground text-sm">{labels.loading}</p>
       ) : (
         <form className="space-y-3" onSubmit={onSubmit} noValidate>
-          <Field
-            label={t("portal.dealer_page.form_name")}
-            id={`${formId}-name`}
-            error={errors.name}
-          >
+          <Field label={labels.name} id={`${formId}-name`} error={errors.name}>
             <Input
               id={`${formId}-name`}
               name="name"
@@ -245,10 +265,7 @@ export function ShowcaseLeadForm({
           </Field>
 
           <div className="grid gap-3 sm:grid-cols-[7rem_1fr]">
-            <Field
-              label={t("portal.dealer_page.form_country")}
-              id={`${formId}-country`}
-            >
+            <Field label={labels.country} id={`${formId}-country`}>
               <select
                 id={`${formId}-country`}
                 name="country"
@@ -264,7 +281,7 @@ export function ShowcaseLeadForm({
               </select>
             </Field>
             <Field
-              label={t("portal.dealer_page.form_phone")}
+              label={labels.phone}
               id={`${formId}-phone`}
               error={errors.phone}
             >
@@ -280,9 +297,7 @@ export function ShowcaseLeadForm({
                   const phone = normalizePhone(values.phone, values.country);
                   setErrors((prev) => ({
                     ...prev,
-                    phone: phone
-                      ? undefined
-                      : t("portal.dealer_page.form_phone_invalid"),
+                    phone: phone ? undefined : labels.phoneInvalid,
                   }));
                   if (phone) set("phone", phone);
                 }}
@@ -292,7 +307,7 @@ export function ShowcaseLeadForm({
           </div>
 
           <Field
-            label={t("portal.dealer_page.form_email")}
+            label={labels.email}
             id={`${formId}-email`}
             error={errors.email}
           >
@@ -307,10 +322,7 @@ export function ShowcaseLeadForm({
           </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field
-              label={t("portal.dealer_page.form_vehicle_brand")}
-              id={`${formId}-brand`}
-            >
+            <Field label={labels.vehicleBrand} id={`${formId}-brand`}>
               <Input
                 id={`${formId}-brand`}
                 name="vehicle_brand"
@@ -318,10 +330,7 @@ export function ShowcaseLeadForm({
                 onChange={(e) => set("vehicle_brand", e.target.value)}
               />
             </Field>
-            <Field
-              label={t("portal.dealer_page.form_vehicle_model")}
-              id={`${formId}-model`}
-            >
+            <Field label={labels.vehicleModel} id={`${formId}-model`}>
               <Input
                 id={`${formId}-model`}
                 name="vehicle_model"
@@ -333,9 +342,7 @@ export function ShowcaseLeadForm({
 
           {services.length ? (
             <fieldset className="space-y-2">
-              <legend className="text-sm font-medium">
-                {t("portal.dealer_page.form_services")}
-              </legend>
+              <legend className="text-sm font-medium">{labels.services}</legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {services.map((service) => (
                   <label
@@ -367,10 +374,7 @@ export function ShowcaseLeadForm({
             </fieldset>
           ) : null}
 
-          <Field
-            label={t("portal.dealer_page.form_message")}
-            id={`${formId}-message`}
-          >
+          <Field label={labels.message} id={`${formId}-message`}>
             <Textarea
               id={`${formId}-message`}
               name="message"
@@ -380,10 +384,7 @@ export function ShowcaseLeadForm({
             />
           </Field>
 
-          <Field
-            label={t("portal.dealer_page.form_channel")}
-            id={`${formId}-channel`}
-          >
+          <Field label={labels.channel} id={`${formId}-channel`}>
             <select
               id={`${formId}-channel`}
               name="preferred_channel"
@@ -396,22 +397,14 @@ export function ShowcaseLeadForm({
                 )
               }
             >
-              <option value="whatsapp">
-                {t("portal.dealer_page.form_channel_whatsapp")}
-              </option>
-              <option value="phone">
-                {t("portal.dealer_page.form_channel_phone")}
-              </option>
-              <option value="email">
-                {t("portal.dealer_page.form_channel_email")}
-              </option>
+              <option value="whatsapp">{labels.channelWhatsapp}</option>
+              <option value="phone">{labels.channelPhone}</option>
+              <option value="email">{labels.channelEmail}</option>
             </select>
           </Field>
 
           <div aria-hidden="true" className="hidden">
-            <label htmlFor={`${formId}-website`}>
-              {t("portal.dealer_page.form_honeypot")}
-            </label>
+            <label htmlFor={`${formId}-website`}>{labels.honeypot}</label>
             <input
               id={`${formId}-website`}
               name="website"
@@ -430,6 +423,7 @@ export function ShowcaseLeadForm({
                 name="kvkk_consent"
                 className="accent-primary mt-0.5 size-4 shrink-0"
                 checked={values.kvkk_consent}
+                aria-label="KVKK"
                 aria-invalid={Boolean(errors.kvkk_consent) || undefined}
                 onChange={(event) => set("kvkk_consent", event.target.checked)}
               />
@@ -437,7 +431,7 @@ export function ShowcaseLeadForm({
                 htmlFor={`${formId}-kvkk`}
                 className="text-sm leading-snug"
               >
-                {t("portal.dealer_page.form_kvkk")}
+                {labels.kvkk}
               </label>
             </div>
             {errors.kvkk_consent ? (
@@ -450,9 +444,7 @@ export function ShowcaseLeadForm({
 
           <Button type="submit" disabled={!values.kvkk_consent || submitting}>
             <Send className="size-4" aria-hidden />
-            {submitting
-              ? t("portal.dealer_page.form_submitting")
-              : t("portal.dealer_page.form_submit")}
+            {submitting ? labels.submitting : labels.submit}
           </Button>
         </form>
       )}

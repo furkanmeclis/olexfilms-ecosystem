@@ -3,7 +3,10 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ShowcaseLeadForm } from "./showcase-lead-form";
+import {
+  ShowcaseLeadForm,
+  type ShowcaseLeadFormLabels,
+} from "./showcase-lead-form";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -79,13 +82,44 @@ const t = (key: string, params?: Record<string, string | number>) => {
   return value;
 };
 
+const labels: ShowcaseLeadFormLabels = {
+  title: t("portal.dealer_page.form_title"),
+  loading: t("portal.dealer_page.form_loading"),
+  name: t("portal.dealer_page.form_name"),
+  country: t("portal.dealer_page.form_country"),
+  phone: t("portal.dealer_page.form_phone"),
+  email: t("portal.dealer_page.form_email"),
+  vehicleBrand: t("portal.dealer_page.form_vehicle_brand"),
+  vehicleModel: t("portal.dealer_page.form_vehicle_model"),
+  services: t("portal.dealer_page.form_services"),
+  message: t("portal.dealer_page.form_message"),
+  channel: t("portal.dealer_page.form_channel"),
+  channelWhatsapp: t("portal.dealer_page.form_channel_whatsapp"),
+  channelPhone: t("portal.dealer_page.form_channel_phone"),
+  channelEmail: t("portal.dealer_page.form_channel_email"),
+  honeypot: t("portal.dealer_page.form_honeypot"),
+  kvkk: t("portal.dealer_page.form_kvkk"),
+  submit: t("portal.dealer_page.form_submit"),
+  submitting: t("portal.dealer_page.form_submitting"),
+  required: t("portal.dealer_page.form_required"),
+  phoneInvalid: t("portal.dealer_page.form_phone_invalid"),
+  emailInvalid: t("portal.dealer_page.form_email_invalid"),
+  kvkkRequired: t("portal.dealer_page.form_kvkk_required"),
+  validation: t("portal.dealer_page.form_validation"),
+  rateLimited: t("portal.dealer_page.form_rate_limited"),
+  failed: t("portal.dealer_page.form_failed"),
+  successTitle: t("portal.dealer_page.form_success_title"),
+  successBody: t("portal.dealer_page.form_success_body"),
+  retryAfter: "Try again in {{seconds}} seconds.",
+};
+
 async function render() {
   await act(async () => {
     root.render(
       createElement(ShowcaseLeadForm, {
         code: "olex-kadikoy",
         locale: "en",
-        t,
+        labels,
         fetchImpl: fetchMock,
       }),
     );
