@@ -142,6 +142,10 @@ export const routes = {
     stock: {
       root: (slug: string) => `/t/${slug}/stock`,
     },
+    /** TEC-486: stock forecast and order suggestions add-on. */
+    stockForecast: {
+      list: (slug: string) => `/t/${slug}/stock-forecast`,
+    },
     /** TEC-163 customers: list, new, detail (with vehicles), edit. */
     customers: {
       list: (slug: string) => `/t/${slug}/customers`,
