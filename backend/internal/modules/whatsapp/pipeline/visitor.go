@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -34,6 +35,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+var dealerReferralRe = regexp.MustCompile(`(?:^|\s)#([a-z0-9][a-z0-9-]{0,99})(?:\s|$)`)
 
 // Visitor flow limits.
 const (
@@ -225,6 +228,37 @@ func (p *Pipeline) visitorLimits(ctx context.Context, r *run, a actor) (bool, er
 	return true, p.sendSystem(ctx, r, textf(r.locale, textVisitorLimit, p.dealerFinderURL()))
 }
 
+func (p *Pipeline) dealerReferral(ctx context.Context, r *run, a actor, batch []db.Message) error {
+	if !a.facts.Visitor || r.conv.ReferredDealerOrgID.Valid {
+		return nil
+	}
+	for _, m := range batch {
+		match := dealerReferralRe.FindStringSubmatch(strings.ToLower(messageText(m)))
+		if len(match) != 2 {
+			continue
+		}
+		org, err := p.d.Queries.GetActiveDealerBySlug(ctx, db.GetActiveDealerBySlugParams{
+			Slug: match[1], BrandID: a.brand.ID,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		conv, err := p.d.Queries.SetConversationReferredDealer(ctx, db.SetConversationReferredDealerParams{
+			ID: r.conv.ID, ReferredDealerOrgID: pgtype.Int8{Int64: org.ID, Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+		r.conv = conv
+		r.stage(p.now(), "dealer_referral", map[string]any{"dealer_code": org.Slug, "organization_id": org.ID})
+		return nil
+	}
+	return nil
+}
+
 // --- lead tool -------------------------------------------------------------------
 
 // visitorTurn is the conversation state of an agent turn, for the tools of
@@ -351,6 +385,9 @@ func (t *visitorTurn) request(ctx context.Context, in leadsusecase.VisitorLeadIn
 	in.PhoneE164 = r.conv.ContactE164
 	in.Language = strings.ReplaceAll(r.locale, "_", "-")
 	in.ConversationUUID = r.conv.Uuid.String()
+	if r.conv.ReferredDealerOrgID.Valid {
+		in.ReferredDealerOrgID = r.conv.ReferredDealerOrgID.Int64
+	}
 	in.Notice = &leadsusecase.KVKKNotice{Locale: notice.Locale, Version: notice.Version, SentAt: p.now()}
 	res, err := p.d.Leads.UpsertVisitorLead(ctx, t.a.brand.ID, in)
 	var verr *leadsusecase.ValidationError

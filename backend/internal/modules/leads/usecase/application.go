@@ -44,6 +44,7 @@ const (
 
 // emailRe mirrors chk_leads_candidate_email.
 var emailRe = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
+var showcaseCodeRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,99}$`)
 
 // AddressResolver validates a geo chain and finds the territory distributor
 // (geo.Service).
@@ -246,6 +247,317 @@ type ApplicationResult struct {
 	OrganizationID int64
 	RoutedBy       string
 	NotifyUserIDs  []int64
+	Created        bool
+}
+
+const (
+	SourceWebsite = "website"
+
+	WebsiteIPAction    = "showcase_lead_ip"
+	WebsitePhoneAction = "showcase_lead_phone"
+
+	maxWebsiteMessage = 5000
+)
+
+// ShowcaseLeadConfig is the public form configuration for a published dealer
+// showcase.
+type ShowcaseLeadConfig struct {
+	DealerCode       string            `json:"dealer_code"`
+	DealerName       string            `json:"dealer_name"`
+	Fields           []string          `json:"fields"`
+	KVKKTextVersion  int32             `json:"kvkk_text_version"`
+	KVKKText         string            `json:"kvkk_text"`
+	Services         []ShowcaseService `json:"services"`
+	WhatsAppChatURL  string            `json:"whatsapp_chat_url"`
+	FormToken        string            `json:"form_token"`
+	MinFillSeconds   int               `json:"min_fill_seconds"`
+	DefaultPhoneISO2 string            `json:"default_phone_country"`
+	PreferredLocales []string          `json:"preferred_locales"`
+}
+
+type ShowcaseService struct {
+	UUID        string `json:"uuid"`
+	Kind        string `json:"kind"`
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+}
+
+// ShowcaseLeadInput is POST /v1/public/dealers/{code}/leads.
+type ShowcaseLeadInput struct {
+	Name             string
+	Phone            string
+	Email            string
+	VehicleBrand     string
+	VehicleModel     string
+	Interested       []string
+	Message          string
+	PreferredChannel string
+	KVKKConsent      bool
+	Language         string
+	Honeypot         string
+	TokenIssuedAt    time.Time
+	RemoteIP         string
+	UserAgent        string
+}
+
+type ShowcaseLead struct {
+	name, phone, email, vehicleBrand, vehicleModel, message, preferredChannel, language string
+	interested                                                                          []string
+	Spam                                                                                bool
+	PhoneE164                                                                           string
+}
+
+type ShowcaseLeadResult struct {
+	Lead           *db.Lead
+	OrganizationID int64
+	NotifyUserIDs  []int64
+	Created        bool
+}
+
+func (a *Applications) showcaseTarget(ctx context.Context, brandID int64, code string) (db.GetShowcaseLeadTargetBySlugRow, error) {
+	code = strings.ToLower(strings.TrimSpace(code))
+	if !showcaseCodeRe.MatchString(code) {
+		return db.GetShowcaseLeadTargetBySlugRow{}, ErrNotFound
+	}
+	row, err := a.q.GetShowcaseLeadTargetBySlug(ctx, db.GetShowcaseLeadTargetBySlugParams{Slug: code, BrandID: brandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.GetShowcaseLeadTargetBySlugRow{}, ErrNotFound
+	}
+	if err != nil {
+		return db.GetShowcaseLeadTargetBySlugRow{}, err
+	}
+	on, err := a.modules.Enabled(ctx, row.OrganizationID, features.ModuleDealerShowcase)
+	if err != nil {
+		return db.GetShowcaseLeadTargetBySlugRow{}, err
+	}
+	if !on {
+		return db.GetShowcaseLeadTargetBySlugRow{}, ErrNotFound
+	}
+	return row, nil
+}
+
+func (a *Applications) ShowcaseLeadConfig(ctx context.Context, brandID int64, code, lang, formToken, whatsappText string) (ShowcaseLeadConfig, error) {
+	target, err := a.showcaseTarget(ctx, brandID, code)
+	if err != nil {
+		return ShowcaseLeadConfig{}, err
+	}
+	locale, ok := validLanguage(lang)
+	if !ok {
+		locale = defaultFormLanguage
+	}
+	notice, err := a.q.GetLatestKVKKNotice(ctx, locale)
+	if errors.Is(err, pgx.ErrNoRows) && locale != defaultFormLanguage {
+		notice, err = a.q.GetLatestKVKKNotice(ctx, defaultFormLanguage)
+	}
+	if err != nil {
+		return ShowcaseLeadConfig{}, fmt.Errorf("leads: showcase kvkk: %w", err)
+	}
+	services, err := a.showcaseServices(ctx, target.ShowcaseID, locale)
+	if err != nil {
+		return ShowcaseLeadConfig{}, err
+	}
+	wa := ""
+	if st, err := a.q.GetWhatsAppSettings(ctx); err == nil && st.PhoneE164.Valid {
+		wa = "https://wa.me/" + strings.TrimPrefix(st.PhoneE164.String, "+") + "?text=" + whatsappText
+	}
+	iso2 := target.CountryIso2.String
+	if iso2 == "" {
+		iso2 = phone.DefaultRegion
+	}
+	return ShowcaseLeadConfig{
+		DealerCode: target.Slug, DealerName: target.Name,
+		Fields:          []string{"name", "phone", "email", "vehicle_brand", "vehicle_model", "interested_services", "message", "preferred_channel", "kvkk_consent"},
+		KVKKTextVersion: notice.Version, KVKKText: notice.Body, Services: services,
+		WhatsAppChatURL: wa, FormToken: formToken, MinFillSeconds: 3, DefaultPhoneISO2: iso2,
+		PreferredLocales: []string{locale, defaultFormLanguage},
+	}, nil
+}
+
+func (a *Applications) showcaseServices(ctx context.Context, showcaseID int64, locale string) ([]ShowcaseService, error) {
+	rows, err := a.q.ListDealerShowcaseServices(ctx, showcaseID)
+	if err != nil {
+		return nil, fmt.Errorf("leads: showcase services: %w", err)
+	}
+	out := make([]ShowcaseService, 0, len(rows))
+	for _, r := range rows {
+		if !r.Visible {
+			continue
+		}
+		out = append(out, ShowcaseService{
+			UUID: r.Uuid.String(), Kind: r.Kind,
+			Title: localizedJSON(r.Title, locale), Description: localizedJSON(r.Description, locale),
+		})
+	}
+	return out, nil
+}
+
+func localizedJSON(raw []byte, locale string) string {
+	var m map[string]string
+	if len(raw) == 0 || json.Unmarshal(raw, &m) != nil {
+		return ""
+	}
+	for _, key := range []string{locale, strings.ReplaceAll(locale, "-", "_"), defaultFormLanguage, "en"} {
+		if s := strings.TrimSpace(m[key]); s != "" {
+			return s
+		}
+	}
+	for _, s := range m {
+		if s = strings.TrimSpace(s); s != "" {
+			return s
+		}
+	}
+	return ""
+}
+
+func (a *Applications) ValidateShowcaseLead(ctx context.Context, brandID int64, code string, in ShowcaseLeadInput) (ShowcaseLead, db.GetShowcaseLeadTargetBySlugRow, error) {
+	target, err := a.showcaseTarget(ctx, brandID, code)
+	if err != nil {
+		return ShowcaseLead{}, target, err
+	}
+	if strings.TrimSpace(in.Honeypot) != "" {
+		return ShowcaseLead{Spam: true}, target, nil
+	}
+	out := ShowcaseLead{}
+	if out.name, err = requiredText("name", in.Name, maxName); err != nil {
+		return ShowcaseLead{}, target, err
+	}
+	if !in.KVKKConsent {
+		return ShowcaseLead{}, target, invalid("kvkk_consent", "must be accepted")
+	}
+	lang, ok := validLanguage(in.Language)
+	if !ok {
+		return ShowcaseLead{}, target, invalid("language", "is not a supported locale")
+	}
+	out.language = lang
+	if email := strings.TrimSpace(in.Email); email != "" {
+		if utf8.RuneCountInString(email) > maxEmail || !emailRe.MatchString(email) {
+			return ShowcaseLead{}, target, invalid("email", "must be a valid e-mail address")
+		}
+		out.email = email
+	}
+	out.vehicleBrand, err = optionalText("vehicle_brand", in.VehicleBrand, maxName)
+	if err != nil {
+		return ShowcaseLead{}, target, err
+	}
+	out.vehicleModel, err = optionalText("vehicle_model", in.VehicleModel, maxName)
+	if err != nil {
+		return ShowcaseLead{}, target, err
+	}
+	out.message, err = optionalText("message", in.Message, maxWebsiteMessage)
+	if err != nil {
+		return ShowcaseLead{}, target, err
+	}
+	out.preferredChannel = strings.TrimSpace(in.PreferredChannel)
+	switch out.preferredChannel {
+	case "", "phone", "email", "whatsapp":
+		if out.preferredChannel == "" {
+			out.preferredChannel = "phone"
+		}
+	default:
+		return ShowcaseLead{}, target, invalid("preferred_channel", "must be phone, email or whatsapp")
+	}
+	if len(in.Interested) > 20 {
+		return ShowcaseLead{}, target, invalid("interested_services", "must contain at most 20 items")
+	}
+	for _, s := range in.Interested {
+		if s = strings.TrimSpace(s); s != "" {
+			out.interested = append(out.interested, s)
+		}
+	}
+	region := target.CountryIso2.String
+	n, perr := phone.Parse(in.Phone, region)
+	if perr != nil {
+		return ShowcaseLead{}, target, invalid("phone", "must be a valid phone number")
+	}
+	out.phone, out.PhoneE164 = n.E164, n.E164
+	return out, target, nil
+}
+
+func (l ShowcaseLead) notes() string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Website showcase form")
+	if l.vehicleBrand != "" || l.vehicleModel != "" {
+		fmt.Fprintf(&sb, "\nVehicle: %s %s", l.vehicleBrand, l.vehicleModel)
+	}
+	if len(l.interested) > 0 {
+		fmt.Fprintf(&sb, "\nInterested services: %s", strings.Join(l.interested, ", "))
+	}
+	fmt.Fprintf(&sb, "\nPreferred channel: %s", l.preferredChannel)
+	if l.message != "" {
+		fmt.Fprintf(&sb, "\n%s", l.message)
+	}
+	return strings.TrimSpace(sb.String())
+}
+
+func (a *Applications) SubmitShowcaseLead(ctx context.Context, target db.GetShowcaseLeadTargetBySlugRow, in ShowcaseLead) (ShowcaseLeadResult, error) {
+	if in.Spam {
+		return ShowcaseLeadResult{}, nil
+	}
+	var res ShowcaseLeadResult
+	now := a.now().UTC()
+	event := map[string]any{
+		"kind": SourceWebsite, "body": in.notes(), "language": in.language,
+		"kvkk_consent": true, "kvkk_consented_at": now.Format(time.RFC3339),
+		"dealer_code": target.Slug, "preferred_channel": in.preferredChannel,
+		"vehicle_brand": in.vehicleBrand, "vehicle_model": in.vehicleModel,
+		"interested_services": in.interested,
+	}
+	err := a.inTx(ctx, func(tx pgx.Tx, q *db.Queries) error {
+		cur, err := q.GetOpenWebsiteLeadByPhone(ctx, db.GetOpenWebsiteLeadByPhoneParams{
+			OrganizationID: target.OrganizationID, BrandID: target.BrandID, PhoneE164: in.phone,
+		})
+		switch {
+		case err == nil:
+			if err := addEvent(ctx, q, cur, EventMessage, event, pgtype.Int8{}); err != nil {
+				return fmt.Errorf("leads: showcase duplicate event: %w", err)
+			}
+			res = ShowcaseLeadResult{Lead: &cur, OrganizationID: target.OrganizationID}
+		case errors.Is(err, pgx.ErrNoRows):
+			var email pgtype.Text
+			if in.email != "" {
+				email = pgtype.Text{String: in.email, Valid: true}
+			}
+			row, err := q.CreateLead(ctx, db.CreateLeadParams{
+				OrganizationID: target.OrganizationID, BrandID: target.BrandID, TargetType: TargetCustomer,
+				CandidateContactName: pgtype.Text{String: in.name, Valid: true},
+				CandidatePhoneE164:   pgtype.Text{String: in.phone, Valid: true},
+				CandidateEmail:       email, Source: SourceWebsite, Temperature: "warm", Status: StatusNew, Notes: in.notes(),
+			})
+			if err != nil {
+				return fmt.Errorf("leads: showcase lead: %w", err)
+			}
+			if err := addEvent(ctx, q, row, EventMessage, event, pgtype.Int8{}); err != nil {
+				return fmt.Errorf("leads: showcase lead event: %w", err)
+			}
+			res = ShowcaseLeadResult{Lead: &row, OrganizationID: target.OrganizationID, Created: true}
+		default:
+			return fmt.Errorf("leads: showcase duplicate: %w", err)
+		}
+		ids, err := q.ListTransferNotifyUserIDs(ctx, db.ListTransferNotifyUserIDsParams{
+			OrganizationID: target.OrganizationID, PermissionSlug: rbac.PermLeadsRead,
+		})
+		if err != nil {
+			return fmt.Errorf("leads: showcase recipients: %w", err)
+		}
+		res.NotifyUserIDs = ids
+		if a.out != nil && tx != nil && res.Lead != nil {
+			id, uid := res.Lead.ID, res.Lead.Uuid
+			ev := events.New(events.LeadsWebsiteReceived).WithTenant(target.OrganizationID).
+				WithEntity("lead", &id, &uid).WithPayload(map[string]any{
+				"lead_uuid": uid.String(), "brand_id": target.BrandID, "organization_id": target.OrganizationID,
+				"dealer_code": target.Slug, "contact_name": in.name, "phone": in.phone,
+				"language": in.language, "notify_user_ids": ids,
+			})
+			if err := a.out.Enqueue(ctx, tx, ev); err != nil {
+				return fmt.Errorf("leads: showcase outbox: %w", err)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return ShowcaseLeadResult{}, err
+	}
+	return res, nil
 }
 
 // target picks the receiving organization: the most specific territory

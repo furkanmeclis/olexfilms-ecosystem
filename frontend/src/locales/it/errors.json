@@ -128,5 +128,19 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Il rotolo non è nello stock di questa organizzazione.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Il rotolo è in un servizio o ordine aperto.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Questa chiave di idempotenza è stata usata per un'altra divisione.",
-  "codes.LEADS_MODULE_DISABLED": "Il modulo contatti è chiuso in tutto il sistema; attiva prima il modulo."
+  "codes.LEADS_MODULE_DISABLED": "Il modulo contatti è chiuso in tutto il sistema; attiva prima il modulo.",
+  "codes.FLEET_ALREADY_EXISTS": "Esiste già una flotta con questo codice fiscale; invii una richiesta di collegamento.",
+  "codes.FLEET_INVALID_TAX_NUMBER": "Il codice fiscale non è valido (il controllo VKN o TCKN non torna).",
+  "codes.FLEET_LINK_EXISTS": "Ha già un collegamento aperto con questa flotta.",
+  "codes.FLEET_LINK_STATE_CHANGED": "Il collegamento è stato modificato contemporaneamente; riprovi.",
+  "codes.FLEET_PRIMARY_USER_REQUIRED": "Inviti prima il primo utente della flotta (il proprietario dei veicoli).",
+  "codes.FLEET_PRIMARY_USER_LOCKED": "L'utente principale della flotta è proprietario dei veicoli e non può essere disattivato.",
+  "codes.FLEET_USER_EMAIL_TAKEN": "Esiste già un account con questo indirizzo e-mail.",
+  "codes.FLEET_VEHICLE_EXISTS": "Un veicolo con questa targa o questo VIN appartiene agli utenti della flotta; può collegarlo alla flotta.",
+  "codes.FLEET_VEHICLE_OTHER_OWNER": "Il veicolo appartiene a un altro cliente o a un'altra flotta e non può essere aggiunto.",
+  "codes.FLEET_NO_DEALER_LINK": "La sua organizzazione non ha un collegamento attivo con questa flotta.",
+  "codes.FLEET_LINK_NOT_PENDING": "La richiesta di collegamento ha già ricevuto risposta.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "La galleria è piena; elimini una foto prima di aggiungerne una nuova.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Scriva una nota per rifiutare.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Tipo di file non supportato; carichi un'immagine JPEG, PNG o WebP."
 }

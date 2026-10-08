@@ -60,27 +60,33 @@ func (q *Queries) GetOrderForIndex(ctx context.Context, argUuid uuid.UUID) (GetO
 
 const getOrganizationForIndex = `-- name: GetOrganizationForIndex :one
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
-       p.name AS parent_name
+       p.name AS parent_name,
+       COALESCE((SELECT array_agg(l.dealer_org_id ORDER BY l.dealer_org_id) FROM fleet_dealer_links l
+                 WHERE l.fleet_org_id = o.id AND l.status = 'active'), '{}')::bigint[] AS linked_org_ids,
+       -- TEC-467: a published dealer showcase (the approved snapshot).
+       EXISTS (SELECT 1 FROM dealer_showcases s
+               WHERE s.organization_id = o.id AND s.published_content IS NOT NULL)::boolean AS has_showcase
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
-WHERE o.uuid = $1 AND o.deleted_at IS NULL AND o.type <> 'fleet'
+WHERE o.uuid = $1 AND o.deleted_at IS NULL
 `
 
 type GetOrganizationForIndexRow struct {
-	Uuid       uuid.UUID   `json:"uuid"`
-	ID         int64       `json:"id"`
-	Slug       string      `json:"slug"`
-	Name       string      `json:"name"`
-	Type       string      `json:"type"`
-	Status     string      `json:"status"`
-	BrandID    int64       `json:"brand_id"`
-	City       string      `json:"city"`
-	District   string      `json:"district"`
-	Phone      string      `json:"phone"`
-	ParentName pgtype.Text `json:"parent_name"`
+	Uuid         uuid.UUID   `json:"uuid"`
+	ID           int64       `json:"id"`
+	Slug         string      `json:"slug"`
+	Name         string      `json:"name"`
+	Type         string      `json:"type"`
+	Status       string      `json:"status"`
+	BrandID      int64       `json:"brand_id"`
+	City         string      `json:"city"`
+	District     string      `json:"district"`
+	Phone        string      `json:"phone"`
+	ParentName   pgtype.Text `json:"parent_name"`
+	LinkedOrgIds []int64     `json:"linked_org_ids"`
+	HasShowcase  bool        `json:"has_showcase"`
 }
 
-// TEC-472: fleets are not indexed (a stale document is removed).
 func (q *Queries) GetOrganizationForIndex(ctx context.Context, argUuid uuid.UUID) (GetOrganizationForIndexRow, error) {
 	row := q.db.QueryRow(ctx, getOrganizationForIndex, argUuid)
 	var i GetOrganizationForIndexRow
@@ -96,6 +102,8 @@ func (q *Queries) GetOrganizationForIndex(ctx context.Context, argUuid uuid.UUID
 		&i.District,
 		&i.Phone,
 		&i.ParentName,
+		&i.LinkedOrgIds,
+		&i.HasShowcase,
 	)
 	return i, err
 }
@@ -246,25 +254,32 @@ func (q *Queries) ListOrdersForIndex(ctx context.Context) ([]ListOrdersForIndexR
 const listOrganizationsForIndex = `-- name: ListOrganizationsForIndex :many
 
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
-       p.name AS parent_name
+       p.name AS parent_name,
+       COALESCE((SELECT array_agg(l.dealer_org_id ORDER BY l.dealer_org_id) FROM fleet_dealer_links l
+                 WHERE l.fleet_org_id = o.id AND l.status = 'active'), '{}')::bigint[] AS linked_org_ids,
+       -- TEC-467: a published dealer showcase (the approved snapshot).
+       EXISTS (SELECT 1 FROM dealer_showcases s
+               WHERE s.organization_id = o.id AND s.published_content IS NOT NULL)::boolean AS has_showcase
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
-WHERE o.deleted_at IS NULL AND o.type <> 'fleet'
+WHERE o.deleted_at IS NULL
 ORDER BY o.id
 `
 
 type ListOrganizationsForIndexRow struct {
-	Uuid       uuid.UUID   `json:"uuid"`
-	ID         int64       `json:"id"`
-	Slug       string      `json:"slug"`
-	Name       string      `json:"name"`
-	Type       string      `json:"type"`
-	Status     string      `json:"status"`
-	BrandID    int64       `json:"brand_id"`
-	City       string      `json:"city"`
-	District   string      `json:"district"`
-	Phone      string      `json:"phone"`
-	ParentName pgtype.Text `json:"parent_name"`
+	Uuid         uuid.UUID   `json:"uuid"`
+	ID           int64       `json:"id"`
+	Slug         string      `json:"slug"`
+	Name         string      `json:"name"`
+	Type         string      `json:"type"`
+	Status       string      `json:"status"`
+	BrandID      int64       `json:"brand_id"`
+	City         string      `json:"city"`
+	District     string      `json:"district"`
+	Phone        string      `json:"phone"`
+	ParentName   pgtype.Text `json:"parent_name"`
+	LinkedOrgIds []int64     `json:"linked_org_ids"`
+	HasShowcase  bool        `json:"has_showcase"`
 }
 
 // TEC-210: organizations (name, dealer code = slug), orders (order number,
@@ -272,6 +287,8 @@ type ListOrganizationsForIndexRow struct {
 // Same contract as search_index.sql (TEC-209): the list endpoints filter
 // the index on the caller's scope and reload the hits from Postgres with
 // that scope, so the index is never the only access check.
+// TEC-473: fleets are indexed with type fleet; linked_org_ids are the
+// dealers with an active link (a dealer's search finds only its fleets).
 func (q *Queries) ListOrganizationsForIndex(ctx context.Context) ([]ListOrganizationsForIndexRow, error) {
 	rows, err := q.db.Query(ctx, listOrganizationsForIndex)
 	if err != nil {
@@ -293,6 +310,8 @@ func (q *Queries) ListOrganizationsForIndex(ctx context.Context) ([]ListOrganiza
 			&i.District,
 			&i.Phone,
 			&i.ParentName,
+			&i.LinkedOrgIds,
+			&i.HasShowcase,
 		); err != nil {
 			return nil, err
 		}

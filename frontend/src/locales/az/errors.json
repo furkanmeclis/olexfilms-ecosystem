@@ -128,5 +128,19 @@
   "codes.STOCK_SPLIT_UNIT_ELSEWHERE": "Rulon bu təşkilatın stokunda deyil.",
   "codes.STOCK_SPLIT_UNIT_IN_USE": "Rulon açıq xidmətdə və ya sifarişdə istifadə olunur.",
   "codes.STOCK_SPLIT_KEY_CONFLICT": "Bu əməliyyat açarı başqa bölmə üçün istifadə olunub.",
-  "codes.LEADS_MODULE_DISABLED": "Potensial müştəri modulu sistem üzrə bağlıdır; əvvəlcə modulu açın."
+  "codes.LEADS_MODULE_DISABLED": "Potensial müştəri modulu sistem üzrə bağlıdır; əvvəlcə modulu açın.",
+  "codes.FLEET_ALREADY_EXISTS": "Bu vergi nömrəsi ilə avtopark artıq mövcuddur; ona əlaqə sorğusu göndərin.",
+  "codes.FLEET_INVALID_TAX_NUMBER": "Vergi nömrəsi etibarsızdır (VKN və ya TCKN yoxlaması uyğun gəlmir).",
+  "codes.FLEET_LINK_EXISTS": "Bu avtoparkla artıq açıq əlaqəniz var.",
+  "codes.FLEET_LINK_STATE_CHANGED": "Əlaqə eyni vaxtda dəyişdirildi; yenidən cəhd edin.",
+  "codes.FLEET_PRIMARY_USER_REQUIRED": "Əvvəlcə avtoparkın ilk istifadəçisini (nəqliyyat vasitələrinin sahibi) dəvət edin.",
+  "codes.FLEET_PRIMARY_USER_LOCKED": "Avtoparkın əsas istifadəçisi nəqliyyat vasitələrinin sahibidir və deaktiv edilə bilməz.",
+  "codes.FLEET_USER_EMAIL_TAKEN": "Bu e-poçt ünvanı ilə artıq hesab mövcuddur.",
+  "codes.FLEET_VEHICLE_EXISTS": "Bu nömrə və ya VIN ilə nəqliyyat vasitəsi avtopark istifadəçilərinə aiddir; onu avtoparka bağlaya bilərsiniz.",
+  "codes.FLEET_VEHICLE_OTHER_OWNER": "Nəqliyyat vasitəsi başqa müştəriyə və ya avtoparka aiddir və əlavə edilə bilməz.",
+  "codes.FLEET_NO_DEALER_LINK": "Təşkilatınızın bu avtoparkla aktiv əlaqəsi yoxdur.",
+  "codes.FLEET_LINK_NOT_PENDING": "Əlaqə sorğusuna artıq cavab verilib.",
+  "codes.SHOWCASE_PHOTO_LIMIT": "Qalereya doludur; yeni şəkil əlavə etməzdən əvvəl bir şəkli silin.",
+  "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Rədd etmək üçün qeyd yazın.",
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Fayl növü dəstəklənmir; JPEG, PNG və ya WebP şəkli yükləyin."
 }

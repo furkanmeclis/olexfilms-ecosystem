@@ -1,6 +1,8 @@
 // Package usecase holds the fleet business rules (F5-02). TEC-472 brings
-// opening a fleet (organization + profile + the opener's link); the
-// endpoints, invitations and vehicle import arrive with F5-02b.
+// opening a fleet (organization + profile + the opener's link); TEC-473
+// (F5-02b) the management API: dealer links and their portal decision,
+// fleet users (invitation), fleet vehicles and their import, the fleet card
+// and the fleet statement.
 package usecase
 
 import (
@@ -15,7 +17,10 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/repository"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -69,12 +74,36 @@ type Conn interface {
 
 // Service is the fleet usecase.
 type Service struct {
-	conn Conn
-	now  func() time.Time
+	conn         Conn
+	now          func() time.Time
+	out          outbox.Enqueuer
+	plates       PlateValidator
+	inviter      PasswordInviter
+	appointments AppointmentStarter
 }
 
 // New creates the fleet usecase.
 func New(conn Conn) *Service { return &Service{conn: conn, now: time.Now} }
+
+// PlateValidator checks a plate against its country's format (geo).
+type PlateValidator interface {
+	ValidatePlate(ctx context.Context, iso2, plate string) (geo.PlateCheck, error)
+}
+
+// PasswordInviter starts the existing password set / reset flow for a new
+// fleet user (auth ForgotPassword: a one-time code by e-mail).
+type PasswordInviter interface {
+	ForgotPassword(ctx context.Context, email string) error
+}
+
+// SetOutbox makes the fleet writes publish fleet.* (and vehicle.*) events.
+func (s *Service) SetOutbox(out outbox.Enqueuer) { s.out = out }
+
+// SetPlates sets the plate validator of the vehicle writes.
+func (s *Service) SetPlates(p PlateValidator) { s.plates = p }
+
+// SetInviter sets the password flow of the user invitation.
+func (s *Service) SetInviter(i PasswordInviter) { s.inviter = i }
 
 // CreateFleetInput opens a fleet for a dealer (or a serving distributor).
 type CreateFleetInput struct {
@@ -213,6 +242,17 @@ func (s *Service) CreateFleet(ctx context.Context, in CreateFleetInput) (Fleet, 
 		return Fleet{}, ErrLinkExists
 	}
 	if err != nil {
+		return Fleet{}, err
+	}
+	// TEC-473: the fleet cari in the opener's ledger, recorded on the link.
+	cari, err := repository.EnsureFleetCari(ctx, q, in.Opener, org.ID)
+	if err != nil {
+		return Fleet{}, err
+	}
+	link.CariAccountID = pgtype.Int8{Int64: cari.ID, Valid: true}
+	if err := s.emit(ctx, tx, events.FleetCreated, in.Opener.ID, in.ActorUserID, org, map[string]any{
+		"link_uuid": link.Uuid.String(), "dealer_org_id": in.Opener.ID,
+	}); err != nil {
 		return Fleet{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {

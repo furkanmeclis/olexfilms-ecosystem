@@ -132,6 +132,7 @@ type Appointment struct {
 	EstimatedMinutes int32      `json:"estimated_minutes"`
 	Source           string     `json:"source"`
 	Status           string     `json:"status"`
+	PlanID           *int64     `json:"plan_id,omitempty"`
 	CancelReason     *string    `json:"cancel_reason,omitempty"`
 	LeadID           *int64     `json:"lead_id,omitempty"`
 	ServiceID        *int64     `json:"service_id,omitempty"`
@@ -186,6 +187,7 @@ type CreateInput struct {
 	EstimatedMinutes *int32     `json:"estimated_minutes"`
 	Source           string     `json:"source"`
 	Note             string     `json:"note"`
+	PlanID           *int64     `json:"-"`
 }
 
 type PatchInput = CreateInput
@@ -704,7 +706,7 @@ func (s *Service) StartIntake(ctx context.Context, c Caller, id uuid.UUID) (Appo
 			ID: locked.ID, OrganizationID: locked.OrganizationID,
 			CustomerUserID: locked.CustomerUserID, VehicleID: locked.VehicleID, StartsAt: locked.StartsAt, EndsAt: locked.EndsAt,
 			EstimatedMinutes: locked.EstimatedMinutes, Source: locked.Source, LeadID: locked.LeadID,
-			ServiceID: pgtype.Int8{Int64: serviceRow.ID, Valid: true}, Note: locked.Note,
+			ServiceID: pgtype.Int8{Int64: serviceRow.ID, Valid: true}, PlanID: locked.PlanID, Note: locked.Note,
 		})
 		if err != nil {
 			return fmt.Errorf("appointments: link service: %w", err)
@@ -845,7 +847,7 @@ func (s *Service) save(ctx context.Context, c Caller, orgID int64, cur db.Appoin
 			OrganizationID: org.ID, BrandID: org.BrandID, CustomerUserID: in.CustomerUserID,
 			VehicleID: int8Ptr(in.VehicleID), StartsAt: tsArg(starts), EndsAt: tsArg(ends),
 			EstimatedMinutes: mins, Source: in.Source, Status: StatusScheduled,
-			Note: strings.TrimSpace(in.Note), CreatedByUserID: c.actor(),
+			Note: strings.TrimSpace(in.Note), CreatedByUserID: c.actor(), PlanID: int8Ptr(in.PlanID),
 		}
 		if create {
 			created, err := q.CreateAppointment(ctx, params)
@@ -859,7 +861,7 @@ func (s *Service) save(ctx context.Context, c Caller, orgID int64, cur db.Appoin
 			ID: cur.ID, OrganizationID: cur.OrganizationID, CustomerUserID: params.CustomerUserID,
 			VehicleID: params.VehicleID, StartsAt: params.StartsAt, EndsAt: params.EndsAt,
 			EstimatedMinutes: params.EstimatedMinutes, Source: params.Source, LeadID: cur.LeadID,
-			ServiceID: cur.ServiceID, Note: params.Note,
+			ServiceID: cur.ServiceID, PlanID: cur.PlanID, Note: params.Note,
 		})
 		if err != nil {
 			return fmt.Errorf("appointments: update: %w", err)
@@ -1038,7 +1040,7 @@ func validateInput(in CreateInput) error {
 
 func validSource(v string) bool {
 	switch v {
-	case "panel", "portal", "assistant", "lead":
+	case "panel", "portal", "assistant", "lead", "fleet_plan":
 		return true
 	}
 	return false
@@ -1200,7 +1202,7 @@ func uuidPtr(v pgtype.UUID) *uuid.UUID {
 func appointmentView(r db.Appointment) Appointment {
 	return Appointment{UUID: r.Uuid, OrganizationID: r.OrganizationID, CustomerUserID: r.CustomerUserID,
 		VehicleID: intPtr(r.VehicleID), StartsAt: r.StartsAt.Time, EndsAt: r.EndsAt.Time,
-		EstimatedMinutes: r.EstimatedMinutes, Source: r.Source, Status: r.Status, CancelReason: textPtr(r.CancelReason),
+		EstimatedMinutes: r.EstimatedMinutes, Source: r.Source, Status: r.Status, PlanID: intPtr(r.PlanID), CancelReason: textPtr(r.CancelReason),
 		LeadID: intPtr(r.LeadID), ServiceID: intPtr(r.ServiceID), Note: r.Note, CreatedByUserID: intPtr(r.CreatedByUserID),
 		CreatedAt: timePtr(r.CreatedAt), UpdatedAt: timePtr(r.UpdatedAt)}
 }

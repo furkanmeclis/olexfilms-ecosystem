@@ -146,6 +146,7 @@ WHERE s.brand_id = sqlc.arg(brand_id)
 -- its snapshot while a newer version waits for review or was rejected.
 -- The module flag is checked by the usecase. The Google rating is live.
 SELECT s.published_content,
+       s.id AS showcase_id,
        s.published_at,
        s.google_place_id,
        s.google_rating,
@@ -158,6 +159,31 @@ FROM dealer_showcases s
 JOIN organizations o ON o.id = s.organization_id
 WHERE o.slug = sqlc.arg(slug)
   AND s.brand_id = sqlc.arg(brand_id)
+  AND s.published_content IS NOT NULL
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type IN ('dealer', 'distributor')
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+  AND (o.contract_valid_until IS NULL OR o.contract_valid_until >= CURRENT_DATE);
+
+-- name: GetShowcaseLeadTargetBySlug :one
+-- TEC-468: public lead form is accepted only when the dealer showcase add-on
+-- is enabled and the showcase has a published snapshot.
+SELECT o.id AS organization_id,
+       o.brand_id,
+       o.slug,
+       o.name,
+       o.locale,
+       o.country_id,
+       c.iso2 AS country_iso2,
+       s.id AS showcase_id,
+       s.published_at
+FROM organizations o
+JOIN dealer_showcases s ON s.organization_id = o.id AND s.brand_id = o.brand_id
+LEFT JOIN countries c ON c.id = o.country_id
+WHERE o.slug = sqlc.arg(slug)
+  AND o.brand_id = sqlc.arg(brand_id)
   AND s.published_content IS NOT NULL
   AND o.deleted_at IS NULL
   AND o.status = 'active'
@@ -246,3 +272,48 @@ UPDATE dealer_showcase_photos x
 SET sort_order = o.ord * 10
 FROM unnest(sqlc.arg(uuids)::uuid[]) WITH ORDINALITY AS o (uuid, ord)
 WHERE x.uuid = o.uuid AND x.showcase_id = sqlc.arg(showcase_id);
+
+-- TEC-467 (F5-01b) -------------------------------------------------------------
+
+-- name: EnsureDealerShowcase :one
+-- Opens an empty draft showcase for the organization when it has none
+-- (a service or photo added before the first content save) and returns the
+-- row either way.
+WITH ins AS (
+    INSERT INTO dealer_showcases (organization_id, brand_id, created_by_user_id, updated_by_user_id)
+    VALUES (sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.narg(actor_user_id), sqlc.narg(actor_user_id))
+    ON CONFLICT (organization_id) DO NOTHING
+    RETURNING *
+)
+SELECT * FROM ins
+UNION ALL
+SELECT * FROM dealer_showcases WHERE organization_id = sqlc.arg(organization_id) AND NOT EXISTS (SELECT 1 FROM ins);
+
+-- name: GetDealerShowcasePhoto :one
+SELECT * FROM dealer_showcase_photos
+WHERE uuid = sqlc.arg(uuid) AND showcase_id = sqlc.arg(showcase_id);
+
+-- name: ListPublishedDealerShowcaseBadges :many
+-- Nearby dealers list: which of the given organizations of the brand serve
+-- a published showcase, with the live Google rating. The module flag is
+-- checked by the caller.
+SELECT o.id AS organization_id,
+       o.uuid AS organization_uuid,
+       s.google_rating
+FROM dealer_showcases s
+JOIN organizations o ON o.id = s.organization_id
+WHERE s.brand_id = sqlc.arg(brand_id)
+  AND s.published_content IS NOT NULL
+  AND o.uuid = ANY (sqlc.arg(organization_uuids)::uuid[]);
+
+-- name: ListPublishedDealerShowcaseDates :many
+-- Sitemap: the publish time of every published showcase of the brand (the
+-- caller keeps the organizations whose module is on).
+SELECT s.organization_id,
+       o.slug,
+       s.published_at
+FROM dealer_showcases s
+JOIN organizations o ON o.id = s.organization_id
+WHERE s.brand_id = sqlc.arg(brand_id)
+  AND s.published_content IS NOT NULL
+  AND o.deleted_at IS NULL;

@@ -32,6 +32,44 @@ const (
 	CodeLinkStale        = "FLEET_LINK_STATE_CHANGED"
 )
 
+// Named business rule codes of the F5-02b management API (TEC-473).
+const (
+	// CodePrimaryUserRequired: vehicles are owned by the fleet's primary
+	// user; invite a user first (422).
+	CodePrimaryUserRequired = "FLEET_PRIMARY_USER_REQUIRED"
+	// CodePrimaryUserLocked: the primary user owns the fleet vehicles and
+	// is not disabled (422).
+	CodePrimaryUserLocked = "FLEET_PRIMARY_USER_LOCKED"
+	// CodeUserEmailTaken: the invited e-mail already has an account (409).
+	CodeUserEmailTaken = "FLEET_USER_EMAIL_TAKEN"
+	// CodeVehicleExists: a vehicle with this plate / VIN already belongs
+	// to the fleet's users; the answer carries it so the client can link
+	// it (409, data.vehicle_uuid).
+	CodeVehicleExists = "FLEET_VEHICLE_EXISTS"
+	// CodeVehicleOtherOwner: the vehicle belongs to another customer or
+	// another fleet; it is never linked (409).
+	CodeVehicleOtherOwner = "FLEET_VEHICLE_OTHER_OWNER"
+	// CodeNoDealerLink: the statement needs the caller's own link (422).
+	CodeNoDealerLink = "FLEET_NO_DEALER_LINK"
+	// CodeLinkNotPending: only a pending link is accepted or rejected (409).
+	CodeLinkNotPending = "FLEET_LINK_NOT_PENDING"
+	// CodeServicePlanStale: the appointment capacity changed after the
+	// preview; the client must preview again (409).
+	CodeServicePlanStale = "FLEET_SERVICE_PLAN_STALE"
+	// CodeServicePlanCancelled: the plan was already cancelled (409).
+	CodeServicePlanCancelled = "FLEET_SERVICE_PLAN_CANCELLED"
+)
+
+// Fleet user statuses (fleet_users.status).
+const (
+	UserActive   = "active"
+	UserDisabled = "disabled"
+)
+
+// Fleet sources of finance entries: the dealer's service income on a
+// fleet vehicle lands on the fleet cari (source service_income).
+const SourceServiceIncome = "service_income"
+
 // ValidTaxNumber reports whether s is a valid VKN (10 digits) or TCKN (11
 // digits) including its checksum.
 func ValidTaxNumber(s string) bool {

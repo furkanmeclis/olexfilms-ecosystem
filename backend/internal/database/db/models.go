@@ -251,6 +251,7 @@ type Appointment struct {
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	PlanID           pgtype.Int8        `json:"plan_id"`
 }
 
 type AppointmentClosure struct {
@@ -762,31 +763,32 @@ type ContractTemplateLocale struct {
 }
 
 type Conversation struct {
-	ID                 int64              `json:"id"`
-	Uuid               uuid.UUID          `json:"uuid"`
-	OrganizationID     pgtype.Int8        `json:"organization_id"`
-	BrandID            pgtype.Int8        `json:"brand_id"`
-	Channel            string             `json:"channel"`
-	ContactE164        string             `json:"contact_e164"`
-	ContactName        pgtype.Text        `json:"contact_name"`
-	UserID             pgtype.Int8        `json:"user_id"`
-	LastMessageAt      pgtype.Timestamptz `json:"last_message_at"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
-	Status             string             `json:"status"`
-	AiMode             string             `json:"ai_mode"`
-	AiPausedUntil      pgtype.Timestamptz `json:"ai_paused_until"`
-	AssignedUserID     pgtype.Int8        `json:"assigned_user_id"`
-	AssignedOrgID      pgtype.Int8        `json:"assigned_org_id"`
-	IdentityKind       string             `json:"identity_kind"`
-	IdentityUserID     pgtype.Int8        `json:"identity_user_id"`
-	IdentityOrgID      pgtype.Int8        `json:"identity_org_id"`
-	IdentityResolvedAt pgtype.Timestamptz `json:"identity_resolved_at"`
-	Locale             pgtype.Text        `json:"locale"`
-	LastInboundAt      pgtype.Timestamptz `json:"last_inbound_at"`
-	UnreadCount        int32              `json:"unread_count"`
-	AiConsentAt        pgtype.Timestamptz `json:"ai_consent_at"`
-	VisitorLeadID      pgtype.Int8        `json:"visitor_lead_id"`
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	OrganizationID      pgtype.Int8        `json:"organization_id"`
+	BrandID             pgtype.Int8        `json:"brand_id"`
+	Channel             string             `json:"channel"`
+	ContactE164         string             `json:"contact_e164"`
+	ContactName         pgtype.Text        `json:"contact_name"`
+	UserID              pgtype.Int8        `json:"user_id"`
+	LastMessageAt       pgtype.Timestamptz `json:"last_message_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	Status              string             `json:"status"`
+	AiMode              string             `json:"ai_mode"`
+	AiPausedUntil       pgtype.Timestamptz `json:"ai_paused_until"`
+	AssignedUserID      pgtype.Int8        `json:"assigned_user_id"`
+	AssignedOrgID       pgtype.Int8        `json:"assigned_org_id"`
+	IdentityKind        string             `json:"identity_kind"`
+	IdentityUserID      pgtype.Int8        `json:"identity_user_id"`
+	IdentityOrgID       pgtype.Int8        `json:"identity_org_id"`
+	IdentityResolvedAt  pgtype.Timestamptz `json:"identity_resolved_at"`
+	Locale              pgtype.Text        `json:"locale"`
+	LastInboundAt       pgtype.Timestamptz `json:"last_inbound_at"`
+	UnreadCount         int32              `json:"unread_count"`
+	AiConsentAt         pgtype.Timestamptz `json:"ai_consent_at"`
+	VisitorLeadID       pgtype.Int8        `json:"visitor_lead_id"`
+	ReferredDealerOrgID pgtype.Int8        `json:"referred_dealer_org_id"`
 }
 
 type ConversationAiRun struct {
@@ -1190,6 +1192,44 @@ type FleetReport struct {
 	EmailedAt   pgtype.Timestamptz `json:"emailed_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FleetServicePlan struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	FleetOrgID        int64              `json:"fleet_org_id"`
+	FleetLinkID       int64              `json:"fleet_link_id"`
+	Title             string             `json:"title"`
+	ServiceType       string             `json:"service_type"`
+	Note              string             `json:"note"`
+	StartDate         pgtype.Date        `json:"start_date"`
+	DailyVehicleLimit int32              `json:"daily_vehicle_limit"`
+	PreferredTimes    []byte             `json:"preferred_times"`
+	Status            string             `json:"status"`
+	IdempotencyKey    pgtype.Text        `json:"idempotency_key"`
+	CancelReason      pgtype.Text        `json:"cancel_reason"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	CancelledByUserID pgtype.Int8        `json:"cancelled_by_user_id"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FleetUser struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	FleetOrgID      int64              `json:"fleet_org_id"`
+	BrandID         int64              `json:"brand_id"`
+	UserID          int64              `json:"user_id"`
+	IsPrimary       bool               `json:"is_primary"`
+	Status          string             `json:"status"`
+	InvitedByOrgID  pgtype.Int8        `json:"invited_by_org_id"`
+	InvitedByUserID pgtype.Int8        `json:"invited_by_user_id"`
+	DisabledAt      pgtype.Timestamptz `json:"disabled_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GithubAppSetting struct {

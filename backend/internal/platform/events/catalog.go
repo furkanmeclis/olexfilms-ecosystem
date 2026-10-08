@@ -677,6 +677,7 @@ func catalogConstants() []string {
 		OrganizationUpdated,
 		QuoteSent,
 		LeadsApplicationReceived,
+		LeadsWebsiteReceived,
 		MeasurementMatchSuggested,
 		MeasurementDiffCheckRequired,
 		CampaignsSubmitted,
@@ -686,6 +687,16 @@ func catalogConstants() []string {
 		AIQuotaThreshold,
 		CampaignsStarted,
 		CampaignsFinished,
+		FleetCreated,
+		FleetLinkRequested,
+		FleetLinked,
+		FleetLinkRejected,
+		FleetVehicleAdded,
+		FleetUserInvited,
+		FleetServicePlanCreated,
+		ShowcaseReviewRequested,
+		ShowcasePublished,
+		ShowcaseRejected,
 	}
 }
 
@@ -702,6 +713,10 @@ const (
 // (territory distributor or brand center) and notify_user_ids its members
 // holding leads.read.
 const LeadsApplicationReceived = "leads.application_received"
+
+// LeadsWebsiteReceived (TEC-468) is written when the public dealer showcase
+// form opens or updates a customer lead in that dealer's list.
+const LeadsWebsiteReceived = "leads.website_received"
 
 // QuoteSent (TEC-315) is written when a quote is sent or reminded over
 // WhatsApp. Payload carries the recipient phone and public quote URL.
@@ -739,3 +754,35 @@ const (
 // period, threshold (80 | 100), used_tokens, quota_tokens. The
 // notification template reaches the organization owners (F4-01g).
 const AIQuotaThreshold = "ai.quota.threshold"
+
+// Fleet management (TEC-473, F5-02b): written in the transaction that opens
+// a fleet, requests or decides a dealer link, adds a vehicle to a fleet or
+// invites a fleet user. tenant is the acting organization (the fleet for a
+// portal decision); payload: fleet_uuid, fleet_id, brand_id, fleet_name
+// and, per event, link_uuid / dealer_org_id / dealer_name, vehicle_uuid,
+// notify_user_ids (link requests reach the fleet users, decisions the
+// requesting user). The search sync refreshes the fleet document.
+const (
+	FleetCreated            = "fleet.created"
+	FleetLinkRequested      = "fleet.link_requested"
+	FleetLinked             = "fleet.linked"
+	FleetLinkRejected       = "fleet.link_rejected"
+	FleetVehicleAdded       = "fleet.vehicle_added"
+	FleetUserInvited        = "fleet.user_invited"
+	FleetServicePlanCreated = "fleet.service_plan_created"
+)
+
+// Dealer showcase (TEC-467, F5-01b): written in the transaction that moves
+// the showcase. review_requested when an owner submits with
+// showcase.approval_required on (notify_user_ids: the brand center's
+// members holding platform.showcase.review); published when the snapshot is
+// written (direct publish or center approval; notify_user_ids: the owners
+// of the organization after an approval, empty on a direct publish);
+// rejected with the reviewer's note (notify_user_ids: the owners). Payload:
+// organization_uuid, organization_id, organization_name, brand_id, status,
+// reason. The organizations index refreshes has_showcase on published.
+const (
+	ShowcaseReviewRequested = "showcase.review_requested"
+	ShowcasePublished       = "showcase.published"
+	ShowcaseRejected        = "showcase.rejected"
+)

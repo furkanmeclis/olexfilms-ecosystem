@@ -897,6 +897,61 @@ func (q *Queries) GetLeadForIndex(ctx context.Context, argUuid uuid.UUID) (Lead,
 	return i, err
 }
 
+const getOpenWebsiteLeadByPhone = `-- name: GetOpenWebsiteLeadByPhone :one
+SELECT id, uuid, organization_id, brand_id, target_type, customer_user_id, vehicle_id, candidate_company_name, candidate_contact_name, candidate_phone_e164, candidate_email, country_id, province_id, district_id, source, temperature, status, lost_reason, follow_up_date, assignee_user_id, notes, won_ref_type, won_ref_id, created_by_user_id, created_at, updated_at, deleted_at FROM leads
+WHERE organization_id = $1
+  AND brand_id = $2
+  AND target_type = 'customer'
+  AND source = 'website'
+  AND candidate_phone_e164 = $3::text
+  AND status IN ('new', 'contacted', 'quoted')
+  AND deleted_at IS NULL
+ORDER BY created_at DESC, id DESC
+LIMIT 1
+`
+
+type GetOpenWebsiteLeadByPhoneParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	BrandID        int64  `json:"brand_id"`
+	PhoneE164      string `json:"phone_e164"`
+}
+
+// TEC-468: one open public showcase lead per dealer + phone.
+func (q *Queries) GetOpenWebsiteLeadByPhone(ctx context.Context, arg GetOpenWebsiteLeadByPhoneParams) (Lead, error) {
+	row := q.db.QueryRow(ctx, getOpenWebsiteLeadByPhone, arg.OrganizationID, arg.BrandID, arg.PhoneE164)
+	var i Lead
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.TargetType,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CandidateCompanyName,
+		&i.CandidateContactName,
+		&i.CandidatePhoneE164,
+		&i.CandidateEmail,
+		&i.CountryID,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.Source,
+		&i.Temperature,
+		&i.Status,
+		&i.LostReason,
+		&i.FollowUpDate,
+		&i.AssigneeUserID,
+		&i.Notes,
+		&i.WonRefType,
+		&i.WonRefID,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getQuoteByPublicToken = `-- name: GetQuoteByPublicToken :one
 SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at FROM quotes
 WHERE public_token = $1 AND deleted_at IS NULL

@@ -101,6 +101,88 @@ func (q *Queries) DeleteDealerShowcaseService(ctx context.Context, arg DeleteDea
 	return result.RowsAffected(), nil
 }
 
+const ensureDealerShowcase = `-- name: EnsureDealerShowcase :one
+
+WITH ins AS (
+    INSERT INTO dealer_showcases (organization_id, brand_id, created_by_user_id, updated_by_user_id)
+    VALUES ($1, $2, $3, $3)
+    ON CONFLICT (organization_id) DO NOTHING
+    RETURNING id, uuid, organization_id, brand_id, status, content, working_hours, social_links, seo_keywords, google_place_id, google_rating, google_review_count, google_rating_source, google_rating_updated_at, published_content, published_at, submitted_at, reviewed_by, reviewed_at, review_note, created_by_user_id, updated_by_user_id, created_at, updated_at
+)
+SELECT id, uuid, organization_id, brand_id, status, content, working_hours, social_links, seo_keywords, google_place_id, google_rating, google_review_count, google_rating_source, google_rating_updated_at, published_content, published_at, submitted_at, reviewed_by, reviewed_at, review_note, created_by_user_id, updated_by_user_id, created_at, updated_at FROM ins
+UNION ALL
+SELECT id, uuid, organization_id, brand_id, status, content, working_hours, social_links, seo_keywords, google_place_id, google_rating, google_review_count, google_rating_source, google_rating_updated_at, published_content, published_at, submitted_at, reviewed_by, reviewed_at, review_note, created_by_user_id, updated_by_user_id, created_at, updated_at FROM dealer_showcases WHERE organization_id = $1 AND NOT EXISTS (SELECT 1 FROM ins)
+`
+
+type EnsureDealerShowcaseParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	BrandID        int64       `json:"brand_id"`
+	ActorUserID    pgtype.Int8 `json:"actor_user_id"`
+}
+
+type EnsureDealerShowcaseRow struct {
+	ID                    int64              `json:"id"`
+	Uuid                  uuid.UUID          `json:"uuid"`
+	OrganizationID        int64              `json:"organization_id"`
+	BrandID               int64              `json:"brand_id"`
+	Status                string             `json:"status"`
+	Content               []byte             `json:"content"`
+	WorkingHours          []byte             `json:"working_hours"`
+	SocialLinks           []byte             `json:"social_links"`
+	SeoKeywords           []string           `json:"seo_keywords"`
+	GooglePlaceID         pgtype.Text        `json:"google_place_id"`
+	GoogleRating          pgtype.Numeric     `json:"google_rating"`
+	GoogleReviewCount     pgtype.Int4        `json:"google_review_count"`
+	GoogleRatingSource    pgtype.Text        `json:"google_rating_source"`
+	GoogleRatingUpdatedAt pgtype.Timestamptz `json:"google_rating_updated_at"`
+	PublishedContent      []byte             `json:"published_content"`
+	PublishedAt           pgtype.Timestamptz `json:"published_at"`
+	SubmittedAt           pgtype.Timestamptz `json:"submitted_at"`
+	ReviewedBy            pgtype.Int8        `json:"reviewed_by"`
+	ReviewedAt            pgtype.Timestamptz `json:"reviewed_at"`
+	ReviewNote            pgtype.Text        `json:"review_note"`
+	CreatedByUserID       pgtype.Int8        `json:"created_by_user_id"`
+	UpdatedByUserID       pgtype.Int8        `json:"updated_by_user_id"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+// TEC-467 (F5-01b) -------------------------------------------------------------
+// Opens an empty draft showcase for the organization when it has none
+// (a service or photo added before the first content save) and returns the
+// row either way.
+func (q *Queries) EnsureDealerShowcase(ctx context.Context, arg EnsureDealerShowcaseParams) (EnsureDealerShowcaseRow, error) {
+	row := q.db.QueryRow(ctx, ensureDealerShowcase, arg.OrganizationID, arg.BrandID, arg.ActorUserID)
+	var i EnsureDealerShowcaseRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Status,
+		&i.Content,
+		&i.WorkingHours,
+		&i.SocialLinks,
+		&i.SeoKeywords,
+		&i.GooglePlaceID,
+		&i.GoogleRating,
+		&i.GoogleReviewCount,
+		&i.GoogleRatingSource,
+		&i.GoogleRatingUpdatedAt,
+		&i.PublishedContent,
+		&i.PublishedAt,
+		&i.SubmittedAt,
+		&i.ReviewedBy,
+		&i.ReviewedAt,
+		&i.ReviewNote,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getDealerShowcaseByOrg = `-- name: GetDealerShowcaseByOrg :one
 
 
@@ -186,8 +268,41 @@ func (q *Queries) GetDealerShowcaseByUUID(ctx context.Context, arg GetDealerShow
 	return i, err
 }
 
+const getDealerShowcasePhoto = `-- name: GetDealerShowcasePhoto :one
+SELECT id, uuid, showcase_id, organization_id, brand_id, storage_key, mime, size_bytes, sha256, caption, sort_order, created_by_user_id, created_at, updated_at FROM dealer_showcase_photos
+WHERE uuid = $1 AND showcase_id = $2
+`
+
+type GetDealerShowcasePhotoParams struct {
+	Uuid       uuid.UUID `json:"uuid"`
+	ShowcaseID int64     `json:"showcase_id"`
+}
+
+func (q *Queries) GetDealerShowcasePhoto(ctx context.Context, arg GetDealerShowcasePhotoParams) (DealerShowcasePhoto, error) {
+	row := q.db.QueryRow(ctx, getDealerShowcasePhoto, arg.Uuid, arg.ShowcaseID)
+	var i DealerShowcasePhoto
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ShowcaseID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.StorageKey,
+		&i.Mime,
+		&i.SizeBytes,
+		&i.Sha256,
+		&i.Caption,
+		&i.SortOrder,
+		&i.CreatedByUserID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getPublishedDealerShowcase = `-- name: GetPublishedDealerShowcase :one
 SELECT s.published_content,
+       s.id AS showcase_id,
        s.published_at,
        s.google_place_id,
        s.google_rating,
@@ -216,6 +331,7 @@ type GetPublishedDealerShowcaseParams struct {
 
 type GetPublishedDealerShowcaseRow struct {
 	PublishedContent      []byte             `json:"published_content"`
+	ShowcaseID            int64              `json:"showcase_id"`
 	PublishedAt           pgtype.Timestamptz `json:"published_at"`
 	GooglePlaceID         pgtype.Text        `json:"google_place_id"`
 	GoogleRating          pgtype.Numeric     `json:"google_rating"`
@@ -236,6 +352,7 @@ func (q *Queries) GetPublishedDealerShowcase(ctx context.Context, arg GetPublish
 	var i GetPublishedDealerShowcaseRow
 	err := row.Scan(
 		&i.PublishedContent,
+		&i.ShowcaseID,
 		&i.PublishedAt,
 		&i.GooglePlaceID,
 		&i.GoogleRating,
@@ -244,6 +361,66 @@ func (q *Queries) GetPublishedDealerShowcase(ctx context.Context, arg GetPublish
 		&i.GoogleRatingUpdatedAt,
 		&i.OrganizationID,
 		&i.OrganizationLocale,
+	)
+	return i, err
+}
+
+const getShowcaseLeadTargetBySlug = `-- name: GetShowcaseLeadTargetBySlug :one
+SELECT o.id AS organization_id,
+       o.brand_id,
+       o.slug,
+       o.name,
+       o.locale,
+       o.country_id,
+       c.iso2 AS country_iso2,
+       s.id AS showcase_id,
+       s.published_at
+FROM organizations o
+JOIN dealer_showcases s ON s.organization_id = o.id AND s.brand_id = o.brand_id
+LEFT JOIN countries c ON c.id = o.country_id
+WHERE o.slug = $1
+  AND o.brand_id = $2
+  AND s.published_content IS NOT NULL
+  AND o.deleted_at IS NULL
+  AND o.status = 'active'
+  AND o.type IN ('dealer', 'distributor')
+  AND o.access_starts_at <= NOW()
+  AND (o.access_ends_at IS NULL OR o.access_ends_at > NOW())
+  AND (o.contract_valid_until IS NULL OR o.contract_valid_until >= CURRENT_DATE)
+`
+
+type GetShowcaseLeadTargetBySlugParams struct {
+	Slug    string `json:"slug"`
+	BrandID int64  `json:"brand_id"`
+}
+
+type GetShowcaseLeadTargetBySlugRow struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Slug           string             `json:"slug"`
+	Name           string             `json:"name"`
+	Locale         string             `json:"locale"`
+	CountryID      pgtype.Int8        `json:"country_id"`
+	CountryIso2    pgtype.Text        `json:"country_iso2"`
+	ShowcaseID     int64              `json:"showcase_id"`
+	PublishedAt    pgtype.Timestamptz `json:"published_at"`
+}
+
+// TEC-468: public lead form is accepted only when the dealer showcase add-on
+// is enabled and the showcase has a published snapshot.
+func (q *Queries) GetShowcaseLeadTargetBySlug(ctx context.Context, arg GetShowcaseLeadTargetBySlugParams) (GetShowcaseLeadTargetBySlugRow, error) {
+	row := q.db.QueryRow(ctx, getShowcaseLeadTargetBySlug, arg.Slug, arg.BrandID)
+	var i GetShowcaseLeadTargetBySlugRow
+	err := row.Scan(
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Slug,
+		&i.Name,
+		&i.Locale,
+		&i.CountryID,
+		&i.CountryIso2,
+		&i.ShowcaseID,
+		&i.PublishedAt,
 	)
 	return i, err
 }
@@ -569,6 +746,90 @@ func (q *Queries) ListDealerShowcaseServices(ctx context.Context, showcaseID int
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublishedDealerShowcaseBadges = `-- name: ListPublishedDealerShowcaseBadges :many
+SELECT o.id AS organization_id,
+       o.uuid AS organization_uuid,
+       s.google_rating
+FROM dealer_showcases s
+JOIN organizations o ON o.id = s.organization_id
+WHERE s.brand_id = $1
+  AND s.published_content IS NOT NULL
+  AND o.uuid = ANY ($2::uuid[])
+`
+
+type ListPublishedDealerShowcaseBadgesParams struct {
+	BrandID           int64       `json:"brand_id"`
+	OrganizationUuids []uuid.UUID `json:"organization_uuids"`
+}
+
+type ListPublishedDealerShowcaseBadgesRow struct {
+	OrganizationID   int64          `json:"organization_id"`
+	OrganizationUuid uuid.UUID      `json:"organization_uuid"`
+	GoogleRating     pgtype.Numeric `json:"google_rating"`
+}
+
+// Nearby dealers list: which of the given organizations of the brand serve
+// a published showcase, with the live Google rating. The module flag is
+// checked by the caller.
+func (q *Queries) ListPublishedDealerShowcaseBadges(ctx context.Context, arg ListPublishedDealerShowcaseBadgesParams) ([]ListPublishedDealerShowcaseBadgesRow, error) {
+	rows, err := q.db.Query(ctx, listPublishedDealerShowcaseBadges, arg.BrandID, arg.OrganizationUuids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublishedDealerShowcaseBadgesRow{}
+	for rows.Next() {
+		var i ListPublishedDealerShowcaseBadgesRow
+		if err := rows.Scan(&i.OrganizationID, &i.OrganizationUuid, &i.GoogleRating); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPublishedDealerShowcaseDates = `-- name: ListPublishedDealerShowcaseDates :many
+SELECT s.organization_id,
+       o.slug,
+       s.published_at
+FROM dealer_showcases s
+JOIN organizations o ON o.id = s.organization_id
+WHERE s.brand_id = $1
+  AND s.published_content IS NOT NULL
+  AND o.deleted_at IS NULL
+`
+
+type ListPublishedDealerShowcaseDatesRow struct {
+	OrganizationID int64              `json:"organization_id"`
+	Slug           string             `json:"slug"`
+	PublishedAt    pgtype.Timestamptz `json:"published_at"`
+}
+
+// Sitemap: the publish time of every published showcase of the brand (the
+// caller keeps the organizations whose module is on).
+func (q *Queries) ListPublishedDealerShowcaseDates(ctx context.Context, brandID int64) ([]ListPublishedDealerShowcaseDatesRow, error) {
+	rows, err := q.db.Query(ctx, listPublishedDealerShowcaseDates, brandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublishedDealerShowcaseDatesRow{}
+	for rows.Next() {
+		var i ListPublishedDealerShowcaseDatesRow
+		if err := rows.Scan(&i.OrganizationID, &i.Slug, &i.PublishedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

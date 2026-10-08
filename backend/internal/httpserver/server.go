@@ -64,6 +64,9 @@ import (
 	dealeraccountingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting"
 	dealeraccountinghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting/handler"
 	dealeraccountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting/usecase"
+	showcasemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase"
+	showcasehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase/handler"
+	showcaseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase/usecase"
 	documentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents"
 	dochandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/handler"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
@@ -73,6 +76,9 @@ import (
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	featuremodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/features"
 	featurehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/features/handler"
+	fleetmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet"
+	fleethandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/handler"
+	fleetusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/usecase"
 	geomodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/geo"
 	geohandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/geo/handler"
 	importmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports"
@@ -626,6 +632,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-389 (F4-01g): AI settings, quotas and usage report; the tool
 	// registry is attached once it is built (below).
 	aiAdmin := aiusecase.NewAdmin(airepo.New(deps.DB), llm.ModelsFromConfig(cfg.AI), nil)
+	// TEC-473 (F5-02b): fleet management; the invitation reuses the
+	// password reset flow, vehicle writes the geo plate check.
+	fleetSvc := fleetusecase.New(deps.DB)
+	fleetSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries))
+	fleetSvc.SetPlates(geoSvc)
+	fleetSvc.SetInviter(uc)
 	ioReg := ioengine.NewRegistry(
 		// TEC-211: price columns behind pricing.* grants.
 		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries).WithPrices(pricingSvc),
@@ -677,6 +689,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		warrantyusecase.NewListExportAdapter(warrantyReader),
 		// TEC-389: AI usage report export (read only).
 		aiusecase.NewUsageExportAdapter(aiAdmin),
+		// TEC-473: fleet statement export and staged fleet vehicle import.
+		fleetusecase.NewStatementAdapter(fleetSvc),
+		fleetusecase.NewImporter(fleetSvc),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -719,6 +734,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		importQueue = deps.Queue
 	}
 	importSvc := importusecase.New(deps.Queries, deps.Storage, ioReg, importQueue, notifSvc, activityRec, log)
+	fleetmodule.RegisterRoutes(mux, fleethandler.New(fleetSvc, exportSvc, importSvc), tokens, loader, deps.Queries, featureSvc)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
@@ -874,6 +890,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	campaignsSvc := campaignsusecase.New(deps.DB, deps.Queries, campaignStorage)
 	campaignsSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-406: approval notifications
 	campaignsmodule.RegisterRoutes(mux, campaignshandler.New(campaignsSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-467 (F5-01b): dealer showcase editor, center review and the
+	// showcase block of the public dealer endpoints.
+	showcaseSvc := showcaseusecase.New(deps.DB, deps.Queries, featureSvc, sysSvc, outbox.NewStore(deps.DB, deps.Queries))
+	var showcaseStore showcasehandler.Store
+	if deps.Storage != nil {
+		showcaseSvc.SetStorage(deps.Storage)
+		showcaseStore = deps.Storage
+	}
+	orgSvc.SetShowcases(showcaseSvc)
+	showcasemodule.RegisterRoutes(mux, showcasehandler.New(showcaseSvc, showcaseStore), tokens, loader, deps.Queries, featureSvc)
 	// TEC-407: public unsubscribe of the campaign e-mail link.
 	campaignsmodule.RegisterPublicRoutes(mux, campaignshandler.NewUnsubscribe(
 		campaignsusecase.NewUnsubscriber(deps.Queries, []byte(cfg.JWT.AccessSecret)),
@@ -900,6 +926,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-323: appointments, capacity, availability and intake start.
 	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
 	appointmentsSvc.SetFeatureChecker(featureSvc)
+	fleetSvc.SetAppointments(appointmentsSvc)
 	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
 	appointmentsmodule.RegisterPortalRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader)
 	// TEC-385 (F4-01c): AI assistant tool registry over the module use
@@ -971,7 +998,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	sysSvc.SetGuard(sysconfig.KeyLeadsDealerApplicationEnabled, dealerApps.SettingGuard)
 	leadsmodule.RegisterPublicRoutes(mux, leadshandler.NewPublic(dealerApps, ratelimit.New(deps.Redis, cfg.App.Env),
 		leadshandler.RateLimits{IPLimit: cfg.Leads.ApplicationIPLimit, PhoneLimit: cfg.Leads.ApplicationPhoneLimit,
-			Window: cfg.Leads.ApplicationRateWindow}).WithQuotes(leadsSvc, docSvc))
+			Window: cfg.Leads.ApplicationRateWindow}).WithShowcaseSecret(cfg.JWT.AccessSecret).WithQuotes(leadsSvc, docSvc))
 	bulkSvc.WithUndoWindow(sysSvc.BulkUndoWindowHours)
 	// TEC-206: stock counts (scans through the TEC-203 resolver, approval via the ledger).
 	warehousemodule.RegisterCountRoutes(mux, warehousehandler.NewCounts(warehouseusecase.NewCounts(deps.DB, deps.Queries,

@@ -29,6 +29,7 @@ import (
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
+	fleetusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
 	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
@@ -63,6 +64,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
@@ -196,6 +198,10 @@ func main() {
 	// TEC-207: end-of-day reports (cron on worker-core, PDF on worker-docs).
 	eodSvc := warehouseusecase.NewEOD(pool, queries)
 	warrantyClaimsSvc := warrantyclaimsusecase.New(pool, queries, store, outboxStore)
+	// TEC-473: the fleet import applies in the worker (plate check, outbox).
+	workerFleet := fleetusecase.New(pool)
+	workerFleet.SetOutbox(outbox.NewStore(pool, queries))
+	workerFleet.SetPlates(geo.New(pool, queries))
 	ioReg := ioengine.NewRegistry(
 		catalogusecase.NewIOAdapter(catalogSvc, queries),
 		ioadapters.NewUsers(queries),
@@ -245,6 +251,9 @@ func main() {
 		warrantyusecase.NewListExportAdapter(warrantyusecase.NewReader(pool, queries, nil, cfg.Auth.FrontendURL)),
 		// TEC-389: AI usage report export (read only).
 		aiusecase.NewUsageExportAdapter(aiusecase.NewAdmin(airepo.New(pool), llm.ModelsFromConfig(cfg.AI), nil)),
+		// TEC-473: fleet statement export and staged fleet vehicle import.
+		fleetusecase.NewStatementAdapter(workerFleet),
+		fleetusecase.NewImporter(workerFleet),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
