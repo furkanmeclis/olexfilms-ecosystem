@@ -73,6 +73,17 @@ WHERE organization_id = sqlc.arg(organization_id)
   AND product_id = sqlc.arg(product_id)
   AND is_latest;
 
+-- name: GetLatestStockForecastByProductUUID :one
+SELECT sf.*, p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       p.unit_type, c.uuid AS category_uuid, c.name AS category_name
+FROM stock_forecasts sf
+JOIN products p ON p.id = sf.product_id
+JOIN product_categories c ON c.id = p.category_id
+WHERE sf.organization_id = sqlc.arg(organization_id)
+  AND sf.brand_id = sqlc.arg(brand_id)
+  AND p.uuid = sqlc.arg(product_uuid)
+  AND sf.is_latest;
+
 -- name: ListStockForecasts :many
 -- List contract: sort=days_left|-days_left|depletion_date|-depletion_date|
 -- product_name|-product_name|avg_daily_30|-avg_daily_30|status|-status;
@@ -204,6 +215,13 @@ LEFT JOIN products p ON p.id = t.product_id
 WHERE t.organization_id = sqlc.arg(organization_id)
 ORDER BY t.product_id NULLS FIRST, p.name ASC, t.id ASC;
 
+-- name: ResolveStockForecastThresholdProduct :one
+SELECT id, brand_id, uuid, sku, name, unit_type
+FROM products
+WHERE uuid = sqlc.arg(product_uuid)
+  AND brand_id = sqlc.arg(brand_id)
+  AND active;
+
 -- name: UpsertNetworkDemandForecast :one
 INSERT INTO network_demand_forecasts (
     organization_id, brand_id, product_id, forecast_month,
@@ -265,6 +283,48 @@ WHERE ndf.brand_id = sqlc.arg(brand_id)
     sqlc.narg(q)::text IS NULL
     OR p.name ILIKE '%' || sqlc.narg(q)::text || '%'
     OR p.sku ILIKE '%' || sqlc.narg(q)::text || '%'
+  );
+
+-- name: ListStockForecastSubtreeSummary :many
+SELECT o.id AS organization_id, o.uuid AS organization_uuid, o.slug, o.name,
+       COUNT(*) FILTER (WHERE sf.status = 'critical')::bigint AS critical_count,
+       COUNT(*) FILTER (WHERE sf.status = 'warning')::bigint AS warning_count,
+       COUNT(*) FILTER (WHERE sf.status = 'insufficient_data')::bigint AS insufficient_data_count,
+       COUNT(*)::bigint AS total_count
+FROM organizations o
+LEFT JOIN stock_forecasts sf ON sf.organization_id = o.id
+  AND sf.brand_id = sqlc.arg(brand_id)
+  AND sf.is_latest
+WHERE o.brand_id = sqlc.arg(brand_id)
+  AND o.deleted_at IS NULL
+  AND o.type = 'dealer'
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_ids)::bigint[]), 0) = 0
+    OR o.id = ANY (sqlc.narg(organization_ids)::bigint[])
+  )
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR o.name ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR o.slug ILIKE '%' || sqlc.narg(q)::text || '%'
+  )
+GROUP BY o.id, o.uuid, o.slug, o.name
+ORDER BY critical_count DESC, warning_count DESC, o.name ASC, o.id ASC
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: CountStockForecastSubtreeSummary :one
+SELECT COUNT(*)::bigint
+FROM organizations o
+WHERE o.brand_id = sqlc.arg(brand_id)
+  AND o.deleted_at IS NULL
+  AND o.type = 'dealer'
+  AND (
+    COALESCE(cardinality(sqlc.narg(organization_ids)::bigint[]), 0) = 0
+    OR o.id = ANY (sqlc.narg(organization_ids)::bigint[])
+  )
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR o.name ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR o.slug ILIKE '%' || sqlc.narg(q)::text || '%'
   );
 
 -- name: ListStockForecastOrganizations :many

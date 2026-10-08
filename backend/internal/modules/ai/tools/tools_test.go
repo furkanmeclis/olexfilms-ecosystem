@@ -23,6 +23,7 @@ import (
 	svcuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	stockmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
 	stockuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
+	sfuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast/usecase"
 	tasksuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	warrantyuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
@@ -103,6 +104,23 @@ func (f fakeOrders) List(context.Context, ordersuc.Caller, ordersuc.ListFilter) 
 func (f fakeOrders) Get(context.Context, ordersuc.Caller, uuid.UUID) (ordersuc.OrderView, error) {
 	return f.order(), nil
 }
+
+type fakeForecasts struct{}
+
+func (fakeForecasts) List(context.Context, sfuc.Caller, sfuc.ListFilter) ([]sfuc.ForecastView, int64, error) {
+	return []sfuc.ForecastView{{
+		Product: sfuc.ProductRef{UUID: productUUID, SKU: "F1", Name: "Film", UnitType: "piece"},
+		Status:  sfuc.StatusCritical, DaysLeft: ptr("3.00"), SuggestedQty: ptrInt32(7),
+	}}, 1, nil
+}
+
+func (fakeForecasts) Detail(context.Context, sfuc.Caller, uuid.UUID) (sfuc.ProductDetail, error) {
+	return sfuc.ProductDetail{Forecast: sfuc.ForecastView{Product: sfuc.ProductRef{UUID: productUUID, Name: "Film"}, Status: sfuc.StatusCritical}}, nil
+}
+
+func ptr(s string) *string { return &s }
+
+func ptrInt32(v int32) *int32 { return &v }
 
 type fakeAccounting struct{}
 
@@ -453,6 +471,34 @@ func TestAvailableAndCallShareTheGate(t *testing.T) {
 	}
 	if _, err := on.Call(glorian, dealer, "search_services", json.RawMessage(`{"query":"34AB"}`)); !errors.Is(err, ErrToolNotAllowed) {
 		t.Fatalf("call across brands: %v", err)
+	}
+}
+
+func TestStockForecastExtensionFeatureGate(t *testing.T) {
+	ctx := context.Background()
+	r := NewRegistry(fakeFeatures{features.ModuleStockForecast: false})
+	RegisterPanel(r, Deps{Tree: fakeTree{}, Extensions: NewStockForecastTools(fakeForecasts{}, fakeTree{})})
+	dealer := principal(OrgDealer, map[string]rbac.Scope{rbac.PermStockForecastRead: rbac.ScopeManaged})
+	got, err := r.Available(ctx, dealer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if contains(names(got), "stock_forecast_list") || contains(names(got), "stock_forecast_product") {
+		t.Fatalf("stock forecast tools offered while module is off: %v", names(got))
+	}
+	res, err := r.Call(ctx, dealer, "stock_forecast_list", json.RawMessage(`{}`))
+	if !errors.Is(err, ErrToolNotAllowed) || !res.IsError || res.Code != CodeToolNotAllowed {
+		t.Fatalf("module off call = %+v %v", res, err)
+	}
+
+	on := NewRegistry(fakeFeatures{})
+	RegisterPanel(on, Deps{Tree: fakeTree{}, Extensions: NewStockForecastTools(fakeForecasts{}, fakeTree{})})
+	got, err = on.Available(ctx, dealer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !contains(names(got), "stock_forecast_list") || !contains(names(got), "stock_forecast_product") {
+		t.Fatalf("stock forecast tools missing while module is on: %v", names(got))
 	}
 }
 

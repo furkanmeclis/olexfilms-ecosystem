@@ -165,6 +165,13 @@ type CreateInput struct {
 	Items []ItemInput
 }
 
+// DraftResult reports whether a stock-forecast draft reused an existing open
+// order or created a fresh one.
+type DraftResult struct {
+	Order   OrderView `json:"order"`
+	Created bool      `json:"created"`
+}
+
 type line struct {
 	product db.Product
 	qty     pgtype.Int4
@@ -382,6 +389,146 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (OrderVi
 		return OrderView{}, err
 	}
 	return s.view(ctx, s.q, c, created)
+}
+
+// CreateOrAppendDraft creates a buyer draft to its tree supplier, or merges
+// the requested lines into the oldest open draft for the same buyer/seller.
+// It is used by stock forecast recommendations so the order rules (K6/K8)
+// stay in the orders module.
+func (s *Service) CreateOrAppendDraft(ctx context.Context, c Caller, in CreateInput) (DraftResult, error) {
+	if c.Org.InternalID == 0 || !c.can(rbac.PermOrdersWrite) {
+		return DraftResult{}, ErrForbidden
+	}
+	var order db.Order
+	created := false
+	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+		buyer, err := q.GetOrganizationByID(ctx, c.Org.InternalID)
+		if err != nil {
+			return fmt.Errorf("orders: buyer: %w", err)
+		}
+		seller, err := s.supplier(ctx, q, buyer)
+		if err != nil {
+			return err
+		}
+		brand, err := q.GetBrandByID(ctx, buyer.BrandID)
+		if err != nil {
+			return fmt.Errorf("orders: brand: %w", err)
+		}
+		lines, err := resolveLines(ctx, q, buyer.BrandID, in.Items)
+		if err != nil {
+			return err
+		}
+		o, err := q.FindOpenDraftOrderForBuyerSeller(ctx, db.FindOpenDraftOrderForBuyerSellerParams{
+			BrandID: buyer.BrandID, BuyerOrgID: buyer.ID, SellerOrgID: seller.ID,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			o, err = q.CreateOrder(ctx, db.CreateOrderParams{
+				SellerOrgID: seller.ID, BrandID: buyer.BrandID, BuyerOrgID: buyer.ID,
+				Currency: strings.TrimSpace(brand.Currency), Note: textOrNull(in.Note), CreatedByUserID: c.actor(),
+			})
+			if err != nil {
+				return fmt.Errorf("orders: create: %w", err)
+			}
+			if err := s.insertLines(ctx, q, o, buyer, lines); err != nil {
+				return err
+			}
+			if o, err = q.RecalculateOrderTotals(ctx, o.ID); err != nil {
+				return fmt.Errorf("orders: totals: %w", err)
+			}
+			if err := s.history(ctx, q, o, "", StatusDraft, c, nil, nil); err != nil {
+				return err
+			}
+			created = true
+			order = o
+			return s.emit(ctx, tx, events.OrdersCreated, o, "", c)
+		}
+		if err != nil {
+			return fmt.Errorf("orders: find draft: %w", err)
+		}
+		merged, err := s.mergeDraftLines(ctx, q, o, lines)
+		if err != nil {
+			return err
+		}
+		old, err := q.LockOrderItems(ctx, o.ID)
+		if err != nil {
+			return fmt.Errorf("orders: lines: %w", err)
+		}
+		for _, it := range old {
+			if _, err := q.DeleteOrderItem(ctx, it.ID); err != nil {
+				return fmt.Errorf("orders: delete line: %w", err)
+			}
+		}
+		if err := s.insertLines(ctx, q, o, buyer, merged); err != nil {
+			return err
+		}
+		if o, err = q.RecalculateOrderTotals(ctx, o.ID); err != nil {
+			return fmt.Errorf("orders: totals: %w", err)
+		}
+		order = o
+		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)
+	})
+	if err != nil {
+		return DraftResult{}, err
+	}
+	view, err := s.view(ctx, s.q, c, order)
+	if err != nil {
+		return DraftResult{}, err
+	}
+	return DraftResult{Order: view, Created: created}, nil
+}
+
+func (s *Service) mergeDraftLines(ctx context.Context, q *db.Queries, o db.Order, add []line) ([]line, error) {
+	items, err := q.LockOrderItems(ctx, o.ID)
+	if err != nil {
+		return nil, fmt.Errorf("orders: lines: %w", err)
+	}
+	out := make([]line, 0, len(items)+len(add))
+	byProduct := map[int64]int{}
+	for _, it := range items {
+		p, err := q.GetProduct(ctx, db.GetProductParams{ID: it.ProductID, BrandID: o.BrandID})
+		if err != nil {
+			return nil, fmt.Errorf("orders: product: %w", err)
+		}
+		l := line{product: p, qty: it.Quantity, meters: it.Meters, note: it.Note}
+		if p.UnitType == "roll_meter" {
+			m, err := parseRat(numericText(it.Meters, 2))
+			if err != nil {
+				return nil, fmt.Errorf("orders: existing meters: %w", err)
+			}
+			l.amount = m
+		} else {
+			if !it.Quantity.Valid {
+				return nil, fmt.Errorf("orders: invalid existing quantity")
+			}
+			l.amount = new(big.Rat).SetInt64(int64(it.Quantity.Int32))
+		}
+		byProduct[p.ID] = len(out)
+		out = append(out, l)
+	}
+	for _, l := range add {
+		i, ok := byProduct[l.product.ID]
+		if !ok {
+			byProduct[l.product.ID] = len(out)
+			out = append(out, l)
+			continue
+		}
+		if l.product.UnitType == "roll_meter" {
+			total := new(big.Rat).Add(out[i].amount, l.amount)
+			m, err := numeric(total.FloatString(2))
+			if err != nil {
+				return nil, err
+			}
+			out[i].meters, out[i].amount = m, total
+		} else {
+			total := int64(out[i].qty.Int32) + int64(l.qty.Int32)
+			if total > MaxQuantity {
+				return nil, invalid("items", fmt.Sprintf("quantity must be at most %d per product", MaxQuantity))
+			}
+			out[i].qty = pgtype.Int4{Int32: int32(total), Valid: true}
+			out[i].amount = new(big.Rat).SetInt64(total)
+		}
+	}
+	return out, nil
 }
 
 // ReplaceItems swaps the lines of a draft order; prices are fetched again.
