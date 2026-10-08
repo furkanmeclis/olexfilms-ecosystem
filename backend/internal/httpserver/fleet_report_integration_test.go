@@ -86,6 +86,15 @@ func TestIntegrationFleetReportRequest(t *testing.T) {
 		t.Fatalf("plans = %+v", plans)
 	}
 	it.fleetDo("GET", "/v1/fleets/"+opened.UUID+"/service-plans/"+uuid.NewString(), n.tokA, nil, http.StatusNotFound)
+	type match struct {
+		FleetUUID  string `json:"fleet_uuid"`
+		LinkStatus string `json:"link_status"`
+	}
+	found := decodeData[match](t, it.fleetDo("GET", "/v1/fleets/lookup?tax_number="+tecVKN(t, it.suffix), n.tokB, nil, http.StatusOK))
+	if found.FleetUUID != opened.UUID || found.LinkStatus != "" {
+		t.Fatalf("lookup = %+v", found)
+	}
+	it.fleetDo("GET", "/v1/fleets/lookup", n.tokB, nil, http.StatusBadRequest)
 	if _, err := it.srv.features.ClearByAdmin(ctx, n.dealerA.ID, "fleet"); err != nil {
 		t.Fatal(err)
 	}

@@ -46,6 +46,7 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/fleets", read(h.List))
 	mux.Handle("POST /v1/fleets", manage(h.Open))
 	mux.Handle("GET /v1/fleets/vehicle-import/sample", manage(h.ImportSample))
+	mux.Handle("GET /v1/fleets/lookup", manage(h.Lookup))
 	mux.Handle("GET /v1/fleets/{uuid}", read(h.Card))
 	mux.Handle("POST /v1/fleets/{uuid}/links", manage(h.RequestLink))
 	mux.Handle("GET /v1/fleets/{uuid}/users", read(h.ListUsers))

@@ -13548,6 +13548,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fleets/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find the brand's fleet of a tax number (TEC-477)
+         * @description The panel's new fleet dialog asks for the VKN/TCKN first. 200 names the fleet and the caller's open link (pending | active, empty without one): the dialog offers a link request. 404 when the brand has no fleet with that number: the dialog shows the opening form. A wrong checksum is 422 FLEET_INVALID_TAX_NUMBER. Only dealers and distributors (403). Needs fleets.manage.
+         */
+        get: operations["lookupFleet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/fleets/vehicle-import/sample": {
         parameters: {
             query?: never;
@@ -25064,6 +25084,20 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["FleetServicePlan"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        FleetMatch: {
+            /** Format: uuid */
+            fleet_uuid: string;
+            name: string;
+            legal_name: string;
+            /** @description The caller's open link (pending | active), empty without one. */
+            link_status: string;
+        };
+        EnvelopeFleetMatch: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetMatch"];
             meta: components["schemas"]["ResponseMeta"];
         };
         FleetServicePlanSummary: {
@@ -50236,6 +50270,33 @@ export interface operations {
                     "application/json": components["schemas"]["FleetExistsError"];
                 };
             };
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    lookupFleet: {
+        parameters: {
+            query: {
+                tax_number: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The fleet of the tax number */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetMatch"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
         };
     };

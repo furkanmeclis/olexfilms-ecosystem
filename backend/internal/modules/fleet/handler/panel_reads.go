@@ -107,3 +107,14 @@ func (h *Handler) ReportFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, max-age=0")
 	_, _ = io.Copy(w, rc)
 }
+
+// Lookup is GET /v1/fleets/lookup?tax_number= (TEC-477): the fleet of the
+// brand with that VKN/TCKN and the caller's open link, or 404.
+func (h *Handler) Lookup(w http.ResponseWriter, r *http.Request) {
+	out, err := h.svc.Lookup(r.Context(), caller(r), r.URL.Query().Get("tax_number"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}

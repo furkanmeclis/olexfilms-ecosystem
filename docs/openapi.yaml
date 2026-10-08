@@ -26365,6 +26365,36 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/FleetExistsError" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/lookup:
+    get:
+      tags: [Fleets]
+      operationId: lookupFleet
+      summary: Find the brand's fleet of a tax number (TEC-477)
+      description: >-
+        The panel's new fleet dialog asks for the VKN/TCKN first. 200 names
+        the fleet and the caller's open link (pending | active, empty
+        without one): the dialog offers a link request. 404 when the brand
+        has no fleet with that number: the dialog shows the opening form. A
+        wrong checksum is 422 FLEET_INVALID_TAX_NUMBER. Only dealers and
+        distributors (403). Needs fleets.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tax_number
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The fleet of the tax number
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetMatch" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
   /v1/fleets/vehicle-import/sample:
     get:
       tags: [Fleets]
@@ -41747,6 +41777,25 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/FleetServicePlan" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    FleetMatch:
+      type: object
+      required: [fleet_uuid, name, legal_name, link_status]
+      properties:
+        fleet_uuid: { type: string, format: uuid }
+        name: { type: string }
+        legal_name: { type: string }
+        link_status:
+          type: string
+          description: The caller's open link (pending | active), empty without one.
+
+    EnvelopeFleetMatch:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetMatch" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     FleetServicePlanSummary:

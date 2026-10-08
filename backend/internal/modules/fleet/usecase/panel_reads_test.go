@@ -140,3 +140,38 @@ func TestFleetReportPanelList(t *testing.T) {
 		t.Fatalf("unlinked dealer err = %v", err)
 	}
 }
+
+// TEC-477: the "new fleet" dialog looks the VKN up first: a fleet of the
+// brand is found with the caller's link status (empty for a second dealer),
+// an unknown valid number is ErrNotFound, a bad checksum is rejected.
+func TestFleetLookupByTaxNumber(t *testing.T) {
+	f := newAPIFixture(t)
+	tax := validVKN(t, f.suffix)
+	opened, err := f.svc.Open(f.ctx, f.dealer(f.d1), OpenInput{LegalName: "T477 Filo A.Ş.", TaxNumber: tax})
+	if err != nil {
+		t.Fatal(err)
+	}
+	own, err := f.svc.Lookup(f.ctx, f.dealer(f.d1), " "+tax+" ")
+	if err != nil || own.FleetUUID != opened.UUID || own.LegalName != "T477 Filo A.Ş." || own.LinkStatus != "active" {
+		t.Fatalf("own lookup = %+v %v", own, err)
+	}
+	other, err := f.svc.Lookup(f.ctx, f.dealer(f.d2), tax)
+	if err != nil || other.FleetUUID != opened.UUID || other.LinkStatus != "" {
+		t.Fatalf("second dealer lookup = %+v %v", other, err)
+	}
+	first := byte('1')
+	if tax[0] == first {
+		first = '2'
+	}
+	unknown := validVKN(t, string(first)+tax[1:9])
+	if _, err := f.svc.Lookup(f.ctx, f.dealer(f.d2), unknown); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("unknown lookup err = %v", err)
+	}
+	bad := tax[:9] + string('0'+(tax[9]-'0'+1)%10)
+	if _, err := f.svc.Lookup(f.ctx, f.dealer(f.d2), bad); !errors.Is(err, ErrInvalidTaxNumber) {
+		t.Fatalf("bad checksum err = %v", err)
+	}
+	if _, err := f.svc.Lookup(f.ctx, f.dealer(f.dist), ""); err == nil {
+		t.Fatal("empty tax number accepted")
+	}
+}

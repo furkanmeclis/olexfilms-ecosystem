@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/repository"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -213,4 +215,36 @@ func (s *Service) ReportFile(ctx context.Context, c Caller, fleetUUID, reportUUI
 		return nil, "", fmt.Errorf("fleet: report file: %w", err)
 	}
 	return rc, fmt.Sprintf("fleet-report-%s-%s.pdf", r.PeriodKind, r.PeriodStart.Time.Format(time.DateOnly)), nil
+}
+
+// Lookup is GET /v1/fleets/lookup (TEC-477): the panel's "new fleet"
+// dialog asks for the VKN/TCKN first. A fleet of the brand with that
+// number is returned with the caller's open link (the dialog then offers a
+// link request); none is ErrNotFound (the dialog shows the opening form).
+// A wrong checksum is FLEET_INVALID_TAX_NUMBER. Same reach as Open.
+func (s *Service) Lookup(ctx context.Context, c Caller, taxNumber string) (FleetExistsError, error) {
+	taxNumber = strings.TrimSpace(taxNumber)
+	if taxNumber == "" {
+		return FleetExistsError{}, &ValidationError{Field: "tax_number", Message: "required"}
+	}
+	if !model.ValidTaxNumber(taxNumber) {
+		return FleetExistsError{}, ErrInvalidTaxNumber
+	}
+	opener, err := db.New(s.conn).GetOrganizationByID(ctx, c.OrgID)
+	if err != nil {
+		return FleetExistsError{}, fmt.Errorf("fleet: opener: %w", err)
+	}
+	if opener.Type != "dealer" && opener.Type != "distributor" {
+		return FleetExistsError{}, ErrForbidden
+	}
+	if _, err := repository.New(s.conn).FindByTaxNumber(ctx, opener.BrandID, taxNumber); errors.Is(err, pgx.ErrNoRows) {
+		return FleetExistsError{}, ErrNotFound
+	} else if err != nil {
+		return FleetExistsError{}, fmt.Errorf("fleet: lookup: %w", err)
+	}
+	var found *FleetExistsError
+	if !errors.As(s.existsError(ctx, opener, taxNumber), &found) {
+		return FleetExistsError{}, fmt.Errorf("fleet: lookup: no match")
+	}
+	return *found, nil
 }
