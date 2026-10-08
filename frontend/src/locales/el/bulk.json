@@ -92,6 +92,8 @@
   "params.lost_reason": "Αιτία απώλειας",
   "actions.stock_units.print_labels": "Εκτύπωση ετικετών",
   "actions.warehouse_count_lines.set_resolution": "Ορισμός επίλυσης: {{resolution}}",
+  "actions.fleet_vehicles.create_plan": "Δημιουργία πλάνου σέρβις",
+  "actions.fleet_plan_appointments.start_intake": "Παραλαβή επιλεγμένων",
   "actions.conversations.assign": "Ανάθεση",
   "actions.conversations.close": "Κλείσιμο",
   "actions.conversations.set_ai_mode": "Αλλαγή λειτουργίας AI",

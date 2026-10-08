@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "Movimento finanziario creato",
   "actions.finance.transfer.create": "Trasferimento finanziario creato",
   "actions.finance.transaction.void": "Movimento finanziario stornato",
+  "actions.showcase.google_rating.refresh_failed": "Aggiornamento della valutazione Google non riuscito più volte",
   "resources.platform.users": "Utenti",
   "resources.platform.roles": "Ruoli",
   "resources.platform.notifications": "Notifiche",

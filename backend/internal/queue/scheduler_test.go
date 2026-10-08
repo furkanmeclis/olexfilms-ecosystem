@@ -72,6 +72,8 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		{cron: efficiencyNetworkRefreshCron, taskType: TaskEfficiencyNetworkRefresh, queue: QueueMaintenance}: false,
 		// TEC-476.
 		{cron: fleetReportsScheduleCron, taskType: TaskFleetReportsSchedule, queue: QueueMaintenance}: false,
+		// TEC-469.
+		{cron: showcaseGoogleRatingCron, taskType: TaskShowcaseGoogleRating, queue: QueueMaintenance}: false,
 	}
 	for _, e := range r.entries {
 		if _, ok := want[e]; !ok {

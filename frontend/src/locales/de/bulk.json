@@ -92,6 +92,8 @@
   "params.lost_reason": "Verlustgrund",
   "actions.stock_units.print_labels": "Etiketten drucken",
   "actions.warehouse_count_lines.set_resolution": "Lösung festlegen: {{resolution}}",
+  "actions.fleet_vehicles.create_plan": "Serviceplan erstellen",
+  "actions.fleet_plan_appointments.start_intake": "Ausgewählte annehmen",
   "actions.conversations.assign": "Zuweisen",
   "actions.conversations.close": "Schließen",
   "actions.conversations.set_ai_mode": "KI-Modus ändern",

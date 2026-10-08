@@ -62,33 +62,17 @@ func caller(r *http.Request) usecase.Caller {
 // CSV), vehicle_count_min/_max, sort name | vehicle_count |
 // last_service_at | created_at (default name).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	values := r.URL.Query()
-	q := apiquery.Parse(values)
-	statuses, err := apiquery.EnumList(values, "status", model.LinkPending, model.LinkActive, model.LinkEnded)
+	f, err := usecase.ParseListValues(r.URL.Query())
 	if err != nil {
 		writeErr(w, r, err)
 		return
-	}
-	rng, err := apiquery.NumRange(values, "vehicle_count")
-	if err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	f := usecase.ListFilter{Statuses: statuses, Q: q.Q, Sort: q.Sort, Limit: q.Limit, Offset: q.Offset}
-	if rng.Min != nil {
-		v := int64(*rng.Min)
-		f.VehicleCountMin = &v
-	}
-	if rng.Max != nil {
-		v := int64(*rng.Max)
-		f.VehicleCountMax = &v
 	}
 	items, total, err := h.svc.List(r.Context(), caller(r), f)
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // Open is POST /v1/fleets.

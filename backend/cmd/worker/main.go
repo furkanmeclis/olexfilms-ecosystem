@@ -27,6 +27,7 @@ import (
 	contractsrepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
 	contractsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/usecase"
 	customersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	showcaseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase/usecase"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	efficiencymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency"
@@ -75,6 +76,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/places"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
@@ -259,6 +261,7 @@ func main() {
 		aiusecase.NewUsageExportAdapter(aiusecase.NewAdmin(airepo.New(pool), llm.ModelsFromConfig(cfg.AI), nil)),
 		// TEC-473: fleet statement export and staged fleet vehicle import.
 		fleetusecase.NewStatementAdapter(workerFleet),
+		fleetusecase.NewListExportAdapter(workerFleet),
 		fleetusecase.NewImporter(workerFleet),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
@@ -425,6 +428,10 @@ func main() {
 	// TEC-394: user / membership / organization events drop the WhatsApp
 	// identity cache.
 	whatsappmodule.RegisterIdentityInvalidation(eventBus, rdb, cfg.App.Env, log)
+	// TEC-469 (F5-01d): daily showcase Google rating refresh from Places
+	// (no-op without GOOGLE_PLACES_API_KEY); backoff kept in Redis.
+	worker.WithShowcaseGoogleRating(showcaseusecase.NewRatingRefresher(queries, places.New(cfg.Places.APIKey),
+		featureSvc, showcaseusecase.NewRedisFailures(rdb, cfg.App.Env), log).Task)
 
 	// TEC-395: WhatsApp outgoing queue, inbound media storage, receipts.
 	waMsgs := whatsappmodule.NewMessaging(waSvc, pool, queries, whatsappmodule.MessagingDeps{

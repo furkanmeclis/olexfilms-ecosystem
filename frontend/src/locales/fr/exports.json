@@ -77,6 +77,8 @@
   "resources.stock.units": "Unités de stock",
   "resources.leads.list": "Prospects",
   "resources.services.list": "Services",
+  "resources.tenant.fleets": "Flottes",
+  "resources.tenant.fleet.statement": "Relevé de la flotte",
   "resources.warranties.list": "Garanties",
   "resources.ai.usage": "Utilisation de l'IA"
 }

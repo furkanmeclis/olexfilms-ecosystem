@@ -140,7 +140,11 @@
   "codes.FLEET_VEHICLE_OTHER_OWNER": "Le véhicule appartient à un autre client ou à une autre flotte et ne peut pas être ajouté.",
   "codes.FLEET_NO_DEALER_LINK": "Votre organisation n'a pas de liaison active avec cette flotte.",
   "codes.FLEET_LINK_NOT_PENDING": "La demande de liaison a déjà reçu une réponse.",
+  "codes.FLEET_SERVICE_PLAN_STALE": "La capacité de rendez-vous a changé après l'aperçu ; relancez l'aperçu du plan.",
+  "codes.FLEET_SERVICE_PLAN_CANCELLED": "Le plan d'entretien est déjà annulé.",
   "codes.SHOWCASE_PHOTO_LIMIT": "La galerie est pleine ; supprimez une photo avant d'en ajouter une nouvelle.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Rédigez une remarque pour refuser.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Saisissez une note comprise entre 1,0 et 5,0 et un nombre d'avis supérieur ou égal à 0.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "La note Google est actualisée depuis Google Places ; supprimez l'identifiant de lieu pour la saisir manuellement.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Type de fichier non pris en charge ; importez une image JPEG, PNG ou WebP."
 }

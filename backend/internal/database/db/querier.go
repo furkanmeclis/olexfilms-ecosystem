@@ -217,6 +217,8 @@ type Querier interface {
 	CountFleetPortalWarranties(ctx context.Context, arg CountFleetPortalWarrantiesParams) (int64, error)
 	CountFleetReportVehicles(ctx context.Context, fleetOrgID int64) (int64, error)
 	CountFleetReports(ctx context.Context, arg CountFleetReportsParams) (int64, error)
+	CountFleetReportsFiltered(ctx context.Context, arg CountFleetReportsFilteredParams) (int64, error)
+	CountFleetServicePlansOfOrg(ctx context.Context, arg CountFleetServicePlansOfOrgParams) (int64, error)
 	CountFleetServices(ctx context.Context, arg CountFleetServicesParams) (int64, error)
 	// Same filter block as ListFleetUsers.
 	CountFleetUsers(ctx context.Context, arg CountFleetUsersParams) (int64, error)
@@ -1724,6 +1726,12 @@ type Querier interface {
 	ListDealerShowcaseReviews(ctx context.Context, arg ListDealerShowcaseReviewsParams) ([]ListDealerShowcaseReviewsRow, error)
 	// Services --------------------------------------------------------------------
 	ListDealerShowcaseServices(ctx context.Context, showcaseID int64) ([]DealerShowcaseService, error)
+	// TEC-469 (F5-01d) -------------------------------------------------------------
+	// Places worker: showcases with a Google place id whose rating did not come
+	// from Places since fresh_before (a second run the same day finds nothing).
+	// The module flag and the per-organization backoff are checked by the
+	// caller.
+	ListDealerShowcasesForPlacesRefresh(ctx context.Context, freshBefore pgtype.Timestamptz) ([]ListDealerShowcasesForPlacesRefreshRow, error)
 	// Center view of the distributor-specific prices with product and
 	// distributor identities. TEC-369: sort keys from
 	// usecase.DistributorPriceSort (docs/list-contract.md); default product.
@@ -1781,6 +1789,9 @@ type Querier interface {
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
 	// Links of a fleet with the dealer names (fleet card, portal).
 	ListFleetDealerLinks(ctx context.Context, arg ListFleetDealerLinksParams) ([]ListFleetDealerLinksRow, error)
+	// Vehicle and draft service references of a plan's appointments (plan
+	// detail).
+	ListFleetPlanAppointmentRefs(ctx context.Context, arg ListFleetPlanAppointmentRefsParams) ([]ListFleetPlanAppointmentRefsRow, error)
 	ListFleetPlanVehicles(ctx context.Context, arg ListFleetPlanVehiclesParams) ([]ListFleetPlanVehiclesRow, error)
 	// The fleet's view of its cari in one dealer's ledger: only service income
 	// (source service_income) and collections; the dealer's other cari
@@ -1816,6 +1827,13 @@ type Querier interface {
 	// (NULL: all organizations).
 	ListFleetRecentServices(ctx context.Context, arg ListFleetRecentServicesParams) ([]ListFleetRecentServicesRow, error)
 	ListFleetReports(ctx context.Context, arg ListFleetReportsParams) ([]FleetReport, error)
+	// Reports of the fleet for the panel (every status). Sort period_start,
+	// default -period_start; id tiebreak.
+	ListFleetReportsSorted(ctx context.Context, arg ListFleetReportsSortedParams) ([]FleetReport, error)
+	// TEC-477 (F5-02f): the panel reads its plans of a fleet.
+	// Plans of one fleet made by the organization. Sort created_at (default
+	// -created_at) or start_date; id tiebreak.
+	ListFleetServicePlansOfOrg(ctx context.Context, arg ListFleetServicePlansOfOrgParams) ([]ListFleetServicePlansOfOrgRow, error)
 	// The ledger rows of one fleet cari in [period_from, period_to): service
 	// income with its service and vehicle, collections and the other cari
 	// movements. Reversals stay as their own (negative) rows.
@@ -2129,8 +2147,9 @@ type Querier interface {
 	// GetPublicDealerBySlug; code and last change only.
 	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
 	// Nearby dealers list: which of the given organizations of the brand serve
-	// a published showcase, with the live Google rating. The module flag is
-	// checked by the caller.
+	// a published showcase, with the live Google rating and its source and the
+	// rating frozen in the snapshot (TEC-469: a manual rating under approval
+	// shows the published one). The module flag is checked by the caller.
 	ListPublishedDealerShowcaseBadges(ctx context.Context, arg ListPublishedDealerShowcaseBadgesParams) ([]ListPublishedDealerShowcaseBadgesRow, error)
 	// Sitemap: the publish time of every published showcase of the brand (the
 	// caller keeps the organizations whose module is on).
@@ -3089,6 +3108,9 @@ type Querier interface {
 	// Writes the Google rating (Places worker or manual entry, F5-01d); NULL
 	// rating and count clear it.
 	SetDealerShowcaseGoogleRating(ctx context.Context, arg SetDealerShowcaseGoogleRatingParams) (DealerShowcase, error)
+	// Writes a Places answer. CAS on the place id: no row when the owner
+	// changed the place id meanwhile.
+	SetDealerShowcasePlacesRating(ctx context.Context, arg SetDealerShowcasePlacesRatingParams) (int64, error)
 	// Records the fleet cari in the dealer's ledger once (CAS on NULL).
 	SetFleetDealerLinkCari(ctx context.Context, arg SetFleetDealerLinkCariParams) (FleetDealerLink, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.

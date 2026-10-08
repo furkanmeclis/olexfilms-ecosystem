@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "Finans işlemi oluşturuldu",
   "actions.finance.transfer.create": "Finans virmanı oluşturuldu",
   "actions.finance.transaction.void": "Finans işlemi iptal edildi",
+  "actions.showcase.google_rating.refresh_failed": "Google puanı güncellemesi art arda başarısız oldu",
   "resources.platform.users": "Kullanıcılar",
   "resources.platform.roles": "Roller",
   "resources.platform.notifications": "Bildirimler",

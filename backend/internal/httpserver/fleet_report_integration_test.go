@@ -67,6 +67,54 @@ func TestIntegrationFleetReportRequest(t *testing.T) {
 	it.fleetDo("POST", base, n.tokA, map[string]any{"period_kind": "monthly", "period": now.Format("2006-01")}, http.StatusBadRequest)
 	it.fleetDo("POST", base, n.tokA, map[string]any{"period_kind": "yearly", "period": "2025"}, http.StatusBadRequest)
 	it.fleetDo("POST", base, n.tokB, body, http.StatusNotFound)
+
+	// TEC-477: the panel lists the reports and its plans of the fleet; a
+	// pending report has no file, an unlinked dealer is 404.
+	type page struct {
+		Items []report `json:"items"`
+		Total int64    `json:"total"`
+	}
+	listed := decodeData[page](t, it.fleetDo("GET", base+"?status=pending&period_kind=monthly", n.tokA, nil, http.StatusOK))
+	if listed.Total != 1 || listed.Items[0].UUID != r.UUID {
+		t.Fatalf("report list = %+v", listed)
+	}
+	it.fleetDo("GET", base+"?status=nope", n.tokA, nil, http.StatusBadRequest)
+	it.fleetDo("GET", base+"/"+r.UUID+"/file", n.tokA, nil, http.StatusNotFound)
+	it.fleetDo("GET", base, n.tokB, nil, http.StatusNotFound)
+	plans := decodeData[page](t, it.fleetDo("GET", "/v1/fleets/"+opened.UUID+"/service-plans", n.tokA, nil, http.StatusOK))
+	if plans.Total != 0 {
+		t.Fatalf("plans = %+v", plans)
+	}
+	it.fleetDo("GET", "/v1/fleets/"+opened.UUID+"/service-plans/"+uuid.NewString(), n.tokA, nil, http.StatusNotFound)
+	type match struct {
+		FleetUUID  string `json:"fleet_uuid"`
+		LinkStatus string `json:"link_status"`
+	}
+	found := decodeData[match](t, it.fleetDo("GET", "/v1/fleets/lookup?tax_number="+tecVKN(t, it.suffix), n.tokB, nil, http.StatusOK))
+	if found.FleetUUID != opened.UUID || found.LinkStatus != "" {
+		t.Fatalf("lookup = %+v", found)
+	}
+	it.fleetDo("GET", "/v1/fleets/lookup", n.tokB, nil, http.StatusBadRequest)
+
+	// TEC-477: the fleet list export queues a tenant.fleets job with the
+	// list parameters and the caller's scope; a bad format or filter is 400.
+	type exportJob struct {
+		UUID     string `json:"uuid"`
+		Resource string `json:"resource"`
+		Status   string `json:"status"`
+	}
+	exportBody := map[string]any{"format": "xlsx", "query": map[string]string{"status": "active", "sort": "-name"}, "locale": "en"}
+	job := decodeData[exportJob](t, it.fleetDo("POST", "/v1/fleets/export", n.tokA, exportBody, http.StatusAccepted))
+	if job.Resource != "tenant.fleets" || job.UUID == "" {
+		t.Fatalf("export job = %+v", job)
+	}
+	if jq := it.exportJobQuery(job.UUID); jq["status"] != "active" || jq["sort"] != "-name" || jq["_scope"] == "" {
+		t.Fatalf("export query = %v", jq)
+	}
+	it.fleetDo("POST", "/v1/fleets/export", n.tokA, map[string]any{"format": "docx"}, http.StatusBadRequest)
+	it.fleetDo("POST", "/v1/fleets/export", n.tokA, map[string]any{
+		"format": "csv", "query": map[string]string{"status": "closed"},
+	}, http.StatusBadRequest)
 	if _, err := it.srv.features.ClearByAdmin(ctx, n.dealerA.ID, "fleet"); err != nil {
 		t.Fatal(err)
 	}

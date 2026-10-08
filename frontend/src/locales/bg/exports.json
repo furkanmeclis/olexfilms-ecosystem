@@ -77,6 +77,8 @@
   "resources.stock.units": "Складови единици",
   "resources.leads.list": "Потенциални клиенти",
   "resources.services.list": "Услуги",
+  "resources.tenant.fleets": "Автопаркове",
+  "resources.tenant.fleet.statement": "Извлечение на автопарка",
   "resources.warranties.list": "Гаранции",
   "resources.ai.usage": "Използване на ИИ"
 }

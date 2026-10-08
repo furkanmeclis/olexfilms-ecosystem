@@ -197,6 +197,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/places"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
@@ -708,6 +709,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		aiusecase.NewUsageExportAdapter(aiAdmin),
 		// TEC-473: fleet statement export and staged fleet vehicle import.
 		fleetusecase.NewStatementAdapter(fleetSvc),
+		fleetusecase.NewListExportAdapter(fleetSvc),
 		fleetusecase.NewImporter(fleetSvc),
 		// TEC-488: efficiency list exports.
 		efficiencyusecase.NewSummaryExportAdapter(efficiencyusecase.New(deps.Queries)),
@@ -921,6 +923,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		showcaseSvc.SetStorage(deps.Storage)
 		showcaseStore = deps.Storage
 	}
+	// TEC-469 (F5-01d): Places configured → the worker owns the Google
+	// rating of showcases with a place id; manual entry otherwise.
+	showcaseSvc.SetPlaces(places.New(cfg.Places.APIKey))
 	orgSvc.SetShowcases(showcaseSvc)
 	showcasemodule.RegisterRoutes(mux, showcasehandler.New(showcaseSvc, showcaseStore), tokens, loader, deps.Queries, featureSvc)
 	// TEC-407: public unsubscribe of the campaign e-mail link.

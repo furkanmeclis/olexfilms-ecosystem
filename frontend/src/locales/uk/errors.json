@@ -140,7 +140,11 @@
   "codes.FLEET_VEHICLE_OTHER_OWNER": "Транспортний засіб належить іншому клієнту або автопарку і не може бути доданий.",
   "codes.FLEET_NO_DEALER_LINK": "Ваша організація не має активного зв'язку з цим автопарком.",
   "codes.FLEET_LINK_NOT_PENDING": "На запит на зв'язок уже відповіли.",
+  "codes.FLEET_SERVICE_PLAN_STALE": "Місткість записів змінилася після попереднього перегляду; перегляньте план ще раз.",
+  "codes.FLEET_SERVICE_PLAN_CANCELLED": "Сервісний план уже скасовано.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Галерея заповнена; видаліть фото, перш ніж додати нове.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Щоб відхилити, напишіть примітку.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Введіть оцінку від 1,0 до 5,0 і кількість відгуків від 0.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Оцінка Google оновлюється з Google Places; видаліть Place ID, щоб ввести її вручну.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Непідтримуваний тип файлу; завантажте зображення JPEG, PNG або WebP."
 }

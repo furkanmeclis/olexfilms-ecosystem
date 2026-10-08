@@ -27,6 +27,7 @@ import editor from "./editor.json";
 import entity from "./entity.json";
 import errors from "./errors.json";
 import exports from "./exports.json";
+import fleets from "./fleets.json";
 import form from "./form.json";
 import geo from "./geo.json";
 import imports from "./imports.json";
@@ -90,6 +91,7 @@ const catalog: LocaleCatalog = {
   entity,
   errors,
   exports,
+  fleets,
   form,
   geo,
   imports,

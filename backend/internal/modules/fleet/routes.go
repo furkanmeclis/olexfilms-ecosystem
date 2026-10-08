@@ -46,6 +46,9 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/fleets", read(h.List))
 	mux.Handle("POST /v1/fleets", manage(h.Open))
 	mux.Handle("GET /v1/fleets/vehicle-import/sample", manage(h.ImportSample))
+	mux.Handle("GET /v1/fleets/lookup", manage(h.Lookup))
+	// TEC-477: list export (I/O engine) with the list's scope and filters.
+	mux.Handle("POST /v1/fleets/export", read(h.RequestListExport))
 	mux.Handle("GET /v1/fleets/{uuid}", read(h.Card))
 	mux.Handle("POST /v1/fleets/{uuid}/links", manage(h.RequestLink))
 	mux.Handle("GET /v1/fleets/{uuid}/users", read(h.ListUsers))
@@ -60,8 +63,13 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/fleets/{uuid}/statement/export", read(h.ExportStatement))
 	// TEC-476: periodic report of a closed period, on demand.
 	mux.Handle("POST /v1/fleets/{uuid}/reports", manage(h.RequestReport))
+	// TEC-477: the panel lists the reports and downloads a ready one.
+	mux.Handle("GET /v1/fleets/{uuid}/reports", read(h.ListReports))
+	mux.Handle("GET /v1/fleets/{uuid}/reports/{report}/file", read(h.ReportFile))
 	mux.Handle("POST /v1/fleets/{uuid}/service-plans/preview", plan(h.PreviewServicePlan))
 	mux.Handle("POST /v1/fleets/{uuid}/service-plans", plan(h.CreateServicePlan))
+	mux.Handle("GET /v1/fleets/{uuid}/service-plans", plan(h.ListServicePlans))
+	mux.Handle("GET /v1/fleets/{uuid}/service-plans/{plan}", plan(h.GetServicePlan))
 	mux.Handle("POST /v1/fleets/{uuid}/service-plans/{plan}/cancel", plan(h.CancelServicePlan))
 	mux.Handle("POST /v1/fleets/{uuid}/service-plans/{plan}/start-intake", plan(h.StartServicePlanIntake))
 

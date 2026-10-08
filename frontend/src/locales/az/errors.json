@@ -140,7 +140,11 @@
   "codes.FLEET_VEHICLE_OTHER_OWNER": "Nəqliyyat vasitəsi başqa müştəriyə və ya avtoparka aiddir və əlavə edilə bilməz.",
   "codes.FLEET_NO_DEALER_LINK": "Təşkilatınızın bu avtoparkla aktiv əlaqəsi yoxdur.",
   "codes.FLEET_LINK_NOT_PENDING": "Əlaqə sorğusuna artıq cavab verilib.",
+  "codes.FLEET_SERVICE_PLAN_STALE": "Önizləmədən sonra randevu tutumu dəyişdi; planı yenidən önizləyin.",
+  "codes.FLEET_SERVICE_PLAN_CANCELLED": "Xidmət planı artıq ləğv edilib.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Qalereya doludur; yeni şəkil əlavə etməzdən əvvəl bir şəkli silin.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Rədd etmək üçün qeyd yazın.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "1,0 ilə 5,0 arasında reytinq və 0 və ya daha çox rəy sayı daxil edin.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Google reytinqi Google Places-dən yenilənir; əl ilə daxil etmək üçün Place ID-ni silin.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Fayl növü dəstəklənmir; JPEG, PNG və ya WebP şəkli yükləyin."
 }

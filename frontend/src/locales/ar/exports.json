@@ -77,6 +77,8 @@
   "resources.stock.units": "وحدات المخزون",
   "resources.leads.list": "العملاء المحتملون",
   "resources.services.list": "الخدمات",
+  "resources.tenant.fleets": "الأساطيل",
+  "resources.tenant.fleet.statement": "كشف حساب الأسطول",
   "resources.warranties.list": "الضمانات",
   "resources.ai.usage": "استخدام الذكاء الاصطناعي"
 }

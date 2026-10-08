@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "Δημιουργήθηκε οικονομική συναλλαγή",
   "actions.finance.transfer.create": "Δημιουργήθηκε οικονομική μεταφορά",
   "actions.finance.transaction.void": "Ακυρώθηκε οικονομική συναλλαγή",
+  "actions.showcase.google_rating.refresh_failed": "Η ενημέρωση της βαθμολογίας Google απέτυχε επανειλημμένα",
   "resources.platform.users": "Χρήστες",
   "resources.platform.roles": "Ρόλοι",
   "resources.platform.notifications": "Ειδοποιήσεις",
