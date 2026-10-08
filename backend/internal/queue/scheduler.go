@@ -82,6 +82,10 @@ func Schedules() []Periodic {
 		{Cron: stockForecastDailyCron, Type: TaskStockForecastDaily, Queue: QueueLow, Opts: stockForecastDailyOpts(), New: func() (*asynq.Task, error) {
 			return NewStockForecastDailyTask(0, time.Time{})
 		}},
+		// TEC-491: hourly gate; each performance-enabled org computes once at local 03:00.
+		{Cron: performanceDailyCron, Type: TaskPerformanceDaily, Queue: QueueLow, Opts: performanceDailyOpts(), New: func() (*asynq.Task, error) {
+			return NewPerformanceDailyTask(0, time.Time{})
+		}},
 		// TEC-488: weekly network medians for efficiency expectations.
 		{Cron: efficiencyNetworkRefreshCron, Type: TaskEfficiencyNetworkRefresh, Queue: QueueMaintenance, Opts: efficiencyNetworkRefreshOpts(), New: NewEfficiencyNetworkRefreshTask},
 		// TEC-476: hourly fleet report schedule (07:00 local on the period's first day).

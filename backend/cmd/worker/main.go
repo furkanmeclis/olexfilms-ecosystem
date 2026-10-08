@@ -44,6 +44,7 @@ import (
 	oauthmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth"
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	performanceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
 	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
@@ -336,6 +337,7 @@ func main() {
 	featureSvc := features.New(pool, queries, nil, log)
 	certificatesCron := certificatesusecase.NewCron(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	stockForecastSvc := stockforecastusecase.New(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
+	performanceSvc := performanceusecase.New(pool, queries, outboxStore, featureSvc, log)
 	efficiencyNetwork := efficiencymodule.NewNetworkRefresher(queries, sysconfig.New(queries, sysconfig.NoCache{}))
 	// TEC-476: periodic fleet reports. The schedule runs on worker-core, the
 	// PDF (fleet_report document template) and its e-mail on worker-docs.
@@ -413,6 +415,7 @@ func main() {
 		WithAIActionSweep(aiusecase.NewActions(airepo.New(pool), nil, nil, log).SweepTask).
 		WithCertificateExpiryScan(certificatesCron.ExpiryScanTask).
 		WithStockForecastDaily(stockForecastSvc.DailyTask).
+		WithPerformanceDaily(performanceSvc.DailyTask).
 		WithEfficiencyNetworkRefresh(efficiencyNetwork.Task).
 		WithFleetReports(workerFleet.ScheduleReportsTask, workerFleet.GenerateReport).
 		WithSearch(
