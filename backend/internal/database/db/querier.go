@@ -47,6 +47,7 @@ type Querier interface {
 	// (sent → delivered → read); read is final.
 	ApplyMessageReceipt(ctx context.Context, arg ApplyMessageReceiptParams) ([]Message, error)
 	AppointmentClosureExists(ctx context.Context, arg AppointmentClosureExistsParams) (bool, error)
+	ApproveBonusAccrual(ctx context.Context, arg ApproveBonusAccrualParams) (BonusAccrual, error)
 	// Seller approval: freezes the rate (decision 2).
 	ApproveOrder(ctx context.Context, arg ApproveOrderParams) (Order, error)
 	ApproveStockCount(ctx context.Context, arg ApproveStockCountParams) (StockCount, error)
@@ -66,6 +67,7 @@ type Querier interface {
 	// TEC-387: a new message of the user in the same conversation cancels the
 	// open confirmation cards of that conversation.
 	CancelAIPendingActionsForSource(ctx context.Context, arg CancelAIPendingActionsForSourceParams) ([]AiPendingAction, error)
+	CancelBonusAccrual(ctx context.Context, arg CancelBonusAccrualParams) (BonusAccrual, error)
 	CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error)
 	CancelFleetServicePlan(ctx context.Context, arg CancelFleetServicePlanParams) (FleetServicePlan, error)
 	// CancelPlannedStaffPayment cancels a payment that is not booked yet; it
@@ -217,6 +219,8 @@ type Querier interface {
 	CountFleetPortalWarranties(ctx context.Context, arg CountFleetPortalWarrantiesParams) (int64, error)
 	CountFleetReportVehicles(ctx context.Context, fleetOrgID int64) (int64, error)
 	CountFleetReports(ctx context.Context, arg CountFleetReportsParams) (int64, error)
+	CountFleetReportsFiltered(ctx context.Context, arg CountFleetReportsFilteredParams) (int64, error)
+	CountFleetServicePlansOfOrg(ctx context.Context, arg CountFleetServicePlansOfOrgParams) (int64, error)
 	CountFleetServices(ctx context.Context, arg CountFleetServicesParams) (int64, error)
 	// Same filter block as ListFleetUsers.
 	CountFleetUsers(ctx context.Context, arg CountFleetUsersParams) (int64, error)
@@ -332,6 +336,8 @@ type Querier interface {
 	CreateAppointmentClosure(ctx context.Context, arg CreateAppointmentClosureParams) (AppointmentClosure, error)
 	CreateBarcodeBatch(ctx context.Context, arg CreateBarcodeBatchParams) (BarcodeBatch, error)
 	CreateBatchUnit(ctx context.Context, arg CreateBatchUnitParams) (Unit, error)
+	// Bonus rules, settings and accruals ------------------------------------------------
+	CreateBonusRule(ctx context.Context, arg CreateBonusRuleParams) (BonusRule, error)
 	CreateBulkJob(ctx context.Context, arg CreateBulkJobParams) (BulkJob, error)
 	// TEC-404 (F4-04a): campaigns, contents, media, events, recipient snapshot
 	// and the marketing reachability read. Scope: organization_ids NULL = whole
@@ -443,6 +449,8 @@ type Querier interface {
 	// TEC-487: efficiency and waste analytics. These queries are intentionally
 	// read/projection focused; authorization scope is resolved by the usecase.
 	CreatePartConsumptionExpectation(ctx context.Context, arg CreatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
+	// Targets ---------------------------------------------------------------------------
+	CreatePerformanceTarget(ctx context.Context, arg CreatePerformanceTargetParams) (PerformanceTarget, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
 	CreatePlateFormat(ctx context.Context, arg CreatePlateFormatParams) (PlateFormat, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
@@ -569,6 +577,8 @@ type Querier interface {
 	// service, organization, brand, product, unit and kind come from the
 	// service item; a second run returns no row (ON CONFLICT DO NOTHING).
 	CreateWarrantyForServiceItem(ctx context.Context, arg CreateWarrantyForServiceItemParams) (Warranty, error)
+	// Weak dealer rules -------------------------------------------------------------
+	CreateWeakDealerRule(ctx context.Context, arg CreateWeakDealerRuleParams) (WeakDealerRule, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
 	// Scope check: is the customer linked to an organization the caller reaches?
 	CustomerInScope(ctx context.Context, arg CustomerInScopeParams) (bool, error)
@@ -596,6 +606,8 @@ type Querier interface {
 	DeleteAppLogsMatching(ctx context.Context, arg DeleteAppLogsMatchingParams) (int64, error)
 	DeleteAppointmentClosure(ctx context.Context, arg DeleteAppointmentClosureParams) (int64, error)
 	DeleteAppointmentClosureByUUID(ctx context.Context, arg DeleteAppointmentClosureByUUIDParams) (int64, error)
+	// A rule with accruals is kept (FK RESTRICT); the usecase deactivates it.
+	DeleteBonusRule(ctx context.Context, arg DeleteBonusRuleParams) (int64, error)
 	DeleteCampaignContent(ctx context.Context, arg DeleteCampaignContentParams) (int64, error)
 	DeleteCampaignMedia(ctx context.Context, id int64) (int64, error)
 	// Fails with a restrict/foreign key violation while models still use the brand.
@@ -644,6 +656,7 @@ type Querier interface {
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
 	DeletePartConsumptionExpectation(ctx context.Context, arg DeletePartConsumptionExpectationParams) (int64, error)
+	DeletePerformanceTarget(ctx context.Context, arg DeletePerformanceTargetParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
 	DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error)
@@ -664,6 +677,7 @@ type Querier interface {
 	DeleteServiceItemsByService(ctx context.Context, serviceID int64) (int64, error)
 	DeleteServiceModuleFlag(ctx context.Context, arg DeleteServiceModuleFlagParams) (int64, error)
 	DeleteServicePriceOverride(ctx context.Context, arg DeleteServicePriceOverrideParams) (int64, error)
+	DeleteStaffTarget(ctx context.Context, arg DeleteStaffTargetParams) (int64, error)
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
 	DeleteStockCountScan(ctx context.Context, arg DeleteStockCountScanParams) (int64, error)
 	DeleteStockEntryLine(ctx context.Context, arg DeleteStockEntryLineParams) (int64, error)
@@ -685,6 +699,8 @@ type Querier interface {
 	DeleteWarrantyClaimPart(ctx context.Context, arg DeleteWarrantyClaimPartParams) (int64, error)
 	// Returns the storage key so the caller can remove the object.
 	DeleteWarrantyClaimPhoto(ctx context.Context, arg DeleteWarrantyClaimPhotoParams) (string, error)
+	// A rule that opened tasks is kept (FK RESTRICT); the usecase deactivates it.
+	DeleteWeakDealerRule(ctx context.Context, arg DeleteWeakDealerRuleParams) (int64, error)
 	DeleteWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) error
 	DeleteWebAuthnCredentialByUUID(ctx context.Context, arg DeleteWebAuthnCredentialByUUIDParams) error
 	// Every organization below the given one (not including itself).
@@ -832,6 +848,8 @@ type Querier interface {
 	GetAuthSettings(ctx context.Context) (GetAuthSettingsRow, error)
 	GetBarcodeBatchByUUID(ctx context.Context, arg GetBarcodeBatchByUUIDParams) (BarcodeBatch, error)
 	GetBestPartExpectation(ctx context.Context, arg GetBestPartExpectationParams) (PartConsumptionExpectation, error)
+	GetBonusRule(ctx context.Context, arg GetBonusRuleParams) (BonusRule, error)
+	GetBonusSettings(ctx context.Context, organizationID int64) (BonusSetting, error)
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
 	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
@@ -1070,6 +1088,7 @@ type Querier interface {
 	GetOrganizationMemberByUserUUID(ctx context.Context, arg GetOrganizationMemberByUserUUIDParams) (GetOrganizationMemberByUserUUIDRow, error)
 	GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error)
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
+	GetPerformanceTarget(ctx context.Context, arg GetPerformanceTargetParams) (PerformanceTarget, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
 	GetPortalAppointmentByUUID(ctx context.Context, arg GetPortalAppointmentByUUIDParams) (Appointment, error)
@@ -1204,6 +1223,7 @@ type Querier interface {
 	GetShowcaseLeadTargetBySlug(ctx context.Context, arg GetShowcaseLeadTargetBySlugParams) (GetShowcaseLeadTargetBySlugRow, error)
 	GetStaffPaymentByUUID(ctx context.Context, arg GetStaffPaymentByUUIDParams) (StaffPayment, error)
 	GetStaffProfileByUUID(ctx context.Context, arg GetStaffProfileByUUIDParams) (StaffProfile, error)
+	GetStaffTarget(ctx context.Context, arg GetStaffTargetParams) (StaffTarget, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
 	GetStockCountByUUID(ctx context.Context, arg GetStockCountByUUIDParams) (StockCount, error)
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
@@ -1295,6 +1315,7 @@ type Querier interface {
 	// time zone (end_at is the end of the last day there, decision 4) and its
 	// brand slug (Glorian services get no warranty, K2).
 	GetWarrantyServiceContext(ctx context.Context, serviceID int64) (GetWarrantyServiceContextRow, error)
+	GetWeakDealerRule(ctx context.Context, arg GetWeakDealerRuleParams) (WeakDealerRule, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
@@ -1322,6 +1343,10 @@ type Querier interface {
 	InsertAccountingDispute(ctx context.Context, arg InsertAccountingDisputeParams) (AccountingDispute, error)
 	InsertActivityEvent(ctx context.Context, arg InsertActivityEventParams) (ActivityEvent, error)
 	InsertAppLog(ctx context.Context, arg InsertAppLogParams) error
+	// Automatic tasks ---------------------------------------------------------------
+	// One task per subject x rule x month (uq_tasks_auto); a second insert for
+	// the same month fails with unique_violation.
+	InsertAutoPerformanceTask(ctx context.Context, arg InsertAutoPerformanceTaskParams) (Task, error)
 	InsertBulkChange(ctx context.Context, arg InsertBulkChangeParams) (BulkChange, error)
 	// TEC-212: bulk operation log + undo.
 	InsertBulkOperation(ctx context.Context, arg InsertBulkOperationParams) (BulkOperation, error)
@@ -1567,6 +1592,8 @@ type Querier interface {
 	ListBinProductStocksByLocation(ctx context.Context, locationID int64) ([]BinProductStock, error)
 	ListBinProductStocksByOrganization(ctx context.Context, organizationID int64) ([]BinProductStock, error)
 	ListBinProductStocksForRebuild(ctx context.Context, organizationID pgtype.Int8) ([]BinProductStock, error)
+	ListBonusAccruals(ctx context.Context, arg ListBonusAccrualsParams) ([]ListBonusAccrualsRow, error)
+	ListBonusRules(ctx context.Context, arg ListBonusRulesParams) ([]BonusRule, error)
 	ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, error)
 	ListBrands(ctx context.Context) ([]Brand, error)
 	ListBulkChangesForJob(ctx context.Context, jobID int64) ([]BulkChange, error)
@@ -1725,6 +1752,12 @@ type Querier interface {
 	ListDealerShowcaseReviews(ctx context.Context, arg ListDealerShowcaseReviewsParams) ([]ListDealerShowcaseReviewsRow, error)
 	// Services --------------------------------------------------------------------
 	ListDealerShowcaseServices(ctx context.Context, showcaseID int64) ([]DealerShowcaseService, error)
+	// TEC-469 (F5-01d) -------------------------------------------------------------
+	// Places worker: showcases with a Google place id whose rating did not come
+	// from Places since fresh_before (a second run the same day finds nothing).
+	// The module flag and the per-organization backoff are checked by the
+	// caller.
+	ListDealerShowcasesForPlacesRefresh(ctx context.Context, freshBefore pgtype.Timestamptz) ([]ListDealerShowcasesForPlacesRefreshRow, error)
 	// Center view of the distributor-specific prices with product and
 	// distributor identities. TEC-369: sort keys from
 	// usecase.DistributorPriceSort (docs/list-contract.md); default product.
@@ -1781,6 +1814,9 @@ type Querier interface {
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
 	// Links of a fleet with the dealer names (fleet card, portal).
 	ListFleetDealerLinks(ctx context.Context, arg ListFleetDealerLinksParams) ([]ListFleetDealerLinksRow, error)
+	// Vehicle and draft service references of a plan's appointments (plan
+	// detail).
+	ListFleetPlanAppointmentRefs(ctx context.Context, arg ListFleetPlanAppointmentRefsParams) ([]ListFleetPlanAppointmentRefsRow, error)
 	ListFleetPlanVehicles(ctx context.Context, arg ListFleetPlanVehiclesParams) ([]ListFleetPlanVehiclesRow, error)
 	// The fleet's view of its cari in one dealer's ledger: only service income
 	// (source service_income) and collections; the dealer's other cari
@@ -1816,6 +1852,13 @@ type Querier interface {
 	// (NULL: all organizations).
 	ListFleetRecentServices(ctx context.Context, arg ListFleetRecentServicesParams) ([]ListFleetRecentServicesRow, error)
 	ListFleetReports(ctx context.Context, arg ListFleetReportsParams) ([]FleetReport, error)
+	// Reports of the fleet for the panel (every status). Sort period_start,
+	// default -period_start; id tiebreak.
+	ListFleetReportsSorted(ctx context.Context, arg ListFleetReportsSortedParams) ([]FleetReport, error)
+	// TEC-477 (F5-02f): the panel reads its plans of a fleet.
+	// Plans of one fleet made by the organization. Sort created_at (default
+	// -created_at) or start_date; id tiebreak.
+	ListFleetServicePlansOfOrg(ctx context.Context, arg ListFleetServicePlansOfOrgParams) ([]ListFleetServicePlansOfOrgRow, error)
 	// The ledger rows of one fleet cari in [period_from, period_to): service
 	// income with its service and vehicle, collections and the other cari
 	// movements. Reversals stay as their own (negative) rows.
@@ -2060,6 +2103,17 @@ type Querier interface {
 	// keeps those not touched since then (the scheduler re-enqueues their task;
 	// a still queued task is deduplicated by its task id).
 	ListPendingCampaignRecipientIDs(ctx context.Context, arg ListPendingCampaignRecipientIDsParams) ([]int64, error)
+	// Metrics of the organizations over a closed period range (YYYY-MM).
+	ListPerformanceMetrics(ctx context.Context, arg ListPerformanceMetricsParams) ([]PerformanceMetricsMonthly, error)
+	// Ranking list of distributors and dealers for one month, one column per
+	// metric (NULL = not computed). Sort: docs/list-contract.md, keys from
+	// performance/repository.RankingSort (metric keys | name); metric columns
+	// sort NULLS LAST in both directions; id tiebreak.
+	ListPerformanceRanking(ctx context.Context, arg ListPerformanceRankingParams) ([]ListPerformanceRankingRow, error)
+	// Targets with their achievement: the target metric summed over the months
+	// of the target period (same currency for order volume). Sort keys from
+	// performance/repository.TargetSort; id tiebreak.
+	ListPerformanceTargets(ctx context.Context, arg ListPerformanceTargetsParams) ([]ListPerformanceTargetsRow, error)
 	ListPermissionSlugsByRoleID(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
@@ -2129,8 +2183,9 @@ type Querier interface {
 	// GetPublicDealerBySlug; code and last change only.
 	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
 	// Nearby dealers list: which of the given organizations of the brand serve
-	// a published showcase, with the live Google rating. The module flag is
-	// checked by the caller.
+	// a published showcase, with the live Google rating and its source and the
+	// rating frozen in the snapshot (TEC-469: a manual rating under approval
+	// shows the published one). The module flag is checked by the caller.
 	ListPublishedDealerShowcaseBadges(ctx context.Context, arg ListPublishedDealerShowcaseBadgesParams) ([]ListPublishedDealerShowcaseBadgesRow, error)
 	// Sitemap: the publish time of every published showcase of the brand (the
 	// caller keeps the organizations whose module is on).
@@ -2273,6 +2328,7 @@ type Querier interface {
 	// docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
 	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]ListStaffPaymentsRow, error)
 	ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error)
+	ListStaffTargets(ctx context.Context, arg ListStaffTargetsParams) ([]ListStaffTargetsRow, error)
 	// Pending reports whose generation task may have been lost (enqueue
 	// failure): the scheduler enqueues them again (task id dedupe). Database
 	// clock: older than 15 minutes.
@@ -2500,6 +2556,7 @@ type Querier interface {
 	// 'expiry' is the order above (descending reverses it), status sorts by
 	// rank (active, expired, void), product / organization by name.
 	ListWarrantyRows(ctx context.Context, arg ListWarrantyRowsParams) ([]ListWarrantyRowsRow, error)
+	ListWeakDealerRules(ctx context.Context, arg ListWeakDealerRulesParams) ([]ListWeakDealerRulesRow, error)
 	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]WebauthnCredential, error)
 	ListWebAuthnCredentialsForUserIDs(ctx context.Context, userIds []int64) ([]WebauthnCredential, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]ListWhatsAppAlarmRecipientsRow, error)
@@ -2523,6 +2580,7 @@ type Querier interface {
 	// Creates the counter on first use and locks it for the batch allocation.
 	LockBarcodeCounter(ctx context.Context, arg LockBarcodeCounterParams) (BarcodeCounter, error)
 	LockBinProductStock(ctx context.Context, arg LockBinProductStockParams) (BinProductStock, error)
+	LockBonusAccrual(ctx context.Context, arg LockBonusAccrualParams) (BonusAccrual, error)
 	LockBulkOperationForUndo(ctx context.Context, id int64) (BulkOperation, error)
 	LockCampaignRecipient(ctx context.Context, id int64) (CampaignRecipient, error)
 	// Serializes photo inserts and status moves of one showcase (the caller
@@ -2612,6 +2670,7 @@ type Querier interface {
 	MarkAppointmentReminder24h(ctx context.Context, arg MarkAppointmentReminder24hParams) (Appointment, error)
 	MarkAppointmentReminder2h(ctx context.Context, arg MarkAppointmentReminder2hParams) (Appointment, error)
 	MarkBarcodeBatchPrinted(ctx context.Context, id int64) (BarcodeBatch, error)
+	MarkBonusAccrualPosted(ctx context.Context, arg MarkBonusAccrualPostedParams) (BonusAccrual, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
 	MarkBulkJobProcessing(ctx context.Context, id int64) (BulkJob, error)
@@ -3090,6 +3149,9 @@ type Querier interface {
 	// Writes the Google rating (Places worker or manual entry, F5-01d); NULL
 	// rating and count clear it.
 	SetDealerShowcaseGoogleRating(ctx context.Context, arg SetDealerShowcaseGoogleRatingParams) (DealerShowcase, error)
+	// Writes a Places answer. CAS on the place id: no row when the owner
+	// changed the place id meanwhile.
+	SetDealerShowcasePlacesRating(ctx context.Context, arg SetDealerShowcasePlacesRatingParams) (int64, error)
 	// Records the fleet cari in the dealer's ledger once (CAS on NULL).
 	SetFleetDealerLinkCari(ctx context.Context, arg SetFleetDealerLinkCariParams) (FleetDealerLink, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.
@@ -3285,6 +3347,7 @@ type Querier interface {
 	UpdateAppSettings(ctx context.Context, arg UpdateAppSettingsParams) (AppSetting, error)
 	UpdateAppointment(ctx context.Context, arg UpdateAppointmentParams) (Appointment, error)
 	UpdateAuthSettings(ctx context.Context, arg UpdateAuthSettingsParams) (AuthSetting, error)
+	UpdateBonusRule(ctx context.Context, arg UpdateBonusRuleParams) (BonusRule, error)
 	// Name, channels and audience of a draft (no row once it left draft).
 	UpdateCampaignDraft(ctx context.Context, arg UpdateCampaignDraftParams) (Campaign, error)
 	// Full replacement of the editable fields (read-modify-write in the use case).
@@ -3337,6 +3400,7 @@ type Querier interface {
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
 	UpdatePartConsumptionExpectation(ctx context.Context, arg UpdatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
+	UpdatePerformanceTarget(ctx context.Context, arg UpdatePerformanceTargetParams) (PerformanceTarget, error)
 	// UpdatePlannedStaffPayment edits a payment that is not booked yet.
 	UpdatePlannedStaffPayment(ctx context.Context, arg UpdatePlannedStaffPaymentParams) (StaffPayment, error)
 	UpdatePlateFormat(ctx context.Context, arg UpdatePlateFormatParams) (PlateFormat, error)
@@ -3389,6 +3453,7 @@ type Querier interface {
 	UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (Vehicle, error)
 	UpdateWarehouse(ctx context.Context, arg UpdateWarehouseParams) (Warehouse, error)
 	UpdateWarehouseLocation(ctx context.Context, arg UpdateWarehouseLocationParams) (WarehouseLocation, error)
+	UpdateWeakDealerRule(ctx context.Context, arg UpdateWeakDealerRuleParams) (WeakDealerRule, error)
 	UpdateWebAuthnCredentialCounter(ctx context.Context, arg UpdateWebAuthnCredentialCounterParams) error
 	UpdateWebAuthnCredentialName(ctx context.Context, arg UpdateWebAuthnCredentialNameParams) (WebauthnCredential, error)
 	UpdateWhatsAppStatus(ctx context.Context, arg UpdateWhatsAppStatusParams) (WhatsappSetting, error)
@@ -3398,6 +3463,10 @@ type Querier interface {
 	// bounded by resolved organization ids; the API layer owns scope resolution.
 	UpsertAppointmentSettings(ctx context.Context, arg UpsertAppointmentSettingsParams) (AppointmentSetting, error)
 	UpsertBinProductStockForRepair(ctx context.Context, arg UpsertBinProductStockForRepairParams) error
+	// Month-end calculation. A recalculation refreshes a still 'calculated'
+	// accrual; approved/posted ones are left untouched (no row returned).
+	UpsertBonusAccrual(ctx context.Context, arg UpsertBonusAccrualParams) (BonusAccrual, error)
+	UpsertBonusSettings(ctx context.Context, arg UpsertBonusSettingsParams) (BonusSetting, error)
 	// Contents ------------------------------------------------------------------
 	UpsertCampaignContent(ctx context.Context, arg UpsertCampaignContentParams) (CampaignContent, error)
 	UpsertConnectionLocationMap(ctx context.Context, arg UpsertConnectionLocationMapParams) (ConnectionLocationMap, error)
@@ -3443,6 +3512,12 @@ type Querier interface {
 	UpsertOAuthGrant(ctx context.Context, arg UpsertOAuthGrantParams) (OauthGrant, error)
 	UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error)
 	UpsertOrganizationProductStockForRepair(ctx context.Context, arg UpsertOrganizationProductStockForRepairParams) error
+	// TEC-490 (F5-05a): performance and targets. Authorization scope is
+	// resolved by the usecase and arrives as organization id lists (NULL = the
+	// whole brand). Metric keys: internal/modules/performance/model.
+	// Monthly metrics ---------------------------------------------------------------
+	// Idempotent write of the metric worker: one row per org x month x metric.
+	UpsertPerformanceMetric(ctx context.Context, arg UpsertPerformanceMetricParams) (PerformanceMetricsMonthly, error)
 	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
 	// TEC-144: product price list and distributor-specific prices (K8). Prices
 	// go in as text so no precision is lost between NUMERIC and Go. Nullable
@@ -3457,6 +3532,8 @@ type Querier interface {
 	UpsertServiceCertificateWarning(ctx context.Context, arg UpsertServiceCertificateWarningParams) (ServiceCertificateWarning, error)
 	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
+	// Staff targets ---------------------------------------------------------------------
+	UpsertStaffTarget(ctx context.Context, arg UpsertStaffTargetParams) (StaffTarget, error)
 	// TEC-483 (F5-04a): stock forecast snapshots, thresholds and center network
 	// demand. Worker/API layers arrive in F5-04b/c; these queries are the
 	// repository contract for daily snapshots and list screens.

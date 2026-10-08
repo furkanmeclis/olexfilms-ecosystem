@@ -37,6 +37,7 @@ import {
   type ExportJobScope,
   type ImportFormat,
   type ImportJob,
+  type ImportResource,
   type IoResource,
 } from "@/features/io/types";
 import { routes } from "@/config/routes";
@@ -45,7 +46,11 @@ import { appToast } from "@/providers/toast-provider";
 import { cn } from "@/lib/utils";
 
 type ImportWizardProps = {
-  resource: IoResource;
+  resource: ImportResource;
+  /** Upload / sample endpoints of a record-scoped import (TEC-477). */
+  paths?: { upload: string; sample: string };
+  /** Job defaults the user does not edit (e.g. the target fleet). */
+  fixedDefaults?: Record<string, string>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onComplete?: () => void;
@@ -115,6 +120,8 @@ function StepIndicator({ step, t }: { step: Step; t: (k: string) => string }) {
 
 export function ImportWizard({
   resource,
+  paths: pathsOverride,
+  fixedDefaults,
   open,
   onOpenChange,
   onComplete,
@@ -122,7 +129,7 @@ export function ImportWizard({
   scope = "platform",
 }: ImportWizardProps) {
   const { t, locale } = useLocale();
-  const paths = IMPORT_PATHS[resource];
+  const paths = pathsOverride ?? IMPORT_PATHS[resource as IoResource];
   const schema = useMemo(() => IMPORT_SCHEMA[resource] ?? [], [resource]);
 
   const [step, setStep] = useState<Step>("upload");
@@ -249,7 +256,7 @@ export function ImportWizard({
         job.uuid,
         {
           mapping: uiMappingToApi(mapping),
-          defaults,
+          defaults: { ...defaults, ...fixedDefaults },
         },
         scope,
       );
@@ -270,7 +277,7 @@ export function ImportWizard({
         job.uuid,
         {
           mapping: uiMappingToApi(mapping),
-          defaults,
+          defaults: { ...defaults, ...fixedDefaults },
         },
         scope,
       );

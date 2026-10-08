@@ -255,7 +255,7 @@ func (q *Queries) GetCenterMemberByUUID(ctx context.Context, arg GetCenterMember
 }
 
 const getTaskByUUID = `-- name: GetTaskByUUID :one
-SELECT id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at FROM tasks
+SELECT id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at, auto_rule_id, auto_period FROM tasks
 WHERE uuid = $1 AND brand_id = $2
 `
 
@@ -287,6 +287,8 @@ func (q *Queries) GetTaskByUUID(ctx context.Context, arg GetTaskByUUIDParams) (T
 		&i.UpdatedAt,
 		&i.DueSoonNotifiedAt,
 		&i.OverdueNotifiedAt,
+		&i.AutoRuleID,
+		&i.AutoPeriod,
 	)
 	return i, err
 }
@@ -324,7 +326,7 @@ func (q *Queries) GetTaskSubjectOrg(ctx context.Context, arg GetTaskSubjectOrgPa
 }
 
 const getTaskView = `-- name: GetTaskView :one
-SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.subject_org_id, t.title, t.description, t.assignee_user_id, t.priority, t.due_at, t.status, t.source, t.created_by_user_id, t.closed_by_user_id, t.closed_at, t.created_at, t.updated_at, t.due_soon_notified_at, t.overdue_notified_at,
+SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.subject_org_id, t.title, t.description, t.assignee_user_id, t.priority, t.due_at, t.status, t.source, t.created_by_user_id, t.closed_by_user_id, t.closed_at, t.created_at, t.updated_at, t.due_soon_notified_at, t.overdue_notified_at, t.auto_rule_id, t.auto_period,
        s.uuid AS subject_uuid, s.name AS subject_name, s.type AS subject_type,
        a.uuid AS assignee_uuid, a.name AS assignee_name, a.surname AS assignee_surname,
        c.uuid AS creator_uuid, c.name AS creator_name, c.surname AS creator_surname,
@@ -361,6 +363,8 @@ type GetTaskViewRow struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	DueSoonNotifiedAt pgtype.Timestamptz `json:"due_soon_notified_at"`
 	OverdueNotifiedAt pgtype.Timestamptz `json:"overdue_notified_at"`
+	AutoRuleID        pgtype.Int8        `json:"auto_rule_id"`
+	AutoPeriod        pgtype.Text        `json:"auto_period"`
 	SubjectUuid       uuid.UUID          `json:"subject_uuid"`
 	SubjectName       string             `json:"subject_name"`
 	SubjectType       string             `json:"subject_type"`
@@ -396,6 +400,8 @@ func (q *Queries) GetTaskView(ctx context.Context, arg GetTaskViewParams) (GetTa
 		&i.UpdatedAt,
 		&i.DueSoonNotifiedAt,
 		&i.OverdueNotifiedAt,
+		&i.AutoRuleID,
+		&i.AutoPeriod,
 		&i.SubjectUuid,
 		&i.SubjectName,
 		&i.SubjectType,
@@ -421,7 +427,7 @@ VALUES (
     $5, $6, $7, $8,
     $9, $10
 )
-RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at, auto_rule_id, auto_period
 `
 
 type InsertTaskParams struct {
@@ -473,6 +479,8 @@ func (q *Queries) InsertTask(ctx context.Context, arg InsertTaskParams) (Task, e
 		&i.UpdatedAt,
 		&i.DueSoonNotifiedAt,
 		&i.OverdueNotifiedAt,
+		&i.AutoRuleID,
+		&i.AutoPeriod,
 	)
 	return i, err
 }
@@ -679,7 +687,7 @@ func (q *Queries) ListTaskUUIDsFiltered(ctx context.Context, arg ListTaskUUIDsFi
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.subject_org_id, t.title, t.description, t.assignee_user_id, t.priority, t.due_at, t.status, t.source, t.created_by_user_id, t.closed_by_user_id, t.closed_at, t.created_at, t.updated_at, t.due_soon_notified_at, t.overdue_notified_at,
+SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.subject_org_id, t.title, t.description, t.assignee_user_id, t.priority, t.due_at, t.status, t.source, t.created_by_user_id, t.closed_by_user_id, t.closed_at, t.created_at, t.updated_at, t.due_soon_notified_at, t.overdue_notified_at, t.auto_rule_id, t.auto_period,
        s.uuid AS subject_uuid, s.name AS subject_name, s.type AS subject_type,
        a.uuid AS assignee_uuid, a.name AS assignee_name, a.surname AS assignee_surname,
        c.uuid AS creator_uuid, c.name AS creator_name, c.surname AS creator_surname,
@@ -763,6 +771,8 @@ type ListTasksRow struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	DueSoonNotifiedAt pgtype.Timestamptz `json:"due_soon_notified_at"`
 	OverdueNotifiedAt pgtype.Timestamptz `json:"overdue_notified_at"`
+	AutoRuleID        pgtype.Int8        `json:"auto_rule_id"`
+	AutoPeriod        pgtype.Text        `json:"auto_period"`
 	SubjectUuid       uuid.UUID          `json:"subject_uuid"`
 	SubjectName       string             `json:"subject_name"`
 	SubjectType       string             `json:"subject_type"`
@@ -824,6 +834,8 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTas
 			&i.UpdatedAt,
 			&i.DueSoonNotifiedAt,
 			&i.OverdueNotifiedAt,
+			&i.AutoRuleID,
+			&i.AutoPeriod,
 			&i.SubjectUuid,
 			&i.SubjectName,
 			&i.SubjectType,
@@ -846,7 +858,7 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTas
 }
 
 const lockTask = `-- name: LockTask :one
-SELECT id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at FROM tasks
+SELECT id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at, auto_rule_id, auto_period FROM tasks
 WHERE uuid = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -879,6 +891,8 @@ func (q *Queries) LockTask(ctx context.Context, arg LockTaskParams) (Task, error
 		&i.UpdatedAt,
 		&i.DueSoonNotifiedAt,
 		&i.OverdueNotifiedAt,
+		&i.AutoRuleID,
+		&i.AutoPeriod,
 	)
 	return i, err
 }
@@ -887,7 +901,7 @@ const setTaskAssignee = `-- name: SetTaskAssignee :one
 UPDATE tasks
 SET assignee_user_id = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at, auto_rule_id, auto_period
 `
 
 type SetTaskAssigneeParams struct {
@@ -919,6 +933,8 @@ func (q *Queries) SetTaskAssignee(ctx context.Context, arg SetTaskAssigneeParams
 		&i.UpdatedAt,
 		&i.DueSoonNotifiedAt,
 		&i.OverdueNotifiedAt,
+		&i.AutoRuleID,
+		&i.AutoPeriod,
 	)
 	return i, err
 }
@@ -927,7 +943,7 @@ const setTaskPriority = `-- name: SetTaskPriority :one
 UPDATE tasks
 SET priority = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at, auto_rule_id, auto_period
 `
 
 type SetTaskPriorityParams struct {
@@ -958,6 +974,8 @@ func (q *Queries) SetTaskPriority(ctx context.Context, arg SetTaskPriorityParams
 		&i.UpdatedAt,
 		&i.DueSoonNotifiedAt,
 		&i.OverdueNotifiedAt,
+		&i.AutoRuleID,
+		&i.AutoPeriod,
 	)
 	return i, err
 }
@@ -970,7 +988,7 @@ SET status = $1::text,
     closed_by_user_id = CASE WHEN $1::text IN ('done', 'cancelled')
                              THEN $3::bigint END
 WHERE id = $4
-RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at, auto_rule_id, auto_period
 `
 
 type SetTaskStatusParams struct {
@@ -1010,6 +1028,8 @@ func (q *Queries) SetTaskStatus(ctx context.Context, arg SetTaskStatusParams) (T
 		&i.UpdatedAt,
 		&i.DueSoonNotifiedAt,
 		&i.OverdueNotifiedAt,
+		&i.AutoRuleID,
+		&i.AutoPeriod,
 	)
 	return i, err
 }
@@ -1031,7 +1051,7 @@ SET subject_org_id = $1,
     closed_at = $8,
     closed_by_user_id = $9
 WHERE id = $10
-RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at
+RETURNING id, uuid, organization_id, brand_id, subject_org_id, title, description, assignee_user_id, priority, due_at, status, source, created_by_user_id, closed_by_user_id, closed_at, created_at, updated_at, due_soon_notified_at, overdue_notified_at, auto_rule_id, auto_period
 `
 
 type UpdateTaskParams struct {
@@ -1081,6 +1101,8 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		&i.UpdatedAt,
 		&i.DueSoonNotifiedAt,
 		&i.OverdueNotifiedAt,
+		&i.AutoRuleID,
+		&i.AutoPeriod,
 	)
 	return i, err
 }

@@ -58,6 +58,18 @@ export const routes = {
       cancelRequests: (slug: string) =>
         `/t/${slug}/service-subscriptions/cancel-requests`,
     },
+    /** TEC-477: fleets (list, card, bulk service plans). */
+    fleets: {
+      list: (slug: string) => `/t/${slug}/fleets`,
+      detail: (slug: string, uuid: string, tab?: string) =>
+        `/t/${slug}/fleets/${uuid}${tab ? `?tab=${tab}` : ""}`,
+      newPlan: (slug: string, uuid: string, vehicles?: string[]) =>
+        `/t/${slug}/fleets/${uuid}/plans/new${
+          vehicles?.length ? `?vehicles=${vehicles.join(",")}` : ""
+        }`,
+      plan: (slug: string, uuid: string, plan: string) =>
+        `/t/${slug}/fleets/${uuid}/plans/${plan}`,
+    },
     /** TEC-482: staff certificates and center / distributor approvals. */
     certificates: {
       list: (slug: string) => `/t/${slug}/certificates`,
@@ -243,6 +255,16 @@ export const routes = {
     assistant: "/portal/assistant",
     /** TEC-327: my appointments and the booking flow (optional preselection). */
     appointments: "/portal/appointments",
+    /** TEC-478: read-only fleet portal. */
+    fleet: {
+      vehicles: "/portal/fleet/vehicles",
+      vehicle: (uuid: string) =>
+        `/portal/fleet/vehicles/${encodeURIComponent(uuid)}`,
+      services: "/portal/fleet/services",
+      warranties: "/portal/fleet/warranties",
+      account: "/portal/fleet/account",
+      reports: "/portal/fleet/reports",
+    },
     newAppointment: (preset?: {
       dealer?: { uuid: string; name: string };
       vehicle?: string;

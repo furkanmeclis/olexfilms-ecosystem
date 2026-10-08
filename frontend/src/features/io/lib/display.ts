@@ -23,6 +23,8 @@ const EXPORT_ONLY_RESOURCES = new Set<string>([
   "services.list",
   "warranties.list",
   "ai.usage",
+  "tenant.fleets",
+  "tenant.fleet.statement",
 ]);
 
 export function resourceLabelKey(resource: string): string | null {

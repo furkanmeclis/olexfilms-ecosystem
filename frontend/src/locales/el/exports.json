@@ -77,6 +77,8 @@
   "resources.stock.units": "Μονάδες αποθέματος",
   "resources.leads.list": "Δυνητικοί πελάτες",
   "resources.services.list": "Υπηρεσίες",
+  "resources.tenant.fleets": "Στόλοι",
+  "resources.tenant.fleet.statement": "Κατάσταση λογαριασμού στόλου",
   "resources.warranties.list": "Εγγυήσεις",
   "resources.ai.usage": "Χρήση AI"
 }

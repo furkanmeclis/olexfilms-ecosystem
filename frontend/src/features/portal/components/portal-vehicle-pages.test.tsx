@@ -9,6 +9,8 @@ const portal = vi.hoisted(() => ({
   getVehicle: vi.fn(),
   getService: vi.fn(),
   me: vi.fn(),
+  getFleetOverview: vi.fn(),
+  listFleetLinks: vi.fn(),
 }));
 const lang = vi.hoisted(() => ({
   locale: "en" as string,
@@ -241,6 +243,14 @@ describe("portal vehicle helpers", () => {
 });
 
 describe("PortalNav", () => {
+  it("does not show the fleet menu to a customer session", async () => {
+    portal.me.mockResolvedValue({ user: {}, roles: ["customer"] });
+    await render(createElement(PortalNav));
+    expect(container.textContent).not.toContain("portal.fleet.nav.vehicles");
+    expect(container.textContent).not.toContain("portal.fleet.nav.account");
+    expect(container.textContent).toContain("portal.nav.vehicles");
+  });
+
   it("links home, vehicles, warranties and dealers and marks the current page", async () => {
     await render(createElement(PortalNav));
     const links = Array.from(container.querySelectorAll("nav a"));
@@ -258,6 +268,23 @@ describe("PortalNav", () => {
         .querySelector('a[href="/portal/vehicles"]')
         ?.getAttribute("aria-current"),
     ).toBe("page");
+  });
+
+  it("switches to fleet-only sections for a fleet session", async () => {
+    portal.me.mockResolvedValue({ user: {}, roles: ["fleet"] });
+    await render(createElement(PortalNav));
+    const links = Array.from(container.querySelectorAll("nav a"));
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([
+      "/portal",
+      "/portal/fleet/vehicles",
+      "/portal/fleet/services",
+      "/portal/fleet/warranties",
+      "/portal/fleet/account",
+      "/portal/fleet/reports",
+      "/portal/preferences",
+    ]);
+    expect(container.textContent).not.toContain("portal.nav.dealers");
+    expect(container.textContent).not.toContain("portal.nav.contracts");
   });
 });
 

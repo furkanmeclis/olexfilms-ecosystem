@@ -315,6 +315,15 @@ const (
 	// expected consumption definitions.
 	PermEfficiencyRead               = "efficiency.read"
 	PermEfficiencyExpectationsManage = "efficiency.expectations.manage"
+	// TEC-490 (000123): performance and targets (F5-05a). Dealers read their
+	// own metrics, distributors their subtree, the center the brand; targets
+	// and weak dealer rules are set from above, staff targets and bonuses
+	// inside the dealer.
+	PermPerformanceRead               = "performance.read"
+	PermPerformanceTargetsManage      = "performance.targets.manage"
+	PermPerformanceStaffTargetsManage = "performance.staff_targets.manage"
+	PermPerformanceBonusManage        = "performance.bonus.manage"
+	PermPerformanceRulesManage        = "performance.rules.manage"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

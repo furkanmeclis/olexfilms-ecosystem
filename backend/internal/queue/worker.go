@@ -121,6 +121,8 @@ type Worker struct {
 	// TEC-476: periodic fleet report schedule and generation.
 	fleetReportsSchedule FleetReportsScheduleFunc
 	fleetReportGenerate  FleetReportGenerateFunc
+	// TEC-469: daily dealer showcase Google rating refresh (Places).
+	showcaseGoogleRating ShowcaseGoogleRatingFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -224,6 +226,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskStockForecastDaily, w.handleStockForecastDaily)
 	mux.HandleFunc(TaskFleetReportsSchedule, w.handleFleetReportsSchedule)
 	mux.HandleFunc(TaskFleetReportGenerate, w.handleFleetReportGenerate)
+	mux.HandleFunc(TaskShowcaseGoogleRating, w.handleShowcaseGoogleRating)
 	return w
 }
 

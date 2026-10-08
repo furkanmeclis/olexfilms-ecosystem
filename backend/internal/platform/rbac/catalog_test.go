@@ -849,3 +849,52 @@ func TestEfficiencyGrants(t *testing.T) {
 		}
 	}
 }
+
+// TEC-490: performance and targets. Dealer owner reads own metrics and
+// manages staff targets and bonuses (accounting shares bonuses);
+// distributors read the subtree and the distributor owner sets targets and
+// weak dealer rules below; center staff covers the brand.
+func TestPerformanceGrants(t *testing.T) {
+	slugs := []string{
+		PermPerformanceRead, PermPerformanceTargetsManage, PermPerformanceStaffTargetsManage,
+		PermPerformanceBonusManage, PermPerformanceRulesManage,
+	}
+	for _, slug := range slugs {
+		def, ok := PermissionBySlug(slug)
+		if !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+		if def.Module != "performance" || def.SuperAdminOnly {
+			t.Fatalf("%s def = %+v", slug, def)
+		}
+	}
+	want := map[string]map[string]Scope{
+		RoleSuperAdmin: {
+			PermPerformanceRead: ScopeAll, PermPerformanceTargetsManage: ScopeAll,
+			PermPerformanceStaffTargetsManage: ScopeAll, PermPerformanceBonusManage: ScopeAll,
+			PermPerformanceRulesManage: ScopeAll,
+		},
+		RoleCenterStaff: {
+			PermPerformanceRead: ScopeBrand, PermPerformanceTargetsManage: ScopeBrand,
+			PermPerformanceRulesManage: ScopeBrand,
+		},
+		RoleDistributorOwner: {
+			PermPerformanceRead: ScopeSubtree, PermPerformanceTargetsManage: ScopeSubtree,
+			PermPerformanceRulesManage: ScopeSubtree,
+		},
+		RoleDistributorStaff: {PermPerformanceRead: ScopeSubtree},
+		RoleDealerOwner: {
+			PermPerformanceRead: ScopeManaged, PermPerformanceStaffTargetsManage: ScopeManaged,
+			PermPerformanceBonusManage: ScopeManaged,
+		},
+		RoleDealerAccounting: {PermPerformanceBonusManage: ScopeManaged},
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range slugs {
+			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
+				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
+			}
+		}
+	}
+}

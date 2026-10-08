@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/places"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -33,16 +34,23 @@ type Showcase struct {
 	GoogleReviewCount     *int32          `json:"google_review_count"`
 	GoogleRatingSource    *string         `json:"google_rating_source"`
 	GoogleRatingUpdatedAt *time.Time      `json:"google_rating_updated_at"`
-	PublishedContent      json.RawMessage `json:"published_content"`
-	PublishedAt           *time.Time      `json:"published_at"`
-	SubmittedAt           *time.Time      `json:"submitted_at"`
-	ReviewedAt            *time.Time      `json:"reviewed_at"`
-	ReviewNote            *string         `json:"review_note"`
-	UpdatedAt             *time.Time      `json:"updated_at"`
-	ApprovalRequired      bool            `json:"approval_required"`
-	MaxPhotos             int64           `json:"max_photos"`
-	Services              []ServiceItem   `json:"services"`
-	Photos                []Photo         `json:"photos"`
+	// TEC-469: Places configured (env key) and whether PUT
+	// /v1/showcase/google-rating is accepted; the place id read from the
+	// organization's google_business_url while google_place_id is empty
+	// (no lookup is made, so a cid-only link yields null).
+	PlacesConfigured        bool            `json:"places_configured"`
+	ManualRatingAllowed     bool            `json:"manual_rating_allowed"`
+	GooglePlaceIDSuggestion *string         `json:"google_place_id_suggestion"`
+	PublishedContent        json.RawMessage `json:"published_content"`
+	PublishedAt             *time.Time      `json:"published_at"`
+	SubmittedAt             *time.Time      `json:"submitted_at"`
+	ReviewedAt              *time.Time      `json:"reviewed_at"`
+	ReviewNote              *string         `json:"review_note"`
+	UpdatedAt               *time.Time      `json:"updated_at"`
+	ApprovalRequired        bool            `json:"approval_required"`
+	MaxPhotos               int64           `json:"max_photos"`
+	Services                []ServiceItem   `json:"services"`
+	Photos                  []Photo         `json:"photos"`
 }
 
 // CategoryRef is the product category of a service.
@@ -83,6 +91,12 @@ func (s *Service) view(ctx context.Context, q *db.Queries, o db.Organization, ro
 		SeoKeywords: []string{}, PublishedContent: json.RawMessage(`null`),
 		ApprovalRequired: s.approvalRequired(ctx), MaxPhotos: s.maxPhotos(ctx),
 		Services: []ServiceItem{}, Photos: []Photo{},
+		PlacesConfigured: s.placesConfigured(), ManualRatingAllowed: s.manualRatingAllowed(row),
+	}
+	if !row.GooglePlaceID.Valid && o.GoogleBusinessUrl.Valid {
+		if ref := places.ParseBusinessURL(o.GoogleBusinessUrl.String); ref.PlaceID != "" {
+			v.GooglePlaceIDSuggestion = &ref.PlaceID
+		}
 	}
 	if !exists {
 		v.Status = "draft"

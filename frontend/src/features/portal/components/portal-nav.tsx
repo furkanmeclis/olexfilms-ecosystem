@@ -6,15 +6,24 @@ import {
   CalendarClock,
   Car,
   FileSignature,
+  FileText,
   House,
+  Landmark,
   ShieldCheck,
   Store,
+  Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 import { routes } from "@/config/routes";
 import { usePortalAssistantVisible } from "@/features/ai-assistant/hooks/use-portal-assistant-visible";
+import { portalApi } from "@/features/portal/lib/portal-client";
+import {
+  isPortalReadOnly,
+  PORTAL_ME_KEY,
+} from "@/features/portal/lib/portal-vehicles";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -36,6 +45,40 @@ const ITEMS = [
     href: routes.portal.contracts,
     key: "portal.nav.contracts",
     icon: FileSignature,
+  },
+  {
+    href: routes.portal.preferences,
+    key: "portal.nav.preferences",
+    icon: BellRing,
+  },
+] as const;
+
+const FLEET_ITEMS = [
+  { href: routes.portal.home, key: "portal.nav.home", icon: House },
+  {
+    href: routes.portal.fleet.vehicles,
+    key: "portal.fleet.nav.vehicles",
+    icon: Car,
+  },
+  {
+    href: routes.portal.fleet.services,
+    key: "portal.fleet.nav.services",
+    icon: Wrench,
+  },
+  {
+    href: routes.portal.fleet.warranties,
+    key: "portal.fleet.nav.warranties",
+    icon: ShieldCheck,
+  },
+  {
+    href: routes.portal.fleet.account,
+    key: "portal.fleet.nav.account",
+    icon: Landmark,
+  },
+  {
+    href: routes.portal.fleet.reports,
+    key: "portal.fleet.nav.reports",
+    icon: FileText,
   },
   {
     href: routes.portal.preferences,
@@ -71,7 +114,16 @@ export function PortalNav() {
   const { t } = useLocale();
   const pathname = usePathname() ?? "";
   const assistant = usePortalAssistantVisible();
-  const items = assistant ? [...ITEMS, ASSISTANT_ITEM] : ITEMS;
+  const me = useQuery({
+    queryKey: PORTAL_ME_KEY,
+    queryFn: () => portalApi.me(),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const fleet = isPortalReadOnly(me.data?.roles);
+  const baseItems = fleet ? FLEET_ITEMS : ITEMS;
+  const items =
+    !fleet && assistant ? [...baseItems, ASSISTANT_ITEM] : baseItems;
   return (
     <nav
       aria-label={t("portal.nav.label")}
