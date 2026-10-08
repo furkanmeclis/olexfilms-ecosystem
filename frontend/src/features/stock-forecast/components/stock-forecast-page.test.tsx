@@ -131,10 +131,14 @@ function row(partial: Partial<StockForecastRow>): StockForecastRow {
 }
 
 let container: HTMLDivElement;
-let root: Root;
+let root: Root | null;
+
+function clearLocalStorage() {
+  window.localStorage?.clear();
+}
 
 beforeEach(() => {
-  window.localStorage.clear();
+  clearLocalStorage();
   captured.tables = [];
   captured.exports = [];
   captured.toasts = [];
@@ -174,9 +178,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  container.remove();
+  if (root) {
+    act(() => root?.unmount());
+  }
+  container?.remove();
   vi.clearAllMocks();
+  root = null;
 });
 
 async function flush() {
@@ -191,8 +198,12 @@ async function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  const currentRoot = root;
+  if (!currentRoot) {
+    throw new Error("test root is not initialized");
+  }
   await act(async () => {
-    root.render(
+    currentRoot.render(
       createElement(
         QueryClientProvider,
         { client },
