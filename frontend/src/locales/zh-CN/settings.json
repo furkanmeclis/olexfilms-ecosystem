@@ -71,6 +71,8 @@
   "system.keys.forecast_min_days_hint": "库存预测给出建议前所需的最短出入库历史。",
   "system.keys.contract_grace_days": "合同宽限期（天）",
   "system.keys.contract_grace_days_hint": "合同到期后进入只读模式前的时间；0 = 无宽限。",
+  "system.keys.photo_standard_enabled": "照片标准",
+  "system.keys.photo_standard_enabled_hint": "车辆接收时要求标准照片组。",
   "system.keys.bulk_undo_window_hours": "批量操作撤销时限（小时）",
   "system.keys.bulk_undo_window_hours_hint": "批量操作执行后可撤销的时长。",
   "system.keys.smtp_host": "SMTP 主机",

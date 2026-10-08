@@ -71,6 +71,8 @@
   "system.keys.forecast_min_days_hint": "Минимална история на движенията, преди прогнозата да предложи нещо.",
   "system.keys.contract_grace_days": "Гратисен период на договора (дни)",
   "system.keys.contract_grace_days_hint": "Време след изтичане на договора преди режим само за четене; 0 = без гратис.",
+  "system.keys.photo_standard_enabled": "Фото стандарт",
+  "system.keys.photo_standard_enabled_hint": "Изисква стандартния комплект снимки при приемане на автомобила.",
   "system.keys.bulk_undo_window_hours": "Прозорец за отмяна на масови операции (часове)",
   "system.keys.bulk_undo_window_hours_hint": "Колко време масова операция може да бъде отменена.",
   "system.keys.smtp_host": "SMTP сървър",

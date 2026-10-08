@@ -71,6 +71,8 @@
   "system.keys.forecast_min_days_hint": "Минимальная история движений, прежде чем прогноз что-либо предложит.",
   "system.keys.contract_grace_days": "Льготный период договора (дни)",
   "system.keys.contract_grace_days_hint": "Время после окончания договора до режима только для чтения; 0 = без льготы.",
+  "system.keys.photo_standard_enabled": "Фотостандарт",
+  "system.keys.photo_standard_enabled_hint": "Требовать стандартный набор фото при приёмке автомобиля.",
   "system.keys.bulk_undo_window_hours": "Окно отмены массовых операций (часы)",
   "system.keys.bulk_undo_window_hours_hint": "Сколько времени массовую операцию можно отменить после выполнения.",
   "system.keys.smtp_host": "SMTP-сервер",

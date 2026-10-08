@@ -158,8 +158,6 @@ CREATE UNIQUE INDEX uq_intake_photos_active_service_angle
 CREATE INDEX idx_intake_photos_service ON intake_photos (service_id, created_at, id);
 CREATE INDEX idx_intake_photos_angle ON intake_photos (angle_id);
 
-DELETE FROM system_settings WHERE key = 'photo_standard_enabled';
-
 INSERT INTO permissions (name, slug, module, scopes, is_sensitive, super_admin_only, description, sort_order) VALUES
     ('Manage photo standard', 'photo_standard.manage', 'photo_standard', ARRAY['brand','all']::text[], false, false,
      'Create and update central vehicle intake angle definitions.', (SELECT COALESCE(MAX(sort_order), 0) + 10 FROM permissions)),

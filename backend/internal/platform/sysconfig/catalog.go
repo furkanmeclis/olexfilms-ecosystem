@@ -84,6 +84,9 @@ const (
 	// KeyContractsIntakeRequired blocks intake status moves until the linked
 	// contract is executed, when the intake_contracts module is also enabled.
 	KeyContractsIntakeRequired = "contracts.intake_required"
+	// KeyPhotoStandardEnabled switches the vehicle intake photo standard
+	// (design §4, default off).
+	KeyPhotoStandardEnabled = "photo_standard_enabled"
 	// KeyBulkUndoWindowHours is how long a bulk operation stays undoable
 	// after it ran (TEC-212).
 	KeyBulkUndoWindowHours = "bulk_undo_window_hours"
@@ -319,6 +322,8 @@ var catalog = []Definition{
 		Description: "Read-only grace period after a contract expires; 0 = no grace (K23)"},
 	{Key: KeyContractsIntakeRequired, Group: GroupContracts, Kind: KindBool, Default: false,
 		Description: "Require an executed intake contract before a service can start processing or be completed directly"},
+	{Key: KeyPhotoStandardEnabled, Group: GroupServices, Kind: KindBool, Default: false,
+		Description: "Require the vehicle intake photo standard"},
 	{Key: KeyBulkUndoWindowHours, Group: GroupGeneral, Kind: KindInt, Default: int64(DefaultBulkUndoWindowHours), Min: i64(1), Max: i64(720),
 		Description: "Hours a bulk operation stays undoable after it ran (TEC-212)"},
 	{Key: KeySMTPHost, Group: GroupSMTP, Kind: KindString, Default: "", MaxLen: 253,

@@ -71,6 +71,8 @@
   "system.keys.forecast_min_days_hint": "Minimum movement history before the stock forecast proposes anything.",
   "system.keys.contract_grace_days": "Contract grace period (days)",
   "system.keys.contract_grace_days_hint": "Time after a contract expires before read-only mode; 0 = no grace.",
+  "system.keys.photo_standard_enabled": "Photo standard",
+  "system.keys.photo_standard_enabled_hint": "Require the standard photo set at vehicle intake.",
   "system.keys.bulk_undo_window_hours": "Bulk undo window (hours)",
   "system.keys.bulk_undo_window_hours_hint": "How long a bulk operation stays undoable after it ran.",
   "system.keys.smtp_host": "SMTP host",

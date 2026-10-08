@@ -177,6 +177,11 @@ func (s *Service) BulkUndoWindowHours(ctx context.Context) int {
 	return int(s.Int(ctx, KeyBulkUndoWindowHours))
 }
 
+// PhotoStandardEnabled is the typed accessor for KeyPhotoStandardEnabled.
+func (s *Service) PhotoStandardEnabled(ctx context.Context) bool {
+	return s.Bool(ctx, KeyPhotoStandardEnabled)
+}
+
 // WhatsAppSendPerMinute is the typed accessor for KeyWhatsAppSendPerMinute.
 func (s *Service) WhatsAppSendPerMinute(ctx context.Context) int {
 	return int(s.Int(ctx, KeyWhatsAppSendPerMinute))

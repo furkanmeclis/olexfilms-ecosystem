@@ -71,6 +71,8 @@
   "system.keys.forecast_min_days_hint": "Ελάχιστο ιστορικό κινήσεων πριν η πρόβλεψη προτείνει κάτι.",
   "system.keys.contract_grace_days": "Περίοδος χάριτος συμβολαίου (ημέρες)",
   "system.keys.contract_grace_days_hint": "Χρόνος μετά τη λήξη πριν από τη λειτουργία μόνο ανάγνωσης· 0 = χωρίς χάρη.",
+  "system.keys.photo_standard_enabled": "Πρότυπο φωτογραφιών",
+  "system.keys.photo_standard_enabled_hint": "Απαιτεί το τυπικό σετ φωτογραφιών στην παραλαβή οχήματος.",
   "system.keys.bulk_undo_window_hours": "Παράθυρο αναίρεσης μαζικών ενεργειών (ώρες)",
   "system.keys.bulk_undo_window_hours_hint": "Πόσο καιρό μπορεί να αναιρεθεί μια μαζική ενέργεια.",
   "system.keys.smtp_host": "Διακομιστής SMTP",

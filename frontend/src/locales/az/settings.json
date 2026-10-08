@@ -71,6 +71,8 @@
   "system.keys.forecast_min_days_hint": "Proqnoz təklif verməzdən əvvəl tələb olunan minimum hərəkət tarixçəsi.",
   "system.keys.contract_grace_days": "Müqavilə güzəşt müddəti (gün)",
   "system.keys.contract_grace_days_hint": "Müqavilə bitdikdən sonra yalnız oxuma rejiminə qədər vaxt; 0 = güzəşt yoxdur.",
+  "system.keys.photo_standard_enabled": "Foto standartı",
+  "system.keys.photo_standard_enabled_hint": "Avtomobil qəbulunda standart foto dəstini tələb edir.",
   "system.keys.bulk_undo_window_hours": "Toplu əməliyyatı geri alma müddəti (saat)",
   "system.keys.bulk_undo_window_hours_hint": "Toplu əməliyyatın icradan sonra geri alına biləcəyi müddət.",
   "system.keys.smtp_host": "SMTP serveri",

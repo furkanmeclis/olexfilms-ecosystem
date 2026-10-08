@@ -14,7 +14,8 @@ import (
 )
 
 // The HTTP integration test writes forecast_min_days and smtp.*; this one
-// writes contract_grace_days so the two never race on a shared database.
+// writes contract_grace_days and photo_standard_enabled so the two never
+// race on a shared database.
 
 type dbtest struct {
 	t     *testing.T
@@ -40,8 +41,8 @@ func newDBTest(t *testing.T) *dbtest {
 	t.Cleanup(func() { _ = rdb.Close() })
 	cache := NewRedisCache(rdb, "test", nil)
 	d := &dbtest{t: t, pool: pool, svc: New(db.New(pool), cache), mr: mr, cache: cache}
-	d.reset(KeyContractGraceDays)
-	t.Cleanup(func() { d.reset(KeyContractGraceDays) })
+	d.reset(KeyContractGraceDays, KeyPhotoStandardEnabled)
+	t.Cleanup(func() { d.reset(KeyContractGraceDays, KeyPhotoStandardEnabled) })
 	return d
 }
 
@@ -107,6 +108,23 @@ func TestDBWriteReadInvalidate(t *testing.T) {
 	}
 	if _, err := d.svc.Set(ctx, "no.such.key", json.RawMessage("1"), 0); !errors.Is(err, ErrUnknownKey) {
 		t.Fatalf("unknown key err = %v", err)
+	}
+
+	// Bool key and reset to default.
+	if _, err := d.svc.Set(ctx, KeyPhotoStandardEnabled, json.RawMessage("true"), 0); err != nil {
+		t.Fatal(err)
+	}
+	if !d.svc.PhotoStandardEnabled(ctx) {
+		t.Fatal("photo standard not enabled after write")
+	}
+	if _, err := d.svc.Reset(ctx, KeyPhotoStandardEnabled); err != nil {
+		t.Fatal(err)
+	}
+	if d.mr.Exists(d.cache.Key()) {
+		t.Fatal("cache not invalidated on reset")
+	}
+	if d.svc.PhotoStandardEnabled(ctx) {
+		t.Fatal("photo standard still enabled after reset")
 	}
 
 	// A stale row that no longer fits the schema falls back to the default.

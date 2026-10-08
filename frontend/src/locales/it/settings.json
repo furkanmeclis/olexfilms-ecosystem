@@ -71,6 +71,8 @@
   "system.keys.forecast_min_days_hint": "Storico minimo dei movimenti prima che la previsione proponga qualcosa.",
   "system.keys.contract_grace_days": "Periodo di tolleranza del contratto (giorni)",
   "system.keys.contract_grace_days_hint": "Tempo dopo la scadenza prima della modalità sola lettura; 0 = nessuna tolleranza.",
+  "system.keys.photo_standard_enabled": "Standard fotografico",
+  "system.keys.photo_standard_enabled_hint": "Richiedere il set fotografico standard all'accettazione del veicolo.",
   "system.keys.bulk_undo_window_hours": "Finestra di annullamento operazioni massive (ore)",
   "system.keys.bulk_undo_window_hours_hint": "Per quanto tempo un'operazione massiva può essere annullata.",
   "system.keys.smtp_host": "Server SMTP",

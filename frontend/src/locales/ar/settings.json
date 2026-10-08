@@ -71,6 +71,8 @@
   "system.keys.forecast_min_days_hint": "الحد الأدنى من سجل الحركات قبل أن يقترح التوقع شيئًا.",
   "system.keys.contract_grace_days": "فترة سماح العقد (أيام)",
   "system.keys.contract_grace_days_hint": "المدة بعد انتهاء العقد قبل وضع القراءة فقط؛ 0 = بلا سماح.",
+  "system.keys.photo_standard_enabled": "معيار الصور",
+  "system.keys.photo_standard_enabled_hint": "يشترط مجموعة الصور القياسية عند استلام المركبة.",
   "system.keys.bulk_undo_window_hours": "مهلة التراجع عن العمليات الجماعية (ساعات)",
   "system.keys.bulk_undo_window_hours_hint": "المدة التي يمكن خلالها التراجع عن عملية جماعية بعد تنفيذها.",
   "system.keys.smtp_host": "خادم SMTP",
