@@ -2081,6 +2081,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/photo-standard/angles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List central intake photo angles
+         * @description TEC-498. Requires the photo_standard add-on and photo_standard.manage.
+         */
+        get: operations["listPhotoStandardAngles"];
+        put?: never;
+        /** Create a central intake photo angle */
+        post: operations["createPhotoStandardAngle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/photo-standard/angles/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a central intake photo angle */
+        put: operations["updatePhotoStandardAngle"];
+        post?: never;
+        /** Delete a central intake photo angle */
+        delete: operations["deletePhotoStandardAngle"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/photo-standard/overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve photo standard overrides for an organization
+         * @description TEC-498. Dealer override wins over distributor override, which wins over the central definition.
+         */
+        get: operations["getPhotoStandardOverrides"];
+        /**
+         * Replace photo standard overrides for an organization
+         * @description TEC-498. Requires photo_standard.override for the distributor subtree.
+         */
+        put: operations["putPhotoStandardOverrides"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/organizations": {
         parameters: {
             query?: never;
@@ -10759,6 +10825,57 @@ export interface paths {
         post?: never;
         /** Delete a service image */
         delete: operations["deleteServiceImage"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/intake-photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get resolved intake photo requirements and uploads
+         * @description TEC-498. Requires services.read and the photo_standard add-on.
+         */
+        get: operations["getServiceIntakePhotos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/intake-photos/{angle_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                angle_key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload or replace one intake photo
+         * @description TEC-498. Multipart field `image`; MaxBytesReader caps uploads at 12 MiB. The server sniffs bytes and accepts JPEG, PNG, WebP and HEIC only. EXIF date, GPS and device are stored when present; missing EXIF is accepted. A second upload for the same service angle soft-deletes the old active row.
+         */
+        post: operations["uploadServiceIntakePhoto"];
+        /**
+         * Delete one active intake photo
+         * @description TEC-498. Refuses completed services and services with an executed contract with 409 PHOTO_SERVICE_LOCKED.
+         */
+        delete: operations["deleteServiceIntakePhoto"];
         options?: never;
         head?: never;
         patch?: never;
@@ -21730,6 +21847,103 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        PhotoStandardAngleInput: {
+            key: string;
+            name: {
+                [key: string]: string;
+            };
+            hint?: {
+                [key: string]: string;
+            };
+            example_storage_key?: string | null;
+            required: boolean;
+            sort_order: number;
+            /** @default true */
+            active: boolean;
+        };
+        PhotoStandardAngle: {
+            /** Format: uuid */
+            uuid: string;
+            key: string;
+            name: {
+                [key: string]: string;
+            };
+            hint: {
+                [key: string]: string;
+            };
+            example_storage_key?: string | null;
+            required: boolean;
+            hidden?: boolean;
+            sort_order: number;
+            active: boolean;
+        };
+        PhotoStandardOverridesInput: {
+            /** Format: uuid */
+            organization_uuid: string;
+            overrides: {
+                angle_key: string;
+                required: boolean;
+                hidden: boolean;
+            }[];
+        };
+        IntakePhoto: {
+            /** Format: uuid */
+            uuid: string;
+            angle_key: string;
+            url: string;
+            /** @enum {string} */
+            mime: "image/jpeg" | "image/png" | "image/webp" | "image/heic";
+            /** Format: int64 */
+            size: number;
+            sha256: string;
+            width?: number;
+            height?: number;
+            /** Format: date-time */
+            exif_taken_at?: string;
+            exif_lat?: string;
+            exif_lng?: string;
+            exif_device?: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        IntakePhotoAngle: {
+            angle: components["schemas"]["PhotoStandardAngle"];
+            photo?: components["schemas"]["IntakePhoto"];
+            missing: boolean;
+            required: boolean;
+        };
+        IntakePhotoList: {
+            /** Format: uuid */
+            service_uuid: string;
+            angles: components["schemas"]["IntakePhotoAngle"][];
+            missing: string[];
+        };
+        EnvelopePhotoStandardAngle: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PhotoStandardAngle"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePhotoStandardAngleList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PhotoStandardAngle"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeIntakePhoto: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["IntakePhoto"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeIntakePhotoList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["IntakePhotoList"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         ServiceStatusLog: {
             from_status: string | null;
             to_status: components["schemas"]["ServiceStatus"];
@@ -26564,6 +26778,15 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description Unsupported uploaded media type */
+        UnsupportedMediaType: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description Conflict (duplicate / constraint) */
         Conflict: {
             headers: {
@@ -30087,6 +30310,164 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeReviewQuestionLocale"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPhotoStandardAngles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Angle list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePhotoStandardAngleList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPhotoStandardAngle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhotoStandardAngleInput"];
+            };
+        };
+        responses: {
+            /** @description Created angle */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePhotoStandardAngle"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updatePhotoStandardAngle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhotoStandardAngleInput"];
+            };
+        };
+        responses: {
+            /** @description Updated angle */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePhotoStandardAngle"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deletePhotoStandardAngle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPhotoStandardOverrides: {
+        parameters: {
+            query: {
+                organization_uuid: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resolved angles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePhotoStandardAngleList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putPhotoStandardOverrides: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhotoStandardOverridesInput"];
+            };
+        };
+        responses: {
+            /** @description Resolved angles after replacement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePhotoStandardAngleList"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -45744,6 +46125,96 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getServiceIntakePhotos: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resolved angles, uploaded photos and missing required keys */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeIntakePhotoList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    uploadServiceIntakePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                angle_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Uploaded intake photo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeIntakePhoto"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    deleteServiceIntakePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                angle_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     correctServiceConsumption: {

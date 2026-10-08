@@ -3777,6 +3777,125 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/platform/photo-standard/angles:
+    get:
+      tags: [PhotoStandard]
+      operationId: listPhotoStandardAngles
+      summary: List central intake photo angles
+      description: TEC-498. Requires the photo_standard add-on and photo_standard.manage.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Angle list
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePhotoStandardAngleList" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [PhotoStandard]
+      operationId: createPhotoStandardAngle
+      summary: Create a central intake photo angle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PhotoStandardAngleInput" }
+      responses:
+        "201":
+          description: Created angle
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePhotoStandardAngle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/platform/photo-standard/angles/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    put:
+      tags: [PhotoStandard]
+      operationId: updatePhotoStandardAngle
+      summary: Update a central intake photo angle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PhotoStandardAngleInput" }
+      responses:
+        "200":
+          description: Updated angle
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePhotoStandardAngle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [PhotoStandard]
+      operationId: deletePhotoStandardAngle
+      summary: Delete a central intake photo angle
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/photo-standard/overrides:
+    get:
+      tags: [PhotoStandard]
+      operationId: getPhotoStandardOverrides
+      summary: Resolve photo standard overrides for an organization
+      description: TEC-498. Dealer override wins over distributor override, which wins over the central definition.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: organization_uuid
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Resolved angles
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePhotoStandardAngleList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [PhotoStandard]
+      operationId: putPhotoStandardOverrides
+      summary: Replace photo standard overrides for an organization
+      description: TEC-498. Requires photo_standard.override for the distributor subtree.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PhotoStandardOverridesInput" }
+      responses:
+        "200":
+          description: Resolved angles after replacement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePhotoStandardAngleList" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/me/organizations:
     get:
       tags: [Auth]
@@ -20769,6 +20888,81 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /v1/services/{uuid}/intake-photos:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [PhotoStandard]
+      operationId: getServiceIntakePhotos
+      summary: Get resolved intake photo requirements and uploads
+      description: TEC-498. Requires services.read and the photo_standard add-on.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Resolved angles, uploaded photos and missing required keys
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeIntakePhotoList" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/services/{uuid}/intake-photos/{angle_key}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+      - name: angle_key
+        in: path
+        required: true
+        schema: { type: string }
+    post:
+      tags: [PhotoStandard]
+      operationId: uploadServiceIntakePhoto
+      summary: Upload or replace one intake photo
+      description: >-
+        TEC-498. Multipart field `image`; MaxBytesReader caps uploads at
+        12 MiB. The server sniffs bytes and accepts JPEG, PNG, WebP and HEIC
+        only. EXIF date, GPS and device are stored when present; missing EXIF
+        is accepted. A second upload for the same service angle soft-deletes
+        the old active row.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "201":
+          description: Uploaded intake photo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeIntakePhoto" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+    delete:
+      tags: [PhotoStandard]
+      operationId: deleteServiceIntakePhoto
+      summary: Delete one active intake photo
+      description: TEC-498. Refuses completed services and services with an executed contract with 409 PHOTO_SERVICE_LOCKED.
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Deleted }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /v1/services/{uuid}/items/{item}/consumption-correction:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -28454,6 +28648,12 @@ components:
             $ref: "#/components/schemas/Error"
     PayloadTooLarge:
       description: Request body or uploaded file too large
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    UnsupportedMediaType:
+      description: Unsupported uploaded media type
       content:
         application/json:
           schema:
@@ -37692,6 +37892,132 @@ components:
         sort_order: { type: integer }
         url: { type: string, description: Authenticated download path }
         created_at: { type: string, format: date-time }
+
+    PhotoStandardAngleInput:
+      type: object
+      required: [key, name, required, sort_order]
+      properties:
+        key: { type: string, pattern: "^[a-z0-9][a-z0-9_-]{1,62}[a-z0-9]$" }
+        name:
+          type: object
+          additionalProperties: { type: string }
+        hint:
+          type: object
+          additionalProperties: { type: string }
+        example_storage_key: { type: [string, "null"] }
+        required: { type: boolean }
+        sort_order: { type: integer }
+        active: { type: boolean, default: true }
+
+    PhotoStandardAngle:
+      type: object
+      required: [uuid, key, name, hint, required, sort_order, active]
+      properties:
+        uuid: { type: string, format: uuid }
+        key: { type: string }
+        name:
+          type: object
+          additionalProperties: { type: string }
+        hint:
+          type: object
+          additionalProperties: { type: string }
+        example_storage_key: { type: [string, "null"] }
+        required: { type: boolean }
+        hidden: { type: boolean }
+        sort_order: { type: integer }
+        active: { type: boolean }
+
+    PhotoStandardOverridesInput:
+      type: object
+      required: [organization_uuid, overrides]
+      properties:
+        organization_uuid: { type: string, format: uuid }
+        overrides:
+          type: array
+          items:
+            type: object
+            required: [angle_key, required, hidden]
+            properties:
+              angle_key: { type: string }
+              required: { type: boolean }
+              hidden: { type: boolean }
+
+    IntakePhoto:
+      type: object
+      required: [uuid, angle_key, url, mime, size, sha256, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        angle_key: { type: string }
+        url: { type: string }
+        mime: { type: string, enum: [image/jpeg, image/png, image/webp, image/heic] }
+        size: { type: integer, format: int64 }
+        sha256: { type: string, pattern: "^[0-9a-f]{64}$" }
+        width: { type: integer }
+        height: { type: integer }
+        exif_taken_at: { type: string, format: date-time }
+        exif_lat: { type: string }
+        exif_lng: { type: string }
+        exif_device: { type: string }
+        created_at: { type: string, format: date-time }
+
+    IntakePhotoAngle:
+      type: object
+      required: [angle, missing, required]
+      properties:
+        angle: { $ref: "#/components/schemas/PhotoStandardAngle" }
+        photo: { $ref: "#/components/schemas/IntakePhoto" }
+        missing: { type: boolean }
+        required: { type: boolean }
+
+    IntakePhotoList:
+      type: object
+      required: [service_uuid, angles, missing]
+      properties:
+        service_uuid: { type: string, format: uuid }
+        angles:
+          type: array
+          items: { $ref: "#/components/schemas/IntakePhotoAngle" }
+        missing:
+          type: array
+          items: { type: string }
+
+    EnvelopePhotoStandardAngle:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PhotoStandardAngle" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePhotoStandardAngleList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PhotoStandardAngle" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeIntakePhoto:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/IntakePhoto" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeIntakePhotoList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/IntakePhotoList" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ServiceStatusLog:
       type: object
