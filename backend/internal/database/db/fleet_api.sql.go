@@ -88,6 +88,55 @@ func (q *Queries) CountFleetActiveWarranties(ctx context.Context, arg CountFleet
 	return column_1, err
 }
 
+const countFleetReportsFiltered = `-- name: CountFleetReportsFiltered :one
+SELECT COUNT(*)::bigint FROM fleet_reports
+WHERE fleet_org_id = $1
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR status = ANY ($2::text[])
+  )
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR period_kind = ANY ($3::text[])
+  )
+`
+
+type CountFleetReportsFilteredParams struct {
+	FleetOrgID  int64    `json:"fleet_org_id"`
+	Statuses    []string `json:"statuses"`
+	PeriodKinds []string `json:"period_kinds"`
+}
+
+func (q *Queries) CountFleetReportsFiltered(ctx context.Context, arg CountFleetReportsFilteredParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countFleetReportsFiltered, arg.FleetOrgID, arg.Statuses, arg.PeriodKinds)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const countFleetServicePlansOfOrg = `-- name: CountFleetServicePlansOfOrg :one
+SELECT COUNT(*)::bigint FROM fleet_service_plans p
+WHERE p.organization_id = $1::bigint
+  AND p.fleet_org_id = $2::bigint
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR p.status = ANY ($3::text[])
+  )
+`
+
+type CountFleetServicePlansOfOrgParams struct {
+	OrganizationID int64    `json:"organization_id"`
+	FleetOrgID     int64    `json:"fleet_org_id"`
+	Statuses       []string `json:"statuses"`
+}
+
+func (q *Queries) CountFleetServicePlansOfOrg(ctx context.Context, arg CountFleetServicePlansOfOrgParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countFleetServicePlansOfOrg, arg.OrganizationID, arg.FleetOrgID, arg.Statuses)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countFleetServices = `-- name: CountFleetServices :one
 SELECT COUNT(*)::bigint
 FROM services s
@@ -699,6 +748,62 @@ func (q *Queries) ListActiveFleetUserIDs(ctx context.Context, fleetOrgID int64) 
 	return items, nil
 }
 
+const listFleetPlanAppointmentRefs = `-- name: ListFleetPlanAppointmentRefs :many
+SELECT a.uuid AS appointment_uuid, v.uuid AS vehicle_uuid, v.plate,
+    cb.name AS car_brand_name, cm.name AS car_model_name, s.uuid AS service_uuid
+FROM appointments a
+LEFT JOIN vehicles v ON v.id = a.vehicle_id
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN services s ON s.id = a.service_id
+WHERE a.plan_id = $1::bigint
+  AND a.organization_id = $2::bigint
+  AND a.deleted_at IS NULL
+`
+
+type ListFleetPlanAppointmentRefsParams struct {
+	PlanID         int64 `json:"plan_id"`
+	OrganizationID int64 `json:"organization_id"`
+}
+
+type ListFleetPlanAppointmentRefsRow struct {
+	AppointmentUuid uuid.UUID   `json:"appointment_uuid"`
+	VehicleUuid     pgtype.UUID `json:"vehicle_uuid"`
+	Plate           pgtype.Text `json:"plate"`
+	CarBrandName    pgtype.Text `json:"car_brand_name"`
+	CarModelName    pgtype.Text `json:"car_model_name"`
+	ServiceUuid     pgtype.UUID `json:"service_uuid"`
+}
+
+// Vehicle and draft service references of a plan's appointments (plan
+// detail).
+func (q *Queries) ListFleetPlanAppointmentRefs(ctx context.Context, arg ListFleetPlanAppointmentRefsParams) ([]ListFleetPlanAppointmentRefsRow, error) {
+	rows, err := q.db.Query(ctx, listFleetPlanAppointmentRefs, arg.PlanID, arg.OrganizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListFleetPlanAppointmentRefsRow{}
+	for rows.Next() {
+		var i ListFleetPlanAppointmentRefsRow
+		if err := rows.Scan(
+			&i.AppointmentUuid,
+			&i.VehicleUuid,
+			&i.Plate,
+			&i.CarBrandName,
+			&i.CarModelName,
+			&i.ServiceUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listFleetPlanVehicles = `-- name: ListFleetPlanVehicles :many
 SELECT v.id, v.uuid, v.user_id, v.organization_id, v.brand_id, v.car_brand_id, v.car_model_id, v.model_year, v.plate, v.plate_normalized, v.plate_country, v.vin, v.created_at, v.updated_at, v.deleted_at, v.fleet_org_id, u.uuid AS customer_uuid
 FROM vehicles v
@@ -825,6 +930,192 @@ func (q *Queries) ListFleetRecentServices(ctx context.Context, arg ListFleetRece
 			&i.VehicleUuid,
 			&i.OrganizationUuid,
 			&i.OrganizationName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFleetReportsSorted = `-- name: ListFleetReportsSorted :many
+SELECT id, uuid, fleet_org_id, brand_id, period_kind, period_start, period_end, locale, storage_key, status, error, emailed_at, created_at, updated_at FROM fleet_reports
+WHERE fleet_org_id = $1
+  AND (
+    COALESCE(cardinality($2::text[]), 0) = 0
+    OR status = ANY ($2::text[])
+  )
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR period_kind = ANY ($3::text[])
+  )
+ORDER BY
+  CASE WHEN NOT $4::bool THEN period_start END ASC,
+  CASE WHEN $4::bool THEN period_start END DESC,
+  CASE WHEN $4::bool THEN id END DESC,
+  id ASC
+LIMIT $6 OFFSET $5
+`
+
+type ListFleetReportsSortedParams struct {
+	FleetOrgID  int64    `json:"fleet_org_id"`
+	Statuses    []string `json:"statuses"`
+	PeriodKinds []string `json:"period_kinds"`
+	SortDesc    bool     `json:"sort_desc"`
+	OffsetCount int32    `json:"offset_count"`
+	LimitCount  int32    `json:"limit_count"`
+}
+
+// Reports of the fleet for the panel (every status). Sort period_start,
+// default -period_start; id tiebreak.
+func (q *Queries) ListFleetReportsSorted(ctx context.Context, arg ListFleetReportsSortedParams) ([]FleetReport, error) {
+	rows, err := q.db.Query(ctx, listFleetReportsSorted,
+		arg.FleetOrgID,
+		arg.Statuses,
+		arg.PeriodKinds,
+		arg.SortDesc,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FleetReport{}
+	for rows.Next() {
+		var i FleetReport
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.FleetOrgID,
+			&i.BrandID,
+			&i.PeriodKind,
+			&i.PeriodStart,
+			&i.PeriodEnd,
+			&i.Locale,
+			&i.StorageKey,
+			&i.Status,
+			&i.Error,
+			&i.EmailedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFleetServicePlansOfOrg = `-- name: ListFleetServicePlansOfOrg :many
+
+SELECT p.id, p.uuid, p.organization_id, p.brand_id, p.fleet_org_id, p.fleet_link_id, p.title, p.service_type, p.note, p.start_date, p.daily_vehicle_limit, p.preferred_times, p.status, p.idempotency_key, p.cancel_reason, p.created_by_user_id, p.cancelled_by_user_id, p.cancelled_at, p.created_at, p.updated_at,
+    (SELECT COUNT(*) FROM appointments a
+     WHERE a.plan_id = p.id AND a.organization_id = p.organization_id AND a.deleted_at IS NULL)::bigint AS appointment_count,
+    (SELECT COUNT(*) FROM appointments a
+     WHERE a.plan_id = p.id AND a.organization_id = p.organization_id AND a.deleted_at IS NULL
+       AND a.service_id IS NOT NULL)::bigint AS intake_count
+FROM fleet_service_plans p
+WHERE p.organization_id = $1::bigint
+  AND p.fleet_org_id = $2::bigint
+  AND (
+    COALESCE(cardinality($3::text[]), 0) = 0
+    OR p.status = ANY ($3::text[])
+  )
+ORDER BY
+  CASE WHEN $4::text = 'created_at' AND NOT $5::bool THEN p.created_at END ASC,
+  CASE WHEN $4::text = 'created_at' AND $5::bool THEN p.created_at END DESC,
+  CASE WHEN $4::text = 'start_date' AND NOT $5::bool THEN p.start_date END ASC,
+  CASE WHEN $4::text = 'start_date' AND $5::bool THEN p.start_date END DESC,
+  CASE WHEN $5::bool THEN p.id END DESC,
+  p.id ASC
+LIMIT $7 OFFSET $6
+`
+
+type ListFleetServicePlansOfOrgParams struct {
+	OrganizationID int64    `json:"organization_id"`
+	FleetOrgID     int64    `json:"fleet_org_id"`
+	Statuses       []string `json:"statuses"`
+	SortField      string   `json:"sort_field"`
+	SortDesc       bool     `json:"sort_desc"`
+	OffsetCount    int32    `json:"offset_count"`
+	LimitCount     int32    `json:"limit_count"`
+}
+
+type ListFleetServicePlansOfOrgRow struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	FleetOrgID        int64              `json:"fleet_org_id"`
+	FleetLinkID       int64              `json:"fleet_link_id"`
+	Title             string             `json:"title"`
+	ServiceType       string             `json:"service_type"`
+	Note              string             `json:"note"`
+	StartDate         pgtype.Date        `json:"start_date"`
+	DailyVehicleLimit int32              `json:"daily_vehicle_limit"`
+	PreferredTimes    []byte             `json:"preferred_times"`
+	Status            string             `json:"status"`
+	IdempotencyKey    pgtype.Text        `json:"idempotency_key"`
+	CancelReason      pgtype.Text        `json:"cancel_reason"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	CancelledByUserID pgtype.Int8        `json:"cancelled_by_user_id"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	AppointmentCount  int64              `json:"appointment_count"`
+	IntakeCount       int64              `json:"intake_count"`
+}
+
+// TEC-477 (F5-02f): the panel reads its plans of a fleet.
+// Plans of one fleet made by the organization. Sort created_at (default
+// -created_at) or start_date; id tiebreak.
+func (q *Queries) ListFleetServicePlansOfOrg(ctx context.Context, arg ListFleetServicePlansOfOrgParams) ([]ListFleetServicePlansOfOrgRow, error) {
+	rows, err := q.db.Query(ctx, listFleetServicePlansOfOrg,
+		arg.OrganizationID,
+		arg.FleetOrgID,
+		arg.Statuses,
+		arg.SortField,
+		arg.SortDesc,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListFleetServicePlansOfOrgRow{}
+	for rows.Next() {
+		var i ListFleetServicePlansOfOrgRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.FleetOrgID,
+			&i.FleetLinkID,
+			&i.Title,
+			&i.ServiceType,
+			&i.Note,
+			&i.StartDate,
+			&i.DailyVehicleLimit,
+			&i.PreferredTimes,
+			&i.Status,
+			&i.IdempotencyKey,
+			&i.CancelReason,
+			&i.CreatedByUserID,
+			&i.CancelledByUserID,
+			&i.CancelledAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AppointmentCount,
+			&i.IntakeCount,
 		); err != nil {
 			return nil, err
 		}

@@ -140,6 +140,8 @@
   "codes.FLEET_VEHICLE_OTHER_OWNER": "Транспортное средство принадлежит другому клиенту или автопарку и не может быть добавлено.",
   "codes.FLEET_NO_DEALER_LINK": "У вашей организации нет активной связи с этим автопарком.",
   "codes.FLEET_LINK_NOT_PENDING": "На запрос на связь уже ответили.",
+  "codes.FLEET_SERVICE_PLAN_STALE": "Ёмкость записи изменилась после предпросмотра; выполните предпросмотр плана снова.",
+  "codes.FLEET_SERVICE_PLAN_CANCELLED": "Сервисный план уже отменён.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Галерея заполнена; удалите фото, прежде чем добавить новое.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Чтобы отклонить, напишите примечание.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Неподдерживаемый тип файла; загрузите изображение JPEG, PNG или WebP."

@@ -26365,6 +26365,67 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/FleetExistsError" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/export:
+    post:
+      tags: [Fleets]
+      operationId: requestFleetListExport
+      summary: Queue a fleet list export (CSV, XLSX or PDF)
+      description: >-
+        TEC-477. fleets.read with the list's scope and the fleet add-on (403
+        FEATURE_DISABLED): the job (worker-docs, exports queue, resource
+        `tenant.fleets`) exports the fleet links the list shows for `query`
+        (every GET /v1/fleets parameter except limit and offset, including
+        `q` and `sort`; a bad value is 400 at request time). Columns: name,
+        legal name, tax number, vehicle count, last service date, link
+        status, dealer, link start date. The job stores the resolved scope
+        and the worker re-authorizes it against the job organization. Poll
+        and download through /v1/tenant/exports/{uuid}.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FleetListExportInput" }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /v1/fleets/lookup:
+    get:
+      tags: [Fleets]
+      operationId: lookupFleet
+      summary: Find the brand's fleet of a tax number (TEC-477)
+      description: >-
+        The panel's new fleet dialog asks for the VKN/TCKN first. 200 names
+        the fleet and the caller's open link (pending | active, empty
+        without one): the dialog offers a link request. 404 when the brand
+        has no fleet with that number: the dialog shows the opening form. A
+        wrong checksum is 422 FLEET_INVALID_TAX_NUMBER. Only dealers and
+        distributors (403). Needs fleets.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tax_number
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: The fleet of the tax number
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetMatch" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
   /v1/fleets/vehicle-import/sample:
     get:
       tags: [Fleets]
@@ -26755,6 +26816,49 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
   /v1/fleets/{uuid}/reports:
+    get:
+      tags: [Fleets]
+      operationId: listFleetReports
+      summary: Periodic reports of a fleet (panel, TEC-477)
+      description: >-
+        Every report of the fleet (pending, ready, failed). `sort` is
+        period_start (default -period_start); id tiebreak. `status` and
+        `period_kind` are comma separated filters; unknown value → 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [pending, ready, failed] }
+        - name: period_kind
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [monthly, quarterly] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetReportPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     post:
       tags: [Fleets]
       operationId: requestFleetReport
@@ -26792,6 +26896,30 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /v1/fleets/{uuid}/reports/{report}/file:
+    get:
+      tags: [Fleets]
+      operationId: getFleetReportFile
+      summary: PDF of a ready fleet report (panel, TEC-477)
+      description: A pending or failed report is 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - name: report
+          in: path
+          required: true
+          description: Fleet report uuid
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Report PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /v1/fleets/{uuid}/service-plans/preview:
     post:
       tags: [Fleets]
@@ -26823,6 +26951,42 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
   /v1/fleets/{uuid}/service-plans:
+    get:
+      tags: [Fleets]
+      operationId: listFleetServicePlans
+      summary: The caller organization's service plans of a fleet (TEC-477)
+      description: >-
+        `sort` is one of created_at (default -created_at), start_date; id
+        tiebreak. `status` is a comma separated filter (scheduled,
+        cancelled).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [scheduled, cancelled] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Plans
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetServicePlanSummaryPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     post:
       tags: [Fleets]
       operationId: createFleetServicePlan
@@ -26856,6 +27020,29 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/{uuid}/service-plans/{plan}:
+    get:
+      tags: [Fleets]
+      operationId: getFleetServicePlan
+      summary: Fleet service plan detail (TEC-477)
+      description: >-
+        The plan with its appointments; each carries vehicle_uuid,
+        vehicle_plate, vehicle_label and the service_uuid of the draft
+        service opened by start-intake.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - $ref: "#/components/parameters/FleetServicePlanUUID"
+      responses:
+        "200":
+          description: Plan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetServicePlan" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /v1/fleets/{uuid}/service-plans/{plan}/cancel:
     post:
       tags: [Fleets]
@@ -30638,6 +30825,21 @@ components:
           type: object
           description: >-
             List parameters of GET /v1/services as strings (q, sort, status, organization_uuid, customer_uuid, vehicle_uuid, created_from, created_to, completed_from, completed_to).
+          additionalProperties: { type: string }
+        locale:
+          type: string
+          description: Document language (defaults to the request locale).
+    FleetListExportInput:
+      type: object
+      required: [format]
+      properties:
+        format:
+          type: string
+          enum: [csv, xlsx, pdf]
+        query:
+          type: object
+          description: >-
+            List parameters of GET /v1/fleets as strings (q, sort, status, vehicle_count_min, vehicle_count_max).
           additionalProperties: { type: string }
         locale:
           type: string
@@ -41621,6 +41823,73 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/FleetServicePlan" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    FleetMatch:
+      type: object
+      required: [fleet_uuid, name, legal_name, link_status]
+      properties:
+        fleet_uuid: { type: string, format: uuid }
+        name: { type: string }
+        legal_name: { type: string }
+        link_status:
+          type: string
+          description: The caller's open link (pending | active), empty without one.
+
+    EnvelopeFleetMatch:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetMatch" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    FleetServicePlanSummary:
+      type: object
+      required: [uuid, status, service_type, note, start_date, daily_vehicle_limit, appointment_count, intake_count, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { type: string, enum: [scheduled, cancelled] }
+        service_type: { type: string }
+        note: { type: string }
+        start_date: { type: string, format: date }
+        daily_vehicle_limit: { type: integer }
+        appointment_count: { type: integer, format: int64 }
+        intake_count: { type: integer, format: int64, description: Appointments with a draft service }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeFleetServicePlanSummaryPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetServicePlanSummary" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetReportPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetReport" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeFleetServicePlanIntake:

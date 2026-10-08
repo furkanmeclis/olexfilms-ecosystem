@@ -92,6 +92,8 @@
   "params.lost_reason": "Причина програшу",
   "actions.stock_units.print_labels": "Друк етикеток",
   "actions.warehouse_count_lines.set_resolution": "Призначити рішення: {{resolution}}",
+  "actions.fleet_vehicles.create_plan": "Створити сервісний план",
+  "actions.fleet_plan_appointments.start_intake": "Прийняти вибрані",
   "actions.conversations.assign": "Призначити",
   "actions.conversations.close": "Закрити",
   "actions.conversations.set_ai_mode": "Змінити режим ШІ",

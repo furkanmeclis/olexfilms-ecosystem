@@ -217,6 +217,8 @@ type Querier interface {
 	CountFleetPortalWarranties(ctx context.Context, arg CountFleetPortalWarrantiesParams) (int64, error)
 	CountFleetReportVehicles(ctx context.Context, fleetOrgID int64) (int64, error)
 	CountFleetReports(ctx context.Context, arg CountFleetReportsParams) (int64, error)
+	CountFleetReportsFiltered(ctx context.Context, arg CountFleetReportsFilteredParams) (int64, error)
+	CountFleetServicePlansOfOrg(ctx context.Context, arg CountFleetServicePlansOfOrgParams) (int64, error)
 	CountFleetServices(ctx context.Context, arg CountFleetServicesParams) (int64, error)
 	// Same filter block as ListFleetUsers.
 	CountFleetUsers(ctx context.Context, arg CountFleetUsersParams) (int64, error)
@@ -1778,6 +1780,9 @@ type Querier interface {
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
 	// Links of a fleet with the dealer names (fleet card, portal).
 	ListFleetDealerLinks(ctx context.Context, arg ListFleetDealerLinksParams) ([]ListFleetDealerLinksRow, error)
+	// Vehicle and draft service references of a plan's appointments (plan
+	// detail).
+	ListFleetPlanAppointmentRefs(ctx context.Context, arg ListFleetPlanAppointmentRefsParams) ([]ListFleetPlanAppointmentRefsRow, error)
 	ListFleetPlanVehicles(ctx context.Context, arg ListFleetPlanVehiclesParams) ([]ListFleetPlanVehiclesRow, error)
 	// The fleet's view of its cari in one dealer's ledger: only service income
 	// (source service_income) and collections; the dealer's other cari
@@ -1813,6 +1818,13 @@ type Querier interface {
 	// (NULL: all organizations).
 	ListFleetRecentServices(ctx context.Context, arg ListFleetRecentServicesParams) ([]ListFleetRecentServicesRow, error)
 	ListFleetReports(ctx context.Context, arg ListFleetReportsParams) ([]FleetReport, error)
+	// Reports of the fleet for the panel (every status). Sort period_start,
+	// default -period_start; id tiebreak.
+	ListFleetReportsSorted(ctx context.Context, arg ListFleetReportsSortedParams) ([]FleetReport, error)
+	// TEC-477 (F5-02f): the panel reads its plans of a fleet.
+	// Plans of one fleet made by the organization. Sort created_at (default
+	// -created_at) or start_date; id tiebreak.
+	ListFleetServicePlansOfOrg(ctx context.Context, arg ListFleetServicePlansOfOrgParams) ([]ListFleetServicePlansOfOrgRow, error)
 	// The ledger rows of one fleet cari in [period_from, period_to): service
 	// income with its service and vehicle, collections and the other cari
 	// movements. Reversals stay as their own (negative) rows.

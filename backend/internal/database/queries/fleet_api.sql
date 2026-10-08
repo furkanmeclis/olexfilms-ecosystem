@@ -224,3 +224,85 @@ WHERE v.fleet_org_id = sqlc.arg(fleet_org_id)::bigint
   AND v.uuid = ANY(sqlc.arg(vehicle_uuids)::uuid[])
   AND v.deleted_at IS NULL
 ORDER BY array_position(sqlc.arg(vehicle_uuids)::uuid[], v.uuid);
+
+-- TEC-477 (F5-02f): the panel reads its plans of a fleet.
+
+-- name: ListFleetServicePlansOfOrg :many
+-- Plans of one fleet made by the organization. Sort created_at (default
+-- -created_at) or start_date; id tiebreak.
+SELECT p.*,
+    (SELECT COUNT(*) FROM appointments a
+     WHERE a.plan_id = p.id AND a.organization_id = p.organization_id AND a.deleted_at IS NULL)::bigint AS appointment_count,
+    (SELECT COUNT(*) FROM appointments a
+     WHERE a.plan_id = p.id AND a.organization_id = p.organization_id AND a.deleted_at IS NULL
+       AND a.service_id IS NOT NULL)::bigint AS intake_count
+FROM fleet_service_plans p
+WHERE p.organization_id = sqlc.arg(organization_id)::bigint
+  AND p.fleet_org_id = sqlc.arg(fleet_org_id)::bigint
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR p.status = ANY (sqlc.narg(statuses)::text[])
+  )
+ORDER BY
+  CASE WHEN sqlc.arg(sort_field)::text = 'created_at' AND NOT sqlc.arg(sort_desc)::bool THEN p.created_at END ASC,
+  CASE WHEN sqlc.arg(sort_field)::text = 'created_at' AND sqlc.arg(sort_desc)::bool THEN p.created_at END DESC,
+  CASE WHEN sqlc.arg(sort_field)::text = 'start_date' AND NOT sqlc.arg(sort_desc)::bool THEN p.start_date END ASC,
+  CASE WHEN sqlc.arg(sort_field)::text = 'start_date' AND sqlc.arg(sort_desc)::bool THEN p.start_date END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN p.id END DESC,
+  p.id ASC
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: CountFleetServicePlansOfOrg :one
+SELECT COUNT(*)::bigint FROM fleet_service_plans p
+WHERE p.organization_id = sqlc.arg(organization_id)::bigint
+  AND p.fleet_org_id = sqlc.arg(fleet_org_id)::bigint
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR p.status = ANY (sqlc.narg(statuses)::text[])
+  );
+
+-- name: ListFleetPlanAppointmentRefs :many
+-- Vehicle and draft service references of a plan's appointments (plan
+-- detail).
+SELECT a.uuid AS appointment_uuid, v.uuid AS vehicle_uuid, v.plate,
+    cb.name AS car_brand_name, cm.name AS car_model_name, s.uuid AS service_uuid
+FROM appointments a
+LEFT JOIN vehicles v ON v.id = a.vehicle_id
+LEFT JOIN car_brands cb ON cb.id = v.car_brand_id
+LEFT JOIN car_models cm ON cm.id = v.car_model_id
+LEFT JOIN services s ON s.id = a.service_id
+WHERE a.plan_id = sqlc.arg(plan_id)::bigint
+  AND a.organization_id = sqlc.arg(organization_id)::bigint
+  AND a.deleted_at IS NULL;
+
+-- name: ListFleetReportsSorted :many
+-- Reports of the fleet for the panel (every status). Sort period_start,
+-- default -period_start; id tiebreak.
+SELECT * FROM fleet_reports
+WHERE fleet_org_id = sqlc.arg(fleet_org_id)
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(period_kinds)::text[]), 0) = 0
+    OR period_kind = ANY (sqlc.narg(period_kinds)::text[])
+  )
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN period_start END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN period_start END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN id END DESC,
+  id ASC
+LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
+
+-- name: CountFleetReportsFiltered :one
+SELECT COUNT(*)::bigint FROM fleet_reports
+WHERE fleet_org_id = sqlc.arg(fleet_org_id)
+  AND (
+    COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0
+    OR status = ANY (sqlc.narg(statuses)::text[])
+  )
+  AND (
+    COALESCE(cardinality(sqlc.narg(period_kinds)::text[]), 0) = 0
+    OR period_kind = ANY (sqlc.narg(period_kinds)::text[])
+  );

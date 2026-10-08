@@ -92,6 +92,8 @@
   "params.lost_reason": "سبب الخسارة",
   "actions.stock_units.print_labels": "طباعة الملصقات",
   "actions.warehouse_count_lines.set_resolution": "تعيين المعالجة: {{resolution}}",
+  "actions.fleet_vehicles.create_plan": "إنشاء خطة خدمة",
+  "actions.fleet_plan_appointments.start_intake": "استلام المحدد",
   "actions.conversations.assign": "تعيين",
   "actions.conversations.close": "إغلاق",
   "actions.conversations.set_ai_mode": "تغيير وضع الذكاء الاصطناعي",

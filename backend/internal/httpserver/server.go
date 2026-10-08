@@ -702,6 +702,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		aiusecase.NewUsageExportAdapter(aiAdmin),
 		// TEC-473: fleet statement export and staged fleet vehicle import.
 		fleetusecase.NewStatementAdapter(fleetSvc),
+		fleetusecase.NewListExportAdapter(fleetSvc),
 		fleetusecase.NewImporter(fleetSvc),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)

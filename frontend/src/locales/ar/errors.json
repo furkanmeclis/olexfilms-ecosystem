@@ -140,6 +140,8 @@
   "codes.FLEET_VEHICLE_OTHER_OWNER": "المركبة تخص عميلًا آخر أو أسطولًا آخر ولا يمكن إضافتها.",
   "codes.FLEET_NO_DEALER_LINK": "ليس لدى مؤسستك ربط نشط مع هذا الأسطول.",
   "codes.FLEET_LINK_NOT_PENDING": "تمت الإجابة على طلب الربط بالفعل.",
+  "codes.FLEET_SERVICE_PLAN_STALE": "تغيّرت سعة المواعيد بعد المعاينة؛ أعد معاينة الخطة.",
+  "codes.FLEET_SERVICE_PLAN_CANCELLED": "خطة الخدمة ملغاة بالفعل.",
   "codes.SHOWCASE_PHOTO_LIMIT": "المعرض ممتلئ؛ احذف صورة قبل إضافة صورة جديدة.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "اكتب ملاحظة للرفض.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "نوع الملف غير مدعوم؛ ارفع صورة JPEG أو PNG أو WebP."
