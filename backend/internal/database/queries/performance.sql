@@ -7,19 +7,25 @@
 -- name: UpsertPerformanceMetric :one
 -- Idempotent write of the metric worker: one row per org x month x metric.
 INSERT INTO performance_metrics_monthly (
-    organization_id, brand_id, period, metric, value, numerator, denominator, currency, computed_at
+    organization_id, brand_id, period, scope, metric, value, numerator, denominator, currency, computed_at
 )
 VALUES (
-    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(period), sqlc.arg(metric),
+    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(period), sqlc.arg(scope), sqlc.arg(metric),
     sqlc.arg(value), sqlc.narg(numerator), sqlc.narg(denominator), sqlc.narg(currency), NOW()
 )
-ON CONFLICT (organization_id, period, metric) DO UPDATE
+ON CONFLICT (organization_id, period, scope, metric) DO UPDATE
 SET value = EXCLUDED.value,
     numerator = EXCLUDED.numerator,
     denominator = EXCLUDED.denominator,
     currency = EXCLUDED.currency,
     computed_at = EXCLUDED.computed_at
 RETURNING *;
+
+-- name: DeletePerformanceMetricsForScope :execrows
+DELETE FROM performance_metrics_monthly
+WHERE organization_id = sqlc.arg(organization_id)
+  AND period = sqlc.arg(period)::text
+  AND scope = sqlc.arg(scope)::text;
 
 -- name: ListPerformanceMetrics :many
 -- Metrics of the organizations over a closed period range (YYYY-MM).
@@ -29,8 +35,9 @@ WHERE m.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(org_ids)::bigint[] IS NULL OR m.organization_id = ANY (sqlc.narg(org_ids)::bigint[]))
   AND m.period >= sqlc.arg(period_from)::text
   AND m.period <= sqlc.arg(period_to)::text
+  AND (sqlc.narg(scope)::text IS NULL OR m.scope = sqlc.narg(scope)::text)
   AND (COALESCE(cardinality(sqlc.narg(metrics)::text[]), 0) = 0 OR m.metric = ANY (sqlc.narg(metrics)::text[]))
-ORDER BY m.organization_id, m.period, m.metric;
+ORDER BY m.organization_id, m.period, m.scope, m.metric;
 
 -- name: ListPerformanceRanking :many
 -- Ranking list of distributors and dealers for one month, one column per
@@ -55,6 +62,7 @@ WITH m AS (
     FROM performance_metrics_monthly pm
     WHERE pm.brand_id = sqlc.arg(brand_id)
       AND pm.period = sqlc.arg(period)::text
+      AND pm.scope = sqlc.arg(scope)::text
     GROUP BY pm.organization_id
 )
 SELECT o.id AS organization_id,
@@ -129,6 +137,189 @@ ORDER BY
   CASE WHEN sqlc.arg(sort_desc)::bool THEN o.id END DESC,
   o.id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- Worker source readers ----------------------------------------------------------
+
+-- name: ListPerformanceOrganizations :many
+SELECT *
+FROM organizations
+WHERE deleted_at IS NULL
+  AND status = 'active'
+  AND type IN ('center', 'distributor', 'dealer')
+  AND (sqlc.narg(organization_id)::bigint IS NULL OR id = sqlc.narg(organization_id)::bigint)
+ORDER BY brand_id, id;
+
+-- name: ListPerformanceSubtreeOrgIDs :many
+WITH RECURSIVE tree AS (
+    SELECT o.id
+    FROM organizations o
+    WHERE o.id = sqlc.arg(root_org_id)::bigint AND o.deleted_at IS NULL
+    UNION ALL
+    SELECT c.id
+    FROM organizations c
+    JOIN tree t ON c.parent_id = t.id
+    WHERE c.deleted_at IS NULL
+)
+SELECT id FROM tree ORDER BY id;
+
+-- name: ComputePerformanceMetrics :one
+WITH completed_services AS (
+    SELECT s.*
+    FROM services s
+    WHERE s.brand_id = sqlc.arg(brand_id)
+      AND s.organization_id = ANY(sqlc.arg(org_ids)::bigint[])
+      AND s.status = 'completed'
+      AND COALESCE(s.completed_at, s.created_at) >= sqlc.arg(period_from)::timestamptz
+      AND COALESCE(s.completed_at, s.created_at) < sqlc.arg(period_to)::timestamptz
+),
+service_staff AS (
+    SELECT DISTINCT COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) AS user_id
+    FROM completed_services s
+    WHERE COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) IS NOT NULL
+),
+service_stats AS (
+    SELECT COUNT(*)::numeric(18,4) AS services_count,
+           COUNT(*) FILTER (
+               WHERE EXISTS (SELECT 1 FROM warranties w WHERE w.service_id = completed_services.id)
+           )::numeric(18,4) AS warranty_started,
+           COUNT(*) FILTER (WHERE has_measurement)::numeric(18,4) AS measurements
+    FROM completed_services
+),
+review_stats AS (
+    SELECT AVG(sr.platform_rating)::numeric(18,4) AS review_avg,
+           COUNT(sr.id)::numeric(18,4) AS review_count
+    FROM service_reviews sr
+    JOIN completed_services cs ON cs.id = sr.service_id
+),
+valid_certified_staff AS (
+    SELECT DISTINCT c.user_id
+    FROM certificates c
+    JOIN service_staff ss ON ss.user_id = c.user_id
+    WHERE c.brand_id = sqlc.arg(brand_id)
+      AND c.status = 'valid'
+      AND c.issued_at < sqlc.arg(period_to)::timestamptz
+      AND (c.expires_at IS NULL OR c.expires_at >= sqlc.arg(period_from)::timestamptz)
+),
+certificate_stats AS (
+    SELECT COUNT(DISTINCT service_staff.user_id)::numeric(18,4) AS service_staff_count,
+           COUNT(DISTINCT valid_certified_staff.user_id)::numeric(18,4) AS certified_staff_count
+    FROM service_staff
+    LEFT JOIN valid_certified_staff ON valid_certified_staff.user_id = service_staff.user_id
+),
+stock_consumption AS (
+    SELECT COALESCE(SUM(ABS(sm.quantity_delta)), 0)::numeric AS qty,
+           COALESCE(SUM(ABS(sm.meters_delta)), 0)::numeric AS meters
+    FROM stock_movements sm
+    WHERE sm.brand_id = sqlc.arg(brand_id)
+      AND sm.organization_id = ANY(sqlc.arg(org_ids)::bigint[])
+      AND sm.created_at >= sqlc.arg(period_from)::timestamptz
+      AND sm.created_at < sqlc.arg(period_to)::timestamptz
+      AND sm.type IN ('consumption', 'partial_consumption')
+),
+stock_on_hand AS (
+    SELECT COALESCE(SUM(ops.quantity), 0)::numeric AS qty,
+           COALESCE(SUM(ops.meters), 0)::numeric AS meters
+    FROM organization_product_stocks ops
+    WHERE ops.organization_id = ANY(sqlc.arg(org_ids)::bigint[])
+),
+cari_balances AS (
+    SELECT c.id,
+           COALESCE(SUM(CASE e.direction
+               WHEN 'income' THEN e.amount
+               WHEN 'charge' THEN e.amount
+               WHEN 'payment' THEN e.amount
+               WHEN 'expense' THEN -e.amount
+               WHEN 'collection' THEN -e.amount
+           END), 0)::numeric AS balance
+    FROM cari_accounts c
+    LEFT JOIN finance_entries e ON e.cari_id = c.id AND e.created_at < sqlc.arg(as_of)::timestamptz
+    WHERE c.brand_id = sqlc.arg(brand_id)
+      AND c.organization_id = ANY(sqlc.arg(org_ids)::bigint[])
+    GROUP BY c.id
+),
+cari_stats AS (
+    SELECT COALESCE(SUM(balance) FILTER (WHERE balance > 0), 0)::numeric(18,4) AS overdue_amount
+    FROM cari_balances
+),
+cari_open_entries AS (
+    SELECT c.id AS cari_id, e.created_at,
+           CASE e.direction
+               WHEN 'income' THEN e.amount
+               WHEN 'charge' THEN e.amount
+               WHEN 'payment' THEN e.amount
+               WHEN 'expense' THEN -e.amount
+               WHEN 'collection' THEN -e.amount
+           END::numeric AS signed_amount,
+           b.balance
+    FROM cari_balances b
+    JOIN cari_accounts c ON c.id = b.id
+    JOIN finance_entries e ON e.cari_id = c.id AND e.created_at < sqlc.arg(as_of)::timestamptz
+    WHERE b.balance > 0
+),
+cari_oldest AS (
+    SELECT MIN(created_at) AS oldest_at
+    FROM cari_open_entries
+    WHERE signed_amount > 0
+),
+closed_leads AS (
+    SELECT l.*
+    FROM leads l
+    WHERE l.brand_id = sqlc.arg(brand_id)
+      AND l.organization_id = ANY(sqlc.arg(org_ids)::bigint[])
+      AND l.deleted_at IS NULL
+      AND l.status IN ('won', 'lost')
+      AND l.updated_at >= sqlc.arg(period_from)::timestamptz
+      AND l.updated_at < sqlc.arg(period_to)::timestamptz
+),
+lead_stats AS (
+    SELECT COUNT(*)::numeric(18,4) AS closed_leads,
+           COUNT(*) FILTER (WHERE status = 'won')::numeric(18,4) AS won_leads
+    FROM closed_leads
+),
+waste AS (
+    SELECT AVG(f.waste_ratio)::numeric(18,4) AS avg_waste_ratio
+    FROM efficiency_facts f
+    WHERE f.brand_id = sqlc.arg(brand_id)
+      AND f.dealer_org_id = ANY(sqlc.arg(org_ids)::bigint[])
+      AND f.service_date >= sqlc.arg(period_from)::date
+      AND f.service_date < sqlc.arg(period_to)::date
+),
+orders_in AS (
+    SELECT COALESCE(SUM(o.total), 0)::numeric(18,4) AS total
+    FROM orders o
+    WHERE o.brand_id = sqlc.arg(brand_id)
+      AND o.buyer_org_id = ANY(sqlc.arg(org_ids)::bigint[])
+      AND o.status IN ('approved', 'preparing', 'ready', 'processing', 'shipped', 'delivered', 'received')
+      AND COALESCE(o.approved_at, o.created_at) >= sqlc.arg(period_from)::timestamptz
+      AND COALESCE(o.approved_at, o.created_at) < sqlc.arg(period_to)::timestamptz
+)
+SELECT service_stats.services_count,
+       service_stats.warranty_started,
+       service_stats.measurements,
+       review_stats.review_avg,
+       review_stats.review_count,
+       stock_consumption.qty::numeric(18,4) AS stock_consumed_qty,
+       stock_consumption.meters::numeric(18,4) AS stock_consumed_meters,
+       stock_on_hand.qty::numeric(18,4) AS stock_on_hand_qty,
+       stock_on_hand.meters::numeric(18,4) AS stock_on_hand_meters,
+       cari_stats.overdue_amount AS cari_overdue_amount,
+       COALESCE(EXTRACT(DAY FROM (sqlc.arg(as_of)::timestamptz - cari_oldest.oldest_at)), 0)::numeric(18,4) AS cari_overdue_days,
+       certificate_stats.service_staff_count,
+       certificate_stats.certified_staff_count,
+       lead_stats.closed_leads,
+       lead_stats.won_leads,
+       waste.avg_waste_ratio::numeric(18,4) AS waste_ratio,
+       orders_in.total::numeric(18,4) AS order_volume
+FROM service_stats
+CROSS JOIN review_stats
+CROSS JOIN stock_consumption
+CROSS JOIN stock_on_hand
+CROSS JOIN cari_stats
+CROSS JOIN cari_oldest
+CROSS JOIN certificate_stats
+CROSS JOIN lead_stats
+CROSS JOIN waste
+CROSS JOIN orders_in;
 
 -- Targets ---------------------------------------------------------------------------
 

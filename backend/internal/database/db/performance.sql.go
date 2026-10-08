@@ -91,6 +91,225 @@ func (q *Queries) CancelBonusAccrual(ctx context.Context, arg CancelBonusAccrual
 	return i, err
 }
 
+const computePerformanceMetrics = `-- name: ComputePerformanceMetrics :one
+WITH completed_services AS (
+    SELECT s.id, s.uuid, s.service_no, s.organization_id, s.brand_id, s.customer_user_id, s.vehicle_id, s.car_brand_id, s.car_model_id, s.model_year, s.plate, s.plate_country, s.vin, s.km, s.package, s.notes, s.has_measurement, s.measurement_result_id, s.contract_id, s.status, s.created_by_user_id, s.updated_by_user_id, s.completed_by_user_id, s.cancelled_by_user_id, s.cancel_reason, s.completed_at, s.cancelled_at, s.review_request_sent_at, s.created_at, s.updated_at, s.measurement_check_required, s.measurement_checked_at, s.warranty_claim_id, s.income_entry_id, s.income_amount, s.performed_by_user_id
+    FROM services s
+    WHERE s.brand_id = $2
+      AND s.organization_id = ANY($3::bigint[])
+      AND s.status = 'completed'
+      AND COALESCE(s.completed_at, s.created_at) >= $4::timestamptz
+      AND COALESCE(s.completed_at, s.created_at) < $5::timestamptz
+),
+service_staff AS (
+    SELECT DISTINCT COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) AS user_id
+    FROM completed_services s
+    WHERE COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) IS NOT NULL
+),
+service_stats AS (
+    SELECT COUNT(*)::numeric(18,4) AS services_count,
+           COUNT(*) FILTER (
+               WHERE EXISTS (SELECT 1 FROM warranties w WHERE w.service_id = completed_services.id)
+           )::numeric(18,4) AS warranty_started,
+           COUNT(*) FILTER (WHERE has_measurement)::numeric(18,4) AS measurements
+    FROM completed_services
+),
+review_stats AS (
+    SELECT AVG(sr.platform_rating)::numeric(18,4) AS review_avg,
+           COUNT(sr.id)::numeric(18,4) AS review_count
+    FROM service_reviews sr
+    JOIN completed_services cs ON cs.id = sr.service_id
+),
+valid_certified_staff AS (
+    SELECT DISTINCT c.user_id
+    FROM certificates c
+    JOIN service_staff ss ON ss.user_id = c.user_id
+    WHERE c.brand_id = $2
+      AND c.status = 'valid'
+      AND c.issued_at < $5::timestamptz
+      AND (c.expires_at IS NULL OR c.expires_at >= $4::timestamptz)
+),
+certificate_stats AS (
+    SELECT COUNT(DISTINCT service_staff.user_id)::numeric(18,4) AS service_staff_count,
+           COUNT(DISTINCT valid_certified_staff.user_id)::numeric(18,4) AS certified_staff_count
+    FROM service_staff
+    LEFT JOIN valid_certified_staff ON valid_certified_staff.user_id = service_staff.user_id
+),
+stock_consumption AS (
+    SELECT COALESCE(SUM(ABS(sm.quantity_delta)), 0)::numeric AS qty,
+           COALESCE(SUM(ABS(sm.meters_delta)), 0)::numeric AS meters
+    FROM stock_movements sm
+    WHERE sm.brand_id = $2
+      AND sm.organization_id = ANY($3::bigint[])
+      AND sm.created_at >= $4::timestamptz
+      AND sm.created_at < $5::timestamptz
+      AND sm.type IN ('consumption', 'partial_consumption')
+),
+stock_on_hand AS (
+    SELECT COALESCE(SUM(ops.quantity), 0)::numeric AS qty,
+           COALESCE(SUM(ops.meters), 0)::numeric AS meters
+    FROM organization_product_stocks ops
+    WHERE ops.organization_id = ANY($3::bigint[])
+),
+cari_balances AS (
+    SELECT c.id,
+           COALESCE(SUM(CASE e.direction
+               WHEN 'income' THEN e.amount
+               WHEN 'charge' THEN e.amount
+               WHEN 'payment' THEN e.amount
+               WHEN 'expense' THEN -e.amount
+               WHEN 'collection' THEN -e.amount
+           END), 0)::numeric AS balance
+    FROM cari_accounts c
+    LEFT JOIN finance_entries e ON e.cari_id = c.id AND e.created_at < $1::timestamptz
+    WHERE c.brand_id = $2
+      AND c.organization_id = ANY($3::bigint[])
+    GROUP BY c.id
+),
+cari_stats AS (
+    SELECT COALESCE(SUM(balance) FILTER (WHERE balance > 0), 0)::numeric(18,4) AS overdue_amount
+    FROM cari_balances
+),
+cari_open_entries AS (
+    SELECT c.id AS cari_id, e.created_at,
+           CASE e.direction
+               WHEN 'income' THEN e.amount
+               WHEN 'charge' THEN e.amount
+               WHEN 'payment' THEN e.amount
+               WHEN 'expense' THEN -e.amount
+               WHEN 'collection' THEN -e.amount
+           END::numeric AS signed_amount,
+           b.balance
+    FROM cari_balances b
+    JOIN cari_accounts c ON c.id = b.id
+    JOIN finance_entries e ON e.cari_id = c.id AND e.created_at < $1::timestamptz
+    WHERE b.balance > 0
+),
+cari_oldest AS (
+    SELECT MIN(created_at) AS oldest_at
+    FROM cari_open_entries
+    WHERE signed_amount > 0
+),
+closed_leads AS (
+    SELECT l.id, l.uuid, l.organization_id, l.brand_id, l.target_type, l.customer_user_id, l.vehicle_id, l.candidate_company_name, l.candidate_contact_name, l.candidate_phone_e164, l.candidate_email, l.country_id, l.province_id, l.district_id, l.source, l.temperature, l.status, l.lost_reason, l.follow_up_date, l.assignee_user_id, l.notes, l.won_ref_type, l.won_ref_id, l.created_by_user_id, l.created_at, l.updated_at, l.deleted_at
+    FROM leads l
+    WHERE l.brand_id = $2
+      AND l.organization_id = ANY($3::bigint[])
+      AND l.deleted_at IS NULL
+      AND l.status IN ('won', 'lost')
+      AND l.updated_at >= $4::timestamptz
+      AND l.updated_at < $5::timestamptz
+),
+lead_stats AS (
+    SELECT COUNT(*)::numeric(18,4) AS closed_leads,
+           COUNT(*) FILTER (WHERE status = 'won')::numeric(18,4) AS won_leads
+    FROM closed_leads
+),
+waste AS (
+    SELECT AVG(f.waste_ratio)::numeric(18,4) AS avg_waste_ratio
+    FROM efficiency_facts f
+    WHERE f.brand_id = $2
+      AND f.dealer_org_id = ANY($3::bigint[])
+      AND f.service_date >= $4::date
+      AND f.service_date < $5::date
+),
+orders_in AS (
+    SELECT COALESCE(SUM(o.total), 0)::numeric(18,4) AS total
+    FROM orders o
+    WHERE o.brand_id = $2
+      AND o.buyer_org_id = ANY($3::bigint[])
+      AND o.status IN ('approved', 'preparing', 'ready', 'processing', 'shipped', 'delivered', 'received')
+      AND COALESCE(o.approved_at, o.created_at) >= $4::timestamptz
+      AND COALESCE(o.approved_at, o.created_at) < $5::timestamptz
+)
+SELECT service_stats.services_count,
+       service_stats.warranty_started,
+       service_stats.measurements,
+       review_stats.review_avg,
+       review_stats.review_count,
+       stock_consumption.qty::numeric(18,4) AS stock_consumed_qty,
+       stock_consumption.meters::numeric(18,4) AS stock_consumed_meters,
+       stock_on_hand.qty::numeric(18,4) AS stock_on_hand_qty,
+       stock_on_hand.meters::numeric(18,4) AS stock_on_hand_meters,
+       cari_stats.overdue_amount AS cari_overdue_amount,
+       COALESCE(EXTRACT(DAY FROM ($1::timestamptz - cari_oldest.oldest_at)), 0)::numeric(18,4) AS cari_overdue_days,
+       certificate_stats.service_staff_count,
+       certificate_stats.certified_staff_count,
+       lead_stats.closed_leads,
+       lead_stats.won_leads,
+       waste.avg_waste_ratio::numeric(18,4) AS waste_ratio,
+       orders_in.total::numeric(18,4) AS order_volume
+FROM service_stats
+CROSS JOIN review_stats
+CROSS JOIN stock_consumption
+CROSS JOIN stock_on_hand
+CROSS JOIN cari_stats
+CROSS JOIN cari_oldest
+CROSS JOIN certificate_stats
+CROSS JOIN lead_stats
+CROSS JOIN waste
+CROSS JOIN orders_in
+`
+
+type ComputePerformanceMetricsParams struct {
+	AsOf       pgtype.Timestamptz `json:"as_of"`
+	BrandID    int64              `json:"brand_id"`
+	OrgIds     []int64            `json:"org_ids"`
+	PeriodFrom pgtype.Timestamptz `json:"period_from"`
+	PeriodTo   pgtype.Timestamptz `json:"period_to"`
+}
+
+type ComputePerformanceMetricsRow struct {
+	ServicesCount       pgtype.Numeric `json:"services_count"`
+	WarrantyStarted     pgtype.Numeric `json:"warranty_started"`
+	Measurements        pgtype.Numeric `json:"measurements"`
+	ReviewAvg           pgtype.Numeric `json:"review_avg"`
+	ReviewCount         pgtype.Numeric `json:"review_count"`
+	StockConsumedQty    pgtype.Numeric `json:"stock_consumed_qty"`
+	StockConsumedMeters pgtype.Numeric `json:"stock_consumed_meters"`
+	StockOnHandQty      pgtype.Numeric `json:"stock_on_hand_qty"`
+	StockOnHandMeters   pgtype.Numeric `json:"stock_on_hand_meters"`
+	CariOverdueAmount   pgtype.Numeric `json:"cari_overdue_amount"`
+	CariOverdueDays     pgtype.Numeric `json:"cari_overdue_days"`
+	ServiceStaffCount   pgtype.Numeric `json:"service_staff_count"`
+	CertifiedStaffCount pgtype.Numeric `json:"certified_staff_count"`
+	ClosedLeads         pgtype.Numeric `json:"closed_leads"`
+	WonLeads            pgtype.Numeric `json:"won_leads"`
+	WasteRatio          pgtype.Numeric `json:"waste_ratio"`
+	OrderVolume         pgtype.Numeric `json:"order_volume"`
+}
+
+func (q *Queries) ComputePerformanceMetrics(ctx context.Context, arg ComputePerformanceMetricsParams) (ComputePerformanceMetricsRow, error) {
+	row := q.db.QueryRow(ctx, computePerformanceMetrics,
+		arg.AsOf,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.PeriodFrom,
+		arg.PeriodTo,
+	)
+	var i ComputePerformanceMetricsRow
+	err := row.Scan(
+		&i.ServicesCount,
+		&i.WarrantyStarted,
+		&i.Measurements,
+		&i.ReviewAvg,
+		&i.ReviewCount,
+		&i.StockConsumedQty,
+		&i.StockConsumedMeters,
+		&i.StockOnHandQty,
+		&i.StockOnHandMeters,
+		&i.CariOverdueAmount,
+		&i.CariOverdueDays,
+		&i.ServiceStaffCount,
+		&i.CertifiedStaffCount,
+		&i.ClosedLeads,
+		&i.WonLeads,
+		&i.WasteRatio,
+		&i.OrderVolume,
+	)
+	return i, err
+}
+
 const createBonusRule = `-- name: CreateBonusRule :one
 
 INSERT INTO bonus_rules (
@@ -298,6 +517,27 @@ type DeleteBonusRuleParams struct {
 // A rule with accruals is kept (FK RESTRICT); the usecase deactivates it.
 func (q *Queries) DeleteBonusRule(ctx context.Context, arg DeleteBonusRuleParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteBonusRule, arg.ID, arg.OrganizationID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deletePerformanceMetricsForScope = `-- name: DeletePerformanceMetricsForScope :execrows
+DELETE FROM performance_metrics_monthly
+WHERE organization_id = $1
+  AND period = $2::text
+  AND scope = $3::text
+`
+
+type DeletePerformanceMetricsForScopeParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	Period         string `json:"period"`
+	Scope          string `json:"scope"`
+}
+
+func (q *Queries) DeletePerformanceMetricsForScope(ctx context.Context, arg DeletePerformanceMetricsForScopeParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deletePerformanceMetricsForScope, arg.OrganizationID, arg.Period, arg.Scope)
 	if err != nil {
 		return 0, err
 	}
@@ -725,22 +965,24 @@ func (q *Queries) ListBonusRules(ctx context.Context, arg ListBonusRulesParams) 
 }
 
 const listPerformanceMetrics = `-- name: ListPerformanceMetrics :many
-SELECT m.id, m.organization_id, m.brand_id, m.period, m.metric, m.value, m.numerator, m.denominator, m.currency, m.computed_at
+SELECT m.id, m.organization_id, m.brand_id, m.period, m.metric, m.value, m.numerator, m.denominator, m.currency, m.computed_at, m.scope
 FROM performance_metrics_monthly m
 WHERE m.brand_id = $1
   AND ($2::bigint[] IS NULL OR m.organization_id = ANY ($2::bigint[]))
   AND m.period >= $3::text
   AND m.period <= $4::text
-  AND (COALESCE(cardinality($5::text[]), 0) = 0 OR m.metric = ANY ($5::text[]))
-ORDER BY m.organization_id, m.period, m.metric
+  AND ($5::text IS NULL OR m.scope = $5::text)
+  AND (COALESCE(cardinality($6::text[]), 0) = 0 OR m.metric = ANY ($6::text[]))
+ORDER BY m.organization_id, m.period, m.scope, m.metric
 `
 
 type ListPerformanceMetricsParams struct {
-	BrandID    int64    `json:"brand_id"`
-	OrgIds     []int64  `json:"org_ids"`
-	PeriodFrom string   `json:"period_from"`
-	PeriodTo   string   `json:"period_to"`
-	Metrics    []string `json:"metrics"`
+	BrandID    int64       `json:"brand_id"`
+	OrgIds     []int64     `json:"org_ids"`
+	PeriodFrom string      `json:"period_from"`
+	PeriodTo   string      `json:"period_to"`
+	Scope      pgtype.Text `json:"scope"`
+	Metrics    []string    `json:"metrics"`
 }
 
 // Metrics of the organizations over a closed period range (YYYY-MM).
@@ -750,6 +992,7 @@ func (q *Queries) ListPerformanceMetrics(ctx context.Context, arg ListPerformanc
 		arg.OrgIds,
 		arg.PeriodFrom,
 		arg.PeriodTo,
+		arg.Scope,
 		arg.Metrics,
 	)
 	if err != nil {
@@ -770,6 +1013,85 @@ func (q *Queries) ListPerformanceMetrics(ctx context.Context, arg ListPerformanc
 			&i.Denominator,
 			&i.Currency,
 			&i.ComputedAt,
+			&i.Scope,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPerformanceOrganizations = `-- name: ListPerformanceOrganizations :many
+
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email
+FROM organizations
+WHERE deleted_at IS NULL
+  AND status = 'active'
+  AND type IN ('center', 'distributor', 'dealer')
+  AND ($1::bigint IS NULL OR id = $1::bigint)
+ORDER BY brand_id, id
+`
+
+// Worker source readers ----------------------------------------------------------
+func (q *Queries) ListPerformanceOrganizations(ctx context.Context, organizationID pgtype.Int8) ([]Organization, error) {
+	rows, err := q.db.Query(ctx, listPerformanceOrganizations, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Organization{}
+	for rows.Next() {
+		var i Organization
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Slug,
+			&i.Name,
+			&i.City,
+			&i.District,
+			&i.Phone,
+			&i.Address,
+			&i.LogoObjectKey,
+			&i.Status,
+			&i.PlanCode,
+			&i.AccessStartsAt,
+			&i.AccessEndsAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.Email,
+			&i.Website,
+			&i.Tagline,
+			&i.FooterText,
+			&i.PaperSize,
+			&i.PrimaryColor,
+			&i.Type,
+			&i.ParentID,
+			&i.BrandID,
+			&i.Currency,
+			&i.Locale,
+			&i.Timezone,
+			&i.CountryID,
+			&i.ContractPdfKey,
+			&i.ContractValidUntil,
+			&i.Settings,
+			&i.ProvinceID,
+			&i.DistrictID,
+			&i.PhoneRaw,
+			&i.GoogleBusinessUrl,
+			&i.Latitude,
+			&i.Longitude,
+			&i.InvoiceVkn,
+			&i.InvoiceTckn,
+			&i.InvoiceTaxOffice,
+			&i.InvoiceLegalName,
+			&i.EinvoiceRegistered,
+			&i.EinvoiceAlias,
+			&i.InvoiceEmail,
 		); err != nil {
 			return nil, err
 		}
@@ -800,6 +1122,7 @@ WITH m AS (
     FROM performance_metrics_monthly pm
     WHERE pm.brand_id = $1
       AND pm.period = $11::text
+      AND pm.scope = $12::text
     GROUP BY pm.organization_id
 )
 SELECT o.id AS organization_id,
@@ -888,6 +1211,7 @@ type ListPerformanceRankingParams struct {
 	RowOffset      int32       `json:"row_offset"`
 	RowLimit       int32       `json:"row_limit"`
 	Period         string      `json:"period"`
+	Scope          string      `json:"scope"`
 }
 
 type ListPerformanceRankingRow struct {
@@ -931,6 +1255,7 @@ func (q *Queries) ListPerformanceRanking(ctx context.Context, arg ListPerformanc
 		arg.RowOffset,
 		arg.RowLimit,
 		arg.Period,
+		arg.Scope,
 	)
 	if err != nil {
 		return nil, err
@@ -965,6 +1290,40 @@ func (q *Queries) ListPerformanceRanking(ctx context.Context, arg ListPerformanc
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPerformanceSubtreeOrgIDs = `-- name: ListPerformanceSubtreeOrgIDs :many
+WITH RECURSIVE tree AS (
+    SELECT o.id
+    FROM organizations o
+    WHERE o.id = $1::bigint AND o.deleted_at IS NULL
+    UNION ALL
+    SELECT c.id
+    FROM organizations c
+    JOIN tree t ON c.parent_id = t.id
+    WHERE c.deleted_at IS NULL
+)
+SELECT id FROM tree ORDER BY id
+`
+
+func (q *Queries) ListPerformanceSubtreeOrgIDs(ctx context.Context, rootOrgID int64) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listPerformanceSubtreeOrgIDs, rootOrgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -1626,25 +1985,26 @@ const upsertPerformanceMetric = `-- name: UpsertPerformanceMetric :one
 
 
 INSERT INTO performance_metrics_monthly (
-    organization_id, brand_id, period, metric, value, numerator, denominator, currency, computed_at
+    organization_id, brand_id, period, scope, metric, value, numerator, denominator, currency, computed_at
 )
 VALUES (
-    $1, $2, $3, $4,
-    $5, $6, $7, $8, NOW()
+    $1, $2, $3, $4, $5,
+    $6, $7, $8, $9, NOW()
 )
-ON CONFLICT (organization_id, period, metric) DO UPDATE
+ON CONFLICT (organization_id, period, scope, metric) DO UPDATE
 SET value = EXCLUDED.value,
     numerator = EXCLUDED.numerator,
     denominator = EXCLUDED.denominator,
     currency = EXCLUDED.currency,
     computed_at = EXCLUDED.computed_at
-RETURNING id, organization_id, brand_id, period, metric, value, numerator, denominator, currency, computed_at
+RETURNING id, organization_id, brand_id, period, metric, value, numerator, denominator, currency, computed_at, scope
 `
 
 type UpsertPerformanceMetricParams struct {
 	OrganizationID int64          `json:"organization_id"`
 	BrandID        int64          `json:"brand_id"`
 	Period         string         `json:"period"`
+	Scope          string         `json:"scope"`
 	Metric         string         `json:"metric"`
 	Value          pgtype.Numeric `json:"value"`
 	Numerator      pgtype.Numeric `json:"numerator"`
@@ -1662,6 +2022,7 @@ func (q *Queries) UpsertPerformanceMetric(ctx context.Context, arg UpsertPerform
 		arg.OrganizationID,
 		arg.BrandID,
 		arg.Period,
+		arg.Scope,
 		arg.Metric,
 		arg.Value,
 		arg.Numerator,
@@ -1680,6 +2041,7 @@ func (q *Queries) UpsertPerformanceMetric(ctx context.Context, arg UpsertPerform
 		&i.Denominator,
 		&i.Currency,
 		&i.ComputedAt,
+		&i.Scope,
 	)
 	return i, err
 }

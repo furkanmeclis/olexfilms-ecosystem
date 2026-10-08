@@ -2250,6 +2250,7 @@ type PerformanceMetricsMonthly struct {
 	Denominator    pgtype.Numeric     `json:"denominator"`
 	Currency       pgtype.Text        `json:"currency"`
 	ComputedAt     pgtype.Timestamptz `json:"computed_at"`
+	Scope          string             `json:"scope"`
 }
 
 type PerformanceTarget struct {

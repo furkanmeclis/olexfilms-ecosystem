@@ -137,6 +137,7 @@ type Querier interface {
 	CompleteStockTransferRequest(ctx context.Context, id int64) (StockTransferRequest, error)
 	CompleteVehicleTransfer(ctx context.Context, arg CompleteVehicleTransferParams) (VehicleTransfer, error)
 	CompleteWarehouseTransfer(ctx context.Context, arg CompleteWarehouseTransferParams) (WarehouseTransfer, error)
+	ComputePerformanceMetrics(ctx context.Context, arg ComputePerformanceMetricsParams) (ComputePerformanceMetricsRow, error)
 	ConfirmServiceMeasurement(ctx context.Context, arg ConfirmServiceMeasurementParams) (int64, error)
 	ConfirmStockEntry(ctx context.Context, arg ConfirmStockEntryParams) (StockEntry, error)
 	ConfirmUserTOTP(ctx context.Context, arg ConfirmUserTOTPParams) (UserTotp, error)
@@ -659,6 +660,7 @@ type Querier interface {
 	DeleteOrderItemUnit(ctx context.Context, id int64) (int64, error)
 	DeleteOrgModuleFlag(ctx context.Context, arg DeleteOrgModuleFlagParams) (int64, error)
 	DeletePartConsumptionExpectation(ctx context.Context, arg DeletePartConsumptionExpectationParams) (int64, error)
+	DeletePerformanceMetricsForScope(ctx context.Context, arg DeletePerformanceMetricsForScopeParams) (int64, error)
 	DeletePerformanceTarget(ctx context.Context, arg DeletePerformanceTargetParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
@@ -2135,11 +2137,14 @@ type Querier interface {
 	ListPendingCampaignRecipientIDs(ctx context.Context, arg ListPendingCampaignRecipientIDsParams) ([]int64, error)
 	// Metrics of the organizations over a closed period range (YYYY-MM).
 	ListPerformanceMetrics(ctx context.Context, arg ListPerformanceMetricsParams) ([]PerformanceMetricsMonthly, error)
+	// Worker source readers ----------------------------------------------------------
+	ListPerformanceOrganizations(ctx context.Context, organizationID pgtype.Int8) ([]Organization, error)
 	// Ranking list of distributors and dealers for one month, one column per
 	// metric (NULL = not computed). Sort: docs/list-contract.md, keys from
 	// performance/repository.RankingSort (metric keys | name); metric columns
 	// sort NULLS LAST in both directions; id tiebreak.
 	ListPerformanceRanking(ctx context.Context, arg ListPerformanceRankingParams) ([]ListPerformanceRankingRow, error)
+	ListPerformanceSubtreeOrgIDs(ctx context.Context, rootOrgID int64) ([]int64, error)
 	// Targets with their achievement: the target metric summed over the months
 	// of the target period (same currency for order volume). Sort keys from
 	// performance/repository.TargetSort; id tiebreak.
