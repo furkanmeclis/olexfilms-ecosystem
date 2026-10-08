@@ -938,6 +938,7 @@ type Querier interface {
 	GetDocumentTemplateByUUID(ctx context.Context, argUuid uuid.UUID) (DocumentTemplate, error)
 	GetDraftDocumentTemplate(ctx context.Context, arg GetDraftDocumentTemplateParams) (DocumentTemplate, error)
 	GetEODReportByUUID(ctx context.Context, arg GetEODReportByUUIDParams) (EodReport, error)
+	GetEfficiencyServiceItemUnit(ctx context.Context, serviceItemID int64) (int64, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
 	GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
 	GetFinanceAccount(ctx context.Context, arg GetFinanceAccountParams) (FinanceAccount, error)
@@ -1087,6 +1088,7 @@ type Querier interface {
 	GetOrganizationMemberByUserAndSlug(ctx context.Context, arg GetOrganizationMemberByUserAndSlugParams) (GetOrganizationMemberByUserAndSlugRow, error)
 	GetOrganizationMemberByUserUUID(ctx context.Context, arg GetOrganizationMemberByUserUUIDParams) (GetOrganizationMemberByUserUUIDRow, error)
 	GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error)
+	GetPartConsumptionExpectationByUUID(ctx context.Context, arg GetPartConsumptionExpectationByUUIDParams) (PartConsumptionExpectation, error)
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
 	GetPerformanceTarget(ctx context.Context, arg GetPerformanceTargetParams) (PerformanceTarget, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
@@ -1782,6 +1784,7 @@ type Querier interface {
 	// TEC-375: sort keys from warehouse usecase EODSort (report_date,
 	// generated_at); within one key the system report comes first.
 	ListEODReports(ctx context.Context, arg ListEODReportsParams) ([]EodReport, error)
+	ListEfficiencyServiceItems(ctx context.Context, arg ListEfficiencyServiceItemsParams) ([]int64, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
 	// TEC-365: platform (actor_id = own jobs, or NULL for admins) and tenant
@@ -3018,6 +3021,7 @@ type Querier interface {
 	// A failed attempt that will be retried: the recipient stays pending.
 	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
 	RefreshEfficiencyFactsForServiceItem(ctx context.Context, targetServiceItemID int64) (int64, error)
+	RefreshNetworkPartExpectations(ctx context.Context, arg RefreshNetworkPartExpectationsParams) (int64, error)
 	RejectCertificate(ctx context.Context, arg RejectCertificateParams) (Certificate, error)
 	// CAS pending_review → rejected with the reviewer's note. The previous
 	// published snapshot (if any) stays live.

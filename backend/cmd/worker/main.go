@@ -30,6 +30,7 @@ import (
 	showcaseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase/usecase"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
+	efficiencymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	fleetusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
@@ -166,6 +167,9 @@ func main() {
 	contractsmodule.RegisterEventHandlers(eventBus, reviewQueue, log)
 	// TEC-296: service events compute the before/after measurement match.
 	measurementsmodule.RegisterEventHandlers(eventBus, pool, queries, log)
+	// TEC-488: efficiency facts are historical projections, independent of
+	// the read-side feature gate.
+	efficiencymodule.RegisterEventHandlers(eventBus, queries, log)
 	// TEC-396: whatsapp.message.received arms the debounced whatsapp:ai_reply.
 	wapipeline.RegisterEventHandlers(eventBus, queue.WhatsAppAIEnqueuer{Client: reviewQueue}, log)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)
@@ -332,6 +336,7 @@ func main() {
 	featureSvc := features.New(pool, queries, nil, log)
 	certificatesCron := certificatesusecase.NewCron(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	stockForecastSvc := stockforecastusecase.New(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
+	efficiencyNetwork := efficiencymodule.NewNetworkRefresher(queries, sysconfig.New(queries, sysconfig.NoCache{}))
 	// TEC-476: periodic fleet reports. The schedule runs on worker-core, the
 	// PDF (fleet_report document template) and its e-mail on worker-docs.
 	workerFleet.SetModules(featureSvc)
@@ -408,6 +413,7 @@ func main() {
 		WithAIActionSweep(aiusecase.NewActions(airepo.New(pool), nil, nil, log).SweepTask).
 		WithCertificateExpiryScan(certificatesCron.ExpiryScanTask).
 		WithStockForecastDaily(stockForecastSvc.DailyTask).
+		WithEfficiencyNetworkRefresh(efficiencyNetwork.Task).
 		WithFleetReports(workerFleet.ScheduleReportsTask, workerFleet.GenerateReport).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
