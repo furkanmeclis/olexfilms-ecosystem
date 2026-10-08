@@ -144,5 +144,7 @@
   "codes.FLEET_SERVICE_PLAN_CANCELLED": "该服务计划已取消。",
   "codes.SHOWCASE_PHOTO_LIMIT": "图库已满；请先删除一张照片再添加新照片。",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "拒绝时请填写备注。",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "请输入 1.0 到 5.0 之间的评分，评价数量不得小于 0。",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Google 评分由 Google Places 自动更新；如需手动填写，请先删除地点 ID。",
   "codes.UNSUPPORTED_MEDIA_TYPE": "不支持的文件类型；请上传 JPEG、PNG 或 WebP 图片。"
 }

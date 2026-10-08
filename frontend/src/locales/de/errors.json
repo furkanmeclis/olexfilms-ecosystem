@@ -144,5 +144,7 @@
   "codes.FLEET_SERVICE_PLAN_CANCELLED": "Der Serviceplan wurde bereits storniert.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Die Galerie ist voll; löschen Sie ein Foto, bevor Sie ein neues hinzufügen.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Für eine Ablehnung ist eine Notiz erforderlich.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Geben Sie eine Bewertung zwischen 1,0 und 5,0 und eine Rezensionsanzahl von mindestens 0 ein.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Die Google-Bewertung wird über Google Places aktualisiert; entfernen Sie die Place-ID, um sie manuell einzugeben.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Nicht unterstützter Dateityp; laden Sie ein JPEG-, PNG- oder WebP-Bild hoch."
 }

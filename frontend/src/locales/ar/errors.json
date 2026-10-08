@@ -144,5 +144,7 @@
   "codes.FLEET_SERVICE_PLAN_CANCELLED": "خطة الخدمة ملغاة بالفعل.",
   "codes.SHOWCASE_PHOTO_LIMIT": "المعرض ممتلئ؛ احذف صورة قبل إضافة صورة جديدة.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "اكتب ملاحظة للرفض.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "أدخل تقييمًا بين 1.0 و5.0 وعدد مراجعات يساوي 0 أو أكثر.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "يُحدَّث تقييم Google من Google Places؛ احذف معرّف المكان لإدخاله يدويًا.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "نوع الملف غير مدعوم؛ ارفع صورة JPEG أو PNG أو WebP."
 }

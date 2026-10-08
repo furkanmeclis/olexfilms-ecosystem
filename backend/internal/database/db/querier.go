@@ -1724,6 +1724,12 @@ type Querier interface {
 	ListDealerShowcaseReviews(ctx context.Context, arg ListDealerShowcaseReviewsParams) ([]ListDealerShowcaseReviewsRow, error)
 	// Services --------------------------------------------------------------------
 	ListDealerShowcaseServices(ctx context.Context, showcaseID int64) ([]DealerShowcaseService, error)
+	// TEC-469 (F5-01d) -------------------------------------------------------------
+	// Places worker: showcases with a Google place id whose rating did not come
+	// from Places since fresh_before (a second run the same day finds nothing).
+	// The module flag and the per-organization backoff are checked by the
+	// caller.
+	ListDealerShowcasesForPlacesRefresh(ctx context.Context, freshBefore pgtype.Timestamptz) ([]ListDealerShowcasesForPlacesRefreshRow, error)
 	// Center view of the distributor-specific prices with product and
 	// distributor identities. TEC-369: sort keys from
 	// usecase.DistributorPriceSort (docs/list-contract.md); default product.
@@ -2138,8 +2144,9 @@ type Querier interface {
 	// GetPublicDealerBySlug; code and last change only.
 	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
 	// Nearby dealers list: which of the given organizations of the brand serve
-	// a published showcase, with the live Google rating. The module flag is
-	// checked by the caller.
+	// a published showcase, with the live Google rating and its source and the
+	// rating frozen in the snapshot (TEC-469: a manual rating under approval
+	// shows the published one). The module flag is checked by the caller.
 	ListPublishedDealerShowcaseBadges(ctx context.Context, arg ListPublishedDealerShowcaseBadgesParams) ([]ListPublishedDealerShowcaseBadgesRow, error)
 	// Sitemap: the publish time of every published showcase of the brand (the
 	// caller keeps the organizations whose module is on).
@@ -3097,6 +3104,9 @@ type Querier interface {
 	// Writes the Google rating (Places worker or manual entry, F5-01d); NULL
 	// rating and count clear it.
 	SetDealerShowcaseGoogleRating(ctx context.Context, arg SetDealerShowcaseGoogleRatingParams) (DealerShowcase, error)
+	// Writes a Places answer. CAS on the place id: no row when the owner
+	// changed the place id meanwhile.
+	SetDealerShowcasePlacesRating(ctx context.Context, arg SetDealerShowcasePlacesRatingParams) (int64, error)
 	// Records the fleet cari in the dealer's ledger once (CAS on NULL).
 	SetFleetDealerLinkCari(ctx context.Context, arg SetFleetDealerLinkCariParams) (FleetDealerLink, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.

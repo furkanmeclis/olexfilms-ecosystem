@@ -113,6 +113,8 @@ x-backend-environment: &backend-environment
   # AI assistant (F4): Anthropic key only from env; empty = AI disabled.
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
+  # Dealer showcase Google rating (TEC-469): Places API key; empty = manual entry.
+  GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
   AI_MODEL_DEFAULT: ${AI_MODEL_DEFAULT:-claude-sonnet-5-5}
   AI_MODEL_FAST: ${AI_MODEL_FAST:-claude-haiku-4-5}
   AI_ALLOWED_MODELS: ${AI_ALLOWED_MODELS:-claude-sonnet-5-5,claude-haiku-4-5}

@@ -756,10 +756,68 @@ func (q *Queries) ListDealerShowcaseServices(ctx context.Context, showcaseID int
 	return items, nil
 }
 
+const listDealerShowcasesForPlacesRefresh = `-- name: ListDealerShowcasesForPlacesRefresh :many
+
+SELECT s.id,
+       s.uuid,
+       s.organization_id,
+       s.google_place_id,
+       o.uuid AS organization_uuid
+FROM dealer_showcases s
+JOIN organizations o ON o.id = s.organization_id
+WHERE s.google_place_id IS NOT NULL
+  AND o.deleted_at IS NULL
+  AND (s.google_rating_source IS DISTINCT FROM 'places'
+       OR s.google_rating_updated_at IS NULL
+       OR s.google_rating_updated_at < $1::timestamptz)
+ORDER BY s.id
+`
+
+type ListDealerShowcasesForPlacesRefreshRow struct {
+	ID               int64       `json:"id"`
+	Uuid             uuid.UUID   `json:"uuid"`
+	OrganizationID   int64       `json:"organization_id"`
+	GooglePlaceID    pgtype.Text `json:"google_place_id"`
+	OrganizationUuid uuid.UUID   `json:"organization_uuid"`
+}
+
+// TEC-469 (F5-01d) -------------------------------------------------------------
+// Places worker: showcases with a Google place id whose rating did not come
+// from Places since fresh_before (a second run the same day finds nothing).
+// The module flag and the per-organization backoff are checked by the
+// caller.
+func (q *Queries) ListDealerShowcasesForPlacesRefresh(ctx context.Context, freshBefore pgtype.Timestamptz) ([]ListDealerShowcasesForPlacesRefreshRow, error) {
+	rows, err := q.db.Query(ctx, listDealerShowcasesForPlacesRefresh, freshBefore)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDealerShowcasesForPlacesRefreshRow{}
+	for rows.Next() {
+		var i ListDealerShowcasesForPlacesRefreshRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.GooglePlaceID,
+			&i.OrganizationUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPublishedDealerShowcaseBadges = `-- name: ListPublishedDealerShowcaseBadges :many
 SELECT o.id AS organization_id,
        o.uuid AS organization_uuid,
-       s.google_rating
+       s.google_rating,
+       s.google_rating_source,
+       (s.published_content -> 'google_rating')::jsonb AS published_google_rating
 FROM dealer_showcases s
 JOIN organizations o ON o.id = s.organization_id
 WHERE s.brand_id = $1
@@ -773,14 +831,17 @@ type ListPublishedDealerShowcaseBadgesParams struct {
 }
 
 type ListPublishedDealerShowcaseBadgesRow struct {
-	OrganizationID   int64          `json:"organization_id"`
-	OrganizationUuid uuid.UUID      `json:"organization_uuid"`
-	GoogleRating     pgtype.Numeric `json:"google_rating"`
+	OrganizationID        int64          `json:"organization_id"`
+	OrganizationUuid      uuid.UUID      `json:"organization_uuid"`
+	GoogleRating          pgtype.Numeric `json:"google_rating"`
+	GoogleRatingSource    pgtype.Text    `json:"google_rating_source"`
+	PublishedGoogleRating []byte         `json:"published_google_rating"`
 }
 
 // Nearby dealers list: which of the given organizations of the brand serve
-// a published showcase, with the live Google rating. The module flag is
-// checked by the caller.
+// a published showcase, with the live Google rating and its source and the
+// rating frozen in the snapshot (TEC-469: a manual rating under approval
+// shows the published one). The module flag is checked by the caller.
 func (q *Queries) ListPublishedDealerShowcaseBadges(ctx context.Context, arg ListPublishedDealerShowcaseBadgesParams) ([]ListPublishedDealerShowcaseBadgesRow, error) {
 	rows, err := q.db.Query(ctx, listPublishedDealerShowcaseBadges, arg.BrandID, arg.OrganizationUuids)
 	if err != nil {
@@ -790,7 +851,13 @@ func (q *Queries) ListPublishedDealerShowcaseBadges(ctx context.Context, arg Lis
 	items := []ListPublishedDealerShowcaseBadgesRow{}
 	for rows.Next() {
 		var i ListPublishedDealerShowcaseBadgesRow
-		if err := rows.Scan(&i.OrganizationID, &i.OrganizationUuid, &i.GoogleRating); err != nil {
+		if err := rows.Scan(
+			&i.OrganizationID,
+			&i.OrganizationUuid,
+			&i.GoogleRating,
+			&i.GoogleRatingSource,
+			&i.PublishedGoogleRating,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -1089,6 +1156,37 @@ func (q *Queries) SetDealerShowcaseGoogleRating(ctx context.Context, arg SetDeal
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const setDealerShowcasePlacesRating = `-- name: SetDealerShowcasePlacesRating :execrows
+UPDATE dealer_showcases
+SET google_rating            = $1,
+    google_review_count      = $2,
+    google_rating_source     = 'places',
+    google_rating_updated_at = NOW()
+WHERE id = $3 AND google_place_id = $4
+`
+
+type SetDealerShowcasePlacesRatingParams struct {
+	GoogleRating      pgtype.Numeric `json:"google_rating"`
+	GoogleReviewCount pgtype.Int4    `json:"google_review_count"`
+	ID                int64          `json:"id"`
+	GooglePlaceID     pgtype.Text    `json:"google_place_id"`
+}
+
+// Writes a Places answer. CAS on the place id: no row when the owner
+// changed the place id meanwhile.
+func (q *Queries) SetDealerShowcasePlacesRating(ctx context.Context, arg SetDealerShowcasePlacesRatingParams) (int64, error) {
+	result, err := q.db.Exec(ctx, setDealerShowcasePlacesRating,
+		arg.GoogleRating,
+		arg.GoogleReviewCount,
+		arg.ID,
+		arg.GooglePlaceID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const submitDealerShowcase = `-- name: SubmitDealerShowcase :one

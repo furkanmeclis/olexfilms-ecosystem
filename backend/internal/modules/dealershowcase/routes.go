@@ -40,6 +40,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/showcase", read(h.Get))
 	mux.Handle("PUT /v1/showcase", write(h.Save))
 	mux.Handle("POST /v1/showcase/submit", write(h.Submit))
+	// TEC-469: manual Google rating (Places not configured or no place id).
+	mux.Handle("PUT /v1/showcase/google-rating", write(h.SetGoogleRating))
 	mux.Handle("GET /v1/showcase/services", read(h.ListServices))
 	mux.Handle("POST /v1/showcase/services", write(h.CreateService))
 	mux.Handle("PUT /v1/showcase/services/order", write(h.ReorderServices))

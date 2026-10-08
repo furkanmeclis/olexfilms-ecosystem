@@ -144,5 +144,7 @@
   "codes.FLEET_SERVICE_PLAN_CANCELLED": "Il piano di servizio è già annullato.",
   "codes.SHOWCASE_PHOTO_LIMIT": "La galleria è piena; elimini una foto prima di aggiungerne una nuova.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Scriva una nota per rifiutare.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Inserisca una valutazione tra 1,0 e 5,0 e un numero di recensioni pari o superiore a 0.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "La valutazione Google viene aggiornata da Google Places; rimuova l'ID luogo per inserirla manualmente.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Tipo di file non supportato; carichi un'immagine JPEG, PNG o WebP."
 }

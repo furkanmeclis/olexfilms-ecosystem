@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "已创建财务交易",
   "actions.finance.transfer.create": "已创建资金转账",
   "actions.finance.transaction.void": "已作废财务交易",
+  "actions.showcase.google_rating.refresh_failed": "Google 评分多次更新失败",
   "resources.platform.users": "用户",
   "resources.platform.roles": "角色",
   "resources.platform.notifications": "通知",

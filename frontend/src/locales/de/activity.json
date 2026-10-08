@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "Finanzbuchung erstellt",
   "actions.finance.transfer.create": "Finanzüberweisung erstellt",
   "actions.finance.transaction.void": "Finanzbuchung storniert",
+  "actions.showcase.google_rating.refresh_failed": "Aktualisierung der Google-Bewertung wiederholt fehlgeschlagen",
   "resources.platform.users": "Benutzer",
   "resources.platform.roles": "Rollen",
   "resources.platform.notifications": "Benachrichtigungen",

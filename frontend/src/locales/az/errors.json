@@ -144,5 +144,7 @@
   "codes.FLEET_SERVICE_PLAN_CANCELLED": "Xidmət planı artıq ləğv edilib.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Qalereya doludur; yeni şəkil əlavə etməzdən əvvəl bir şəkli silin.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Rədd etmək üçün qeyd yazın.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "1,0 ilə 5,0 arasında reytinq və 0 və ya daha çox rəy sayı daxil edin.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Google reytinqi Google Places-dən yenilənir; əl ilə daxil etmək üçün Place ID-ni silin.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Fayl növü dəstəklənmir; JPEG, PNG və ya WebP şəkli yükləyin."
 }

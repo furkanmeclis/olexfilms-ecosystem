@@ -144,5 +144,7 @@
   "codes.FLEET_SERVICE_PLAN_CANCELLED": "Сервісний план уже скасовано.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Галерея заповнена; видаліть фото, перш ніж додати нове.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Щоб відхилити, напишіть примітку.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Введіть оцінку від 1,0 до 5,0 і кількість відгуків від 0.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Оцінка Google оновлюється з Google Places; видаліть Place ID, щоб ввести її вручну.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Непідтримуваний тип файлу; завантажте зображення JPEG, PNG або WebP."
 }
