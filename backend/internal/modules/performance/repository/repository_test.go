@@ -95,7 +95,7 @@ func (f *fixture) user(t *testing.T, name string) db.User {
 func (f *fixture) metric(t *testing.T, orgID int64, period, metric, value string) {
 	t.Helper()
 	arg := db.UpsertPerformanceMetricParams{
-		OrganizationID: orgID, BrandID: f.brandID, Period: period, Metric: metric, Value: numeric(t, value),
+		OrganizationID: orgID, BrandID: f.brandID, Period: period, Scope: "org", Metric: metric, Value: numeric(t, value),
 	}
 	for _, m := range model.MoneyMetrics {
 		if m == metric {

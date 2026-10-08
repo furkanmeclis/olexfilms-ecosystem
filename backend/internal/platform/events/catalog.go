@@ -699,6 +699,7 @@ func catalogConstants() []string {
 		ShowcaseRejected,
 		StockForecastComputed,
 		StockForecastLow,
+		PerformanceComputed,
 	}
 }
 
@@ -796,3 +797,7 @@ const (
 	StockForecastComputed = "stock.forecast_computed"
 	StockForecastLow      = "stock.forecast_low"
 )
+
+// Performance add-on events (TEC-491/F5-05b): written after an organization
+// month is recomputed.
+const PerformanceComputed = "performance.computed"

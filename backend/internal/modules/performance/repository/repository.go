@@ -62,6 +62,9 @@ func (s *Store) ListRanking(ctx context.Context, arg db.ListPerformanceRankingPa
 	}
 	arg.SortKey = resolved.Key
 	arg.SortDesc = resolved.Desc
+	if arg.Scope == "" {
+		arg.Scope = "org"
+	}
 	if arg.RowLimit == 0 {
 		arg.RowLimit = int32(apiquery.DefaultLimit)
 	}

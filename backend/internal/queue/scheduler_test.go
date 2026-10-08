@@ -68,6 +68,7 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		{cron: certificateExpiryScanCron, taskType: TaskCertificateExpiryScan, queue: QueueMaintenance}: false,
 		// TEC-484.
 		{cron: stockForecastDailyCron, taskType: TaskStockForecastDaily, queue: QueueLow}: false,
+		{cron: performanceDailyCron, taskType: TaskPerformanceDaily, queue: QueueLow}:     false,
 		// TEC-488.
 		{cron: efficiencyNetworkRefreshCron, taskType: TaskEfficiencyNetworkRefresh, queue: QueueMaintenance}: false,
 		// TEC-476.
