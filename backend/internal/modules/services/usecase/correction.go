@@ -137,7 +137,7 @@ func (s *Service) CorrectConsumption(ctx context.Context, c Caller, id, itemID u
 			CreatedByUserID: c.actor(), ActorOrgID: c.actorOrg(),
 		}
 		extra := map[string]any{
-			"change": "consumption_corrected", "item_uuid": item.Uuid.String(), "unit_id": item.UnitID,
+			"change": "consumption_corrected", "item_id": item.ID, "item_uuid": item.Uuid.String(), "unit_id": item.UnitID,
 			"return_movement_id": returned.ID,
 		}
 		if replacement != "" {

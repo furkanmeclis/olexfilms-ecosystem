@@ -118,6 +118,8 @@ type Worker struct {
 	certificateExpiryScan CertificateExpiryScanFunc
 	// TEC-484: stock forecast daily snapshots and low-stock transitions.
 	stockForecastDaily StockForecastDailyFunc
+	// TEC-488: weekly efficiency network medians.
+	efficiencyNetworkRefresh EfficiencyNetworkRefreshFunc
 	// TEC-476: periodic fleet report schedule and generation.
 	fleetReportsSchedule FleetReportsScheduleFunc
 	fleetReportGenerate  FleetReportGenerateFunc
@@ -224,6 +226,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskCampaignSendRecipient, w.handleCampaignSendRecipient)
 	mux.HandleFunc(TaskCertificateExpiryScan, w.handleCertificateExpiryScan)
 	mux.HandleFunc(TaskStockForecastDaily, w.handleStockForecastDaily)
+	mux.HandleFunc(TaskEfficiencyNetworkRefresh, w.handleEfficiencyNetworkRefresh)
 	mux.HandleFunc(TaskFleetReportsSchedule, w.handleFleetReportsSchedule)
 	mux.HandleFunc(TaskFleetReportGenerate, w.handleFleetReportGenerate)
 	mux.HandleFunc(TaskShowcaseGoogleRating, w.handleShowcaseGoogleRating)

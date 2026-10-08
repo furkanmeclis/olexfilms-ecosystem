@@ -53,6 +53,36 @@ const DEALER: PublicDealer = {
   whatsapp: "+905321234567",
 };
 
+const SHOWCASE: NonNullable<PublicDealer["showcase"]> = {
+  locale: "en",
+  headline: "Premium PPF studio",
+  about: "Certified paint protection film applications.",
+  working_hours: [
+    { day: "monday", windows: [{ start: "09:00", end: "18:00" }] },
+    { day: "tuesday", windows: [] },
+  ],
+  open_now: true,
+  timezone: "Europe/Istanbul",
+  services: [
+    { kind: "custom", title: "Full body PPF", description: "Gloss film" },
+  ],
+  photos: [
+    {
+      url: "/v1/public/dealers/olex-kadikoy/photos/11111111-1111-4111-8111-111111111111",
+      caption: "Workshop",
+    },
+  ],
+  social_links: { instagram: "https://instagram.com/olex" },
+  seo_keywords: ["ppf"],
+  google_rating: 4.8,
+  google_review_count: 128,
+  google_rating_source: "places",
+  google_place_id: "ChIJ1",
+  lead_form_enabled: false,
+  whatsapp_chat_url: "https://wa.me/905321234567?text=showcase",
+  published_at: "2026-10-08T09:00:00Z",
+};
+
 let container: HTMLDivElement;
 let root: Root;
 
@@ -111,6 +141,31 @@ describe("DealerShowcaseView", () => {
       "/portal/dealers",
     );
     expect(q("main")?.getAttribute("dir")).toBe("ltr");
+    expect(q('[data-slot="showcase-services"]')).toBeNull();
+    expect(q('[data-slot="showcase-gallery"]')).toBeNull();
+  });
+
+  it("renders showcase sections when the published block exists", () => {
+    render({ kind: "ok", dealer: { ...DEALER, showcase: SHOWCASE } });
+    expect(q('[data-slot="showcase-intro"]')?.textContent).toContain(
+      "Premium PPF studio",
+    );
+    expect(q('[data-slot="google-rating"]')?.textContent).toContain("4.8");
+    expect(q('[data-slot="showcase-open-now"]')?.textContent).toContain(
+      "Open now",
+    );
+    expect(q('[data-slot="showcase-services"]')?.textContent).toContain(
+      "Full body PPF",
+    );
+    expect(q('[data-slot="showcase-gallery"] img')?.getAttribute("src")).toBe(
+      "/api/v1/public/dealers/olex-kadikoy/photos/11111111-1111-4111-8111-111111111111",
+    );
+    expect(q('[data-slot="showcase-social"]')?.textContent).toContain(
+      "instagram",
+    );
+    expect(q('[data-slot="dealer-whatsapp"]')?.getAttribute("href")).toBe(
+      SHOWCASE.whatsapp_chat_url,
+    );
   });
 
   it("shows no map for a dealer without coordinates", () => {

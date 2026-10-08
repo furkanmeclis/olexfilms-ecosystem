@@ -5,6 +5,7 @@ import {
   LocateFixed,
   MapPin,
   MessageCircle,
+  Star,
   Store,
 } from "lucide-react";
 import Link from "next/link";
@@ -332,8 +333,33 @@ function DealerResults({
                         {formatDistanceKm(d.distance_km, locale)}
                       </span>
                     </p>
+                    {typeof d.google_rating === "number" ? (
+                      <p
+                        className="text-muted-foreground flex items-center gap-1 text-xs"
+                        data-testid="dealer-rating"
+                      >
+                        <Star
+                          className="size-3 fill-amber-500 text-amber-500"
+                          aria-hidden
+                        />
+                        {t("portal.dealers.google_rating", {
+                          rating: d.google_rating.toFixed(1),
+                        })}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {d.has_showcase ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          href={routes.public.dealer(d.slug)}
+                          data-testid="dealer-showcase"
+                        >
+                          <Store className="size-4" aria-hidden />
+                          {t("portal.dealers.showcase")}
+                        </Link>
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       size="sm"

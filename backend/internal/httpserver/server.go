@@ -71,6 +71,9 @@ import (
 	dochandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/handler"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
+	efficiencymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency"
+	efficiencyhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency/handler"
+	efficiencyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency/usecase"
 	exportmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports"
 	exporthandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/handler"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
@@ -606,6 +609,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	glorian.RegisterEventHandlers(eventBus, deps.Queries, glorianQueue, log)
 	// TEC-296: service events compute the before/after measurement match.
 	measurementsmodule.RegisterEventHandlers(eventBus, deps.DB, deps.Queries, log)
+	// TEC-488: service completion and consumption correction rebuild
+	// efficiency facts even when the module is disabled for reads.
+	efficiencymodule.RegisterEventHandlers(eventBus, deps.Queries, log)
 	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
 	indexsync.Register(eventBus, deps.Queries, searchIndexer, log)
 	// TEC-189: public warranty lookup behind /garanti/{public_code}.
@@ -715,6 +721,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		fleetusecase.NewStatementAdapter(fleetSvc),
 		fleetusecase.NewListExportAdapter(fleetSvc),
 		fleetusecase.NewImporter(fleetSvc),
+		// TEC-488: efficiency list exports.
+		efficiencyusecase.NewSummaryExportAdapter(efficiencyusecase.New(deps.Queries)),
+		efficiencyusecase.NewRollsExportAdapter(efficiencyusecase.New(deps.Queries)),
+		efficiencyusecase.NewExpectationsImportAdapter(efficiencyusecase.New(deps.Queries)),
 	)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
@@ -759,6 +769,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	importSvc := importusecase.New(deps.Queries, deps.Storage, ioReg, importQueue, notifSvc, activityRec, log)
 	fleetmodule.RegisterRoutes(mux, fleethandler.New(fleetSvc, exportSvc, importSvc), tokens, loader, deps.Queries, featureSvc)
+	efficiencySvc := efficiencyusecase.New(deps.Queries)
+	efficiencymodule.RegisterRoutes(mux, efficiencyhandler.New(efficiencySvc, exportSvc, importSvc), tokens, loader, deps.Queries, featureSvc)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
@@ -799,6 +811,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			WithTasksDueScan(tasksusecase.NewCron(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).DueScanTask).
 			// TEC-381: planned staff payments booked on their paid_on.
 			WithStaffPaymentsPostDue(accountingSvc.PostDueStaffPaymentsTask)
+		s.worker.WithEfficiencyNetworkRefresh(efficiencymodule.NewNetworkRefresher(deps.Queries, sysSvc).Task)
 		if searchIndexer != nil {
 			s.worker.WithSearch(
 				searchIndexer.ProcessUpsert,

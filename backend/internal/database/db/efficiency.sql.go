@@ -241,7 +241,8 @@ SELECT CASE $1::text
        COUNT(DISTINCT f.service_id)::bigint AS service_count,
        SUM(f.actual_meters)::numeric(14,2) AS actual_meters,
        SUM(f.expected_meters)::numeric(14,2) AS expected_meters,
-       AVG(f.waste_ratio)::numeric(12,6) AS avg_waste_ratio
+       AVG(f.waste_ratio)::numeric(12,6) AS avg_waste_ratio,
+       COUNT(*) OVER()::bigint AS total_count
 FROM efficiency_facts f
 LEFT JOIN organizations o ON o.id = f.dealer_org_id
 LEFT JOIN users u ON u.id = f.staff_user_id
@@ -251,8 +252,23 @@ WHERE f.brand_id = $2
   AND f.service_date >= $4::date
   AND f.service_date < $5::date
 GROUP BY dimension_key, dimension_label
-ORDER BY avg_waste_ratio DESC NULLS LAST, actual_meters DESC, dimension_label ASC
-LIMIT $7 OFFSET $6
+ORDER BY
+  CASE WHEN NOT $6::bool THEN
+    CASE $7::text
+      WHEN 'waste_ratio' THEN AVG(f.waste_ratio)
+      WHEN 'meters' THEN SUM(f.actual_meters)
+      WHEN 'services' THEN COUNT(DISTINCT f.service_id)::numeric
+    END
+  END ASC NULLS LAST,
+  CASE WHEN $6::bool THEN
+    CASE $7::text
+      WHEN 'waste_ratio' THEN AVG(f.waste_ratio)
+      WHEN 'meters' THEN SUM(f.actual_meters)
+      WHEN 'services' THEN COUNT(DISTINCT f.service_id)::numeric
+    END
+  END DESC NULLS LAST,
+  dimension_label ASC
+LIMIT $9 OFFSET $8
 `
 
 type EfficiencySummaryParams struct {
@@ -261,6 +277,8 @@ type EfficiencySummaryParams struct {
 	OrgIds    []int64     `json:"org_ids"`
 	DateFrom  pgtype.Date `json:"date_from"`
 	DateTo    pgtype.Date `json:"date_to"`
+	SortDesc  bool        `json:"sort_desc"`
+	SortKey   string      `json:"sort_key"`
 	RowOffset int32       `json:"row_offset"`
 	RowLimit  int32       `json:"row_limit"`
 }
@@ -272,6 +290,7 @@ type EfficiencySummaryRow struct {
 	ActualMeters   pgtype.Numeric `json:"actual_meters"`
 	ExpectedMeters pgtype.Numeric `json:"expected_meters"`
 	AvgWasteRatio  pgtype.Numeric `json:"avg_waste_ratio"`
+	TotalCount     int64          `json:"total_count"`
 }
 
 func (q *Queries) EfficiencySummary(ctx context.Context, arg EfficiencySummaryParams) ([]EfficiencySummaryRow, error) {
@@ -281,6 +300,8 @@ func (q *Queries) EfficiencySummary(ctx context.Context, arg EfficiencySummaryPa
 		arg.OrgIds,
 		arg.DateFrom,
 		arg.DateTo,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
@@ -298,6 +319,7 @@ func (q *Queries) EfficiencySummary(ctx context.Context, arg EfficiencySummaryPa
 			&i.ActualMeters,
 			&i.ExpectedMeters,
 			&i.AvgWasteRatio,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}
@@ -358,10 +380,91 @@ func (q *Queries) GetBestPartExpectation(ctx context.Context, arg GetBestPartExp
 	return i, err
 }
 
+const getEfficiencyServiceItemUnit = `-- name: GetEfficiencyServiceItemUnit :one
+SELECT unit_id FROM service_items WHERE id = $1
+`
+
+func (q *Queries) GetEfficiencyServiceItemUnit(ctx context.Context, serviceItemID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, getEfficiencyServiceItemUnit, serviceItemID)
+	var unit_id int64
+	err := row.Scan(&unit_id)
+	return unit_id, err
+}
+
+const getPartConsumptionExpectationByUUID = `-- name: GetPartConsumptionExpectationByUUID :one
+SELECT id, uuid, organization_id, brand_id, product_id, category_id, body_type, part_key, expected_meters, source, sample_size, created_at, updated_at FROM part_consumption_expectations
+WHERE uuid = $1 AND brand_id = $2
+`
+
+type GetPartConsumptionExpectationByUUIDParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+func (q *Queries) GetPartConsumptionExpectationByUUID(ctx context.Context, arg GetPartConsumptionExpectationByUUIDParams) (PartConsumptionExpectation, error) {
+	row := q.db.QueryRow(ctx, getPartConsumptionExpectationByUUID, arg.Uuid, arg.BrandID)
+	var i PartConsumptionExpectation
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ProductID,
+		&i.CategoryID,
+		&i.BodyType,
+		&i.PartKey,
+		&i.ExpectedMeters,
+		&i.Source,
+		&i.SampleSize,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listEfficiencyServiceItems = `-- name: ListEfficiencyServiceItems :many
+SELECT si.id
+FROM service_items si
+JOIN services s ON s.id = si.service_id
+WHERE s.status = 'completed'
+  AND si.kind = 'partial'
+  AND jsonb_array_length(si.applied_parts) > 0
+  AND ($1::bigint IS NULL OR si.id > $1::bigint)
+ORDER BY si.id
+LIMIT $2
+`
+
+type ListEfficiencyServiceItemsParams struct {
+	AfterID  pgtype.Int8 `json:"after_id"`
+	RowLimit int32       `json:"row_limit"`
+}
+
+func (q *Queries) ListEfficiencyServiceItems(ctx context.Context, arg ListEfficiencyServiceItemsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listEfficiencyServiceItems, arg.AfterID, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPartConsumptionExpectations = `-- name: ListPartConsumptionExpectations :many
 SELECT e.id, e.uuid, e.organization_id, e.brand_id, e.product_id, e.category_id, e.body_type, e.part_key, e.expected_meters, e.source, e.sample_size, e.created_at, e.updated_at,
        p.name AS product_name,
+       p.uuid AS product_uuid,
        c.name AS category_name,
+       c.uuid AS category_uuid,
        COUNT(*) OVER()::bigint AS total_count
 FROM part_consumption_expectations e
 LEFT JOIN products p ON p.id = e.product_id
@@ -443,7 +546,9 @@ type ListPartConsumptionExpectationsRow struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	ProductName    pgtype.Text        `json:"product_name"`
+	ProductUuid    pgtype.UUID        `json:"product_uuid"`
 	CategoryName   pgtype.Text        `json:"category_name"`
+	CategoryUuid   pgtype.UUID        `json:"category_uuid"`
 	TotalCount     int64              `json:"total_count"`
 }
 
@@ -483,7 +588,9 @@ func (q *Queries) ListPartConsumptionExpectations(ctx context.Context, arg ListP
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ProductName,
+			&i.ProductUuid,
 			&i.CategoryName,
+			&i.CategoryUuid,
 			&i.TotalCount,
 		); err != nil {
 			return nil, err
@@ -507,37 +614,39 @@ JOIN units u ON u.id = r.unit_id
 JOIN products p ON p.id = r.product_id
 WHERE r.brand_id = $1
   AND ($2::bigint[] IS NULL OR r.organization_id = ANY($2::bigint[]))
-  AND ($3::text IS NULL OR u.barcode ILIKE '%' || $3::text || '%' OR p.name ILIKE '%' || $3::text || '%')
-  AND (COALESCE(cardinality($4::bigint[]), 0) = 0 OR r.product_id = ANY($4::bigint[]))
-  AND ($5::numeric IS NULL OR (CASE WHEN r.expected_meters > 0 THEN (r.consumed_meters / r.expected_meters) - 1 ELSE NULL END) >= $5::numeric)
-  AND ($6::numeric IS NULL OR (CASE WHEN r.expected_meters > 0 THEN (r.consumed_meters / r.expected_meters) - 1 ELSE NULL END) <= $6::numeric)
-  AND ($7::timestamptz IS NULL OR r.last_used_at >= $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR r.last_used_at < $8::timestamptz)
+  AND ($3::uuid IS NULL OR u.uuid = $3::uuid)
+  AND ($4::text IS NULL OR u.barcode ILIKE '%' || $4::text || '%' OR p.name ILIKE '%' || $4::text || '%')
+  AND (COALESCE(cardinality($5::bigint[]), 0) = 0 OR r.product_id = ANY($5::bigint[]))
+  AND ($6::numeric IS NULL OR (CASE WHEN r.expected_meters > 0 THEN (r.consumed_meters / r.expected_meters) - 1 ELSE NULL END) >= $6::numeric)
+  AND ($7::numeric IS NULL OR (CASE WHEN r.expected_meters > 0 THEN (r.consumed_meters / r.expected_meters) - 1 ELSE NULL END) <= $7::numeric)
+  AND ($8::timestamptz IS NULL OR r.last_used_at >= $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR r.last_used_at < $9::timestamptz)
 ORDER BY
-  CASE WHEN NOT $9::bool THEN
-    CASE $10::text
+  CASE WHEN NOT $10::bool THEN
+    CASE $11::text
       WHEN 'waste_ratio' THEN CASE WHEN r.expected_meters > 0 THEN (r.consumed_meters / r.expected_meters) - 1 ELSE NULL END
       WHEN 'consumed_meters' THEN r.consumed_meters
       WHEN 'remaining_meters' THEN r.remaining_meters
     END
   END ASC NULLS LAST,
-  CASE WHEN $9::bool THEN
-    CASE $10::text
+  CASE WHEN $10::bool THEN
+    CASE $11::text
       WHEN 'waste_ratio' THEN CASE WHEN r.expected_meters > 0 THEN (r.consumed_meters / r.expected_meters) - 1 ELSE NULL END
       WHEN 'consumed_meters' THEN r.consumed_meters
       WHEN 'remaining_meters' THEN r.remaining_meters
     END
   END DESC NULLS LAST,
-  CASE WHEN NOT $9::bool AND $10::text = 'last_used_at' THEN r.last_used_at END ASC NULLS LAST,
-  CASE WHEN $9::bool AND $10::text = 'last_used_at' THEN r.last_used_at END DESC NULLS LAST,
-  CASE WHEN $9::bool THEN r.id END DESC,
+  CASE WHEN NOT $10::bool AND $11::text = 'last_used_at' THEN r.last_used_at END ASC NULLS LAST,
+  CASE WHEN $10::bool AND $11::text = 'last_used_at' THEN r.last_used_at END DESC NULLS LAST,
+  CASE WHEN $10::bool THEN r.id END DESC,
   r.id ASC
-LIMIT $12 OFFSET $11
+LIMIT $13 OFFSET $12
 `
 
 type ListRollEfficiencyParams struct {
 	BrandID       int64              `json:"brand_id"`
 	OrgIds        []int64            `json:"org_ids"`
+	UnitUuid      pgtype.UUID        `json:"unit_uuid"`
 	Q             pgtype.Text        `json:"q"`
 	ProductIds    []int64            `json:"product_ids"`
 	WasteRatioMin pgtype.Numeric     `json:"waste_ratio_min"`
@@ -576,6 +685,7 @@ func (q *Queries) ListRollEfficiency(ctx context.Context, arg ListRollEfficiency
 	rows, err := q.db.Query(ctx, listRollEfficiency,
 		arg.BrandID,
 		arg.OrgIds,
+		arg.UnitUuid,
 		arg.Q,
 		arg.ProductIds,
 		arg.WasteRatioMin,
@@ -629,6 +739,9 @@ const rebuildRollEfficiency = `-- name: RebuildRollEfficiency :execrows
 WITH affected AS (
     SELECT DISTINCT unit_id FROM efficiency_facts
     WHERE $1::bigint IS NULL OR unit_id = $1::bigint
+    UNION
+    SELECT $1::bigint
+    WHERE $1::bigint IS NOT NULL
 ),
 deleted AS (
     DELETE FROM roll_efficiency r
@@ -693,8 +806,8 @@ src AS (
     JOIN car_models cm ON cm.id = s.car_model_id
     WHERE si.id = $1
       AND si.kind = 'partial'
+      AND s.status = 'completed'
       AND jsonb_array_length(si.applied_parts) > 0
-      AND NOT EXISTS (SELECT 1 FROM service_item_corrections c WHERE c.service_item_id = si.id)
 ),
 parts AS (
     SELECT src.service_item_id, src.service_id, src.organization_id, src.brand_id, src.unit_id, src.product_id, src.meters, src.applied_parts, src.dealer_org_id, src.staff_user_id, src.body_type, src.service_date, src.category_id,
@@ -737,6 +850,119 @@ FROM weighted
 
 func (q *Queries) RefreshEfficiencyFactsForServiceItem(ctx context.Context, targetServiceItemID int64) (int64, error) {
 	result, err := q.db.Exec(ctx, refreshEfficiencyFactsForServiceItem, targetServiceItemID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const refreshNetworkPartExpectations = `-- name: RefreshNetworkPartExpectations :execrows
+WITH center_org AS (
+    SELECT id, brand_id
+    FROM organizations
+    WHERE organizations.brand_id = $1 AND type = 'center' AND deleted_at IS NULL
+    ORDER BY id
+    LIMIT 1
+),
+deleted AS (
+    DELETE FROM part_consumption_expectations e
+    USING center_org c
+    WHERE e.brand_id = $1
+      AND e.organization_id = c.id
+      AND e.source = 'network'
+    RETURNING 1
+),
+samples AS (
+    SELECT f.brand_id,
+           f.product_id,
+           p.category_id,
+           f.body_type,
+           f.part_key,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY f.actual_meters)::numeric(10,2) AS median_meters,
+           COUNT(*)::integer AS sample_size
+    FROM efficiency_facts f
+    JOIN products p ON p.id = f.product_id
+    WHERE f.brand_id = $1
+      AND f.service_date >= $2::date
+      AND f.service_date < $3::date
+    GROUP BY f.brand_id, f.product_id, p.category_id, f.body_type, f.part_key
+    HAVING COUNT(*) >= $4::integer
+),
+category_samples AS (
+    SELECT f.brand_id,
+           p.category_id,
+           f.body_type,
+           f.part_key,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY f.actual_meters)::numeric(10,2) AS median_meters,
+           COUNT(*)::integer AS sample_size
+    FROM efficiency_facts f
+    JOIN products p ON p.id = f.product_id
+    WHERE f.brand_id = $1
+      AND f.service_date >= $2::date
+      AND f.service_date < $3::date
+      AND p.category_id IS NOT NULL
+    GROUP BY f.brand_id, p.category_id, f.body_type, f.part_key
+    HAVING COUNT(*) >= $4::integer
+),
+eligible_product AS (
+    SELECT s.brand_id, s.product_id, s.category_id, s.body_type, s.part_key, s.median_meters, s.sample_size
+    FROM samples s
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM part_consumption_expectations manual
+        WHERE manual.brand_id = s.brand_id
+          AND manual.source = 'manual'
+          AND manual.part_key = s.part_key
+          AND manual.product_id = s.product_id
+          AND manual.body_type IS NOT DISTINCT FROM s.body_type
+    )
+),
+eligible_category AS (
+    SELECT s.brand_id, s.category_id, s.body_type, s.part_key, s.median_meters, s.sample_size
+    FROM category_samples s
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM part_consumption_expectations manual
+        WHERE manual.brand_id = s.brand_id
+          AND manual.source = 'manual'
+          AND manual.part_key = s.part_key
+          AND manual.category_id = s.category_id
+          AND manual.body_type IS NOT DISTINCT FROM s.body_type
+    )
+)
+INSERT INTO part_consumption_expectations (
+    organization_id, brand_id, product_id, category_id, body_type,
+    part_key, expected_meters, source, sample_size
+)
+SELECT c.id, e.brand_id, e.product_id, NULL::bigint, e.body_type,
+       e.part_key, e.median_meters, 'network', e.sample_size
+FROM eligible_product e
+CROSS JOIN center_org c
+CROSS JOIN (SELECT COUNT(*) FROM deleted) deleted_once
+WHERE e.median_meters > 0
+UNION ALL
+SELECT c.id, e.brand_id, NULL::bigint, e.category_id, e.body_type,
+       e.part_key, e.median_meters, 'network', e.sample_size
+FROM eligible_category e
+CROSS JOIN center_org c
+CROSS JOIN (SELECT COUNT(*) FROM deleted) deleted_once
+WHERE e.median_meters > 0
+`
+
+type RefreshNetworkPartExpectationsParams struct {
+	BrandID    int64       `json:"brand_id"`
+	FromDate   pgtype.Date `json:"from_date"`
+	ToDate     pgtype.Date `json:"to_date"`
+	MinSamples int32       `json:"min_samples"`
+}
+
+func (q *Queries) RefreshNetworkPartExpectations(ctx context.Context, arg RefreshNetworkPartExpectationsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, refreshNetworkPartExpectations,
+		arg.BrandID,
+		arg.FromDate,
+		arg.ToDate,
+		arg.MinSamples,
+	)
 	if err != nil {
 		return 0, err
 	}
