@@ -455,3 +455,80 @@ func ntext(n pgtype.Numeric) string {
 	}
 	return r.FloatString(decimals)
 }
+
+// TEC-489: summary rows filter on their average waste ratio, and the roll
+// detail lists every service that consumed the roll.
+func TestSummaryWasteRangeAndRollServices(t *testing.T) {
+	f := newFixture(t)
+	film, other := f.film.ID, f.otherFilm.ID
+	f.expectation(t, &film, nil, "sedan", "hood", "2.00")
+	f.expectation(t, &other, nil, "sedan", "hood", "2.00")
+	roll := f.unit(t, f.film, "30.00")
+	otherRoll := f.unit(t, f.otherFilm, "30.00")
+	first := f.serviceItem(t, f.film, roll, `["hood"]`, "3.00")
+	second := f.serviceItem(t, f.film, roll, `["hood"]`, "3.00")
+	flat := f.serviceItem(t, f.otherFilm, otherRoll, `["hood"]`, "2.00")
+	for _, item := range []db.ServiceItem{first, second, flat} {
+		if err := f.store.RefreshServiceItem(f.ctx, item.ID); err != nil {
+			t.Fatalf("refresh facts: %v", err)
+		}
+	}
+
+	today := time.Now().UTC()
+	summary := func(min, max string) []string {
+		t.Helper()
+		arg := db.EfficiencySummaryParams{
+			Dimension: "product", BrandID: f.brandID, OrgIds: []int64{f.dealer.ID},
+			DateFrom: date(today.Year(), today.Month(), today.Day()-2),
+			DateTo:   date(today.Year(), today.Month(), today.Day()+2),
+			SortKey:  "waste_ratio", SortDesc: true, RowLimit: 10,
+		}
+		if min != "" {
+			arg.WasteRatioMin = numeric(t, min)
+		}
+		if max != "" {
+			arg.WasteRatioMax = numeric(t, max)
+		}
+		rows, err := f.q.EfficiencySummary(f.ctx, arg)
+		if err != nil {
+			t.Fatalf("summary: %v", err)
+		}
+		out := make([]string, 0, len(rows))
+		for _, r := range rows {
+			out = append(out, fmt.Sprint(r.DimensionKey))
+		}
+		return out
+	}
+	both := fmt.Sprint([]string{fmt.Sprint(film), fmt.Sprint(other)})
+	if got := fmt.Sprint(summary("", "")); got != both {
+		t.Fatalf("unfiltered summary = %s, want %s", got, both)
+	}
+	if got := fmt.Sprint(summary("0.2", "")); got != fmt.Sprint([]string{fmt.Sprint(film)}) {
+		t.Fatalf("waste_ratio_min summary = %s", got)
+	}
+	if got := fmt.Sprint(summary("", "0.1")); got != fmt.Sprint([]string{fmt.Sprint(other)}) {
+		t.Fatalf("waste_ratio_max summary = %s", got)
+	}
+
+	services, err := f.q.ListRollEfficiencyServices(f.ctx, db.ListRollEfficiencyServicesParams{UnitID: roll.ID, BrandID: f.brandID})
+	if err != nil {
+		t.Fatalf("roll services: %v", err)
+	}
+	if len(services) != 2 {
+		t.Fatalf("roll services = %d, want 2", len(services))
+	}
+	for _, s := range services {
+		if ntext(s.ActualMeters) != "3.00" || ntext(s.AvgWasteRatio) != "0.500000" || s.DealerName != f.dealer.Name {
+			t.Fatalf("roll service = %+v", s)
+		}
+	}
+	scoped, err := f.q.ListRollEfficiencyServices(f.ctx, db.ListRollEfficiencyServicesParams{
+		UnitID: roll.ID, BrandID: f.brandID, OrgIds: []int64{f.centerID},
+	})
+	if err != nil {
+		t.Fatalf("scoped roll services: %v", err)
+	}
+	if len(scoped) != 0 {
+		t.Fatalf("out-of-scope roll services = %d, want 0", len(scoped))
+	}
+}

@@ -37,6 +37,7 @@ export function DataTable<TData>({
   onCellEdit,
   onExportReady,
   onRowClick,
+  getRowClassName,
   className,
 }: DataTableProps<TData>) {
   const { t } = useLocale();
@@ -223,6 +224,7 @@ export function DataTable<TData>({
           onEditingCellChange={setEditingCell}
           onCellEdit={onCellEdit}
           onRowClick={reorderMode ? undefined : onRowClick}
+          getRowClassName={getRowClassName}
         />
       )}
 

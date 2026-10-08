@@ -268,6 +268,8 @@ export type DataTableProps<TData> = {
    * (checkboxes, action buttons, links, inline editors).
    */
   onRowClick?: (row: TData) => void;
+  /** Extra class for a table row (e.g. highlight rows above a threshold). */
+  getRowClassName?: (row: TData) => string | undefined;
   className?: string;
 };
 

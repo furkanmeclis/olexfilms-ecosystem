@@ -140,7 +140,10 @@ export const IMPORT_PATHS: Partial<
  * Import resources: the registered ones plus the record-scoped imports
  * whose upload path the caller passes to ImportWizard (`paths`).
  */
-export type ImportResource = IoResource | "tenant.fleet.vehicles";
+export type ImportResource =
+  | IoResource
+  | "tenant.fleet.vehicles"
+  | "platform.part_consumption_expectations";
 
 export const IMPORT_SCHEMA: Partial<
   Record<
@@ -179,6 +182,23 @@ export const IMPORT_SCHEMA: Partial<
     },
     { key: "active", labelKey: "catalog.fields.active" },
     { key: "description_md", labelKey: "catalog.fields.description_md" },
+  ],
+  // TEC-489: a uuid updates that row; product (SKU) or category, not both.
+  "platform.part_consumption_expectations": [
+    { key: "uuid", labelKey: "efficiency.expectations.uuid" },
+    { key: "product_sku", labelKey: "efficiency.expectations.product_sku" },
+    { key: "category", labelKey: "efficiency.expectations.category" },
+    { key: "body_type", labelKey: "efficiency.expectations.body_type" },
+    {
+      key: "part_key",
+      labelKey: "efficiency.expectations.part",
+      required: true,
+    },
+    {
+      key: "expected_meters",
+      labelKey: "efficiency.expectations.expected_meters",
+      required: true,
+    },
   ],
   // TEC-473/477: the fleet comes from the job defaults (fleet_uuid).
   "tenant.fleet.vehicles": [

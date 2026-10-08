@@ -27,6 +27,7 @@ func RegisterRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager,
 	mux.Handle("GET /v1/efficiency/summary", tenantRead(h.Summary))
 	mux.Handle("POST /v1/efficiency/summary/export", tenantRead(h.ExportSummary))
 	mux.Handle("GET /v1/efficiency/trend", tenantRead(h.Trend))
+	mux.Handle("GET /v1/efficiency/settings", tenantRead(h.Settings))
 	mux.Handle("GET /v1/efficiency/compare", tenantRead(h.Compare))
 	mux.Handle("GET /v1/efficiency/rolls", tenantRead(h.Rolls))
 	mux.Handle("POST /v1/efficiency/rolls/export", tenantRead(h.ExportRolls))
