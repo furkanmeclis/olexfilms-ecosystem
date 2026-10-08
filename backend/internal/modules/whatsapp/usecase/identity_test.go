@@ -69,7 +69,7 @@ func newIDFixture(t *testing.T, cache usecase.IdentityCache) *idFixture {
 }
 
 func (f *idFixture) uniq() string {
-	return fmt.Sprintf("%d%03d", time.Now().UnixNano()%1_000_000, idSeq.Add(1)%1000)
+	return fmt.Sprintf("%06d%03d", time.Now().UnixNano()%1_000_000, idSeq.Add(1)%1000)
 }
 
 func (f *idFixture) phone() string { return "+90555" + f.uniq()[:7] }
