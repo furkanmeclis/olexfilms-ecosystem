@@ -761,6 +761,27 @@ var Permissions = []PermissionDef{
 		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
 		Description: "Define weak dealer rules that open tasks or send notifications.",
 	},
+
+	// TEC-501: e-Invoice archive and settings (F5-08a). Appended last;
+	// migration 000124 seeds them. Archive/manage is center accounting;
+	// settings are super_admin-only because they define the seller profile.
+	{
+		Slug: PermEinvoiceRead, Name: "Read e-invoices", Module: "einvoice",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Read UBL-TR e-invoice settings, counters and archived invoices.",
+	},
+	{
+		Slug: PermEinvoiceManage, Name: "Manage e-invoices", Module: "einvoice",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Sensitive:   true,
+		Description: "Archive, void and repair UBL-TR e-invoices. Requires step-up.",
+	},
+	{
+		Slug: PermEinvoiceSettings, Name: "Manage e-invoice settings", Module: "einvoice",
+		Scopes:         scopesAll,
+		SuperAdminOnly: true,
+		Description:    "Edit the center seller profile, UBL series and XSLT settings.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -999,6 +1020,9 @@ var Roles = []RoleDef{
 			PermAIUsageRead:      ScopeBrand,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
+			// TEC-501 (000124).
+			PermEinvoiceRead:   ScopeBrand,
+			PermEinvoiceManage: ScopeBrand,
 		}),
 	},
 	{

@@ -205,6 +205,7 @@ type Querier interface {
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
 	CountEODReports(ctx context.Context, arg CountEODReportsParams) (int64, error)
+	CountEinvoices(ctx context.Context, arg CountEinvoicesParams) (int64, error)
 	CountExportJobsFiltered(ctx context.Context, arg CountExportJobsFilteredParams) (int64, error)
 	// Active warranties on the fleet's vehicles; service_org_ids limits them
 	// to the warranties of those organizations (NULL: all).
@@ -383,6 +384,8 @@ type Querier interface {
 	CreateCustomerProfile(ctx context.Context, arg CreateCustomerProfileParams) (CustomerProfile, error)
 	CreateDistrict(ctx context.Context, arg CreateDistrictParams) (District, error)
 	CreateDocumentTemplate(ctx context.Context, arg CreateDocumentTemplateParams) (DocumentTemplate, error)
+	// Archive -------------------------------------------------------------------
+	CreateEinvoice(ctx context.Context, arg CreateEinvoiceParams) (Einvoice, error)
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
 	// TEC-171: accounting primitives for the finance/cari use cases (TEC-99b)
 	// and the source API (TEC-99c). finance_entries is append-only: corrections
@@ -829,6 +832,7 @@ type Querier interface {
 	// TEC-468: helper lookups for public showcase lead / WhatsApp referral.
 	GetActiveDealerBySlug(ctx context.Context, arg GetActiveDealerBySlugParams) (GetActiveDealerBySlugRow, error)
 	GetActiveDocumentTemplate(ctx context.Context, arg GetActiveDocumentTemplateParams) (DocumentTemplate, error)
+	GetActiveEinvoiceBySource(ctx context.Context, arg GetActiveEinvoiceBySourceParams) (Einvoice, error)
 	// Full-unit duplicate guard before creation (decision 3); the partial
 	// unique index uq_warranties_active_full_unit is the final barrier.
 	GetActiveFullWarrantyByVehicleUnit(ctx context.Context, arg GetActiveFullWarrantyByVehicleUnitParams) (Warranty, error)
@@ -938,6 +942,9 @@ type Querier interface {
 	GetDocumentTemplateByUUID(ctx context.Context, argUuid uuid.UUID) (DocumentTemplate, error)
 	GetDraftDocumentTemplate(ctx context.Context, arg GetDraftDocumentTemplateParams) (DocumentTemplate, error)
 	GetEODReportByUUID(ctx context.Context, arg GetEODReportByUUIDParams) (EodReport, error)
+	GetEinvoiceByUUID(ctx context.Context, arg GetEinvoiceByUUIDParams) (Einvoice, error)
+	GetEinvoiceCounter(ctx context.Context, arg GetEinvoiceCounterParams) (EinvoiceCounter, error)
+	GetEinvoiceSettingsByOrg(ctx context.Context, arg GetEinvoiceSettingsByOrgParams) (EinvoiceSetting, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
 	GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
 	GetFinanceAccount(ctx context.Context, arg GetFinanceAccountParams) (FinanceAccount, error)
@@ -1326,6 +1333,8 @@ type Querier interface {
 	// uuid and time come from the import (migration_map, the legacy timestamp).
 	// Idempotent like InsertStockMovement (no row on a repeated key).
 	ImportStockMovement(ctx context.Context, arg ImportStockMovementParams) (StockMovement, error)
+	// Counters ------------------------------------------------------------------
+	IncrementEinvoiceCounter(ctx context.Context, arg IncrementEinvoiceCounterParams) (IncrementEinvoiceCounterRow, error)
 	IncrementOTPAttempts(ctx context.Context, id int64) (OtpCode, error)
 	// A wrong code: one more attempt (the use case cancels at the limit).
 	IncrementVehicleTransferAttempts(ctx context.Context, id int64) (VehicleTransfer, error)
@@ -1782,6 +1791,13 @@ type Querier interface {
 	// TEC-375: sort keys from warehouse usecase EODSort (report_date,
 	// generated_at); within one key the system report comes first.
 	ListEODReports(ctx context.Context, arg ListEODReportsParams) ([]EodReport, error)
+	// Billable sources -----------------------------------------------------------
+	ListEinvoiceBillableOrders(ctx context.Context, arg ListEinvoiceBillableOrdersParams) ([]ListEinvoiceBillableOrdersRow, error)
+	ListEinvoiceBillableSubscriptionPeriods(ctx context.Context, arg ListEinvoiceBillableSubscriptionPeriodsParams) ([]ListEinvoiceBillableSubscriptionPeriodsRow, error)
+	// List contract: sort=issue_date|number|payable|status|created_at, default
+	// -issue_date; id is the stable tiebreak. q matches number, buyer legal/name
+	// fields and ETTN. status/profile/buyer_org_ids are multi-value filters.
+	ListEinvoices(ctx context.Context, arg ListEinvoicesParams) ([]ListEinvoicesRow, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
 	// TEC-365: platform (actor_id = own jobs, or NULL for admins) and tenant
@@ -3494,6 +3510,10 @@ type Querier interface {
 	UpsertDocumentRender(ctx context.Context, arg UpsertDocumentRenderParams) (DocumentRender, error)
 	// Manual run: (re)writes the report of the scope and day.
 	UpsertEODReport(ctx context.Context, arg UpsertEODReportParams) (EodReport, error)
+	// TEC-501 (F5-08a): e-Invoice (UBL-TR) settings, counters, archive and
+	// billable source records. Integrator submission is out of scope for F5.
+	// Settings ------------------------------------------------------------------
+	UpsertEinvoiceSettings(ctx context.Context, arg UpsertEinvoiceSettingsParams) (EinvoiceSetting, error)
 	UpsertExchangeRate(ctx context.Context, arg UpsertExchangeRateParams) error
 	UpsertFixedBarcodeHoldingForRepair(ctx context.Context, arg UpsertFixedBarcodeHoldingForRepairParams) error
 	// One row per (fleet, period); a rerun of a failed period goes back to
@@ -3551,6 +3571,7 @@ type Querier interface {
 	VehicleHasServices(ctx context.Context, vehicleID int64) (bool, error)
 	VerifyCertificate(ctx context.Context, arg VerifyCertificateParams) (Certificate, error)
 	VoidContractInstance(ctx context.Context, arg VoidContractInstanceParams) (ContractInstance, error)
+	VoidEinvoice(ctx context.Context, arg VoidEinvoiceParams) (Einvoice, error)
 	// VoidStaffPayment marks a payment void after its ledger row was reversed;
 	// a voided salary frees its period.
 	VoidStaffPayment(ctx context.Context, arg VoidStaffPaymentParams) (StaffPayment, error)
