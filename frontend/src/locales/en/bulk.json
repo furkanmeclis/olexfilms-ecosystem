@@ -92,6 +92,8 @@
   "params.lost_reason": "Loss reason",
   "actions.stock_units.print_labels": "Print labels",
   "actions.warehouse_count_lines.set_resolution": "Set resolution: {{resolution}}",
+  "actions.fleet_vehicles.create_plan": "Create service plan",
+  "actions.fleet_plan_appointments.start_intake": "Take selected into intake",
   "actions.conversations.assign": "Assign",
   "actions.conversations.close": "Close",
   "actions.conversations.set_ai_mode": "Change AI mode",

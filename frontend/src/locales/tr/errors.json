@@ -140,6 +140,8 @@
   "codes.FLEET_VEHICLE_OTHER_OWNER": "Araç başka bir müşteriye veya filoya ait; filoya eklenemez.",
   "codes.FLEET_NO_DEALER_LINK": "İşletmenizin bu filoyla aktif bağlantısı yok.",
   "codes.FLEET_LINK_NOT_PENDING": "Bağlantı isteği zaten yanıtlanmış.",
+  "codes.FLEET_SERVICE_PLAN_STALE": "Önizlemeden sonra randevu kapasitesi değişti; planı yeniden önizleyin.",
+  "codes.FLEET_SERVICE_PLAN_CANCELLED": "Hizmet planı zaten iptal edilmiş.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Galeri dolu; yeni fotoğraf eklemek için önce bir fotoğrafı silin.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Reddetmek için bir not yazın.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Dosya türü desteklenmiyor; JPEG, PNG veya WebP yükleyin."

@@ -92,6 +92,8 @@
   "params.lost_reason": "Причина проигрыша",
   "actions.stock_units.print_labels": "Печать этикеток",
   "actions.warehouse_count_lines.set_resolution": "Назначить решение: {{resolution}}",
+  "actions.fleet_vehicles.create_plan": "Создать сервисный план",
+  "actions.fleet_plan_appointments.start_intake": "Принять выбранные",
   "actions.conversations.assign": "Назначить",
   "actions.conversations.close": "Закрыть",
   "actions.conversations.set_ai_mode": "Изменить режим ИИ",

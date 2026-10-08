@@ -48,6 +48,7 @@ import {
   Barcode,
   ClipboardCheck,
   BadgeCheck,
+  Truck,
   Sunset,
   ChartColumn,
   Gauge,
@@ -633,6 +634,26 @@ export function tenantNav(slug: string) {
             icon: Car,
             permission: permissions.vehicles.read,
             feature: "customers",
+          },
+        ],
+      },
+      {
+        // TEC-477: fleets need fleets.read and the fleet add-on (same gates
+        // as /v1/fleets).
+        id: "fleets",
+        labelKey: "fleets.nav",
+        icon: Truck,
+        defaultOpen: true,
+        permission: permissions.fleets.read,
+        feature: "fleet",
+        items: [
+          {
+            id: "fleets-list",
+            titleKey: "fleets.nav_list",
+            href: routes.tenant.fleets.list(slug),
+            icon: Truck,
+            permission: permissions.fleets.read,
+            feature: "fleet",
           },
         ],
       },

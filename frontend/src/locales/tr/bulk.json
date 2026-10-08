@@ -92,6 +92,8 @@
   "params.lost_reason": "Kayıp nedeni",
   "actions.stock_units.print_labels": "Etiketleri yazdır",
   "actions.warehouse_count_lines.set_resolution": "Çözüm uygula: {{resolution}}",
+  "actions.fleet_vehicles.create_plan": "Hizmet planı oluştur",
+  "actions.fleet_plan_appointments.start_intake": "Seçilenleri kabule al",
   "actions.conversations.assign": "Ata",
   "actions.conversations.close": "Kapat",
   "actions.conversations.set_ai_mode": "AI modunu değiştir",

@@ -136,8 +136,17 @@ export const IMPORT_PATHS: Partial<
   },
 };
 
+/**
+ * Import resources: the registered ones plus the record-scoped imports
+ * whose upload path the caller passes to ImportWizard (`paths`).
+ */
+export type ImportResource = IoResource | "tenant.fleet.vehicles";
+
 export const IMPORT_SCHEMA: Partial<
-  Record<IoResource, { key: string; labelKey: string; required?: boolean }[]>
+  Record<
+    ImportResource,
+    { key: string; labelKey: string; required?: boolean }[]
+  >
 > = {
   "platform.users": [
     { key: "email", labelKey: "users.fields.email", required: true },
@@ -170,5 +179,14 @@ export const IMPORT_SCHEMA: Partial<
     },
     { key: "active", labelKey: "catalog.fields.active" },
     { key: "description_md", labelKey: "catalog.fields.description_md" },
+  ],
+  // TEC-473/477: the fleet comes from the job defaults (fleet_uuid).
+  "tenant.fleet.vehicles": [
+    { key: "plate", labelKey: "fleets.fields.plate", required: true },
+    { key: "vin", labelKey: "fleets.fields.vin" },
+    { key: "car_brand", labelKey: "fleets.fields.car_brand" },
+    { key: "car_model", labelKey: "fleets.fields.car_model" },
+    { key: "model_year", labelKey: "fleets.fields.model_year" },
+    { key: "plate_country", labelKey: "fleets.fields.plate_country" },
   ],
 };

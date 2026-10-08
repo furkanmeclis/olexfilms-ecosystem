@@ -58,6 +58,18 @@ export const routes = {
       cancelRequests: (slug: string) =>
         `/t/${slug}/service-subscriptions/cancel-requests`,
     },
+    /** TEC-477: fleets (list, card, bulk service plans). */
+    fleets: {
+      list: (slug: string) => `/t/${slug}/fleets`,
+      detail: (slug: string, uuid: string, tab?: string) =>
+        `/t/${slug}/fleets/${uuid}${tab ? `?tab=${tab}` : ""}`,
+      newPlan: (slug: string, uuid: string, vehicles?: string[]) =>
+        `/t/${slug}/fleets/${uuid}/plans/new${
+          vehicles?.length ? `?vehicles=${vehicles.join(",")}` : ""
+        }`,
+      plan: (slug: string, uuid: string, plan: string) =>
+        `/t/${slug}/fleets/${uuid}/plans/${plan}`,
+    },
     /** TEC-482: staff certificates and center / distributor approvals. */
     certificates: {
       list: (slug: string) => `/t/${slug}/certificates`,
