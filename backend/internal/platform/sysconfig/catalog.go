@@ -54,6 +54,8 @@ const (
 	GroupCertificates Group = "certificates"
 	// GroupShowcase: dealer showcase publication (TEC-466).
 	GroupShowcase Group = "showcase"
+	// GroupEfficiency: efficiency and waste analytics (TEC-487).
+	GroupEfficiency Group = "efficiency"
 )
 
 // SchemaVersion is stored with every row; bump it when a key's shape
@@ -166,10 +168,26 @@ const (
 	KeyShowcaseApprovalRequired = "showcase.approval_required"
 	// KeyShowcaseMaxPhotos caps the gallery photos of one showcase (TEC-466).
 	KeyShowcaseMaxPhotos = "showcase.max_photos"
+	// KeyEfficiencyNetworkWindowDays is the service-history window used when
+	// deriving network expectations.
+	KeyEfficiencyNetworkWindowDays = "efficiency.network_window_days"
+	// KeyEfficiencyNetworkMinSamples is the minimum sample size before a
+	// network expectation is considered reliable.
+	KeyEfficiencyNetworkMinSamples = "efficiency.network_min_samples"
+	// KeyEfficiencyWarningWasteRatio is the waste ratio threshold for
+	// warnings; 0.15 means 15% over expected.
+	KeyEfficiencyWarningWasteRatio = "efficiency.warning_waste_ratio"
 )
 
 // DefaultShowcaseMaxPhotos is the catalog default of KeyShowcaseMaxPhotos.
 const DefaultShowcaseMaxPhotos = 12
+
+// Catalog defaults for efficiency analysis (TEC-487).
+const (
+	DefaultEfficiencyNetworkWindowDays = 180
+	DefaultEfficiencyNetworkMinSamples = 20
+	DefaultEfficiencyWarningWasteRatio = "0.15"
+)
 
 // Catalog defaults of the campaign keys (F4 QUESTIONS S14).
 const (
@@ -219,6 +237,15 @@ var laborAmountRe = regexp.MustCompile(`^[0-9]{1,14}(\.[0-9]{1,2})?$`)
 func checkLaborAmount(s string) string {
 	if !laborAmountRe.MatchString(s) {
 		return "must be a non-negative amount with at most 2 decimals, e.g. 150.00"
+	}
+	return ""
+}
+
+var decimalRatioRe = regexp.MustCompile(`^[0-9]{1,3}(\.[0-9]{1,4})?$`)
+
+func checkNonNegativeDecimal(s string) string {
+	if !decimalRatioRe.MatchString(s) {
+		return "must be a non-negative decimal, e.g. 0.15"
 	}
 	return ""
 }
@@ -345,6 +372,12 @@ var catalog = []Definition{
 		Description: "Dealer showcases wait for center review before they are published; off = the owner publishes directly (TEC-466)"},
 	{Key: KeyShowcaseMaxPhotos, Group: GroupShowcase, Kind: KindInt, Default: int64(DefaultShowcaseMaxPhotos), Min: i64(1), Max: i64(50),
 		Description: "Gallery photos one dealer showcase may hold (TEC-466)"},
+	{Key: KeyEfficiencyNetworkWindowDays, Group: GroupEfficiency, Kind: KindInt, Default: int64(DefaultEfficiencyNetworkWindowDays), Min: i64(1), Max: i64(3650),
+		Description: "Days of recent service history used to derive network expected consumption (TEC-487)"},
+	{Key: KeyEfficiencyNetworkMinSamples, Group: GroupEfficiency, Kind: KindInt, Default: int64(DefaultEfficiencyNetworkMinSamples), Min: i64(1), Max: i64(100000),
+		Description: "Minimum network sample size before expected consumption is trusted (TEC-487)"},
+	{Key: KeyEfficiencyWarningWasteRatio, Group: GroupEfficiency, Kind: KindString, Default: DefaultEfficiencyWarningWasteRatio, MaxLen: 16, check: checkNonNegativeDecimal,
+		Description: "Waste ratio warning threshold; 0.15 means 15% over expected (TEC-487)"},
 }
 
 var byKey = func() map[string]Definition {
