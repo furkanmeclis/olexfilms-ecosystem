@@ -33,14 +33,26 @@ type Importer interface {
 	Sample(ctx context.Context, resource string, format ioengine.ImportFormat, locale string) ([]byte, string, error)
 }
 
+// Settings reads the efficiency system settings (sysconfig).
+type Settings interface {
+	EfficiencyWarningWasteRatio(ctx context.Context) string
+}
+
 type Handler struct {
-	svc     *usecase.Service
-	exports Exporter
-	imports Importer
+	svc      *usecase.Service
+	exports  Exporter
+	imports  Importer
+	settings Settings
 }
 
 func New(svc *usecase.Service, exports Exporter, imports Importer) *Handler {
 	return &Handler{svc: svc, exports: exports, imports: imports}
+}
+
+// WithSettings wires the sysconfig reader for GET /v1/efficiency/settings.
+func (h *Handler) WithSettings(s Settings) *Handler {
+	h.settings = s
+	return h
 }
 
 func caller(r *http.Request) usecase.Caller {
@@ -131,12 +143,25 @@ func (h *Handler) Roll(w http.ResponseWriter, r *http.Request) {
 		response.NotFound(w, r, "Efficiency roll not found")
 		return
 	}
-	rows, _, err := h.svc.Rolls(r.Context(), caller(r), usecase.RollFilter{Limit: 1}, &id)
+	row, err := h.svc.Roll(r.Context(), caller(r), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, rows[0])
+	response.JSON(w, r, http.StatusOK, row)
+}
+
+// Settings (GET /v1/efficiency/settings): the read-only analysis settings
+// the screens need, e.g. the waste ratio above which rows are highlighted
+// (TEC-489).
+func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
+	ratio := usecase.DefaultWarningWasteRatio
+	if h.settings != nil {
+		if v := strings.TrimSpace(h.settings.EfficiencyWarningWasteRatio(r.Context())); v != "" {
+			ratio = v
+		}
+	}
+	response.JSON(w, r, http.StatusOK, map[string]string{"warning_waste_ratio": ratio})
 }
 
 func (h *Handler) Expectations(w http.ResponseWriter, r *http.Request) {
@@ -310,7 +335,15 @@ func analyticsFilter(w http.ResponseWriter, r *http.Request) (usecase.AnalyticsF
 	if !ok {
 		return usecase.AnalyticsFilter{}, false
 	}
-	return usecase.AnalyticsFilter{From: from, To: to.AddDate(0, 0, 1), Limit: q.Limit, Offset: q.Offset, Sort: q.Sort}, true
+	waste, err := apiquery.NumRange(r.URL.Query(), "waste_ratio")
+	if err != nil {
+		writeError(w, r, err)
+		return usecase.AnalyticsFilter{}, false
+	}
+	return usecase.AnalyticsFilter{
+		From: from, To: to.AddDate(0, 0, 1), Limit: q.Limit, Offset: q.Offset, Sort: q.Sort,
+		WasteRatioMin: waste.Min, WasteRatioMax: waste.Max,
+	}, true
 }
 
 func rollFilter(w http.ResponseWriter, r *http.Request) (usecase.RollFilter, bool) {

@@ -209,6 +209,9 @@ export const Permission = {
   ShowcaseRead: "showcase.read",
   ShowcaseWrite: "showcase.write",
   PlatformShowcaseReview: "platform.showcase.review",
+  /** TEC-489: efficiency and waste screens (efficiency module). */
+  EfficiencyRead: "efficiency.read",
+  EfficiencyExpectationsManage: "efficiency.expectations.manage",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -600,5 +603,9 @@ export const permissions = {
     read: Permission.ShowcaseRead,
     write: Permission.ShowcaseWrite,
     review: Permission.PlatformShowcaseReview,
+  },
+  efficiency: {
+    read: Permission.EfficiencyRead,
+    expectationsManage: Permission.EfficiencyExpectationsManage,
   },
 } as const;

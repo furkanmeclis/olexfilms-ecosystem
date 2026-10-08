@@ -46,6 +46,7 @@ import {
   ScanLine,
   PackagePlus,
   TrendingUp,
+  Recycle,
   Barcode,
   ClipboardCheck,
   BadgeCheck,
@@ -186,6 +187,14 @@ export const platformNav = defineNav({
           href: routes.platform.showcases.root,
           icon: BadgeCheck,
           permission: permissions.showcase.review,
+        },
+        {
+          // TEC-489: expected part consumption of the efficiency add-on.
+          id: "part-consumption-expectations",
+          titleKey: "efficiency.expectations.nav",
+          href: routes.platform.partConsumptionExpectations.root,
+          icon: Recycle,
+          permission: permissions.efficiency.expectationsManage,
         },
         {
           id: "certificate-types",
@@ -885,6 +894,26 @@ export function tenantNav(slug: string) {
             icon: TrendingUp,
             permission: permissions.stockForecast.read,
             feature: "stock_forecast",
+          },
+        ],
+      },
+      {
+        // TEC-489: efficiency and waste analysis add-on (same gates as
+        // /v1/efficiency/*: the efficiency module and efficiency.read).
+        id: "efficiency",
+        labelKey: "efficiency.nav",
+        icon: Recycle,
+        defaultOpen: true,
+        permission: permissions.efficiency.read,
+        feature: "efficiency",
+        items: [
+          {
+            id: "efficiency",
+            titleKey: "efficiency.nav",
+            href: routes.tenant.efficiency.root(slug),
+            icon: Recycle,
+            permission: permissions.efficiency.read,
+            feature: "efficiency",
           },
         ],
       },

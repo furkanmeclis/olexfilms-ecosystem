@@ -149,6 +149,10 @@ export const routes = {
     stockForecast: {
       list: (slug: string) => `/t/${slug}/stock-forecast`,
     },
+    /** TEC-489: efficiency and waste analysis add-on. */
+    efficiency: {
+      root: (slug: string) => `/t/${slug}/efficiency`,
+    },
     /** TEC-163 customers: list, new, detail (with vehicles), edit. */
     customers: {
       list: (slug: string) => `/t/${slug}/customers`,
@@ -375,6 +379,10 @@ export const routes = {
     },
     showcases: {
       root: "/platform/showcases",
+    },
+    /** TEC-489: expected part consumption (efficiency add-on). */
+    partConsumptionExpectations: {
+      root: "/platform/part-consumption-expectations",
     },
     activity: {
       root: "/platform/activity",

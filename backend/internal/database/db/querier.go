@@ -2271,6 +2271,8 @@ type Querier interface {
 	ListRolesForExport(ctx context.Context, arg ListRolesForExportParams) ([]Role, error)
 	ListRolesForUserIDs(ctx context.Context, userIds []int64) ([]ListRolesForUserIDsRow, error)
 	ListRollEfficiency(ctx context.Context, arg ListRollEfficiencyParams) ([]ListRollEfficiencyRow, error)
+	// TEC-489: services that consumed a roll (roll detail), newest first.
+	ListRollEfficiencyServices(ctx context.Context, arg ListRollEfficiencyServicesParams) ([]ListRollEfficiencyServicesRow, error)
 	// ---------------------------------------------------------------------------
 	// Typed locations (aisle, shelf, bin).
 	// The whole tree of a room, parents before children is not guaranteed:
