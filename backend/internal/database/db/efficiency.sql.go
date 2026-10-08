@@ -888,7 +888,23 @@ samples AS (
     GROUP BY f.brand_id, f.product_id, p.category_id, f.body_type, f.part_key
     HAVING COUNT(*) >= $4::integer
 ),
-eligible AS (
+category_samples AS (
+    SELECT f.brand_id,
+           p.category_id,
+           f.body_type,
+           f.part_key,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY f.actual_meters)::numeric(10,2) AS median_meters,
+           COUNT(*)::integer AS sample_size
+    FROM efficiency_facts f
+    JOIN products p ON p.id = f.product_id
+    WHERE f.brand_id = $1
+      AND f.service_date >= $2::date
+      AND f.service_date < $3::date
+      AND p.category_id IS NOT NULL
+    GROUP BY f.brand_id, p.category_id, f.body_type, f.part_key
+    HAVING COUNT(*) >= $4::integer
+),
+eligible_product AS (
     SELECT s.brand_id, s.product_id, s.category_id, s.body_type, s.part_key, s.median_meters, s.sample_size
     FROM samples s
     WHERE NOT EXISTS (
@@ -900,6 +916,19 @@ eligible AS (
           AND manual.product_id = s.product_id
           AND manual.body_type IS NOT DISTINCT FROM s.body_type
     )
+),
+eligible_category AS (
+    SELECT s.brand_id, s.category_id, s.body_type, s.part_key, s.median_meters, s.sample_size
+    FROM category_samples s
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM part_consumption_expectations manual
+        WHERE manual.brand_id = s.brand_id
+          AND manual.source = 'manual'
+          AND manual.part_key = s.part_key
+          AND manual.category_id = s.category_id
+          AND manual.body_type IS NOT DISTINCT FROM s.body_type
+    )
 )
 INSERT INTO part_consumption_expectations (
     organization_id, brand_id, product_id, category_id, body_type,
@@ -907,7 +936,14 @@ INSERT INTO part_consumption_expectations (
 )
 SELECT c.id, e.brand_id, e.product_id, NULL::bigint, e.body_type,
        e.part_key, e.median_meters, 'network', e.sample_size
-FROM eligible e
+FROM eligible_product e
+CROSS JOIN center_org c
+CROSS JOIN (SELECT COUNT(*) FROM deleted) deleted_once
+WHERE e.median_meters > 0
+UNION ALL
+SELECT c.id, e.brand_id, NULL::bigint, e.category_id, e.body_type,
+       e.part_key, e.median_meters, 'network', e.sample_size
+FROM eligible_category e
 CROSS JOIN center_org c
 CROSS JOIN (SELECT COUNT(*) FROM deleted) deleted_once
 WHERE e.median_meters > 0

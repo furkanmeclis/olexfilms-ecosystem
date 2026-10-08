@@ -278,8 +278,8 @@ func TestNetworkMedianNeedsTwentySamplesAndKeepsManual(t *testing.T) {
 	if err := f.store.RefreshServiceItem(f.ctx, item.ID); err != nil {
 		t.Fatalf("refresh 20: %v", err)
 	}
-	if n, err := f.q.RefreshNetworkPartExpectations(f.ctx, params); err != nil || n != 1 {
-		t.Fatalf("20 samples network = %d, %v; want 1", n, err)
+	if n, err := f.q.RefreshNetworkPartExpectations(f.ctx, params); err != nil || n != 2 {
+		t.Fatalf("20 samples network = %d, %v; want 2", n, err)
 	}
 	var got string
 	if err := f.tx.QueryRow(f.ctx, `SELECT expected_meters::text FROM part_consumption_expectations WHERE source='network' AND product_id=$1 AND part_key='hood'`, f.film.ID).Scan(&got); err != nil {
