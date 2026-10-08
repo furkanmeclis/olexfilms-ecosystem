@@ -344,7 +344,7 @@ UPDATE organizations
 SET latitude = $1::numeric,
     longitude = $2::numeric
 WHERE id = $3 AND deleted_at IS NULL
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email
 `
 
 type UpdateOrganizationCoordinatesParams struct {
@@ -397,6 +397,13 @@ func (q *Queries) UpdateOrganizationCoordinates(ctx context.Context, arg UpdateO
 		&i.GoogleBusinessUrl,
 		&i.Latitude,
 		&i.Longitude,
+		&i.InvoiceVkn,
+		&i.InvoiceTckn,
+		&i.InvoiceTaxOffice,
+		&i.InvoiceLegalName,
+		&i.EinvoiceRegistered,
+		&i.EinvoiceAlias,
+		&i.InvoiceEmail,
 	)
 	return i, err
 }

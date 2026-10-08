@@ -324,6 +324,13 @@ const (
 	PermPerformanceStaffTargetsManage = "performance.staff_targets.manage"
 	PermPerformanceBonusManage        = "performance.bonus.manage"
 	PermPerformanceRulesManage        = "performance.rules.manage"
+
+	// TEC-501 (000124): e-Invoice (UBL-TR) archive, numbering and settings.
+	// The center accounting team reads and manages brand invoices; settings
+	// stay super_admin-only.
+	PermEinvoiceRead     = "einvoice.read"
+	PermEinvoiceManage   = "einvoice.manage"
+	PermEinvoiceSettings = "einvoice.settings"
 )
 
 // IsSystemRole reports whether slug is a protected system role.
