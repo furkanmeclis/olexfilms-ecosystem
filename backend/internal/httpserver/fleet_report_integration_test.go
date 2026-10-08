@@ -67,6 +67,25 @@ func TestIntegrationFleetReportRequest(t *testing.T) {
 	it.fleetDo("POST", base, n.tokA, map[string]any{"period_kind": "monthly", "period": now.Format("2006-01")}, http.StatusBadRequest)
 	it.fleetDo("POST", base, n.tokA, map[string]any{"period_kind": "yearly", "period": "2025"}, http.StatusBadRequest)
 	it.fleetDo("POST", base, n.tokB, body, http.StatusNotFound)
+
+	// TEC-477: the panel lists the reports and its plans of the fleet; a
+	// pending report has no file, an unlinked dealer is 404.
+	type page struct {
+		Items []report `json:"items"`
+		Total int64    `json:"total"`
+	}
+	listed := decodeData[page](t, it.fleetDo("GET", base+"?status=pending&period_kind=monthly", n.tokA, nil, http.StatusOK))
+	if listed.Total != 1 || listed.Items[0].UUID != r.UUID {
+		t.Fatalf("report list = %+v", listed)
+	}
+	it.fleetDo("GET", base+"?status=nope", n.tokA, nil, http.StatusBadRequest)
+	it.fleetDo("GET", base+"/"+r.UUID+"/file", n.tokA, nil, http.StatusNotFound)
+	it.fleetDo("GET", base, n.tokB, nil, http.StatusNotFound)
+	plans := decodeData[page](t, it.fleetDo("GET", "/v1/fleets/"+opened.UUID+"/service-plans", n.tokA, nil, http.StatusOK))
+	if plans.Total != 0 {
+		t.Fatalf("plans = %+v", plans)
+	}
+	it.fleetDo("GET", "/v1/fleets/"+opened.UUID+"/service-plans/"+uuid.NewString(), n.tokA, nil, http.StatusNotFound)
 	if _, err := it.srv.features.ClearByAdmin(ctx, n.dealerA.ID, "fleet"); err != nil {
 		t.Fatal(err)
 	}

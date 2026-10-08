@@ -13761,13 +13761,37 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Periodic reports of a fleet (panel, TEC-477)
+         * @description Every report of the fleet (pending, ready, failed). `sort` is period_start (default -period_start); id tiebreak. `status` and `period_kind` are comma separated filters; unknown value → 400.
+         */
+        get: operations["listFleetReports"];
         put?: never;
         /**
          * Request the periodic report of a closed period (TEC-476)
          * @description A linked dealer (fleets.manage) asks for the fleet report of a closed month (period YYYY-MM) or quarter (YYYY-Qn). 202 with the report: pending (worker-docs renders the PDF, stores it and e-mails it to the fleet users and the billing address in the fleet's report language), or ready when the period already has a report. A failed report runs again. Only dealers with the fleet module contribute data. 400 when the period has not ended in the fleet's timezone.
          */
         post: operations["requestFleetReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/reports/{report}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * PDF of a ready fleet report (panel, TEC-477)
+         * @description A pending or failed report is 404.
+         */
+        get: operations["getFleetReportFile"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -13801,13 +13825,37 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The caller organization's service plans of a fleet (TEC-477)
+         * @description `sort` is one of created_at (default -created_at), start_date; id tiebreak. `status` is a comma separated filter (scheduled, cancelled).
+         */
+        get: operations["listFleetServicePlans"];
         put?: never;
         /**
          * Create the fleet service plan and all appointments atomically
          * @description Uses Idempotency-Key per dealer organization. If capacity changed after preview, answers 409 FLEET_SERVICE_PLAN_STALE and writes no plan or appointments.
          */
         post: operations["createFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/{plan}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fleet service plan detail (TEC-477)
+         * @description The plan with its appointments; each carries vehicle_uuid, vehicle_plate, vehicle_label and the service_uuid of the draft service opened by start-intake.
+         */
+        get: operations["getFleetServicePlan"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -25016,6 +25064,50 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["FleetServicePlan"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        FleetServicePlanSummary: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            status: "scheduled" | "cancelled";
+            service_type: string;
+            note: string;
+            /** Format: date */
+            start_date: string;
+            daily_vehicle_limit: number;
+            /** Format: int64 */
+            appointment_count: number;
+            /**
+             * Format: int64
+             * @description Appointments with a draft service
+             */
+            intake_count: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeFleetServicePlanSummaryPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetServicePlanSummary"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetReportPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetReport"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeFleetServicePlanIntake: {
@@ -50577,6 +50669,40 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    listFleetReports: {
+        parameters: {
+            query?: {
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                status?: ("pending" | "ready" | "failed")[];
+                period_kind?: ("monthly" | "quarterly")[];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetReportPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     requestFleetReport: {
         parameters: {
             query?: never;
@@ -50616,6 +50742,34 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getFleetReportFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet report uuid */
+                report: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     previewFleetServicePlan: {
         parameters: {
             query?: never;
@@ -50646,6 +50800,39 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listFleetServicePlans: {
+        parameters: {
+            query?: {
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                status?: ("scheduled" | "cancelled")[];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plans */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlanSummaryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     createFleetServicePlan: {
@@ -50681,6 +50868,34 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet service plan uuid */
+                plan: components["parameters"]["FleetServicePlanUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Plan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlan"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     cancelFleetServicePlan: {
