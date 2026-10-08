@@ -43,6 +43,7 @@
   "kinds.order_slip": "Order slip",
   "kinds.invoice_view": "Invoice view",
   "kinds.warranty": "Warranty certificate",
+  "kinds.fleet_report": "Fleet report",
   "languages.tr": "Turkish",
   "languages.en": "English",
   "languages.bg": "Bulgarian",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "Invoice",
   "variable_groups.warranty": "Warranty",
   "variable_groups.totals": "Totals",
+  "variable_groups.fleet_report": "Fleet report",
   "fields.updated_at": "Updated"
 }

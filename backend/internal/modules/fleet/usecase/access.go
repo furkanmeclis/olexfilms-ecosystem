@@ -8,7 +8,9 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
@@ -70,11 +72,13 @@ func (e *VehicleExistsError) Error() string { return "fleet: vehicle exists" }
 // Caller is the panel principal in its active organization with the
 // resolved scope of the route's permission (fleets.read / fleets.manage).
 type Caller struct {
-	UserID  int64
-	OrgID   int64
-	BrandID int64
-	OrgType string
-	Filter  scopefilter.Filter
+	Principal authctx.Principal
+	Org       orgctx.Scope
+	UserID    int64
+	OrgID     int64
+	BrandID   int64
+	OrgType   string
+	Filter    scopefilter.Filter
 }
 
 // orgIDs is the organization reach (nil: the whole brand).

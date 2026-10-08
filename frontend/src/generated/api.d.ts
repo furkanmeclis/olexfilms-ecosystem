@@ -1174,10 +1174,388 @@ export interface paths {
          *     together when the dealer has no map position; `whatsapp` is the
          *     organization phone when it is E.164, otherwise null. Rate limited
          *     per client IP (120 per minute); over the limit 429 with Retry-After.
+         *     TEC-467: while the dealer_showcase module is on and a showcase is
+         *     published, a `showcase` block is added (see PublicDealerShowcaseBlock);
+         *     otherwise the body is unchanged.
          */
         get: operations["getPublicDealerShowcase"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/dealers/{code}/photos/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gallery photo of a published dealer showcase
+         * @description TEC-467. No authentication. Streams a photo of the dealer's
+         *     published showcase snapshot (the `showcase.photos[].url` of
+         *     `GET /v1/public/dealers/{code}`). The bytes are served as uploaded
+         *     (`X-Content-Type-Options: nosniff`, public cache 1 h). Unknown
+         *     photos, unpublished showcases and dealers whose dealer_showcase
+         *     module is off are 404.
+         */
+        get: operations["getPublicDealerShowcasePhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/dealers/{code}/lead-form/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public dealer showcase lead form config
+         * @description TEC-468. No authentication. Returns the lead form fields, current KVKK
+         *     text version, showcase services and WhatsApp click-to-chat URL for a
+         *     published dealer showcase. Dealers without the module enabled or without
+         *     a published showcase return 404.
+         */
+        get: operations["getPublicDealerLeadFormConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/dealers/{code}/leads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit public dealer showcase lead
+         * @description TEC-468. No authentication. Accepts website leads for a published dealer
+         *     showcase. Stores accepted leads under the dealer organization with
+         *     `source=website`; an open lead with the same phone is updated with a
+         *     timeline note instead of creating a duplicate. The endpoint enforces a
+         *     16 KB body limit, HMAC form token, minimum fill time, honeypot, 5/hour
+         *     IP limit and 3/day phone limit.
+         */
+        post: operations["submitPublicDealerLead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Showcase editor view of the active organization (or ?org=)
+         * @description TEC-467 (F5-01b). Requires the dealer_showcase module of the active
+         *     organization (403 FEATURE_DISABLED) and showcase.read. Without
+         *     `org` it is the caller's own showcase (dealer or distributor); with
+         *     `org` a dealer or distributor inside the caller's scope (a
+         *     distributor's subtree), anything else 404; a target without the
+         *     module is 403 FEATURE_DISABLED. An organization without a showcase
+         *     gets an empty draft (`uuid` null). `content` is the draft;
+         *     `published_content` the live snapshot (null until the first
+         *     publish).
+         */
+        get: operations["getShowcase"];
+        /**
+         * Replace the showcase draft
+         * @description TEC-467. Requires showcase.write. Replaces the draft content (per
+         *     locale headline ≤ 160 / about ≤ 5000), working hours (same shape as
+         *     appointment working hours: weekday → [{start, end}]), social links
+         *     (instagram, facebook, youtube, tiktok, website; https only), SEO
+         *     keywords (≤ 30, ≤ 100 chars, trimmed, duplicates dropped) and the
+         *     Google place id. The status and `published_content` are not touched:
+         *     a draft edit never changes the live page. Invalid input is 400
+         *     VALIDATION_ERROR.
+         */
+        put: operations["saveShowcase"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish the draft (or send it for center review)
+         * @description TEC-467. Requires showcase.write. With `showcase.approval_required`
+         *     off (default) the draft is published at once: status `published`,
+         *     `published_content` written from the draft, the visible services
+         *     and the gallery (event `showcase.published`). With it on the
+         *     showcase moves to `pending_review` and the brand center's members
+         *     holding platform.showcase.review are notified
+         *     (`showcase.review_requested`); the previous snapshot stays live.
+         *     A showcase already pending is 409 INVALID_TRANSITION.
+         */
+        post: operations["submitShowcase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Showcase services in display order
+         * @description TEC-467. Requires showcase.read. Services never carry a price.
+         */
+        get: operations["listShowcaseServices"];
+        put?: never;
+        /**
+         * Add a showcase service (end of the list)
+         * @description TEC-467. Requires showcase.write. `product_category` needs a
+         *     `category_uuid` of the brand (title optional, the category name is
+         *     the fallback); `custom` needs a title. A category listed twice is
+         *     409 CONFLICT. Opens the showcase when the organization has none.
+         */
+        post: operations["createShowcaseService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/services/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reorder the showcase services
+         * @description TEC-467. Requires showcase.write. `uuids` lists every service exactly once (otherwise 400).
+         */
+        put: operations["reorderShowcaseServices"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/services/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a showcase service
+         * @description TEC-467. Requires showcase.write.
+         */
+        put: operations["updateShowcaseService"];
+        post?: never;
+        /**
+         * Remove a showcase service
+         * @description TEC-467. Requires showcase.write.
+         */
+        delete: operations["deleteShowcaseService"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/photos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a gallery photo (multipart)
+         * @description TEC-467. Requires showcase.write. Multipart field `photo` (JPEG,
+         *     PNG or WebP by byte sniffing; the declared type is ignored; anything
+         *     else 415 UNSUPPORTED_MEDIA_TYPE), at most 5 MiB (413), and an
+         *     optional `caption` JSON object (locale → text, ≤ 300). The bytes
+         *     are stored as uploaded (no re-encoding, EXIF kept). The gallery
+         *     holds `showcase.max_photos` photos (default 12); one more is 422
+         *     SHOWCASE_PHOTO_LIMIT (`data.count`, `data.max`). The same image
+         *     twice is 409 CONFLICT.
+         */
+        post: operations["uploadShowcasePhoto"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/photos/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reorder the gallery
+         * @description TEC-467. Requires showcase.write. `uuids` lists every photo exactly once (otherwise 400).
+         */
+        put: operations["reorderShowcasePhotos"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/photos/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a photo caption
+         * @description TEC-467. Requires showcase.write.
+         */
+        put: operations["updateShowcasePhoto"];
+        post?: never;
+        /**
+         * Remove a gallery photo
+         * @description TEC-467. Requires showcase.write. The object is deleted unless the
+         *     live snapshot still shows it; then the next publish removes it.
+         */
+        delete: operations["deleteShowcasePhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/showcase/photos/{uuid}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gallery photo bytes (panel preview)
+         * @description TEC-467. Requires showcase.read.
+         */
+        get: operations["getShowcasePhotoFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/showcases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Center showcase review queue
+         * @description TEC-467 (docs/list-contract.md). Requires platform.showcase.review
+         *     in the brand center (or super admin). Lists the showcases of the
+         *     brand's dealers and distributors. `sort` is one of updated_at
+         *     (default `-updated_at`), name (organization name), status (flow rank
+         *     draft → pending_review → published → rejected); id tiebreak in the
+         *     sort direction; an unknown field is 400. `status` is a comma
+         *     separated any-of filter (unknown value 400); `q` matches the
+         *     organization name or city; `updated_from` / `updated_to` bound the
+         *     last change.
+         */
+        get: operations["listPlatformShowcases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/showcases/{org_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Showcase under review (draft and live snapshot)
+         * @description TEC-467. Requires platform.showcase.review. Organizations outside the brand are 404.
+         */
+        get: operations["getPlatformShowcase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/showcases/{org_uuid}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve or reject a pending showcase
+         * @description TEC-467. Requires platform.showcase.review. `approve` publishes the
+         *     current draft (snapshot written, event `showcase.published`);
+         *     `reject` keeps the previous snapshot live and needs a `note` (422
+         *     SHOWCASE_REVIEW_NOTE_REQUIRED; event `showcase.rejected`). The
+         *     dealer's owners are notified of either decision. A showcase that is
+         *     not pending is 409 INVALID_TRANSITION.
+         */
+        post: operations["reviewPlatformShowcase"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1495,7 +1873,7 @@ export interface paths {
         };
         /**
          * Service PDF of the signed-in customer
-         * @description TEC-239. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). Uses the service PDF render (TEC-196) and prints only the warranties the user holds. A completed render of the same locale, newer than the last service change and younger than 24 hours, answers 200 with its download_url; otherwise a running job (younger than 15 minutes) is returned or a new one is queued, with 202. Poll and download through /v1/portal/exports/{uuid}.
+         * @description TEC-239. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). TEC-474: a fleet user also reads the services of their fleet's vehicles at the dealers the fleet portal shows (the fleet's warranties are printed). Uses the service PDF render (TEC-196) and prints only the warranties the user holds. A completed render of the same locale, newer than the last service change and younger than 24 hours, answers 200 with its download_url; otherwise a running job (younger than 15 minutes) is returned or a new one is queued, with 202. Poll and download through /v1/portal/exports/{uuid}.
          */
         get: operations["getPortalServicePdf"];
         put?: never;
@@ -13376,6 +13754,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/fleets/{uuid}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request the periodic report of a closed period (TEC-476)
+         * @description A linked dealer (fleets.manage) asks for the fleet report of a closed month (period YYYY-MM) or quarter (YYYY-Qn). 202 with the report: pending (worker-docs renders the PDF, stores it and e-mails it to the fleet users and the billing address in the fleet's report language), or ready when the period already has a report. A failed report runs again. Only dealers with the fleet module contribute data. 400 when the period has not ended in the fleet's timezone.
+         */
+        post: operations["requestFleetReport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a capacity-aware fleet service appointment series
+         * @description TEC-475: schedules the selected fleet vehicles from start_date using appointment settings, closures and existing active appointments. Closed days and full days are skipped; warnings flag vehicles with another active appointment on the proposed day.
+         */
+        post: operations["previewFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create the fleet service plan and all appointments atomically
+         * @description Uses Idempotency-Key per dealer organization. If capacity changed after preview, answers 409 FLEET_SERVICE_PLAN_STALE and writes no plan or appointments.
+         */
+        post: operations["createFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/{plan}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a fleet service plan and its scheduled appointments */
+        post: operations["cancelFleetServicePlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/fleets/{uuid}/service-plans/{plan}/start-intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start draft service intake for plan appointments row by row
+         * @description Selected appointments are attempted independently through the existing appointment start-intake flow. One row failure does not stop the others.
+         */
+        post: operations["startFleetServicePlanIntake"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/portal/fleet/links": {
         parameters: {
             query?: never;
@@ -13424,6 +13899,166 @@ export interface paths {
         put?: never;
         /** Reject a pending dealer link (fleet user) */
         post: operations["rejectPortalFleetLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Fleet portal overview (vehicles, period services, warranties, appointments, dealers)
+         * @description TEC-474 (F5-02c): the signed-in fleet user's fleet. Every figure counts only the dealers the fleet worked with (an active or ended link) whose fleet module is on; a dealer that turns the module off is hidden (its history is kept). With no actively linked dealer that has the module the fleet portal reads answer 403 FEATURE_DISABLED (/v1/portal/fleet/links stays open). service_count runs over date_from / date_to (default: the current month).
+         */
+        get: operations["getPortalFleetOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vehicles of the signed-in user's fleet
+         * @description TEC-474. List contract (docs/list-contract.md): q (plate / VIN), brand (car brand uuids, CSV), has_active_warranty (true|false), sort plate | last_service_at | warranty_until (default plate, id tiebreak). Counts and dates use the visible dealers only.
+         */
+        get: operations["listPortalFleetVehicles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/vehicles/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A fleet vehicle with its service history and warranties from every visible dealer
+         * @description TEC-474. A vehicle outside the user's fleet is 404. The embedded history holds the latest 100 services (page the rest through /v1/portal/fleet/services?vehicle=); the service PDF is the existing /v1/portal/services/{uuid}/pdf.
+         */
+        get: operations["getPortalFleetVehicle"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Service history of the fleet's vehicles across the visible dealers
+         * @description TEC-474. Drafts are never listed. q (service no / plate), status (CSV), dealer (dealer uuids, CSV), vehicle (uuid), date_from / date_to (created_at), sort created_at | completed_at | service_no | status (default -created_at).
+         */
+        get: operations["listPortalFleetServices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/warranties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Warranties on the fleet's vehicles (active / expired)
+         * @description TEC-474. state is the effective status: active (not past end_at), expired (expired or past end_at) or void. Filters state (CSV), dealer (CSV), vehicle, q (plate / code / product); sort end_at | start_at (default end_at).
+         */
+        get: operations["listPortalFleetWarranties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/accounting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The fleet's account at each visible dealer (service income and collections only)
+         * @description TEC-474 (F5 Q11). For every visible dealer the fleet cari in the dealer's ledger, restricted to the service income billed to the fleet (finance_entries source service_income) and the collections; the dealer's other records never appear. Balances are computed from those rows only. date_from / date_to: inclusive days in each dealer's timezone, both or neither (default: the current month), at most 366 days.
+         */
+        get: operations["getPortalFleetAccounting"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready periodic reports of the fleet
+         * @description TEC-474. The ready reports of F5-02e; period_kind (CSV), sort period_start (default -period_start).
+         */
+        get: operations["listPortalFleetReports"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/fleet/reports/{uuid}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a ready fleet report (PDF)
+         * @description TEC-474. A pending report or another fleet's report is 404.
+         */
+        get: operations["downloadPortalFleetReport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -16012,6 +16647,10 @@ export interface components {
             accepts_appointments: boolean;
             /** @description E.164 phone */
             whatsapp: string | null;
+            /** @description TEC-467. A published showcase with the dealer_showcase module on */
+            has_showcase: boolean;
+            /** @description TEC-467. Live Google rating of the showcase (null without one) */
+            google_rating: number | null;
         };
         EnvelopeNearbyDealers: {
             /** @enum {boolean} */
@@ -16035,12 +16674,299 @@ export interface components {
             longitude: number | null;
             /** @description E.164 phone */
             whatsapp: string | null;
+            /**
+             * @description TEC-467. Present only while the dealer_showcase module is on and
+             *     a showcase is published; otherwise the key is absent and the
+             *     body is exactly the TEC-250 skeleton.
+             */
+            showcase?: components["schemas"]["PublicDealerShowcaseBlock"];
         };
         EnvelopePublicDealer: {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["PublicDealer"];
             meta: components["schemas"]["ResponseMeta"];
+        };
+        PublicDealerLeadFormService: {
+            /** Format: uuid */
+            uuid: string;
+            kind: string;
+            title: string;
+            description?: string;
+        };
+        PublicDealerLeadFormConfig: {
+            dealer_code: string;
+            dealer_name: string;
+            fields: string[];
+            /** Format: int32 */
+            kvkk_text_version: number;
+            kvkk_text: string;
+            services: components["schemas"]["PublicDealerLeadFormService"][];
+            /** Format: uri */
+            whatsapp_chat_url: string;
+            form_token: string;
+            min_fill_seconds: number;
+            default_phone_country: string;
+            preferred_locales: string[];
+        };
+        PublicDealerLeadRequest: {
+            name: string;
+            phone: string;
+            /** Format: email */
+            email?: string;
+            vehicle_brand?: string;
+            vehicle_model?: string;
+            interested_services: string[];
+            message?: string;
+            /** @enum {string} */
+            preferred_channel?: "phone" | "email" | "whatsapp";
+            kvkk_consent: boolean;
+            language: string;
+            form_token: string;
+            /** @description Hidden honeypot field; legitimate clients submit an empty value. */
+            website?: string;
+        };
+        PublicDealerLeadAccepted: {
+            /** @enum {boolean} */
+            received: true;
+        };
+        /** @enum {string} */
+        ShowcaseStatus: "draft" | "pending_review" | "published" | "rejected";
+        /** @description Locale (13 UI locales) → text; empty entries are dropped. */
+        ShowcaseLocaleTexts: {
+            [key: string]: string;
+        };
+        ShowcaseWorkWindow: {
+            /** @example 09:00 */
+            start: string;
+            /** @example 18:00 */
+            end: string;
+        };
+        ShowcaseInput: {
+            /** @description Locale → {headline ≤ 160, about ≤ 5000}. */
+            content?: {
+                [key: string]: {
+                    headline?: string;
+                    about?: string;
+                };
+            };
+            /** @description Weekday (monday/mon/1 … sunday/sun/7) → windows. */
+            working_hours?: {
+                [key: string]: components["schemas"]["ShowcaseWorkWindow"][];
+            };
+            /** @description instagram, facebook, youtube, tiktok, website → https URL. */
+            social_links?: {
+                [key: string]: string;
+            };
+            seo_keywords?: string[];
+            google_place_id?: string | null;
+        };
+        ShowcaseOrganization: {
+            /** Format: uuid */
+            uuid: string;
+            /** @description Organization slug (/bayi/{code}) */
+            code: string;
+            name: string;
+            /** @enum {string} */
+            type: "dealer" | "distributor";
+            city: string;
+        };
+        ShowcaseServiceInput: {
+            /** @enum {string} */
+            kind: "product_category" | "custom";
+            /** Format: uuid */
+            category_uuid?: string | null;
+            title?: components["schemas"]["ShowcaseLocaleTexts"];
+            description?: components["schemas"]["ShowcaseLocaleTexts"];
+            /** @default true */
+            visible: boolean;
+        };
+        ShowcaseService: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            kind: "product_category" | "custom";
+            category: null | {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+            title: components["schemas"]["ShowcaseLocaleTexts"];
+            description: components["schemas"]["ShowcaseLocaleTexts"];
+            visible: boolean;
+            sort_order: number;
+        };
+        ShowcasePhoto: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            mime: "image/jpeg" | "image/png" | "image/webp";
+            size_bytes: number;
+            caption: components["schemas"]["ShowcaseLocaleTexts"];
+            sort_order: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ShowcaseOrderInput: {
+            uuids: string[];
+        };
+        ShowcaseReviewInput: {
+            /** @enum {string} */
+            decision: "approve" | "reject";
+            /** @description Required to reject */
+            note?: string;
+        };
+        /** @description TEC-467 showcase editor view (draft + live snapshot). No price fields. */
+        Showcase: {
+            /**
+             * Format: uuid
+             * @description Null until the showcase is first saved
+             */
+            uuid: string | null;
+            organization: components["schemas"]["ShowcaseOrganization"];
+            status: components["schemas"]["ShowcaseStatus"];
+            content: {
+                [key: string]: {
+                    headline?: string;
+                    about?: string;
+                };
+            };
+            working_hours: {
+                [key: string]: components["schemas"]["ShowcaseWorkWindow"][];
+            };
+            social_links: {
+                [key: string]: string;
+            };
+            seo_keywords: string[];
+            google_place_id: string | null;
+            google_rating: number | null;
+            google_review_count: number | null;
+            /** @enum {string|null} */
+            google_rating_source: "places" | "manual" | null;
+            /** Format: date-time */
+            google_rating_updated_at: string | null;
+            /** @description The live snapshot (content, working_hours, social_links, seo_keywords, services, photos). */
+            published_content: Record<string, never> | null;
+            /** Format: date-time */
+            published_at: string | null;
+            /** Format: date-time */
+            submitted_at: string | null;
+            /** Format: date-time */
+            reviewed_at: string | null;
+            review_note: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /** @description showcase.approval_required */
+            approval_required: boolean;
+            /** @description showcase.max_photos */
+            max_photos: number;
+            services: components["schemas"]["ShowcaseService"][];
+            photos: components["schemas"]["ShowcasePhoto"][];
+        };
+        EnvelopeShowcase: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Showcase"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeShowcaseService: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ShowcaseService"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeShowcaseServices: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ShowcaseService"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeShowcasePhoto: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ShowcasePhoto"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeShowcasePhotos: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ShowcasePhoto"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ShowcaseReviewItem: {
+            /** Format: uuid */
+            uuid: string;
+            organization: components["schemas"]["ShowcaseOrganization"];
+            status: components["schemas"]["ShowcaseStatus"];
+            /** Format: date-time */
+            submitted_at: string | null;
+            /** Format: date-time */
+            published_at: string | null;
+            /** Format: date-time */
+            reviewed_at: string | null;
+            review_note: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeShowcaseReviewPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ShowcaseReviewItem"][];
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /**
+         * @description TEC-467. The published snapshot in the requested locale (?locale=,
+         *     then Accept-Language; each text falls back to the organization
+         *     locale, then tr). No price anywhere (F5 S8).
+         */
+        PublicDealerShowcaseBlock: {
+            locale: string;
+            headline: string;
+            about: string;
+            /** @description Monday first; a day without windows is closed. */
+            working_hours: {
+                /** @enum {string} */
+                day: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+                windows: components["schemas"]["ShowcaseWorkWindow"][];
+            }[];
+            /** @description Now in the organization's time zone; null without hours */
+            open_now: boolean | null;
+            timezone: string;
+            services: {
+                /** @enum {string} */
+                kind: "product_category" | "custom";
+                title: string;
+                description: string;
+            }[];
+            photos: {
+                /** @description /v1/public/dealers/{code}/photos/{uuid} */
+                url: string;
+                caption: string;
+            }[];
+            social_links: {
+                [key: string]: string;
+            };
+            seo_keywords: string[];
+            google_rating: number | null;
+            google_review_count: number | null;
+            /** @enum {string|null} */
+            google_rating_source: "places" | "manual" | null;
+            google_place_id: string | null;
+            /** @description The leads module is on for the dealer */
+            lead_form_enabled: boolean;
+            /** @description wa.me link of the dealer phone (E.164) */
+            whatsapp_chat_url: string | null;
+            /** Format: date-time */
+            published_at: string;
         };
         PublicDealerCode: {
             code: string;
@@ -16062,7 +16988,7 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
-        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote";
+        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote" | "fleet_report";
         DocumentVariable: {
             /** @example customer_name */
             key: string;
@@ -21397,7 +22323,7 @@ export interface components {
         /** @enum {string} */
         AppointmentStatus: "scheduled" | "confirmed" | "arrived" | "no_show" | "cancelled";
         /** @enum {string} */
-        AppointmentSource: "panel" | "portal" | "assistant" | "lead";
+        AppointmentSource: "panel" | "portal" | "assistant" | "lead" | "fleet_plan";
         AppointmentSettingsInput: {
             daily_vehicle_capacity: number;
             default_estimated_minutes: number;
@@ -23975,6 +24901,75 @@ export interface components {
             service_count: number;
             lines: components["schemas"]["FleetStatementLine"][];
         };
+        FleetPlanAppointment: {
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** Format: date-time */
+            starts_at: string;
+        };
+        FleetServicePlanWarning: {
+            /** Format: uuid */
+            vehicle_uuid: string;
+            /** Format: date */
+            date: string;
+            /** @example FLEET_PLAN_VEHICLE_DAY_CONFLICT */
+            code: string;
+            message: string;
+        };
+        FleetServicePlanRequest: {
+            vehicle_uuids: string[];
+            service_type: string;
+            note?: string;
+            /** Format: date */
+            start_date: string;
+            daily_max_vehicles?: number;
+            preferred_times?: string[];
+            /** @description Optional edited preview to commit. */
+            appointments?: components["schemas"]["FleetPlanAppointment"][];
+        };
+        FleetServicePlanPreview: {
+            /** Format: uuid */
+            fleet_uuid: string;
+            /** Format: uuid */
+            dealer_uuid: string;
+            service_type: string;
+            note: string;
+            appointments: components["schemas"]["FleetPlanAppointment"][];
+            warnings: components["schemas"]["FleetServicePlanWarning"][];
+        };
+        FleetServicePlan: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            fleet_uuid: string;
+            /** Format: uuid */
+            dealer_uuid: string;
+            /** @enum {string} */
+            status: "scheduled" | "cancelled";
+            service_type: string;
+            note: string;
+            appointments: components["schemas"]["Appointment"][];
+            warnings?: components["schemas"]["FleetServicePlanWarning"][];
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetServicePlanIntakeRequest: {
+            /** @description Empty or absent means every appointment of the plan. */
+            appointment_uuids?: string[];
+        };
+        FleetServicePlanIntake: {
+            /** Format: uuid */
+            plan_uuid: string;
+            results: {
+                /** Format: uuid */
+                appointment_uuid: string;
+                /** Format: uuid */
+                service_uuid?: string | null;
+                ok: boolean;
+                code?: string;
+                message?: string;
+            }[];
+        };
         EnvelopeFleet: {
             /** @enum {boolean} */
             success: true;
@@ -24009,6 +25004,24 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["FleetStatement"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetServicePlanPreview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetServicePlanPreview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetServicePlan: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetServicePlan"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetServicePlanIntake: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetServicePlanIntake"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeFleetListPage: {
@@ -24052,6 +25065,260 @@ export interface components {
             success: true;
             data: {
                 items: components["schemas"]["FleetLink"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        FleetPortalDealer: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            /** @enum {string} */
+            link_status: "active" | "ended";
+            /** Format: date-time */
+            started_at: string | null;
+        };
+        FleetPortalAppointment: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: date-time */
+            starts_at: string;
+            /** Format: date-time */
+            ends_at: string;
+            /** @enum {string} */
+            status: "scheduled" | "confirmed";
+            dealer: components["schemas"]["FleetPartyRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            plate: string | null;
+        };
+        FleetPortalOverview: {
+            fleet: components["schemas"]["FleetPartyRef"];
+            /** Format: date */
+            period_from: string;
+            /** Format: date */
+            period_to: string;
+            /** Format: int64 */
+            vehicle_count: number;
+            /**
+             * Format: int64
+             * @description Services created in the period
+             */
+            service_count: number;
+            /** Format: int64 */
+            active_warranty_count: number;
+            /** Format: int64 */
+            upcoming_appointment_count: number;
+            /** @description The next five */
+            upcoming_appointments: components["schemas"]["FleetPortalAppointment"][];
+            dealers: components["schemas"]["FleetPortalDealer"][];
+            /** Format: int64 */
+            pending_link_count: number;
+        };
+        FleetPortalVehicle: {
+            /** Format: uuid */
+            uuid: string;
+            plate: string | null;
+            plate_country: string | null;
+            vin: string | null;
+            model_year: number | null;
+            car_brand: components["schemas"]["FleetCatalogRef"] | null;
+            car_model: components["schemas"]["FleetCatalogRef"] | null;
+            /** Format: int64 */
+            service_count: number;
+            /** Format: date-time */
+            last_service_at: string | null;
+            /** Format: int64 */
+            active_warranty_count: number;
+            /**
+             * Format: date-time
+             * @description Latest end of an active warranty
+             */
+            warranty_until: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetPortalService: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            status: string;
+            package: string | null;
+            dealer: components["schemas"]["FleetPartyRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            plate: string | null;
+            car_brand_name: string;
+            car_model_name: string;
+            /** Format: date-time */
+            completed_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetPortalWarranty: {
+            /** Format: uuid */
+            uuid: string;
+            public_code: string;
+            /** @enum {string} */
+            state: "active" | "expired" | "void";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            days_left: number;
+            product_name: string;
+            product_sku: string;
+            /** Format: uuid */
+            service_uuid: string;
+            service_no: string;
+            dealer: components["schemas"]["FleetPartyRef"];
+            /** Format: uuid */
+            vehicle_uuid: string;
+            plate: string | null;
+        };
+        FleetPortalVehicleDetail: components["schemas"]["FleetPortalVehicle"] & {
+            services: components["schemas"]["FleetPortalService"][];
+            warranties: components["schemas"]["FleetPortalWarranty"][];
+        };
+        FleetPortalAccountLine: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: date-time */
+            date: string;
+            /** @enum {string} */
+            kind: "service_income" | "collection";
+            debit: string;
+            credit: string;
+            balance: string;
+            is_reversal: boolean;
+            service: {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+                plate: string | null;
+                /** Format: uuid */
+                vehicle_uuid: string | null;
+                /** Format: date-time */
+                completed_at: string | null;
+            } | null;
+        };
+        FleetPortalDealerAccount: {
+            dealer: components["schemas"]["FleetPartyRef"];
+            /** @enum {string} */
+            link_status: "active" | "ended";
+            currency: string;
+            opening_balance: string;
+            service_income_total: string;
+            collection_total: string;
+            /** @description > 0: the fleet owes the dealer */
+            closing_balance: string;
+            lines: components["schemas"]["FleetPortalAccountLine"][];
+        };
+        FleetPortalAccounting: {
+            /** Format: date */
+            period_from: string;
+            /** Format: date */
+            period_to: string;
+            dealers: components["schemas"]["FleetPortalDealerAccount"][];
+        };
+        FleetPortalReport: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            period_kind: "monthly" | "quarterly";
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            locale: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        FleetReport: {
+            /** Format: uuid */
+            uuid: string;
+            /** @enum {string} */
+            period_kind: "monthly" | "quarterly";
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            locale: string;
+            /** @enum {string} */
+            status: "pending" | "ready" | "failed";
+            /** Format: date-time */
+            emailed_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        EnvelopeFleetReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetReport"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalOverview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetPortalOverview"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalVehicleDetail: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetPortalVehicleDetail"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalAccounting: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["FleetPortalAccounting"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalVehiclePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetPortalVehicle"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalServicePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetPortalService"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalWarrantyPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetPortalWarranty"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeFleetPortalReportPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["FleetPortalReport"][];
                 /** Format: int64 */
                 total: number;
                 limit: number;
@@ -24256,6 +25523,12 @@ export interface components {
         CreatedFrom: string;
         /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
         CreatedTo: string;
+        /**
+         * @description TEC-467. Organization uuid of a dealer or distributor inside the
+         *     caller's scope (a distributor's subtree); absent = the active
+         *     organization. Outside the scope 404.
+         */
+        ShowcaseTargetOrg: string;
         /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
         Sort: string;
         /** @description Fleet (organization) uuid */
@@ -24263,6 +25536,8 @@ export interface components {
         FleetVehicleUUID: string;
         /** @description Fleet-dealer link uuid */
         FleetLinkUUID: string;
+        /** @description Fleet service plan uuid */
+        FleetServicePlanUUID: string;
     };
     requestBodies: never;
     headers: never;
@@ -26204,7 +27479,10 @@ export interface operations {
     };
     getPublicDealerShowcase: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description TEC-467. Locale of the showcase block texts (default Accept-Language, then the organization locale, then tr). */
+                locale?: string;
+            };
             header?: never;
             path: {
                 code: string;
@@ -26235,6 +27513,662 @@ export interface operations {
                 };
             };
             500: components["responses"]["InternalError"];
+        };
+    };
+    getPublicDealerShowcasePhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Photo bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPublicDealerLeadFormConfig: {
+        parameters: {
+            query?: {
+                lang?: string;
+            };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lead form configuration */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDealerLeadFormConfig"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    submitPublicDealerLead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicDealerLeadRequest"];
+            };
+        };
+        responses: {
+            /** @description Lead accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDealerLeadAccepted"];
+                };
+            };
+            /** @description Honeypot submission accepted without storing a lead */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            404: components["responses"]["NotFound"];
+            /** @description KVKK consent is required */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited by IP or phone */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getShowcase: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Showcase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    saveShowcase: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseInput"];
+            };
+        };
+        responses: {
+            /** @description Saved showcase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    submitShowcase: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Showcase after the move */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listShowcaseServices: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseServices"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createShowcaseService: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseServiceInput"];
+            };
+        };
+        responses: {
+            /** @description Service */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    reorderShowcaseServices: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseOrderInput"];
+            };
+        };
+        responses: {
+            /** @description Services in the new order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseServices"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateShowcaseService: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseServiceInput"];
+            };
+        };
+        responses: {
+            /** @description Service */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseService"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteShowcaseService: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    uploadShowcasePhoto: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    photo: string;
+                    /** @description JSON object: locale → caption */
+                    caption?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Photo */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcasePhoto"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            413: components["responses"]["PayloadTooLarge"];
+            /** @description Not a JPEG, PNG or WebP image (UNSUPPORTED_MEDIA_TYPE) */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    reorderShowcasePhotos: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseOrderInput"];
+            };
+        };
+        responses: {
+            /** @description Photos in the new order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcasePhotos"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateShowcasePhoto: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    caption: components["schemas"]["ShowcaseLocaleTexts"];
+                };
+            };
+        };
+        responses: {
+            /** @description Photo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcasePhoto"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteShowcasePhoto: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getShowcasePhotoFile: {
+        parameters: {
+            query?: {
+                /**
+                 * @description TEC-467. Organization uuid of a dealer or distributor inside the
+                 *     caller's scope (a distributor's subtree); absent = the active
+                 *     organization. Outside the scope 404.
+                 */
+                org?: components["parameters"]["ShowcaseTargetOrg"];
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Photo bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPlatformShowcases: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated showcase statuses; unknown value → 400. */
+                status?: components["schemas"]["ShowcaseStatus"][];
+                /** @description Inclusive lower bound of updated_at (RFC3339 or YYYY-MM-DD, UTC). */
+                updated_from?: string;
+                /** @description Upper bound of updated_at; a YYYY-MM-DD day covers the whole day. */
+                updated_to?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Review queue page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcaseReviewPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPlatformShowcase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Showcase */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reviewPlatformShowcase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShowcaseReviewInput"];
+            };
+        };
+        responses: {
+            /** @description Showcase after the decision */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeShowcase"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     getPublicWarranty: {
@@ -48643,6 +50577,182 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    requestFleetReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    period_kind: "monthly" | "quarterly";
+                    /**
+                     * @description YYYY-MM (monthly) or YYYY-Qn (quarterly)
+                     * @example 2026-09
+                     */
+                    period: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Report queued (or already present) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    previewFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetServicePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlanPreview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    createFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetServicePlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Plan created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlan"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    cancelFleetServicePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet service plan uuid */
+                plan: components["parameters"]["FleetServicePlanUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    reason?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Plan cancelled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlan"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    startFleetServicePlanIntake: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Fleet (organization) uuid */
+                uuid: components["parameters"]["FleetUUID"];
+                /** @description Fleet service plan uuid */
+                plan: components["parameters"]["FleetServicePlanUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FleetServicePlanIntakeRequest"];
+            };
+        };
+        responses: {
+            /** @description Row results */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetServicePlanIntake"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
     listPortalFleetLinks: {
         parameters: {
             query?: never;
@@ -48718,6 +50828,252 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getPortalFleetOverview: {
+        parameters: {
+            query?: {
+                date_from?: string;
+                date_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Overview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalOverview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalFleetVehicles: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                brand?: string[];
+                has_active_warranty?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalVehiclePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalFleetVehicle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Vehicle */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalVehicleDetail"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalFleetServices: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                status?: ("pending" | "processing" | "ready" | "completed" | "cancelled")[];
+                dealer?: string[];
+                vehicle?: string;
+                date_from?: string;
+                date_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalServicePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalFleetWarranties: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                state?: ("active" | "expired" | "void")[];
+                dealer?: string[];
+                vehicle?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warranties */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalWarrantyPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPortalFleetAccounting: {
+        parameters: {
+            query?: {
+                date_from?: string;
+                date_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accounts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalAccounting"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPortalFleetReports: {
+        parameters: {
+            query?: {
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                period_kind?: ("monthly" | "quarterly")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeFleetPortalReportPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    downloadPortalFleetReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Report storage is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
 }

@@ -63,6 +63,8 @@ tags:
     description: "Duyuru API: authoring, feed, read receipts and unread badge"
   - name: Fleets
     description: "Filo yönetimi: filo açma, bayi bağı, kullanıcılar, araçlar, içe aktarma, filo kartı ve ekstre (F5-02)"
+  - name: Showcase
+    description: "Bayi vitrini API: panel editor, gallery, center review queue (F5-01b)"
   - name: Campaigns
     description: "Kampanya API: drafts, per-locale contents and media, audience preview (F4-04)"
   - name: WhatsApp
@@ -2210,12 +2212,20 @@ paths:
         together when the dealer has no map position; `whatsapp` is the
         organization phone when it is E.164, otherwise null. Rate limited
         per client IP (120 per minute); over the limit 429 with Retry-After.
+        TEC-467: while the dealer_showcase module is on and a showcase is
+        published, a `showcase` block is added (see PublicDealerShowcaseBlock);
+        otherwise the body is unchanged.
       security: []
       parameters:
         - name: code
           in: path
           required: true
           schema: { type: string, maxLength: 100 }
+        - name: locale
+          in: query
+          required: false
+          description: TEC-467. Locale of the showcase block texts (default Accept-Language, then the organization locale, then tr).
+          schema: { type: string }
       responses:
         "200":
           description: Dealer showcase
@@ -2238,6 +2248,605 @@ paths:
                 $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /v1/public/dealers/{code}/photos/{uuid}:
+    get:
+      tags: [Public]
+      operationId: getPublicDealerShowcasePhoto
+      summary: Gallery photo of a published dealer showcase
+      description: |
+        TEC-467. No authentication. Streams a photo of the dealer's
+        published showcase snapshot (the `showcase.photos[].url` of
+        `GET /v1/public/dealers/{code}`). The bytes are served as uploaded
+        (`X-Content-Type-Options: nosniff`, public cache 1 h). Unknown
+        photos, unpublished showcases and dealers whose dealer_showcase
+        module is off are 404.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, maxLength: 100 }
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Photo bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/public/dealers/{code}/lead-form/config:
+    get:
+      tags: [Public]
+      operationId: getPublicDealerLeadFormConfig
+      summary: Public dealer showcase lead form config
+      description: |
+        TEC-468. No authentication. Returns the lead form fields, current KVKK
+        text version, showcase services and WhatsApp click-to-chat URL for a
+        published dealer showcase. Dealers without the module enabled or without
+        a published showcase return 404.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, maxLength: 100 }
+        - name: lang
+          in: query
+          required: false
+          schema: { type: string, maxLength: 16 }
+      responses:
+        "200":
+          description: Lead form configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicDealerLeadFormConfig"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/public/dealers/{code}/leads:
+    post:
+      tags: [Public]
+      operationId: submitPublicDealerLead
+      summary: Submit public dealer showcase lead
+      description: |
+        TEC-468. No authentication. Accepts website leads for a published dealer
+        showcase. Stores accepted leads under the dealer organization with
+        `source=website`; an open lead with the same phone is updated with a
+        timeline note instead of creating a duplicate. The endpoint enforces a
+        16 KB body limit, HMAC form token, minimum fill time, honeypot, 5/hour
+        IP limit and 3/day phone limit.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublicDealerLeadRequest"
+      responses:
+        "202":
+          description: Lead accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicDealerLeadAccepted"
+        "204":
+          description: Honeypot submission accepted without storing a lead
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          description: KVKK consent is required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Rate limited by IP or phone
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/showcase:
+    get:
+      tags: [Showcase]
+      operationId: getShowcase
+      summary: Showcase editor view of the active organization (or ?org=)
+      description: |
+        TEC-467 (F5-01b). Requires the dealer_showcase module of the active
+        organization (403 FEATURE_DISABLED) and showcase.read. Without
+        `org` it is the caller's own showcase (dealer or distributor); with
+        `org` a dealer or distributor inside the caller's scope (a
+        distributor's subtree), anything else 404; a target without the
+        module is 403 FEATURE_DISABLED. An organization without a showcase
+        gets an empty draft (`uuid` null). `content` is the draft;
+        `published_content` the live snapshot (null until the first
+        publish).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      responses:
+        "200":
+          description: Showcase
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Showcase]
+      operationId: saveShowcase
+      summary: Replace the showcase draft
+      description: |
+        TEC-467. Requires showcase.write. Replaces the draft content (per
+        locale headline ≤ 160 / about ≤ 5000), working hours (same shape as
+        appointment working hours: weekday → [{start, end}]), social links
+        (instagram, facebook, youtube, tiktok, website; https only), SEO
+        keywords (≤ 30, ≤ 100 chars, trimmed, duplicates dropped) and the
+        Google place id. The status and `published_content` are not touched:
+        a draft edit never changes the live page. Invalid input is 400
+        VALIDATION_ERROR.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseInput" }
+      responses:
+        "200":
+          description: Saved showcase
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/submit:
+    post:
+      tags: [Showcase]
+      operationId: submitShowcase
+      summary: Publish the draft (or send it for center review)
+      description: |
+        TEC-467. Requires showcase.write. With `showcase.approval_required`
+        off (default) the draft is published at once: status `published`,
+        `published_content` written from the draft, the visible services
+        and the gallery (event `showcase.published`). With it on the
+        showcase moves to `pending_review` and the brand center's members
+        holding platform.showcase.review are notified
+        (`showcase.review_requested`); the previous snapshot stays live.
+        A showcase already pending is 409 INVALID_TRANSITION.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      responses:
+        "200":
+          description: Showcase after the move
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/showcase/services:
+    get:
+      tags: [Showcase]
+      operationId: listShowcaseServices
+      summary: Showcase services in display order
+      description: TEC-467. Requires showcase.read. Services never carry a price.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      responses:
+        "200":
+          description: Services
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseServices" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Showcase]
+      operationId: createShowcaseService
+      summary: Add a showcase service (end of the list)
+      description: |
+        TEC-467. Requires showcase.write. `product_category` needs a
+        `category_uuid` of the brand (title optional, the category name is
+        the fallback); `custom` needs a title. A category listed twice is
+        409 CONFLICT. Opens the showcase when the organization has none.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseServiceInput" }
+      responses:
+        "201":
+          description: Service
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseService" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/showcase/services/order:
+    put:
+      tags: [Showcase]
+      operationId: reorderShowcaseServices
+      summary: Reorder the showcase services
+      description: TEC-467. Requires showcase.write. `uuids` lists every service exactly once (otherwise 400).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseOrderInput" }
+      responses:
+        "200":
+          description: Services in the new order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseServices" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/services/{uuid}:
+    put:
+      tags: [Showcase]
+      operationId: updateShowcaseService
+      summary: Replace a showcase service
+      description: TEC-467. Requires showcase.write.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseServiceInput" }
+      responses:
+        "200":
+          description: Service
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseService" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Showcase]
+      operationId: deleteShowcaseService
+      summary: Remove a showcase service
+      description: TEC-467. Requires showcase.write.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/photos:
+    post:
+      tags: [Showcase]
+      operationId: uploadShowcasePhoto
+      summary: Upload a gallery photo (multipart)
+      description: |
+        TEC-467. Requires showcase.write. Multipart field `photo` (JPEG,
+        PNG or WebP by byte sniffing; the declared type is ignored; anything
+        else 415 UNSUPPORTED_MEDIA_TYPE), at most 5 MiB (413), and an
+        optional `caption` JSON object (locale → text, ≤ 300). The bytes
+        are stored as uploaded (no re-encoding, EXIF kept). The gallery
+        holds `showcase.max_photos` photos (default 12); one more is 422
+        SHOWCASE_PHOTO_LIMIT (`data.count`, `data.max`). The same image
+        twice is 409 CONFLICT.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo: { type: string, format: binary }
+                caption: { type: string, description: "JSON object: locale → caption" }
+      responses:
+        "201":
+          description: Photo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcasePhoto" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415":
+          description: Not a JPEG, PNG or WebP image (UNSUPPORTED_MEDIA_TYPE)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/showcase/photos/order:
+    put:
+      tags: [Showcase]
+      operationId: reorderShowcasePhotos
+      summary: Reorder the gallery
+      description: TEC-467. Requires showcase.write. `uuids` lists every photo exactly once (otherwise 400).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseOrderInput" }
+      responses:
+        "200":
+          description: Photos in the new order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcasePhotos" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/photos/{uuid}:
+    put:
+      tags: [Showcase]
+      operationId: updateShowcasePhoto
+      summary: Replace a photo caption
+      description: TEC-467. Requires showcase.write.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [caption]
+              properties:
+                caption: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+      responses:
+        "200":
+          description: Photo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcasePhoto" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Showcase]
+      operationId: deleteShowcasePhoto
+      summary: Remove a gallery photo
+      description: |
+        TEC-467. Requires showcase.write. The object is deleted unless the
+        live snapshot still shows it; then the next publish removes it.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Removed }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/showcase/photos/{uuid}/file:
+    get:
+      tags: [Showcase]
+      operationId: getShowcasePhotoFile
+      summary: Gallery photo bytes (panel preview)
+      description: TEC-467. Requires showcase.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Photo bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/platform/showcases:
+    get:
+      tags: [Showcase]
+      operationId: listPlatformShowcases
+      summary: Center showcase review queue
+      description: |
+        TEC-467 (docs/list-contract.md). Requires platform.showcase.review
+        in the brand center (or super admin). Lists the showcases of the
+        brand's dealers and distributors. `sort` is one of updated_at
+        (default `-updated_at`), name (organization name), status (flow rank
+        draft → pending_review → published → rejected); id tiebreak in the
+        sort direction; an unknown field is 400. `status` is a comma
+        separated any-of filter (unknown value 400); `q` matches the
+        organization name or city; `updated_from` / `updated_to` bound the
+        last change.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          description: Comma separated showcase statuses; unknown value → 400.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/ShowcaseStatus" }
+        - name: updated_from
+          in: query
+          description: Inclusive lower bound of updated_at (RFC3339 or YYYY-MM-DD, UTC).
+          schema: { type: string }
+        - name: updated_to
+          in: query
+          description: Upper bound of updated_at; a YYYY-MM-DD day covers the whole day.
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Review queue page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcaseReviewPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/platform/showcases/{org_uuid}:
+    get:
+      tags: [Showcase]
+      operationId: getPlatformShowcase
+      summary: Showcase under review (draft and live snapshot)
+      description: TEC-467. Requires platform.showcase.review. Organizations outside the brand are 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: org_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Showcase
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/platform/showcases/{org_uuid}/review:
+    post:
+      tags: [Showcase]
+      operationId: reviewPlatformShowcase
+      summary: Approve or reject a pending showcase
+      description: |
+        TEC-467. Requires platform.showcase.review. `approve` publishes the
+        current draft (snapshot written, event `showcase.published`);
+        `reject` keeps the previous snapshot live and needs a `note` (422
+        SHOWCASE_REVIEW_NOTE_REQUIRED; event `showcase.rejected`). The
+        dealer's owners are notified of either decision. A showcase that is
+        not pending is 409 INVALID_TRANSITION.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: org_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseReviewInput" }
+      responses:
+        "200":
+          description: Showcase after the decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
 
   /v1/public/warranties/{public_code}:
     get:
@@ -2748,7 +3357,9 @@ paths:
       summary: Service PDF of the signed-in customer
       description: >-
         TEC-239. Portal session (services.read, scope customer); same
-        ownership rule as GET /v1/portal/services/{uuid} (else 404). Uses the
+        ownership rule as GET /v1/portal/services/{uuid} (else 404). TEC-474:
+        a fleet user also reads the services of their fleet's vehicles at the
+        dealers the fleet portal shows (the fleet's warranties are printed). Uses the
         service PDF render (TEC-196) and prints only the warranties the user
         holds. A completed render of the same locale, newer than the last
         service change and younger than 24 hours, answers 200 with its
@@ -26143,6 +26754,168 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/{uuid}/reports:
+    post:
+      tags: [Fleets]
+      operationId: requestFleetReport
+      summary: Request the periodic report of a closed period (TEC-476)
+      description: >-
+        A linked dealer (fleets.manage) asks for the fleet report of a
+        closed month (period YYYY-MM) or quarter (YYYY-Qn). 202 with the
+        report: pending (worker-docs renders the PDF, stores it and e-mails
+        it to the fleet users and the billing address in the fleet's report
+        language), or ready when the period already has a report. A failed
+        report runs again. Only dealers with the fleet module contribute
+        data. 400 when the period has not ended in the fleet's timezone.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period_kind, period]
+              additionalProperties: false
+              properties:
+                period_kind: { type: string, enum: [monthly, quarterly] }
+                period: { type: string, example: "2026-09", description: "YYYY-MM (monthly) or YYYY-Qn (quarterly)" }
+      responses:
+        "202":
+          description: Report queued (or already present)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/fleets/{uuid}/service-plans/preview:
+    post:
+      tags: [Fleets]
+      operationId: previewFleetServicePlan
+      summary: Preview a capacity-aware fleet service appointment series
+      description: >-
+        TEC-475: schedules the selected fleet vehicles from start_date using
+        appointment settings, closures and existing active appointments. Closed
+        days and full days are skipped; warnings flag vehicles with another
+        active appointment on the proposed day.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FleetServicePlanRequest" }
+      responses:
+        "200":
+          description: Preview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetServicePlanPreview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/{uuid}/service-plans:
+    post:
+      tags: [Fleets]
+      operationId: createFleetServicePlan
+      summary: Create the fleet service plan and all appointments atomically
+      description: >-
+        Uses Idempotency-Key per dealer organization. If capacity changed
+        after preview, answers 409 FLEET_SERVICE_PLAN_STALE and writes no
+        plan or appointments.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string, maxLength: 128 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FleetServicePlanRequest" }
+      responses:
+        "201":
+          description: Plan created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetServicePlan" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/{uuid}/service-plans/{plan}/cancel:
+    post:
+      tags: [Fleets]
+      operationId: cancelFleetServicePlan
+      summary: Cancel a fleet service plan and its scheduled appointments
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - $ref: "#/components/parameters/FleetServicePlanUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                reason: { type: string }
+      responses:
+        "200":
+          description: Plan cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetServicePlan" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+  /v1/fleets/{uuid}/service-plans/{plan}/start-intake:
+    post:
+      tags: [Fleets]
+      operationId: startFleetServicePlanIntake
+      summary: Start draft service intake for plan appointments row by row
+      description: >-
+        Selected appointments are attempted independently through the existing
+        appointment start-intake flow. One row failure does not stop the
+        others.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/FleetUUID"
+        - $ref: "#/components/parameters/FleetServicePlanUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FleetServicePlanIntakeRequest" }
+      responses:
+        "200":
+          description: Row results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetServicePlanIntake" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
   /v1/portal/fleet/links:
     get:
       tags: [Fleets]
@@ -26201,6 +26974,282 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/portal/fleet/overview:
+    get:
+      tags: [Fleets]
+      operationId: getPortalFleetOverview
+      summary: Fleet portal overview (vehicles, period services, warranties, appointments, dealers)
+      description: >-
+        TEC-474 (F5-02c): the signed-in fleet user's fleet. Every figure
+        counts only the dealers the fleet worked with (an active or ended
+        link) whose fleet module is on; a dealer that turns the module off is
+        hidden (its history is kept). With no actively linked dealer that has
+        the module the fleet portal reads answer 403 FEATURE_DISABLED
+        (/v1/portal/fleet/links stays open). service_count runs over
+        date_from / date_to (default: the current month).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD or RFC3339" }
+        - name: date_to
+          in: query
+          schema: { type: string, description: "YYYY-MM-DD (whole day) or RFC3339" }
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalOverview" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/vehicles:
+    get:
+      tags: [Fleets]
+      operationId: listPortalFleetVehicles
+      summary: Vehicles of the signed-in user's fleet
+      description: >-
+        TEC-474. List contract (docs/list-contract.md): q (plate / VIN),
+        brand (car brand uuids, CSV), has_active_warranty (true|false), sort
+        plate | last_service_at | warranty_until (default plate, id
+        tiebreak). Counts and dates use the visible dealers only.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: brand
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: has_active_warranty
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Vehicles
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalVehiclePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/vehicles/{uuid}:
+    get:
+      tags: [Fleets]
+      operationId: getPortalFleetVehicle
+      summary: A fleet vehicle with its service history and warranties from every visible dealer
+      description: >-
+        TEC-474. A vehicle outside the user's fleet is 404. The embedded
+        history holds the latest 100 services (page the rest through
+        /v1/portal/fleet/services?vehicle=); the service PDF is the existing
+        /v1/portal/services/{uuid}/pdf.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Vehicle
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalVehicleDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/services:
+    get:
+      tags: [Fleets]
+      operationId: listPortalFleetServices
+      summary: Service history of the fleet's vehicles across the visible dealers
+      description: >-
+        TEC-474. Drafts are never listed. q (service no / plate), status
+        (CSV), dealer (dealer uuids, CSV), vehicle (uuid), date_from /
+        date_to (created_at), sort created_at | completed_at | service_no |
+        status (default -created_at).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: status
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [pending, processing, ready, completed, cancelled] }
+        - name: dealer
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: vehicle
+          in: query
+          schema: { type: string, format: uuid }
+        - name: date_from
+          in: query
+          schema: { type: string }
+        - name: date_to
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Services
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalServicePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/warranties:
+    get:
+      tags: [Fleets]
+      operationId: listPortalFleetWarranties
+      summary: Warranties on the fleet's vehicles (active / expired)
+      description: >-
+        TEC-474. state is the effective status: active (not past end_at),
+        expired (expired or past end_at) or void. Filters state (CSV),
+        dealer (CSV), vehicle, q (plate / code / product); sort end_at |
+        start_at (default end_at).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: state
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [active, expired, void] }
+        - name: dealer
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: vehicle
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Warranties
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalWarrantyPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/accounting:
+    get:
+      tags: [Fleets]
+      operationId: getPortalFleetAccounting
+      summary: The fleet's account at each visible dealer (service income and collections only)
+      description: >-
+        TEC-474 (F5 Q11). For every visible dealer the fleet cari in the
+        dealer's ledger, restricted to the service income billed to the fleet
+        (finance_entries source service_income) and the collections; the
+        dealer's other records never appear. Balances are computed from
+        those rows only. date_from / date_to: inclusive days in each dealer's
+        timezone, both or neither (default: the current month), at most 366
+        days.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date_from
+          in: query
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Accounts
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalAccounting" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/reports:
+    get:
+      tags: [Fleets]
+      operationId: listPortalFleetReports
+      summary: Ready periodic reports of the fleet
+      description: >-
+        TEC-474. The ready reports of F5-02e; period_kind (CSV), sort
+        period_start (default -period_start).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: period_kind
+          in: query
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, enum: [monthly, quarterly] }
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeFleetPortalReportPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /v1/portal/fleet/reports/{uuid}/file:
+    get:
+      tags: [Fleets]
+      operationId: downloadPortalFleetReport
+      summary: Download a ready fleet report (PDF)
+      description: TEC-474. A pending report or another fleet's report is 404.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: The report PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "503":
+          description: Report storage is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
 components:
   securitySchemes:
@@ -26424,6 +27473,15 @@ components:
         Created on or before; a date (YYYY-MM-DD) covers the whole day, an
         RFC3339 value that instant. `created_from` after `created_to` → 400.
       schema: { type: string }
+    ShowcaseTargetOrg:
+      name: org
+      in: query
+      required: false
+      description: |
+        TEC-467. Organization uuid of a dealer or distributor inside the
+        caller's scope (a distributor's subtree); absent = the active
+        organization. Outside the scope 404.
+      schema: { type: string, format: uuid }
     Sort:
       name: sort
       in: query
@@ -26448,6 +27506,12 @@ components:
       in: path
       required: true
       description: Fleet-dealer link uuid
+      schema: { type: string, format: uuid }
+    FleetServicePlanUUID:
+      name: plan
+      in: path
+      required: true
+      description: Fleet service plan uuid
       schema: { type: string, format: uuid }
 
   responses:
@@ -30025,7 +31089,8 @@ components:
 
     NearbyDealer:
       type: object
-      required: [uuid, slug, name, city, district, latitude, longitude, distance_km, accepts_appointments, whatsapp]
+      required: [uuid, slug, name, city, district, latitude, longitude, distance_km, accepts_appointments, whatsapp,
+        has_showcase, google_rating]
       properties:
         uuid: { type: string, format: uuid, description: "TEC-327. Organization uuid for portal appointment booking" }
         slug: { type: string }
@@ -30037,6 +31102,8 @@ components:
         distance_km: { type: number, description: Haversine distance in km (2 decimals) }
         accepts_appointments: { type: boolean }
         whatsapp: { type: [string, "null"], description: E.164 phone }
+        has_showcase: { type: boolean, description: "TEC-467. A published showcase with the dealer_showcase module on" }
+        google_rating: { type: [number, "null"], description: "TEC-467. Live Google rating of the showcase (null without one)" }
 
     EnvelopeNearbyDealers:
       type: object
@@ -30066,6 +31133,12 @@ components:
         latitude: { type: [number, "null"] }
         longitude: { type: [number, "null"] }
         whatsapp: { type: [string, "null"], description: E.164 phone }
+        showcase:
+          $ref: "#/components/schemas/PublicDealerShowcaseBlock"
+          description: |
+            TEC-467. Present only while the dealer_showcase module is on and
+            a showcase is published; otherwise the key is absent and the
+            body is exactly the TEC-250 skeleton.
 
     EnvelopePublicDealer:
       type: object
@@ -30074,6 +31147,353 @@ components:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PublicDealer" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PublicDealerLeadFormService:
+      type: object
+      required: [uuid, kind, title]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string }
+        title: { type: string }
+        description: { type: string }
+
+    PublicDealerLeadFormConfig:
+      type: object
+      required:
+        [dealer_code, dealer_name, fields, kvkk_text_version, kvkk_text, services, whatsapp_chat_url, form_token, min_fill_seconds, default_phone_country, preferred_locales]
+      properties:
+        dealer_code: { type: string }
+        dealer_name: { type: string }
+        fields:
+          type: array
+          items: { type: string }
+        kvkk_text_version: { type: integer, format: int32 }
+        kvkk_text: { type: string }
+        services:
+          type: array
+          items: { $ref: "#/components/schemas/PublicDealerLeadFormService" }
+        whatsapp_chat_url: { type: string, format: uri }
+        form_token: { type: string }
+        min_fill_seconds: { type: integer, minimum: 0 }
+        default_phone_country: { type: string, minLength: 2, maxLength: 2 }
+        preferred_locales:
+          type: array
+          items: { type: string }
+
+    PublicDealerLeadRequest:
+      type: object
+      required: [name, phone, interested_services, kvkk_consent, language, form_token]
+      properties:
+        name: { type: string, maxLength: 160 }
+        phone: { type: string, maxLength: 32 }
+        email: { type: string, format: email, maxLength: 254 }
+        vehicle_brand: { type: string, maxLength: 120 }
+        vehicle_model: { type: string, maxLength: 120 }
+        interested_services:
+          type: array
+          items: { type: string, format: uuid }
+        message: { type: string, maxLength: 5000 }
+        preferred_channel:
+          type: string
+          enum: [phone, email, whatsapp]
+        kvkk_consent: { type: boolean }
+        language: { type: string, maxLength: 16 }
+        form_token: { type: string }
+        website:
+          type: string
+          description: Hidden honeypot field; legitimate clients submit an empty value.
+
+    PublicDealerLeadAccepted:
+      type: object
+      required: [received]
+      properties:
+        received: { type: boolean, enum: [true] }
+
+    ShowcaseStatus:
+      type: string
+      enum: [draft, pending_review, published, rejected]
+
+    ShowcaseLocaleTexts:
+      type: object
+      description: Locale (13 UI locales) → text; empty entries are dropped.
+      additionalProperties: { type: string }
+
+    ShowcaseWorkWindow:
+      type: object
+      required: [start, end]
+      properties:
+        start: { type: string, example: "09:00" }
+        end: { type: string, example: "18:00" }
+
+    ShowcaseInput:
+      type: object
+      additionalProperties: false
+      properties:
+        content:
+          type: object
+          description: Locale → {headline ≤ 160, about ≤ 5000}.
+          additionalProperties:
+            type: object
+            additionalProperties: false
+            properties:
+              headline: { type: string, maxLength: 160 }
+              about: { type: string, maxLength: 5000 }
+        working_hours:
+          type: object
+          description: Weekday (monday/mon/1 … sunday/sun/7) → windows.
+          additionalProperties:
+            type: array
+            items: { $ref: "#/components/schemas/ShowcaseWorkWindow" }
+        social_links:
+          type: object
+          description: instagram, facebook, youtube, tiktok, website → https URL.
+          additionalProperties: { type: string, maxLength: 500 }
+        seo_keywords:
+          type: array
+          maxItems: 30
+          items: { type: string, maxLength: 100 }
+        google_place_id: { type: [string, "null"], maxLength: 255 }
+
+    ShowcaseOrganization:
+      type: object
+      required: [uuid, code, name, type, city]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string, description: "Organization slug (/bayi/{code})" }
+        name: { type: string }
+        type: { type: string, enum: [dealer, distributor] }
+        city: { type: string }
+
+    ShowcaseServiceInput:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [product_category, custom] }
+        category_uuid: { type: [string, "null"], format: uuid }
+        title: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        description: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        visible: { type: boolean, default: true }
+
+    ShowcaseService:
+      type: object
+      required: [uuid, kind, category, title, description, visible, sort_order]
+      properties:
+        uuid: { type: string, format: uuid }
+        kind: { type: string, enum: [product_category, custom] }
+        category:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [uuid, name]
+              properties:
+                uuid: { type: string, format: uuid }
+                name: { type: string }
+        title: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        description: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        visible: { type: boolean }
+        sort_order: { type: integer }
+
+    ShowcasePhoto:
+      type: object
+      required: [uuid, mime, size_bytes, caption, sort_order, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        mime: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        size_bytes: { type: integer }
+        caption: { $ref: "#/components/schemas/ShowcaseLocaleTexts" }
+        sort_order: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    ShowcaseOrderInput:
+      type: object
+      additionalProperties: false
+      required: [uuids]
+      properties:
+        uuids:
+          type: array
+          items: { type: string, format: uuid }
+
+    ShowcaseReviewInput:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approve, reject] }
+        note: { type: string, maxLength: 2000, description: Required to reject }
+
+    Showcase:
+      type: object
+      description: TEC-467 showcase editor view (draft + live snapshot). No price fields.
+      required: [uuid, organization, status, content, working_hours, social_links, seo_keywords, google_place_id,
+        google_rating, google_review_count, google_rating_source, google_rating_updated_at, published_content,
+        published_at, submitted_at, reviewed_at, review_note, updated_at, approval_required, max_photos, services, photos]
+      properties:
+        uuid: { type: [string, "null"], format: uuid, description: Null until the showcase is first saved }
+        organization: { $ref: "#/components/schemas/ShowcaseOrganization" }
+        status: { $ref: "#/components/schemas/ShowcaseStatus" }
+        content:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              headline: { type: string }
+              about: { type: string }
+        working_hours:
+          type: object
+          additionalProperties:
+            type: array
+            items: { $ref: "#/components/schemas/ShowcaseWorkWindow" }
+        social_links:
+          type: object
+          additionalProperties: { type: string }
+        seo_keywords: { type: array, items: { type: string } }
+        google_place_id: { type: [string, "null"] }
+        google_rating: { type: [number, "null"] }
+        google_review_count: { type: [integer, "null"] }
+        google_rating_source: { type: [string, "null"], enum: [places, manual, null] }
+        google_rating_updated_at: { type: [string, "null"], format: date-time }
+        published_content:
+          type: [object, "null"]
+          description: The live snapshot (content, working_hours, social_links, seo_keywords, services, photos).
+        published_at: { type: [string, "null"], format: date-time }
+        submitted_at: { type: [string, "null"], format: date-time }
+        reviewed_at: { type: [string, "null"], format: date-time }
+        review_note: { type: [string, "null"] }
+        updated_at: { type: [string, "null"], format: date-time }
+        approval_required: { type: boolean, description: "showcase.approval_required" }
+        max_photos: { type: integer, description: "showcase.max_photos" }
+        services: { type: array, items: { $ref: "#/components/schemas/ShowcaseService" } }
+        photos: { type: array, items: { $ref: "#/components/schemas/ShowcasePhoto" } }
+
+    EnvelopeShowcase:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Showcase" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeShowcaseService:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ShowcaseService" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeShowcaseServices:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/ShowcaseService" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeShowcasePhoto:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ShowcasePhoto" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeShowcasePhotos:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/ShowcasePhoto" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ShowcaseReviewItem:
+      type: object
+      required: [uuid, organization, status, submitted_at, published_at, reviewed_at, review_note, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        organization: { $ref: "#/components/schemas/ShowcaseOrganization" }
+        status: { $ref: "#/components/schemas/ShowcaseStatus" }
+        submitted_at: { type: [string, "null"], format: date-time }
+        published_at: { type: [string, "null"], format: date-time }
+        reviewed_at: { type: [string, "null"], format: date-time }
+        review_note: { type: [string, "null"] }
+        updated_at: { type: string, format: date-time }
+
+    EnvelopeShowcaseReviewPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/ShowcaseReviewItem" } }
+            total: { type: integer }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PublicDealerShowcaseBlock:
+      type: object
+      description: |
+        TEC-467. The published snapshot in the requested locale (?locale=,
+        then Accept-Language; each text falls back to the organization
+        locale, then tr). No price anywhere (F5 S8).
+      required: [locale, headline, about, working_hours, open_now, timezone, services, photos, social_links,
+        seo_keywords, google_rating, google_review_count, google_rating_source, google_place_id,
+        lead_form_enabled, whatsapp_chat_url, published_at]
+      properties:
+        locale: { type: string }
+        headline: { type: string }
+        about: { type: string }
+        working_hours:
+          type: array
+          description: Monday first; a day without windows is closed.
+          items:
+            type: object
+            required: [day, windows]
+            properties:
+              day: { type: string, enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday] }
+              windows: { type: array, items: { $ref: "#/components/schemas/ShowcaseWorkWindow" } }
+        open_now: { type: [boolean, "null"], description: Now in the organization's time zone; null without hours }
+        timezone: { type: string }
+        services:
+          type: array
+          items:
+            type: object
+            required: [kind, title, description]
+            properties:
+              kind: { type: string, enum: [product_category, custom] }
+              title: { type: string }
+              description: { type: string }
+        photos:
+          type: array
+          items:
+            type: object
+            required: [url, caption]
+            properties:
+              url: { type: string, description: "/v1/public/dealers/{code}/photos/{uuid}" }
+              caption: { type: string }
+        social_links:
+          type: object
+          additionalProperties: { type: string }
+        seo_keywords: { type: array, items: { type: string } }
+        google_rating: { type: [number, "null"] }
+        google_review_count: { type: [integer, "null"] }
+        google_rating_source: { type: [string, "null"], enum: [places, manual, null] }
+        google_place_id: { type: [string, "null"] }
+        lead_form_enabled: { type: boolean, description: The leads module is on for the dealer }
+        whatsapp_chat_url: { type: [string, "null"], description: "wa.me link of the dealer phone (E.164)" }
+        published_at: { type: string, format: date-time }
 
     PublicDealerCode:
       type: object
@@ -30106,7 +31526,7 @@ components:
 
     DocumentKind:
       type: string
-      enum: [service, measurement, contract, order_slip, invoice_view, warranty, quote]
+      enum: [service, measurement, contract, order_slip, invoice_view, warranty, quote, fleet_report]
 
     DocumentVariable:
       type: object
@@ -36965,7 +38385,7 @@ components:
 
     AppointmentSource:
       type: string
-      enum: [panel, portal, assistant, lead]
+      enum: [panel, portal, assistant, lead, fleet_plan]
 
     AppointmentSettingsInput:
       type: object
@@ -40043,6 +41463,102 @@ components:
           type: array
           items: { $ref: "#/components/schemas/FleetStatementLine" }
 
+    FleetPlanAppointment:
+      type: object
+      required: [vehicle_uuid, starts_at]
+      properties:
+        vehicle_uuid: { type: string, format: uuid }
+        starts_at: { type: string, format: date-time }
+
+    FleetServicePlanWarning:
+      type: object
+      required: [vehicle_uuid, date, code, message]
+      properties:
+        vehicle_uuid: { type: string, format: uuid }
+        date: { type: string, format: date }
+        code: { type: string, example: FLEET_PLAN_VEHICLE_DAY_CONFLICT }
+        message: { type: string }
+
+    FleetServicePlanRequest:
+      type: object
+      additionalProperties: false
+      required: [vehicle_uuids, service_type, start_date]
+      properties:
+        vehicle_uuids:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+        service_type: { type: string, maxLength: 120 }
+        note: { type: string }
+        start_date: { type: string, format: date }
+        daily_max_vehicles: { type: integer, minimum: 1 }
+        preferred_times:
+          type: array
+          items: { type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$" }
+        appointments:
+          type: array
+          description: Optional edited preview to commit.
+          items: { $ref: "#/components/schemas/FleetPlanAppointment" }
+
+    FleetServicePlanPreview:
+      type: object
+      required: [fleet_uuid, dealer_uuid, service_type, note, appointments, warnings]
+      properties:
+        fleet_uuid: { type: string, format: uuid }
+        dealer_uuid: { type: string, format: uuid }
+        service_type: { type: string }
+        note: { type: string }
+        appointments:
+          type: array
+          items: { $ref: "#/components/schemas/FleetPlanAppointment" }
+        warnings:
+          type: array
+          items: { $ref: "#/components/schemas/FleetServicePlanWarning" }
+
+    FleetServicePlan:
+      type: object
+      required: [uuid, fleet_uuid, dealer_uuid, status, service_type, note, appointments, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        fleet_uuid: { type: string, format: uuid }
+        dealer_uuid: { type: string, format: uuid }
+        status: { type: string, enum: [scheduled, cancelled] }
+        service_type: { type: string }
+        note: { type: string }
+        appointments:
+          type: array
+          items: { $ref: "#/components/schemas/Appointment" }
+        warnings:
+          type: array
+          items: { $ref: "#/components/schemas/FleetServicePlanWarning" }
+        created_at: { type: string, format: date-time }
+
+    FleetServicePlanIntakeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        appointment_uuids:
+          type: array
+          description: Empty or absent means every appointment of the plan.
+          items: { type: string, format: uuid }
+
+    FleetServicePlanIntake:
+      type: object
+      required: [plan_uuid, results]
+      properties:
+        plan_uuid: { type: string, format: uuid }
+        results:
+          type: array
+          items:
+            type: object
+            required: [appointment_uuid, ok]
+            properties:
+              appointment_uuid: { type: string, format: uuid }
+              service_uuid: { type: [string, "null"], format: uuid }
+              ok: { type: boolean }
+              code: { type: string }
+              message: { type: string }
+
     EnvelopeFleet:
       type: object
       required: [success, data, meta]
@@ -40089,6 +41605,30 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/FleetStatement" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetServicePlanPreview:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetServicePlanPreview" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetServicePlan:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetServicePlan" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetServicePlanIntake:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetServicePlanIntake" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeFleetListPage:
@@ -40154,6 +41694,289 @@ components:
             items:
               type: array
               items: { $ref: "#/components/schemas/FleetLink" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    FleetPortalDealer:
+      type: object
+      required: [uuid, name, link_status, started_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        link_status: { type: string, enum: [active, ended] }
+        started_at: { type: [string, "null"], format: date-time }
+
+    FleetPortalAppointment:
+      type: object
+      required: [uuid, starts_at, ends_at, status, dealer, vehicle_uuid, plate]
+      properties:
+        uuid: { type: string, format: uuid }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        status: { type: string, enum: [scheduled, confirmed] }
+        dealer: { $ref: "#/components/schemas/FleetPartyRef" }
+        vehicle_uuid: { type: string, format: uuid }
+        plate: { type: [string, "null"] }
+
+    FleetPortalOverview:
+      type: object
+      required: [fleet, period_from, period_to, vehicle_count, service_count, active_warranty_count, upcoming_appointment_count, upcoming_appointments, dealers, pending_link_count]
+      properties:
+        fleet: { $ref: "#/components/schemas/FleetPartyRef" }
+        period_from: { type: string, format: date }
+        period_to: { type: string, format: date }
+        vehicle_count: { type: integer, format: int64 }
+        service_count: { type: integer, format: int64, description: Services created in the period }
+        active_warranty_count: { type: integer, format: int64 }
+        upcoming_appointment_count: { type: integer, format: int64 }
+        upcoming_appointments:
+          type: array
+          description: The next five
+          items: { $ref: "#/components/schemas/FleetPortalAppointment" }
+        dealers:
+          type: array
+          items: { $ref: "#/components/schemas/FleetPortalDealer" }
+        pending_link_count: { type: integer, format: int64 }
+
+    FleetPortalVehicle:
+      type: object
+      required: [uuid, plate, plate_country, vin, model_year, car_brand, car_model, service_count, last_service_at, active_warranty_count, warranty_until, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        plate: { type: [string, "null"] }
+        plate_country: { type: [string, "null"] }
+        vin: { type: [string, "null"] }
+        model_year: { type: [integer, "null"] }
+        car_brand:
+          oneOf:
+            - $ref: "#/components/schemas/FleetCatalogRef"
+            - type: "null"
+        car_model:
+          oneOf:
+            - $ref: "#/components/schemas/FleetCatalogRef"
+            - type: "null"
+        service_count: { type: integer, format: int64 }
+        last_service_at: { type: [string, "null"], format: date-time }
+        active_warranty_count: { type: integer, format: int64 }
+        warranty_until: { type: [string, "null"], format: date-time, description: Latest end of an active warranty }
+        created_at: { type: string, format: date-time }
+
+    FleetPortalService:
+      type: object
+      required: [uuid, service_no, status, package, dealer, vehicle_uuid, plate, car_brand_name, car_model_name, completed_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        status: { type: string }
+        package: { type: [string, "null"] }
+        dealer: { $ref: "#/components/schemas/FleetPartyRef" }
+        vehicle_uuid: { type: string, format: uuid }
+        plate: { type: [string, "null"] }
+        car_brand_name: { type: string }
+        car_model_name: { type: string }
+        completed_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    FleetPortalWarranty:
+      type: object
+      required: [uuid, public_code, state, start_at, end_at, days_left, product_name, product_sku, service_uuid, service_no, dealer, vehicle_uuid, plate]
+      properties:
+        uuid: { type: string, format: uuid }
+        public_code: { type: string }
+        state: { type: string, enum: [active, expired, void] }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        days_left: { type: integer }
+        product_name: { type: string }
+        product_sku: { type: string }
+        service_uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        dealer: { $ref: "#/components/schemas/FleetPartyRef" }
+        vehicle_uuid: { type: string, format: uuid }
+        plate: { type: [string, "null"] }
+
+    FleetPortalVehicleDetail:
+      allOf:
+        - $ref: "#/components/schemas/FleetPortalVehicle"
+        - type: object
+          required: [services, warranties]
+          properties:
+            services:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalService" }
+            warranties:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalWarranty" }
+
+    FleetPortalAccountLine:
+      type: object
+      required: [uuid, date, kind, debit, credit, balance, is_reversal, service]
+      properties:
+        uuid: { type: string, format: uuid }
+        date: { type: string, format: date-time }
+        kind: { type: string, enum: [service_income, collection] }
+        debit: { type: string }
+        credit: { type: string }
+        balance: { type: string }
+        is_reversal: { type: boolean }
+        service:
+          oneOf:
+            - type: object
+              required: [uuid, service_no, plate, vehicle_uuid, completed_at]
+              properties:
+                uuid: { type: string, format: uuid }
+                service_no: { type: string }
+                plate: { type: [string, "null"] }
+                vehicle_uuid: { type: [string, "null"], format: uuid }
+                completed_at: { type: [string, "null"], format: date-time }
+            - type: "null"
+
+    FleetPortalDealerAccount:
+      type: object
+      required: [dealer, link_status, currency, opening_balance, service_income_total, collection_total, closing_balance, lines]
+      properties:
+        dealer: { $ref: "#/components/schemas/FleetPartyRef" }
+        link_status: { type: string, enum: [active, ended] }
+        currency: { type: string }
+        opening_balance: { type: string }
+        service_income_total: { type: string }
+        collection_total: { type: string }
+        closing_balance: { type: string, description: "> 0: the fleet owes the dealer" }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/FleetPortalAccountLine" }
+
+    FleetPortalAccounting:
+      type: object
+      required: [period_from, period_to, dealers]
+      properties:
+        period_from: { type: string, format: date }
+        period_to: { type: string, format: date }
+        dealers:
+          type: array
+          items: { $ref: "#/components/schemas/FleetPortalDealerAccount" }
+
+    FleetPortalReport:
+      type: object
+      required: [uuid, period_kind, period_start, period_end, locale, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        period_kind: { type: string, enum: [monthly, quarterly] }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        locale: { type: string }
+        created_at: { type: string, format: date-time }
+
+    FleetReport:
+      type: object
+      required: [uuid, period_kind, period_start, period_end, locale, status, emailed_at, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        period_kind: { type: string, enum: [monthly, quarterly] }
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        locale: { type: string }
+        status: { type: string, enum: [pending, ready, failed] }
+        emailed_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+
+    EnvelopeFleetReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalOverview:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetPortalOverview" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalVehicleDetail:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetPortalVehicleDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalAccounting:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/FleetPortalAccounting" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalVehiclePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalVehicle" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalServicePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalService" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalWarrantyPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalWarranty" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeFleetPortalReportPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/FleetPortalReport" }
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }

@@ -48,6 +48,7 @@
   "system.hub.notification_center": "通知渠道、短信备用及模板。",
   "system.hub.auth_settings": "登录方式、密码与 OTP 规则。",
   "system.hub.document_templates": "PDF 文档模板。",
+  "system.hub.certificates": "证书类型、有效期以及产品/分类绑定。",
   "system.load_failed": "无法加载系统设置。",
   "system.read_only": "仅查看——编辑需要设置写入权限。",
   "system.groups.general": "通用",

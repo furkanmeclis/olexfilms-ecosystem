@@ -43,6 +43,7 @@
   "kinds.order_slip": "订货单",
   "kinds.invoice_view": "发票视图",
   "kinds.warranty": "质保证书",
+  "kinds.fleet_report": "车队报告",
   "languages.tr": "土耳其语",
   "languages.en": "英语",
   "languages.bg": "保加利亚语",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "发票",
   "variable_groups.warranty": "质保",
   "variable_groups.totals": "合计",
+  "variable_groups.fleet_report": "车队报告",
   "fields.updated_at": "更新时间"
 }

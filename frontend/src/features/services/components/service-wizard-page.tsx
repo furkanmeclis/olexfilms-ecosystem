@@ -124,6 +124,7 @@ export function ServiceWizardPage({
   const { can } = usePermission();
   const access = resolveServiceWizardAccess(can);
   const contracts = useFeature(slug, "intake_contracts");
+  const certificates = useFeature(slug, "certificates");
   const [step, setStep] = useState<WizardStep>(
     uuid ? "parts" : "customer_vehicle",
   );
@@ -290,6 +291,7 @@ export function ServiceWizardPage({
           });
           router.push(routes.tenant.services.detail(slug, saved.uuid));
         }}
+        showCertificateWarnings={certificates.enabled}
       />
     );
   }

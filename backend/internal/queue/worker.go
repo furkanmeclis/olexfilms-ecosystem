@@ -114,6 +114,11 @@ type Worker struct {
 	// TEC-407: campaign scheduler tick and recipient sends.
 	campaignTick CampaignTickFunc
 	campaignSend CampaignRecipientFunc
+	// TEC-481: certificate expiry notices and expiry policy refresh.
+	certificateExpiryScan CertificateExpiryScanFunc
+	// TEC-476: periodic fleet report schedule and generation.
+	fleetReportsSchedule FleetReportsScheduleFunc
+	fleetReportGenerate  FleetReportGenerateFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -212,6 +217,9 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskWarrantyClaimTriage, w.handleWarrantyClaimTriage)
 	mux.HandleFunc(TaskCampaignTick, w.handleCampaignTick)
 	mux.HandleFunc(TaskCampaignSendRecipient, w.handleCampaignSendRecipient)
+	mux.HandleFunc(TaskCertificateExpiryScan, w.handleCertificateExpiryScan)
+	mux.HandleFunc(TaskFleetReportsSchedule, w.handleFleetReportsSchedule)
+	mux.HandleFunc(TaskFleetReportGenerate, w.handleFleetReportGenerate)
 	return w
 }
 

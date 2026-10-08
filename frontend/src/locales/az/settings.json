@@ -48,6 +48,7 @@
   "system.hub.notification_center": "Bildiriş kanalları, ehtiyat SMS və şablonlar.",
   "system.hub.auth_settings": "Giriş üsulları, şifrə və OTP qaydaları.",
   "system.hub.document_templates": "PDF sənəd şablonları.",
+  "system.hub.certificates": "Sertifikat növləri, etibarlılıq və məhsul/kateqoriya bağları.",
   "system.load_failed": "Sistem ayarları yüklənmədi.",
   "system.read_only": "Yalnız baxış — redaktə üçün ayar yazma icazəsi lazımdır.",
   "system.groups.general": "Ümumi",

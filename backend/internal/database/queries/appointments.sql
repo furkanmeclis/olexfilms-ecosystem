@@ -79,13 +79,13 @@ WHERE uuid = sqlc.arg(uuid) AND organization_id = sqlc.arg(organization_id);
 INSERT INTO appointments (
     organization_id, brand_id, customer_user_id, vehicle_id, starts_at, ends_at,
     estimated_minutes, source, status, cancel_reason, lead_id, service_id, note,
-    created_by_user_id
+    created_by_user_id, plan_id
 ) VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(customer_user_id),
     sqlc.narg(vehicle_id), sqlc.arg(starts_at), sqlc.arg(ends_at),
     sqlc.arg(estimated_minutes), sqlc.arg(source), sqlc.arg(status),
     sqlc.narg(cancel_reason), sqlc.narg(lead_id), sqlc.narg(service_id),
-    sqlc.arg(note), sqlc.narg(created_by_user_id)
+    sqlc.arg(note), sqlc.narg(created_by_user_id), sqlc.narg(plan_id)
 )
 RETURNING *;
 
@@ -189,9 +189,30 @@ SET customer_user_id = sqlc.arg(customer_user_id),
     source = sqlc.arg(source),
     lead_id = sqlc.narg(lead_id),
     service_id = sqlc.narg(service_id),
+    plan_id = sqlc.narg(plan_id),
     note = sqlc.arg(note)
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND deleted_at IS NULL
 RETURNING *;
+
+-- name: ListAppointmentsByPlan :many
+SELECT * FROM appointments
+WHERE plan_id = sqlc.arg(plan_id)::bigint
+  AND organization_id = sqlc.arg(organization_id)::bigint
+  AND deleted_at IS NULL
+ORDER BY starts_at, id;
+
+-- name: VehicleHasActiveAppointmentOnDay :one
+SELECT EXISTS (
+    SELECT 1
+    FROM appointments
+    WHERE vehicle_id = sqlc.arg(vehicle_id)::bigint
+      AND brand_id = sqlc.arg(brand_id)::bigint
+      AND deleted_at IS NULL
+      AND status IN ('scheduled', 'confirmed', 'arrived')
+      AND starts_at >= sqlc.arg(from_time)::timestamptz
+      AND starts_at < sqlc.arg(to_time)::timestamptz
+      AND (sqlc.narg(exclude_plan_id)::bigint IS NULL OR plan_id IS DISTINCT FROM sqlc.narg(exclude_plan_id)::bigint)
+)::boolean AS has_conflict;
 
 -- name: SetAppointmentStatus :one
 UPDATE appointments

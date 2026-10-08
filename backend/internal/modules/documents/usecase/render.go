@@ -216,6 +216,45 @@ func (s *Service) renderRow(ctx context.Context, row db.DocumentRender) ([]byte,
 	return s.convert(ctx, tpl, vars, title, org.PrimaryColor, org.Name)
 }
 
+// RenderSource renders the document of a source synchronously as the
+// system (TEC-476: a worker task that stores the PDF itself, e.g. the fleet
+// report): registered loader, active template (brand+locale chain),
+// letterhead of the source organization. No document_renders row is kept.
+func (s *Service) RenderSource(ctx context.Context, kind, sourceID, locale string) ([]byte, error) {
+	if s.pdf == nil {
+		return nil, ErrUnavailable
+	}
+	loader, ok := s.loader(kind)
+	if !ok {
+		return nil, fmt.Errorf("%w: no source registered for kind %s", ErrInvalidRequest, kind)
+	}
+	lang := model.NormalizeLanguage(locale)
+	if lang == "" {
+		lang = model.FallbackLanguage
+	}
+	src, err := loader.Load(ctx, model.Viewer{System: true}, sourceID, lang)
+	if err != nil {
+		return nil, err
+	}
+	org, err := s.q.GetOrganizationByID(ctx, src.OrganizationID)
+	if err != nil {
+		return nil, notFound(err)
+	}
+	tpl, err := s.resolveTemplate(ctx, kind, src.BrandID, lang)
+	if err != nil {
+		return nil, err
+	}
+	vars := s.organizationVars(ctx, org)
+	for k, v := range src.Vars {
+		vars[strings.ToLower(k)] = v
+	}
+	title := src.Title
+	if title == "" {
+		title = tpl.Name
+	}
+	return s.convert(ctx, tpl, vars, title, org.PrimaryColor, org.Name)
+}
+
 func (s *Service) convert(ctx context.Context, tpl db.DocumentTemplate, vars map[string]string, title, color, footer string) ([]byte, error) {
 	html := BuildHTML(tpl.Kind, tpl.Html, tpl.Language, vars, title, color, s.fonts)
 	return s.pdf.Convert(ctx, pdfrender.Request{HTML: html, FooterHTML: pdfrender.FooterHTML(tpl.Language, footer)})

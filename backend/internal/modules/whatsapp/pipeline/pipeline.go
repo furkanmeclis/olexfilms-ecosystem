@@ -405,6 +405,11 @@ func (p *Pipeline) handle(ctx context.Context, r *run, batch []db.Message) error
 		return err
 	}
 
+	if err := p.dealerReferral(ctx, r, act, batch); err != nil {
+		return err
+	}
+	conv = r.conv
+
 	// A shared location: the nearest dealers (TEC-397, no model call).
 	if done, err := p.location(ctx, r, act, batch); done || err != nil {
 		return err

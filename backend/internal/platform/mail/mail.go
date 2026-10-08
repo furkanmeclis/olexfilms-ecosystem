@@ -2,6 +2,7 @@ package mail
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"mime"
 	"net"
@@ -20,6 +21,16 @@ type Message struct {
 	// HTMLBody, when set, is sent as the text/html part of a
 	// multipart/alternative message next to the plain-text Body.
 	HTMLBody string
+	// Attachments, when set, make the message multipart/mixed: the body
+	// part first, then each file base64 encoded (TEC-476 fleet report PDF).
+	Attachments []Attachment
+}
+
+// Attachment is a file sent with a message.
+type Attachment struct {
+	Filename    string
+	ContentType string
+	Data        []byte
 }
 
 // Sender delivers email messages.
@@ -97,8 +108,43 @@ func (s *SMTPSender) Send(_ context.Context, msg Message) error {
 }
 
 // writeBody writes the content headers and body: plain text, or
-// multipart/alternative (text + HTML) when HTMLBody is set.
+// multipart/alternative (text + HTML) when HTMLBody is set, wrapped in
+// multipart/mixed with the attachments when there are any.
 func writeBody(b *strings.Builder, msg Message) {
+	if len(msg.Attachments) == 0 {
+		writeContent(b, msg)
+		return
+	}
+	boundary := "olex-mixed-" + strconv.FormatInt(int64(len(msg.Body))*7907+int64(len(msg.HTMLBody))+int64(len(msg.Attachments)), 36)
+	for strings.Contains(msg.Body, boundary) || strings.Contains(msg.HTMLBody, boundary) {
+		boundary += "x"
+	}
+	b.WriteString("Content-Type: multipart/mixed; boundary=\"" + boundary + "\"\r\n\r\n")
+	b.WriteString("--" + boundary + "\r\n")
+	writeContent(b, msg)
+	for _, a := range msg.Attachments {
+		ct := a.ContentType
+		if ct == "" || strings.ContainsAny(ct, "\r\n") {
+			ct = "application/octet-stream"
+		}
+		name := mime.QEncoding.Encode("utf-8", stripHeaderBreaks(strings.ReplaceAll(a.Filename, `"`, "")))
+		b.WriteString("\r\n--" + boundary + "\r\n")
+		b.WriteString("Content-Type: " + ct + "; name=\"" + name + "\"\r\n")
+		b.WriteString("Content-Transfer-Encoding: base64\r\n")
+		b.WriteString("Content-Disposition: attachment; filename=\"" + name + "\"\r\n\r\n")
+		enc := base64.StdEncoding.EncodeToString(a.Data)
+		for len(enc) > 76 {
+			b.WriteString(enc[:76] + "\r\n")
+			enc = enc[76:]
+		}
+		b.WriteString(enc + "\r\n")
+	}
+	b.WriteString("--" + boundary + "--\r\n")
+}
+
+// writeContent writes the text part: plain text, or multipart/alternative
+// (text + HTML) when HTMLBody is set.
+func writeContent(b *strings.Builder, msg Message) {
 	if msg.HTMLBody == "" {
 		b.WriteString("Content-Type: text/plain; charset=UTF-8\r\n\r\n")
 		b.WriteString(msg.Body)

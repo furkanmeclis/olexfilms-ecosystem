@@ -59,6 +59,9 @@ type Document struct {
 	OrgType     string `json:"org_type,omitempty"`
 	SellerOrgID int64  `json:"seller_org_id,omitempty"`
 	BuyerOrgID  int64  `json:"buyer_org_id,omitempty"`
+	// TEC-467: the organization serves a published dealer showcase
+	// (organizations spec only, filterable; set to false explicitly there).
+	HasShowcase *bool `json:"has_showcase,omitempty"`
 }
 
 // Hit is a normalized search result returned to clients.

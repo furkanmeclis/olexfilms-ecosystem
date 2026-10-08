@@ -32,3 +32,23 @@ func leadApplicationDispatch(event events.Event) (notifmodel.DispatchInput, bool
 	}
 	return in, true
 }
+
+func leadWebsiteDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
+	ids := userIDsFromPayload(event.Payload, "notify_user_ids")
+	if len(ids) == 0 {
+		return notifmodel.DispatchInput{}, false
+	}
+	in := notifmodel.DispatchInput{
+		EventCode: catalog.EventLeadWebsiteReceived, UserIDs: ids,
+		Vars: map[string]string{
+			"contact_name": stringFromPayload(event.Payload, "contact_name"),
+			"phone":        stringFromPayload(event.Payload, "phone"),
+			"dealer_code":  stringFromPayload(event.Payload, "dealer_code"),
+		},
+		Payload: map[string]any{"lead_uuid": stringFromPayload(event.Payload, "lead_uuid")},
+	}
+	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
+		in.BrandID = &brand
+	}
+	return in, true
+}

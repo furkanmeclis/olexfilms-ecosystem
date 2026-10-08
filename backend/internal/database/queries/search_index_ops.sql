@@ -10,7 +10,10 @@
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
        p.name AS parent_name,
        COALESCE((SELECT array_agg(l.dealer_org_id ORDER BY l.dealer_org_id) FROM fleet_dealer_links l
-                 WHERE l.fleet_org_id = o.id AND l.status = 'active'), '{}')::bigint[] AS linked_org_ids
+                 WHERE l.fleet_org_id = o.id AND l.status = 'active'), '{}')::bigint[] AS linked_org_ids,
+       -- TEC-467: a published dealer showcase (the approved snapshot).
+       EXISTS (SELECT 1 FROM dealer_showcases s
+               WHERE s.organization_id = o.id AND s.published_content IS NOT NULL)::boolean AS has_showcase
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.deleted_at IS NULL
@@ -20,7 +23,10 @@ ORDER BY o.id;
 SELECT o.uuid, o.id, o.slug, o.name, o.type, o.status, o.brand_id, o.city, o.district, o.phone,
        p.name AS parent_name,
        COALESCE((SELECT array_agg(l.dealer_org_id ORDER BY l.dealer_org_id) FROM fleet_dealer_links l
-                 WHERE l.fleet_org_id = o.id AND l.status = 'active'), '{}')::bigint[] AS linked_org_ids
+                 WHERE l.fleet_org_id = o.id AND l.status = 'active'), '{}')::bigint[] AS linked_org_ids,
+       -- TEC-467: a published dealer showcase (the approved snapshot).
+       EXISTS (SELECT 1 FROM dealer_showcases s
+               WHERE s.organization_id = o.id AND s.published_content IS NOT NULL)::boolean AS has_showcase
 FROM organizations o
 LEFT JOIN organizations p ON p.id = o.parent_id
 WHERE o.uuid = sqlc.arg(uuid) AND o.deleted_at IS NULL;
