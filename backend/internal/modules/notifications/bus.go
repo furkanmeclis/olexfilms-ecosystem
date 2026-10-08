@@ -200,6 +200,10 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range CertificateEventCodes {
 		on(name, certificateDispatcher(code))
 	}
+	// TEC-484: stock forecast low-stock threshold transitions.
+	for name, code := range StockForecastEventCodes {
+		on(name, stockForecastDispatcher(code))
+	}
 	// TEC-297: dealer owners review services with micron differences outside
 	// the configured tolerance.
 	on(events.MeasurementDiffCheckRequired, measurementDiffDispatch)

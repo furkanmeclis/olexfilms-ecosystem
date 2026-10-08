@@ -1206,6 +1206,12 @@ type Querier interface {
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
 	GetStockEntryByImportBatch(ctx context.Context, importBatchID pgtype.Int8) (StockEntry, error)
 	GetStockEntryByUUID(ctx context.Context, arg GetStockEntryByUUIDParams) (StockEntry, error)
+	GetStockForecastConsumptionTotals(ctx context.Context, arg GetStockForecastConsumptionTotalsParams) (GetStockForecastConsumptionTotalsRow, error)
+	GetStockForecastFirstMovementDate(ctx context.Context, arg GetStockForecastFirstMovementDateParams) (pgtype.Date, error)
+	GetStockForecastOnHand(ctx context.Context, arg GetStockForecastOnHandParams) (GetStockForecastOnHandRow, error)
+	GetStockForecastOpenIncomingOrders(ctx context.Context, arg GetStockForecastOpenIncomingOrdersParams) (GetStockForecastOpenIncomingOrdersRow, error)
+	GetStockForecastPartialMetersAndServices(ctx context.Context, arg GetStockForecastPartialMetersAndServicesParams) (GetStockForecastPartialMetersAndServicesRow, error)
+	GetStockForecastSeasonalityTotals(ctx context.Context, arg GetStockForecastSeasonalityTotalsParams) (GetStockForecastSeasonalityTotalsRow, error)
 	GetStockForecastThreshold(ctx context.Context, arg GetStockForecastThresholdParams) (StockForecastThreshold, error)
 	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
 	GetStockImportBatchByJob(ctx context.Context, importJobID pgtype.Int8) (StockImportBatch, error)
@@ -2287,6 +2293,10 @@ type Querier interface {
 	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error)
 	ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error)
 	ListStockForecastHistory(ctx context.Context, arg ListStockForecastHistoryParams) ([]StockForecast, error)
+	ListStockForecastNetworkInputs(ctx context.Context, arg ListStockForecastNetworkInputsParams) ([]ListStockForecastNetworkInputsRow, error)
+	ListStockForecastNotifyUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
+	ListStockForecastOrganizations(ctx context.Context, organizationID pgtype.Int8) ([]Organization, error)
+	ListStockForecastProductsForOrg(ctx context.Context, arg ListStockForecastProductsForOrgParams) ([]Product, error)
 	ListStockForecastThresholds(ctx context.Context, organizationID int64) ([]ListStockForecastThresholdsRow, error)
 	// List contract: sort=days_left|-days_left|depletion_date|-depletion_date|
 	// product_name|-product_name|avg_daily_30|-avg_daily_30|status|-status;
