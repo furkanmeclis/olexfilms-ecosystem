@@ -8,9 +8,10 @@ import type {
 export const SECRET_MASK = "********";
 
 /** Page order of the catalog groups; unknown future groups go last. */
-export const GROUP_ORDER: SystemSettingGroup[] = [
+export const GROUP_ORDER: (SystemSettingGroup | "certificates")[] = [
   "general",
   "contracts",
+  "certificates",
   "forecast",
   "services",
   "smtp",

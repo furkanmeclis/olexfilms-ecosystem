@@ -329,13 +329,18 @@ describe("Step 2: SVG part picker", () => {
 });
 
 describe("Step 4: products and stock", () => {
-  function renderStock(svc: Service, parts: string[] = []) {
+  function renderStock(
+    svc: Service,
+    parts: string[] = [],
+    showCertificateWarnings = true,
+  ) {
     const props = {
       service: svc,
       selectedParts: parts,
       onChanged: vi.fn(),
       onBack: vi.fn(),
       onCompleted: vi.fn(),
+      showCertificateWarnings,
     };
     return render(createElement(StockStep, props)).then(() => props);
   }
@@ -471,6 +476,55 @@ describe("Step 4: products and stock", () => {
     expect(
       ($('[data-testid="complete-service"]') as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+
+  it("disables completion and explains the pending approval certificate warning", async () => {
+    granted.set.add("services.complete");
+    api.listStockUnits.mockResolvedValue({ items: [] });
+    await renderStock(
+      service({
+        items: [item()],
+        certificate_warnings: [
+          {
+            uuid: "cw1",
+            reason: "missing",
+            decision: "pending_approval",
+            type: { uuid: "ct1", name: { tr: "PPF Usta", en: "PPF Master" } },
+            user: { uuid: "u1", name: "Ada", surname: "Usta" },
+          },
+        ],
+      } as Partial<Service>),
+    );
+    expect($("[data-testid=certificate-warning-band]")).not.toBeNull();
+    expect($("[data-testid=complete-hint]")?.textContent).toContain(
+      "certificates.service.complete_pending",
+    );
+    expect(
+      ($('[data-testid="complete-service"]') as HTMLButtonElement).disabled,
+    ).toBe(true);
+    await click($('[data-testid="complete-service"]'));
+    expect(api.transition).not.toHaveBeenCalled();
+  });
+
+  it("hides certificate warning controls while the certificates module is off", async () => {
+    granted.set.add("services.complete");
+    api.listStockUnits.mockResolvedValue({ items: [] });
+    await renderStock(
+      service({
+        items: [item()],
+        certificate_warnings: [
+          {
+            uuid: "cw1",
+            reason: "missing",
+            decision: "pending_approval",
+          },
+        ],
+      } as Partial<Service>),
+      [],
+      false,
+    );
+    expect($("[data-testid=certificate-warning-band]")).toBeNull();
+    expect($('[data-testid="complete-service"]')).not.toBeNull();
   });
 });
 

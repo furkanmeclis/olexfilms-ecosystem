@@ -48,6 +48,7 @@
   "system.hub.notification_center": "Canaux de notification, secours SMS et modèles.",
   "system.hub.auth_settings": "Méthodes de connexion, règles de mot de passe et d'OTP.",
   "system.hub.document_templates": "Modèles de documents PDF.",
+  "system.hub.certificates": "Types de certificat, validité et liens produit/catégorie.",
   "system.load_failed": "Impossible de charger les paramètres système.",
   "system.read_only": "Lecture seule — la modification requiert le droit d'écriture des paramètres.",
   "system.groups.general": "Général",

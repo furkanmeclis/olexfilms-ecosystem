@@ -48,6 +48,7 @@
   "system.hub.notification_center": "Canales de notificación, respaldo por SMS y plantillas.",
   "system.hub.auth_settings": "Métodos de inicio de sesión, reglas de contraseña y OTP.",
   "system.hub.document_templates": "Plantillas de documentos PDF.",
+  "system.hub.certificates": "Tipos de certificado, vigencia y vínculos producto/categoría.",
   "system.load_failed": "No se pudieron cargar los ajustes del sistema.",
   "system.read_only": "Solo lectura — para editar se necesita el permiso de escritura de ajustes.",
   "system.groups.general": "General",
