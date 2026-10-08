@@ -181,6 +181,13 @@ export const platformNav = defineNav({
           permission: permissions.modules.platformRead,
         },
         {
+          id: "showcases",
+          titleKey: "showcase.queue.nav",
+          href: routes.platform.showcases.root,
+          icon: BadgeCheck,
+          permission: permissions.showcase.review,
+        },
+        {
           id: "certificate-types",
           titleKey: "certificates.types.nav",
           href: routes.platform.certificateTypes.root,
@@ -410,6 +417,15 @@ export function tenantNav(slug: string) {
             titleKey: "layout.nav_features",
             href: routes.tenant.features.root(slug),
             icon: Blocks,
+          },
+          {
+            id: "showcase",
+            titleKey: "showcase.nav",
+            href: routes.tenant.showcase.root(slug),
+            icon: BadgeCheck,
+            permission: permissions.showcase.read,
+            feature: "dealer_showcase",
+            orgTypes: ["dealer", "distributor"],
           },
           {
             // TEC-390: AI assistant (ai_assistant module + ai.use; the
