@@ -670,6 +670,8 @@ type Querier interface {
 	DeletePhotoAngleOverridesForOrg(ctx context.Context, arg DeletePhotoAngleOverridesForOrgParams) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
 	DeletePriceDisciplineSnapshotsBefore(ctx context.Context, before pgtype.Date) (int64, error)
+	// Price discipline (F5-09b worker) -----------------------------------------------
+	DeletePriceDisciplineSnapshotsOn(ctx context.Context, arg DeletePriceDisciplineSnapshotsOnParams) (int64, error)
 	DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error)
 	// Fails with a foreign key violation while products still use the category.
 	DeleteProductCategory(ctx context.Context, arg DeleteProductCategoryParams) (int64, error)
@@ -1604,6 +1606,13 @@ type Querier interface {
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	// Sort: docs/list-contract.md, keys from apiquery.LogsSortSpec.
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	// The price in force per product and currency for an organization's
+	// country: the country row when there is one, else the currency-wide row.
+	// currencies NULL = every currency.
+	ListApplicableRecommendedPrices(ctx context.Context, arg ListApplicableRecommendedPricesParams) ([]ListApplicableRecommendedPricesRow, error)
+	// The recommended price list of a country and currency (country row, else
+	// the currency-wide row). Sort keys: product_name | price | effective_from.
+	ListApplicableRecommendedPricesPage(ctx context.Context, arg ListApplicableRecommendedPricesPageParams) ([]ListApplicableRecommendedPricesPageRow, error)
 	ListAppointmentClosures(ctx context.Context, arg ListAppointmentClosuresParams) ([]AppointmentClosure, error)
 	// Panel calendar references (TEC-326): customer, vehicle and linked service
 	// UUIDs and labels of the given appointments.
@@ -1805,6 +1814,10 @@ type Querier interface {
 	// Live versions whose day has come and that are newer than the one in
 	// force, the latest per key (input of the effective-date job).
 	ListDueRecommendedPriceVersions(ctx context.Context, arg ListDueRecommendedPriceVersionsParams) ([]RecommendedPriceVersion, error)
+	// TEC-506 (F5-09b) ----------------------------------------------------------------
+	// ListDueRecommendedPriceVersions of one brand: the effective-date job reads
+	// "today" in the brand center's timezone.
+	ListDueRecommendedPriceVersionsForBrand(ctx context.Context, arg ListDueRecommendedPriceVersionsForBrandParams) ([]RecommendedPriceVersion, error)
 	ListDueScheduledCampaigns(ctx context.Context, arg ListDueScheduledCampaignsParams) ([]Campaign, error)
 	// ListDueStaffPayments is the scan of the posting job: planned payments
 	// whose paid_on has arrived in their organization's time zone.
@@ -2199,12 +2212,22 @@ type Querier interface {
 	// customer are closed to Glorian), even on a Glorian host. Draft services
 	// are dealer-internal and stay out. No measurement column is selected.
 	ListPortalVehicles(ctx context.Context, arg ListPortalVehiclesParams) ([]ListPortalVehiclesRow, error)
+	// Organizations with at least one product over the threshold on a day (the
+	// weekly digest): the count of such products and the largest deviation.
+	ListPriceDisciplineOverThresholdOrgs(ctx context.Context, arg ListPriceDisciplineOverThresholdOrgsParams) ([]ListPriceDisciplineOverThresholdOrgsRow, error)
 	// Deviation list of one snapshot day. org_ids is the caller's scope (NULL =
 	// whole brand); distributor_ids keeps the distributor and its dealers;
 	// over_threshold compares |deviation_pct| with threshold_pct (NULL deviation
 	// is never over). Sort keys: deviation_pct (NULLS LAST) | org_name |
 	// product_name.
 	ListPriceDisciplineSnapshots(ctx context.Context, arg ListPriceDisciplineSnapshotsParams) ([]ListPriceDisciplineSnapshotsRow, error)
+	// Languages of the price list PDF of a country / currency: the locales of
+	// the distributors and dealers it reaches (see the audience above).
+	ListPriceListLocales(ctx context.Context, arg ListPriceListLocalesParams) ([]string, error)
+	// Content of a price list PDF: the brand's active products with the price
+	// in force for the country and currency (country row, else currency-wide)
+	// and the next scheduled change, if any.
+	ListPriceListRows(ctx context.Context, arg ListPriceListRowsParams) ([]ListPriceListRowsRow, error)
 	// TEC-146: batch reads for the effective price views and the distributor's
 	// dealer prices (000041).
 	// Products of the brand for the price list view.
@@ -2264,8 +2287,16 @@ type Querier interface {
 	// as organization/trash owner (every later owner of the unit at that
 	// organization follows from such a movement), or a projection row it holds.
 	ListRebuildUnitIDsByOrganization(ctx context.Context, organizationID int64) ([]int64, error)
+	// Countries with their own recommended price versions in a currency (the
+	// country price lists a currency-wide change also touches).
+	ListRecommendedPriceCountries(ctx context.Context, arg ListRecommendedPriceCountriesParams) ([]int64, error)
+	// Owners of the brand's active distributors and dealers a recommended price
+	// reaches: in the country (country_id set) or, for a currency-wide price,
+	// every organization trading in the currency. Distinct users.
+	ListRecommendedPriceListAudience(ctx context.Context, arg ListRecommendedPriceListAudienceParams) ([]ListRecommendedPriceListAudienceRow, error)
 	// Version history. Sort keys: effective_from | published_at | price.
 	ListRecommendedPriceVersions(ctx context.Context, arg ListRecommendedPriceVersionsParams) ([]ListRecommendedPriceVersionsRow, error)
+	ListRecommendedPriceVersionsByBatch(ctx context.Context, arg ListRecommendedPriceVersionsByBatchParams) ([]ListRecommendedPriceVersionsByBatchRow, error)
 	// Current list. Sort keys: product_name | price | effective_from.
 	ListRecommendedPricesCurrent(ctx context.Context, arg ListRecommendedPricesCurrentParams) ([]ListRecommendedPricesCurrentRow, error)
 	// Required certificate types for the products/categories used by a service.
@@ -3061,6 +3092,12 @@ type Querier interface {
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
 	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
 	PingDB(ctx context.Context) (int32, error)
+	// Country x currency summary of one snapshot day in the caller's scope
+	// (org_ids NULL = whole brand): average / median deviation and the
+	// organizations with at least one product over the threshold.
+	PriceDisciplineSummaryByCountry(ctx context.Context, arg PriceDisciplineSummaryByCountryParams) ([]PriceDisciplineSummaryByCountryRow, error)
+	// Country x product breakdown of the same day and scope.
+	PriceDisciplineSummaryByProduct(ctx context.Context, arg PriceDisciplineSummaryByProductParams) ([]PriceDisciplineSummaryByProductRow, error)
 	// Profit per product over a period: revenue and the purchase cost snapshot
 	// of the sold lines (lines without a cost snapshot count as zero cost and
 	// are reported separately).
@@ -3083,6 +3120,12 @@ type Querier interface {
 	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
 	RefreshEfficiencyFactsForServiceItem(ctx context.Context, targetServiceItemID int64) (int64, error)
 	RefreshNetworkPartExpectations(ctx context.Context, arg RefreshNetworkPartExpectationsParams) (int64, error)
+	// One day of snapshots of a brand: every active dealer / distributor list
+	// price (dealer_product_prices) that has a recommended price in force for
+	// the organization's country (else currency-wide), the deviation in percent
+	// and the realised average unit price of non-voided quick sales in
+	// [sales_from, sales_to). Idempotent per (day, org, product, currency).
+	RefreshPriceDisciplineSnapshots(ctx context.Context, arg RefreshPriceDisciplineSnapshotsParams) (int64, error)
 	RejectCertificate(ctx context.Context, arg RejectCertificateParams) (Certificate, error)
 	// CAS pending_review → rejected with the reviewer's note. The previous
 	// published snapshot (if any) stays live.

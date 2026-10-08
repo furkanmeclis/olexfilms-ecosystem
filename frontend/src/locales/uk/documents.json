@@ -44,6 +44,7 @@
   "kinds.invoice_view": "Перегляд рахунку",
   "kinds.warranty": "Гарантійний сертифікат",
   "kinds.fleet_report": "Звіт автопарку",
+  "kinds.price_list": "Прайс-лист рекомендованих цін",
   "languages.tr": "Турецька",
   "languages.en": "Англійська",
   "languages.bg": "Болгарська",
@@ -69,5 +70,6 @@
   "variable_groups.warranty": "Гарантія",
   "variable_groups.totals": "Підсумки",
   "variable_groups.fleet_report": "Звіт автопарку",
+  "variable_groups.price_list": "Прайс-лист рекомендованих цін",
   "fields.updated_at": "Оновлено"
 }

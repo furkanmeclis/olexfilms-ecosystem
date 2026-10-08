@@ -14664,6 +14664,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/pricing/recommended/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish recommended retail prices (center, step-up)
+         * @description TEC-506. Brand center with pricing.recommended.write and a recent step-up. Every row is validated first (400 VALIDATION_ERROR with rows[i].field); the rows become append-only versions of one batch (batch_id). effective_from (default for rows without their own, default today in the center's timezone) must be today or later. A version effective today becomes current (and, currency-wide, product_prices.recommended_sale_price) in the same transaction; a later one on its day through the hourly pricing tick. Writes pricing.recommended_published (notification to the owners of the country's distributors and dealers, price list PDF to the document center when pricing.price_list_auto_publish is on).
+         */
+        post: operations["publishRecommendedPrices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pricing/recommended/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a recommended price publication file (center, step-up)
+         * @description TEC-506. Staged io engine import (resource tenant.pricing.recommended): columns sku, country (ISO-3166 alpha-2, empty = currency-wide), currency, price, effective_from. Preview (/v1/tenant/imports/{uuid}/preview) is a dry run classifying rows (new, duplicate, invalid); confirm publishes one batch whose batch_id is the import job. Published prices are append-only: rollback is refused.
+         */
+        post: operations["importRecommendedPrices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pricing/recommended/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download the recommended price import sample */
+        get: operations["sampleRecommendedPriceImport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pricing/recommended/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recommended price version history (center)
+         * @description TEC-506. Brand center with pricing.recommended.read. Sort: effective_from (default -effective_from), published_at, price; id tiebreak. country is a CSV of ISO-3166 alpha-2 codes, `none` for the currency-wide price; product a CSV of product uuids; currency and source CSV; effective_from_from / effective_from_to (inclusive day).
+         */
+        get: operations["listRecommendedPriceVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/pricing/recommended/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recommended price list in force for a country and currency
+         * @description TEC-506. Any organization with pricing.recommended.read. Per product the country's own price, else the currency-wide price (scope). currency defaults to the organization's; country (ISO2, `none` = currency-wide only) is the center's choice, distributors and dealers always read their own country. Sort: product_name (default), price, effective_from; id tiebreak.
+         */
+        get: operations["listCurrentRecommendedPrices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pricing/discipline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Price discipline rows of a snapshot day
+         * @description TEC-506. pricing.discipline.read: the center reads the brand, a distributor its subtree. One row per organization x product of the daily snapshot (default: the latest day): list price (dealer_product_prices) against the recommended price in force, deviation_pct, realised average sale price of the last 30 days. Sort: deviation_pct (default -deviation_pct, nulls last), org_name, product_name; id tiebreak. Filters: date, country (ISO2 CSV), product, distributor (uuid CSV), currency CSV, deviation_pct_min/_max, over_threshold (|deviation| >= pricing.deviation_warning_pct), q.
+         */
+        get: operations["listPriceDiscipline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pricing/discipline/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Price discipline summary per country (and country x product)
+         * @description TEC-506. Same scope as the list. Per country x currency the average and median deviation and the organizations with a product over the threshold; the same per country x product.
+         */
+        get: operations["getPriceDisciplineSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pricing/discipline/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export the price discipline list (io engine)
+         * @description TEC-506. Resource pricing.discipline; query takes the list filters.
+         */
+        post: operations["exportPriceDiscipline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -17619,7 +17776,7 @@ export interface components {
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
-        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote" | "fleet_report";
+        DocumentKind: "service" | "measurement" | "contract" | "order_slip" | "invoice_view" | "warranty" | "quote" | "fleet_report" | "price_list";
         DocumentVariable: {
             /** @example customer_name */
             key: string;
@@ -20496,6 +20653,13 @@ export interface components {
             purchase_price_source?: "own" | "list" | "override" | "distributor";
             sale_price?: components["schemas"]["PriceAmount"];
             recommended_sale_price?: components["schemas"]["PriceAmount"];
+            /** @description TEC-506. distributor and dealer viewers with pricing.recommended.read: the recommended price in force for the organization's country, else the currency-wide price. */
+            recommended?: components["schemas"]["RecommendedPriceRef"];
+            /**
+             * @description TEC-506. (own end-customer price (dealer_product_prices) - recommended) / recommended in percent, 2 decimals; absent without an own price or the recommended block.
+             * @example 15.00
+             */
+            deviation_pct?: string;
         };
         ProductPriceView: {
             /** Format: uuid */
@@ -24364,6 +24528,13 @@ export interface components {
             recommended_sale_price?: string | null;
             /** Format: date-time */
             updated_at: string;
+            /** @description TEC-506. Only with pricing.recommended.read (the dealer's country, else currency-wide). */
+            recommended?: components["schemas"]["RecommendedPriceRef"];
+            /**
+             * @description TEC-506. (sale_price - recommended) / recommended in percent.
+             * @example 15.00
+             */
+            deviation_pct?: string;
         };
         DealerPriceRequest: {
             /** Format: uuid */
@@ -24573,6 +24744,13 @@ export interface components {
             estimated_profit: string | null;
             /** Format: date-time */
             updated_at: string | null;
+            /** @description TEC-506. Only with pricing.recommended.read. */
+            recommended?: components["schemas"]["RecommendedPriceRef"];
+            /**
+             * @description TEC-506. Absent without a sale price.
+             * @example 15.00
+             */
+            deviation_pct?: string;
         };
         ProductSaleLookup: {
             /** Format: uuid */
@@ -26291,6 +26469,194 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description TEC-506. The recommended price in force (country, else currency-wide). */
+        RecommendedPriceRef: {
+            /** @example 1500.00 */
+            price: string;
+            currency: string;
+            /** @description empty for the currency-wide price */
+            country_iso2: string;
+            /** @enum {string} */
+            scope: "country" | "currency";
+            /** Format: date */
+            effective_from: string;
+        };
+        RecommendedPublishRequest: {
+            /**
+             * Format: date
+             * @description Default day of the rows (today or later).
+             */
+            effective_from?: string | null;
+            note?: string | null;
+            rows: {
+                /** Format: uuid */
+                product_uuid: string;
+                /** @description ISO-3166 alpha-2; empty or null = currency-wide */
+                country?: string | null;
+                currency: string;
+                /**
+                 * @description NUMERIC(18,2), non-negative
+                 * @example 1500.00
+                 */
+                price: string;
+                /** Format: date */
+                effective_from?: string | null;
+            }[];
+        };
+        RecommendedPriceVersion: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            product_uuid: string;
+            product_sku: string;
+            product_name: string;
+            country_iso2: string;
+            currency: string;
+            price: string;
+            /** Format: date */
+            effective_from: string;
+            /** @enum {string} */
+            source: "publish" | "price_list" | "migration";
+            /** Format: uuid */
+            batch_id: string | null;
+            note: string;
+            /** Format: date-time */
+            published_at: string;
+            published_by_name: string;
+            /** Format: date-time */
+            superseded_at: string | null;
+            /** @enum {string} */
+            status: "current" | "scheduled" | "superseded";
+        };
+        RecommendedPublishResult: {
+            /** Format: uuid */
+            batch_id: string;
+            price_count: number;
+            applied_count: number;
+            scheduled_count: number;
+            versions: components["schemas"]["RecommendedPriceVersion"][];
+        };
+        CurrentRecommendedPrice: {
+            /** Format: uuid */
+            product_uuid: string;
+            product_sku: string;
+            product_name: string;
+            price: string;
+            currency: string;
+            country_iso2: string;
+            /** @enum {string} */
+            scope: "country" | "currency";
+            /** Format: date */
+            effective_from: string;
+            /** Format: uuid */
+            version_uuid: string;
+            source: string;
+            /** Format: uuid */
+            batch_id: string | null;
+        };
+        PriceDisciplineRow: {
+            /** Format: date */
+            snapshot_date: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            organization_name: string;
+            /** @enum {string} */
+            organization_type: "dealer" | "distributor";
+            /** Format: uuid */
+            product_uuid: string;
+            product_sku: string;
+            product_name: string;
+            country_iso2: string;
+            currency: string;
+            recommended_price: string;
+            list_price: string;
+            deviation_pct: string | null;
+            avg_sale_price: string | null;
+            sales_quantity: string;
+            over_threshold: boolean;
+        };
+        PriceDisciplineSummary: {
+            /** Format: date */
+            snapshot_date: string | null;
+            threshold_pct: number;
+            countries: {
+                country_iso2: string;
+                country_name_en: string;
+                country_name_tr: string;
+                currency: string;
+                /** Format: int64 */
+                org_count: number;
+                /** Format: int64 */
+                row_count: number;
+                avg_deviation_pct: string | null;
+                median_deviation_pct: string | null;
+                /** Format: int64 */
+                over_threshold_org_count: number;
+            }[];
+            products: {
+                country_iso2: string;
+                currency: string;
+                /** Format: uuid */
+                product_uuid: string;
+                product_sku: string;
+                product_name: string;
+                recommended_price: string;
+                /** Format: int64 */
+                org_count: number;
+                avg_deviation_pct: string | null;
+                median_deviation_pct: string | null;
+                /** Format: int64 */
+                over_threshold_org_count: number;
+            }[];
+        };
+        EnvelopeRecommendedPublishResult: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["RecommendedPublishResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeRecommendedPriceVersionPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["RecommendedPriceVersion"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeCurrentRecommendedPricePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["CurrentRecommendedPrice"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePriceDisciplinePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["PriceDisciplineRow"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePriceDisciplineSummary: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PriceDisciplineSummary"];
             meta: components["schemas"]["ResponseMeta"];
         };
     };
@@ -53044,6 +53410,261 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    publishRecommendedPrices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendedPublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Published batch */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeRecommendedPublishResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    importRecommendedPrices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @enum {string} */
+                    format?: "csv" | "xlsx";
+                    locale?: string;
+                    /** Format: date */
+                    effective_from?: string;
+                    note?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    sampleRecommendedPriceImport: {
+        parameters: {
+            query?: {
+                format?: "csv" | "xlsx";
+                locale?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Import sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listRecommendedPriceVersions: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description CSV of product uuids */
+                product?: string;
+                /** @description CSV of ISO2 codes or none */
+                country?: string;
+                currency?: string;
+                /** @description CSV of publish, price_list, migration */
+                source?: string;
+                batch_id?: string;
+                effective_from_from?: string;
+                effective_from_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Version page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeRecommendedPriceVersionPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listCurrentRecommendedPrices: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                country?: string;
+                currency?: string;
+                /** @description CSV of product uuids */
+                product?: string;
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Price list page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCurrentRecommendedPricePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPriceDiscipline: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                date?: string;
+                country?: string;
+                product?: string;
+                distributor?: string;
+                currency?: string;
+                deviation_pct_min?: number;
+                deviation_pct_max?: number;
+                over_threshold?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discipline page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePriceDisciplinePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPriceDisciplineSummary: {
+        parameters: {
+            query?: {
+                date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Summary */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePriceDisciplineSummary"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportPriceDiscipline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    format: "csv" | "xlsx" | "pdf";
+                    query?: {
+                        [key: string]: string;
+                    };
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
 }

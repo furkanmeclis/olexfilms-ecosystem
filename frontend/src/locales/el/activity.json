@@ -197,5 +197,6 @@
   "filters.actor": "Φιλτράρισμα κατά χρήστη",
   "resources.platform.organizations": "Οργανισμοί",
   "actions.mcp.tool_called": "Κλήθηκε εργαλείο MCP",
-  "resources.mcp_tool": "Εργαλείο MCP"
+  "resources.mcp_tool": "Εργαλείο MCP",
+  "actions.pricing.recommended_published": "Δημοσιεύτηκαν προτεινόμενες τιμές"
 }
