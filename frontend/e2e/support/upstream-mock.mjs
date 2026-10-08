@@ -82,6 +82,7 @@ const warranty = {
 
 /** Public quote token of the TEC-320 spec (keep in sync with constants). */
 const QUOTE_OK = "3f1c2b7a-8d4e-4b6f-9a1c-2e3d4f5a6b7c";
+const SHOWCASE_DEALER = "olex-kadikoy";
 
 const publicQuote = {
   uuid: "9b2f0c1d-1111-4222-8333-444455556666",
@@ -114,6 +115,72 @@ const publicQuote = {
     },
   ],
   pdf: { url: `/v1/public/quotes/${QUOTE_OK}/pdf` },
+};
+
+const publicDealer = {
+  code: SHOWCASE_DEALER,
+  name: "Olex Kadıköy",
+  logo_url: null,
+  address: "Moda Cd. 1",
+  city: "İstanbul",
+  district: "Kadıköy",
+  latitude: 40.99,
+  longitude: 29.03,
+  whatsapp: "+905321234567",
+  showcase: {
+    locale: "en",
+    headline: "Premium PPF studio",
+    about: "Paint protection film and ceramic care applications.",
+    working_hours: [
+      { day: "monday", windows: [{ start: "09:00", end: "18:00" }] },
+      { day: "tuesday", windows: [{ start: "09:00", end: "18:00" }] },
+      { day: "wednesday", windows: [{ start: "09:00", end: "18:00" }] },
+      { day: "thursday", windows: [{ start: "09:00", end: "18:00" }] },
+      { day: "friday", windows: [{ start: "09:00", end: "18:00" }] },
+      { day: "saturday", windows: [] },
+      { day: "sunday", windows: [] },
+    ],
+    open_now: true,
+    timezone: "Europe/Istanbul",
+    services: [
+      {
+        kind: "custom",
+        title: "Full body PPF",
+        description: "Transparent paint protection film.",
+      },
+    ],
+    photos: [],
+    social_links: { instagram: "https://instagram.com/olexfilms" },
+    seo_keywords: ["ppf"],
+    google_rating: 4.8,
+    google_review_count: 128,
+    google_rating_source: "places",
+    google_place_id: "ChIJ-e2e",
+    lead_form_enabled: true,
+    whatsapp_chat_url: "https://wa.me/905321234567?text=showcase",
+    published_at: "2026-10-08T09:00:00Z",
+  },
+};
+
+const publicDealerLeadConfig = {
+  dealer_code: SHOWCASE_DEALER,
+  dealer_name: "Olex Kadıköy",
+  fields: ["name", "phone", "message"],
+  kvkk_text_version: 1,
+  kvkk_text: "Privacy notice text.",
+  services: [
+    {
+      uuid: "11111111-1111-4111-8111-111111111111",
+      kind: "custom",
+      title: "Full body PPF",
+      description: "Transparent paint protection film.",
+    },
+  ],
+  whatsapp_chat_url: "https://wa.me/905321234567?text=showcase",
+  form_token: "e2e-showcase-token",
+  min_fill_seconds: 1,
+  default_phone_country: "TR",
+  preferred_locales: ["en", "tr"],
 };
 
 const b64url = (v) => Buffer.from(JSON.stringify(v)).toString("base64url");
@@ -334,6 +401,24 @@ const server = createServer(async (req, res) => {
     path === "/v1/public/dealer-applications/config"
   ) {
     return send(res, 200, { success: true, data: { enabled: true } });
+  }
+
+  const dealer = path.match(/^\/v1\/public\/dealers\/([^/]+)$/)?.[1];
+  if (req.method === "GET" && dealer) {
+    if (decodeURIComponent(dealer) === SHOWCASE_DEALER) {
+      return send(res, 200, { success: true, data: publicDealer });
+    }
+    return send(res, 404, error("NOT_FOUND", "Dealer not found"));
+  }
+
+  const leadConfig = path.match(
+    /^\/v1\/public\/dealers\/([^/]+)\/lead-form\/config$/,
+  )?.[1];
+  if (req.method === "GET" && leadConfig) {
+    if (decodeURIComponent(leadConfig) === SHOWCASE_DEALER) {
+      return send(res, 200, { success: true, data: publicDealerLeadConfig });
+    }
+    return send(res, 404, error("NOT_FOUND", "Lead form not found"));
   }
 
   // Not mocked: behave like the closed port the other specs rely on.

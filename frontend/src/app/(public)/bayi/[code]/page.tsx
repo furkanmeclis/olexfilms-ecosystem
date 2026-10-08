@@ -7,8 +7,12 @@ import { routes } from "@/config/routes";
 import { site } from "@/config/site";
 import { DealerShowcaseView } from "@/features/dealers/components/dealer-showcase-view";
 import {
+  dealerCanonicalPath,
+  dealerJsonLd,
   dealerLocality,
+  dealerOgImage,
   dealerLogoSrc,
+  dealerSeoTitle,
   fetchPublicDealer,
 } from "@/features/dealers/lib/dealer-showcase";
 import { loadMessages, translate } from "@/lib/i18n/messages";
@@ -34,13 +38,14 @@ type PageProps = {
 };
 
 /** One Go lookup per request, shared by generateMetadata and the page. */
-const lookup = cache(async (code: string) => {
+const lookup = cache(async (code: string, locale?: string) => {
   const requestHeaders = await headers();
   return fetchPublicDealer(
     code,
     {
       clientIp: clientIpFromHeaders(requestHeaders),
       forwardedHost: forwardedHostFromHeaders(requestHeaders),
+      locale: normalizeLocale(locale) ?? undefined,
     },
     fetchUpstream,
   );
@@ -67,7 +72,7 @@ export async function generateMetadata({
   const { code } = await params;
   const { locale } = await pageLocale(searchParams);
   if (locale !== i18nConfig.fallbackLocale) await loadMessages(locale);
-  const result = await lookup(code);
+  const result = await lookup(code, locale);
   if (result.kind !== "ok") {
     const title =
       result.kind === "not_found"
@@ -77,6 +82,7 @@ export async function generateMetadata({
   }
   const dealer = result.dealer;
   const locality = dealerLocality(dealer);
+  const title = dealerSeoTitle(dealer);
   const description = locality
     ? translate(locale, "portal.dealer_page.og_description", {
         name: dealer.name,
@@ -85,22 +91,26 @@ export async function generateMetadata({
     : translate(locale, "portal.dealer_page.og_description_short", {
         name: dealer.name,
       });
-  const logo = dealerLogoSrc(dealer);
+  const image = dealerOgImage(dealer) ?? dealerLogoSrc(dealer);
+  const canonical = dealerCanonicalPath(dealer);
+  const languages = Object.fromEntries(
+    i18nConfig.supportedLocales.map((l) => [l, `${canonical}?lang=${l}`]),
+  );
   return {
-    title: dealer.name,
+    title,
     description,
-    alternates: { canonical: routes.public.dealer(dealer.code) },
+    alternates: { canonical, languages },
     openGraph: {
       type: "website",
-      title: dealer.name,
+      title,
       description,
       locale,
-      url: routes.public.dealer(dealer.code),
-      images: logo
-        ? [{ url: logo, alt: dealer.name }]
+      url: canonical,
+      images: image
+        ? [{ url: image, alt: dealer.name }]
         : [{ ...site.ogImage, alt: dealer.name }],
     },
-    twitter: { card: "summary", title: dealer.name, description },
+    twitter: { card: "summary", title, description },
   };
 }
 
@@ -111,10 +121,22 @@ export default async function DealerShowcasePage({
   const { code } = await params;
   const { locale } = await pageLocale(searchParams);
   if (locale !== i18nConfig.fallbackLocale) await loadMessages(locale);
-  const result = await lookup(code);
+  const result = await lookup(code, locale);
   const path =
     result.kind === "ok"
       ? routes.public.dealer(result.dealer.code)
       : routes.public.dealer(code);
-  return <DealerShowcaseView result={result} locale={locale} path={path} />;
+  return (
+    <>
+      <DealerShowcaseView result={result} locale={locale} path={path} />
+      {result.kind === "ok" ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(dealerJsonLd(result.dealer)),
+          }}
+        />
+      ) : null}
+    </>
+  );
 }

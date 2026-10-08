@@ -57,6 +57,8 @@ const DEALER = {
   distance_km: 3.456,
   accepts_appointments: true,
   whatsapp: "+905321234567",
+  has_showcase: true,
+  google_rating: 4.7,
 };
 
 let root: Root;
@@ -143,6 +145,8 @@ describe("DealerFinder", () => {
     expect(q("dealer-whatsapp")?.getAttribute("href")).toBe(
       "https://wa.me/905321234567",
     );
+    expect(q("dealer-rating")?.textContent).toContain("4.7");
+    expect(q("dealer-showcase")?.getAttribute("href")).toBe("/bayi/kadikoy");
     expect(mapProps.last?.markers).toHaveLength(2);
   });
 
