@@ -251,6 +251,7 @@ type Appointment struct {
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	PlanID           pgtype.Int8        `json:"plan_id"`
 }
 
 type AppointmentClosure struct {
@@ -1191,6 +1192,29 @@ type FleetReport struct {
 	EmailedAt   pgtype.Timestamptz `json:"emailed_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FleetServicePlan struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	FleetOrgID        int64              `json:"fleet_org_id"`
+	FleetLinkID       int64              `json:"fleet_link_id"`
+	Title             string             `json:"title"`
+	ServiceType       string             `json:"service_type"`
+	Note              string             `json:"note"`
+	StartDate         pgtype.Date        `json:"start_date"`
+	DailyVehicleLimit int32              `json:"daily_vehicle_limit"`
+	PreferredTimes    []byte             `json:"preferred_times"`
+	Status            string             `json:"status"`
+	IdempotencyKey    pgtype.Text        `json:"idempotency_key"`
+	CancelReason      pgtype.Text        `json:"cancel_reason"`
+	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
+	CancelledByUserID pgtype.Int8        `json:"cancelled_by_user_id"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type FleetUser struct {

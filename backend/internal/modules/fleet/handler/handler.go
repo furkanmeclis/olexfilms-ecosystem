@@ -55,7 +55,7 @@ func caller(r *http.Request) usecase.Caller {
 	p := authctx.MustPrincipal(r.Context())
 	org := orgctx.MustScope(r.Context())
 	f, _ := scopefilter.From(r.Context())
-	return usecase.Caller{UserID: p.UserInternal, OrgID: org.InternalID, BrandID: org.BrandID, OrgType: org.OrgType, Filter: f}
+	return usecase.Caller{Principal: p, Org: org, UserID: p.UserInternal, OrgID: org.InternalID, BrandID: org.BrandID, OrgType: org.OrgType, Filter: f}
 }
 
 // List is GET /v1/fleets (docs/list-contract.md): q, status (link status,
@@ -454,6 +454,86 @@ func (h *Handler) ExportStatement(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusAccepted, job)
+}
+
+func (h *Handler) PreviewServicePlan(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var in usecase.ServicePlanInput
+	if !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.PreviewServicePlan(r.Context(), caller(r), id, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) CreateServicePlan(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	var in usecase.ServicePlanInput
+	if !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.CreateServicePlan(r.Context(), caller(r), id, in, r.Header.Get("Idempotency-Key"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, out)
+}
+
+type cancelPlanBody struct {
+	Reason string `json:"reason"`
+}
+
+func (h *Handler) CancelServicePlan(w http.ResponseWriter, r *http.Request) {
+	fleetID, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	planID, ok := pathUUID(w, r, "plan")
+	if !ok {
+		return
+	}
+	var in cancelPlanBody
+	if r.ContentLength != 0 && !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.CancelServicePlan(r.Context(), caller(r), fleetID, planID, in.Reason)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) StartServicePlanIntake(w http.ResponseWriter, r *http.Request) {
+	fleetID, ok := pathUUID(w, r, "uuid")
+	if !ok {
+		return
+	}
+	planID, ok := pathUUID(w, r, "plan")
+	if !ok {
+		return
+	}
+	var in usecase.IntakeInput
+	if !decode(w, r, &in) {
+		return
+	}
+	out, err := h.svc.StartServicePlanIntake(r.Context(), caller(r), fleetID, planID, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
 }
 
 // --- Portal --------------------------------------------------------------------

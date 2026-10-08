@@ -13,8 +13,11 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
+	appointmentsuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/appointments/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
@@ -80,6 +83,7 @@ func newAPIFixture(t *testing.T) *apiFixture {
 		t.Fatal(err)
 	}
 	f.svc = New(tx)
+	f.svc.now = func() time.Time { return time.Date(2026, 10, 1, 8, 0, 0, 0, time.UTC) }
 	f.svc.SetPlates(fakePlates{})
 	return f
 }
@@ -100,14 +104,60 @@ func (f *apiFixture) org(t *testing.T, name, typ string, parent int64) db.Organi
 
 // dealer is a dealer caller with the managed scope (dealer_owner).
 func (f *apiFixture) dealer(o db.Organization) Caller {
-	return Caller{OrgID: o.ID, BrandID: o.BrandID, OrgType: o.Type, Filter: scopefilter.Filter{
-		Scope: rbac.ScopeManaged, OrgID: o.ID, OrgIDs: []int64{o.ID},
-	}}
+	return Caller{Principal: authctx.Principal{PermissionScopes: map[string]rbac.Scope{
+		rbac.PermFleetsPlan: rbac.ScopeManaged, rbac.PermAppointmentsWrite: rbac.ScopeManaged,
+		rbac.PermServicesRead: rbac.ScopeManaged, rbac.PermServicesWrite: rbac.ScopeManaged,
+	}}, Org: orgctx.Scope{InternalID: o.ID, UUID: o.Uuid, OrgType: o.Type, BrandID: o.BrandID},
+		OrgID: o.ID, BrandID: o.BrandID, OrgType: o.Type, Filter: scopefilter.Filter{
+			Scope: rbac.ScopeManaged, OrgID: o.ID, OrgIDs: []int64{o.ID},
+		}}
 }
 
 // plate is a plate unique to the run.
 func (f *apiFixture) plate(n int) string {
 	return fmt.Sprintf("34 T%s %d", f.suffix[len(f.suffix)-4:], n)
+}
+
+func (f *apiFixture) settings(t *testing.T, org db.Organization, capacity int32) {
+	t.Helper()
+	_, err := f.q.UpsertAppointmentSettings(f.ctx, db.UpsertAppointmentSettingsParams{
+		OrganizationID: org.ID, BrandID: org.BrandID, DailyVehicleCapacity: capacity,
+		DefaultEstimatedMinutes: 60, SlotIntervalMinutes: 60,
+		WorkingHours: []byte(`{
+			"monday":[{"start":"09:00","end":"17:00"}],
+			"tuesday":[{"start":"09:00","end":"17:00"}],
+			"wednesday":[{"start":"09:00","end":"17:00"}],
+			"thursday":[{"start":"09:00","end":"17:00"}],
+			"friday":[{"start":"09:00","end":"17:00"}]
+		}`),
+	})
+	if err != nil {
+		t.Fatalf("appointment settings: %v", err)
+	}
+}
+
+func (f *apiFixture) fleetWithVehicles(t *testing.T, n int) (FleetView, []VehicleView) {
+	t.Helper()
+	opened, err := f.svc.Open(f.ctx, f.dealer(f.d1), OpenInput{LegalName: "T475 Filo A.Ş.", TaxNumber: validVKN(t, f.suffix)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.InviteUser(f.ctx, f.dealer(f.d1), opened.UUID, InviteInput{
+		Email: "t475-" + f.suffix + "@example.test", Name: "Filo", Surname: "Plan",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	vehicles := make([]VehicleView, 0, n)
+	for i := 0; i < n; i++ {
+		v, _, err := f.svc.AddVehicle(f.ctx, f.dealer(f.d1), opened.UUID, AddVehicleInput{
+			Plate: f.plate(100 + i), CarBrandUUID: &f.carBrand.Uuid, CarModelUUID: &f.carModel.Uuid,
+		})
+		if err != nil {
+			t.Fatalf("vehicle %d: %v", i, err)
+		}
+		vehicles = append(vehicles, v)
+	}
+	return opened, vehicles
 }
 
 // completedService inserts a completed service of org on the vehicle.
@@ -282,6 +332,170 @@ func TestSecondDealerLinkPendingThenOwnDataOnly(t *testing.T) {
 	if items, total, err := f.svc.List(ctx, f.dealer(d3), ListFilter{Limit: 20}); err != nil || total != 0 || len(items) != 0 {
 		t.Fatalf("unlinked dealer list = %d, %v", total, err)
 	}
+}
+
+func TestFleetServicePlanPreviewCapacityClosureAndWarnings(t *testing.T) {
+	f := newAPIFixture(t)
+	f.settings(t, f.d1, 3)
+	opened, vehicles := f.fleetWithVehicles(t, 7)
+	if _, err := f.q.CreateAppointmentClosure(f.ctx, db.CreateAppointmentClosureParams{
+		OrganizationID: f.d1.ID, BrandID: f.d1.BrandID,
+		ClosedOn: pgtype.Date{Time: time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC), Valid: true},
+		Reason:   "closed",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	input := ServicePlanInput{
+		VehicleUUIDs: uuidsOf(vehicles), ServiceType: "PPF kontrol",
+		StartDate: "2026-10-05", PreferredTimes: []string{"10:00", "11:00", "12:00"},
+	}
+	got, err := f.svc.PreviewServicePlan(f.ctx, f.dealer(f.d1), opened.UUID, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byDay := map[string]int{}
+	for _, a := range got.Appointments {
+		byDay[a.StartsAt.In(loadLocation(f.d1.Timezone)).Format(time.DateOnly)]++
+	}
+	if byDay["2026-10-05"] != 3 || byDay["2026-10-06"] != 0 || byDay["2026-10-07"] != 3 || byDay["2026-10-08"] != 1 {
+		t.Fatalf("distribution = %+v, want 3 + closure + 3 + 1", byDay)
+	}
+
+	// Same vehicle already has another active appointment on the first day:
+	// the preview still proposes the plan row but flags the conflict.
+	firstVehicle, err := f.q.GetVehicleByUUID(f.ctx, vehicles[0].UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.q.CreateAppointment(f.ctx, db.CreateAppointmentParams{
+		OrganizationID: f.d1.ID, BrandID: f.d1.BrandID, CustomerUserID: firstVehicle.UserID,
+		VehicleID:        pgtype.Int8{Int64: firstVehicle.ID, Valid: true},
+		StartsAt:         tsArg(time.Date(2026, 10, 5, 7, 0, 0, 0, time.UTC)),
+		EndsAt:           tsArg(time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC)),
+		EstimatedMinutes: 60, Source: "panel", Status: appointmentsuc.StatusScheduled,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got, err = f.svc.PreviewServicePlan(f.ctx, f.dealer(f.d1), opened.UUID, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Warnings) != 1 || got.Warnings[0].VehicleUUID != vehicles[0].UUID {
+		t.Fatalf("warnings = %+v", got.Warnings)
+	}
+}
+
+func TestFleetServicePlanCreateRollbackOnStaleCapacityAndIdempotency(t *testing.T) {
+	f := newAPIFixture(t)
+	f.settings(t, f.d1, 3)
+	opened, vehicles := f.fleetWithVehicles(t, 3)
+	input := ServicePlanInput{VehicleUUIDs: uuidsOf(vehicles), ServiceType: "PPF", StartDate: "2026-10-05"}
+	preview, err := f.svc.PreviewServicePlan(f.ctx, f.dealer(f.d1), opened.UUID, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range vehicles {
+		row, err := f.q.GetVehicleByUUID(f.ctx, v.UUID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.q.CreateAppointment(f.ctx, db.CreateAppointmentParams{
+			OrganizationID: f.d1.ID, BrandID: f.d1.BrandID, CustomerUserID: row.UserID,
+			VehicleID:        pgtype.Int8{Int64: row.ID, Valid: true},
+			StartsAt:         tsArg(time.Date(2026, 10, 5, 7, 0, 0, 0, time.UTC)),
+			EndsAt:           tsArg(time.Date(2026, 10, 5, 8, 0, 0, 0, time.UTC)),
+			EstimatedMinutes: 60, Source: "panel", Status: appointmentsuc.StatusScheduled,
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	input.Appointments = preview.Appointments
+	if _, err := f.svc.CreateServicePlan(f.ctx, f.dealer(f.d1), opened.UUID, input, "stale-"+f.suffix); !errors.Is(err, ErrServicePlanStale) {
+		t.Fatalf("create with stale preview err = %v", err)
+	}
+	if got := countPlans(t, f.tx, f.d1.ID); got != 0 {
+		t.Fatalf("plans after stale create = %d", got)
+	}
+
+	f2 := newAPIFixture(t)
+	f2.settings(t, f2.d1, 3)
+	opened2, vehicles2 := f2.fleetWithVehicles(t, 2)
+	okInput := ServicePlanInput{VehicleUUIDs: uuidsOf(vehicles2), ServiceType: "PPF", StartDate: "2026-10-05"}
+	one, err := f2.svc.CreateServicePlan(f2.ctx, f2.dealer(f2.d1), opened2.UUID, okInput, "idem-"+f2.suffix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	two, err := f2.svc.CreateServicePlan(f2.ctx, f2.dealer(f2.d1), opened2.UUID, okInput, "idem-"+f2.suffix)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if one.UUID != two.UUID || countPlans(t, f2.tx, f2.d1.ID) != 1 {
+		t.Fatalf("idempotent plans = %s %s count=%d", one.UUID, two.UUID, countPlans(t, f2.tx, f2.d1.ID))
+	}
+}
+
+func TestFleetServicePlanStartIntakeIsRowWise(t *testing.T) {
+	f := newAPIFixture(t)
+	f.settings(t, f.d1, 3)
+	opened, vehicles := f.fleetWithVehicles(t, 2)
+	plan, err := f.svc.CreateServicePlan(f.ctx, f.dealer(f.d1), opened.UUID,
+		ServicePlanInput{VehicleUUIDs: uuidsOf(vehicles), ServiceType: "PPF", StartDate: "2026-10-05"}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fail := plan.Appointments[0].UUID
+	f.svc.SetAppointments(fakeAppointmentStarter{fail: fail})
+	got, err := f.svc.StartServicePlanIntake(f.ctx, f.dealer(f.d1), opened.UUID, plan.UUID, IntakeInput{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Results) != 2 {
+		t.Fatalf("results = %+v", got.Results)
+	}
+	var ok, bad int
+	for _, r := range got.Results {
+		if r.OK {
+			ok++
+			if r.ServiceUUID == nil {
+				t.Fatalf("success row missing service uuid: %+v", r)
+			}
+		} else {
+			bad++
+			if r.AppointmentUUID != fail || r.Code == "" {
+				t.Fatalf("error row = %+v", r)
+			}
+		}
+	}
+	if ok != 1 || bad != 1 {
+		t.Fatalf("row results ok=%d bad=%d: %+v", ok, bad, got.Results)
+	}
+}
+
+type fakeAppointmentStarter struct{ fail uuid.UUID }
+
+func (f fakeAppointmentStarter) StartIntake(_ context.Context, _ appointmentsuc.Caller, id uuid.UUID) (appointmentsuc.Appointment, error) {
+	if id == f.fail {
+		return appointmentsuc.Appointment{}, appointmentsuc.ErrInvalidTransition
+	}
+	svc := uuid.New()
+	return appointmentsuc.Appointment{UUID: id, ServiceUUID: &svc}, nil
+}
+
+func uuidsOf(vs []VehicleView) []uuid.UUID {
+	out := make([]uuid.UUID, 0, len(vs))
+	for _, v := range vs {
+		out = append(out, v.UUID)
+	}
+	return out
+}
+
+func countPlans(t *testing.T, tx pgx.Tx, orgID int64) int {
+	t.Helper()
+	var n int
+	if err := tx.QueryRow(context.Background(), `SELECT COUNT(*) FROM fleet_service_plans WHERE organization_id = $1`, orgID).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
 }
 
 // Acceptance (TEC-473): another customer's vehicle never joins a fleet
