@@ -43,6 +43,7 @@
   "kinds.order_slip": "Бележка за поръчка",
   "kinds.invoice_view": "Изглед на фактура",
   "kinds.warranty": "Гаранционен сертификат",
+  "kinds.fleet_report": "Отчет за автопарка",
   "languages.tr": "Турски",
   "languages.en": "Английски",
   "languages.bg": "Български",
@@ -67,5 +68,6 @@
   "variable_groups.invoice": "Фактура",
   "variable_groups.warranty": "Гаранция",
   "variable_groups.totals": "Суми",
+  "variable_groups.fleet_report": "Отчет за автопарка",
   "fields.updated_at": "Обновено"
 }

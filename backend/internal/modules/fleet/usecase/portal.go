@@ -139,11 +139,35 @@ func (s *Service) resolvePortal(ctx context.Context, q *db.Queries, c PortalCall
 	if c.BrandID != 0 && f.Organization.BrandID != c.BrandID {
 		return portalScope{}, ErrNotFound
 	}
-	links, err := q.ListFleetDealerLinks(ctx, db.ListFleetDealerLinksParams{FleetOrgID: f.Organization.ID})
-	if err != nil {
-		return portalScope{}, fmt.Errorf("fleet: portal links: %w", err)
-	}
 	out := portalScope{fleet: f.Organization, profile: f.FleetProfile}
+	dealers, open, pending, err := s.visibleDealers(ctx, q, f.Organization.ID)
+	if err != nil {
+		return portalScope{}, err
+	}
+	if !open {
+		return portalScope{}, ErrPortalClosed
+	}
+	out.dealers, out.pending = dealers, pending
+	out.ids = make([]int64, 0, len(out.dealers))
+	for _, d := range out.dealers {
+		out.ids = append(out.ids, d.id)
+	}
+	return out, nil
+}
+
+// visibleDealers lists the dealers whose data a fleet sees (the portal and
+// the periodic report): every dealer the fleet worked with (a link that was
+// active once) whose fleet module is on, sorted by name. open reports an
+// active link among them; pending counts the pending link requests.
+func (s *Service) visibleDealers(ctx context.Context, q *db.Queries, fleetOrgID int64) ([]portalDealer, bool, int64, error) {
+	links, err := q.ListFleetDealerLinks(ctx, db.ListFleetDealerLinksParams{FleetOrgID: fleetOrgID})
+	if err != nil {
+		return nil, false, 0, fmt.Errorf("fleet: portal links: %w", err)
+	}
+	var (
+		dealers []portalDealer
+		pending int64
+	)
 	enabled := map[int64]bool{}
 	seen := map[int64]int{}
 	open := false
@@ -151,7 +175,7 @@ func (s *Service) resolvePortal(ctx context.Context, q *db.Queries, c PortalCall
 	for _, r := range links {
 		l := r.FleetDealerLink
 		if l.Status == model.LinkPending {
-			out.pending++
+			pending++
 		}
 		if !l.StartedAt.Valid {
 			continue // never active (a rejected request): nothing to show
@@ -159,7 +183,7 @@ func (s *Service) resolvePortal(ctx context.Context, q *db.Queries, c PortalCall
 		on, ok := enabled[l.DealerOrgID]
 		if !ok {
 			if on, err = s.moduleOn(ctx, l.DealerOrgID); err != nil {
-				return portalScope{}, err
+				return nil, false, 0, err
 			}
 			enabled[l.DealerOrgID] = on
 		}
@@ -170,26 +194,19 @@ func (s *Service) resolvePortal(ctx context.Context, q *db.Queries, c PortalCall
 			open = true
 		}
 		if i, dup := seen[l.DealerOrgID]; dup {
-			if !out.dealers[i].cariID.Valid {
-				out.dealers[i].cariID = l.CariAccountID
+			if !dealers[i].cariID.Valid {
+				dealers[i].cariID = l.CariAccountID
 			}
 			continue
 		}
-		seen[l.DealerOrgID] = len(out.dealers)
-		out.dealers = append(out.dealers, portalDealer{
+		seen[l.DealerOrgID] = len(dealers)
+		dealers = append(dealers, portalDealer{
 			id: l.DealerOrgID, uuid: r.DealerUuid, name: r.DealerName, linkStatus: l.Status,
 			startedAt: l.StartedAt, cariID: l.CariAccountID,
 		})
 	}
-	if !open {
-		return portalScope{}, ErrPortalClosed
-	}
-	sort.SliceStable(out.dealers, func(i, j int) bool { return out.dealers[i].name < out.dealers[j].name })
-	out.ids = make([]int64, 0, len(out.dealers))
-	for _, d := range out.dealers {
-		out.ids = append(out.ids, d.id)
-	}
-	return out, nil
+	sort.SliceStable(dealers, func(i, j int) bool { return dealers[i].name < dealers[j].name })
+	return dealers, open, pending, nil
 }
 
 func (s *Service) moduleOn(ctx context.Context, orgID int64) (bool, error) {
