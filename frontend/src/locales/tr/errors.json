@@ -144,5 +144,7 @@
   "codes.FLEET_SERVICE_PLAN_CANCELLED": "Hizmet planı zaten iptal edilmiş.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Galeri dolu; yeni fotoğraf eklemek için önce bir fotoğrafı silin.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Reddetmek için bir not yazın.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "1,0 ile 5,0 arasında bir puan ve 0 veya daha büyük bir yorum sayısı girin.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Google puanı Google Places'tan güncelleniyor; elle girmek için Place ID'yi kaldırın.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Dosya türü desteklenmiyor; JPEG, PNG veya WebP yükleyin."
 }

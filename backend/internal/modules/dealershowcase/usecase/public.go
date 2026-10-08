@@ -17,6 +17,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // PublicShowcase is the `showcase` block of GET /v1/public/dealers/{code}
@@ -124,15 +125,15 @@ func (s *Service) PublicBlock(ctx context.Context, brandID int64, code, locale s
 	out := PublicShowcase{
 		Locale: chain[0], WorkingHours: []PublicDay{}, Services: []PublicService{}, Photos: []PublicPhoto{},
 		SocialLinks: map[string]string{}, SeoKeywords: snap.SeoKeywords,
-		GoogleRating: numericPtr(row.GoogleRating), GoogleRatingSource: textPtr(row.GoogleRatingSource),
 		GooglePlaceID: textPtr(row.GooglePlaceID), PublishedAt: row.PublishedAt.Time.UTC(),
 	}
 	if out.SeoKeywords == nil {
 		out.SeoKeywords = []string{}
 	}
-	if row.GoogleReviewCount.Valid {
-		n := row.GoogleReviewCount.Int32
-		out.GoogleReviewCount = &n
+	live := ratingOf(row.GoogleRating, row.GoogleReviewCount, row.GoogleRatingSource, row.GoogleRatingUpdatedAt)
+	if r := publicRating(live, snap.GoogleRating, s.approvalRequired(ctx)); r != nil {
+		v, src := r.Rating, r.Source
+		out.GoogleRating, out.GoogleReviewCount, out.GoogleRatingSource = &v, r.ReviewCount, &src
 	}
 	content := map[string]map[string]string{}
 	_ = json.Unmarshal(snap.Content, &content)
@@ -260,8 +261,9 @@ func (s *Service) PublicPhoto(ctx context.Context, brandID int64, code string, i
 }
 
 // Badges reports, for the given organizations of the brand, the ones that
-// serve a published showcase with the module on, mapped to their live
-// Google rating (nil when unrated). Nearby dealers use it.
+// serve a published showcase with the module on, mapped to their public
+// Google rating (nil when unrated; same pick as the public block). Nearby
+// dealers use it.
 func (s *Service) Badges(ctx context.Context, brandID int64, orgUUIDs []uuid.UUID) (map[uuid.UUID]*float64, error) {
 	out := map[uuid.UUID]*float64{}
 	if len(orgUUIDs) == 0 {
@@ -273,13 +275,20 @@ func (s *Service) Badges(ctx context.Context, brandID int64, orgUUIDs []uuid.UUI
 	if err != nil {
 		return nil, err
 	}
+	approval := s.approvalRequired(ctx)
 	for _, r := range rows {
 		on, err := s.moduleOn(ctx, r.OrganizationID)
 		if err != nil {
 			return nil, err
 		}
-		if on {
-			out[r.OrganizationUuid] = numericPtr(r.GoogleRating)
+		if !on {
+			continue
+		}
+		out[r.OrganizationUuid] = nil
+		live := ratingOf(r.GoogleRating, pgtype.Int4{}, r.GoogleRatingSource, pgtype.Timestamptz{})
+		if pick := publicRating(live, parseRating(r.PublishedGoogleRating), approval); pick != nil {
+			v := pick.Rating
+			out[r.OrganizationUuid] = &v
 		}
 	}
 	return out, nil

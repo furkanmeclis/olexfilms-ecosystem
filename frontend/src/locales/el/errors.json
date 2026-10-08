@@ -144,5 +144,7 @@
   "codes.FLEET_SERVICE_PLAN_CANCELLED": "Το πλάνο σέρβις έχει ήδη ακυρωθεί.",
   "codes.SHOWCASE_PHOTO_LIMIT": "Η συλλογή είναι πλήρης· διαγράψτε μια φωτογραφία πριν προσθέσετε νέα.",
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Γράψτε μια σημείωση για να απορρίψετε.",
+  "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Εισαγάγετε βαθμολογία από 1,0 έως 5,0 και αριθμό κριτικών 0 ή περισσότερο.",
+  "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Η βαθμολογία Google ενημερώνεται από το Google Places· αφαιρέστε το Place ID για να την εισαγάγετε χειροκίνητα.",
   "codes.UNSUPPORTED_MEDIA_TYPE": "Μη υποστηριζόμενος τύπος αρχείου· ανεβάστε εικόνα JPEG, PNG ή WebP."
 }

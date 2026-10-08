@@ -2460,6 +2460,45 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /v1/showcase/google-rating:
+    put:
+      tags: [Showcase]
+      operationId: setShowcaseGoogleRating
+      summary: Enter the Google rating by hand
+      description: |
+        TEC-469. Requires showcase.write. Accepted only while Google Places
+        is not configured (no GOOGLE_PLACES_API_KEY) or the showcase has no
+        `google_place_id`; otherwise the daily Places worker owns the rating
+        and the call is 409 SHOWCASE_RATING_MANAGED_BY_PLACES (see
+        `manual_rating_allowed` in the editor view). `rating` 1.0–5.0
+        (rounded to one decimal) and `review_count` ≥ 0 go together; outside
+        that range is 422 SHOWCASE_RATING_OUT_OF_RANGE; both null clear the
+        rating. The source becomes `manual`. With
+        `showcase.approval_required` on, the public page keeps the rating of
+        the published snapshot until the next approved submit; with it off
+        the value is public at once.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShowcaseTargetOrg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShowcaseGoogleRatingInput" }
+      responses:
+        "200":
+          description: Showcase with the new rating
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeShowcase" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
   /v1/showcase/services:
     get:
       tags: [Showcase]
@@ -31305,7 +31344,7 @@ components:
         accepts_appointments: { type: boolean }
         whatsapp: { type: [string, "null"], description: E.164 phone }
         has_showcase: { type: boolean, description: "TEC-467. A published showcase with the dealer_showcase module on" }
-        google_rating: { type: [number, "null"], description: "TEC-467. Live Google rating of the showcase (null without one)" }
+        google_rating: { type: [number, "null"], description: "TEC-467. Google rating of the showcase (null without one); TEC-469: same pick as the public showcase block" }
 
     EnvelopeNearbyDealers:
       type: object
@@ -31529,7 +31568,8 @@ components:
       description: TEC-467 showcase editor view (draft + live snapshot). No price fields.
       required: [uuid, organization, status, content, working_hours, social_links, seo_keywords, google_place_id,
         google_rating, google_review_count, google_rating_source, google_rating_updated_at, published_content,
-        published_at, submitted_at, reviewed_at, review_note, updated_at, approval_required, max_photos, services, photos]
+        published_at, submitted_at, reviewed_at, review_note, updated_at, approval_required, max_photos, services, photos,
+        places_configured, manual_rating_allowed, google_place_id_suggestion]
       properties:
         uuid: { type: [string, "null"], format: uuid, description: Null until the showcase is first saved }
         organization: { $ref: "#/components/schemas/ShowcaseOrganization" }
@@ -31567,6 +31607,28 @@ components:
         max_photos: { type: integer, description: "showcase.max_photos" }
         services: { type: array, items: { $ref: "#/components/schemas/ShowcaseService" } }
         photos: { type: array, items: { $ref: "#/components/schemas/ShowcasePhoto" } }
+        places_configured:
+          type: boolean
+          description: TEC-469. GOOGLE_PLACES_API_KEY is set (daily Places refresh of showcases with a place id).
+        manual_rating_allowed:
+          type: boolean
+          description: TEC-469. PUT /v1/showcase/google-rating is accepted (Places not configured or no place id).
+        google_place_id_suggestion:
+          type: [string, "null"]
+          description: |
+            TEC-469. Place id read from the organization's
+            google_business_url (place_id / placeid / query_place_id /
+            q=place_id:) while google_place_id is empty. No lookup is made, so
+            a cid-only or short link yields null and the owner enters the id.
+
+    ShowcaseGoogleRatingInput:
+      type: object
+      additionalProperties: false
+      description: TEC-469 manual Google rating; both null clear it.
+      required: [rating, review_count]
+      properties:
+        rating: { type: [number, "null"], minimum: 1, maximum: 5 }
+        review_count: { type: [integer, "null"], minimum: 0 }
 
     EnvelopeShowcase:
       type: object
@@ -31691,7 +31753,14 @@ components:
         seo_keywords: { type: array, items: { type: string } }
         google_rating: { type: [number, "null"] }
         google_review_count: { type: [integer, "null"] }
-        google_rating_source: { type: [string, "null"], enum: [places, manual, null] }
+        google_rating_source:
+          type: [string, "null"]
+          enum: [places, manual, null]
+          description: |
+            TEC-469. A Places rating is always live (refreshed daily without
+            review). A manual rating is live while showcase.approval_required is
+            off; with it on the page shows the rating frozen in the published
+            snapshot. JSON-LD aggregateRating is written only for `places`.
         google_place_id: { type: [string, "null"] }
         lead_form_enabled: { type: boolean, description: The leads module is on for the dealer }
         whatsapp_chat_url: { type: [string, "null"], description: "wa.me link of the dealer phone (E.164)" }

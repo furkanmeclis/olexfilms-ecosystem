@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "Mouvement financier créé",
   "actions.finance.transfer.create": "Virement financier créé",
   "actions.finance.transaction.void": "Mouvement financier annulé",
+  "actions.showcase.google_rating.refresh_failed": "Échecs répétés de l'actualisation de la note Google",
   "resources.platform.users": "Utilisateurs",
   "resources.platform.roles": "Rôles",
   "resources.platform.notifications": "Notifications de la plateforme",

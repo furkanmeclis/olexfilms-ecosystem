@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "أُنشئت معاملة مالية",
   "actions.finance.transfer.create": "أُنشئ تحويل مالي",
   "actions.finance.transaction.void": "أُلغيت معاملة مالية",
+  "actions.showcase.google_rating.refresh_failed": "فشل تحديث تقييم Google عدة مرات متتالية",
   "resources.platform.users": "المستخدمون",
   "resources.platform.roles": "الأدوار",
   "resources.platform.notifications": "الإشعارات",

@@ -28,6 +28,7 @@
   "actions.finance.transaction.create": "Maliyyə əməliyyatı yaradıldı",
   "actions.finance.transfer.create": "Maliyyə köçürməsi yaradıldı",
   "actions.finance.transaction.void": "Maliyyə əməliyyatı ləğv edildi",
+  "actions.showcase.google_rating.refresh_failed": "Google reytinqinin yenilənməsi dəfələrlə uğursuz oldu",
   "resources.platform.users": "İstifadəçilər",
   "resources.platform.roles": "Rollar",
   "resources.platform.notifications": "Bildirişlər",
