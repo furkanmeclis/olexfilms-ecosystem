@@ -85,6 +85,7 @@
   "labels.pricing.sale.write": "Change sale prices",
   "labels.pricing.recommended.read": "View recommended prices",
   "labels.pricing.recommended.write": "Publish recommended prices",
+  "labels.pricing.discipline.read": "View price discipline",
   "labels.accounting.read": "View accounting",
   "labels.accounting.write": "Manage accounting",
   "labels.accounting.dispute": "Dispute accounting entries",

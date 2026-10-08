@@ -164,5 +164,11 @@
   "system.keys.showcase_approval_required": "Showcase publication requires center approval",
   "system.keys.showcase_approval_required_hint": "When on, a dealer showcase is published only after center approval; when off, the dealer publishes directly.",
   "system.keys.showcase_max_photos": "Maximum photos per showcase",
-  "system.keys.showcase_max_photos_hint": "Number of photos one dealer showcase gallery may hold (1–50)."
+  "system.keys.showcase_max_photos_hint": "Number of photos one dealer showcase gallery may hold (1–50).",
+  "system.groups.pricing": "Pricing",
+  "system.groups.pricing_hint": "Recommended sale prices and dealer price discipline.",
+  "system.keys.pricing_deviation_warning_pct": "Deviation warning threshold (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "A dealer or distributor end-customer price this many percent away from the recommended price (either way) is over the threshold.",
+  "system.keys.pricing_price_list_auto_publish": "Publish the price list automatically",
+  "system.keys.pricing_price_list_auto_publish_hint": "When on, the price list PDF is uploaded to the document center as a new version after every recommended price publication."
 }

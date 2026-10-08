@@ -331,6 +331,11 @@ const (
 	PermEinvoiceRead     = "einvoice.read"
 	PermEinvoiceManage   = "einvoice.manage"
 	PermEinvoiceSettings = "einvoice.settings"
+
+	// TEC-505 (000125): price discipline report (F5-09a): dealer and
+	// distributor end-customer prices against the recommended price.
+	// Publishing stays on PermPricingRecommendedWrite.
+	PermPricingDisciplineRead = "pricing.discipline.read"
 )
 
 // IsSystemRole reports whether slug is a protected system role.

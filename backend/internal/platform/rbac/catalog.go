@@ -782,6 +782,14 @@ var Permissions = []PermissionDef{
 		SuperAdminOnly: true,
 		Description:    "Edit the center seller profile, UBL series and XSLT settings.",
 	},
+
+	// TEC-505: recommended price versions (F5-09a). Appended last; migration
+	// 000125 seeds it.
+	{
+		Slug: PermPricingDisciplineRead, Name: "Read price discipline", Module: "pricing",
+		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
+		Description: "Read dealer and distributor end-customer prices against the recommended price.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -944,6 +952,8 @@ var Roles = []RoleDef{
 			PermPerformanceRead:          ScopeBrand,
 			PermPerformanceTargetsManage: ScopeBrand,
 			PermPerformanceRulesManage:   ScopeBrand,
+			// TEC-505 (000125).
+			PermPricingDisciplineRead: ScopeBrand,
 		}),
 	},
 	{
@@ -1182,6 +1192,8 @@ var Roles = []RoleDef{
 			PermPerformanceRead:          ScopeSubtree,
 			PermPerformanceTargetsManage: ScopeSubtree,
 			PermPerformanceRulesManage:   ScopeSubtree,
+			// TEC-505 (000125): deviations of the subtree.
+			PermPricingDisciplineRead: ScopeSubtree,
 		}),
 	},
 	{

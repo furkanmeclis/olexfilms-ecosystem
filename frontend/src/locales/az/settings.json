@@ -164,5 +164,11 @@
   "system.keys.showcase_approval_required": "Vitrinin dərci mərkəzin təsdiqini tələb edir",
   "system.keys.showcase_approval_required_hint": "Aktivdirsə, diler vitrini yalnız mərkəz təsdiq etdikdən sonra dərc olunur; deaktivdirsə, diler birbaşa dərc edir.",
   "system.keys.showcase_max_photos": "Vitrin üzrə maksimum foto",
-  "system.keys.showcase_max_photos_hint": "Bir diler vitrininin qalereyasında saxlanıla bilən foto sayı (1–50)."
+  "system.keys.showcase_max_photos_hint": "Bir diler vitrininin qalereyasında saxlanıla bilən foto sayı (1–50).",
+  "system.groups.pricing": "Qiymətləndirmə",
+  "system.groups.pricing_hint": "Tövsiyə olunan satış qiymətləri və diler qiymət intizamı.",
+  "system.keys.pricing_deviation_warning_pct": "Kənarlaşma xəbərdarlığı həddi (%)",
+  "system.keys.pricing_deviation_warning_pct_hint": "Diler və ya distribütorun son müştəri qiyməti tövsiyə olunan qiymətdən bu qədər faiz (istənilən istiqamətdə) fərqlənərsə, hədd aşılmış sayılır.",
+  "system.keys.pricing_price_list_auto_publish": "Qiymət siyahısını avtomatik dərc et",
+  "system.keys.pricing_price_list_auto_publish_hint": "Aktiv olduqda, hər tövsiyə qiymət dərcindən sonra qiymət siyahısının PDF-i sənəd mərkəzinə yeni versiya kimi yüklənir."
 }
