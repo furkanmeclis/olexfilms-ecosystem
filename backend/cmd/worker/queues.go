@@ -24,7 +24,7 @@ var queueGroups = map[string]map[string]int{
 		queue.QueueBulk:    3,
 		queue.QueueSearch:  3,
 	},
-	"low":  {queue.QueueMaintenance: 1, queue.QueueCampaigns: 1},
+	"low":  {queue.QueueMaintenance: 1, queue.QueueLow: 1, queue.QueueCampaigns: 1},
 	"docs": {queue.QueueDocs: 4, queue.QueueExports: 2},
 }
 

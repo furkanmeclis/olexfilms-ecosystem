@@ -146,12 +146,12 @@ func TestService_RunOrganizationLedgerOrderCancelAndIdempotentDay(t *testing.T) 
 	if err != nil {
 		t.Fatalf("network demand: %v", err)
 	}
-	if networkRows != 3 {
-		t.Fatalf("network rows = %d, want 3", networkRows)
+	if networkRows < 3 {
+		t.Fatalf("network rows = %d, want at least the 3 rows for the test product", networkRows)
 	}
 	var networkCount int
-	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM network_demand_forecasts WHERE brand_id=$1 AND product_id=$2`,
-		brand.ID, product.ID).Scan(&networkCount); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT COUNT(*) FROM network_demand_forecasts WHERE organization_id=$1 AND brand_id=$2 AND product_id=$3`,
+		center.ID, brand.ID, product.ID).Scan(&networkCount); err != nil {
 		t.Fatal(err)
 	}
 	if networkCount != 3 {
