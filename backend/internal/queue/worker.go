@@ -116,6 +116,8 @@ type Worker struct {
 	campaignSend CampaignRecipientFunc
 	// TEC-481: certificate expiry notices and expiry policy refresh.
 	certificateExpiryScan CertificateExpiryScanFunc
+	// TEC-484: stock forecast daily snapshots and low-stock transitions.
+	stockForecastDaily StockForecastDailyFunc
 	// TEC-476: periodic fleet report schedule and generation.
 	fleetReportsSchedule FleetReportsScheduleFunc
 	fleetReportGenerate  FleetReportGenerateFunc
@@ -137,6 +139,7 @@ func DefaultQueues() map[string]int {
 		QueueBulk:          2,
 		QueueSearch:        2,
 		QueueMaintenance:   1,
+		QueueLow:           1,
 		QueueDocs:          2,
 		QueueWhatsApp:      2,
 		QueueCampaigns:     1,
@@ -218,6 +221,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskCampaignTick, w.handleCampaignTick)
 	mux.HandleFunc(TaskCampaignSendRecipient, w.handleCampaignSendRecipient)
 	mux.HandleFunc(TaskCertificateExpiryScan, w.handleCertificateExpiryScan)
+	mux.HandleFunc(TaskStockForecastDaily, w.handleStockForecastDaily)
 	mux.HandleFunc(TaskFleetReportsSchedule, w.handleFleetReportsSchedule)
 	mux.HandleFunc(TaskFleetReportGenerate, w.handleFleetReportGenerate)
 	return w
