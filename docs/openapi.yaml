@@ -28333,6 +28333,247 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/tenant/pricing/recommended/publish:
+    post:
+      tags: [Pricing]
+      operationId: publishRecommendedPrices
+      summary: Publish recommended retail prices (center, step-up)
+      description: >-
+        TEC-506. Brand center with pricing.recommended.write and a recent
+        step-up. Every row is validated first (400 VALIDATION_ERROR with
+        rows[i].field); the rows become append-only versions of one batch
+        (batch_id). effective_from (default for rows without their own,
+        default today in the center's timezone) must be today or later. A
+        version effective today becomes current (and, currency-wide,
+        product_prices.recommended_sale_price) in the same transaction; a
+        later one on its day through the hourly pricing tick. Writes
+        pricing.recommended_published (notification to the owners of the
+        country's distributors and dealers, price list PDF to the document
+        center when pricing.price_list_auto_publish is on).
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecommendedPublishRequest" }
+      responses:
+        "201":
+          description: Published batch
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeRecommendedPublishResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/tenant/pricing/recommended/import:
+    post:
+      tags: [Pricing]
+      operationId: importRecommendedPrices
+      summary: Upload a recommended price publication file (center, step-up)
+      description: >-
+        TEC-506. Staged io engine import (resource tenant.pricing.recommended):
+        columns sku, country (ISO-3166 alpha-2, empty = currency-wide),
+        currency, price, effective_from. Preview
+        (/v1/tenant/imports/{uuid}/preview) is a dry run classifying rows
+        (new, duplicate, invalid); confirm publishes one batch whose batch_id
+        is the import job. Published prices are append-only: rollback is
+        refused.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, xlsx] }
+                locale: { type: string }
+                effective_from: { type: string, format: date }
+                note: { type: string, maxLength: 2000 }
+      responses:
+        "201":
+          description: Import job created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeImportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/tenant/pricing/recommended/import/sample:
+    get:
+      tags: [Pricing]
+      operationId: sampleRecommendedPriceImport
+      summary: Download the recommended price import sample
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] } }
+        - { name: locale, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Import sample file }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/tenant/pricing/recommended/versions:
+    get:
+      tags: [Pricing]
+      operationId: listRecommendedPriceVersions
+      summary: Recommended price version history (center)
+      description: >-
+        TEC-506. Brand center with pricing.recommended.read. Sort:
+        effective_from (default -effective_from), published_at, price; id
+        tiebreak. country is a CSV of ISO-3166 alpha-2 codes, `none` for the
+        currency-wide price; product a CSV of product uuids; currency and
+        source CSV; effective_from_from / effective_from_to (inclusive day).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - { name: product, in: query, schema: { type: string }, description: CSV of product uuids }
+        - { name: country, in: query, schema: { type: string }, description: "CSV of ISO2 codes or none" }
+        - { name: currency, in: query, schema: { type: string } }
+        - { name: source, in: query, schema: { type: string }, description: "CSV of publish, price_list, migration" }
+        - { name: batch_id, in: query, schema: { type: string, format: uuid } }
+        - { name: effective_from_from, in: query, schema: { type: string, format: date } }
+        - { name: effective_from_to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Version page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeRecommendedPriceVersionPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/tenant/pricing/recommended/current:
+    get:
+      tags: [Pricing]
+      operationId: listCurrentRecommendedPrices
+      summary: Recommended price list in force for a country and currency
+      description: >-
+        TEC-506. Any organization with pricing.recommended.read. Per product
+        the country's own price, else the currency-wide price (scope).
+        currency defaults to the organization's; country (ISO2, `none` =
+        currency-wide only) is the center's choice, distributors and dealers
+        always read their own country. Sort: product_name (default), price,
+        effective_from; id tiebreak.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - { name: country, in: query, schema: { type: string } }
+        - { name: currency, in: query, schema: { type: string, minLength: 3, maxLength: 3 } }
+        - { name: product, in: query, schema: { type: string }, description: CSV of product uuids }
+        - { name: active, in: query, schema: { type: boolean } }
+      responses:
+        "200":
+          description: Price list page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCurrentRecommendedPricePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/pricing/discipline:
+    get:
+      tags: [Pricing]
+      operationId: listPriceDiscipline
+      summary: Price discipline rows of a snapshot day
+      description: >-
+        TEC-506. pricing.discipline.read: the center reads the brand, a
+        distributor its subtree. One row per organization x product of the
+        daily snapshot (default: the latest day): list price
+        (dealer_product_prices) against the recommended price in force,
+        deviation_pct, realised average sale price of the last 30 days.
+        Sort: deviation_pct (default -deviation_pct, nulls last), org_name,
+        product_name; id tiebreak. Filters: date, country (ISO2 CSV),
+        product, distributor (uuid CSV), currency CSV,
+        deviation_pct_min/_max, over_threshold (|deviation| >=
+        pricing.deviation_warning_pct), q.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - { name: date, in: query, schema: { type: string, format: date } }
+        - { name: country, in: query, schema: { type: string } }
+        - { name: product, in: query, schema: { type: string } }
+        - { name: distributor, in: query, schema: { type: string } }
+        - { name: currency, in: query, schema: { type: string } }
+        - { name: deviation_pct_min, in: query, schema: { type: number } }
+        - { name: deviation_pct_max, in: query, schema: { type: number } }
+        - { name: over_threshold, in: query, schema: { type: boolean } }
+      responses:
+        "200":
+          description: Discipline page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePriceDisciplinePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/pricing/discipline/summary:
+    get:
+      tags: [Pricing]
+      operationId: getPriceDisciplineSummary
+      summary: Price discipline summary per country (and country x product)
+      description: >-
+        TEC-506. Same scope as the list. Per country x currency the average
+        and median deviation and the organizations with a product over the
+        threshold; the same per country x product.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: date, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePriceDisciplineSummary" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/pricing/discipline/export:
+    post:
+      tags: [Pricing]
+      operationId: exportPriceDiscipline
+      summary: Export the price discipline list (io engine)
+      description: TEC-506. Resource pricing.discipline; query takes the list filters.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [format]
+              properties:
+                format: { type: string, enum: [csv, xlsx, pdf] }
+                query: { type: object, additionalProperties: { type: string } }
+                locale: { type: string }
+      responses:
+        "202":
+          description: Export job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -32867,7 +33108,7 @@ components:
 
     DocumentKind:
       type: string
-      enum: [service, measurement, contract, order_slip, invoice_view, warranty, quote, fleet_report]
+      enum: [service, measurement, contract, order_slip, invoice_view, warranty, quote, fleet_report, price_list]
 
     DocumentVariable:
       type: object
@@ -36654,6 +36895,19 @@ components:
           enum: [own, list, override, distributor]
         sale_price: { $ref: "#/components/schemas/PriceAmount" }
         recommended_sale_price: { $ref: "#/components/schemas/PriceAmount" }
+        recommended:
+          $ref: "#/components/schemas/RecommendedPriceRef"
+          description: >-
+            TEC-506. distributor and dealer viewers with
+            pricing.recommended.read: the recommended price in force for the
+            organization's country, else the currency-wide price.
+        deviation_pct:
+          type: string
+          example: "15.00"
+          description: >-
+            TEC-506. (own end-customer price (dealer_product_prices) -
+            recommended) / recommended in percent, 2 decimals; absent without
+            an own price or the recommended block.
 
     ProductPriceView:
       type: object
@@ -41508,6 +41762,10 @@ components:
         currency: { type: string, minLength: 3, maxLength: 3, example: TRY }
         recommended_sale_price: { type: [string, "null"], example: "1500.00" }
         updated_at: { type: string, format: date-time }
+        recommended:
+          $ref: "#/components/schemas/RecommendedPriceRef"
+          description: TEC-506. Only with pricing.recommended.read (the dealer's country, else currency-wide).
+        deviation_pct: { type: string, example: "15.00", description: "TEC-506. (sale_price - recommended) / recommended in percent." }
 
     DealerPriceRequest:
       type: object
@@ -41752,6 +42010,10 @@ components:
         purchase_price: { type: [string, "null"], example: "800.00", description: null without pricing.purchase.read }
         estimated_profit: { type: [string, "null"], example: "400.00" }
         updated_at: { type: [string, "null"], format: date-time }
+        recommended:
+          $ref: "#/components/schemas/RecommendedPriceRef"
+          description: TEC-506. Only with pricing.recommended.read.
+        deviation_pct: { type: string, example: "15.00", description: "TEC-506. Absent without a sale price." }
 
     ProductSaleLookup:
       type: object
@@ -43752,4 +44014,210 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    RecommendedPriceRef:
+      type: object
+      description: TEC-506. The recommended price in force (country, else currency-wide).
+      required: [price, currency, country_iso2, scope, effective_from]
+      properties:
+        price: { type: string, example: "1500.00" }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        country_iso2: { type: string, description: empty for the currency-wide price }
+        scope: { type: string, enum: [country, currency] }
+        effective_from: { type: string, format: date }
+
+    RecommendedPublishRequest:
+      type: object
+      additionalProperties: false
+      required: [rows]
+      properties:
+        effective_from: { type: [string, "null"], format: date, description: "Default day of the rows (today or later)." }
+        note: { type: [string, "null"], maxLength: 2000 }
+        rows:
+          type: array
+          minItems: 1
+          maxItems: 2000
+          items:
+            type: object
+            additionalProperties: false
+            required: [product_uuid, currency, price]
+            properties:
+              product_uuid: { type: string, format: uuid }
+              country: { type: [string, "null"], description: "ISO-3166 alpha-2; empty or null = currency-wide" }
+              currency: { type: string, minLength: 3, maxLength: 3 }
+              price: { type: string, example: "1500.00", description: "NUMERIC(18,2), non-negative" }
+              effective_from: { type: [string, "null"], format: date }
+
+    RecommendedPriceVersion:
+      type: object
+      required: [uuid, product_uuid, product_sku, product_name, country_iso2, currency, price, effective_from, source, batch_id, note, published_at, published_by_name, superseded_at, status]
+      properties:
+        uuid: { type: string, format: uuid }
+        product_uuid: { type: string, format: uuid }
+        product_sku: { type: string }
+        product_name: { type: string }
+        country_iso2: { type: string }
+        currency: { type: string }
+        price: { type: string }
+        effective_from: { type: string, format: date }
+        source: { type: string, enum: [publish, price_list, migration] }
+        batch_id: { type: [string, "null"], format: uuid }
+        note: { type: string }
+        published_at: { type: string, format: date-time }
+        published_by_name: { type: string }
+        superseded_at: { type: [string, "null"], format: date-time }
+        status: { type: string, enum: [current, scheduled, superseded] }
+
+    RecommendedPublishResult:
+      type: object
+      required: [batch_id, price_count, applied_count, scheduled_count, versions]
+      properties:
+        batch_id: { type: string, format: uuid }
+        price_count: { type: integer }
+        applied_count: { type: integer }
+        scheduled_count: { type: integer }
+        versions:
+          type: array
+          items: { $ref: "#/components/schemas/RecommendedPriceVersion" }
+
+    CurrentRecommendedPrice:
+      type: object
+      required: [product_uuid, product_sku, product_name, price, currency, country_iso2, scope, effective_from, version_uuid, source, batch_id]
+      properties:
+        product_uuid: { type: string, format: uuid }
+        product_sku: { type: string }
+        product_name: { type: string }
+        price: { type: string }
+        currency: { type: string }
+        country_iso2: { type: string }
+        scope: { type: string, enum: [country, currency] }
+        effective_from: { type: string, format: date }
+        version_uuid: { type: string, format: uuid }
+        source: { type: string }
+        batch_id: { type: [string, "null"], format: uuid }
+
+    PriceDisciplineRow:
+      type: object
+      required: [snapshot_date, organization_uuid, organization_name, organization_type, product_uuid, product_sku, product_name, country_iso2, currency, recommended_price, list_price, deviation_pct, avg_sale_price, sales_quantity, over_threshold]
+      properties:
+        snapshot_date: { type: string, format: date }
+        organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+        organization_type: { type: string, enum: [dealer, distributor] }
+        product_uuid: { type: string, format: uuid }
+        product_sku: { type: string }
+        product_name: { type: string }
+        country_iso2: { type: string }
+        currency: { type: string }
+        recommended_price: { type: string }
+        list_price: { type: string }
+        deviation_pct: { type: [string, "null"] }
+        avg_sale_price: { type: [string, "null"] }
+        sales_quantity: { type: string }
+        over_threshold: { type: boolean }
+
+    PriceDisciplineSummary:
+      type: object
+      required: [snapshot_date, threshold_pct, countries, products]
+      properties:
+        snapshot_date: { type: [string, "null"], format: date }
+        threshold_pct: { type: integer }
+        countries:
+          type: array
+          items:
+            type: object
+            required: [country_iso2, country_name_en, country_name_tr, currency, org_count, row_count, avg_deviation_pct, median_deviation_pct, over_threshold_org_count]
+            properties:
+              country_iso2: { type: string }
+              country_name_en: { type: string }
+              country_name_tr: { type: string }
+              currency: { type: string }
+              org_count: { type: integer, format: int64 }
+              row_count: { type: integer, format: int64 }
+              avg_deviation_pct: { type: [string, "null"] }
+              median_deviation_pct: { type: [string, "null"] }
+              over_threshold_org_count: { type: integer, format: int64 }
+        products:
+          type: array
+          items:
+            type: object
+            required: [country_iso2, currency, product_uuid, product_sku, product_name, recommended_price, org_count, avg_deviation_pct, median_deviation_pct, over_threshold_org_count]
+            properties:
+              country_iso2: { type: string }
+              currency: { type: string }
+              product_uuid: { type: string, format: uuid }
+              product_sku: { type: string }
+              product_name: { type: string }
+              recommended_price: { type: string }
+              org_count: { type: integer, format: int64 }
+              avg_deviation_pct: { type: [string, "null"] }
+              median_deviation_pct: { type: [string, "null"] }
+              over_threshold_org_count: { type: integer, format: int64 }
+
+    EnvelopeRecommendedPublishResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/RecommendedPublishResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeRecommendedPriceVersionPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/RecommendedPriceVersion" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeCurrentRecommendedPricePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/CurrentRecommendedPrice" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePriceDisciplinePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/PriceDisciplineRow" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePriceDisciplineSummary:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PriceDisciplineSummary" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }

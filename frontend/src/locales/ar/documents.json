@@ -44,6 +44,7 @@
   "kinds.invoice_view": "عرض الفاتورة",
   "kinds.warranty": "شهادة الضمان",
   "kinds.fleet_report": "تقرير الأسطول",
+  "kinds.price_list": "قائمة أسعار البيع الموصى بها",
   "languages.tr": "التركية",
   "languages.en": "الإنجليزية",
   "languages.bg": "البلغارية",
@@ -69,5 +70,6 @@
   "variable_groups.warranty": "الضمان",
   "variable_groups.totals": "الإجماليات",
   "variable_groups.fleet_report": "تقرير الأسطول",
+  "variable_groups.price_list": "قائمة أسعار البيع الموصى بها",
   "fields.updated_at": "تاريخ التحديث"
 }

@@ -49,6 +49,9 @@ type PriceCatalogItem struct {
 	PurchasePrice        *string    `json:"purchase_price"`
 	EstimatedProfit      *string    `json:"estimated_profit"`
 	UpdatedAt            *time.Time `json:"updated_at"`
+	// Recommended / DeviationPct: see DealerPriceView (TEC-506).
+	Recommended  *usecase.RecommendedRef `json:"recommended,omitempty"`
+	DeviationPct *string                 `json:"deviation_pct,omitempty"`
 }
 
 func (s *Service) ListPriceCatalog(ctx context.Context, c Caller, f PriceCatalogFilter) (apiquery.Page[PriceCatalogItem], error) {
@@ -80,6 +83,16 @@ func (s *Service) ListPriceCatalog(ctx context.Context, c Caller, f PriceCatalog
 			return apiquery.Page[PriceCatalogItem]{}, fmt.Errorf("dealer accounting: purchase prices: %w", err)
 		}
 	}
+	var refs map[usecase.RecommendedKey]usecase.RecommendedRef
+	if c.RecommendedRead && len(rows) > 0 {
+		ids := make([]int64, 0, len(rows))
+		for _, r := range rows {
+			ids = append(ids, r.ProductID)
+		}
+		if refs, err = usecase.ApplicableRecommended(ctx, s.q, o.BrandID, o.CountryID, ids, nil); err != nil {
+			return apiquery.Page[PriceCatalogItem]{}, fmt.Errorf("dealer accounting: %w", err)
+		}
+	}
 	items := make([]PriceCatalogItem, 0, len(rows))
 	for _, r := range rows {
 		it := PriceCatalogItem{
@@ -92,6 +105,12 @@ func (s *Service) ListPriceCatalog(ctx context.Context, c Caller, f PriceCatalog
 		if r.PriceUpdatedAt.Valid {
 			t := r.PriceUpdatedAt.Time
 			it.UpdatedAt = &t
+		}
+		if ref, ok := refs[usecase.RecommendedKey{ProductID: r.ProductID, Currency: strings.TrimSpace(it.Currency)}]; ok {
+			it.Recommended = &ref
+			if it.SalePrice != nil {
+				it.DeviationPct = usecase.DeviationPct(*it.SalePrice, ref.Price)
+			}
 		}
 		if p, ok := purchase[r.ProductID]; ok {
 			pp, err := normalizeMoneyLoose(p.Price)

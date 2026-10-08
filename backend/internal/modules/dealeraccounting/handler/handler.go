@@ -11,6 +11,7 @@ import (
 	da "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
@@ -31,7 +32,11 @@ func New(svc *da.Service) *Handler { return &Handler{svc: svc} }
 func caller(r *http.Request) da.Caller {
 	p := authctx.MustPrincipal(r.Context())
 	f, _ := scopefilter.From(r.Context())
-	return da.Caller{UserID: p.UserInternal, Org: orgctx.MustScope(r.Context()), Filter: f}
+	// TEC-506: the recommended block needs pricing.recommended.read.
+	return da.Caller{
+		UserID: p.UserInternal, Org: orgctx.MustScope(r.Context()), Filter: f,
+		RecommendedRead: p.Can(rbac.PermPricingRecommendedRead, rbac.ScopeManaged),
+	}
 }
 
 func decode(w http.ResponseWriter, r *http.Request, dst any) bool {

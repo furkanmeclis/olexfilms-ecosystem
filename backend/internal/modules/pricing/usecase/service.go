@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -37,6 +38,7 @@ func invalid(field, msg string) error { return &ValidationError{Field: field, Me
 type Querier interface {
 	GetProductByUUID(ctx context.Context, arg db.GetProductByUUIDParams) (db.Product, error)
 	GetOrganizationByUUID(ctx context.Context, uuid uuid.UUID) (db.Organization, error)
+	GetOrganizationByID(ctx context.Context, id int64) (db.Organization, error)
 	SupplierOf(ctx context.Context, id int64) (db.Organization, error)
 
 	ListPricedProducts(ctx context.Context, arg db.ListPricedProductsParams) ([]db.ListPricedProductsRow, error)
@@ -55,6 +57,10 @@ type Querier interface {
 	ListDistributorOverrideDetails(ctx context.Context, arg db.ListDistributorOverrideDetailsParams) ([]db.ListDistributorOverrideDetailsRow, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg db.CountDistributorPriceOverridesParams) (int64, error)
 	CountDistributorOverrideDetails(ctx context.Context, arg db.CountDistributorOverrideDetailsParams) (int64, error)
+
+	// TEC-506: recommended block of the distributor / dealer view.
+	ListApplicableRecommendedPrices(ctx context.Context, arg db.ListApplicableRecommendedPricesParams) ([]db.ListApplicableRecommendedPricesRow, error)
+	ListDealerProductPrices(ctx context.Context, arg db.ListDealerProductPricesParams) ([]db.DealerProductPrice, error)
 
 	UpsertDistributorDealerPrice(ctx context.Context, arg db.UpsertDistributorDealerPriceParams) (db.UpsertDistributorDealerPriceRow, error)
 	DeleteDistributorDealerPrice(ctx context.Context, arg db.DeleteDistributorDealerPriceParams) (int64, error)
@@ -114,10 +120,16 @@ type EffectivePrice struct {
 	// (center: to distributors; distributor: to its dealers).
 	SalePrice            *string `json:"sale_price,omitempty"`
 	RecommendedSalePrice *string `json:"recommended_sale_price,omitempty"`
+	// Recommended (TEC-506) is the recommended price in force for a
+	// distributor's or dealer's country (else the currency-wide price),
+	// with pricing.recommended.read only; DeviationPct compares the
+	// organization's own end-customer price (dealer_product_prices) with it.
+	Recommended  *RecommendedRef `json:"recommended,omitempty"`
+	DeviationPct *string         `json:"deviation_pct,omitempty"`
 }
 
 func (e EffectivePrice) empty() bool {
-	return e.PurchasePrice == nil && e.SalePrice == nil && e.RecommendedSalePrice == nil
+	return e.PurchasePrice == nil && e.SalePrice == nil && e.RecommendedSalePrice == nil && e.Recommended == nil
 }
 
 // ProductPriceView is the effective price view of one product.
@@ -220,6 +232,11 @@ func (s *Service) views(ctx context.Context, v Viewer, products []productRef) ([
 		}
 		if err != nil {
 			return nil, err
+		}
+		if v.RecommendedRead && v.OrgType != OrgCenter {
+			if err := s.recommendedBlock(ctx, v, ids, at); err != nil {
+				return nil, err
+			}
 		}
 	}
 	out := make([]ProductPriceView, 0, len(products))
@@ -325,6 +342,50 @@ func (s *Service) dealerPrices(ctx context.Context, v Viewer, ids []int64, at fu
 	for _, r := range rows {
 		e := at(r.ProductID, r.Currency)
 		e.PurchasePrice, e.PurchasePriceSource = strPtr(r.Price), SourceDistributor
+	}
+	return nil
+}
+
+// recommendedBlock adds the recommended price of the viewer's country (else
+// currency-wide) and the deviation of its own end-customer price (TEC-506).
+func (s *Service) recommendedBlock(ctx context.Context, v Viewer, ids []int64, at func(int64, string) *EffectivePrice) error {
+	org, err := s.q.GetOrganizationByID(ctx, v.OrgID)
+	if err != nil {
+		return fmt.Errorf("organization: %w", err)
+	}
+	refs, err := ApplicableRecommended(ctx, s.q, v.BrandID, org.CountryID, ids, nil)
+	if err != nil {
+		return err
+	}
+	if len(refs) == 0 {
+		return nil
+	}
+	own, err := s.q.ListDealerProductPrices(ctx, db.ListDealerProductPricesParams{OrganizationID: v.OrgID, ProductIds: ids})
+	if err != nil {
+		return fmt.Errorf("own prices: %w", err)
+	}
+	ownPrice := map[RecommendedKey]string{}
+	for _, o := range own {
+		ownPrice[RecommendedKey{ProductID: o.ProductID, Currency: strings.TrimSpace(o.Currency)}] = money(o.SalePrice)
+	}
+	keys := make([]RecommendedKey, 0, len(refs))
+	for k := range refs {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].ProductID != keys[j].ProductID {
+			return keys[i].ProductID < keys[j].ProductID
+		}
+		return keys[i].Currency < keys[j].Currency
+	})
+	for _, k := range keys {
+		ref := refs[k]
+		e := at(k.ProductID, k.Currency)
+		r := ref
+		e.Recommended = &r
+		if p, ok := ownPrice[k]; ok {
+			e.DeviationPct = DeviationPct(p, ref.Price)
+		}
 	}
 	return nil
 }

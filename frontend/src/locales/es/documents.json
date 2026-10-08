@@ -44,6 +44,7 @@
   "kinds.invoice_view": "Vista de factura",
   "kinds.warranty": "Certificado de garantía",
   "kinds.fleet_report": "Informe de flota",
+  "kinds.price_list": "Lista de precios recomendados",
   "languages.tr": "Turco",
   "languages.en": "Inglés",
   "languages.bg": "Búlgaro",
@@ -69,5 +70,6 @@
   "variable_groups.warranty": "Garantía",
   "variable_groups.totals": "Totales",
   "variable_groups.fleet_report": "Informe de flota",
+  "variable_groups.price_list": "Lista de precios recomendados",
   "fields.updated_at": "Actualizado"
 }

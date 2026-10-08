@@ -700,6 +700,8 @@ func catalogConstants() []string {
 		StockForecastComputed,
 		StockForecastLow,
 		PerformanceComputed,
+		PricingRecommendedPublished,
+		PricingDisciplineDigest,
 	}
 }
 
@@ -796,6 +798,22 @@ const (
 const (
 	StockForecastComputed = "stock.forecast_computed"
 	StockForecastLow      = "stock.forecast_low"
+)
+
+// Recommended prices (TEC-506, F5-09b). recommended_published is written in
+// the transaction that publishes a batch (API or import); tenant is the
+// brand center; payload: brand_id, batch_id, effective_from, applied (the
+// batch is in force today), price_count, currencies, keys ([{country_id,
+// country_iso2, currency}]) and notify_user_ids (owners of the
+// distributors and dealers of the countries / currencies). It also drives
+// the price list PDF publication to the document center. discipline_digest
+// is the weekly price discipline summary (one per recipient group: the
+// center, each distributor for its subtree), written by the pricing daily
+// tick with the Monday snapshot; payload: brand_id, snapshot_date,
+// threshold_pct, org_count, org_names, notify_user_ids.
+const (
+	PricingRecommendedPublished = "pricing.recommended_published"
+	PricingDisciplineDigest     = "pricing.discipline_digest"
 )
 
 // Performance add-on events (TEC-492/F5-05c): computed triggers weak-dealer

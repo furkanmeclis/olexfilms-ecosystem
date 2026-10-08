@@ -78,6 +78,23 @@ func (f *fakeQ) GetProductByUUID(_ context.Context, arg db.GetProductByUUIDParam
 	return db.Product{ID: productID, Uuid: productUUID, BrandID: brandID, Sku: "PPF-1", Name: "Film"}, nil
 }
 
+// TEC-506: the recommended block reads the viewer organization and finds
+// no recommended price in the fake.
+func (f *fakeQ) GetOrganizationByID(_ context.Context, id int64) (db.Organization, error) {
+	if o, ok := f.orgs[id]; ok {
+		return o, nil
+	}
+	return db.Organization{ID: id}, nil
+}
+
+func (f *fakeQ) ListApplicableRecommendedPrices(context.Context, db.ListApplicableRecommendedPricesParams) ([]db.ListApplicableRecommendedPricesRow, error) {
+	return nil, nil
+}
+
+func (f *fakeQ) ListDealerProductPrices(context.Context, db.ListDealerProductPricesParams) ([]db.DealerProductPrice, error) {
+	return nil, nil
+}
+
 func (f *fakeQ) GetOrganizationByUUID(_ context.Context, id uuid.UUID) (db.Organization, error) {
 	for _, o := range f.orgs {
 		if o.Uuid == id && id != uuid.Nil {

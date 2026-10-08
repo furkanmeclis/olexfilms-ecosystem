@@ -197,5 +197,6 @@
   "filters.actor": "Kullanıcıya göre filtrele",
   "resources.platform.organizations": "İşletmeler",
   "actions.mcp.tool_called": "MCP aracı çağrıldı",
-  "resources.mcp_tool": "MCP aracı"
+  "resources.mcp_tool": "MCP aracı",
+  "actions.pricing.recommended_published": "Tavsiye fiyatlar yayınlandı"
 }

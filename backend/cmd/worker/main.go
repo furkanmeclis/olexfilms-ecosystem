@@ -35,6 +35,7 @@ import (
 	fleetusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
 	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
+	libraryusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/library/usecase"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
 	measurementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements"
 	measurementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/usecase"
@@ -46,6 +47,8 @@ import (
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	performancemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance"
 	performanceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/usecase"
+	pricingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing"
+	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
 	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
@@ -172,6 +175,12 @@ func main() {
 	// TEC-488: efficiency facts are historical projections, independent of
 	// the read-side feature gate.
 	efficiencymodule.RegisterEventHandlers(eventBus, queries, log)
+	// TEC-506: recommended prices: the publication event queues the price
+	// list PDFs (docs queue); the hourly tick applies due versions and
+	// writes the price discipline snapshot / weekly digest.
+	recommendedSvc := pricingusecase.NewRecommended(pool, queries, outboxStore, sysconfig.New(queries, sysconfig.NoCache{}), log)
+	recommendedSvc.SetPriceListQueue(queue.PriceListEnqueuer{Client: reviewQueue})
+	pricingmodule.RegisterEventHandlers(eventBus, recommendedSvc)
 	// TEC-492: performance.computed evaluates weak-dealer rules.
 	performancemodule.RegisterEventHandlers(eventBus,
 		performanceusecase.New(pool, queries, outboxStore).WithPanelURL(cfg.Auth.FrontendURL), log)
@@ -270,6 +279,9 @@ func main() {
 		fleetusecase.NewStatementAdapter(workerFleet),
 		fleetusecase.NewListExportAdapter(workerFleet),
 		fleetusecase.NewImporter(workerFleet),
+		// TEC-506: recommended price import (staged) and discipline export.
+		pricingusecase.NewRecommendedImporter(recommendedSvc),
+		pricingusecase.NewDisciplineExportAdapter(recommendedSvc, pricingusecase.ParseDisciplineFilter),
 	)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
@@ -346,6 +358,12 @@ func main() {
 	// TEC-476: periodic fleet reports. The schedule runs on worker-core, the
 	// PDF (fleet_report document template) and its e-mail on worker-docs.
 	workerFleet.SetModules(featureSvc)
+	// TEC-506: price_list document source and its library publication.
+	priceListPublisher := pricingusecase.NewPriceListPublisher(queries, docSvc, libraryusecase.New(queries, store), featureSvc, log)
+	if err := docSvc.RegisterLoader(docmodel.KindPriceList, priceListPublisher.DocumentLoader()); err != nil {
+		log.Error("documents_loader_failed", "kind", docmodel.KindPriceList, "error", err)
+		os.Exit(1)
+	}
 	workerFleet.SetReportFiles(store)
 	if err := docSvc.RegisterLoader(docmodel.KindFleetReport, workerFleet.ReportDocumentLoader()); err != nil {
 		log.Error("documents_loader_failed", "kind", docmodel.KindFleetReport, "error", err)
@@ -422,6 +440,7 @@ func main() {
 		WithPerformanceDaily(performanceSvc.DailyTask).
 		WithEfficiencyNetworkRefresh(efficiencyNetwork.Task).
 		WithFleetReports(workerFleet.ScheduleReportsTask, workerFleet.GenerateReport).
+		WithPricing(recommendedSvc.DailyTask, priceListPublisher.Task).
 		WithSearch(
 			searchIndexer.ProcessUpsert,
 			searchIndexer.ProcessDelete,
