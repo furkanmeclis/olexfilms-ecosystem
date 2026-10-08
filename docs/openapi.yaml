@@ -20864,6 +20864,186 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/stock-forecasts:
+    get:
+      tags: [Stock Forecasts]
+      operationId: listStockForecasts
+      summary: Latest stock forecast list
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: days_left_min
+          in: query
+          schema: { type: number }
+        - name: days_left_max
+          in: query
+          schema: { type: number }
+      responses:
+        "200":
+          description: Forecast page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockForecastPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/stock-forecasts/meta:
+    get:
+      tags: [Stock Forecasts]
+      operationId: getStockForecastMeta
+      summary: Stock forecast list metadata and defaults
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Forecast metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockForecastMeta" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/stock-forecasts/{product_uuid}:
+    get:
+      tags: [Stock Forecasts]
+      operationId: getStockForecastProduct
+      summary: Product stock forecast detail
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: product_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Product forecast
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockForecastDetail" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/stock-forecasts/thresholds:
+    put:
+      tags: [Stock Forecasts]
+      operationId: putStockForecastThresholds
+      summary: Update organization and product forecast thresholds
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockForecastThresholdInput" }
+      responses:
+        "200":
+          description: Thresholds
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockForecastThresholds" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/stock-forecasts/order-draft:
+    post:
+      tags: [Stock Forecasts]
+      operationId: createStockForecastOrderDraft
+      summary: Create or append a draft order from forecast suggestions
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockForecastOrderDraftInput" }
+      responses:
+        "201":
+          description: Draft order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockForecastOrderDraft" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/stock-forecasts/network:
+    get:
+      tags: [Stock Forecasts]
+      operationId: listStockForecastNetwork
+      summary: Center network demand forecast
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: from_month
+          in: query
+          schema: { type: string }
+        - name: months
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 12 }
+      responses:
+        "200":
+          description: Network demand page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockForecastNetworkPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/stock-forecasts/network/export:
+    post:
+      tags: [Stock Forecasts]
+      operationId: exportStockForecastNetwork
+      summary: Queue the center network demand forecast XLSX export
+      description: >-
+        Queues an I/O engine export job (`stock_forecasts.network`) over the
+        center network demand forecast list. `query` carries `q`,
+        `from_month` and `months`; format must be `xlsx`. Poll and download
+        through `/v1/tenant/exports/{uuid}`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ListExportRequest" }
+      responses:
+        "202":
+          description: Export job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/stock-forecasts/subtree:
+    get:
+      tags: [Stock Forecasts]
+      operationId: listStockForecastSubtree
+      summary: Distributor subtree stock forecast summary
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+      responses:
+        "200":
+          description: Subtree summary page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockForecastSubtreePage" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/orders:
     get:
       tags: [Orders]
@@ -38255,6 +38435,244 @@ components:
           minItems: 1
           maxItems: 200
           items: { $ref: "#/components/schemas/OrderItemInput" }
+
+    StockForecastStatus:
+      type: string
+      enum: [insufficient_data, ok, warning, critical, no_consumption]
+
+    StockForecastProductRef:
+      type: object
+      required: [uuid, sku, name, unit_type]
+      properties:
+        uuid: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        unit_type: { type: string }
+        category_uuid: { type: string, format: uuid }
+        category_name: { type: string }
+
+    StockForecast:
+      type: object
+      required: [uuid, product, computed_on, on_hand_qty, on_hand_meters, avg_daily_30, avg_daily_90, seasonality_factor, data_days, status]
+      properties:
+        uuid: { type: string, format: uuid }
+        product: { $ref: "#/components/schemas/StockForecastProductRef" }
+        computed_on: { type: string, format: date }
+        on_hand_qty: { type: integer }
+        on_hand_meters: { type: string }
+        avg_daily_30: { type: string }
+        avg_daily_90: { type: string }
+        seasonality_factor: { type: string }
+        avg_meters_per_vehicle: { type: string }
+        vehicles_left: { type: string }
+        days_left: { type: string }
+        depletion_date: { type: string, format: date }
+        data_days: { type: integer }
+        status: { $ref: "#/components/schemas/StockForecastStatus" }
+        suggested_qty: { type: integer }
+        suggested_meters: { type: string }
+
+    StockForecastThresholds:
+      type: object
+      required: [warning_days, cover_days]
+      properties:
+        warning_days: { type: integer }
+        cover_days: { type: integer }
+        overrides:
+          type: array
+          items:
+            type: object
+            required: [uuid, warning_days, cover_days]
+            properties:
+              uuid: { type: string, format: uuid }
+              product: { $ref: "#/components/schemas/StockForecastProductRef" }
+              warning_days: { type: integer }
+              cover_days: { type: integer }
+
+    StockForecastDetail:
+      type: object
+      required: [forecast, consumption, projection, thresholds, parameters]
+      properties:
+        forecast: { $ref: "#/components/schemas/StockForecast" }
+        consumption:
+          type: array
+          items:
+            type: object
+            required: [date, qty, meters]
+            properties:
+              date: { type: string, format: date }
+              qty: { type: integer }
+              meters: { type: string }
+        projection:
+          type: array
+          items:
+            type: object
+            required: [date, stock_qty, stock_meters]
+            properties:
+              date: { type: string, format: date }
+              stock_qty: { type: integer }
+              stock_meters: { type: string }
+        thresholds: { $ref: "#/components/schemas/StockForecastThresholds" }
+        parameters:
+          type: object
+          required: [min_data_days, warning_days, critical_days, cover_days, horizon_days]
+          properties:
+            min_data_days: { type: integer }
+            warning_days: { type: integer }
+            critical_days: { type: integer }
+            cover_days: { type: integer }
+            horizon_days: { type: integer }
+
+    StockForecastThresholdInput:
+      type: object
+      required: [warning_days, cover_days]
+      properties:
+        warning_days: { type: integer, minimum: 1 }
+        cover_days: { type: integer, minimum: 1 }
+        products:
+          type: array
+          items:
+            type: object
+            required: [product_uuid, warning_days, cover_days]
+            properties:
+              product_uuid: { type: string, format: uuid }
+              warning_days: { type: integer, minimum: 1 }
+              cover_days: { type: integer, minimum: 1 }
+
+    StockForecastOrderDraftInput:
+      type: object
+      required: [items]
+      properties:
+        note: { type: string }
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [product_uuid]
+            properties:
+              product_uuid: { type: string, format: uuid }
+              quantity: { type: integer, minimum: 1 }
+              meters: { type: string }
+
+    StockForecastOrderDraft:
+      type: object
+      required: [order, created]
+      properties:
+        order: { $ref: "#/components/schemas/Order" }
+        created: { type: boolean }
+
+    StockForecastNetworkDemand:
+      type: object
+      required: [uuid, product, forecast_month, expected_qty, expected_meters, network_on_hand_qty, network_on_hand_meters, open_order_qty, open_order_meters, suggested_production_qty, suggested_production_meters]
+      properties:
+        uuid: { type: string, format: uuid }
+        product: { $ref: "#/components/schemas/StockForecastProductRef" }
+        forecast_month: { type: string, format: date }
+        expected_qty: { type: integer }
+        expected_meters: { type: string }
+        network_on_hand_qty: { type: integer }
+        network_on_hand_meters: { type: string }
+        open_order_qty: { type: integer }
+        open_order_meters: { type: string }
+        suggested_production_qty: { type: integer }
+        suggested_production_meters: { type: string }
+        computed_at: { type: string, format: date-time }
+
+    StockForecastSubtreeSummary:
+      type: object
+      required: [organization_uuid, slug, name, critical_count, warning_count, insufficient_data_count, total_count]
+      properties:
+        organization_uuid: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        critical_count: { type: integer, format: int64 }
+        warning_count: { type: integer, format: int64 }
+        insufficient_data_count: { type: integer, format: int64 }
+        total_count: { type: integer, format: int64 }
+
+    EnvelopeStockForecastPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockForecast" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockForecastDetail:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockForecastDetail" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockForecastThresholds:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockForecastThresholds" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockForecastMeta:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { type: object }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockForecastOrderDraft:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockForecastOrderDraft" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockForecastNetworkPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockForecastNetworkDemand" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeStockForecastSubtreePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockForecastSubtreeSummary" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     OrderTransitionInput:
       type: object

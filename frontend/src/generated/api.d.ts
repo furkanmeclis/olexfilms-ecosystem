@@ -10808,6 +10808,145 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock-forecasts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest stock forecast list */
+        get: operations["listStockForecasts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-forecasts/meta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stock forecast list metadata and defaults */
+        get: operations["getStockForecastMeta"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-forecasts/{product_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Product stock forecast detail */
+        get: operations["getStockForecastProduct"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-forecasts/thresholds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update organization and product forecast thresholds */
+        put: operations["putStockForecastThresholds"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-forecasts/order-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create or append a draft order from forecast suggestions */
+        post: operations["createStockForecastOrderDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-forecasts/network": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Center network demand forecast */
+        get: operations["listStockForecastNetwork"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-forecasts/network/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the center network demand forecast XLSX export
+         * @description Queues an I/O engine export job (`stock_forecasts.network`) over the center network demand forecast list. `query` carries `q`, `from_month` and `months`; format must be `xlsx`. Poll and download through `/v1/tenant/exports/{uuid}`.
+         */
+        post: operations["exportStockForecastNetwork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-forecasts/subtree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Distributor subtree stock forecast summary */
+        get: operations["listStockForecastSubtree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orders": {
         parameters: {
             query?: never;
@@ -22175,6 +22314,187 @@ export interface components {
         OrderCreateInput: {
             note?: string;
             items: components["schemas"]["OrderItemInput"][];
+        };
+        /** @enum {string} */
+        StockForecastStatus: "insufficient_data" | "ok" | "warning" | "critical" | "no_consumption";
+        StockForecastProductRef: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+            unit_type: string;
+            /** Format: uuid */
+            category_uuid?: string;
+            category_name?: string;
+        };
+        StockForecast: {
+            /** Format: uuid */
+            uuid: string;
+            product: components["schemas"]["StockForecastProductRef"];
+            /** Format: date */
+            computed_on: string;
+            on_hand_qty: number;
+            on_hand_meters: string;
+            avg_daily_30: string;
+            avg_daily_90: string;
+            seasonality_factor: string;
+            avg_meters_per_vehicle?: string;
+            vehicles_left?: string;
+            days_left?: string;
+            /** Format: date */
+            depletion_date?: string;
+            data_days: number;
+            status: components["schemas"]["StockForecastStatus"];
+            suggested_qty?: number;
+            suggested_meters?: string;
+        };
+        StockForecastThresholds: {
+            warning_days: number;
+            cover_days: number;
+            overrides?: {
+                /** Format: uuid */
+                uuid: string;
+                product?: components["schemas"]["StockForecastProductRef"];
+                warning_days: number;
+                cover_days: number;
+            }[];
+        };
+        StockForecastDetail: {
+            forecast: components["schemas"]["StockForecast"];
+            consumption: {
+                /** Format: date */
+                date: string;
+                qty: number;
+                meters: string;
+            }[];
+            projection: {
+                /** Format: date */
+                date: string;
+                stock_qty: number;
+                stock_meters: string;
+            }[];
+            thresholds: components["schemas"]["StockForecastThresholds"];
+            parameters: {
+                min_data_days: number;
+                warning_days: number;
+                critical_days: number;
+                cover_days: number;
+                horizon_days: number;
+            };
+        };
+        StockForecastThresholdInput: {
+            warning_days: number;
+            cover_days: number;
+            products?: {
+                /** Format: uuid */
+                product_uuid: string;
+                warning_days: number;
+                cover_days: number;
+            }[];
+        };
+        StockForecastOrderDraftInput: {
+            note?: string;
+            items: {
+                /** Format: uuid */
+                product_uuid: string;
+                quantity?: number;
+                meters?: string;
+            }[];
+        };
+        StockForecastOrderDraft: {
+            order: components["schemas"]["Order"];
+            created: boolean;
+        };
+        StockForecastNetworkDemand: {
+            /** Format: uuid */
+            uuid: string;
+            product: components["schemas"]["StockForecastProductRef"];
+            /** Format: date */
+            forecast_month: string;
+            expected_qty: number;
+            expected_meters: string;
+            network_on_hand_qty: number;
+            network_on_hand_meters: string;
+            open_order_qty: number;
+            open_order_meters: string;
+            suggested_production_qty: number;
+            suggested_production_meters: string;
+            /** Format: date-time */
+            computed_at?: string;
+        };
+        StockForecastSubtreeSummary: {
+            /** Format: uuid */
+            organization_uuid: string;
+            slug: string;
+            name: string;
+            /** Format: int64 */
+            critical_count: number;
+            /** Format: int64 */
+            warning_count: number;
+            /** Format: int64 */
+            insufficient_data_count: number;
+            /** Format: int64 */
+            total_count: number;
+        };
+        EnvelopeStockForecastPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockForecast"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockForecastDetail: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockForecastDetail"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockForecastThresholds: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockForecastThresholds"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockForecastMeta: {
+            /** @enum {boolean} */
+            success: true;
+            data: Record<string, never>;
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockForecastOrderDraft: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockForecastOrderDraft"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockForecastNetworkPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockForecastNetworkDemand"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeStockForecastSubtreePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["StockForecastSubtreeSummary"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
         };
         OrderTransitionInput: {
             status: components["schemas"]["OrderStatus"];
@@ -45089,6 +45409,222 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    listStockForecasts: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                status?: string;
+                days_left_min?: number;
+                days_left_max?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Forecast page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockForecastPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getStockForecastMeta: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Forecast metadata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockForecastMeta"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getStockForecastProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Product forecast */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockForecastDetail"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    putStockForecastThresholds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockForecastThresholdInput"];
+            };
+        };
+        responses: {
+            /** @description Thresholds */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockForecastThresholds"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createStockForecastOrderDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockForecastOrderDraftInput"];
+            };
+        };
+        responses: {
+            /** @description Draft order */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockForecastOrderDraft"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listStockForecastNetwork: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                from_month?: string;
+                months?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Network demand page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockForecastNetworkPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportStockForecastNetwork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Export job */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listStockForecastSubtree: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Subtree summary page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockForecastSubtreePage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listOrders: {

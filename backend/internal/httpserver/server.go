@@ -152,6 +152,9 @@ import (
 	stockledger "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
+	stockforecastmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast"
+	stockforecasthandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast/handler"
+	stockforecastusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast/usecase"
 	storagemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage"
 	storagehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/handler"
 	storageusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/storage/usecase"
@@ -542,6 +545,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	ordersH := ordershandler.New(ordersSvc)
 	ordersmodule.RegisterRoutes(mux, ordersH, tokens, loader, deps.Queries, featureSvc)
+	// TEC-485 (F5-04c): stock forecast panel API, order-draft bridge and AI read tools.
+	stockForecastSvc := stockforecastusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries),
+		featureSvc, sysSvc, log)
+	stockForecastH := stockforecasthandler.New(stockForecastSvc, ordersSvc)
+	stockforecastmodule.RegisterRoutes(mux, stockForecastH, tokens, loader, deps.Queries, featureSvc)
 	// TEC-197: stock transfer requests between siblings (K13).
 	// TEC-200: a received transfer books A alacak / B borç.
 	transfersSvc := transfersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
@@ -702,6 +710,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		// TEC-373: order list and stock unit list exports.
 		ordersusecase.NewListExportAdapter(ordersSvc),
 		stockusecase.NewUnitsExportAdapter(stockusecase.New(deps.Queries)),
+		// TEC-485: center network demand forecast export.
+		stockforecastusecase.NewNetworkExportAdapter(stockForecastSvc),
 		// TEC-377: service and warranty list exports.
 		servicesusecase.NewListExportAdapter(servicesSvc),
 		warrantyusecase.NewListExportAdapter(warrantyReader),
@@ -722,6 +732,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	accountingH.WithExports(exportSvc)
 	customersH.WithExports(exportSvc)
 	ordersH.WithExports(exportSvc) // TEC-373
+	stockForecastH.WithExports(exportSvc)
 	warrantymodule.RegisterListExportRoutes(mux, deps.Queries, tokens, loader, featureSvc,
 		warrantyhandler.NewListExport(exportSvc)) // TEC-377
 	// TEC-392 (F4-01j): AI first triage of warranty claims (status event →
@@ -965,7 +976,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Tree: deps.Queries, Services: servicesSvc, Warranties: warrantyReader, Customers: customersSvc,
 		Stock: stockSvc, Orders: ordersSvc, Accounting: accountingSvc, Appointments: appointmentsSvc,
 		Leads: leadsSvc, Tasks: tasksSvc, Catalog: catalogSvc, Organizations: orgSvc,
-		Links: shorturlsmodule.NewLinker(deps.Queries, cfg.Auth.FrontendURL),
+		Links:      shorturlsmodule.NewLinker(deps.Queries, cfg.Auth.FrontendURL),
+		Extensions: aitools.NewStockForecastTools(stockForecastSvc, deps.Queries),
 	})
 	// TEC-387 (F4-01e): write tools behind the confirmation card; every
 	// channel confirms through s.aiActions.

@@ -51,6 +51,36 @@ func (q *Queries) CountNetworkDemandForecasts(ctx context.Context, arg CountNetw
 	return column_1, err
 }
 
+const countStockForecastSubtreeSummary = `-- name: CountStockForecastSubtreeSummary :one
+SELECT COUNT(*)::bigint
+FROM organizations o
+WHERE o.brand_id = $1
+  AND o.deleted_at IS NULL
+  AND o.type = 'dealer'
+  AND (
+    COALESCE(cardinality($2::bigint[]), 0) = 0
+    OR o.id = ANY ($2::bigint[])
+  )
+  AND (
+    $3::text IS NULL
+    OR o.name ILIKE '%' || $3::text || '%'
+    OR o.slug ILIKE '%' || $3::text || '%'
+  )
+`
+
+type CountStockForecastSubtreeSummaryParams struct {
+	BrandID         int64       `json:"brand_id"`
+	OrganizationIds []int64     `json:"organization_ids"`
+	Q               pgtype.Text `json:"q"`
+}
+
+func (q *Queries) CountStockForecastSubtreeSummary(ctx context.Context, arg CountStockForecastSubtreeSummaryParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countStockForecastSubtreeSummary, arg.BrandID, arg.OrganizationIds, arg.Q)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const countStockForecasts = `-- name: CountStockForecasts :one
 SELECT COUNT(*)::bigint
 FROM stock_forecasts sf
@@ -152,6 +182,91 @@ func (q *Queries) GetLatestStockForecast(ctx context.Context, arg GetLatestStock
 		&i.SuggestedMeters,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getLatestStockForecastByProductUUID = `-- name: GetLatestStockForecastByProductUUID :one
+SELECT sf.id, sf.uuid, sf.organization_id, sf.brand_id, sf.product_id, sf.computed_on, sf.is_latest, sf.on_hand_qty, sf.on_hand_meters, sf.avg_daily_30, sf.avg_daily_90, sf.seasonality_factor, sf.avg_meters_per_vehicle, sf.vehicles_left, sf.days_left, sf.depletion_date, sf.data_days, sf.status, sf.suggested_qty, sf.suggested_meters, sf.created_at, sf.updated_at, p.uuid AS product_uuid, p.sku, p.name AS product_name,
+       p.unit_type, c.uuid AS category_uuid, c.name AS category_name
+FROM stock_forecasts sf
+JOIN products p ON p.id = sf.product_id
+JOIN product_categories c ON c.id = p.category_id
+WHERE sf.organization_id = $1
+  AND sf.brand_id = $2
+  AND p.uuid = $3
+  AND sf.is_latest
+`
+
+type GetLatestStockForecastByProductUUIDParams struct {
+	OrganizationID int64     `json:"organization_id"`
+	BrandID        int64     `json:"brand_id"`
+	ProductUuid    uuid.UUID `json:"product_uuid"`
+}
+
+type GetLatestStockForecastByProductUUIDRow struct {
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	OrganizationID      int64              `json:"organization_id"`
+	BrandID             int64              `json:"brand_id"`
+	ProductID           int64              `json:"product_id"`
+	ComputedOn          pgtype.Date        `json:"computed_on"`
+	IsLatest            bool               `json:"is_latest"`
+	OnHandQty           int32              `json:"on_hand_qty"`
+	OnHandMeters        pgtype.Numeric     `json:"on_hand_meters"`
+	AvgDaily30          pgtype.Numeric     `json:"avg_daily_30"`
+	AvgDaily90          pgtype.Numeric     `json:"avg_daily_90"`
+	SeasonalityFactor   pgtype.Numeric     `json:"seasonality_factor"`
+	AvgMetersPerVehicle pgtype.Numeric     `json:"avg_meters_per_vehicle"`
+	VehiclesLeft        pgtype.Numeric     `json:"vehicles_left"`
+	DaysLeft            pgtype.Numeric     `json:"days_left"`
+	DepletionDate       pgtype.Date        `json:"depletion_date"`
+	DataDays            int32              `json:"data_days"`
+	Status              string             `json:"status"`
+	SuggestedQty        pgtype.Int4        `json:"suggested_qty"`
+	SuggestedMeters     pgtype.Numeric     `json:"suggested_meters"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	ProductUuid         uuid.UUID          `json:"product_uuid"`
+	Sku                 string             `json:"sku"`
+	ProductName         string             `json:"product_name"`
+	UnitType            string             `json:"unit_type"`
+	CategoryUuid        uuid.UUID          `json:"category_uuid"`
+	CategoryName        string             `json:"category_name"`
+}
+
+func (q *Queries) GetLatestStockForecastByProductUUID(ctx context.Context, arg GetLatestStockForecastByProductUUIDParams) (GetLatestStockForecastByProductUUIDRow, error) {
+	row := q.db.QueryRow(ctx, getLatestStockForecastByProductUUID, arg.OrganizationID, arg.BrandID, arg.ProductUuid)
+	var i GetLatestStockForecastByProductUUIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ProductID,
+		&i.ComputedOn,
+		&i.IsLatest,
+		&i.OnHandQty,
+		&i.OnHandMeters,
+		&i.AvgDaily30,
+		&i.AvgDaily90,
+		&i.SeasonalityFactor,
+		&i.AvgMetersPerVehicle,
+		&i.VehiclesLeft,
+		&i.DaysLeft,
+		&i.DepletionDate,
+		&i.DataDays,
+		&i.Status,
+		&i.SuggestedQty,
+		&i.SuggestedMeters,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.ProductUuid,
+		&i.Sku,
+		&i.ProductName,
+		&i.UnitType,
+		&i.CategoryUuid,
+		&i.CategoryName,
 	)
 	return i, err
 }
@@ -1043,6 +1158,87 @@ func (q *Queries) ListStockForecastProductsForOrg(ctx context.Context, arg ListS
 	return items, nil
 }
 
+const listStockForecastSubtreeSummary = `-- name: ListStockForecastSubtreeSummary :many
+SELECT o.id AS organization_id, o.uuid AS organization_uuid, o.slug, o.name,
+       COUNT(*) FILTER (WHERE sf.status = 'critical')::bigint AS critical_count,
+       COUNT(*) FILTER (WHERE sf.status = 'warning')::bigint AS warning_count,
+       COUNT(*) FILTER (WHERE sf.status = 'insufficient_data')::bigint AS insufficient_data_count,
+       COUNT(*)::bigint AS total_count
+FROM organizations o
+LEFT JOIN stock_forecasts sf ON sf.organization_id = o.id
+  AND sf.brand_id = $1
+  AND sf.is_latest
+WHERE o.brand_id = $1
+  AND o.deleted_at IS NULL
+  AND o.type = 'dealer'
+  AND (
+    COALESCE(cardinality($2::bigint[]), 0) = 0
+    OR o.id = ANY ($2::bigint[])
+  )
+  AND (
+    $3::text IS NULL
+    OR o.name ILIKE '%' || $3::text || '%'
+    OR o.slug ILIKE '%' || $3::text || '%'
+  )
+GROUP BY o.id, o.uuid, o.slug, o.name
+ORDER BY critical_count DESC, warning_count DESC, o.name ASC, o.id ASC
+LIMIT $5 OFFSET $4
+`
+
+type ListStockForecastSubtreeSummaryParams struct {
+	BrandID         int64       `json:"brand_id"`
+	OrganizationIds []int64     `json:"organization_ids"`
+	Q               pgtype.Text `json:"q"`
+	OffsetCount     int32       `json:"offset_count"`
+	LimitCount      int32       `json:"limit_count"`
+}
+
+type ListStockForecastSubtreeSummaryRow struct {
+	OrganizationID        int64     `json:"organization_id"`
+	OrganizationUuid      uuid.UUID `json:"organization_uuid"`
+	Slug                  string    `json:"slug"`
+	Name                  string    `json:"name"`
+	CriticalCount         int64     `json:"critical_count"`
+	WarningCount          int64     `json:"warning_count"`
+	InsufficientDataCount int64     `json:"insufficient_data_count"`
+	TotalCount            int64     `json:"total_count"`
+}
+
+func (q *Queries) ListStockForecastSubtreeSummary(ctx context.Context, arg ListStockForecastSubtreeSummaryParams) ([]ListStockForecastSubtreeSummaryRow, error) {
+	rows, err := q.db.Query(ctx, listStockForecastSubtreeSummary,
+		arg.BrandID,
+		arg.OrganizationIds,
+		arg.Q,
+		arg.OffsetCount,
+		arg.LimitCount,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStockForecastSubtreeSummaryRow{}
+	for rows.Next() {
+		var i ListStockForecastSubtreeSummaryRow
+		if err := rows.Scan(
+			&i.OrganizationID,
+			&i.OrganizationUuid,
+			&i.Slug,
+			&i.Name,
+			&i.CriticalCount,
+			&i.WarningCount,
+			&i.InsufficientDataCount,
+			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStockForecastThresholds = `-- name: ListStockForecastThresholds :many
 SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.product_id, t.warning_days, t.cover_days, t.created_at, t.updated_at, p.uuid AS product_uuid, p.sku, p.name AS product_name
 FROM stock_forecast_thresholds t
@@ -1248,6 +1444,42 @@ func (q *Queries) ListStockForecasts(ctx context.Context, arg ListStockForecasts
 		return nil, err
 	}
 	return items, nil
+}
+
+const resolveStockForecastThresholdProduct = `-- name: ResolveStockForecastThresholdProduct :one
+SELECT id, brand_id, uuid, sku, name, unit_type
+FROM products
+WHERE uuid = $1
+  AND brand_id = $2
+  AND active
+`
+
+type ResolveStockForecastThresholdProductParams struct {
+	ProductUuid uuid.UUID `json:"product_uuid"`
+	BrandID     int64     `json:"brand_id"`
+}
+
+type ResolveStockForecastThresholdProductRow struct {
+	ID       int64     `json:"id"`
+	BrandID  int64     `json:"brand_id"`
+	Uuid     uuid.UUID `json:"uuid"`
+	Sku      string    `json:"sku"`
+	Name     string    `json:"name"`
+	UnitType string    `json:"unit_type"`
+}
+
+func (q *Queries) ResolveStockForecastThresholdProduct(ctx context.Context, arg ResolveStockForecastThresholdProductParams) (ResolveStockForecastThresholdProductRow, error) {
+	row := q.db.QueryRow(ctx, resolveStockForecastThresholdProduct, arg.ProductUuid, arg.BrandID)
+	var i ResolveStockForecastThresholdProductRow
+	err := row.Scan(
+		&i.ID,
+		&i.BrandID,
+		&i.Uuid,
+		&i.Sku,
+		&i.Name,
+		&i.UnitType,
+	)
+	return i, err
 }
 
 const upsertNetworkDemandForecast = `-- name: UpsertNetworkDemandForecast :one

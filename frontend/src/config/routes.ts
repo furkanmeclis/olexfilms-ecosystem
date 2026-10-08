@@ -39,6 +39,9 @@ export const routes = {
     features: {
       root: (slug: string) => `/t/${slug}/features`,
     },
+    showcase: {
+      root: (slug: string) => `/t/${slug}/showcase`,
+    },
     /** TEC-147. Search hits link `/catalog/products/{uuid}` (TEC-145). */
     catalog: {
       products: (slug: string) => `/t/${slug}/catalog/products`,
@@ -141,6 +144,10 @@ export const routes = {
     /** TEC-224 dealer "My stock" (units on hand, consumed in services). */
     stock: {
       root: (slug: string) => `/t/${slug}/stock`,
+    },
+    /** TEC-486: stock forecast and order suggestions add-on. */
+    stockForecast: {
+      list: (slug: string) => `/t/${slug}/stock-forecast`,
     },
     /** TEC-163 customers: list, new, detail (with vehicles), edit. */
     customers: {
@@ -365,6 +372,9 @@ export const routes = {
     },
     certificateTypes: {
       root: "/platform/certificate-types",
+    },
+    showcases: {
+      root: "/platform/showcases",
     },
     activity: {
       root: "/platform/activity",

@@ -136,6 +136,10 @@ export const Permission = {
   StockAdjust: "stock.adjust",
   StockReclassify: "stock.reclassify",
   StockImport: "stock.import",
+  /** TEC-486: stock forecast add-on screens. */
+  StockForecastRead: "stock_forecast.read",
+  StockForecastManage: "stock_forecast.manage",
+  StockForecastNetworkRead: "stock_forecast.network.read",
 
   OrdersRead: "orders.read",
   OrdersWrite: "orders.write",
@@ -524,6 +528,11 @@ export const permissions = {
   stock: {
     read: Permission.StockRead,
     write: Permission.StockWrite,
+  },
+  stockForecast: {
+    read: Permission.StockForecastRead,
+    manage: Permission.StockForecastManage,
+    networkRead: Permission.StockForecastNetworkRead,
   },
   contractTemplates: {
     manage: Permission.ContractsTemplatesManage,

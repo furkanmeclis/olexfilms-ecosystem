@@ -23,6 +23,7 @@ import (
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	shorturlsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
+	stockforecastusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast/usecase"
 	tasksusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	warrantyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	warrantyclaimsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty_claims/usecase"
@@ -89,6 +90,7 @@ func newWhatsAppAIPipeline(d whatsAppAIDeps) *wapipeline.Pipeline {
 	warrantyReader := warrantyusecase.NewReader(pool, q, box, cfg.Auth.FrontendURL)
 	catalogSvc := catalogusecase.New(q, nil)
 	stockSvc := stockusecase.New(q)
+	stockForecastSvc := stockforecastusecase.New(pool, q, box, d.features, sys, log)
 	tasksSvc := tasksusecase.New(pool, q, box)
 	leadsSvc := leadsusecase.New(pool, q, tasksSvc)
 	appointmentsSvc := appointmentsusecase.New(pool, q, box, servicesSvc)
@@ -101,6 +103,7 @@ func newWhatsAppAIPipeline(d whatsAppAIDeps) *wapipeline.Pipeline {
 		Tree: q, Services: servicesSvc, Warranties: warrantyReader, Customers: customersSvc,
 		Stock: stockSvc, Orders: ordersSvc, Accounting: accountingSvc, Appointments: appointmentsSvc,
 		Leads: leadsSvc, Tasks: tasksSvc, Catalog: catalogSvc, Organizations: orgSvc, Links: links,
+		Extensions: aitools.NewStockForecastTools(stockForecastSvc, q),
 	})
 	aitools.RegisterPanelWrite(reg, aitools.WriteDeps{
 		Tree: q, Tasks: tasksSvc, Leads: leadsSvc, Appointments: appointmentsSvc,
