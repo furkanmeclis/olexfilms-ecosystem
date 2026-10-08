@@ -406,6 +406,7 @@ type Querier interface {
 	CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error)
 	// An applied import batch is a confirmed entry at once.
 	CreateImportStockEntry(ctx context.Context, arg CreateImportStockEntryParams) (StockEntry, error)
+	CreateIntakePhoto(ctx context.Context, arg CreateIntakePhotoParams) (IntakePhoto, error)
 	// TEC-266 (F2-02a): Glorian sync schema. api_key_enc is always the
 	// crypto.SecretBox ciphertext; callers never pass a plain key here.
 	CreateIntegrationConnection(ctx context.Context, arg CreateIntegrationConnectionParams) (IntegrationConnection, error)
@@ -452,6 +453,8 @@ type Querier interface {
 	// Targets ---------------------------------------------------------------------------
 	CreatePerformanceTarget(ctx context.Context, arg CreatePerformanceTargetParams) (PerformanceTarget, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
+	// TEC-498 (F5-07a): vehicle intake photo standard.
+	CreatePhotoAngle(ctx context.Context, arg CreatePhotoAngleParams) (PhotoAngle, error)
 	CreatePlateFormat(ctx context.Context, arg CreatePlateFormatParams) (PlateFormat, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	// TEC-144: product categories and products. Every query is brand-filtered;
@@ -658,6 +661,8 @@ type Querier interface {
 	DeletePartConsumptionExpectation(ctx context.Context, arg DeletePartConsumptionExpectationParams) (int64, error)
 	DeletePerformanceTarget(ctx context.Context, arg DeletePerformanceTargetParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
+	DeletePhotoAngle(ctx context.Context, arg DeletePhotoAngleParams) (int64, error)
+	DeletePhotoAngleOverridesForOrg(ctx context.Context, arg DeletePhotoAngleOverridesForOrgParams) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
 	DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error)
 	// Fails with a foreign key violation while products still use the category.
@@ -832,6 +837,8 @@ type Querier interface {
 	// Full-unit duplicate guard before creation (decision 3); the partial
 	// unique index uq_warranties_active_full_unit is the final barrier.
 	GetActiveFullWarrantyByVehicleUnit(ctx context.Context, arg GetActiveFullWarrantyByVehicleUnitParams) (Warranty, error)
+	GetActiveIntakePhotoByAngle(ctx context.Context, arg GetActiveIntakePhotoByAngleParams) (IntakePhoto, error)
+	GetActiveIntakePhotoByUUID(ctx context.Context, arg GetActiveIntakePhotoByUUIDParams) (IntakePhoto, error)
 	// A live token of a live grant and client, with the user's status.
 	GetActiveOAuthToken(ctx context.Context, arg GetActiveOAuthTokenParams) (GetActiveOAuthTokenRow, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
@@ -1092,6 +1099,8 @@ type Querier interface {
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
 	GetPerformanceTarget(ctx context.Context, arg GetPerformanceTargetParams) (PerformanceTarget, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
+	GetPhotoAngleByKey(ctx context.Context, arg GetPhotoAngleByKeyParams) (PhotoAngle, error)
+	GetPhotoAngleByUUID(ctx context.Context, arg GetPhotoAngleByUUIDParams) (PhotoAngle, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
 	GetPortalAppointmentByUUID(ctx context.Context, arg GetPortalAppointmentByUUIDParams) (Appointment, error)
 	// Portal booking accepts only active dealers of the request brand whose
@@ -1322,6 +1331,7 @@ type Querier interface {
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
 	GetWhatsAppSettings(ctx context.Context) (WhatsappSetting, error)
+	HasExecutedServiceContract(ctx context.Context, serviceID int64) (bool, error)
 	// Resolves a live token of the brand and counts the hit in one statement.
 	HitShortURL(ctx context.Context, arg HitShortURLParams) (HitShortURLRow, error)
 	// TEC-258: ledger.Import appends a recorded (historical) movement as is: its
@@ -1548,6 +1558,7 @@ type Querier interface {
 	ListActiveFleetUserEmails(ctx context.Context, fleetOrgID int64) ([]string, error)
 	// Recipients of fleet notifications (link requests).
 	ListActiveFleetUserIDs(ctx context.Context, fleetOrgID int64) ([]int64, error)
+	ListActiveIntakePhotosForService(ctx context.Context, serviceID int64) ([]IntakePhoto, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
 	ListActivePublicKeys(ctx context.Context, keys []string) ([]string, error)
 	ListActivePublicLinks(ctx context.Context) ([]StorageLink, error)
@@ -2120,6 +2131,8 @@ type Querier interface {
 	ListPermissionSlugsByRoleID(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
+	ListPhotoAngleOverridesForOrg(ctx context.Context, arg ListPhotoAngleOverridesForOrgParams) ([]ListPhotoAngleOverridesForOrgRow, error)
+	ListPhotoAnglesByBrand(ctx context.Context, brandID int64) ([]PhotoAngle, error)
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	// Sort: docs/list-contract.md, keys from apiquery.NotificationsSortSpec.
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
@@ -2216,6 +2229,7 @@ type Querier interface {
 	// Required certificate types for the products/categories used by a service.
 	ListRequiredCertificateTypesForService(ctx context.Context, arg ListRequiredCertificateTypesForServiceParams) ([]CertificateType, error)
 	ListReservationsByOrder(ctx context.Context, orderID int64) ([]StockReservation, error)
+	ListResolvedPhotoAngles(ctx context.Context, arg ListResolvedPhotoAnglesParams) ([]ListResolvedPhotoAnglesRow, error)
 	ListReviewQuestionLocales(ctx context.Context, questionID int64) ([]ReviewQuestionLocale, error)
 	// Batch load for a question list (avoids N+1).
 	ListReviewQuestionLocalesByQuestions(ctx context.Context, questionIds []int64) ([]ReviewQuestionLocale, error)
@@ -3274,6 +3288,7 @@ type Querier interface {
 	SkipPendingCampaignRecipients(ctx context.Context, arg SkipPendingCampaignRecipientsParams) (int64, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	SoftDeleteAIConversation(ctx context.Context, arg SoftDeleteAIConversationParams) (int64, error)
+	SoftDeleteActiveIntakePhoto(ctx context.Context, arg SoftDeleteActiveIntakePhotoParams) (IntakePhoto, error)
 	SoftDeleteAppointment(ctx context.Context, arg SoftDeleteAppointmentParams) (int64, error)
 	SoftDeleteLead(ctx context.Context, arg SoftDeleteLeadParams) (int64, error)
 	// Only an empty folder (no live subfolder or item) is removed.
@@ -3405,6 +3420,7 @@ type Querier interface {
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
 	UpdatePartConsumptionExpectation(ctx context.Context, arg UpdatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	UpdatePerformanceTarget(ctx context.Context, arg UpdatePerformanceTargetParams) (PerformanceTarget, error)
+	UpdatePhotoAngle(ctx context.Context, arg UpdatePhotoAngleParams) (PhotoAngle, error)
 	// UpdatePlannedStaffPayment edits a payment that is not booked yet.
 	UpdatePlannedStaffPayment(ctx context.Context, arg UpdatePlannedStaffPaymentParams) (StaffPayment, error)
 	UpdatePlateFormat(ctx context.Context, arg UpdatePlateFormatParams) (PlateFormat, error)
@@ -3523,6 +3539,7 @@ type Querier interface {
 	// Idempotent write of the metric worker: one row per org x month x metric.
 	UpsertPerformanceMetric(ctx context.Context, arg UpsertPerformanceMetricParams) (PerformanceMetricsMonthly, error)
 	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
+	UpsertPhotoAngleOverride(ctx context.Context, arg UpsertPhotoAngleOverrideParams) (PhotoAngleOverride, error)
 	// TEC-144: product price list and distributor-specific prices (K8). Prices
 	// go in as text so no precision is lost between NUMERIC and Go. Nullable
 	// price columns come back as NUMERIC (a NULL cannot scan into a text cast's

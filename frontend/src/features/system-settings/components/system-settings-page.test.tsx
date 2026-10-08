@@ -133,15 +133,6 @@ const catalog: SystemSetting[] = [
     updated_at: "2026-10-01T10:00:00Z",
   }),
   setting({
-    key: "photo_standard_enabled",
-    group: "services",
-    kind: "bool",
-    default: false,
-    value: false,
-    min: undefined,
-    max: undefined,
-  }),
-  setting({
     key: "smtp.host",
     group: "smtp",
     kind: "string",
@@ -230,9 +221,6 @@ describe("SystemSettingsPage (TEC-222)", () => {
     expect(row("forecast_min_days").textContent).toContain(
       "settings.system.custom_badge",
     );
-    expect(
-      row("photo_standard_enabled").querySelector("[role='switch']"),
-    ).not.toBeNull();
   });
 
   it("validates the integer range before saving", async () => {
@@ -286,27 +274,6 @@ describe("SystemSettingsPage (TEC-222)", () => {
     await click(button("forecast_min_days", "settings.system.reset"));
     expect(api.reset).toHaveBeenCalledWith("forecast_min_days");
     expect(input("forecast_min_days").value).toBe("30");
-  });
-
-  it("saves a bool toggle", async () => {
-    state.grants = new Set(rw);
-    api.put.mockResolvedValue(
-      setting({
-        key: "photo_standard_enabled",
-        group: "services",
-        kind: "bool",
-        default: false,
-        value: true,
-        is_default: false,
-      }),
-    );
-    await render();
-    const sw = row("photo_standard_enabled").querySelector<HTMLElement>(
-      "[role='switch']",
-    )!;
-    await click(sw);
-    await click(button("photo_standard_enabled", "settings.system.save"));
-    expect(api.put).toHaveBeenCalledWith("photo_standard_enabled", true);
   });
 
   it("toggles contracts.intake_required in the contracts group (TEC-291)", async () => {

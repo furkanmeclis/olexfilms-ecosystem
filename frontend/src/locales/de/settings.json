@@ -71,8 +71,6 @@
   "system.keys.forecast_min_days_hint": "Mindestbewegungshistorie, bevor die Prognose Vorschläge macht.",
   "system.keys.contract_grace_days": "Vertragskulanz (Tage)",
   "system.keys.contract_grace_days_hint": "Zeit nach Vertragsende bis zum Nur-Lese-Modus; 0 = keine Kulanz.",
-  "system.keys.photo_standard_enabled": "Fotostandard",
-  "system.keys.photo_standard_enabled_hint": "Standard-Fotosatz bei der Fahrzeugannahme verlangen.",
   "system.keys.bulk_undo_window_hours": "Rückgängig-Fenster für Massenvorgänge (Stunden)",
   "system.keys.bulk_undo_window_hours_hint": "Wie lange ein Massenvorgang nach der Ausführung rückgängig gemacht werden kann.",
   "system.keys.smtp_host": "SMTP-Server",

@@ -761,6 +761,19 @@ var Permissions = []PermissionDef{
 		Scopes:      []Scope{ScopeSubtree, ScopeBrand, ScopeAll},
 		Description: "Define weak dealer rules that open tasks or send notifications.",
 	},
+
+	// TEC-498: vehicle intake photo standard (F5-07a). Appended last;
+	// migration 000124 seeds them.
+	{
+		Slug: PermPhotoStandardManage, Name: "Manage photo standard", Module: "photo_standard",
+		Scopes:      []Scope{ScopeBrand, ScopeAll},
+		Description: "Create and update central vehicle intake angle definitions.",
+	},
+	{
+		Slug: PermPhotoStandardOverride, Name: "Override photo standard", Module: "photo_standard",
+		Scopes:      []Scope{ScopeSubtree},
+		Description: "Set distributor or dealer required/hidden overrides for intake photo angles.",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
@@ -923,6 +936,8 @@ var Roles = []RoleDef{
 			PermPerformanceRead:          ScopeBrand,
 			PermPerformanceTargetsManage: ScopeBrand,
 			PermPerformanceRulesManage:   ScopeBrand,
+			// TEC-498 (000124).
+			PermPhotoStandardManage: ScopeBrand,
 		}),
 	},
 	{
@@ -1158,6 +1173,8 @@ var Roles = []RoleDef{
 			PermPerformanceRead:          ScopeSubtree,
 			PermPerformanceTargetsManage: ScopeSubtree,
 			PermPerformanceRulesManage:   ScopeSubtree,
+			// TEC-498 (000124).
+			PermPhotoStandardOverride: ScopeSubtree,
 		}),
 	},
 	{

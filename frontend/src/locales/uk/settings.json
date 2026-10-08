@@ -71,8 +71,6 @@
   "system.keys.forecast_min_days_hint": "Мінімальна історія рухів, перш ніж прогноз щось запропонує.",
   "system.keys.contract_grace_days": "Пільговий період договору (дні)",
   "system.keys.contract_grace_days_hint": "Час після закінчення договору до режиму лише для читання; 0 = без пільги.",
-  "system.keys.photo_standard_enabled": "Фотостандарт",
-  "system.keys.photo_standard_enabled_hint": "Вимагати стандартний набір фото під час приймання авто.",
   "system.keys.bulk_undo_window_hours": "Вікно скасування масових операцій (години)",
   "system.keys.bulk_undo_window_hours_hint": "Скільки часу масову операцію можна скасувати після виконання.",
   "system.keys.smtp_host": "SMTP-сервер",

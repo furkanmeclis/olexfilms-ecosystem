@@ -71,8 +71,6 @@
   "system.keys.forecast_min_days_hint": "Stok tahmini öneri üretmeden önce gereken en az hareket geçmişi.",
   "system.keys.contract_grace_days": "Sözleşme ek süresi (gün)",
   "system.keys.contract_grace_days_hint": "Sözleşme bitince salt okunur moda geçmeden önceki süre; 0 = ek süre yok.",
-  "system.keys.photo_standard_enabled": "Fotoğraf standardı",
-  "system.keys.photo_standard_enabled_hint": "Araç kabulünde standart fotoğraf setini zorunlu kılar.",
   "system.keys.bulk_undo_window_hours": "Toplu işlem geri alma süresi (saat)",
   "system.keys.bulk_undo_window_hours_hint": "Toplu işlemin çalıştıktan sonra geri alınabildiği süre.",
   "system.keys.smtp_host": "SMTP sunucusu",

@@ -23,9 +23,6 @@ func TestValidate(t *testing.T) {
 		{KeyForecastDefaultWarningDays, "14", "14"},
 		{KeyForecastCriticalDays, "7", "7"},
 		{KeyForecastDefaultCoverDays, "30", "30"},
-		{KeyPhotoStandardEnabled, "true", "true"},
-		{KeyPhotoStandardEnabled, "1", ""},
-		{KeyPhotoStandardEnabled, `"yes"`, ""},
 		{KeySMTPPort, "587", "587"},
 		{KeySMTPPort, "70000", ""},
 		{KeySMTPHost, `"smtp.example.com"`, `"smtp.example.com"`},
@@ -78,9 +75,6 @@ func TestCatalogDefaults(t *testing.T) {
 	d, _ := Lookup(KeyContractGraceDays)
 	if d.Default != int64(0) {
 		t.Fatalf("contract_grace_days default = %v, want 0 (K23)", d.Default)
-	}
-	if d, _ := Lookup(KeyPhotoStandardEnabled); d.Default != false {
-		t.Fatalf("photo_standard_enabled default = %v, want false", d.Default)
 	}
 	if d, _ := Lookup(KeyForecastMinDays); d.Default != int64(90) {
 		t.Fatalf("forecast_min_days default = %v, want 90", d.Default)

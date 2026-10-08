@@ -71,8 +71,6 @@
   "system.keys.forecast_min_days_hint": "Historique minimal de mouvements avant toute proposition de prévision.",
   "system.keys.contract_grace_days": "Délai de grâce du contrat (jours)",
   "system.keys.contract_grace_days_hint": "Délai après l'expiration du contrat avant le mode lecture seule ; 0 = aucun délai.",
-  "system.keys.photo_standard_enabled": "Standard photo",
-  "system.keys.photo_standard_enabled_hint": "Exiger le jeu de photos standard à la réception du véhicule.",
   "system.keys.bulk_undo_window_hours": "Fenêtre d'annulation des opérations groupées (heures)",
   "system.keys.bulk_undo_window_hours_hint": "Durée pendant laquelle une opération groupée peut être annulée.",
   "system.keys.smtp_host": "Serveur SMTP",

@@ -51,6 +51,12 @@ func ServiceImageObjectKey(orgUUID, serviceUUID, imageUUID uuid.UUID, ext string
 	return fmt.Sprintf("services/%s/%s/images/%s.%s", orgUUID.String(), serviceUUID.String(), imageUUID.String(), trimExt(ext))
 }
 
+// IntakePhotoObjectKey builds services/{org}/{service}/intake/{angle}/{photo}.{ext}
+// (TEC-498). Intake photos live separately from service_images.
+func IntakePhotoObjectKey(orgUUID, serviceUUID uuid.UUID, angleKey string, photoUUID uuid.UUID, ext string) string {
+	return fmt.Sprintf("services/%s/%s/intake/%s/%s.%s", orgUUID.String(), serviceUUID.String(), angleKey, photoUUID.String(), trimExt(ext))
+}
+
 // DocumentObjectKey builds documents/{org}/{kind}/{render}.pdf (TEC-88).
 func DocumentObjectKey(orgUUID uuid.UUID, kind string, renderUUID uuid.UUID) string {
 	return fmt.Sprintf("documents/%s/%s/%s.pdf", orgUUID.String(), kind, renderUUID.String())

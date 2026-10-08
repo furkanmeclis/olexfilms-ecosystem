@@ -164,6 +164,11 @@ const (
 	PermStockForecastManage      = "stock_forecast.manage"
 	PermStockForecastNetworkRead = "stock_forecast.network.read"
 
+	// Photo standard (TEC-498, F5-07a): central intake angle definitions
+	// and distributor subtree overrides.
+	PermPhotoStandardManage   = "photo_standard.manage"
+	PermPhotoStandardOverride = "photo_standard.override"
+
 	// Accounting disputes (TEC-171, K24): a lower level never writes its
 	// parent's ledger; it opens a dispute on an entry the parent posted.
 	PermAccountingDispute = "accounting.dispute"

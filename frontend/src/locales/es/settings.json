@@ -71,8 +71,6 @@
   "system.keys.forecast_min_days_hint": "Historial mínimo de movimientos antes de que la previsión proponga algo.",
   "system.keys.contract_grace_days": "Periodo de gracia del contrato (días)",
   "system.keys.contract_grace_days_hint": "Tiempo tras el vencimiento antes del modo de solo lectura; 0 = sin gracia.",
-  "system.keys.photo_standard_enabled": "Estándar de fotos",
-  "system.keys.photo_standard_enabled_hint": "Exigir el conjunto estándar de fotos en la recepción del vehículo.",
   "system.keys.bulk_undo_window_hours": "Ventana para deshacer operaciones masivas (horas)",
   "system.keys.bulk_undo_window_hours_hint": "Tiempo durante el cual se puede deshacer una operación masiva.",
   "system.keys.smtp_host": "Servidor SMTP",
