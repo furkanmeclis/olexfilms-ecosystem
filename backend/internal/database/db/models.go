@@ -1024,6 +1024,8 @@ type District struct {
 	Code       pgtype.Text        `json:"code"`
 	Name       string             `json:"name"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	Latitude   pgtype.Numeric     `json:"latitude"`
+	Longitude  pgtype.Numeric     `json:"longitude"`
 }
 
 type DocumentRender struct {
@@ -2463,6 +2465,8 @@ type Province struct {
 	Code      string             `json:"code"`
 	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Latitude  pgtype.Numeric     `json:"latitude"`
+	Longitude pgtype.Numeric     `json:"longitude"`
 }
 
 type Purchase struct {

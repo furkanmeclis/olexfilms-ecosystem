@@ -10925,6 +10925,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/performance/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Region map with dealer density and territory gaps
+         * @description Requires the `performance` feature and `performance.read`. Center organizations see the brand network; distributors see only their own country/province/district territories. `level` selects the aggregate region granularity; TR provinces have seeded centroids, other regions fall back to the average dealer coordinates when available.
+         */
+        get: operations["getPerformanceRegionMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/map/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dealer point layer for the performance map
+         * @description Requires the `performance` feature and `performance.read`. Dealers without coordinates are included in `missing_coordinates` but omitted from the point layer.
+         */
+        get: operations["getPerformanceDealerMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock-forecasts": {
         parameters: {
             query?: never;
@@ -22679,6 +22719,87 @@ export interface components {
             insufficient_data_count: number;
             /** Format: int64 */
             total_count: number;
+        };
+        PerformanceMapDistributor: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        PerformanceRegionMapItem: {
+            /** @enum {string} */
+            level: "country" | "province" | "district";
+            /** Format: int64 */
+            id: number;
+            code: string;
+            name: string;
+            country_iso2: string;
+            country_name: string;
+            province_code?: string;
+            province_name?: string;
+            /** Format: int64 */
+            dealer_count: number;
+            distributor?: components["schemas"]["PerformanceMapDistributor"];
+            metric_avg?: number;
+            latitude?: number;
+            longitude?: number;
+            /** Format: int64 */
+            missing_coordinates: number;
+        };
+        PerformanceEmptyRegion: {
+            /** @enum {string} */
+            level: "country" | "province" | "district";
+            /** Format: int64 */
+            id: number;
+            code: string;
+            name: string;
+            country_iso2: string;
+            /** @enum {string} */
+            empty_reason: "territory_no_dealers" | "unassigned_territory";
+            distributor?: components["schemas"]["PerformanceMapDistributor"];
+        };
+        PerformanceRegionMap: {
+            /** @enum {string} */
+            level: "country" | "province" | "district";
+            country?: string;
+            period: string;
+            metric: string;
+            items: components["schemas"]["PerformanceRegionMapItem"][];
+            empty_regions: components["schemas"]["PerformanceEmptyRegion"][];
+            /** Format: int64 */
+            missing_coordinates: number;
+        };
+        PerformanceDealerPoint: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+            country_iso2: string;
+            province?: string;
+            district?: string;
+            latitude: number;
+            longitude: number;
+            metric_value?: number;
+            showcase_url: string;
+        };
+        PerformanceDealerMap: {
+            country?: string;
+            period: string;
+            metric: string;
+            items: components["schemas"]["PerformanceDealerPoint"][];
+            /** Format: int64 */
+            missing_coordinates: number;
+        };
+        EnvelopePerformanceRegionMap: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PerformanceRegionMap"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceDealerMap: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PerformanceDealerMap"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeStockForecastPage: {
             /** @enum {boolean} */
@@ -45910,6 +46031,61 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getPerformanceRegionMap: {
+        parameters: {
+            query: {
+                level: "country" | "province" | "district";
+                country?: string;
+                period?: string;
+                metric?: "services_count" | "warranty_start_rate" | "measurement_rate" | "review_avg" | "stock_turnover" | "contract_days_left" | "cari_overdue_amount" | "cari_overdue_days" | "certificate_coverage" | "lead_conversion_rate" | "waste_ratio" | "order_volume";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Region aggregates and empty-region reasons */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceRegionMap"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPerformanceDealerMap: {
+        parameters: {
+            query?: {
+                country?: string;
+                period?: string;
+                metric?: "services_count" | "warranty_start_rate" | "measurement_rate" | "review_avg" | "stock_turnover" | "contract_days_left" | "cari_overdue_amount" | "cari_overdue_days" | "certificate_coverage" | "lead_conversion_rate" | "waste_ratio" | "order_volume";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer points and missing coordinate count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceDealerMap"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listStockForecasts: {

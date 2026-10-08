@@ -420,6 +420,265 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- Staff targets ---------------------------------------------------------------------
 
+-- Region map ------------------------------------------------------------------------
+
+-- name: ListPerformanceMapRegions :many
+WITH visible_territories AS (
+    SELECT t.*
+    FROM territories t
+    WHERE t.brand_id = sqlc.arg(brand_id)
+      AND (
+        sqlc.arg(actor_type)::text = 'center'
+        OR (sqlc.arg(actor_type)::text = 'distributor' AND t.organization_id = sqlc.arg(actor_org_id)::bigint)
+      )
+),
+visible_dealers AS (
+    SELECT o.*
+    FROM organizations o
+    WHERE o.brand_id = sqlc.arg(brand_id)
+      AND o.deleted_at IS NULL
+      AND o.type = 'dealer'
+      AND (sqlc.narg(country_iso2)::text IS NULL OR EXISTS (
+        SELECT 1 FROM countries c WHERE c.id = o.country_id AND c.iso2 = sqlc.narg(country_iso2)::text
+      ))
+      AND (
+        sqlc.arg(actor_type)::text = 'center'
+        OR (sqlc.arg(actor_type)::text = 'dealer' AND o.id = sqlc.arg(actor_org_id)::bigint)
+        OR (
+          sqlc.arg(actor_type)::text = 'distributor'
+          AND EXISTS (
+            SELECT 1
+            FROM visible_territories t
+            WHERE t.country_id = o.country_id
+              AND (t.province_id IS NULL OR t.province_id = o.province_id)
+              AND (t.district_id IS NULL OR t.district_id = o.district_id)
+          )
+        )
+      )
+),
+areas AS (
+    SELECT 'country'::text AS level,
+           c.id AS area_id,
+           c.iso2::text AS code,
+           c.name_tr AS name,
+           c.id AS country_id,
+           NULL::bigint AS province_id,
+           NULL::bigint AS district_id,
+           NULL::numeric AS area_latitude,
+           NULL::numeric AS area_longitude
+    FROM countries c
+    WHERE sqlc.arg(level)::text = 'country'
+      AND c.is_active
+      AND (sqlc.narg(country_iso2)::text IS NULL OR c.iso2 = sqlc.narg(country_iso2)::text)
+      AND (
+        sqlc.arg(actor_type)::text = 'center'
+        OR EXISTS (SELECT 1 FROM visible_territories t WHERE t.country_id = c.id)
+        OR EXISTS (SELECT 1 FROM visible_dealers d WHERE d.country_id = c.id)
+      )
+    UNION ALL
+    SELECT 'province'::text AS level,
+           p.id AS area_id,
+           p.code::text AS code,
+           p.name,
+           p.country_id,
+           p.id AS province_id,
+           NULL::bigint AS district_id,
+           p.latitude AS area_latitude,
+           p.longitude AS area_longitude
+    FROM provinces p
+    JOIN countries c ON c.id = p.country_id
+    WHERE sqlc.arg(level)::text = 'province'
+      AND (sqlc.narg(country_iso2)::text IS NULL OR c.iso2 = sqlc.narg(country_iso2)::text)
+      AND (
+        sqlc.arg(actor_type)::text = 'center'
+        OR EXISTS (
+          SELECT 1 FROM visible_territories t
+          WHERE t.country_id = p.country_id AND (t.province_id IS NULL OR t.province_id = p.id)
+        )
+        OR EXISTS (SELECT 1 FROM visible_dealers d WHERE d.province_id = p.id)
+      )
+    UNION ALL
+    SELECT 'district'::text AS level,
+           d.id AS area_id,
+           d.code::text AS code,
+           d.name,
+           p.country_id,
+           p.id AS province_id,
+           d.id AS district_id,
+           d.latitude AS area_latitude,
+           d.longitude AS area_longitude
+    FROM districts d
+    JOIN provinces p ON p.id = d.province_id
+    JOIN countries c ON c.id = p.country_id
+    WHERE sqlc.arg(level)::text = 'district'
+      AND (sqlc.narg(country_iso2)::text IS NULL OR c.iso2 = sqlc.narg(country_iso2)::text)
+      AND (
+        sqlc.arg(actor_type)::text = 'center'
+        OR EXISTS (
+          SELECT 1 FROM visible_territories t
+          WHERE t.country_id = p.country_id
+            AND (t.province_id IS NULL OR t.province_id = p.id)
+            AND (t.district_id IS NULL OR t.district_id = d.id)
+        )
+        OR EXISTS (SELECT 1 FROM visible_dealers vd WHERE vd.district_id = d.id)
+      )
+),
+area_stats AS (
+    SELECT a.level,
+           a.area_id,
+           COUNT(d.id)::bigint AS dealer_count,
+           COUNT(d.id) FILTER (WHERE d.latitude IS NULL OR d.longitude IS NULL)::bigint AS missing_coordinates,
+           AVG(d.latitude)::numeric AS avg_latitude,
+           AVG(d.longitude)::numeric AS avg_longitude,
+           AVG(pm.value)::numeric AS metric_avg
+    FROM areas a
+    LEFT JOIN visible_dealers d ON d.country_id = a.country_id
+      AND (a.province_id IS NULL OR d.province_id = a.province_id)
+      AND (a.district_id IS NULL OR d.district_id = a.district_id)
+    LEFT JOIN performance_metrics_monthly pm ON pm.organization_id = d.id
+      AND pm.brand_id = sqlc.arg(brand_id)
+      AND pm.period = sqlc.arg(period)::text
+      AND pm.scope = 'org'
+      AND pm.metric = sqlc.arg(metric)::text
+    GROUP BY a.level, a.area_id
+)
+SELECT a.level,
+       a.area_id,
+       a.code,
+       a.name,
+       c.iso2::text AS country_iso2,
+       c.name_tr AS country_name,
+       COALESCE(p.code, '')::text AS province_code,
+       p.name AS province_name,
+       COALESCE(owner.organization_id, 0)::bigint AS distributor_id,
+       COALESCE(owner.organization_uuid, '00000000-0000-0000-0000-000000000000'::uuid) AS distributor_uuid,
+       COALESCE(owner.organization_name, '')::text AS distributor_name,
+       s.dealer_count,
+       s.missing_coordinates,
+       s.metric_avg,
+       COALESCE(a.area_latitude, s.avg_latitude)::numeric AS latitude,
+       COALESCE(a.area_longitude, s.avg_longitude)::numeric AS longitude,
+       CASE
+         WHEN s.dealer_count = 0 AND owner.organization_id IS NOT NULL THEN 'territory_no_dealers'
+         WHEN a.level = 'province' AND owner.organization_id IS NULL THEN 'unassigned_territory'
+         ELSE ''
+       END::text AS empty_reason
+FROM areas a
+JOIN area_stats s ON s.level = a.level AND s.area_id = a.area_id
+JOIN countries c ON c.id = a.country_id
+LEFT JOIN provinces p ON p.id = a.province_id
+LEFT JOIN LATERAL (
+    SELECT t.organization_id, o.uuid AS organization_uuid, o.name AS organization_name
+    FROM visible_territories t
+    JOIN organizations o ON o.id = t.organization_id
+    WHERE t.country_id = a.country_id
+      AND (t.province_id IS NULL OR t.province_id = a.province_id)
+      AND (t.district_id IS NULL OR t.district_id = a.district_id)
+    ORDER BY (t.district_id IS NOT NULL) DESC, (t.province_id IS NOT NULL) DESC, t.id
+    LIMIT 1
+) owner ON true
+ORDER BY c.iso2, p.code NULLS FIRST, a.code NULLS FIRST, a.name;
+
+-- name: ListPerformanceMapDealers :many
+WITH visible_territories AS (
+    SELECT t.*
+    FROM territories t
+    WHERE t.brand_id = sqlc.arg(brand_id)
+      AND (
+        sqlc.arg(actor_type)::text = 'center'
+        OR (sqlc.arg(actor_type)::text = 'distributor' AND t.organization_id = sqlc.arg(actor_org_id)::bigint)
+      )
+),
+visible_dealers AS (
+    SELECT o.*
+    FROM organizations o
+    WHERE o.brand_id = sqlc.arg(brand_id)
+      AND o.deleted_at IS NULL
+      AND o.type = 'dealer'
+      AND (sqlc.narg(country_iso2)::text IS NULL OR EXISTS (
+        SELECT 1 FROM countries c WHERE c.id = o.country_id AND c.iso2 = sqlc.narg(country_iso2)::text
+      ))
+      AND (
+        sqlc.arg(actor_type)::text = 'center'
+        OR (sqlc.arg(actor_type)::text = 'dealer' AND o.id = sqlc.arg(actor_org_id)::bigint)
+        OR (
+          sqlc.arg(actor_type)::text = 'distributor'
+          AND EXISTS (
+            SELECT 1
+            FROM visible_territories t
+            WHERE t.country_id = o.country_id
+              AND (t.province_id IS NULL OR t.province_id = o.province_id)
+              AND (t.district_id IS NULL OR t.district_id = o.district_id)
+          )
+        )
+      )
+)
+SELECT d.id AS organization_id,
+       d.uuid AS organization_uuid,
+       d.slug,
+       d.name,
+       c.iso2::text AS country_iso2,
+       COALESCE(p.code, '')::text AS province_code,
+       p.name AS province_name,
+       ds.name AS district_name,
+       d.latitude,
+       d.longitude,
+       pm.value::numeric AS metric_value,
+       missing.total::bigint AS missing_coordinates
+FROM visible_dealers d
+JOIN countries c ON c.id = d.country_id
+LEFT JOIN provinces p ON p.id = d.province_id
+LEFT JOIN districts ds ON ds.id = d.district_id
+LEFT JOIN performance_metrics_monthly pm ON pm.organization_id = d.id
+  AND pm.brand_id = sqlc.arg(brand_id)
+  AND pm.period = sqlc.arg(period)::text
+  AND pm.scope = 'org'
+  AND pm.metric = sqlc.arg(metric)::text
+CROSS JOIN (
+    SELECT COUNT(*) FILTER (WHERE latitude IS NULL OR longitude IS NULL) AS total
+    FROM visible_dealers
+) missing
+WHERE d.latitude IS NOT NULL
+  AND d.longitude IS NOT NULL
+ORDER BY c.iso2, p.code NULLS LAST, d.name, d.id;
+
+-- name: CountPerformanceMapDealerMissingCoordinates :one
+WITH visible_territories AS (
+    SELECT t.*
+    FROM territories t
+    WHERE t.brand_id = sqlc.arg(brand_id)
+      AND (
+        sqlc.arg(actor_type)::text = 'center'
+        OR (sqlc.arg(actor_type)::text = 'distributor' AND t.organization_id = sqlc.arg(actor_org_id)::bigint)
+      )
+),
+visible_dealers AS (
+    SELECT o.*
+    FROM organizations o
+    WHERE o.brand_id = sqlc.arg(brand_id)
+      AND o.deleted_at IS NULL
+      AND o.type = 'dealer'
+      AND (sqlc.narg(country_iso2)::text IS NULL OR EXISTS (
+        SELECT 1 FROM countries c WHERE c.id = o.country_id AND c.iso2 = sqlc.narg(country_iso2)::text
+      ))
+      AND (
+        sqlc.arg(actor_type)::text = 'center'
+        OR (sqlc.arg(actor_type)::text = 'dealer' AND o.id = sqlc.arg(actor_org_id)::bigint)
+        OR (
+          sqlc.arg(actor_type)::text = 'distributor'
+          AND EXISTS (
+            SELECT 1
+            FROM visible_territories t
+            WHERE t.country_id = o.country_id
+              AND (t.province_id IS NULL OR t.province_id = o.province_id)
+              AND (t.district_id IS NULL OR t.district_id = o.district_id)
+          )
+        )
+      )
+)
+SELECT COUNT(*) FILTER (WHERE latitude IS NULL OR longitude IS NULL)::bigint
+FROM visible_dealers;
+
 -- name: UpsertStaffTarget :one
 INSERT INTO staff_targets (
     organization_id, brand_id, user_id, period, metric, value, currency, created_by_user_id

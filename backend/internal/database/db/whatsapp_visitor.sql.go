@@ -67,7 +67,7 @@ func (q *Queries) CountConversationRunsWithStageBefore(ctx context.Context, arg 
 }
 
 const findDistrictByName = `-- name: FindDistrictByName :one
-SELECT id, province_id, code, name, created_at FROM districts
+SELECT id, province_id, code, name, created_at, latitude, longitude FROM districts
 WHERE province_id = $1
   AND lower(translate(name, 'İIıŞşĞğÜüÖöÇç', 'iiissgguuoocc')) = lower(translate($2::text, 'İIıŞşĞğÜüÖöÇç', 'iiissgguuoocc'))
 ORDER BY id
@@ -89,12 +89,14 @@ func (q *Queries) FindDistrictByName(ctx context.Context, arg FindDistrictByName
 		&i.Code,
 		&i.Name,
 		&i.CreatedAt,
+		&i.Latitude,
+		&i.Longitude,
 	)
 	return i, err
 }
 
 const findProvinceByName = `-- name: FindProvinceByName :one
-SELECT p.id, p.country_id, p.code, p.name, p.created_at
+SELECT p.id, p.country_id, p.code, p.name, p.created_at, p.latitude, p.longitude
 FROM provinces p
 JOIN countries c ON c.id = p.country_id
 WHERE c.is_active
@@ -114,6 +116,8 @@ func (q *Queries) FindProvinceByName(ctx context.Context, name string) (Province
 		&i.Code,
 		&i.Name,
 		&i.CreatedAt,
+		&i.Latitude,
+		&i.Longitude,
 	)
 	return i, err
 }

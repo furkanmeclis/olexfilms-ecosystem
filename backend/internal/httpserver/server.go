@@ -123,6 +123,9 @@ import (
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	performancemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance"
+	performancehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/handler"
+	performanceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/usecase"
 	photostandardmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard"
 	photostandardhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/handler"
 	photostandardusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/usecase"
@@ -553,6 +556,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		featureSvc, sysSvc, log)
 	stockForecastH := stockforecasthandler.New(stockForecastSvc, ordersSvc)
 	stockforecastmodule.RegisterRoutes(mux, stockForecastH, tokens, loader, deps.Queries, featureSvc)
+	performanceSvc := performanceusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), featureSvc, log)
+	performancemodule.RegisterRoutes(mux, performancehandler.New(performanceSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-197: stock transfer requests between siblings (K13).
 	// TEC-200: a received transfer books A alacak / B borç.
 	transfersSvc := transfersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
