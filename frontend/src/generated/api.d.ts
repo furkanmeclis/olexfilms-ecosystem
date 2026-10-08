@@ -14376,6 +14376,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/efficiency/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read-only efficiency settings for the screens
+         * @description TEC-489. `warning_waste_ratio` is the system setting
+         *     `efficiency.warning_waste_ratio` (decimal string); rows above it are
+         *     highlighted.
+         */
+        get: operations["getEfficiencySettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/efficiency/compare": {
         parameters: {
             query?: never;
@@ -14383,7 +14405,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Compare active organization, subtree and network averages */
+        /**
+         * Compare active organization, subtree and network averages
+         * @description Buckets `organization`, `subtree` and `network`. For a dealer the
+         *     `subtree` bucket is its supplier's network (distributor and its
+         *     dealers, TEC-489).
+         */
         get: operations["compareEfficiency"];
         put?: never;
         post?: never;
@@ -14437,7 +14464,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Roll efficiency detail */
+        /**
+         * Roll efficiency detail
+         * @description The roll row plus `services`, the services that consumed it (newest first, max 200; TEC-489).
+         */
         get: operations["getEfficiencyRoll"];
         put?: never;
         post?: never;
@@ -52235,6 +52265,10 @@ export interface operations {
                 dimension?: "dealer" | "staff" | "product" | "body_type" | "part";
                 period_from?: string;
                 period_to?: string;
+                /** @description Minimum average waste ratio of a row (TEC-489). */
+                waste_ratio_min?: number;
+                /** @description Maximum average waste ratio of a row (TEC-489). */
+                waste_ratio_max?: number;
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
                 sort?: "waste_ratio" | "-waste_ratio" | "meters" | "-meters" | "services" | "-services";
@@ -52292,6 +52326,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getEfficiencySettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Efficiency settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @example 0.15 */
+                        warning_waste_ratio: string;
+                    };
+                };
             };
             403: components["responses"]["Forbidden"];
         };

@@ -287,6 +287,8 @@ WHERE f.brand_id = sqlc.arg(brand_id)
   AND f.service_date >= sqlc.arg(date_from)::date
   AND f.service_date < sqlc.arg(date_to)::date
 GROUP BY dimension_key, dimension_label
+HAVING (sqlc.narg(waste_ratio_min)::numeric IS NULL OR AVG(f.waste_ratio) >= sqlc.narg(waste_ratio_min)::numeric)
+   AND (sqlc.narg(waste_ratio_max)::numeric IS NULL OR AVG(f.waste_ratio) <= sqlc.narg(waste_ratio_max)::numeric)
 ORDER BY
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
     CASE sqlc.arg(sort_key)::text
@@ -304,6 +306,25 @@ ORDER BY
   END DESC NULLS LAST,
   dimension_label ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: ListRollEfficiencyServices :many
+-- TEC-489: services that consumed a roll (roll detail), newest first.
+SELECT s.uuid,
+       s.service_no,
+       MAX(f.service_date)::date AS service_date,
+       o.name AS dealer_name,
+       SUM(f.actual_meters)::numeric(14,2) AS actual_meters,
+       SUM(f.expected_meters)::numeric(14,2) AS expected_meters,
+       AVG(f.waste_ratio)::numeric(12,6) AS avg_waste_ratio
+FROM efficiency_facts f
+JOIN services s ON s.id = f.service_id
+JOIN organizations o ON o.id = f.dealer_org_id
+WHERE f.unit_id = sqlc.arg(unit_id)
+  AND f.brand_id = sqlc.arg(brand_id)
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR f.dealer_org_id = ANY(sqlc.narg(org_ids)::bigint[]))
+GROUP BY s.id, s.uuid, s.service_no, o.name
+ORDER BY MAX(f.service_date) DESC, s.id DESC
+LIMIT 200;
 
 -- name: EfficiencyMonthlyTrend :many
 SELECT date_trunc('month', f.service_date)::date AS month,

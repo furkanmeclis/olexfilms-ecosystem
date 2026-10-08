@@ -160,7 +160,11 @@ func analyticsFromMap(v map[string]string) (AnalyticsFilter, error) {
 	if to.IsZero() {
 		to = time.Now().UTC()
 	}
-	return AnalyticsFilter{From: from, To: to.AddDate(0, 0, 1), Sort: q.Sort}, nil
+	waste, err := apiquery.NumRange(values, "waste_ratio")
+	if err != nil {
+		return AnalyticsFilter{}, err
+	}
+	return AnalyticsFilter{From: from, To: to.AddDate(0, 0, 1), Sort: q.Sort, WasteRatioMin: waste.Min, WasteRatioMax: waste.Max}, nil
 }
 
 func rollFromMap(v map[string]string) (RollFilter, error) {
