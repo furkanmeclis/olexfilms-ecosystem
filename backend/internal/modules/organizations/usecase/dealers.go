@@ -127,6 +127,10 @@ type NearbyDealer struct {
 	DistanceKm          float64   `json:"distance_km"`
 	AcceptsAppointments bool      `json:"accepts_appointments"`
 	WhatsApp            *string   `json:"whatsapp"`
+	// TEC-467: the dealer serves a published showcase (module on) and its
+	// Google rating (null when unrated or without a showcase).
+	HasShowcase  bool     `json:"has_showcase"`
+	GoogleRating *float64 `json:"google_rating"`
 }
 
 // NearbyDealers lists the active dealers / distributors of a brand around
@@ -151,6 +155,27 @@ func (s *Service) NearbyDealers(ctx context.Context, brandID int64, in NearbyInp
 			d.WhatsApp = &p
 		}
 		out = append(out, d)
+	}
+	return s.withBadges(ctx, brandID, out)
+}
+
+// withBadges sets has_showcase / google_rating from the showcase data.
+func (s *Service) withBadges(ctx context.Context, brandID int64, out []NearbyDealer) ([]NearbyDealer, error) {
+	if s.showcases == nil || len(out) == 0 {
+		return out, nil
+	}
+	ids := make([]uuid.UUID, len(out))
+	for i, d := range out {
+		ids[i] = d.UUID
+	}
+	badges, err := s.showcases.Badges(ctx, brandID, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if rating, ok := badges[out[i].UUID]; ok {
+			out[i].HasShowcase, out[i].GoogleRating = true, rating
+		}
 	}
 	return out, nil
 }

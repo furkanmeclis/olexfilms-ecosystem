@@ -69,6 +69,8 @@ func RegisterRoutes(
 func RegisterPublicRoutes(mux *http.ServeMux, h *handler.Public) {
 	mux.HandleFunc("GET /v1/public/dealer-applications/config", h.Config)
 	mux.HandleFunc("POST /v1/public/dealer-applications", h.Submit)
+	mux.HandleFunc("GET /v1/public/dealers/{code}/lead-form/config", h.ShowcaseConfig)
+	mux.HandleFunc("POST /v1/public/dealers/{code}/leads", h.ShowcaseSubmit)
 	mux.HandleFunc("GET /v1/public/quotes/{token}", h.Quote)
 	mux.HandleFunc("GET /v1/public/quotes/{token}/pdf", h.QuotePDF)
 	mux.HandleFunc("GET /v1/public/quotes/{token}/pdf/file", h.QuotePDFFile)

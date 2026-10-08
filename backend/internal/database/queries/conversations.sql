@@ -136,6 +136,13 @@ UPDATE conversations SET visitor_lead_id = sqlc.narg(visitor_lead_id)
 WHERE id = sqlc.arg(id)
 RETURNING *;
 
+-- name: SetConversationReferredDealer :one
+-- TEC-468: #dealer-code in the first public WhatsApp message routes the
+-- visitor lead to that dealer while the conversation stays system-owned.
+UPDATE conversations SET referred_dealer_org_id = sqlc.narg(referred_dealer_org_id)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
 -- Messages (timeline) ----------------------------------------------------------
 
 -- name: GetMessageByUUID :one

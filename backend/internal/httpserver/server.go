@@ -64,6 +64,9 @@ import (
 	dealeraccountingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting"
 	dealeraccountinghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting/handler"
 	dealeraccountingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealeraccounting/usecase"
+	showcasemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase"
+	showcasehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase/handler"
+	showcaseusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase/usecase"
 	documentsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents"
 	dochandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/handler"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
@@ -635,6 +638,12 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	fleetSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries))
 	fleetSvc.SetPlates(geoSvc)
 	fleetSvc.SetInviter(uc)
+	// TEC-474 (F5-02c): the fleet portal reads follow each dealer's fleet
+	// module, download the report PDFs from storage, and the portal service
+	// detail / PDF serves a fleet user's fleet vehicles.
+	fleetSvc.SetModules(featureSvc)
+	fleetSvc.SetReportFiles(deps.Storage)
+	servicesSvc.WithFleetPortal(fleetSvc)
 	ioReg := ioengine.NewRegistry(
 		// TEC-211: price columns behind pricing.* grants.
 		catalogusecase.NewIOAdapter(catalogSvc, deps.Queries).WithPrices(pricingSvc),
@@ -887,6 +896,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	campaignsSvc := campaignsusecase.New(deps.DB, deps.Queries, campaignStorage)
 	campaignsSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-406: approval notifications
 	campaignsmodule.RegisterRoutes(mux, campaignshandler.New(campaignsSvc), tokens, loader, deps.Queries, featureSvc)
+	// TEC-467 (F5-01b): dealer showcase editor, center review and the
+	// showcase block of the public dealer endpoints.
+	showcaseSvc := showcaseusecase.New(deps.DB, deps.Queries, featureSvc, sysSvc, outbox.NewStore(deps.DB, deps.Queries))
+	var showcaseStore showcasehandler.Store
+	if deps.Storage != nil {
+		showcaseSvc.SetStorage(deps.Storage)
+		showcaseStore = deps.Storage
+	}
+	orgSvc.SetShowcases(showcaseSvc)
+	showcasemodule.RegisterRoutes(mux, showcasehandler.New(showcaseSvc, showcaseStore), tokens, loader, deps.Queries, featureSvc)
 	// TEC-407: public unsubscribe of the campaign e-mail link.
 	campaignsmodule.RegisterPublicRoutes(mux, campaignshandler.NewUnsubscribe(
 		campaignsusecase.NewUnsubscriber(deps.Queries, []byte(cfg.JWT.AccessSecret)),
@@ -913,6 +932,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-323: appointments, capacity, availability and intake start.
 	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
 	appointmentsSvc.SetFeatureChecker(featureSvc)
+	fleetSvc.SetAppointments(appointmentsSvc)
 	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
 	appointmentsmodule.RegisterPortalRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader)
 	// TEC-385 (F4-01c): AI assistant tool registry over the module use
@@ -984,7 +1004,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	sysSvc.SetGuard(sysconfig.KeyLeadsDealerApplicationEnabled, dealerApps.SettingGuard)
 	leadsmodule.RegisterPublicRoutes(mux, leadshandler.NewPublic(dealerApps, ratelimit.New(deps.Redis, cfg.App.Env),
 		leadshandler.RateLimits{IPLimit: cfg.Leads.ApplicationIPLimit, PhoneLimit: cfg.Leads.ApplicationPhoneLimit,
-			Window: cfg.Leads.ApplicationRateWindow}).WithQuotes(leadsSvc, docSvc))
+			Window: cfg.Leads.ApplicationRateWindow}).WithShowcaseSecret(cfg.JWT.AccessSecret).WithQuotes(leadsSvc, docSvc))
 	bulkSvc.WithUndoWindow(sysSvc.BulkUndoWindowHours)
 	// TEC-206: stock counts (scans through the TEC-203 resolver, approval via the ledger).
 	warehousemodule.RegisterCountRoutes(mux, warehousehandler.NewCounts(warehouseusecase.NewCounts(deps.DB, deps.Queries,

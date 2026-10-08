@@ -76,6 +76,8 @@ func Schedules() []Periodic {
 		{Cron: aiActionSweepCron, Type: TaskAIActionSweep, Queue: QueueMaintenance, Opts: aiActionSweepOpts(), New: NewAIActionSweepTask},
 		// TEC-407: campaign scheduler (due campaigns, finish, lost tasks).
 		{Cron: campaignTickCron, Type: TaskCampaignTick, Queue: QueueMaintenance, Opts: campaignTickOpts(), New: NewCampaignTickTask},
+		// TEC-481: hourly certificate notices/expiry in each org's timezone.
+		{Cron: certificateExpiryScanCron, Type: TaskCertificateExpiryScan, Queue: QueueMaintenance, Opts: certificateExpiryScanOpts(), New: NewCertificateExpiryScanTask},
 	}
 }
 

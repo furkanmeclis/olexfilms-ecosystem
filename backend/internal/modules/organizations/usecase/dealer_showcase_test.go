@@ -92,7 +92,7 @@ func TestMapPublicDealerCodes(t *testing.T) {
 func TestPublicDealerByCodeMalformed(t *testing.T) {
 	s := &Service{}
 	for _, code := range []string{"", "  ", "-x", "a/b", "a b", "ö", strings.Repeat("a", 101)} {
-		if _, err := s.PublicDealerByCode(context.Background(), 1, code); !errors.Is(err, ErrNotFound) {
+		if _, err := s.PublicDealerByCode(context.Background(), 1, code, ""); !errors.Is(err, ErrNotFound) {
 			t.Fatalf("%q: err = %v, want ErrNotFound", code, err)
 		}
 	}

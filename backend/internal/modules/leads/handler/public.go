@@ -2,6 +2,9 @@ package handler
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
@@ -26,7 +30,10 @@ const (
 	applicationIPAction    = "dealer_application_ip"
 	applicationPhoneAction = "dealer_application_phone"
 	quotePublicAction      = "quote_public"
+	showcaseMinFill        = 3 * time.Second
+	showcaseTokenTTL       = 30 * time.Minute
 	maxApplicationBody     = 32 << 10
+	maxShowcaseLeadBody    = 16 << 10
 	applicationNotFound    = "Dealer applications are not available"
 	quoteNotFound          = "Quote was not found"
 )
@@ -41,6 +48,9 @@ type Applications interface {
 	Enabled(ctx context.Context) (bool, error)
 	Validate(ctx context.Context, in usecase.ApplicationInput) (usecase.Application, error)
 	Submit(ctx context.Context, brandID int64, app usecase.Application) (usecase.ApplicationResult, error)
+	ShowcaseLeadConfig(ctx context.Context, brandID int64, code, lang, formToken, whatsappText string) (usecase.ShowcaseLeadConfig, error)
+	ValidateShowcaseLead(ctx context.Context, brandID int64, code string, in usecase.ShowcaseLeadInput) (usecase.ShowcaseLead, db.GetShowcaseLeadTargetBySlugRow, error)
+	SubmitShowcaseLead(ctx context.Context, target db.GetShowcaseLeadTargetBySlugRow, in usecase.ShowcaseLead) (usecase.ShowcaseLeadResult, error)
 }
 
 // PublicQuotes is the public read-only quote use case.
@@ -72,11 +82,18 @@ type Public struct {
 	files   QuoteFiles
 	limiter Limiter
 	limits  RateLimits
+	secret  []byte
 }
 
 // NewPublic builds the handler.
 func NewPublic(apps Applications, limiter Limiter, limits RateLimits) *Public {
 	return &Public{apps: apps, limiter: limiter, limits: limits}
+}
+
+// WithShowcaseSecret enables signed form tokens for public showcase leads.
+func (h *Public) WithShowcaseSecret(secret string) *Public {
+	h.secret = []byte(secret)
+	return h
 }
 
 // WithQuotes enables /v1/public/quotes/{token}. When docs can also read
@@ -126,6 +143,21 @@ type applicationBody struct {
 
 type applicationReceived struct {
 	Received bool `json:"received"`
+}
+
+type showcaseLeadBody struct {
+	Name             string   `json:"name"`
+	Phone            string   `json:"phone"`
+	Email            string   `json:"email"`
+	VehicleBrand     string   `json:"vehicle_brand"`
+	VehicleModel     string   `json:"vehicle_model"`
+	Interested       []string `json:"interested_services"`
+	Message          string   `json:"message"`
+	PreferredChannel string   `json:"preferred_channel"`
+	KVKKConsent      bool     `json:"kvkk_consent"`
+	Language         string   `json:"language"`
+	FormToken        string   `json:"form_token"`
+	Website          string   `json:"website"`
 }
 
 // Submit answers POST /v1/public/dealer-applications: 404 while the form
@@ -182,6 +214,141 @@ func (h *Public) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusAccepted, applicationReceived{Received: true})
+}
+
+// ShowcaseConfig answers GET /v1/public/dealers/{code}/lead-form/config.
+func (h *Public) ShowcaseConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	b, ok := brandctx.From(r.Context())
+	if !ok {
+		response.NotFound(w, r, "Dealer was not found")
+		return
+	}
+	code := r.PathValue("code")
+	token := h.signShowcaseToken(code, time.Now().UTC())
+	waText := url.QueryEscape(showcaseWhatsAppText(r.URL.Query().Get("lang"), code))
+	cfg, err := h.apps.ShowcaseLeadConfig(r.Context(), b.ID, code, r.URL.Query().Get("lang"), token, waText)
+	if err != nil {
+		if errors.Is(err, usecase.ErrNotFound) {
+			response.NotFound(w, r, "Dealer was not found")
+			return
+		}
+		response.InternalErr(w, r, err, "showcase lead config failed")
+		return
+	}
+	response.JSON(w, r, http.StatusOK, cfg)
+}
+
+// ShowcaseSubmit answers POST /v1/public/dealers/{code}/leads.
+func (h *Public) ShowcaseSubmit(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	b, ok := brandctx.From(r.Context())
+	if !ok {
+		response.NotFound(w, r, "Dealer was not found")
+		return
+	}
+	code := r.PathValue("code")
+	ip := clientIP(r)
+	if !h.allowWindow(w, r, usecase.WebsiteIPAction, ip, 5, time.Hour) {
+		return
+	}
+	var body showcaseLeadBody
+	r.Body = http.MaxBytesReader(w, r.Body, maxShowcaseLeadBody)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&body); err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "Invalid request body")
+		return
+	}
+	issued, ok := h.verifyShowcaseToken(code, body.FormToken)
+	if !ok {
+		response.BadRequest(w, r, response.CodeValidationError, "form_token is invalid")
+		return
+	}
+	if time.Since(issued) < showcaseMinFill {
+		response.BadRequest(w, r, response.CodeValidationError, "form was submitted too quickly")
+		return
+	}
+	lead, target, err := h.apps.ValidateShowcaseLead(r.Context(), b.ID, code, usecase.ShowcaseLeadInput{
+		Name: body.Name, Phone: body.Phone, Email: body.Email, VehicleBrand: body.VehicleBrand,
+		VehicleModel: body.VehicleModel, Interested: body.Interested, Message: body.Message,
+		PreferredChannel: body.PreferredChannel, KVKKConsent: body.KVKKConsent, Language: body.Language,
+		Honeypot: body.Website, TokenIssuedAt: issued, RemoteIP: ip, UserAgent: r.UserAgent(),
+	})
+	if err != nil {
+		if errors.Is(err, usecase.ErrNotFound) {
+			response.NotFound(w, r, "Dealer was not found")
+			return
+		}
+		var ve *usecase.ValidationError
+		if errors.As(err, &ve) {
+			status := http.StatusBadRequest
+			if ve.Field == "kvkk_consent" {
+				status = http.StatusUnprocessableEntity
+			}
+			response.ErrorWithDetails(w, r, status, response.CodeValidationError, ve.Message,
+				[]response.Detail{{Field: ve.Field, Message: ve.Message, Code: ve.Code}})
+			return
+		}
+		response.InternalErr(w, r, err, "showcase lead failed")
+		return
+	}
+	if !lead.Spam && !h.allowWindow(w, r, usecase.WebsitePhoneAction, lead.PhoneE164, 3, 24*time.Hour) {
+		return
+	}
+	if _, err := h.apps.SubmitShowcaseLead(r.Context(), target, lead); err != nil {
+		response.InternalErr(w, r, err, "showcase lead failed")
+		return
+	}
+	if lead.Spam {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	response.JSON(w, r, http.StatusAccepted, applicationReceived{Received: true})
+}
+
+func (h *Public) signShowcaseToken(code string, issued time.Time) string {
+	if len(h.secret) == 0 {
+		return ""
+	}
+	payload := strings.ToLower(strings.TrimSpace(code)) + "|" + strconv.FormatInt(issued.Unix(), 10)
+	mac := hmac.New(sha256.New, h.secret)
+	_, _ = mac.Write([]byte(payload))
+	return base64.RawURLEncoding.EncodeToString([]byte(payload + "|" + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))))
+}
+
+func (h *Public) verifyShowcaseToken(code, token string) (time.Time, bool) {
+	if len(h.secret) == 0 {
+		return time.Now().Add(-showcaseMinFill), true
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(token))
+	if err != nil {
+		return time.Time{}, false
+	}
+	parts := strings.Split(string(raw), "|")
+	if len(parts) != 3 || parts[0] != strings.ToLower(strings.TrimSpace(code)) {
+		return time.Time{}, false
+	}
+	sec, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return time.Time{}, false
+	}
+	issued := time.Unix(sec, 0).UTC()
+	if time.Since(issued) < 0 || time.Since(issued) > showcaseTokenTTL {
+		return time.Time{}, false
+	}
+	payload := parts[0] + "|" + parts[1]
+	mac := hmac.New(sha256.New, h.secret)
+	_, _ = mac.Write([]byte(payload))
+	want := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	return issued, hmac.Equal([]byte(want), []byte(parts[2]))
+}
+
+func showcaseWhatsAppText(lang, code string) string {
+	if strings.TrimSpace(lang) == "en" {
+		return "Hello, I would like information about your services. #" + code
+	}
+	return "Merhaba, hizmetleriniz hakkında bilgi almak istiyorum. #" + code
 }
 
 // Quote answers GET /v1/public/quotes/{token}; it never exposes recipient
@@ -304,10 +471,14 @@ func (h *Public) publicQuoteToken(w http.ResponseWriter, r *http.Request) (uuid.
 }
 
 func (h *Public) allow(w http.ResponseWriter, r *http.Request, action, subject string, limit int) bool {
-	if h.limiter == nil || limit <= 0 || h.limits.Window <= 0 {
+	return h.allowWindow(w, r, action, subject, limit, h.limits.Window)
+}
+
+func (h *Public) allowWindow(w http.ResponseWriter, r *http.Request, action, subject string, limit int, window time.Duration) bool {
+	if h.limiter == nil || limit <= 0 || window <= 0 {
 		return true
 	}
-	ok, retry := h.limiter.Allow(r.Context(), action, subject, limit, h.limits.Window)
+	ok, retry := h.limiter.Allow(r.Context(), action, subject, limit, window)
 	if ok {
 		return true
 	}
