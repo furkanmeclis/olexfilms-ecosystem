@@ -338,5 +338,6 @@
   "review_questions.validation.key": "Ключ обязателен, не более 64 символов.",
   "review_questions.validation.text_tr": "Текст вопроса на турецком обязателен.",
   "review_questions.toast.saved": "Вопрос сохранён.",
-  "review_questions.toast.failed": "Не удалось выполнить действие. Повторите попытку."
+  "review_questions.toast.failed": "Не удалось выполнить действие. Повторите попытку.",
+  "wizard.steps.photos": "Фото приёмки"
 }

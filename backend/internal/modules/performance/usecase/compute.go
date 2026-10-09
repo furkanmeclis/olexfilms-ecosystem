@@ -74,6 +74,12 @@ func (s *Service) RunOrganization(ctx context.Context, org db.Organization, at t
 		res.Periods++
 		res.Metrics += n
 	}
+	if org.Type == "dealer" && local.Day() == 1 {
+		previous := periods[1].Format("2006-01")
+		if _, err := s.calculateBonuses(ctx, org, previous, false); err != nil {
+			return res, err
+		}
+	}
 	return res, nil
 }
 

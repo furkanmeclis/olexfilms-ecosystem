@@ -179,23 +179,25 @@ SELECT COUNT(*)::bigint FROM tasks t
 WHERE t.brand_id = $1
   AND (COALESCE(cardinality($2::text[]), 0) = 0 OR t.status = ANY ($2::text[]))
   AND (COALESCE(cardinality($3::text[]), 0) = 0 OR t.priority = ANY ($3::text[]))
-  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR t.source = ANY ($4::text[]))
+  AND (COALESCE(cardinality($5::uuid[]), 0) = 0
        OR t.subject_org_id IN (SELECT so.id FROM organizations so
-                               WHERE so.uuid = ANY ($4::uuid[])))
-  AND ($5::bigint IS NULL OR t.assignee_user_id = $5::bigint)
-  AND ($6::timestamptz IS NULL OR t.due_at >= $6::timestamptz)
-  AND ($7::timestamptz IS NULL OR t.due_at < $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR t.created_at >= $8::timestamptz)
-  AND ($9::timestamptz IS NULL OR t.created_at < $9::timestamptz)
-  AND ($10::text IS NULL
-       OR t.title ILIKE '%' || $10::text || '%'
-       OR t.description ILIKE '%' || $10::text || '%')
+                               WHERE so.uuid = ANY ($5::uuid[])))
+  AND ($6::bigint IS NULL OR t.assignee_user_id = $6::bigint)
+  AND ($7::timestamptz IS NULL OR t.due_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR t.due_at < $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR t.created_at >= $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR t.created_at < $10::timestamptz)
+  AND ($11::text IS NULL
+       OR t.title ILIKE '%' || $11::text || '%'
+       OR t.description ILIKE '%' || $11::text || '%')
 `
 
 type CountTasksParams struct {
 	BrandID         int64              `json:"brand_id"`
 	Statuses        []string           `json:"statuses"`
 	Priorities      []string           `json:"priorities"`
+	Sources         []string           `json:"sources"`
 	SubjectOrgUuids []uuid.UUID        `json:"subject_org_uuids"`
 	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
 	DueAfter        pgtype.Timestamptz `json:"due_after"`
@@ -210,6 +212,7 @@ func (q *Queries) CountTasks(ctx context.Context, arg CountTasksParams) (int64, 
 		arg.BrandID,
 		arg.Statuses,
 		arg.Priorities,
+		arg.Sources,
 		arg.SubjectOrgUuids,
 		arg.AssigneeUserID,
 		arg.DueAfter,
@@ -621,26 +624,28 @@ SELECT t.uuid FROM tasks t
 WHERE t.brand_id = $1
   AND (COALESCE(cardinality($2::text[]), 0) = 0 OR t.status = ANY ($2::text[]))
   AND (COALESCE(cardinality($3::text[]), 0) = 0 OR t.priority = ANY ($3::text[]))
-  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR t.source = ANY ($4::text[]))
+  AND (COALESCE(cardinality($5::uuid[]), 0) = 0
        OR t.subject_org_id IN (SELECT so.id FROM organizations so
-                               WHERE so.uuid = ANY ($4::uuid[])))
-  AND ($5::bigint IS NULL OR t.assignee_user_id = $5::bigint)
-  AND ($6::timestamptz IS NULL OR t.due_at >= $6::timestamptz)
-  AND ($7::timestamptz IS NULL OR t.due_at < $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR t.created_at >= $8::timestamptz)
-  AND ($9::timestamptz IS NULL OR t.created_at < $9::timestamptz)
-  AND ($10::text IS NULL
-       OR t.title ILIKE '%' || $10::text || '%'
-       OR t.description ILIKE '%' || $10::text || '%')
-  AND t.organization_id = $11
+                               WHERE so.uuid = ANY ($5::uuid[])))
+  AND ($6::bigint IS NULL OR t.assignee_user_id = $6::bigint)
+  AND ($7::timestamptz IS NULL OR t.due_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR t.due_at < $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR t.created_at >= $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR t.created_at < $10::timestamptz)
+  AND ($11::text IS NULL
+       OR t.title ILIKE '%' || $11::text || '%'
+       OR t.description ILIKE '%' || $11::text || '%')
+  AND t.organization_id = $12
 ORDER BY t.created_at DESC, t.id DESC
-LIMIT $12
+LIMIT $13
 `
 
 type ListTaskUUIDsFilteredParams struct {
 	BrandID         int64              `json:"brand_id"`
 	Statuses        []string           `json:"statuses"`
 	Priorities      []string           `json:"priorities"`
+	Sources         []string           `json:"sources"`
 	SubjectOrgUuids []uuid.UUID        `json:"subject_org_uuids"`
 	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
 	DueAfter        pgtype.Timestamptz `json:"due_after"`
@@ -658,6 +663,7 @@ func (q *Queries) ListTaskUUIDsFiltered(ctx context.Context, arg ListTaskUUIDsFi
 		arg.BrandID,
 		arg.Statuses,
 		arg.Priorities,
+		arg.Sources,
 		arg.SubjectOrgUuids,
 		arg.AssigneeUserID,
 		arg.DueAfter,
@@ -699,45 +705,47 @@ LEFT JOIN users c ON c.id = t.created_by_user_id
 WHERE t.brand_id = $1
   AND (COALESCE(cardinality($2::text[]), 0) = 0 OR t.status = ANY ($2::text[]))
   AND (COALESCE(cardinality($3::text[]), 0) = 0 OR t.priority = ANY ($3::text[]))
-  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+  AND (COALESCE(cardinality($4::text[]), 0) = 0 OR t.source = ANY ($4::text[]))
+  AND (COALESCE(cardinality($5::uuid[]), 0) = 0
        OR t.subject_org_id IN (SELECT so.id FROM organizations so
-                               WHERE so.uuid = ANY ($4::uuid[])))
-  AND ($5::bigint IS NULL OR t.assignee_user_id = $5::bigint)
-  AND ($6::timestamptz IS NULL OR t.due_at >= $6::timestamptz)
-  AND ($7::timestamptz IS NULL OR t.due_at < $7::timestamptz)
-  AND ($8::timestamptz IS NULL OR t.created_at >= $8::timestamptz)
-  AND ($9::timestamptz IS NULL OR t.created_at < $9::timestamptz)
-  AND ($10::text IS NULL
-       OR t.title ILIKE '%' || $10::text || '%'
-       OR t.description ILIKE '%' || $10::text || '%')
+                               WHERE so.uuid = ANY ($5::uuid[])))
+  AND ($6::bigint IS NULL OR t.assignee_user_id = $6::bigint)
+  AND ($7::timestamptz IS NULL OR t.due_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR t.due_at < $8::timestamptz)
+  AND ($9::timestamptz IS NULL OR t.created_at >= $9::timestamptz)
+  AND ($10::timestamptz IS NULL OR t.created_at < $10::timestamptz)
+  AND ($11::text IS NULL
+       OR t.title ILIKE '%' || $11::text || '%'
+       OR t.description ILIKE '%' || $11::text || '%')
 ORDER BY
-  CASE WHEN NOT $11::bool THEN CASE $12::text
+  CASE WHEN NOT $12::bool THEN CASE $13::text
     WHEN 'title' THEN lower(t.title) WHEN 'subject' THEN lower(s.name) END END ASC,
-  CASE WHEN $11::bool THEN CASE $12::text
+  CASE WHEN $12::bool THEN CASE $13::text
     WHEN 'title' THEN lower(t.title) WHEN 'subject' THEN lower(s.name) END END DESC,
-  CASE WHEN NOT $11::bool THEN CASE $12::text
+  CASE WHEN NOT $12::bool THEN CASE $13::text
     WHEN 'status' THEN CASE t.status WHEN 'open' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'done' THEN 3 ELSE 4 END
     WHEN 'priority' THEN CASE t.priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 ELSE 4 END
   END END ASC,
-  CASE WHEN $11::bool THEN CASE $12::text
+  CASE WHEN $12::bool THEN CASE $13::text
     WHEN 'status' THEN CASE t.status WHEN 'open' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'done' THEN 3 ELSE 4 END
     WHEN 'priority' THEN CASE t.priority WHEN 'low' THEN 1 WHEN 'normal' THEN 2 WHEN 'high' THEN 3 ELSE 4 END
   END END DESC,
-  CASE WHEN NOT $11::bool THEN CASE $12::text
+  CASE WHEN NOT $12::bool THEN CASE $13::text
     WHEN 'created_at' THEN t.created_at WHEN 'updated_at' THEN t.updated_at END END ASC,
-  CASE WHEN $11::bool THEN CASE $12::text
+  CASE WHEN $12::bool THEN CASE $13::text
     WHEN 'created_at' THEN t.created_at WHEN 'updated_at' THEN t.updated_at END END DESC,
-  CASE WHEN NOT $11::bool AND $12::text = 'due_at' THEN t.due_at END ASC NULLS LAST,
-  CASE WHEN $11::bool AND $12::text = 'due_at' THEN t.due_at END DESC NULLS LAST,
-  CASE WHEN $11::bool THEN t.id END DESC,
+  CASE WHEN NOT $12::bool AND $13::text = 'due_at' THEN t.due_at END ASC NULLS LAST,
+  CASE WHEN $12::bool AND $13::text = 'due_at' THEN t.due_at END DESC NULLS LAST,
+  CASE WHEN $12::bool THEN t.id END DESC,
   t.id ASC
-LIMIT $14 OFFSET $13
+LIMIT $15 OFFSET $14
 `
 
 type ListTasksParams struct {
 	BrandID         int64              `json:"brand_id"`
 	Statuses        []string           `json:"statuses"`
 	Priorities      []string           `json:"priorities"`
+	Sources         []string           `json:"sources"`
 	SubjectOrgUuids []uuid.UUID        `json:"subject_org_uuids"`
 	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
 	DueAfter        pgtype.Timestamptz `json:"due_after"`
@@ -795,6 +803,7 @@ func (q *Queries) ListTasks(ctx context.Context, arg ListTasksParams) ([]ListTas
 		arg.BrandID,
 		arg.Statuses,
 		arg.Priorities,
+		arg.Sources,
 		arg.SubjectOrgUuids,
 		arg.AssigneeUserID,
 		arg.DueAfter,

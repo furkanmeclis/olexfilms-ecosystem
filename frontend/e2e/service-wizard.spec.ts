@@ -170,3 +170,157 @@ test("list: filters, then a draft continues in the wizard", async ({
   );
   await expect(page.getByTestId("parts-step")).toBeVisible();
 });
+
+/** 1×1 PNG served for the example and photo urls. */
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+  "base64",
+);
+
+test("wizard photos step: camera cards, 12 MB check, unlock, 422 marks the missing angle (TEC-500)", async ({
+  page,
+}) => {
+  const api = await mockApi(page);
+  api.seedDraft(5000);
+  api.features.push("photo_standard", "intake_contracts");
+  api.permissions.push("contracts.read", "contracts.write");
+
+  const svc = `/v1/services/${SERVICE_UUID}`;
+  const taken = new Set<string>();
+  const angle = (key: string, name: string, example: boolean) => ({
+    uuid: `00000000-0000-4000-8000-0000000005${key === "front" ? "01" : "02"}`,
+    key,
+    name: { en: name, tr: name },
+    hint: { en: `Shoot the ${name.toLowerCase()} from 3 m` },
+    ...(example
+      ? { example_url: `/v1/photo-standard/angles/${key}/example` }
+      : {}),
+    required: true,
+    sort_order: key === "front" ? 10 : 20,
+    active: true,
+  });
+  const angles = [angle("front", "Front", true), angle("rear", "Rear", false)];
+  const photo = (key: string) => ({
+    uuid: `00000000-0000-4000-8000-0000000006${key === "front" ? "01" : "02"}`,
+    angle_key: key,
+    url: `${svc}/intake-photos/${key}/file`,
+    mime: "image/png",
+    size: PNG.length,
+    sha256: "0".repeat(64),
+    created_at: "2026-10-09T08:00:00Z",
+  });
+  api.extra.push(async ({ method, path, ok, route }) => {
+    if (method === "GET" && path === `${svc}/intake-photos`) {
+      const rows = angles.map((a) => ({
+        angle: a,
+        required: true,
+        missing: !taken.has(a.key),
+        ...(taken.has(a.key) ? { photo: photo(a.key) } : {}),
+      }));
+      await ok({
+        service_uuid: SERVICE_UUID,
+        angles: rows,
+        missing: rows.filter((r) => r.missing).map((r) => r.angle.key),
+      });
+      return true;
+    }
+    const upload = path.match(/^\/v1\/services\/[^/]+\/intake-photos\/(\w+)$/);
+    if (method === "POST" && upload) {
+      taken.add(upload[1]);
+      await ok(photo(upload[1]), 201);
+      return true;
+    }
+    if (
+      method === "GET" &&
+      (path.endsWith("/example") || path.endsWith("/file"))
+    ) {
+      await route.fulfill({ status: 200, contentType: "image/png", body: PNG });
+      return true;
+    }
+    if (method === "POST" && path === `${svc}/contract`) {
+      // The rear photo went missing on the server meanwhile.
+      taken.delete("rear");
+      await route.fulfill({
+        status: 422,
+        json: {
+          success: false,
+          error: {
+            code: "PHOTO_STANDARD_INCOMPLETE",
+            message:
+              "Every required intake photo angle must be photographed first",
+            details: [
+              {
+                field: "intake_photos.rear",
+                code: "missing",
+                message: "required intake photo is missing",
+              },
+            ],
+          },
+          data: { missing_angles: ["rear"] },
+        },
+      });
+      return true;
+    }
+    return false;
+  });
+
+  await page.goto(`/t/${SLUG}/services/${SERVICE_UUID}/wizard`);
+  const step = page.getByTestId("photos-step");
+  await expect(step).toBeVisible();
+  const front = page.locator(
+    '[data-testid="intake-angle"][data-angle="front"]',
+  );
+  const rear = page.locator('[data-testid="intake-angle"][data-angle="rear"]');
+  await expect(front.getByTestId("intake-example")).toBeVisible();
+  await expect(front).toContainText("Shoot the front from 3 m");
+  await expect(front.getByTestId("intake-input")).toHaveAttribute(
+    "capture",
+    "environment",
+  );
+  await expect(page.getByTestId("intake-counter")).toBeVisible();
+  await expect(page.getByTestId("photos-next")).toBeDisabled();
+  await expect(page.locator('[data-step="contract"]')).toBeDisabled();
+  await expect(page.locator('[data-step="contract"]')).toHaveAttribute(
+    "data-blocked",
+    "photos",
+  );
+
+  // Over 12 MB: refused in the browser, nothing is sent.
+  await front.getByTestId("intake-input").setInputFiles({
+    name: "big.jpg",
+    mimeType: "image/jpeg",
+    buffer: Buffer.alloc(12 * 1024 * 1024 + 1),
+  });
+  await expect(front.getByTestId("intake-error")).toBeVisible();
+  expect(
+    api.calls.filter(
+      (c) => c.startsWith("POST") && c.includes("intake-photos"),
+    ),
+  ).toEqual([]);
+
+  for (const card of [front, rear]) {
+    await card.getByTestId("intake-input").setInputFiles({
+      name: "shot.png",
+      mimeType: "image/png",
+      buffer: PNG,
+    });
+    await expect(card.getByTestId("intake-done")).toBeVisible();
+  }
+  await expect(page.getByTestId("intake-complete")).toBeVisible();
+  await expect(page.getByTestId("photos-next")).toBeEnabled();
+  expect(
+    api.calls.filter((c) => c.startsWith(`POST ${svc}/intake-photos/`)),
+  ).toEqual([
+    `POST ${svc}/intake-photos/front`,
+    `POST ${svc}/intake-photos/rear`,
+  ]);
+
+  // The contract is refused (422): the photos come back, rear marked.
+  await page.locator('[data-step="contract"]').click();
+  await page.getByTestId("contract-create").click();
+  await expect(step).toBeVisible();
+  await expect(rear).toHaveAttribute("data-missing", "true");
+  await expect(rear.getByTestId("intake-missing")).toBeVisible();
+  await expect(front).toHaveAttribute("data-missing", "false");
+  await expect(page.getByTestId("photos-next")).toBeDisabled();
+});

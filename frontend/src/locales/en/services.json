@@ -338,5 +338,6 @@
   "review_questions.validation.key": "The key is required, at most 64 characters.",
   "review_questions.validation.text_tr": "The Turkish question text is required.",
   "review_questions.toast.saved": "Question saved.",
-  "review_questions.toast.failed": "The operation failed. Try again."
+  "review_questions.toast.failed": "The operation failed. Try again.",
+  "wizard.steps.photos": "Intake photos"
 }

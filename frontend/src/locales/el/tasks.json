@@ -80,5 +80,8 @@
   "comments.error": "Δεν ήταν δυνατή η προσθήκη του σχολίου.",
   "errors.FORBIDDEN": "Μόνο το κέντρο διαχειρίζεται εργασίες.",
   "errors.NOT_FOUND": "Η εργασία δεν βρέθηκε.",
-  "errors.VALIDATION_ERROR": "Ελέγξτε τα επισημασμένα πεδία."
+  "errors.VALIDATION_ERROR": "Ελέγξτε τα επισημασμένα πεδία.",
+  "columns.source": "Προέλευση",
+  "source.manual": "Χειροκίνητη",
+  "source.auto": "Αυτόματη"
 }

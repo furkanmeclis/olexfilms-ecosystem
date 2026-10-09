@@ -49,6 +49,9 @@ const (
 // the F5 performance panel (TEC-130).
 const SourceManual = "manual"
 
+// SourceAuto marks tasks opened by a weak dealer rule (TEC-492).
+const SourceAuto = "auto"
+
 const (
 	orgTypeCenter      = "center"
 	orgTypeDistributor = "distributor"
@@ -218,6 +221,7 @@ func cleanDescription(v string) (string, error) {
 type Filter struct {
 	Statuses        []string // validated; "active" already expanded
 	Priorities      []string // validated
+	Sources         []string // validated (manual, auto)
 	SubjectOrgUUIDs []uuid.UUID
 	AssigneeUUID    *uuid.UUID
 	// DueAfter / DueBefore bound due_at (inclusive / exclusive, TEC-221);
@@ -234,7 +238,7 @@ type Filter struct {
 // means the assignee is not a member of the center (an empty page).
 func (s *Service) listParams(ctx context.Context, c Caller, f Filter) (db.ListTasksParams, bool, error) {
 	arg := db.ListTasksParams{
-		BrandID: c.Org.BrandID, Statuses: f.Statuses, Priorities: f.Priorities,
+		BrandID: c.Org.BrandID, Statuses: f.Statuses, Priorities: f.Priorities, Sources: f.Sources,
 		SubjectOrgUuids: f.SubjectOrgUUIDs, Q: textArg(f.Q),
 		CreatedFrom: tstz(f.CreatedFrom), CreatedBefore: tstz(f.CreatedBefore),
 		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc, RowLimit: f.Limit, RowOffset: f.Offset,
@@ -289,7 +293,7 @@ func (s *Service) List(ctx context.Context, c Caller, f Filter) ([]Task, int64, 
 		return nil, 0, fmt.Errorf("tasks: list: %w", err)
 	}
 	total, err := s.q.CountTasks(ctx, db.CountTasksParams{
-		BrandID: arg.BrandID, Statuses: arg.Statuses, Priorities: arg.Priorities,
+		BrandID: arg.BrandID, Statuses: arg.Statuses, Priorities: arg.Priorities, Sources: arg.Sources,
 		SubjectOrgUuids: arg.SubjectOrgUuids, AssigneeUserID: arg.AssigneeUserID,
 		DueAfter: arg.DueAfter, DueBefore: arg.DueBefore,
 		CreatedFrom: arg.CreatedFrom, CreatedBefore: arg.CreatedBefore, Q: arg.Q,
@@ -315,7 +319,7 @@ func (s *Service) MatchingUUIDs(ctx context.Context, c Caller, f Filter, max int
 		return nil, err
 	}
 	ids, err := s.q.ListTaskUUIDsFiltered(ctx, db.ListTaskUUIDsFilteredParams{
-		BrandID: arg.BrandID, Statuses: arg.Statuses, Priorities: arg.Priorities,
+		BrandID: arg.BrandID, Statuses: arg.Statuses, Priorities: arg.Priorities, Sources: arg.Sources,
 		SubjectOrgUuids: arg.SubjectOrgUuids, AssigneeUserID: arg.AssigneeUserID,
 		DueAfter: arg.DueAfter, DueBefore: arg.DueBefore,
 		CreatedFrom: arg.CreatedFrom, CreatedBefore: arg.CreatedBefore, Q: arg.Q,

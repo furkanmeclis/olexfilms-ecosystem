@@ -38,7 +38,7 @@ func TestRegionMapProvinceCountsEmptyAndDistributorScope(t *testing.T) {
 	f.mapMetric(t, d3.ID, mapTestPeriod, model.MetricServicesCount, "6")
 	f.mapMetric(t, foreign.ID, mapTestPeriod, model.MetricServicesCount, "99")
 
-	got, err := svc.RegionMap(f.ctx, callerFor(f.dist), MapFilter{
+	got, err := svc.RegionMap(f.ctx, mapCallerFor(f.dist), MapFilter{
 		Level: LevelProvince, CountryISO: "TR", Period: mapTestPeriod, Metric: model.MetricServicesCount,
 	})
 	if err != nil {
@@ -62,7 +62,7 @@ func TestRegionMapProvinceCountsEmptyAndDistributorScope(t *testing.T) {
 		t.Fatalf("empty territory = %+v", empty)
 	}
 
-	points, err := svc.DealerMap(f.ctx, callerFor(f.dist), MapFilter{
+	points, err := svc.DealerMap(f.ctx, mapCallerFor(f.dist), MapFilter{
 		CountryISO: "TR", Period: mapTestPeriod, Metric: model.MetricServicesCount,
 	})
 	if err != nil {
@@ -146,7 +146,7 @@ func (f *perfFixture) mapMetric(t *testing.T, orgID int64, period, metric, value
 	}
 }
 
-func callerFor(org db.Organization) Caller {
+func mapCallerFor(org db.Organization) Caller {
 	return Caller{Org: orgctx.Scope{
 		InternalID: org.ID, UUID: org.Uuid, Slug: org.Slug, Name: org.Name,
 		OrgType: org.Type, BrandID: org.BrandID,

@@ -11,6 +11,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -169,7 +170,8 @@ func TestRankingSortEveryMetricAndTiebreak(t *testing.T) {
 	scope := []int64{a.ID, b.ID, c.ID, d.ID}
 
 	keys := append([]string{"name"}, model.Metrics...)
-	if len(RankingSort.Columns) != len(keys) {
+	// distributor and province (TEC-496) are covered by TestRankingFilters.
+	if len(RankingSort.Columns) != len(keys)+2 {
 		t.Fatalf("ranking sort columns = %d, want %d", len(RankingSort.Columns), len(keys))
 	}
 	for _, key := range keys {
@@ -257,6 +259,39 @@ func TestRankingFilters(t *testing.T) {
 	}
 	if got := list(db.ListPerformanceRankingParams{Q: pgtype.Text{String: " UNDER ", Valid: true}}); !sameIDs(got, []int64{under.ID}) {
 		t.Fatalf("q filter = %v", got)
+	}
+	// TEC-496: distributor uuid filter, distributor / province columns and
+	// their sort keys (NULLS LAST both ways, id tiebreak).
+	if got := list(db.ListPerformanceRankingParams{DistributorUuids: []uuid.UUID{dist.Uuid}}); !sameIDs(got, []int64{dist.ID, under.ID}) {
+		t.Fatalf("distributor uuid filter = %v", got)
+	}
+	rows, err := f.store.ListRanking(f.ctx, db.ListPerformanceRankingParams{
+		BrandID: f.brandID, Period: testPeriod, OrgIds: scope,
+	}, []apiquery.SortField{{Field: "distributor"}})
+	if err != nil {
+		t.Fatalf("distributor sort: %v", err)
+	}
+	if got := ids(rows); !sameIDs(got, []int64{dist.ID, under.ID, direct.ID}) {
+		t.Fatalf("distributor sort = %v", got)
+	}
+	for _, r := range rows[:2] {
+		if !r.DistributorUuid.Valid || uuid.UUID(r.DistributorUuid.Bytes) != dist.Uuid || r.DistributorName.String != dist.Name {
+			t.Fatalf("distributor of %d = %+v %q", r.OrganizationID, r.DistributorUuid, r.DistributorName.String)
+		}
+	}
+	if rows[2].DistributorUuid.Valid || !rows[2].ProvinceName.Valid || rows[2].ProvinceID.Int64 != provinceID {
+		t.Fatalf("direct dealer row = %+v", rows[2])
+	}
+	for _, desc := range []bool{false, true} {
+		rows, err := f.store.ListRanking(f.ctx, db.ListPerformanceRankingParams{
+			BrandID: f.brandID, Period: testPeriod, OrgIds: scope,
+		}, []apiquery.SortField{{Field: "province", Desc: desc}})
+		if err != nil {
+			t.Fatalf("province sort: %v", err)
+		}
+		if rows[0].OrganizationID != direct.ID {
+			t.Fatalf("province sort desc=%v first = %d, want %d", desc, rows[0].OrganizationID, direct.ID)
+		}
 	}
 }
 

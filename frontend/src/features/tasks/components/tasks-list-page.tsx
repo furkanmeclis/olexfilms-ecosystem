@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
+  Bot,
   CircleCheck,
   Eye,
   Flag,
@@ -29,6 +30,7 @@ import {
   type EntityRowAction,
 } from "@/components/entity";
 import { createColumn, createSelectColumnDef } from "@/components/tables";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
@@ -121,6 +123,22 @@ export const TASK_BULK_ACTIONS: BulkActionDef[] = [
   },
 ];
 
+/** Task sources (TEC-496): auto = opened by a weak dealer rule. */
+export const TASK_SOURCES = ["manual", "auto"] as const;
+
+function AutoSourceBadge({ label }: { label: string }) {
+  return (
+    <Badge
+      variant="secondary"
+      className="ms-2 align-middle text-[10px]"
+      data-testid="task-source-auto"
+    >
+      <Bot className="size-3" aria-hidden />
+      {label}
+    </Badge>
+  );
+}
+
 /** Status filter the list opens with: open + in progress. */
 const INITIAL_FILTERS = [{ id: "status", value: ["active"] }];
 
@@ -137,8 +155,8 @@ function enumOptions(values: readonly string[], prefix: string) {
 
 /**
  * Tenant > Tasks (TEC-221, TEC-380): server DataTable over GET /v1/tasks
- * with sort, `q`, status (default: open + in progress) / priority / subject
- * facets, an assignee select, due and created ranges, plus the due presets
+ * with sort, `q`, status (default: open + in progress) / priority / source
+ * (auto badge, TEC-496) / subject facets, an assignee select, due and created ranges, plus the due presets
  * in the toolbar. Writers change status / priority inline or from the row
  * menu and select rows (or every matching task) for the bulk actions.
  * Center roles with tasks.read only.
@@ -212,6 +230,9 @@ export function TasksListPage({ slug }: { slug: string }) {
               >
                 {row.original.title}
               </Link>
+              {row.original.source === "auto" ? (
+                <AutoSourceBadge label={t("tasks.source.auto")} />
+              ) : null}
               {row.original.comment_count > 0 ? (
                 <div className="text-muted-foreground text-xs">
                   {t("tasks.list.comments", {
@@ -259,6 +280,16 @@ export function TasksListPage({ slug }: { slug: string }) {
               tone={taskPriorityTone(row.original.priority)}
             />
           ),
+        }),
+        createColumn<Task>({
+          accessorKey: "source",
+          labelKey: "tasks.columns.source",
+          enableSorting: false,
+          defaultHidden: true,
+          filterVariant: "faceted",
+          filterOptions: enumOptions(TASK_SOURCES, "tasks.source"),
+          param: "source",
+          cell: ({ row }) => t(`tasks.source.${row.original.source}`),
         }),
         createColumn<Task>({
           id: "subject",
@@ -613,6 +644,9 @@ export function TasksListPage({ slug }: { slug: string }) {
                 tone={taskStatusTone(task.status)}
               />
             </div>
+            {task.source === "auto" ? (
+              <AutoSourceBadge label={t("tasks.source.auto")} />
+            ) : null}
             <p className="text-muted-foreground text-xs">
               {task.subject_organization.name} ·{" "}
               {t(`tasks.priority.${task.priority}`)}

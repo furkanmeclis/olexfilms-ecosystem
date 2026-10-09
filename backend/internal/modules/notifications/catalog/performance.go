@@ -3,8 +3,10 @@ package catalog
 import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 
 const (
-	EventPerformanceWeakDealer  = "PERFORMANCE_WEAK_DEALER"
-	EventPerformanceBelowTarget = "PERFORMANCE_BELOW_TARGET"
+	EventPerformanceWeakDealer      = "PERFORMANCE_WEAK_DEALER"
+	EventPerformanceBelowTarget     = "PERFORMANCE_BELOW_TARGET"
+	EventPerformanceBonusCalculated = "PERFORMANCE_BONUS_CALCULATED"
+	EventPerformanceBonusApproved   = "PERFORMANCE_BONUS_APPROVED"
 )
 
 var performanceChannels = []string{ChannelInapp, ChannelEmail}
@@ -41,14 +43,50 @@ var performanceBelowTargetTexts = map[string]localizedText{
 	"ar":    {"متابعة الهدف: {{period}}", "قيمة {{metric}} لديك في {{period}} هي {{metric_value}}. راجع لوحة الأداء لمتابعة الهدف."},
 }
 
+var performanceBonusCalculatedTexts = map[string]localizedText{
+	"tr":    {"Prim tahakkuklari hazir: {{period}}", "{{period}} donemi icin {{count}} prim tahakkuku owner onayini bekliyor."},
+	"en":    {"Bonus accruals ready: {{period}}", "{{count}} bonus accruals for {{period}} are waiting for owner approval."},
+	"bg":    {"Бонусите са изчислени: {{period}}", "{{count}} бонус начисления за {{period}} чакат одобрение от owner."},
+	"de":    {"Bonusabgrenzungen bereit: {{period}}", "{{count}} Bonusabgrenzungen fur {{period}} warten auf Owner-Freigabe."},
+	"el":    {"Έτοιμες προμήθειες: {{period}}", "{{count}} εγγραφές bonus για {{period}} περιμένουν έγκριση owner."},
+	"uk":    {"Бонуси нараховано: {{period}}", "{{count}} бонусних нарахувань за {{period}} очікують схвалення owner."},
+	"ru":    {"Бонусы рассчитаны: {{period}}", "{{count}} бонусных начислений за {{period}} ожидают одобрения owner."},
+	"fr":    {"Primes calculees : {{period}}", "{{count}} provisions de prime pour {{period}} attendent l'approbation owner."},
+	"es":    {"Bonos calculados: {{period}}", "{{count}} devengos de bono de {{period}} esperan aprobacion del owner."},
+	"it":    {"Bonus calcolati: {{period}}", "{{count}} maturazioni bonus per {{period}} attendono approvazione owner."},
+	"zh-CN": {"奖金已计算：{{period}}", "{{period}} 的 {{count}} 条奖金计提正在等待 owner 审批。"},
+	"az":    {"Prim hesablamalari hazirdir: {{period}}", "{{period}} dovru ucun {{count}} prim hesablamasi owner tesdiqini gozleyir."},
+	"ar":    {"تم حساب المكافآت: {{period}}", "{{count}} استحقاقات مكافأة للفترة {{period}} بانتظار موافقة المالك."},
+}
+
+var performanceBonusApprovedTexts = map[string]localizedText{
+	"tr":    {"Priminiz onaylandi", "{{period}} donemi icin {{amount}} {{currency}} priminiz onaylandi. Odeme gunu: {{paid_on}}."},
+	"en":    {"Your bonus was approved", "Your {{amount}} {{currency}} bonus for {{period}} was approved. Payment day: {{paid_on}}."},
+	"bg":    {"Бонусът ви е одобрен", "Вашият бонус {{amount}} {{currency}} за {{period}} е одобрен. Ден за плащане: {{paid_on}}."},
+	"de":    {"Ihr Bonus wurde freigegeben", "Ihr Bonus uber {{amount}} {{currency}} fur {{period}} wurde freigegeben. Zahlungstag: {{paid_on}}."},
+	"el":    {"Το bonus εγκρίθηκε", "Το bonus {{amount}} {{currency}} για {{period}} εγκρίθηκε. Ημέρα πληρωμής: {{paid_on}}."},
+	"uk":    {"Ваш бонус схвалено", "Ваш бонус {{amount}} {{currency}} за {{period}} схвалено. День оплати: {{paid_on}}."},
+	"ru":    {"Ваш бонус одобрен", "Ваш бонус {{amount}} {{currency}} за {{period}} одобрен. День выплаты: {{paid_on}}."},
+	"fr":    {"Votre prime est approuvee", "Votre prime de {{amount}} {{currency}} pour {{period}} est approuvee. Jour de paiement : {{paid_on}}."},
+	"es":    {"Tu bono fue aprobado", "Tu bono de {{amount}} {{currency}} para {{period}} fue aprobado. Dia de pago: {{paid_on}}."},
+	"it":    {"Il tuo bonus e approvato", "Il bonus di {{amount}} {{currency}} per {{period}} e approvato. Giorno pagamento: {{paid_on}}."},
+	"zh-CN": {"您的奖金已审批", "您 {{period}} 的 {{amount}} {{currency}} 奖金已审批。付款日：{{paid_on}}。"},
+	"az":    {"Priminiz tesdiqlendi", "{{period}} dovru ucun {{amount}} {{currency}} priminiz tesdiqlendi. Odeme gunu: {{paid_on}}."},
+	"ar":    {"تمت الموافقة على مكافأتك", "تمت الموافقة على مكافأة {{amount}} {{currency}} للفترة {{period}}. يوم الدفع: {{paid_on}}."},
+}
+
 func performanceTemplates(code string, texts map[string]localizedText) []DefaultTemplate {
+	return performanceTemplatesForChannels(code, texts, performanceChannels)
+}
+
+func performanceTemplatesForChannels(code string, texts map[string]localizedText, channels []string) []DefaultTemplate {
 	out := make([]DefaultTemplate, 0, len(texts)*len(performanceChannels))
 	for _, lang := range msgtemplate.Locales {
 		t, ok := texts[lang]
 		if !ok {
 			continue
 		}
-		for _, ch := range performanceChannels {
+		for _, ch := range channels {
 			out = append(out, DefaultTemplate{Role: RoleGeneric, Channel: ch, Language: lang, Subject: t.subject, Body: t.body, Format: "text"})
 		}
 	}
@@ -66,6 +104,16 @@ func performancePlaceholders() []msgtemplate.Placeholder {
 	}
 }
 
+func performanceBonusPlaceholders() []msgtemplate.Placeholder {
+	return []msgtemplate.Placeholder{
+		ph("period", "2026-10", "2026-10"),
+		ph("count", "3", "3"),
+		ph("amount", "500.00", "500.00"),
+		ph("currency", "TRY", "TRY"),
+		ph("paid_on", "2026-11-05", "2026-11-05"),
+	}
+}
+
 func init() {
 	Register(Event{Code: EventPerformanceWeakDealer, Module: "performance", DefaultChannels: performanceChannels,
 		AudienceRoles: []string{RoleCenter, RoleDistributor}, Placeholders: performancePlaceholders(),
@@ -73,4 +121,10 @@ func init() {
 	Register(Event{Code: EventPerformanceBelowTarget, Module: "performance", DefaultChannels: performanceChannels,
 		AudienceRoles: []string{RoleDealer}, Placeholders: performancePlaceholders(),
 		UserConfigurable: true, Templates: performanceTemplates(EventPerformanceBelowTarget, performanceBelowTargetTexts)})
+	Register(Event{Code: EventPerformanceBonusCalculated, Module: "performance", DefaultChannels: performanceChannels,
+		AudienceRoles: []string{RoleDealer}, Placeholders: performanceBonusPlaceholders(),
+		UserConfigurable: true, Templates: performanceTemplates(EventPerformanceBonusCalculated, performanceBonusCalculatedTexts)})
+	Register(Event{Code: EventPerformanceBonusApproved, Module: "performance", DefaultChannels: []string{ChannelInapp},
+		AudienceRoles: []string{RoleDealer}, Placeholders: performanceBonusPlaceholders(),
+		UserConfigurable: true, Templates: performanceTemplatesForChannels(EventPerformanceBonusApproved, performanceBonusApprovedTexts, []string{ChannelInapp})})
 }

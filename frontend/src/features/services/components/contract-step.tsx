@@ -48,6 +48,7 @@ import {
   type Contract,
   type ContractMedia,
 } from "@/features/contracts/services/contract-signing.service";
+import { missingAnglesFromError } from "@/features/photo-standard/lib/photo-standard";
 import { contractBlocksNext } from "@/features/services/lib/wizard";
 import {
   serviceWizardKeys,
@@ -480,6 +481,8 @@ export type ContractStepProps = {
   service: Service;
   onBack: () => void;
   onNext: () => void;
+  /** TEC-500: the contract was refused for missing intake photo angles. */
+  onPhotosIncomplete?: (missing: string[]) => void;
 };
 
 /**
@@ -488,7 +491,12 @@ export type ContractStepProps = {
  * and staff signatures and the images. With `contract_required` the next
  * step stays closed until the contract is executed.
  */
-export function ContractStep({ service, onBack, onNext }: ContractStepProps) {
+export function ContractStep({
+  service,
+  onBack,
+  onNext,
+  onPhotosIncomplete,
+}: ContractStepProps) {
   const { t } = useLocale();
   const { can } = usePermission();
   const queryClient = useQueryClient();
@@ -534,7 +542,15 @@ export function ContractStep({ service, onBack, onNext }: ContractStepProps) {
       stored(c);
       appToast.success(t(`${T}.created`, { no: c.contract_no }));
     },
-    onError: () => appToast.error(t(`${T}.errors.create_failed`)),
+    onError: (e: unknown) => {
+      const missing = missingAnglesFromError(e);
+      if (missing && onPhotosIncomplete) {
+        appToast.error(t("services.stock.errors.PHOTO_STANDARD_INCOMPLETE"));
+        onPhotosIncomplete(missing);
+        return;
+      }
+      appToast.error(t(`${T}.errors.create_failed`));
+    },
   });
 
   const data = contract.data;

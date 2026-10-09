@@ -103,7 +103,7 @@ func TestStatusHelpers(t *testing.T) {
 func TestParseListFilter(t *testing.T) {
 	me := uuid.New()
 	f, err := ParseListFilter(url.Values{
-		"status": {"active,done"}, "priority": {"high,urgent"}, "q": {"50%"}, "sort": {"-due_at"},
+		"status": {"active,done"}, "priority": {"high,urgent"}, "source": {"auto"}, "q": {"50%"}, "sort": {"-due_at"},
 		"mine": {"true"}, "due_from": {"2026-10-01"}, "due_to": {"2026-10-02"}, "created_from": {"2026-09-01"},
 	}, &me)
 	if err != nil {
@@ -111,6 +111,9 @@ func TestParseListFilter(t *testing.T) {
 	}
 	if strings.Join(f.Statuses, ",") != "done,in_progress,open" || strings.Join(f.Priorities, ",") != "high,urgent" {
 		t.Fatalf("enums: %v %v", f.Statuses, f.Priorities)
+	}
+	if strings.Join(f.Sources, ",") != "auto" {
+		t.Fatalf("source: %v", f.Sources)
 	}
 	if f.Sort.Key != "due_at" || !f.Sort.Desc || f.AssigneeUUID == nil || *f.AssigneeUUID != me {
 		t.Fatalf("sort/mine: %+v", f)
@@ -126,7 +129,7 @@ func TestParseListFilter(t *testing.T) {
 		t.Fatalf("default sort: %+v", def.Sort)
 	}
 	for _, bad := range []url.Values{
-		{"status": {"closed"}}, {"priority": {"p0"}}, {"sort": {"comment_count"}},
+		{"status": {"closed"}}, {"priority": {"p0"}}, {"source": {"rule"}}, {"sort": {"comment_count"}},
 		{"subject_organization_uuid": {"x"}}, {"mine": {"true"}}, {"due_after": {"2026-10-01"}},
 		{"due_after": {"2026-10-01T00:00:00Z"}, "due_from": {"2026-10-01"}},
 	} {

@@ -338,5 +338,6 @@
   "review_questions.validation.key": "Anahtar zorunludur, en fazla 64 karakter.",
   "review_questions.validation.text_tr": "Türkçe soru metni zorunludur.",
   "review_questions.toast.saved": "Soru kaydedildi.",
-  "review_questions.toast.failed": "İşlem tamamlanamadı. Tekrar deneyin."
+  "review_questions.toast.failed": "İşlem tamamlanamadı. Tekrar deneyin.",
+  "wizard.steps.photos": "Kabul fotoğrafları"
 }

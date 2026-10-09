@@ -57,6 +57,12 @@ func IntakePhotoObjectKey(orgUUID, serviceUUID uuid.UUID, angleKey string, photo
 	return fmt.Sprintf("services/%s/%s/intake/%s/%s.%s", orgUUID.String(), serviceUUID.String(), angleKey, photoUUID.String(), trimExt(ext))
 }
 
+// PhotoAngleExampleObjectKey builds photo-standard/angles/{angle}/{example}.{ext}
+// (TEC-500): the central example image (silhouette) of an intake angle.
+func PhotoAngleExampleObjectKey(angleUUID, exampleUUID uuid.UUID, ext string) string {
+	return fmt.Sprintf("photo-standard/angles/%s/%s.%s", angleUUID.String(), exampleUUID.String(), trimExt(ext))
+}
+
 // DocumentObjectKey builds documents/{org}/{kind}/{render}.pdf (TEC-88).
 func DocumentObjectKey(orgUUID uuid.UUID, kind string, renderUUID uuid.UUID) string {
 	return fmt.Sprintf("documents/%s/%s/%s.pdf", orgUUID.String(), kind, renderUUID.String())

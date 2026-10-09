@@ -80,5 +80,8 @@
   "comments.error": "Не удалось добавить комментарий.",
   "errors.FORBIDDEN": "Задачами управляет только центр.",
   "errors.NOT_FOUND": "Задача не найдена.",
-  "errors.VALIDATION_ERROR": "Проверьте отмеченные поля."
+  "errors.VALIDATION_ERROR": "Проверьте отмеченные поля.",
+  "columns.source": "Источник",
+  "source.manual": "Вручную",
+  "source.auto": "Автоматически"
 }

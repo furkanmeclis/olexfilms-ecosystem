@@ -15,6 +15,11 @@ import { routes } from "@/config/routes";
 import { ContractStep } from "@/features/services/components/contract-step";
 import { CustomerVehicleStep } from "@/features/services/components/customer-vehicle-step";
 import { MeasurementStep } from "@/features/services/components/measurement-step";
+import { IntakePhotosStep } from "@/features/photo-standard/components/intake-photos-step";
+import {
+  photoStandardKeys,
+  photoStandardService,
+} from "@/features/photo-standard/services/photo-standard.service";
 import { PartsStep } from "@/features/services/components/parts-step";
 import { StockStep } from "@/features/services/components/stock-step";
 import { serviceMeasurementKeys } from "@/features/measurements/services/service-measurements.service";
@@ -47,12 +52,14 @@ function Stepper({
   current,
   hasService,
   contractLocked,
+  photosLocked,
   onSelect,
 }: {
   steps: readonly WizardStep[];
   current: WizardStep;
   hasService: boolean;
   contractLocked: boolean;
+  photosLocked: boolean;
   onSelect: (step: WizardStep) => void;
 }) {
   const { t } = useLocale();
@@ -61,19 +68,40 @@ function Stepper({
     <ol
       className={cn(
         "grid gap-2",
-        steps.length > 4 ? "sm:grid-cols-5" : "sm:grid-cols-4",
+        steps.length > 5
+          ? "sm:grid-cols-3 lg:grid-cols-6"
+          : steps.length > 4
+            ? "sm:grid-cols-5"
+            : "sm:grid-cols-4",
       )}
       data-testid="wizard-stepper"
     >
       {steps.map((step, i) => {
         const active = step === current;
         const done = hasService && i < currentIndex;
-        const open = canOpenStep(step, hasService, contractLocked, steps);
+        const open = canOpenStep(
+          step,
+          hasService,
+          contractLocked,
+          steps,
+          photosLocked,
+        );
+        // TEC-500: a step closed by missing intake photos says why.
+        const photoBlocked =
+          hasService &&
+          !open &&
+          !canOpenStep(step, hasService, false, steps, photosLocked);
         return (
           <li key={step}>
             <button
               type="button"
               disabled={!open}
+              title={
+                photoBlocked
+                  ? t("photo_standard.intake.next_blocked")
+                  : undefined
+              }
+              data-blocked={photoBlocked ? "photos" : undefined}
               aria-current={active ? "step" : undefined}
               data-step={step}
               onClick={() => onSelect(step)}
@@ -109,7 +137,10 @@ function Stepper({
  * items of step 4), step 4 adds the stock and completes the service.
  * TEC-291: the intake contract step sits before stock while the
  * intake_contracts module is on; a required contract keeps stock closed
- * until it is executed.
+ * until it is executed. TEC-500: with the photo_standard module the intake
+ * photos follow step 1; a missing required angle keeps the later steps
+ * closed, and a 422 PHOTO_STANDARD_INCOMPLETE from the contract or the
+ * completion brings the photos back with the missing angles marked.
  */
 export function ServiceWizardPage({
   slug,
@@ -125,9 +156,11 @@ export function ServiceWizardPage({
   const access = resolveServiceWizardAccess(can);
   const contracts = useFeature(slug, "intake_contracts");
   const certificates = useFeature(slug, "certificates");
+  const photos = useFeature(slug, "photo_standard");
   const [step, setStep] = useState<WizardStep>(
-    uuid ? "parts" : "customer_vehicle",
+    uuid ? "photos" : "customer_vehicle",
   );
+  const [flagged, setFlagged] = useState<string[]>([]);
   // null = not touched yet: the stored draft selection, else the parts the
   // items already carry.
   const [parts, setParts] = useState<string[] | null>(() =>
@@ -138,6 +171,11 @@ export function ServiceWizardPage({
     queryKey: serviceWizardKeys.service(uuid ?? ""),
     queryFn: () => serviceWizardService.getService(uuid ?? ""),
     enabled: Boolean(uuid) && access.canStart,
+  });
+  const intake = useQuery({
+    queryKey: photoStandardKeys.intake(uuid ?? ""),
+    queryFn: () => photoStandardService.intake(uuid ?? ""),
+    enabled: Boolean(uuid) && access.canStart && photos.enabled,
   });
 
   const title = t("services.wizard.title");
@@ -200,13 +238,38 @@ export function ServiceWizardPage({
     contracts.enabled ||
       Boolean(current?.contract_required) ||
       Boolean(current?.contract),
+    photos.enabled,
   );
   const contractLocked = current ? contractBlocksNext(current) : false;
-  // Only the contract step can be hidden; a locked step shows the contract.
-  let shown: WizardStep = steps.includes(step) ? step : "stock";
-  if (hasService && !canOpenStep(shown, hasService, contractLocked, steps)) {
+  const photosLocked =
+    photos.enabled && (intake.data?.missing?.length ?? 0) > 0;
+  // A hidden step falls to its neighbour; a locked step shows the step
+  // that locks it (the photos first, then the contract).
+  let shown: WizardStep = steps.includes(step)
+    ? step
+    : step === "photos"
+      ? "parts"
+      : "stock";
+  if (
+    hasService &&
+    !canOpenStep(shown, hasService, false, steps, photosLocked)
+  ) {
+    shown = "photos";
+  } else if (
+    hasService &&
+    !canOpenStep(shown, hasService, contractLocked, steps)
+  ) {
     shown = "contract";
   }
+  const photosIncomplete = (missing: string[]) => {
+    setFlagged(missing);
+    if (current) {
+      void queryClient.invalidateQueries({
+        queryKey: photoStandardKeys.intake(current.uuid),
+      });
+    }
+    if (steps.includes("photos")) setStep("photos");
+  };
   const goNext = (from: WizardStep) => {
     const n = nextStep(from, steps);
     if (n) setStep(n);
@@ -240,6 +303,22 @@ export function ServiceWizardPage({
         }}
       />
     );
+  } else if (shown === "photos") {
+    body = (
+      <IntakePhotosStep
+        serviceUuid={current.uuid}
+        intake={intake}
+        flagged={flagged}
+        locked={
+          current.status === "completed" || current.status === "cancelled"
+        }
+        onUploaded={(key) =>
+          setFlagged((prev) => prev.filter((k) => k !== key))
+        }
+        onBack={() => goBack("photos")}
+        onNext={() => goNext("photos")}
+      />
+    );
   } else if (shown === "measurement") {
     body = (
       <MeasurementStep
@@ -269,6 +348,7 @@ export function ServiceWizardPage({
         service={current}
         onBack={() => goBack("contract")}
         onNext={() => goNext("contract")}
+        onPhotosIncomplete={photosIncomplete}
       />
     );
   } else if (shown === "stock") {
@@ -292,6 +372,7 @@ export function ServiceWizardPage({
           router.push(routes.tenant.services.detail(slug, saved.uuid));
         }}
         showCertificateWarnings={certificates.enabled}
+        onPhotosIncomplete={photosIncomplete}
       />
     );
   }
@@ -304,6 +385,7 @@ export function ServiceWizardPage({
         current={hasService ? shown : "customer_vehicle"}
         hasService={hasService}
         contractLocked={contractLocked}
+        photosLocked={photosLocked}
         onSelect={setStep}
       />
       <Card>
