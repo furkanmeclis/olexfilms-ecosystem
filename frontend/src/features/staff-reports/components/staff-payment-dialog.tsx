@@ -15,11 +15,12 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MonthPicker } from "@/components/ui/month-picker";
 import { Textarea } from "@/components/ui/textarea";
 import {
   FieldError,
   Money,
-  NativeSelect,
+  FormSelect,
 } from "@/features/accounting/components/shared";
 import { accountingKeys } from "@/features/accounting/hooks/use-accounting-access";
 import {
@@ -106,7 +107,7 @@ export function StaffPaymentForm({
       data-testid="staff-payment-form"
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <NativeSelect
+        <FormSelect
           id="staff-payment-type"
           name="type"
           label={t("staff_reports.fields.payment_type")}
@@ -121,17 +122,16 @@ export function StaffPaymentForm({
           <Label htmlFor="staff-payment-period">
             {t("staff_reports.fields.period")}
           </Label>
-          <Input
+          <MonthPicker
             id="staff-payment-period"
             name="period"
-            type="month"
-            dir="ltr"
             value={values.period}
+            clearable
             aria-invalid={errors.period ? true : undefined}
             aria-describedby={
               errors.period ? "staff-payment-period-error" : undefined
             }
-            onChange={(e) => set("period", e.target.value)}
+            onChange={(value) => set("period", value)}
           />
           <FieldError id="staff-payment-period-error" message={errors.period} />
         </div>
@@ -166,7 +166,7 @@ export function StaffPaymentForm({
         <FieldError id="staff-payment-amount-error" message={errors.amount} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <NativeSelect
+        <FormSelect
           id="staff-payment-account"
           name="account_uuid"
           label={t("staff_reports.fields.account")}

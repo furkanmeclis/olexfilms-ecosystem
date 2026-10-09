@@ -12,7 +12,7 @@ import {
 } from "@/components/entity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Label } from "@/components/ui/label";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
@@ -146,16 +146,16 @@ export function CampaignDetailPage({
                 <Label htmlFor="campaign-detail-schedule">
                   {t("campaigns.fields.scheduled_at")}
                 </Label>
-                <Input
+                <DateTimePicker
                   id="campaign-detail-schedule"
-                  type="datetime-local"
+                  className="w-auto min-w-56"
                   value={
                     scheduledAt ||
                     (campaign.scheduled_at
                       ? toZonedInput(campaign.scheduled_at, campaign.timezone)
                       : "")
                   }
-                  onChange={(event) => setScheduledAt(event.target.value)}
+                  onChange={setScheduledAt}
                 />
               </div>
               <Button

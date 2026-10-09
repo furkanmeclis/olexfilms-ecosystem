@@ -63,6 +63,12 @@ vi.mock("@/features/portal/lib/portal-client", async (orig) => ({
 import { Permission } from "@/config/permissions";
 import type { Warranty } from "@/features/warranty/lib/warranty-list";
 
+import {
+  chooseValue,
+  installRadixPolyfills,
+  optionLabels,
+  optionValues,
+} from "@/test/form-controls";
 import { PortalWarranties } from "./portal-warranties";
 import { validVoidReason, WarrantyDetailPage } from "./warranty-detail-page";
 import { WarrantyProgressBar } from "./warranty-progress";
@@ -70,6 +76,7 @@ import { WarrantyProgressBar } from "./warranty-progress";
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -325,18 +332,17 @@ describe("PortalWarranties", () => {
     portal.listWarranties.mockResolvedValue(page([warranty()]));
     await render(createElement(PortalWarranties));
     const select = container.querySelector("#portal-warranty-sort");
-    if (!(select instanceof HTMLSelectElement)) throw new Error("no sort");
-    expect(
-      Array.from(select.options).map((o) => [o.value, o.textContent]),
-    ).toEqual([
-      ["expiry", "warranty.portal.sort.expiry"],
-      ["-start_at", "warranty.portal.sort.desc_start_at"],
-      ["start_at", "warranty.portal.sort.start_at"],
+    expect(await optionValues(select)).toEqual([
+      "expiry",
+      "-start_at",
+      "start_at",
     ]);
-    await act(async () => {
-      select.value = "-start_at";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    expect(await optionLabels(select)).toEqual([
+      "warranty.portal.sort.expiry",
+      "warranty.portal.sort.desc_start_at",
+      "warranty.portal.sort.start_at",
+    ]);
+    await chooseValue(select, "-start_at");
     await flush();
     expect(portal.listWarranties).toHaveBeenLastCalledWith({
       limit: 10,

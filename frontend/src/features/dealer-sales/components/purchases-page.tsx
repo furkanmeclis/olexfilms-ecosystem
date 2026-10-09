@@ -30,7 +30,7 @@ import { routes } from "@/config/routes";
 import {
   FieldError,
   Money,
-  NativeSelect,
+  FormSelect,
 } from "@/features/accounting/components/shared";
 import { useDealerSalesAccess } from "@/features/dealer-sales/hooks/use-dealer-sales-access";
 import { normalizeMoney, toCents } from "@/features/dealer-sales/lib/sales";
@@ -117,7 +117,7 @@ function PurchaseForm({
       className="space-y-4"
       data-testid="purchase-form"
     >
-      <NativeSelect
+      <FormSelect
         id="purchase-supplier"
         name="supplier_uuid"
         label={t("dealer_sales.fields.supplier")}
@@ -149,7 +149,7 @@ function PurchaseForm({
         />
         <FieldError id="purchase-amount-error" message={errors.amount} />
       </div>
-      <NativeSelect
+      <FormSelect
         id="purchase-payment"
         name="payment_method"
         label={t("dealer_sales.fields.payment_method")}

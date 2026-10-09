@@ -46,7 +46,6 @@ import {
 } from "@/features/stock/services/stock.service";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
-import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -59,9 +58,6 @@ const OWN = "own";
 
 /** Filter-only column fed by the product picker (product_uuid). */
 const PRODUCT_FILTER = "product_filter";
-
-const selectClass =
-  "border-input bg-background h-9 w-full rounded-md border px-2 text-sm";
 
 /** Barcode column filter: a prefix match (TEC-373 barcode_match). */
 function barcodeParams(value: unknown): Record<string, string | undefined> {
@@ -442,27 +438,30 @@ export function MyStockPage({
         <Card>
           <CardContent className="space-y-2 pt-6">
             <Label htmlFor="stock-dealer">{t("stock.dealer.label")}</Label>
-            <select
+            <AsyncCombobox
               id="stock-dealer"
               data-testid="stock-dealer"
-              className={cn(selectClass, "max-w-md")}
+              className="max-w-md"
               value={dealer}
-              onChange={(e) => {
-                setDealer(e.target.value);
+              options={[
+                {
+                  value: OWN,
+                  label: t("stock.dealer.own", { name: org?.name ?? "" }),
+                },
+                ...(dealers.data ?? []).map((d) => ({
+                  value: d.uuid,
+                  label: d.name,
+                })),
+              ]}
+              onValueChange={(next) => {
+                // Re-picking the current entry clears it; keep a view.
+                if (!next) return;
+                setDealer(next);
                 setProduct(null);
                 onColumnFiltersChange([]);
                 setPagination((prev) => ({ ...prev, pageIndex: 0 }));
               }}
-            >
-              <option value={OWN}>
-                {t("stock.dealer.own", { name: org?.name ?? "" })}
-              </option>
-              {(dealers.data ?? []).map((d) => (
-                <option key={d.uuid} value={d.uuid}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            />
             <p className="text-muted-foreground text-xs">
               {viewingDealer
                 ? t("stock.dealer.read_only", { name: dealerName })

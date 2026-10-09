@@ -8,11 +8,11 @@ import { AppForm, AppInput } from "@/components/forms";
 import { FormFieldShell } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AsyncCombobox } from "@/components/ui/async-combobox";
 import {
   catalogService,
   type CatalogProduct,
 } from "@/features/catalog/services/catalog.service";
-import { nativeSelectClass } from "@/features/warehouse/components/native-select-field";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import {
   BATCH_MAX,
@@ -153,29 +153,26 @@ function ProductField({
           aria-label={t("warehouse.generate.product_search")}
           data-testid="generate-product-search"
         />
-        <select
+        <AsyncCombobox
           id="product_uuid"
-          className={nativeSelectClass}
+          data-testid="generate-product"
           value={value ?? ""}
           aria-invalid={Boolean(error)}
-          data-testid="generate-product"
-          onChange={(e) => {
-            const picked =
-              options.find((p) => p.uuid === e.target.value) ?? null;
-            setValue("product_uuid", e.target.value, { shouldValidate: true });
+          placeholder={t("warehouse.generate.pick_product")}
+          options={options.map((p) => ({
+            value: p.uuid,
+            label: `${p.sku} · ${p.name}${
+              p.unit_type === "roll_meter"
+                ? ` (${t("warehouse.unit_type.roll_meter")})`
+                : ""
+            }`,
+          }))}
+          onValueChange={(next) => {
+            const picked = options.find((p) => p.uuid === next) ?? null;
+            setValue("product_uuid", next, { shouldValidate: true });
             onProduct(picked);
           }}
-        >
-          <option value="">{t("warehouse.generate.pick_product")}</option>
-          {options.map((p) => (
-            <option key={p.uuid} value={p.uuid}>
-              {p.sku} · {p.name}
-              {p.unit_type === "roll_meter"
-                ? ` (${t("warehouse.unit_type.roll_meter")})`
-                : ""}
-            </option>
-          ))}
-        </select>
+        />
       </div>
     </FormFieldShell>
   );

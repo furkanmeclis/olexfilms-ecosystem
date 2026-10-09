@@ -64,6 +64,9 @@ export type AsyncComboboxProps = {
   clearable?: boolean;
   id?: string;
   "aria-invalid"?: boolean;
+  "aria-label"?: string;
+  "aria-describedby"?: string;
+  "data-testid"?: string;
 };
 
 /**
@@ -86,6 +89,9 @@ export function AsyncCombobox({
   clearable = false,
   id,
   "aria-invalid": ariaInvalid,
+  "aria-label": ariaLabel,
+  "aria-describedby": ariaDescribedBy,
+  "data-testid": testId,
 }: AsyncComboboxProps) {
   const { t } = useLocale();
   const listId = useId();
@@ -173,6 +179,9 @@ export function AsyncCombobox({
           aria-expanded={open}
           aria-controls={listId}
           aria-invalid={ariaInvalid}
+          aria-label={ariaLabel}
+          aria-describedby={ariaDescribedBy}
+          data-testid={testId}
           disabled={disabled}
           className={cn(
             "h-9 w-full justify-between font-normal",

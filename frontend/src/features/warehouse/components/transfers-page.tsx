@@ -23,14 +23,13 @@ import {
   type EntityRowAction,
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
-import { AppForm, AppInput } from "@/components/forms";
+import { AppForm, AppInput, AppSelect } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import { NativeSelectField } from "@/features/warehouse/components/native-select-field";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
 import {
   enumFilterOptions,
@@ -438,14 +437,14 @@ export function NewTransferForm({
           className="space-y-4"
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <NativeSelectField
+            <AppSelect
               name="from_warehouse_uuid"
               label={t("warehouse.fields.from_warehouse")}
               placeholder={t("warehouse.entries.pick_warehouse")}
               options={options}
               testId="transfer-from"
             />
-            <NativeSelectField
+            <AppSelect
               name="to_warehouse_uuid"
               label={t("warehouse.fields.to_warehouse")}
               placeholder={t("warehouse.entries.pick_warehouse")}

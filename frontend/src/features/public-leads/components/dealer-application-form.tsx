@@ -15,6 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { AppLocale } from "@/config/i18n";
 import { countryName } from "@/features/geo/hooks/use-geo";
 import type { Country, District, Province } from "@/features/geo/types";
@@ -51,8 +58,7 @@ type Notice =
   | { kind: "closed" }
   | { kind: "failed" };
 
-const SELECT_CLASS =
-  "border-border bg-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 text-sm shadow-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive";
+const SELECT_CLASS = "aria-invalid:border-destructive data-[size=default]:h-10";
 
 /**
  * Public dealer application form (TEC-320). A client island of the server
@@ -303,31 +309,39 @@ export function DealerApplicationForm({
             : undefined)
         }
       >
-        <select
-          id={id("country")}
+        <Select
           name="country_id"
           value={values.country_id}
           disabled={countries.loading}
-          aria-invalid={Boolean(errors.country_id) || undefined}
-          aria-describedby={
-            errors.country_id || countries.failed
-              ? `${id("country")}-error`
-              : undefined
-          }
-          onChange={(e) => onCountry(e.target.value)}
-          className={SELECT_CLASS}
+          onValueChange={onCountry}
         >
-          <option value="">
-            {countries.loading
-              ? t("landing.dealer_application.geo_loading")
-              : t("landing.dealer_application.country_placeholder")}
-          </option>
-          {countryOptions.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            id={id("country")}
+            data-testid="application-country"
+            aria-invalid={Boolean(errors.country_id) || undefined}
+            aria-describedby={
+              errors.country_id || countries.failed
+                ? `${id("country")}-error`
+                : undefined
+            }
+            className={SELECT_CLASS}
+          >
+            <SelectValue
+              placeholder={
+                countries.loading
+                  ? t("landing.dealer_application.geo_loading")
+                  : t("landing.dealer_application.country_placeholder")
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {countryOptions.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -340,27 +354,35 @@ export function DealerApplicationForm({
               : undefined
           }
         >
-          <select
-            id={id("province")}
+          <Select
             name="province_id"
             value={values.province_id}
             disabled={
               !country || provinces.loading || provinces.items.length === 0
             }
-            onChange={(e) => onProvince(e.target.value)}
-            className={SELECT_CLASS}
+            onValueChange={onProvince}
           >
-            <option value="">
-              {provinces.loading
-                ? t("landing.dealer_application.geo_loading")
-                : t("landing.dealer_application.province_placeholder")}
-            </option>
-            {provinces.items.map((p) => (
-              <option key={p.id} value={String(p.id)}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id={id("province")}
+              data-testid="application-province"
+              className={SELECT_CLASS}
+            >
+              <SelectValue
+                placeholder={
+                  provinces.loading
+                    ? t("landing.dealer_application.geo_loading")
+                    : t("landing.dealer_application.province_placeholder")
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {provinces.items.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>
+                  {p.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
         <Field
           id={id("district")}
@@ -371,27 +393,35 @@ export function DealerApplicationForm({
               : undefined
           }
         >
-          <select
-            id={id("district")}
+          <Select
             name="district_id"
             value={values.district_id}
             disabled={
               !province || districts.loading || districts.items.length === 0
             }
-            onChange={(e) => set("district_id", e.target.value)}
-            className={SELECT_CLASS}
+            onValueChange={(value) => set("district_id", value)}
           >
-            <option value="">
-              {districts.loading
-                ? t("landing.dealer_application.geo_loading")
-                : t("landing.dealer_application.district_placeholder")}
-            </option>
-            {districts.items.map((d) => (
-              <option key={d.id} value={String(d.id)}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id={id("district")}
+              data-testid="application-district"
+              className={SELECT_CLASS}
+            >
+              <SelectValue
+                placeholder={
+                  districts.loading
+                    ? t("landing.dealer_application.geo_loading")
+                    : t("landing.dealer_application.district_placeholder")
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {districts.items.map((d) => (
+                <SelectItem key={d.id} value={String(d.id)}>
+                  {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Field>
       </div>
 

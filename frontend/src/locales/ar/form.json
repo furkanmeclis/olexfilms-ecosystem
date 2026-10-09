@@ -13,5 +13,12 @@
   "combobox_selected": "محدد",
   "command_title": "أمر / اختيار",
   "command_description": "ابحث عن عنصر واختره",
-  "command_group_default": "النتائج"
+  "command_group_default": "النتائج",
+  "pick_time": "اختر وقتًا",
+  "pick_month": "اختر شهرًا",
+  "pick_date_time": "اختر التاريخ والوقت",
+  "hour": "الساعة",
+  "minute": "الدقيقة",
+  "previous_year": "السنة السابقة",
+  "next_year": "السنة التالية"
 }

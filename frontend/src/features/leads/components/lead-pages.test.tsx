@@ -63,6 +63,7 @@ import { NavBadges } from "@/features/nav-engine/components/nav-badges";
 import type { NavAdornment } from "@/features/nav-engine/types";
 import { permissions } from "@/config/permissions";
 import type { Lead } from "@/features/leads/services/leads.service";
+import { chooseValue, installRadixPolyfills } from "@/test/form-controls";
 
 import { LeadDetailPage } from "./lead-detail-page";
 import { LeadFormPage } from "./lead-form-page";
@@ -71,6 +72,7 @@ import { leadsNavItem } from "../nav";
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -127,11 +129,7 @@ function BadgeProbe({
 }
 
 async function choose(sel: string, value: string) {
-  const el = q<HTMLSelectElement>(sel)!;
-  await act(async () => {
-    el.value = value;
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  await chooseValue(q(sel), value);
   await flush();
 }
 

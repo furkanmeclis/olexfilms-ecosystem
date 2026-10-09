@@ -13,5 +13,12 @@
   "combobox_selected": "Επιλεγμένο",
   "command_title": "Εντολή / επιλογή",
   "command_description": "Αναζητήστε και επιλέξτε ένα στοιχείο",
-  "command_group_default": "Αποτελέσματα"
+  "command_group_default": "Αποτελέσματα",
+  "pick_time": "Επιλέξτε ώρα",
+  "pick_month": "Επιλέξτε μήνα",
+  "pick_date_time": "Επιλέξτε ημερομηνία και ώρα",
+  "hour": "Ώρα",
+  "minute": "Λεπτό",
+  "previous_year": "Προηγούμενο έτος",
+  "next_year": "Επόμενο έτος"
 }

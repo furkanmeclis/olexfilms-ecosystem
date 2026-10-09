@@ -52,6 +52,8 @@ import type {
 import { LIBRARY_MAX_UPLOAD_BYTES } from "@/features/library/lib/library";
 import { ApiError } from "@/lib/api/errors";
 
+import { LOCALE_NAMES } from "@/config/i18n";
+import { chooseValue, installRadixPolyfills } from "@/test/form-controls";
 import { LibraryPage } from "./library-page";
 
 (
@@ -67,13 +69,7 @@ window.matchMedia ??= ((query: string) => ({
   removeListener: () => {},
   dispatchEvent: () => false,
 })) as typeof window.matchMedia;
-(
-  globalThis as typeof globalThis & { ResizeObserver?: typeof ResizeObserver }
-).ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as typeof ResizeObserver;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -188,15 +184,7 @@ async function click(sel: string) {
 }
 
 async function selectValue(sel: string, value: string) {
-  const el = q<HTMLSelectElement>(sel)!;
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value",
-  )!.set!;
-  await act(async () => {
-    setter.call(el, value);
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  await chooseValue(q(sel), value);
   await flush();
 }
 
@@ -230,7 +218,7 @@ describe("LibraryPage", () => {
     expect(q("[data-testid=library-folder-tree]")?.textContent).toContain(
       "Guides",
     );
-    expect(q<HTMLSelectElement>("#library-locale")?.value).toBe("en");
+    expect(q("#library-locale")?.textContent).toBe(LOCALE_NAMES.en);
   });
 
   it("filters by folder", async () => {

@@ -73,6 +73,7 @@ import type {
   AppointmentAvailabilityDay,
 } from "@/features/appointments/services/appointments.service";
 import { ApiError } from "@/lib/api/errors";
+import { installRadixPolyfills, pickTime } from "@/test/form-controls";
 
 import { AppointmentCalendar } from "./appointment-calendar";
 import { AppointmentDialog } from "./appointment-dialog";
@@ -81,12 +82,8 @@ import { AppointmentSettingsPanel } from "./appointment-settings-panel";
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
-// Radix Switch measures itself.
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver;
+// Radix Switch measures itself; the time pickers are Radix popovers.
+installRadixPolyfills();
 
 const appt = (over: Partial<Appointment>): Appointment => ({
   uuid: "a-1",
@@ -156,15 +153,6 @@ const cardDay = (uuid: string) =>
 const cardTop = (uuid: string) =>
   (document.querySelector(`[data-testid="appointment-${uuid}"]`) as HTMLElement)
     ?.style.top;
-
-function setInput(input: HTMLInputElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value",
-  )?.set;
-  setter?.call(input, value);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-}
 
 function button(selector: string) {
   return document.querySelector(selector) as HTMLButtonElement | null;
@@ -502,7 +490,7 @@ describe("AppointmentSettingsPanel (TEC-326)", () => {
   }
 
   const input = (name: string) =>
-    document.querySelector(`input[name="${name}"]`) as HTMLInputElement;
+    document.querySelector(`[name="${name}"]`) as HTMLButtonElement;
 
   async function submit() {
     const form = document.querySelector(
@@ -536,14 +524,14 @@ describe("AppointmentSettingsPanel (TEC-326)", () => {
     await render(createElement(AppointmentSettingsPanel, { timeZone: "UTC" }));
     const end = input("monday-0-end");
     expect(end.value).toBe("18:00");
-    await act(async () => setInput(end, "08:00"));
+    await pickTime(end, "08:00");
     await submit();
     expect(document.querySelector('[data-error="monday-0"]')?.textContent).toBe(
       "appointments.settings.close_before_open",
     );
     notSaved();
 
-    await act(async () => setInput(end, "17:00"));
+    await pickTime(end, "17:00");
     await submit();
     expect(document.querySelector('[data-error="monday-0"]')).toBeNull();
     expect(http.platformRequest).toHaveBeenCalledWith(
@@ -586,8 +574,8 @@ describe("AppointmentSettingsPanel (TEC-326)", () => {
       button('[data-action="add-window-tuesday"]')?.click();
     });
     expect(input("tuesday-1-start").value).toBe("12:00");
-    await act(async () => setInput(input("tuesday-1-start"), "14:00"));
-    await act(async () => setInput(input("tuesday-1-end"), "18:00"));
+    await pickTime(input("tuesday-1-start"), "14:00");
+    await pickTime(input("tuesday-1-end"), "18:00");
     await act(async () => {
       button('[data-action="add-window-tuesday"]')?.click();
     });
@@ -615,7 +603,7 @@ describe("AppointmentSettingsPanel (TEC-326)", () => {
       ],
     });
     await render(createElement(AppointmentSettingsPanel, { timeZone: "UTC" }));
-    await act(async () => setInput(input("monday-1-start"), "11:00"));
+    await pickTime(input("monday-1-start"), "11:00");
     await submit();
     expect(document.querySelector('[data-error="monday"]')?.textContent).toBe(
       "appointments.settings.windows_overlap",

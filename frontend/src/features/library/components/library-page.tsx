@@ -28,6 +28,13 @@ import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LOCALE_NAMES } from "@/config/i18n";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
@@ -37,7 +44,6 @@ import {
   LibraryFolderDialog,
   LibraryItemDialog,
   LibraryUploadDialog,
-  librarySelectClass,
 } from "@/features/library/components/library-dialogs";
 import { LibraryFolderTree } from "@/features/library/components/library-folder-tree";
 import {
@@ -340,23 +346,26 @@ export function LibraryPage({ slug }: { slug: string }) {
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm">
               <Languages className="text-muted-foreground size-4" />
-              <span className="sr-only">{t("library.fields.locale")}</span>
-              <select
-                id="library-locale"
-                data-testid="library-locale"
-                className={librarySelectClass}
-                value={locale}
-                onChange={(e) => setLocale(e.target.value)}
-              >
-                {LIBRARY_LOCALES.map((l) => (
-                  <option key={l} value={l}>
-                    {LOCALE_NAMES[l]}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <Select value={locale} onValueChange={setLocale}>
+                <SelectTrigger
+                  id="library-locale"
+                  data-testid="library-locale"
+                  aria-label={t("library.fields.locale")}
+                  className="w-auto min-w-32"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LIBRARY_LOCALES.map((l) => (
+                    <SelectItem key={l} value={l}>
+                      {LOCALE_NAMES[l]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             {canManage ? (
               <>
                 <Button

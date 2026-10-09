@@ -13,6 +13,13 @@ import {
 
 import { registerMessages, translate } from "@/lib/i18n/messages";
 import tr from "@/locales/tr";
+import {
+  chooseValue,
+  closePicker,
+  installRadixPolyfills,
+  openOptions,
+  openPicker,
+} from "@/test/form-controls";
 
 import { applicationMessages } from "../lib/dealer-application";
 import { DealerApplicationForm } from "./dealer-application-form";
@@ -30,12 +37,8 @@ vi.mock("next/link", () => ({
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
-// Radix Checkbox measures itself; jsdom has no ResizeObserver.
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver;
+// Radix Checkbox / Select need ResizeObserver, pointer capture, scrollIntoView.
+installRadixPolyfills();
 
 const COUNTRIES = [
   {
@@ -148,16 +151,28 @@ async function type(name: string, value: string) {
   });
 }
 
-async function choose(name: string, value: string) {
-  const el = field<HTMLSelectElement>(name);
-  await act(async () => {
-    Object.getOwnPropertyDescriptor(
-      HTMLSelectElement.prototype,
-      "value",
-    )!.set!.call(el, value);
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+const PICKERS = {
+  country_id: "application-country",
+  province_id: "application-province",
+  district_id: "application-district",
+} as const;
+
+function picker(name: keyof typeof PICKERS) {
+  return container.querySelector<HTMLButtonElement>(
+    `[data-testid="${PICKERS[name]}"]`,
+  )!;
+}
+
+async function choose(name: keyof typeof PICKERS, value: string) {
+  await chooseValue(picker(name), value);
   await flush();
+}
+
+async function labelsOf(name: keyof typeof PICKERS) {
+  await openPicker(picker(name));
+  const labels = openOptions();
+  await closePicker();
+  return labels;
 }
 
 function submitButton() {
@@ -201,7 +216,7 @@ describe("DealerApplicationForm (TEC-320)", () => {
 
   it("loads the provinces when a country is chosen, then the districts", async () => {
     await render();
-    const province = field<HTMLSelectElement>("province_id");
+    const province = picker("province_id");
     expect(province.disabled).toBe(true);
     expect(calls.map((c) => c.url)).toEqual(["/api/v1/public/geo/countries"]);
 
@@ -210,24 +225,19 @@ describe("DealerApplicationForm (TEC-320)", () => {
       "/api/v1/public/geo/countries/TR/provinces",
     );
     expect(province.disabled).toBe(false);
-    expect([...province.options].map((o) => o.textContent)).toEqual([
-      msg("province_placeholder"),
-      "İstanbul",
-      "Ankara",
-    ]);
+    expect(province.textContent).toBe(msg("province_placeholder"));
+    expect(await labelsOf("province_id")).toEqual(["İstanbul", "Ankara"]);
 
-    const district = field<HTMLSelectElement>("district_id");
+    const district = picker("district_id");
     expect(district.disabled).toBe(true);
     await choose("province_id", "34");
     expect(district.disabled).toBe(false);
-    expect([...district.options].map((o) => o.textContent)).toContain(
-      "Kadıköy",
-    );
+    expect(await labelsOf("district_id")).toContain("Kadıköy");
 
     // A country without provinces leaves both pickers empty and disabled.
     await choose("country_id", "2");
     expect(province.disabled).toBe(true);
-    expect(province.options).toHaveLength(1);
+    expect(province.textContent).toBe(msg("province_placeholder"));
     expect(district.disabled).toBe(true);
   });
 

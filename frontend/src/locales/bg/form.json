@@ -13,5 +13,12 @@
   "combobox_selected": "Избрано",
   "command_title": "Команда / избор",
   "command_description": "Потърсете и изберете елемент",
-  "command_group_default": "Резултати"
+  "command_group_default": "Резултати",
+  "pick_time": "Изберете час",
+  "pick_month": "Изберете месец",
+  "pick_date_time": "Изберете дата и час",
+  "hour": "Час",
+  "minute": "Минута",
+  "previous_year": "Предишна година",
+  "next_year": "Следваща година"
 }

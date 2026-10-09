@@ -6,6 +6,7 @@ import {
   mockCustomers,
 } from "./support/customer-mock";
 import { signIn } from "./support/mock-api";
+import { chooseOption } from "./support/pickers";
 
 /**
  * TEC-163: customers against a mocked BFF — a center admin creates a
@@ -78,7 +79,7 @@ test("customer: create → vehicle → search → anonymize", async ({ page }) =
   // List export (TEC-199): queued with the current filters and sort
   // (TEC-372), then downloaded.
   await page.getByTestId("customer-list-export").click();
-  await page.locator("#list-export-format").selectOption("csv");
+  await chooseOption(page.locator("#list-export-format"), "csv");
   await page.getByTestId("list-export-confirm").click();
   await expect
     .poll(() => api.bodies["POST /v1/customers/export"]?.[0])

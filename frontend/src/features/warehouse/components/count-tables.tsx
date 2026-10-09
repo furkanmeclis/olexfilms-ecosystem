@@ -11,7 +11,13 @@ import {
   type DataTableBulkAction,
 } from "@/components/tables";
 import { Button } from "@/components/ui/button";
-import { nativeSelectClass } from "@/features/warehouse/components/native-select-field";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { enumFilterOptions } from "@/features/warehouse/components/table-options";
 import {
   COUNT_RESOLUTIONS,
@@ -352,25 +358,31 @@ export function CountLinesTable({
                 : "—";
             }
             return (
-              <select
-                className={nativeSelectClass}
+              <Select
                 value={choices[l.uuid] ?? defaultResolution(l) ?? ""}
-                aria-label={t("warehouse.count.resolution_for", {
-                  code: l.unit?.barcode ?? l.product.sku,
-                })}
-                data-testid="count-resolution"
-                onChange={(e) =>
+                onValueChange={(value) =>
                   onChoices({
-                    [l.uuid]: e.target.value as StockCountResolution,
+                    [l.uuid]: value as StockCountResolution,
                   })
                 }
               >
-                {l.allowed_resolutions.map((r) => (
-                  <option key={r} value={r}>
-                    {t(`warehouse.count_resolution.${r}`)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  size="sm"
+                  aria-label={t("warehouse.count.resolution_for", {
+                    code: l.unit?.barcode ?? l.product.sku,
+                  })}
+                  data-testid="count-resolution"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {l.allowed_resolutions.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {t(`warehouse.count_resolution.${r}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             );
           },
         }),

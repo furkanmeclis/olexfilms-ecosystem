@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 
-import { AppForm, AppInput, AppSwitch } from "@/components/forms";
+import { AppForm, AppInput, AppSelect, AppSwitch } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { NativeSelectField } from "@/features/warehouse/components/native-select-field";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import {
   nodeFormSchema,
@@ -84,7 +83,7 @@ export function NodeForm({
           className="space-y-4"
         >
           {typeChoices ? (
-            <NativeSelectField
+            <AppSelect
               name="type"
               label={t("warehouse.fields.type")}
               options={allowedTypes.map((ty) => ({

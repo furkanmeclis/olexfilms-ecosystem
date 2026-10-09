@@ -3,6 +3,14 @@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
+import {
   LEAD_SOURCES,
   LEAD_TARGET_TYPES,
   LEAD_TEMPERATURES,
@@ -74,70 +82,99 @@ export function LeadFields({
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label htmlFor="lead-target-type">{t("leads.form.target_type")}</Label>
-        <select
-          id="lead-target-type"
-          data-testid="lead-target-type"
-          className={leadInputClass}
+        <Select
           value={values.target_type}
           disabled={disabled}
-          onChange={(e) =>
-            setTarget(e.target.value as LeadFormValues["target_type"])
+          onValueChange={(value) =>
+            setTarget(value as LeadFormValues["target_type"])
           }
         >
-          {LEAD_TARGET_TYPES.filter(
-            (x) => x === values.target_type || targetTypes.includes(x),
-          ).map((x) => (
-            <option key={x} value={x}>
-              {t(`leads.target_type.${x}`)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            id="lead-target-type"
+            data-testid="lead-target-type"
+            className="h-10"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LEAD_TARGET_TYPES.filter(
+              (x) => x === values.target_type || targetTypes.includes(x),
+            ).map((x) => (
+              <SelectItem key={x} value={x}>
+                {t(`leads.target_type.${x}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="lead-source">{t("leads.form.source")}</Label>
-        <select
-          id="lead-source"
-          data-testid="lead-source"
-          className={leadInputClass}
+        <Select
           value={values.source}
           disabled={disabled}
-          onChange={(e) =>
-            onChange({ source: e.target.value as LeadFormValues["source"] })
+          onValueChange={(value) =>
+            onChange({ source: value as LeadFormValues["source"] })
           }
         >
-          {LEAD_SOURCES.map((x) => (
-            <option key={x} value={x}>
-              {t(`leads.source.${x}`)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            id="lead-source"
+            data-testid="lead-source"
+            className="h-10"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LEAD_SOURCES.map((x) => (
+              <SelectItem key={x} value={x}>
+                {t(`leads.source.${x}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="lead-temperature">{t("leads.form.temperature")}</Label>
-        <select
-          id="lead-temperature"
-          data-testid="lead-temperature"
-          className={leadInputClass}
+        <Select
           value={values.temperature}
           disabled={disabled}
-          onChange={(e) =>
-            onChange({
-              temperature: e.target.value as LeadFormValues["temperature"],
-            })
+          onValueChange={(value) =>
+            onChange({ temperature: value as LeadFormValues["temperature"] })
           }
         >
-          {LEAD_TEMPERATURES.map((x) => (
-            <option key={x} value={x}>
-              {t(`leads.temperature.${x}`)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            id="lead-temperature"
+            data-testid="lead-temperature"
+            className="h-10"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {LEAD_TEMPERATURES.map((x) => (
+              <SelectItem key={x} value={x}>
+                {t(`leads.temperature.${x}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      {field(
-        "follow_up_date",
-        t("leads.form.follow_up_date"),
-        "datetime-local",
-      )}
+      <div className="space-y-1.5">
+        <Label htmlFor="lead-follow_up_date">
+          {t("leads.form.follow_up_date")}
+        </Label>
+        <DateTimePicker
+          id="lead-follow_up_date"
+          data-testid="lead-follow_up_date"
+          value={values.follow_up_date}
+          disabled={disabled}
+          aria-invalid={errors?.follow_up_date ? true : undefined}
+          onChange={(value) => onChange({ follow_up_date: value })}
+        />
+        {errors?.follow_up_date ? (
+          <p className="text-destructive text-xs" data-error="follow_up_date">
+            {errors.follow_up_date}
+          </p>
+        ) : null}
+      </div>
       {field("assignee_user_id", t("leads.form.assignee_user_id"), "number")}
 
       {candidate ? (

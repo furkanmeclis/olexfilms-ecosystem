@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   FieldError,
-  NativeSelect,
+  FormSelect,
   newIdempotencyKey,
 } from "@/features/accounting/components/shared";
 import { accountingKeys } from "@/features/accounting/hooks/use-accounting-access";
@@ -111,7 +111,7 @@ export function ManualEntryForm({
       className="space-y-4"
       data-testid="manual-entry-form"
     >
-      <NativeSelect
+      <FormSelect
         id="manual-entry-direction"
         name="direction"
         label={t("accounting.fields.direction")}
@@ -128,7 +128,7 @@ export function ManualEntryForm({
           label: t(`accounting.directions.${d}`),
         }))}
       />
-      <NativeSelect
+      <FormSelect
         id="manual-entry-category"
         name="category"
         label={t("accounting.fields.category")}
@@ -159,7 +159,7 @@ export function ManualEntryForm({
         <FieldError id="manual-entry-amount-error" message={errors.amount} />
       </div>
       {charge ? null : (
-        <NativeSelect
+        <FormSelect
           id="manual-entry-account"
           name="account_uuid"
           label={t("accounting.fields.account")}
@@ -173,7 +173,7 @@ export function ManualEntryForm({
           }))}
         />
       )}
-      <NativeSelect
+      <FormSelect
         id="manual-entry-cari"
         name="cari_uuid"
         label={t("accounting.fields.cari")}

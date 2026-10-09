@@ -6,6 +6,13 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { routes } from "@/config/routes";
 import {
   buildExportRequest,
@@ -21,9 +28,6 @@ import {
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
-
-const selectClass =
-  "border-input bg-background h-9 rounded-md border px-2 text-sm";
 
 /**
  * Queues the active tab's report as a CSV / XLSX export job (TEC-338
@@ -65,22 +69,26 @@ export function ClaimReportExportButton({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <label className="sr-only" htmlFor="claim-report-export-format">
-        {t("warranty.claim_reports.export.format")}
-      </label>
-      <select
-        id="claim-report-export-format"
-        data-testid="claim-report-export-format"
-        className={selectClass}
+      <Select
         value={format}
-        onChange={(e) => setFormat(e.target.value as ClaimReportExportFormat)}
+        onValueChange={(value) => setFormat(value as ClaimReportExportFormat)}
       >
-        {CLAIM_REPORT_EXPORT_FORMATS.map((f) => (
-          <option key={f} value={f}>
-            {f.toUpperCase()}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          id="claim-report-export-format"
+          data-testid="claim-report-export-format"
+          aria-label={t("warranty.claim_reports.export.format")}
+          className="w-auto"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {CLAIM_REPORT_EXPORT_FORMATS.map((f) => (
+            <SelectItem key={f} value={f}>
+              {f.toUpperCase()}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button
         type="button"
         variant="outline"

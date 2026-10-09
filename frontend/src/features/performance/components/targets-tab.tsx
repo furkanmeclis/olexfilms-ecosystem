@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MonthPicker } from "@/components/ui/month-picker";
 import {
   Select,
   SelectContent,
@@ -517,12 +518,11 @@ export function TargetFormDialog({
               <Label htmlFor="performance-target-month">
                 {t("performance.targets.start_month")}
               </Label>
-              <Input
+              <MonthPicker
                 id="performance-target-month"
-                type="month"
                 value={month}
                 disabled={editing}
-                onChange={(e) => setMonth(e.target.value)}
+                onChange={setMonth}
               />
             </div>
             <div className="grid gap-2">

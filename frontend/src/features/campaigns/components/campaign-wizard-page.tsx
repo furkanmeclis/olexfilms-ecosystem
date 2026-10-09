@@ -16,10 +16,18 @@ import { EntityPage } from "@/components/entity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import {
@@ -30,7 +38,6 @@ import {
   contentIssues,
   plansDirectly,
   requiredLocales,
-  toZonedInput,
   type ContentIssue,
 } from "@/features/campaigns/lib/campaigns";
 import {
@@ -334,25 +341,27 @@ export function CampaignWizardPage({ slug }: { slug: string }) {
               <Label htmlFor="audience-type">
                 {t("campaigns.fields.audience_type")}
               </Label>
-              <select
-                id="audience-type"
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Select
                 value={audience.audience_type}
-                onChange={(event) =>
+                onValueChange={(value) =>
                   setAudience(
                     emptyAudience(
-                      event.target
-                        .value as CampaignAudienceFilter["audience_type"],
+                      value as CampaignAudienceFilter["audience_type"],
                     ),
                   )
                 }
               >
-                {audienceTypes.map((value) => (
-                  <option key={value} value={value}>
-                    {t(`campaigns.audience.${value}`)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="audience-type" className="w-auto min-w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {audienceTypes.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(`campaigns.audience.${value}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="bg-muted/40 rounded-md p-3 text-sm">
               <PreviewLine>
@@ -524,15 +533,11 @@ export function CampaignWizardPage({ slug }: { slug: string }) {
               <Label htmlFor="campaign-scheduled-at">
                 {t("campaigns.fields.scheduled_at")}
               </Label>
-              <Input
+              <DateTimePicker
                 id="campaign-scheduled-at"
-                type="datetime-local"
+                className="w-auto min-w-56"
                 value={scheduledAt}
-                placeholder={toZonedInput(
-                  new Date().toISOString(),
-                  user?.timeZone ?? "Europe/Istanbul",
-                )}
-                onChange={(event) => setScheduledAt(event.target.value)}
+                onChange={setScheduledAt}
               />
             </div>
             <Button

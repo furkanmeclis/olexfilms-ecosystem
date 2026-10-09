@@ -20,10 +20,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { downloadEodPdf } from "@/features/warehouse/components/eod-report-detail-page";
-import { nativeSelectClass } from "@/features/warehouse/components/native-select-field";
 import {
   enumFilterOptions,
   useWarehouseFilterOptions,
@@ -338,20 +344,21 @@ export function GenerateEodForm({ slug }: { slug: string }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="eod-warehouse">{t("warehouse.fields.scope")}</Label>
-            <select
-              id="eod-warehouse"
-              className={nativeSelectClass}
-              value={warehouseUuid}
-              onChange={(e) => setWarehouseUuid(e.target.value)}
-              data-testid="eod-warehouse"
-            >
-              <option value={SYSTEM}>{t("warehouse.eod.system")}</option>
-              {(warehouses.data?.items ?? []).map((w) => (
-                <option key={w.uuid} value={w.uuid}>
-                  {w.code} · {w.name}
-                </option>
-              ))}
-            </select>
+            <Select value={warehouseUuid} onValueChange={setWarehouseUuid}>
+              <SelectTrigger id="eod-warehouse" data-testid="eod-warehouse">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SYSTEM}>
+                  {t("warehouse.eod.system")}
+                </SelectItem>
+                {(warehouses.data?.items ?? []).map((w) => (
+                  <SelectItem key={w.uuid} value={w.uuid}>
+                    {w.code} · {w.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button
             type="submit"

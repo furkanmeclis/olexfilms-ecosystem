@@ -16,6 +16,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { routes } from "@/config/routes";
 import {
   PortalApiError,
@@ -259,18 +266,18 @@ function PhoneOTPForm({
       <div className="grid grid-cols-[7rem_1fr] gap-2">
         <div className="space-y-2">
           <Label htmlFor="portal-country">{t("portal.phone.country")}</Label>
-          <select
-            id="portal-country"
-            className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-          >
-            {COUNTRIES.map((c) => (
-              <option key={c} value={c}>
-                {countryNames?.of(c) ?? c}
-              </option>
-            ))}
-          </select>
+          <Select value={country} onValueChange={setCountry}>
+            <SelectTrigger id="portal-country" data-testid="portal-country">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {COUNTRIES.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {countryNames?.of(c) ?? c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="portal-phone">{t("portal.phone.label")}</Label>

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
 import {
   Select,
   SelectContent,
@@ -480,28 +481,28 @@ function EditorInner({ slug, orgUuid }: { slug: string; orgUuid?: string }) {
                     className="grid gap-2 sm:grid-cols-[1fr_120px_120px]"
                   >
                     <Label>{t(`showcase.days.${day}`)}</Label>
-                    <Input
-                      type="time"
+                    <TimePicker
+                      aria-label={`${t(`showcase.days.${day}`)} · ${t("appointments.settings.opens")}`}
                       value={first.start}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setWorkingHours((prev) => ({
                           ...prev,
                           [day]:
-                            e.target.value || first.end
-                              ? [{ ...first, start: e.target.value }]
+                            value || first.end
+                              ? [{ ...first, start: value }]
                               : [],
                         }))
                       }
                     />
-                    <Input
-                      type="time"
+                    <TimePicker
+                      aria-label={`${t(`showcase.days.${day}`)} · ${t("appointments.settings.closes")}`}
                       value={first.end}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         setWorkingHours((prev) => ({
                           ...prev,
                           [day]:
-                            first.start || e.target.value
-                              ? [{ ...first, end: e.target.value }]
+                            first.start || value
+                              ? [{ ...first, end: value }]
                               : [],
                         }))
                       }

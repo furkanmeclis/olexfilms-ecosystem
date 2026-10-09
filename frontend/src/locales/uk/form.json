@@ -13,5 +13,12 @@
   "combobox_selected": "Вибрано",
   "command_title": "Команда / вибір",
   "command_description": "Знайдіть і виберіть елемент",
-  "command_group_default": "Результати"
+  "command_group_default": "Результати",
+  "pick_time": "Виберіть час",
+  "pick_month": "Виберіть місяць",
+  "pick_date_time": "Виберіть дату й час",
+  "hour": "Година",
+  "minute": "Хвилина",
+  "previous_year": "Попередній рік",
+  "next_year": "Наступний рік"
 }

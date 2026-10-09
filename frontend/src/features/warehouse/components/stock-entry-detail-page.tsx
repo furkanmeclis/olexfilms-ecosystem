@@ -9,12 +9,19 @@ import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { AsyncCombobox } from "@/components/ui/async-combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { EntryLinesTable } from "@/features/warehouse/components/entry-lines-table";
 import { GenerateForm } from "@/features/warehouse/components/generate-form";
 import { LabelButton } from "@/features/warehouse/components/label-button";
-import { nativeSelectClass } from "@/features/warehouse/components/native-select-field";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
 import {
   useWarehouseAccess,
@@ -352,47 +359,40 @@ export function StockEntryDetailPage({
                       <Label htmlFor="entry-room">
                         {t("warehouse.fields.room")}
                       </Label>
-                      <select
-                        id="entry-room"
-                        className={nativeSelectClass}
+                      <Select
                         value={roomUuid}
-                        data-testid="entry-room"
-                        onChange={(e) => {
-                          setRoomUuid(e.target.value);
+                        onValueChange={(value) => {
+                          setRoomUuid(value);
                           setLocationUuid("");
                         }}
                       >
-                        <option value="">
-                          {t("warehouse.entry.pick_room")}
-                        </option>
-                        {(rooms.data?.items ?? []).map((r) => (
-                          <option key={r.uuid} value={r.uuid}>
-                            {r.code} · {r.name}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger id="entry-room" data-testid="entry-room">
+                          <SelectValue
+                            placeholder={t("warehouse.entry.pick_room")}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(rooms.data?.items ?? []).map((r) => (
+                            <SelectItem key={r.uuid} value={r.uuid}>
+                              {r.code} · {r.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="entry-location-pick">
                         {t("warehouse.fields.location")}
                       </Label>
-                      <select
+                      <AsyncCombobox
                         id="entry-location-pick"
-                        className={nativeSelectClass}
+                        data-testid="entry-location-pick"
                         value={locationUuid}
                         disabled={!roomUuid}
-                        data-testid="entry-location-pick"
-                        onChange={(e) => setLocationUuid(e.target.value)}
-                      >
-                        <option value="">
-                          {t("warehouse.entry.pick_location")}
-                        </option>
-                        {locOptions.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder={t("warehouse.entry.pick_location")}
+                        options={locOptions}
+                        onValueChange={setLocationUuid}
+                      />
                     </div>
                   </div>
                   <Button

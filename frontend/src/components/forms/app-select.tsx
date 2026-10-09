@@ -21,6 +21,7 @@ type AppSelectProps = {
   options: Option[];
   className?: string;
   disabled?: boolean;
+  testId?: string;
 };
 
 export function AppSelect({
@@ -31,6 +32,7 @@ export function AppSelect({
   options,
   className,
   disabled,
+  testId,
 }: AppSelectProps) {
   const {
     control,
@@ -51,7 +53,7 @@ export function AppSelect({
         control={control}
         render={({ field }) => (
           <Select
-            value={field.value}
+            value={field.value ?? ""}
             onValueChange={field.onChange}
             disabled={disabled}
           >
@@ -60,6 +62,7 @@ export function AppSelect({
               aria-invalid={Boolean(error)}
               className="w-full"
               disabled={disabled}
+              data-testid={testId}
             >
               <SelectValue placeholder={placeholder} />
             </SelectTrigger>

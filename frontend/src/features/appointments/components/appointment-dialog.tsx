@@ -24,6 +24,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
 import {
   Select,
   SelectContent,
@@ -378,13 +379,12 @@ export function AppointmentDialog({
               <Label htmlFor={`${id}-time`}>
                 {t("appointments.fields.time")}
               </Label>
-              <Input
+              <TimePicker
                 id={`${id}-time`}
-                type="time"
-                dir="ltr"
                 value={time}
                 disabled={!editable}
-                onChange={(e) => setTime(e.target.value)}
+                clearable={false}
+                onChange={setTime}
               />
             </div>
             <div className="space-y-2">

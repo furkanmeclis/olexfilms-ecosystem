@@ -40,10 +40,15 @@ vi.mock("@/components/ui/date-picker", async () => {
   };
 });
 
+import {
+  chooseValue,
+  installRadixPolyfills,
+  optionValues,
+} from "@/test/form-controls";
 import { AccountForm } from "./account-form-dialog";
 import { AccountOpeningForm } from "./account-opening-dialog";
 import { SettlementForm } from "./settlement-dialog";
-import { EntryAmount, EntryStatus } from "./shared";
+import { EMPTY_SELECT_VALUE, EntryAmount, EntryStatus } from "./shared";
 import type {
   CariAccount,
   FinanceAccount,
@@ -53,6 +58,7 @@ import type {
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 // Radix Switch measures itself; jsdom has no ResizeObserver.
 globalThis.ResizeObserver ??= class {
   observe() {}
@@ -102,15 +108,7 @@ async function type(el: Element | null, value: string) {
 }
 
 async function choose(el: Element | null, value: string) {
-  if (!(el instanceof HTMLSelectElement)) throw new Error("select not found");
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value",
-  )?.set;
-  await act(async () => {
-    setter?.call(el, value);
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  await chooseValue(el, value);
 }
 
 async function submit(form: Element | null) {
@@ -245,11 +243,11 @@ describe("SettlementForm validation", () => {
         onSubmit: vi.fn(),
       }),
     );
-    const select = $("#settlement-cari") as HTMLSelectElement;
+    const select = $("#settlement-cari") as HTMLButtonElement;
     expect(select.disabled).toBe(true);
-    expect(select.value).toBe("c1");
+    expect(select.getAttribute("data-value")).toBe("c1");
     // A single active account is preselected with its currency.
-    expect(($("#settlement-account") as HTMLSelectElement).value).toBe("a1");
+    expect($("#settlement-account")?.getAttribute("data-value")).toBe("a1");
     expect($("[data-testid=settlement-fx-hint]")).toBeNull();
     await choose($("#settlement-currency"), "EUR");
     expect($("[data-testid=settlement-fx-hint]")).not.toBeNull();
@@ -267,10 +265,11 @@ describe("SettlementForm validation", () => {
         onSubmit: vi.fn(),
       }),
     );
-    const values = Array.from(
-      ($("#settlement-account") as HTMLSelectElement).options,
-    ).map((o) => o.value);
-    expect(values).toEqual(["", "a2"]);
+    // The placeholder stays a pickable "no account" choice.
+    expect(await optionValues($("#settlement-account"))).toEqual([
+      EMPTY_SELECT_VALUE,
+      "a2",
+    ]);
   });
 });
 
@@ -314,7 +313,7 @@ describe("AccountForm validation", () => {
         onSubmit: vi.fn(),
       }),
     );
-    expect(($("#account-type") as HTMLSelectElement).disabled).toBe(true);
+    expect(($("#account-type") as HTMLButtonElement).disabled).toBe(true);
     expect(($("#account-name") as HTMLInputElement).value).toBe("Kasa");
   });
 });

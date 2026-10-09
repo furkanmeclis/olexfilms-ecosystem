@@ -34,6 +34,7 @@ vi.mock("@/features/catalog/services/catalog.service", async (orig) => ({
 }));
 
 import { ApiError } from "@/lib/api";
+import { optionValues } from "@/test/form-controls";
 
 import { GenerateForm } from "./generate-form";
 import { NodeForm } from "./node-form";
@@ -47,13 +48,6 @@ import {
   unmount,
   type Mounted,
 } from "./test-helpers";
-
-// The Radix switch measures itself.
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver;
 
 let m: Mounted;
 beforeEach(() => {
@@ -139,10 +133,7 @@ describe("NodeForm validation (TEC-231)", () => {
         onCancel: vi.fn(),
       }),
     );
-    const select = $<HTMLSelectElement>("node-type");
-    expect(Array.from(select?.options ?? []).map((o) => o.value)).toEqual([
-      "bin",
-    ]);
+    expect(await optionValues($("node-type"))).toEqual(["bin"]);
     expect(text()).toContain("WH1-R1-A-S1");
     // No address on a location.
     expect($("node-address")).toBeNull();
@@ -190,16 +181,9 @@ describe("NewEntryForm validation (TEC-231)", () => {
         onCancel: vi.fn(),
       }),
     );
-    const wh = $<HTMLSelectElement>("entry-warehouse");
     // Inactive warehouses are not offered.
-    expect(Array.from(wh?.options ?? []).map((o) => o.value)).toEqual([
-      "",
-      "w1",
-    ]);
-    const mode = $<HTMLSelectElement>("entry-mode");
-    expect(Array.from(mode?.options ?? []).map((o) => o.value)).toEqual([
-      "with_existing",
-    ]);
+    expect(await optionValues($("entry-warehouse"))).toEqual(["w1"]);
+    expect(await optionValues($("entry-mode"))).toEqual(["with_existing"]);
 
     await click($("entry-create"));
     expect(text()).toContain("warehouse.validation.warehouse");
@@ -217,8 +201,10 @@ describe("NewEntryForm validation (TEC-231)", () => {
         onCancel: vi.fn(),
       }),
     );
-    await fill($<HTMLSelectElement>("entry-warehouse"), "w1");
-    expect($<HTMLSelectElement>("entry-mode")?.value).toBe("generate_new");
+    await fill($("entry-warehouse"), "w1");
+    expect($("entry-mode")?.textContent).toBe(
+      "warehouse.entry_mode.generate_new",
+    );
     await fill($("entry-note"), "x".repeat(501));
     await click($("entry-create"));
     expect(text()).toContain("warehouse.validation.too_long");
@@ -256,7 +242,7 @@ describe("GenerateForm validation (TEC-231)", () => {
     expect(text()).toContain("warehouse.validation.product");
     expect(onSubmit).not.toHaveBeenCalled();
 
-    await fill($<HTMLSelectElement>("generate-product"), "p-roll");
+    await fill($("generate-product"), "p-roll");
     await fill($("generate-quantity"), "1001");
     await click($("generate-submit"));
     expect(text()).toContain("warehouse.validation.quantity");
@@ -282,7 +268,7 @@ describe("GenerateForm validation (TEC-231)", () => {
       m,
       createElement(GenerateForm, { submitLabel: "go", onSubmit }),
     );
-    await fill($<HTMLSelectElement>("generate-product"), "p-kit");
+    await fill($("generate-product"), "p-kit");
     expect($("generate-meters")).toBeNull();
     await fill($("generate-prefix"), "O");
     await click($("generate-submit"));

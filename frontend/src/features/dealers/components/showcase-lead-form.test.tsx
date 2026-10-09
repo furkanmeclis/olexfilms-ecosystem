@@ -133,6 +133,13 @@ function field<T extends HTMLElement>(name: string) {
   return host.querySelector(`[name="${name}"]`) as T;
 }
 
+/** The shadcn KVKK checkbox (a button; its hidden input carries the name). */
+function kvkk() {
+  return host.querySelector(
+    'button[role="checkbox"][aria-label="KVKK"]',
+  ) as HTMLButtonElement;
+}
+
 function type(name: string, value: string) {
   const el = field<HTMLInputElement>(name);
   const setter = Object.getOwnPropertyDescriptor(
@@ -179,7 +186,7 @@ describe("ShowcaseLeadForm", () => {
     await act(async () => {
       type("name", "Ayşe Yılmaz");
       type("phone", "12");
-      field<HTMLButtonElement>("kvkk_consent").click();
+      kvkk().click();
     });
     expect(submit.disabled).toBe(false);
 
@@ -193,7 +200,7 @@ describe("ShowcaseLeadForm", () => {
     await act(async () => {
       type("name", "Ayşe Yılmaz");
       type("phone", "0532 123 45 67");
-      field<HTMLButtonElement>("kvkk_consent").click();
+      kvkk().click();
     });
     await act(async () => {
       (

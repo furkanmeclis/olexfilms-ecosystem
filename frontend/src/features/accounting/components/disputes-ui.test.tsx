@@ -104,6 +104,7 @@ vi.mock(
   },
 );
 
+import { installRadixPolyfills } from "@/test/form-controls";
 import { CariDetailPage } from "./cari-detail-page";
 import { DisputeForm } from "./dispute-dialog";
 import { ResolveForm } from "./dispute-detail-page";
@@ -122,6 +123,7 @@ import type {
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;

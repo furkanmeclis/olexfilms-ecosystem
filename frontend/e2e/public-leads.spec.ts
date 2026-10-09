@@ -1,6 +1,7 @@
 import { expect, test, type Route } from "@playwright/test";
 
 import { E2E_QUOTE } from "./support/constants";
+import { chooseOption } from "./support/pickers";
 
 /**
  * TEC-320: the public quote page `/teklif/{token}` (server rendered, Go is
@@ -93,11 +94,11 @@ test("dealer application: country loads provinces, KVKK gates submit, success", 
   const form = page.locator('[data-slot="dealer-application-form"]');
   await expect(form).toBeVisible();
 
-  const province = form.locator('select[name="province_id"]');
+  const province = form.getByTestId("application-province");
   await expect(province).toBeDisabled();
-  await form.locator('select[name="country_id"]').selectOption("1");
+  await chooseOption(form.getByTestId("application-country"), "1");
   await expect(province).toBeEnabled();
-  await province.selectOption("34");
+  await chooseOption(province, "34");
 
   await form.locator('input[name="company_name"]').fill("Kadıköy Kaplama");
   await form.locator('input[name="contact_name"]').fill("Ayşe Yılmaz");

@@ -292,23 +292,25 @@ export function VehicleForm({
             {t("customers.vehicle.plate_country")}
             <span className="text-destructive ms-1">*</span>
           </Label>
-          <select
+          <AsyncCombobox
             id="vehicle-plate-country"
-            name="plate_country"
-            className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+            data-testid="vehicle-plate-country"
             value={country}
             aria-invalid={errors.plate_country ? true : undefined}
-            onChange={(e) => patch({ plate_country: e.target.value })}
-          >
-            {country && !format ? (
-              <option value={country}>{country}</option>
-            ) : null}
-            {(items ?? []).map((f) => (
-              <option key={f.country_iso2} value={f.country_iso2}>
-                {f.country_iso2} · {f.country_name_en}
-              </option>
-            ))}
-          </select>
+            options={[
+              ...(country && !format
+                ? [{ value: country, label: country }]
+                : []),
+              ...(items ?? []).map((f) => ({
+                value: f.country_iso2,
+                label: `${f.country_iso2} · ${f.country_name_en}`,
+              })),
+            ]}
+            onValueChange={(next) => {
+              // The plate country is required; re-picking it keeps it.
+              if (next) patch({ plate_country: next });
+            }}
+          />
           {err("plate_country")}
         </div>
         <div className="space-y-1.5">

@@ -130,6 +130,11 @@ vi.mock("@/components/entity", async (orig) => ({
     ),
 }));
 
+import {
+  chooseValue,
+  installRadixPolyfills,
+  optionLabels,
+} from "@/test/form-controls";
 import { CariPage } from "./cari-page";
 import { EntriesPage } from "./entries-page";
 import { ManualEntryForm } from "./manual-entry-dialog";
@@ -143,6 +148,7 @@ import type {
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -287,15 +293,7 @@ describe("Dealer accounting write screens (TEC-347)", () => {
 });
 
 async function choose(el: Element | null, value: string) {
-  if (!(el instanceof HTMLSelectElement)) throw new Error("select not found");
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value",
-  )?.set;
-  await act(async () => {
-    setter?.call(el, value);
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  await chooseValue(el, value);
 }
 
 async function type(el: Element | null, value: string) {
@@ -339,9 +337,11 @@ describe("ManualEntryForm", () => {
       }),
     );
     // Income lists manual categories only and shows the account.
-    const category = container.querySelector("#manual-entry-category");
-    expect(category?.textContent).toContain("Misc");
-    expect(category?.textContent).not.toContain("Sale");
+    const category = await optionLabels(
+      container.querySelector("#manual-entry-category"),
+    );
+    expect(category.join(" ")).toContain("Misc");
+    expect(category.join(" ")).not.toContain("Sale");
     expect(container.querySelector("#manual-entry-account")).not.toBeNull();
 
     await choose(container.querySelector("#manual-entry-direction"), "charge");

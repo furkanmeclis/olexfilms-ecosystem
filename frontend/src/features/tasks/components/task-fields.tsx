@@ -2,8 +2,17 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { AsyncCombobox } from "@/components/ui/async-combobox";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DESCRIPTION_MAX,
@@ -16,9 +25,6 @@ import {
   tasksService,
 } from "@/features/tasks/services/tasks.service";
 import { useLocale } from "@/providers/locale-provider";
-
-export const selectClass =
-  "border-input bg-background h-9 w-full rounded-md border px-2 text-sm";
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
@@ -81,22 +87,20 @@ export function TaskFields({
           {t("tasks.form.subject")}
           <span className="text-destructive ms-1">*</span>
         </Label>
-        <select
+        <AsyncCombobox
           id="task-subject"
           data-testid="task-subject"
-          className={selectClass}
           value={values.subjectUuid}
           disabled={disabled}
+          clearable
+          placeholder={t("tasks.form.subject_placeholder")}
           aria-invalid={errors.subject_organization_uuid ? true : undefined}
-          onChange={(e) => onChange({ subjectUuid: e.target.value })}
-        >
-          <option value="">{t("tasks.form.subject_placeholder")}</option>
-          {(subjects.data ?? []).map((o) => (
-            <option key={o.uuid} value={o.uuid}>
-              {o.name} · {t(`tasks.org_type.${o.type}`)}
-            </option>
-          ))}
-        </select>
+          onValueChange={(value) => onChange({ subjectUuid: value })}
+          options={(subjects.data ?? []).map((o) => ({
+            value: o.uuid,
+            label: `${o.name} · ${t(`tasks.org_type.${o.type}`)}`,
+          }))}
+        />
         <FieldError
           id="task-subject-error"
           message={errors.subject_organization_uuid}
@@ -104,22 +108,20 @@ export function TaskFields({
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="task-assignee">{t("tasks.form.assignee")}</Label>
-        <select
+        <AsyncCombobox
           id="task-assignee"
           data-testid="task-assignee"
-          className={selectClass}
           value={values.assigneeUuid}
           disabled={disabled}
+          clearable
+          placeholder={t("tasks.form.unassigned")}
           aria-invalid={errors.assignee_user_uuid ? true : undefined}
-          onChange={(e) => onChange({ assigneeUuid: e.target.value })}
-        >
-          <option value="">{t("tasks.form.unassigned")}</option>
-          {(assignees.data ?? []).map((u) => (
-            <option key={u.uuid} value={u.uuid}>
-              {u.name}
-            </option>
-          ))}
-        </select>
+          onValueChange={(value) => onChange({ assigneeUuid: value })}
+          options={(assignees.data ?? []).map((u) => ({
+            value: u.uuid,
+            label: u.name,
+          }))}
+        />
         <FieldError
           id="task-assignee-error"
           message={errors.assignee_user_uuid}
@@ -127,36 +129,34 @@ export function TaskFields({
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="task-priority">{t("tasks.form.priority")}</Label>
-        <select
-          id="task-priority"
-          data-testid="task-priority"
-          className={selectClass}
+        <Select
           value={values.priority}
           disabled={disabled}
-          onChange={(e) =>
-            onChange({
-              priority: e.target.value as TaskFormValues["priority"],
-            })
+          onValueChange={(value) =>
+            onChange({ priority: value as TaskFormValues["priority"] })
           }
         >
-          {TASK_PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {t(`tasks.priority.${p}`)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="task-priority" data-testid="task-priority">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TASK_PRIORITIES.map((p) => (
+              <SelectItem key={p} value={p}>
+                {t(`tasks.priority.${p}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="task-due">{t("tasks.form.due_at")}</Label>
-        <Input
+        <DateTimePicker
           id="task-due"
           data-testid="task-due"
-          type="datetime-local"
-          dir="ltr"
           value={values.dueLocal}
           disabled={disabled}
           aria-invalid={errors.due_at ? true : undefined}
-          onChange={(e) => onChange({ dueLocal: e.target.value })}
+          onChange={(value) => onChange({ dueLocal: value })}
         />
         <p className="text-muted-foreground text-xs">
           {t("tasks.form.due_hint")}

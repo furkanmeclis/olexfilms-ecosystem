@@ -3,6 +3,13 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Permission } from "@/components/permissions/permission-groups";
 import { broadestScope } from "@/config/permissions";
 import { useLocale } from "@/providers/locale-provider";
@@ -110,21 +117,28 @@ export function PermissionGroupPanel({
                   </p>
                 ) : null}
                 {checked && onScopeChange && allowed.length > 1 ? (
-                  <select
-                    aria-label={t("permissions.scope_label")}
-                    className="border-input bg-background mt-1 h-7 rounded-md border px-2 text-xs"
+                  <Select
                     value={scope}
                     disabled={disabled}
-                    onChange={(e) =>
-                      onScopeChange(permission.slug, e.target.value)
+                    onValueChange={(value) =>
+                      onScopeChange(permission.slug, value)
                     }
                   >
-                    {allowed.map((s) => (
-                      <option key={s} value={s}>
-                        {t(`permissions.scopes.${s}`)}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      size="sm"
+                      aria-label={t("permissions.scope_label")}
+                      className="mt-1 h-7 w-auto text-xs data-[size=sm]:h-7"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allowed.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {t(`permissions.scopes.${s}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 ) : checked && allowed.length === 1 ? (
                   <p className="text-muted-foreground text-[11px]">
                     {t(`permissions.scopes.${allowed[0]}`)}
