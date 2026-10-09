@@ -102,6 +102,8 @@
   "params.ai_mode.auto": "Автоматично",
   "params.ai_mode.paused": "На пауза",
   "params.ai_mode.off": "Изключен",
+  "actions.einvoices.create_draft": "Създай чернова",
+  "confirm.einvoices.create_draft": "Да се създадат ли чернови на електронни фактури за избраните записи? Записите на купувачи с непълен профил се пропускат.",
   "actions.performance_bonuses.approve": "Одобряване на премии",
   "confirm.performance_bonuses.approve": "Да се одобрят ли избраните премии с изчислените суми? Всяка става плащане към служител."
 }

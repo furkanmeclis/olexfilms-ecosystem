@@ -102,6 +102,8 @@
   "params.ai_mode.auto": "Automatique",
   "params.ai_mode.paused": "En pause",
   "params.ai_mode.off": "Désactivé",
+  "actions.einvoices.create_draft": "Créer un brouillon",
+  "confirm.einvoices.create_draft": "Créer des brouillons de factures électroniques pour les enregistrements sélectionnés ? Les enregistrements des acheteurs au profil incomplet sont ignorés.",
   "actions.performance_bonuses.approve": "Approuver les primes",
   "confirm.performance_bonuses.approve": "Approuver les primes sélectionnées avec leurs montants calculés ? Chacune devient un paiement du personnel."
 }

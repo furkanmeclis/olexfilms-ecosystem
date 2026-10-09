@@ -29493,6 +29493,40 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/einvoices/billable/bulk:
+    post:
+      tags: [EInvoice]
+      operationId: bulkEinvoiceBillable
+      summary: Draft e-invoices for many billable sources
+      description: >-
+        TEC-504. Brand center with einvoice.manage (e_invoice add-on). Action
+        `create_draft`: every source runs the POST /v1/einvoices rules; a
+        source that cannot be drafted fails alone with the API error code
+        (EINVOICE_BUYER_PROFILE_INCOMPLETE, EINVOICE_SOURCE_ALREADY_INVOICED,
+        ...). Target scope `ids` (source uuids) or `query` with the GET
+        /v1/einvoices/billable filters ("select all matching", at most
+        10000). Not reversible: a draft is released by voiding it.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkExecuteRequest" }
+      responses:
+        "200":
+          description: Sync bulk result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkSyncResult" }
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/einvoices:
     get:
       tags: [EInvoice]
@@ -29651,6 +29685,27 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeEinvoiceSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/einvoices/settings/xslt/preview:
+    get:
+      tags: [EInvoice]
+      operationId: previewEinvoiceXSLT
+      summary: Sample invoice rendered with the current stylesheet
+      description: >-
+        TEC-504. einvoice.read. A sample invoice (the center as seller, a
+        sample buyer, one line) rendered with the uploaded or the default GİB
+        stylesheet, with a PREVIEW watermark. Nothing is stored. 422
+        EINVOICE_SETTINGS_REQUIRED before the settings are saved.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: HTML
+          content:
+            text/html:
+              schema: { type: string }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/UnprocessableEntity" }
@@ -29846,6 +29901,25 @@ paths:
         "409": { $ref: "#/components/responses/Conflict" }
 
   /v1/platform/organizations/{uuid}/invoice-profile:
+    get:
+      tags: [EInvoice]
+      operationId: getOrganizationInvoiceProfile
+      summary: Invoice profile of a distributor or dealer
+      description: >-
+        TEC-504. Brand center with einvoice.read (e_invoice add-on);
+        missing_fields lists what an invoice still needs.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Invoice profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeInvoiceProfile" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     put:
       tags: [EInvoice]
       operationId: putOrganizationInvoiceProfile
@@ -46268,7 +46342,7 @@ components:
         reason: { type: string, minLength: 1, maxLength: 1000 }
     EinvoiceSettings:
       type: object
-      required: [configured, vkn, tax_office, legal_name, address, city, district, country, iban, email, phone, website, trade_registry_no, mersis_no, default_note, earchive_series, efatura_series, pdf_enabled, custom_xslt, xslt_sha1, updated_at]
+      required: [configured, vkn, tax_office, legal_name, address, city, district, country, iban, email, phone, website, trade_registry_no, mersis_no, default_note, earchive_series, efatura_series, pdf_enabled, custom_xslt, xslt_sha1, updated_at, counters]
       properties:
         configured: { type: boolean }
         vkn: { type: string }
@@ -46290,6 +46364,18 @@ components:
         pdf_enabled: { type: boolean }
         custom_xslt: { type: boolean }
         xslt_sha1: { type: [string, "null"] }
+        updated_at: { type: [string, "null"], format: date-time }
+        counters:
+          type: array
+          description: TEC-504. Read-only last number per year × series (the reserved TMP draft series is left out), newest year first.
+          items: { $ref: "#/components/schemas/EinvoiceCounter" }
+    EinvoiceCounter:
+      type: object
+      required: [series, year, last_no, updated_at]
+      properties:
+        series: { type: string, example: EAR }
+        year: { type: integer, example: 2026 }
+        last_no: { type: integer, format: int64, example: 42 }
         updated_at: { type: [string, "null"], format: date-time }
     EnvelopeEinvoiceSettings:
       type: object

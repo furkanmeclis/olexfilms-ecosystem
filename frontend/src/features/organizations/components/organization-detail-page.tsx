@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { apiConfig } from "@/config/api";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { InvoiceProfileCard } from "@/features/einvoice/components/invoice-profile-card";
 import { ORGANIZATION_STATUS_TONE } from "@/features/organizations/constants";
 import { OrganizationAddMemberDialog } from "@/features/organizations/components/organization-add-member-dialog";
 import {
@@ -264,6 +265,11 @@ export function OrganizationDetailPage({ uuid }: OrganizationDetailPageProps) {
             <EntitySectionCard title={t("organizations.detail.children")}>
               <OrganizationChildrenTable uuid={uuid} />
             </EntitySectionCard>
+          ) : null}
+
+          {/* TEC-504: invoice profile of a distributor / dealer. */}
+          {organization.type !== "center" ? (
+            <InvoiceProfileCard orgUuid={uuid} />
           ) : null}
         </div>
       ) : null}

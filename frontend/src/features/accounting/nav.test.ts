@@ -33,6 +33,8 @@ describe("tenant nav: accounting (TEC-176, TEC-195)", () => {
       routes.tenant.accounting.cari("acme"),
       routes.tenant.accounting.entries("acme"),
       routes.tenant.accounting.disputes("acme"),
+      // TEC-504: e-invoices (own gates: e_invoice module, center).
+      routes.tenant.einvoices.list("acme"),
     ]);
   });
 

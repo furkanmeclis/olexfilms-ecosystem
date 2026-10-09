@@ -223,6 +223,10 @@ export const Permission = {
   /** TEC-500: photo standard angles (center) and overrides (distributor). */
   PhotoStandardManage: "photo_standard.manage",
   PhotoStandardOverride: "photo_standard.override",
+  /** TEC-504: e-invoice screens of the brand center (e_invoice module). */
+  EinvoiceRead: "einvoice.read",
+  EinvoiceManage: "einvoice.manage",
+  EinvoiceSettings: "einvoice.settings",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -630,5 +634,10 @@ export const permissions = {
   photoStandard: {
     manage: Permission.PhotoStandardManage,
     override: Permission.PhotoStandardOverride,
+  },
+  einvoice: {
+    read: Permission.EinvoiceRead,
+    manage: Permission.EinvoiceManage,
+    settings: Permission.EinvoiceSettings,
   },
 } as const;

@@ -131,6 +131,13 @@ export const routes = {
       edit: (slug: string, uuid: string) => `/t/${slug}/orders/${uuid}/edit`,
     },
     /** TEC-191 warranty list and detail. */
+    /** TEC-504: e-invoices of the brand center (Muhasebe > e-Fatura). */
+    einvoices: {
+      list: (slug: string) => `/t/${slug}/einvoices`,
+      billable: (slug: string) => `/t/${slug}/einvoices/billable`,
+      settings: (slug: string) => `/t/${slug}/einvoices/settings`,
+      detail: (slug: string, uuid: string) => `/t/${slug}/einvoices/${uuid}`,
+    },
     warranties: {
       list: (slug: string) => `/t/${slug}/warranties`,
       detail: (slug: string, uuid: string) => `/t/${slug}/warranties/${uuid}`,

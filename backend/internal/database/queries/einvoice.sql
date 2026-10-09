@@ -60,6 +60,13 @@ WHERE organization_id = sqlc.arg(organization_id)
   AND series = sqlc.arg(series)
   AND year = sqlc.arg(year);
 
+-- TEC-504: read-only counter state of the settings screen (year × series).
+-- name: ListEinvoiceCounters :many
+SELECT series, year, last_no, updated_at FROM einvoice_counters
+WHERE organization_id = sqlc.arg(organization_id)
+  AND brand_id = sqlc.arg(brand_id)
+ORDER BY year DESC, series;
+
 -- Archive -------------------------------------------------------------------
 
 -- name: CreateEinvoice :one

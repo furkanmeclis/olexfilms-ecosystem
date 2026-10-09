@@ -191,6 +191,18 @@ func TestIntegrationEinvoices(t *testing.T) {
 	if len(prof.Missing) != 0 {
 		t.Fatalf("profile missing = %v", prof.Missing)
 	}
+	// TEC-504: the organization card reads the profile; the settings screen
+	// renders a sample with the current stylesheet.
+	read := decodeData[struct {
+		VKN *string `json:"invoice_vkn"`
+	}](t, mustDo(t, it, "GET", "/v1/platform/organizations/"+dist.Uuid.String()+"/invoice-profile", accTok, nil, http.StatusOK))
+	if read.VKN == nil || *read.VKN != "1234567890" {
+		t.Fatalf("profile read = %+v", read)
+	}
+	if rec := it.raw("GET", "/v1/einvoices/settings/xslt/preview", accTok, "", nil, nil); rec.Code != http.StatusOK ||
+		!strings.Contains(rec.Body.String(), `data-watermark="PREVIEW"`) {
+		t.Fatalf("sample preview = %d", rec.Code)
+	}
 
 	d1 := decodeData[einvoiceResp](t, mustDo(t, it, "POST", "/v1/einvoices", accTok, map[string]any{"source_type": "order", "source_uuid": o1}, http.StatusCreated))
 	d2 := decodeData[einvoiceResp](t, mustDo(t, it, "POST", "/v1/einvoices", accTok, map[string]any{"source_type": "order", "source_uuid": o2}, http.StatusCreated))
@@ -276,5 +288,30 @@ func TestIntegrationEinvoices(t *testing.T) {
 	// Step-up is per user: the super admin's archive needs its own.
 	if code, env := it.do("POST", "/v1/einvoices/"+d2.UUID+"/archive", hostOlex, adminTok, nil); code != http.StatusForbidden || errCode(env) != "STEP_UP_REQUIRED" {
 		t.Fatalf("admin archive without step-up = %d %s", code, errCode(env))
+	}
+
+	// TEC-504: bulk drafts of the billable sources. The voided o1 drafts
+	// again; o3's buyer has no profile and fails alone.
+	if code, _ := it.do("POST", "/v1/einvoices/billable/bulk", hostOlex, distTok, map[string]any{
+		"action": "create_draft", "target": map[string]any{"scope": "ids", "ids": []string{o1}},
+	}); code != http.StatusForbidden {
+		t.Fatalf("distributor bulk = %d", code)
+	}
+	run := it.bulkRun("/v1/einvoices/billable/bulk", accTok, map[string]any{
+		"action": "create_draft", "target": map[string]any{"scope": "ids", "ids": []string{o1, o3}},
+	})
+	if run.Summary.Total != 2 || run.Summary.Succeeded != 1 || run.Summary.Failed != 1 {
+		t.Fatalf("bulk drafts = %+v", run.Summary)
+	}
+	if left := page("/v1/einvoices/billable?buyer=" + dist.Uuid.String()); left.Total != 0 {
+		t.Fatalf("billable after bulk = %+v", left)
+	}
+	// Query scope: every billable source matching the list filters.
+	o5 := order(dist, 1, "20.00")
+	run = it.bulkRun("/v1/einvoices/billable/bulk", accTok, map[string]any{
+		"action": "create_draft", "target": map[string]any{"scope": "query", "query": map[string]string{"buyer": dist.Uuid.String()}},
+	})
+	if run.Summary.Total != 1 || run.Summary.Succeeded != 1 {
+		t.Fatalf("bulk query drafts = %+v (o5 %s)", run.Summary, o5)
 	}
 }
