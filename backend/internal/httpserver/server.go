@@ -146,6 +146,7 @@ import (
 	searchgroups "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/groups"
 	searchhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/handler"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
+	searchregistry "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/registry"
 	searchusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/usecase"
 	servicecatalogmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog"
 	servicecataloghandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog/handler"
@@ -214,7 +215,6 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/places"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
-	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/stepup"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -349,21 +349,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		uc.SetRevocations(authrevoke.New(deps.Redis, cfg.App.Env, cfg.JWT.AccessTTL))
 	}
 
-	searchReg := searchengine.NewRegistry(
-		searchadapters.NewUsers(deps.Queries),
-		searchadapters.NewRoles(deps.Queries),
-		catalogusecase.NewSearchAdapter(deps.Queries),
-		customersusecase.NewSearchAdapter(deps.Queries), // TEC-164
-		// TEC-209: services, warranties, vehicles (plate / VIN).
-		servicesusecase.NewSearchAdapter(deps.Queries),
-		warrantyusecase.NewSearchAdapter(deps.Queries),
-		customersusecase.NewVehicleSearchAdapter(deps.Queries),
-		// TEC-210: organizations (dealer code), orders, stock units (barcode).
-		orgusecase.NewSearchAdapter(deps.Queries),
-		ordersusecase.NewSearchAdapter(deps.Queries),
-		stockusecase.NewSearchAdapter(deps.Queries),
-		leadsusecase.NewSearchAdapter(deps.Queries),
-	)
+	searchReg := searchregistry.New(deps.Queries)
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, deps.Queue, log)
 	// TEC-209: module lists answer q from the index when it is up.

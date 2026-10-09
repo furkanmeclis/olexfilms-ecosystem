@@ -51,6 +51,7 @@ import (
 	pricingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing"
 	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
+	searchregistry "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/registry"
 	servicecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog/usecase"
 	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
@@ -86,7 +87,6 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/places"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ratelimit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
-	searchadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sysconfig"
@@ -203,20 +203,7 @@ func main() {
 	defer outboxStop()
 
 	activityRec := activity.NewRecorder(queries, log)
-	searchReg := searchengine.NewRegistry(
-		searchadapters.NewUsers(queries),
-		searchadapters.NewRoles(queries),
-		catalogusecase.NewSearchAdapter(queries),
-		customersusecase.NewSearchAdapter(queries), // TEC-164
-		// TEC-209: services, warranties, vehicles (plate / VIN).
-		servicesusecase.NewSearchAdapter(queries),
-		warrantyusecase.NewSearchAdapter(queries),
-		customersusecase.NewVehicleSearchAdapter(queries),
-		// TEC-210: organizations (dealer code), orders, stock units (barcode).
-		orgusecase.NewSearchAdapter(queries),
-		ordersusecase.NewSearchAdapter(queries),
-		stockusecase.NewSearchAdapter(queries),
-	)
+	searchReg := searchregistry.New(queries) // TEC-524: same specs as the API server
 	searchClient := searchengine.NewClient(cfg.Search, log)
 	searchIndexer := searchengine.NewIndexer(searchClient, searchReg, nil, log)
 	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
