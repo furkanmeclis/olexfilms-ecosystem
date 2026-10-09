@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -42,7 +41,6 @@ import (
 	measurementsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements"
 	measurementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/usecase"
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
 	oauthmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth"
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
@@ -140,10 +138,16 @@ func main() {
 	}
 
 	queries := database.NewQueries(pool)
-	notifSvc := notifmodule.NewService(notifmodule.Deps{
+	secretBox, err := crypto.NewSecretBox(cfg.Encryption.Key)
+	if err != nil {
+		log.Error("encryption_init_failed", "error", err)
+		os.Exit(1)
+	}
+	// TEC-143: same factory as the in-process worker and the API server.
+	notifSvc, waSvc := notifmodule.NewWithWhatsApp(notifmodule.Deps{
 		Config: cfg, Queries: queries, Realtime: publisher,
 		Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
-	})
+	}, pool, secretBox)
 	if err := notifusecase.SyncCatalog(ctx, queries); err != nil {
 		log.Warn("notification_catalog_sync_failed", "error", err)
 	}
@@ -355,15 +359,8 @@ func main() {
 		log.Error("worker_queues_invalid", "error", err)
 		os.Exit(1)
 	}
-	secretBox, err := crypto.NewSecretBox(cfg.Encryption.Key)
-	if err != nil {
-		log.Error("encryption_init_failed", "error", err)
-		os.Exit(1)
-	}
 	glorianPusher := glorian.NewPusher(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log)
 	glorianOrders := glorian.NewOrderOutbounder(queries, secretBox, glorian.HTTPClientFactory(glorian.OptionsFromConfig(cfg.Glorian)), log)
-	waSvc := whatsappmodule.NewService(cfg.Wuzapi, pool, queries, secretBox, notifSvc, log)
-	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
 	featureSvc := features.New(pool, queries, nil, log)
 	// TEC-508: decided module requests (auto-approved after a bundle opens a
 	// module) notify the requester; expired bundles close their modules.
@@ -546,38 +543,13 @@ func main() {
 	go runHealthFile(ctx, rdb, healthPath, 15*time.Second, log)
 
 	// Periodic tasks: only workers with SCHEDULER_ENABLED (default true) run
-	// for the scheduler, and a Redis lease keeps a single leader among them.
+	// for the scheduler, and a Redis lease keeps a single leader among them
+	// (shared with the in-process worker, TEC-143).
 	schedulerDone := make(chan struct{})
-	if os.Getenv("SCHEDULER_ENABLED") != "false" {
-		hostname, _ := os.Hostname()
-		lock := &leaderLock{
-			rdb: rdb,
-			key: schedulerLockKey,
-			id:  fmt.Sprintf("%s:%d", hostname, os.Getpid()),
-			ttl: 30 * time.Second,
-		}
+	if queue.SchedulerEnabled() {
 		go func() {
 			defer close(schedulerDone)
-			runAsLeader(ctx, lock, 10*time.Second, log, func() func() {
-				scheduler, err := queue.StartScheduler(cfg, log)
-				if err == nil {
-					err = queue.RegisterWhatsAppPoll(scheduler)
-				}
-				if err == nil {
-					err = queue.RegisterNotificationPurge(scheduler)
-				}
-				if err == nil {
-					err = scheduler.Start()
-				}
-				if err != nil {
-					log.Error("scheduler_failed", "error", err)
-					errtrack.CaptureTask(ctx, errtrack.TaskInfo{
-						Type: "scheduler", Queue: queue.QueueMaintenance, Scheduler: true,
-					}, err)
-					return func() {}
-				}
-				return scheduler.Shutdown
-			})
+			queue.RunScheduler(ctx, cfg, rdb, log)
 		}()
 	} else {
 		close(schedulerDone)
@@ -589,7 +561,7 @@ func main() {
 		"env", cfg.App.Env,
 		"concurrency", cfg.Queue.Concurrency,
 		"queues", queues,
-		"scheduler", os.Getenv("SCHEDULER_ENABLED") != "false",
+		"scheduler", queue.SchedulerEnabled(),
 	)
 
 	if n, err := notifSvc.ReclaimStuck(ctx, notifusecase.DefaultStuckProcessingMinutes); err != nil {

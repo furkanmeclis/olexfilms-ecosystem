@@ -1,18 +1,74 @@
-package main
+package queue
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
 // schedulerLockKey guards the periodic-task scheduler: with more than one
-// worker running SCHEDULER_ENABLED=true (a scaled worker-core, a deploy
-// overlap), only the lock holder registers cron tasks, so nothing is
-// enqueued twice.
+// process running it (a scaled worker-core, a deploy overlap, an API with
+// QUEUE_WORKER_INPROCESS next to a worker), only the lock holder registers
+// cron tasks, so nothing is enqueued twice.
 const schedulerLockKey = "worker:scheduler:leader"
+
+const (
+	schedulerLockTTL      = 30 * time.Second
+	schedulerPollInterval = 10 * time.Second
+)
+
+// SchedulerEnabled reports SCHEDULER_ENABLED (default true): processes with
+// "false" never run for the scheduler.
+func SchedulerEnabled() bool {
+	return os.Getenv("SCHEDULER_ENABLED") != "false"
+}
+
+// RunScheduler runs the periodic scheduler (every entry of Schedules) under
+// the Redis leader lock until ctx ends, then stops it and releases the lock.
+// cmd/worker and the in-process worker (QUEUE_WORKER_INPROCESS) both call
+// it, so they share one lock and one task list (TEC-143).
+func RunScheduler(ctx context.Context, cfg config.Config, rdb redis.UniversalClient, log *slog.Logger) {
+	runScheduler(ctx, cfg, newSchedulerLock(rdb), schedulerPollInterval, 0, log)
+}
+
+func newSchedulerLock(rdb redis.UniversalClient) *leaderLock {
+	hostname, _ := os.Hostname()
+	return &leaderLock{
+		rdb: rdb,
+		key: schedulerLockKey,
+		// The suffix keeps two schedulers of one process (API + in-process
+		// worker in tests) distinct holders.
+		id:  fmt.Sprintf("%s:%d:%s", hostname, os.Getpid(), uuid.NewString()[:8]),
+		ttl: schedulerLockTTL,
+	}
+}
+
+func runScheduler(ctx context.Context, cfg config.Config, lock *leaderLock, interval, heartbeat time.Duration, log *slog.Logger) {
+	if log == nil {
+		log = slog.Default()
+	}
+	runAsLeader(ctx, lock, interval, log, func() func() {
+		scheduler, err := newScheduler(cfg, log, heartbeat)
+		if err == nil {
+			err = scheduler.Start()
+		}
+		if err != nil {
+			log.Error("scheduler_failed", "error", err)
+			errtrack.CaptureTask(ctx, errtrack.TaskInfo{
+				Type: "scheduler", Queue: QueueMaintenance, Scheduler: true,
+			}, err)
+			return func() {}
+		}
+		return scheduler.Shutdown
+	})
+}
 
 // Compare-and-act scripts: only the holder may extend or release the lock.
 var (

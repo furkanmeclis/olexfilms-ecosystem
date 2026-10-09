@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -40,6 +41,27 @@ func (s *Service) RegisterProvider(p providers.Provider) *Service {
 		s.providers[p.Channel()] = p
 	}
 	return s
+}
+
+// Provider returns the driver registered for a channel (nil when none).
+func (s *Service) Provider(channel string) providers.Provider {
+	if s == nil {
+		return nil
+	}
+	return s.providers[channel]
+}
+
+// Channels lists the channels with a registered driver, sorted.
+func (s *Service) Channels() []string {
+	if s == nil {
+		return nil
+	}
+	out := make([]string, 0, len(s.providers))
+	for ch := range s.providers {
+		out = append(out, ch)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // VAPIDPublicKey returns the configured public key (may be empty).

@@ -2,7 +2,6 @@ package queue
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hibiken/asynq"
 )
@@ -35,12 +34,4 @@ func (w *Worker) handleWhatsAppPoll(ctx context.Context, _ *asynq.Task) error {
 		return nil
 	}
 	return w.pollWhatsApp(ctx)
-}
-
-// RegisterWhatsAppPoll adds the 1-minute poll to a scheduler.
-func RegisterWhatsAppPoll(s *asynq.Scheduler) error {
-	if _, err := s.Register(whatsAppPollCron, NewWhatsAppStatusPollTask(), asynq.Queue(QueueMaintenance)); err != nil {
-		return fmt.Errorf("queue: register whatsapp poll: %w", err)
-	}
-	return nil
 }
