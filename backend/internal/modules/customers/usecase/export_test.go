@@ -85,3 +85,31 @@ func TestDataExportMasksAnonymizedProfileInSections(t *testing.T) {
 		t.Fatal("vehicle plate must stay after anonymization")
 	}
 }
+
+// TEC-521: the generated-at row is printed in the requester's zone (export
+// job), else the customer's, else Europe/Istanbul; never UTC.
+func TestDataExportHTMLIssuedAtTimezone(t *testing.T) {
+	for _, tc := range []struct{ name, job, customer, want string }{
+		{"default", "", "", "2026-10-09 14:32 (Europe/Istanbul)"},
+		{"customer", "", "Asia/Baku", "2026-10-09 15:32 (Asia/Baku)"},
+		{"requester", "America/New_York", "Asia/Baku", "2026-10-09 07:32 (America/New_York)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			doc := sampleExport()
+			doc.ExportedAt = time.Date(2026, 10, 9, 11, 32, 0, 0, time.UTC)
+			if tc.customer != "" {
+				doc.Profile.Timezone = &tc.customer
+			}
+			a := NewDataExportAdapter(nil)
+			ds := DataExportDataset(a.Resource(), doc, i18n.LocaleTR)
+			ds.Timezone = tc.job
+			h, err := a.DocumentHTML(ds, "tr", nil, "Veri dökümü")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(h, tc.want) || strings.Contains(h, " UTC") {
+				t.Fatalf("generated-at is not %q", tc.want)
+			}
+		})
+	}
+}

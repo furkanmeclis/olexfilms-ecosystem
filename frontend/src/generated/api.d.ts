@@ -31475,7 +31475,7 @@ export interface operations {
             query?: {
                 /** @description Document language; else Accept-Language, else tr. */
                 lang?: string;
-                /** @description IANA time zone of the printed dates; invalid or missing is UTC. */
+                /** @description IANA time zone of the printed dates and the issued-at time; invalid or missing is Europe/Istanbul. */
                 tz?: string;
             };
             header?: never;

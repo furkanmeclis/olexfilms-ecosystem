@@ -62,6 +62,10 @@ type PDFDoc struct {
 	Items        []PDFItem
 	Warranties   []PDFWarranty
 	GeneratedAt  time.Time
+	// Timezone is the zone GeneratedAt is printed in (TEC-521): the
+	// requester's zone from the export job, else the performing
+	// organization's, else Europe/Istanbul.
+	Timezone string
 	// Letterhead is the performing organization's letterhead.
 	Letterhead ioengine.Letterhead
 }
@@ -198,6 +202,7 @@ func (p *PDFService) doc(ctx context.Context, svc db.Service, loc i18n.Locale) (
 		Package:     deref(v.Package),
 		Notes:       deref(v.Notes),
 		GeneratedAt: p.now(),
+		Timezone:    org.Timezone,
 	}
 	if v.CompletedAt != nil {
 		d.CompletedAt = date(*v.CompletedAt)
@@ -372,6 +377,9 @@ func (a *PDFAdapter) DocumentHTML(ds ioengine.Dataset, locale string, _ *ioengin
 	if !ok {
 		return "", errors.New("services pdf: dataset carries no service")
 	}
+	if ds.Timezone != "" {
+		d.Timezone = ds.Timezone
+	}
 	return PDFHTML(d, i18n.Normalize(locale), title)
 }
 
@@ -485,7 +493,7 @@ func PDFHTML(d PDFDoc, loc i18n.Locale, title string) (string, error) {
 		b.WriteString(`<p class="muted">` + esc(t("warranty.certificate.verify_hint")) + `</p>`)
 	}
 	b.WriteString(`<p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
-		esc(d.GeneratedAt.UTC().Format("2006-01-02 15:04 UTC")) + `</p>`)
+		esc(pdfrender.IssuedAt(d.GeneratedAt, pdfrender.Zone(d.Timezone))) + `</p>`)
 	b.WriteString(ioengine.LetterheadFooterHTML(&lh))
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: lh.PrimaryColor}.HTML(), nil
 }

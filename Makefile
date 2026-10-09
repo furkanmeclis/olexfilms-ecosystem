@@ -179,6 +179,7 @@ create-super-admin:
 seed-demo:
 	@$(load_env) cd backend && go run ./cmd/seed-demo
 
+# TEC-524: rebuild every search index (spec list: backend/internal/modules/search/registry).
 search-reindex:
 	@$(load_env) $(MAKE) -C backend search-reindex
 

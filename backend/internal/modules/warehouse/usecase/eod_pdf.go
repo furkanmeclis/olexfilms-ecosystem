@@ -38,7 +38,11 @@ type EODPDFDoc struct {
 	Report       EODReport
 	Organization string
 	GeneratedAt  time.Time
-	Letterhead   ioengine.Letterhead
+	// Timezone is the zone the report's generated-at time is printed in
+	// (TEC-521): the requester's zone from the export job, else the
+	// report's, else Europe/Istanbul.
+	Timezone   string
+	Letterhead ioengine.Letterhead
 }
 
 // EODPDF builds report PDFs.
@@ -92,7 +96,7 @@ func (p *EODPDF) Build(ctx context.Context, q ioengine.ExportQuery) (EODPDFDoc, 
 	if err != nil {
 		return EODPDFDoc{}, fmt.Errorf("warehouse eod pdf: settings: %w", err)
 	}
-	d := EODPDFDoc{Report: rep, Organization: org.Name, GeneratedAt: p.now(),
+	d := EODPDFDoc{Report: rep, Organization: org.Name, GeneratedAt: p.now(), Timezone: rep.Timezone,
 		Letterhead: ioengine.LetterheadFromOrganization(org, settings)}
 	if p.store != nil {
 		if lh, err := ioengine.LoadOrganizationLetterhead(ctx, p.store, org, settings); err != nil {
@@ -195,6 +199,9 @@ func (a *EODPDFAdapter) DocumentHTML(ds ioengine.Dataset, locale string, _ *ioen
 	if !ok {
 		return "", errors.New("warehouse eod pdf: dataset carries no report")
 	}
+	if ds.Timezone != "" {
+		d.Timezone = ds.Timezone
+	}
 	return EODPDFHTML(d, i18n.Normalize(locale), title), nil
 }
 
@@ -281,7 +288,7 @@ func EODPDFHTML(d EODPDFDoc, loc i18n.Locale, title string) string {
 		b.WriteString(`</tbody></table>`)
 	}
 	b.WriteString(`<p class="muted">` + esc(t("warehouse.eod.generated_at")) + `: ` +
-		esc(r.GeneratedAt.UTC().Format("2006-01-02 15:04 UTC")) + `</p>`)
+		esc(pdfrender.IssuedAt(r.GeneratedAt, pdfrender.Zone(d.Timezone, r.Timezone))) + `</p>`)
 	b.WriteString(ioengine.LetterheadFooterHTML(&lh))
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: lh.PrimaryColor}.HTML()
 }

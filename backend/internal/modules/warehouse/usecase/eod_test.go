@@ -138,3 +138,31 @@ func TestEODPDFHTML(t *testing.T) {
 		t.Fatal("ar html must be rtl with the empty / system labels")
 	}
 }
+
+// TEC-521: the generated-at line is printed in the requester's zone (export
+// job), else the report's, else Europe/Istanbul; never UTC.
+func TestEODPDFIssuedAtTimezone(t *testing.T) {
+	start := time.Date(2026, 10, 8, 21, 0, 0, 0, time.UTC)
+	for _, tc := range []struct{ name, job, report, want string }{
+		{"report", "", "Asia/Baku", "2026-10-09 15:32 (Asia/Baku)"},
+		{"invalid report zone", "", "", "2026-10-09 14:32 (Europe/Istanbul)"},
+		{"requester", "America/New_York", "Asia/Baku", "2026-10-09 07:32 (America/New_York)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := EODPDFDoc{Organization: "Olex", Timezone: tc.report, Report: EODReport{
+				ReportDate: "2026-10-09", Timezone: tc.report, PeriodStart: start, PeriodEnd: start.Add(24 * time.Hour),
+				Kind: EODKindAuto, Summary: EODSummary{Groups: []EODGroupTotal{}},
+				GeneratedAt: time.Date(2026, 10, 9, 11, 32, 0, 0, time.UTC),
+			}}
+			ds := EODPDFDataset(d, i18n.LocaleTR)
+			ds.Timezone = tc.job
+			out, err := NewEODPDFAdapter(nil).DocumentHTML(ds, "tr", nil, "Gün sonu raporu")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(out, i18n.Translate(i18n.LocaleTR, "warehouse.eod.generated_at")+": "+tc.want) {
+				t.Fatalf("generated-at is not %q", tc.want)
+			}
+		})
+	}
+}
