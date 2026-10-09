@@ -144,6 +144,11 @@ func (s *Recommended) threshold(ctx context.Context) int {
 	return s.settings.PricingDeviationWarningPct(ctx)
 }
 
+// ThresholdPct is the price discipline threshold in percent
+// (pricing.deviation_warning_pct): the price screens flag a deviation at or
+// above it either way.
+func (s *Recommended) ThresholdPct(ctx context.Context) int { return s.threshold(ctx) }
+
 func (s *Recommended) autoPublish(ctx context.Context) bool {
 	if s.settings == nil {
 		return true

@@ -14959,6 +14959,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/pricing/recommended/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recommended price settings visible to the price screens
+         * @description TEC-507. Any organization with pricing.recommended.read. deviation_warning_pct is pricing.deviation_warning_pct: the distributor and dealer price screens flag a deviation at or above it (either way).
+         */
+        get: operations["getRecommendedPriceSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pricing/discipline": {
         parameters: {
             query?: never;
@@ -18747,7 +18767,7 @@ export interface components {
             /** @example contract_grace_days */
             key: string;
             /** @enum {string} */
-            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims" | "whatsapp" | "mcp" | "campaigns" | "showcase" | "pricing";
+            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims" | "whatsapp" | "mcp" | "campaigns" | "showcase" | "pricing" | "einvoice";
             /** @enum {string} */
             kind: "int" | "bool" | "string";
             default: components["schemas"]["SystemSettingValue"];
@@ -27230,6 +27250,16 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        RecommendedPriceSettings: {
+            /** @example 15 */
+            deviation_warning_pct: number;
+        };
+        EnvelopeRecommendedPriceSettings: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["RecommendedPriceSettings"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopePriceDisciplineSummary: {
@@ -54673,6 +54703,28 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getRecommendedPriceSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeRecommendedPriceSettings"];
+                };
+            };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

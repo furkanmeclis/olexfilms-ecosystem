@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Rédigez une remarque pour refuser.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Saisissez une note comprise entre 1,0 et 5,0 et un nombre d'avis supérieur ou égal à 0.",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "La note Google est actualisée depuis Google Places ; supprimez l'identifiant de lieu pour la saisir manuellement.",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "Type de fichier non pris en charge ; importez une image JPEG, PNG ou WebP."
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Type de fichier non pris en charge ; importez une image JPEG, PNG ou WebP.",
+  "codes.EINVOICE_INVALID_TAX_ID": "Le VKN ou TCKN est invalide (VKN à 10 chiffres, TCKN à 11, avec une clé de contrôle correcte).",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "Les factures électroniques ne peuvent être émises qu’en TRY à des acheteurs en Turquie.",
+  "codes.EINVOICE_INVALID_DOCUMENT": "Les données de la facture sont incomplètes ou erronées.",
+  "codes.EINVOICE_INVALID_VAT_RATE": "Le taux de TVA est invalide ; 0 % exige un code d’exonération.",
+  "codes.EINVOICE_INVALID_STYLESHEET": "La feuille de style XSLT est invalide."
 }

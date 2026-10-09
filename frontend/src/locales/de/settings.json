@@ -170,5 +170,9 @@
   "system.keys.pricing_deviation_warning_pct": "Warnschwelle für Abweichung (%)",
   "system.keys.pricing_deviation_warning_pct_hint": "Ein Endkundenpreis eines Händlers oder Distributors, der um so viele Prozent (in beide Richtungen) von der Preisempfehlung abweicht, überschreitet die Schwelle.",
   "system.keys.pricing_price_list_auto_publish": "Preisliste automatisch veröffentlichen",
-  "system.keys.pricing_price_list_auto_publish_hint": "Wenn aktiviert, wird die Preisliste als PDF nach jeder Veröffentlichung von Preisempfehlungen als neue Version im Dokumentenzentrum abgelegt."
+  "system.keys.pricing_price_list_auto_publish_hint": "Wenn aktiviert, wird die Preisliste als PDF nach jeder Veröffentlichung von Preisempfehlungen als neue Version im Dokumentenzentrum abgelegt.",
+  "system.groups.einvoice": "E-Rechnung",
+  "system.groups.einvoice_hint": "UBL-TR-Rechnungen für e-Fatura und e-Arşiv.",
+  "system.keys.einvoice_default_vat_rate": "Standard-Mehrwertsteuersatz (%)",
+  "system.keys.einvoice_default_vat_rate_hint": "Satz für eine Rechnungsposition, deren Produkt oder Kategorie keinen Steuersatz hat. 0 % erfordert einen Befreiungscode und ist hier nicht wählbar."
 }
