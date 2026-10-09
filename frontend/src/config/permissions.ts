@@ -216,6 +216,10 @@ export const Permission = {
   /** TEC-496: performance panel, ranking and map (performance module). */
   PerformanceRead: "performance.read",
   PerformanceTargetsManage: "performance.targets.manage",
+  /** TEC-497: team targets, bonuses and weak dealer rules. */
+  PerformanceStaffTargetsManage: "performance.staff_targets.manage",
+  PerformanceBonusManage: "performance.bonus.manage",
+  PerformanceRulesManage: "performance.rules.manage",
   /** TEC-500: photo standard angles (center) and overrides (distributor). */
   PhotoStandardManage: "photo_standard.manage",
   PhotoStandardOverride: "photo_standard.override",
@@ -619,6 +623,9 @@ export const permissions = {
   performance: {
     read: Permission.PerformanceRead,
     targetsManage: Permission.PerformanceTargetsManage,
+    staffTargetsManage: Permission.PerformanceStaffTargetsManage,
+    bonusManage: Permission.PerformanceBonusManage,
+    rulesManage: Permission.PerformanceRulesManage,
   },
   photoStandard: {
     manage: Permission.PhotoStandardManage,

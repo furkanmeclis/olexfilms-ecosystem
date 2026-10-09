@@ -328,6 +328,9 @@ func main() {
 		leadsusecase.NewBulkAdapter(queries),
 		// TEC-398: conversations (close, assign, AI mode).
 		whatsappusecase.NewBulkAdapter(queries),
+		// TEC-497: dealer bonus accruals (approve).
+		performanceusecase.NewBonusBulkAdapter(performanceusecase.New(pool, queries, outboxStore,
+			features.New(pool, queries, nil, log), log).WithPanelURL(cfg.Auth.FrontendURL)),
 	)
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log).
 		WithPool(pool).WithUndoWindow(sysconfig.New(queries, sysconfig.NoCache{}).BulkUndoWindowHours)

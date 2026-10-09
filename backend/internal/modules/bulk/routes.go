@@ -7,6 +7,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	bulkhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/handler"
 	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
+	performanceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/usecase"
 	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
@@ -95,6 +96,12 @@ func RegisterTenantRoutes(
 	mux.Handle("POST /v1/leads/bulk", route(
 		h.ExecuteTenantScoped(leadsusecase.ResourceBulk), rbac.PermLeadsWrite,
 		middleware.RequireFeature(checker, features.ModuleLeads),
+	))
+	// TEC-497: bulk approval of the dealer's calculated bonus accruals.
+	mux.Handle("POST /v1/performance/bonuses/bulk", route(
+		h.ExecuteTenantScoped(performanceusecase.ResourceBonusBulk), rbac.PermPerformanceBonusManage,
+		middleware.RequireFeature(checker, features.ModulePerformance),
+		middleware.RequireFeature(checker, features.ModuleDealerAccounting),
 	))
 
 	// The undo log of the organization; undo itself checks the action's

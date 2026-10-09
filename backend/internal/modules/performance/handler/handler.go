@@ -320,3 +320,90 @@ func (h *Handler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *Handler) ListBonusRules(w http.ResponseWriter, r *http.Request) {
+	active, err := apiquery.Bool(r.URL.Query(), "active")
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	items, err := h.svc.ListBonusRules(r.Context(), caller(r), active)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}
+
+func (h *Handler) CreateBonusRule(w http.ResponseWriter, r *http.Request) {
+	var in usecase.BonusRuleInput
+	if !decode(w, r, &in) {
+		return
+	}
+	item, err := h.svc.CreateBonusRule(r.Context(), caller(r), in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, item)
+}
+
+func (h *Handler) UpdateBonusRule(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	var in usecase.BonusRuleInput
+	if !decode(w, r, &in) {
+		return
+	}
+	item, err := h.svc.UpdateBonusRule(r.Context(), caller(r), id, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, item)
+}
+
+func (h *Handler) DeleteBonusRule(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	if err := h.svc.DeleteBonusRule(r.Context(), caller(r), id); err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) GetBonusSettings(w http.ResponseWriter, r *http.Request) {
+	item, err := h.svc.GetBonusSettings(r.Context(), caller(r))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, item)
+}
+
+func (h *Handler) UpdateBonusSettings(w http.ResponseWriter, r *http.Request) {
+	var in usecase.BonusSettingsInput
+	if !decode(w, r, &in) {
+		return
+	}
+	item, err := h.svc.UpdateBonusSettings(r.Context(), caller(r), in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, item)
+}
+
+func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
+	items, err := h.svc.ListMembers(r.Context(), caller(r))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}

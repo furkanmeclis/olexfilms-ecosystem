@@ -70,6 +70,9 @@ const bulkActionIconCatalog: Record<
     assign: UserPlus,
     set_ai_mode: Bot,
   },
+  "performance.bonuses": {
+    approve: CircleCheck,
+  },
 };
 
 export function resolveBulkActionIcon(
