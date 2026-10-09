@@ -15039,6 +15039,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reports/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reports the caller may open
+         * @description TEC-495. Lists the reports whose module is on and whose permission and reach the caller holds, in display order, with localized titles and the accepted period / granularity values.
+         */
+        get: operations["getReportCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview cards (legacy dashboard summary)
+         * @description TEC-495. Same as GET /v1/reports/overview through the generic route: one "cards" series with the card groups of every domain the caller reaches (services, orders, customers, warranties, stock, measurements; dealer counts only for a subtree / brand reach).
+         */
+        get: operations["getReportOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's report widget layout in the active organization
+         * @description TEC-495. Without a stored layout the default (overview only) is returned. Widgets whose report the caller can no longer open are left out.
+         */
+        get: operations["getReportLayout"];
+        /**
+         * Replace the widget layout atomically
+         * @description TEC-495. The full list is sent; sort_order follows the array order. One invalid widget (unknown or unavailable report, duplicate id or report, period / granularity the report does not take) rejects the whole layout with 400 VALIDATION_ERROR (field widgets[i].*) and the stored layout stays unchanged. At most 30 widgets.
+         */
+        put: operations["putReportLayout"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/{report}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One report in the shared envelope
+         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent. Periodic reports take period (7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
+         */
+        get: operations["getReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -27187,6 +27271,110 @@ export interface components {
             data: components["schemas"]["PriceDisciplineSummary"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        ReportCatalogItem: {
+            key: string;
+            /** @enum {string} */
+            kind: "summary" | "timeseries" | "distribution" | "ranking" | "table";
+            title: string;
+            module: string | null;
+            periodic: boolean;
+            periods: string[];
+            default_period: string | null;
+            granularities: string[];
+            limited: boolean;
+        };
+        EnvelopeReportCatalog: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ReportCatalogItem"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ReportPoint: {
+            /** @description Bucket start date, status, item uuid or card key */
+            key: string;
+            label: string;
+            value: number;
+        };
+        ReportSeries: {
+            key: string;
+            label: string;
+            unit: string;
+            points: components["schemas"]["ReportPoint"][];
+        };
+        ReportColumn: {
+            key: string;
+            label: string;
+            /** @enum {string} */
+            type: "string" | "integer" | "number" | "datetime";
+        };
+        /** @description Shared envelope of every report: the same keys in all reports; period / range / granularity are null when a report does not take them, columns / rows are empty outside tables. */
+        ReportEnvelope: {
+            report: string;
+            /** @enum {string} */
+            kind: "summary" | "timeseries" | "distribution" | "ranking" | "table";
+            title: string;
+            locale: string;
+            timezone: string;
+            /** @description Reach of the read permission (managed, subtree, brand, all, own, assigned) */
+            scope: string;
+            period: string | null;
+            /** Format: date */
+            range_from: string | null;
+            /** Format: date */
+            range_to: string | null;
+            /** @enum {string|null} */
+            granularity: "day" | "week" | "month" | null;
+            /** Format: date-time */
+            generated_at: string;
+            series: components["schemas"]["ReportSeries"][];
+            columns: components["schemas"]["ReportColumn"][];
+            rows: {
+                [key: string]: unknown;
+            }[];
+        };
+        EnvelopeReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ReportEnvelope"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ReportWidget: {
+            /** Format: uuid */
+            id: string;
+            report: string;
+            sort_order: number;
+            /** @enum {string|null} */
+            period: "7d" | "30d" | "90d" | "12m" | null;
+            /** @enum {string|null} */
+            granularity: "day" | "week" | "month" | null;
+        };
+        ReportLayout: {
+            version: number;
+            /** Format: date-time */
+            updated_at: string | null;
+            widgets: components["schemas"]["ReportWidget"][];
+        };
+        ReportLayoutInput: {
+            /** @enum {integer} */
+            version?: 1;
+            widgets: {
+                /** Format: uuid */
+                id: string;
+                report: string;
+                /** @enum {string|null} */
+                period?: "7d" | "30d" | "90d" | "12m" | null;
+                /** @enum {string|null} */
+                granularity?: "day" | "week" | "month" | null;
+            }[];
+        };
+        EnvelopeReportLayout: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ReportLayout"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
     };
     responses: {
         /** @description 426 MOBILE_API_VERSION_UNSUPPORTED (missing or unsupported X-Mobile-Api-Version) or 426 UPDATE_REQUIRED (X-App-Version below the minimum, TEC-236; `data` carries the minimum and the store links). Either way the app asks the user to update. */
@@ -27335,6 +27523,11 @@ export interface components {
         };
     };
     parameters: {
+        ReportPeriod: "7d" | "30d" | "90d" | "12m" | "custom";
+        ReportRangeFrom: string;
+        ReportRangeTo: string;
+        /** @description Label locale (default the request locale chain, K10). */
+        ReportLocale: string;
         AIUsageChannel: ("panel" | "portal" | "whatsapp" | "mcp" | "triage")[];
         AIUsagePurpose: ("chat" | "title" | "triage" | "locale")[];
         AIUsagePool: ("org" | "system")[];
@@ -54636,6 +54829,144 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getReportCatalog: {
+        parameters: {
+            query?: {
+                /** @description Label locale (default the request locale chain, K10). */
+                locale?: components["parameters"]["ReportLocale"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReportCatalog"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getReportOverview: {
+        parameters: {
+            query?: {
+                period?: components["parameters"]["ReportPeriod"];
+                range_from?: components["parameters"]["ReportRangeFrom"];
+                range_to?: components["parameters"]["ReportRangeTo"];
+                /** @description Label locale (default the request locale chain, K10). */
+                locale?: components["parameters"]["ReportLocale"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Overview report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getReportLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Layout */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReportLayout"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    putReportLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportLayoutInput"];
+            };
+        };
+        responses: {
+            /** @description Saved layout */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReportLayout"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getReport: {
+        parameters: {
+            query?: {
+                period?: components["parameters"]["ReportPeriod"];
+                range_from?: components["parameters"]["ReportRangeFrom"];
+                range_to?: components["parameters"]["ReportRangeTo"];
+                granularity?: "day" | "week" | "month";
+                limit?: number;
+                /** @description Label locale (default the request locale chain, K10). */
+                locale?: components["parameters"]["ReportLocale"];
+            };
+            header?: never;
+            path: {
+                report: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
 }
