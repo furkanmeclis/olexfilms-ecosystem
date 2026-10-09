@@ -16,6 +16,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/model"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
+	psmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
@@ -201,6 +202,18 @@ func (s *Service) contractDocumentVars(ctx context.Context, q *db.Queries, row d
 		if tag := s.imageTag(ctx, org.LogoObjectKey.String, "image/png", org.Name); tag != "" {
 			vars["company_logo"] = tag
 		}
+	}
+	// TEC-499: intake photo grid (angle name + capture time, no EXIF
+	// location); separate from the contract's own media_html.
+	vars["intake_photos_html"] = ""
+	if s.intake != nil && row.SubjectType == subjectService {
+		grid, err := s.intake.IntakePhotosHTML(ctx, q, psmodel.ServiceRef{
+			ID: row.SubjectID, OrganizationID: row.OrganizationID, BrandID: row.BrandID,
+		}, row.Locale)
+		if err != nil {
+			return nil, err
+		}
+		vars["intake_photos_html"] = grid
 	}
 	return vars, nil
 }

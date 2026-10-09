@@ -576,16 +576,21 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-179: services (draft, items from stock, stock-free transitions, images).
 	certificatesSvc := certificatesusecase.New(deps.DB, deps.Queries, deps.Storage,
 		outbox.NewStore(deps.DB, deps.Queries), featureSvc, sysSvc)
+	// TEC-499 (F5-07b): photo standard rule, completion event and PDF grid.
+	photoStandardSvc := photostandardusecase.New(deps.DB, deps.Queries).
+		WithFeatures(featureSvc).
+		WithOutbox(outbox.NewStore(deps.DB, deps.Queries)).
+		WithStorage(deps.Storage)
 	servicesSvc := servicesusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
 		WithContractRequirement(sysSvc, featureSvc).
 		WithCompletedCancelAccounting(accountingPoster).
-		WithCertificatePolicy(certificatesSvc)
+		WithCertificatePolicy(certificatesSvc).
+		WithIntakePhotoGate(photoStandardSvc)
 	if listFinder != nil {
 		servicesSvc.SetFinder(listFinder) // TEC-209
 	}
 	servicesH := serviceshandler.New(servicesSvc, deps.Storage)
 	servicesmodule.RegisterRoutes(mux, servicesH, tokens, loader, deps.Queries, featureSvc)
-	photoStandardSvc := photostandardusecase.New(deps.DB, deps.Queries)
 	photostandardmodule.RegisterRoutes(mux, photostandardhandler.New(photoStandardSvc, deps.Storage), tokens, loader, deps.Queries, featureSvc)
 	certificatesmodule.RegisterRoutes(mux, certificateshandler.New(certificatesSvc, deps.Queries), tokens, loader, deps.Queries, featureSvc)
 	// TEC-234: old hub mobile app aliases, /v1/mobile/legacy/* (MOBILE_LEGACY_ALIASES; F5'te kaldırılır).
@@ -889,6 +894,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		contractsusecase.WithStorage(deps.Storage),
 		contractsusecase.WithPDFRenderer(pdfClient),
 		contractsusecase.WithOutbox(outbox.NewStore(deps.DB, deps.Queries)),
+		contractsusecase.WithIntakePhotos(photoStandardSvc),
 	)
 	_ = docSvc.RegisterLoader(docmodel.KindContract, contractsSvc.ContractDocumentLoader())
 	// TEC-288: contract.executed enqueues the worker-docs contract:pdf task.
@@ -1216,6 +1222,12 @@ func (s *Server) Start() error {
 		}
 		if err := notifusecase.SyncCatalog(ctx, s.queries); err != nil {
 			s.log.Warn("notification_catalog_sync_failed", "error", err)
+		}
+		// TEC-499: {{intake_photos_html}} in the system contract templates.
+		if s.documents != nil {
+			if _, err := s.documents.EnsureContractIntakePhotos(ctx); err != nil {
+				s.log.Warn("contract_template_sync_failed", "error", err)
+			}
 		}
 		cancel()
 	}

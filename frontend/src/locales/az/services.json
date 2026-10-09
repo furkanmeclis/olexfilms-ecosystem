@@ -217,6 +217,7 @@
   "detail.items.added_at": "Əlavə edilib",
   "wizard.steps.contract": "Müqavilə",
   "stock.errors.CONTRACT_REQUIRED": "Xidmət tamamlanmazdan əvvəl avtomobil qəbulu müqaviləsi imzalanmalıdır. Müqavilə addımına qayıdın.",
+  "stock.errors.PHOTO_STANDARD_INCOMPLETE": "Məcburi avtomobil qəbul fotoşəkilləri çatışmır. Əvvəlcə bütün məcburi bucaqların şəklini çəkin.",
   "contract.title": "Avtomobil qəbulu müqaviləsi",
   "contract.none": "Bu xidmət üçün hələ müqavilə yaradılmayıb.",
   "contract.voided_hint": "Əvvəlki müqavilə ləğv edildi. Yeni müqavilə yaradın.",

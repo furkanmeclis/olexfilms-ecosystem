@@ -217,6 +217,7 @@
   "detail.items.added_at": "Añadido",
   "wizard.steps.contract": "Contrato",
   "stock.errors.CONTRACT_REQUIRED": "El contrato de recepción del vehículo debe firmarse antes de completar el servicio. Vuelva al paso Contrato.",
+  "stock.errors.PHOTO_STANDARD_INCOMPLETE": "Faltan fotos obligatorias de recepción del vehículo. Fotografíe primero todos los ángulos obligatorios.",
   "contract.title": "Contrato de recepción del vehículo",
   "contract.none": "Todavía no se ha creado ningún contrato para este servicio.",
   "contract.voided_hint": "El contrato anterior fue anulado. Cree uno nuevo.",

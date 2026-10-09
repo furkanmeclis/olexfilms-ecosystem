@@ -217,6 +217,7 @@
   "detail.items.added_at": "添加时间",
   "wizard.steps.contract": "合同",
   "stock.errors.CONTRACT_REQUIRED": "完成服务前必须签署车辆接收合同。请返回“合同”步骤。",
+  "stock.errors.PHOTO_STANDARD_INCOMPLETE": "缺少必需的车辆接收照片。请先拍摄所有必需角度。",
   "contract.title": "车辆接收合同",
   "contract.none": "尚未为此服务创建合同。",
   "contract.voided_hint": "之前的合同已作废。请创建新合同。",

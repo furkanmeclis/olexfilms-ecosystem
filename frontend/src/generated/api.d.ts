@@ -3735,7 +3735,7 @@ export interface paths {
         put?: never;
         /**
          * Create a contract instance from a service
-         * @description Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided.
+         * @description Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
          */
         post: operations["createServiceContract"];
         delete?: never;
@@ -3795,7 +3795,7 @@ export interface paths {
         put?: never;
         /**
          * Send customer contract signing OTP
-         * @description Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice.
+         * @description Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
          */
         post: operations["requestContractCustomerOtp"];
         delete?: never;
@@ -3815,7 +3815,7 @@ export interface paths {
         put?: never;
         /**
          * Sign the customer slot
-         * @description Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation.
+         * @description Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
          */
         post: operations["signContractCustomer"];
         delete?: never;
@@ -3835,7 +3835,7 @@ export interface paths {
         put?: never;
         /**
          * Sign the staff slot
-         * @description Requires contracts.write. Uses the authenticated staff user; no OTP is required.
+         * @description Requires contracts.write. Uses the authenticated staff user; no OTP is required. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
          */
         post: operations["signContractStaff"];
         delete?: never;
@@ -10753,7 +10753,7 @@ export interface paths {
         put?: never;
         /**
          * Move a service to another status
-         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event. When contracts.intake_required and the intake_contracts module are both enabled for the service organization, draft/pending -> processing and direct completion from draft require the linked contract to be executed; otherwise the transition answers 422 CONTRACT_REQUIRED.
+         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event. When contracts.intake_required and the intake_contracts module are both enabled for the service organization, draft/pending -> processing and direct completion from draft require the linked contract to be executed; otherwise the transition answers 422 CONTRACT_REQUIRED. TEC-499: when the photo_standard module is on for the service organization, leaving draft (any status but cancelled) and completing need a photo for every required (resolved, not hidden) intake angle; otherwise 422 PHOTO_STANDARD_INCOMPLETE with data.missing_angles (angle keys) and one error detail per angle. Cancelling is never blocked.
          */
         post: operations["transitionService"];
         delete?: never;
@@ -22430,8 +22430,11 @@ export interface components {
             height?: number;
             /** Format: date-time */
             exif_taken_at?: string;
+            /** @description KVKK (TEC-499) — returned only to super admins, the brand center and an owner of the service's dealer; cleared by customer anonymization. Never in PDFs or the portal. */
             exif_lat?: string;
+            /** @description Same visibility as exif_lat. */
             exif_lng?: string;
+            /** @description Same visibility as exif_lat. */
             exif_device?: string;
             /** Format: date-time */
             created_at: string;
@@ -34035,6 +34038,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     signContractCustomer: {
@@ -34098,6 +34102,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     addContractMedia: {
@@ -46730,6 +46735,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     cancelCompletedService: {

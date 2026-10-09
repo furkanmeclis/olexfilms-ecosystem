@@ -702,6 +702,7 @@ func catalogConstants() []string {
 		PerformanceComputed,
 		PricingRecommendedPublished,
 		PricingDisciplineDigest,
+		ServiceIntakePhotosCompleted,
 	}
 }
 
@@ -824,3 +825,10 @@ const (
 	PerformanceWeakDealer  = "performance.weak_dealer"
 	PerformanceBelowTarget = "performance.below_target"
 )
+
+// ServiceIntakePhotosCompleted (TEC-499, F5-07b) is written in the intake
+// photo upload transaction that photographs the last missing required angle
+// of a service (photo_standard add-on). Tenant is the service organization;
+// payload: service_id, service_uuid, organization_id, brand_id, angle_keys.
+// No EXIF data in the payload (KVKK).
+const ServiceIntakePhotosCompleted = "service.intake_photos_completed"

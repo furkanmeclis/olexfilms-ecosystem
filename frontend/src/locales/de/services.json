@@ -217,6 +217,7 @@
   "detail.items.added_at": "Hinzugefügt",
   "wizard.steps.contract": "Vertrag",
   "stock.errors.CONTRACT_REQUIRED": "Der Fahrzeugannahmevertrag muss unterschrieben sein, bevor der Service abgeschlossen werden kann. Gehen Sie zurück zum Schritt Vertrag.",
+  "stock.errors.PHOTO_STANDARD_INCOMPLETE": "Pflichtfotos der Fahrzeugannahme fehlen. Fotografieren Sie zuerst alle vorgeschriebenen Blickwinkel.",
   "contract.title": "Fahrzeugannahmevertrag",
   "contract.none": "Für diesen Service wurde noch kein Vertrag erstellt.",
   "contract.voided_hint": "Der vorherige Vertrag wurde storniert. Erstellen Sie einen neuen.",

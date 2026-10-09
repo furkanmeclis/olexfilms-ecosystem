@@ -6738,7 +6738,7 @@ paths:
       tags: [Contracts]
       operationId: createServiceContract
       summary: Create a contract instance from a service
-      description: Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided.
+      description: Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
       security:
         - bearerAuth: []
       parameters:
@@ -6830,7 +6830,7 @@ paths:
       tags: [Contracts]
       operationId: requestContractCustomerOtp
       summary: Send customer contract signing OTP
-      description: Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice.
+      description: Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
       security:
         - bearerAuth: []
       parameters:
@@ -6855,13 +6855,15 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
 
   /v1/contracts/{uuid}/signers/customer/sign:
     post:
       tags: [Contracts]
       operationId: signContractCustomer
       summary: Sign the customer slot
-      description: Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation.
+      description: Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
       security:
         - bearerAuth: []
       parameters:
@@ -6900,7 +6902,7 @@ paths:
       tags: [Contracts]
       operationId: signContractStaff
       summary: Sign the staff slot
-      description: Requires contracts.write. Uses the authenticated staff user; no OTP is required.
+      description: Requires contracts.write. Uses the authenticated staff user; no OTP is required. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
       security:
         - bearerAuth: []
       parameters:
@@ -6931,6 +6933,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
 
   /v1/contracts/{uuid}/media:
     post:
@@ -20734,7 +20738,12 @@ paths:
         the intake_contracts module are both enabled for the service
         organization, draft/pending -> processing and direct completion from
         draft require the linked contract to be executed; otherwise the
-        transition answers 422 CONTRACT_REQUIRED.
+        transition answers 422 CONTRACT_REQUIRED. TEC-499: when the
+        photo_standard module is on for the service organization, leaving
+        draft (any status but cancelled) and completing need a photo for
+        every required (resolved, not hidden) intake angle; otherwise 422
+        PHOTO_STANDARD_INCOMPLETE with data.missing_angles (angle keys) and
+        one error detail per angle. Cancelling is never blocked.
       security:
         - bearerAuth: []
       requestBody:
@@ -20760,6 +20769,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
 
   /v1/services/{uuid}/cancel-completed:
     parameters:
@@ -38751,9 +38762,15 @@ components:
         width: { type: integer }
         height: { type: integer }
         exif_taken_at: { type: string, format: date-time }
-        exif_lat: { type: string }
-        exif_lng: { type: string }
-        exif_device: { type: string }
+        exif_lat:
+          type: string
+          description: KVKK (TEC-499) — returned only to super admins, the brand center and an owner of the service's dealer; cleared by customer anonymization. Never in PDFs or the portal.
+        exif_lng:
+          type: string
+          description: Same visibility as exif_lat.
+        exif_device:
+          type: string
+          description: Same visibility as exif_lat.
         created_at: { type: string, format: date-time }
 
     IntakePhotoAngle:
