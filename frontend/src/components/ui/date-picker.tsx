@@ -27,6 +27,9 @@ export type DatePickerProps = {
   captionLayout?: React.ComponentProps<typeof Calendar>["captionLayout"];
   align?: React.ComponentProps<typeof PopoverContent>["align"];
   "aria-invalid"?: boolean;
+  "aria-label"?: string;
+  "aria-describedby"?: string;
+  "data-testid"?: string;
   /** Earliest selectable day (`yyyy-MM-dd`); earlier days are disabled. */
   minDate?: string;
 };
@@ -53,6 +56,9 @@ export function DatePicker({
   captionLayout,
   align = "start",
   "aria-invalid": ariaInvalid,
+  "aria-label": ariaLabel,
+  "aria-describedby": ariaDescribedBy,
+  "data-testid": testId,
   minDate,
 }: DatePickerProps) {
   const { locale, t } = useLocale();
@@ -69,6 +75,9 @@ export function DatePicker({
           variant="outline"
           disabled={disabled}
           aria-invalid={ariaInvalid}
+          aria-label={ariaLabel}
+          aria-describedby={ariaDescribedBy}
+          data-testid={testId}
           data-empty={!selected}
           className={cn(
             "data-[empty=true]:text-muted-foreground h-9 w-full justify-start gap-2 px-3 font-normal",

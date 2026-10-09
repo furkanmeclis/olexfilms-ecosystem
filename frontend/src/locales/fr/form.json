@@ -13,5 +13,12 @@
   "combobox_selected": "Sélectionné",
   "command_title": "Commande / sélection",
   "command_description": "Rechercher et sélectionner un élément",
-  "command_group_default": "Résultats"
+  "command_group_default": "Résultats",
+  "pick_time": "Choisir une heure",
+  "pick_month": "Choisir un mois",
+  "pick_date_time": "Choisir une date et une heure",
+  "hour": "Heure",
+  "minute": "Minute",
+  "previous_year": "Année précédente",
+  "next_year": "Année suivante"
 }

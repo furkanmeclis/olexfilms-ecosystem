@@ -13,5 +13,12 @@
   "combobox_selected": "Выбрано",
   "command_title": "Команда / выбор",
   "command_description": "Найдите и выберите элемент",
-  "command_group_default": "Результаты"
+  "command_group_default": "Результаты",
+  "pick_time": "Выберите время",
+  "pick_month": "Выберите месяц",
+  "pick_date_time": "Выберите дату и время",
+  "hour": "Час",
+  "minute": "Минута",
+  "previous_year": "Предыдущий год",
+  "next_year": "Следующий год"
 }

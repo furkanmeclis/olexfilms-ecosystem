@@ -13,5 +13,12 @@
   "combobox_selected": "Seçili",
   "command_title": "Komut / seçim",
   "command_description": "Ara ve bir öğe seç",
-  "command_group_default": "Sonuçlar"
+  "command_group_default": "Sonuçlar",
+  "pick_time": "Saat seçin",
+  "pick_month": "Ay seçin",
+  "pick_date_time": "Tarih ve saat seçin",
+  "hour": "Saat",
+  "minute": "Dakika",
+  "previous_year": "Önceki yıl",
+  "next_year": "Sonraki yıl"
 }

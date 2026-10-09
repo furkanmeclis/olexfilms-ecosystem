@@ -13,5 +13,12 @@
   "combobox_selected": "Seçildi",
   "command_title": "Əmr / seçim",
   "command_description": "Element axtarın və seçin",
-  "command_group_default": "Nəticələr"
+  "command_group_default": "Nəticələr",
+  "pick_time": "Saat seçin",
+  "pick_month": "Ay seçin",
+  "pick_date_time": "Tarix və saat seçin",
+  "hour": "Saat",
+  "minute": "Dəqiqə",
+  "previous_year": "Əvvəlki il",
+  "next_year": "Növbəti il"
 }
