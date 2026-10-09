@@ -2123,6 +2123,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/photo-standard/angles/{uuid}/example": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload or replace the example image of an angle
+         * @description TEC-500. Multipart field `image` (at most 12 MiB). The server sniffs bytes and accepts JPEG, PNG and WebP; the previous example object is deleted. Requires photo_standard.manage.
+         */
+        post: operations["uploadPhotoStandardAngleExample"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/photo-standard/angles/{uuid}/example": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Example image of an angle
+         * @description TEC-500. Requires the photo_standard add-on and services.read. 404 without an uploaded example.
+         */
+        get: operations["getPhotoStandardAngleExample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/photo-standard/overrides": {
         parameters: {
             query?: never;
@@ -2132,7 +2178,7 @@ export interface paths {
         };
         /**
          * Resolve photo standard overrides for an organization
-         * @description TEC-498. Dealer override wins over distributor override, which wins over the central definition.
+         * @description TEC-498. Dealer override wins over distributor override, which wins over the central definition. TEC-500: every active angle is listed, hidden ones included, with default_required, default_hidden and overridden.
          */
         get: operations["getPhotoStandardOverrides"];
         /**
@@ -10876,6 +10922,30 @@ export interface paths {
          * @description TEC-498. Refuses completed services and services with an executed contract with 409 PHOTO_SERVICE_LOCKED.
          */
         delete: operations["deleteServiceIntakePhoto"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/{uuid}/intake-photos/{angle_key}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                angle_key: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Active intake photo bytes of an angle
+         * @description TEC-500. The IntakePhoto.url path. Requires services.read and the photo_standard add-on.
+         */
+        get: operations["getServiceIntakePhotoFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -22390,10 +22460,18 @@ export interface components {
                 [key: string]: string;
             };
             example_storage_key?: string | null;
+            /** @description TEC-500. Authenticated example image path; absent without an uploaded example. */
+            example_url?: string;
             required: boolean;
             hidden?: boolean;
             sort_order: number;
             active: boolean;
+            /** @description TEC-500, override endpoints only. Central default (center override, else the angle). */
+            default_required?: boolean;
+            /** @description TEC-500, override endpoints only. Central default hidden flag. */
+            default_hidden?: boolean;
+            /** @description TEC-500, override endpoints only. The target organization has its own override row. */
+            overridden?: boolean;
         };
         PhotoStandardOverridesInput: {
             /** Format: uuid */
@@ -31137,6 +31215,70 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    uploadPhotoStandardAngleExample: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    image: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Angle with the new example_url */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePhotoStandardAngle"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+        };
+    };
+    getPhotoStandardAngleExample: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
@@ -46939,6 +47081,36 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getServiceIntakePhotoFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                angle_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                    "image/heic": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     correctServiceConsumption: {

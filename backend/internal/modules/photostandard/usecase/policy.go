@@ -106,15 +106,9 @@ func (s *Service) missingAngles(ctx context.Context, q *db.Queries, ref model.Se
 }
 
 func (s *Service) resolvedRows(ctx context.Context, q *db.Queries, orgID, brandID int64) ([]db.ListResolvedPhotoAnglesRow, error) {
-	distID, err := s.distributorID(ctx, orgID)
+	rows, err := s.allResolvedRows(ctx, q, orgID, brandID)
 	if err != nil {
 		return nil, err
-	}
-	rows, err := q.ListResolvedPhotoAngles(ctx, db.ListResolvedPhotoAnglesParams{
-		BrandID: brandID, ServiceOrgID: orgID, DistributorOrgID: distID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("photo_standard: resolved angles: %w", err)
 	}
 	out := rows[:0]
 	for _, r := range rows {
@@ -343,4 +337,20 @@ func intakeHeading(locale string) string {
 		return v
 	}
 	return intakeHeadings["en"]
+}
+
+// allResolvedRows lists every active angle of the brand resolved for orgID,
+// hidden ones included.
+func (s *Service) allResolvedRows(ctx context.Context, q *db.Queries, orgID, brandID int64) ([]db.ListResolvedPhotoAnglesRow, error) {
+	distID, err := s.distributorID(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := q.ListResolvedPhotoAngles(ctx, db.ListResolvedPhotoAnglesParams{
+		BrandID: brandID, ServiceOrgID: orgID, DistributorOrgID: distID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("photo_standard: resolved angles: %w", err)
+	}
+	return rows, nil
 }

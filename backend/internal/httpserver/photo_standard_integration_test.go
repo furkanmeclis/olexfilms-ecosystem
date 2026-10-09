@@ -42,6 +42,11 @@ type intakeResp struct {
 
 func (it *itest) postIntakePhoto(serviceUUID, angleKey, bearer, declared string, data []byte) *httptest.ResponseRecorder {
 	it.t.Helper()
+	return it.postPhotoImage("/v1/services/"+serviceUUID+"/intake-photos/"+angleKey, bearer, declared, data)
+}
+
+func (it *itest) postPhotoImage(path, bearer, declared string, data []byte) *httptest.ResponseRecorder {
+	it.t.Helper()
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	h := make(textproto.MIMEHeader)
@@ -53,7 +58,7 @@ func (it *itest) postIntakePhoto(serviceUUID, angleKey, bearer, declared string,
 	}
 	_, _ = part.Write(data)
 	_ = mw.Close()
-	return it.raw("POST", "/v1/services/"+serviceUUID+"/intake-photos/"+angleKey, bearer, mw.FormDataContentType(), buf.Bytes(), nil)
+	return it.raw("POST", path, bearer, mw.FormDataContentType(), buf.Bytes(), nil)
 }
 
 func TestIntegrationPhotoStandardIntake(t *testing.T) {
@@ -175,6 +180,73 @@ func TestIntegrationPhotoStandardIntake(t *testing.T) {
 	_ = json.Unmarshal(env.Data, &after)
 	if len(after.Missing) != 0 || len(after.Angles) != 1 || after.Angles[0].Photo == nil || after.Angles[0].Photo.Mime != "image/png" {
 		t.Fatalf("after upload = %+v", after)
+	}
+
+	// TEC-500: the photo url streams the active photo.
+	rec = it.raw("GET", "/v1/services/"+svc.UUID+"/intake-photos/"+angleKey+"/file", dealerTok, "", nil, nil)
+	if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "image/png" || !bytes.Equal(rec.Body.Bytes(), pngBytes) {
+		t.Fatalf("intake file = %d %s", rec.Code, rec.Header().Get("Content-Type"))
+	}
+	if rec = it.raw("GET", "/v1/services/"+svc.UUID+"/intake-photos/nope_angle/file", dealerTok, "", nil, nil); rec.Code != http.StatusNotFound {
+		t.Fatalf("unknown angle file = %d", rec.Code)
+	}
+
+	// TEC-500: the override form lists hidden angles with the central default.
+	code, env = it.do("PUT", "/v1/photo-standard/overrides", hostOlex, distTok, map[string]any{
+		"organization_uuid": dist.Uuid.String(),
+		"overrides":         []map[string]any{{"angle_key": angleKey, "required": false, "hidden": true}},
+	})
+	if code != http.StatusOK {
+		t.Fatalf("dist hide = %d %s", code, errCode(env))
+	}
+	var overrides struct {
+		Items []struct {
+			Key             string `json:"key"`
+			Hidden          bool   `json:"hidden"`
+			DefaultRequired *bool  `json:"default_required"`
+			Overridden      *bool  `json:"overridden"`
+		} `json:"items"`
+	}
+	_ = json.Unmarshal(env.Data, &overrides)
+	found := false
+	for _, item := range overrides.Items {
+		if item.Key != angleKey {
+			continue
+		}
+		found = true
+		if !item.Hidden || item.DefaultRequired == nil || !*item.DefaultRequired || item.Overridden == nil || !*item.Overridden {
+			t.Fatalf("override view = %+v", item)
+		}
+	}
+	if !found {
+		t.Fatalf("hidden angle missing from override view: %+v", overrides)
+	}
+
+	// TEC-500: example image upload (center) and read (dealer).
+	if rec = it.postPhotoImage("/v1/platform/photo-standard/angles/"+angle.UUID+"/example", centerTok, "application/pdf", []byte("%PDF-1.7")); rec.Code != http.StatusUnsupportedMediaType {
+		t.Fatalf("pdf example = %d %s", rec.Code, rec.Body.String())
+	}
+	if rec = it.postPhotoImage("/v1/platform/photo-standard/angles/"+angle.UUID+"/example", dealerTok, "image/png", pngBytes); rec.Code != http.StatusForbidden {
+		t.Fatalf("dealer example upload = %d", rec.Code)
+	}
+	rec = it.postPhotoImage("/v1/platform/photo-standard/angles/"+angle.UUID+"/example", centerTok, "image/png", pngBytes)
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "/v1/photo-standard/angles/"+angle.UUID+"/example") {
+		t.Fatalf("example upload = %d %s", rec.Code, rec.Body.String())
+	}
+	rec = it.raw("GET", "/v1/photo-standard/angles/"+angle.UUID+"/example", dealerTok, "", nil, nil)
+	if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != "image/png" || !bytes.Equal(rec.Body.Bytes(), pngBytes) {
+		t.Fatalf("example file = %d %s", rec.Code, rec.Header().Get("Content-Type"))
+	}
+	// A key set by hand (PUT) outside the angle's folder is never served.
+	code, env = it.do("PUT", "/v1/platform/photo-standard/angles/"+angle.UUID, hostOlex, centerTok, map[string]any{
+		"key": angleKey, "name": map[string]string{"tr": "Ön", "en": "Front"},
+		"example_storage_key": "services/other/secret.png", "required": true, "sort_order": 10,
+	})
+	if code != http.StatusOK {
+		t.Fatalf("put foreign key = %d %s", code, errCode(env))
+	}
+	if rec = it.raw("GET", "/v1/photo-standard/angles/"+angle.UUID+"/example", dealerTok, "", nil, nil); rec.Code != http.StatusNotFound {
+		t.Fatalf("foreign example key = %d", rec.Code)
 	}
 
 	if _, err := it.pool.Exec(ctx, `UPDATE services SET status = 'completed', completed_at = NOW() WHERE uuid = $1`, svc.UUID); err != nil {
