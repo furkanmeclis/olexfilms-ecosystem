@@ -32,6 +32,7 @@ const captured = vi.hoisted(() => ({
     canSuppliers: true,
     canPurchases: true,
     canSeePurchasePrice: true,
+    canSeeRecommended: true,
   },
   service: {
     listPrices: vi.fn(),
@@ -53,6 +54,7 @@ vi.mock("@/providers/locale-provider", () => ({
       date: (v: string) => v,
       dateTime: (v: string) => v,
       currency: (v: number, c: string) => `${v.toFixed(2)} ${c}`,
+      percent: (v: number) => `${(v * 100).toFixed(2)}%`,
     },
   }),
 }));
@@ -70,6 +72,12 @@ vi.mock(
     dealerSalesService: captured.service,
   }),
 );
+vi.mock("@/features/pricing/services/recommended.service", async (orig) => ({
+  ...(await orig<object>()),
+  recommendedService: {
+    settings: () => Promise.resolve({ deviation_warning_pct: 15 }),
+  },
+}));
 vi.mock("@/components/entity", async (orig) => ({
   ...(await orig<object>()),
   EntityPage: ({ children }: { children: ReactNode }) =>
@@ -207,6 +215,67 @@ describe("SalePricesPage (TEC-348)", () => {
     });
     await flush();
     expect(captured.service.setPrice).toHaveBeenCalledWith("p-1", "950.50");
+  });
+});
+
+describe("SalePricesPage recommended column (TEC-507)", () => {
+  const columnIds = () =>
+    (captured.tables.at(-1)?.columns ?? []).map(
+      (c) => c.id ?? (c as { accessorKey?: string }).accessorKey,
+    );
+  beforeEach(() => {
+    captured.service.listPrices.mockResolvedValue({
+      items: [priceItem()],
+      total: 1,
+      limit: 20,
+      offset: 0,
+    });
+  });
+  afterEach(() => {
+    captured.access.canSeeRecommended = true;
+  });
+
+  it("does not render the recommended column without pricing.recommended.read", async () => {
+    captured.access.canSeeRecommended = false;
+    await render(m, createElement(SalePricesPage, { slug: "acme" }));
+    expect(columnIds()).not.toContain("recommended_sale_price");
+    expect(columnIds()).toContain("sale_price");
+  });
+
+  it("renders the recommended price with the deviation badge", async () => {
+    await render(m, createElement(SalePricesPage, { slug: "acme" }));
+    const col = (captured.tables.at(-1)?.columns ?? []).find(
+      (c) => c.id === "recommended_sale_price",
+    ) as unknown as {
+      cell: (ctx: { row: { original: AnyRow } }) => ReactNode;
+    };
+    expect(col).toBeDefined();
+    await render(
+      m,
+      createElement(Fragment, null, [
+        createElement(
+          "div",
+          { key: "over" },
+          col.cell({
+            row: {
+              original: priceItem({
+                sale_price: "1200.00",
+                recommended: {
+                  price: "1000.00",
+                  currency: "TRY",
+                  country_iso2: "TR",
+                  scope: "country",
+                  effective_from: "2026-10-01",
+                },
+                deviation_pct: "20.00",
+              }),
+            },
+          }),
+        ),
+      ]),
+    );
+    const badge = m.container.querySelector('[data-testid="deviation-badge"]');
+    expect(badge?.getAttribute("data-over-threshold")).toBe("true");
   });
 });
 

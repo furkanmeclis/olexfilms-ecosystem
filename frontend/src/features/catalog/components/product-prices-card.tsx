@@ -24,6 +24,7 @@ import {
 } from "@/features/catalog/components/price-dialog";
 import { PriceTable } from "@/features/catalog/components/price-table";
 import { listPriceBody } from "@/features/catalog/lib/prices";
+import { useDeviationThreshold } from "@/features/pricing/hooks/use-deviation-threshold";
 import {
   pricingService,
   type EffectivePrice,
@@ -66,6 +67,9 @@ export function ProductPricesCard({
     enabled: access.canView,
   });
   const viewer = view.data?.viewer;
+  const showRecommended =
+    access.canReadRecommended && Boolean(viewer) && viewer !== "center";
+  const threshold = useDeviationThreshold(showRecommended);
   const editable =
     (viewer === "center" && access.canWriteList) ||
     (viewer === "distributor" && access.canWriteDealerPrice);
@@ -199,6 +203,8 @@ export function ProductPricesCard({
             canDelete={(r) =>
               viewer === "distributor" ? r.sale_price !== undefined : true
             }
+            showRecommended={showRecommended}
+            threshold={threshold}
           />
         )}
       </CardContent>

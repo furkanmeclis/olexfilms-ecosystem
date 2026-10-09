@@ -369,6 +369,7 @@ describe("DistributorPricesCard", () => {
           canReadDistributorPrices: true,
           canWriteDistributorPrices: true,
           canWriteDealerPrice: false,
+          canReadRecommended: false,
         },
       }),
     );

@@ -27,6 +27,11 @@ export type PricingAccess = {
   canWriteDistributorPrices: boolean;
   /** Distributor writes its price to its dealers. */
   canWriteDealerPrice: boolean;
+  /**
+   * pricing.recommended.read: the distributor / dealer price table shows the
+   * recommended price in force and the deviation (TEC-507).
+   */
+  canReadRecommended: boolean;
 };
 
 /**
@@ -61,5 +66,6 @@ export function resolvePricingAccess({
     canReadDistributorPrices: center && can(p.saleRead),
     canWriteDistributorPrices: center && saleWrite,
     canWriteDealerPrice: distributor && saleWrite,
+    canReadRecommended: can(p.recommendedRead),
   };
 }

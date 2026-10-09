@@ -27,6 +27,8 @@ export type DatePickerProps = {
   captionLayout?: React.ComponentProps<typeof Calendar>["captionLayout"];
   align?: React.ComponentProps<typeof PopoverContent>["align"];
   "aria-invalid"?: boolean;
+  /** Earliest selectable day (`yyyy-MM-dd`); earlier days are disabled. */
+  minDate?: string;
 };
 
 function parseDateValue(value: string | undefined): Date | undefined {
@@ -51,9 +53,11 @@ export function DatePicker({
   captionLayout,
   align = "start",
   "aria-invalid": ariaInvalid,
+  minDate,
 }: DatePickerProps) {
   const { locale, t } = useLocale();
   const selected = parseDateValue(value);
+  const min = parseDateValue(minDate);
   const dfLocale = dateFnsLocale(locale);
 
   return (
@@ -85,8 +89,9 @@ export function DatePicker({
           onSelect={(date) => {
             onChange?.(date ? format(date, "yyyy-MM-dd") : "");
           }}
-          defaultMonth={selected}
+          defaultMonth={selected ?? min}
           captionLayout={captionLayout}
+          disabled={min ? { before: min } : undefined}
         />
       </PopoverContent>
     </Popover>
