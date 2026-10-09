@@ -1797,6 +1797,22 @@ type ModuleFlag struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ModuleRequest struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	ModuleKey         string             `json:"module_key"`
+	Note              string             `json:"note"`
+	Status            string             `json:"status"`
+	RequestedByUserID pgtype.Int8        `json:"requested_by_user_id"`
+	DecidedByUserID   pgtype.Int8        `json:"decided_by_user_id"`
+	DecisionNote      string             `json:"decision_note"`
+	DecidedAt         pgtype.Timestamptz `json:"decided_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type NetworkDemandForecast struct {
 	ID                        int64              `json:"id"`
 	Uuid                      uuid.UUID          `json:"uuid"`

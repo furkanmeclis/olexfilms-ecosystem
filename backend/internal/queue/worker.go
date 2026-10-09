@@ -116,6 +116,8 @@ type Worker struct {
 	campaignSend CampaignRecipientFunc
 	// TEC-481: certificate expiry notices and expiry policy refresh.
 	certificateExpiryScan CertificateExpiryScanFunc
+	// TEC-508: service subscription expiry.
+	serviceSubscriptionsExpire ServiceSubscriptionsExpireFunc
 	// TEC-484: stock forecast daily snapshots and low-stock transitions.
 	stockForecastDaily StockForecastDailyFunc
 	// TEC-491: daily performance metric projections.
@@ -232,6 +234,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskCampaignTick, w.handleCampaignTick)
 	mux.HandleFunc(TaskCampaignSendRecipient, w.handleCampaignSendRecipient)
 	mux.HandleFunc(TaskCertificateExpiryScan, w.handleCertificateExpiryScan)
+	mux.HandleFunc(TaskServiceSubscriptionsExpire, w.handleServiceSubscriptionsExpire)
 	mux.HandleFunc(TaskStockForecastDaily, w.handleStockForecastDaily)
 	mux.HandleFunc(TaskPerformanceDaily, w.handlePerformanceDaily)
 	mux.HandleFunc(TaskEfficiencyNetworkRefresh, w.handleEfficiencyNetworkRefresh)

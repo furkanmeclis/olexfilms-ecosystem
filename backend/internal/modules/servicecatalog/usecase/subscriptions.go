@@ -680,3 +680,43 @@ func valueOrEmpty(v *string) string {
 	}
 	return *v
 }
+
+// ExpireDue marks every active (or cancel-requested) subscription whose
+// ends_on is before today as expired and closes the modules of expired
+// module bundles, unless another active subscription still covers them
+// (TEC-508). Run daily by the worker; returns the expired count.
+func (s *Service) ExpireDue(ctx context.Context, today time.Time) (int, error) {
+	if s.pool == nil {
+		return 0, ErrNotConfigured
+	}
+	var expired []db.ServiceSubscription
+	if err := s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
+		var err error
+		expired, err = q.ExpireServiceSubscriptions(ctx, dateArg(today))
+		if err != nil {
+			return err
+		}
+		for _, sub := range expired {
+			item, err := q.GetServiceCatalogItem(ctx, db.GetServiceCatalogItemParams{ID: sub.ItemID, BrandID: sub.BrandID})
+			if err != nil {
+				return err
+			}
+			if err := s.closeModules(ctx, q, sub, item); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+	if s.feature != nil {
+		seen := map[int64]bool{}
+		for _, sub := range expired {
+			if !seen[sub.OrganizationID] {
+				seen[sub.OrganizationID] = true
+				s.feature.InvalidateOrg(ctx, sub.OrganizationID)
+			}
+		}
+	}
+	return len(expired), nil
+}
