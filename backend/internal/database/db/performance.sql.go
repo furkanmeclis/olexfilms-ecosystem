@@ -15,20 +15,27 @@ import (
 const approveBonusAccrual = `-- name: ApproveBonusAccrual :one
 UPDATE bonus_accruals
 SET status = 'approved',
-    approved_by_user_id = $1,
+    amount = COALESCE($1, amount),
+    approved_by_user_id = $2,
     approved_at = NOW()
-WHERE id = $2 AND organization_id = $3 AND status = 'calculated'
+WHERE id = $3 AND organization_id = $4 AND status = 'calculated'
 RETURNING id, uuid, organization_id, brand_id, user_id, period, rule_id, achievement_pct, amount, currency, status, staff_payment_id, approved_by_user_id, approved_at, cancelled_at, created_at, updated_at
 `
 
 type ApproveBonusAccrualParams struct {
-	ApprovedByUserID pgtype.Int8 `json:"approved_by_user_id"`
-	ID               int64       `json:"id"`
-	OrganizationID   int64       `json:"organization_id"`
+	Amount           pgtype.Numeric `json:"amount"`
+	ApprovedByUserID pgtype.Int8    `json:"approved_by_user_id"`
+	ID               int64          `json:"id"`
+	OrganizationID   int64          `json:"organization_id"`
 }
 
 func (q *Queries) ApproveBonusAccrual(ctx context.Context, arg ApproveBonusAccrualParams) (BonusAccrual, error) {
-	row := q.db.QueryRow(ctx, approveBonusAccrual, arg.ApprovedByUserID, arg.ID, arg.OrganizationID)
+	row := q.db.QueryRow(ctx, approveBonusAccrual,
+		arg.Amount,
+		arg.ApprovedByUserID,
+		arg.ID,
+		arg.OrganizationID,
+	)
 	var i BonusAccrual
 	err := row.Scan(
 		&i.ID,
@@ -802,6 +809,41 @@ func (q *Queries) GetPerformanceTarget(ctx context.Context, arg GetPerformanceTa
 	return i, err
 }
 
+const getStaffProfileByUserID = `-- name: GetStaffProfileByUserID :one
+SELECT id, uuid, organization_id, brand_id, user_id, name, title, hired_on, monthly_salary, currency, active, created_at, updated_at FROM staff_profiles
+WHERE organization_id = $1
+  AND user_id = $2
+  AND active
+ORDER BY id
+LIMIT 1
+`
+
+type GetStaffProfileByUserIDParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	UserID         pgtype.Int8 `json:"user_id"`
+}
+
+func (q *Queries) GetStaffProfileByUserID(ctx context.Context, arg GetStaffProfileByUserIDParams) (StaffProfile, error) {
+	row := q.db.QueryRow(ctx, getStaffProfileByUserID, arg.OrganizationID, arg.UserID)
+	var i StaffProfile
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UserID,
+		&i.Name,
+		&i.Title,
+		&i.HiredOn,
+		&i.MonthlySalary,
+		&i.Currency,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getStaffTarget = `-- name: GetStaffTarget :one
 SELECT id, uuid, organization_id, brand_id, user_id, period, metric, value, currency, created_by_user_id, created_at, updated_at FROM staff_targets
 WHERE uuid = $1 AND organization_id = $2
@@ -1023,6 +1065,114 @@ func (q *Queries) ListBonusAccruals(ctx context.Context, arg ListBonusAccrualsPa
 			&i.UserSurname,
 			&i.RuleName,
 			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBonusCalculationCandidates = `-- name: ListBonusCalculationCandidates :many
+WITH actuals AS (
+    SELECT COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) AS user_id,
+           COUNT(*)::numeric(18,2) AS services_count,
+           COALESCE(SUM(s.income_amount), 0)::numeric(18,2) AS service_revenue
+    FROM services s
+    WHERE s.organization_id = $1
+      AND s.brand_id = $2
+      AND s.status = 'completed'
+      AND COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) IS NOT NULL
+      AND COALESCE(s.completed_at, s.created_at) >= $4::timestamptz
+      AND COALESCE(s.completed_at, s.created_at) < $5::timestamptz
+    GROUP BY COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id)
+)
+SELECT st.user_id,
+       st.metric,
+       st.value AS target_value,
+       CASE st.metric
+            WHEN 'services_count' THEN COALESCE(a.services_count, 0)
+            WHEN 'service_revenue' THEN COALESCE(a.service_revenue, 0)
+       END::numeric(18,2) AS actual_value,
+       COALESCE(a.service_revenue, 0)::numeric(18,2) AS actual_revenue,
+       r.id AS rule_id,
+       r.uuid AS rule_uuid,
+       r.name AS rule_name,
+       r.threshold_pct,
+       r.kind,
+       r.amount,
+       r.percent,
+       r.currency
+FROM staff_targets st
+JOIN bonus_rules r
+  ON r.organization_id = st.organization_id
+ AND r.metric = st.metric
+ AND r.active
+LEFT JOIN actuals a ON a.user_id = st.user_id
+WHERE st.organization_id = $1
+  AND st.brand_id = $2
+  AND st.period = $3::text
+ORDER BY st.user_id, r.id
+`
+
+type ListBonusCalculationCandidatesParams struct {
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Period         string             `json:"period"`
+	PeriodFrom     pgtype.Timestamptz `json:"period_from"`
+	PeriodTo       pgtype.Timestamptz `json:"period_to"`
+}
+
+type ListBonusCalculationCandidatesRow struct {
+	UserID        int64          `json:"user_id"`
+	Metric        string         `json:"metric"`
+	TargetValue   pgtype.Numeric `json:"target_value"`
+	ActualValue   pgtype.Numeric `json:"actual_value"`
+	ActualRevenue pgtype.Numeric `json:"actual_revenue"`
+	RuleID        int64          `json:"rule_id"`
+	RuleUuid      uuid.UUID      `json:"rule_uuid"`
+	RuleName      string         `json:"rule_name"`
+	ThresholdPct  pgtype.Numeric `json:"threshold_pct"`
+	Kind          string         `json:"kind"`
+	Amount        pgtype.Numeric `json:"amount"`
+	Percent       pgtype.Numeric `json:"percent"`
+	Currency      pgtype.Text    `json:"currency"`
+}
+
+// Dealer month-end bonus calculation: every active rule x matching staff
+// target with actual service count / service revenue for the same staff user.
+func (q *Queries) ListBonusCalculationCandidates(ctx context.Context, arg ListBonusCalculationCandidatesParams) ([]ListBonusCalculationCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, listBonusCalculationCandidates,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.Period,
+		arg.PeriodFrom,
+		arg.PeriodTo,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListBonusCalculationCandidatesRow{}
+	for rows.Next() {
+		var i ListBonusCalculationCandidatesRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Metric,
+			&i.TargetValue,
+			&i.ActualValue,
+			&i.ActualRevenue,
+			&i.RuleID,
+			&i.RuleUuid,
+			&i.RuleName,
+			&i.ThresholdPct,
+			&i.Kind,
+			&i.Amount,
+			&i.Percent,
+			&i.Currency,
 		); err != nil {
 			return nil, err
 		}

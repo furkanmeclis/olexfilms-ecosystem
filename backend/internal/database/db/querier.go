@@ -1259,6 +1259,7 @@ type Querier interface {
 	GetShowcaseLeadTargetBySlug(ctx context.Context, arg GetShowcaseLeadTargetBySlugParams) (GetShowcaseLeadTargetBySlugRow, error)
 	GetStaffPaymentByUUID(ctx context.Context, arg GetStaffPaymentByUUIDParams) (StaffPayment, error)
 	GetStaffProfileByUUID(ctx context.Context, arg GetStaffProfileByUUIDParams) (StaffProfile, error)
+	GetStaffProfileByUserID(ctx context.Context, arg GetStaffProfileByUserIDParams) (StaffProfile, error)
 	GetStaffTarget(ctx context.Context, arg GetStaffTargetParams) (StaffTarget, error)
 	GetStepupSettings(ctx context.Context) (StepupSetting, error)
 	GetStockCountByUUID(ctx context.Context, arg GetStockCountByUUIDParams) (StockCount, error)
@@ -1641,6 +1642,9 @@ type Querier interface {
 	ListBinProductStocksByOrganization(ctx context.Context, organizationID int64) ([]BinProductStock, error)
 	ListBinProductStocksForRebuild(ctx context.Context, organizationID pgtype.Int8) ([]BinProductStock, error)
 	ListBonusAccruals(ctx context.Context, arg ListBonusAccrualsParams) ([]ListBonusAccrualsRow, error)
+	// Dealer month-end bonus calculation: every active rule x matching staff
+	// target with actual service count / service revenue for the same staff user.
+	ListBonusCalculationCandidates(ctx context.Context, arg ListBonusCalculationCandidatesParams) ([]ListBonusCalculationCandidatesRow, error)
 	ListBonusRules(ctx context.Context, arg ListBonusRulesParams) ([]BonusRule, error)
 	ListBrandDomains(ctx context.Context) ([]ListBrandDomainsRow, error)
 	ListBrands(ctx context.Context) ([]Brand, error)

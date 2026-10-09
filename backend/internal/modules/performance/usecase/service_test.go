@@ -2,14 +2,18 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -112,6 +116,33 @@ RETURNING id`, name, fmt.Sprintf("%s-%s-%d@example.test", f.prefix, name, f.seq)
 		t.Fatalf("user: %v", err)
 	}
 	return id
+}
+
+func (f *perfFixture) member(t *testing.T, org db.Organization, name string) int64 {
+	t.Helper()
+	id := f.user(t, name)
+	if _, err := f.tx.Exec(f.ctx, `
+INSERT INTO organization_members (organization_id, user_id, role)
+VALUES ($1, $2, 'staff')`, org.ID, id); err != nil {
+		t.Fatalf("member: %v", err)
+	}
+	return id
+}
+
+func (f *perfFixture) staffProfile(t *testing.T, org db.Organization, userID int64, name string) db.StaffProfile {
+	t.Helper()
+	row, err := f.q.CreateStaffProfile(f.ctx, db.CreateStaffProfileParams{
+		OrganizationID: org.ID,
+		BrandID:        org.BrandID,
+		UserID:         pgtype.Int8{Int64: userID, Valid: true},
+		Name:           name,
+		Currency:       org.Currency,
+		Active:         true,
+	})
+	if err != nil {
+		t.Fatalf("staff profile: %v", err)
+	}
+	return row
 }
 
 func (f *perfFixture) catalog(t *testing.T) {
@@ -356,6 +387,137 @@ func TestPerformanceRunComputesMetricsIdempotentlyAndUpdatesPreviousMonth(t *tes
 	assertMetric(t, f, f.dist.ID, "2026-10", ScopeSubtree, model.MetricServicesCount, "3.0000")
 }
 
+func TestBonusCalculationApprovalAndCancellation(t *testing.T) {
+	f := newPerfFixture(t)
+	staffUser := f.member(t, f.dealer1, "bonus-staff")
+	f.staffProfile(t, f.dealer1, staffUser, "Bonus Usta")
+	period := "2026-10"
+	target := "100"
+	if _, err := f.q.UpsertStaffTarget(f.ctx, db.UpsertStaffTargetParams{
+		OrganizationID: f.dealer1.ID,
+		BrandID:        f.dealer1.BrandID,
+		UserID:         staffUser,
+		Period:         period,
+		Metric:         model.MetricServicesCount,
+		Value:          mustNum(t, target),
+	}); err != nil {
+		t.Fatalf("target: %v", err)
+	}
+	if _, err := f.q.CreateBonusRule(f.ctx, db.CreateBonusRuleParams{
+		OrganizationID: f.dealer1.ID,
+		BrandID:        f.dealer1.BrandID,
+		Name:           "Yuzde yuz",
+		Metric:         model.MetricServicesCount,
+		ThresholdPct:   mustNum(t, "100"),
+		Kind:           model.BonusFixed,
+		Amount:         mustNum(t, "500"),
+		Currency:       pgtype.Text{String: "TRY", Valid: true},
+		Active:         true,
+	}); err != nil {
+		t.Fatalf("rule: %v", err)
+	}
+	completed := time.Date(2026, 10, 12, 10, 0, 0, 0, time.UTC)
+	for i := 0; i < 99; i++ {
+		f.service(t, f.dealer1, completed.Add(time.Duration(i)*time.Minute), false, 0, false, staffUser)
+	}
+	svc := New(f.tx, f.q, outbox.NewMemory(), featureMap{}, posting.New(f.q, nil, nil)).
+		WithClock(func() time.Time { return time.Date(2026, 11, 1, 9, 0, 0, 0, time.UTC) })
+	res, err := svc.CalculateBonuses(f.ctx, f.dealer1.ID, period)
+	if err != nil {
+		t.Fatalf("99 calculate: %v", err)
+	}
+	if res.Accrued != 0 || bonusCount(t, f, f.dealer1.ID) != 0 {
+		t.Fatalf("99%% result = %+v count=%d, want no accrual", res, bonusCount(t, f, f.dealer1.ID))
+	}
+	f.service(t, f.dealer1, completed.Add(100*time.Minute), false, 0, false, staffUser)
+	res, err = svc.CalculateBonuses(f.ctx, f.dealer1.ID, period)
+	if err != nil {
+		t.Fatalf("100 calculate: %v", err)
+	}
+	if res.Accrued != 1 || bonusCount(t, f, f.dealer1.ID) != 1 {
+		t.Fatalf("100%% result = %+v count=%d, want one accrual", res, bonusCount(t, f, f.dealer1.ID))
+	}
+	if _, err = svc.CalculateBonuses(f.ctx, f.dealer1.ID, period); err != nil {
+		t.Fatalf("second calculate: %v", err)
+	}
+	if got := bonusCount(t, f, f.dealer1.ID); got != 1 {
+		t.Fatalf("idempotent accrual count = %d, want 1", got)
+	}
+	var accrual uuid.UUID
+	if err := f.tx.QueryRow(f.ctx, `SELECT uuid FROM bonus_accruals WHERE organization_id = $1`, f.dealer1.ID).Scan(&accrual); err != nil {
+		t.Fatalf("accrual uuid: %v", err)
+	}
+	view, err := svc.ApproveBonus(f.ctx, callerFor(f.dealer1, staffUser), accrual, BonusApprovalInput{})
+	if err != nil {
+		t.Fatalf("approve: %v", err)
+	}
+	if view.Status != model.AccrualPosted || view.Amount != "500.00" {
+		t.Fatalf("approved view = %+v", view)
+	}
+	assertBonusPayment(t, f, f.dealer1.ID, "planned", "2026-11-05", 0)
+}
+
+func TestBonusCancelSkipsPaymentAndFeatureGate(t *testing.T) {
+	f := newPerfFixture(t)
+	staffUser := f.member(t, f.dealer1, "bonus-cancel")
+	f.staffProfile(t, f.dealer1, staffUser, "Iptal Usta")
+	if _, err := f.q.UpsertStaffTarget(f.ctx, db.UpsertStaffTargetParams{
+		OrganizationID: f.dealer1.ID,
+		BrandID:        f.dealer1.BrandID,
+		UserID:         staffUser,
+		Period:         "2026-09",
+		Metric:         model.MetricServiceRevenue,
+		Value:          mustNum(t, "100"),
+		Currency:       pgtype.Text{String: "TRY", Valid: true},
+	}); err != nil {
+		t.Fatalf("target: %v", err)
+	}
+	if _, err := f.q.CreateBonusRule(f.ctx, db.CreateBonusRuleParams{
+		OrganizationID: f.dealer1.ID,
+		BrandID:        f.dealer1.BrandID,
+		Name:           "Gelir",
+		Metric:         model.MetricServiceRevenue,
+		ThresholdPct:   mustNum(t, "100"),
+		Kind:           model.BonusFixed,
+		Amount:         mustNum(t, "250"),
+		Currency:       pgtype.Text{String: "TRY", Valid: true},
+		Active:         true,
+	}); err != nil {
+		t.Fatalf("rule: %v", err)
+	}
+	sid := f.service(t, f.dealer1, time.Date(2026, 9, 10, 10, 0, 0, 0, time.UTC), false, 0, false, staffUser)
+	if _, err := f.tx.Exec(f.ctx, `UPDATE services SET income_amount = 100 WHERE id = $1`, sid); err != nil {
+		t.Fatalf("income: %v", err)
+	}
+	svc := New(f.tx, f.q, outbox.NewMemory(), featureMap{}, posting.New(f.q, nil, nil)).
+		WithClock(func() time.Time { return time.Date(2026, 10, 6, 9, 0, 0, 0, time.UTC) })
+	if _, err := svc.CalculateBonuses(f.ctx, f.dealer1.ID, "2026-09"); err != nil {
+		t.Fatalf("calculate: %v", err)
+	}
+	var accrual uuid.UUID
+	if err := f.tx.QueryRow(f.ctx, `SELECT uuid FROM bonus_accruals WHERE organization_id = $1`, f.dealer1.ID).Scan(&accrual); err != nil {
+		t.Fatalf("accrual uuid: %v", err)
+	}
+	cancelled, err := svc.CancelBonus(f.ctx, callerFor(f.dealer1, staffUser), accrual)
+	if err != nil {
+		t.Fatalf("cancel: %v", err)
+	}
+	if cancelled.Status != model.AccrualCancelled {
+		t.Fatalf("cancelled = %+v", cancelled)
+	}
+	var payments int
+	if err := f.tx.QueryRow(f.ctx, `SELECT count(*) FROM staff_payments WHERE organization_id = $1`, f.dealer1.ID).Scan(&payments); err != nil {
+		t.Fatalf("payments: %v", err)
+	}
+	if payments != 0 {
+		t.Fatalf("cancelled accrual payments = %d, want 0", payments)
+	}
+	off := New(f.tx, f.q, outbox.NewMemory(), featureMap{features.ModuleDealerAccounting: false}, posting.New(f.q, nil, nil))
+	if _, err := off.CalculateBonuses(f.ctx, f.dealer1.ID, "2026-09"); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("dealer_accounting off error = %v, want ErrForbidden", err)
+	}
+}
+
 func metricRows(t *testing.T, f *perfFixture, orgID int64) int {
 	t.Helper()
 	var n int
@@ -392,5 +554,55 @@ WHERE organization_id = $1 AND period = $2 AND scope = $3 AND metric = $4`,
 	}
 	if n != 0 {
 		t.Fatalf("metric %s exists with count %d", metric, n)
+	}
+}
+
+func callerFor(org db.Organization, userID int64) Caller {
+	return Caller{
+		Principal: authctx.Principal{UserInternal: userID},
+		Org: orgctx.Scope{
+			InternalID: org.ID,
+			UUID:       org.Uuid,
+			Slug:       org.Slug,
+			Name:       org.Name,
+			Status:     org.Status,
+			OrgType:    org.Type,
+			BrandID:    org.BrandID,
+		},
+	}
+}
+
+func mustNum(t *testing.T, raw string) pgtype.Numeric {
+	t.Helper()
+	var n pgtype.Numeric
+	if err := n.Scan(raw); err != nil {
+		t.Fatalf("numeric %s: %v", raw, err)
+	}
+	return n
+}
+
+func bonusCount(t *testing.T, f *perfFixture, orgID int64) int {
+	t.Helper()
+	var n int
+	if err := f.tx.QueryRow(f.ctx, `SELECT count(*) FROM bonus_accruals WHERE organization_id = $1 AND status <> 'cancelled'`, orgID).Scan(&n); err != nil {
+		t.Fatalf("bonus count: %v", err)
+	}
+	return n
+}
+
+func assertBonusPayment(t *testing.T, f *perfFixture, orgID int64, wantStatus, wantPaidOn string, wantLedger int) {
+	t.Helper()
+	var status, paidOn string
+	var ledgerRows int
+	err := f.tx.QueryRow(f.ctx, `
+SELECT p.status, p.paid_on::text,
+       (SELECT count(*) FROM finance_entries e WHERE e.source_type = 'staff_payment' AND e.source_uuid = p.uuid)
+FROM staff_payments p
+WHERE p.organization_id = $1 AND p.type = 'bonus'`, orgID).Scan(&status, &paidOn, &ledgerRows)
+	if err != nil {
+		t.Fatalf("bonus payment: %v", err)
+	}
+	if status != wantStatus || paidOn != wantPaidOn || ledgerRows != wantLedger {
+		t.Fatalf("bonus payment status=%s paid_on=%s ledger=%d, want %s %s %d", status, paidOn, ledgerRows, wantStatus, wantPaidOn, wantLedger)
 	}
 }

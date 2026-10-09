@@ -221,6 +221,50 @@ func (h *Handler) DeleteStaffTarget(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *Handler) ListBonuses(w http.ResponseWriter, r *http.Request) {
+	f, err := usecase.ParseBonusFilter(r.URL.Query(), time.Now())
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	items, total, err := h.svc.ListBonuses(r.Context(), caller(r), f)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
+}
+
+func (h *Handler) ApproveBonus(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	var in usecase.BonusApprovalInput
+	if r.ContentLength != 0 && !decode(w, r, &in) {
+		return
+	}
+	item, err := h.svc.ApproveBonus(r.Context(), caller(r), id, in)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, item)
+}
+
+func (h *Handler) CancelBonus(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	item, err := h.svc.CancelBonus(r.Context(), caller(r), id)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, item)
+}
+
 func (h *Handler) ListRules(w http.ResponseWriter, r *http.Request) {
 	active, err := apiquery.Bool(r.URL.Query(), "active")
 	if err != nil {

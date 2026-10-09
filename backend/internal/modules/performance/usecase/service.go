@@ -12,12 +12,14 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	accountingmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/accounting/posting"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/model"
 	perfrepo "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/repository"
 	tasksuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
@@ -32,6 +34,8 @@ const (
 	EventPerformanceComputed    = events.PerformanceComputed
 	EventPerformanceWeakDealer  = events.PerformanceWeakDealer
 	EventPerformanceBelowTarget = events.PerformanceBelowTarget
+	EventBonusCalculated        = events.PerformanceBonusCalculated
+	EventBonusApproved          = events.PerformanceBonusApproved
 
 	ScopeOrg     = "org"
 	ScopeSubtree = "subtree"
@@ -73,6 +77,7 @@ type Service struct {
 	q        *db.Queries
 	store    *perfrepo.Store
 	out      outbox.Enqueuer
+	poster   *posting.Poster
 	features FeatureChecker
 	log      *slog.Logger
 	now      func() time.Time
@@ -85,6 +90,8 @@ func New(pool TxBeginner, q *db.Queries, out outbox.Enqueuer, opts ...any) *Serv
 		switch v := opt.(type) {
 		case FeatureChecker:
 			s.features = v
+		case *posting.Poster:
+			s.poster = v
 		case *slog.Logger:
 			if v != nil {
 				s.log = v
@@ -327,6 +334,43 @@ type RuleRunResult struct {
 	Evaluated     int    `json:"evaluated"`
 	Matched       int    `json:"matched"`
 	TasksCreated  int    `json:"tasks_created"`
+	Notifications int    `json:"notifications"`
+}
+
+type BonusFilter struct {
+	Period        string
+	UserID        *int64
+	Statuses      []string
+	Limit, Offset int32
+}
+
+type BonusAccrualView struct {
+	UUID             uuid.UUID  `json:"uuid"`
+	UserID           int64      `json:"user_id"`
+	UserName         string     `json:"user_name"`
+	Period           string     `json:"period"`
+	RuleName         string     `json:"rule_name"`
+	AchievementPct   string     `json:"achievement_pct"`
+	Amount           string     `json:"amount"`
+	Currency         string     `json:"currency"`
+	Status           string     `json:"status"`
+	StaffPaymentID   *int64     `json:"staff_payment_id,omitempty"`
+	ApprovedByUserID *int64     `json:"approved_by_user_id,omitempty"`
+	ApprovedAt       *time.Time `json:"approved_at,omitempty"`
+	CancelledAt      *time.Time `json:"cancelled_at,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+type BonusApprovalInput struct {
+	Amount *string `json:"amount"`
+	Note   *string `json:"note"`
+}
+
+type BonusRunResult struct {
+	Period        string `json:"period"`
+	Evaluated     int    `json:"evaluated"`
+	Accrued       int    `json:"accrued"`
 	Notifications int    `json:"notifications"`
 }
 
@@ -574,6 +618,251 @@ func (s *Service) DeleteStaffTarget(ctx context.Context, c Caller, id uuid.UUID)
 		return ErrNotFound
 	}
 	return nil
+}
+
+func ParseBonusFilter(values url.Values, now time.Time) (BonusFilter, error) {
+	q := apiquery.Parse(values)
+	f := BonusFilter{Period: values.Get("period"), Limit: q.Limit, Offset: q.Offset}
+	if f.Period == "" {
+		f.Period = monthParam("", now)
+	}
+	var err error
+	if f.Statuses, err = apiquery.EnumList(values, "status", model.AccrualStatuses...); err != nil {
+		return f, err
+	}
+	if raw := strings.TrimSpace(values.Get("user_id")); raw != "" {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil {
+			return f, invalid("user_id", "must be an integer")
+		}
+		f.UserID = &id
+	}
+	return f, nil
+}
+
+func (s *Service) ListBonuses(ctx context.Context, c Caller, f BonusFilter) ([]BonusAccrualView, int64, error) {
+	if c.Org.OrgType != "dealer" {
+		return nil, 0, ErrForbidden
+	}
+	if err := s.ensureBonusFeatures(ctx, c.Org.InternalID, true); err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.q.ListBonusAccruals(ctx, db.ListBonusAccrualsParams{
+		OrganizationID: c.Org.InternalID,
+		Period:         textArg(f.Period),
+		Statuses:       f.Statuses,
+		UserID:         int8Ptr(f.UserID),
+		RowLimit:       f.Limit,
+		RowOffset:      f.Offset,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]BonusAccrualView, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, bonusAccrualRowView(r))
+	}
+	return out, totalBonuses(rows), nil
+}
+
+func (s *Service) CalculateBonuses(ctx context.Context, organizationID int64, period string) (BonusRunResult, error) {
+	org, err := s.q.GetOrganizationByID(ctx, organizationID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return BonusRunResult{}, ErrNotFound
+	}
+	if err != nil {
+		return BonusRunResult{}, err
+	}
+	return s.calculateBonuses(ctx, org, monthParam(period, s.now()), true)
+}
+
+func (s *Service) calculateBonuses(ctx context.Context, org db.Organization, period string, strict bool) (BonusRunResult, error) {
+	if org.Type != "dealer" {
+		if strict {
+			return BonusRunResult{}, ErrForbidden
+		}
+		return BonusRunResult{Period: period}, nil
+	}
+	if err := s.ensureBonusFeatures(ctx, org.ID, strict); err != nil {
+		if strict {
+			return BonusRunResult{}, err
+		}
+		return BonusRunResult{Period: period}, nil
+	}
+	from, to, err := periodBounds(period)
+	if err != nil {
+		return BonusRunResult{}, err
+	}
+	rows, err := s.q.ListBonusCalculationCandidates(ctx, db.ListBonusCalculationCandidatesParams{
+		OrganizationID: org.ID,
+		BrandID:        org.BrandID,
+		Period:         period,
+		PeriodFrom:     ts(from),
+		PeriodTo:       ts(to),
+	})
+	if err != nil {
+		return BonusRunResult{}, err
+	}
+	res := BonusRunResult{Period: period, Evaluated: len(rows)}
+	var calculated []db.BonusAccrual
+	for _, r := range rows {
+		achievement := pct(r.ActualValue, r.TargetValue)
+		if numFloat(achievement) < numFloat(r.ThresholdPct) {
+			continue
+		}
+		amount, currency, ok := bonusAmount(org.Currency, r)
+		if !ok {
+			continue
+		}
+		accrual, err := s.q.UpsertBonusAccrual(ctx, db.UpsertBonusAccrualParams{
+			OrganizationID: org.ID,
+			BrandID:        org.BrandID,
+			UserID:         r.UserID,
+			Period:         period,
+			RuleID:         r.RuleID,
+			AchievementPct: achievement,
+			Amount:         amount,
+			Currency:       currency,
+		})
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return res, mapPG(err)
+		}
+		res.Accrued++
+		calculated = append(calculated, accrual)
+	}
+	n, err := s.notifyBonusesCalculated(ctx, org, period, calculated)
+	if err != nil {
+		return res, err
+	}
+	res.Notifications = n
+	return res, nil
+}
+
+func (s *Service) ApproveBonus(ctx context.Context, c Caller, id uuid.UUID, in BonusApprovalInput) (BonusAccrualView, error) {
+	if c.Org.OrgType != "dealer" {
+		return BonusAccrualView{}, ErrForbidden
+	}
+	if err := s.ensureBonusFeatures(ctx, c.Org.InternalID, true); err != nil {
+		return BonusAccrualView{}, err
+	}
+	note := ""
+	if in.Note != nil {
+		note = strings.TrimSpace(*in.Note)
+	}
+	overrideAmount := pgtype.Numeric{}
+	if in.Amount != nil && strings.TrimSpace(*in.Amount) != "" {
+		if note == "" {
+			return BonusAccrualView{}, invalid("note", "is required when amount is adjusted")
+		}
+		n, err := numeric(*in.Amount)
+		if err != nil {
+			return BonusAccrualView{}, invalid("amount", "must be a positive decimal")
+		}
+		overrideAmount = n
+	}
+	org, err := s.q.GetOrganizationByID(ctx, c.Org.InternalID)
+	if err != nil {
+		return BonusAccrualView{}, err
+	}
+	err = s.inTx(ctx, func(tx pgx.Tx) error {
+		qtx := s.q.WithTx(tx)
+		cur, err := qtx.LockBonusAccrual(ctx, db.LockBonusAccrualParams{Uuid: id, OrganizationID: c.Org.InternalID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if cur.Status != model.AccrualCalculated {
+			return ErrNotFound
+		}
+		if overrideAmount.Valid {
+			cur.Amount = overrideAmount
+		}
+		approved, err := qtx.ApproveBonusAccrual(ctx, db.ApproveBonusAccrualParams{ID: cur.ID, OrganizationID: c.Org.InternalID, Amount: cur.Amount, ApprovedByUserID: userArg(c)})
+		if err != nil {
+			return err
+		}
+		staff, err := qtx.GetStaffProfileByUserID(ctx, db.GetStaffProfileByUserIDParams{OrganizationID: c.Org.InternalID, UserID: pgtype.Int8{Int64: approved.UserID, Valid: true}})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		paidOn, err := s.bonusPayoutDate(ctx, qtx, org, approved.Period)
+		if err != nil {
+			return err
+		}
+		status := "posted"
+		if paidOn.After(bookToday(org, s.now())) {
+			status = "planned"
+		}
+		desc := "Prim tahakkuku"
+		if note != "" {
+			desc += ": " + note
+		}
+		payment, err := qtx.CreateStaffPayment(ctx, db.CreateStaffPaymentParams{
+			OrganizationID:  c.Org.InternalID,
+			BrandID:         c.Org.BrandID,
+			StaffID:         staff.ID,
+			Type:            "bonus",
+			Period:          approved.Period,
+			Amount:          cur.Amount,
+			Currency:        approved.Currency,
+			PaidOn:          pgtype.Date{Time: paidOn, Valid: true},
+			Description:     textArg(desc),
+			CreatedByUserID: userArg(c),
+			Status:          status,
+		})
+		if err != nil {
+			return mapPG(err)
+		}
+		if status == "posted" {
+			if err := s.postBonusStaffPayment(ctx, tx, payment, userArg(c)); err != nil {
+				return err
+			}
+		}
+		if _, err := qtx.MarkBonusAccrualPosted(ctx, db.MarkBonusAccrualPostedParams{
+			ID:             approved.ID,
+			OrganizationID: approved.OrganizationID,
+			StaffPaymentID: pgtype.Int8{Int64: payment.ID, Valid: true},
+		}); err != nil {
+			return err
+		}
+		return s.notifyBonusApproved(ctx, tx, org, approved, payment)
+	})
+	if err != nil {
+		return BonusAccrualView{}, err
+	}
+	return s.bonusByIDView(ctx, c, id)
+}
+
+func (s *Service) CancelBonus(ctx context.Context, c Caller, id uuid.UUID) (BonusAccrualView, error) {
+	if c.Org.OrgType != "dealer" {
+		return BonusAccrualView{}, ErrForbidden
+	}
+	if err := s.ensureBonusFeatures(ctx, c.Org.InternalID, true); err != nil {
+		return BonusAccrualView{}, err
+	}
+	cur, err := s.q.LockBonusAccrual(ctx, db.LockBonusAccrualParams{Uuid: id, OrganizationID: c.Org.InternalID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return BonusAccrualView{}, ErrNotFound
+	}
+	if err != nil {
+		return BonusAccrualView{}, err
+	}
+	row, err := s.q.CancelBonusAccrual(ctx, db.CancelBonusAccrualParams{ID: cur.ID, OrganizationID: c.Org.InternalID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return BonusAccrualView{}, ErrNotFound
+	}
+	if err != nil {
+		return BonusAccrualView{}, err
+	}
+	return s.bonusByIDView(ctx, c, row.Uuid)
 }
 
 func (s *Service) ListRules(ctx context.Context, c Caller, f RuleFilter) ([]RuleView, error) {
@@ -1014,6 +1303,50 @@ func ruleView(r db.WeakDealerRule) RuleView {
 	return RuleView{UUID: r.Uuid, Name: r.Name, Metric: r.Metric, Operator: r.Operator, Threshold: numText(r.Threshold), CreateTask: r.CreateTask, Notify: r.Notify, AssigneeUserID: int64Ptr(r.AssigneeUserID), Active: r.Active, CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time}
 }
 
+func bonusAccrualRowView(r db.ListBonusAccrualsRow) BonusAccrualView {
+	return BonusAccrualView{
+		UUID:             r.Uuid,
+		UserID:           r.UserID,
+		UserName:         strings.TrimSpace(r.UserName + " " + r.UserSurname),
+		Period:           r.Period,
+		RuleName:         r.RuleName,
+		AchievementPct:   numText(r.AchievementPct),
+		Amount:           numText(r.Amount),
+		Currency:         r.Currency,
+		Status:           r.Status,
+		StaffPaymentID:   int64Ptr(r.StaffPaymentID),
+		ApprovedByUserID: int64Ptr(r.ApprovedByUserID),
+		ApprovedAt:       timePtr(r.ApprovedAt),
+		CancelledAt:      timePtr(r.CancelledAt),
+		CreatedAt:        r.CreatedAt.Time,
+		UpdatedAt:        r.UpdatedAt.Time,
+	}
+}
+
+func totalBonuses(rows []db.ListBonusAccrualsRow) int64 {
+	if len(rows) == 0 {
+		return 0
+	}
+	return rows[0].TotalCount
+}
+
+func (s *Service) bonusByIDView(ctx context.Context, c Caller, id uuid.UUID) (BonusAccrualView, error) {
+	rows, err := s.q.ListBonusAccruals(ctx, db.ListBonusAccrualsParams{
+		OrganizationID: c.Org.InternalID,
+		Statuses:       model.AccrualStatuses,
+		RowLimit:       1000,
+	})
+	if err != nil {
+		return BonusAccrualView{}, err
+	}
+	for _, r := range rows {
+		if r.Uuid == id {
+			return bonusAccrualRowView(r), nil
+		}
+	}
+	return BonusAccrualView{}, ErrNotFound
+}
+
 func diff(a, b *MetricValue) *string {
 	if a == nil || b == nil {
 		return nil
@@ -1145,6 +1478,184 @@ func numeric(s string) (pgtype.Numeric, error) {
 		return n, errors.New("invalid numeric")
 	}
 	return n, nil
+}
+
+func pct(actual, target pgtype.Numeric) pgtype.Numeric {
+	v := 0.0
+	if t := numFloat(target); t > 0 {
+		v = numFloat(actual) / t * 100
+	}
+	n, _ := numeric(fmt.Sprintf("%.2f", v))
+	if !n.Valid {
+		_ = n.Scan("0")
+	}
+	return n
+}
+
+func bonusAmount(currency string, r db.ListBonusCalculationCandidatesRow) (pgtype.Numeric, string, bool) {
+	switch r.Kind {
+	case model.BonusFixed:
+		if !r.Amount.Valid || !r.Currency.Valid || numFloat(r.Amount) <= 0 {
+			return pgtype.Numeric{}, "", false
+		}
+		return r.Amount, r.Currency.String, true
+	case model.BonusPercentOfRevenue:
+		amount := numFloat(r.ActualRevenue) * numFloat(r.Percent) / 100
+		if amount <= 0 {
+			return pgtype.Numeric{}, "", false
+		}
+		n, err := numeric(fmt.Sprintf("%.2f", amount))
+		return n, currency, err == nil
+	default:
+		return pgtype.Numeric{}, "", false
+	}
+}
+
+func periodBounds(period string) (time.Time, time.Time, error) {
+	period = strings.TrimSpace(period)
+	if len(period) != 7 {
+		return time.Time{}, time.Time{}, invalid("period", "must be YYYY-MM")
+	}
+	start, err := time.Parse("2006-01-02", period+"-01")
+	if err != nil {
+		return time.Time{}, time.Time{}, invalid("period", "must be YYYY-MM")
+	}
+	return start, start.AddDate(0, 1, 0), nil
+}
+
+func (s *Service) ensureBonusFeatures(ctx context.Context, orgID int64, strict bool) error {
+	on, err := s.featureOn(ctx, orgID, features.ModulePerformance)
+	if err != nil {
+		return err
+	}
+	if !on {
+		return ErrForbidden
+	}
+	on, err = s.featureOn(ctx, orgID, features.ModuleDealerAccounting)
+	if err != nil {
+		return err
+	}
+	if !on {
+		return ErrForbidden
+	}
+	_ = strict
+	return nil
+}
+
+func (s *Service) bonusPayoutDate(ctx context.Context, q *db.Queries, org db.Organization, period string) (time.Time, error) {
+	day := int16(5)
+	settings, err := q.GetBonusSettings(ctx, org.ID)
+	if err == nil {
+		day = settings.PayoutDay
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return time.Time{}, err
+	}
+	start, _, err := periodBounds(period)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return time.Date(start.Year(), start.Month()+1, int(day), 0, 0, 0, 0, time.UTC), nil
+}
+
+func bookToday(org db.Organization, now time.Time) time.Time {
+	loc := loadLocation(org.Timezone)
+	return dayStart(now.In(loc))
+}
+
+func dayStart(t time.Time) time.Time {
+	y, m, d := t.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
+}
+
+func ledgerTime(paidOn, now time.Time) time.Time {
+	day := dayStart(paidOn)
+	if dayStart(now.UTC()).Equal(day) {
+		return now
+	}
+	return day
+}
+
+func (s *Service) inTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := fn(tx); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func (s *Service) postBonusStaffPayment(ctx context.Context, tx pgx.Tx, p db.StaffPayment, actor pgtype.Int8) error {
+	if s.poster == nil {
+		return errors.New("performance: accounting poster not configured")
+	}
+	var actorPtr *int64
+	if actor.Valid {
+		actorPtr = &actor.Int64
+	}
+	desc := ""
+	if p.Description.Valid {
+		desc = p.Description.String
+	}
+	res, err := s.poster.PostExpense(ctx, tx, posting.Entry{
+		OrganizationID: p.OrganizationID,
+		Source:         posting.Source{Type: "staff_payment", UUID: p.Uuid},
+		Category:       accountingmodel.CategoryStaffBonus,
+		Amount:         posting.FormatNumeric(p.Amount),
+		Currency:       p.Currency,
+		AllowNoTarget:  true,
+		Description:    desc,
+		ActorUserID:    actorPtr,
+		PostedAt:       ledgerTime(p.PaidOn.Time, s.now()),
+	})
+	if err != nil {
+		return err
+	}
+	if _, err := s.q.WithTx(tx).SetStaffPaymentFinanceEntry(ctx, db.SetStaffPaymentFinanceEntryParams{
+		FinanceEntryID: pgtype.Int8{Int64: res.Entry.ID, Valid: true},
+		ID:             p.ID,
+		OrganizationID: p.OrganizationID,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) notifyBonusesCalculated(ctx context.Context, org db.Organization, period string, accruals []db.BonusAccrual) (int, error) {
+	if s.out == nil || len(accruals) == 0 {
+		return 0, nil
+	}
+	owners, err := s.q.ListOrganizationOwnerUserIDs(ctx, org.ID)
+	if err != nil || len(owners) == 0 {
+		return 0, err
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	payload := map[string]any{
+		"brand_id": org.BrandID, "period": period, "count": strconv.Itoa(len(accruals)),
+		"notify_user_ids": owners,
+	}
+	if err := s.out.Enqueue(ctx, tx, events.New(EventBonusCalculated).WithTenant(org.ID).WithPayload(payload)); err != nil {
+		return 0, err
+	}
+	return len(owners), tx.Commit(ctx)
+}
+
+func (s *Service) notifyBonusApproved(ctx context.Context, tx pgx.Tx, org db.Organization, accrual db.BonusAccrual, payment db.StaffPayment) error {
+	if s.out == nil {
+		return nil
+	}
+	payload := map[string]any{
+		"brand_id": org.BrandID, "period": accrual.Period, "amount": numText(payment.Amount),
+		"currency": payment.Currency, "paid_on": payment.PaidOn.Time.Format(time.DateOnly),
+		"status": payment.Status, "notify_user_ids": []int64{accrual.UserID},
+	}
+	return s.out.Enqueue(ctx, tx, events.New(EventBonusApproved).WithTenant(org.ID).WithEntity("staff_payment", &payment.ID, &payment.Uuid).WithPayload(payload))
 }
 
 func contains(list []string, v string) bool {

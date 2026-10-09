@@ -28,6 +28,9 @@ func RegisterRoutes(
 	read := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermPerformanceRead) }
 	targets := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermPerformanceTargetsManage) }
 	staff := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermPerformanceStaffTargetsManage) }
+	bonus := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireFeature(checker, features.ModuleDealerAccounting), middleware.RequireScope(q, rbac.PermPerformanceBonusManage))
+	}
 	rules := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermPerformanceRulesManage) }
 
 	mux.Handle("GET /v1/performance/dashboard", read(h.Dashboard))
@@ -45,6 +48,10 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/performance/staff-targets", staff(h.UpsertStaffTarget))
 	mux.Handle("PUT /v1/performance/staff-targets", staff(h.UpsertStaffTarget))
 	mux.Handle("DELETE /v1/performance/staff-targets/{uuid}", staff(h.DeleteStaffTarget))
+
+	mux.Handle("GET /v1/performance/bonuses", bonus(h.ListBonuses))
+	mux.Handle("POST /v1/performance/bonuses/{uuid}/approve", bonus(h.ApproveBonus))
+	mux.Handle("POST /v1/performance/bonuses/{uuid}/cancel", bonus(h.CancelBonus))
 
 	mux.Handle("GET /v1/performance/rules", rules(h.ListRules))
 	mux.Handle("POST /v1/performance/rules", rules(h.CreateRule))

@@ -21571,6 +21571,82 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/performance/bonuses:
+    get:
+      tags: [Performance]
+      operationId: listPerformanceBonuses
+      summary: Dealer staff bonus accruals
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: period
+          in: query
+          schema: { type: string }
+        - name: user_id
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: status
+          in: query
+          schema: { type: string, enum: [calculated, approved, posted, cancelled] }
+      responses:
+        "200":
+          description: Bonus accrual page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/bonuses/{uuid}/approve:
+    post:
+      tags: [Performance]
+      operationId: approvePerformanceBonus
+      summary: Approve a calculated bonus and create the staff payment
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceBonusApprovalInput" }
+      responses:
+        "200":
+          description: Approved bonus accrual
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonus" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/performance/bonuses/{uuid}/cancel:
+    post:
+      tags: [Performance]
+      operationId: cancelPerformanceBonus
+      summary: Cancel a calculated or approved bonus accrual
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Cancelled bonus accrual
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonus" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/performance/rules:
     get:
       tags: [Performance]
@@ -29406,6 +29482,30 @@ components:
         notify: { type: boolean }
         assignee_user_id: { type: [integer, "null"], format: int64 }
         active: { type: boolean }
+    PerformanceBonus:
+      type: object
+      properties:
+        uuid: { type: string, format: uuid }
+        user_id: { type: integer, format: int64 }
+        user_name: { type: string }
+        period: { type: string }
+        rule_name: { type: string }
+        achievement_pct: { type: string }
+        amount: { type: string }
+        currency: { type: string }
+        status: { type: string, enum: [calculated, approved, posted, cancelled] }
+        staff_payment_id: { type: [integer, "null"], format: int64 }
+        approved_by_user_id: { type: [integer, "null"], format: int64 }
+        approved_at: { type: [string, "null"], format: date-time }
+        cancelled_at: { type: [string, "null"], format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PerformanceBonusApprovalInput:
+      type: object
+      additionalProperties: false
+      properties:
+        amount: { type: [string, "null"] }
+        note: { type: [string, "null"] }
     EnvelopePerformanceDashboard:
       type: object
       properties:
@@ -29477,6 +29577,24 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PerformanceRule" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceBonusPage:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PerformanceBonus" } }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceBonus:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceBonus" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     CertificateTypeInput:
