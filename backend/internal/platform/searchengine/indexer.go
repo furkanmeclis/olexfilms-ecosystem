@@ -3,6 +3,7 @@ package searchengine
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
@@ -74,7 +75,7 @@ func (i *Indexer) EnqueueReindex(ctx context.Context, spec string) {
 		return
 	}
 	if i.queue == nil {
-		i.processReindex(ctx, spec)
+		_ = i.processReindex(ctx, spec) // logged per spec
 		return
 	}
 	task, err := queue.NewSearchReindexTask(spec)
@@ -99,10 +100,11 @@ func (i *Indexer) ProcessDelete(ctx context.Context, spec, id string) error {
 	return nil
 }
 
-// ProcessReindex rebuilds one or all indexes (worker handler).
+// ProcessReindex rebuilds one or all indexes (worker handler). It returns
+// the failures so the task and cmd/search-reindex do not report success;
+// an unknown spec never retries (TEC-524).
 func (i *Indexer) ProcessReindex(ctx context.Context, spec string) error {
-	i.processReindex(ctx, spec)
-	return nil
+	return i.processReindex(ctx, spec)
 }
 
 // Bootstrap ensures indexes exist and triggers reindex when empty.
@@ -160,32 +162,36 @@ func (i *Indexer) processDelete(ctx context.Context, spec, id string) {
 	}
 }
 
-func (i *Indexer) processReindex(ctx context.Context, spec string) {
+func (i *Indexer) processReindex(ctx context.Context, spec string) error {
 	if i.reg == nil {
-		return
+		return nil
 	}
 	specs := i.reg.Specs()
 	if spec != "" {
 		adapter, err := i.reg.Get(spec)
 		if err != nil {
 			i.log.Warn("search_reindex_unknown_spec", "spec", spec, "error", err)
-			return
+			return fmt.Errorf("%w: %w", asynq.SkipRetry, err)
 		}
 		specs = []Spec{adapter.Spec()}
 	}
+	var errs []error
 	for _, s := range specs {
 		adapter, err := i.reg.Get(s.ID)
 		if err != nil {
 			i.log.Warn("search_reindex_adapter_failed", "spec", s.ID, "error", err)
+			errs = append(errs, err)
 			continue
 		}
 		if err := i.client.EnsureIndex(ctx, s); err != nil {
 			i.log.Warn("search_reindex_ensure_failed", "spec", s.ID, "error", err)
+			errs = append(errs, err)
 			continue
 		}
 		docs, err := adapter.ListAll(ctx)
 		if err != nil {
 			i.log.Warn("search_reindex_list_failed", "spec", s.ID, "error", err)
+			errs = append(errs, fmt.Errorf("searchengine: list %q: %w", s.ID, err))
 			continue
 		}
 		const batch = 200
@@ -196,9 +202,11 @@ func (i *Indexer) processReindex(ctx context.Context, spec string) {
 			}
 			if err := i.client.UpsertDocuments(ctx, s.ID, docs[start:end]); err != nil {
 				i.log.Warn("search_reindex_batch_failed", "spec", s.ID, "error", err)
+				errs = append(errs, err)
 				break
 			}
 		}
 		i.log.Info("search_reindex_completed", "spec", s.ID, "count", len(docs))
 	}
+	return errors.Join(errs...)
 }
