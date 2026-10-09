@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   FieldError,
-  NativeSelect,
+  FormSelect,
 } from "@/features/accounting/components/shared";
 import { accountingKeys } from "@/features/accounting/hooks/use-accounting-access";
 import { normalizeAmount } from "@/features/accounting/lib/form";
@@ -243,7 +243,7 @@ export function ServiceIncomeForm({
         />
         <FieldError id="service-income-amount-error" message={errors.amount} />
       </div>
-      <NativeSelect
+      <FormSelect
         id="service-income-method"
         name="payment_method"
         label={t("services.income.method")}
@@ -262,7 +262,7 @@ export function ServiceIncomeForm({
         }))}
       />
       {accountType ? (
-        <NativeSelect
+        <FormSelect
           id="service-income-account"
           name="account_uuid"
           label={t("services.income.account")}

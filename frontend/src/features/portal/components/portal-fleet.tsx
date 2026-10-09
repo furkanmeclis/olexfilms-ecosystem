@@ -33,6 +33,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { routes } from "@/config/routes";
 import { serviceStatusTone } from "@/features/services/lib/detail";
 import {
@@ -971,20 +978,25 @@ export function PortalFleetAccount() {
         <label className="text-sm font-medium" htmlFor="fleet-account-dealer">
           {t("portal.fleet.account.dealer_filter")}
         </label>
-        <select
-          id="fleet-account-dealer"
-          className="border-input bg-background rounded-md border px-3 py-2 text-sm"
-          value={dealer}
-          onChange={(e) => setDealer(e.target.value)}
-          data-testid="portal-fleet-account-dealer-filter"
-        >
-          <option value="all">{t("portal.fleet.account.all_dealers")}</option>
-          {dealers.map((d) => (
-            <option key={d.dealer.uuid} value={d.dealer.uuid}>
-              {d.dealer.name}
-            </option>
-          ))}
-        </select>
+        <Select value={dealer} onValueChange={setDealer}>
+          <SelectTrigger
+            id="fleet-account-dealer"
+            data-testid="portal-fleet-account-dealer-filter"
+            className="w-auto min-w-48"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">
+              {t("portal.fleet.account.all_dealers")}
+            </SelectItem>
+            {dealers.map((d) => (
+              <SelectItem key={d.dealer.uuid} value={d.dealer.uuid}>
+                {d.dealer.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {shown.map((d) => (

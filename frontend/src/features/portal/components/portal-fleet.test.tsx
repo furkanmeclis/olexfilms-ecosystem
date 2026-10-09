@@ -80,10 +80,12 @@ import type {
   FleetPortalAccounting,
   FleetPortalOverview,
 } from "@/features/portal/lib/portal-client";
+import { chooseValue, installRadixPolyfills } from "@/test/form-controls";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -245,11 +247,8 @@ describe("PortalFleetAccount", () => {
     const filter = container.querySelector(
       '[data-testid="portal-fleet-account-dealer-filter"]',
     );
-    expect(filter).toBeInstanceOf(HTMLSelectElement);
-    await act(async () => {
-      (filter as HTMLSelectElement).value = "dealer-2";
-      filter?.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    expect(filter).not.toBeNull();
+    await chooseValue(filter, "dealer-2");
     await flush();
 
     expect(

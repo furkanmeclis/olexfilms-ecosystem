@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { DisputeStatusChip } from "@/features/accounting/components/disputes-page";
@@ -103,33 +104,36 @@ export function ResolveForm({
         <legend className="mb-1 text-sm font-medium">
           {t("accounting.disputes.resolve.resolution")}
         </legend>
-        {DISPUTE_RESOLUTIONS.map((r) => (
-          <label
-            key={r}
-            className="has-checked:border-primary flex cursor-pointer items-start gap-2 rounded-md border p-3"
-          >
-            <input
-              type="radio"
-              name="resolution"
-              value={r}
-              className="mt-1"
-              checked={values.resolution === r}
-              data-testid={`resolve-${r}`}
-              onChange={() => {
-                set("resolution", r);
-                setErrors({});
-              }}
-            />
-            <span>
-              <span className="block text-sm font-medium">
-                {t(`accounting.disputes.resolve.${r}`)}
+        <RadioGroup
+          name="resolution"
+          value={values.resolution}
+          onValueChange={(r) => {
+            set("resolution", r as (typeof DISPUTE_RESOLUTIONS)[number]);
+            setErrors({});
+          }}
+          className="grid gap-2"
+        >
+          {DISPUTE_RESOLUTIONS.map((r) => (
+            <label
+              key={r}
+              className="has-data-[state=checked]:border-primary flex cursor-pointer items-start gap-2 rounded-md border p-3"
+            >
+              <RadioGroupItem
+                value={r}
+                className="mt-1"
+                data-testid={`resolve-${r}`}
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  {t(`accounting.disputes.resolve.${r}`)}
+                </span>
+                <span className="text-muted-foreground block text-xs">
+                  {t(`accounting.disputes.resolve.${r}_hint`)}
+                </span>
               </span>
-              <span className="text-muted-foreground block text-xs">
-                {t(`accounting.disputes.resolve.${r}_hint`)}
-              </span>
-            </span>
-          </label>
-        ))}
+            </label>
+          ))}
+        </RadioGroup>
       </fieldset>
       {values.resolution === "revision" ? (
         <div className="grid gap-1.5">

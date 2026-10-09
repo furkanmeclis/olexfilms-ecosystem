@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   FieldError,
   Money,
-  NativeSelect,
+  FormSelect,
 } from "@/features/accounting/components/shared";
 import {
   addLine,
@@ -361,7 +361,7 @@ export function QuickSaleForm({
             message={errors.customer_uuid}
           />
         </div>
-        <NativeSelect
+        <FormSelect
           id="quick-sale-payment"
           label={t("dealer_sales.fields.payment_method")}
           value={payment}

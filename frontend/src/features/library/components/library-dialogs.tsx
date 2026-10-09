@@ -17,6 +17,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { LOCALE_NAMES } from "@/config/i18n";
 import {
   flattenFolderTree,
@@ -41,8 +48,8 @@ import {
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 
-export const librarySelectClass =
-  "border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
+/** Select value of "no folder" (Radix Select items cannot be ""). */
+const ROOT = "__root__";
 
 function useErrorToast() {
   const { t } = useLocale();
@@ -60,9 +67,9 @@ function FolderOptions({
   return flattenFolderTree(tree)
     .filter((f) => !exclude?.has(f.uuid))
     .map((f) => (
-      <option key={f.uuid} value={f.uuid}>
+      <SelectItem key={f.uuid} value={f.uuid}>
         {`${"— ".repeat(f.depth)}${f.name}`}
-      </option>
+      </SelectItem>
     ));
 }
 
@@ -141,15 +148,20 @@ export function LibraryFolderDialog({
             <Label htmlFor="library-folder-parent">
               {t("library.folders.parent")}
             </Label>
-            <select
-              id="library-folder-parent"
-              className={librarySelectClass}
-              value={parent}
-              onChange={(e) => setParent(e.target.value)}
+            <Select
+              value={parent || ROOT}
+              onValueChange={(value) => setParent(value === ROOT ? "" : value)}
             >
-              <option value="">{t("library.folders.root")}</option>
-              <FolderOptions tree={tree} exclude={exclude} />
-            </select>
+              <SelectTrigger id="library-folder-parent">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ROOT}>
+                  {t("library.folders.root")}
+                </SelectItem>
+                <FolderOptions tree={tree} exclude={exclude} />
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter>
             <Button
@@ -348,34 +360,44 @@ export function LibraryItemDialog({
               <Label htmlFor="library-item-folder">
                 {t("library.fields.folder")}
               </Label>
-              <select
-                id="library-item-folder"
-                className={librarySelectClass}
-                value={folder}
-                onChange={(e) => setFolder(e.target.value)}
+              <Select
+                value={folder || ROOT}
+                onValueChange={(value) =>
+                  setFolder(value === ROOT ? "" : value)
+                }
               >
-                <option value="">{t("library.folders.root")}</option>
-                <FolderOptions tree={tree} />
-              </select>
+                <SelectTrigger id="library-item-folder">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ROOT}>
+                    {t("library.folders.root")}
+                  </SelectItem>
+                  <FolderOptions tree={tree} />
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="library-item-access">
                 {t("library.fields.access_level")}
               </Label>
-              <select
-                id="library-item-access"
-                className={librarySelectClass}
+              <Select
                 value={access}
-                onChange={(e) =>
-                  setAccess(e.target.value as LibraryAccessLevel)
+                onValueChange={(value) =>
+                  setAccess(value as LibraryAccessLevel)
                 }
               >
-                {LIBRARY_ACCESS_LEVELS.map((level) => (
-                  <option key={level} value={level}>
-                    {t(`library.access.${level}`)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="library-item-access">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LIBRARY_ACCESS_LEVELS.map((level) => (
+                    <SelectItem key={level} value={level}>
+                      {t(`library.access.${level}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-2">
@@ -498,18 +520,18 @@ export function LibraryUploadDialog({
             <Label htmlFor="library-upload-locale">
               {t("library.fields.locale")}
             </Label>
-            <select
-              id="library-upload-locale"
-              className={librarySelectClass}
-              value={locale}
-              onChange={(e) => setLocale(e.target.value)}
-            >
-              {LIBRARY_LOCALES.map((l) => (
-                <option key={l} value={l}>
-                  {LOCALE_NAMES[l]}
-                </option>
-              ))}
-            </select>
+            <Select value={locale} onValueChange={setLocale}>
+              <SelectTrigger id="library-upload-locale">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LIBRARY_LOCALES.map((l) => (
+                  <SelectItem key={l} value={l}>
+                    {LOCALE_NAMES[l]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="library-upload-file">

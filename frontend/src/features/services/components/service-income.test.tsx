@@ -20,11 +20,13 @@ vi.mock("@/providers/toast-provider", () => ({
 
 import { resolveServiceIncomeAccess } from "@/features/services/lib/access";
 import type { FinanceAccount } from "@/features/accounting/services/accounting.service";
+import { chooseValue, installRadixPolyfills } from "@/test/form-controls";
 import { ServiceIncomeForm, ServiceProfitCard } from "./service-income";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -47,15 +49,7 @@ async function render(node: ReactNode) {
 }
 
 async function choose(el: Element | null, value: string) {
-  if (!(el instanceof HTMLSelectElement)) throw new Error("select not found");
-  const setter = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value",
-  )?.set;
-  await act(async () => {
-    setter?.call(el, value);
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  await chooseValue(el, value);
 }
 
 async function type(el: Element | null, value: string) {
@@ -113,7 +107,7 @@ describe("ServiceIncomeForm (TEC-347)", () => {
     // Cash: only the cash account, preselected.
     expect(account()?.textContent).toContain("Kasa");
     expect(account()?.textContent).not.toContain("Banka");
-    expect((account() as HTMLSelectElement).value).toBe("cash-1");
+    expect(account()?.getAttribute("data-value")).toBe("cash-1");
     // Card: the active bank account only.
     await choose(container.querySelector("#service-income-method"), "card");
     expect(account()?.textContent).toContain("Banka");

@@ -44,17 +44,13 @@ vi.mock(
 import { Permission } from "@/config/permissions";
 import type { SystemSetting } from "@/features/system-settings/services/system-settings.service";
 
+import { chooseValue, installRadixPolyfills } from "@/test/form-controls";
 import { SystemSettingsPage } from "./system-settings-page";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
-
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -145,11 +141,7 @@ const laborCatalog: SystemSetting[] = [
 const $ = (sel: string) => container.querySelector(sel);
 
 async function select(el: Element | null, value: string) {
-  if (!(el instanceof HTMLSelectElement)) throw new Error("select not found");
-  await act(async () => {
-    el.value = value;
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  await chooseValue(el, value);
   await flush();
 }
 

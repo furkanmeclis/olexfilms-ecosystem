@@ -17,6 +17,13 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Markdown } from "@/features/portal/lib/markdown";
 import {
   legalTextsService,
@@ -125,18 +132,18 @@ function Editor({ view }: { view: LegalTextAdmin }) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="legal-locale">{t("portal.legal.locale")}</Label>
-            <select
-              id="legal-locale"
-              className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
-              value={locale}
-              onChange={(e) => setLocale(e.target.value)}
-            >
-              {TEXT_LOCALES.map((l) => (
-                <option key={l} value={l}>
-                  {names?.of(l) ?? l} ({l})
-                </option>
-              ))}
-            </select>
+            <Select value={locale} onValueChange={setLocale}>
+              <SelectTrigger id="legal-locale" data-testid="legal-locale">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TEXT_LOCALES.map((l) => (
+                  <SelectItem key={l} value={l}>
+                    {names?.of(l) ?? l} ({l})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="legal-body">{t("portal.legal.body")}</Label>

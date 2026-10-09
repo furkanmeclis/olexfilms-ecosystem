@@ -72,18 +72,15 @@ import type {
   FailureRateRow,
 } from "@/features/warranty-claims/services/claim-reports.service";
 
+import { chooseValue, installRadixPolyfills } from "@/test/form-controls";
 import { WarrantyClaimReportsPage } from "./warranty-claim-reports-page";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 Element.prototype.scrollIntoView ??= () => {};
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as unknown as typeof ResizeObserver;
 
 let container: HTMLDivElement;
 let root: Root;
@@ -213,11 +210,7 @@ async function click(el: Element | null) {
 }
 
 async function select(el: Element | null, value: string) {
-  if (!(el instanceof HTMLSelectElement)) throw new Error("select not found");
-  await act(async () => {
-    el.value = value;
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+  await chooseValue(el, value);
   await flush();
 }
 

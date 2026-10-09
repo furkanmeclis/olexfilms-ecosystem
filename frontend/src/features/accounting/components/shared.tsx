@@ -5,6 +5,14 @@ import { useMemo, type ReactNode } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
 import { Label } from "@/components/ui/label";
+import { AsyncCombobox } from "@/components/ui/async-combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { accountingKeys } from "@/features/accounting/hooks/use-accounting-access";
 import {
   accountingService,
@@ -15,8 +23,17 @@ import { useLocale } from "@/providers/locale-provider";
 
 export type SelectOption = { value: string; label: string };
 
-/** Native select (keyboard and screen-reader friendly, testable). */
-export function NativeSelect({
+/** Select item value standing for "" (Radix Select items cannot be ""). */
+export const EMPTY_SELECT_VALUE = "__none__";
+const EMPTY = EMPTY_SELECT_VALUE;
+/** Longer lists get a searchable combobox instead of a plain listbox. */
+const COMBOBOX_THRESHOLD = 15;
+
+/**
+ * Labelled select: a shadcn Select, or a searchable combobox for long lists.
+ * `placeholder` stays a pickable "empty" choice that reports "".
+ */
+export function FormSelect({
   id,
   name,
   label,
@@ -43,25 +60,49 @@ export function NativeSelect({
   return (
     <div className={cn("grid gap-1.5", className)}>
       <Label htmlFor={id}>{label}</Label>
-      <select
-        id={id}
-        name={name ?? id}
-        value={value}
-        disabled={disabled}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={errorId}
-        onChange={(e) => onChange(e.target.value)}
-        className="border-input bg-background aria-invalid:border-destructive h-9 w-full rounded-md border px-2 text-sm disabled:opacity-50"
-      >
-        {placeholder !== undefined ? (
-          <option value="">{placeholder}</option>
-        ) : null}
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      {options.length > COMBOBOX_THRESHOLD ? (
+        <AsyncCombobox
+          id={id}
+          value={value}
+          disabled={disabled}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
+          placeholder={placeholder}
+          clearable={placeholder !== undefined}
+          options={options}
+          onValueChange={(next) => {
+            // Without a placeholder there is no empty choice to go back to.
+            if (next || placeholder !== undefined) onChange(next);
+          }}
+        />
+      ) : (
+        <Select
+          name={name ?? id}
+          value={value === "" && placeholder !== undefined ? EMPTY : value}
+          disabled={disabled}
+          onValueChange={(next) => onChange(next === EMPTY ? "" : next)}
+        >
+          <SelectTrigger
+            id={id}
+            data-value={value}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={errorId}
+            className="aria-invalid:border-destructive"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {placeholder !== undefined ? (
+              <SelectItem value={EMPTY}>{placeholder}</SelectItem>
+            ) : null}
+            {options.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       {error ? (
         <p id={errorId} className="text-destructive text-xs">
           {error}

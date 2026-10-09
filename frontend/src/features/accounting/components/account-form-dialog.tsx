@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   FieldError,
-  NativeSelect,
+  FormSelect,
 } from "@/features/accounting/components/shared";
 import {
   accountDefaults,
@@ -85,7 +85,7 @@ export function AccountForm({
       className="space-y-4"
       data-testid="account-form"
     >
-      <NativeSelect
+      <FormSelect
         id="account-type"
         name="type"
         label={t("accounting.fields.type")}

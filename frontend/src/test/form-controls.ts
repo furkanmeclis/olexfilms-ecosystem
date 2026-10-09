@@ -81,6 +81,14 @@ export async function optionValues(trigger: Element | null) {
   return values;
 }
 
+/** Opens a Select / combobox, reads its option labels, closes it again. */
+export async function optionLabels(trigger: Element | null) {
+  await openPicker(trigger);
+  const labels = openOptions();
+  await closePicker();
+  return labels;
+}
+
 /** Opens a Select / combobox and clicks the option with `data-value=value`. */
 export async function chooseValue(trigger: Element | null, value: string) {
   await openPicker(trigger);

@@ -10,6 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
+import { TimePicker } from "@/components/ui/time-picker";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -154,28 +163,26 @@ export function ActionConfirmCard({
                     rows={3}
                   />
                 ) : f.type === "select" ? (
-                  <select
-                    id={id}
-                    value={value}
-                    onChange={(e) => set(e.target.value)}
-                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
-                  >
-                    {(f.options ?? []).map((o) => (
-                      <option key={o} value={o}>
-                        {o}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={value} onValueChange={set}>
+                    <SelectTrigger id={id}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(f.options ?? []).filter(Boolean).map((o) => (
+                        <SelectItem key={o} value={o}>
+                          {o}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : f.type === "date" ? (
+                  <DatePicker id={id} value={value} onChange={set} />
+                ) : f.type === "time" ? (
+                  <TimePicker id={id} value={value} onChange={set} />
                 ) : (
                   <Input
                     id={id}
-                    type={
-                      f.type === "date" ||
-                      f.type === "time" ||
-                      f.type === "number"
-                        ? f.type
-                        : "text"
-                    }
+                    type={f.type === "number" ? "number" : "text"}
                     value={value}
                     onChange={(e) => set(e.target.value)}
                   />

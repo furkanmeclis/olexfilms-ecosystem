@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   FieldError,
   Money,
-  NativeSelect,
+  FormSelect,
 } from "@/features/accounting/components/shared";
 import { accountingKeys } from "@/features/accounting/hooks/use-accounting-access";
 import {
@@ -107,7 +107,7 @@ export function StaffPaymentForm({
       data-testid="staff-payment-form"
     >
       <div className="grid gap-4 sm:grid-cols-2">
-        <NativeSelect
+        <FormSelect
           id="staff-payment-type"
           name="type"
           label={t("staff_reports.fields.payment_type")}
@@ -166,7 +166,7 @@ export function StaffPaymentForm({
         <FieldError id="staff-payment-amount-error" message={errors.amount} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <NativeSelect
+        <FormSelect
           id="staff-payment-account"
           name="account_uuid"
           label={t("staff_reports.fields.account")}

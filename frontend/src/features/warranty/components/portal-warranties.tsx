@@ -10,6 +10,13 @@ import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { routes } from "@/config/routes";
 import { portalApi } from "@/features/portal/lib/portal-client";
 import { PortalClaimBadge } from "@/features/warranty-claims/components/portal-claim-badge";
@@ -116,22 +123,27 @@ export function PortalWarranties() {
                 <Label htmlFor="portal-warranty-sort">
                   {t("warranty.portal.sort.label")}
                 </Label>
-                <select
-                  id="portal-warranty-sort"
-                  data-testid="portal-warranty-sort"
-                  className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+                <Select
                   value={sort}
-                  onChange={(e) => {
-                    setSort(e.target.value as PortalWarrantySort);
+                  onValueChange={(value) => {
+                    setSort(value as PortalWarrantySort);
                     setPage(0);
                   }}
                 >
-                  {PORTAL_WARRANTY_SORTS.map((value) => (
-                    <option key={value} value={value}>
-                      {t(PORTAL_SORT_LABELS[value])}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id="portal-warranty-sort"
+                    data-testid="portal-warranty-sort"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PORTAL_WARRANTY_SORTS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {t(PORTAL_SORT_LABELS[value])}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             }
           />

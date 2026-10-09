@@ -15,6 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   hasLaborErrors,
   LABOR_RULES,
   laborChanges,
@@ -28,9 +35,6 @@ import { systemSettingsService } from "@/features/system-settings/services/syste
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
-
-const selectClass =
-  "border-input bg-background h-9 w-full rounded-md border px-2 text-sm";
 
 /**
  * System settings hub card for the warranty claim labor rule (TEC-337
@@ -102,20 +106,22 @@ export function WarrantyLaborRuleCard({
             <Label htmlFor="labor-rule">
               {t("settings.system.labor.rule")}
             </Label>
-            <select
-              id="labor-rule"
-              data-testid="labor-rule-select"
-              className={selectClass}
+            <Select
               value={draft.rule}
               disabled={disabled}
-              onChange={(e) => patch({ rule: e.target.value as LaborRule })}
+              onValueChange={(value) => patch({ rule: value as LaborRule })}
             >
-              {LABOR_RULES.map((rule) => (
-                <option key={rule} value={rule}>
-                  {t(`settings.system.labor.rules.${rule}`)}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="labor-rule" data-testid="labor-rule-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LABOR_RULES.map((rule) => (
+                  <SelectItem key={rule} value={rule}>
+                    {t(`settings.system.labor.rules.${rule}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <p className="text-muted-foreground text-xs">
               {t(`settings.system.labor.rules.${draft.rule}_hint`)}
             </p>

@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   FieldError,
-  NativeSelect,
+  FormSelect,
   newIdempotencyKey,
 } from "@/features/accounting/components/shared";
 import { accountingKeys } from "@/features/accounting/hooks/use-accounting-access";
@@ -128,7 +128,7 @@ export function SettlementForm({
       data-testid="settlement-form"
       data-kind={kind}
     >
-      <NativeSelect
+      <FormSelect
         id="settlement-account"
         name="account_uuid"
         label={t("accounting.fields.account")}
@@ -148,7 +148,7 @@ export function SettlementForm({
           label: `${a.name} (${a.currency})`,
         }))}
       />
-      <NativeSelect
+      <FormSelect
         id="settlement-cari"
         name="cari_uuid"
         label={t("accounting.fields.cari")}
@@ -180,7 +180,7 @@ export function SettlementForm({
           />
           <FieldError id="settlement-amount-error" message={errors.amount} />
         </div>
-        <NativeSelect
+        <FormSelect
           id="settlement-currency"
           name="currency"
           label={t("accounting.fields.currency")}
