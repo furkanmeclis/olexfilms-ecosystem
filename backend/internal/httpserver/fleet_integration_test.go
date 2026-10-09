@@ -556,10 +556,14 @@ func TestIntegrationFleetStatementExport(t *testing.T) {
 	if err != nil || len(ds.Rows) != 1 || ds.Totals["balance"] != "0.00" {
 		t.Fatalf("dataset = %+v, %v", ds, err)
 	}
-	for _, f := range []ioengine.ExportFormat{ioengine.ExportXLSX, ioengine.ExportPDF, ioengine.ExportCSV} {
+	for _, f := range []ioengine.ExportFormat{ioengine.ExportXLSX, ioengine.ExportCSV} {
 		if out, err := ioengine.EncodeExport(f, ds, "en", nil, "Fleet statement"); err != nil || len(out) == 0 {
 			t.Fatalf("encode %s: %v", f, err)
 		}
+	}
+	// TEC-139: the PDF is the Gotenberg HTML table.
+	if h := ioengine.ExportTableHTML(ds, "en", nil, "Fleet statement"); !strings.Contains(h, "Fleet statement") || !strings.Contains(h, "0.00") {
+		t.Fatal("fleet statement pdf html")
 	}
 	q[ioengine.QueryOrganizationID] = fmt.Sprint(n.dealerB.ID)
 	if _, err := adapter.Export(ctx, q, "en"); err == nil {

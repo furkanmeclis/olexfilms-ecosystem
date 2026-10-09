@@ -20,7 +20,6 @@ require (
 	github.com/hibiken/asynq v0.26.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/joho/godotenv v1.5.1
-	github.com/jung-kurt/gofpdf/v2 v2.17.3
 	github.com/makiuchi-d/gozxing v0.1.1
 	github.com/meilisearch/meilisearch-go v0.31.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0

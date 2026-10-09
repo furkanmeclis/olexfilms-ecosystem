@@ -108,11 +108,12 @@ func attachLetterheadLogo(
 	return lh, nil
 }
 
-// EncodeExport selects encoder by format.
+// EncodeExport selects encoder by format. PDF needs Gotenberg: use
+// EncodePDF (ErrPDFRendererRequired here).
 func EncodeExport(format ExportFormat, ds Dataset, locale string, lh *Letterhead, title string) ([]byte, error) {
 	switch format {
 	case ExportPDF:
-		return EncodePDF(ds, locale, lh, title)
+		return nil, ErrPDFRendererRequired
 	case ExportXLSX:
 		var head *Letterhead
 		if lh != nil {
