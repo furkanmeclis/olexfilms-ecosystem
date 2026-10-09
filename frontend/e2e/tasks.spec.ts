@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { signIn } from "./support/mock-api";
+import { chooseOption } from "./support/pickers";
 import {
   DEALER,
   mockTasks,
@@ -73,9 +74,9 @@ test("tasks: create, change status, comment", async ({ page }) => {
 
   await page.goto(`/t/${TASK_SLUG}/tasks/new`);
   await page.getByTestId("task-title").fill("Call about the new film");
-  await page.getByTestId("task-subject").selectOption(DEALER);
-  await page.getByTestId("task-assignee").selectOption(OTHER_MEMBER);
-  await page.getByTestId("task-priority").selectOption("high");
+  await chooseOption(page.getByTestId("task-subject"), DEALER);
+  await chooseOption(page.getByTestId("task-assignee"), OTHER_MEMBER);
+  await chooseOption(page.getByTestId("task-priority"), "high");
   await page.getByTestId("task-submit").click();
 
   await expect(page.getByTestId("task-detail")).toBeVisible();

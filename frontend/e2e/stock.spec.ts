@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { signIn } from "./support/mock-api";
+import { openOptions } from "./support/pickers";
 import {
   DEALER_UUID,
   KIT,
@@ -78,9 +79,9 @@ test("my stock: a distributor picks a dealer of its subtree", async ({
   await page.goto(`/t/${STOCK_SLUG}/stock`);
   const picker = page.getByTestId("stock-dealer");
   await expect(picker).toBeVisible();
-  await expect(picker.locator("option")).toHaveCount(2);
-
-  await picker.selectOption(DEALER_UUID);
+  // Own stock plus the one dealer of the subtree.
+  await expect(await openOptions(picker)).toHaveCount(2);
+  await page.locator(`[role="option"][data-value="${DEALER_UUID}"]`).click();
   const rows = page
     .getByRole("row")
     .filter({ has: page.getByTestId("stock-row") });

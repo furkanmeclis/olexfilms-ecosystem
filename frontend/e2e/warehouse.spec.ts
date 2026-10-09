@@ -1,6 +1,11 @@
 import { expect, test } from "@playwright/test";
 
 import { signIn } from "./support/mock-api";
+import {
+  chooseOption,
+  chooseOptionByLabel,
+  openOptions,
+} from "./support/pickers";
 import { mockWarehouse, WAREHOUSE_SLUG } from "./support/warehouse-mock";
 
 /**
@@ -51,19 +56,20 @@ test("warehouse: location → stock entry → transfer", async ({ page }) => {
   await expect(page.getByTestId("room-row")).toHaveAttribute("data-code", "R1");
 
   await page.getByTestId("location-new-root").click();
-  await expect(form.getByTestId("node-type")).toHaveValue("aisle");
+  await expect(form.getByTestId("node-type")).toHaveText("Aisle");
   await save("A");
   const nodes = page.getByTestId("location-node");
   await expect(nodes).toHaveCount(1);
 
   await page.getByRole("button", { name: "Add under A" }).click();
   // Under an aisle only a shelf is allowed.
-  await expect(form.getByTestId("node-type").locator("option")).toHaveText([
+  await expect(await openOptions(form.getByTestId("node-type"))).toHaveText([
     "Shelf",
   ]);
+  await page.keyboard.press("Escape");
   await save("S1");
   await page.getByRole("button", { name: "Add under S1" }).click();
-  await expect(form.getByTestId("node-type")).toHaveValue("bin");
+  await expect(form.getByTestId("node-type")).toHaveText("Bin");
   await save("01");
 
   await expect(nodes).toHaveCount(3);
@@ -92,10 +98,8 @@ test("warehouse: location → stock entry → transfer", async ({ page }) => {
   await page.goto(`${base}/entries`);
   await expect(page.getByText("No stock entries")).toBeVisible();
   await page.getByTestId("entry-new").click();
-  await page
-    .getByTestId("entry-warehouse")
-    .selectOption({ label: "WH1 · WH1" });
-  await page.getByTestId("entry-mode").selectOption("with_existing");
+  await chooseOptionByLabel(page.getByTestId("entry-warehouse"), "WH1 · WH1");
+  await chooseOption(page.getByTestId("entry-mode"), "with_existing");
   await page.getByTestId("entry-note").fill("Container 12");
   await page.getByTestId("entry-create").click();
   await expect(page).toHaveURL(new RegExp(`${base}/entries/[0-9a-f-]+$`));
@@ -173,12 +177,12 @@ test("warehouse: location → stock entry → transfer", async ({ page }) => {
   await page.getByTestId("transfer-new").click();
   const tform = page.getByTestId("transfer-form");
   // Same warehouse on both sides is refused before any request.
-  await tform.getByTestId("transfer-from").selectOption({ label: "WH1 · WH1" });
-  await tform.getByTestId("transfer-to").selectOption({ label: "WH1 · WH1" });
+  await chooseOptionByLabel(tform.getByTestId("transfer-from"), "WH1 · WH1");
+  await chooseOptionByLabel(tform.getByTestId("transfer-to"), "WH1 · WH1");
   await tform.getByTestId("transfer-create").click();
   await expect(tform.getByText("Pick a different warehouse.")).toBeVisible();
   expect(api.bodies["POST /v1/warehouse/transfers"]).toBeUndefined();
-  await tform.getByTestId("transfer-to").selectOption({ label: "WH2 · WH2" });
+  await chooseOptionByLabel(tform.getByTestId("transfer-to"), "WH2 · WH2");
   await tform.getByTestId("transfer-note").fill("Branch refill");
   await tform.getByTestId("transfer-create").click();
   await expect(page).toHaveURL(new RegExp(`${base}/transfers/[0-9a-f-]+$`));
