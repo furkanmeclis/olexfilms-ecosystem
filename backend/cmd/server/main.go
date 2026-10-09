@@ -20,6 +20,7 @@ import (
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
@@ -27,6 +28,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/workerapp"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
@@ -95,12 +97,19 @@ func main() {
 	if cfg.Queue.Enabled {
 		queueClient = queue.NewClient(cfg.Redis)
 		if cfg.Queue.WorkerInProcess {
-			notifSvc, err := newInProcessDelivery(cfg, db, queries, queueClient, publisher, log)
+			notifSvc, waSvc, err := newInProcessDelivery(cfg, db, queries, queueClient, publisher, log)
 			if err != nil {
 				log.Error("encryption_init_failed", "error", err)
 				os.Exit(1)
 			}
-			worker = newInProcessWorker(cfg, log, notifSvc.Deliver)
+			worker, err = newInProcessWorker(cfg, log, workerapp.Deps{
+				Config: cfg, Pool: db, Queries: queries, Storage: store, Realtime: publisher,
+				Redis: rdb, Queue: queueClient, Notifications: notifSvc, WhatsApp: waSvc, Log: log,
+			})
+			if err != nil {
+				log.Error("worker_handlers_failed", "error", err)
+				os.Exit(1)
+			}
 			if n, err := notifSvc.ReclaimStuck(ctx, notifusecase.DefaultStuckProcessingMinutes); err != nil {
 				log.Error("notification_reclaim_failed", "error", err)
 			} else if n > 0 {
@@ -154,28 +163,31 @@ func main() {
 	log.Info("server_stopped")
 }
 
-// newInProcessWorker builds the QUEUE_WORKER_INPROCESS worker. It only binds
-// notification delivery: every other processor (export, import, bulk, log and
-// notification purge, rates, WhatsApp poll, search, docs) is wired by
-// httpserver.New from its own services. Wiring them here as well registered
-// app:notifications:purge twice and panicked at startup (TEC-142).
-func newInProcessWorker(cfg config.Config, log *slog.Logger, deliver queue.DeliverNotificationFunc) *queue.Worker {
-	return queue.NewWorker(cfg, log, deliver)
+// newInProcessWorker builds the QUEUE_WORKER_INPROCESS worker with every
+// task processor cmd/worker binds, from the same factory (workerapp), so
+// each task the scheduler or the API enqueues has a handler here too
+// (TEC-527). httpserver.New only starts and stops it.
+func newInProcessWorker(cfg config.Config, log *slog.Logger, deps workerapp.Deps) (*queue.Worker, error) {
+	w := queue.NewWorker(cfg, log, nil)
+	if _, err := workerapp.Register(w, deps); err != nil {
+		return nil, err
+	}
+	return w, nil
 }
 
 // newInProcessDelivery builds the notification center the in-process worker
 // delivers with, from the factory cmd/worker uses, so the WhatsApp provider
 // (and every other channel driver) is the same in both modes (TEC-143).
-func newInProcessDelivery(cfg config.Config, pool *pgxpool.Pool, queries *db.Queries, q notifusecase.Enqueuer, publisher realtime.Publisher, log *slog.Logger) (*notifusecase.Service, error) {
+func newInProcessDelivery(cfg config.Config, pool *pgxpool.Pool, queries *db.Queries, q notifusecase.Enqueuer, publisher realtime.Publisher, log *slog.Logger) (*notifusecase.Service, *whatsappusecase.Service, error) {
 	box, err := crypto.NewSecretBox(cfg.Encryption.Key)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	svc, _ := notifmodule.NewWithWhatsApp(notifmodule.Deps{
+	svc, wa := notifmodule.NewWithWhatsApp(notifmodule.Deps{
 		Config: cfg, Queries: queries, Queue: q, Realtime: publisher,
 		Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
 	}, pool, box)
-	return svc, nil
+	return svc, wa, nil
 }
 
 // startInProcessScheduler runs the periodic scheduler next to the in-process

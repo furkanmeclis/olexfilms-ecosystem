@@ -1,10 +1,12 @@
 package queue
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/hibiken/asynq"
 )
 
@@ -144,5 +146,41 @@ func TestInventoryRebuildPayload(t *testing.T) {
 	}
 	if _, err := ParseInventoryRebuildPayload([]byte(`{"organization_id":-1}`)); err == nil {
 		t.Fatal("negative organization must be rejected")
+	}
+}
+
+// TEC-527: every periodic task type has a handler on the worker mux, and the
+// mux lists each task type once.
+func TestSchedulesHaveWorkerHandlers(t *testing.T) {
+	handled := map[string]int{}
+	for _, typ := range TaskTypes() {
+		handled[typ]++
+		if handled[typ] > 1 {
+			t.Errorf("task type %q is listed twice in the worker bindings", typ)
+		}
+	}
+	for _, p := range Schedules() {
+		if handled[p.Type] == 0 {
+			t.Errorf("scheduled task %q has no worker handler", p.Type)
+		}
+	}
+}
+
+// TEC-527: a bare worker reports every processor-backed task as unbound and
+// a set processor clears it.
+func TestWorkerUnbound(t *testing.T) {
+	w := NewWorker(config.Config{Redis: config.RedisConfig{Addr: "127.0.0.1:0"}}, nil, nil)
+	unbound := map[string]bool{}
+	for _, typ := range w.Unbound() {
+		unbound[typ] = true
+	}
+	if len(unbound) != len(TaskTypes())-1 || unbound[TaskPing] {
+		t.Fatalf("bare worker unbound = %d types, want every type but ping (%d)", len(unbound), len(TaskTypes())-1)
+	}
+	w.WithCampaigns(func(context.Context) error { return nil }, nil)
+	for _, typ := range w.Unbound() {
+		if typ == TaskCampaignTick {
+			t.Fatal("campaigns:tick still unbound after WithCampaigns")
+		}
 	}
 }

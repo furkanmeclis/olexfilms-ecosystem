@@ -20,6 +20,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/workerapp"
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -57,7 +58,10 @@ func TestInProcessWorkerWithHTTPServerDoesNotPanic(t *testing.T) {
 	cfg.Queue.Concurrency = 1
 
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	worker := newInProcessWorker(cfg, log, func(context.Context, int64) error { return nil })
+	worker, err := newInProcessWorker(cfg, log, inProcessTestDeps(t, cfg, db.New(pool), rdb, log))
+	if err != nil {
+		t.Fatalf("newInProcessWorker: %v", err)
+	}
 
 	var srv *httpserver.Server
 	func() {
@@ -82,6 +86,54 @@ func TestInProcessWorkerWithHTTPServerDoesNotPanic(t *testing.T) {
 	_ = srv.Shutdown(ctx)
 }
 
+// inProcessTestDeps wires the in-process worker factory without live
+// services (constructors only store their dependencies).
+func inProcessTestDeps(t *testing.T, cfg config.Config, q *db.Queries, rdb *redis.Client, log *slog.Logger) workerapp.Deps {
+	t.Helper()
+	notif, wa, err := newInProcessDelivery(cfg, nil, q, nil, realtime.NoopPublisher{}, log)
+	if err != nil {
+		t.Fatalf("newInProcessDelivery: %v", err)
+	}
+	qc := queue.NewClient(cfg.Redis)
+	t.Cleanup(func() { _ = qc.Close() })
+	return workerapp.Deps{
+		Config: cfg, Queries: q, Redis: rdb, Queue: qc, Realtime: realtime.NoopPublisher{},
+		Notifications: notif, WhatsApp: wa, Log: log,
+	}
+}
+
+// TEC-527: every task type the scheduler enqueues (the list cmd/worker and
+// the in-process scheduler share) has a processor on the in-process worker,
+// and so does every other task type: the worker binds them from the
+// cmd/worker factory. A missing processor fails here instead of only
+// logging "<task>_handler_missing" at run time.
+func TestInProcessWorkerBindsEveryScheduledTask(t *testing.T) {
+	var cfg config.Config
+	cfg.Encryption.Key = "app-dev-encryption-key-32bytes!!"
+	cfg.Redis.Addr = "127.0.0.1:0"
+	cfg.Queue.WorkerInProcess = true
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	rdb := redis.NewClient(&redis.Options{Addr: cfg.Redis.Addr})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	worker, err := newInProcessWorker(cfg, log, inProcessTestDeps(t, cfg, db.New(nil), rdb, log))
+	if err != nil {
+		t.Fatalf("newInProcessWorker: %v", err)
+	}
+	unbound := map[string]bool{}
+	for _, typ := range worker.Unbound() {
+		unbound[typ] = true
+	}
+	for _, p := range queue.Schedules() {
+		if unbound[p.Type] {
+			t.Errorf("scheduled task %q has no processor on the in-process worker", p.Type)
+		}
+	}
+	if len(unbound) > 0 {
+		t.Errorf("in-process worker task types without a processor: %v", worker.Unbound())
+	}
+}
+
 // TEC-143: the in-process worker delivers through the notification center
 // of the cmd/worker factory: the same channel drivers, with the real
 // WhatsApp provider instead of the placeholder.
@@ -92,7 +144,7 @@ func TestInProcessDeliveryRegistersWorkerProviders(t *testing.T) {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	q := db.New(nil)
 
-	inProcess, err := newInProcessDelivery(cfg, nil, q, nil, realtime.NoopPublisher{}, log)
+	inProcess, _, err := newInProcessDelivery(cfg, nil, q, nil, realtime.NoopPublisher{}, log)
 	if err != nil {
 		t.Fatalf("newInProcessDelivery: %v", err)
 	}
