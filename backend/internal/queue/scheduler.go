@@ -94,6 +94,8 @@ func Schedules() []Periodic {
 		{Cron: showcaseGoogleRatingCron, Type: TaskShowcaseGoogleRating, Queue: QueueMaintenance, Opts: showcaseGoogleRatingOpts(), New: NewShowcaseGoogleRatingTask},
 		// TEC-506: hourly pricing tick (effective dates, discipline snapshot, weekly digest).
 		{Cron: pricingDailyCron, Type: TaskPricingDaily, Queue: QueueMaintenance, Opts: pricingDailyOpts(), New: NewPricingDailyTask},
+		// TEC-508: hourly expiry of service subscriptions (module bundles close).
+		{Cron: serviceSubscriptionsExpireCron, Type: TaskServiceSubscriptionsExpire, Queue: QueueMaintenance, Opts: serviceSubscriptionsExpireOpts(), New: NewServiceSubscriptionsExpireTask},
 	}
 }
 
