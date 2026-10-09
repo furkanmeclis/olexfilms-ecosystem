@@ -71,48 +71,6 @@ func formatCell(v any, col Column, loc i18n.Locale) string {
 	return fmt.Sprint(v)
 }
 
-func formatPDFCell(v any, col Column, loc i18n.Locale) string {
-	s := formatCell(v, col, loc)
-	return truncateRunes(s, pdfMaxRunes(col))
-}
-
-func pdfMaxRunes(col Column) int {
-	if col.Weight > 0 {
-		return int(20 * col.Weight)
-	}
-	switch col.Type {
-	case ColumnTypeUUID:
-		return 18
-	case ColumnTypeDatetime:
-		return 22
-	case ColumnTypeBoolean, ColumnTypeEnum:
-		return 14
-	default:
-		switch col.Key {
-		case "email":
-			return 26
-		case "role_slugs", "permission_slugs", "title", "description":
-			return 24
-		default:
-			return 20
-		}
-	}
-}
-
-func truncateRunes(s string, max int) string {
-	if max <= 0 {
-		return ""
-	}
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
-	}
-	if max == 1 {
-		return "…"
-	}
-	return string(runes[:max-1]) + "…"
-}
-
 func pdfColumnWeights(columns []Column) []float64 {
 	weights := make([]float64, len(columns))
 	for i, c := range columns {

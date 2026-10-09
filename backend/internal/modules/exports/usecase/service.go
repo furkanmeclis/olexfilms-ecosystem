@@ -58,10 +58,12 @@ type Service struct {
 // HTMLToPDF converts HTML to PDF (satisfied by *pdfrender.Client).
 type HTMLToPDF interface {
 	HTMLToPDF(ctx context.Context, html string) ([]byte, error)
+	ioengine.PDFConverter
 }
 
-// SetDocumentPDF enables styled PDF documents for adapters implementing
-// ioengine.DocumentRenderer (nil keeps the generic table PDF).
+// SetDocumentPDF sets the Gotenberg renderer of PDF exports: styled
+// documents of ioengine.DocumentRenderer adapters and the generic table PDF
+// (TEC-139). Without it PDF jobs fail.
 func (s *Service) SetDocumentPDF(r HTMLToPDF) { s.pdf = r }
 
 // New creates an export service.
@@ -202,8 +204,8 @@ func (s *Service) ProcessExport(ctx context.Context, jobID int64) error {
 	}
 	title := ioengine.ExportTitle(job.Locale, job.Resource)
 	data, err := s.renderDocument(ctx, adapter, job.Format, ds, job.Locale, &lh, title)
-	if data == nil {
-		data, err = ioengine.EncodeExport(ioengine.ExportFormat(job.Format), ds, job.Locale, &lh, title)
+	if data == nil && err == nil {
+		data, err = s.encode(ctx, ds, job, &lh, title)
 	}
 	if err != nil {
 		return s.fail(ctx, jobID, err.Error())
@@ -492,9 +494,24 @@ func mapExportJob(row db.ExportJob) ExportJobView {
 	}
 }
 
+// encode runs the generic encoder of the job format; PDF tables render
+// through Gotenberg (TEC-139).
+func (s *Service) encode(ctx context.Context, ds ioengine.Dataset, job db.ExportJob, lh *ioengine.Letterhead, title string) ([]byte, error) {
+	format := ioengine.ExportFormat(job.Format)
+	if format != ioengine.ExportPDF {
+		return ioengine.EncodeExport(format, ds, job.Locale, lh, title)
+	}
+	var conv ioengine.PDFConverter
+	if s.pdf != nil {
+		conv = s.pdf
+	}
+	return ioengine.EncodePDF(ctx, conv, ds, job.Locale, lh, title)
+}
+
 // renderDocument returns a structured JSON document or a styled PDF for
 // document adapters, or nil to use the generic encoder (other formats, no
-// renderer, or Gotenberg failure).
+// renderer, or document HTML failure). A Gotenberg failure is returned: the
+// table fallback would hit the same Gotenberg.
 func (s *Service) renderDocument(
 	ctx context.Context,
 	adapter ioengine.ResourceAdapter,
@@ -519,7 +536,7 @@ func (s *Service) renderDocument(
 	data, err := s.pdf.HTMLToPDF(ctx, html)
 	if err != nil {
 		s.log.Warn("export_document_pdf_failed", "resource", adapter.Resource(), "error", err)
-		return nil, nil
+		return nil, err
 	}
 	return data, nil
 }

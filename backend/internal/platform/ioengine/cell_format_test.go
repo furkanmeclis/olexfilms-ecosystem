@@ -37,29 +37,3 @@ func TestFormatCellEnumAndDatetime(t *testing.T) {
 		t.Fatalf("datetime cell = %q", got)
 	}
 }
-
-func TestTruncateRunes(t *testing.T) {
-	if got := truncateRunes("Oluşturulma", 5); got != "Oluş…" {
-		t.Fatalf("truncate = %q", got)
-	}
-}
-
-func TestEncodePDFTurkish(t *testing.T) {
-	ds := Dataset{
-		Resource: "platform.users",
-		Columns: []Column{
-			{Key: "name", LabelKey: "users.name", Type: ColumnTypeString},
-			{Key: "created_at", LabelKey: "users.created_at", Type: ColumnTypeDatetime},
-		},
-		Rows: []map[string]any{
-			{"name": "Yıldız", "created_at": time.Date(2026, 8, 23, 17, 47, 18, 0, time.UTC)},
-		},
-	}
-	out, err := EncodePDF(ds, "tr", nil, ExportTitle("tr", "platform.users"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(out) < 1000 {
-		t.Fatalf("pdf too small: %d bytes", len(out))
-	}
-}

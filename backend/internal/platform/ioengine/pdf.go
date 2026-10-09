@@ -1,225 +1,147 @@
 package ioengine
 
 import (
-	"bytes"
+	"context"
+	"errors"
 	"fmt"
+	"html"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
-	"github.com/jung-kurt/gofpdf/v2"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 )
 
-const pdfContentWidth = 190.0
+// ErrPDFRendererRequired is returned when a PDF export is encoded without a
+// Gotenberg client: table PDFs have a single engine (design §6, TEC-139).
+var ErrPDFRendererRequired = errors.New("ioengine: pdf export needs the gotenberg renderer")
 
-// EncodePDF renders a letterheaded A4 table.
-func EncodePDF(ds Dataset, locale string, lh *Letterhead, title string) ([]byte, error) {
-	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.SetAutoPageBreak(true, 18)
-	if err := registerPDFFonts(pdf); err != nil {
-		return nil, err
-	}
-	pdf.AddPage()
-	loc := i18n.Normalize(locale)
-	colWidths := pdfColumnWidths(ds.Columns, pdfContentWidth)
-
-	y := 12.0
-	if lh != nil {
-		y = drawPDFLetterhead(pdf, lh, y)
-	}
-	setPDFFont(pdf, "B", 14)
-	pdf.SetXY(10, y)
-	pdf.Cell(pdfContentWidth, 8, title)
-	y += 10
-	setPDFFont(pdf, "", 9)
-	pdf.SetXY(10, y)
-	pdf.Cell(pdfContentWidth, 5, ExportedAtLabel(locale))
-	y += 6
-	if len(ds.Info) > 0 {
-		y = drawPDFInfo(pdf, ds.Info, y, loc)
-	}
-	y += 2
-
-	drawPDFHeaderRow(pdf, ds.Columns, colWidths, y, lh, loc)
-	y += 6
-	setPDFFont(pdf, "", 8)
-	for _, row := range ds.Rows {
-		if y > 270 {
-			pdf.AddPage()
-			y = 12
-			drawPDFHeaderRow(pdf, ds.Columns, colWidths, y, lh, loc)
-			y += 6
-			setPDFFont(pdf, "", 8)
-		}
-		y = drawPDFDataRow(pdf, ds.Columns, colWidths, y, row, loc)
-	}
-	if len(ds.Totals) > 0 {
-		if y > 270 {
-			pdf.AddPage()
-			y = 12
-		}
-		setPDFFont(pdf, "B", 8)
-		pdf.SetFillColor(241, 245, 249)
-		drawPDFRow(pdf, ds.Columns, colWidths, y, ds.Totals, loc, true)
-		setPDFFont(pdf, "", 8)
-	}
-	if lh != nil && lh.FooterText != "" {
-		pdf.SetY(-12)
-		setPDFFont(pdf, "I", 8)
-		pdf.Cell(pdfContentWidth, 5, lh.FooterText)
-	}
-
-	var buf bytes.Buffer
-	if err := pdf.Output(&buf); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+// PDFConverter renders one HTML request to PDF (satisfied by
+// *pdfrender.Client).
+type PDFConverter interface {
+	Convert(ctx context.Context, req pdfrender.Request) ([]byte, error)
 }
 
-func drawPDFHeaderRow(
-	pdf *gofpdf.Fpdf,
-	columns []Column,
-	widths []float64,
-	y float64,
+// pdfLandscapeColumns is the column count above which the table is laid out
+// on landscape A4.
+const pdfLandscapeColumns = 7
+
+// EncodePDF renders a letterheaded table through Gotenberg (TEC-139). The
+// HTML skeleton carries lang/dir (rtl for ar) and the Noto fonts, so Arabic
+// shaping, bidi and CJK glyphs come from Chromium.
+func EncodePDF(
+	ctx context.Context,
+	conv PDFConverter,
+	ds Dataset,
+	locale string,
 	lh *Letterhead,
-	loc i18n.Locale,
-) {
-	pdf.SetFillColor(parseRGB(lh, true))
-	pdf.SetTextColor(255, 255, 255)
-	setPDFFont(pdf, "B", 8)
-	x := 10.0
-	for i, c := range columns {
-		pdf.SetXY(x, y)
-		label := i18n.Translate(loc, c.LabelKey)
-		pdf.CellFormat(widths[i], 6, truncateRunes(label, 28), "1", 0, pdfAlign(c), true, 0, "")
-		x += widths[i]
+	title string,
+) ([]byte, error) {
+	if conv == nil {
+		return nil, ErrPDFRendererRequired
 	}
-	pdf.SetTextColor(0, 0, 0)
+	return conv.Convert(ctx, ExportPDFRequest(ds, locale, lh, title))
 }
 
-func drawPDFDataRow(
-	pdf *gofpdf.Fpdf,
-	columns []Column,
-	widths []float64,
-	y float64,
-	row map[string]any,
-	loc i18n.Locale,
-) float64 {
-	return drawPDFRow(pdf, columns, widths, y, row, loc, false)
+// ExportPDFRequest builds the Gotenberg request of a table export: the
+// document, a footer with the letterhead footer text and page numbers, and
+// landscape orientation for wide tables.
+func ExportPDFRequest(ds Dataset, locale string, lh *Letterhead, title string) pdfrender.Request {
+	footer := ""
+	if lh != nil {
+		footer = strings.TrimSpace(lh.FooterText)
+	}
+	return pdfrender.Request{
+		HTML:       ExportTableHTML(ds, locale, lh, title),
+		FooterHTML: pdfrender.FooterHTML(string(i18n.Normalize(locale)), footer),
+		Landscape:  len(ds.Columns) > pdfLandscapeColumns,
+	}
 }
 
-func drawPDFRow(
-	pdf *gofpdf.Fpdf,
-	columns []Column,
-	widths []float64,
-	y float64,
-	row map[string]any,
-	loc i18n.Locale,
-	fill bool,
-) float64 {
-	x := 10.0
-	lineH := 5.0
-	texts := make([]string, len(columns))
-	maxH := lineH
-	for i, c := range columns {
-		texts[i] = formatPDFCell(row[c.Key], c, loc)
-		if h := pdfMultiCellHeight(pdf, widths[i]-2, lineH, texts[i]); h > maxH {
-			maxH = h
-		}
+// ExportTableHTML lays out a dataset as an HTML document on the pdfrender
+// skeleton: letterhead header, title, export timestamp, info lines, the
+// data table (column widths from the column weights, numeric columns end
+// aligned) and the totals row. Every value is escaped.
+func ExportTableHTML(ds Dataset, locale string, lh *Letterhead, title string) string {
+	loc := i18n.Normalize(locale)
+	esc := html.EscapeString
+	var b strings.Builder
+	b.WriteString(LetterheadHeaderHTML(lh))
+	b.WriteString(`<h1 class="doc-title">`)
+	b.WriteString(esc(title))
+	b.WriteString(`</h1><p class="muted">`)
+	b.WriteString(esc(ExportedAtLabel(locale)))
+	b.WriteString(`</p>`)
+	if info := exportInfoHTML(ds.Info, loc); info != "" {
+		b.WriteString(info)
 	}
-	style := "D"
-	if fill {
-		style = "FD"
+	b.WriteString(`<table class="doc-table export-table"><colgroup>`)
+	for _, w := range pdfColumnWidths(ds.Columns, 100) {
+		fmt.Fprintf(&b, `<col style="width:%.2f%%">`, w)
 	}
-	for i, c := range columns {
-		pdf.Rect(x, y, widths[i], maxH, style)
-		pdf.SetXY(x+1, y+0.5)
-		pdf.MultiCell(widths[i]-2, lineH, texts[i], "", pdfAlign(c), false)
-		x += widths[i]
+	b.WriteString(`</colgroup><thead><tr>`)
+	for _, c := range ds.Columns {
+		b.WriteString(exportCellOpen("th", c))
+		b.WriteString(esc(i18n.Translate(loc, c.LabelKey)))
+		b.WriteString(`</th>`)
 	}
-	return y + maxH
+	b.WriteString(`</tr></thead><tbody>`)
+	for _, row := range ds.Rows {
+		writeExportRow(&b, ds.Columns, row, loc)
+	}
+	b.WriteString(`</tbody>`)
+	if len(ds.Totals) > 0 {
+		b.WriteString(`<tfoot>`)
+		writeExportRow(&b, ds.Columns, ds.Totals, loc)
+		b.WriteString(`</tfoot>`)
+	}
+	b.WriteString(`</table>`)
+	b.WriteString(LetterheadFooterHTML(lh))
+	color := ""
+	if lh != nil {
+		color = lh.PrimaryColor
+	}
+	body := `<style>` + exportTableCSS + `</style>` + b.String()
+	return pdfrender.Document{Lang: string(loc), Title: title, Body: body, PrimaryColor: color}.HTML()
 }
 
-func pdfAlign(c Column) string {
+// exportTableCSS narrows the skeleton table for dense lists: header in the
+// primary color, smaller text, long values wrap instead of being cut.
+const exportTableCSS = `table.export-table{table-layout:fixed;font-size:8pt}
+table.export-table th,table.export-table td{padding:2pt 4pt;overflow-wrap:anywhere}
+table.export-table thead th{background:var(--primary);color:#fff}
+table.export-table tfoot td{background:#f1f5f9;font-weight:700}`
+
+func writeExportRow(b *strings.Builder, columns []Column, row map[string]any, loc i18n.Locale) {
+	b.WriteString(`<tr>`)
+	for _, c := range columns {
+		b.WriteString(exportCellOpen("td", c))
+		b.WriteString(pdfrender.EscapeText(formatCell(row[c.Key], c, loc)))
+		b.WriteString(`</td>`)
+	}
+	b.WriteString(`</tr>`)
+}
+
+func exportCellOpen(tag string, c Column) string {
 	if c.AlignRight {
-		return "R"
+		return `<` + tag + ` class="num">`
 	}
-	return "L"
+	return `<` + tag + `>`
 }
 
-func drawPDFInfo(pdf *gofpdf.Fpdf, lines []InfoLine, y float64, loc i18n.Locale) float64 {
+func exportInfoHTML(lines []InfoLine, loc i18n.Locale) string {
+	var b strings.Builder
 	for _, line := range lines {
 		if strings.TrimSpace(line.Value) == "" {
 			continue
 		}
-		label := i18n.Translate(loc, line.LabelKey) + ": "
-		pdf.SetXY(10, y)
-		setPDFFont(pdf, "B", 9)
-		w := pdf.GetStringWidth(label) + 1
-		pdf.Cell(w, 5, label)
-		setPDFFont(pdf, "", 9)
-		pdf.Cell(pdfContentWidth-w, 5, line.Value)
-		y += 5
+		b.WriteString(`<tr><th>`)
+		b.WriteString(html.EscapeString(i18n.Translate(loc, line.LabelKey)))
+		b.WriteString(`</th><td>`)
+		b.WriteString(html.EscapeString(line.Value))
+		b.WriteString(`</td></tr>`)
 	}
-	return y
-}
-
-func pdfMultiCellHeight(pdf *gofpdf.Fpdf, w, lineH float64, txt string) float64 {
-	if strings.TrimSpace(txt) == "" {
-		return lineH
+	if b.Len() == 0 {
+		return ""
 	}
-	return float64(len(pdf.SplitText(txt, w))) * lineH
-}
-
-func drawPDFLetterhead(pdf *gofpdf.Fpdf, lh *Letterhead, y float64) float64 {
-	if len(lh.LogoBytes) > 0 {
-		opt := gofpdf.ImageOptions{ImageType: logoImageType(lh.LogoMIME), ReadDpi: true}
-		pdf.RegisterImageOptionsReader("logo", opt, bytes.NewReader(lh.LogoBytes))
-		pdf.ImageOptions("logo", 10, y, 18, 0, false, opt, 0, "")
-	}
-	x := 32.0
-	if lh.CompanyName != "" {
-		setPDFFont(pdf, "B", 12)
-		pdf.SetXY(x, y)
-		pdf.Cell(160, 6, lh.CompanyName)
-		y += 6
-	}
-	if lh.Tagline != "" {
-		setPDFFont(pdf, "", 9)
-		pdf.SetXY(x, y)
-		pdf.Cell(160, 5, lh.Tagline)
-		y += 5
-	}
-	meta := strings.Join(filterNonEmpty([]string{lh.Address, lh.Phone, lh.Email}), " · ")
-	if meta != "" {
-		setPDFFont(pdf, "", 8)
-		pdf.SetXY(x, y)
-		pdf.Cell(160, 4, meta)
-		y += 5
-	}
-	return y + 4
-}
-
-func logoImageType(mime string) string {
-	switch mime {
-	case "image/png":
-		return "PNG"
-	case "image/webp":
-		return "WEBP"
-	default:
-		return "JPG"
-	}
-}
-
-func parseRGB(lh *Letterhead, _ bool) (int, int, int) {
-	c := "#0F172A"
-	if lh != nil && lh.PrimaryColor != "" {
-		c = lh.PrimaryColor
-	}
-	c = strings.TrimPrefix(strings.TrimSpace(c), "#")
-	if len(c) != 6 {
-		return 15, 23, 42
-	}
-	var r, g, b int
-	_, _ = fmt.Sscanf(c, "%02x%02x%02x", &r, &g, &b)
-	return r, g, b
+	return `<table class="doc-meta">` + b.String() + `</table>`
 }
