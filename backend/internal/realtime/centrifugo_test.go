@@ -32,6 +32,12 @@ func TestCentrifugoPing(t *testing.T) {
 		t.Fatalf("request auth=%q body=%q", gotAuth, gotBody)
 	}
 
+	// A real node's info (metrics included) is larger than 4 KiB.
+	answer = `{"result":{"nodes":[{"name":"n1","metrics":{"items":{"x":"` + strings.Repeat("m", 8192) + `"}}}]}}`
+	if err := c.Ping(context.Background()); err != nil {
+		t.Fatalf("Ping with a large info response: %v", err)
+	}
+
 	answer = `{"error":{"code":101,"message":"unauthorized"}}`
 	if err := c.Ping(context.Background()); err == nil || !strings.Contains(err.Error(), "unauthorized") {
 		t.Fatalf("Ping with API error = %v", err)

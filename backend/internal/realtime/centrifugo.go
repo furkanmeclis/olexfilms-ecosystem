@@ -97,6 +97,9 @@ var (
 	_ Publisher = NoopPublisher{}
 )
 
+// maxInfoBytes bounds the info response Ping decodes.
+const maxInfoBytes = 1 << 20
+
 // Ping calls the server API's info method with the API key (TEC-275
 // preflight): it proves the endpoint the publisher uses answers and accepts
 // the key. A nil client (realtime disabled) is an error.
@@ -116,17 +119,19 @@ func (c *CentrifugoClient) Ping(ctx context.Context) error {
 		return fmt.Errorf("realtime: info request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 	if resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return fmt.Errorf("realtime: info status %d: %s", resp.StatusCode, string(body))
 	}
+	// A real node's info carries its metrics and easily passes 4 KiB, so
+	// the body is decoded whole (bounded), not from a truncated prefix.
 	var out struct {
 		Error *struct {
 			Code    int    `json:"code"`
 			Message string `json:"message"`
 		} `json:"error"`
 	}
-	if err := json.Unmarshal(body, &out); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxInfoBytes)).Decode(&out); err != nil {
 		return fmt.Errorf("realtime: info response: %w", err)
 	}
 	if out.Error != nil {
