@@ -194,16 +194,20 @@ type Benchmark struct {
 }
 
 type StaffTargetView struct {
-	UUID      uuid.UUID `json:"uuid"`
-	UserID    int64     `json:"user_id"`
-	UserUUID  uuid.UUID `json:"user_uuid"`
-	UserName  string    `json:"user_name"`
-	Period    string    `json:"period"`
-	Metric    string    `json:"metric"`
-	Value     string    `json:"value"`
-	Currency  *string   `json:"currency,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	UUID     uuid.UUID `json:"uuid"`
+	UserID   int64     `json:"user_id"`
+	UserUUID uuid.UUID `json:"user_uuid"`
+	UserName string    `json:"user_name"`
+	Period   string    `json:"period"`
+	Metric   string    `json:"metric"`
+	Value    string    `json:"value"`
+	Currency *string   `json:"currency,omitempty"`
+	// Actual / AchievementPct (TEC-497): the staff user's completed
+	// services of the month (count or income); nil on upsert responses.
+	Actual         *string   `json:"actual,omitempty"`
+	AchievementPct *string   `json:"achievement_pct,omitempty"`
+	CreatedAt      time.Time `json:"created_at,omitempty"`
+	UpdatedAt      time.Time `json:"updated_at,omitempty"`
 }
 
 type RuleView struct {
@@ -581,7 +585,7 @@ func (s *Service) ListStaffTargets(ctx context.Context, c Caller, f StaffTargetF
 	}
 	out := make([]StaffTargetView, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, StaffTargetView{UUID: r.Uuid, UserID: r.UserID, UserUUID: r.UserUuid, UserName: strings.TrimSpace(r.UserName + " " + r.UserSurname), Period: r.Period, Metric: r.Metric, Value: numText(r.Value), Currency: textPtr(r.Currency), CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time})
+		out = append(out, StaffTargetView{UUID: r.Uuid, UserID: r.UserID, UserUUID: r.UserUuid, UserName: strings.TrimSpace(r.UserName + " " + r.UserSurname), Period: r.Period, Metric: r.Metric, Value: numText(r.Value), Currency: textPtr(r.Currency), Actual: numPtr(r.Actual), AchievementPct: numPtr(r.AchievementPct), CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time})
 	}
 	return out, nil
 }

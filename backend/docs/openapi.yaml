@@ -29610,6 +29610,10 @@ components:
         metric: { type: string, enum: [services_count, service_revenue] }
         value: { type: string }
         currency: { type: [string, "null"] }
+        actual:
+          type: [string, "null"]
+          description: Completed services of the staff user in the month (count or income).
+        achievement_pct: { type: [string, "null"] }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     PerformanceStaffTargetInput:

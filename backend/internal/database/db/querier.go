@@ -2438,6 +2438,8 @@ type Querier interface {
 	// docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
 	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]ListStaffPaymentsRow, error)
 	ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error)
+	// actual: completed services of the staff user in the target month (UTC
+	// month like ListBonusCalculationCandidates), count or income by metric.
 	ListStaffTargets(ctx context.Context, arg ListStaffTargetsParams) ([]ListStaffTargetsRow, error)
 	// Pending reports whose generation task may have been lost (enqueue
 	// failure): the scheduler enqueues them again (task id dedupe). Database

@@ -125,6 +125,11 @@ func TestBonusBulkApproveAndRuleWithAccrualIsDeactivated(t *testing.T) {
 	if res, err := svc.CalculateBonuses(f.ctx, f.dealer1.ID, period); err != nil || res.Accrued != 1 {
 		t.Fatalf("calculate = %+v, %v", res, err)
 	}
+	staffTargets, err := svc.ListStaffTargets(f.ctx, c, StaffTargetFilter{PeriodFrom: period, PeriodTo: period})
+	if err != nil || len(staffTargets) != 1 || staffTargets[0].Actual == nil || *staffTargets[0].Actual != "1.00" ||
+		staffTargets[0].AchievementPct == nil || *staffTargets[0].AchievementPct != "100.00" {
+		t.Fatalf("staff target actual = %+v, %v", staffTargets, err)
+	}
 
 	adapter := NewBonusBulkAdapter(svc)
 	query := map[string]string{

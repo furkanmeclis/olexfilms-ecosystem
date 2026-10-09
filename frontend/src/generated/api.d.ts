@@ -15387,6 +15387,9 @@ export interface components {
             metric?: "services_count" | "service_revenue";
             value?: string;
             currency?: string | null;
+            /** @description Completed services of the staff user in the month (count or income). */
+            actual?: string | null;
+            achievement_pct?: string | null;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */

@@ -720,12 +720,29 @@ DELETE FROM staff_targets
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
 
 -- name: ListStaffTargets :many
+-- actual: completed services of the staff user in the target month (UTC
+-- month like ListBonusCalculationCandidates), count or income by metric.
 SELECT st.*,
        u.name AS user_name,
        u.surname AS user_surname,
-       u.uuid AS user_uuid
+       u.uuid AS user_uuid,
+       a.actual::numeric(18,2) AS actual,
+       ROUND(a.actual / st.value * 100, 2)::numeric AS achievement_pct
 FROM staff_targets st
 JOIN users u ON u.id = st.user_id
+LEFT JOIN LATERAL (
+    SELECT CASE st.metric
+                WHEN 'services_count' THEN COUNT(*)::numeric
+                ELSE COALESCE(SUM(s.income_amount), 0)::numeric
+           END AS actual
+    FROM services s
+    WHERE s.organization_id = st.organization_id
+      AND s.brand_id = st.brand_id
+      AND s.status = 'completed'
+      AND COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) = st.user_id
+      AND COALESCE(s.completed_at, s.created_at) >= ((st.period || '-01')::timestamp AT TIME ZONE 'UTC')
+      AND COALESCE(s.completed_at, s.created_at) < (((st.period || '-01')::timestamp + interval '1 month') AT TIME ZONE 'UTC')
+) a ON true
 WHERE st.organization_id = sqlc.arg(organization_id)
   AND st.period >= sqlc.arg(period_from)::text
   AND st.period <= sqlc.arg(period_to)::text
