@@ -11198,7 +11198,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Network performance ranking */
+        /**
+         * Network performance ranking
+         * @description Sort keys: name, distributor, province and every metric key (default -services_count, metrics NULLS LAST, id tiebreak).
+         */
         get: operations["listPerformanceRanking"];
         put?: never;
         post?: never;
@@ -11291,6 +11294,57 @@ export interface paths {
         post?: never;
         /** Delete a staff target */
         delete: operations["deletePerformanceStaffTarget"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dealer staff bonus accruals */
+        get: operations["listPerformanceBonuses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonuses/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a calculated bonus and create the staff payment */
+        post: operations["approvePerformanceBonus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonuses/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a calculated or approved bonus accrual */
+        post: operations["cancelPerformanceBonus"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -15209,6 +15263,15 @@ export interface components {
             organization_uuid?: string;
             name?: string;
             type?: string;
+            /** @description TEC-496. The row itself for a distributor, the parent distributor for a dealer. */
+            distributor?: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+            /** Format: int64 */
+            province_id?: number;
+            province_name?: string;
             currency?: string;
             metrics?: {
                 [key: string]: components["schemas"]["PerformanceMetricValue"];
@@ -15343,6 +15406,36 @@ export interface components {
             assignee_user_id?: number | null;
             active?: boolean;
         };
+        PerformanceBonus: {
+            /** Format: uuid */
+            uuid?: string;
+            /** Format: int64 */
+            user_id?: number;
+            user_name?: string;
+            period?: string;
+            rule_name?: string;
+            achievement_pct?: string;
+            amount?: string;
+            currency?: string;
+            /** @enum {string} */
+            status?: "calculated" | "approved" | "posted" | "cancelled";
+            /** Format: int64 */
+            staff_payment_id?: number | null;
+            /** Format: int64 */
+            approved_by_user_id?: number | null;
+            /** Format: date-time */
+            approved_at?: string | null;
+            /** Format: date-time */
+            cancelled_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        PerformanceBonusApprovalInput: {
+            amount?: string | null;
+            note?: string | null;
+        };
         EnvelopePerformanceDashboard: {
             /** @enum {boolean} */
             success?: true;
@@ -15411,6 +15504,24 @@ export interface components {
             /** @enum {boolean} */
             success?: true;
             data?: components["schemas"]["PerformanceRule"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceBonusPage: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: {
+                items?: components["schemas"]["PerformanceBonus"][];
+                /** Format: int64 */
+                total?: number;
+                limit?: number;
+                offset?: number;
+            };
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceBonus: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceBonus"];
             meta?: components["schemas"]["ResponseMeta"];
         };
         CertificateTypeInput: {
@@ -47479,6 +47590,12 @@ export interface operations {
                 offset?: components["parameters"]["Offset"];
                 period?: string;
                 type?: "distributor" | "dealer";
+                /** @description TEC-496. CSV of distributor uuids; keeps those distributors and their dealers. */
+                distributor_uuid?: string;
+                /** @description CSV of internal distributor ids (same as distributor_uuid). */
+                distributor_id?: string;
+                /** @description CSV of province ids of the organization address. */
+                province_id?: string;
             };
             header?: never;
             path?: never;
@@ -47700,6 +47817,90 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPerformanceBonuses: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                period?: string;
+                user_id?: number;
+                status?: "calculated" | "approved" | "posted" | "cancelled";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bonus accrual page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    approvePerformanceBonus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PerformanceBonusApprovalInput"];
+            };
+        };
+        responses: {
+            /** @description Approved bonus accrual */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonus"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    cancelPerformanceBonus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled bonus accrual */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonus"];
+                };
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
@@ -49428,6 +49629,8 @@ export interface operations {
                 status?: string;
                 /** @description CSV of low, normal, high, urgent. Unknown value → 400. */
                 priority?: string;
+                /** @description TEC-496. CSV of manual, auto (auto = opened by a weak dealer rule of the performance module). Unknown value → 400. */
+                source?: string;
                 /** @description CSV of subject organization UUIDs. */
                 subject_organization_uuid?: string;
                 assignee_user_uuid?: string;

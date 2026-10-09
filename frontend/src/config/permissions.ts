@@ -213,6 +213,9 @@ export const Permission = {
   /** TEC-489: efficiency and waste screens (efficiency module). */
   EfficiencyRead: "efficiency.read",
   EfficiencyExpectationsManage: "efficiency.expectations.manage",
+  /** TEC-496: performance panel, ranking and map (performance module). */
+  PerformanceRead: "performance.read",
+  PerformanceTargetsManage: "performance.targets.manage",
   /** TEC-500: photo standard angles (center) and overrides (distributor). */
   PhotoStandardManage: "photo_standard.manage",
   PhotoStandardOverride: "photo_standard.override",
@@ -612,6 +615,10 @@ export const permissions = {
   efficiency: {
     read: Permission.EfficiencyRead,
     expectationsManage: Permission.EfficiencyExpectationsManage,
+  },
+  performance: {
+    read: Permission.PerformanceRead,
+    targetsManage: Permission.PerformanceTargetsManage,
   },
   photoStandard: {
     manage: Permission.PhotoStandardManage,

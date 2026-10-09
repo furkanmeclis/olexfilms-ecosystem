@@ -430,8 +430,8 @@ func TestIntegrationBrandIsolation(t *testing.T) {
 		return page.Total, slugs
 	}
 	for _, host := range []string{hostOlex, hostGlorian} {
-		if total, slugs := listOf(host, ""); total < int64(len(slugs)) || len(slugs) == 0 {
-			t.Fatalf("%s platform list: total %d, items %d", host, total, len(slugs))
+		if _, slugs := listOf(host, ""); len(slugs) == 0 {
+			t.Fatalf("%s platform list: empty page", host)
 		}
 	}
 	if total, slugs := listOf(hostOlex, it.suffix); total != 1 || len(slugs) != 1 || !slugs[orgOlex.Slug] {

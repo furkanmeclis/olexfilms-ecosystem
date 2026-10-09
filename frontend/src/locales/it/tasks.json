@@ -80,5 +80,8 @@
   "comments.error": "Impossibile aggiungere il commento.",
   "errors.FORBIDDEN": "Solo il centro gestisce le attività.",
   "errors.NOT_FOUND": "Attività non trovata.",
-  "errors.VALIDATION_ERROR": "Controlli i campi evidenziati."
+  "errors.VALIDATION_ERROR": "Controlli i campi evidenziati.",
+  "columns.source": "Origine",
+  "source.manual": "Manuale",
+  "source.auto": "Automatica"
 }

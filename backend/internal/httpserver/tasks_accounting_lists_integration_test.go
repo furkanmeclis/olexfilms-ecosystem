@@ -153,7 +153,7 @@ func TestIntegrationTaskAccountingListsTasks(t *testing.T) {
 		t.Fatalf("total = %d", total)
 	}
 	for _, bad := range []string{
-		"&sort=comment_count", "&status=closed", "&priority=p0", "&subject_organization_uuid=x",
+		"&sort=comment_count", "&status=closed", "&priority=p0", "&source=rule", "&subject_organization_uuid=x",
 		"&created_from=yesterday", "&due_from=" + today + "&due_after=" + url.QueryEscape(now.Format(time.RFC3339)),
 		"&due_after=" + today, "&mine=maybe",
 	} {
@@ -246,6 +246,18 @@ func TestIntegrationTaskAccountingListsTasks(t *testing.T) {
 	if _, p, _ := it.taskState(t1); p != "low" {
 		t.Fatalf("t1 changed by a refused run: %s", p)
 	}
+
+	// TEC-496: source filter (auto = opened by a weak dealer rule).
+	auto, err := db.New(it.pool).InsertTask(context.Background(), db.InsertTaskParams{
+		OrganizationID: center.ID, BrandID: center.BrandID, SubjectOrgID: dealer.ID,
+		Title: "Auto " + it.suffix, Priority: "normal", Source: "auto",
+	})
+	if err != nil {
+		t.Fatalf("auto task: %v", err)
+	}
+	it.dt8Expect(tok, base+"&source=auto", auto.Uuid.String())
+	it.dt8Expect(tok, base+"&source=manual", t4, t3, t2, t1)
+	it.dt8Expect(tok, base+"&source=manual,auto", auto.Uuid.String(), t4, t3, t2, t1)
 }
 
 // dt8Book is a fresh distributor book with accounts, caris and entries.

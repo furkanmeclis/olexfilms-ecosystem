@@ -80,5 +80,8 @@
   "comments.error": "The comment could not be added.",
   "errors.FORBIDDEN": "Only the center organization manages tasks.",
   "errors.NOT_FOUND": "Task not found.",
-  "errors.VALIDATION_ERROR": "Check the highlighted fields."
+  "errors.VALIDATION_ERROR": "Check the highlighted fields.",
+  "columns.source": "Source",
+  "source.manual": "Manual",
+  "source.auto": "Automatic"
 }

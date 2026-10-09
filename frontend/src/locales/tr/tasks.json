@@ -80,5 +80,8 @@
   "comments.error": "Yorum eklenemedi.",
   "errors.FORBIDDEN": "Görevleri yalnız merkez organizasyonu yönetir.",
   "errors.NOT_FOUND": "Görev bulunamadı.",
-  "errors.VALIDATION_ERROR": "İşaretli alanları kontrol edin."
+  "errors.VALIDATION_ERROR": "İşaretli alanları kontrol edin.",
+  "columns.source": "Kaynak",
+  "source.manual": "Elle",
+  "source.auto": "Otomatik"
 }
