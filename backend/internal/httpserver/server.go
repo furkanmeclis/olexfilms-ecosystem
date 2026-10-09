@@ -137,6 +137,9 @@ import (
 	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	ratesmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/rates"
 	rateshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/rates/handler"
+	reportsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/reports"
+	reportshandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/reports/handler"
+	reportsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/reports/usecase"
 	searchmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search"
 	searchgroups "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/groups"
 	searchhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/handler"
@@ -795,6 +798,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	efficiencymodule.RegisterRoutes(mux, efficiencyhandler.New(efficiencySvc, exportSvc, importSvc).WithSettings(sysSvc), tokens, loader, deps.Queries, featureSvc)
 	pricingmodule.RegisterRecommendedRoutes(mux, pricinghandler.NewRecommended(recommendedSvc, exportSvc, importSvc, activityRec),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
+	// TEC-495 (F5-05f): /v1/reports (mobile reports + panel widgets).
+	reportsmodule.RegisterRoutes(mux, reportshandler.New(reportsusecase.New(deps.Queries, featureSvc)), tokens, loader, deps.Queries)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
