@@ -45,6 +45,7 @@ import (
 	oauthmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth"
 	ordersusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
+	performancemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance"
 	performanceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/usecase"
 	pricingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing"
 	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
@@ -180,6 +181,9 @@ func main() {
 	recommendedSvc := pricingusecase.NewRecommended(pool, queries, outboxStore, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	recommendedSvc.SetPriceListQueue(queue.PriceListEnqueuer{Client: reviewQueue})
 	pricingmodule.RegisterEventHandlers(eventBus, recommendedSvc)
+	// TEC-492: performance.computed evaluates weak-dealer rules.
+	performancemodule.RegisterEventHandlers(eventBus,
+		performanceusecase.New(pool, queries, outboxStore).WithPanelURL(cfg.Auth.FrontendURL), log)
 	// TEC-396: whatsapp.message.received arms the debounced whatsapp:ai_reply.
 	wapipeline.RegisterEventHandlers(eventBus, queue.WhatsAppAIEnqueuer{Client: reviewQueue}, log)
 	outboxPub := outbox.NewPublisher(outboxStore, eventBus, log)

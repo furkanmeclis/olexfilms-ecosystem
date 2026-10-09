@@ -800,10 +800,6 @@ const (
 	StockForecastLow      = "stock.forecast_low"
 )
 
-// Performance add-on events (TEC-491/F5-05b): written after an organization
-// month is recomputed.
-const PerformanceComputed = "performance.computed"
-
 // Recommended prices (TEC-506, F5-09b). recommended_published is written in
 // the transaction that publishes a batch (API or import); tenant is the
 // brand center; payload: brand_id, batch_id, effective_from, applied (the
@@ -818,4 +814,13 @@ const PerformanceComputed = "performance.computed"
 const (
 	PricingRecommendedPublished = "pricing.recommended_published"
 	PricingDisciplineDigest     = "pricing.discipline_digest"
+)
+
+// Performance add-on events (TEC-492/F5-05c): computed triggers weak-dealer
+// rule evaluation; weak_dealer reaches center and distributor owners;
+// below_target reaches the dealer with neutral text.
+const (
+	PerformanceComputed    = "performance.computed"
+	PerformanceWeakDealer  = "performance.weak_dealer"
+	PerformanceBelowTarget = "performance.below_target"
 )

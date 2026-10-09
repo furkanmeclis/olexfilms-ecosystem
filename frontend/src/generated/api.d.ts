@@ -10925,6 +10925,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/performance/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Region map with dealer density and territory gaps
+         * @description Requires the `performance` feature and `performance.read`. Center organizations see the brand network; distributors see only their own country/province/district territories. `level` selects the aggregate region granularity; TR provinces have seeded centroids, other regions fall back to the average dealer coordinates when available.
+         */
+        get: operations["getPerformanceRegionMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/map/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dealer point layer for the performance map
+         * @description Requires the `performance` feature and `performance.read`. Dealers without coordinates are included in `missing_coordinates` but omitted from the point layer.
+         */
+        get: operations["getPerformanceDealerMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock-forecasts": {
         parameters: {
             query?: never;
@@ -11059,6 +11099,164 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Performance dashboard metrics and targets */
+        get: operations["getPerformanceDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/ranking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Network performance ranking */
+        get: operations["listPerformanceRanking"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/benchmark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dealer benchmark without peer names */
+        get: operations["getPerformanceBenchmark"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Performance targets with achievement percentage */
+        get: operations["listPerformanceTargets"];
+        put?: never;
+        /** Create a performance target */
+        post: operations["createPerformanceTarget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/targets/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a performance target */
+        put: operations["updatePerformanceTarget"];
+        post?: never;
+        /** Delete a performance target */
+        delete: operations["deletePerformanceTarget"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/staff-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dealer staff targets */
+        get: operations["listPerformanceStaffTargets"];
+        put?: never;
+        /** Create or update a dealer staff target */
+        post: operations["upsertPerformanceStaffTarget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/staff-targets/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a staff target */
+        delete: operations["deletePerformanceStaffTarget"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Weak dealer rules */
+        get: operations["listPerformanceRules"];
+        put?: never;
+        /** Create a weak dealer rule */
+        post: operations["createPerformanceRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/rules/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a weak dealer rule */
+        put: operations["updatePerformanceRule"];
+        post?: never;
+        /** Delete or deactivate a weak dealer rule */
+        delete: operations["deletePerformanceRule"];
         options?: never;
         head?: never;
         patch?: never;
@@ -14845,6 +15043,222 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        PerformanceMetricValue: {
+            value?: string;
+            currency?: string | null;
+            /** Format: date-time */
+            computed_at?: string | null;
+        };
+        PerformanceRankingRow: {
+            rank?: number;
+            /** Format: uuid */
+            organization_uuid?: string;
+            name?: string;
+            type?: string;
+            currency?: string;
+            metrics?: {
+                [key: string]: components["schemas"]["PerformanceMetricValue"];
+            };
+            /** Format: date-time */
+            computed_at?: string | null;
+        };
+        PerformanceBenchmark: {
+            period?: string;
+            own?: components["schemas"]["PerformanceRankingRow"];
+            network_average?: {
+                [key: string]: components["schemas"]["PerformanceMetricValue"];
+            };
+        };
+        PerformanceDashboard: {
+            period?: string;
+            /** Format: uuid */
+            organization_uuid?: string;
+            organization_name?: string;
+            metrics?: {
+                [key: string]: Record<string, never>;
+            };
+            trend?: {
+                period?: string;
+                metrics?: {
+                    [key: string]: components["schemas"]["PerformanceMetricValue"];
+                };
+            }[];
+            targets?: components["schemas"]["PerformanceTarget"][];
+            subtree?: {
+                /** Format: uuid */
+                organization_uuid?: string;
+                name?: string;
+                type?: string;
+                metrics?: {
+                    [key: string]: components["schemas"]["PerformanceMetricValue"];
+                };
+            }[];
+        };
+        PerformanceTarget: {
+            /** Format: uuid */
+            uuid?: string;
+            target_name?: string;
+            target_type?: string;
+            /** @enum {string} */
+            metric?: "services_count" | "order_volume";
+            /** @enum {string} */
+            period_kind?: "monthly" | "quarterly" | "yearly";
+            /** Format: date */
+            period_start?: string;
+            /** Format: date */
+            period_end?: string;
+            value?: string;
+            currency?: string | null;
+            /** Format: date */
+            contract_ref?: string | null;
+            note?: string | null;
+            actual?: string | null;
+            achievement_pct?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        PerformanceTargetInput: {
+            /** Format: uuid */
+            target_organization_uuid: string;
+            /** @enum {string} */
+            metric: "services_count" | "order_volume";
+            /** @enum {string} */
+            period_kind: "monthly" | "quarterly" | "yearly";
+            /** Format: date */
+            period_start: string;
+            value: string;
+            currency?: string | null;
+            /** Format: date */
+            contract_ref?: string | null;
+            note?: string | null;
+        };
+        PerformanceStaffTarget: {
+            /** Format: uuid */
+            uuid?: string;
+            /** Format: int64 */
+            user_id?: number;
+            user_name?: string;
+            period?: string;
+            /** @enum {string} */
+            metric?: "services_count" | "service_revenue";
+            value?: string;
+            currency?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        PerformanceStaffTargetInput: {
+            /** Format: uuid */
+            user_uuid: string;
+            period: string;
+            /** @enum {string} */
+            metric: "services_count" | "service_revenue";
+            value: string;
+            currency?: string | null;
+        };
+        PerformanceRule: {
+            /** Format: uuid */
+            uuid?: string;
+            name?: string;
+            metric?: string;
+            /** @enum {string} */
+            operator?: "lt" | "lte" | "gt" | "gte" | "below_median_pct";
+            threshold?: string;
+            create_task?: boolean;
+            notify?: boolean;
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+            active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        PerformanceRuleInput: {
+            name: string;
+            metric: string;
+            /** @enum {string} */
+            operator: "lt" | "lte" | "gt" | "gte" | "below_median_pct";
+            threshold: string;
+            create_task?: boolean;
+            notify?: boolean;
+            /** Format: int64 */
+            assignee_user_id?: number | null;
+            active?: boolean;
+        };
+        EnvelopePerformanceDashboard: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceDashboard"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceBenchmark: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceBenchmark"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceRankingPage: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: {
+                items?: components["schemas"]["PerformanceRankingRow"][];
+                /** Format: int64 */
+                total?: number;
+                limit?: number;
+                offset?: number;
+            };
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceTargetPage: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: {
+                items?: components["schemas"]["PerformanceTarget"][];
+                /** Format: int64 */
+                total?: number;
+                limit?: number;
+                offset?: number;
+            };
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceTarget: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceTarget"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceStaffTargets: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: {
+                items?: components["schemas"]["PerformanceStaffTarget"][];
+            };
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceStaffTarget: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceStaffTarget"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceRules: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: {
+                items?: components["schemas"]["PerformanceRule"][];
+            };
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceRule: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceRule"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
         CertificateTypeInput: {
             name: {
                 [key: string]: string;
@@ -22863,6 +23277,87 @@ export interface components {
             insufficient_data_count: number;
             /** Format: int64 */
             total_count: number;
+        };
+        PerformanceMapDistributor: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        PerformanceRegionMapItem: {
+            /** @enum {string} */
+            level: "country" | "province" | "district";
+            /** Format: int64 */
+            id: number;
+            code: string;
+            name: string;
+            country_iso2: string;
+            country_name: string;
+            province_code?: string;
+            province_name?: string;
+            /** Format: int64 */
+            dealer_count: number;
+            distributor?: components["schemas"]["PerformanceMapDistributor"];
+            metric_avg?: number;
+            latitude?: number;
+            longitude?: number;
+            /** Format: int64 */
+            missing_coordinates: number;
+        };
+        PerformanceEmptyRegion: {
+            /** @enum {string} */
+            level: "country" | "province" | "district";
+            /** Format: int64 */
+            id: number;
+            code: string;
+            name: string;
+            country_iso2: string;
+            /** @enum {string} */
+            empty_reason: "territory_no_dealers" | "unassigned_territory";
+            distributor?: components["schemas"]["PerformanceMapDistributor"];
+        };
+        PerformanceRegionMap: {
+            /** @enum {string} */
+            level: "country" | "province" | "district";
+            country?: string;
+            period: string;
+            metric: string;
+            items: components["schemas"]["PerformanceRegionMapItem"][];
+            empty_regions: components["schemas"]["PerformanceEmptyRegion"][];
+            /** Format: int64 */
+            missing_coordinates: number;
+        };
+        PerformanceDealerPoint: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+            country_iso2: string;
+            province?: string;
+            district?: string;
+            latitude: number;
+            longitude: number;
+            metric_value?: number;
+            showcase_url: string;
+        };
+        PerformanceDealerMap: {
+            country?: string;
+            period: string;
+            metric: string;
+            items: components["schemas"]["PerformanceDealerPoint"][];
+            /** Format: int64 */
+            missing_coordinates: number;
+        };
+        EnvelopePerformanceRegionMap: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PerformanceRegionMap"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceDealerMap: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PerformanceDealerMap"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeStockForecastPage: {
             /** @enum {boolean} */
@@ -46308,6 +46803,61 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    getPerformanceRegionMap: {
+        parameters: {
+            query: {
+                level: "country" | "province" | "district";
+                country?: string;
+                period?: string;
+                metric?: "services_count" | "warranty_start_rate" | "measurement_rate" | "review_avg" | "stock_turnover" | "contract_days_left" | "cari_overdue_amount" | "cari_overdue_days" | "certificate_coverage" | "lead_conversion_rate" | "waste_ratio" | "order_volume";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Region aggregates and empty-region reasons */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceRegionMap"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPerformanceDealerMap: {
+        parameters: {
+            query?: {
+                country?: string;
+                period?: string;
+                metric?: "services_count" | "warranty_start_rate" | "measurement_rate" | "review_avg" | "stock_turnover" | "contract_days_left" | "cari_overdue_amount" | "cari_overdue_days" | "certificate_coverage" | "lead_conversion_rate" | "waste_ratio" | "order_volume";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer points and missing coordinate count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceDealerMap"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listStockForecasts: {
         parameters: {
             query?: {
@@ -46522,6 +47072,369 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getPerformanceDashboard: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Performance dashboard */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceDashboard"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPerformanceRanking: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                period?: string;
+                type?: "distributor" | "dealer";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ranking page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceRankingPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPerformanceBenchmark: {
+        parameters: {
+            query?: {
+                period?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer benchmark */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBenchmark"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPerformanceTargets: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Target page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceTargetPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPerformanceTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceTargetInput"];
+            };
+        };
+        responses: {
+            /** @description Created target */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceTarget"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updatePerformanceTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceTargetInput"];
+            };
+        };
+        responses: {
+            /** @description Updated target */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceTarget"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deletePerformanceTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPerformanceStaffTargets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Staff targets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceStaffTargets"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    upsertPerformanceStaffTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceStaffTargetInput"];
+            };
+        };
+        responses: {
+            /** @description Staff target */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceStaffTarget"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    deletePerformanceStaffTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listPerformanceRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceRules"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPerformanceRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updatePerformanceRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deletePerformanceRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listOrders: {

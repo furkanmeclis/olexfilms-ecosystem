@@ -208,6 +208,10 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	for name, code := range PricingEventCodes {
 		on(name, pricingDispatcher(code))
 	}
+	// TEC-492: weak dealer rules and neutral dealer below-target notices.
+	for name, code := range PerformanceEventCodes {
+		on(name, performanceDispatcher(code))
+	}
 	// TEC-297: dealer owners review services with micron differences outside
 	// the configured tolerance.
 	on(events.MeasurementDiffCheckRequired, measurementDiffDispatch)

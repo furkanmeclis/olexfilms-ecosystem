@@ -263,6 +263,7 @@ type Querier interface {
 	// Open (pending) vehicle transfers that involve the user; the transfer's
 	// current owner is immutable, so a merge waits until they are closed.
 	CountPendingVehicleTransfersForUser(ctx context.Context, userID int64) (int64, error)
+	CountPerformanceMapDealerMissingCoordinates(ctx context.Context, arg CountPerformanceMapDealerMissingCoordinatesParams) (int64, error)
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
@@ -873,6 +874,7 @@ type Querier interface {
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
 	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
+	GetBrandCenterOrganization(ctx context.Context, brandID int64) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
 	GetBulkOperationByJobID(ctx context.Context, jobID pgtype.Int8) (BulkOperation, error)
@@ -2159,6 +2161,10 @@ type Querier interface {
 	// keeps those not touched since then (the scheduler re-enqueues their task;
 	// a still queued task is deduplicated by its task id).
 	ListPendingCampaignRecipientIDs(ctx context.Context, arg ListPendingCampaignRecipientIDsParams) ([]int64, error)
+	ListPerformanceMapDealers(ctx context.Context, arg ListPerformanceMapDealersParams) ([]ListPerformanceMapDealersRow, error)
+	// Staff targets ---------------------------------------------------------------------
+	// Region map ------------------------------------------------------------------------
+	ListPerformanceMapRegions(ctx context.Context, arg ListPerformanceMapRegionsParams) ([]ListPerformanceMapRegionsRow, error)
 	// Metrics of the organizations over a closed period range (YYYY-MM).
 	ListPerformanceMetrics(ctx context.Context, arg ListPerformanceMetricsParams) ([]PerformanceMetricsMonthly, error)
 	// Worker source readers ----------------------------------------------------------
@@ -2168,6 +2174,7 @@ type Querier interface {
 	// performance/repository.RankingSort (metric keys | name); metric columns
 	// sort NULLS LAST in both directions; id tiebreak.
 	ListPerformanceRanking(ctx context.Context, arg ListPerformanceRankingParams) ([]ListPerformanceRankingRow, error)
+	ListPerformanceRuleEvaluations(ctx context.Context, arg ListPerformanceRuleEvaluationsParams) ([]ListPerformanceRuleEvaluationsRow, error)
 	ListPerformanceSubtreeOrgIDs(ctx context.Context, rootOrgID int64) ([]int64, error)
 	// Targets with their achievement: the target metric summed over the months
 	// of the target period (same currency for order volume). Sort keys from
@@ -3662,7 +3669,6 @@ type Querier interface {
 	UpsertServiceCertificateWarning(ctx context.Context, arg UpsertServiceCertificateWarningParams) (ServiceCertificateWarning, error)
 	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
-	// Staff targets ---------------------------------------------------------------------
 	UpsertStaffTarget(ctx context.Context, arg UpsertStaffTargetParams) (StaffTarget, error)
 	// TEC-483 (F5-04a): stock forecast snapshots, thresholds and center network
 	// demand. Worker/API layers arrive in F5-04b/c; these queries are the
