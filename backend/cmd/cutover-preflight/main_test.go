@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator"
+	searchregistry "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/registry"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/glorian"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 )
@@ -434,21 +436,21 @@ func TestIndexSourcesCountListAll(t *testing.T) {
 	}
 }
 
-// Every spec of the server's search registry is counted, so a migrated
-// index cannot be missed.
-func TestSearchAdaptersCoverServerSpecs(t *testing.T) {
-	seen := map[string]bool{}
-	for _, a := range searchAdapters(nil) {
-		id := a.Spec().ID
-		if seen[id] {
-			t.Fatalf("duplicate spec %q", id)
-		}
-		seen[id] = true
+// The check counts exactly the specs of the shared search registry: a spec
+// the server indexes but the preflight leaves out (or a stale extra one)
+// fails here.
+func TestSearchSourcesMatchRegistry(t *testing.T) {
+	var got []string
+	for _, s := range searchSources(nil) {
+		got = append(got, s.Spec)
 	}
-	for _, id := range []string{"users", "roles", "customers", "leads"} {
-		if !seen[id] {
-			t.Errorf("spec %q missing from %v", id, seen)
-		}
+	want := searchregistry.New(nil).SpecIDs()
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("preflight specs = %v, registry specs = %v", got, want)
+	}
+	if !slices.Contains(got, "leads") {
+		t.Errorf("leads missing from %v", got)
 	}
 }
 

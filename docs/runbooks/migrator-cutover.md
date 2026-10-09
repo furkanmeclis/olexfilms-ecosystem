@@ -41,7 +41,8 @@ tool search-reindex
 ```
 
 Komut kayıtlı her spec'i (users, roles, ürünler, müşteriler, servisler, garantiler, araçlar,
-organizasyonlar, siparişler, stok birimleri; TEC-524 sonrası leads de) Postgres'ten yeniden yükler.
+organizasyonlar, siparişler, stok birimleri, leads) Postgres'ten yeniden yükler. Spec listesi
+`internal/modules/search/registry`; preflight da aynı listeyi sayar.
 Yerelde karşılığı `make search-reindex`. Uzun sürebilir; backend ve worker çalışırken güvenle
 koşar (belgeler upsert edilir).
 

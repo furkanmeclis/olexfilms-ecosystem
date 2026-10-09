@@ -157,7 +157,7 @@ func buildChecks(ctx context.Context, cfg config.Config, opts options) ([]Check,
 			pingCheck{name: "health_postgres", timeout: opts.timeout,
 				ping: func(ctx context.Context) error { return database.Ping(ctx, pool) }},
 		}
-		indexCounts.sources = indexSources(searchAdapters(database.NewQueries(pool)))
+		indexCounts.sources = searchSources(database.NewQueries(pool))
 	}
 
 	var redisCheck Check
