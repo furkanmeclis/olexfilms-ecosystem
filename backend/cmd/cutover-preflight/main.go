@@ -1,6 +1,6 @@
 // Command cutover-preflight runs the go/no-go checks of the final cutover
-// (TEC-275, TEC-111) and prints them as a PASS/FAIL/SKIP table. Any FAIL
-// exits 1.
+// (TEC-275, TEC-111) and prints them as a PASS/WARN/FAIL/SKIP table. Any
+// FAIL exits 1; WARN does not.
 //
 // Checks:
 //
@@ -16,7 +16,11 @@
 //     never starts one). No active connection: SKIP.
 //  4. health_*: Postgres, Redis, Meilisearch, S3, Centrifugo, Gotenberg
 //     (a dependency switched off in config is SKIP).
-//  5. schema_version: schema_migrations is the version embedded in this
+//  5. search_index_counts: every Meilisearch index holds as many documents
+//     as the database has indexable rows (TEC-525). A difference is a WARN:
+//     run search-reindex (docs/runbooks/migrator-cutover.md). Search
+//     switched off: SKIP.
+//  6. schema_version: schema_migrations is the version embedded in this
 //     binary and not dirty.
 //
 // Usage:
@@ -126,6 +130,7 @@ func buildChecks(ctx context.Context, cfg config.Config, opts options) ([]Check,
 
 	pool, dbErr := database.NewPostgresPool(ctx, cfg.DB)
 	var dataChecks []Check
+	indexCounts := searchIndexCountsCheck{}
 	if dbErr != nil {
 		dbErr = fmt.Errorf("database: %w", dbErr)
 		dataChecks = []Check{
@@ -152,6 +157,7 @@ func buildChecks(ctx context.Context, cfg config.Config, opts options) ([]Check,
 			pingCheck{name: "health_postgres", timeout: opts.timeout,
 				ping: func(ctx context.Context) error { return database.Ping(ctx, pool) }},
 		}
+		indexCounts.sources = indexSources(searchAdapters(database.NewQueries(pool)))
 	}
 
 	var redisCheck Check
@@ -166,8 +172,13 @@ func buildChecks(ctx context.Context, cfg config.Config, opts options) ([]Check,
 	meili := pingCheck{name: "health_meilisearch", timeout: opts.timeout}
 	if search := searchengine.NewClient(cfg.Search, nil); search == nil {
 		meili.disabled = "search is disabled (SEARCH_ENABLED / SEARCH_DRIVER)"
+		indexCounts.disabled = meili.disabled
 	} else {
 		meili.ping = search.Ping
+		indexCounts.count = search.Stats
+	}
+	if dbErr != nil && indexCounts.disabled == "" {
+		indexCounts.disabled = "database unavailable (see health_postgres)"
 	}
 
 	var s3Check Check
@@ -186,9 +197,10 @@ func buildChecks(ctx context.Context, cfg config.Config, opts options) ([]Check,
 
 	gotenberg := pdfrender.New(cfg.Gotenberg.URL)
 	health := []Check{redisCheck, meili, s3Check, centrifugo,
-		pingCheck{name: "health_gotenberg", timeout: opts.timeout, ping: gotenberg.Ping}}
+		pingCheck{name: "health_gotenberg", timeout: opts.timeout, ping: gotenberg.Ping}, indexCounts}
 
-	// Order: data checks (1-3), health (4), schema version (5).
+	// Order: data checks (1-3), health (4), search index counts (5), schema
+	// version (6).
 	checks := make([]Check, 0, len(dataChecks)+len(health))
 	var schema, pg Check
 	for _, c := range dataChecks {

@@ -22,18 +22,22 @@ type Status string
 
 const (
 	Pass Status = "PASS"
+	// Warn is a finding the operator must look at that does not block the
+	// cutover (exit code stays 0).
+	Warn Status = "WARN"
 	Fail Status = "FAIL"
 	Skip Status = "SKIP"
 )
 
-// Result is one row of the preflight table. Detail says why on FAIL / SKIP
-// and what was seen on PASS.
+// Result is one row of the preflight table. Detail says why on WARN / FAIL /
+// SKIP and what was seen on PASS.
 type Result struct {
 	Status Status
 	Detail string
 }
 
 func pass(format string, a ...any) Result { return Result{Pass, fmt.Sprintf(format, a...)} }
+func warn(format string, a ...any) Result { return Result{Warn, fmt.Sprintf(format, a...)} }
 func fail(format string, a ...any) Result { return Result{Fail, fmt.Sprintf(format, a...)} }
 func skip(format string, a ...any) Result { return Result{Skip, fmt.Sprintf(format, a...)} }
 
@@ -44,8 +48,8 @@ type Check interface {
 	Run(ctx context.Context) Result
 }
 
-// runChecks runs every check in order, prints the PASS/FAIL/SKIP table and
-// returns the exit code: 1 when any check failed, else 0. A check that
+// runChecks runs every check in order, prints the PASS/WARN/FAIL/SKIP table
+// and returns the exit code: 1 when any check failed, else 0 (WARN included). A check that
 // panics is a FAIL; it does not stop the others.
 func runChecks(ctx context.Context, checks []Check, out io.Writer) int {
 	tw := tabwriter.NewWriter(out, 0, 2, 2, ' ', 0)
@@ -57,7 +61,7 @@ func runChecks(ctx context.Context, checks []Check, out io.Writer) int {
 		_, _ = fmt.Fprintf(tw, "%s\t%s\t%s\n", c.Name(), r.Status, oneLine(r.Detail))
 	}
 	_ = tw.Flush()
-	_, _ = fmt.Fprintf(out, "\n%d PASS, %d FAIL, %d SKIP\n", counts[Pass], counts[Fail], counts[Skip])
+	_, _ = fmt.Fprintf(out, "\n%d PASS, %d WARN, %d FAIL, %d SKIP\n", counts[Pass], counts[Warn], counts[Fail], counts[Skip])
 	if counts[Fail] > 0 {
 		return 1
 	}
@@ -71,7 +75,7 @@ func runOne(ctx context.Context, c Check) (r Result) {
 		}
 	}()
 	r = c.Run(ctx)
-	if r.Status != Pass && r.Status != Skip {
+	if r.Status != Pass && r.Status != Warn && r.Status != Skip {
 		r.Status = Fail
 	}
 	return r
@@ -299,7 +303,68 @@ func (c pingCheck) Run(ctx context.Context) Result {
 	return pass("ok (%s)", time.Since(start).Round(time.Millisecond))
 }
 
-// --- 5. schema version -------------------------------------------------------
+// --- 5. search index counts ---------------------------------------------------
+
+// IndexSource is one search spec of the index count check. Expected counts
+// the documents a full reindex of the spec writes, i.e. the indexable
+// database rows (adapter ListAll).
+type IndexSource struct {
+	Spec     string
+	Expected func(ctx context.Context) (int64, error)
+}
+
+// IndexCountFunc returns the document count of a spec's index
+// (searchengine.Client.Stats).
+type IndexCountFunc func(ctx context.Context, spec string) (int64, error)
+
+// searchIndexCountsCheck compares every search index's document count with
+// the database (TEC-525). The backend fills only empty indexes at start, so
+// an index that already had a document (e.g. users with the super admin)
+// stays short after a full migrator run until search-reindex runs. A
+// difference is a WARN, not a FAIL: search is not a go/no-go dependency and
+// search-reindex fixes it at any time. A non-empty disabled reason SKIPs.
+type searchIndexCountsCheck struct {
+	sources  []IndexSource
+	count    IndexCountFunc
+	disabled string
+}
+
+func (searchIndexCountsCheck) Name() string { return "search_index_counts" }
+
+func (c searchIndexCountsCheck) Run(ctx context.Context) Result {
+	if c.disabled != "" {
+		return skip("%s", c.disabled)
+	}
+	if len(c.sources) == 0 {
+		return skip("no search spec registered")
+	}
+	var problems []string
+	var total int64
+	for _, src := range c.sources {
+		want, err := src.Expected(ctx)
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("%s: database: %v", src.Spec, err))
+			continue
+		}
+		got, err := c.count(ctx, src.Spec)
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("%s: index: %v", src.Spec, err))
+			continue
+		}
+		if got != want {
+			problems = append(problems, fmt.Sprintf("%s: index %d, database %d", src.Spec, got, want))
+			continue
+		}
+		total += got
+	}
+	if len(problems) > 0 {
+		return warn("%d of %d indexes differ from the database (%s); run search-reindex",
+			len(problems), len(c.sources), strings.Join(problems, "; "))
+	}
+	return pass("%d indexes match the database (%d documents)", len(c.sources), total)
+}
+
+// --- 6. schema version -------------------------------------------------------
 
 // VersionFunc reads schema_migrations: the applied version and the dirty
 // flag. ok is false when the table has no row.
