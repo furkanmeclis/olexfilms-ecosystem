@@ -21647,6 +21647,154 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/performance/bonuses/bulk:
+    post:
+      tags: [Performance]
+      operationId: bulkPerformanceBonuses
+      summary: Bulk approve calculated bonus accruals (TEC-497)
+      description: >-
+        performance.bonus.manage, dealer with the performance and
+        dealer_accounting modules. Action `approve` runs the single approval
+        (no amount override) per item and books the staff payment; a row
+        that is no longer calculated fails per item. Target scope `ids`, or
+        `query` with the GET /v1/performance/bonuses filters (period,
+        user_id; only calculated rows). Not undoable.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkExecuteRequest" }
+      responses:
+        "200":
+          description: Sync bulk result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkSyncResult" }
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/bonus-rules:
+    get:
+      tags: [Performance]
+      operationId: listPerformanceBonusRules
+      summary: Dealer bonus rules (TEC-497)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Bonus rules
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusRules" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Performance]
+      operationId: createPerformanceBonusRule
+      summary: Create a dealer bonus rule
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceBonusRuleInput" }
+      responses:
+        "201":
+          description: Bonus rule
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusRule" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/bonus-rules/{uuid}:
+    put:
+      tags: [Performance]
+      operationId: updatePerformanceBonusRule
+      summary: Update a dealer bonus rule
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceBonusRuleInput" }
+      responses:
+        "200":
+          description: Bonus rule
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusRule" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Performance]
+      operationId: deletePerformanceBonusRule
+      summary: Delete a bonus rule (deactivated when it has accruals)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted or deactivated }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/performance/bonus-settings:
+    get:
+      tags: [Performance]
+      operationId: getPerformanceBonusSettings
+      summary: Bonus payout day of the dealer (default 5)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Bonus settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [Performance]
+      operationId: updatePerformanceBonusSettings
+      summary: Set the bonus payout day (1-28) of the month after the period
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceBonusSettings" }
+      responses:
+        "200":
+          description: Bonus settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/performance/rules:
     get:
       tags: [Performance]
@@ -29409,6 +29557,7 @@ components:
       type: object
       properties:
         uuid: { type: string, format: uuid }
+        target_organization_uuid: { type: string, format: uuid }
         target_name: { type: string }
         target_type: { type: string }
         metric: { type: string, enum: [services_count, order_volume] }
@@ -29500,6 +29649,60 @@ components:
         cancelled_at: { type: [string, "null"], format: date-time }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+    PerformanceBonusRule:
+      type: object
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        metric: { type: string, enum: [services_count, service_revenue] }
+        threshold_pct: { type: string }
+        kind: { type: string, enum: [fixed, percent_of_revenue] }
+        amount: { type: [string, "null"] }
+        percent: { type: [string, "null"] }
+        currency: { type: [string, "null"] }
+        active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PerformanceBonusRuleInput:
+      type: object
+      additionalProperties: false
+      required: [name, metric, threshold_pct, kind]
+      properties:
+        name: { type: string }
+        metric: { type: string, enum: [services_count, service_revenue] }
+        threshold_pct: { type: string, description: "Achievement % (0-1000] from which the rule pays" }
+        kind: { type: string, enum: [fixed, percent_of_revenue] }
+        amount: { type: [string, "null"], description: "fixed: amount" }
+        percent: { type: [string, "null"], description: "percent_of_revenue: percent (0-100]" }
+        currency: { type: [string, "null"], description: "fixed: ISO 4217" }
+        active: { type: boolean }
+    PerformanceBonusSettings:
+      type: object
+      additionalProperties: false
+      required: [payout_day]
+      properties:
+        payout_day: { type: integer, minimum: 1, maximum: 28 }
+    EnvelopePerformanceBonusRules:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PerformanceBonusRule" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceBonusRule:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceBonusRule" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceBonusSettings:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceBonusSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
     PerformanceBonusApprovalInput:
       type: object
       additionalProperties: false

@@ -2142,6 +2142,7 @@ const listPerformanceTargets = `-- name: ListPerformanceTargets :many
 SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.target_org_id, t.metric, t.period_kind, t.period_start, t.period_end, t.value, t.currency, t.contract_ref, t.note, t.created_by_user_id, t.created_at, t.updated_at,
        o.name AS target_name,
        o.type AS target_type,
+       o.uuid AS target_org_uuid,
        a.actual::numeric AS actual,
        CASE WHEN a.actual IS NULL THEN NULL
             ELSE ROUND(a.actual / t.value * 100, 2)
@@ -2237,6 +2238,7 @@ type ListPerformanceTargetsRow struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	TargetName      string             `json:"target_name"`
 	TargetType      string             `json:"target_type"`
+	TargetOrgUuid   uuid.UUID          `json:"target_org_uuid"`
 	Actual          pgtype.Numeric     `json:"actual"`
 	AchievementPct  pgtype.Numeric     `json:"achievement_pct"`
 	TotalCount      int64              `json:"total_count"`
@@ -2286,6 +2288,7 @@ func (q *Queries) ListPerformanceTargets(ctx context.Context, arg ListPerformanc
 			&i.UpdatedAt,
 			&i.TargetName,
 			&i.TargetType,
+			&i.TargetOrgUuid,
 			&i.Actual,
 			&i.AchievementPct,
 			&i.TotalCount,

@@ -1278,7 +1278,7 @@ func averageMetrics(rows []db.ListPerformanceRankingRow) map[string]*MetricValue
 }
 
 func targetRowView(r db.ListPerformanceTargetsRow) TargetView {
-	return TargetView{UUID: r.Uuid, TargetName: r.TargetName, TargetType: r.TargetType, Metric: r.Metric, PeriodKind: r.PeriodKind, PeriodStart: dateText(r.PeriodStart), PeriodEnd: dateText(r.PeriodEnd), Value: numText(r.Value), Currency: textPtr(r.Currency), ContractRef: datePtrText(r.ContractRef), Note: textPtr(r.Note), Actual: numPtr(r.Actual), AchievementPct: numPtr(r.AchievementPct), CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time}
+	return TargetView{UUID: r.Uuid, TargetOrganizationUUID: r.TargetOrgUuid, TargetName: r.TargetName, TargetType: r.TargetType, Metric: r.Metric, PeriodKind: r.PeriodKind, PeriodStart: dateText(r.PeriodStart), PeriodEnd: dateText(r.PeriodEnd), Value: numText(r.Value), Currency: textPtr(r.Currency), ContractRef: datePtrText(r.ContractRef), Note: textPtr(r.Note), Actual: numPtr(r.Actual), AchievementPct: numPtr(r.AchievementPct), CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time}
 }
 
 func (s *Service) targetByIDView(ctx context.Context, c Caller, id uuid.UUID) (TargetView, error) {

@@ -376,6 +376,7 @@ WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id);
 SELECT t.*,
        o.name AS target_name,
        o.type AS target_type,
+       o.uuid AS target_org_uuid,
        a.actual::numeric AS actual,
        CASE WHEN a.actual IS NULL THEN NULL
             ELSE ROUND(a.actual / t.value * 100, 2)

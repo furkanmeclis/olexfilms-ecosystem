@@ -821,6 +821,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		leadsusecase.NewBulkAdapter(deps.Queries),
 		// TEC-398: conversations (close, assign, AI mode).
 		whatsappusecase.NewBulkAdapter(deps.Queries),
+		// TEC-497: dealer bonus accruals (approve).
+		performanceusecase.NewBonusBulkAdapter(performanceSvc),
 	)
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log).WithPool(deps.DB)
 	logsSvc := logsusecase.New(deps.Queries)

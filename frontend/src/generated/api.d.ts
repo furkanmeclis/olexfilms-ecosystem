@@ -11280,6 +11280,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/performance/bonuses/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk approve calculated bonus accruals (TEC-497)
+         * @description performance.bonus.manage, dealer with the performance and dealer_accounting modules. Action `approve` runs the single approval (no amount override) per item and books the staff payment; a row that is no longer calculated fails per item. Target scope `ids`, or `query` with the GET /v1/performance/bonuses filters (period, user_id; only calculated rows). Not undoable.
+         */
+        post: operations["bulkPerformanceBonuses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonus-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dealer bonus rules (TEC-497) */
+        get: operations["listPerformanceBonusRules"];
+        put?: never;
+        /** Create a dealer bonus rule */
+        post: operations["createPerformanceBonusRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonus-rules/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a dealer bonus rule */
+        put: operations["updatePerformanceBonusRule"];
+        post?: never;
+        /** Delete a bonus rule (deactivated when it has accruals) */
+        delete: operations["deletePerformanceBonusRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonus-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bonus payout day of the dealer (default 5) */
+        get: operations["getPerformanceBonusSettings"];
+        /** Set the bonus payout day (1-28) of the month after the period */
+        put: operations["updatePerformanceBonusSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/performance/rules": {
         parameters: {
             query?: never;
@@ -15244,6 +15318,8 @@ export interface components {
         PerformanceTarget: {
             /** Format: uuid */
             uuid?: string;
+            /** Format: uuid */
+            target_organization_uuid?: string;
             target_name?: string;
             target_type?: string;
             /** @enum {string} */
@@ -15361,6 +15437,63 @@ export interface components {
             created_at?: string;
             /** Format: date-time */
             updated_at?: string;
+        };
+        PerformanceBonusRule: {
+            /** Format: uuid */
+            uuid?: string;
+            name?: string;
+            /** @enum {string} */
+            metric?: "services_count" | "service_revenue";
+            threshold_pct?: string;
+            /** @enum {string} */
+            kind?: "fixed" | "percent_of_revenue";
+            amount?: string | null;
+            percent?: string | null;
+            currency?: string | null;
+            active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        PerformanceBonusRuleInput: {
+            name: string;
+            /** @enum {string} */
+            metric: "services_count" | "service_revenue";
+            /** @description Achievement % (0-1000] from which the rule pays */
+            threshold_pct: string;
+            /** @enum {string} */
+            kind: "fixed" | "percent_of_revenue";
+            /** @description fixed: amount */
+            amount?: string | null;
+            /** @description percent_of_revenue: percent (0-100] */
+            percent?: string | null;
+            /** @description fixed: ISO 4217 */
+            currency?: string | null;
+            active?: boolean;
+        };
+        PerformanceBonusSettings: {
+            payout_day: number;
+        };
+        EnvelopePerformanceBonusRules: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: {
+                items?: components["schemas"]["PerformanceBonusRule"][];
+            };
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceBonusRule: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceBonusRule"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceBonusSettings: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceBonusSettings"];
+            meta?: components["schemas"]["ResponseMeta"];
         };
         PerformanceBonusApprovalInput: {
             amount?: string | null;
@@ -47733,6 +47866,196 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    bulkPerformanceBonuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPerformanceBonusRules: {
+        parameters: {
+            query?: {
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bonus rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusRules"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPerformanceBonusRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceBonusRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Bonus rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updatePerformanceBonusRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceBonusRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Bonus rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deletePerformanceBonusRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted or deactivated */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPerformanceBonusSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bonus settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updatePerformanceBonusSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceBonusSettings"];
+            };
+        };
+        responses: {
+            /** @description Bonus settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listPerformanceRules: {

@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	perfuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/google/uuid"
 )
 
 func TestIntegrationPerformanceAPIAndRules(t *testing.T) {
@@ -119,12 +121,54 @@ func TestIntegrationPerformanceAPIAndRules(t *testing.T) {
 		t.Fatal("performance notifications were not enqueued")
 	}
 
+	// TEC-497: target rows carry the target organization (edit form), the
+	// dealer manages bonus rules and the payout day, bulk approval runs
+	// through the bulk engine.
+	code, env = it.do("GET", "/v1/performance/targets", hostOlex, centerTok, nil)
+	if code != http.StatusOK || !strings.Contains(string(env.Data), dealerA.Uuid.String()) {
+		t.Fatalf("targets = %d %s, want target_organization_uuid", code, string(env.Data))
+	}
+	if _, err := it.srv.features.SetByAdmin(ctx, 0, dealerA.ID, features.ModuleDealerAccounting, true); err != nil {
+		t.Fatal(err)
+	}
+	code, env = it.do("POST", "/v1/performance/bonus-rules", hostOlex, dealerTok, map[string]any{
+		"name": "Hedef", "metric": "services_count", "threshold_pct": "100", "kind": "fixed",
+		"amount": "500", "currency": "TRY", "active": true,
+	})
+	if code != http.StatusCreated {
+		t.Fatalf("bonus rule = %d %s", code, errCode(env))
+	}
+	code, env = it.do("POST", "/v1/performance/bonus-rules", hostOlex, dealerTok, map[string]any{
+		"name": "Eksik", "metric": "services_count", "threshold_pct": "100", "kind": "fixed", "active": true,
+	})
+	if code != http.StatusBadRequest {
+		t.Fatalf("bonus rule without amount = %d %s, want 400", code, errCode(env))
+	}
+	code, env = it.do("GET", "/v1/performance/bonus-rules", hostOlex, distTok, nil)
+	if code != http.StatusForbidden {
+		t.Fatalf("distributor bonus rules = %d %s, want 403", code, errCode(env))
+	}
+	code, env = it.do("PUT", "/v1/performance/bonus-settings", hostOlex, dealerTok, map[string]any{"payout_day": 12})
+	if code != http.StatusOK || !strings.Contains(string(env.Data), `"payout_day":12`) {
+		t.Fatalf("bonus settings = %d %s", code, string(env.Data))
+	}
+	code, env = it.do("POST", "/v1/performance/bonuses/bulk", hostOlex, dealerTok, map[string]any{
+		"action": "approve", "target": map[string]any{"scope": "ids", "ids": []string{uuid.NewString()}},
+	})
+	if code != http.StatusOK || !strings.Contains(string(env.Data), `"failed":1`) {
+		t.Fatalf("bulk approve unknown id = %d %s, want one failed item", code, string(env.Data))
+	}
+
 	if _, err := it.srv.features.SetByAdmin(ctx, 0, dealerA.ID, features.ModuleDealerAccounting, false); err != nil {
 		t.Fatal(err)
 	}
 	code, env = it.do("GET", "/v1/performance/bonuses?period=2026-10", hostOlex, dealerTok, nil)
 	if code != http.StatusForbidden {
 		t.Fatalf("dealer_accounting off bonuses = %d %s, want 403", code, errCode(env))
+	}
+	code, env = it.do("GET", "/v1/performance/bonus-rules", hostOlex, dealerTok, nil)
+	if code != http.StatusForbidden {
+		t.Fatalf("dealer_accounting off bonus rules = %d %s, want 403", code, errCode(env))
 	}
 
 	if _, err := it.srv.features.SetByAdmin(ctx, 0, dealerA.ID, features.ModulePerformance, false); err != nil {
