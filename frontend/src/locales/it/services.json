@@ -217,6 +217,7 @@
   "detail.items.added_at": "Aggiunto",
   "wizard.steps.contract": "Contratto",
   "stock.errors.CONTRACT_REQUIRED": "Il contratto di accettazione del veicolo deve essere firmato prima di completare il servizio. Torna al passaggio Contratto.",
+  "stock.errors.PHOTO_STANDARD_INCOMPLETE": "Mancano foto obbligatorie di accettazione del veicolo. Fotografa prima tutte le angolazioni obbligatorie.",
   "contract.title": "Contratto di accettazione del veicolo",
   "contract.none": "Non è ancora stato creato alcun contratto per questo servizio.",
   "contract.voided_hint": "Il contratto precedente è stato annullato. Creane uno nuovo.",

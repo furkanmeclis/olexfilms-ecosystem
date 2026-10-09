@@ -13,6 +13,7 @@ import (
 	"time"
 
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
+	psmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/model"
 	svcuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
@@ -72,6 +73,7 @@ func caller(r *http.Request) svcuc.Caller {
 func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var ve *svcuc.ValidationError
 	var qe *apiquery.ValidationError
+	var incomplete *psmodel.IncompleteError
 	switch {
 	case errors.As(err, &qe):
 		details := make([]response.Detail, 0, len(qe.Details))
@@ -95,6 +97,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeUnitNotAvailable, "The unit is not available to this organization")
 	case errors.Is(err, svcuc.ErrTooManyImages):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeTooManyImages, "The image limit of the service is reached")
+	case errors.As(err, &incomplete):
+		psmodel.WriteIncomplete(w, r, incomplete)
 	case errors.Is(err, svcuc.ErrContractRequired):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeContractRequired, "An executed intake contract is required for this service transition")
 	case errors.Is(err, svcuc.ErrCertificateApprovalRequired):

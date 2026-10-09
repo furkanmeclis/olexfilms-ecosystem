@@ -139,6 +139,9 @@ describe("stock rules (TEC-182)", () => {
     expect(stockErrorKey("CONTRACT_REQUIRED")).toBe(
       "services.stock.errors.CONTRACT_REQUIRED",
     );
+    expect(stockErrorKey("PHOTO_STANDARD_INCOMPLETE")).toBe(
+      "services.stock.errors.PHOTO_STANDARD_INCOMPLETE",
+    );
     expect(stockErrorKey("HTTP_500")).toBe("services.stock.errors.generic");
     expect(stockErrorKey(undefined)).toBe("services.stock.errors.generic");
   });

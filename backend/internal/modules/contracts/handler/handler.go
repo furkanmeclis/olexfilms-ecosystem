@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/usecase"
+	psmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/brandctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
@@ -429,7 +430,10 @@ func decodeOptional(w http.ResponseWriter, r *http.Request, dst any) bool {
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 	var unknown *usecase.UnknownVariablesError
+	var incomplete *psmodel.IncompleteError
 	switch {
+	case errors.As(err, &incomplete):
+		psmodel.WriteIncomplete(w, r, incomplete)
 	case errors.As(err, &unknown):
 		details := make([]response.Detail, 0, len(unknown.Keys))
 		for _, k := range unknown.Keys {

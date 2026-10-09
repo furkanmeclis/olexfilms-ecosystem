@@ -11,8 +11,10 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -46,8 +48,11 @@ type Caller struct {
 }
 
 type Service struct {
-	pool *pgxpool.Pool
-	q    *db.Queries
+	pool     *pgxpool.Pool
+	q        *db.Queries
+	features FeatureChecker
+	out      outbox.Enqueuer
+	store    storage.Driver
 }
 
 func New(pool *pgxpool.Pool, q *db.Queries) *Service {
@@ -264,21 +269,12 @@ func (s *Service) GetOverrides(ctx context.Context, c Caller, target uuid.UUID) 
 }
 
 func (s *Service) ResolvedAngles(ctx context.Context, serviceOrgID, brandID int64) ([]AngleView, error) {
-	distID, err := s.distributorID(ctx, serviceOrgID)
+	rows, err := s.resolvedRows(ctx, s.q, serviceOrgID, brandID)
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.q.ListResolvedPhotoAngles(ctx, db.ListResolvedPhotoAnglesParams{
-		BrandID: brandID, ServiceOrgID: serviceOrgID, DistributorOrgID: distID,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("photo_standard: resolved angles: %w", err)
-	}
 	out := make([]AngleView, 0, len(rows))
 	for _, row := range rows {
-		if row.ResolvedHidden {
-			continue
-		}
 		out = append(out, AngleView{
 			UUID: textUUID(row.Uuid), Key: row.Key, Name: copyJSON(row.Name), Hint: copyJSON(row.Hint),
 			ExampleStorageKey: textPtr(row.ExampleStorageKey), Required: row.ResolvedRequired,
@@ -306,6 +302,7 @@ func (s *Service) Intake(ctx context.Context, c Caller, serviceID uuid.UUID) (In
 		byAngle[p.AngleID] = p
 	}
 	out := IntakeListView{ServiceUUID: svc.Uuid, Angles: make([]IntakeAngleView, 0, len(angles))}
+	exif := CanSeeEXIF(c, svc.OrganizationID)
 	for _, a := range angles {
 		row, err := s.q.GetPhotoAngleByKey(ctx, db.GetPhotoAngleByKeyParams{Key: a.Key, BrandID: svc.BrandID})
 		if err != nil {
@@ -314,6 +311,9 @@ func (s *Service) Intake(ctx context.Context, c Caller, serviceID uuid.UUID) (In
 		var photo *IntakePhotoView
 		if p, ok := byAngle[row.ID]; ok {
 			v := photoView(p, svc.Uuid, a.Key)
+			if !exif {
+				redactEXIF(&v)
+			}
 			photo = &v
 		}
 		missing := a.Required && photo == nil
@@ -327,7 +327,7 @@ func (s *Service) Intake(ctx context.Context, c Caller, serviceID uuid.UUID) (In
 
 func (s *Service) Upload(ctx context.Context, c Caller, serviceID uuid.UUID, angleKey string, meta UploadMeta) (UploadSlot, error) {
 	var out UploadSlot
-	err := s.inTx(ctx, func(q *db.Queries) error {
+	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		svc, err := s.lockWritableService(ctx, q, c, serviceID)
 		if err != nil {
 			return err
@@ -338,6 +338,14 @@ func (s *Service) Upload(ctx context.Context, c Caller, serviceID uuid.UUID, ang
 		}
 		if err != nil {
 			return fmt.Errorf("photo_standard: angle: %w", err)
+		}
+		var missingBefore []string
+		if s.out != nil {
+			if missingBefore, err = s.missingAngles(ctx, q, model.ServiceRef{
+				ID: svc.ID, OrganizationID: svc.OrganizationID, BrandID: svc.BrandID,
+			}); err != nil {
+				return err
+			}
 		}
 		old, err := q.SoftDeleteActiveIntakePhoto(ctx, db.SoftDeleteActiveIntakePhotoParams{
 			ServiceID: svc.ID, AngleID: angle.ID, DeletedBy: int8OrNull(c.Principal.UserInternal),
@@ -360,14 +368,17 @@ func (s *Service) Upload(ctx context.Context, c Caller, serviceID uuid.UUID, ang
 			return fmt.Errorf("photo_standard: create photo: %w", err)
 		}
 		out.Photo = photoView(row, svc.Uuid, angle.Key)
-		return nil
+		if !CanSeeEXIF(c, svc.OrganizationID) {
+			redactEXIF(&out.Photo)
+		}
+		return s.emitCompleted(ctx, q, tx, c, svc, missingBefore)
 	})
 	return out, err
 }
 
 func (s *Service) DeletePhoto(ctx context.Context, c Caller, serviceID uuid.UUID, angleKey string) (string, error) {
 	var key string
-	err := s.inTx(ctx, func(q *db.Queries) error {
+	err := s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
 		svc, err := s.lockWritableService(ctx, q, c, serviceID)
 		if err != nil {
 			return err
@@ -401,13 +412,13 @@ func (s *Service) DeletePhoto(ctx context.Context, c Caller, serviceID uuid.UUID
 	return key, err
 }
 
-func (s *Service) inTx(ctx context.Context, fn func(*db.Queries) error) error {
+func (s *Service) inTx(ctx context.Context, fn func(*db.Queries, pgx.Tx) error) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("photo_standard: begin: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	if err := fn(s.q.WithTx(tx)); err != nil {
+	if err := fn(s.q.WithTx(tx), tx); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {

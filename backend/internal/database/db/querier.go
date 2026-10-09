@@ -116,6 +116,10 @@ type Querier interface {
 	// Rotated refresh tokens stay until they expire, for reuse detection.
 	CleanupOAuthTokens(ctx context.Context) (int64, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
+	// TEC-499 (F5-07b): KVKK anonymization of a customer clears the EXIF
+	// location and device of the intake photos of their services (the photos
+	// and capture time stay as service evidence).
+	ClearCustomerIntakePhotoEXIF(ctx context.Context, customerUserID int64) (int64, error)
 	// Run before setting a new default in the same transaction.
 	ClearDefaultContractTemplate(ctx context.Context, arg ClearDefaultContractTemplateParams) error
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
