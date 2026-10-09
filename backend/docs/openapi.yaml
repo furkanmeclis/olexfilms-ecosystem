@@ -3860,12 +3860,72 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/platform/photo-standard/angles/{uuid}/example:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [PhotoStandard]
+      operationId: uploadPhotoStandardAngleExample
+      summary: Upload or replace the example image of an angle
+      description: >-
+        TEC-500. Multipart field `image` (at most 12 MiB). The server sniffs
+        bytes and accepts JPEG, PNG and WebP; the previous example object is
+        deleted. Requires photo_standard.manage.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "200":
+          description: Angle with the new example_url
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePhotoStandardAngle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+
+  /v1/photo-standard/angles/{uuid}/example:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [PhotoStandard]
+      operationId: getPhotoStandardAngleExample
+      summary: Example image of an angle
+      description: TEC-500. Requires the photo_standard add-on and services.read. 404 without an uploaded example.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/photo-standard/overrides:
     get:
       tags: [PhotoStandard]
       operationId: getPhotoStandardOverrides
       summary: Resolve photo standard overrides for an organization
-      description: TEC-498. Dealer override wins over distributor override, which wins over the central definition.
+      description: >-
+        TEC-498. Dealer override wins over distributor override, which wins
+        over the central definition. TEC-500: every active angle is listed,
+        hidden ones included, with default_required, default_hidden and
+        overridden.
       security:
         - bearerAuth: []
       parameters:
@@ -20984,6 +21044,31 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+  /v1/services/{uuid}/intake-photos/{angle_key}/file:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+      - name: angle_key
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [PhotoStandard]
+      operationId: getServiceIntakePhotoFile
+      summary: Active intake photo bytes of an angle
+      description: TEC-500. The IntakePhoto.url path. Requires services.read and the photo_standard add-on.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+            image/heic: { schema: { type: string, format: binary } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /v1/services/{uuid}/items/{item}/consumption-correction:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -38847,10 +38932,22 @@ components:
           type: object
           additionalProperties: { type: string }
         example_storage_key: { type: [string, "null"] }
+        example_url:
+          type: string
+          description: TEC-500. Authenticated example image path; absent without an uploaded example.
         required: { type: boolean }
         hidden: { type: boolean }
         sort_order: { type: integer }
         active: { type: boolean }
+        default_required:
+          type: boolean
+          description: TEC-500, override endpoints only. Central default (center override, else the angle).
+        default_hidden:
+          type: boolean
+          description: TEC-500, override endpoints only. Central default hidden flag.
+        overridden:
+          type: boolean
+          description: TEC-500, override endpoints only. The target organization has its own override row.
 
     PhotoStandardOverridesInput:
       type: object

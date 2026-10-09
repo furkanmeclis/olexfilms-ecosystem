@@ -338,5 +338,6 @@
   "review_questions.validation.key": "La chiave è obbligatoria, massimo 64 caratteri.",
   "review_questions.validation.text_tr": "Il testo della domanda in turco è obbligatorio.",
   "review_questions.toast.saved": "Domanda salvata.",
-  "review_questions.toast.failed": "Operazione non riuscita. Riprova."
+  "review_questions.toast.failed": "Operazione non riuscita. Riprova.",
+  "wizard.steps.photos": "Foto di accettazione"
 }

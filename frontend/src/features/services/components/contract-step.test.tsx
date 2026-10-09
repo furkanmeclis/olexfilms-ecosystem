@@ -16,7 +16,8 @@ const contractApi = vi.hoisted(() => ({
   downloadPdf: vi.fn(),
 }));
 const granted = vi.hoisted(() => ({ set: new Set<string>() }));
-const feature = vi.hoisted(() => ({ enabled: true }));
+const feature = vi.hoisted(() => ({ enabled: true, photos: false }));
+const photoApi = vi.hoisted(() => ({ intake: vi.fn(), uploadIntake: vi.fn() }));
 const toast = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
@@ -28,6 +29,8 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     t: (key: string, params?: Record<string, string | number>) =>
       params ? `${key} ${JSON.stringify(params)}` : key,
+    locale: "tr",
+    format: { dateTime: (v: string) => v },
   }),
 }));
 vi.mock("next/navigation", () => ({
@@ -41,12 +44,19 @@ vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));
 vi.mock("@/features/modules/hooks/use-features", () => ({
-  useFeature: () => ({
-    enabled: feature.enabled,
+  useFeature: (_slug: string, key: string) => ({
+    enabled: key === "photo_standard" ? feature.photos : feature.enabled,
     isLoading: false,
     isError: false,
   }),
 }));
+vi.mock(
+  "@/features/photo-standard/services/photo-standard.service",
+  async (orig) => ({
+    ...(await orig<object>()),
+    photoStandardService: photoApi,
+  }),
+);
 vi.mock(
   "@/features/services/services/service-wizard.service",
   async (orig) => ({
@@ -97,6 +107,7 @@ beforeEach(() => {
     "contracts.write",
   ]);
   feature.enabled = true;
+  feature.photos = false;
   // jsdom has no canvas backend: a drawing context stub and a fixed PNG.
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
     () =>
@@ -497,6 +508,139 @@ describe("ServiceWizardPage contract step (TEC-291)", () => {
     expect($('[data-testid="contract-step"]')).not.toBeNull();
     expect(disabled('[data-testid="contract-next"]')).toBe(true);
     expect($('[data-testid="stock-step"]')).toBeNull();
+  });
+});
+
+const angle = (key: string, over: Record<string, unknown> = {}) => ({
+  angle: {
+    uuid: `a-${key}`,
+    key,
+    name: { tr: key },
+    hint: {},
+    required: true,
+    sort_order: 10,
+    active: true,
+  },
+  missing: false,
+  required: true,
+  photo: {
+    uuid: `p-${key}`,
+    angle_key: key,
+    url: `/v1/services/s1/intake-photos/${key}/file`,
+    mime: "image/jpeg",
+    size: 10,
+    sha256: "0".repeat(64),
+    created_at: "2026-10-07T10:00:00Z",
+  },
+  ...over,
+});
+
+describe("ServiceWizardPage photos step (TEC-500)", () => {
+  const steps = () =>
+    $$('[data-testid="wizard-stepper"] [data-step]').map((b) =>
+      b.getAttribute("data-step"),
+    );
+
+  it("lists photos after customer_vehicle only while photo_standard is on", async () => {
+    wizardApi.getService.mockResolvedValue(service());
+    await render(
+      createElement(ServiceWizardPage, { slug: "acme", uuid: "s1" }),
+    );
+    expect(steps()).not.toContain("photos");
+    expect(photoApi.intake).not.toHaveBeenCalled();
+
+    act(() => root.unmount());
+    root = createRoot(container);
+    feature.photos = true;
+    photoApi.intake.mockResolvedValue({
+      service_uuid: "s1",
+      angles: [angle("front")],
+      missing: [],
+    });
+    await render(
+      createElement(ServiceWizardPage, { slug: "acme", uuid: "s1" }),
+    );
+    expect(steps().slice(0, 3)).toEqual([
+      "customer_vehicle",
+      "photos",
+      "parts",
+    ]);
+  });
+
+  it("keeps İleri and the contract closed while a required angle is missing", async () => {
+    feature.photos = true;
+    wizardApi.getService.mockResolvedValue(service());
+    photoApi.intake.mockResolvedValue({
+      service_uuid: "s1",
+      angles: [
+        angle("front"),
+        angle("rear", { photo: undefined, missing: true }),
+      ],
+      missing: ["rear"],
+    });
+    await render(
+      createElement(ServiceWizardPage, { slug: "acme", uuid: "s1" }),
+    );
+    expect($('[data-testid="photos-step"]')).not.toBeNull();
+    expect(disabled('[data-testid="photos-next"]')).toBe(true);
+    expect(
+      $('[data-testid="photos-next"]')?.getAttribute("aria-describedby"),
+    ).toBe("intake-blocked-reason");
+    expect($('[data-testid="intake-counter"]')?.textContent).toContain(
+      '"count":1',
+    );
+    expect(disabled('[data-step="contract"]')).toBe(true);
+    expect($('[data-step="contract"]')?.getAttribute("data-blocked")).toBe(
+      "photos",
+    );
+    expect(disabled('[data-step="parts"]')).toBe(true);
+  });
+
+  it("marks the missing angles on the cards after a 422 PHOTO_STANDARD_INCOMPLETE", async () => {
+    feature.photos = true;
+    wizardApi.getService.mockResolvedValue(service());
+    photoApi.intake
+      .mockResolvedValueOnce({
+        service_uuid: "s1",
+        angles: [angle("front"), angle("rear")],
+        missing: [],
+      })
+      .mockResolvedValue({
+        service_uuid: "s1",
+        angles: [
+          angle("front"),
+          angle("rear", { photo: undefined, missing: true }),
+        ],
+        missing: ["rear"],
+      });
+    contractApi.createForService.mockRejectedValue(
+      new ApiError({
+        status: 422,
+        code: "PHOTO_STANDARD_INCOMPLETE",
+        message: "missing",
+        details: [
+          { field: "intake_photos.rear", code: "missing", message: "x" },
+        ],
+      }),
+    );
+    await render(
+      createElement(ServiceWizardPage, { slug: "acme", uuid: "s1" }),
+    );
+    expect(disabled('[data-testid="photos-next"]')).toBe(false);
+    await click($('[data-step="contract"]'));
+    await click($('[data-testid="contract-create"]'));
+
+    expect($('[data-testid="photos-step"]')).not.toBeNull();
+    const rear = $('[data-testid="intake-angle"][data-angle="rear"]');
+    const front = $('[data-testid="intake-angle"][data-angle="front"]');
+    expect(rear?.getAttribute("data-missing")).toBe("true");
+    expect(
+      rear?.querySelector('[data-testid="intake-missing"]'),
+    ).not.toBeNull();
+    expect(front?.getAttribute("data-missing")).toBe("false");
+    expect(toast.error).toHaveBeenCalledWith(
+      "services.stock.errors.PHOTO_STANDARD_INCOMPLETE",
+    );
   });
 });
 

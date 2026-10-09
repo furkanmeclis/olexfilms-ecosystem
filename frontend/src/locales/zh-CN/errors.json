@@ -151,5 +151,9 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "电子发票只能以 TRY 开具给土耳其境内的买方。",
   "codes.EINVOICE_INVALID_DOCUMENT": "发票数据不完整或有误。",
   "codes.EINVOICE_INVALID_VAT_RATE": "增值税税率无效；0% 需要免税代码。",
-  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT 样式表无效。"
+  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT 样式表无效。",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "缺少必拍的接车照片。请先拍摄所有必拍角度。",
+  "codes.PHOTO_FILE_TOO_LARGE": "照片不能超过 12 MB。",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "照片必须为 JPEG、PNG、WebP 或 HEIC 格式。",
+  "codes.PHOTO_SERVICE_LOCKED": "该服务的接车照片已无法修改。"
 }

@@ -338,5 +338,6 @@
   "review_questions.validation.key": "Der Schlüssel ist Pflicht, höchstens 64 Zeichen.",
   "review_questions.validation.text_tr": "Der türkische Fragetext ist Pflicht.",
   "review_questions.toast.saved": "Frage gespeichert.",
-  "review_questions.toast.failed": "Der Vorgang ist fehlgeschlagen. Versuchen Sie es erneut."
+  "review_questions.toast.failed": "Der Vorgang ist fehlgeschlagen. Versuchen Sie es erneut.",
+  "wizard.steps.photos": "Annahmefotos"
 }

@@ -504,7 +504,10 @@ const listResolvedPhotoAngles = `-- name: ListResolvedPhotoAngles :many
 SELECT
     a.id, a.uuid, a.key, a.name, a.hint, a.example_storage_key, a.sort_order, a.active,
     COALESCE(dealer.required, distributor.required, center.required, a.required)::boolean AS resolved_required,
-    COALESCE(dealer.hidden, distributor.hidden, center.hidden, false)::boolean AS resolved_hidden
+    COALESCE(dealer.hidden, distributor.hidden, center.hidden, false)::boolean AS resolved_hidden,
+    COALESCE(center.required, a.required)::boolean AS default_required,
+    COALESCE(center.hidden, false)::boolean AS default_hidden,
+    (dealer.id IS NOT NULL)::boolean AS overridden
 FROM photo_angles a
 LEFT JOIN photo_angle_overrides center
     ON center.angle_id = a.id AND center.organization_id = a.organization_id
@@ -534,6 +537,9 @@ type ListResolvedPhotoAnglesRow struct {
 	Active            bool        `json:"active"`
 	ResolvedRequired  bool        `json:"resolved_required"`
 	ResolvedHidden    bool        `json:"resolved_hidden"`
+	DefaultRequired   bool        `json:"default_required"`
+	DefaultHidden     bool        `json:"default_hidden"`
+	Overridden        bool        `json:"overridden"`
 }
 
 func (q *Queries) ListResolvedPhotoAngles(ctx context.Context, arg ListResolvedPhotoAnglesParams) ([]ListResolvedPhotoAnglesRow, error) {
@@ -556,6 +562,9 @@ func (q *Queries) ListResolvedPhotoAngles(ctx context.Context, arg ListResolvedP
 			&i.Active,
 			&i.ResolvedRequired,
 			&i.ResolvedHidden,
+			&i.DefaultRequired,
+			&i.DefaultHidden,
+			&i.Overridden,
 		); err != nil {
 			return nil, err
 		}

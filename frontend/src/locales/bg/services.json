@@ -338,5 +338,6 @@
   "review_questions.validation.key": "Ключът е задължителен, най-много 64 знака.",
   "review_questions.validation.text_tr": "Текстът на въпроса на турски е задължителен.",
   "review_questions.toast.saved": "Въпросът е запазен.",
-  "review_questions.toast.failed": "Операцията не бе успешна. Опитайте отново."
+  "review_questions.toast.failed": "Операцията не бе успешна. Опитайте отново.",
+  "wizard.steps.photos": "Снимки при приемане"
 }

@@ -216,6 +216,9 @@ export const Permission = {
   /** TEC-496: performance panel, ranking and map (performance module). */
   PerformanceRead: "performance.read",
   PerformanceTargetsManage: "performance.targets.manage",
+  /** TEC-500: photo standard angles (center) and overrides (distributor). */
+  PhotoStandardManage: "photo_standard.manage",
+  PhotoStandardOverride: "photo_standard.override",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -616,5 +619,9 @@ export const permissions = {
   performance: {
     read: Permission.PerformanceRead,
     targetsManage: Permission.PerformanceTargetsManage,
+  },
+  photoStandard: {
+    manage: Permission.PhotoStandardManage,
+    override: Permission.PhotoStandardOverride,
   },
 } as const;

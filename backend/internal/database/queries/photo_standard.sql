@@ -68,7 +68,10 @@ ORDER BY a.sort_order ASC, a.id ASC;
 SELECT
     a.id, a.uuid, a.key, a.name, a.hint, a.example_storage_key, a.sort_order, a.active,
     COALESCE(dealer.required, distributor.required, center.required, a.required)::boolean AS resolved_required,
-    COALESCE(dealer.hidden, distributor.hidden, center.hidden, false)::boolean AS resolved_hidden
+    COALESCE(dealer.hidden, distributor.hidden, center.hidden, false)::boolean AS resolved_hidden,
+    COALESCE(center.required, a.required)::boolean AS default_required,
+    COALESCE(center.hidden, false)::boolean AS default_hidden,
+    (dealer.id IS NOT NULL)::boolean AS overridden
 FROM photo_angles a
 LEFT JOIN photo_angle_overrides center
     ON center.angle_id = a.id AND center.organization_id = a.organization_id

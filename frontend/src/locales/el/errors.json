@@ -151,5 +151,9 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "Τα ηλεκτρονικά τιμολόγια εκδίδονται μόνο σε TRY για αγοραστές στην Τουρκία.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Τα στοιχεία του τιμολογίου είναι ελλιπή ή λανθασμένα.",
   "codes.EINVOICE_INVALID_VAT_RATE": "Ο συντελεστής ΦΠΑ δεν είναι έγκυρος· το 0% απαιτεί κωδικό απαλλαγής.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "Το φύλλο στυλ XSLT δεν είναι έγκυρο."
+  "codes.EINVOICE_INVALID_STYLESHEET": "Το φύλλο στυλ XSLT δεν είναι έγκυρο.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Λείπουν υποχρεωτικές φωτογραφίες παραλαβής. Φωτογραφίστε πρώτα όλες τις υποχρεωτικές γωνίες.",
+  "codes.PHOTO_FILE_TOO_LARGE": "Η φωτογραφία πρέπει να είναι έως 12 MB.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "Η φωτογραφία πρέπει να είναι JPEG, PNG, WebP ή HEIC.",
+  "codes.PHOTO_SERVICE_LOCKED": "Οι φωτογραφίες παραλαβής αυτής της υπηρεσίας δεν αλλάζουν πλέον."
 }

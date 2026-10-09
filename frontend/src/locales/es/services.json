@@ -338,5 +338,6 @@
   "review_questions.validation.key": "La clave es obligatoria, máximo 64 caracteres.",
   "review_questions.validation.text_tr": "El texto de la pregunta en turco es obligatorio.",
   "review_questions.toast.saved": "Pregunta guardada.",
-  "review_questions.toast.failed": "La operación ha fallado. Inténtelo de nuevo."
+  "review_questions.toast.failed": "La operación ha fallado. Inténtelo de nuevo.",
+  "wizard.steps.photos": "Fotos de recepción"
 }

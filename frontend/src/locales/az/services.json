@@ -338,5 +338,6 @@
   "review_questions.validation.key": "Açar məcburidir, ən çox 64 simvol.",
   "review_questions.validation.text_tr": "Türkcə sual mətni məcburidir.",
   "review_questions.toast.saved": "Sual yadda saxlanıldı.",
-  "review_questions.toast.failed": "Əməliyyat alınmadı. Yenidən cəhd edin."
+  "review_questions.toast.failed": "Əməliyyat alınmadı. Yenidən cəhd edin.",
+  "wizard.steps.photos": "Qəbul fotoşəkilləri"
 }

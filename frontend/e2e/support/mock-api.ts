@@ -257,7 +257,13 @@ export class MockApi {
     const path = url.pathname.replace(/^\/api/, "");
     const method = req.method();
     this.calls.push(`${method} ${path}${url.search}`);
-    const body = req.postData() ? (req.postDataJSON() as Json) : undefined;
+    // Multipart uploads (TEC-500 intake photos) carry no JSON body.
+    let body: Json | undefined;
+    try {
+      body = req.postData() ? (req.postDataJSON() as Json) : undefined;
+    } catch {
+      body = undefined;
+    }
     if (body !== undefined) {
       (this.bodies[`${method} ${path}`] ??= []).push(body);
     }

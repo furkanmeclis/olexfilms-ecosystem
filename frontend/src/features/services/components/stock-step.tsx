@@ -33,6 +33,7 @@ import {
   type ServiceStockUnit,
 } from "@/features/services/services/service-wizard.service";
 import { useDebounce } from "@/hooks/use-debounce";
+import { missingAnglesFromError } from "@/features/photo-standard/lib/photo-standard";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -46,6 +47,8 @@ export type StockStepProps = {
   onBack: () => void;
   onCompleted: (service: Service) => void;
   showCertificateWarnings?: boolean;
+  /** TEC-500: completion refused for missing intake photo angles. */
+  onPhotosIncomplete?: (missing: string[]) => void;
 };
 
 function useErrorText() {
@@ -356,6 +359,7 @@ export function StockStep({
   onBack,
   onCompleted,
   showCertificateWarnings = true,
+  onPhotosIncomplete,
 }: StockStepProps) {
   const { t } = useLocale();
   const { can } = usePermission();
@@ -424,7 +428,11 @@ export function StockStep({
       appToast.success(t("services.complete.done", { no: saved.service_no }));
       onCompleted(saved);
     },
-    onError: (error: unknown) => appToast.error(errorText(error)),
+    onError: (error: unknown) => {
+      appToast.error(errorText(error));
+      const missing = missingAnglesFromError(error);
+      if (missing && onPhotosIncomplete) onPhotosIncomplete(missing);
+    },
   });
 
   const onScan = (e: FormEvent) => {

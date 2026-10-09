@@ -338,5 +338,6 @@
   "review_questions.validation.key": "المفتاح مطلوب، 64 حرفًا كحد أقصى.",
   "review_questions.validation.text_tr": "نص السؤال باللغة التركية مطلوب.",
   "review_questions.toast.saved": "تم حفظ السؤال.",
-  "review_questions.toast.failed": "فشلت العملية. حاول مرة أخرى."
+  "review_questions.toast.failed": "فشلت العملية. حاول مرة أخرى.",
+  "wizard.steps.photos": "صور الاستلام"
 }
