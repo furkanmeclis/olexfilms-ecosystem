@@ -15267,6 +15267,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/einvoices/billable/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Draft e-invoices for many billable sources
+         * @description TEC-504. Brand center with einvoice.manage (e_invoice add-on). Action `create_draft`: every source runs the POST /v1/einvoices rules; a source that cannot be drafted fails alone with the API error code (EINVOICE_BUYER_PROFILE_INCOMPLETE, EINVOICE_SOURCE_ALREADY_INVOICED, ...). Target scope `ids` (source uuids) or `query` with the GET /v1/einvoices/billable filters ("select all matching", at most 10000). Not reversible: a draft is released by voiding it.
+         */
+        post: operations["bulkEinvoiceBillable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/einvoices": {
         parameters: {
             query?: never;
@@ -55926,6 +55946,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeEinvoiceBillablePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    bulkEinvoiceBillable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
                 };
             };
             400: components["responses"]["BadRequest"];

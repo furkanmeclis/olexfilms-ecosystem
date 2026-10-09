@@ -29080,6 +29080,40 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/einvoices/billable/bulk:
+    post:
+      tags: [EInvoice]
+      operationId: bulkEinvoiceBillable
+      summary: Draft e-invoices for many billable sources
+      description: >-
+        TEC-504. Brand center with einvoice.manage (e_invoice add-on). Action
+        `create_draft`: every source runs the POST /v1/einvoices rules; a
+        source that cannot be drafted fails alone with the API error code
+        (EINVOICE_BUYER_PROFILE_INCOMPLETE, EINVOICE_SOURCE_ALREADY_INVOICED,
+        ...). Target scope `ids` (source uuids) or `query` with the GET
+        /v1/einvoices/billable filters ("select all matching", at most
+        10000). Not reversible: a draft is released by voiding it.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkExecuteRequest" }
+      responses:
+        "200":
+          description: Sync bulk result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkSyncResult" }
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/einvoices:
     get:
       tags: [EInvoice]

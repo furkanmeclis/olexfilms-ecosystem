@@ -310,7 +310,8 @@ func main() {
 		pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
 	_ = docSvc.RegisterLoader(docmodel.KindMeasurement, measurementPDF.DocumentLoader())
 	// TEC-503: e-invoice PDF (worker-docs renders XSLT HTML via Gotenberg).
-	einvoicePDF := einvoiceusecase.New(pool, queries, store, outboxStore, log).WithPDF(pdfClient, nil)
+	einvoicePDF := einvoiceusecase.New(pool, queries, store, outboxStore, log).WithPDF(pdfClient, nil).
+		WithSettings(sysconfig.New(queries, sysconfig.NoCache{}))
 	importSvc := importusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
@@ -328,6 +329,8 @@ func main() {
 		leadsusecase.NewBulkAdapter(queries),
 		// TEC-398: conversations (close, assign, AI mode).
 		whatsappusecase.NewBulkAdapter(queries),
+		// TEC-504: e-invoice drafts of the billable center sales.
+		einvoiceusecase.NewBulkAdapter(einvoicePDF, queries),
 	)
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log).
 		WithPool(pool).WithUndoWindow(sysconfig.New(queries, sysconfig.NoCache{}).BulkUndoWindowHours)

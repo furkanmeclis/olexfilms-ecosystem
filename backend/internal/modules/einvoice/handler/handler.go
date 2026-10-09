@@ -43,13 +43,9 @@ var InvoiceSortSpec = apiquery.SortSpec{
 	Default: apiquery.SortField{Field: "issue_date", Desc: true},
 }
 
-// BillableSortSpec is the list contract of GET /v1/einvoices/billable.
-var BillableSortSpec = apiquery.SortSpec{
-	Columns: apiquery.SortColumns{
-		"billable_at": "billable_at", "source_no": "source_no", "payable": "payable", "buyer_name": "buyer_name",
-	},
-	Default: apiquery.SortField{Field: "billable_at", Desc: true},
-}
+// BillableSortSpec is the list contract of GET /v1/einvoices/billable
+// (shared with the bulk run query).
+var BillableSortSpec = einvoiceuc.BillableSortSpec
 
 // Handler serves the e-invoice API.
 type Handler struct {
@@ -231,42 +227,11 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 // Billable is GET /v1/einvoices/billable.
 func (h *Handler) Billable(w http.ResponseWriter, r *http.Request) {
-	vals := r.URL.Query()
-	qp := apiquery.Parse(vals)
-	sort, err := apiquery.ResolveSort(qp.Sort, BillableSortSpec)
+	qp := apiquery.Parse(r.URL.Query())
+	p, err := einvoiceuc.ParseBillableQuery(r.URL.Query())
 	if err != nil {
 		writeError(w, r, err)
 		return
-	}
-	types, err := apiquery.EnumList(vals, "source_type", einvoiceuc.SourceTypes...)
-	if err != nil {
-		writeError(w, r, err)
-		return
-	}
-	billable, err := apiquery.DateRange(vals, "billable_at")
-	if err != nil {
-		writeError(w, r, err)
-		return
-	}
-	payable, err := apiquery.NumRange(vals, "payable")
-	if err != nil {
-		writeError(w, r, err)
-		return
-	}
-	buyers, err := uuidList(apiquery.CSVValues(vals, "buyer"), "buyer")
-	if err != nil {
-		writeError(w, r, err)
-		return
-	}
-	p := db.ListEinvoiceBillableSourcesParams{
-		SourceTypes: types, BuyerOrgUuids: buyers, PayableMin: numeric(payable.Min), PayableMax: numeric(payable.Max),
-		Q: qText(qp.Q), SortKey: sort.Key, SortDesc: sort.Desc, RowLimit: qp.Limit, RowOffset: qp.Offset,
-	}
-	if billable.From != nil {
-		p.BillableFrom = pgtype.Timestamptz{Time: *billable.From, Valid: true}
-	}
-	if billable.Before != nil {
-		p.BillableBefore = pgtype.Timestamptz{Time: *billable.Before, Valid: true}
 	}
 	items, total, err := h.svc.ListBillable(r.Context(), caller(r), p)
 	if err != nil {
