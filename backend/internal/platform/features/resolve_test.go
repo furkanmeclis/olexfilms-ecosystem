@@ -169,3 +169,55 @@ func TestDealerUnderCenter(t *testing.T) {
 		t.Fatalf("add-on under center = %+v", st)
 	}
 }
+
+// TEC-308: a module bundle grant (source=service) sits beside the manual
+// value; the module is on when either is on, and removing the grant leaves
+// the manual value as it was.
+func TestServiceGrantBesideManualValue(t *testing.T) {
+	key := ModuleStockForecast
+	grant := FlagRow{Scope: ScopeOrg, OrgID: distID, Key: key, Enabled: true, Source: SourceService}
+	manualOff := FlagRow{Scope: ScopeOrg, OrgID: distID, Key: key, Enabled: false, Source: SourceAdmin}
+	manualOn := FlagRow{Scope: ScopeOrg, OrgID: distID, Key: key, Enabled: true, Source: SourceAdmin}
+
+	if st := state(t, []FlagRow{manualOff, grant}, distNode, key); !st.Enabled || st.Source != SourceService || !st.AdminOverride {
+		t.Fatalf("manual off + grant = %+v, want on via service", st)
+	}
+	if st := state(t, []FlagRow{manualOff}, distNode, key); st.Enabled {
+		t.Fatalf("manual off without grant = %+v, want off", st)
+	}
+	if st := state(t, []FlagRow{manualOn, grant}, distNode, key); !st.Enabled || st.Source != SourceAdmin {
+		t.Fatalf("manual on + grant = %+v, want on via admin", st)
+	}
+	if st := state(t, []FlagRow{manualOn}, distNode, key); !st.Enabled || st.Source != SourceAdmin {
+		t.Fatalf("manual on after grant removal = %+v, want on via admin", st)
+	}
+	if st := state(t, []FlagRow{grant}, distNode, key); !st.Enabled || st.Source != SourceService {
+		t.Fatalf("grant only = %+v, want on via service", st)
+	}
+	// A closed system switch wins over a grant.
+	sysOff := FlagRow{Scope: ScopeSystem, Key: key, Enabled: false}
+	if st := state(t, []FlagRow{sysOff, grant}, distNode, key); st.Enabled {
+		t.Fatalf("system off + grant = %+v, want off", st)
+	}
+}
+
+func TestServiceGrantForDealers(t *testing.T) {
+	key := ModuleStockForecast
+	distGrant := FlagRow{Scope: ScopeOrg, OrgID: distID, Key: key, Enabled: true, Source: SourceService}
+	dealerGrant := FlagRow{Scope: ScopeOrg, OrgID: dealerID, Key: key, Enabled: true, Source: SourceService}
+	distOff := FlagRow{Scope: ScopeOrg, OrgID: distID, Key: key, Enabled: false, Source: SourceAdmin}
+	dealerByDist := FlagRow{Scope: ScopeOrg, OrgID: dealerID, Key: key, Enabled: false, Source: SourceDistributor}
+
+	// The distributor's grant opens the module upstream of its dealers.
+	if st := state(t, []FlagRow{distOff, distGrant}, dealerNode, key); !st.UpstreamEnabled || !st.Visible {
+		t.Fatalf("dealer under granted distributor = %+v, want upstream on", st)
+	}
+	// A dealer grant beats the distributor's off value for the dealer.
+	if st := state(t, []FlagRow{distGrant, dealerByDist, dealerGrant}, dealerNode, key); !st.Enabled || st.Source != SourceService {
+		t.Fatalf("dealer manual off + grant = %+v, want on via service", st)
+	}
+	// A dealer grant cannot open a module its distributor has closed.
+	if st := state(t, []FlagRow{distOff, dealerGrant}, dealerNode, key); st.Enabled {
+		t.Fatalf("closed distributor + dealer grant = %+v, want off", st)
+	}
+}

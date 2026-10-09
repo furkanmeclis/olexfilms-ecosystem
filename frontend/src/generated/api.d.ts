@@ -9374,7 +9374,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Request early cancellation for own subscription */
+        /**
+         * Request early cancellation for own subscription
+         * @description An active subscription moves to cancel_requested; a scheduled one (TEC-308) keeps its status and the request freezes a zero fee. 409 when another request is pending or the status is final.
+         */
         post: operations["requestServiceSubscriptionCancel"];
         delete?: never;
         options?: never;
@@ -22210,8 +22213,11 @@ export interface components {
             data: components["schemas"]["ServiceCatalogOverride"];
             meta: components["schemas"]["ResponseMeta"];
         };
-        /** @enum {string} */
-        ServiceSubscriptionStatus: "active" | "cancel_requested" | "cancelled" | "expired";
+        /**
+         * @description scheduled (TEC-308): starts_on is after the assignment day; modules stay closed and no period is booked until the daily job activates it on starts_on. A scheduled subscription can be cancelled without a fee.
+         * @enum {string}
+         */
+        ServiceSubscriptionStatus: "scheduled" | "active" | "cancel_requested" | "cancelled" | "expired";
         ServiceSubscriptionInput: {
             /** Format: uuid */
             item_uuid: string;
@@ -45144,7 +45150,7 @@ export interface operations {
     listServiceSubscriptions: {
         parameters: {
             query?: {
-                /** @description CSV of active, cancel_requested, cancelled, expired. */
+                /** @description CSV of scheduled, active, cancel_requested, cancelled, expired. */
                 status?: string;
                 /** @description CSV of subscriber organization UUIDs. */
                 organization_uuid?: string;

@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Ricorrenza",
   "subscriptions.fields.contract": "Contratto",
   "subscriptions.fields.cancellation_fee": "Penale di recesso",
+  "subscriptions.status.scheduled": "Programmato",
   "subscriptions.status.active": "Attivo",
   "subscriptions.status.cancel_requested": "Disdetta richiesta",
   "subscriptions.status.cancelled": "Disdetto",

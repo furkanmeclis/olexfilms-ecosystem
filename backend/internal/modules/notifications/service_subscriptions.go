@@ -11,6 +11,8 @@ var ServiceSubscriptionEventCodes = map[string]string{
 	events.ServiceSubscriptionCancelRequested: catalog.EventServiceSubscriptionCancelRequested,
 	events.ServiceSubscriptionCancelled:       catalog.EventServiceSubscriptionCancelled,
 	events.ServiceSubscriptionCancelRejected:  catalog.EventServiceSubscriptionCancelRejected,
+	events.ServiceSubscriptionExpired:         catalog.EventServiceSubscriptionExpired,
+	events.ServiceSubscriptionExpiring:        catalog.EventServiceSubscriptionExpiring,
 }
 
 func serviceSubscriptionDispatcher(code string) func(events.Event) (notifmodel.DispatchInput, bool) {
@@ -20,7 +22,7 @@ func serviceSubscriptionDispatcher(code string) func(events.Event) (notifmodel.D
 			return notifmodel.DispatchInput{}, false
 		}
 		vars := map[string]string{}
-		for _, k := range []string{"item_name", "organization_name", "ends_on", "reason", "cancellation_fee", "currency"} {
+		for _, k := range []string{"item_name", "organization_name", "ends_on", "reason", "cancellation_fee", "currency", "days_before"} {
 			vars[k] = stringFromPayload(event.Payload, k)
 		}
 		in := notifmodel.DispatchInput{

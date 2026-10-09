@@ -312,6 +312,11 @@ var trCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "Garanti işçiliği",
 	"accounting.category.warranty_labor_income": "Garanti işçilik geliri",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Hizmet satışı",
+	"accounting.category.service_purchase":         "Hizmet alımı",
+	"accounting.category.service_cancellation_fee": "Cayma bedeli",
+
 	"accounting.category.utilities":       "Faturalar",
 	"accounting.category.tax":             "Vergi",
 	"accounting.category.shipping":        "Kargo ve nakliye",
@@ -1197,6 +1202,11 @@ var enCatalog = map[string]string{
 	"accounting.category.warranty_cost":         "Warranty cost",
 	"accounting.category.warranty_labor":        "Warranty labor",
 	"accounting.category.warranty_labor_income": "Warranty labor income",
+
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Service sale",
+	"accounting.category.service_purchase":         "Service purchase",
+	"accounting.category.service_cancellation_fee": "Cancellation fee",
 
 	"accounting.category.utilities":       "Utilities",
 	"accounting.category.tax":             "Taxes",

@@ -105,6 +105,8 @@ func Schedules() []Periodic {
 		{Cron: notificationPurgeCron, Type: TaskNotificationPurge, Queue: QueueMaintenance, New: func() (*asynq.Task, error) {
 			return NewNotificationPurgeTask(), nil
 		}},
+		// TEC-308: subscription periods on both ledgers, activation, reminders.
+		{Cron: serviceSubscriptionsPostPeriodsCron, Type: TaskServiceSubscriptionsPostPeriods, Queue: QueueMaintenance, Opts: serviceSubscriptionsPostPeriodsOpts(), New: NewServiceSubscriptionsPostPeriodsTask},
 	}
 }
 

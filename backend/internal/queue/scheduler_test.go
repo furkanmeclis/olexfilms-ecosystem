@@ -82,6 +82,8 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		// TEC-143: formerly registered by cmd/worker alone.
 		{cron: whatsAppPollCron, taskType: TaskWhatsAppStatusPoll, queue: QueueMaintenance}:     false,
 		{cron: notificationPurgeCron, taskType: TaskNotificationPurge, queue: QueueMaintenance}: false,
+		// TEC-308.
+		{cron: serviceSubscriptionsPostPeriodsCron, taskType: TaskServiceSubscriptionsPostPeriods, queue: QueueMaintenance}: false,
 	}
 	for _, e := range r.entries {
 		if _, ok := want[e]; !ok {

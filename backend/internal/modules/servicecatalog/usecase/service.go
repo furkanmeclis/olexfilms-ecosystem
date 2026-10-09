@@ -8,6 +8,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	pricing "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
@@ -90,6 +91,9 @@ type Service struct {
 	out     Outbox
 	rates   RateResolver
 	feature FeatureService
+	// TEC-308: period / cancellation fee accounting and the job clock.
+	poster Poster
+	now    func() time.Time
 }
 
 func New(q Store) *Service {

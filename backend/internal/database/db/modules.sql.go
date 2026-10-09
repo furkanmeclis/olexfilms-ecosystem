@@ -14,6 +14,7 @@ import (
 const deleteOrgModuleFlag = `-- name: DeleteOrgModuleFlag :execrows
 DELETE FROM module_flags
 WHERE scope = $1 AND organization_id = $2 AND module_key = $3
+  AND source <> 'service'
 `
 
 type DeleteOrgModuleFlagParams struct {
@@ -85,6 +86,7 @@ func (q *Queries) GetModule(ctx context.Context, key string) (Module, error) {
 const getOrgModuleFlag = `-- name: GetOrgModuleFlag :one
 SELECT id, scope, organization_id, module_key, enabled, source, set_by_user_id, service_id, note, created_at, updated_at FROM module_flags
 WHERE scope = $1 AND organization_id = $2 AND module_key = $3
+  AND source <> 'service'
 `
 
 type GetOrgModuleFlagParams struct {
@@ -93,6 +95,7 @@ type GetOrgModuleFlagParams struct {
 	ModuleKey      string      `json:"module_key"`
 }
 
+// The manual value (admin / distributor / dealer standard), never a grant.
 func (q *Queries) GetOrgModuleFlag(ctx context.Context, arg GetOrgModuleFlagParams) (ModuleFlag, error) {
 	row := q.db.QueryRow(ctx, getOrgModuleFlag, arg.Scope, arg.OrganizationID, arg.ModuleKey)
 	var i ModuleFlag
@@ -326,7 +329,7 @@ const upsertOrgModuleFlag = `-- name: UpsertOrgModuleFlag :one
 INSERT INTO module_flags (scope, organization_id, module_key, enabled, source, set_by_user_id, note)
 VALUES ($1, $2, $3, $4,
         $5, $6, $7)
-ON CONFLICT (scope, organization_id, module_key) WHERE organization_id IS NOT NULL DO UPDATE SET
+ON CONFLICT (scope, organization_id, module_key) WHERE organization_id IS NOT NULL AND source <> 'service' DO UPDATE SET
     enabled = EXCLUDED.enabled,
     source = EXCLUDED.source,
     set_by_user_id = EXCLUDED.set_by_user_id,
@@ -344,6 +347,8 @@ type UpsertOrgModuleFlagParams struct {
 	Note           pgtype.Text `json:"note"`
 }
 
+// TEC-308: manual values only; a module bundle grant (source=service) is a
+// separate row (uq_module_flags_service).
 func (q *Queries) UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error) {
 	row := q.db.QueryRow(ctx, upsertOrgModuleFlag,
 		arg.Scope,
@@ -375,9 +380,8 @@ const upsertServiceModuleFlag = `-- name: UpsertServiceModuleFlag :one
 INSERT INTO module_flags (scope, organization_id, module_key, enabled, source, set_by_user_id, service_id, note)
 VALUES ('org', $1, $2, $3, 'service',
         $4, $5, $6)
-ON CONFLICT (scope, organization_id, module_key) WHERE organization_id IS NOT NULL DO UPDATE SET
+ON CONFLICT (organization_id, module_key) WHERE source = 'service' DO UPDATE SET
     enabled = EXCLUDED.enabled,
-    source = EXCLUDED.source,
     set_by_user_id = EXCLUDED.set_by_user_id,
     service_id = EXCLUDED.service_id,
     note = EXCLUDED.note

@@ -311,6 +311,11 @@ var ruCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "Гарантийные работы",
 	"accounting.category.warranty_labor_income": "Доход от гарантийных работ",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Продажа услуг",
+	"accounting.category.service_purchase":         "Закупка услуг",
+	"accounting.category.service_cancellation_fee": "Плата за досрочное расторжение",
+
 	"accounting.category.utilities":       "Коммунальные услуги",
 	"accounting.category.tax":             "Налоги",
 	"accounting.category.shipping":        "Доставка",

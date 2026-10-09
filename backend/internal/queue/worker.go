@@ -118,6 +118,8 @@ type Worker struct {
 	certificateExpiryScan CertificateExpiryScanFunc
 	// TEC-508: service subscription expiry.
 	serviceSubscriptionsExpire ServiceSubscriptionsExpireFunc
+	// TEC-308: daily subscription periods, activation and reminders.
+	serviceSubscriptionsPostPeriods ServiceSubscriptionsPostPeriodsFunc
 	// TEC-484: stock forecast daily snapshots and low-stock transitions.
 	stockForecastDaily StockForecastDailyFunc
 	// TEC-491: daily performance metric projections.
@@ -235,6 +237,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskCampaignSendRecipient, w.handleCampaignSendRecipient)
 	mux.HandleFunc(TaskCertificateExpiryScan, w.handleCertificateExpiryScan)
 	mux.HandleFunc(TaskServiceSubscriptionsExpire, w.handleServiceSubscriptionsExpire)
+	mux.HandleFunc(TaskServiceSubscriptionsPostPeriods, w.handleServiceSubscriptionsPostPeriods)
 	mux.HandleFunc(TaskStockForecastDaily, w.handleStockForecastDaily)
 	mux.HandleFunc(TaskPerformanceDaily, w.handlePerformanceDaily)
 	mux.HandleFunc(TaskEfficiencyNetworkRefresh, w.handleEfficiencyNetworkRefresh)

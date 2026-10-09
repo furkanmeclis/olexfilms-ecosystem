@@ -311,6 +311,11 @@ var itCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "Manodopera in garanzia",
 	"accounting.category.warranty_labor_income": "Ricavi da manodopera in garanzia",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Vendita di servizi",
+	"accounting.category.service_purchase":         "Acquisto di servizi",
+	"accounting.category.service_cancellation_fee": "Penale di recesso",
+
 	"accounting.category.utilities":       "Utenze",
 	"accounting.category.tax":             "Imposte",
 	"accounting.category.shipping":        "Spedizioni",

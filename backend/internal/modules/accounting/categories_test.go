@@ -37,7 +37,7 @@ func TestCategoryCatalog(t *testing.T) {
 			t.Errorf("direction %s has no label", d)
 		}
 	}
-	for _, k := range []string{CategorySale, CategoryPurchase} {
+	for _, k := range []string{CategorySale, CategoryPurchase, CategoryServiceSale, CategoryServicePurchase, CategoryServiceCancellationFee} {
 		c, ok := LookupCategory(k)
 		if !ok || c.Manual {
 			t.Errorf("%s must be a system category", k)

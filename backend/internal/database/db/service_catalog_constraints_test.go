@@ -70,7 +70,7 @@ func (f *serviceCatalogFixture) subParams(t *testing.T, it db.ServiceCatalogItem
 		OrganizationID: f.dealer.ID, BrandID: it.BrandID, SellerOrgID: f.olex.ID, ItemID: it.ID,
 		AssignedByOrgID: f.dist.ID, StartsOn: day(2026, 10, 1), EndsOn: day(2027, 9, 30),
 		Recurrence: it.Recurrence, Price: it.DefaultPrice, Currency: it.Currency,
-		RateSnapshot: []byte(`{}`), CancellationFee: it.CancellationFee,
+		RateSnapshot: []byte(`{}`), CancellationFee: it.CancellationFee, Status: "active",
 	}
 }
 

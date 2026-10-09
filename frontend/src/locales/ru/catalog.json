@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Периодичность",
   "subscriptions.fields.contract": "Договор",
   "subscriptions.fields.cancellation_fee": "Штраф за расторжение",
+  "subscriptions.status.scheduled": "Запланирована",
   "subscriptions.status.active": "Активна",
   "subscriptions.status.cancel_requested": "Запрошено расторжение",
   "subscriptions.status.cancelled": "Расторгнута",
