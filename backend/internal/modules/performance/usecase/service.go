@@ -223,8 +223,8 @@ type RankingFilter struct {
 	// DistributorUUIDs keeps distributors and dealers of these distributors.
 	DistributorUUIDs []uuid.UUID
 	ProvinceIDs      []int64
-	Sort           []apiquery.SortField
-	Limit, Offset  int32
+	Sort             []apiquery.SortField
+	Limit, Offset    int32
 }
 
 func ParseRankingFilter(values url.Values, now time.Time) (RankingFilter, error) {
