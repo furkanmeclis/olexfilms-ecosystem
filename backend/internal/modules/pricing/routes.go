@@ -79,3 +79,49 @@ func RegisterRoutes(
 	mux.Handle("PUT /v1/tenant/pricing/products/{uuid}/dealer-prices/{currency}", write(h.SetDealerPrice, distributor))
 	mux.Handle("DELETE /v1/tenant/pricing/products/{uuid}/dealer-prices/{currency}", write(h.DeleteDealerPrice, distributor))
 }
+
+// RegisterRecommendedRoutes mounts the recommended price and price
+// discipline routes (TEC-506, F5-09b). Publishing (API and import) is the
+// brand center's, behind pricing.recommended.write and a recent step-up;
+// the history is the center's, the price in force any organization's with
+// pricing.recommended.read; the discipline reads follow the
+// pricing.discipline.read scope (center: brand, distributor: subtree).
+func RegisterRecommendedRoutes(
+	mux *http.ServeMux,
+	h *pricinghandler.RecommendedHandler,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+	stepUp middleware.StepUpChecker,
+	checker middleware.FeatureChecker,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	module := middleware.RequireFeature(checker, features.ModuleCatalog)
+	center := pricingusecase.OrgCenter
+	publish := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module,
+			middleware.RequirePermission(rbac.PermPricingRecommendedWrite),
+			requireOrgType(center),
+			middleware.RequireStepUp(stepUp))
+	}
+	read := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequirePermission(rbac.PermPricingRecommendedRead))
+	}
+	discipline := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermPricingDisciplineRead))
+	}
+
+	mux.Handle("POST /v1/tenant/pricing/recommended/publish", publish(h.Publish))
+	mux.Handle("POST /v1/tenant/pricing/recommended/import", publish(h.Import))
+	mux.Handle("GET /v1/tenant/pricing/recommended/import/sample", middleware.Chain(http.HandlerFunc(h.ImportSample),
+		authn, org, module, middleware.RequirePermission(rbac.PermPricingRecommendedWrite), requireOrgType(center)))
+	mux.Handle("GET /v1/tenant/pricing/recommended/versions", middleware.Chain(http.HandlerFunc(h.Versions),
+		authn, org, module, middleware.RequirePermission(rbac.PermPricingRecommendedRead), requireOrgType(center)))
+	mux.Handle("GET /v1/tenant/pricing/recommended/current", read(h.Current))
+	mux.Handle("GET /v1/tenant/pricing/recommended/settings", read(h.Settings))
+
+	mux.Handle("GET /v1/pricing/discipline", discipline(h.Discipline))
+	mux.Handle("GET /v1/pricing/discipline/summary", discipline(h.DisciplineSummary))
+	mux.Handle("POST /v1/pricing/discipline/export", discipline(h.DisciplineExport))
+}

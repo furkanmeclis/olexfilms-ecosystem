@@ -98,7 +98,23 @@ describe("resolvePricingAccess", () => {
       canReadDistributorPrices: false,
       canWriteDistributorPrices: false,
       canWriteDealerPrice: false,
+      canReadRecommended: false,
     });
+  });
+
+  it("recommended price column follows pricing.recommended.read (TEC-507)", () => {
+    for (const orgType of ["dealer", "distributor"]) {
+      expect(
+        resolvePricingAccess({
+          can: grants("pricing.purchase.read", "pricing.recommended.read"),
+          orgType,
+        }).canReadRecommended,
+      ).toBe(true);
+      expect(
+        resolvePricingAccess({ can: grants("pricing.purchase.read"), orgType })
+          .canReadRecommended,
+      ).toBe(false);
+    }
   });
 
   it("no pricing grant hides the price card", () => {

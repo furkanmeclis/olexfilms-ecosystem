@@ -946,9 +946,6 @@ func TestPricingDisciplineGrants(t *testing.T) {
 	if def.Module != "pricing" || def.SuperAdminOnly || def.Sensitive {
 		t.Fatalf("%s def = %+v", PermPricingDisciplineRead, def)
 	}
-	if last := Permissions[len(Permissions)-1]; last.Slug != PermPricingDisciplineRead {
-		t.Fatalf("catalog is append-only; last = %s", last.Slug)
-	}
 	if w, ok := PermissionBySlug(PermPricingRecommendedWrite); !ok || !w.Sensitive {
 		t.Fatalf("%s must stay a step-up permission: %+v", PermPricingRecommendedWrite, w)
 	}
@@ -960,6 +957,39 @@ func TestPricingDisciplineGrants(t *testing.T) {
 	for _, r := range Roles {
 		if got := RoleGrants(r)[PermPricingDisciplineRead]; got != want[r.Slug] {
 			t.Fatalf("%s %s = %q, want %q", r.Slug, PermPricingDisciplineRead, got, want[r.Slug])
+		}
+	}
+}
+
+// TEC-498: photo standard definitions are managed by the center; distributor
+// owners can override required/hidden angles for their subtree.
+func TestPhotoStandardGrants(t *testing.T) {
+	slugs := []string{PermPhotoStandardManage, PermPhotoStandardOverride}
+	for _, slug := range slugs {
+		def, ok := PermissionBySlug(slug)
+		if !ok {
+			t.Fatalf("catalog misses %s", slug)
+		}
+		if def.Module != "photo_standard" || def.SuperAdminOnly || def.Sensitive {
+			t.Fatalf("%s def = %+v", slug, def)
+		}
+	}
+	if last := Permissions[len(Permissions)-1]; last.Slug != PermPhotoStandardOverride {
+		t.Fatalf("catalog is append-only; last = %s", last.Slug)
+	}
+	want := map[string]map[string]Scope{
+		RoleSuperAdmin: {
+			PermPhotoStandardManage: ScopeAll, PermPhotoStandardOverride: ScopeSubtree,
+		},
+		RoleCenterStaff:      {PermPhotoStandardManage: ScopeBrand},
+		RoleDistributorOwner: {PermPhotoStandardOverride: ScopeSubtree},
+	}
+	for _, r := range Roles {
+		g := RoleGrants(r)
+		for _, slug := range slugs {
+			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
+				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
+			}
 		}
 	}
 }

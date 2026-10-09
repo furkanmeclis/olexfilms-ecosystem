@@ -15,7 +15,7 @@ import (
 const createDistrict = `-- name: CreateDistrict :one
 INSERT INTO districts (province_id, code, name)
 VALUES ($1, $2, $3)
-RETURNING id, province_id, code, name, created_at
+RETURNING id, province_id, code, name, created_at, latitude, longitude
 `
 
 type CreateDistrictParams struct {
@@ -33,6 +33,8 @@ func (q *Queries) CreateDistrict(ctx context.Context, arg CreateDistrictParams) 
 		&i.Code,
 		&i.Name,
 		&i.CreatedAt,
+		&i.Latitude,
+		&i.Longitude,
 	)
 	return i, err
 }
@@ -95,7 +97,7 @@ func (q *Queries) CreatePlateFormat(ctx context.Context, arg CreatePlateFormatPa
 const createProvince = `-- name: CreateProvince :one
 INSERT INTO provinces (country_id, code, name)
 VALUES ($1, $2, $3)
-RETURNING id, country_id, code, name, created_at
+RETURNING id, country_id, code, name, created_at, latitude, longitude
 `
 
 type CreateProvinceParams struct {
@@ -113,6 +115,8 @@ func (q *Queries) CreateProvince(ctx context.Context, arg CreateProvinceParams) 
 		&i.Code,
 		&i.Name,
 		&i.CreatedAt,
+		&i.Latitude,
+		&i.Longitude,
 	)
 	return i, err
 }
@@ -262,7 +266,7 @@ func (q *Queries) GetCountryByISO2(ctx context.Context, iso2 string) (Country, e
 }
 
 const getDistrictByID = `-- name: GetDistrictByID :one
-SELECT id, province_id, code, name, created_at FROM districts WHERE id = $1
+SELECT id, province_id, code, name, created_at, latitude, longitude FROM districts WHERE id = $1
 `
 
 func (q *Queries) GetDistrictByID(ctx context.Context, id int64) (District, error) {
@@ -274,6 +278,8 @@ func (q *Queries) GetDistrictByID(ctx context.Context, id int64) (District, erro
 		&i.Code,
 		&i.Name,
 		&i.CreatedAt,
+		&i.Latitude,
+		&i.Longitude,
 	)
 	return i, err
 }
@@ -329,7 +335,7 @@ func (q *Queries) GetPlateFormatByCountry(ctx context.Context, iso2 string) (Get
 }
 
 const getProvinceByID = `-- name: GetProvinceByID :one
-SELECT id, country_id, code, name, created_at FROM provinces WHERE id = $1
+SELECT id, country_id, code, name, created_at, latitude, longitude FROM provinces WHERE id = $1
 `
 
 func (q *Queries) GetProvinceByID(ctx context.Context, id int64) (Province, error) {
@@ -341,6 +347,8 @@ func (q *Queries) GetProvinceByID(ctx context.Context, id int64) (Province, erro
 		&i.Code,
 		&i.Name,
 		&i.CreatedAt,
+		&i.Latitude,
+		&i.Longitude,
 	)
 	return i, err
 }
@@ -408,7 +416,7 @@ func (q *Queries) ListCountries(ctx context.Context, activeOnly bool) ([]ListCou
 }
 
 const listDistrictsByProvince = `-- name: ListDistrictsByProvince :many
-SELECT id, province_id, code, name, created_at FROM districts
+SELECT id, province_id, code, name, created_at, latitude, longitude FROM districts
 WHERE province_id = $1
 ORDER BY name ASC
 `
@@ -428,6 +436,8 @@ func (q *Queries) ListDistrictsByProvince(ctx context.Context, provinceID int64)
 			&i.Code,
 			&i.Name,
 			&i.CreatedAt,
+			&i.Latitude,
+			&i.Longitude,
 		); err != nil {
 			return nil, err
 		}
@@ -580,7 +590,7 @@ func (q *Queries) ListPlateFormats(ctx context.Context, activeOnly bool) ([]List
 }
 
 const listProvincesByCountry = `-- name: ListProvincesByCountry :many
-SELECT p.id, p.country_id, p.code, p.name, p.created_at,
+SELECT p.id, p.country_id, p.code, p.name, p.created_at, p.latitude, p.longitude,
        EXISTS (SELECT 1 FROM districts d WHERE d.province_id = p.id) AS has_districts
 FROM provinces p
 WHERE p.country_id = $1
@@ -593,6 +603,8 @@ type ListProvincesByCountryRow struct {
 	Code         string             `json:"code"`
 	Name         string             `json:"name"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	Latitude     pgtype.Numeric     `json:"latitude"`
+	Longitude    pgtype.Numeric     `json:"longitude"`
 	HasDistricts bool               `json:"has_districts"`
 }
 
@@ -611,6 +623,8 @@ func (q *Queries) ListProvincesByCountry(ctx context.Context, countryID int64) (
 			&i.Code,
 			&i.Name,
 			&i.CreatedAt,
+			&i.Latitude,
+			&i.Longitude,
 			&i.HasDistricts,
 		); err != nil {
 			return nil, err

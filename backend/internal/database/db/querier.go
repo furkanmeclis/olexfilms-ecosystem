@@ -263,6 +263,7 @@ type Querier interface {
 	// Open (pending) vehicle transfers that involve the user; the transfer's
 	// current owner is immutable, so a merge waits until they are closed.
 	CountPendingVehicleTransfersForUser(ctx context.Context, userID int64) (int64, error)
+	CountPerformanceMapDealerMissingCoordinates(ctx context.Context, arg CountPerformanceMapDealerMissingCoordinatesParams) (int64, error)
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
@@ -410,6 +411,7 @@ type Querier interface {
 	CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error)
 	// An applied import batch is a confirmed entry at once.
 	CreateImportStockEntry(ctx context.Context, arg CreateImportStockEntryParams) (StockEntry, error)
+	CreateIntakePhoto(ctx context.Context, arg CreateIntakePhotoParams) (IntakePhoto, error)
 	// TEC-266 (F2-02a): Glorian sync schema. api_key_enc is always the
 	// crypto.SecretBox ciphertext; callers never pass a plain key here.
 	CreateIntegrationConnection(ctx context.Context, arg CreateIntegrationConnectionParams) (IntegrationConnection, error)
@@ -456,6 +458,8 @@ type Querier interface {
 	// Targets ---------------------------------------------------------------------------
 	CreatePerformanceTarget(ctx context.Context, arg CreatePerformanceTargetParams) (PerformanceTarget, error)
 	CreatePhoneOTP(ctx context.Context, arg CreatePhoneOTPParams) (OtpCode, error)
+	// TEC-498 (F5-07a): vehicle intake photo standard.
+	CreatePhotoAngle(ctx context.Context, arg CreatePhotoAngleParams) (PhotoAngle, error)
 	CreatePlateFormat(ctx context.Context, arg CreatePlateFormatParams) (PlateFormat, error)
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	// TEC-144: product categories and products. Every query is brand-filtered;
@@ -663,8 +667,12 @@ type Querier interface {
 	DeletePerformanceMetricsForScope(ctx context.Context, arg DeletePerformanceMetricsForScopeParams) (int64, error)
 	DeletePerformanceTarget(ctx context.Context, arg DeletePerformanceTargetParams) (int64, error)
 	DeletePermissionBySlug(ctx context.Context, slug string) error
+	DeletePhotoAngle(ctx context.Context, arg DeletePhotoAngleParams) (int64, error)
+	DeletePhotoAngleOverridesForOrg(ctx context.Context, arg DeletePhotoAngleOverridesForOrgParams) error
 	DeletePlateFormat(ctx context.Context, countryID int64) (int64, error)
 	DeletePriceDisciplineSnapshotsBefore(ctx context.Context, before pgtype.Date) (int64, error)
+	// Price discipline (F5-09b worker) -----------------------------------------------
+	DeletePriceDisciplineSnapshotsOn(ctx context.Context, arg DeletePriceDisciplineSnapshotsOnParams) (int64, error)
 	DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error)
 	// Fails with a foreign key violation while products still use the category.
 	DeleteProductCategory(ctx context.Context, arg DeleteProductCategoryParams) (int64, error)
@@ -839,6 +847,8 @@ type Querier interface {
 	// Full-unit duplicate guard before creation (decision 3); the partial
 	// unique index uq_warranties_active_full_unit is the final barrier.
 	GetActiveFullWarrantyByVehicleUnit(ctx context.Context, arg GetActiveFullWarrantyByVehicleUnitParams) (Warranty, error)
+	GetActiveIntakePhotoByAngle(ctx context.Context, arg GetActiveIntakePhotoByAngleParams) (IntakePhoto, error)
+	GetActiveIntakePhotoByUUID(ctx context.Context, arg GetActiveIntakePhotoByUUIDParams) (IntakePhoto, error)
 	// A live token of a live grant and client, with the user's status.
 	GetActiveOAuthToken(ctx context.Context, arg GetActiveOAuthTokenParams) (GetActiveOAuthTokenRow, error)
 	GetActiveOTPByEmailType(ctx context.Context, arg GetActiveOTPByEmailTypeParams) (OtpCode, error)
@@ -864,6 +874,7 @@ type Querier interface {
 	GetBrandByID(ctx context.Context, id int64) (Brand, error)
 	GetBrandBySlug(ctx context.Context, slug string) (Brand, error)
 	GetBrandCenter(ctx context.Context, brandID int64) (Organization, error)
+	GetBrandCenterOrganization(ctx context.Context, brandID int64) (Organization, error)
 	GetBulkJobByID(ctx context.Context, id int64) (BulkJob, error)
 	GetBulkJobByUUID(ctx context.Context, argUuid uuid.UUID) (BulkJob, error)
 	GetBulkOperationByJobID(ctx context.Context, jobID pgtype.Int8) (BulkOperation, error)
@@ -1107,6 +1118,8 @@ type Querier interface {
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
 	GetPerformanceTarget(ctx context.Context, arg GetPerformanceTargetParams) (PerformanceTarget, error)
 	GetPermissionBySlug(ctx context.Context, slug string) (Permission, error)
+	GetPhotoAngleByKey(ctx context.Context, arg GetPhotoAngleByKeyParams) (PhotoAngle, error)
+	GetPhotoAngleByUUID(ctx context.Context, arg GetPhotoAngleByUUIDParams) (PhotoAngle, error)
 	GetPlateFormatByCountry(ctx context.Context, iso2 string) (GetPlateFormatByCountryRow, error)
 	GetPortalAppointmentByUUID(ctx context.Context, arg GetPortalAppointmentByUUIDParams) (Appointment, error)
 	// Portal booking accepts only active dealers of the request brand whose
@@ -1338,6 +1351,7 @@ type Querier interface {
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
 	GetWhatsAppSettings(ctx context.Context) (WhatsappSetting, error)
+	HasExecutedServiceContract(ctx context.Context, serviceID int64) (bool, error)
 	// Resolves a live token of the brand and counts the hit in one statement.
 	HitShortURL(ctx context.Context, arg HitShortURLParams) (HitShortURLRow, error)
 	// TEC-258: ledger.Import appends a recorded (historical) movement as is: its
@@ -1567,6 +1581,7 @@ type Querier interface {
 	ListActiveFleetUserEmails(ctx context.Context, fleetOrgID int64) ([]string, error)
 	// Recipients of fleet notifications (link requests).
 	ListActiveFleetUserIDs(ctx context.Context, fleetOrgID int64) ([]int64, error)
+	ListActiveIntakePhotosForService(ctx context.Context, serviceID int64) ([]IntakePhoto, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
 	ListActivePublicKeys(ctx context.Context, keys []string) ([]string, error)
 	ListActivePublicLinks(ctx context.Context) ([]StorageLink, error)
@@ -1593,6 +1608,13 @@ type Querier interface {
 	ListAppLogSources(ctx context.Context) ([]string, error)
 	// Sort: docs/list-contract.md, keys from apiquery.LogsSortSpec.
 	ListAppLogs(ctx context.Context, arg ListAppLogsParams) ([]AppLog, error)
+	// The price in force per product and currency for an organization's
+	// country: the country row when there is one, else the currency-wide row.
+	// currencies NULL = every currency.
+	ListApplicableRecommendedPrices(ctx context.Context, arg ListApplicableRecommendedPricesParams) ([]ListApplicableRecommendedPricesRow, error)
+	// The recommended price list of a country and currency (country row, else
+	// the currency-wide row). Sort keys: product_name | price | effective_from.
+	ListApplicableRecommendedPricesPage(ctx context.Context, arg ListApplicableRecommendedPricesPageParams) ([]ListApplicableRecommendedPricesPageRow, error)
 	ListAppointmentClosures(ctx context.Context, arg ListAppointmentClosuresParams) ([]AppointmentClosure, error)
 	// Panel calendar references (TEC-326): customer, vehicle and linked service
 	// UUIDs and labels of the given appointments.
@@ -1794,6 +1816,10 @@ type Querier interface {
 	// Live versions whose day has come and that are newer than the one in
 	// force, the latest per key (input of the effective-date job).
 	ListDueRecommendedPriceVersions(ctx context.Context, arg ListDueRecommendedPriceVersionsParams) ([]RecommendedPriceVersion, error)
+	// TEC-506 (F5-09b) ----------------------------------------------------------------
+	// ListDueRecommendedPriceVersions of one brand: the effective-date job reads
+	// "today" in the brand center's timezone.
+	ListDueRecommendedPriceVersionsForBrand(ctx context.Context, arg ListDueRecommendedPriceVersionsForBrandParams) ([]RecommendedPriceVersion, error)
 	ListDueScheduledCampaigns(ctx context.Context, arg ListDueScheduledCampaignsParams) ([]Campaign, error)
 	// ListDueStaffPayments is the scan of the posting job: planned payments
 	// whose paid_on has arrived in their organization's time zone.
@@ -2135,6 +2161,10 @@ type Querier interface {
 	// keeps those not touched since then (the scheduler re-enqueues their task;
 	// a still queued task is deduplicated by its task id).
 	ListPendingCampaignRecipientIDs(ctx context.Context, arg ListPendingCampaignRecipientIDsParams) ([]int64, error)
+	ListPerformanceMapDealers(ctx context.Context, arg ListPerformanceMapDealersParams) ([]ListPerformanceMapDealersRow, error)
+	// Staff targets ---------------------------------------------------------------------
+	// Region map ------------------------------------------------------------------------
+	ListPerformanceMapRegions(ctx context.Context, arg ListPerformanceMapRegionsParams) ([]ListPerformanceMapRegionsRow, error)
 	// Metrics of the organizations over a closed period range (YYYY-MM).
 	ListPerformanceMetrics(ctx context.Context, arg ListPerformanceMetricsParams) ([]PerformanceMetricsMonthly, error)
 	// Worker source readers ----------------------------------------------------------
@@ -2144,6 +2174,7 @@ type Querier interface {
 	// performance/repository.RankingSort (metric keys | name); metric columns
 	// sort NULLS LAST in both directions; id tiebreak.
 	ListPerformanceRanking(ctx context.Context, arg ListPerformanceRankingParams) ([]ListPerformanceRankingRow, error)
+	ListPerformanceRuleEvaluations(ctx context.Context, arg ListPerformanceRuleEvaluationsParams) ([]ListPerformanceRuleEvaluationsRow, error)
 	ListPerformanceSubtreeOrgIDs(ctx context.Context, rootOrgID int64) ([]int64, error)
 	// Targets with their achievement: the target metric summed over the months
 	// of the target period (same currency for order volume). Sort keys from
@@ -2152,6 +2183,8 @@ type Querier interface {
 	ListPermissionSlugsByRoleID(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionSlugsByRoleSlug(ctx context.Context, slug string) ([]string, error)
 	ListPermissionsFiltered(ctx context.Context, arg ListPermissionsFilteredParams) ([]Permission, error)
+	ListPhotoAngleOverridesForOrg(ctx context.Context, arg ListPhotoAngleOverridesForOrgParams) ([]ListPhotoAngleOverridesForOrgRow, error)
+	ListPhotoAnglesByBrand(ctx context.Context, brandID int64) ([]PhotoAngle, error)
 	ListPlateFormats(ctx context.Context, activeOnly bool) ([]ListPlateFormatsRow, error)
 	// Sort: docs/list-contract.md, keys from apiquery.NotificationsSortSpec.
 	ListPlatformNotifications(ctx context.Context, arg ListPlatformNotificationsParams) ([]Notification, error)
@@ -2186,12 +2219,22 @@ type Querier interface {
 	// customer are closed to Glorian), even on a Glorian host. Draft services
 	// are dealer-internal and stay out. No measurement column is selected.
 	ListPortalVehicles(ctx context.Context, arg ListPortalVehiclesParams) ([]ListPortalVehiclesRow, error)
+	// Organizations with at least one product over the threshold on a day (the
+	// weekly digest): the count of such products and the largest deviation.
+	ListPriceDisciplineOverThresholdOrgs(ctx context.Context, arg ListPriceDisciplineOverThresholdOrgsParams) ([]ListPriceDisciplineOverThresholdOrgsRow, error)
 	// Deviation list of one snapshot day. org_ids is the caller's scope (NULL =
 	// whole brand); distributor_ids keeps the distributor and its dealers;
 	// over_threshold compares |deviation_pct| with threshold_pct (NULL deviation
 	// is never over). Sort keys: deviation_pct (NULLS LAST) | org_name |
 	// product_name.
 	ListPriceDisciplineSnapshots(ctx context.Context, arg ListPriceDisciplineSnapshotsParams) ([]ListPriceDisciplineSnapshotsRow, error)
+	// Languages of the price list PDF of a country / currency: the locales of
+	// the distributors and dealers it reaches (see the audience above).
+	ListPriceListLocales(ctx context.Context, arg ListPriceListLocalesParams) ([]string, error)
+	// Content of a price list PDF: the brand's active products with the price
+	// in force for the country and currency (country row, else currency-wide)
+	// and the next scheduled change, if any.
+	ListPriceListRows(ctx context.Context, arg ListPriceListRowsParams) ([]ListPriceListRowsRow, error)
 	// TEC-146: batch reads for the effective price views and the distributor's
 	// dealer prices (000041).
 	// Products of the brand for the price list view.
@@ -2251,13 +2294,22 @@ type Querier interface {
 	// as organization/trash owner (every later owner of the unit at that
 	// organization follows from such a movement), or a projection row it holds.
 	ListRebuildUnitIDsByOrganization(ctx context.Context, organizationID int64) ([]int64, error)
+	// Countries with their own recommended price versions in a currency (the
+	// country price lists a currency-wide change also touches).
+	ListRecommendedPriceCountries(ctx context.Context, arg ListRecommendedPriceCountriesParams) ([]int64, error)
+	// Owners of the brand's active distributors and dealers a recommended price
+	// reaches: in the country (country_id set) or, for a currency-wide price,
+	// every organization trading in the currency. Distinct users.
+	ListRecommendedPriceListAudience(ctx context.Context, arg ListRecommendedPriceListAudienceParams) ([]ListRecommendedPriceListAudienceRow, error)
 	// Version history. Sort keys: effective_from | published_at | price.
 	ListRecommendedPriceVersions(ctx context.Context, arg ListRecommendedPriceVersionsParams) ([]ListRecommendedPriceVersionsRow, error)
+	ListRecommendedPriceVersionsByBatch(ctx context.Context, arg ListRecommendedPriceVersionsByBatchParams) ([]ListRecommendedPriceVersionsByBatchRow, error)
 	// Current list. Sort keys: product_name | price | effective_from.
 	ListRecommendedPricesCurrent(ctx context.Context, arg ListRecommendedPricesCurrentParams) ([]ListRecommendedPricesCurrentRow, error)
 	// Required certificate types for the products/categories used by a service.
 	ListRequiredCertificateTypesForService(ctx context.Context, arg ListRequiredCertificateTypesForServiceParams) ([]CertificateType, error)
 	ListReservationsByOrder(ctx context.Context, orderID int64) ([]StockReservation, error)
+	ListResolvedPhotoAngles(ctx context.Context, arg ListResolvedPhotoAnglesParams) ([]ListResolvedPhotoAnglesRow, error)
 	ListReviewQuestionLocales(ctx context.Context, questionID int64) ([]ReviewQuestionLocale, error)
 	// Batch load for a question list (avoids N+1).
 	ListReviewQuestionLocalesByQuestions(ctx context.Context, questionIds []int64) ([]ReviewQuestionLocale, error)
@@ -3047,6 +3099,12 @@ type Querier interface {
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
 	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
 	PingDB(ctx context.Context) (int32, error)
+	// Country x currency summary of one snapshot day in the caller's scope
+	// (org_ids NULL = whole brand): average / median deviation and the
+	// organizations with at least one product over the threshold.
+	PriceDisciplineSummaryByCountry(ctx context.Context, arg PriceDisciplineSummaryByCountryParams) ([]PriceDisciplineSummaryByCountryRow, error)
+	// Country x product breakdown of the same day and scope.
+	PriceDisciplineSummaryByProduct(ctx context.Context, arg PriceDisciplineSummaryByProductParams) ([]PriceDisciplineSummaryByProductRow, error)
 	// Profit per product over a period: revenue and the purchase cost snapshot
 	// of the sold lines (lines without a cost snapshot count as zero cost and
 	// are reported separately).
@@ -3069,6 +3127,12 @@ type Querier interface {
 	RecordCampaignRecipientAttempt(ctx context.Context, arg RecordCampaignRecipientAttemptParams) (CampaignRecipient, error)
 	RefreshEfficiencyFactsForServiceItem(ctx context.Context, targetServiceItemID int64) (int64, error)
 	RefreshNetworkPartExpectations(ctx context.Context, arg RefreshNetworkPartExpectationsParams) (int64, error)
+	// One day of snapshots of a brand: every active dealer / distributor list
+	// price (dealer_product_prices) that has a recommended price in force for
+	// the organization's country (else currency-wide), the deviation in percent
+	// and the realised average unit price of non-voided quick sales in
+	// [sales_from, sales_to). Idempotent per (day, org, product, currency).
+	RefreshPriceDisciplineSnapshots(ctx context.Context, arg RefreshPriceDisciplineSnapshotsParams) (int64, error)
 	RejectCertificate(ctx context.Context, arg RejectCertificateParams) (Certificate, error)
 	// CAS pending_review → rejected with the reviewer's note. The previous
 	// published snapshot (if any) stays live.
@@ -3321,6 +3385,7 @@ type Querier interface {
 	SkipPendingCampaignRecipients(ctx context.Context, arg SkipPendingCampaignRecipientsParams) (int64, error)
 	SlugExists(ctx context.Context, slug string) (bool, error)
 	SoftDeleteAIConversation(ctx context.Context, arg SoftDeleteAIConversationParams) (int64, error)
+	SoftDeleteActiveIntakePhoto(ctx context.Context, arg SoftDeleteActiveIntakePhotoParams) (IntakePhoto, error)
 	SoftDeleteAppointment(ctx context.Context, arg SoftDeleteAppointmentParams) (int64, error)
 	SoftDeleteLead(ctx context.Context, arg SoftDeleteLeadParams) (int64, error)
 	// Only an empty folder (no live subfolder or item) is removed.
@@ -3465,6 +3530,7 @@ type Querier interface {
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
 	UpdatePartConsumptionExpectation(ctx context.Context, arg UpdatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	UpdatePerformanceTarget(ctx context.Context, arg UpdatePerformanceTargetParams) (PerformanceTarget, error)
+	UpdatePhotoAngle(ctx context.Context, arg UpdatePhotoAngleParams) (PhotoAngle, error)
 	// UpdatePlannedStaffPayment edits a payment that is not booked yet.
 	UpdatePlannedStaffPayment(ctx context.Context, arg UpdatePlannedStaffPaymentParams) (StaffPayment, error)
 	UpdatePlateFormat(ctx context.Context, arg UpdatePlateFormatParams) (PlateFormat, error)
@@ -3587,6 +3653,7 @@ type Querier interface {
 	// Idempotent write of the metric worker: one row per org x month x metric.
 	UpsertPerformanceMetric(ctx context.Context, arg UpsertPerformanceMetricParams) (PerformanceMetricsMonthly, error)
 	UpsertPermission(ctx context.Context, arg UpsertPermissionParams) error
+	UpsertPhotoAngleOverride(ctx context.Context, arg UpsertPhotoAngleOverrideParams) (PhotoAngleOverride, error)
 	// Price discipline snapshots ----------------------------------------------------
 	UpsertPriceDisciplineSnapshot(ctx context.Context, arg UpsertPriceDisciplineSnapshotParams) (PriceDisciplineSnapshot, error)
 	// TEC-144: product price list and distributor-specific prices (K8). Prices
@@ -3602,7 +3669,6 @@ type Querier interface {
 	UpsertServiceCertificateWarning(ctx context.Context, arg UpsertServiceCertificateWarningParams) (ServiceCertificateWarning, error)
 	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
-	// Staff targets ---------------------------------------------------------------------
 	UpsertStaffTarget(ctx context.Context, arg UpsertStaffTargetParams) (StaffTarget, error)
 	// TEC-483 (F5-04a): stock forecast snapshots, thresholds and center network
 	// demand. Worker/API layers arrive in F5-04b/c; these queries are the

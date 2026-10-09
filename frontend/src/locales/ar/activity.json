@@ -197,5 +197,6 @@
   "filters.actor": "تصفية حسب المستخدم",
   "resources.platform.organizations": "المنشآت",
   "actions.mcp.tool_called": "تم استدعاء أداة MCP",
-  "resources.mcp_tool": "أداة MCP"
+  "resources.mcp_tool": "أداة MCP",
+  "actions.pricing.recommended_published": "تم نشر أسعار البيع الموصى بها"
 }

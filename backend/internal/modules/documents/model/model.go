@@ -26,6 +26,8 @@ const (
 	KindQuote       = "quote"
 	// KindFleetReport is the periodic fleet report (TEC-476, F5-02e).
 	KindFleetReport = "fleet_report"
+	// KindPriceList is the recommended retail price list (TEC-506, F5-09b).
+	KindPriceList = "price_list"
 )
 
 // Languages a template may be written in (K10: 12 languages + Arabic).
@@ -267,6 +269,14 @@ var specs = map[string]KindSpec{
 		block("fleet_report", "upcoming_expirations_table", "Yaklaşan garanti bitişleri", "Upcoming warranty expirations"),
 		block("fleet_report", "accounts_table", "Hizmet tutarı ve ödemeler", "Service amounts and payments"),
 	})},
+	// TEC-506: the recommended retail price list of a country / currency,
+	// published to the document center; letterhead of the brand center.
+	KindPriceList: {Kind: KindPriceList, Variables: join(companyVars, documentVars, []Variable{
+		text("price_list", "country_name", "Ülke", "Country", "Türkiye", "Turkey"),
+		text("price_list", "currency", "Para birimi", "Currency", "TRY", "TRY"),
+		text("price_list", "effective_date", "Geçerlilik tarihi", "Valid as of", "09.10.2026", "2026-10-09"),
+		block("price_list", "prices_table", "Fiyat tablosu", "Price table"),
+	})},
 }
 
 func init() {
@@ -288,7 +298,7 @@ func init() {
 }
 
 // Kinds lists the document kinds in display order.
-var Kinds = []string{KindService, KindMeasurement, KindContract, KindOrderSlip, KindInvoiceView, KindWarranty, KindQuote, KindFleetReport}
+var Kinds = []string{KindService, KindMeasurement, KindContract, KindOrderSlip, KindInvoiceView, KindWarranty, KindQuote, KindFleetReport, KindPriceList}
 
 // Spec returns the schema of a kind.
 func Spec(kind string) (KindSpec, bool) {
@@ -408,6 +418,13 @@ var sampleBlocks = map[string]func(tr bool) string{
 			return pdfrender.Table([]pdfrender.Column{{Label: "Bayi"}, {Label: "Hizmet tutarı", Numeric: true}, {Label: "Ödeme", Numeric: true}, {Label: "Bakiye", Numeric: true}}, [][]string{{"Olex Kadıköy", "45.000,00 TRY", "30.000,00 TRY", "15.000,00 TRY"}})
 		}
 		return pdfrender.Table([]pdfrender.Column{{Label: "Dealer"}, {Label: "Service amount", Numeric: true}, {Label: "Payments", Numeric: true}, {Label: "Balance", Numeric: true}}, [][]string{{"Olex Kadikoy", "TRY 45,000.00", "TRY 30,000.00", "TRY 15,000.00"}})
+	},
+	// TEC-506: price list table.
+	"prices_table": func(tr bool) string {
+		if tr {
+			return pdfrender.Table([]pdfrender.Column{{Label: "Stok kodu"}, {Label: "Ürün"}, {Label: "Fiyat", Numeric: true}, {Label: "Sonraki fiyat", Numeric: true}, {Label: "Geçerlilik"}}, [][]string{{"PPF-190", "Olex PPF Ultra 190µ", "45.000,00", "", ""}})
+		}
+		return pdfrender.Table([]pdfrender.Column{{Label: "SKU"}, {Label: "Product"}, {Label: "Price", Numeric: true}, {Label: "Next price", Numeric: true}, {Label: "Effective from"}}, [][]string{{"PPF-190", "Olex PPF Ultra 190µ", "45,000.00", "", ""}})
 	},
 	"qr_code": func(bool) string {
 		return `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 8 8"><rect width="8" height="8" fill="#fff"/><path d="M0 0h3v3H0zM5 0h3v3H5zM0 5h3v3H0zM4 4h1v1H4zM6 5h1v2H6zM4 6h1v2H4z" fill="#000"/></svg>`

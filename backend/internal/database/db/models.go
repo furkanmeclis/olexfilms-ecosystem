@@ -1024,6 +1024,8 @@ type District struct {
 	Code       pgtype.Text        `json:"code"`
 	Name       string             `json:"name"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	Latitude   pgtype.Numeric     `json:"latitude"`
+	Longitude  pgtype.Numeric     `json:"longitude"`
 }
 
 type DocumentRender struct {
@@ -1415,6 +1417,29 @@ type ImportJob struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	OrganizationID pgtype.Int8        `json:"organization_id"`
 	SourceFilename string             `json:"source_filename"`
+}
+
+type IntakePhoto struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	ServiceID      int64              `json:"service_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	AngleID        int64              `json:"angle_id"`
+	StorageKey     string             `json:"storage_key"`
+	Mime           string             `json:"mime"`
+	Size           int64              `json:"size"`
+	Sha256         string             `json:"sha256"`
+	Width          pgtype.Int4        `json:"width"`
+	Height         pgtype.Int4        `json:"height"`
+	ExifTakenAt    pgtype.Timestamptz `json:"exif_taken_at"`
+	ExifLat        pgtype.Numeric     `json:"exif_lat"`
+	ExifLng        pgtype.Numeric     `json:"exif_lng"`
+	ExifDevice     pgtype.Text        `json:"exif_device"`
+	UploadedBy     pgtype.Int8        `json:"uploaded_by"`
+	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
+	DeletedBy      pgtype.Int8        `json:"deleted_by"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type IntegrationConnection struct {
@@ -2290,6 +2315,35 @@ type PgExtension struct {
 	Extname string `json:"extname"`
 }
 
+type PhotoAngle struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	Key               string             `json:"key"`
+	Name              []byte             `json:"name"`
+	Hint              []byte             `json:"hint"`
+	ExampleStorageKey pgtype.Text        `json:"example_storage_key"`
+	Required          bool               `json:"required"`
+	SortOrder         int32              `json:"sort_order"`
+	Active            bool               `json:"active"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PhotoAngleOverride struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	BrandID         int64              `json:"brand_id"`
+	AngleID         int64              `json:"angle_id"`
+	Required        bool               `json:"required"`
+	Hidden          bool               `json:"hidden"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type PlateFormat struct {
 	ID              int64              `json:"id"`
 	CountryID       int64              `json:"country_id"`
@@ -2411,6 +2465,8 @@ type Province struct {
 	Code      string             `json:"code"`
 	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Latitude  pgtype.Numeric     `json:"latitude"`
+	Longitude pgtype.Numeric     `json:"longitude"`
 }
 
 type Purchase struct {

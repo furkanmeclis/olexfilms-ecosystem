@@ -143,8 +143,10 @@ func TestIntegrationPricingVisibility(t *testing.T) {
 		dv.Prices[0].PurchasePriceSource != "override" || dv.Prices[0].SalePrice != nil {
 		t.Fatalf("distributor view = %s", raw)
 	}
-	if strings.Contains(raw, "recommended") {
-		t.Fatalf("distributor view leaks center prices: %s", raw)
+	// TEC-506: the distributor (pricing.recommended.read) gets the
+	// recommended block of its country, never the center's list field.
+	if strings.Contains(raw, "recommended_sale_price") || !strings.Contains(raw, `"recommended":{"price":"150.00"`) {
+		t.Fatalf("distributor view leaks center prices or misses the recommended block: %s", raw)
 	}
 	// Another distributor without an override pays the list price.
 	ov, raw := it.priceView(it.loginOrg(otherOwner, opw, otherDist), pid)

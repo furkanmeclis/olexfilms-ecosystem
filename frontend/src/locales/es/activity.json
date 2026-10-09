@@ -197,5 +197,6 @@
   "filters.actor": "Filtrar por usuario",
   "resources.platform.organizations": "Organizaciones",
   "actions.mcp.tool_called": "Herramienta MCP invocada",
-  "resources.mcp_tool": "Herramienta MCP"
+  "resources.mcp_tool": "Herramienta MCP",
+  "actions.pricing.recommended_published": "Precios recomendados publicados"
 }

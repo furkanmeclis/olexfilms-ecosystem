@@ -44,6 +44,7 @@
   "kinds.invoice_view": "Προβολή τιμολογίου",
   "kinds.warranty": "Πιστοποιητικό εγγύησης",
   "kinds.fleet_report": "Αναφορά στόλου",
+  "kinds.price_list": "Τιμοκατάλογος προτεινόμενων τιμών",
   "languages.tr": "Τουρκικά",
   "languages.en": "Αγγλικά",
   "languages.bg": "Βουλγαρικά",
@@ -69,5 +70,6 @@
   "variable_groups.warranty": "Εγγύηση",
   "variable_groups.totals": "Σύνολα",
   "variable_groups.fleet_report": "Αναφορά στόλου",
+  "variable_groups.price_list": "Τιμοκατάλογος προτεινόμενων τιμών",
   "fields.updated_at": "Ενημερώθηκε"
 }

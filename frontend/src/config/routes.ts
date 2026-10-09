@@ -51,6 +51,11 @@ export const routes = {
       productEdit: (slug: string, uuid: string) =>
         `/t/${slug}/catalog/products/${uuid}/edit`,
       categories: (slug: string) => `/t/${slug}/catalog/categories`,
+      /** TEC-507: center recommended prices (publish + history). */
+      recommendedPrices: (slug: string) =>
+        `/t/${slug}/catalog/recommended-prices`,
+      /** TEC-507: price discipline report (center, distributor). */
+      priceDiscipline: (slug: string) => `/t/${slug}/catalog/price-discipline`,
       services: (slug: string) => `/t/${slug}/service-catalog`,
     },
     /** TEC-311 service subscriptions and the center cancellation queue. */

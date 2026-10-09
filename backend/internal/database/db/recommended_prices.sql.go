@@ -25,6 +25,26 @@ func (q *Queries) DeletePriceDisciplineSnapshotsBefore(ctx context.Context, befo
 	return result.RowsAffected(), nil
 }
 
+const deletePriceDisciplineSnapshotsOn = `-- name: DeletePriceDisciplineSnapshotsOn :execrows
+
+DELETE FROM price_discipline_snapshots
+WHERE brand_id = $1 AND snapshot_date = $2::date
+`
+
+type DeletePriceDisciplineSnapshotsOnParams struct {
+	BrandID      int64       `json:"brand_id"`
+	SnapshotDate pgtype.Date `json:"snapshot_date"`
+}
+
+// Price discipline (F5-09b worker) -----------------------------------------------
+func (q *Queries) DeletePriceDisciplineSnapshotsOn(ctx context.Context, arg DeletePriceDisciplineSnapshotsOnParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deletePriceDisciplineSnapshotsOn, arg.BrandID, arg.SnapshotDate)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getApplicableRecommendedPrice = `-- name: GetApplicableRecommendedPrice :one
 
 SELECT id, organization_id, brand_id, product_id, country_id, currency, version_id, price, effective_from, updated_at FROM recommended_prices_current
@@ -170,6 +190,186 @@ func (q *Queries) InsertRecommendedPriceVersion(ctx context.Context, arg InsertR
 	return i, err
 }
 
+const listApplicableRecommendedPrices = `-- name: ListApplicableRecommendedPrices :many
+SELECT DISTINCT ON (c.product_id, c.currency)
+       c.product_id, c.currency, c.country_id, c.price, c.effective_from, c.version_id,
+       COALESCE(co.iso2, '')::text AS country_iso2
+FROM recommended_prices_current c
+LEFT JOIN countries co ON co.id = c.country_id
+WHERE c.brand_id = $1
+  AND c.product_id = ANY ($2::bigint[])
+  AND ($3::text[] IS NULL OR c.currency = ANY ($3::text[]))
+  AND (c.country_id IS NULL OR c.country_id = $4::bigint)
+ORDER BY c.product_id, c.currency, c.country_id NULLS LAST
+`
+
+type ListApplicableRecommendedPricesParams struct {
+	BrandID    int64       `json:"brand_id"`
+	ProductIds []int64     `json:"product_ids"`
+	Currencies []string    `json:"currencies"`
+	CountryID  pgtype.Int8 `json:"country_id"`
+}
+
+type ListApplicableRecommendedPricesRow struct {
+	ProductID     int64          `json:"product_id"`
+	Currency      string         `json:"currency"`
+	CountryID     pgtype.Int8    `json:"country_id"`
+	Price         pgtype.Numeric `json:"price"`
+	EffectiveFrom pgtype.Date    `json:"effective_from"`
+	VersionID     int64          `json:"version_id"`
+	CountryIso2   string         `json:"country_iso2"`
+}
+
+// The price in force per product and currency for an organization's
+// country: the country row when there is one, else the currency-wide row.
+// currencies NULL = every currency.
+func (q *Queries) ListApplicableRecommendedPrices(ctx context.Context, arg ListApplicableRecommendedPricesParams) ([]ListApplicableRecommendedPricesRow, error) {
+	rows, err := q.db.Query(ctx, listApplicableRecommendedPrices,
+		arg.BrandID,
+		arg.ProductIds,
+		arg.Currencies,
+		arg.CountryID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListApplicableRecommendedPricesRow{}
+	for rows.Next() {
+		var i ListApplicableRecommendedPricesRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.Currency,
+			&i.CountryID,
+			&i.Price,
+			&i.EffectiveFrom,
+			&i.VersionID,
+			&i.CountryIso2,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listApplicableRecommendedPricesPage = `-- name: ListApplicableRecommendedPricesPage :many
+WITH applicable AS (
+    SELECT DISTINCT ON (c.product_id) c.id, c.organization_id, c.brand_id, c.product_id, c.country_id, c.currency, c.version_id, c.price, c.effective_from, c.updated_at
+    FROM recommended_prices_current c
+    WHERE c.brand_id = $8
+      AND c.currency = $9::text
+      AND (c.country_id IS NULL OR c.country_id = $10::bigint)
+    ORDER BY c.product_id, c.country_id NULLS LAST
+)
+SELECT a.id, a.product_id, a.country_id, a.currency, a.price, a.effective_from,
+       v.uuid AS version_uuid, v.batch_id, v.source,
+       p.uuid AS product_uuid, p.name AS product_name, p.sku AS product_sku,
+       COALESCE(co.iso2, '')::text AS country_iso2,
+       COUNT(*) OVER()::bigint AS total_count
+FROM applicable a
+JOIN products p ON p.id = a.product_id
+JOIN recommended_price_versions v ON v.id = a.version_id
+LEFT JOIN countries co ON co.id = a.country_id
+WHERE (COALESCE(cardinality($1::bigint[]), 0) = 0
+       OR a.product_id = ANY ($1::bigint[]))
+  AND ($2::bool IS NULL OR p.active = $2::bool)
+  AND ($3::text IS NULL
+       OR p.name ILIKE '%' || $3::text || '%'
+       OR p.sku ILIKE '%' || $3::text || '%')
+ORDER BY
+  CASE WHEN NOT $4::bool AND $5::text = 'product_name' THEN p.name END ASC,
+  CASE WHEN $4::bool AND $5::text = 'product_name' THEN p.name END DESC,
+  CASE WHEN NOT $4::bool AND $5::text = 'price' THEN a.price END ASC,
+  CASE WHEN $4::bool AND $5::text = 'price' THEN a.price END DESC,
+  CASE WHEN NOT $4::bool AND $5::text = 'effective_from' THEN a.effective_from END ASC,
+  CASE WHEN $4::bool AND $5::text = 'effective_from' THEN a.effective_from END DESC,
+  CASE WHEN $4::bool THEN a.id END DESC,
+  a.id ASC
+LIMIT $7 OFFSET $6
+`
+
+type ListApplicableRecommendedPricesPageParams struct {
+	ProductIds []int64     `json:"product_ids"`
+	Active     pgtype.Bool `json:"active"`
+	Q          pgtype.Text `json:"q"`
+	SortDesc   bool        `json:"sort_desc"`
+	SortKey    string      `json:"sort_key"`
+	RowOffset  int32       `json:"row_offset"`
+	RowLimit   int32       `json:"row_limit"`
+	BrandID    int64       `json:"brand_id"`
+	Currency   string      `json:"currency"`
+	CountryID  pgtype.Int8 `json:"country_id"`
+}
+
+type ListApplicableRecommendedPricesPageRow struct {
+	ID            int64          `json:"id"`
+	ProductID     int64          `json:"product_id"`
+	CountryID     pgtype.Int8    `json:"country_id"`
+	Currency      string         `json:"currency"`
+	Price         pgtype.Numeric `json:"price"`
+	EffectiveFrom pgtype.Date    `json:"effective_from"`
+	VersionUuid   uuid.UUID      `json:"version_uuid"`
+	BatchID       pgtype.UUID    `json:"batch_id"`
+	Source        string         `json:"source"`
+	ProductUuid   uuid.UUID      `json:"product_uuid"`
+	ProductName   string         `json:"product_name"`
+	ProductSku    string         `json:"product_sku"`
+	CountryIso2   string         `json:"country_iso2"`
+	TotalCount    int64          `json:"total_count"`
+}
+
+// The recommended price list of a country and currency (country row, else
+// the currency-wide row). Sort keys: product_name | price | effective_from.
+func (q *Queries) ListApplicableRecommendedPricesPage(ctx context.Context, arg ListApplicableRecommendedPricesPageParams) ([]ListApplicableRecommendedPricesPageRow, error) {
+	rows, err := q.db.Query(ctx, listApplicableRecommendedPricesPage,
+		arg.ProductIds,
+		arg.Active,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.RowOffset,
+		arg.RowLimit,
+		arg.BrandID,
+		arg.Currency,
+		arg.CountryID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListApplicableRecommendedPricesPageRow{}
+	for rows.Next() {
+		var i ListApplicableRecommendedPricesPageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductID,
+			&i.CountryID,
+			&i.Currency,
+			&i.Price,
+			&i.EffectiveFrom,
+			&i.VersionUuid,
+			&i.BatchID,
+			&i.Source,
+			&i.ProductUuid,
+			&i.ProductName,
+			&i.ProductSku,
+			&i.CountryIso2,
+			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listDueRecommendedPriceVersions = `-- name: ListDueRecommendedPriceVersions :many
 SELECT DISTINCT ON (v.product_id, v.country_id, v.currency) v.id, v.uuid, v.organization_id, v.brand_id, v.product_id, v.country_id, v.currency, v.price, v.effective_from, v.source, v.published_by_user_id, v.published_at, v.batch_id, v.note, v.superseded_at
 FROM recommended_price_versions v
@@ -216,6 +416,124 @@ func (q *Queries) ListDueRecommendedPriceVersions(ctx context.Context, arg ListD
 			&i.BatchID,
 			&i.Note,
 			&i.SupersededAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDueRecommendedPriceVersionsForBrand = `-- name: ListDueRecommendedPriceVersionsForBrand :many
+
+SELECT DISTINCT ON (v.product_id, v.country_id, v.currency) v.id, v.uuid, v.organization_id, v.brand_id, v.product_id, v.country_id, v.currency, v.price, v.effective_from, v.source, v.published_by_user_id, v.published_at, v.batch_id, v.note, v.superseded_at
+FROM recommended_price_versions v
+LEFT JOIN recommended_prices_current c
+       ON c.product_id = v.product_id
+      AND c.country_id IS NOT DISTINCT FROM v.country_id
+      AND c.currency = v.currency
+WHERE v.brand_id = $1
+  AND v.superseded_at IS NULL
+  AND v.effective_from <= $2::date
+  AND (c.id IS NULL OR (c.version_id <> v.id AND v.effective_from >= c.effective_from))
+ORDER BY v.product_id, v.country_id, v.currency, v.effective_from DESC, v.id DESC
+LIMIT $3
+`
+
+type ListDueRecommendedPriceVersionsForBrandParams struct {
+	BrandID  int64       `json:"brand_id"`
+	AsOf     pgtype.Date `json:"as_of"`
+	RowLimit int32       `json:"row_limit"`
+}
+
+// TEC-506 (F5-09b) ----------------------------------------------------------------
+// ListDueRecommendedPriceVersions of one brand: the effective-date job reads
+// "today" in the brand center's timezone.
+func (q *Queries) ListDueRecommendedPriceVersionsForBrand(ctx context.Context, arg ListDueRecommendedPriceVersionsForBrandParams) ([]RecommendedPriceVersion, error) {
+	rows, err := q.db.Query(ctx, listDueRecommendedPriceVersionsForBrand, arg.BrandID, arg.AsOf, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []RecommendedPriceVersion{}
+	for rows.Next() {
+		var i RecommendedPriceVersion
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ProductID,
+			&i.CountryID,
+			&i.Currency,
+			&i.Price,
+			&i.EffectiveFrom,
+			&i.Source,
+			&i.PublishedByUserID,
+			&i.PublishedAt,
+			&i.BatchID,
+			&i.Note,
+			&i.SupersededAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPriceDisciplineOverThresholdOrgs = `-- name: ListPriceDisciplineOverThresholdOrgs :many
+SELECT s.organization_id, o.name AS org_name, o.type AS org_type, o.parent_id AS org_parent_id,
+       COUNT(*)::bigint AS over_count,
+       MAX(ABS(s.deviation_pct))::numeric AS max_abs_deviation_pct
+FROM price_discipline_snapshots s
+JOIN organizations o ON o.id = s.organization_id
+WHERE s.brand_id = $1
+  AND s.snapshot_date = $2::date
+  AND ABS(s.deviation_pct) >= $3::numeric
+GROUP BY s.organization_id, o.name, o.type, o.parent_id
+ORDER BY MAX(ABS(s.deviation_pct)) DESC, s.organization_id
+`
+
+type ListPriceDisciplineOverThresholdOrgsParams struct {
+	BrandID      int64          `json:"brand_id"`
+	SnapshotDate pgtype.Date    `json:"snapshot_date"`
+	ThresholdPct pgtype.Numeric `json:"threshold_pct"`
+}
+
+type ListPriceDisciplineOverThresholdOrgsRow struct {
+	OrganizationID     int64          `json:"organization_id"`
+	OrgName            string         `json:"org_name"`
+	OrgType            string         `json:"org_type"`
+	OrgParentID        pgtype.Int8    `json:"org_parent_id"`
+	OverCount          int64          `json:"over_count"`
+	MaxAbsDeviationPct pgtype.Numeric `json:"max_abs_deviation_pct"`
+}
+
+// Organizations with at least one product over the threshold on a day (the
+// weekly digest): the count of such products and the largest deviation.
+func (q *Queries) ListPriceDisciplineOverThresholdOrgs(ctx context.Context, arg ListPriceDisciplineOverThresholdOrgsParams) ([]ListPriceDisciplineOverThresholdOrgsRow, error) {
+	rows, err := q.db.Query(ctx, listPriceDisciplineOverThresholdOrgs, arg.BrandID, arg.SnapshotDate, arg.ThresholdPct)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPriceDisciplineOverThresholdOrgsRow{}
+	for rows.Next() {
+		var i ListPriceDisciplineOverThresholdOrgsRow
+		if err := rows.Scan(
+			&i.OrganizationID,
+			&i.OrgName,
+			&i.OrgType,
+			&i.OrgParentID,
+			&i.OverCount,
+			&i.MaxAbsDeviationPct,
 		); err != nil {
 			return nil, err
 		}
@@ -393,10 +711,216 @@ func (q *Queries) ListPriceDisciplineSnapshots(ctx context.Context, arg ListPric
 	return items, nil
 }
 
+const listPriceListLocales = `-- name: ListPriceListLocales :many
+SELECT DISTINCT o.locale::text AS locale
+FROM organizations o
+WHERE o.brand_id = $1
+  AND o.type IN ('distributor', 'dealer')
+  AND o.status = 'active' AND o.deleted_at IS NULL
+  AND (
+      ($2::bigint IS NOT NULL AND o.country_id = $2::bigint)
+      OR ($2::bigint IS NULL AND o.currency = $3::text)
+  )
+ORDER BY 1
+`
+
+type ListPriceListLocalesParams struct {
+	BrandID   int64       `json:"brand_id"`
+	CountryID pgtype.Int8 `json:"country_id"`
+	Currency  string      `json:"currency"`
+}
+
+// Languages of the price list PDF of a country / currency: the locales of
+// the distributors and dealers it reaches (see the audience above).
+func (q *Queries) ListPriceListLocales(ctx context.Context, arg ListPriceListLocalesParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, listPriceListLocales, arg.BrandID, arg.CountryID, arg.Currency)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var locale string
+		if err := rows.Scan(&locale); err != nil {
+			return nil, err
+		}
+		items = append(items, locale)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPriceListRows = `-- name: ListPriceListRows :many
+WITH applicable AS (
+    SELECT DISTINCT ON (c.product_id) c.id, c.organization_id, c.brand_id, c.product_id, c.country_id, c.currency, c.version_id, c.price, c.effective_from, c.updated_at
+    FROM recommended_prices_current c
+    WHERE c.brand_id = $3
+      AND c.currency = $4::text
+      AND (c.country_id IS NULL OR c.country_id = $2::bigint)
+    ORDER BY c.product_id, c.country_id NULLS LAST
+)
+SELECT p.id AS product_id, p.sku, p.name, a.price, a.effective_from,
+       nxt.price AS next_price, nxt.effective_from AS next_effective_from
+FROM applicable a
+JOIN products p ON p.id = a.product_id AND p.active
+LEFT JOIN LATERAL (
+    SELECT v.price, v.effective_from
+    FROM recommended_price_versions v
+    WHERE v.product_id = a.product_id AND v.currency = a.currency
+      AND v.superseded_at IS NULL
+      AND v.effective_from > $1::date
+      AND (v.country_id IS NULL OR v.country_id = $2::bigint)
+    ORDER BY v.effective_from, v.country_id NULLS LAST, v.id
+    LIMIT 1
+) nxt ON true
+ORDER BY p.name, p.id
+`
+
+type ListPriceListRowsParams struct {
+	AsOf      pgtype.Date `json:"as_of"`
+	CountryID pgtype.Int8 `json:"country_id"`
+	BrandID   int64       `json:"brand_id"`
+	Currency  string      `json:"currency"`
+}
+
+type ListPriceListRowsRow struct {
+	ProductID         int64          `json:"product_id"`
+	Sku               string         `json:"sku"`
+	Name              string         `json:"name"`
+	Price             pgtype.Numeric `json:"price"`
+	EffectiveFrom     pgtype.Date    `json:"effective_from"`
+	NextPrice         pgtype.Numeric `json:"next_price"`
+	NextEffectiveFrom pgtype.Date    `json:"next_effective_from"`
+}
+
+// Content of a price list PDF: the brand's active products with the price
+// in force for the country and currency (country row, else currency-wide)
+// and the next scheduled change, if any.
+func (q *Queries) ListPriceListRows(ctx context.Context, arg ListPriceListRowsParams) ([]ListPriceListRowsRow, error) {
+	rows, err := q.db.Query(ctx, listPriceListRows,
+		arg.AsOf,
+		arg.CountryID,
+		arg.BrandID,
+		arg.Currency,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPriceListRowsRow{}
+	for rows.Next() {
+		var i ListPriceListRowsRow
+		if err := rows.Scan(
+			&i.ProductID,
+			&i.Sku,
+			&i.Name,
+			&i.Price,
+			&i.EffectiveFrom,
+			&i.NextPrice,
+			&i.NextEffectiveFrom,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRecommendedPriceCountries = `-- name: ListRecommendedPriceCountries :many
+SELECT DISTINCT v.country_id::bigint AS country_id
+FROM recommended_price_versions v
+WHERE v.brand_id = $1 AND v.currency = $2::text
+  AND v.country_id IS NOT NULL
+ORDER BY 1
+`
+
+type ListRecommendedPriceCountriesParams struct {
+	BrandID  int64  `json:"brand_id"`
+	Currency string `json:"currency"`
+}
+
+// Countries with their own recommended price versions in a currency (the
+// country price lists a currency-wide change also touches).
+func (q *Queries) ListRecommendedPriceCountries(ctx context.Context, arg ListRecommendedPriceCountriesParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, listRecommendedPriceCountries, arg.BrandID, arg.Currency)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var country_id int64
+		if err := rows.Scan(&country_id); err != nil {
+			return nil, err
+		}
+		items = append(items, country_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRecommendedPriceListAudience = `-- name: ListRecommendedPriceListAudience :many
+SELECT DISTINCT ON (u.id) u.id AS user_id, o.id AS organization_id, o.type AS org_type
+FROM organizations o
+JOIN organization_members m ON m.organization_id = o.id AND m.role = 'owner'
+JOIN users u ON u.id = m.user_id AND u.deleted_at IS NULL
+WHERE o.brand_id = $1
+  AND o.type IN ('distributor', 'dealer')
+  AND o.status = 'active' AND o.deleted_at IS NULL
+  AND (
+      ($2::bigint IS NOT NULL AND o.country_id = $2::bigint)
+      OR ($2::bigint IS NULL AND o.currency = $3::text)
+  )
+ORDER BY u.id, o.id
+`
+
+type ListRecommendedPriceListAudienceParams struct {
+	BrandID   int64       `json:"brand_id"`
+	CountryID pgtype.Int8 `json:"country_id"`
+	Currency  string      `json:"currency"`
+}
+
+type ListRecommendedPriceListAudienceRow struct {
+	UserID         int64  `json:"user_id"`
+	OrganizationID int64  `json:"organization_id"`
+	OrgType        string `json:"org_type"`
+}
+
+// Owners of the brand's active distributors and dealers a recommended price
+// reaches: in the country (country_id set) or, for a currency-wide price,
+// every organization trading in the currency. Distinct users.
+func (q *Queries) ListRecommendedPriceListAudience(ctx context.Context, arg ListRecommendedPriceListAudienceParams) ([]ListRecommendedPriceListAudienceRow, error) {
+	rows, err := q.db.Query(ctx, listRecommendedPriceListAudience, arg.BrandID, arg.CountryID, arg.Currency)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListRecommendedPriceListAudienceRow{}
+	for rows.Next() {
+		var i ListRecommendedPriceListAudienceRow
+		if err := rows.Scan(&i.UserID, &i.OrganizationID, &i.OrgType); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listRecommendedPriceVersions = `-- name: ListRecommendedPriceVersions :many
 SELECT v.id, v.uuid, v.organization_id, v.brand_id, v.product_id, v.country_id, v.currency, v.price, v.effective_from, v.source, v.published_by_user_id, v.published_at, v.batch_id, v.note, v.superseded_at,
        p.name AS product_name,
        p.sku AS product_sku,
+       p.uuid AS product_uuid,
        COALESCE(co.iso2, '')::text AS country_iso2,
        COALESCE(co.name_en, '')::text AS country_name_en,
        COALESCE(co.name_tr, '')::text AS country_name_tr,
@@ -469,6 +993,7 @@ type ListRecommendedPriceVersionsRow struct {
 	SupersededAt      pgtype.Timestamptz `json:"superseded_at"`
 	ProductName       string             `json:"product_name"`
 	ProductSku        string             `json:"product_sku"`
+	ProductUuid       uuid.UUID          `json:"product_uuid"`
 	CountryIso2       string             `json:"country_iso2"`
 	CountryNameEn     string             `json:"country_name_en"`
 	CountryNameTr     string             `json:"country_name_tr"`
@@ -519,12 +1044,94 @@ func (q *Queries) ListRecommendedPriceVersions(ctx context.Context, arg ListReco
 			&i.SupersededAt,
 			&i.ProductName,
 			&i.ProductSku,
+			&i.ProductUuid,
 			&i.CountryIso2,
 			&i.CountryNameEn,
 			&i.CountryNameTr,
 			&i.PublishedByName,
 			&i.IsCurrent,
 			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listRecommendedPriceVersionsByBatch = `-- name: ListRecommendedPriceVersionsByBatch :many
+SELECT v.id, v.uuid, v.organization_id, v.brand_id, v.product_id, v.country_id, v.currency, v.price, v.effective_from, v.source, v.published_by_user_id, v.published_at, v.batch_id, v.note, v.superseded_at, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
+       COALESCE(co.iso2, '')::text AS country_iso2,
+       (c.id IS NOT NULL)::bool AS is_current
+FROM recommended_price_versions v
+JOIN products p ON p.id = v.product_id
+LEFT JOIN countries co ON co.id = v.country_id
+LEFT JOIN recommended_prices_current c ON c.version_id = v.id
+WHERE v.brand_id = $1 AND v.batch_id = $2::uuid
+ORDER BY v.id
+`
+
+type ListRecommendedPriceVersionsByBatchParams struct {
+	BrandID int64     `json:"brand_id"`
+	BatchID uuid.UUID `json:"batch_id"`
+}
+
+type ListRecommendedPriceVersionsByBatchRow struct {
+	ID                int64              `json:"id"`
+	Uuid              uuid.UUID          `json:"uuid"`
+	OrganizationID    int64              `json:"organization_id"`
+	BrandID           int64              `json:"brand_id"`
+	ProductID         int64              `json:"product_id"`
+	CountryID         pgtype.Int8        `json:"country_id"`
+	Currency          string             `json:"currency"`
+	Price             pgtype.Numeric     `json:"price"`
+	EffectiveFrom     pgtype.Date        `json:"effective_from"`
+	Source            string             `json:"source"`
+	PublishedByUserID pgtype.Int8        `json:"published_by_user_id"`
+	PublishedAt       pgtype.Timestamptz `json:"published_at"`
+	BatchID           pgtype.UUID        `json:"batch_id"`
+	Note              string             `json:"note"`
+	SupersededAt      pgtype.Timestamptz `json:"superseded_at"`
+	ProductUuid       uuid.UUID          `json:"product_uuid"`
+	ProductSku        string             `json:"product_sku"`
+	ProductName       string             `json:"product_name"`
+	CountryIso2       string             `json:"country_iso2"`
+	IsCurrent         bool               `json:"is_current"`
+}
+
+func (q *Queries) ListRecommendedPriceVersionsByBatch(ctx context.Context, arg ListRecommendedPriceVersionsByBatchParams) ([]ListRecommendedPriceVersionsByBatchRow, error) {
+	rows, err := q.db.Query(ctx, listRecommendedPriceVersionsByBatch, arg.BrandID, arg.BatchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListRecommendedPriceVersionsByBatchRow{}
+	for rows.Next() {
+		var i ListRecommendedPriceVersionsByBatchRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.ProductID,
+			&i.CountryID,
+			&i.Currency,
+			&i.Price,
+			&i.EffectiveFrom,
+			&i.Source,
+			&i.PublishedByUserID,
+			&i.PublishedAt,
+			&i.BatchID,
+			&i.Note,
+			&i.SupersededAt,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.CountryIso2,
+			&i.IsCurrent,
 		); err != nil {
 			return nil, err
 		}
@@ -657,6 +1264,243 @@ SELECT recommended_prices_make_current($1::bigint)
 func (q *Queries) MakeRecommendedPriceCurrent(ctx context.Context, versionID int64) error {
 	_, err := q.db.Exec(ctx, makeRecommendedPriceCurrent, versionID)
 	return err
+}
+
+const priceDisciplineSummaryByCountry = `-- name: PriceDisciplineSummaryByCountry :many
+SELECT COALESCE(s.country_id, 0)::bigint AS country_id,
+       COALESCE(co.iso2, '')::text AS country_iso2,
+       COALESCE(co.name_en, '')::text AS country_name_en,
+       COALESCE(co.name_tr, '')::text AS country_name_tr,
+       s.currency,
+       COUNT(DISTINCT s.organization_id)::bigint AS org_count,
+       COUNT(*)::bigint AS row_count,
+       ROUND(AVG(s.deviation_pct), 2)::numeric AS avg_deviation_pct,
+       ROUND((percentile_cont(0.5) WITHIN GROUP (ORDER BY s.deviation_pct))::numeric, 2)::numeric AS median_deviation_pct,
+       COUNT(DISTINCT s.organization_id) FILTER (
+           WHERE ABS(s.deviation_pct) >= $1::numeric)::bigint AS over_threshold_org_count
+FROM price_discipline_snapshots s
+LEFT JOIN countries co ON co.id = s.country_id
+WHERE s.brand_id = $2
+  AND s.snapshot_date = $3::date
+  AND ($4::bigint[] IS NULL OR s.organization_id = ANY ($4::bigint[]))
+GROUP BY COALESCE(s.country_id, 0), co.iso2, co.name_en, co.name_tr, s.currency
+ORDER BY COALESCE(co.iso2, ''), s.currency
+`
+
+type PriceDisciplineSummaryByCountryParams struct {
+	ThresholdPct pgtype.Numeric `json:"threshold_pct"`
+	BrandID      int64          `json:"brand_id"`
+	SnapshotDate pgtype.Date    `json:"snapshot_date"`
+	OrgIds       []int64        `json:"org_ids"`
+}
+
+type PriceDisciplineSummaryByCountryRow struct {
+	CountryID             int64          `json:"country_id"`
+	CountryIso2           string         `json:"country_iso2"`
+	CountryNameEn         string         `json:"country_name_en"`
+	CountryNameTr         string         `json:"country_name_tr"`
+	Currency              string         `json:"currency"`
+	OrgCount              int64          `json:"org_count"`
+	RowCount              int64          `json:"row_count"`
+	AvgDeviationPct       pgtype.Numeric `json:"avg_deviation_pct"`
+	MedianDeviationPct    pgtype.Numeric `json:"median_deviation_pct"`
+	OverThresholdOrgCount int64          `json:"over_threshold_org_count"`
+}
+
+// Country x currency summary of one snapshot day in the caller's scope
+// (org_ids NULL = whole brand): average / median deviation and the
+// organizations with at least one product over the threshold.
+func (q *Queries) PriceDisciplineSummaryByCountry(ctx context.Context, arg PriceDisciplineSummaryByCountryParams) ([]PriceDisciplineSummaryByCountryRow, error) {
+	rows, err := q.db.Query(ctx, priceDisciplineSummaryByCountry,
+		arg.ThresholdPct,
+		arg.BrandID,
+		arg.SnapshotDate,
+		arg.OrgIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PriceDisciplineSummaryByCountryRow{}
+	for rows.Next() {
+		var i PriceDisciplineSummaryByCountryRow
+		if err := rows.Scan(
+			&i.CountryID,
+			&i.CountryIso2,
+			&i.CountryNameEn,
+			&i.CountryNameTr,
+			&i.Currency,
+			&i.OrgCount,
+			&i.RowCount,
+			&i.AvgDeviationPct,
+			&i.MedianDeviationPct,
+			&i.OverThresholdOrgCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const priceDisciplineSummaryByProduct = `-- name: PriceDisciplineSummaryByProduct :many
+SELECT COALESCE(s.country_id, 0)::bigint AS country_id,
+       COALESCE(co.iso2, '')::text AS country_iso2,
+       s.currency, s.product_id, p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
+       MAX(s.recommended_price)::numeric AS recommended_price,
+       COUNT(DISTINCT s.organization_id)::bigint AS org_count,
+       ROUND(AVG(s.deviation_pct), 2)::numeric AS avg_deviation_pct,
+       ROUND((percentile_cont(0.5) WITHIN GROUP (ORDER BY s.deviation_pct))::numeric, 2)::numeric AS median_deviation_pct,
+       COUNT(DISTINCT s.organization_id) FILTER (
+           WHERE ABS(s.deviation_pct) >= $1::numeric)::bigint AS over_threshold_org_count
+FROM price_discipline_snapshots s
+JOIN products p ON p.id = s.product_id
+LEFT JOIN countries co ON co.id = s.country_id
+WHERE s.brand_id = $2
+  AND s.snapshot_date = $3::date
+  AND ($4::bigint[] IS NULL OR s.organization_id = ANY ($4::bigint[]))
+GROUP BY COALESCE(s.country_id, 0), co.iso2, s.currency, s.product_id, p.uuid, p.sku, p.name
+ORDER BY COALESCE(co.iso2, ''), s.currency, p.name, s.product_id
+`
+
+type PriceDisciplineSummaryByProductParams struct {
+	ThresholdPct pgtype.Numeric `json:"threshold_pct"`
+	BrandID      int64          `json:"brand_id"`
+	SnapshotDate pgtype.Date    `json:"snapshot_date"`
+	OrgIds       []int64        `json:"org_ids"`
+}
+
+type PriceDisciplineSummaryByProductRow struct {
+	CountryID             int64          `json:"country_id"`
+	CountryIso2           string         `json:"country_iso2"`
+	Currency              string         `json:"currency"`
+	ProductID             int64          `json:"product_id"`
+	ProductUuid           uuid.UUID      `json:"product_uuid"`
+	ProductSku            string         `json:"product_sku"`
+	ProductName           string         `json:"product_name"`
+	RecommendedPrice      pgtype.Numeric `json:"recommended_price"`
+	OrgCount              int64          `json:"org_count"`
+	AvgDeviationPct       pgtype.Numeric `json:"avg_deviation_pct"`
+	MedianDeviationPct    pgtype.Numeric `json:"median_deviation_pct"`
+	OverThresholdOrgCount int64          `json:"over_threshold_org_count"`
+}
+
+// Country x product breakdown of the same day and scope.
+func (q *Queries) PriceDisciplineSummaryByProduct(ctx context.Context, arg PriceDisciplineSummaryByProductParams) ([]PriceDisciplineSummaryByProductRow, error) {
+	rows, err := q.db.Query(ctx, priceDisciplineSummaryByProduct,
+		arg.ThresholdPct,
+		arg.BrandID,
+		arg.SnapshotDate,
+		arg.OrgIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PriceDisciplineSummaryByProductRow{}
+	for rows.Next() {
+		var i PriceDisciplineSummaryByProductRow
+		if err := rows.Scan(
+			&i.CountryID,
+			&i.CountryIso2,
+			&i.Currency,
+			&i.ProductID,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.RecommendedPrice,
+			&i.OrgCount,
+			&i.AvgDeviationPct,
+			&i.MedianDeviationPct,
+			&i.OverThresholdOrgCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const refreshPriceDisciplineSnapshots = `-- name: RefreshPriceDisciplineSnapshots :execrows
+INSERT INTO price_discipline_snapshots (
+    snapshot_date, organization_id, brand_id, product_id, country_id, currency,
+    recommended_version_id, recommended_price, list_price, deviation_pct,
+    avg_sale_price, sales_quantity
+)
+SELECT $1::date, dp.organization_id, dp.brand_id, dp.product_id, o.country_id, dp.currency,
+       rc.version_id, rc.price, dp.sale_price,
+       CASE WHEN rc.price > 0 THEN
+           LEAST(GREATEST(ROUND((dp.sale_price - rc.price) * 100 / rc.price, 2), -9999999.99), 9999999.99)
+       END,
+       sales.avg_price, COALESCE(sales.quantity, 0)
+FROM dealer_product_prices dp
+JOIN organizations o
+  ON o.id = dp.organization_id AND o.brand_id = dp.brand_id
+ AND o.type IN ('dealer', 'distributor') AND o.status = 'active' AND o.deleted_at IS NULL
+JOIN LATERAL (
+    SELECT c.version_id, c.price
+    FROM recommended_prices_current c
+    WHERE c.product_id = dp.product_id AND c.currency = dp.currency
+      AND (c.country_id IS NULL OR c.country_id = o.country_id)
+    ORDER BY c.country_id NULLS LAST
+    LIMIT 1
+) rc ON true
+LEFT JOIN LATERAL (
+    SELECT ROUND(SUM(l.line_total) / NULLIF(SUM(l.quantity), 0), 2) AS avg_price,
+           SUM(l.quantity) AS quantity
+    FROM product_sale_lines l
+    JOIN product_sales s ON s.id = l.sale_id
+    WHERE l.organization_id = dp.organization_id AND l.product_id = dp.product_id
+      AND s.currency = dp.currency
+      AND s.sold_at >= $2::timestamptz AND s.sold_at < $3::timestamptz
+      AND EXISTS (
+          SELECT 1 FROM finance_entries e
+          WHERE e.source_type = 'product_sale' AND e.source_uuid = s.uuid
+            AND e.reversal_of_id IS NULL
+            AND NOT EXISTS (SELECT 1 FROM finance_entries r WHERE r.reversal_of_id = e.id)
+      )
+) sales ON true
+WHERE dp.brand_id = $4
+ON CONFLICT (snapshot_date, organization_id, product_id, currency) DO UPDATE SET
+    country_id             = EXCLUDED.country_id,
+    recommended_version_id = EXCLUDED.recommended_version_id,
+    recommended_price      = EXCLUDED.recommended_price,
+    list_price             = EXCLUDED.list_price,
+    deviation_pct          = EXCLUDED.deviation_pct,
+    avg_sale_price         = EXCLUDED.avg_sale_price,
+    sales_quantity         = EXCLUDED.sales_quantity,
+    computed_at            = NOW()
+`
+
+type RefreshPriceDisciplineSnapshotsParams struct {
+	SnapshotDate pgtype.Date        `json:"snapshot_date"`
+	SalesFrom    pgtype.Timestamptz `json:"sales_from"`
+	SalesTo      pgtype.Timestamptz `json:"sales_to"`
+	BrandID      int64              `json:"brand_id"`
+}
+
+// One day of snapshots of a brand: every active dealer / distributor list
+// price (dealer_product_prices) that has a recommended price in force for
+// the organization's country (else currency-wide), the deviation in percent
+// and the realised average unit price of non-voided quick sales in
+// [sales_from, sales_to). Idempotent per (day, org, product, currency).
+func (q *Queries) RefreshPriceDisciplineSnapshots(ctx context.Context, arg RefreshPriceDisciplineSnapshotsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, refreshPriceDisciplineSnapshots,
+		arg.SnapshotDate,
+		arg.SalesFrom,
+		arg.SalesTo,
+		arg.BrandID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const supersedeLiveRecommendedPriceVersionsOn = `-- name: SupersedeLiveRecommendedPriceVersionsOn :execrows
