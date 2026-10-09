@@ -12990,7 +12990,7 @@ export interface paths {
          * @description `q` matches name, description and tags. `sort` name, access_level,
          *     created_at, updated_at; default `name`, id tiebreak, unknown → 400
          *     (docs/list-contract.md). `latest_version` is the newest version in
-         *     `locale` (falls back to tr, then any language).
+         *     `locale` (falls back to en, then tr, then any language).
          */
         get: operations["listLibraryItems"];
         put?: never;
