@@ -93,6 +93,7 @@ export type BulkResource =
   | "vehicle_catalog.models"
   | "leads"
   | "conversations"
+  | "einvoices.billable"
   | "performance.bonuses";
 
 export const BULK_PATHS: Record<BulkResource, string> = {
@@ -106,6 +107,8 @@ export const BULK_PATHS: Record<BulkResource, string> = {
   "vehicle_catalog.models": "/v1/platform/vehicle-catalog/models/bulk",
   leads: "/v1/leads/bulk",
   conversations: "/v1/conversations/bulk",
+  // TEC-504: e-invoice drafts of the billable center sales.
+  "einvoices.billable": "/v1/einvoices/billable/bulk",
   "performance.bonuses": "/v1/performance/bonuses/bulk",
 };
 

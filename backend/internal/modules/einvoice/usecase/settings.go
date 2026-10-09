@@ -49,6 +49,40 @@ type SettingsView struct {
 	CustomXSLT      bool       `json:"custom_xslt"`
 	XSLTSHA1        *string    `json:"xslt_sha1"`
 	UpdatedAt       *time.Time `json:"updated_at"`
+	// Counters is the read-only last number per year × series (TEC-504);
+	// the reserved draft series is left out.
+	Counters []CounterView `json:"counters"`
+}
+
+// CounterView is the last number a series took in a year.
+type CounterView struct {
+	Series    string     `json:"series"`
+	Year      int32      `json:"year"`
+	LastNo    int64      `json:"last_no"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+
+// withCounters fills the counter state of the center.
+func (s *Service) withCounters(ctx context.Context, c Caller, v SettingsView) (SettingsView, error) {
+	rows, err := s.q.ListEinvoiceCounters(ctx, db.ListEinvoiceCountersParams{
+		OrganizationID: c.Org.InternalID, BrandID: c.Org.BrandID,
+	})
+	if err != nil {
+		return SettingsView{}, err
+	}
+	v.Counters = make([]CounterView, 0, len(rows))
+	for _, r := range rows {
+		if r.Series == DraftSeries {
+			continue
+		}
+		cv := CounterView{Series: r.Series, Year: r.Year, LastNo: r.LastNo}
+		if r.UpdatedAt.Valid {
+			t := r.UpdatedAt.Time
+			cv.UpdatedAt = &t
+		}
+		v.Counters = append(v.Counters, cv)
+	}
+	return v, nil
 }
 
 func settingsView(st db.EinvoiceSetting) SettingsView {
@@ -58,7 +92,7 @@ func settingsView(st db.EinvoiceSetting) SettingsView {
 		Phone: textPtr(st.Phone), Website: textPtr(st.Website), TradeRegistryNo: textPtr(st.TradeRegistryNo),
 		MersisNo: textPtr(st.MersisNo), DefaultNote: textPtr(st.DefaultNote), EArchiveSeries: st.EarchiveSeries,
 		EFaturaSeries: st.EfaturaSeries, PDFEnabled: st.PdfEnabled, CustomXSLT: st.XsltStorageKey.Valid,
-		XSLTSHA1: textPtr(st.XsltSha1),
+		XSLTSHA1: textPtr(st.XsltSha1), Counters: []CounterView{},
 	}
 	if st.UpdatedAt.Valid {
 		t := st.UpdatedAt.Time
@@ -74,12 +108,15 @@ func (s *Service) GetSettings(ctx context.Context, c Caller) (SettingsView, erro
 	}
 	st, err := s.settings(ctx, s.q, c)
 	if errors.Is(err, ErrSettingsRequired) {
-		return SettingsView{Country: ubl.CountryTR, EArchiveSeries: "EAR", EFaturaSeries: "EFN", PDFEnabled: true}, nil
+		return SettingsView{
+			Country: ubl.CountryTR, EArchiveSeries: "EAR", EFaturaSeries: "EFN", PDFEnabled: true,
+			Counters: []CounterView{},
+		}, nil
 	}
 	if err != nil {
 		return SettingsView{}, err
 	}
-	return settingsView(st), nil
+	return s.withCounters(ctx, c, settingsView(st))
 }
 
 // SettingsInput is PUT /v1/einvoices/settings. The stylesheet has its own
@@ -218,7 +255,10 @@ func (s *Service) PutSettings(ctx context.Context, c Caller, in SettingsInput) (
 	}, c.Meta); err != nil {
 		return SettingsView{}, err
 	}
-	return settingsView(st), tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return SettingsView{}, err
+	}
+	return s.withCounters(ctx, c, settingsView(st))
 }
 
 // xslNamespace is the XSLT 1.0/2.0 namespace.
@@ -335,7 +375,35 @@ func (s *Service) setXSLT(ctx context.Context, c Caller, key, digest pgtype.Text
 	}, c.Meta); err != nil {
 		return SettingsView{}, err
 	}
-	return settingsView(st), tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return SettingsView{}, err
+	}
+	return s.withCounters(ctx, c, settingsView(st))
+}
+
+// SamplePreview renders a sample invoice with the center's current
+// stylesheet (TEC-504) so the settings screen can show the look before any
+// real invoice exists. It carries a PREVIEW watermark; nothing is stored.
+func (s *Service) SamplePreview(ctx context.Context, c Caller) ([]byte, error) {
+	if err := c.center(); err != nil {
+		return nil, err
+	}
+	st, err := s.settings(ctx, s.q, c)
+	if err != nil {
+		return nil, err
+	}
+	now := s.now()
+	xslt := s.stylesheet(ctx, &st)
+	_, xml, err := compose(sampleDocument(st, now), ubl.ProfileEArchive,
+		fmt.Sprintf("%s%d000000001", DraftSeries, now.In(trTime).Year()), uuid.New(), xslt)
+	if err != nil {
+		return nil, err
+	}
+	html, err := ubl.RenderHTML(ctx, xml, xslt)
+	if err != nil {
+		return nil, err
+	}
+	return Watermark(html, "PREVIEW"), nil
 }
 
 // BuyerProfileInput is PUT /v1/platform/organizations/{uuid}/invoice-profile.
@@ -378,6 +446,23 @@ func buyerProfileView(o db.Organization) BuyerProfileView {
 		v.Missing = pe.Fields
 	}
 	return v
+}
+
+// GetBuyerProfile returns the invoice profile of a distributor or dealer of
+// the center's brand (TEC-504, the organization detail card).
+func (s *Service) GetBuyerProfile(ctx context.Context, c Caller, orgID uuid.UUID) (BuyerProfileView, error) {
+	if err := c.center(); err != nil {
+		return BuyerProfileView{}, err
+	}
+	org, err := s.q.GetOrganizationByUUID(ctx, orgID)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (org.BrandID != c.Org.BrandID ||
+		(org.Type != "distributor" && org.Type != "dealer"))) {
+		return BuyerProfileView{}, ErrNotFound
+	}
+	if err != nil {
+		return BuyerProfileView{}, err
+	}
+	return buyerProfileView(org), nil
 }
 
 // UpdateBuyerProfile sets the invoice profile of a distributor or dealer of

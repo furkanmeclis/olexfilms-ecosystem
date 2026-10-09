@@ -1868,6 +1868,8 @@ type Querier interface {
 	// and posted service catalog subscription periods of dealers.
 	ListEinvoiceBillableSources(ctx context.Context, arg ListEinvoiceBillableSourcesParams) ([]ListEinvoiceBillableSourcesRow, error)
 	ListEinvoiceBillableSubscriptionPeriods(ctx context.Context, arg ListEinvoiceBillableSubscriptionPeriodsParams) ([]ListEinvoiceBillableSubscriptionPeriodsRow, error)
+	// TEC-504: read-only counter state of the settings screen (year × series).
+	ListEinvoiceCounters(ctx context.Context, arg ListEinvoiceCountersParams) ([]ListEinvoiceCountersRow, error)
 	ListEinvoiceOrderLines(ctx context.Context, orderID int64) ([]ListEinvoiceOrderLinesRow, error)
 	// List contract: sort=issue_date|number|payable|status|created_at, default
 	// -issue_date; id is the stable tiebreak. q matches number, buyer legal/name

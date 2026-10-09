@@ -15,6 +15,7 @@ import {
   Download,
   FileSignature,
   FileText,
+  FileSpreadsheet,
   Flame,
   FolderTree,
   HardDrive,
@@ -864,6 +865,17 @@ export function tenantNav(slug: string) {
             icon: MessageSquareWarning,
             permission: permissions.accounting.read,
             feature: "accounting",
+          },
+          {
+            // TEC-504: e-invoices of the brand center (same gates as
+            // /v1/einvoices: the e_invoice add-on, einvoice.read, center).
+            id: "accounting-einvoices",
+            titleKey: "einvoice.nav",
+            href: routes.tenant.einvoices.list(slug),
+            icon: FileSpreadsheet,
+            permission: permissions.einvoice.read,
+            feature: "e_invoice",
+            orgTypes: ["center"],
           },
         ],
       },

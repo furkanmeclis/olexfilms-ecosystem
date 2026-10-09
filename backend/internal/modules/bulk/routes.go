@@ -6,6 +6,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	bulkhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/bulk/handler"
+	einvoiceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/einvoice/usecase"
 	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	performanceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/usecase"
 	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
@@ -96,6 +97,12 @@ func RegisterTenantRoutes(
 	mux.Handle("POST /v1/leads/bulk", route(
 		h.ExecuteTenantScoped(leadsusecase.ResourceBulk), rbac.PermLeadsWrite,
 		middleware.RequireFeature(checker, features.ModuleLeads),
+	))
+	// TEC-504: e-invoice drafts of the billable center sales (the brand
+	// center, the e_invoice add-on and einvoice.manage).
+	mux.Handle("POST /v1/einvoices/billable/bulk", route(
+		h.ExecuteTenantScoped(einvoiceusecase.ResourceBulk), rbac.PermEinvoiceManage,
+		middleware.RequireFeature(checker, features.ModuleEInvoice),
 	))
 	// TEC-497: bulk approval of the dealer's calculated bonus accruals.
 	mux.Handle("POST /v1/performance/bonuses/bulk", route(

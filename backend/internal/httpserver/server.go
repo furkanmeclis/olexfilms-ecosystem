@@ -810,6 +810,17 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
 	// TEC-495 (F5-05f): /v1/reports (mobile reports + panel widgets).
 	reportsmodule.RegisterRoutes(mux, reportshandler.New(reportsusecase.New(deps.Queries, featureSvc)), tokens, loader, deps.Queries)
+	// TEC-503: built before the bulk registry (TEC-504 bulk drafts).
+	var einvoiceTx einvoiceusecase.TxBeginner
+	if deps.DB != nil {
+		einvoiceTx = deps.DB
+	}
+	var einvoiceQueue einvoiceusecase.Enqueuer
+	if deps.Queue != nil {
+		einvoiceQueue = deps.Queue
+	}
+	einvoiceSvc := einvoiceusecase.New(einvoiceTx, deps.Queries, deps.Storage, outbox.NewStore(deps.DB, deps.Queries), log).
+		WithPDF(pdfClient, einvoiceQueue).WithSettings(sysSvc)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),
@@ -826,6 +837,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		leadsusecase.NewBulkAdapter(deps.Queries),
 		// TEC-398: conversations (close, assign, AI mode).
 		whatsappusecase.NewBulkAdapter(deps.Queries),
+		// TEC-504: e-invoice drafts of the billable center sales.
+		einvoiceusecase.NewBulkAdapter(einvoiceSvc, deps.Queries),
 		// TEC-497: dealer bonus accruals (approve).
 		performanceusecase.NewBonusBulkAdapter(performanceSvc),
 	)
@@ -934,16 +947,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	measurementsmodule.RegisterPDFRoutes(mux, measurementshandler.NewPDF(measurementPDF), tokens, loader, deps.Queries, featureSvc)
 	// TEC-503 (F5-08c): e-invoice drafts, preview, numbering, archive (XML
 	// + PDF on the docs queue), void mark and settings.
-	var einvoiceTx einvoiceusecase.TxBeginner
-	if deps.DB != nil {
-		einvoiceTx = deps.DB
-	}
-	var einvoiceQueue einvoiceusecase.Enqueuer
-	if deps.Queue != nil {
-		einvoiceQueue = deps.Queue
-	}
-	einvoiceSvc := einvoiceusecase.New(einvoiceTx, deps.Queries, deps.Storage, outbox.NewStore(deps.DB, deps.Queries), log).
-		WithPDF(pdfClient, einvoiceQueue).WithSettings(sysSvc)
 	if s.worker != nil {
 		s.worker.WithEinvoicePDF(einvoiceSvc.GeneratePDF)
 	}
