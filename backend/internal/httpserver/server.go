@@ -118,7 +118,6 @@ import (
 	measurementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/usecase"
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	notifhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/handler"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
 	oauthmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/oauth"
 	ordersmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders"
@@ -330,10 +329,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if deps.Queue != nil {
 		notifQueue = deps.Queue
 	}
-	notifSvc := notifmodule.NewService(notifmodule.Deps{
+	secretBox, err := crypto.NewSecretBox(cfg.Encryption.Key)
+	if err != nil {
+		return nil, fmt.Errorf("httpserver: encryption: %w", err)
+	}
+	// WhatsApp gateway (wuzapi) + phone OTP (TEC-92) come from the same
+	// factory as the workers' delivery side (TEC-143).
+	notifSvc, waSvc := notifmodule.NewWithWhatsApp(notifmodule.Deps{
 		Config: cfg, Queries: deps.Queries, Queue: notifQueue, Realtime: deps.Realtime,
 		Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
-	})
+	}, deps.DB, secretBox)
 	notifSvc.WithActionSigner(cfg.JWT.AccessSecret, 0)
 
 	repo := authrepo.NewPostgres(deps.DB, deps.Queries)
@@ -399,10 +404,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	} else {
 		log.Warn("stepup_webauthn_disabled", "error", err)
 	}
-	secretBox, err := crypto.NewSecretBox(cfg.Encryption.Key)
-	if err != nil {
-		return nil, fmt.Errorf("httpserver: encryption: %w", err)
-	}
 	stepUpSvc := stepup.NewService(deps.Queries, stepUpStore, stepUpWebAuthn, repo)
 	stepUpSvc.SetSecretBox(secretBox)
 
@@ -420,10 +421,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	h := authhandler.New(uc, oauthUC, githubSvc, oauthProvSvc, authSettingsSvc, cfg.Auth.AdapterSecret, stepUpSvc, activityRec)
 	h.SetRateLimiter(ratelimit.New(deps.Redis, cfg.App.Env))
 
-	// WhatsApp gateway (wuzapi) + phone OTP (TEC-92). The OTP message is
-	// critical: it is sent synchronously through the provider, not queued.
-	waSvc := whatsappmodule.NewService(cfg.Wuzapi, deps.DB, deps.Queries, secretBox, notifSvc, log)
-	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
+	// Phone OTP (TEC-92). The OTP message is critical: it is sent
+	// synchronously through the provider, not queued.
 	otpSvc := otp.New(
 		otp.NewPGStore(deps.DB, deps.Queries),
 		&whatsapp.Sender{WhatsApp: waSvc.Provider(), SMS: sms.Noop{Log: log}, SMSFallback: waSvc.SMSFallbackEnabled},

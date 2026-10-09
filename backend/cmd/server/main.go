@@ -13,18 +13,22 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/cache"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/errtrack"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/httpserver"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/logging"
 	logsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/logs/usecase"
 	notifmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -90,11 +94,12 @@ func main() {
 	var worker *queue.Worker
 	if cfg.Queue.Enabled {
 		queueClient = queue.NewClient(cfg.Redis)
-		notifSvc := notifmodule.NewService(notifmodule.Deps{
-			Config: cfg, Queries: queries, Queue: queueClient, Realtime: publisher,
-			Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
-		})
 		if cfg.Queue.WorkerInProcess {
+			notifSvc, err := newInProcessDelivery(cfg, db, queries, queueClient, publisher, log)
+			if err != nil {
+				log.Error("encryption_init_failed", "error", err)
+				os.Exit(1)
+			}
 			worker = newInProcessWorker(cfg, log, notifSvc.Deliver)
 			if n, err := notifSvc.ReclaimStuck(ctx, notifusecase.DefaultStuckProcessingMinutes); err != nil {
 				log.Error("notification_reclaim_failed", "error", err)
@@ -119,6 +124,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	schedulerDone := startInProcessScheduler(ctx, cfg, rdb, worker != nil, log)
+
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- srv.Start()
@@ -142,6 +149,8 @@ func main() {
 		log.Error("shutdown_failed", "error", err)
 		os.Exit(1)
 	}
+	stop()
+	<-schedulerDone
 	log.Info("server_stopped")
 }
 
@@ -152,4 +161,37 @@ func main() {
 // app:notifications:purge twice and panicked at startup (TEC-142).
 func newInProcessWorker(cfg config.Config, log *slog.Logger, deliver queue.DeliverNotificationFunc) *queue.Worker {
 	return queue.NewWorker(cfg, log, deliver)
+}
+
+// newInProcessDelivery builds the notification center the in-process worker
+// delivers with, from the factory cmd/worker uses, so the WhatsApp provider
+// (and every other channel driver) is the same in both modes (TEC-143).
+func newInProcessDelivery(cfg config.Config, pool *pgxpool.Pool, queries *db.Queries, q notifusecase.Enqueuer, publisher realtime.Publisher, log *slog.Logger) (*notifusecase.Service, error) {
+	box, err := crypto.NewSecretBox(cfg.Encryption.Key)
+	if err != nil {
+		return nil, err
+	}
+	svc, _ := notifmodule.NewWithWhatsApp(notifmodule.Deps{
+		Config: cfg, Queries: queries, Queue: q, Realtime: publisher,
+		Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
+	}, pool, box)
+	return svc, nil
+}
+
+// startInProcessScheduler runs the periodic scheduler next to the in-process
+// worker: the same task list and Redis leader lock as cmd/worker, so with
+// several API instances (or an API next to a worker) only one schedules
+// (TEC-143). SCHEDULER_ENABLED=false turns it off as on the worker. The
+// returned channel closes once the scheduler stopped (after ctx ends).
+func startInProcessScheduler(ctx context.Context, cfg config.Config, rdb redis.UniversalClient, inProcess bool, log *slog.Logger) <-chan struct{} {
+	done := make(chan struct{})
+	if !inProcess || !queue.SchedulerEnabled() {
+		close(done)
+		return done
+	}
+	go func() {
+		defer close(done)
+		queue.RunScheduler(ctx, cfg, rdb, log)
+	}()
+	return done
 }

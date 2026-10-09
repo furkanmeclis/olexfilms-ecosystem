@@ -79,6 +79,9 @@ func TestRegisterSchedulesIncludesRatesFetch(t *testing.T) {
 		{cron: pricingDailyCron, taskType: TaskPricingDaily, queue: QueueMaintenance}: false,
 		// TEC-508.
 		{cron: serviceSubscriptionsExpireCron, taskType: TaskServiceSubscriptionsExpire, queue: QueueMaintenance}: false,
+		// TEC-143: formerly registered by cmd/worker alone.
+		{cron: whatsAppPollCron, taskType: TaskWhatsAppStatusPoll, queue: QueueMaintenance}:     false,
+		{cron: notificationPurgeCron, taskType: TaskNotificationPurge, queue: QueueMaintenance}: false,
 		// TEC-308.
 		{cron: serviceSubscriptionsPostPeriodsCron, taskType: TaskServiceSubscriptionsPostPeriods, queue: QueueMaintenance}: false,
 	}
