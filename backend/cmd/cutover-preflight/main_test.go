@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +17,9 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator"
+	searchregistry "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/registry"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/glorian"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
 )
 
 var testNow = time.Date(2026, 11, 1, 3, 0, 0, 0, time.UTC)
@@ -105,6 +109,40 @@ type suite struct {
 	glorian GlorianQuerier
 	pings   map[string]func(context.Context) error
 	version VersionFunc
+	index   fakeIndex
+}
+
+// fakeIndex holds the database and index document counts per spec.
+type fakeIndex struct {
+	db, docs map[string]int64
+	err      error
+}
+
+func consistentIndex() fakeIndex {
+	return fakeIndex{
+		db:   map[string]int64{"users": 57, "products": 120, "services": 0},
+		docs: map[string]int64{"users": 57, "products": 120, "services": 0},
+	}
+}
+
+func (f fakeIndex) check() searchIndexCountsCheck {
+	specs := make([]string, 0, len(f.db))
+	for spec := range f.db {
+		specs = append(specs, spec)
+	}
+	sort.Strings(specs)
+	sources := make([]IndexSource, 0, len(specs))
+	for _, spec := range specs {
+		n := f.db[spec]
+		sources = append(sources, IndexSource{Spec: spec,
+			Expected: func(context.Context) (int64, error) { return n, nil }})
+	}
+	return searchIndexCountsCheck{sources: sources, count: func(_ context.Context, spec string) (int64, error) {
+		if f.err != nil {
+			return 0, f.err
+		}
+		return f.docs[spec], nil
+	}}
 }
 
 func newSuite(t *testing.T) *suite {
@@ -114,6 +152,7 @@ func newSuite(t *testing.T) *suite {
 		glorian: activeGlorian(t, reconcileRun(t, glorian.RunSucceeded, testNow.Add(-20*time.Minute), glorian.ReconcileSummary{})),
 		pings:   map[string]func(context.Context) error{},
 		version: func(context.Context) (uint64, bool, bool, error) { return 86, false, true, nil },
+		index:   consistentIndex(),
 	}
 }
 
@@ -131,6 +170,7 @@ func (s *suite) checks() []Check {
 		glorianReconcileCheck{q: s.glorian, maxAge: time.Hour, now: clock},
 		ping("health_postgres"), ping("health_redis"), ping("health_meilisearch"),
 		ping("health_s3"), ping("health_centrifugo"), ping("health_gotenberg"),
+		s.index.check(),
 		schemaVersionCheck{expected: func() (uint64, error) { return 86, nil }, current: s.version},
 	}
 }
@@ -188,7 +228,7 @@ func TestAllPassExitsZero(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit = %d; rows %v", code, rows)
 	}
-	if len(rows) != 10 {
+	if len(rows) != 11 {
 		t.Fatalf("rows = %d: %v", len(rows), rows)
 	}
 	for n, r := range rows {
@@ -301,6 +341,119 @@ func TestGlorianInactiveSkipsAndExitsZero(t *testing.T) {
 	}
 }
 
+// TEC-525: an empty or short index (users kept only the super admin after a
+// full migrator run) is a WARN with the counts; the exit code stays 0.
+func TestSearchIndexCountsWarnOnEmptyOrMissing(t *testing.T) {
+	cases := []struct {
+		name   string
+		mut    func(f *fakeIndex)
+		reason []string
+	}{
+		{"empty index", func(f *fakeIndex) { f.docs["products"] = 0 },
+			[]string{"1 of 3 indexes differ", "products: index 0, database 120", "run search-reindex"}},
+		{"short index", func(f *fakeIndex) { f.docs["users"] = 1 },
+			[]string{"users: index 1, database 57"}},
+		{"missing index", func(f *fakeIndex) { delete(f.docs, "users"); delete(f.docs, "products") },
+			[]string{"2 of 3 indexes differ", "products: index 0, database 120", "users: index 0, database 57"}},
+		{"stale extra documents", func(f *fakeIndex) { f.docs["services"] = 4 },
+			[]string{"services: index 4, database 0"}},
+		{"index error", func(f *fakeIndex) { f.err = errors.New("index_not_found") },
+			[]string{"3 of 3 indexes differ", "users: index: index_not_found"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newSuite(t)
+			tc.mut(&s.index)
+			var out bytes.Buffer
+			code := runChecks(context.Background(), s.checks(), &out)
+			rows := parseTable(t, out.String())
+			if code != 0 {
+				t.Fatalf("exit = %d, want 0 (WARN does not fail); rows %v", code, rows)
+			}
+			r := rows["search_index_counts"]
+			if !strings.HasPrefix(r, "WARN") {
+				t.Fatalf("search_index_counts = %q, want WARN", r)
+			}
+			for _, want := range tc.reason {
+				if !strings.Contains(r, want) {
+					t.Errorf("search_index_counts = %q, missing %q", r, want)
+				}
+			}
+			if !strings.Contains(out.String(), "10 PASS, 1 WARN, 0 FAIL, 0 SKIP") {
+				t.Fatalf("summary: %q", out.String())
+			}
+		})
+	}
+}
+
+func TestSearchIndexCountsPassWhenConsistent(t *testing.T) {
+	r := consistentIndex().check().Run(context.Background())
+	if r.Status != Pass || r.Detail != "3 indexes match the database (177 documents)" {
+		t.Fatalf("result = %+v", r)
+	}
+}
+
+func TestSearchIndexCountsSkips(t *testing.T) {
+	if r := (searchIndexCountsCheck{disabled: "search is disabled"}).Run(context.Background()); r.Status != Skip {
+		t.Fatalf("disabled: %+v", r)
+	}
+	if r := (searchIndexCountsCheck{}).Run(context.Background()); r.Status != Skip {
+		t.Fatalf("no specs: %+v", r)
+	}
+}
+
+type fakeAdapter struct {
+	id   string
+	docs int
+	err  error
+}
+
+func (a fakeAdapter) Spec() searchengine.Spec { return searchengine.Spec{ID: a.id} }
+func (a fakeAdapter) ListAll(context.Context) ([]searchengine.Document, error) {
+	return make([]searchengine.Document, a.docs), a.err
+}
+func (a fakeAdapter) Document(context.Context, string) (searchengine.Document, error) {
+	return searchengine.Document{}, nil
+}
+
+// The expected count is what a reindex would write (ListAll), per spec.
+func TestIndexSourcesCountListAll(t *testing.T) {
+	src := indexSources([]searchengine.Adapter{fakeAdapter{id: "users", docs: 3},
+		fakeAdapter{id: "roles", err: errors.New("db down")}})
+	if len(src) != 2 || src[0].Spec != "roles" || src[1].Spec != "users" {
+		t.Fatalf("sources = %+v", src)
+	}
+	if n, err := src[1].Expected(context.Background()); n != 3 || err != nil {
+		t.Fatalf("users = %d, %v", n, err)
+	}
+	if _, err := src[0].Expected(context.Background()); err == nil {
+		t.Fatal("roles: want error")
+	}
+	r := searchIndexCountsCheck{sources: src, count: func(context.Context, string) (int64, error) { return 3, nil }}.
+		Run(context.Background())
+	if r.Status != Warn || !strings.Contains(r.Detail, "roles: database: db down") {
+		t.Fatalf("result = %+v", r)
+	}
+}
+
+// The check counts exactly the specs of the shared search registry: a spec
+// the server indexes but the preflight leaves out (or a stale extra one)
+// fails here.
+func TestSearchSourcesMatchRegistry(t *testing.T) {
+	var got []string
+	for _, s := range searchSources(nil) {
+		got = append(got, s.Spec)
+	}
+	want := searchregistry.New(nil).SpecIDs()
+	slices.Sort(want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("preflight specs = %v, registry specs = %v", got, want)
+	}
+	if !slices.Contains(got, "leads") {
+		t.Errorf("leads missing from %v", got)
+	}
+}
+
 // --- runner and helpers ------------------------------------------------------
 
 type panicky struct{}
@@ -321,7 +474,7 @@ func TestRunnerPanicAndUnknownStatusFail(t *testing.T) {
 		rows["db"] != "FAIL down" {
 		t.Fatalf("code=%d rows=%v", code, rows)
 	}
-	if !strings.Contains(out.String(), "0 PASS, 3 FAIL, 0 SKIP") {
+	if !strings.Contains(out.String(), "0 PASS, 0 WARN, 3 FAIL, 0 SKIP") {
 		t.Fatalf("summary missing: %q", out.String())
 	}
 }

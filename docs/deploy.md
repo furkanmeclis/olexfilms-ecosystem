@@ -46,7 +46,7 @@ Backend dışa açık değildir. Tarayıcı Go'ya doğrudan gitmez; frontend `AP
 | 10 | worker-core | `WORKER_QUEUES=critical,default,low`, `SCHEDULER_ENABLED=true` | app |
 | 11 | worker-docs | `WORKER_QUEUES=docs` (PDF/export), scheduler kapalı | app |
 | 12 | frontend | Next.js, `/health` | app + dokploy-network |
-| 13 | migrator | `APP_ROLE=migrator`, `profiles: [migrator]`; F2'ye kadar "not implemented" | app |
+| 13 | migrator | `APP_ROLE=migrator`, `profiles: [migrator]`; tek seferlik aktarım ve cutover araçları (`cutover-preflight`, `search-reindex`, `inventory-reconcile`) | app |
 
 Başlangıç sırası `depends_on` ile şöyledir: altyapı servisleri healthy olur, sonra migrate başarıyla tamamlanır, sonra backend healthy olur, ardından worker'lar başlar, en son frontend. Frontend worker'ları yalnızca `service_started` olarak bekler. Böylece sağlıksız bir worker siteyi düşürmez.
 
@@ -55,6 +55,7 @@ Başlangıç sırası `depends_on` ile şöyledir: altyapı servisleri healthy o
 - Worker healthcheck'i `/tmp/worker.health` dosyasının tazeliğine bakar. Worker bu dosyayı her başarılı Redis ping'inde (15 sn'de bir) yeniler.
 - `stop_grace_period`: backend 30 sn, worker'lar 35 sn.
 - Migrator'ı çalıştırmak için: `docker compose --env-file .env.server -f compose.prod.yml --profile migrator run --rm migrator`.
+- İlk tam aktarımdan ve her `migrator run --mode=full` çalıştırmasından sonra tüm arama indeksleri yeniden kurulur; backend açılışta yalnız boş indeksleri doldurduğu için bu adım atlanırsa dolu sayılan indeksler (ör. super admin'li `users`) eksik kalır: `docker compose --env-file .env.server -f compose.prod.yml --profile migrator run --rm --entrypoint /app/search-reindex migrator`. Sonra `--entrypoint /app/cutover-preflight` ile preflight çalıştırılır; `search_index_counts` satırı `PASS` olmalı (`WARN` cutover'ı durdurmaz). Sıra ve ayrıntı: [`docs/runbooks/migrator-cutover.md`](runbooks/migrator-cutover.md).
 
 ## 4. Yedek ve geri yükleme
 
