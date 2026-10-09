@@ -194,15 +194,20 @@ type Benchmark struct {
 }
 
 type StaffTargetView struct {
-	UUID      uuid.UUID `json:"uuid"`
-	UserID    int64     `json:"user_id"`
-	UserName  string    `json:"user_name"`
-	Period    string    `json:"period"`
-	Metric    string    `json:"metric"`
-	Value     string    `json:"value"`
-	Currency  *string   `json:"currency,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	UUID     uuid.UUID `json:"uuid"`
+	UserID   int64     `json:"user_id"`
+	UserUUID uuid.UUID `json:"user_uuid"`
+	UserName string    `json:"user_name"`
+	Period   string    `json:"period"`
+	Metric   string    `json:"metric"`
+	Value    string    `json:"value"`
+	Currency *string   `json:"currency,omitempty"`
+	// Actual / AchievementPct (TEC-497): the staff user's completed
+	// services of the month (count or income); nil on upsert responses.
+	Actual         *string   `json:"actual,omitempty"`
+	AchievementPct *string   `json:"achievement_pct,omitempty"`
+	CreatedAt      time.Time `json:"created_at,omitempty"`
+	UpdatedAt      time.Time `json:"updated_at,omitempty"`
 }
 
 type RuleView struct {
@@ -217,6 +222,8 @@ type RuleView struct {
 	CreateTask            bool      `json:"create_task"`
 	Notify                bool      `json:"notify"`
 	AssigneeUserID        *int64    `json:"assignee_user_id,omitempty"`
+	AssigneeUserUUID      *string   `json:"assignee_user_uuid,omitempty"`
+	AssigneeName          *string   `json:"assignee_name,omitempty"`
 	Active                bool      `json:"active"`
 	CreatedAt             time.Time `json:"created_at,omitempty"`
 	UpdatedAt             time.Time `json:"updated_at,omitempty"`
@@ -326,7 +333,10 @@ type RuleInput struct {
 	CreateTask     bool   `json:"create_task"`
 	Notify         bool   `json:"notify"`
 	AssigneeUserID *int64 `json:"assignee_user_id"`
-	Active         bool   `json:"active"`
+	// AssigneeUserUUID (TEC-497) wins over AssigneeUserID: a member of the
+	// rule's organization.
+	AssigneeUserUUID *uuid.UUID `json:"assignee_user_uuid"`
+	Active           bool       `json:"active"`
 }
 
 type RuleRunResult struct {
@@ -575,7 +585,7 @@ func (s *Service) ListStaffTargets(ctx context.Context, c Caller, f StaffTargetF
 	}
 	out := make([]StaffTargetView, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, StaffTargetView{UUID: r.Uuid, UserID: r.UserID, UserName: strings.TrimSpace(r.UserName + " " + r.UserSurname), Period: r.Period, Metric: r.Metric, Value: numText(r.Value), Currency: textPtr(r.Currency), CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time})
+		out = append(out, StaffTargetView{UUID: r.Uuid, UserID: r.UserID, UserUUID: r.UserUuid, UserName: strings.TrimSpace(r.UserName + " " + r.UserSurname), Period: r.Period, Metric: r.Metric, Value: numText(r.Value), Currency: textPtr(r.Currency), Actual: numPtr(r.Actual), AchievementPct: numPtr(r.AchievementPct), CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time})
 	}
 	return out, nil
 }
@@ -595,11 +605,21 @@ func (s *Service) UpsertStaffTarget(ctx context.Context, c Caller, in StaffTarge
 	if !contains(model.StaffMetrics, in.Metric) {
 		return StaffTargetView{}, invalid("metric", "invalid")
 	}
-	row, err := s.q.UpsertStaffTarget(ctx, db.UpsertStaffTargetParams{OrganizationID: c.Org.InternalID, BrandID: c.Org.BrandID, UserID: u.UserID, Period: in.Period, Metric: in.Metric, Value: val, Currency: currencyArg(in.Currency), CreatedByUserID: userArg(c)})
+	cur := currencyArg(in.Currency)
+	switch {
+	case in.Metric == model.MetricServicesCount:
+		cur = pgtype.Text{}
+	case !cur.Valid:
+		// TEC-497: revenue targets default to the dealer currency.
+		if cur, err = s.orgCurrency(ctx, c); err != nil {
+			return StaffTargetView{}, err
+		}
+	}
+	row, err := s.q.UpsertStaffTarget(ctx, db.UpsertStaffTargetParams{OrganizationID: c.Org.InternalID, BrandID: c.Org.BrandID, UserID: u.UserID, Period: in.Period, Metric: in.Metric, Value: val, Currency: cur, CreatedByUserID: userArg(c)})
 	if err != nil {
 		return StaffTargetView{}, mapPG(err)
 	}
-	return StaffTargetView{UUID: row.Uuid, UserID: row.UserID, UserName: strings.TrimSpace(u.Name + " " + u.Surname), Period: row.Period, Metric: row.Metric, Value: numText(row.Value), Currency: textPtr(row.Currency), CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time}, nil
+	return StaffTargetView{UUID: row.Uuid, UserID: row.UserID, UserUUID: u.UserUuid, UserName: strings.TrimSpace(u.Name + " " + u.Surname), Period: row.Period, Metric: row.Metric, Value: numText(row.Value), Currency: textPtr(row.Currency), CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time}, nil
 }
 
 func (s *Service) DeleteStaffTarget(ctx context.Context, c Caller, id uuid.UUID) error {
@@ -882,6 +902,12 @@ func (s *Service) ListRules(ctx context.Context, c Caller, f RuleFilter) ([]Rule
 }
 
 func (s *Service) CreateRule(ctx context.Context, c Caller, in RuleInput) (RuleView, error) {
+	if _, err := s.ruleOwnerIDs(ctx, c); err != nil {
+		return RuleView{}, err
+	}
+	if err := s.resolveAssignee(ctx, c, &in); err != nil {
+		return RuleView{}, err
+	}
 	arg, err := ruleInput(c, in)
 	if err != nil {
 		return RuleView{}, err
@@ -890,7 +916,7 @@ func (s *Service) CreateRule(ctx context.Context, c Caller, in RuleInput) (RuleV
 	if err != nil {
 		return RuleView{}, mapPG(err)
 	}
-	return ruleView(row), nil
+	return s.ruleByIDView(ctx, c, row)
 }
 
 func (s *Service) UpdateRule(ctx context.Context, c Caller, id uuid.UUID, in RuleInput) (RuleView, error) {
@@ -904,6 +930,9 @@ func (s *Service) UpdateRule(ctx context.Context, c Caller, id uuid.UUID, in Rul
 	if cur.OrganizationID != c.Org.InternalID {
 		return RuleView{}, ErrNotFound
 	}
+	if err := s.resolveAssignee(ctx, c, &in); err != nil {
+		return RuleView{}, err
+	}
 	arg, err := ruleUpdateInput(cur.ID, c.Org.BrandID, in)
 	if err != nil {
 		return RuleView{}, err
@@ -912,7 +941,7 @@ func (s *Service) UpdateRule(ctx context.Context, c Caller, id uuid.UUID, in Rul
 	if err != nil {
 		return RuleView{}, mapPG(err)
 	}
-	return ruleView(row), nil
+	return s.ruleByIDView(ctx, c, row)
 }
 
 func (s *Service) DeleteRule(ctx context.Context, c Caller, id uuid.UUID) error {
@@ -1278,7 +1307,7 @@ func averageMetrics(rows []db.ListPerformanceRankingRow) map[string]*MetricValue
 }
 
 func targetRowView(r db.ListPerformanceTargetsRow) TargetView {
-	return TargetView{UUID: r.Uuid, TargetName: r.TargetName, TargetType: r.TargetType, Metric: r.Metric, PeriodKind: r.PeriodKind, PeriodStart: dateText(r.PeriodStart), PeriodEnd: dateText(r.PeriodEnd), Value: numText(r.Value), Currency: textPtr(r.Currency), ContractRef: datePtrText(r.ContractRef), Note: textPtr(r.Note), Actual: numPtr(r.Actual), AchievementPct: numPtr(r.AchievementPct), CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time}
+	return TargetView{UUID: r.Uuid, TargetOrganizationUUID: r.TargetOrgUuid, TargetName: r.TargetName, TargetType: r.TargetType, Metric: r.Metric, PeriodKind: r.PeriodKind, PeriodStart: dateText(r.PeriodStart), PeriodEnd: dateText(r.PeriodEnd), Value: numText(r.Value), Currency: textPtr(r.Currency), ContractRef: datePtrText(r.ContractRef), Note: textPtr(r.Note), Actual: numPtr(r.Actual), AchievementPct: numPtr(r.AchievementPct), CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time}
 }
 
 func (s *Service) targetByIDView(ctx context.Context, c Caller, id uuid.UUID) (TargetView, error) {
@@ -1296,11 +1325,12 @@ func (s *Service) targetByIDView(ctx context.Context, c Caller, id uuid.UUID) (T
 
 func ruleRowView(r db.ListWeakDealerRulesRow) RuleView {
 	v := RuleView{UUID: r.Uuid, OwnerName: r.OwnerName, OwnerType: r.OwnerType, Name: r.Name, Metric: r.Metric, Operator: r.Operator, Threshold: numText(r.Threshold), CreateTask: r.CreateTask, Notify: r.Notify, AssigneeUserID: int64Ptr(r.AssigneeUserID), Active: r.Active, CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time}
+	if r.AssigneeUserUuid.Valid {
+		id := uuid.UUID(r.AssigneeUserUuid.Bytes).String()
+		name := strings.TrimSpace(r.AssigneeName.String + " " + r.AssigneeSurname.String)
+		v.AssigneeUserUUID, v.AssigneeName = &id, &name
+	}
 	return v
-}
-
-func ruleView(r db.WeakDealerRule) RuleView {
-	return RuleView{UUID: r.Uuid, Name: r.Name, Metric: r.Metric, Operator: r.Operator, Threshold: numText(r.Threshold), CreateTask: r.CreateTask, Notify: r.Notify, AssigneeUserID: int64Ptr(r.AssigneeUserID), Active: r.Active, CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time}
 }
 
 func bonusAccrualRowView(r db.ListBonusAccrualsRow) BonusAccrualView {

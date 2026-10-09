@@ -103,5 +103,7 @@
   "params.ai_mode.paused": "En pausa",
   "params.ai_mode.off": "Desactivado",
   "actions.einvoices.create_draft": "Crear borrador",
-  "confirm.einvoices.create_draft": "¿Crear borradores de factura electrónica para los registros seleccionados? Se omiten los registros de compradores con perfil incompleto."
+  "confirm.einvoices.create_draft": "¿Crear borradores de factura electrónica para los registros seleccionados? Se omiten los registros de compradores con perfil incompleto.",
+  "actions.performance_bonuses.approve": "Aprobar primas",
+  "confirm.performance_bonuses.approve": "¿Aprobar las primas seleccionadas con sus importes calculados? Cada una se convierte en un pago al personal."
 }

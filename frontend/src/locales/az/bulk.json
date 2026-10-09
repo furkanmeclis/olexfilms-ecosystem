@@ -103,5 +103,7 @@
   "params.ai_mode.paused": "Dayandırılıb",
   "params.ai_mode.off": "Söndürülüb",
   "actions.einvoices.create_draft": "Qaralama yarat",
-  "confirm.einvoices.create_draft": "Seçilmiş qeydlər üçün e-Faktura qaralaması yaradılsın? Profili natamam alıcıların qeydləri ötürülür."
+  "confirm.einvoices.create_draft": "Seçilmiş qeydlər üçün e-Faktura qaralaması yaradılsın? Profili natamam alıcıların qeydləri ötürülür.",
+  "actions.performance_bonuses.approve": "Mükafatları təsdiqlə",
+  "confirm.performance_bonuses.approve": "Seçilmiş mükafatlar hesablanmış məbləğlərlə təsdiqlənsin? Hər biri işçi ödənişinə çevrilir."
 }

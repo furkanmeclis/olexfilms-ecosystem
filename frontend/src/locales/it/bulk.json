@@ -103,5 +103,7 @@
   "params.ai_mode.paused": "In pausa",
   "params.ai_mode.off": "Disattivata",
   "actions.einvoices.create_draft": "Crea bozza",
-  "confirm.einvoices.create_draft": "Creare bozze di fattura elettronica per i record selezionati? I record degli acquirenti con profilo incompleto vengono saltati."
+  "confirm.einvoices.create_draft": "Creare bozze di fattura elettronica per i record selezionati? I record degli acquirenti con profilo incompleto vengono saltati.",
+  "actions.performance_bonuses.approve": "Approva premi",
+  "confirm.performance_bonuses.approve": "Approvare i premi selezionati con gli importi calcolati? Ognuno diventa un pagamento al personale."
 }

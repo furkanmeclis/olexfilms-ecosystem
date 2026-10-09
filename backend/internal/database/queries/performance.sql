@@ -376,6 +376,7 @@ WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id);
 SELECT t.*,
        o.name AS target_name,
        o.type AS target_type,
+       o.uuid AS target_org_uuid,
        a.actual::numeric AS actual,
        CASE WHEN a.actual IS NULL THEN NULL
             ELSE ROUND(a.actual / t.value * 100, 2)
@@ -719,11 +720,29 @@ DELETE FROM staff_targets
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
 
 -- name: ListStaffTargets :many
+-- actual: completed services of the staff user in the target month (UTC
+-- month like ListBonusCalculationCandidates), count or income by metric.
 SELECT st.*,
        u.name AS user_name,
-       u.surname AS user_surname
+       u.surname AS user_surname,
+       u.uuid AS user_uuid,
+       a.actual::numeric(18,2) AS actual,
+       ROUND(a.actual / st.value * 100, 2)::numeric AS achievement_pct
 FROM staff_targets st
 JOIN users u ON u.id = st.user_id
+LEFT JOIN LATERAL (
+    SELECT CASE st.metric
+                WHEN 'services_count' THEN COUNT(*)::numeric
+                ELSE COALESCE(SUM(s.income_amount), 0)::numeric
+           END AS actual
+    FROM services s
+    WHERE s.organization_id = st.organization_id
+      AND s.brand_id = st.brand_id
+      AND s.status = 'completed'
+      AND COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) = st.user_id
+      AND COALESCE(s.completed_at, s.created_at) >= ((st.period || '-01')::timestamp AT TIME ZONE 'UTC')
+      AND COALESCE(s.completed_at, s.created_at) < (((st.period || '-01')::timestamp + interval '1 month') AT TIME ZONE 'UTC')
+) a ON true
 WHERE st.organization_id = sqlc.arg(organization_id)
   AND st.period >= sqlc.arg(period_from)::text
   AND st.period <= sqlc.arg(period_to)::text
@@ -937,9 +956,13 @@ WHERE wr.id = sqlc.arg(id) AND wr.brand_id = sqlc.arg(brand_id)
 -- name: ListWeakDealerRules :many
 SELECT r.*,
        o.name AS owner_name,
-       o.type AS owner_type
+       o.type AS owner_type,
+       au.uuid AS assignee_user_uuid,
+       au.name AS assignee_name,
+       au.surname AS assignee_surname
 FROM weak_dealer_rules r
 JOIN organizations o ON o.id = r.organization_id
+LEFT JOIN users au ON au.id = r.assignee_user_id
 WHERE r.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(owner_org_ids)::bigint[] IS NULL OR r.organization_id = ANY (sqlc.narg(owner_org_ids)::bigint[]))
   AND (sqlc.narg(active)::bool IS NULL OR r.active = sqlc.narg(active)::bool)

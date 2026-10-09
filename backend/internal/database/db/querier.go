@@ -73,6 +73,7 @@ type Querier interface {
 	CancelBonusAccrual(ctx context.Context, arg CancelBonusAccrualParams) (BonusAccrual, error)
 	CancelCompletedService(ctx context.Context, arg CancelCompletedServiceParams) (Service, error)
 	CancelFleetServicePlan(ctx context.Context, arg CancelFleetServicePlanParams) (FleetServicePlan, error)
+	CancelPendingModuleRequest(ctx context.Context, arg CancelPendingModuleRequestParams) (ModuleRequest, error)
 	// CancelPlannedStaffPayment cancels a payment that is not booked yet; it
 	// never had a ledger row, and a cancelled salary frees its period.
 	CancelPlannedStaffPayment(ctx context.Context, arg CancelPlannedStaffPaymentParams) (StaffPayment, error)
@@ -248,6 +249,7 @@ type Querier interface {
 	CountLibraryItems(ctx context.Context, arg CountLibraryItemsParams) (int64, error)
 	CountMessagesByExternalID(ctx context.Context, arg CountMessagesByExternalIDParams) (int64, error)
 	CountMigrationMap(ctx context.Context) ([]CountMigrationMapRow, error)
+	CountModuleRequestsPage(ctx context.Context, arg CountModuleRequestsPageParams) (int64, error)
 	CountNetworkDemandForecasts(ctx context.Context, arg CountNetworkDemandForecastsParams) (int64, error)
 	CountNotificationDeliveries(ctx context.Context, arg CountNotificationDeliveriesParams) (int64, error)
 	CountNotificationsForUser(ctx context.Context, arg CountNotificationsForUserParams) (int64, error)
@@ -600,6 +602,8 @@ type Querier interface {
 	// Is the customer linked to an organization of the brand?
 	CustomerLinkedToBrand(ctx context.Context, arg CustomerLinkedToBrandParams) (bool, error)
 	DeactivateDocumentTemplates(ctx context.Context, arg DeactivateDocumentTemplatesParams) error
+	// Only a pending request is decided; a decided one returns no row.
+	DecideModuleRequest(ctx context.Context, arg DecideModuleRequestParams) (ModuleRequest, error)
 	DecideQRLoginChallenge(ctx context.Context, arg DecideQRLoginChallengeParams) (QrLoginChallenge, error)
 	DecideServiceCertificateWarning(ctx context.Context, arg DecideServiceCertificateWarningParams) (ServiceCertificateWarning, error)
 	DecideServiceSubscriptionCancelRequest(ctx context.Context, arg DecideServiceSubscriptionCancelRequestParams) (ServiceSubscriptionCancelRequest, error)
@@ -1086,6 +1090,7 @@ type Querier interface {
 	// TEC-252: migrator bookkeeping (000074). Written only by cmd/migrator.
 	GetMigrationMap(ctx context.Context, arg GetMigrationMapParams) (MigrationMap, error)
 	GetModule(ctx context.Context, key string) (Module, error)
+	GetModuleRequestByUUID(ctx context.Context, argUuid uuid.UUID) (ModuleRequest, error)
 	GetNotificationByID(ctx context.Context, id int64) (Notification, error)
 	GetNotificationByUUID(ctx context.Context, argUuid uuid.UUID) (Notification, error)
 	// Notification center (TEC-87): recipients, templates, preferences,
@@ -2021,6 +2026,8 @@ type Querier interface {
 	ListLatestLegalTexts(ctx context.Context, kind string) ([]LegalText, error)
 	// The newest version of each language of an item.
 	ListLatestLibraryItemVersions(ctx context.Context, itemID int64) ([]LibraryItemVersion, error)
+	// The newest request of every module of an organization (Özellikler page).
+	ListLatestModuleRequestsForOrg(ctx context.Context, organizationID int64) ([]ModuleRequest, error)
 	ListLeadEvents(ctx context.Context, leadID int64) ([]LeadEvent, error)
 	ListLeadsByOrganizations(ctx context.Context, arg ListLeadsByOrganizationsParams) ([]Lead, error)
 	ListLeadsForIndex(ctx context.Context) ([]Lead, error)
@@ -2085,8 +2092,17 @@ type Querier interface {
 	ListMemberRoleSlugs(ctx context.Context, arg ListMemberRoleSlugsParams) ([]string, error)
 	ListMemberRolesByOrganization(ctx context.Context, organizationID int64) ([]ListMemberRolesByOrganizationRow, error)
 	ListMigrationRuns(ctx context.Context, limit int32) ([]MigrationRun, error)
+	// TEC-508: active module_bundle catalog items of a brand that contain a
+	// module, with the distributor override of the buyer (or of its parent
+	// distributor) when one exists. Cheapest bundle with the fewest modules first.
+	ListModuleBundlePrices(ctx context.Context, arg ListModuleBundlePricesParams) ([]ListModuleBundlePricesRow, error)
 	// System rows plus the org / dealer_standard rows of the given organizations.
 	ListModuleFlagsForOrgs(ctx context.Context, orgIds []int64) ([]ListModuleFlagsForOrgsRow, error)
+	// Decision queue. queue 'distributor': requests of the distributor's direct
+	// dealers; queue 'platform': requests of distributors and of dealers without
+	// a distributor parent. Sort: docs/list-contract.md, keys from
+	// features handler ModuleRequestsSortSpec.
+	ListModuleRequestsPage(ctx context.Context, arg ListModuleRequestsPageParams) ([]ListModuleRequestsPageRow, error)
 	ListModules(ctx context.Context) ([]Module, error)
 	// Active, serving (access window open) dealers and distributors of a brand
 	// with coordinates, within radius_km of (lat, lng). Distance is the
@@ -2191,6 +2207,9 @@ type Querier interface {
 	// keeps those not touched since then (the scheduler re-enqueues their task;
 	// a still queued task is deduplicated by its task id).
 	ListPendingCampaignRecipientIDs(ctx context.Context, arg ListPendingCampaignRecipientIDsParams) ([]int64, error)
+	// Auto approval: open requests of a module that may have been switched on.
+	ListPendingModuleRequestsByKey(ctx context.Context, moduleKey string) ([]ModuleRequest, error)
+	ListPendingModuleRequestsForOrgs(ctx context.Context, orgIds []int64) ([]ModuleRequest, error)
 	ListPerformanceMapDealers(ctx context.Context, arg ListPerformanceMapDealersParams) ([]ListPerformanceMapDealersRow, error)
 	// Staff targets ---------------------------------------------------------------------
 	// Region map ------------------------------------------------------------------------
@@ -2459,6 +2478,8 @@ type Querier interface {
 	// docs/list-contract.md, keys from usecase.StaffPaymentSortSpec.
 	ListStaffPayments(ctx context.Context, arg ListStaffPaymentsParams) ([]ListStaffPaymentsRow, error)
 	ListStaffProfiles(ctx context.Context, arg ListStaffProfilesParams) ([]StaffProfile, error)
+	// actual: completed services of the staff user in the target month (UTC
+	// month like ListBonusCalculationCandidates), count or income by metric.
 	ListStaffTargets(ctx context.Context, arg ListStaffTargetsParams) ([]ListStaffTargetsRow, error)
 	// Pending reports whose generation task may have been lost (enqueue
 	// failure): the scheduler enqueues them again (task id dedupe). Database
@@ -3719,6 +3740,10 @@ type Querier interface {
 	UpsertOAuthGrant(ctx context.Context, arg UpsertOAuthGrantParams) (OauthGrant, error)
 	UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error)
 	UpsertOrganizationProductStockForRepair(ctx context.Context, arg UpsertOrganizationProductStockForRepairParams) error
+	// TEC-508 (F5-10a): persistent module requests (migration 000131).
+	// One pending request per organization x module: asking again refreshes the
+	// note and the requesting user of the open request.
+	UpsertPendingModuleRequest(ctx context.Context, arg UpsertPendingModuleRequestParams) (ModuleRequest, error)
 	// TEC-490 (F5-05a): performance and targets. Authorization scope is
 	// resolved by the usecase and arrives as organization id lists (NULL = the
 	// whole brand). Metric keys: internal/modules/performance/model.

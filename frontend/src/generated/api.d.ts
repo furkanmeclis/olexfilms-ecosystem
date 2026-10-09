@@ -4010,7 +4010,7 @@ export interface paths {
         };
         /**
          * Modules of the active organization (Özellikler page, menus, guards)
-         * @description Every member may read it. `items` lists the modules the level above has access to (closed system wide or missing at the distributor are left out); `enabled` lists the keys that are on. The module catalog (keys, levels) comes from the backend; the frontend never duplicates it.
+         * @description Every member may read it. `items` lists the modules the level above has access to (closed system wide or missing at the distributor are left out); `enabled` lists the keys that are on. The module catalog (keys, levels) comes from the backend; the frontend never duplicates it. TEC-508: every item carries its `description` in the request locale (Accept-Language; 13 languages), `free_default` (on by default, free, no service record), `price` (cheapest active `module_bundle` service catalog item containing the module, with the distributor override) or `contact_for_price` (paid, no bundle on sale) and the organization's newest module `request`.
          */
         get: operations["listFeatures"];
         put?: never;
@@ -4031,10 +4031,79 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ask the level above to switch a module on (in-app notification)
-         * @description Notifies the owners of the parent distributor, or the platform admins for a distributor (or a dealer under the center). Needs modules.read.
+         * Ask the level above to switch a module on (stored request + notification)
+         * @description TEC-508: stores the request (one pending per organization x module; asking again refreshes the note of the open one) and notifies the owners of the parent distributor, or the platform admins for a distributor (or a dealer under the center). A module that is already on is refused (409 CONFLICT), one closed system wide too (409 FEATURE_DISABLED). Needs modules.read.
          */
         post: operations["requestFeature"];
+        /**
+         * Withdraw the organization's pending request of a module
+         * @description TEC-508. The request becomes `cancelled`; no pending request → 404. Needs modules.read.
+         */
+        delete: operations["cancelFeatureRequest"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Module requests of the distributor's dealers (modules.manage)
+         * @description TEC-508: the decision queue of the active distributor (its direct dealers'
+         *     requests; a reparented dealer's requests follow its new distributor).
+         *     List contract: `sort` created_at (default `-created_at`), decided_at,
+         *     module_key, status, organization_name; `q` matches the organization name
+         *     or module key; `status` and `module_key` are comma-separated;
+         *     `created_from` / `created_to`.
+         */
+        get: operations["listDealerModuleRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/requests/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a dealer's request (opens the module for that dealer)
+         * @description TEC-508: opens the module for the requesting dealer (distributor value, same rules as PUT /v1/tenant/modules/dealers/{uuid}/{key}) and notifies the requester (features.module_request_decided). 409 MODULE_BLOCKED_BY_PARENT when the distributor itself does not have the module (request it from the level above first), 409 MODULE_ADMIN_OVERRIDE when the admin set the dealer's value, 409 CONFLICT when the request is no longer pending.
+         */
+        post: operations["approveDealerModuleRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/modules/requests/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a dealer's request
+         * @description TEC-508. Notifies the requester; 409 CONFLICT when the request is no longer pending.
+         */
+        post: operations["rejectDealerModuleRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4152,6 +4221,67 @@ export interface paths {
         get: operations["listPlatformModules"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/modules/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Module requests the center decides (platform.modules.read)
+         * @description TEC-508: requests of distributors and of dealers without a distributor.
+         *     Same list contract as GET /v1/tenant/modules/requests.
+         */
+        get: operations["listPlatformModuleRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/modules/requests/{uuid}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a request as the platform admin (organization value, source admin)
+         * @description TEC-508: same rules as PUT /v1/platform/organizations/{uuid}/modules/{key} (409 FEATURE_DISABLED below a closed system switch); 409 CONFLICT when the request is no longer pending. Needs platform.modules.write.
+         */
+        post: operations["approvePlatformModuleRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/modules/requests/{uuid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a request as the platform admin
+         * @description TEC-508. Needs platform.modules.write.
+         */
+        post: operations["rejectPlatformModuleRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11228,6 +11358,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/performance/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active members of the active organization (TEC-497 pickers) */
+        get: operations["listPerformanceMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/performance/targets": {
         parameters: {
             query?: never;
@@ -11344,6 +11491,80 @@ export interface paths {
         put?: never;
         /** Cancel a calculated or approved bonus accrual */
         post: operations["cancelPerformanceBonus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonuses/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk approve calculated bonus accruals (TEC-497)
+         * @description performance.bonus.manage, dealer with the performance and dealer_accounting modules. Action `approve` runs the single approval (no amount override) per item and books the staff payment; a row that is no longer calculated fails per item. Target scope `ids`, or `query` with the GET /v1/performance/bonuses filters (period, user_id; only calculated rows). Not undoable.
+         */
+        post: operations["bulkPerformanceBonuses"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonus-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dealer bonus rules (TEC-497) */
+        get: operations["listPerformanceBonusRules"];
+        put?: never;
+        /** Create a dealer bonus rule */
+        post: operations["createPerformanceBonusRule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonus-rules/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a dealer bonus rule */
+        put: operations["updatePerformanceBonusRule"];
+        post?: never;
+        /** Delete a bonus rule (deactivated when it has accruals) */
+        delete: operations["deletePerformanceBonusRule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/bonus-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bonus payout day of the dealer (default 5) */
+        get: operations["getPerformanceBonusSettings"];
+        /** Set the bonus payout day (1-28) of the month after the period */
+        put: operations["updatePerformanceBonusSettings"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -15630,6 +15851,8 @@ export interface components {
         PerformanceTarget: {
             /** Format: uuid */
             uuid?: string;
+            /** Format: uuid */
+            target_organization_uuid?: string;
             target_name?: string;
             target_type?: string;
             /** @enum {string} */
@@ -15672,12 +15895,17 @@ export interface components {
             uuid?: string;
             /** Format: int64 */
             user_id?: number;
+            /** Format: uuid */
+            user_uuid?: string;
             user_name?: string;
             period?: string;
             /** @enum {string} */
             metric?: "services_count" | "service_revenue";
             value?: string;
             currency?: string | null;
+            /** @description Completed services of the staff user in the month (count or income). */
+            actual?: string | null;
+            achievement_pct?: string | null;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -15704,6 +15932,11 @@ export interface components {
             notify?: boolean;
             /** Format: int64 */
             assignee_user_id?: number | null;
+            /** Format: uuid */
+            assignee_user_uuid?: string | null;
+            assignee_name?: string | null;
+            owner_name?: string;
+            owner_type?: string;
             active?: boolean;
             /** Format: date-time */
             created_at?: string;
@@ -15716,10 +15949,16 @@ export interface components {
             /** @enum {string} */
             operator: "lt" | "lte" | "gt" | "gte" | "below_median_pct";
             threshold: string;
+            /** @description Center rules only (a distributor rule only notifies). */
             create_task?: boolean;
             notify?: boolean;
             /** Format: int64 */
             assignee_user_id?: number | null;
+            /**
+             * Format: uuid
+             * @description Task assignee (TEC-497), a member of the rule's organization; wins over assignee_user_id; requires create_task.
+             */
+            assignee_user_uuid?: string | null;
             active?: boolean;
         };
         PerformanceBonus: {
@@ -15747,6 +15986,77 @@ export interface components {
             created_at?: string;
             /** Format: date-time */
             updated_at?: string;
+        };
+        PerformanceMember: {
+            /** Format: uuid */
+            uuid?: string;
+            name?: string;
+            role?: string;
+        };
+        EnvelopePerformanceMembers: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: {
+                items?: components["schemas"]["PerformanceMember"][];
+            };
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        PerformanceBonusRule: {
+            /** Format: uuid */
+            uuid?: string;
+            name?: string;
+            /** @enum {string} */
+            metric?: "services_count" | "service_revenue";
+            threshold_pct?: string;
+            /** @enum {string} */
+            kind?: "fixed" | "percent_of_revenue";
+            amount?: string | null;
+            percent?: string | null;
+            currency?: string | null;
+            active?: boolean;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        PerformanceBonusRuleInput: {
+            name: string;
+            /** @enum {string} */
+            metric: "services_count" | "service_revenue";
+            /** @description Achievement % (0-1000] from which the rule pays */
+            threshold_pct: string;
+            /** @enum {string} */
+            kind: "fixed" | "percent_of_revenue";
+            /** @description fixed: amount */
+            amount?: string | null;
+            /** @description percent_of_revenue: percent (0-100] */
+            percent?: string | null;
+            /** @description fixed: ISO 4217, default the dealer currency */
+            currency?: string | null;
+            active?: boolean;
+        };
+        PerformanceBonusSettings: {
+            payout_day: number;
+        };
+        EnvelopePerformanceBonusRules: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: {
+                items?: components["schemas"]["PerformanceBonusRule"][];
+            };
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceBonusRule: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceBonusRule"];
+            meta?: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceBonusSettings: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: components["schemas"]["PerformanceBonusSettings"];
+            meta?: components["schemas"]["ResponseMeta"];
         };
         PerformanceBonusApprovalInput: {
             amount?: string | null;
@@ -19143,8 +19453,89 @@ export interface components {
             success: true;
             data: {
                 organization_type: string;
-                items: components["schemas"]["ModuleState"][];
+                items: components["schemas"]["FeatureListItem"][];
                 enabled: string[];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description TEC-508. A module state with the Özellikler page meta. */
+        FeatureListItem: components["schemas"]["ModuleState"] & {
+            /** @description One-sentence description in the request locale (13 languages). */
+            description: string;
+            /** @description On by default; free and needs no service record. */
+            free_default: boolean;
+            price: components["schemas"]["ModulePrice"] | null;
+            /** @description Paid module with no module bundle on sale ("contact us for the price"). */
+            contact_for_price: boolean;
+            request: components["schemas"]["ModuleRequestSummary"] | null;
+        };
+        /** @description Cheapest active module_bundle service catalog item containing the module (fewest modules first), with the buyer's distributor override. */
+        ModulePrice: {
+            /** @example 99.50 */
+            amount: string;
+            /** @example TRY */
+            currency: string;
+            /** @enum {string} */
+            recurrence: "one_time" | "monthly" | "yearly";
+            /** Format: uuid */
+            item_uuid: string;
+            item_name: string;
+        };
+        /** @enum {string} */
+        ModuleRequestStatus: "pending" | "approved" | "rejected" | "cancelled";
+        ModuleRequestSummary: {
+            /** Format: uuid */
+            uuid: string;
+            status: components["schemas"]["ModuleRequestStatus"];
+            note: string;
+            /** @description `auto` when the module opened some other way. */
+            decision_note: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            decided_at: string | null;
+        };
+        ModuleRequestRow: {
+            /** Format: uuid */
+            uuid: string;
+            /** Format: uuid */
+            organization_uuid: string;
+            organization_name: string;
+            organization_type: string;
+            module_key: string;
+            note: string;
+            status: components["schemas"]["ModuleRequestStatus"];
+            /** Format: uuid */
+            requested_by_uuid: string | null;
+            requested_by_name: string;
+            /** Format: uuid */
+            decided_by_uuid: string | null;
+            /** @description Empty for an automatic approval. */
+            decided_by_name: string;
+            decision_note: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            decided_at: string | null;
+        };
+        ModuleRequestDecision: {
+            note?: string;
+        };
+        EnvelopeModuleRequestSummary: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ModuleRequestSummary"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeModuleRequestList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ModuleRequestRow"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -19155,6 +19546,7 @@ export interface components {
                 /** @enum {string} */
                 status: "requested";
                 recipients: number;
+                request: components["schemas"]["ModuleRequestSummary"];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -28335,6 +28727,10 @@ export interface components {
         CountryISO2: string;
         /** @description Province or district id */
         GeoID: number;
+        /** @description Comma-separated module request statuses (TEC-508). */
+        ModuleRequestStatusFilter: components["schemas"]["ModuleRequestStatus"][];
+        /** @description Comma-separated module keys (TEC-508). */
+        ModuleRequestKeyFilter: string[];
         /** @description Module key from the backend catalog (GET /v1/features) */
         ModuleKey: string;
         /** @description System setting key from the catalog (e.g. contract_grace_days, smtp.host) */
@@ -35149,7 +35545,135 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
             422: components["responses"]["ModuleError"];
+        };
+    };
+    cancelFeatureRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Module key from the backend catalog (GET /v1/features) */
+                key: components["parameters"]["ModuleKey"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleRequestSummary"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDealerModuleRequests: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma-separated module request statuses (TEC-508). */
+                status?: components["parameters"]["ModuleRequestStatusFilter"];
+                /** @description Comma-separated module keys (TEC-508). */
+                module_key?: components["parameters"]["ModuleRequestKeyFilter"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleRequestList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    approveDealerModuleRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModuleRequestDecision"];
+            };
+        };
+        responses: {
+            /** @description Approved request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleRequestSummary"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+        };
+    };
+    rejectDealerModuleRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModuleRequestDecision"];
+            };
+        };
+        responses: {
+            /** @description Rejected request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleRequestSummary"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     listDealerModules: {
@@ -35384,6 +35908,107 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listPlatformModuleRequests: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma-separated module request statuses (TEC-508). */
+                status?: components["parameters"]["ModuleRequestStatusFilter"];
+                /** @description Comma-separated module keys (TEC-508). */
+                module_key?: components["parameters"]["ModuleRequestKeyFilter"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Requests */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleRequestList"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    approvePlatformModuleRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModuleRequestDecision"];
+            };
+        };
+        responses: {
+            /** @description Approved request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleRequestSummary"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["ModuleError"];
+        };
+    };
+    rejectPlatformModuleRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ModuleRequestDecision"];
+            };
+        };
+        responses: {
+            /** @description Rejected request */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeModuleRequestSummary"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     patchPlatformModule: {
@@ -48214,6 +48839,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listPerformanceMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Members */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceMembers"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listPerformanceTargets: {
         parameters: {
             query?: {
@@ -48478,6 +49125,196 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    bulkPerformanceBonuses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Sync bulk result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkSyncResult"];
+                };
+            };
+            /** @description Async bulk job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPerformanceBonusRules: {
+        parameters: {
+            query?: {
+                active?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bonus rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusRules"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createPerformanceBonusRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceBonusRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Bonus rule */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updatePerformanceBonusRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceBonusRuleInput"];
+            };
+        };
+        responses: {
+            /** @description Bonus rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusRule"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deletePerformanceBonusRule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted or deactivated */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPerformanceBonusSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bonus settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updatePerformanceBonusSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerformanceBonusSettings"];
+            };
+        };
+        responses: {
+            /** @description Bonus settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceBonusSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listPerformanceRules: {

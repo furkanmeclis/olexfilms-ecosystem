@@ -103,5 +103,7 @@
   "params.ai_mode.paused": "Pausiert",
   "params.ai_mode.off": "Aus",
   "actions.einvoices.create_draft": "Entwurf erstellen",
-  "confirm.einvoices.create_draft": "E-Rechnungsentwürfe für die ausgewählten Datensätze erstellen? Datensätze von Käufern mit unvollständigem Profil werden übersprungen."
+  "confirm.einvoices.create_draft": "E-Rechnungsentwürfe für die ausgewählten Datensätze erstellen? Datensätze von Käufern mit unvollständigem Profil werden übersprungen.",
+  "actions.performance_bonuses.approve": "Prämien genehmigen",
+  "confirm.performance_bonuses.approve": "Die ausgewählten Prämien mit ihren berechneten Beträgen genehmigen? Jede wird zu einer Mitarbeiterzahlung."
 }

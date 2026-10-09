@@ -33,6 +33,7 @@ import (
 	efficiencymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency"
 	einvoiceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/einvoice/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
+	featurehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/features/handler"
 	fleetusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
 	leadsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
@@ -52,6 +53,7 @@ import (
 	pricingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing"
 	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
+	servicecatalogusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/servicecatalog/usecase"
 	servicereview "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/review"
 	servicesusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	shorturlsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls"
@@ -331,6 +333,9 @@ func main() {
 		whatsappusecase.NewBulkAdapter(queries),
 		// TEC-504: e-invoice drafts of the billable center sales.
 		einvoiceusecase.NewBulkAdapter(einvoicePDF, queries),
+		// TEC-497: dealer bonus accruals (approve).
+		performanceusecase.NewBonusBulkAdapter(performanceusecase.New(pool, queries, outboxStore,
+			features.New(pool, queries, nil, log), log).WithPanelURL(cfg.Auth.FrontendURL)),
 	)
 	bulkSvc := bulkusecase.New(queries, bulkReg, nil, notifSvc, activityRec, cfg.Bulk, log).
 		WithPool(pool).WithUndoWindow(sysconfig.New(queries, sysconfig.NoCache{}).BulkUndoWindowHours)
@@ -360,6 +365,10 @@ func main() {
 	waSvc := whatsappmodule.NewService(cfg.Wuzapi, pool, queries, secretBox, notifSvc, log)
 	notifSvc.RegisterProvider(providers.WhatsAppProvider{WA: waSvc.Provider()})
 	featureSvc := features.New(pool, queries, nil, log)
+	// TEC-508: decided module requests (auto-approved after a bundle opens a
+	// module) notify the requester; expired bundles close their modules.
+	featureSvc.WithDecisionNotifier(featurehandler.NewDecisionNotifier(queries, notifSvc, log))
+	subscriptionExpiry := servicecatalogusecase.New(queries).WithLifecycle(pool, nil, nil, featureSvc)
 	certificatesCron := certificatesusecase.NewCron(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	stockForecastSvc := stockforecastusecase.New(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	performanceSvc := performanceusecase.New(pool, queries, outboxStore, featureSvc, log)
@@ -447,6 +456,17 @@ func main() {
 		// TEC-387: AI confirmation card expiry and stale run cleanup.
 		WithAIActionSweep(aiusecase.NewActions(airepo.New(pool), nil, nil, log).SweepTask).
 		WithCertificateExpiryScan(certificatesCron.ExpiryScanTask).
+		WithServiceSubscriptionsExpire(func(ctx context.Context) error {
+			loc, err := time.LoadLocation(queue.SchedulerTimezone)
+			if err != nil {
+				loc = time.UTC
+			}
+			n, err := subscriptionExpiry.ExpireDue(ctx, time.Now().In(loc))
+			if n > 0 {
+				log.Info("service_subscriptions_expired", "count", n)
+			}
+			return err
+		}).
 		WithStockForecastDaily(stockForecastSvc.DailyTask).
 		WithPerformanceDaily(performanceSvc.DailyTask).
 		WithEfficiencyNetworkRefresh(efficiencyNetwork.Task).

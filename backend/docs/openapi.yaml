@@ -7210,6 +7210,12 @@ paths:
         has access to (closed system wide or missing at the distributor are
         left out); `enabled` lists the keys that are on. The module catalog
         (keys, levels) comes from the backend; the frontend never duplicates it.
+        TEC-508: every item carries its `description` in the request locale
+        (Accept-Language; 13 languages), `free_default` (on by default, free,
+        no service record), `price` (cheapest active `module_bundle` service
+        catalog item containing the module, with the distributor override) or
+        `contact_for_price` (paid, no bundle on sale) and the organization's
+        newest module `request`.
       security:
         - bearerAuth: []
       responses:
@@ -7228,10 +7234,14 @@ paths:
     post:
       tags: [Features]
       operationId: requestFeature
-      summary: Ask the level above to switch a module on (in-app notification)
+      summary: Ask the level above to switch a module on (stored request + notification)
       description: >-
-        Notifies the owners of the parent distributor, or the platform admins
-        for a distributor (or a dealer under the center). Needs modules.read.
+        TEC-508: stores the request (one pending per organization x module;
+        asking again refreshes the note of the open one) and notifies the
+        owners of the parent distributor, or the platform admins for a
+        distributor (or a dealer under the center). A module that is already
+        on is refused (409 CONFLICT), one closed system wide too (409
+        FEATURE_DISABLED). Needs modules.read.
       security:
         - bearerAuth: []
       parameters:
@@ -7257,8 +7267,144 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ModuleError"
         "422":
           $ref: "#/components/responses/ModuleError"
+    delete:
+      tags: [Features]
+      operationId: cancelFeatureRequest
+      summary: Withdraw the organization's pending request of a module
+      description: TEC-508. The request becomes `cancelled`; no pending request → 404. Needs modules.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ModuleKey"
+      responses:
+        "200":
+          description: Cancelled request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleRequestSummary"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/tenant/modules/requests:
+    get:
+      tags: [Features]
+      operationId: listDealerModuleRequests
+      summary: Module requests of the distributor's dealers (modules.manage)
+      description: |
+        TEC-508: the decision queue of the active distributor (its direct dealers'
+        requests; a reparented dealer's requests follow its new distributor).
+        List contract: `sort` created_at (default `-created_at`), decided_at,
+        module_key, status, organization_name; `q` matches the organization name
+        or module key; `status` and `module_key` are comma-separated;
+        `created_from` / `created_to`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/ModuleRequestStatusFilter"
+        - $ref: "#/components/parameters/ModuleRequestKeyFilter"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+      responses:
+        "200":
+          description: Requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleRequestList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/tenant/modules/requests/{uuid}/approve:
+    post:
+      tags: [Features]
+      operationId: approveDealerModuleRequest
+      summary: Approve a dealer's request (opens the module for that dealer)
+      description: >-
+        TEC-508: opens the module for the requesting dealer (distributor value,
+        same rules as PUT /v1/tenant/modules/dealers/{uuid}/{key}) and notifies
+        the requester (features.module_request_decided). 409
+        MODULE_BLOCKED_BY_PARENT when the distributor itself does not have the
+        module (request it from the level above first), 409
+        MODULE_ADMIN_OVERRIDE when the admin set the dealer's value, 409
+        CONFLICT when the request is no longer pending.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleRequestDecision"
+      responses:
+        "200":
+          description: Approved request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleRequestSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ModuleError"
+
+  /v1/tenant/modules/requests/{uuid}/reject:
+    post:
+      tags: [Features]
+      operationId: rejectDealerModuleRequest
+      summary: Reject a dealer's request
+      description: TEC-508. Notifies the requester; 409 CONFLICT when the request is no longer pending.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleRequestDecision"
+      responses:
+        "200":
+          description: Rejected request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleRequestSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /v1/tenant/modules/dealers:
     get:
@@ -7503,6 +7649,110 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/modules/requests:
+    get:
+      tags: [Features]
+      operationId: listPlatformModuleRequests
+      summary: Module requests the center decides (platform.modules.read)
+      description: |
+        TEC-508: requests of distributors and of dealers without a distributor.
+        Same list contract as GET /v1/tenant/modules/requests.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/ModuleRequestStatusFilter"
+        - $ref: "#/components/parameters/ModuleRequestKeyFilter"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+      responses:
+        "200":
+          description: Requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleRequestList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/platform/modules/requests/{uuid}/approve:
+    post:
+      tags: [Features]
+      operationId: approvePlatformModuleRequest
+      summary: Approve a request as the platform admin (organization value, source admin)
+      description: >-
+        TEC-508: same rules as PUT /v1/platform/organizations/{uuid}/modules/{key}
+        (409 FEATURE_DISABLED below a closed system switch); 409 CONFLICT when
+        the request is no longer pending. Needs platform.modules.write.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleRequestDecision"
+      responses:
+        "200":
+          description: Approved request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleRequestSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/ModuleError"
+
+  /v1/platform/modules/requests/{uuid}/reject:
+    post:
+      tags: [Features]
+      operationId: rejectPlatformModuleRequest
+      summary: Reject a request as the platform admin
+      description: TEC-508. Needs platform.modules.write.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModuleRequestDecision"
+      responses:
+        "200":
+          description: Rejected request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeModuleRequestSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
 
   /v1/platform/modules/{key}:
     patch:
@@ -21528,6 +21778,21 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/performance/members:
+    get:
+      tags: [Performance]
+      operationId: listPerformanceMembers
+      summary: Active members of the active organization (TEC-497 pickers)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceMembers" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/performance/targets:
     get:
       tags: [Performance]
@@ -21737,6 +22002,154 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/performance/bonuses/bulk:
+    post:
+      tags: [Performance]
+      operationId: bulkPerformanceBonuses
+      summary: Bulk approve calculated bonus accruals (TEC-497)
+      description: >-
+        performance.bonus.manage, dealer with the performance and
+        dealer_accounting modules. Action `approve` runs the single approval
+        (no amount override) per item and books the staff payment; a row
+        that is no longer calculated fails per item. Target scope `ids`, or
+        `query` with the GET /v1/performance/bonuses filters (period,
+        user_id; only calculated rows). Not undoable.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkExecuteRequest" }
+      responses:
+        "200":
+          description: Sync bulk result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkSyncResult" }
+        "202":
+          description: Async bulk job queued
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBulkJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/bonus-rules:
+    get:
+      tags: [Performance]
+      operationId: listPerformanceBonusRules
+      summary: Dealer bonus rules (TEC-497)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Bonus rules
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusRules" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Performance]
+      operationId: createPerformanceBonusRule
+      summary: Create a dealer bonus rule
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceBonusRuleInput" }
+      responses:
+        "201":
+          description: Bonus rule
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusRule" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/bonus-rules/{uuid}:
+    put:
+      tags: [Performance]
+      operationId: updatePerformanceBonusRule
+      summary: Update a dealer bonus rule
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceBonusRuleInput" }
+      responses:
+        "200":
+          description: Bonus rule
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusRule" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Performance]
+      operationId: deletePerformanceBonusRule
+      summary: Delete a bonus rule (deactivated when it has accruals)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204": { description: Deleted or deactivated }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/performance/bonus-settings:
+    get:
+      tags: [Performance]
+      operationId: getPerformanceBonusSettings
+      summary: Bonus payout day of the dealer (default 5)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Bonus settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [Performance]
+      operationId: updatePerformanceBonusSettings
+      summary: Set the bonus payout day (1-28) of the month after the period
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PerformanceBonusSettings" }
+      responses:
+        "200":
+          description: Bonus settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceBonusSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /v1/performance/rules:
     get:
@@ -29729,6 +30142,24 @@ components:
       required: true
       description: Province or district id
       schema: { type: integer, format: int64 }
+    ModuleRequestStatusFilter:
+      name: status
+      in: query
+      description: Comma-separated module request statuses (TEC-508).
+      style: form
+      explode: false
+      schema:
+        type: array
+        items: { $ref: "#/components/schemas/ModuleRequestStatus" }
+    ModuleRequestKeyFilter:
+      name: module_key
+      in: query
+      description: Comma-separated module keys (TEC-508).
+      style: form
+      explode: false
+      schema:
+        type: array
+        items: { type: string }
     ModuleKey:
       name: key
       in: path
@@ -29995,6 +30426,7 @@ components:
       type: object
       properties:
         uuid: { type: string, format: uuid }
+        target_organization_uuid: { type: string, format: uuid }
         target_name: { type: string }
         target_type: { type: string }
         metric: { type: string, enum: [services_count, order_volume] }
@@ -30026,11 +30458,16 @@ components:
       properties:
         uuid: { type: string, format: uuid }
         user_id: { type: integer, format: int64 }
+        user_uuid: { type: string, format: uuid }
         user_name: { type: string }
         period: { type: string }
         metric: { type: string, enum: [services_count, service_revenue] }
         value: { type: string }
         currency: { type: [string, "null"] }
+        actual:
+          type: [string, "null"]
+          description: Completed services of the staff user in the month (count or income).
+        achievement_pct: { type: [string, "null"] }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     PerformanceStaffTargetInput:
@@ -30053,6 +30490,10 @@ components:
         create_task: { type: boolean }
         notify: { type: boolean }
         assignee_user_id: { type: [integer, "null"], format: int64 }
+        assignee_user_uuid: { type: [string, "null"], format: uuid }
+        assignee_name: { type: [string, "null"] }
+        owner_name: { type: string }
+        owner_type: { type: string }
         active: { type: boolean }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -30064,9 +30505,17 @@ components:
         metric: { type: string }
         operator: { type: string, enum: [lt, lte, gt, gte, below_median_pct] }
         threshold: { type: string }
-        create_task: { type: boolean }
+        create_task:
+          type: boolean
+          description: Center rules only (a distributor rule only notifies).
         notify: { type: boolean }
         assignee_user_id: { type: [integer, "null"], format: int64 }
+        assignee_user_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: >-
+            Task assignee (TEC-497), a member of the rule's organization; wins
+            over assignee_user_id; requires create_task.
         active: { type: boolean }
     PerformanceBonus:
       type: object
@@ -30086,6 +30535,75 @@ components:
         cancelled_at: { type: [string, "null"], format: date-time }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+    PerformanceMember:
+      type: object
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string }
+    EnvelopePerformanceMembers:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PerformanceMember" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    PerformanceBonusRule:
+      type: object
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        metric: { type: string, enum: [services_count, service_revenue] }
+        threshold_pct: { type: string }
+        kind: { type: string, enum: [fixed, percent_of_revenue] }
+        amount: { type: [string, "null"] }
+        percent: { type: [string, "null"] }
+        currency: { type: [string, "null"] }
+        active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PerformanceBonusRuleInput:
+      type: object
+      additionalProperties: false
+      required: [name, metric, threshold_pct, kind]
+      properties:
+        name: { type: string }
+        metric: { type: string, enum: [services_count, service_revenue] }
+        threshold_pct: { type: string, description: "Achievement % (0-1000] from which the rule pays" }
+        kind: { type: string, enum: [fixed, percent_of_revenue] }
+        amount: { type: [string, "null"], description: "fixed: amount" }
+        percent: { type: [string, "null"], description: "percent_of_revenue: percent (0-100]" }
+        currency: { type: [string, "null"], description: "fixed: ISO 4217, default the dealer currency" }
+        active: { type: boolean }
+    PerformanceBonusSettings:
+      type: object
+      additionalProperties: false
+      required: [payout_day]
+      properties:
+        payout_day: { type: integer, minimum: 1, maximum: 28 }
+    EnvelopePerformanceBonusRules:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PerformanceBonusRule" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceBonusRule:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceBonusRule" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopePerformanceBonusSettings:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceBonusSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
     PerformanceBonusApprovalInput:
       type: object
       additionalProperties: false
@@ -34579,10 +35097,130 @@ components:
             organization_type: { type: string }
             items:
               type: array
-              items: { $ref: "#/components/schemas/ModuleState" }
+              items: { $ref: "#/components/schemas/FeatureListItem" }
             enabled:
               type: array
               items: { type: string }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    FeatureListItem:
+      description: TEC-508. A module state with the Özellikler page meta.
+      allOf:
+        - $ref: "#/components/schemas/ModuleState"
+        - type: object
+          required: [description, free_default, price, contact_for_price, request]
+          properties:
+            description:
+              type: string
+              description: One-sentence description in the request locale (13 languages).
+            free_default:
+              type: boolean
+              description: On by default; free and needs no service record.
+            price:
+              oneOf:
+                - $ref: "#/components/schemas/ModulePrice"
+                - type: "null"
+            contact_for_price:
+              type: boolean
+              description: Paid module with no module bundle on sale ("contact us for the price").
+            request:
+              oneOf:
+                - $ref: "#/components/schemas/ModuleRequestSummary"
+                - type: "null"
+
+    ModulePrice:
+      type: object
+      description: >-
+        Cheapest active module_bundle service catalog item containing the
+        module (fewest modules first), with the buyer's distributor override.
+      required: [amount, currency, recurrence, item_uuid, item_name]
+      properties:
+        amount: { type: string, example: "99.50" }
+        currency: { type: string, example: TRY }
+        recurrence: { type: string, enum: [one_time, monthly, yearly] }
+        item_uuid: { type: string, format: uuid }
+        item_name: { type: string }
+
+    ModuleRequestStatus:
+      type: string
+      enum: [pending, approved, rejected, cancelled]
+
+    ModuleRequestSummary:
+      type: object
+      required: [uuid, status, note, decision_note, created_at, decided_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/ModuleRequestStatus" }
+        note: { type: string }
+        decision_note:
+          type: string
+          description: "`auto` when the module opened some other way."
+        created_at: { type: string, format: date-time }
+        decided_at: { type: [string, "null"], format: date-time }
+
+    ModuleRequestRow:
+      type: object
+      required:
+        - uuid
+        - organization_uuid
+        - organization_name
+        - organization_type
+        - module_key
+        - note
+        - status
+        - requested_by_uuid
+        - requested_by_name
+        - decided_by_uuid
+        - decided_by_name
+        - decision_note
+        - created_at
+        - decided_at
+      properties:
+        uuid: { type: string, format: uuid }
+        organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+        organization_type: { type: string }
+        module_key: { type: string }
+        note: { type: string }
+        status: { $ref: "#/components/schemas/ModuleRequestStatus" }
+        requested_by_uuid: { type: [string, "null"], format: uuid }
+        requested_by_name: { type: string }
+        decided_by_uuid: { type: [string, "null"], format: uuid }
+        decided_by_name:
+          type: string
+          description: Empty for an automatic approval.
+        decision_note: { type: string }
+        created_at: { type: string, format: date-time }
+        decided_at: { type: [string, "null"], format: date-time }
+
+    ModuleRequestDecision:
+      type: object
+      properties:
+        note: { type: string, maxLength: 1000 }
+
+    EnvelopeModuleRequestSummary:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ModuleRequestSummary" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeModuleRequestList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ModuleRequestRow" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeFeatureRequest:
@@ -34592,10 +35230,11 @@ components:
         success: { type: boolean, enum: [true] }
         data:
           type: object
-          required: [status, recipients]
+          required: [status, recipients, request]
           properties:
             status: { type: string, enum: [requested] }
             recipients: { type: integer }
+            request: { $ref: "#/components/schemas/ModuleRequestSummary" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     DealerModuleEntry:

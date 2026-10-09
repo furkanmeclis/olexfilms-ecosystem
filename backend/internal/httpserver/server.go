@@ -474,6 +474,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		})
 	}
 	featureSvc := features.New(deps.DB, deps.Queries, featureCache, log)
+	// TEC-508: decided module requests notify the requester.
+	featureSvc.WithDecisionNotifier(featurehandler.NewDecisionNotifier(deps.Queries, notifSvc, log))
 	s.features = featureSvc
 	// TEC-215: system settings store with a 30 s Redis cache.
 	var sysCache sysconfig.Cache = sysconfig.NoCache{}
@@ -837,6 +839,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		whatsappusecase.NewBulkAdapter(deps.Queries),
 		// TEC-504: e-invoice drafts of the billable center sales.
 		einvoiceusecase.NewBulkAdapter(einvoiceSvc, deps.Queries),
+		// TEC-497: dealer bonus accruals (approve).
+		performanceusecase.NewBonusBulkAdapter(performanceSvc),
 	)
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log).WithPool(deps.DB)
 	logsSvc := logsusecase.New(deps.Queries)

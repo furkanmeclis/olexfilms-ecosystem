@@ -74,6 +74,9 @@ const bulkActionIconCatalog: Record<
   "einvoices.billable": {
     create_draft: FilePlus,
   },
+  "performance.bonuses": {
+    approve: CircleCheck,
+  },
 };
 
 export function resolveBulkActionIcon(

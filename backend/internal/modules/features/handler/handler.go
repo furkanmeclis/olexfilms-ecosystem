@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	notifcatalog "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/catalog"
@@ -19,6 +20,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
@@ -26,6 +28,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Notifier dispatches the "request a module" notification center event
@@ -86,6 +89,12 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Forbidden(w, r, "Dealer module settings are available to distributors only")
 	case errors.Is(err, features.ErrNotOwnDealer):
 		response.Forbidden(w, r, "Every organization must be a dealer of the active distributor")
+	case errors.Is(err, features.ErrModuleEnabled):
+		response.Error(w, r, http.StatusConflict, response.CodeConflict, "The module is already enabled")
+	case errors.Is(err, features.ErrRequestNotFound):
+		response.NotFound(w, r, "Module request was not found")
+	case errors.Is(err, features.ErrRequestDecided):
+		response.Error(w, r, http.StatusConflict, response.CodeConflict, "The module request is no longer pending")
 	default:
 		response.InternalErr(w, r, err, "module request failed")
 	}
@@ -112,10 +121,54 @@ func (h *Handler) record(r *http.Request, action string, resource *uuid.UUID, pa
 // --- Özellikler (every organization) ---------------------------------------
 
 type featuresResponse struct {
-	OrganizationType string           `json:"organization_type"`
-	Items            []features.State `json:"items"`
+	OrganizationType string        `json:"organization_type"`
+	Items            []featureItem `json:"items"`
 	// Enabled lists the keys that are on (menus and route guards).
 	Enabled []string `json:"enabled"`
+}
+
+// featureItem is a module state with the Özellikler page meta (TEC-508).
+type featureItem struct {
+	features.State
+	// Description is the module's one-sentence description in the request
+	// locale (backend i18n catalog, 13 languages).
+	Description string `json:"description"`
+	// FreeDefault: on by default, free, needs no service record.
+	FreeDefault bool `json:"free_default"`
+	// Price of the cheapest active module bundle that contains the module.
+	Price *modulePrice `json:"price"`
+	// ContactForPrice: a paid module with no bundle on sale.
+	ContactForPrice bool `json:"contact_for_price"`
+	// Request is the organization's newest request of the module.
+	Request *requestSummary `json:"request"`
+}
+
+type modulePrice struct {
+	Amount     string    `json:"amount"`
+	Currency   string    `json:"currency"`
+	Recurrence string    `json:"recurrence"`
+	ItemUUID   uuid.UUID `json:"item_uuid"`
+	ItemName   string    `json:"item_name"`
+}
+
+type requestSummary struct {
+	UUID         uuid.UUID  `json:"uuid"`
+	Status       string     `json:"status"`
+	Note         string     `json:"note"`
+	DecisionNote string     `json:"decision_note"`
+	CreatedAt    time.Time  `json:"created_at"`
+	DecidedAt    *time.Time `json:"decided_at"`
+}
+
+func summarize(r db.ModuleRequest) *requestSummary {
+	out := &requestSummary{
+		UUID: r.Uuid, Status: r.Status, Note: r.Note, DecisionNote: r.DecisionNote, CreatedAt: r.CreatedAt.Time,
+	}
+	if r.DecidedAt.Valid {
+		t := r.DecidedAt.Time
+		out.DecidedAt = &t
+	}
+	return out
 }
 
 // List returns the active organization's modules (GET /v1/features). The
@@ -127,10 +180,29 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	out := featuresResponse{OrganizationType: scope.OrgType, Items: []features.State{}, Enabled: []string{}}
+	prices, err := h.bundlePrices(r.Context(), scope)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	requests, err := h.svc.LatestRequests(r.Context(), scope.InternalID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	locale := i18n.FromContext(r.Context()).Locale
+	out := featuresResponse{OrganizationType: scope.OrgType, Items: []featureItem{}, Enabled: []string{}}
 	for _, st := range states {
 		if st.Visible {
-			out.Items = append(out.Items, st)
+			it := featureItem{
+				State: st, Description: i18n.ModuleDescription(locale, st.Key),
+				FreeDefault: st.DefaultEnabled, Price: prices[st.Key],
+			}
+			it.ContactForPrice = st.Paid && !it.FreeDefault && it.Price == nil
+			if req, ok := requests[st.Key]; ok {
+				it.Request = summarize(req)
+			}
+			out.Items = append(out.Items, it)
 		}
 		if st.Enabled {
 			out.Enabled = append(out.Enabled, st.Key)
@@ -139,18 +211,61 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, out)
 }
 
+// bundlePrices returns, per module key, the cheapest active module bundle of
+// the brand's service catalog with the buyer's distributor override.
+func (h *Handler) bundlePrices(ctx context.Context, scope orgctx.Scope) (map[string]*modulePrice, error) {
+	org, err := h.q.GetOrganizationByID(ctx, scope.InternalID)
+	if err != nil {
+		return nil, err
+	}
+	var override pgtype.Int8
+	switch {
+	case org.Type == features.OrgDistributor:
+		override = pgtype.Int8{Int64: org.ID, Valid: true}
+	case org.Type == features.OrgDealer && org.ParentID.Valid:
+		if p, err := h.q.GetOrganizationByID(ctx, org.ParentID.Int64); err == nil && p.Type == features.OrgDistributor {
+			override = pgtype.Int8{Int64: p.ID, Valid: true}
+		}
+	}
+	rows, err := h.q.ListModuleBundlePrices(ctx, db.ListModuleBundlePricesParams{BrandID: org.BrandID, OverrideOrgID: override})
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]*modulePrice{}
+	for _, row := range rows {
+		if _, ok := out[row.ModuleKey]; ok {
+			continue // rows come cheapest first per module
+		}
+		out[row.ModuleKey] = &modulePrice{
+			Amount: numText(row.Price), Currency: row.Currency, Recurrence: row.Recurrence,
+			ItemUUID: row.ItemUuid, ItemName: row.ItemName,
+		}
+	}
+	return out, nil
+}
+
+func numText(n pgtype.Numeric) string {
+	v, err := n.Value()
+	if err != nil || v == nil {
+		return ""
+	}
+	s, _ := v.(string)
+	return s
+}
+
 type requestBody struct {
 	Note string `json:"note"`
 }
 
 // Request asks the level above to switch a module on
-// (POST /v1/features/{key}/request): the parent distributor's owners, or the
-// platform admins for a distributor or a dealer under the center.
+// (POST /v1/features/{key}/request): the request is stored (one pending per
+// organization x module) and the parent distributor's owners, or the
+// platform admins for a distributor or a dealer under the center, are
+// notified.
 func (h *Handler) Request(w http.ResponseWriter, r *http.Request) {
 	scope := orgctx.MustScope(r.Context())
 	key := r.PathValue("key")
-	def, ok := features.ModuleByKey(key)
-	if !ok {
+	if _, ok := features.ModuleByKey(key); !ok {
 		writeError(w, r, features.ErrUnknownModule)
 		return
 	}
@@ -160,12 +275,15 @@ func (h *Handler) Request(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if len(body.Note) > 1000 {
+	if len(body.Note) > features.MaxRequestNote {
 		response.BadRequest(w, r, response.CodeValidationError, "note is too long")
 		return
 	}
-	if def.Level == features.LevelCore {
-		writeError(w, r, features.ErrCoreModule)
+	req, err := h.svc.RequestModule(r.Context(), features.RequestInput{
+		OrgID: scope.InternalID, BrandID: scope.BrandID, ActorID: actorID(r), Key: key, Note: body.Note,
+	})
+	if err != nil {
+		writeError(w, r, err)
 		return
 	}
 	recipients, err := h.upstreamRecipients(r.Context(), scope.InternalID)
@@ -183,15 +301,34 @@ func (h *Handler) Request(w http.ResponseWriter, r *http.Request) {
 			},
 			Payload: map[string]any{
 				"module_key": key, "organization_uuid": scope.UUID.String(),
-				"organization_name": scope.Name, "note": body.Note,
+				"organization_name": scope.Name, "note": body.Note, "request_uuid": req.Uuid.String(),
 			},
 		}); err != nil {
 			h.log.Warn("feature_request_notify_failed", "recipients", len(recipients), "error", err)
 		}
 	}
 	orgUUID := scope.UUID
-	h.record(r, "modules.requested", &orgUUID, map[string]any{"module_key": key, "recipients": len(recipients)})
-	response.JSON(w, r, http.StatusAccepted, map[string]any{"status": "requested", "recipients": len(recipients)})
+	h.record(r, "modules.requested", &orgUUID, map[string]any{
+		"module_key": key, "recipients": len(recipients), "request_uuid": req.Uuid.String(),
+	})
+	response.JSON(w, r, http.StatusAccepted, map[string]any{
+		"status": "requested", "recipients": len(recipients), "request": summarize(req),
+	})
+}
+
+// CancelRequest withdraws the organization's pending request of a module
+// (DELETE /v1/features/{key}/request).
+func (h *Handler) CancelRequest(w http.ResponseWriter, r *http.Request) {
+	scope := orgctx.MustScope(r.Context())
+	key := r.PathValue("key")
+	req, err := h.svc.CancelRequest(r.Context(), scope.InternalID, actorID(r), key)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	orgUUID := scope.UUID
+	h.record(r, "modules.request.cancelled", &orgUUID, map[string]any{"module_key": key, "request_uuid": req.Uuid.String()})
+	response.JSON(w, r, http.StatusOK, summarize(req))
 }
 
 func (h *Handler) upstreamRecipients(ctx context.Context, orgID int64) ([]int64, error) {

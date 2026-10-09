@@ -38,6 +38,8 @@ type Service struct {
 	q     *db.Queries
 	cache Cache
 	log   *slog.Logger
+	// notify is told about decided module requests (TEC-508); may be nil.
+	notify DecisionNotifier
 }
 
 // New creates the service. cache may be nil (no caching).
@@ -314,6 +316,7 @@ func (s *Service) UpdatePlatformModule(ctx context.Context, actorID int64, key s
 		return PlatformModule{}, err
 	}
 	s.cache.BumpGeneration(ctx)
+	s.reconcileKey(ctx, key)
 	all, err := s.PlatformModules(ctx)
 	if err != nil {
 		return PlatformModule{}, err
@@ -330,29 +333,35 @@ func (s *Service) UpdatePlatformModule(ctx context.Context, actorID int64, key s
 // (source=admin). It works below a closed distributor, never below a closed
 // system switch.
 func (s *Service) SetByAdmin(ctx context.Context, actorID, orgID int64, key string, enabled bool) (State, error) {
-	if _, err := switchable(key); err != nil {
-		return State{}, err
-	}
-	if enabled {
-		closed, err := s.systemClosed(ctx, s.q, key)
-		if err != nil {
-			return State{}, err
-		}
-		if closed {
-			return State{}, ErrUpstreamDisabled
-		}
-	}
-	if _, err := s.node(ctx, s.q, orgID); err != nil {
-		return State{}, err
-	}
-	if _, err := s.q.UpsertOrgModuleFlag(ctx, db.UpsertOrgModuleFlagParams{
-		Scope: ScopeOrg, OrganizationID: pgtype.Int8{Int64: orgID, Valid: true}, ModuleKey: key,
-		Enabled: enabled, Source: SourceAdmin, SetByUserID: actorArg(actorID),
-	}); err != nil {
+	if err := s.setByAdmin(ctx, s.q, actorID, orgID, key, enabled); err != nil {
 		return State{}, err
 	}
 	s.invalidateTree(ctx, orgID)
+	s.reconcileKey(ctx, key)
 	return s.stateOf(ctx, orgID, key)
+}
+
+func (s *Service) setByAdmin(ctx context.Context, q *db.Queries, actorID, orgID int64, key string, enabled bool) error {
+	if _, err := switchable(key); err != nil {
+		return err
+	}
+	if enabled {
+		closed, err := s.systemClosed(ctx, q, key)
+		if err != nil {
+			return err
+		}
+		if closed {
+			return ErrUpstreamDisabled
+		}
+	}
+	if _, err := s.node(ctx, q, orgID); err != nil {
+		return err
+	}
+	_, err := q.UpsertOrgModuleFlag(ctx, db.UpsertOrgModuleFlagParams{
+		Scope: ScopeOrg, OrganizationID: pgtype.Int8{Int64: orgID, Valid: true}, ModuleKey: key,
+		Enabled: enabled, Source: SourceAdmin, SetByUserID: actorArg(actorID),
+	})
+	return err
 }
 
 // ClearByAdmin removes an organization's own value (back to inheritance).
@@ -369,6 +378,7 @@ func (s *Service) ClearByAdmin(ctx context.Context, orgID int64, key string) (St
 		return State{}, err
 	}
 	s.invalidateTree(ctx, orgID)
+	s.reconcileKey(ctx, key)
 	return s.stateOf(ctx, orgID, key)
 }
 
@@ -427,6 +437,9 @@ func (s *Service) ClearByService(ctx context.Context, q *db.Queries, orgID int64
 // that change flags inside their own transaction call it after commit.
 func (s *Service) InvalidateOrg(ctx context.Context, orgID int64) {
 	s.invalidateTree(ctx, orgID)
+	// TEC-508: a module bundle subscription may have opened a requested
+	// module.
+	s.reconcileOrg(ctx, orgID)
 }
 
 // OrgStates resolves an organization without the cache (platform detail).
@@ -484,37 +497,42 @@ func checkDealers(ctx context.Context, q *db.Queries, distributorID int64, deale
 // (source=distributor), all or nothing. Switching on needs the module on for
 // the distributor itself; dealers whose value the admin set are refused.
 func (s *Service) SetForDealers(ctx context.Context, actorID, distributorID int64, dealerIDs []int64, key string, enabled bool) error {
-	if _, err := switchable(key); err != nil {
-		return err
-	}
 	err := s.inTx(ctx, func(q *db.Queries) error {
-		dist, err := s.distributor(ctx, q, distributorID)
-		if err != nil {
-			return err
-		}
-		if err := checkDealers(ctx, q, distributorID, dealerIDs); err != nil {
-			return err
-		}
-		if st, _ := Lookup(dist, key); enabled && !st.Enabled {
-			return ErrUpstreamDisabled
-		}
-		for _, id := range dealerIDs {
-			if err := refuseAdminOverride(ctx, q, id, key); err != nil {
-				return err
-			}
-			if _, err := q.UpsertOrgModuleFlag(ctx, db.UpsertOrgModuleFlagParams{
-				Scope: ScopeOrg, OrganizationID: pgtype.Int8{Int64: id, Valid: true}, ModuleKey: key,
-				Enabled: enabled, Source: SourceDistributor, SetByUserID: actorArg(actorID),
-			}); err != nil {
-				return err
-			}
-		}
-		return nil
+		return s.setForDealers(ctx, q, actorID, distributorID, dealerIDs, key, enabled)
 	})
 	if err != nil {
 		return err
 	}
 	s.cache.Invalidate(ctx, dealerIDs...)
+	s.reconcileKey(ctx, key)
+	return nil
+}
+
+func (s *Service) setForDealers(ctx context.Context, q *db.Queries, actorID, distributorID int64, dealerIDs []int64, key string, enabled bool) error {
+	if _, err := switchable(key); err != nil {
+		return err
+	}
+	dist, err := s.distributor(ctx, q, distributorID)
+	if err != nil {
+		return err
+	}
+	if err := checkDealers(ctx, q, distributorID, dealerIDs); err != nil {
+		return err
+	}
+	if st, _ := Lookup(dist, key); enabled && !st.Enabled {
+		return ErrUpstreamDisabled
+	}
+	for _, id := range dealerIDs {
+		if err := refuseAdminOverride(ctx, q, id, key); err != nil {
+			return err
+		}
+		if _, err := q.UpsertOrgModuleFlag(ctx, db.UpsertOrgModuleFlagParams{
+			Scope: ScopeOrg, OrganizationID: pgtype.Int8{Int64: id, Valid: true}, ModuleKey: key,
+			Enabled: enabled, Source: SourceDistributor, SetByUserID: actorArg(actorID),
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -547,6 +565,7 @@ func (s *Service) ClearForDealers(ctx context.Context, distributorID int64, deal
 		return err
 	}
 	s.cache.Invalidate(ctx, dealerIDs...)
+	s.reconcileKey(ctx, key)
 	return nil
 }
 
@@ -586,6 +605,7 @@ func (s *Service) SetDealerStandard(ctx context.Context, actorID, distributorID 
 		return err
 	}
 	s.invalidateTree(ctx, distributorID)
+	s.reconcileKey(ctx, key)
 	return nil
 }
 
@@ -603,6 +623,7 @@ func (s *Service) ClearDealerStandard(ctx context.Context, distributorID int64, 
 		return err
 	}
 	s.invalidateTree(ctx, distributorID)
+	s.reconcileKey(ctx, key)
 	return nil
 }
 
