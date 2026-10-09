@@ -198,5 +198,15 @@
   "resources.platform.organizations": "Organizations",
   "actions.mcp.tool_called": "MCP tool called",
   "resources.mcp_tool": "MCP tool",
-  "actions.pricing.recommended_published": "Recommended prices published"
+  "actions.pricing.recommended_published": "Recommended prices published",
+  "actions.einvoice.draft_created": "e-Invoice draft created",
+  "actions.einvoice.archived": "e-Invoice archived",
+  "actions.einvoice.archive_failed": "e-Invoice validation failed",
+  "actions.einvoice.voided": "e-Invoice voided",
+  "actions.einvoice.pdf_retried": "e-Invoice PDF regenerated",
+  "actions.einvoice.settings_updated": "e-Invoice settings updated",
+  "actions.einvoice.xslt_uploaded": "e-Invoice stylesheet uploaded",
+  "actions.einvoice.xslt_reset": "e-Invoice stylesheet reset to default",
+  "actions.einvoice.buyer_profile_updated": "Buyer invoice profile updated",
+  "resources.einvoices": "e-Invoices"
 }

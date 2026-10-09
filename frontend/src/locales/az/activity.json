@@ -198,5 +198,15 @@
   "resources.platform.organizations": "Təşkilatlar",
   "actions.mcp.tool_called": "MCP aləti çağırıldı",
   "resources.mcp_tool": "MCP aləti",
-  "actions.pricing.recommended_published": "Tövsiyə olunan satış qiymətləri dərc edildi"
+  "actions.pricing.recommended_published": "Tövsiyə olunan satış qiymətləri dərc edildi",
+  "actions.einvoice.draft_created": "E-faktura qaralaması yaradıldı",
+  "actions.einvoice.archived": "E-faktura arxivləşdirildi",
+  "actions.einvoice.archive_failed": "E-fakturanın yoxlanışı uğursuz oldu",
+  "actions.einvoice.voided": "E-faktura ləğv edildi",
+  "actions.einvoice.pdf_retried": "E-fakturanın PDF faylı yenidən yaradıldı",
+  "actions.einvoice.settings_updated": "E-faktura ayarları yeniləndi",
+  "actions.einvoice.xslt_uploaded": "E-faktura XSLT şablonu yükləndi",
+  "actions.einvoice.xslt_reset": "E-faktura XSLT şablonu standarta qaytarıldı",
+  "actions.einvoice.buyer_profile_updated": "Alıcının faktura profili yeniləndi",
+  "resources.einvoices": "E-fakturalar"
 }

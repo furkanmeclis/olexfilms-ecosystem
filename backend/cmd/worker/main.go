@@ -31,6 +31,7 @@ import (
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	efficiencymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency"
+	einvoiceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/einvoice/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	fleetusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/usecase"
 	importusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/usecase"
@@ -305,6 +306,8 @@ func main() {
 	measurementPDF := measurementsusecase.NewPDF(pool, queries, store, pdfClient, reviewQueue,
 		pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
 	_ = docSvc.RegisterLoader(docmodel.KindMeasurement, measurementPDF.DocumentLoader())
+	// TEC-503: e-invoice PDF (worker-docs renders XSLT HTML via Gotenberg).
+	einvoicePDF := einvoiceusecase.New(pool, queries, store, outboxStore, log).WithPDF(pdfClient, nil)
 	importSvc := importusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(queries),
@@ -396,6 +399,8 @@ func main() {
 		WithContractPDF(contractsSvc.GenerateExecutedPDF).
 		// TEC-298: measurement PDF (docs queue).
 		WithMeasurementPDF(measurementPDF.GeneratePDF).
+		// TEC-503: e-invoice PDF (docs queue).
+		WithEinvoicePDF(einvoicePDF.GeneratePDF).
 		WithRatesFetch(ratesSvc.FetchTask).
 		WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
 		WithWarrantyRepairScan(warrantymodule.NewRepairScanner(pool, queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).

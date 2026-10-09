@@ -151,5 +151,12 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "Las facturas electrónicas solo pueden emitirse en TRY a compradores en Turquía.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Los datos de la factura están incompletos o son incorrectos.",
   "codes.EINVOICE_INVALID_VAT_RATE": "El tipo de IVA no es válido; el 0 % requiere un código de exención.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "La hoja de estilos XSLT no es válida."
+  "codes.EINVOICE_INVALID_STYLESHEET": "La hoja de estilos XSLT no es válida.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Guarde primero los datos del vendedor y las series de facturación electrónica.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "Este registro no se puede facturar (el pedido no se ha recibido o el periodo no está contabilizado).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "Este registro ya tiene una factura electrónica activa; anúlela para volver a facturar.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "El perfil de facturación del comprador está incompleto; complete los campos que faltan.",
+  "codes.EINVOICE_INVALID_STATUS": "El estado de la factura electrónica no permite esta acción.",
+  "codes.EINVOICE_NOT_ARCHIVED": "La factura electrónica aún no está archivada.",
+  "codes.EINVOICE_PDF_NOT_READY": "El PDF de la factura aún no está listo; inténtelo en breve o vuelva a generarlo."
 }

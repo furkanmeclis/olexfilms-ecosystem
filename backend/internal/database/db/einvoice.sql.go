@@ -12,6 +12,106 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const archiveEinvoice = `-- name: ArchiveEinvoice :one
+UPDATE einvoices
+SET number = $1,
+    profile = $2,
+    buyer = $3,
+    seller = $4,
+    lines = $5,
+    line_extension = $6,
+    tax_exclusive = $7,
+    tax_total = $8,
+    payable = $9,
+    tax_breakdown = $10,
+    issue_date = $11,
+    xml_storage_key = $12,
+    xml_sha256 = $13,
+    validation_status = 'valid',
+    validation_messages = '[]'::jsonb,
+    status = 'archived',
+    error = NULL
+WHERE id = $14
+  AND status IN ('draft', 'failed')
+RETURNING id, uuid, organization_id, brand_id, number, profile, invoice_type, source_type, source_uuid, buyer_org_id, buyer, seller, lines, currency, rate_snapshot, line_extension, tax_exclusive, tax_total, payable, tax_breakdown, xml_storage_key, xml_sha256, pdf_storage_key, validation_status, validation_messages, status, error, voided_at, voided_by, void_reason, issue_date, created_by, created_at, updated_at
+`
+
+type ArchiveEinvoiceParams struct {
+	Number        string         `json:"number"`
+	Profile       string         `json:"profile"`
+	Buyer         []byte         `json:"buyer"`
+	Seller        []byte         `json:"seller"`
+	Lines         []byte         `json:"lines"`
+	LineExtension pgtype.Numeric `json:"line_extension"`
+	TaxExclusive  pgtype.Numeric `json:"tax_exclusive"`
+	TaxTotal      pgtype.Numeric `json:"tax_total"`
+	Payable       pgtype.Numeric `json:"payable"`
+	TaxBreakdown  []byte         `json:"tax_breakdown"`
+	IssueDate     pgtype.Date    `json:"issue_date"`
+	XmlStorageKey pgtype.Text    `json:"xml_storage_key"`
+	XmlSha256     pgtype.Text    `json:"xml_sha256"`
+	ID            int64          `json:"id"`
+}
+
+// Archives a draft (or a failed attempt) with its final number, the frozen
+// parties/lines/totals and the stored XML.
+func (q *Queries) ArchiveEinvoice(ctx context.Context, arg ArchiveEinvoiceParams) (Einvoice, error) {
+	row := q.db.QueryRow(ctx, archiveEinvoice,
+		arg.Number,
+		arg.Profile,
+		arg.Buyer,
+		arg.Seller,
+		arg.Lines,
+		arg.LineExtension,
+		arg.TaxExclusive,
+		arg.TaxTotal,
+		arg.Payable,
+		arg.TaxBreakdown,
+		arg.IssueDate,
+		arg.XmlStorageKey,
+		arg.XmlSha256,
+		arg.ID,
+	)
+	var i Einvoice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Number,
+		&i.Profile,
+		&i.InvoiceType,
+		&i.SourceType,
+		&i.SourceUuid,
+		&i.BuyerOrgID,
+		&i.Buyer,
+		&i.Seller,
+		&i.Lines,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.LineExtension,
+		&i.TaxExclusive,
+		&i.TaxTotal,
+		&i.Payable,
+		&i.TaxBreakdown,
+		&i.XmlStorageKey,
+		&i.XmlSha256,
+		&i.PdfStorageKey,
+		&i.ValidationStatus,
+		&i.ValidationMessages,
+		&i.Status,
+		&i.Error,
+		&i.VoidedAt,
+		&i.VoidedBy,
+		&i.VoidReason,
+		&i.IssueDate,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const countEinvoices = `-- name: CountEinvoices :one
 SELECT COUNT(*)::bigint
 FROM einvoices e
@@ -191,6 +291,100 @@ func (q *Queries) CreateEinvoice(ctx context.Context, arg CreateEinvoiceParams) 
 	return i, err
 }
 
+const failEinvoice = `-- name: FailEinvoice :one
+UPDATE einvoices
+SET profile = $1,
+    buyer = $2,
+    seller = $3,
+    lines = $4,
+    line_extension = $5,
+    tax_exclusive = $6,
+    tax_total = $7,
+    payable = $8,
+    tax_breakdown = $9,
+    validation_status = $10,
+    validation_messages = $11,
+    status = 'failed',
+    error = $12
+WHERE id = $13
+  AND status IN ('draft', 'failed')
+RETURNING id, uuid, organization_id, brand_id, number, profile, invoice_type, source_type, source_uuid, buyer_org_id, buyer, seller, lines, currency, rate_snapshot, line_extension, tax_exclusive, tax_total, payable, tax_breakdown, xml_storage_key, xml_sha256, pdf_storage_key, validation_status, validation_messages, status, error, voided_at, voided_by, void_reason, issue_date, created_by, created_at, updated_at
+`
+
+type FailEinvoiceParams struct {
+	Profile            string         `json:"profile"`
+	Buyer              []byte         `json:"buyer"`
+	Seller             []byte         `json:"seller"`
+	Lines              []byte         `json:"lines"`
+	LineExtension      pgtype.Numeric `json:"line_extension"`
+	TaxExclusive       pgtype.Numeric `json:"tax_exclusive"`
+	TaxTotal           pgtype.Numeric `json:"tax_total"`
+	Payable            pgtype.Numeric `json:"payable"`
+	TaxBreakdown       []byte         `json:"tax_breakdown"`
+	ValidationStatus   string         `json:"validation_status"`
+	ValidationMessages []byte         `json:"validation_messages"`
+	Error              pgtype.Text    `json:"error"`
+	ID                 int64          `json:"id"`
+}
+
+// Records a validation failure: the draft keeps its temporary number (no
+// series number is consumed) and can be archived again after a fix.
+func (q *Queries) FailEinvoice(ctx context.Context, arg FailEinvoiceParams) (Einvoice, error) {
+	row := q.db.QueryRow(ctx, failEinvoice,
+		arg.Profile,
+		arg.Buyer,
+		arg.Seller,
+		arg.Lines,
+		arg.LineExtension,
+		arg.TaxExclusive,
+		arg.TaxTotal,
+		arg.Payable,
+		arg.TaxBreakdown,
+		arg.ValidationStatus,
+		arg.ValidationMessages,
+		arg.Error,
+		arg.ID,
+	)
+	var i Einvoice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Number,
+		&i.Profile,
+		&i.InvoiceType,
+		&i.SourceType,
+		&i.SourceUuid,
+		&i.BuyerOrgID,
+		&i.Buyer,
+		&i.Seller,
+		&i.Lines,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.LineExtension,
+		&i.TaxExclusive,
+		&i.TaxTotal,
+		&i.Payable,
+		&i.TaxBreakdown,
+		&i.XmlStorageKey,
+		&i.XmlSha256,
+		&i.PdfStorageKey,
+		&i.ValidationStatus,
+		&i.ValidationMessages,
+		&i.Status,
+		&i.Error,
+		&i.VoidedAt,
+		&i.VoidedBy,
+		&i.VoidReason,
+		&i.IssueDate,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getActiveEinvoiceBySource = `-- name: GetActiveEinvoiceBySource :one
 SELECT id, uuid, organization_id, brand_id, number, profile, invoice_type, source_type, source_uuid, buyer_org_id, buyer, seller, lines, currency, rate_snapshot, line_extension, tax_exclusive, tax_total, payable, tax_breakdown, xml_storage_key, xml_sha256, pdf_storage_key, validation_status, validation_messages, status, error, voided_at, voided_by, void_reason, issue_date, created_by, created_at, updated_at FROM einvoices
 WHERE organization_id = $1
@@ -207,6 +401,52 @@ type GetActiveEinvoiceBySourceParams struct {
 
 func (q *Queries) GetActiveEinvoiceBySource(ctx context.Context, arg GetActiveEinvoiceBySourceParams) (Einvoice, error) {
 	row := q.db.QueryRow(ctx, getActiveEinvoiceBySource, arg.OrganizationID, arg.SourceType, arg.SourceUuid)
+	var i Einvoice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Number,
+		&i.Profile,
+		&i.InvoiceType,
+		&i.SourceType,
+		&i.SourceUuid,
+		&i.BuyerOrgID,
+		&i.Buyer,
+		&i.Seller,
+		&i.Lines,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.LineExtension,
+		&i.TaxExclusive,
+		&i.TaxTotal,
+		&i.Payable,
+		&i.TaxBreakdown,
+		&i.XmlStorageKey,
+		&i.XmlSha256,
+		&i.PdfStorageKey,
+		&i.ValidationStatus,
+		&i.ValidationMessages,
+		&i.Status,
+		&i.Error,
+		&i.VoidedAt,
+		&i.VoidedBy,
+		&i.VoidReason,
+		&i.IssueDate,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getEinvoiceByID = `-- name: GetEinvoiceByID :one
+SELECT id, uuid, organization_id, brand_id, number, profile, invoice_type, source_type, source_uuid, buyer_org_id, buyer, seller, lines, currency, rate_snapshot, line_extension, tax_exclusive, tax_total, payable, tax_breakdown, xml_storage_key, xml_sha256, pdf_storage_key, validation_status, validation_messages, status, error, voided_at, voided_by, void_reason, issue_date, created_by, created_at, updated_at FROM einvoices WHERE id = $1
+`
+
+func (q *Queries) GetEinvoiceByID(ctx context.Context, id int64) (Einvoice, error) {
+	row := q.db.QueryRow(ctx, getEinvoiceByID, id)
 	var i Einvoice
 	err := row.Scan(
 		&i.ID,
@@ -328,6 +568,101 @@ func (q *Queries) GetEinvoiceCounter(ctx context.Context, arg GetEinvoiceCounter
 	return i, err
 }
 
+const getEinvoiceFinanceEntry = `-- name: GetEinvoiceFinanceEntry :one
+SELECT f.uuid, f.direction, f.amount, f.currency, f.source_type, f.created_at
+FROM finance_entries f
+WHERE f.organization_id = $1
+  AND f.source_uuid = $2
+  AND f.reversal_of_id IS NULL
+  AND NOT EXISTS (SELECT 1 FROM finance_entries r WHERE r.reversal_of_id = f.id)
+ORDER BY f.revision DESC, f.id DESC
+LIMIT 1
+`
+
+type GetEinvoiceFinanceEntryParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	SourceUuid     pgtype.UUID `json:"source_uuid"`
+}
+
+type GetEinvoiceFinanceEntryRow struct {
+	Uuid       uuid.UUID          `json:"uuid"`
+	Direction  string             `json:"direction"`
+	Amount     pgtype.Numeric     `json:"amount"`
+	Currency   string             `json:"currency"`
+	SourceType pgtype.Text        `json:"source_type"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
+// The center's ledger row of the invoiced source (orders book source
+// "order"/orders.uuid); no ledger row is written for an invoice.
+func (q *Queries) GetEinvoiceFinanceEntry(ctx context.Context, arg GetEinvoiceFinanceEntryParams) (GetEinvoiceFinanceEntryRow, error) {
+	row := q.db.QueryRow(ctx, getEinvoiceFinanceEntry, arg.OrganizationID, arg.SourceUuid)
+	var i GetEinvoiceFinanceEntryRow
+	err := row.Scan(
+		&i.Uuid,
+		&i.Direction,
+		&i.Amount,
+		&i.Currency,
+		&i.SourceType,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getEinvoiceForUpdate = `-- name: GetEinvoiceForUpdate :one
+SELECT id, uuid, organization_id, brand_id, number, profile, invoice_type, source_type, source_uuid, buyer_org_id, buyer, seller, lines, currency, rate_snapshot, line_extension, tax_exclusive, tax_total, payable, tax_breakdown, xml_storage_key, xml_sha256, pdf_storage_key, validation_status, validation_messages, status, error, voided_at, voided_by, void_reason, issue_date, created_by, created_at, updated_at FROM einvoices
+WHERE uuid = $1
+  AND brand_id = $2
+FOR UPDATE
+`
+
+type GetEinvoiceForUpdateParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+func (q *Queries) GetEinvoiceForUpdate(ctx context.Context, arg GetEinvoiceForUpdateParams) (Einvoice, error) {
+	row := q.db.QueryRow(ctx, getEinvoiceForUpdate, arg.Uuid, arg.BrandID)
+	var i Einvoice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Number,
+		&i.Profile,
+		&i.InvoiceType,
+		&i.SourceType,
+		&i.SourceUuid,
+		&i.BuyerOrgID,
+		&i.Buyer,
+		&i.Seller,
+		&i.Lines,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.LineExtension,
+		&i.TaxExclusive,
+		&i.TaxTotal,
+		&i.Payable,
+		&i.TaxBreakdown,
+		&i.XmlStorageKey,
+		&i.XmlSha256,
+		&i.PdfStorageKey,
+		&i.ValidationStatus,
+		&i.ValidationMessages,
+		&i.Status,
+		&i.Error,
+		&i.VoidedAt,
+		&i.VoidedBy,
+		&i.VoidReason,
+		&i.IssueDate,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getEinvoiceSettingsByOrg = `-- name: GetEinvoiceSettingsByOrg :one
 SELECT id, uuid, organization_id, brand_id, vkn, tax_office, legal_name, address, city, district, country, iban, email, phone, website, trade_registry_no, mersis_no, default_note, earchive_series, efatura_series, xslt_storage_key, xslt_sha1, pdf_enabled, created_at, updated_at FROM einvoice_settings
 WHERE organization_id = $1
@@ -368,6 +703,79 @@ func (q *Queries) GetEinvoiceSettingsByOrg(ctx context.Context, arg GetEinvoiceS
 		&i.PdfEnabled,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getEinvoiceSubscriptionPeriod = `-- name: GetEinvoiceSubscriptionPeriod :one
+SELECT p.id, p.subscription_id, p.organization_id, p.brand_id, p.period_start, p.period_end, p.posted_at, p.created_at, p.uuid, s.id, s.uuid, s.organization_id, s.brand_id, s.seller_org_id, s.item_id, s.assigned_by_org_id, s.assigned_by_user_id, s.starts_on, s.ends_on, s.recurrence, s.price, s.currency, s.rate_snapshot, s.cancellation_fee, s.status, s.contract_id, s.cancelled_at, s.expired_at, s.created_at, s.updated_at, i.id, i.uuid, i.organization_id, i.brand_id, i.name, i.description, i.category, i.default_price, i.currency, i.recurrence, i.cancellation_fee, i.contract_template_id, i.is_active, i.created_at, i.updated_at
+FROM service_subscription_periods p
+JOIN service_subscriptions s ON s.id = p.subscription_id
+JOIN service_catalog_items i ON i.id = s.item_id
+WHERE p.uuid = $1
+  AND p.brand_id = $2
+`
+
+type GetEinvoiceSubscriptionPeriodParams struct {
+	Uuid    uuid.UUID `json:"uuid"`
+	BrandID int64     `json:"brand_id"`
+}
+
+type GetEinvoiceSubscriptionPeriodRow struct {
+	ServiceSubscriptionPeriod ServiceSubscriptionPeriod `json:"service_subscription_period"`
+	ServiceSubscription       ServiceSubscription       `json:"service_subscription"`
+	ServiceCatalogItem        ServiceCatalogItem        `json:"service_catalog_item"`
+}
+
+func (q *Queries) GetEinvoiceSubscriptionPeriod(ctx context.Context, arg GetEinvoiceSubscriptionPeriodParams) (GetEinvoiceSubscriptionPeriodRow, error) {
+	row := q.db.QueryRow(ctx, getEinvoiceSubscriptionPeriod, arg.Uuid, arg.BrandID)
+	var i GetEinvoiceSubscriptionPeriodRow
+	err := row.Scan(
+		&i.ServiceSubscriptionPeriod.ID,
+		&i.ServiceSubscriptionPeriod.SubscriptionID,
+		&i.ServiceSubscriptionPeriod.OrganizationID,
+		&i.ServiceSubscriptionPeriod.BrandID,
+		&i.ServiceSubscriptionPeriod.PeriodStart,
+		&i.ServiceSubscriptionPeriod.PeriodEnd,
+		&i.ServiceSubscriptionPeriod.PostedAt,
+		&i.ServiceSubscriptionPeriod.CreatedAt,
+		&i.ServiceSubscriptionPeriod.Uuid,
+		&i.ServiceSubscription.ID,
+		&i.ServiceSubscription.Uuid,
+		&i.ServiceSubscription.OrganizationID,
+		&i.ServiceSubscription.BrandID,
+		&i.ServiceSubscription.SellerOrgID,
+		&i.ServiceSubscription.ItemID,
+		&i.ServiceSubscription.AssignedByOrgID,
+		&i.ServiceSubscription.AssignedByUserID,
+		&i.ServiceSubscription.StartsOn,
+		&i.ServiceSubscription.EndsOn,
+		&i.ServiceSubscription.Recurrence,
+		&i.ServiceSubscription.Price,
+		&i.ServiceSubscription.Currency,
+		&i.ServiceSubscription.RateSnapshot,
+		&i.ServiceSubscription.CancellationFee,
+		&i.ServiceSubscription.Status,
+		&i.ServiceSubscription.ContractID,
+		&i.ServiceSubscription.CancelledAt,
+		&i.ServiceSubscription.ExpiredAt,
+		&i.ServiceSubscription.CreatedAt,
+		&i.ServiceSubscription.UpdatedAt,
+		&i.ServiceCatalogItem.ID,
+		&i.ServiceCatalogItem.Uuid,
+		&i.ServiceCatalogItem.OrganizationID,
+		&i.ServiceCatalogItem.BrandID,
+		&i.ServiceCatalogItem.Name,
+		&i.ServiceCatalogItem.Description,
+		&i.ServiceCatalogItem.Category,
+		&i.ServiceCatalogItem.DefaultPrice,
+		&i.ServiceCatalogItem.Currency,
+		&i.ServiceCatalogItem.Recurrence,
+		&i.ServiceCatalogItem.CancellationFee,
+		&i.ServiceCatalogItem.ContractTemplateID,
+		&i.ServiceCatalogItem.IsActive,
+		&i.ServiceCatalogItem.CreatedAt,
+		&i.ServiceCatalogItem.UpdatedAt,
 	)
 	return i, err
 }
@@ -503,6 +911,169 @@ func (q *Queries) ListEinvoiceBillableOrders(ctx context.Context, arg ListEinvoi
 	return items, nil
 }
 
+const listEinvoiceBillableSources = `-- name: ListEinvoiceBillableSources :many
+
+WITH src AS (
+    SELECT 'order'::text AS source_type, o.id, o.uuid AS source_uuid, o.order_no::text AS source_no,
+           buyer.id AS buyer_org_id, buyer.uuid AS buyer_org_uuid, buyer.name::text AS buyer_name,
+           o.currency::text AS currency, o.subtotal AS line_extension, o.tax_total AS tax_total,
+           o.total AS payable, o.received_at AS billable_at,
+           NULL::date AS period_start, NULL::date AS period_end
+    FROM orders o
+    JOIN organizations seller ON seller.id = o.seller_org_id
+    JOIN organizations buyer ON buyer.id = o.buyer_org_id
+    WHERE o.brand_id = $12
+      AND o.seller_org_id = $13
+      AND seller.type = 'center'
+      AND buyer.type = 'distributor'
+      AND o.status = 'received'
+      AND NOT EXISTS (
+          SELECT 1 FROM einvoices e
+          WHERE e.organization_id = o.seller_org_id AND e.source_type = 'order'
+            AND e.source_uuid = o.uuid AND e.status <> 'voided')
+    UNION ALL
+    SELECT 'service_subscription'::text, p.id, p.uuid, i.name::text,
+           buyer.id, buyer.uuid, buyer.name::text,
+           s.currency::text, s.price, 0::numeric(18,2), s.price, p.posted_at,
+           p.period_start, p.period_end
+    FROM service_subscription_periods p
+    JOIN service_subscriptions s ON s.id = p.subscription_id
+    JOIN service_catalog_items i ON i.id = s.item_id
+    JOIN organizations seller ON seller.id = s.seller_org_id
+    JOIN organizations buyer ON buyer.id = s.organization_id
+    WHERE p.brand_id = $12
+      AND s.seller_org_id = $13
+      AND seller.type = 'center'
+      AND buyer.type = 'dealer'
+      AND p.posted_at IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM einvoices e
+          WHERE e.organization_id = s.seller_org_id AND e.source_type = 'service_subscription'
+            AND e.source_uuid = p.uuid AND e.status <> 'voided')
+)
+SELECT src.source_type, src.id, src.source_uuid, src.source_no, src.buyer_org_id,
+       src.buyer_org_uuid, src.buyer_name, src.currency, src.line_extension, src.tax_total,
+       src.payable, src.billable_at, src.period_start, src.period_end,
+       COUNT(*) OVER()::bigint AS total_count
+FROM src
+WHERE (COALESCE(cardinality($1::text[]), 0) = 0 OR src.source_type = ANY ($1::text[]))
+  AND (COALESCE(cardinality($2::uuid[]), 0) = 0 OR src.buyer_org_uuid = ANY ($2::uuid[]))
+  AND ($3::timestamptz IS NULL OR src.billable_at >= $3::timestamptz)
+  AND ($4::timestamptz IS NULL OR src.billable_at < $4::timestamptz)
+  AND ($5::numeric IS NULL OR src.payable >= $5::numeric)
+  AND ($6::numeric IS NULL OR src.payable <= $6::numeric)
+  AND (
+    $7::text IS NULL
+    OR src.source_no ILIKE '%' || $7::text || '%'
+    OR src.buyer_name ILIKE '%' || $7::text || '%'
+  )
+ORDER BY
+  CASE WHEN NOT $8::bool AND $9::text = 'billable_at' THEN src.billable_at END ASC NULLS LAST,
+  CASE WHEN $8::bool AND $9::text = 'billable_at' THEN src.billable_at END DESC NULLS LAST,
+  CASE WHEN NOT $8::bool THEN
+    CASE $9::text WHEN 'source_no' THEN src.source_no WHEN 'buyer_name' THEN src.buyer_name END
+  END ASC,
+  CASE WHEN $8::bool THEN
+    CASE $9::text WHEN 'source_no' THEN src.source_no WHEN 'buyer_name' THEN src.buyer_name END
+  END DESC,
+  CASE WHEN NOT $8::bool AND $9::text = 'payable' THEN src.payable END ASC,
+  CASE WHEN $8::bool AND $9::text = 'payable' THEN src.payable END DESC,
+  CASE WHEN $8::bool THEN src.source_type END DESC,
+  CASE WHEN $8::bool THEN src.id END DESC,
+  src.source_type ASC,
+  src.id ASC
+LIMIT $11 OFFSET $10
+`
+
+type ListEinvoiceBillableSourcesParams struct {
+	SourceTypes    []string           `json:"source_types"`
+	BuyerOrgUuids  []uuid.UUID        `json:"buyer_org_uuids"`
+	BillableFrom   pgtype.Timestamptz `json:"billable_from"`
+	BillableBefore pgtype.Timestamptz `json:"billable_before"`
+	PayableMin     pgtype.Numeric     `json:"payable_min"`
+	PayableMax     pgtype.Numeric     `json:"payable_max"`
+	Q              pgtype.Text        `json:"q"`
+	SortDesc       bool               `json:"sort_desc"`
+	SortKey        string             `json:"sort_key"`
+	RowOffset      int32              `json:"row_offset"`
+	RowLimit       int32              `json:"row_limit"`
+	BrandID        int64              `json:"brand_id"`
+	CenterOrgID    int64              `json:"center_org_id"`
+}
+
+type ListEinvoiceBillableSourcesRow struct {
+	SourceType    string             `json:"source_type"`
+	ID            int64              `json:"id"`
+	SourceUuid    uuid.UUID          `json:"source_uuid"`
+	SourceNo      string             `json:"source_no"`
+	BuyerOrgID    int64              `json:"buyer_org_id"`
+	BuyerOrgUuid  uuid.UUID          `json:"buyer_org_uuid"`
+	BuyerName     string             `json:"buyer_name"`
+	Currency      string             `json:"currency"`
+	LineExtension pgtype.Numeric     `json:"line_extension"`
+	TaxTotal      pgtype.Numeric     `json:"tax_total"`
+	Payable       pgtype.Numeric     `json:"payable"`
+	BillableAt    pgtype.Timestamptz `json:"billable_at"`
+	PeriodStart   pgtype.Date        `json:"period_start"`
+	PeriodEnd     pgtype.Date        `json:"period_end"`
+	TotalCount    int64              `json:"total_count"`
+}
+
+// TEC-503 (F5-08c): e-Invoice use case and API -------------------------------
+// List contract: sort=billable_at|source_no|payable|buyer_name, default
+// -billable_at; (source_type, id) is the stable tiebreak. Center sales
+// without an active (non-voided) invoice: received orders to distributors
+// and posted service catalog subscription periods of dealers.
+func (q *Queries) ListEinvoiceBillableSources(ctx context.Context, arg ListEinvoiceBillableSourcesParams) ([]ListEinvoiceBillableSourcesRow, error) {
+	rows, err := q.db.Query(ctx, listEinvoiceBillableSources,
+		arg.SourceTypes,
+		arg.BuyerOrgUuids,
+		arg.BillableFrom,
+		arg.BillableBefore,
+		arg.PayableMin,
+		arg.PayableMax,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.RowOffset,
+		arg.RowLimit,
+		arg.BrandID,
+		arg.CenterOrgID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListEinvoiceBillableSourcesRow{}
+	for rows.Next() {
+		var i ListEinvoiceBillableSourcesRow
+		if err := rows.Scan(
+			&i.SourceType,
+			&i.ID,
+			&i.SourceUuid,
+			&i.SourceNo,
+			&i.BuyerOrgID,
+			&i.BuyerOrgUuid,
+			&i.BuyerName,
+			&i.Currency,
+			&i.LineExtension,
+			&i.TaxTotal,
+			&i.Payable,
+			&i.BillableAt,
+			&i.PeriodStart,
+			&i.PeriodEnd,
+			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listEinvoiceBillableSubscriptionPeriods = `-- name: ListEinvoiceBillableSubscriptionPeriods :many
 SELECT p.id, p.subscription_id, s.uuid AS subscription_uuid, i.name AS source_no,
        s.organization_id AS buyer_org_id, buyer.name AS buyer_name, s.currency,
@@ -584,6 +1155,74 @@ func (q *Queries) ListEinvoiceBillableSubscriptionPeriods(ctx context.Context, a
 			&i.PeriodStart,
 			&i.PeriodEnd,
 			&i.BillableAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listEinvoiceOrderLines = `-- name: ListEinvoiceOrderLines :many
+SELECT oi.id, oi.uuid, oi.order_id, oi.organization_id, oi.brand_id, oi.product_id, oi.quantity, oi.meters, oi.unit_price, oi.price_source, oi.recommended_price_snapshot, oi.line_total, oi.note, oi.created_at, oi.updated_at, p.id, p.uuid, p.organization_id, p.brand_id, p.category_id, p.sku, p.name, p.description_md, p.warranty_duration_months, p.micron_thickness, p.images, p.unit_type, p.uses_fixed_barcode, p.active, p.external_id, p.connection_id, p.locked_fields, p.created_at, p.updated_at
+FROM order_items oi
+JOIN products p ON p.id = oi.product_id
+WHERE oi.order_id = $1
+ORDER BY oi.id
+`
+
+type ListEinvoiceOrderLinesRow struct {
+	OrderItem OrderItem `json:"order_item"`
+	Product   Product   `json:"product"`
+}
+
+func (q *Queries) ListEinvoiceOrderLines(ctx context.Context, orderID int64) ([]ListEinvoiceOrderLinesRow, error) {
+	rows, err := q.db.Query(ctx, listEinvoiceOrderLines, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListEinvoiceOrderLinesRow{}
+	for rows.Next() {
+		var i ListEinvoiceOrderLinesRow
+		if err := rows.Scan(
+			&i.OrderItem.ID,
+			&i.OrderItem.Uuid,
+			&i.OrderItem.OrderID,
+			&i.OrderItem.OrganizationID,
+			&i.OrderItem.BrandID,
+			&i.OrderItem.ProductID,
+			&i.OrderItem.Quantity,
+			&i.OrderItem.Meters,
+			&i.OrderItem.UnitPrice,
+			&i.OrderItem.PriceSource,
+			&i.OrderItem.RecommendedPriceSnapshot,
+			&i.OrderItem.LineTotal,
+			&i.OrderItem.Note,
+			&i.OrderItem.CreatedAt,
+			&i.OrderItem.UpdatedAt,
+			&i.Product.ID,
+			&i.Product.Uuid,
+			&i.Product.OrganizationID,
+			&i.Product.BrandID,
+			&i.Product.CategoryID,
+			&i.Product.Sku,
+			&i.Product.Name,
+			&i.Product.DescriptionMd,
+			&i.Product.WarrantyDurationMonths,
+			&i.Product.MicronThickness,
+			&i.Product.Images,
+			&i.Product.UnitType,
+			&i.Product.UsesFixedBarcode,
+			&i.Product.Active,
+			&i.Product.ExternalID,
+			&i.Product.ConnectionID,
+			&i.Product.LockedFields,
+			&i.Product.CreatedAt,
+			&i.Product.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -766,6 +1405,225 @@ func (q *Queries) ListEinvoices(ctx context.Context, arg ListEinvoicesParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const setEinvoicePDF = `-- name: SetEinvoicePDF :one
+UPDATE einvoices
+SET pdf_storage_key = $1,
+    error = NULL
+WHERE id = $2
+  AND status IN ('archived', 'voided')
+RETURNING id, uuid, organization_id, brand_id, number, profile, invoice_type, source_type, source_uuid, buyer_org_id, buyer, seller, lines, currency, rate_snapshot, line_extension, tax_exclusive, tax_total, payable, tax_breakdown, xml_storage_key, xml_sha256, pdf_storage_key, validation_status, validation_messages, status, error, voided_at, voided_by, void_reason, issue_date, created_by, created_at, updated_at
+`
+
+type SetEinvoicePDFParams struct {
+	PdfStorageKey pgtype.Text `json:"pdf_storage_key"`
+	ID            int64       `json:"id"`
+}
+
+func (q *Queries) SetEinvoicePDF(ctx context.Context, arg SetEinvoicePDFParams) (Einvoice, error) {
+	row := q.db.QueryRow(ctx, setEinvoicePDF, arg.PdfStorageKey, arg.ID)
+	var i Einvoice
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Number,
+		&i.Profile,
+		&i.InvoiceType,
+		&i.SourceType,
+		&i.SourceUuid,
+		&i.BuyerOrgID,
+		&i.Buyer,
+		&i.Seller,
+		&i.Lines,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.LineExtension,
+		&i.TaxExclusive,
+		&i.TaxTotal,
+		&i.Payable,
+		&i.TaxBreakdown,
+		&i.XmlStorageKey,
+		&i.XmlSha256,
+		&i.PdfStorageKey,
+		&i.ValidationStatus,
+		&i.ValidationMessages,
+		&i.Status,
+		&i.Error,
+		&i.VoidedAt,
+		&i.VoidedBy,
+		&i.VoidReason,
+		&i.IssueDate,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const setEinvoicePDFError = `-- name: SetEinvoicePDFError :exec
+UPDATE einvoices
+SET error = $1
+WHERE id = $2
+  AND status IN ('archived', 'voided')
+`
+
+type SetEinvoicePDFErrorParams struct {
+	Error pgtype.Text `json:"error"`
+	ID    int64       `json:"id"`
+}
+
+// A PDF failure never changes the invoice status; it is kept in error until
+// a retry succeeds.
+func (q *Queries) SetEinvoicePDFError(ctx context.Context, arg SetEinvoicePDFErrorParams) error {
+	_, err := q.db.Exec(ctx, setEinvoicePDFError, arg.Error, arg.ID)
+	return err
+}
+
+const setEinvoiceSettingsXSLT = `-- name: SetEinvoiceSettingsXSLT :one
+UPDATE einvoice_settings
+SET xslt_storage_key = $1,
+    xslt_sha1 = $2
+WHERE organization_id = $3
+  AND brand_id = $4
+RETURNING id, uuid, organization_id, brand_id, vkn, tax_office, legal_name, address, city, district, country, iban, email, phone, website, trade_registry_no, mersis_no, default_note, earchive_series, efatura_series, xslt_storage_key, xslt_sha1, pdf_enabled, created_at, updated_at
+`
+
+type SetEinvoiceSettingsXSLTParams struct {
+	XsltStorageKey pgtype.Text `json:"xslt_storage_key"`
+	XsltSha1       pgtype.Text `json:"xslt_sha1"`
+	OrganizationID int64       `json:"organization_id"`
+	BrandID        int64       `json:"brand_id"`
+}
+
+func (q *Queries) SetEinvoiceSettingsXSLT(ctx context.Context, arg SetEinvoiceSettingsXSLTParams) (EinvoiceSetting, error) {
+	row := q.db.QueryRow(ctx, setEinvoiceSettingsXSLT,
+		arg.XsltStorageKey,
+		arg.XsltSha1,
+		arg.OrganizationID,
+		arg.BrandID,
+	)
+	var i EinvoiceSetting
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Vkn,
+		&i.TaxOffice,
+		&i.LegalName,
+		&i.Address,
+		&i.City,
+		&i.District,
+		&i.Country,
+		&i.Iban,
+		&i.Email,
+		&i.Phone,
+		&i.Website,
+		&i.TradeRegistryNo,
+		&i.MersisNo,
+		&i.DefaultNote,
+		&i.EarchiveSeries,
+		&i.EfaturaSeries,
+		&i.XsltStorageKey,
+		&i.XsltSha1,
+		&i.PdfEnabled,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateOrganizationInvoiceProfile = `-- name: UpdateOrganizationInvoiceProfile :one
+UPDATE organizations
+SET invoice_vkn = $1,
+    invoice_tckn = $2,
+    invoice_tax_office = $3,
+    invoice_legal_name = $4,
+    einvoice_registered = $5,
+    einvoice_alias = $6,
+    invoice_email = $7
+WHERE id = $8
+  AND brand_id = $9
+  AND deleted_at IS NULL
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email
+`
+
+type UpdateOrganizationInvoiceProfileParams struct {
+	InvoiceVkn         pgtype.Text `json:"invoice_vkn"`
+	InvoiceTckn        pgtype.Text `json:"invoice_tckn"`
+	InvoiceTaxOffice   pgtype.Text `json:"invoice_tax_office"`
+	InvoiceLegalName   pgtype.Text `json:"invoice_legal_name"`
+	EinvoiceRegistered bool        `json:"einvoice_registered"`
+	EinvoiceAlias      pgtype.Text `json:"einvoice_alias"`
+	InvoiceEmail       pgtype.Text `json:"invoice_email"`
+	ID                 int64       `json:"id"`
+	BrandID            int64       `json:"brand_id"`
+}
+
+func (q *Queries) UpdateOrganizationInvoiceProfile(ctx context.Context, arg UpdateOrganizationInvoiceProfileParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, updateOrganizationInvoiceProfile,
+		arg.InvoiceVkn,
+		arg.InvoiceTckn,
+		arg.InvoiceTaxOffice,
+		arg.InvoiceLegalName,
+		arg.EinvoiceRegistered,
+		arg.EinvoiceAlias,
+		arg.InvoiceEmail,
+		arg.ID,
+		arg.BrandID,
+	)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+		&i.InvoiceVkn,
+		&i.InvoiceTckn,
+		&i.InvoiceTaxOffice,
+		&i.InvoiceLegalName,
+		&i.EinvoiceRegistered,
+		&i.EinvoiceAlias,
+		&i.InvoiceEmail,
+	)
+	return i, err
 }
 
 const upsertEinvoiceSettings = `-- name: UpsertEinvoiceSettings :one

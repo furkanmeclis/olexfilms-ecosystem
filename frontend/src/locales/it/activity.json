@@ -198,5 +198,15 @@
   "resources.platform.organizations": "Organizzazioni",
   "actions.mcp.tool_called": "Strumento MCP richiamato",
   "resources.mcp_tool": "Strumento MCP",
-  "actions.pricing.recommended_published": "Prezzi consigliati pubblicati"
+  "actions.pricing.recommended_published": "Prezzi consigliati pubblicati",
+  "actions.einvoice.draft_created": "Bozza di fattura elettronica creata",
+  "actions.einvoice.archived": "Fattura elettronica archiviata",
+  "actions.einvoice.archive_failed": "Convalida della fattura elettronica non riuscita",
+  "actions.einvoice.voided": "Fattura elettronica annullata",
+  "actions.einvoice.pdf_retried": "PDF della fattura elettronica rigenerato",
+  "actions.einvoice.settings_updated": "Impostazioni della fattura elettronica aggiornate",
+  "actions.einvoice.xslt_uploaded": "Modello XSLT della fattura elettronica caricato",
+  "actions.einvoice.xslt_reset": "Modello XSLT della fattura elettronica ripristinato",
+  "actions.einvoice.buyer_profile_updated": "Profilo di fatturazione dell'acquirente aggiornato",
+  "resources.einvoices": "Fatture elettroniche"
 }

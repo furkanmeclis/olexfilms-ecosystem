@@ -702,6 +702,8 @@ func catalogConstants() []string {
 		PerformanceComputed,
 		PricingRecommendedPublished,
 		PricingDisciplineDigest,
+		EinvoiceArchived,
+		EinvoiceVoided,
 	}
 }
 
@@ -823,4 +825,15 @@ const (
 	PerformanceComputed    = "performance.computed"
 	PerformanceWeakDealer  = "performance.weak_dealer"
 	PerformanceBelowTarget = "performance.below_target"
+)
+
+// e-Invoice (TEC-503, F5-08c): written in the transaction that archives or
+// voids an invoice; tenant is the brand center. archived payload:
+// einvoice_uuid (ETTN), number, profile, source_type, source_uuid,
+// buyer_org_id, payable, currency, issue_date, xml_sha256. voided payload:
+// einvoice_uuid, number, previous_status, source_type, source_uuid, reason.
+// Nothing is sent to GİB or an integrator (design §9).
+const (
+	EinvoiceArchived = "einvoice.archived"
+	EinvoiceVoided   = "einvoice.voided"
 )

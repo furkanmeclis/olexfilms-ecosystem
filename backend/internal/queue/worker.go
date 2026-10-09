@@ -130,6 +130,8 @@ type Worker struct {
 	// TEC-506: pricing tick and price list PDF publication.
 	pricingDaily     PricingDailyFunc
 	pricingPriceList PricingPriceListFunc
+	// TEC-503: e-invoice PDF (docs queue).
+	einvoicePDF EinvoicePDFFunc
 }
 
 // NewWorker builds a worker that handles known task types on every queue.
@@ -238,6 +240,7 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	mux.HandleFunc(TaskShowcaseGoogleRating, w.handleShowcaseGoogleRating)
 	mux.HandleFunc(TaskPricingDaily, w.handlePricingDaily)
 	mux.HandleFunc(TaskPricingPriceList, w.handlePricingPriceList)
+	mux.HandleFunc(TaskEinvoicePDF, w.handleEinvoicePDF)
 	return w
 }
 

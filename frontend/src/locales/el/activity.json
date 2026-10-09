@@ -198,5 +198,15 @@
   "resources.platform.organizations": "Οργανισμοί",
   "actions.mcp.tool_called": "Κλήθηκε εργαλείο MCP",
   "resources.mcp_tool": "Εργαλείο MCP",
-  "actions.pricing.recommended_published": "Δημοσιεύτηκαν προτεινόμενες τιμές"
+  "actions.pricing.recommended_published": "Δημοσιεύτηκαν προτεινόμενες τιμές",
+  "actions.einvoice.draft_created": "Δημιουργήθηκε πρόχειρο ηλεκτρονικού τιμολογίου",
+  "actions.einvoice.archived": "Το ηλεκτρονικό τιμολόγιο αρχειοθετήθηκε",
+  "actions.einvoice.archive_failed": "Η επικύρωση του ηλεκτρονικού τιμολογίου απέτυχε",
+  "actions.einvoice.voided": "Το ηλεκτρονικό τιμολόγιο ακυρώθηκε",
+  "actions.einvoice.pdf_retried": "Το PDF του ηλεκτρονικού τιμολογίου δημιουργήθηκε ξανά",
+  "actions.einvoice.settings_updated": "Οι ρυθμίσεις ηλεκτρονικών τιμολογίων ενημερώθηκαν",
+  "actions.einvoice.xslt_uploaded": "Μεταφορτώθηκε πρότυπο XSLT ηλεκτρονικών τιμολογίων",
+  "actions.einvoice.xslt_reset": "Το πρότυπο XSLT επανήλθε στο προεπιλεγμένο",
+  "actions.einvoice.buyer_profile_updated": "Το προφίλ τιμολόγησης του αγοραστή ενημερώθηκε",
+  "resources.einvoices": "Ηλεκτρονικά τιμολόγια"
 }

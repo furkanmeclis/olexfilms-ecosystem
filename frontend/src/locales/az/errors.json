@@ -151,5 +151,12 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "E-faktura yalnız Türkiyədəki alıcılara və TRY ilə kəsilə bilər.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Faktura məlumatları natamam və ya səhvdir.",
   "codes.EINVOICE_INVALID_VAT_RATE": "ƏDV dərəcəsi etibarsızdır; 0% üçün azadolma kodu lazımdır.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT üslub faylı etibarsızdır."
+  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT üslub faylı etibarsızdır.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Əvvəlcə e-faktura satıcı ayarlarını və seriyalarını yadda saxlayın.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "Bu qeyd fakturalana bilməz (sifariş qəbul edilməyib və ya dövr qeydə alınmayıb).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "Bu qeydin artıq aktiv e-fakturası var; yenidən fakturalamaq üçün onu ləğv edin.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Alıcının faktura profili natamamdır; çatışmayan sahələri doldurun.",
+  "codes.EINVOICE_INVALID_STATUS": "E-fakturanın statusu bu əməliyyata icazə vermir.",
+  "codes.EINVOICE_NOT_ARCHIVED": "E-faktura hələ arxivləşdirilməyib.",
+  "codes.EINVOICE_PDF_NOT_READY": "Fakturanın PDF faylı hələ hazır deyil; bir az sonra yenidən cəhd edin və ya yenidən yaradın."
 }

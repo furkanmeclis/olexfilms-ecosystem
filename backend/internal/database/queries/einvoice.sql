@@ -217,3 +217,201 @@ WHERE p.brand_id = sqlc.arg(brand_id)
   AND e.id IS NULL
 ORDER BY p.period_start ASC, p.id ASC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- TEC-503 (F5-08c): e-Invoice use case and API -------------------------------
+
+-- name: ListEinvoiceBillableSources :many
+-- List contract: sort=billable_at|source_no|payable|buyer_name, default
+-- -billable_at; (source_type, id) is the stable tiebreak. Center sales
+-- without an active (non-voided) invoice: received orders to distributors
+-- and posted service catalog subscription periods of dealers.
+WITH src AS (
+    SELECT 'order'::text AS source_type, o.id, o.uuid AS source_uuid, o.order_no::text AS source_no,
+           buyer.id AS buyer_org_id, buyer.uuid AS buyer_org_uuid, buyer.name::text AS buyer_name,
+           o.currency::text AS currency, o.subtotal AS line_extension, o.tax_total AS tax_total,
+           o.total AS payable, o.received_at AS billable_at,
+           NULL::date AS period_start, NULL::date AS period_end
+    FROM orders o
+    JOIN organizations seller ON seller.id = o.seller_org_id
+    JOIN organizations buyer ON buyer.id = o.buyer_org_id
+    WHERE o.brand_id = sqlc.arg(brand_id)
+      AND o.seller_org_id = sqlc.arg(center_org_id)
+      AND seller.type = 'center'
+      AND buyer.type = 'distributor'
+      AND o.status = 'received'
+      AND NOT EXISTS (
+          SELECT 1 FROM einvoices e
+          WHERE e.organization_id = o.seller_org_id AND e.source_type = 'order'
+            AND e.source_uuid = o.uuid AND e.status <> 'voided')
+    UNION ALL
+    SELECT 'service_subscription'::text, p.id, p.uuid, i.name::text,
+           buyer.id, buyer.uuid, buyer.name::text,
+           s.currency::text, s.price, 0::numeric(18,2), s.price, p.posted_at,
+           p.period_start, p.period_end
+    FROM service_subscription_periods p
+    JOIN service_subscriptions s ON s.id = p.subscription_id
+    JOIN service_catalog_items i ON i.id = s.item_id
+    JOIN organizations seller ON seller.id = s.seller_org_id
+    JOIN organizations buyer ON buyer.id = s.organization_id
+    WHERE p.brand_id = sqlc.arg(brand_id)
+      AND s.seller_org_id = sqlc.arg(center_org_id)
+      AND seller.type = 'center'
+      AND buyer.type = 'dealer'
+      AND p.posted_at IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM einvoices e
+          WHERE e.organization_id = s.seller_org_id AND e.source_type = 'service_subscription'
+            AND e.source_uuid = p.uuid AND e.status <> 'voided')
+)
+SELECT src.source_type, src.id, src.source_uuid, src.source_no, src.buyer_org_id,
+       src.buyer_org_uuid, src.buyer_name, src.currency, src.line_extension, src.tax_total,
+       src.payable, src.billable_at, src.period_start, src.period_end,
+       COUNT(*) OVER()::bigint AS total_count
+FROM src
+WHERE (COALESCE(cardinality(sqlc.narg(source_types)::text[]), 0) = 0 OR src.source_type = ANY (sqlc.narg(source_types)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(buyer_org_uuids)::uuid[]), 0) = 0 OR src.buyer_org_uuid = ANY (sqlc.narg(buyer_org_uuids)::uuid[]))
+  AND (sqlc.narg(billable_from)::timestamptz IS NULL OR src.billable_at >= sqlc.narg(billable_from)::timestamptz)
+  AND (sqlc.narg(billable_before)::timestamptz IS NULL OR src.billable_at < sqlc.narg(billable_before)::timestamptz)
+  AND (sqlc.narg(payable_min)::numeric IS NULL OR src.payable >= sqlc.narg(payable_min)::numeric)
+  AND (sqlc.narg(payable_max)::numeric IS NULL OR src.payable <= sqlc.narg(payable_max)::numeric)
+  AND (
+    sqlc.narg(q)::text IS NULL
+    OR src.source_no ILIKE '%' || sqlc.narg(q)::text || '%'
+    OR src.buyer_name ILIKE '%' || sqlc.narg(q)::text || '%'
+  )
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'billable_at' THEN src.billable_at END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'billable_at' THEN src.billable_at END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'source_no' THEN src.source_no WHEN 'buyer_name' THEN src.buyer_name END
+  END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN
+    CASE sqlc.arg(sort_key)::text WHEN 'source_no' THEN src.source_no WHEN 'buyer_name' THEN src.buyer_name END
+  END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'payable' THEN src.payable END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'payable' THEN src.payable END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN src.source_type END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN src.id END DESC,
+  src.source_type ASC,
+  src.id ASC
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: GetEinvoiceForUpdate :one
+SELECT * FROM einvoices
+WHERE uuid = sqlc.arg(uuid)
+  AND brand_id = sqlc.arg(brand_id)
+FOR UPDATE;
+
+-- name: GetEinvoiceByID :one
+SELECT * FROM einvoices WHERE id = sqlc.arg(id);
+
+-- name: ArchiveEinvoice :one
+-- Archives a draft (or a failed attempt) with its final number, the frozen
+-- parties/lines/totals and the stored XML.
+UPDATE einvoices
+SET number = sqlc.arg(number),
+    profile = sqlc.arg(profile),
+    buyer = sqlc.arg(buyer),
+    seller = sqlc.arg(seller),
+    lines = sqlc.arg(lines),
+    line_extension = sqlc.arg(line_extension),
+    tax_exclusive = sqlc.arg(tax_exclusive),
+    tax_total = sqlc.arg(tax_total),
+    payable = sqlc.arg(payable),
+    tax_breakdown = sqlc.arg(tax_breakdown),
+    issue_date = sqlc.arg(issue_date),
+    xml_storage_key = sqlc.arg(xml_storage_key),
+    xml_sha256 = sqlc.arg(xml_sha256),
+    validation_status = 'valid',
+    validation_messages = '[]'::jsonb,
+    status = 'archived',
+    error = NULL
+WHERE id = sqlc.arg(id)
+  AND status IN ('draft', 'failed')
+RETURNING *;
+
+-- name: FailEinvoice :one
+-- Records a validation failure: the draft keeps its temporary number (no
+-- series number is consumed) and can be archived again after a fix.
+UPDATE einvoices
+SET profile = sqlc.arg(profile),
+    buyer = sqlc.arg(buyer),
+    seller = sqlc.arg(seller),
+    lines = sqlc.arg(lines),
+    line_extension = sqlc.arg(line_extension),
+    tax_exclusive = sqlc.arg(tax_exclusive),
+    tax_total = sqlc.arg(tax_total),
+    payable = sqlc.arg(payable),
+    tax_breakdown = sqlc.arg(tax_breakdown),
+    validation_status = sqlc.arg(validation_status),
+    validation_messages = sqlc.arg(validation_messages),
+    status = 'failed',
+    error = sqlc.arg(error)
+WHERE id = sqlc.arg(id)
+  AND status IN ('draft', 'failed')
+RETURNING *;
+
+-- name: SetEinvoicePDF :one
+UPDATE einvoices
+SET pdf_storage_key = sqlc.arg(pdf_storage_key),
+    error = NULL
+WHERE id = sqlc.arg(id)
+  AND status IN ('archived', 'voided')
+RETURNING *;
+
+-- name: SetEinvoicePDFError :exec
+-- A PDF failure never changes the invoice status; it is kept in error until
+-- a retry succeeds.
+UPDATE einvoices
+SET error = sqlc.arg(error)
+WHERE id = sqlc.arg(id)
+  AND status IN ('archived', 'voided');
+
+-- name: GetEinvoiceFinanceEntry :one
+-- The center's ledger row of the invoiced source (orders book source
+-- "order"/orders.uuid); no ledger row is written for an invoice.
+SELECT f.uuid, f.direction, f.amount, f.currency, f.source_type, f.created_at
+FROM finance_entries f
+WHERE f.organization_id = sqlc.arg(organization_id)
+  AND f.source_uuid = sqlc.arg(source_uuid)
+  AND f.reversal_of_id IS NULL
+  AND NOT EXISTS (SELECT 1 FROM finance_entries r WHERE r.reversal_of_id = f.id)
+ORDER BY f.revision DESC, f.id DESC
+LIMIT 1;
+
+-- name: ListEinvoiceOrderLines :many
+SELECT sqlc.embed(oi), sqlc.embed(p)
+FROM order_items oi
+JOIN products p ON p.id = oi.product_id
+WHERE oi.order_id = sqlc.arg(order_id)
+ORDER BY oi.id;
+
+-- name: GetEinvoiceSubscriptionPeriod :one
+SELECT sqlc.embed(p), sqlc.embed(s), sqlc.embed(i)
+FROM service_subscription_periods p
+JOIN service_subscriptions s ON s.id = p.subscription_id
+JOIN service_catalog_items i ON i.id = s.item_id
+WHERE p.uuid = sqlc.arg(uuid)
+  AND p.brand_id = sqlc.arg(brand_id);
+
+-- name: SetEinvoiceSettingsXSLT :one
+UPDATE einvoice_settings
+SET xslt_storage_key = sqlc.narg(xslt_storage_key),
+    xslt_sha1 = sqlc.narg(xslt_sha1)
+WHERE organization_id = sqlc.arg(organization_id)
+  AND brand_id = sqlc.arg(brand_id)
+RETURNING *;
+
+-- name: UpdateOrganizationInvoiceProfile :one
+UPDATE organizations
+SET invoice_vkn = sqlc.narg(invoice_vkn),
+    invoice_tckn = sqlc.narg(invoice_tckn),
+    invoice_tax_office = sqlc.narg(invoice_tax_office),
+    invoice_legal_name = sqlc.narg(invoice_legal_name),
+    einvoice_registered = sqlc.arg(einvoice_registered),
+    einvoice_alias = sqlc.narg(einvoice_alias),
+    invoice_email = sqlc.narg(invoice_email)
+WHERE id = sqlc.arg(id)
+  AND brand_id = sqlc.arg(brand_id)
+  AND deleted_at IS NULL
+RETURNING *;

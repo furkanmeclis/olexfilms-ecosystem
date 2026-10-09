@@ -151,5 +151,12 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "e-Invoices can only be issued in TRY to buyers in Türkiye.",
   "codes.EINVOICE_INVALID_DOCUMENT": "The invoice data is incomplete or invalid.",
   "codes.EINVOICE_INVALID_VAT_RATE": "The VAT rate is invalid; 0% needs an exemption code.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "The XSLT stylesheet is invalid."
+  "codes.EINVOICE_INVALID_STYLESHEET": "The XSLT stylesheet is invalid.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Save the e-invoice seller settings and series first.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "This record cannot be invoiced (the order is not received or the period is not posted).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "This record already has an active e-invoice; void it to invoice again.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "The buyer's invoice profile is incomplete; fill in the missing fields.",
+  "codes.EINVOICE_INVALID_STATUS": "The e-invoice status does not allow this action.",
+  "codes.EINVOICE_NOT_ARCHIVED": "The e-invoice is not archived yet.",
+  "codes.EINVOICE_PDF_NOT_READY": "The invoice PDF is not ready yet; try again shortly or retry the PDF."
 }

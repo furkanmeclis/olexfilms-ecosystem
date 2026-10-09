@@ -15039,6 +15039,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/einvoices/billable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Billable center sales without an active e-invoice
+         * @description TEC-503. Brand center with einvoice.read; the center's e_invoice add-on must be on (403 FEATURE_DISABLED). Received orders to distributors and posted service catalog subscription periods of dealers that have no draft, failed or archived invoice (a voided invoice frees the source). Sort: billable_at (default -billable_at), source_no, payable, buyer_name; (source_type, id) tiebreak. source_type CSV (order, service_subscription); buyer CSV of organization uuids; billable_at_from / billable_at_to; payable_min / payable_max; q matches the source number and buyer name.
+         */
+        get: operations["listEinvoiceBillable"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * E-invoices of the brand center
+         * @description TEC-503. Brand center with einvoice.read (e_invoice add-on). Sort: issue_date (default -issue_date), number, payable, status, created_at; id tiebreak. status / profile CSV; buyer CSV of organization uuids; issue_date_from / issue_date_to (inclusive days); payable_min / payable_max; q matches the number, the ETTN and the buyer name.
+         */
+        get: operations["listEinvoices"];
+        put?: never;
+        /**
+         * Draft an e-invoice from a billable source
+         * @description TEC-503. Brand center with einvoice.manage. The draft reserves the source under a temporary TMP number (number stays null) and freezes a snapshot of the parties, lines and totals; KDV comes from einvoice.default_vat_rate. 422 EINVOICE_SETTINGS_REQUIRED before the seller settings are saved; 422 EINVOICE_BUYER_PROFILE_INCOMPLETE with details[].field and data.missing_fields (invoice_vkn, invoice_tax_office, address, city, district); 422 EINVOICE_UNSUPPORTED_BUYER outside Türkiye / TRY; 422 EINVOICE_SOURCE_NOT_BILLABLE (order not received, period not posted); 409 EINVOICE_SOURCE_ALREADY_INVOICED.
+         */
+        post: operations["createEinvoiceDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Seller profile, series and stylesheet of the center
+         * @description TEC-503. Brand center with einvoice.read. Before the first save the defaults come back with configured false (archiving is closed).
+         */
+        get: operations["getEinvoiceSettings"];
+        /**
+         * Save the seller profile and series
+         * @description TEC-503. einvoice.settings (super_admin) in the brand center. VKN with a valid check digit; series 3 characters A-Z/0-9, the two series differ and TMP is reserved for drafts. The stylesheet is kept.
+         */
+        put: operations["putEinvoiceSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/settings/xslt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a custom invoice stylesheet
+         * @description TEC-503. einvoice.settings. Multipart field file, at most 1 MB, root element xsl:stylesheet. A sample invoice is rendered with it first; a broken stylesheet is 422 EINVOICE_INVALID_STYLESHEET. 422 EINVOICE_SETTINGS_REQUIRED before the settings are saved.
+         */
+        post: operations["uploadEinvoiceXSLT"];
+        /**
+         * Return to the default GİB stylesheet
+         * @description TEC-503. einvoice.settings.
+         */
+        delete: operations["resetEinvoiceXSLT"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * E-invoice detail
+         * @description TEC-503. einvoice.read. finance_entry is the center's ledger row of the source (orders book source "order"); the invoice writes no ledger row.
+         */
+        get: operations["getEinvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/{uuid}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Unnumbered HTML preview of a draft
+         * @description TEC-503. einvoice.read. Draft or failed invoices only (409 EINVOICE_INVALID_STATUS otherwise): rendered with the current data, without a number and with a PREVIEW watermark. Nothing is stored.
+         */
+        get: operations["previewEinvoice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/{uuid}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Number, validate and archive a draft
+         * @description TEC-503. einvoice.manage + step-up (403 STEP_UP_REQUIRED). The XML is validated (XSD + Schematron) with the temporary number first; invalid or rule_warnings answer 200 with status failed, validation_status and validation_messages and consume no number. A valid invoice takes the next number of its series (e-Arşiv or e-Fatura) in the same transaction, is stored at einvoices/{year}/{number}.xml with its sha256 and becomes archived (event einvoice.archived). The PDF follows on the docs queue; a PDF failure only fills error. 409 EINVOICE_INVALID_STATUS for archived or voided invoices.
+         */
+        post: operations["archiveEinvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/{uuid}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark an e-invoice voided
+         * @description TEC-503. einvoice.manage + step-up. A mark only: nothing is sent, the row and its files stay, the source becomes billable again (event einvoice.voided). reason is required. Return invoices (IADE) are deferred.
+         */
+        post: operations["voidEinvoice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/{uuid}/pdf/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Render the PDF of an archived invoice again
+         * @description TEC-503. einvoice.manage. Queues the PDF render (docs queue); error is cleared when it succeeds. 409 EINVOICE_NOT_ARCHIVED for drafts.
+         */
+        post: operations["retryEinvoicePDF"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/{uuid}/xml": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the archived UBL-TR XML
+         * @description TEC-503. einvoice.read. Streamed from private storage; 409 EINVOICE_NOT_ARCHIVED for drafts.
+         */
+        get: operations["downloadEinvoiceXML"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/{uuid}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the invoice PDF
+         * @description TEC-503. einvoice.read. 409 EINVOICE_PDF_NOT_READY while the PDF is pending or failed.
+         */
+        get: operations["downloadEinvoicePDF"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/einvoices/{uuid}/html": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * HTML view of the archived invoice
+         * @description TEC-503. einvoice.read. The stored XML rendered with the center's stylesheet (voided invoices carry a VOID watermark).
+         */
+        get: operations["renderEinvoiceHTML"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/organizations/{uuid}/invoice-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the invoice profile of a distributor or dealer
+         * @description TEC-503. Brand center with einvoice.manage (e_invoice add-on). Either invoice_vkn or invoice_tckn (valid check digits); missing_fields lists what an invoice still needs.
+         */
+        put: operations["putOrganizationInvoiceProfile"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -27182,6 +27454,248 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["PriceDisciplineSummary"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EinvoiceOrgRef: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        EinvoiceParty: {
+            name: string;
+            vkn?: string;
+            tckn?: string;
+            tax_office?: string;
+            street?: string;
+            district?: string;
+            city?: string;
+            country_code?: string;
+            email?: string;
+            phone?: string;
+            einvoice_registered: boolean;
+        };
+        EinvoiceLine: {
+            name: string;
+            /** @example 2 */
+            quantity: string;
+            /** @example C62 */
+            unit_code: string;
+            /** @example 100.00 */
+            unit_price: string;
+            /** @example 20 */
+            vat_rate: string;
+            /** @example 200.00 */
+            line_extension: string;
+        };
+        EinvoiceTax: {
+            percent: string;
+            taxable_amount: string;
+            tax_amount: string;
+        };
+        EinvoiceFinanceEntry: {
+            /** Format: uuid */
+            uuid: string;
+            direction: string;
+            amount: string;
+            currency: string;
+            source_type: string;
+        };
+        Einvoice: {
+            /**
+             * Format: uuid
+             * @description ETTN
+             */
+            uuid: string;
+            /** @description GİB number (SSSYYYY000000001); null while only a temporary draft number exists */
+            number: string | null;
+            /** @enum {string} */
+            profile: "EARSIVFATURA" | "TEMELFATURA" | "TICARIFATURA";
+            /** @enum {string} */
+            invoice_type: "SATIS";
+            /** @enum {string} */
+            status: "draft" | "failed" | "archived" | "voided";
+            /** @enum {string} */
+            validation_status: "valid" | "rule_warnings" | "invalid";
+            validation_messages: string[];
+            /** @enum {string} */
+            source_type: "order" | "service_subscription";
+            /** Format: uuid */
+            source_uuid: string;
+            buyer_organization: components["schemas"]["EinvoiceOrgRef"] | null;
+            buyer: components["schemas"]["EinvoiceParty"];
+            seller: components["schemas"]["EinvoiceParty"];
+            lines: components["schemas"]["EinvoiceLine"][];
+            tax_breakdown: components["schemas"]["EinvoiceTax"][];
+            /** @example TRY */
+            currency: string;
+            /** @example 300.00 */
+            line_extension: string;
+            /** @example 300.00 */
+            tax_exclusive: string;
+            /** @example 60.00 */
+            tax_total: string;
+            /** @example 360.00 */
+            payable: string;
+            /** Format: date */
+            issue_date: string;
+            xml_sha256: string | null;
+            has_xml: boolean;
+            has_pdf: boolean;
+            /** @description Validation failure summary (status failed) or the last PDF error (status unchanged) */
+            error: string | null;
+            /** Format: date-time */
+            voided_at: string | null;
+            void_reason: string | null;
+            finance_entry?: components["schemas"]["EinvoiceFinanceEntry"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeEinvoice: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["Einvoice"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeEinvoicePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["Einvoice"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EinvoiceBillable: {
+            /** @enum {string} */
+            source_type: "order" | "service_subscription";
+            /** Format: uuid */
+            source_uuid: string;
+            /** @description Order number or service catalog item name */
+            source_no: string;
+            buyer_organization: components["schemas"]["EinvoiceOrgRef"];
+            currency: string;
+            line_extension: string;
+            tax_total: string;
+            payable: string;
+            /** Format: date-time */
+            billable_at: string | null;
+            /** Format: date */
+            period_start: string | null;
+            /** Format: date */
+            period_end: string | null;
+        };
+        EnvelopeEinvoiceBillablePage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["EinvoiceBillable"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EinvoiceDraftRequest: {
+            /** @enum {string} */
+            source_type: "order" | "service_subscription";
+            /**
+             * Format: uuid
+             * @description orders.uuid or service_subscription_periods.uuid
+             */
+            source_uuid: string;
+        };
+        EinvoiceVoidRequest: {
+            reason: string;
+        };
+        EinvoiceSettings: {
+            configured: boolean;
+            vkn: string;
+            tax_office: string;
+            legal_name: string;
+            address: string;
+            city: string;
+            district: string;
+            /** @example TR */
+            country: string;
+            iban: string | null;
+            email: string | null;
+            phone: string | null;
+            website: string | null;
+            trade_registry_no: string | null;
+            mersis_no: string | null;
+            default_note: string | null;
+            /** @example EAR */
+            earchive_series: string;
+            /** @example EFN */
+            efatura_series: string;
+            pdf_enabled: boolean;
+            custom_xslt: boolean;
+            xslt_sha1: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        EnvelopeEinvoiceSettings: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["EinvoiceSettings"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EinvoiceSettingsRequest: {
+            vkn: string;
+            tax_office: string;
+            legal_name: string;
+            address: string;
+            city: string;
+            district: string;
+            iban?: string;
+            email?: string;
+            /** @description E.164 */
+            phone?: string;
+            website?: string;
+            trade_registry_no?: string;
+            mersis_no?: string;
+            default_note?: string;
+            earchive_series: string;
+            efatura_series: string;
+            /** @default true */
+            pdf_enabled: boolean;
+        };
+        InvoiceProfileRequest: {
+            /** @description 10 digit VKN (or invoice_tckn) */
+            invoice_vkn?: string;
+            /** @description 11 digit TCKN */
+            invoice_tckn?: string;
+            invoice_tax_office?: string;
+            invoice_legal_name?: string;
+            einvoice_registered?: boolean;
+            einvoice_alias?: string;
+            invoice_email?: string;
+        };
+        InvoiceProfile: {
+            /** Format: uuid */
+            organization_uuid: string;
+            organization_name: string;
+            /** @enum {string} */
+            organization_type: "distributor" | "dealer";
+            invoice_vkn: string | null;
+            invoice_tckn: string | null;
+            invoice_tax_office: string | null;
+            invoice_legal_name: string | null;
+            einvoice_registered: boolean;
+            einvoice_alias: string | null;
+            invoice_email: string | null;
+            missing_fields: string[];
+        };
+        EnvelopeInvoiceProfile: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["InvoiceProfile"];
             meta: components["schemas"]["ResponseMeta"];
         };
     };
@@ -54630,6 +55144,457 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listEinvoiceBillable: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                source_type?: ("order" | "service_subscription")[];
+                /** @description CSV of buyer organization uuids */
+                buyer?: string;
+                billable_at_from?: string;
+                billable_at_to?: string;
+                payable_min?: number;
+                payable_max?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Billable source page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoiceBillablePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listEinvoices: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                status?: ("draft" | "failed" | "archived" | "voided")[];
+                profile?: ("EARSIVFATURA" | "TEMELFATURA" | "TICARIFATURA")[];
+                /** @description CSV of buyer organization uuids */
+                buyer?: string;
+                issue_date_from?: string;
+                issue_date_to?: string;
+                payable_min?: number;
+                payable_max?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description E-invoice page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoicePage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createEinvoiceDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EinvoiceDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description Draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoice"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getEinvoiceSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoiceSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    putEinvoiceSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EinvoiceSettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoiceSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    uploadEinvoiceXSLT: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoiceSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    resetEinvoiceXSLT: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoiceSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getEinvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ETTN */
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description E-invoice */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoice"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    previewEinvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HTML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    archiveEinvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived or failed invoice */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoice"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    voidEinvoice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EinvoiceVoidRequest"];
+            };
+        };
+        responses: {
+            /** @description Voided invoice */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoice"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    retryEinvoicePDF: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEinvoice"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    downloadEinvoiceXML: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description XML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/xml": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    downloadEinvoicePDF: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    renderEinvoiceHTML: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HTML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    putOrganizationInvoiceProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Invoice profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeInvoiceProfile"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
 }

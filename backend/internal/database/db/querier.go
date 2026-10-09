@@ -54,6 +54,9 @@ type Querier interface {
 	ApproveStockCountStart(ctx context.Context, arg ApproveStockCountStartParams) (StockCount, error)
 	// Approval freezes A's purchase price (K13).
 	ApproveStockTransferRequest(ctx context.Context, arg ApproveStockTransferRequestParams) (StockTransferRequest, error)
+	// Archives a draft (or a failed attempt) with its final number, the frozen
+	// parties/lines/totals and the stored XML.
+	ArchiveEinvoice(ctx context.Context, arg ArchiveEinvoiceParams) (Einvoice, error)
 	// assigned_org_id NULL = center.
 	AssignConversation(ctx context.Context, arg AssignConversationParams) (Conversation, error)
 	AssignLead(ctx context.Context, arg AssignLeadParams) (Lead, error)
@@ -756,6 +759,9 @@ type Querier interface {
 	ExpireDueWarranties(ctx context.Context, now pgtype.Timestamptz) ([]Warranty, error)
 	ExpireServiceSubscriptions(ctx context.Context, today pgtype.Date) ([]ServiceSubscription, error)
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
+	// Records a validation failure: the draft keeps its temporary number (no
+	// series number is consumed) and can be archived again after a fix.
+	FailEinvoice(ctx context.Context, arg FailEinvoiceParams) (Einvoice, error)
 	// TEC-387: actions left executing since before stale_before (the process
 	// stopped mid-run) become failed with an "outcome unknown" error.
 	// updated_at is the claim time (set_updated_at trigger).
@@ -961,9 +967,15 @@ type Querier interface {
 	GetDraftDocumentTemplate(ctx context.Context, arg GetDraftDocumentTemplateParams) (DocumentTemplate, error)
 	GetEODReportByUUID(ctx context.Context, arg GetEODReportByUUIDParams) (EodReport, error)
 	GetEfficiencyServiceItemUnit(ctx context.Context, serviceItemID int64) (int64, error)
+	GetEinvoiceByID(ctx context.Context, id int64) (Einvoice, error)
 	GetEinvoiceByUUID(ctx context.Context, arg GetEinvoiceByUUIDParams) (Einvoice, error)
 	GetEinvoiceCounter(ctx context.Context, arg GetEinvoiceCounterParams) (EinvoiceCounter, error)
+	// The center's ledger row of the invoiced source (orders book source
+	// "order"/orders.uuid); no ledger row is written for an invoice.
+	GetEinvoiceFinanceEntry(ctx context.Context, arg GetEinvoiceFinanceEntryParams) (GetEinvoiceFinanceEntryRow, error)
+	GetEinvoiceForUpdate(ctx context.Context, arg GetEinvoiceForUpdateParams) (Einvoice, error)
 	GetEinvoiceSettingsByOrg(ctx context.Context, arg GetEinvoiceSettingsByOrgParams) (EinvoiceSetting, error)
+	GetEinvoiceSubscriptionPeriod(ctx context.Context, arg GetEinvoiceSubscriptionPeriodParams) (GetEinvoiceSubscriptionPeriodRow, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
 	GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
 	GetFinanceAccount(ctx context.Context, arg GetFinanceAccountParams) (FinanceAccount, error)
@@ -1835,7 +1847,14 @@ type Querier interface {
 	ListEfficiencyServiceItems(ctx context.Context, arg ListEfficiencyServiceItemsParams) ([]int64, error)
 	// Billable sources -----------------------------------------------------------
 	ListEinvoiceBillableOrders(ctx context.Context, arg ListEinvoiceBillableOrdersParams) ([]ListEinvoiceBillableOrdersRow, error)
+	// TEC-503 (F5-08c): e-Invoice use case and API -------------------------------
+	// List contract: sort=billable_at|source_no|payable|buyer_name, default
+	// -billable_at; (source_type, id) is the stable tiebreak. Center sales
+	// without an active (non-voided) invoice: received orders to distributors
+	// and posted service catalog subscription periods of dealers.
+	ListEinvoiceBillableSources(ctx context.Context, arg ListEinvoiceBillableSourcesParams) ([]ListEinvoiceBillableSourcesRow, error)
 	ListEinvoiceBillableSubscriptionPeriods(ctx context.Context, arg ListEinvoiceBillableSubscriptionPeriodsParams) ([]ListEinvoiceBillableSubscriptionPeriodsRow, error)
+	ListEinvoiceOrderLines(ctx context.Context, orderID int64) ([]ListEinvoiceOrderLinesRow, error)
 	// List contract: sort=issue_date|number|payable|status|created_at, default
 	// -issue_date; id is the stable tiebreak. q matches number, buyer legal/name
 	// fields and ETTN. status/profile/buyer_org_ids are multi-value filters.
@@ -3267,6 +3286,11 @@ type Querier interface {
 	// Writes a Places answer. CAS on the place id: no row when the owner
 	// changed the place id meanwhile.
 	SetDealerShowcasePlacesRating(ctx context.Context, arg SetDealerShowcasePlacesRatingParams) (int64, error)
+	SetEinvoicePDF(ctx context.Context, arg SetEinvoicePDFParams) (Einvoice, error)
+	// A PDF failure never changes the invoice status; it is kept in error until
+	// a retry succeeds.
+	SetEinvoicePDFError(ctx context.Context, arg SetEinvoicePDFErrorParams) error
+	SetEinvoiceSettingsXSLT(ctx context.Context, arg SetEinvoiceSettingsXSLTParams) (EinvoiceSetting, error)
 	// Records the fleet cari in the dealer's ledger once (CAS on NULL).
 	SetFleetDealerLinkCari(ctx context.Context, arg SetFleetDealerLinkCariParams) (FleetDealerLink, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.
@@ -3525,6 +3549,7 @@ type Querier interface {
 	// TEC-240: dealer coordinates and the public "nearby dealers" lookup.
 	// Sets or clears (both NULL) the map position of an organization.
 	UpdateOrganizationCoordinates(ctx context.Context, arg UpdateOrganizationCoordinatesParams) (Organization, error)
+	UpdateOrganizationInvoiceProfile(ctx context.Context, arg UpdateOrganizationInvoiceProfileParams) (Organization, error)
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
