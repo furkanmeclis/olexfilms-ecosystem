@@ -17,13 +17,14 @@ type FeatureChecker interface {
 
 // RequireFeature blocks a module the organization does not have
 // (403 FEATURE_DISABLED). It runs after RequireOrganization; without an
-// organization context (platform routes) or with a nil checker (unit tests
-// of other middleware) it passes.
+// organization context (platform routes), with the super admin's center
+// fallback scope (TEC-522: the platform panel never had a module gate) or
+// with a nil checker (unit tests of other middleware) it passes.
 func RequireFeature(ent FeatureChecker, key string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			scope, ok := orgctx.ScopeFrom(r.Context())
-			if ok && ent != nil {
+			if ok && ent != nil && !scope.SuperAdminFallback {
 				on, err := ent.Enabled(r.Context(), scope.InternalID, key)
 				if err != nil {
 					response.InternalErr(w, r, err, "feature check failed")

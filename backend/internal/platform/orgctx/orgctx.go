@@ -23,6 +23,9 @@ type Scope struct {
 	OrgType   string
 	BrandID   int64
 	BrandSlug string
+	// SuperAdminFallback marks the brand center scope RequireOrganization
+	// gives a super admin whose token carries no organization (TEC-522).
+	SuperAdminFallback bool
 }
 
 // WithScope stores organization scope on the context.
