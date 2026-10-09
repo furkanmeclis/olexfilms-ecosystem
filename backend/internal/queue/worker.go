@@ -189,65 +189,109 @@ func NewWorkerWithQueues(cfg config.Config, log *slog.Logger, deliver DeliverNot
 	})
 	mux := asynq.NewServeMux()
 	w := &Worker{server: server, mux: mux, log: log, deliver: deliver}
-	mux.HandleFunc(TaskPing, handlePing(log))
-	mux.HandleFunc(TaskNotificationDeliver, w.handleNotificationDeliver)
-	mux.HandleFunc(TaskAnnouncementDispatch, w.handleAnnouncementDispatch)
-	mux.HandleFunc(TaskExportProcess, w.handleExportProcess)
-	mux.HandleFunc(TaskImportProcess, w.handleImportProcess)
-	mux.HandleFunc(TaskBulkProcess, w.handleBulkProcess)
-	mux.HandleFunc(TaskLogPurgeSweep, w.handleLogPurgeSweep)
-	mux.HandleFunc(TaskSearchUpsert, w.handleSearchUpsert)
-	mux.HandleFunc(TaskSearchDelete, w.handleSearchDelete)
-	mux.HandleFunc(TaskSearchReindex, w.handleSearchReindex)
-	mux.HandleFunc(TaskDocsRender, w.handleDocsRender)
-	mux.HandleFunc(TaskContractPDF, w.handleContractPDF)
-	mux.HandleFunc(TaskRatesFetch, w.handleRatesFetch)
-	mux.HandleFunc(TaskNotificationPurge, w.handleNotificationPurge)
-	mux.HandleFunc(TaskWhatsAppStatusPoll, w.handleWhatsAppPoll)
-	mux.HandleFunc(TaskWarrantyExpire, w.handleWarrantyExpire)
-	mux.HandleFunc(TaskWarrantyExpiringScan, w.handleWarrantyExpiringScan)
-	mux.HandleFunc(TaskWarrantyRepairScan, w.handleWarrantyRepairScan)
-	mux.HandleFunc(TaskInventoryRebuild, w.handleInventoryRebuild)
-	mux.HandleFunc(TaskVehicleTransferExpire, w.handleVehicleTransferExpire)
-	mux.HandleFunc(TaskServiceReviewRequest, w.handleServiceReviewRequest)
-	mux.HandleFunc(TaskAppointmentReminder, w.handleAppointmentReminder)
-	mux.HandleFunc(TaskAppointmentNoShowScan, w.handleAppointmentNoShowScan)
-	mux.HandleFunc(TaskTasksDueScan, w.handleTasksDueScan)
-	mux.HandleFunc(TaskQuoteExpire, w.handleQuoteExpire)
-	mux.HandleFunc(TaskQuoteReminder, w.handleQuoteReminder)
-	mux.HandleFunc(TaskOAuthCleanup, w.handleOAuthCleanup)
-	mux.HandleFunc(TaskAIActionSweep, w.handleAIActionSweep)
-	mux.HandleFunc(TaskWarehouseEODReports, w.handleWarehouseEOD)
-	mux.HandleFunc(TaskGlorianPullCatalog, w.handleGlorianPull)
-	mux.HandleFunc(TaskGlorianPushBarcodes, w.handleGlorianPush)
-	mux.HandleFunc(TaskGlorianPatchStockItem, w.handleGlorianPatch)
-	mux.HandleFunc(TaskGlorianOrderOutbound, w.handleGlorianOrderOutbound)
-	mux.HandleFunc(TaskGlorianOrderReplay, w.handleGlorianOrderReplay)
-	mux.HandleFunc(TaskGlorianReconcile, w.handleGlorianReconcile)
-	mux.HandleFunc(TaskGlorianOutboundReplayOne, w.handleGlorianOutboundReplayOne)
-	mux.HandleFunc(TaskMeasurementPDF, w.handleMeasurementPDF)
-	mux.HandleFunc(TaskStaffPaymentsPostDue, w.handleStaffPaymentsPostDue)
-	mux.HandleFunc(TaskConversationAIRunPurge, w.handleConversationAIRunPurge)
-	mux.HandleFunc(TaskWhatsAppSend, w.handleWhatsAppSend)
-	mux.HandleFunc(TaskWhatsAppMediaStore, w.handleWhatsAppMediaStore)
-	mux.HandleFunc(TaskWhatsAppQueueSweep, w.handleWhatsAppQueueSweep)
-	mux.HandleFunc(TaskWhatsAppAIReply, w.handleWhatsAppAIReply)
-	mux.HandleFunc(TaskWarrantyClaimTriage, w.handleWarrantyClaimTriage)
-	mux.HandleFunc(TaskCampaignTick, w.handleCampaignTick)
-	mux.HandleFunc(TaskCampaignSendRecipient, w.handleCampaignSendRecipient)
-	mux.HandleFunc(TaskCertificateExpiryScan, w.handleCertificateExpiryScan)
-	mux.HandleFunc(TaskServiceSubscriptionsExpire, w.handleServiceSubscriptionsExpire)
-	mux.HandleFunc(TaskServiceSubscriptionsPostPeriods, w.handleServiceSubscriptionsPostPeriods)
-	mux.HandleFunc(TaskStockForecastDaily, w.handleStockForecastDaily)
-	mux.HandleFunc(TaskPerformanceDaily, w.handlePerformanceDaily)
-	mux.HandleFunc(TaskEfficiencyNetworkRefresh, w.handleEfficiencyNetworkRefresh)
-	mux.HandleFunc(TaskFleetReportsSchedule, w.handleFleetReportsSchedule)
-	mux.HandleFunc(TaskFleetReportGenerate, w.handleFleetReportGenerate)
-	mux.HandleFunc(TaskShowcaseGoogleRating, w.handleShowcaseGoogleRating)
-	mux.HandleFunc(TaskPricingDaily, w.handlePricingDaily)
-	mux.HandleFunc(TaskPricingPriceList, w.handlePricingPriceList)
-	mux.HandleFunc(TaskEinvoicePDF, w.handleEinvoicePDF)
+	for _, b := range w.bindings() {
+		mux.HandleFunc(b.taskType, b.handle)
+	}
 	return w
+}
+
+// binding is one task type on the mux: its handler and whether the
+// processor behind it is set (a handler without one only logs
+// "<task>_handler_missing" and drops the task).
+type binding struct {
+	taskType string
+	handle   asynq.HandlerFunc
+	bound    bool
+}
+
+// bindings lists every task type the worker handles. NewWorkerWithQueues
+// registers exactly these on the mux and Unbound reads the same list, so a
+// new task type cannot be handled without being checked (TEC-527).
+func (w *Worker) bindings() []binding {
+	log := w.log
+	return []binding{
+		{TaskPing, handlePing(log), true},
+		{TaskNotificationDeliver, w.handleNotificationDeliver, w.deliver != nil},
+		{TaskAnnouncementDispatch, w.handleAnnouncementDispatch, w.announcementDispatch != nil},
+		{TaskExportProcess, w.handleExportProcess, w.processExport != nil},
+		{TaskImportProcess, w.handleImportProcess, w.processImport != nil},
+		{TaskBulkProcess, w.handleBulkProcess, w.processBulk != nil},
+		{TaskLogPurgeSweep, w.handleLogPurgeSweep, w.purgeLogs != nil},
+		{TaskSearchUpsert, w.handleSearchUpsert, w.processSearchUpsert != nil},
+		{TaskSearchDelete, w.handleSearchDelete, w.processSearchDelete != nil},
+		{TaskSearchReindex, w.handleSearchReindex, w.processSearchReindex != nil},
+		{TaskDocsRender, w.handleDocsRender, w.processDocsRender != nil},
+		{TaskContractPDF, w.handleContractPDF, w.contractPDF != nil},
+		{TaskRatesFetch, w.handleRatesFetch, w.fetchRates != nil},
+		{TaskNotificationPurge, w.handleNotificationPurge, w.purgeNotifications != nil},
+		{TaskWhatsAppStatusPoll, w.handleWhatsAppPoll, w.pollWhatsApp != nil},
+		{TaskWarrantyExpire, w.handleWarrantyExpire, w.warrantyExpire != nil},
+		{TaskWarrantyExpiringScan, w.handleWarrantyExpiringScan, w.warrantyExpiringScan != nil},
+		{TaskWarrantyRepairScan, w.handleWarrantyRepairScan, w.warrantyRepairScan != nil},
+		{TaskInventoryRebuild, w.handleInventoryRebuild, w.inventoryRebuild != nil},
+		{TaskVehicleTransferExpire, w.handleVehicleTransferExpire, w.vehicleTransferExpire != nil},
+		{TaskServiceReviewRequest, w.handleServiceReviewRequest, w.serviceReviewRequest != nil},
+		{TaskAppointmentReminder, w.handleAppointmentReminder, w.appointmentReminder != nil},
+		{TaskAppointmentNoShowScan, w.handleAppointmentNoShowScan, w.appointmentNoShowScan != nil},
+		{TaskTasksDueScan, w.handleTasksDueScan, w.tasksDueScan != nil},
+		{TaskQuoteExpire, w.handleQuoteExpire, w.quoteExpire != nil},
+		{TaskQuoteReminder, w.handleQuoteReminder, w.quoteReminder != nil},
+		{TaskOAuthCleanup, w.handleOAuthCleanup, w.oauthCleanup != nil},
+		{TaskAIActionSweep, w.handleAIActionSweep, w.aiActionSweep != nil},
+		{TaskWarehouseEODReports, w.handleWarehouseEOD, w.warehouseEOD != nil},
+		{TaskGlorianPullCatalog, w.handleGlorianPull, w.glorianPull != nil},
+		{TaskGlorianPushBarcodes, w.handleGlorianPush, w.glorianPush != nil},
+		{TaskGlorianPatchStockItem, w.handleGlorianPatch, w.glorianPatch != nil},
+		{TaskGlorianOrderOutbound, w.handleGlorianOrderOutbound, w.glorianOrder != nil},
+		{TaskGlorianOrderReplay, w.handleGlorianOrderReplay, w.glorianReplay != nil},
+		{TaskGlorianReconcile, w.handleGlorianReconcile, w.glorianReconcile != nil},
+		{TaskGlorianOutboundReplayOne, w.handleGlorianOutboundReplayOne, w.glorianReplayOne != nil},
+		{TaskMeasurementPDF, w.handleMeasurementPDF, w.measurementPDF != nil},
+		{TaskStaffPaymentsPostDue, w.handleStaffPaymentsPostDue, w.staffPaymentsPostDue != nil},
+		{TaskConversationAIRunPurge, w.handleConversationAIRunPurge, w.purgeConversationAIRuns != nil},
+		{TaskWhatsAppSend, w.handleWhatsAppSend, w.whatsAppSend != nil},
+		{TaskWhatsAppMediaStore, w.handleWhatsAppMediaStore, w.whatsAppMedia != nil},
+		{TaskWhatsAppQueueSweep, w.handleWhatsAppQueueSweep, w.whatsAppSweep != nil},
+		{TaskWhatsAppAIReply, w.handleWhatsAppAIReply, w.whatsAppAIReply != nil},
+		{TaskWarrantyClaimTriage, w.handleWarrantyClaimTriage, w.warrantyClaimTriage != nil},
+		{TaskCampaignTick, w.handleCampaignTick, w.campaignTick != nil},
+		{TaskCampaignSendRecipient, w.handleCampaignSendRecipient, w.campaignSend != nil},
+		{TaskCertificateExpiryScan, w.handleCertificateExpiryScan, w.certificateExpiryScan != nil},
+		{TaskServiceSubscriptionsExpire, w.handleServiceSubscriptionsExpire, w.serviceSubscriptionsExpire != nil},
+		{TaskServiceSubscriptionsPostPeriods, w.handleServiceSubscriptionsPostPeriods, w.serviceSubscriptionsPostPeriods != nil},
+		{TaskStockForecastDaily, w.handleStockForecastDaily, w.stockForecastDaily != nil},
+		{TaskPerformanceDaily, w.handlePerformanceDaily, w.performanceDaily != nil},
+		{TaskEfficiencyNetworkRefresh, w.handleEfficiencyNetworkRefresh, w.efficiencyNetworkRefresh != nil},
+		{TaskFleetReportsSchedule, w.handleFleetReportsSchedule, w.fleetReportsSchedule != nil},
+		{TaskFleetReportGenerate, w.handleFleetReportGenerate, w.fleetReportGenerate != nil},
+		{TaskShowcaseGoogleRating, w.handleShowcaseGoogleRating, w.showcaseGoogleRating != nil},
+		{TaskPricingDaily, w.handlePricingDaily, w.pricingDaily != nil},
+		{TaskPricingPriceList, w.handlePricingPriceList, w.pricingPriceList != nil},
+		{TaskEinvoicePDF, w.handleEinvoicePDF, w.einvoicePDF != nil},
+	}
+}
+
+// Unbound lists the task types whose processor is not set: the worker
+// accepts those tasks but drops them with a "handler missing" warning. The
+// shared factory (internal/workerapp) leaves none (TEC-527).
+func (w *Worker) Unbound() []string {
+	var out []string
+	for _, b := range w.bindings() {
+		if !b.bound {
+			out = append(out, b.taskType)
+		}
+	}
+	return out
+}
+
+// TaskTypes lists every task type the worker registers on its mux.
+func TaskTypes() []string {
+	bs := (&Worker{}).bindings()
+	out := make([]string, 0, len(bs))
+	for _, b := range bs {
+		out = append(out, b.taskType)
+	}
+	return out
 }
 
 // TaskErrorHandler logs a failed task and reports it to error tracking with

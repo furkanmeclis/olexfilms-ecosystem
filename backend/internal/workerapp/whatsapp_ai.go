@@ -1,4 +1,4 @@
-package main
+package workerapp
 
 import (
 	"log/slog"
@@ -63,7 +63,8 @@ type whatsAppAIDeps struct {
 // the same tool registry as the API server (panel read and write tools,
 // customer and visitor tools) over worker-side use cases, the
 // confirmation flow and the chat agent, then the WhatsApp pipeline.
-// Keep the registrations in step with internal/httpserver/server.go.
+// Keep the registrations in step with internal/httpserver/server.go (the
+// API chat); this pipeline serves cmd/worker and the in-process worker.
 func newWhatsAppAIPipeline(d whatsAppAIDeps) *wapipeline.Pipeline {
 	cfg, pool, q, log := d.cfg, d.pool, d.queries, d.log
 	box := outbox.NewStore(pool, q)

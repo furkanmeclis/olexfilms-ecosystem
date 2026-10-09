@@ -234,8 +234,10 @@ type Deps struct {
 	Queue    *queue.Client
 	Storage  storage.Driver
 	Realtime realtime.Publisher
-	Worker   *queue.Worker
-	Events   events.Bus
+	// Worker is the in-process worker (QUEUE_WORKER_INPROCESS), already
+	// bound by workerapp (TEC-527); the server only starts and stops it.
+	Worker *queue.Worker
+	Events events.Bus
 	// SearchFinder replaces the Meilisearch client in the module lists
 	// (TEC-209 tests: an in-memory index). Nil: the configured client.
 	SearchFinder searchengine.ListFinder
@@ -645,9 +647,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-401: authorize, consent decision, connected apps, platform clients.
 	oauthSvc.SetAccess(oauthmodule.AuthAccess{UC: uc})
 	oauthmodule.RegisterSessionRoutes(mux, oauthSvc, tokens, loader, log)
-	if s.worker != nil {
-		s.worker.WithOAuthCleanup(oauthSvc.Cleanup)
-	}
 	// TEC-191: panel / portal warranty list and detail, center void.
 	warrantyReader := warrantymodule.RegisterListRoutes(mux, deps.DB, deps.Queries, cfg.Auth.FrontendURL,
 		tokens, loader, featureSvc, stepUpSvc, listFinder)
@@ -772,9 +771,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if deps.Queue != nil {
 		warrantyclaimsusecase.RegisterTriageHandlers(eventBus, queue.WarrantyTriageEnqueuer{Client: deps.Queue}, log)
 	}
-	if s.worker != nil {
-		s.worker.WithWarrantyClaimTriage(claimTriage.Auto)
-	}
 	warrantyclaimsmodule.RegisterRoutes(mux, warrantyclaimshandler.New(warrantyClaimsSvc, exportSvc).WithTriage(claimTriage),
 		tokens, loader, deps.Queries, featureSvc)
 	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
@@ -829,52 +825,16 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	)
 	bulkSvc := bulkusecase.New(deps.Queries, bulkReg, deps.Queue, notifSvc, activityRec, cfg.Bulk, log).WithPool(deps.DB)
 	logsSvc := logsusecase.New(deps.Queries)
-	if s.worker != nil {
-		warrantyCron := warrantymodule.NewCron(deps.DB, deps.Queries, cfg.Auth.FrontendURL)
-		s.worker.WithExport(exportSvc.ProcessExport).
-			WithImport(importSvc.ProcessImport).
-			WithBulk(bulkSvc.ProcessBulk).
-			WithLogPurge(logsSvc.ApplyDueRules).
-			WithRatesFetch(ratesSvc.FetchTask).
-			WithWarrantyCron(warrantyCron.ExpireTask, warrantyCron.ExpiringScanTask).
-			WithWarrantyRepairScan(warrantymodule.NewRepairScanner(deps.DB, deps.Queries, cfg.Auth.FrontendURL, cfg.Warranty.RepairScanDays, log).Task).
-			WithVehicleTransferExpire(customersSvc.ExpireTransfersTask).
-			WithServiceReviewRequest(servicereview.NewTaskSender(deps.DB, deps.Queries, cfg.Auth.FrontendURL, log).Task).
-			WithAppointmentReminder(appointmentreminder.NewTaskSender(deps.DB, deps.Queries, log).Task).
-			WithAppointmentNoShowScan(appointmentreminder.NewTaskNoShowScanner(deps.DB, deps.Queries, featureSvc, log).Task).
-			WithNotificationPurge(notifSvc.PurgeExpired).
-			WithAnnouncementDispatch(func(ctx context.Context, payload queue.AnnouncementDispatchPayload) error {
-				return announcementsusecase.DispatchBatch(ctx, notifSvc, payload)
-			}).
-			WithWhatsAppPoll(waSvc.PollStatus).
-			WithTasksDueScan(tasksusecase.NewCron(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).DueScanTask).
-			// TEC-381: planned staff payments booked on their paid_on.
-			WithStaffPaymentsPostDue(accountingSvc.PostDueStaffPaymentsTask)
-		s.worker.WithEfficiencyNetworkRefresh(efficiencymodule.NewNetworkRefresher(deps.Queries, sysSvc).Task)
-		if searchIndexer != nil {
-			s.worker.WithSearch(
-				searchIndexer.ProcessUpsert,
-				searchIndexer.ProcessDelete,
-				searchIndexer.ProcessReindex,
-			)
-		}
-	}
 	var docQueue docusecase.Enqueuer
 	if deps.Queue != nil {
 		docQueue = deps.Queue
 	}
 	docSvc := docusecase.New(deps.DB, deps.Queries, deps.Storage, pdfClient, docQueue, pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
 	s.documents = docSvc
-	if s.worker != nil {
-		s.worker.WithDocsRender(docSvc.ProcessRender)
-	}
 	// TEC-506: price_list document source and its library publication.
 	priceListPublisher := pricingusecase.NewPriceListPublisher(deps.Queries, docSvc,
 		libraryusecase.New(deps.Queries, deps.Storage), featureSvc, log)
 	_ = docSvc.RegisterLoader(docmodel.KindPriceList, priceListPublisher.DocumentLoader())
-	if s.worker != nil {
-		s.worker.WithPricing(recommendedSvc.DailyTask, priceListPublisher.Task)
-	}
 	// TEC-395: WhatsApp conversation messaging: outgoing queue (whatsapp:send),
 	// delivery receipts, inbound media storage and inbox realtime events.
 	// AI tools (F4-02c) and staff replies (F4-02f) queue through it.
@@ -888,11 +848,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	s.waMessaging = whatsappmodule.NewMessaging(waSvc, deps.DB, deps.Queries, waDeps, log)
 	s.waMessaging.SetDocuments(whatsappmodule.NewDocumentRenderer(
 		servicesusecase.NewPDFAdapter(servicePDF), warrantyusecase.NewCertificateAdapter(warrantyCert), pdfClient))
-	if s.worker != nil {
-		s.worker.WithWhatsAppMessaging(s.waMessaging.ProcessSend, s.waMessaging.StoreInboundMedia, func(ctx context.Context) (int, error) {
-			return s.waMessaging.RequeueStale(ctx, 2*time.Minute)
-		})
-	}
 	documentsmodule.RegisterRoutes(mux, dochandler.New(docSvc, ratelimit.New(deps.Redis, cfg.App.Env)), tokens, loader, deps.Queries)
 	contractsSvc := contractsusecase.New(contractsrepo.New(deps.DB, deps.Queries),
 		contractsusecase.WithOTP(otpSvc),
@@ -908,9 +863,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		contractPDFQueue = deps.Queue
 	}
 	contractsmodule.RegisterEventHandlers(eventBus, contractPDFQueue, log)
-	if s.worker != nil {
-		s.worker.WithContractPDF(contractsSvc.GenerateExecutedPDF)
-	}
 	contractsmodule.RegisterRoutes(mux, contractshandler.New(contractsSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-298: timestamped measurement PDF (worker-docs measurement:pdf,
 	// cached in measurement_results.pdf_key) and the measurement document
@@ -926,15 +878,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	measurementPDF := measurementsusecase.NewPDF(measurementPDFTx, deps.Queries, deps.Storage, pdfClient,
 		measurementPDFQueue, pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
 	_ = docSvc.RegisterLoader(docmodel.KindMeasurement, measurementPDF.DocumentLoader())
-	if s.worker != nil {
-		s.worker.WithMeasurementPDF(measurementPDF.GeneratePDF)
-	}
 	measurementsmodule.RegisterPDFRoutes(mux, measurementshandler.NewPDF(measurementPDF), tokens, loader, deps.Queries, featureSvc)
 	// TEC-503 (F5-08c): e-invoice drafts, preview, numbering, archive (XML
 	// + PDF on the docs queue), void mark and settings.
-	if s.worker != nil {
-		s.worker.WithEinvoicePDF(einvoiceSvc.GeneratePDF)
-	}
 	einvoicemodule.RegisterRoutes(mux, einvoicehandler.New(einvoiceSvc, deps.Queries), tokens, loader, deps.Queries,
 		stepUpSvc, featureSvc)
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
@@ -1012,10 +958,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	if err := docSvc.RegisterLoader(docmodel.KindQuote, leadsSvc); err != nil {
 		return nil, err
 	}
-	if s.worker != nil {
-		s.worker.WithQuoteExpire(leadsSvc.ExpireDueQuotesTask).
-			WithQuoteReminder(leadsSvc.QuoteReminderTask)
-	}
 	leadsmodule.RegisterRoutes(mux, leadshandler.New(leadsSvc).WithDocuments(docSvc).WithExports(exportSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-323: appointments, capacity, availability and intake start.
 	appointmentsSvc := appointmentsusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), servicesSvc)
@@ -1043,9 +985,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Customers: customersSvc, Orders: ordersSvc, Products: catalogSvc, Services: servicesSvc,
 	})
 	s.aiActions = aiusecase.NewActions(airepo.New(deps.DB), s.aiTools, activityRec, log)
-	if s.worker != nil {
-		s.worker.WithAIActionSweep(s.aiActions.SweepTask)
-	}
 	// TEC-388 (F4-01f): panel and portal chat with SSE streaming.
 	aiProvider := deps.LLM
 	if aiProvider == nil {
@@ -1064,27 +1003,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	aiAdmin.Tools = s.aiTools
 	aimodule.RegisterAdminRoutes(mux, aihandler.NewAdmin(aiAdmin, exportSvc), tokens, loader, deps.Queries)
 	// TEC-396 (F4-02c): WhatsApp AI pipeline. whatsapp.message.received arms
-	// the debounced whatsapp:ai_reply task; the in-process worker runs it
-	// here, worker-core in production (cmd/worker).
+	// the debounced whatsapp:ai_reply task; worker-core (cmd/worker) or the
+	// in-process worker runs it, both bound by workerapp (TEC-527).
 	if deps.Queue != nil {
 		wapipeline.RegisterEventHandlers(eventBus, queue.WhatsAppAIEnqueuer{Client: deps.Queue}, log)
-	}
-	if s.worker != nil {
-		var waMedia llm.ObjectReader
-		if deps.Storage != nil {
-			waMedia = deps.Storage
-		}
-		s.worker.WithWhatsAppAIReply(wapipeline.Wire(wapipeline.WireDeps{
-			Queries: deps.Queries, AIStore: airepo.New(deps.DB), Chat: s.aiChat, Actions: s.aiActions,
-			Messaging: s.waMessaging, Provider: aiProvider, Models: llm.ModelsFromConfig(cfg.AI),
-			Access: uc, Features: featureSvc, Settings: sysSvc, Redis: deps.Redis, Env: cfg.App.Env,
-			Notifier: notifSvc, Media: waMedia, Downloader: waSvc.MediaDownloader(),
-			DefaultBrandSlug: cfg.App.DefaultBrandSlug, Log: log,
-			// TEC-397 (F4-02e): visitor flow (locations, limits, leads).
-			Tools: s.aiTools, Dealers: orgSvc, VisitorSettings: sysSvc, FrontendURL: cfg.Auth.FrontendURL,
-			Leads: leadsusecase.NewApplications(deps.DB, deps.Queries, geoSvc, featureSvc, sysSvc,
-				outbox.NewStore(deps.DB, deps.Queries)),
-		}).Process)
 	}
 	// TEC-149: vehicle catalog (global car brands/models, super_admin writes).
 	vehiclecatalogmodule.RegisterRoutes(mux, vehiclecataloghandler.New(

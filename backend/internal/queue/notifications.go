@@ -36,3 +36,10 @@ func (w *Worker) handleNotificationPurge(ctx context.Context, _ *asynq.Task) err
 	_, err := w.purgeNotifications(ctx)
 	return err
 }
+
+// WithDeliver sets the notification delivery processor (NewWorker's deliver
+// argument); the shared worker factory binds it with the rest (TEC-527).
+func (w *Worker) WithDeliver(fn DeliverNotificationFunc) *Worker {
+	w.deliver = fn
+	return w
+}
