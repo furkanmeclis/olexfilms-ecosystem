@@ -198,6 +198,7 @@ func (s *Service) ProcessExport(ctx context.Context, jobID int64) error {
 	// TEC-211: drop the columns the stored grants do not unlock, whatever
 	// the adapter returned.
 	ds = ioengine.ApplyColumnVisibility(ds, ioengine.GrantedPermissions(query))
+	ds.Timezone = s.jobTimezone(ctx, job)
 	lh, err := s.letterheadForJob(ctx, job)
 	if err != nil {
 		return s.fail(ctx, jobID, err.Error())
@@ -464,6 +465,26 @@ func exportDownloadPath(row db.ExportJob) string {
 		return fmt.Sprintf("/v1/tenant/exports/%s/download", row.Uuid.String())
 	}
 	return fmt.Sprintf("/v1/platform/exports/%s/download", row.Uuid.String())
+}
+
+// jobTimezone is the zone the requester reads the document in (TEC-521,
+// K10): the actor's own zone, else the job organization's, else its brand
+// center's, else Europe/Istanbul.
+func (s *Service) jobTimezone(ctx context.Context, job db.ExportJob) string {
+	p := db.GetLocaleSourcesParams{UserID: job.ActorID}
+	if job.OrganizationID.Valid {
+		if org, err := s.q.GetOrganizationByID(ctx, job.OrganizationID.Int64); err == nil {
+			p.OrganizationUuid = pgtype.UUID{Bytes: org.Uuid, Valid: true}
+			p.BrandID = pgtype.Int8{Int64: org.BrandID, Valid: true}
+		}
+	}
+	row, err := s.q.GetLocaleSources(ctx, p)
+	if err != nil {
+		return i18n.DefaultTimezone
+	}
+	return i18n.Resolve(i18n.Sources{
+		UserTimezone: row.UserTimezone, OrgTimezone: row.OrgTimezone, CenterTimezone: row.CenterTimezone,
+	}).Timezone
 }
 
 func organizationSlug(ctx context.Context, q *db.Queries, orgID pgtype.Int8) string {

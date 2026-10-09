@@ -98,3 +98,28 @@ func TestCertificateVerifyURL(t *testing.T) {
 		t.Fatalf("verify url = %s", got)
 	}
 }
+
+// TEC-521: the issued-at line is printed in the requester's zone (export
+// job), else the dealer organization's, else Europe/Istanbul; never UTC.
+func TestCertificateIssuedAtTimezone(t *testing.T) {
+	for _, tc := range []struct{ name, job, org, want string }{
+		{"default", "", "", "2026-10-09 14:32 (Europe/Istanbul)"},
+		{"invalid org zone", "", "Not/AZone", "2026-10-09 14:32 (Europe/Istanbul)"},
+		{"organization", "", "Asia/Baku", "2026-10-09 15:32 (Asia/Baku)"},
+		{"requester", "America/New_York", "Asia/Baku", "2026-10-09 07:32 (America/New_York)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := sampleCertificate()
+			c.GeneratedAt, c.Timezone = time.Date(2026, 10, 9, 11, 32, 0, 0, time.UTC), tc.org
+			ds := CertificateDataset(ResourceCertificate, c, i18n.LocaleTR)
+			ds.Timezone = tc.job
+			out, err := NewCertificateAdapter(nil).DocumentHTML(ds, "tr", nil, "Garanti belgesi")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(out, "Düzenlenme: "+tc.want) || strings.Contains(out, " UTC") {
+				t.Fatalf("issued-at is not %q", tc.want)
+			}
+		})
+	}
+}

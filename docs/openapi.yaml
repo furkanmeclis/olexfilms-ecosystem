@@ -2990,7 +2990,7 @@ paths:
         - name: tz
           in: query
           required: false
-          description: IANA time zone of the printed dates; invalid or missing is UTC.
+          description: IANA time zone of the printed dates and the issued-at time; invalid or missing is Europe/Istanbul.
           schema:
             type: string
       responses:

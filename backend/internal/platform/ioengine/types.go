@@ -50,6 +50,11 @@ type Dataset struct {
 	// Doc carries adapter-specific structured data for DocumentRenderer
 	// adapters (never serialized).
 	Doc any `json:"-"`
+	// Timezone is the IANA zone a DocumentRenderer prints times such as the
+	// issued-at line in (TEC-521): the export worker sets the requester's
+	// zone (K10: user -> organization -> brand center -> Europe/Istanbul);
+	// empty leaves the adapter's own fallback (e.g. the organization zone).
+	Timezone string `json:"-"`
 }
 
 // DocumentRenderer is implemented by adapters whose PDF export is a styled

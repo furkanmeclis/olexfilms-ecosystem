@@ -131,3 +131,39 @@ func TestBalancesDataset(t *testing.T) {
 		t.Fatalf("balances html: %v", err)
 	}
 }
+
+// TEC-521: the generated-at line of the statement and balance PDFs is
+// printed in the requester's zone (export job), else the book
+// organization's, else Europe/Istanbul; never UTC.
+func TestAccountingPDFIssuedAtTimezone(t *testing.T) {
+	at := time.Date(2026, 10, 9, 11, 32, 0, 0, time.UTC)
+	for _, tc := range []struct{ name, job, org, want string }{
+		{"default", "", "", "2026-10-09 14:32 (Europe/Istanbul)"},
+		{"organization", "", "Asia/Baku", "2026-10-09 15:32 (Asia/Baku)"},
+		{"requester", "America/New_York", "Asia/Baku", "2026-10-09 07:32 (America/New_York)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			st := sampleStatement()
+			st.GeneratedAt, st.Timezone = at, tc.org
+			ds := StatementDataset(st, i18n.LocaleTR)
+			ds.Timezone = tc.job
+			out, err := NewStatementAdapter(nil).DocumentHTML(ds, "tr", nil, "Ekstre")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(out, tc.want) || strings.Contains(out, " UTC") {
+				t.Fatalf("statement generated-at is not %q", tc.want)
+			}
+			rep := BalanceReport{Organization: Ref{Name: "Olex"}, Currency: "TRY", GeneratedAt: at, Timezone: tc.org}
+			ds = BalancesDataset(rep, i18n.LocaleTR)
+			ds.Timezone = tc.job
+			out, err = NewBalancesAdapter(nil).DocumentHTML(ds, "tr", nil, "Bakiye")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(out, tc.want) || strings.Contains(out, " UTC") {
+				t.Fatalf("balances generated-at is not %q", tc.want)
+			}
+		})
+	}
+}
