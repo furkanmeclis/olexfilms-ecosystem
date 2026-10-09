@@ -71,6 +71,7 @@ LEFT JOIN users c ON c.id = t.created_by_user_id
 WHERE t.brand_id = sqlc.arg(brand_id)
   AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR t.status = ANY (sqlc.narg(statuses)::text[]))
   AND (COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0 OR t.priority = ANY (sqlc.narg(priorities)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(sources)::text[]), 0) = 0 OR t.source = ANY (sqlc.narg(sources)::text[]))
   AND (COALESCE(cardinality(sqlc.narg(subject_org_uuids)::uuid[]), 0) = 0
        OR t.subject_org_id IN (SELECT so.id FROM organizations so
                                WHERE so.uuid = ANY (sqlc.narg(subject_org_uuids)::uuid[])))
@@ -110,6 +111,7 @@ SELECT COUNT(*)::bigint FROM tasks t
 WHERE t.brand_id = sqlc.arg(brand_id)
   AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR t.status = ANY (sqlc.narg(statuses)::text[]))
   AND (COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0 OR t.priority = ANY (sqlc.narg(priorities)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(sources)::text[]), 0) = 0 OR t.source = ANY (sqlc.narg(sources)::text[]))
   AND (COALESCE(cardinality(sqlc.narg(subject_org_uuids)::uuid[]), 0) = 0
        OR t.subject_org_id IN (SELECT so.id FROM organizations so
                                WHERE so.uuid = ANY (sqlc.narg(subject_org_uuids)::uuid[])))
@@ -128,6 +130,7 @@ SELECT t.uuid FROM tasks t
 WHERE t.brand_id = sqlc.arg(brand_id)
   AND (COALESCE(cardinality(sqlc.narg(statuses)::text[]), 0) = 0 OR t.status = ANY (sqlc.narg(statuses)::text[]))
   AND (COALESCE(cardinality(sqlc.narg(priorities)::text[]), 0) = 0 OR t.priority = ANY (sqlc.narg(priorities)::text[]))
+  AND (COALESCE(cardinality(sqlc.narg(sources)::text[]), 0) = 0 OR t.source = ANY (sqlc.narg(sources)::text[]))
   AND (COALESCE(cardinality(sqlc.narg(subject_org_uuids)::uuid[]), 0) = 0
        OR t.subject_org_id IN (SELECT so.id FROM organizations so
                                WHERE so.uuid = ANY (sqlc.narg(subject_org_uuids)::uuid[])))

@@ -161,11 +161,20 @@ type SubtreeSummary struct {
 	Metrics          map[string]*MetricValue `json:"metrics"`
 }
 
+// RankingOrg is the distributor of a ranking row (TEC-496).
+type RankingOrg struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
+}
+
 type RankingRow struct {
 	Rank             int                     `json:"rank"`
 	OrganizationUUID uuid.UUID               `json:"organization_uuid,omitempty"`
 	Name             string                  `json:"name,omitempty"`
 	Type             string                  `json:"type"`
+	Distributor      *RankingOrg             `json:"distributor,omitempty"`
+	ProvinceID       *int64                  `json:"province_id,omitempty"`
+	ProvinceName     *string                 `json:"province_name,omitempty"`
 	Currency         string                  `json:"currency"`
 	Metrics          map[string]*MetricValue `json:"metrics"`
 	ComputedAt       *time.Time              `json:"computed_at,omitempty"`
@@ -211,7 +220,9 @@ type RankingFilter struct {
 	Q              string
 	OrgTypes       []string
 	DistributorIDs []int64
-	ProvinceIDs    []int64
+	// DistributorUUIDs keeps distributors and dealers of these distributors.
+	DistributorUUIDs []uuid.UUID
+	ProvinceIDs      []int64
 	Sort           []apiquery.SortField
 	Limit, Offset  int32
 }
@@ -229,6 +240,13 @@ func ParseRankingFilter(values url.Values, now time.Time) (RankingFilter, error)
 			return f, invalid("distributor_id", "must be an integer")
 		}
 		f.DistributorIDs = append(f.DistributorIDs, id)
+	}
+	for _, raw := range apiquery.CSVValues(values, "distributor_uuid") {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return f, invalid("distributor_uuid", "must be a list of UUIDs")
+		}
+		f.DistributorUUIDs = append(f.DistributorUUIDs, id)
 	}
 	for _, raw := range apiquery.CSVValues(values, "province_id") {
 		id, err := strconv.ParseInt(raw, 10, 64)
@@ -381,14 +399,18 @@ func (s *Service) ListRanking(ctx context.Context, c Caller, f RankingFilter) ([
 	}
 	rows, err := s.store.ListRanking(ctx, db.ListPerformanceRankingParams{
 		BrandID: c.Org.BrandID, OrgIds: orgIDs, Period: f.Period, Scope: ScopeOrg, Q: textArg(f.Q), OrgTypes: f.OrgTypes,
-		DistributorIds: f.DistributorIDs, ProvinceIds: f.ProvinceIDs, RowLimit: f.Limit, RowOffset: f.Offset,
+		DistributorIds: f.DistributorIDs, DistributorUuids: f.DistributorUUIDs, ProvinceIds: f.ProvinceIDs, RowLimit: f.Limit, RowOffset: f.Offset,
 	}, f.Sort)
 	if err != nil {
 		return nil, 0, err
 	}
 	out := make([]RankingRow, 0, len(rows))
 	for i, r := range rows {
-		out = append(out, RankingRow{Rank: int(f.Offset) + i + 1, OrganizationUUID: r.OrganizationUuid, Name: r.Name, Type: r.Type, Currency: r.Currency, Metrics: rankingMetrics(r), ComputedAt: timePtr(r.ComputedAt)})
+		row := RankingRow{Rank: int(f.Offset) + i + 1, OrganizationUUID: r.OrganizationUuid, Name: r.Name, Type: r.Type, Currency: r.Currency, Metrics: rankingMetrics(r), ComputedAt: timePtr(r.ComputedAt), ProvinceID: int64Ptr(r.ProvinceID), ProvinceName: textPtr(r.ProvinceName)}
+		if r.DistributorUuid.Valid {
+			row.Distributor = &RankingOrg{UUID: r.DistributorUuid.Bytes, Name: r.DistributorName.String}
+		}
+		out = append(out, row)
 	}
 	return out, totalRanking(rows), nil
 }

@@ -2172,8 +2172,10 @@ type Querier interface {
 	ListPerformanceOrganizations(ctx context.Context, organizationID pgtype.Int8) ([]Organization, error)
 	// Ranking list of distributors and dealers for one month, one column per
 	// metric (NULL = not computed). Sort: docs/list-contract.md, keys from
-	// performance/repository.RankingSort (metric keys | name); metric columns
-	// sort NULLS LAST in both directions; id tiebreak.
+	// performance/repository.RankingSort (metric keys | name | distributor |
+	// province); metric columns sort NULLS LAST in both directions; id
+	// tiebreak. distributor is the row itself for a distributor and the parent
+	// distributor for a dealer (NULL for a dealer directly under the center).
 	ListPerformanceRanking(ctx context.Context, arg ListPerformanceRankingParams) ([]ListPerformanceRankingRow, error)
 	ListPerformanceRuleEvaluations(ctx context.Context, arg ListPerformanceRuleEvaluationsParams) ([]ListPerformanceRuleEvaluationsRow, error)
 	ListPerformanceSubtreeOrgIDs(ctx context.Context, rootOrgID int64) ([]int64, error)

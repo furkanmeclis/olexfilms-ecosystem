@@ -1605,8 +1605,8 @@ WITH m AS (
            MAX(pm.computed_at)::timestamptz AS computed_at
     FROM performance_metrics_monthly pm
     WHERE pm.brand_id = $1
-      AND pm.period = $11::text
-      AND pm.scope = $12::text
+      AND pm.period = $12::text
+      AND pm.scope = $13::text
     GROUP BY pm.organization_id
 )
 SELECT o.id AS organization_id,
@@ -1629,9 +1629,18 @@ SELECT o.id AS organization_id,
        m.waste_ratio::numeric AS waste_ratio,
        m.order_volume::numeric AS order_volume,
        m.computed_at AS computed_at,
+       dist.uuid AS distributor_uuid,
+       dist.name AS distributor_name,
+       prov.name AS province_name,
        COUNT(*) OVER()::bigint AS total_count
 FROM organizations o
 LEFT JOIN m ON m.organization_id = o.id
+LEFT JOIN organizations par ON par.id = o.parent_id
+LEFT JOIN organizations dist ON dist.id = CASE
+         WHEN o.type = 'distributor' THEN o.id
+         WHEN par.type = 'distributor' THEN par.id
+       END
+LEFT JOIN provinces prov ON prov.id = o.province_id
 WHERE o.brand_id = $1
   AND o.deleted_at IS NULL
   AND o.type IN ('distributor', 'dealer')
@@ -1643,11 +1652,17 @@ WHERE o.brand_id = $1
        OR o.parent_id = ANY ($5::bigint[]))
   AND (COALESCE(cardinality($6::bigint[]), 0) = 0
        OR o.province_id = ANY ($6::bigint[]))
+  AND (COALESCE(cardinality($7::uuid[]), 0) = 0
+       OR dist.uuid = ANY ($7::uuid[]))
 ORDER BY
-  CASE WHEN NOT $7::bool AND $8::text = 'name' THEN o.name END ASC,
-  CASE WHEN $7::bool AND $8::text = 'name' THEN o.name END DESC,
-  CASE WHEN NOT $7::bool THEN
-    CASE $8::text
+  CASE WHEN NOT $8::bool AND $9::text = 'name' THEN o.name END ASC,
+  CASE WHEN $8::bool AND $9::text = 'name' THEN o.name END DESC,
+  CASE WHEN NOT $8::bool AND $9::text = 'distributor' THEN dist.name END ASC NULLS LAST,
+  CASE WHEN $8::bool AND $9::text = 'distributor' THEN dist.name END DESC NULLS LAST,
+  CASE WHEN NOT $8::bool AND $9::text = 'province' THEN prov.name END ASC NULLS LAST,
+  CASE WHEN $8::bool AND $9::text = 'province' THEN prov.name END DESC NULLS LAST,
+  CASE WHEN NOT $8::bool THEN
+    CASE $9::text
       WHEN 'services_count' THEN m.services_count
       WHEN 'warranty_start_rate' THEN m.warranty_start_rate
       WHEN 'measurement_rate' THEN m.measurement_rate
@@ -1662,8 +1677,8 @@ ORDER BY
       WHEN 'order_volume' THEN m.order_volume
     END
   END ASC NULLS LAST,
-  CASE WHEN $7::bool THEN
-    CASE $8::text
+  CASE WHEN $8::bool THEN
+    CASE $9::text
       WHEN 'services_count' THEN m.services_count
       WHEN 'warranty_start_rate' THEN m.warranty_start_rate
       WHEN 'measurement_rate' THEN m.measurement_rate
@@ -1678,24 +1693,25 @@ ORDER BY
       WHEN 'order_volume' THEN m.order_volume
     END
   END DESC NULLS LAST,
-  CASE WHEN $7::bool THEN o.id END DESC,
+  CASE WHEN $8::bool THEN o.id END DESC,
   o.id ASC
-LIMIT $10 OFFSET $9
+LIMIT $11 OFFSET $10
 `
 
 type ListPerformanceRankingParams struct {
-	BrandID        int64       `json:"brand_id"`
-	OrgIds         []int64     `json:"org_ids"`
-	Q              pgtype.Text `json:"q"`
-	OrgTypes       []string    `json:"org_types"`
-	DistributorIds []int64     `json:"distributor_ids"`
-	ProvinceIds    []int64     `json:"province_ids"`
-	SortDesc       bool        `json:"sort_desc"`
-	SortKey        string      `json:"sort_key"`
-	RowOffset      int32       `json:"row_offset"`
-	RowLimit       int32       `json:"row_limit"`
-	Period         string      `json:"period"`
-	Scope          string      `json:"scope"`
+	BrandID          int64       `json:"brand_id"`
+	OrgIds           []int64     `json:"org_ids"`
+	Q                pgtype.Text `json:"q"`
+	OrgTypes         []string    `json:"org_types"`
+	DistributorIds   []int64     `json:"distributor_ids"`
+	ProvinceIds      []int64     `json:"province_ids"`
+	DistributorUuids []uuid.UUID `json:"distributor_uuids"`
+	SortDesc         bool        `json:"sort_desc"`
+	SortKey          string      `json:"sort_key"`
+	RowOffset        int32       `json:"row_offset"`
+	RowLimit         int32       `json:"row_limit"`
+	Period           string      `json:"period"`
+	Scope            string      `json:"scope"`
 }
 
 type ListPerformanceRankingRow struct {
@@ -1719,13 +1735,18 @@ type ListPerformanceRankingRow struct {
 	WasteRatio          pgtype.Numeric     `json:"waste_ratio"`
 	OrderVolume         pgtype.Numeric     `json:"order_volume"`
 	ComputedAt          pgtype.Timestamptz `json:"computed_at"`
+	DistributorUuid     pgtype.UUID        `json:"distributor_uuid"`
+	DistributorName     pgtype.Text        `json:"distributor_name"`
+	ProvinceName        pgtype.Text        `json:"province_name"`
 	TotalCount          int64              `json:"total_count"`
 }
 
 // Ranking list of distributors and dealers for one month, one column per
 // metric (NULL = not computed). Sort: docs/list-contract.md, keys from
-// performance/repository.RankingSort (metric keys | name); metric columns
-// sort NULLS LAST in both directions; id tiebreak.
+// performance/repository.RankingSort (metric keys | name | distributor |
+// province); metric columns sort NULLS LAST in both directions; id
+// tiebreak. distributor is the row itself for a distributor and the parent
+// distributor for a dealer (NULL for a dealer directly under the center).
 func (q *Queries) ListPerformanceRanking(ctx context.Context, arg ListPerformanceRankingParams) ([]ListPerformanceRankingRow, error) {
 	rows, err := q.db.Query(ctx, listPerformanceRanking,
 		arg.BrandID,
@@ -1734,6 +1755,7 @@ func (q *Queries) ListPerformanceRanking(ctx context.Context, arg ListPerformanc
 		arg.OrgTypes,
 		arg.DistributorIds,
 		arg.ProvinceIds,
+		arg.DistributorUuids,
 		arg.SortDesc,
 		arg.SortKey,
 		arg.RowOffset,
@@ -1769,6 +1791,9 @@ func (q *Queries) ListPerformanceRanking(ctx context.Context, arg ListPerformanc
 			&i.WasteRatio,
 			&i.OrderVolume,
 			&i.ComputedAt,
+			&i.DistributorUuid,
+			&i.DistributorName,
+			&i.ProvinceName,
 			&i.TotalCount,
 		); err != nil {
 			return nil, err
