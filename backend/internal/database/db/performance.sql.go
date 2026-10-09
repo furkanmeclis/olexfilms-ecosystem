@@ -310,6 +310,63 @@ func (q *Queries) ComputePerformanceMetrics(ctx context.Context, arg ComputePerf
 	return i, err
 }
 
+const countPerformanceMapDealerMissingCoordinates = `-- name: CountPerformanceMapDealerMissingCoordinates :one
+WITH visible_territories AS (
+    SELECT t.id, t.uuid, t.brand_id, t.organization_id, t.country_id, t.province_id, t.district_id, t.level, t.created_by_user_id, t.created_at
+    FROM territories t
+    WHERE t.brand_id = $1
+      AND (
+        $2::text = 'center'
+        OR ($2::text = 'distributor' AND t.organization_id = $3::bigint)
+      )
+),
+visible_dealers AS (
+    SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email
+    FROM organizations o
+    WHERE o.brand_id = $1
+      AND o.deleted_at IS NULL
+      AND o.type = 'dealer'
+      AND ($4::text IS NULL OR EXISTS (
+        SELECT 1 FROM countries c WHERE c.id = o.country_id AND c.iso2 = $4::text
+      ))
+      AND (
+        $2::text = 'center'
+        OR ($2::text = 'dealer' AND o.id = $3::bigint)
+        OR (
+          $2::text = 'distributor'
+          AND EXISTS (
+            SELECT 1
+            FROM visible_territories t
+            WHERE t.country_id = o.country_id
+              AND (t.province_id IS NULL OR t.province_id = o.province_id)
+              AND (t.district_id IS NULL OR t.district_id = o.district_id)
+          )
+        )
+      )
+)
+SELECT COUNT(*) FILTER (WHERE latitude IS NULL OR longitude IS NULL)::bigint
+FROM visible_dealers
+`
+
+type CountPerformanceMapDealerMissingCoordinatesParams struct {
+	BrandID     int64       `json:"brand_id"`
+	ActorType   string      `json:"actor_type"`
+	ActorOrgID  int64       `json:"actor_org_id"`
+	CountryIso2 pgtype.Text `json:"country_iso2"`
+}
+
+func (q *Queries) CountPerformanceMapDealerMissingCoordinates(ctx context.Context, arg CountPerformanceMapDealerMissingCoordinatesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPerformanceMapDealerMissingCoordinates,
+		arg.BrandID,
+		arg.ActorType,
+		arg.ActorOrgID,
+		arg.CountryIso2,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createBonusRule = `-- name: CreateBonusRule :one
 
 INSERT INTO bonus_rules (
@@ -1014,6 +1071,372 @@ func (q *Queries) ListBonusRules(ctx context.Context, arg ListBonusRulesParams) 
 			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPerformanceMapDealers = `-- name: ListPerformanceMapDealers :many
+WITH visible_territories AS (
+    SELECT t.id, t.uuid, t.brand_id, t.organization_id, t.country_id, t.province_id, t.district_id, t.level, t.created_by_user_id, t.created_at
+    FROM territories t
+    WHERE t.brand_id = $1
+      AND (
+        $4::text = 'center'
+        OR ($4::text = 'distributor' AND t.organization_id = $5::bigint)
+      )
+),
+visible_dealers AS (
+    SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email
+    FROM organizations o
+    WHERE o.brand_id = $1
+      AND o.deleted_at IS NULL
+      AND o.type = 'dealer'
+      AND ($6::text IS NULL OR EXISTS (
+        SELECT 1 FROM countries c WHERE c.id = o.country_id AND c.iso2 = $6::text
+      ))
+      AND (
+        $4::text = 'center'
+        OR ($4::text = 'dealer' AND o.id = $5::bigint)
+        OR (
+          $4::text = 'distributor'
+          AND EXISTS (
+            SELECT 1
+            FROM visible_territories t
+            WHERE t.country_id = o.country_id
+              AND (t.province_id IS NULL OR t.province_id = o.province_id)
+              AND (t.district_id IS NULL OR t.district_id = o.district_id)
+          )
+        )
+      )
+)
+SELECT d.id AS organization_id,
+       d.uuid AS organization_uuid,
+       d.slug,
+       d.name,
+       c.iso2::text AS country_iso2,
+       COALESCE(p.code, '')::text AS province_code,
+       p.name AS province_name,
+       ds.name AS district_name,
+       d.latitude,
+       d.longitude,
+       pm.value::numeric AS metric_value,
+       missing.total::bigint AS missing_coordinates
+FROM visible_dealers d
+JOIN countries c ON c.id = d.country_id
+LEFT JOIN provinces p ON p.id = d.province_id
+LEFT JOIN districts ds ON ds.id = d.district_id
+LEFT JOIN performance_metrics_monthly pm ON pm.organization_id = d.id
+  AND pm.brand_id = $1
+  AND pm.period = $2::text
+  AND pm.scope = 'org'
+  AND pm.metric = $3::text
+CROSS JOIN (
+    SELECT COUNT(*) FILTER (WHERE latitude IS NULL OR longitude IS NULL) AS total
+    FROM visible_dealers
+) missing
+WHERE d.latitude IS NOT NULL
+  AND d.longitude IS NOT NULL
+ORDER BY c.iso2, p.code NULLS LAST, d.name, d.id
+`
+
+type ListPerformanceMapDealersParams struct {
+	BrandID     int64       `json:"brand_id"`
+	Period      string      `json:"period"`
+	Metric      string      `json:"metric"`
+	ActorType   string      `json:"actor_type"`
+	ActorOrgID  int64       `json:"actor_org_id"`
+	CountryIso2 pgtype.Text `json:"country_iso2"`
+}
+
+type ListPerformanceMapDealersRow struct {
+	OrganizationID     int64          `json:"organization_id"`
+	OrganizationUuid   uuid.UUID      `json:"organization_uuid"`
+	Slug               string         `json:"slug"`
+	Name               string         `json:"name"`
+	CountryIso2        string         `json:"country_iso2"`
+	ProvinceCode       string         `json:"province_code"`
+	ProvinceName       pgtype.Text    `json:"province_name"`
+	DistrictName       pgtype.Text    `json:"district_name"`
+	Latitude           pgtype.Numeric `json:"latitude"`
+	Longitude          pgtype.Numeric `json:"longitude"`
+	MetricValue        pgtype.Numeric `json:"metric_value"`
+	MissingCoordinates int64          `json:"missing_coordinates"`
+}
+
+func (q *Queries) ListPerformanceMapDealers(ctx context.Context, arg ListPerformanceMapDealersParams) ([]ListPerformanceMapDealersRow, error) {
+	rows, err := q.db.Query(ctx, listPerformanceMapDealers,
+		arg.BrandID,
+		arg.Period,
+		arg.Metric,
+		arg.ActorType,
+		arg.ActorOrgID,
+		arg.CountryIso2,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPerformanceMapDealersRow{}
+	for rows.Next() {
+		var i ListPerformanceMapDealersRow
+		if err := rows.Scan(
+			&i.OrganizationID,
+			&i.OrganizationUuid,
+			&i.Slug,
+			&i.Name,
+			&i.CountryIso2,
+			&i.ProvinceCode,
+			&i.ProvinceName,
+			&i.DistrictName,
+			&i.Latitude,
+			&i.Longitude,
+			&i.MetricValue,
+			&i.MissingCoordinates,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPerformanceMapRegions = `-- name: ListPerformanceMapRegions :many
+
+
+WITH visible_territories AS (
+    SELECT t.id, t.uuid, t.brand_id, t.organization_id, t.country_id, t.province_id, t.district_id, t.level, t.created_by_user_id, t.created_at
+    FROM territories t
+    WHERE t.brand_id = $1
+      AND (
+        $2::text = 'center'
+        OR ($2::text = 'distributor' AND t.organization_id = $3::bigint)
+      )
+),
+visible_dealers AS (
+    SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email
+    FROM organizations o
+    WHERE o.brand_id = $1
+      AND o.deleted_at IS NULL
+      AND o.type = 'dealer'
+      AND ($4::text IS NULL OR EXISTS (
+        SELECT 1 FROM countries c WHERE c.id = o.country_id AND c.iso2 = $4::text
+      ))
+      AND (
+        $2::text = 'center'
+        OR ($2::text = 'dealer' AND o.id = $3::bigint)
+        OR (
+          $2::text = 'distributor'
+          AND EXISTS (
+            SELECT 1
+            FROM visible_territories t
+            WHERE t.country_id = o.country_id
+              AND (t.province_id IS NULL OR t.province_id = o.province_id)
+              AND (t.district_id IS NULL OR t.district_id = o.district_id)
+          )
+        )
+      )
+),
+areas AS (
+    SELECT 'country'::text AS level,
+           c.id AS area_id,
+           c.iso2::text AS code,
+           c.name_tr AS name,
+           c.id AS country_id,
+           NULL::bigint AS province_id,
+           NULL::bigint AS district_id,
+           NULL::numeric AS area_latitude,
+           NULL::numeric AS area_longitude
+    FROM countries c
+    WHERE $5::text = 'country'
+      AND c.is_active
+      AND ($4::text IS NULL OR c.iso2 = $4::text)
+      AND (
+        $2::text = 'center'
+        OR EXISTS (SELECT 1 FROM visible_territories t WHERE t.country_id = c.id)
+        OR EXISTS (SELECT 1 FROM visible_dealers d WHERE d.country_id = c.id)
+      )
+    UNION ALL
+    SELECT 'province'::text AS level,
+           p.id AS area_id,
+           p.code::text AS code,
+           p.name,
+           p.country_id,
+           p.id AS province_id,
+           NULL::bigint AS district_id,
+           p.latitude AS area_latitude,
+           p.longitude AS area_longitude
+    FROM provinces p
+    JOIN countries c ON c.id = p.country_id
+    WHERE $5::text = 'province'
+      AND ($4::text IS NULL OR c.iso2 = $4::text)
+      AND (
+        $2::text = 'center'
+        OR EXISTS (
+          SELECT 1 FROM visible_territories t
+          WHERE t.country_id = p.country_id AND (t.province_id IS NULL OR t.province_id = p.id)
+        )
+        OR EXISTS (SELECT 1 FROM visible_dealers d WHERE d.province_id = p.id)
+      )
+    UNION ALL
+    SELECT 'district'::text AS level,
+           d.id AS area_id,
+           d.code::text AS code,
+           d.name,
+           p.country_id,
+           p.id AS province_id,
+           d.id AS district_id,
+           d.latitude AS area_latitude,
+           d.longitude AS area_longitude
+    FROM districts d
+    JOIN provinces p ON p.id = d.province_id
+    JOIN countries c ON c.id = p.country_id
+    WHERE $5::text = 'district'
+      AND ($4::text IS NULL OR c.iso2 = $4::text)
+      AND (
+        $2::text = 'center'
+        OR EXISTS (
+          SELECT 1 FROM visible_territories t
+          WHERE t.country_id = p.country_id
+            AND (t.province_id IS NULL OR t.province_id = p.id)
+            AND (t.district_id IS NULL OR t.district_id = d.id)
+        )
+        OR EXISTS (SELECT 1 FROM visible_dealers vd WHERE vd.district_id = d.id)
+      )
+),
+area_stats AS (
+    SELECT a.level,
+           a.area_id,
+           COUNT(d.id)::bigint AS dealer_count,
+           COUNT(d.id) FILTER (WHERE d.latitude IS NULL OR d.longitude IS NULL)::bigint AS missing_coordinates,
+           AVG(d.latitude)::numeric AS avg_latitude,
+           AVG(d.longitude)::numeric AS avg_longitude,
+           AVG(pm.value)::numeric AS metric_avg
+    FROM areas a
+    LEFT JOIN visible_dealers d ON d.country_id = a.country_id
+      AND (a.province_id IS NULL OR d.province_id = a.province_id)
+      AND (a.district_id IS NULL OR d.district_id = a.district_id)
+    LEFT JOIN performance_metrics_monthly pm ON pm.organization_id = d.id
+      AND pm.brand_id = $1
+      AND pm.period = $6::text
+      AND pm.scope = 'org'
+      AND pm.metric = $7::text
+    GROUP BY a.level, a.area_id
+)
+SELECT a.level,
+       a.area_id,
+       a.code,
+       a.name,
+       c.iso2::text AS country_iso2,
+       c.name_tr AS country_name,
+       COALESCE(p.code, '')::text AS province_code,
+       p.name AS province_name,
+       COALESCE(owner.organization_id, 0)::bigint AS distributor_id,
+       COALESCE(owner.organization_uuid, '00000000-0000-0000-0000-000000000000'::uuid) AS distributor_uuid,
+       COALESCE(owner.organization_name, '')::text AS distributor_name,
+       s.dealer_count,
+       s.missing_coordinates,
+       s.metric_avg,
+       COALESCE(a.area_latitude, s.avg_latitude)::numeric AS latitude,
+       COALESCE(a.area_longitude, s.avg_longitude)::numeric AS longitude,
+       CASE
+         WHEN s.dealer_count = 0 AND owner.organization_id IS NOT NULL THEN 'territory_no_dealers'
+         WHEN a.level = 'province' AND owner.organization_id IS NULL THEN 'unassigned_territory'
+         ELSE ''
+       END::text AS empty_reason
+FROM areas a
+JOIN area_stats s ON s.level = a.level AND s.area_id = a.area_id
+JOIN countries c ON c.id = a.country_id
+LEFT JOIN provinces p ON p.id = a.province_id
+LEFT JOIN LATERAL (
+    SELECT t.organization_id, o.uuid AS organization_uuid, o.name AS organization_name
+    FROM visible_territories t
+    JOIN organizations o ON o.id = t.organization_id
+    WHERE t.country_id = a.country_id
+      AND (t.province_id IS NULL OR t.province_id = a.province_id)
+      AND (t.district_id IS NULL OR t.district_id = a.district_id)
+    ORDER BY (t.district_id IS NOT NULL) DESC, (t.province_id IS NOT NULL) DESC, t.id
+    LIMIT 1
+) owner ON true
+ORDER BY c.iso2, p.code NULLS FIRST, a.code NULLS FIRST, a.name
+`
+
+type ListPerformanceMapRegionsParams struct {
+	BrandID     int64       `json:"brand_id"`
+	ActorType   string      `json:"actor_type"`
+	ActorOrgID  int64       `json:"actor_org_id"`
+	CountryIso2 pgtype.Text `json:"country_iso2"`
+	Level       string      `json:"level"`
+	Period      string      `json:"period"`
+	Metric      string      `json:"metric"`
+}
+
+type ListPerformanceMapRegionsRow struct {
+	Level              string         `json:"level"`
+	AreaID             int64          `json:"area_id"`
+	Code               string         `json:"code"`
+	Name               string         `json:"name"`
+	CountryIso2        string         `json:"country_iso2"`
+	CountryName        string         `json:"country_name"`
+	ProvinceCode       string         `json:"province_code"`
+	ProvinceName       pgtype.Text    `json:"province_name"`
+	DistributorID      int64          `json:"distributor_id"`
+	DistributorUuid    uuid.UUID      `json:"distributor_uuid"`
+	DistributorName    string         `json:"distributor_name"`
+	DealerCount        int64          `json:"dealer_count"`
+	MissingCoordinates int64          `json:"missing_coordinates"`
+	MetricAvg          pgtype.Numeric `json:"metric_avg"`
+	Latitude           pgtype.Numeric `json:"latitude"`
+	Longitude          pgtype.Numeric `json:"longitude"`
+	EmptyReason        string         `json:"empty_reason"`
+}
+
+// Staff targets ---------------------------------------------------------------------
+// Region map ------------------------------------------------------------------------
+func (q *Queries) ListPerformanceMapRegions(ctx context.Context, arg ListPerformanceMapRegionsParams) ([]ListPerformanceMapRegionsRow, error) {
+	rows, err := q.db.Query(ctx, listPerformanceMapRegions,
+		arg.BrandID,
+		arg.ActorType,
+		arg.ActorOrgID,
+		arg.CountryIso2,
+		arg.Level,
+		arg.Period,
+		arg.Metric,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPerformanceMapRegionsRow{}
+	for rows.Next() {
+		var i ListPerformanceMapRegionsRow
+		if err := rows.Scan(
+			&i.Level,
+			&i.AreaID,
+			&i.Code,
+			&i.Name,
+			&i.CountryIso2,
+			&i.CountryName,
+			&i.ProvinceCode,
+			&i.ProvinceName,
+			&i.DistributorID,
+			&i.DistributorUuid,
+			&i.DistributorName,
+			&i.DealerCount,
+			&i.MissingCoordinates,
+			&i.MetricAvg,
+			&i.Latitude,
+			&i.Longitude,
+			&i.EmptyReason,
 		); err != nil {
 			return nil, err
 		}
@@ -2257,7 +2680,6 @@ func (q *Queries) UpsertPerformanceMetric(ctx context.Context, arg UpsertPerform
 }
 
 const upsertStaffTarget = `-- name: UpsertStaffTarget :one
-
 INSERT INTO staff_targets (
     organization_id, brand_id, user_id, period, metric, value, currency, created_by_user_id
 )
@@ -2282,7 +2704,6 @@ type UpsertStaffTargetParams struct {
 	CreatedByUserID pgtype.Int8    `json:"created_by_user_id"`
 }
 
-// Staff targets ---------------------------------------------------------------------
 func (q *Queries) UpsertStaffTarget(ctx context.Context, arg UpsertStaffTargetParams) (StaffTarget, error) {
 	row := q.db.QueryRow(ctx, upsertStaffTarget,
 		arg.OrganizationID,

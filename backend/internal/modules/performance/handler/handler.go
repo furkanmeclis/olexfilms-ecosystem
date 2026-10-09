@@ -17,9 +17,10 @@ import (
 
 type Handler struct {
 	svc *usecase.Service
+	now func() time.Time
 }
 
-func New(svc *usecase.Service) *Handler { return &Handler{svc: svc} }
+func New(svc *usecase.Service) *Handler { return &Handler{svc: svc, now: time.Now} }
 
 func caller(r *http.Request) usecase.Caller {
 	f, _ := scopefilter.From(r.Context())
@@ -38,6 +39,8 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 			details = append(details, response.Detail{Field: d.Field, Message: d.Message, Code: d.Code})
 		}
 		response.ValidationError(w, r, details)
+	case errors.Is(err, usecase.ErrInvalidRequest):
+		response.BadRequest(w, r, response.CodeValidationError, "Invalid performance map query")
 	case errors.Is(err, usecase.ErrNotFound):
 		response.NotFound(w, r, "Performance record not found")
 	case errors.Is(err, usecase.ErrForbidden):
@@ -76,7 +79,7 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Ranking(w http.ResponseWriter, r *http.Request) {
-	f, err := usecase.ParseRankingFilter(r.URL.Query(), time.Now())
+	f, err := usecase.ParseRankingFilter(r.URL.Query(), h.now())
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -96,6 +99,34 @@ func (h *Handler) Benchmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, item)
+}
+
+func (h *Handler) RegionMap(w http.ResponseWriter, r *http.Request) {
+	f, err := usecase.ParseMapFilter(r.URL.Query(), h.now())
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	out, err := h.svc.RegionMap(r.Context(), caller(r), f)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+func (h *Handler) DealersMap(w http.ResponseWriter, r *http.Request) {
+	f, err := usecase.ParseMapFilter(r.URL.Query(), h.now())
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	out, err := h.svc.DealerMap(r.Context(), caller(r), f)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
 }
 
 func (h *Handler) ListTargets(w http.ResponseWriter, r *http.Request) {

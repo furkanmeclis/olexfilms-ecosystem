@@ -21068,6 +21068,102 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/performance/map:
+    get:
+      tags: [Performance]
+      operationId: getPerformanceRegionMap
+      summary: Region map with dealer density and territory gaps
+      description: >-
+        Requires the `performance` feature and `performance.read`. Center
+        organizations see the brand network; distributors see only their own
+        country/province/district territories. `level` selects the aggregate
+        region granularity; TR provinces have seeded centroids, other regions
+        fall back to the average dealer coordinates when available.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: level
+          in: query
+          required: true
+          schema: { type: string, enum: [country, province, district] }
+        - name: country
+          in: query
+          schema: { type: string, minLength: 2, maxLength: 2, example: TR }
+        - name: period
+          in: query
+          schema: { type: string, pattern: '^\d{4}-\d{2}$', example: "2026-09" }
+        - name: metric
+          in: query
+          schema:
+            type: string
+            default: services_count
+            enum:
+              - services_count
+              - warranty_start_rate
+              - measurement_rate
+              - review_avg
+              - stock_turnover
+              - contract_days_left
+              - cari_overdue_amount
+              - cari_overdue_days
+              - certificate_coverage
+              - lead_conversion_rate
+              - waste_ratio
+              - order_volume
+      responses:
+        "200":
+          description: Region aggregates and empty-region reasons
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceRegionMap" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/performance/map/dealers:
+    get:
+      tags: [Performance]
+      operationId: getPerformanceDealerMap
+      summary: Dealer point layer for the performance map
+      description: >-
+        Requires the `performance` feature and `performance.read`. Dealers
+        without coordinates are included in `missing_coordinates` but omitted
+        from the point layer.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: country
+          in: query
+          schema: { type: string, minLength: 2, maxLength: 2, example: TR }
+        - name: period
+          in: query
+          schema: { type: string, pattern: '^\d{4}-\d{2}$', example: "2026-09" }
+        - name: metric
+          in: query
+          schema:
+            type: string
+            default: services_count
+            enum:
+              - services_count
+              - warranty_start_rate
+              - measurement_rate
+              - review_avg
+              - stock_turnover
+              - contract_days_left
+              - cari_overdue_amount
+              - cari_overdue_days
+              - certificate_coverage
+              - lead_conversion_rate
+              - waste_ratio
+              - order_volume
+      responses:
+        "200":
+          description: Dealer points and missing coordinate count
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceDealerMap" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/stock-forecasts:
     get:
       tags: [Stock Forecasts]
@@ -39852,6 +39948,103 @@ components:
         warning_count: { type: integer, format: int64 }
         insufficient_data_count: { type: integer, format: int64 }
         total_count: { type: integer, format: int64 }
+
+    PerformanceMapDistributor:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    PerformanceRegionMapItem:
+      type: object
+      required: [level, id, code, name, country_iso2, country_name, dealer_count, missing_coordinates]
+      properties:
+        level: { type: string, enum: [country, province, district] }
+        id: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string }
+        country_iso2: { type: string }
+        country_name: { type: string }
+        province_code: { type: string }
+        province_name: { type: string }
+        dealer_count: { type: integer, format: int64 }
+        distributor: { $ref: "#/components/schemas/PerformanceMapDistributor" }
+        metric_avg: { type: number }
+        latitude: { type: number }
+        longitude: { type: number }
+        missing_coordinates: { type: integer, format: int64 }
+
+    PerformanceEmptyRegion:
+      type: object
+      required: [level, id, code, name, country_iso2, empty_reason]
+      properties:
+        level: { type: string, enum: [country, province, district] }
+        id: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string }
+        country_iso2: { type: string }
+        empty_reason: { type: string, enum: [territory_no_dealers, unassigned_territory] }
+        distributor: { $ref: "#/components/schemas/PerformanceMapDistributor" }
+
+    PerformanceRegionMap:
+      type: object
+      required: [level, period, metric, items, empty_regions, missing_coordinates]
+      properties:
+        level: { type: string, enum: [country, province, district] }
+        country: { type: string }
+        period: { type: string }
+        metric: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PerformanceRegionMapItem" }
+        empty_regions:
+          type: array
+          items: { $ref: "#/components/schemas/PerformanceEmptyRegion" }
+        missing_coordinates: { type: integer, format: int64 }
+
+    PerformanceDealerPoint:
+      type: object
+      required: [uuid, code, name, country_iso2, latitude, longitude, showcase_url]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        country_iso2: { type: string }
+        province: { type: string }
+        district: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        metric_value: { type: number }
+        showcase_url: { type: string }
+
+    PerformanceDealerMap:
+      type: object
+      required: [period, metric, items, missing_coordinates]
+      properties:
+        country: { type: string }
+        period: { type: string }
+        metric: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PerformanceDealerPoint" }
+        missing_coordinates: { type: integer, format: int64 }
+
+    EnvelopePerformanceRegionMap:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceRegionMap" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopePerformanceDealerMap:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PerformanceDealerMap" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockForecastPage:
       type: object
