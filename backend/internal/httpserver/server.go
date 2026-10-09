@@ -562,6 +562,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		featureSvc, sysSvc, log)
 	stockForecastH := stockforecasthandler.New(stockForecastSvc, ordersSvc)
 	stockforecastmodule.RegisterRoutes(mux, stockForecastH, tokens, loader, deps.Queries, featureSvc)
+	performanceSvc := performanceusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), featureSvc, log).
+		WithPanelURL(cfg.Auth.FrontendURL)
+	performancemodule.RegisterRoutes(mux, performancehandler.New(performanceSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-197: stock transfer requests between siblings (K13).
 	// TEC-200: a received transfer books A alacak / B borç.
 	transfersSvc := transfersusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
@@ -792,9 +795,6 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	efficiencymodule.RegisterRoutes(mux, efficiencyhandler.New(efficiencySvc, exportSvc, importSvc).WithSettings(sysSvc), tokens, loader, deps.Queries, featureSvc)
 	pricingmodule.RegisterRecommendedRoutes(mux, pricinghandler.NewRecommended(recommendedSvc, exportSvc, importSvc, activityRec),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
-	performanceSvc := performanceusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
-		WithPanelURL(cfg.Auth.FrontendURL)
-	performancemodule.RegisterRoutes(mux, performancehandler.New(performanceSvc), tokens, loader, deps.Queries, featureSvc)
 	bulkReg := bulkengine.NewRegistry(
 		bulkadapters.NewUsers(deps.Queries),
 		bulkadapters.NewRoles(deps.Queries),

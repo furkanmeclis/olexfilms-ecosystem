@@ -33,6 +33,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/performance/dashboard", read(h.Dashboard))
 	mux.Handle("GET /v1/performance/ranking", read(h.Ranking))
 	mux.Handle("GET /v1/performance/benchmark", read(h.Benchmark))
+	mux.Handle("GET /v1/performance/map", read(h.RegionMap))
+	mux.Handle("GET /v1/performance/map/dealers", read(h.DealersMap))
 
 	mux.Handle("GET /v1/performance/targets", read(h.ListTargets))
 	mux.Handle("POST /v1/performance/targets", targets(h.CreateTarget))
