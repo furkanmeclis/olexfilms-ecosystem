@@ -940,6 +940,26 @@ export function tenantNav(slug: string) {
         ],
       },
       {
+        // TEC-496: performance panel add-on (same gates as
+        // /v1/performance/*: the performance module and performance.read).
+        id: "performance",
+        labelKey: "performance.nav",
+        icon: Gauge,
+        defaultOpen: true,
+        permission: permissions.performance.read,
+        feature: "performance",
+        items: [
+          {
+            id: "performance",
+            titleKey: "performance.nav",
+            href: routes.tenant.performance.root(slug),
+            icon: Gauge,
+            permission: permissions.performance.read,
+            feature: "performance",
+          },
+        ],
+      },
+      {
         // TEC-332: published announcements for the full network. Center can
         // target all audiences; distributors can target their subtree.
         id: "announcements",

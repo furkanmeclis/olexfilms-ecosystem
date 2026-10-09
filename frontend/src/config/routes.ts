@@ -158,6 +158,10 @@ export const routes = {
     efficiency: {
       root: (slug: string) => `/t/${slug}/efficiency`,
     },
+    /** TEC-496: performance panel, ranking, region map and widgets. */
+    performance: {
+      root: (slug: string) => `/t/${slug}/performance`,
+    },
     /** TEC-163 customers: list, new, detail (with vehicles), edit. */
     customers: {
       list: (slug: string) => `/t/${slug}/customers`,

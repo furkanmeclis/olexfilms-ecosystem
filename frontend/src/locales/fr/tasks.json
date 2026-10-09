@@ -80,5 +80,8 @@
   "comments.error": "Le commentaire n'a pas pu être ajouté.",
   "errors.FORBIDDEN": "Seul le centre gère les tâches.",
   "errors.NOT_FOUND": "Tâche introuvable.",
-  "errors.VALIDATION_ERROR": "Vérifiez les champs signalés."
+  "errors.VALIDATION_ERROR": "Vérifiez les champs signalés.",
+  "columns.source": "Origine",
+  "source.manual": "Manuelle",
+  "source.auto": "Automatique"
 }

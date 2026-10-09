@@ -80,5 +80,8 @@
   "comments.error": "Коментарът не можа да бъде добавен.",
   "errors.FORBIDDEN": "Само централата управлява задачите.",
   "errors.NOT_FOUND": "Задачата не е намерена.",
-  "errors.VALIDATION_ERROR": "Проверете маркираните полета."
+  "errors.VALIDATION_ERROR": "Проверете маркираните полета.",
+  "columns.source": "Източник",
+  "source.manual": "Ръчно",
+  "source.auto": "Автоматично"
 }

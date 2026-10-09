@@ -80,5 +80,8 @@
   "comments.error": "No se pudo añadir el comentario.",
   "errors.FORBIDDEN": "Solo el centro gestiona las tareas.",
   "errors.NOT_FOUND": "Tarea no encontrada.",
-  "errors.VALIDATION_ERROR": "Revise los campos marcados."
+  "errors.VALIDATION_ERROR": "Revise los campos marcados.",
+  "columns.source": "Origen",
+  "source.manual": "Manual",
+  "source.auto": "Automática"
 }

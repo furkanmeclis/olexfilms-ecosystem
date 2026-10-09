@@ -17,6 +17,9 @@ export type MapMarker = {
   /** "point" is the user / picked position, "place" a dealer. */
   kind?: "point" | "place";
   active?: boolean;
+  /** TEC-496: data markers (region circles, clusters) size and color. */
+  radius?: number;
+  color?: string;
 };
 
 export type LeafletMapProps = {
@@ -141,7 +144,11 @@ export function LeafletMap({
       const style = m.active
         ? MARKER_STYLE.active
         : MARKER_STYLE[m.kind ?? "place"];
-      const marker = L.circleMarker([m.lat, m.lng], style);
+      const marker = L.circleMarker([m.lat, m.lng], {
+        ...style,
+        ...(m.radius ? { radius: m.radius } : {}),
+        ...(m.color ? { fillColor: m.color, fillOpacity: 0.7 } : {}),
+      });
       if (m.label) marker.bindTooltip(m.label, { direction: "top" });
       marker.on("click", () => markerClickRef.current?.(m.id));
       marker.addTo(layer);

@@ -213,6 +213,9 @@ export const Permission = {
   /** TEC-489: efficiency and waste screens (efficiency module). */
   EfficiencyRead: "efficiency.read",
   EfficiencyExpectationsManage: "efficiency.expectations.manage",
+  /** TEC-496: performance panel, ranking and map (performance module). */
+  PerformanceRead: "performance.read",
+  PerformanceTargetsManage: "performance.targets.manage",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -609,5 +612,9 @@ export const permissions = {
   efficiency: {
     read: Permission.EfficiencyRead,
     expectationsManage: Permission.EfficiencyExpectationsManage,
+  },
+  performance: {
+    read: Permission.PerformanceRead,
+    targetsManage: Permission.PerformanceTargetsManage,
   },
 } as const;
