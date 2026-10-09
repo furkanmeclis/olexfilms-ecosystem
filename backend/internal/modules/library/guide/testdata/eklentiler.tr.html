@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="tr" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:">
+<title>Eklentiler kullanıcı kılavuzu</title>
+<style>
+:root{--primary:#0F172A}
+@page{size:A4}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;font-family:"Noto Sans","Noto Sans Arabic","Noto Sans CJK SC","DejaVu Sans",sans-serif;font-size:10.5pt;line-height:1.45;color:#111827;text-align:start}
+h1,h2,h3{line-height:1.25;color:var(--primary)}
+h1.doc-title{font-size:18pt;margin:14pt 0 8pt}
+h2{font-size:12pt;margin:14pt 0 6pt}
+p{margin:0 0 6pt}
+img{max-width:100%}
+.doc-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16pt;border-block-end:2px solid var(--primary);padding-block-end:8pt}
+.doc-logo img{max-height:48pt;max-width:160pt}
+.doc-company{text-align:end;font-size:9pt}
+table{border-collapse:collapse;width:100%;margin-block-end:8pt}
+thead{display:table-header-group}
+tr{break-inside:avoid}
+table.doc-meta th,table.doc-meta td,table.doc-table th,table.doc-table td{border:1px solid #d1d5db;padding:4pt 6pt;text-align:start;vertical-align:top}
+table.doc-meta th,table.doc-table th{background:#f3f4f6;font-weight:700}
+table.doc-table td.num,table.doc-table th.num{text-align:end;white-space:nowrap}
+table.doc-totals{width:auto;margin-inline-start:auto}
+table.doc-totals th,table.doc-totals td{padding:2pt 6pt;text-align:end}
+table.doc-totals tr:last-child{font-weight:700;border-block-start:1px solid #6b7280}
+.doc-total{text-align:end;font-weight:700;font-size:12pt}
+.doc-sign{display:flex;justify-content:space-between;gap:24pt;margin-block-start:36pt;break-inside:avoid}
+.doc-sign>div{flex:1;border-block-start:1px solid #6b7280;padding-block-start:4pt;text-align:center;font-size:9pt}
+.doc-sign img{max-height:48pt}
+.doc-verify{display:flex;align-items:center;gap:12pt;margin-block-start:12pt}
+.doc-verify img,.doc-verify svg{width:80pt;height:80pt}
+.doc-footer{margin-block-start:24pt;font-size:8pt;color:#6b7280;text-align:center}
+.muted{color:#6b7280}
+.doc-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8pt;margin-block-end:8pt}
+.doc-photos figure{margin:0;break-inside:avoid;border:1px solid #d1d5db;padding:4pt}
+.doc-photos figcaption{font-size:8.5pt;margin-block-end:3pt}
+.doc-photos img{width:100%;height:auto}
+</style>
+</head>
+<body>
+<style>
+.guide h1{font-size:20pt;margin:0 0 10pt}
+.guide h2{font-size:14pt;margin:18pt 0 6pt;border-block-end:1px solid #d1d5db;padding-block-end:3pt;break-after:avoid}
+.guide h3{font-size:11.5pt;margin:12pt 0 4pt;break-after:avoid}
+.guide h4{font-size:10.5pt;margin:10pt 0 4pt;break-after:avoid}
+.guide ul,.guide ol{margin:0 0 6pt;padding-inline-start:16pt}
+.guide li{margin-block-end:2pt}
+.guide table{border-collapse:collapse;width:100%;margin-block-end:8pt;font-size:9.5pt}
+.guide th,.guide td{border:1px solid #d1d5db;padding:3pt 5pt;text-align:start;vertical-align:top}
+.guide th{background:#f3f4f6}
+.guide code{font-family:"DejaVu Sans Mono",monospace;font-size:9pt;background:#f3f4f6;padding:0 2pt}
+.guide blockquote{margin:6pt 0;padding:6pt 8pt;border-inline-start:3pt solid var(--primary);background:#f9fafb;color:#374151;break-inside:avoid}
+.guide blockquote p:last-child{margin:0}
+</style>
+<article class="guide"><h1 id="eklentiler-kullanc-klavuzu">Eklentiler kullanıcı kılavuzu</h1>
+<p>Bu kılavuz Olexfilms panelindeki eklenti modüllerini anlatır: her eklenti ne yapar, kim açar, nasıl talep edilir, hangi ekranda ne yapılır ve hangi izinler gerekir. Kılavuz doküman merkezinde (<strong>Dokümanlar → Doküman kütüphanesi</strong>, &quot;Kılavuzlar&quot; klasörü) tüm ağa açıktır. Türkçe ve İngilizce sürümü vardır; diğer dillerde İngilizce sürüm açılır.</p>
+<blockquote>
+<p><strong>Ekran görüntüleri:</strong> <code>[Ekran görüntüsü: …]</code> ile işaretli kutular ekran görüntüsü yer tutucusudur. Görseller sonraki sürümde eklenecek.</p>
+</blockquote>
+<h2 id="1-modl-seviyeleri">1. Modül seviyeleri</h2>
+<p>Paneldeki her özellik bir <strong>modüldür</strong>. Modüller üç seviyededir:</p>
+<table>
+<thead>
+<tr>
+<th>Seviye</th>
+<th>Anlamı</th>
+<th>Ücret</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Çekirdek</td>
+<td>Her zaman açıktır, kapatılamaz (ör. stok, siparişler, hizmetler, müşteriler, muhasebe).</td>
+<td>Ücretsiz</td>
+</tr>
+<tr>
+<td>Standart</td>
+<td>Varsayılan olarak açıktır (ör. sözleşme, ölçüm, lead, randevu, duyurular, bayi muhasebesi).</td>
+<td>Ücretsiz; hizmet kaydı gerekmez, tekrarlamaz</td>
+</tr>
+<tr>
+<td>Eklenti</td>
+<td>Varsayılan olarak kapalıdır. Talep edilir veya bir üst seviye açar.</td>
+<td>Çoğu ücretli; fiyat <strong>Özellikler</strong> sayfasında yazar</td>
+</tr>
+</tbody>
+</table>
+<p>Bu kılavuzdaki eklentiler (modül anahtarı parantez içinde):</p>
+<table>
+<thead>
+<tr>
+<th>Eklenti</th>
+<th>Modül anahtarı</th>
+<th>Kim kullanır</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bayi vitrini ve lead formu</td>
+<td><code>dealer_showcase</code></td>
+<td>Bayi, distribütör; onay kuyruğu merkezde</td>
+</tr>
+<tr>
+<td>Filo müşterileri</td>
+<td><code>fleet</code></td>
+<td>Bayi, distribütör, merkez; filo yöneticisi portalda</td>
+</tr>
+<tr>
+<td>Sertifika</td>
+<td><code>certificates</code></td>
+<td>Bayi, distribütör, merkez</td>
+</tr>
+<tr>
+<td>Stok tahmini ve sipariş önerisi</td>
+<td><code>stock_forecast</code></td>
+<td>Bayi, distribütör, merkez</td>
+</tr>
+<tr>
+<td>Performans ve hedef paneli (prim dahil)</td>
+<td><code>performance</code></td>
+<td>Merkez, distribütör, bayi</td>
+</tr>
+<tr>
+<td>Verimlilik ve fire analizi</td>
+<td><code>efficiency</code></td>
+<td>Merkez, distribütör, bayi</td>
+</tr>
+<tr>
+<td>Fotoğraf standardı</td>
+<td><code>photo_standard</code></td>
+<td>Merkez, distribütör; bayi kabulünde uygulanır</td>
+</tr>
+<tr>
+<td>E-fatura altyapısı (UBL-TR)</td>
+<td><code>e_invoice</code></td>
+<td>Yalnız merkez, yalnız Türkiye</td>
+</tr>
+<tr>
+<td>Tavsiye satış fiyatı</td>
+<td>modül değil, izin: <code>pricing.recommended.read</code></td>
+<td>Merkez yayınlar; distribütör ve bayi görür</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-eklentiyi-kim-aar-zincir-kurallar">2. Eklentiyi kim açar: zincir kuralları</h2>
+<p>Bir eklentinin bir organizasyonda açık olup olmadığı yukarıdan aşağıya bir zincirle belirlenir: <strong>platform yöneticisi (merkez) → distribütör → bayi</strong>. Değerler kopyalanmaz; her okumada zincir yeniden hesaplanır ve değişiklik en geç 30 saniyede her yere yansır.</p>
+<ol>
+<li><strong>Çekirdek modüller</strong> her zaman açıktır.</li>
+<li><strong>Sistem genelinde kapalı</strong> bir modül hiçbir yerde açılamaz. Platform yöneticisi <strong>Modüller</strong> sayfasından (<code>/platform/modules</code>) bir modülü sistem genelinde kapatabilir, varsayılan açık/kapalı ve ücretli bilgisini değiştirebilir.</li>
+<li><strong>Distribütör, merkez ve distribütörü olmayan bayi</strong> kendi değerini kullanır; değer yoksa modülün varsayılanı geçerlidir.</li>
+<li><strong>Distribütöre bağlı bayi</strong> için öncelik sırası:
+<ol>
+<li>Platform yöneticisinin bayiye verdiği değer (distribütörde kapalı olsa bile geçerlidir).</li>
+<li>Distribütörde kapalıysa bayide de kapalıdır ve modül bayiye <strong>gösterilmez</strong> (&quot;Üst seviyede kapalı&quot;).</li>
+<li>Bayinin kendi değeri (distribütörün o bayi için verdiği değer).</li>
+<li>Distribütörün <strong>bayi standardı</strong>.</li>
+<li>Modülün varsayılanı.</li>
+</ol>
+</li>
+</ol>
+<p>Üst seviye bir modülü kapattığında alt seviyedeki kayıtlar silinmez; bayi yalnızca kapalı görür. Üst seviye yeniden açınca bayinin eski değeri geri gelir.</p>
+<h3 id="21-distribtrn-bayileri-iin-amas">2.1 Distribütörün bayileri için açması</h3>
+<p>Distribütör <strong>Özellikler → Bayiler</strong> sekmesinde bir modülü doğrudan bayileri için açar veya kapatır. Kurallar:</p>
+<ul>
+<li>Distribütör kendisinde kapalı olan bir modülü bayileri için açamaz.</li>
+<li>Yalnız kendi doğrudan bayileri seçilebilir; seçimin tamamı uygulanır ya da hiçbiri uygulanmaz.</li>
+<li>Platform yöneticisinin değer verdiği bayi distribütör tarafından değiştirilemez (<code>MODULE_ADMIN_OVERRIDE</code>).</li>
+<li>&quot;Temizle&quot; bayiyi bayi standardına döndürür.</li>
+</ul>
+<h3 id="22-bayi-standard">2.2 Bayi standardı</h3>
+<p><strong>Özellikler → Bayi standardı</strong> sekmesi distribütörün bayileri için varsayılan modül setidir. Kendi değeri olmayan bayiler ve yeni açılan bayiler standardı hemen alır. Distribütör kendisinde kapalı bir modülü standarda ekleyemez.</p>
+<h3 id="23-platform-yneticisinin-bamsz-amas">2.3 Platform yöneticisinin bağımsız açması</h3>
+<p>Platform yöneticisi herhangi bir organizasyonda bir modülü <strong>bağımsız</strong> açabilir veya kapatabilir (kaynak: &quot;Platform yöneticisi&quot;). Bu değer distribütörde kapalı olsa bile bayide geçerlidir; yalnız sistem genelinde kapalı modülde reddedilir. &quot;Temizle&quot; organizasyonu yeniden zincire bağlar.</p>
+<h3 id="24-modl-paketi">2.4 Modül paketi</h3>
+<p>Merkezin hizmet kataloğunda <strong>modül paketi</strong> (<code>module_bundle</code>) türünde hizmetler vardır. Bir organizasyona modül paketi aboneliği atanınca paketteki modüller açılır (kaynak: &quot;Hizmet kaydı&quot;, rozet: &quot;Abonelikle açık&quot;). Üst seviyede kapalı bir modül paketle de açılamaz; atama bu durumda tümüyle reddedilir. Abonelik iptal edilince veya süresi dolunca, başka bir aktif abonelik aynı modülü kapsamıyorsa modül kapanır. Süre dolumu saatlik bir işle kontrol edilir.</p>
+<p>Bir eklentinin fiyatı, o eklentiyi içeren satıştaki modül paketinden gelir. Birden fazla paket varsa en az modül içeren, sonra en ucuz olan gösterilir. Distribütörün fiyat override'ı varsa distribütör ve bayileri o fiyatı görür. Satışta paket yoksa &quot;Fiyat için iletişime geçin&quot; yazar.</p>
+<h3 id="25-zellikler-sayfasnda-kaynak-rozetleri">2.5 Özellikler sayfasında kaynak rozetleri</h3>
+<table>
+<thead>
+<tr>
+<th>Rozet</th>
+<th>Anlamı</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Çekirdek (her zaman açık)</td>
+<td>Çekirdek modül</td>
+</tr>
+<tr>
+<td>Sistem genelinde kapalı</td>
+<td>Platform yöneticisi sistemde kapattı</td>
+</tr>
+<tr>
+<td>Varsayılan</td>
+<td>Modülün varsayılan değeri</td>
+</tr>
+<tr>
+<td>Üst seviyede kapalı</td>
+<td>Distribütörde kapalı olduğu için bayide kapalı</td>
+</tr>
+<tr>
+<td>Bayi standardı</td>
+<td>Distribütörün bayi standardından</td>
+</tr>
+<tr>
+<td>Platform yöneticisi</td>
+<td>Admin bağımsız değeri</td>
+</tr>
+<tr>
+<td>Distribütör</td>
+<td>Distribütörün bu bayi için verdiği değer</td>
+</tr>
+<tr>
+<td>Hizmet kaydı</td>
+<td>Modül paketi aboneliğinden</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-eklenti-talep-etme">3. Eklenti talep etme</h2>
+<blockquote>
+<p><strong>[Ekran görüntüsü: features-page]</strong> Özellikler sayfası: seviye grupları, açıklama, fiyat ibaresi, durum ve kaynak rozeti, &quot;Talep et&quot; düğmesi.</p>
+</blockquote>
+<ol>
+<li>Sol menüde <strong>İşletme → Özellikler</strong> sayfasını açın (<code>/t/{organizasyon}/features</code>). Sayfayı <code>modules.read</code> izni olan herkes görür.</li>
+<li>Kapalı bir eklentinin satırında <strong>Talep et</strong> düğmesine basın.</li>
+<li>Açılan pencerede isteğe bağlı bir not yazın (en fazla 1000 karakter) ve gönderin.</li>
+<li>Satırda <strong>Talep bekliyor</strong> rozeti görünür. Karar verilene kadar <strong>Talebi geri çek</strong> ile vazgeçebilirsiniz.</li>
+</ol>
+<p>Talep nereye gider:</p>
+<ul>
+<li>Distribütöre bağlı bayinin talebi <strong>distribütörün</strong> <strong>Özellikler → Talepler</strong> sekmesine düşer; distribütör sahiplerine bildirim gider.</li>
+<li>Distribütörün ve distribütörü olmayan bayinin talebi <strong>merkeze</strong> gider: <strong>Modüller</strong> sayfasındaki <strong>Talepler</strong> sekmesi; platform yöneticilerine bildirim gider.</li>
+</ul>
+<p>Kurallar:</p>
+<ul>
+<li>Çekirdek modül, zaten açık modül veya sistem genelinde kapalı modül talep edilemez.</li>
+<li>Bir organizasyonun bir modül için tek açık talebi olur; yeniden talep etmek mevcut talebi günceller.</li>
+<li>Durumlar: <strong>Bekliyor</strong>, <strong>Onaylandı</strong>, <strong>Reddedildi</strong>, <strong>Geri çekildi</strong>.</li>
+<li>Modül başka bir yoldan açılırsa (admin, distribütör, bayi standardı, modül paketi) açık talep kendiliğinden <strong>Onaylandı</strong> olur (&quot;Otomatik&quot;).</li>
+<li>Onay ve ret kararında talep eden kullanıcıya uygulama içi bildirim ve e-posta gider.</li>
+</ul>
+<h3 id="31-talep-kuyruu-onaylayanlar-iin">3.1 Talep kuyruğu (onaylayanlar için)</h3>
+<blockquote>
+<p><strong>[Ekran görüntüsü: module-requests]</strong> Talepler sekmesi: talep eden, modül, durum, tarih ve karar sütunları, toplu onay.</p>
+</blockquote>
+<ul>
+<li>Distribütör: <strong>Özellikler → Talepler</strong> (<code>modules.manage</code> izni). Onaylanan modül o bayi için açılır. Distribütörün kendisinde kapalı bir modülü onaylamak reddedilir; önce kendisi üst seviyeden talep etmelidir.</li>
+<li>Merkez: <strong>Modüller → Talepler</strong> (<code>platform.modules.read</code> görmek, <code>platform.modules.write</code> karar için). Onaylanan modül o organizasyon için platform yöneticisi değeriyle açılır.</li>
+<li>Satırdan <strong>Onayla</strong> veya <strong>Reddet</strong>; birden fazla talep seçilip <strong>Seçilenleri onayla</strong> ile toplu onay. Kararla birlikte isteğe bağlı bir not yazılabilir; not listenin <strong>Karar</strong> sütununda görünür.</li>
+</ul>
+<h2 id="4-zinler-zeti">4. İzinler özeti</h2>
+<table>
+<thead>
+<tr>
+<th>İzin</th>
+<th>Ne sağlar</th>
+<th>Kimde</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modules.read</code></td>
+<td>Özellikler sayfasını görmek, talep etmek</td>
+<td>Distribütör ve bayi rolleri</td>
+</tr>
+<tr>
+<td><code>modules.manage</code></td>
+<td>Bayiler ve bayi standardı sekmeleri, talep onayı</td>
+<td>Distribütör sahibi</td>
+</tr>
+<tr>
+<td><code>platform.modules.read</code> / <code>platform.modules.write</code></td>
+<td>Modüller sayfası, merkez talep kuyruğu</td>
+<td>Platform yöneticisi</td>
+</tr>
+</tbody>
+</table>
+<p>Eklentilerin kendi izinleri aşağıda her eklentinin bölümündedir. Bir ekranı görmek için hem eklentinin açık olması hem de rolünüzde ilgili iznin bulunması gerekir; eklenti kapalıysa menü öğesi gizlenir ve API <code>FEATURE_DISABLED</code> döner.</p>
+<h2 id="5-bayi-vitrini-ve-lead-formu-dealer-showcase">5. Bayi vitrini ve lead formu (<code>dealer_showcase</code>)</h2>
+<p><strong>Ne yapar:</strong> Bayinin herkese açık sayfasını (<code>/bayi/{kod}</code>) zenginleştirir: hizmetler, fotoğraf galerisi, çalışma saatleri, Google puanı, teklif formu ve WhatsApp düğmesi. Teklif formundan gelen talep bayide lead olarak açılır.</p>
+<p><strong>Kim açar:</strong> Eklentidir (ücretli). Distribütör bayileri için açar veya bayi talep eder; merkez bağımsız açabilir. Modül kapalıyken public sayfada yalnız temel bilgiler (ad, adres, harita, WhatsApp) kalır.</p>
+<p><strong>Ekranlar:</strong></p>
+<blockquote>
+<p><strong>[Ekran görüntüsü: showcase-editor]</strong> Vitrinim: dil içerikleri, çalışma saatleri, hizmetler, galeri, Google puanı.</p>
+</blockquote>
+<ul>
+<li><strong>Vitrinim</strong> (<code>/t/{organizasyon}/showcase</code>, bayi ve distribütör):
+<ul>
+<li>Dil içerikleri: başlık, hakkında metni, SEO anahtar kelimeleri.</li>
+<li>Çalışma saatleri; &quot;Randevu saatlerinden kopyala&quot; ile hızlı doldurma.</li>
+<li>SEO ve sosyal bağlantılar.</li>
+<li>Hizmetler: ekle, gizle, sırala.</li>
+<li>Fotoğraf galerisi: yükle, açıklama yaz, sırala (varsayılan en fazla 12 fotoğraf, her biri en fazla 5 MB).</li>
+<li>Google puanı: elle giriş (1,0–5,0) veya Places kimliği.</li>
+<li><strong>Önizle</strong>, <strong>Taslağı kaydet</strong>, <strong>Onaya gönder</strong> (onay kapalıysa <strong>Yayınla</strong>).</li>
+<li>Durumlar: Taslak, Onay bekliyor, Yayında, Reddedildi (ret notu gösterilir).</li>
+<li>Distribütör &quot;Hedef bayi&quot; seçiciyle bayilerinin vitrinini düzenler.</li>
+</ul>
+</li>
+<li><strong>Vitrin onay kuyruğu</strong> (<code>/platform/showcases</code>, merkez): İncele, <strong>Onayla</strong>, <strong>Reddet</strong> (ret notu zorunlu).</li>
+<li><strong>Public bayi sayfası</strong> (<code>/bayi/{kod}</code>): &quot;WhatsApp'tan yaz&quot;, Hizmetler, Galeri, Google puanı ve <strong>Teklif iste</strong> formu (ad, telefon, e-posta, araç, ilgilenilen hizmetler, tercih edilen iletişim, mesaj, KVKK onayı).</li>
+</ul>
+<blockquote>
+<p><strong>[Ekran görüntüsü: showcase-public]</strong> Public bayi sayfası ve teklif formu.</p>
+</blockquote>
+<p><strong>İzinler:</strong> <code>showcase.read</code> (merkez personeli, distribütör sahibi, bayi sahibi ve personeli), <code>showcase.write</code> (distribütör sahibi, bayi sahibi), <code>platform.showcase.review</code> (merkez personeli, merkez sosyal medya).</p>
+<p><strong>Sık sorulanlar:</strong></p>
+<ul>
+<li><em>Vitrin hemen yayına girer mi?</em> Merkez onayı varsayılan kapalıdır; gönderince yayına girer. Admin onayı açarsa vitrin &quot;Onay bekliyor&quot; olur, karar bayi sahiplerine bildirilir. Ret durumunda önceki yayın sürümü yayında kalır.</li>
+<li><em>Vitrinde fiyat görünür mü?</em> Hayır. Vitrinde hiçbir fiyat (tavsiye fiyat dahil) gösterilmez.</li>
+<li><em>Google puanı nasıl güncellenir?</em> Sistemde Google Places anahtarı tanımlıysa ve Places kimliği girildiyse günlük otomatik güncellenir; yoksa bayi puanı elle girer.</li>
+<li><em>WhatsApp mesajları kime gider?</em> Merkez numarasına, bayi kodu etiketiyle. Konuşmaları yalnız sistem yöneticisi görür; lead ilgili bayide açılır ve bayiye bildirim gider.</li>
+</ul>
+<h2 id="6-filo-mterileri-fleet">6. Filo müşterileri (<code>fleet</code>)</h2>
+<p><strong>Ne yapar:</strong> Kurumsal filoları (VKN ile) ayrı bir hesap olarak yönetir: araçlar, filo kullanıcıları, toplu hizmet planı, toplu araç kabulü, filo cari ekstresi ve dönemsel PDF raporu. Filo yöneticisi kendi portalını kullanır.</p>
+<p><strong>Kim açar:</strong> Eklentidir (ücretli). Bayi, distribütör veya merkez kullanabilir; zincir kuralları geçerlidir. Filo kendisi ayrı bir organizasyon tipidir, bayi ağacının ve modül zincirinin dışındadır.</p>
+<p><strong>Ekranlar:</strong></p>
+<blockquote>
+<p><strong>[Ekran görüntüsü: fleet-card]</strong> Filo kartı: özet, araçlar, kullanıcılar, hizmetler, hesap ekstresi, raporlar, hizmet planları.</p>
+</blockquote>
+<ul>
+<li><strong>Filolar → Filo listesi</strong> (<code>/t/{organizasyon}/fleets</code>): <strong>Yeni filo</strong> önce VKN sorar ve filonun zaten olup olmadığını kontrol eder.</li>
+<li><strong>Filo kartı</strong> (<code>/t/{organizasyon}/fleets/{filo}</code>): sekmeler Özet, Araçlar (ekle, içe aktar, filodan çıkar), Kullanıcılar (davet et, pasifleştir), Hizmetler, Hesap ekstresi (açılış, hizmet, tahsilat, kapanış; dışa aktarılabilir), Raporlar, Hizmet planları.</li>
+<li><strong>Toplu hizmet planı</strong> sihirbazı (<code>…/plans/new</code>): Araçlar → Hizmet ve takvim (başlangıç tarihi, günlük en fazla araç, tercih edilen saatler) → Önizleme. Plan detayında iptal ve kabul başlatma.</li>
+<li><strong>Filo portalı</strong> (filo kullanıcıları için): Filo araçları, Hizmetler, Garantiler, Hesap, Raporlar ve bayilerden gelen bağ isteklerinin onayı.</li>
+</ul>
+<p><strong>İzinler:</strong> <code>fleets.read</code>, <code>fleets.manage</code> (merkez personeli, distribütör sahibi, bayi sahibi; bayi personeli yalnız okuma), <code>fleets.plan</code> (bayi sahibi ve personeli), <code>fleet.portal.read</code> (filo rolü, yalnız kendi filosu).</p>
+<p><strong>Sık sorulanlar:</strong></p>
+<ul>
+<li><em>Aynı filo ikinci bir bayiye nasıl bağlanır?</em> İkinci bayi aynı VKN'yi girince bağ isteği gönderilir; filo kullanıcısı portalda kabul edince bağ kurulur. Talep eden her iki durumda da bildirim alır.</li>
+<li><em>Filo kullanıcısı nasıl giriş yapar?</em> Davet e-postasındaki kodla şifresini belirler. İlk kullanıcı birincil kullanıcıdır ve filonun araçlarının sahibidir.</li>
+<li><em>Filo portalında muhasebe ne kadar görünür?</em> Her bayi için yalnız filo carisi: filoya kesilen hizmetler, tahsilatlar ve bakiye.</li>
+<li><em>Dönemsel rapor ne zaman gelir?</em> Varsayılan aylık; çeyreklik veya kapalı seçilebilir. PDF filo diliyle üretilir ve filo kullanıcılarına e-postayla gider.</li>
+</ul>
+<h2 id="7-sertifika-certificates">7. Sertifika (<code>certificates</code>)</h2>
+<p><strong>Ne yapar:</strong> Personel sertifikalarını (ör. uygulama eğitimi) tutar, geçerlilik süresini izler ve sertifika gerektiren ürün/kategoride sertifikasız personelle yapılan hizmeti işaretler.</p>
+<p><strong>Kim açar:</strong> Eklentidir (ücretli). Sertifika tiplerini merkez tanımlar; sertifikayı bayi/distribütör sahibi kendi personeli için yükler; doğrulamayı yalnız merkez, distribütör ve super_admin yapar.</p>
+<p><strong>Ekranlar:</strong></p>
+<blockquote>
+<p><strong>[Ekran görüntüsü: certificates]</strong> Personel sertifikaları listesi ve doğrulama kuyruğu.</p>
+</blockquote>
+<ul>
+<li><strong>Sertifikalar → Personel sertifikaları</strong> (<code>/t/{organizasyon}/certificates</code>): <strong>Sertifika yükle</strong> (yalnız PDF, en fazla 10 MB), durum, PDF indirme, iptal, kapsama görünümü.</li>
+<li><strong>Doğrulama kuyruğu</strong> (<code>…/certificates/verification</code>, merkez ve distribütör): doğrula veya gerekçeyle reddet.</li>
+<li><strong>Sertifika onayları</strong> (<code>…/certificates/approvals</code>, merkez): sertifika eksikliği nedeniyle bekleyen hizmet statü değişikliklerini onayla/reddet.</li>
+<li><strong>Sertifika tipleri</strong> (<code>/platform/certificate-types</code>, merkez): geçerlilik süresi ve ürün/kategori bağları.</li>
+</ul>
+<p><strong>İzinler:</strong> <code>certificate_types.manage</code> ve <code>certificates.approve_service</code> (merkez personeli), <code>certificates.read</code> (merkez personeli, distribütör sahibi, bayi sahibi), <code>certificates.write</code> (distribütör sahibi, bayi sahibi), <code>certificates.verify</code> (merkez personeli, distribütör sahibi).</p>
+<p><strong>Sık sorulanlar:</strong></p>
+<ul>
+<li><em>Sertifikasız personel hizmet yaparsa ne olur?</em> Hizmete iç uyarı işareti konur. Müşteriye hiçbir bildirim gitmez. Admin &quot;statü değişiminde onay&quot; ayarını açarsa iptal dışındaki statü değişiklikleri merkez onayına kadar bekler (varsayılan kapalı).</li>
+<li><em>Süresi dolacak sertifika için uyarı gelir mi?</em> Bitişten 30 gün önce bildirim gider (admin ayarı). Süre dolunca günlük iş sertifikayı &quot;süresi doldu&quot; yapar.</li>
+</ul>
+<h2 id="8-stok-tahmini-ve-sipari-nerisi-stock-forecast">8. Stok tahmini ve sipariş önerisi (<code>stock_forecast</code>)</h2>
+<p><strong>Ne yapar:</strong> Ürün bazında günlük tüketim hızını, tükenme tarihini ve sipariş önerisini hesaplar. Hesap algoritmiktir (yapay zekâ kullanılmaz).</p>
+<p><strong>Kim açar:</strong> Eklentidir (ücretli). Merkez, distribütör ve bayi kullanabilir.</p>
+<p><strong>Ekranlar:</strong></p>
+<blockquote>
+<p><strong>[Ekran görüntüsü: stock-forecast]</strong> Tahmin listesi, ürün grafiği ve sipariş taslağı.</p>
+</blockquote>
+<ul>
+<li><strong>Stok → Tahmin ve öneri</strong> (<code>/t/{organizasyon}/stock-forecast</code>): ürün listesi ve arama, ürün grafiği (gerçekleşen / tahmin / eşik), seçilenlerden <strong>Sipariş taslağı oluştur</strong> (miktarlar düzenlenebilir), eşik düzenleme.</li>
+<li><strong>Ağ talebi</strong> sekmesi (merkez, dışa aktarılabilir) ve <strong>Bayilerim</strong> sekmesi (distribütör).</li>
+<li>Gösterge panelinde <strong>Kritik stok</strong> kartı.</li>
+</ul>
+<p><strong>İzinler:</strong> <code>stock_forecast.read</code> (merkez personeli ve depo, distribütör sahibi/personeli/depo, bayi sahibi ve personeli), <code>stock_forecast.manage</code> (merkez personeli ve depo, distribütör sahibi, bayi sahibi), <code>stock_forecast.network.read</code> (merkez).</p>
+<p><strong>Sık sorulanlar:</strong></p>
+<ul>
+<li><em>Neden &quot;yetersiz veri&quot; görüyorum?</em> Tahmin için en az 90 günlük hareket gerekir.</li>
+<li><em>Eşikler nedir?</em> Uyarı 14 gün, kritik 7 gün stok kaldığında. Öneri 30 günlük kapsamayı hedefler; eldeki stok ve açık siparişler düşülür.</li>
+<li><em>Ne zaman hesaplanır?</em> Her gece 03:00'te (organizasyon saat dilimi). Bildirim yalnız ürün &quot;normal → uyarı&quot; veya &quot;uyarı → kritik&quot; geçtiğinde gider.</li>
+</ul>
+<h2 id="9-performans-hedef-ve-prim-performance">9. Performans, hedef ve prim (<code>performance</code>)</h2>
+<p><strong>Ne yapar:</strong> Aylık performans metrikleri, sıralama ve karşılaştırma, bölge haritası, hedefler ve gerçekleşme, zayıf bayi kuralları; bayi içinde personel hedefi ve hedef bazlı prim.</p>
+<p><strong>Kim açar:</strong> Eklentidir (ücretli). Merkez, distribütör ve bayi kullanabilir. Prim ekranları ayrıca <strong>Bayi muhasebesi</strong> (<code>dealer_accounting</code>) modülünü gerektirir.</p>
+<p><strong>Ekranlar</strong> (<code>/t/{organizasyon}/performance</code>, menü <strong>Performans</strong>):</p>
+<blockquote>
+<p><strong>[Ekran görüntüsü: performance]</strong> Performans paneli, sıralama ve bölge haritası.</p>
+</blockquote>
+<ul>
+<li>Merkez ve distribütör: <strong>Panel</strong>, <strong>Sıralama</strong> (satırdan &quot;Hedef koy&quot;, &quot;Görev aç&quot;; dışa aktarılabilir), <strong>Bölge haritası</strong> (ülke/il/ilçe, bayi noktaları, bayisiz bölgeler), <strong>Kurumsal pano</strong>, <strong>Hedefler</strong> (aylık, çeyreklik, yıllık), <strong>Zayıf bayi kuralları</strong>.</li>
+<li>Bayi: <strong>Panel</strong> (&quot;Ağa göre konumum&quot;; başka bayi adı görünmez), <strong>Sıralama</strong>, <strong>Kurumsal pano</strong>, <strong>Ekip hedefleri</strong> (personel × ay tablosu), <strong>Prim kuralları</strong> (sabit tutar veya hizmet gelirinden pay, gerçekleşme eşiği; <strong>Prim ödeme günü</strong>), <strong>Primler</strong> (onayla, tutarı değiştir — not zorunlu, iptal et, toplu onay).</li>
+</ul>
+<p><strong>İzinler:</strong> <code>performance.read</code> (merkez personeli, distribütör sahibi ve personeli, bayi sahibi), <code>performance.targets.manage</code> ve <code>performance.rules.manage</code> (merkez personeli, distribütör sahibi), <code>performance.staff_targets.manage</code> (bayi sahibi), <code>performance.bonus.manage</code> (bayi sahibi, bayi muhasebe).</p>
+<p><strong>Sık sorulanlar:</strong></p>
+<ul>
+<li><em>Prim ne zaman ödenir?</em> Ay sonunda hesaplanır, bayi sahibi onaylar ve bir sonraki ayın prim ödeme gününe (varsayılan ayın 5'i, 1–28 arası ayarlanabilir) planlı personel ödemesi olarak yazılır.</li>
+<li><em>Zayıf bayi kuralı ne yapar?</em> Hedef gerçekleşmesi veya ağ medyanının altında kalma koşuluna uyan bayi için merkez ve distribütör sahiplerine bildirim gider. Otomatik görev yalnız merkez kuralında açılır (bayi × kural × ay için tek görev). Bayiye nötr bir &quot;hedefin altında&quot; bildirimi gider.</li>
+</ul>
+<h2 id="10-verimlilik-ve-fire-analizi-efficiency">10. Verimlilik ve fire analizi (<code>efficiency</code>)</h2>
+<p><strong>Ne yapar:</strong> Tamamlanan hizmetlerde kullanılan film metrajını beklenen tüketimle karşılaştırır; fire oranını bayi, personel, ürün, gövde tipi, parça ve rulo kırılımlarında gösterir.</p>
+<p><strong>Kim açar:</strong> Eklentidir (ücretli). Merkez, distribütör ve bayi kullanabilir. Beklenen tüketim tablosunu merkez yönetir.</p>
+<p><strong>Ekranlar:</strong></p>
+<blockquote>
+<p><strong>[Ekran görüntüsü: efficiency]</strong> Verimlilik özeti, aylık trend ve kırılım sekmeleri.</p>
+</blockquote>
+<ul>
+<li><strong>Verimlilik ve fire</strong> (<code>/t/{organizasyon}/efficiency</code>): dönem seçici; ortalama fire, uyarı eşiği, toplam metraj, en çok fire veren ürün; Karşılaştırma ve Aylık trend; sekmeler Bayiler, Personel, Ürünler, Gövde tipleri, Parçalar, Rulolar (rulo detayı ve kullanıldığı hizmetler). Dışa aktarılabilir.</li>
+<li><strong>Beklenen tüketim</strong> (<code>/platform/part-consumption-expectations</code>, merkez): ürün/kategori × gövde tipi × parça için beklenen metraj; ekle, düzenle, içe aktar.</li>
+</ul>
+<p><strong>İzinler:</strong> <code>efficiency.read</code> (merkez personeli, distribütör sahibi, bayi sahibi), <code>efficiency.expectations.manage</code> (merkez personeli).</p>
+<p><strong>Sık sorulanlar:</strong></p>
+<ul>
+<li><em>Fire uyarısı ne zaman çıkar?</em> Beklenenin %15 üzerinde.</li>
+<li><em>Beklenen tüketim tanımlı değilse?</em> Son 180 günün ağ medyanı kullanılır (en az 20 örnek); daha az örnekte fire hesaplanmaz.</li>
+<li><em>Bayi kiminle karşılaştırılır?</em> Kendi distribütörünün ağıyla.</li>
+</ul>
+<h2 id="11-fotoraf-standard-photo-standard">11. Fotoğraf standardı (<code>photo_standard</code>)</h2>
+<p><strong>Ne yapar:</strong> Araç kabulünde çekilmesi gereken fotoğraf açılarını tanımlar; zorunlu açı eksikken sözleşme oluşturulamaz ve hizmet taslaktan çıkamaz. Fotoğraflar sözleşme PDF'ine gömülür.</p>
+<p><strong>Kim açar:</strong> Eklentidir ama ücretsizdir; platform yöneticisinin açıp kapattığı bir anahtardır. Açıları merkez tanımlar, distribütör kendi ağı için değiştirebilir, bayi kabulde uygular.</p>
+<p><strong>Ekranlar:</strong></p>
+<blockquote>
+<p><strong>[Ekran görüntüsü: intake-photos]</strong> Hizmet sihirbazında kabul fotoğrafları adımı (kamera).</p>
+</blockquote>
+<ul>
+<li><strong>Fotoğraf açıları</strong> (<code>/platform/photo-angles</code>, merkez): açı seti ve örnek görseller.</li>
+<li><strong>Fotoğraf standardı</strong> (<code>/t/{organizasyon}/photo-standard</code>, distribütör): her açı için Zorunlu, Gizli veya Merkez varsayılanı.</li>
+<li><strong>Kabul fotoğrafları</strong> adımı (hizmet sihirbazı ve hizmet detayı): <strong>Fotoğraf çek</strong> telefonda kamerayı açar; fotoğraf başına en fazla 12 MB.</li>
+</ul>
+<p><strong>İzinler:</strong> <code>photo_standard.manage</code> (merkez personeli), <code>photo_standard.override</code> (distribütör sahibi).</p>
+<p><strong>Sık sorulanlar:</strong></p>
+<ul>
+<li><em>Zorunlu açı eksikse ne olur?</em> Sözleşme oluşturulamaz; hizmet taslaktan çıkamaz ve tamamlanamaz. İptal her zaman mümkündür.</li>
+<li><em>Konum bilgisi kimde görünür?</em> EXIF konum ve cihaz bilgisi yalnız bayi sahibi, merkez ve super_admin tarafından görülür (KVKK). Sözleşme PDF'indeki görsellerde EXIF yoktur.</li>
+</ul>
+<h2 id="12-e-fatura-ubl-tr-e-invoice">12. E-fatura (UBL-TR) (<code>e_invoice</code>)</h2>
+<p><strong>Ne yapar:</strong> Merkezin satışları için UBL-TR e-Fatura ve e-Arşiv faturası taslağı oluşturur, doğrular (XSD + Schematron), numaralandırır, XML ve PDF olarak arşivler. Entegratöre gönderim yoktur.</p>
+<p><strong>Kim açar:</strong> Yalnız merkez ve yalnız Türkiye'de kullanılır (TRY). Türkiye dışındaki alıcıya fatura kesilmez.</p>
+<p><strong>Ekranlar</strong> (menü <strong>Muhasebe → e-Fatura</strong>):</p>
+<blockquote>
+<p><strong>[Ekran görüntüsü: einvoice]</strong> Fatura listesi, faturalanabilir kayıtlar ve fatura detayı.</p>
+</blockquote>
+<ul>
+<li><strong>Fatura listesi</strong> (<code>/t/{organizasyon}/einvoices</code>): durumlar Taslak, Doğrulama hatası, Arşivlendi, İptal edildi; CSV indirme.</li>
+<li><strong>Faturalanabilir kayıtlar</strong> (<code>…/einvoices/billable</code>): teslim alınmış distribütör siparişleri ve bayi hizmet kataloğu dönemleri; <strong>Taslak oluştur</strong>. Alıcının fatura profilinde eksik alan varsa listelenir.</li>
+<li><strong>Fatura detayı</strong>: Önizle, Arşivle, İptal et (gerekçe zorunlu), XML indir, PDF indir, PDF'i yeniden oluştur; doğrulama mesajları ve durum geçmişi.</li>
+<li><strong>e-Fatura ayarları</strong> (<code>…/einvoices/settings</code>): satıcı profili, e-Arşiv ve e-Fatura serileri (3 karakter; numara seri + yıl + 9 hane, ör. EAR2026000000001), sayaçlar, XSLT (GİB varsayılanı veya özel).</li>
+<li>Alıcı fatura profili organizasyon detay sayfasındadır.</li>
+</ul>
+<p><strong>İzinler:</strong> <code>einvoice.read</code>, <code>einvoice.manage</code> (merkez muhasebe; arşivleme ve iptal kimlik doğrulaması ister), <code>einvoice.settings</code> (yalnız super_admin).</p>
+<p><strong>Sık sorulanlar:</strong></p>
+<ul>
+<li><em>Doğrulama hatasında numara harcanır mı?</em> Hayır. Doğrulamadan geçmeyen fatura arşivlenmez ve numara almaz.</li>
+<li><em>İptal ne yapar?</em> Faturayı iptal edildi olarak işaretler; kaynak kayıt yeniden faturalanabilir. İade faturası bu sürümde yoktur.</li>
+<li><em>Varsayılan KDV?</em> %20. Ayarlar kaydedilmeden taslak ve arşivleme kapalıdır.</li>
+</ul>
+<h2 id="13-tavsiye-sat-fiyat-ve-fiyat-disiplini">13. Tavsiye satış fiyatı ve fiyat disiplini</h2>
+<p><strong>Ne yapar:</strong> Merkez ürün × ülke × para birimi bazında tavsiye satış fiyatı yayınlar; distribütör ve bayi kendi fiyatlarının yanında tavsiye fiyatı ve sapmayı görür. Her yayından sonra fiyat listesi PDF'i doküman merkezine eklenir.</p>
+<p><strong>Kim açar:</strong> Ayrı bir eklenti değildir; katalog çekirdeğinde izinle çalışır. Fiyat listesi PDF'i doküman merkezi (<code>announcements</code> modülü) açıksa yayınlanır.</p>
+<p><strong>Ekranlar:</strong></p>
+<blockquote>
+<p><strong>[Ekran görüntüsü: recommended-prices]</strong> Tavsiye fiyatlar: fiyat listesi, yayın sepeti, sürüm geçmişi.</p>
+</blockquote>
+<ul>
+<li><strong>Tavsiye fiyatlar</strong> (<code>/t/{organizasyon}/catalog/recommended-prices</code>, merkez): Fiyat listesi ve Sürüm geçmişi sekmeleri, yüzdeyle toplu değişiklik, <strong>Yayın sepeti</strong> → yürürlük tarihiyle <strong>Yayınla</strong> (kimlik doğrulaması ister), CSV dışa/içe aktarma.</li>
+<li><strong>Fiyat disiplini</strong> (<code>…/catalog/price-discipline</code>, merkez ve distribütör): sapma listesi ve &quot;Ülkelere göre ortalama sapma&quot; grafiği.</li>
+<li>Distribütör ve bayide: <strong>Satış fiyatlarım</strong> ve katalog fiyat tablosunda &quot;Tavsiye fiyat&quot; sütunu ve sapma rozeti.</li>
+<li><strong>Dokümanlar → Fiyat listeleri</strong> klasörü: ülke/para birimi başına fiyat listesi PDF'i.</li>
+</ul>
+<p><strong>İzinler:</strong> <code>pricing.recommended.read</code> (merkez personeli ve muhasebe, distribütör sahibi ve muhasebe, bayi sahibi ve muhasebe), <code>pricing.recommended.write</code> (yayın; yalnız merkez muhasebe), <code>pricing.discipline.read</code> (merkez personeli, distribütör sahibi).</p>
+<p><strong>Sık sorulanlar:</strong></p>
+<ul>
+<li><em>Sapma eşiği nedir?</em> ±%15. Eşik aşımları tek tek değil, haftalık özetle (pazartesi) merkeze ve her distribütöre kendi ağı için bildirilir.</li>
+<li><em>Gelecek tarihli fiyat ne zaman görünür?</em> Yürürlük gününde geçerli olur; sürümler üzerine yazılmaz.</li>
+<li><em>Tavsiye fiyat vitrinde görünür mü?</em> Hayır, yalnız distribütör ve bayi panelinde.</li>
+</ul>
+<h2 id="14-genel-sk-sorulanlar">14. Genel sık sorulanlar</h2>
+<ul>
+<li><em>Bir eklentiyi göremiyorum.</em> Distribütörünüzde kapalı olabilir (&quot;Üst seviyede kapalı&quot;) ya da sistem genelinde kapalıdır. Özellikler sayfasından talep edin; distribütörünüzde de kapalıysa distribütörün önce merkezden talep etmesi gerekir.</li>
+<li><em>Eklenti açık ama menüde yok.</em> Rolünüzde ilgili izin yoktur; organizasyon sahibinize başvurun.</li>
+<li><em>Modül paketi aboneliği bitti; verilerim silinir mi?</em> Hayır. Modül kapanır, veriler korunur; yeniden açıldığında geri gelir.</li>
+<li><em>Bu kılavuz nerede güncellenir?</em> Kılavuz yeni sürüm yayınlandığında doküman merkezindeki aynı kayda yeni sürüm olarak eklenir; içerik değişmediyse yeni sürüm açılmaz.</li>
+</ul>
+</article>
+</body>
+</html>

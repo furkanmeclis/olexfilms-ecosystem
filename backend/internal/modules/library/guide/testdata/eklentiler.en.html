@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:">
+<title>Add-ons user guide</title>
+<style>
+:root{--primary:#0F172A}
+@page{size:A4}
+html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;font-family:"Noto Sans","Noto Sans Arabic","Noto Sans CJK SC","DejaVu Sans",sans-serif;font-size:10.5pt;line-height:1.45;color:#111827;text-align:start}
+h1,h2,h3{line-height:1.25;color:var(--primary)}
+h1.doc-title{font-size:18pt;margin:14pt 0 8pt}
+h2{font-size:12pt;margin:14pt 0 6pt}
+p{margin:0 0 6pt}
+img{max-width:100%}
+.doc-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16pt;border-block-end:2px solid var(--primary);padding-block-end:8pt}
+.doc-logo img{max-height:48pt;max-width:160pt}
+.doc-company{text-align:end;font-size:9pt}
+table{border-collapse:collapse;width:100%;margin-block-end:8pt}
+thead{display:table-header-group}
+tr{break-inside:avoid}
+table.doc-meta th,table.doc-meta td,table.doc-table th,table.doc-table td{border:1px solid #d1d5db;padding:4pt 6pt;text-align:start;vertical-align:top}
+table.doc-meta th,table.doc-table th{background:#f3f4f6;font-weight:700}
+table.doc-table td.num,table.doc-table th.num{text-align:end;white-space:nowrap}
+table.doc-totals{width:auto;margin-inline-start:auto}
+table.doc-totals th,table.doc-totals td{padding:2pt 6pt;text-align:end}
+table.doc-totals tr:last-child{font-weight:700;border-block-start:1px solid #6b7280}
+.doc-total{text-align:end;font-weight:700;font-size:12pt}
+.doc-sign{display:flex;justify-content:space-between;gap:24pt;margin-block-start:36pt;break-inside:avoid}
+.doc-sign>div{flex:1;border-block-start:1px solid #6b7280;padding-block-start:4pt;text-align:center;font-size:9pt}
+.doc-sign img{max-height:48pt}
+.doc-verify{display:flex;align-items:center;gap:12pt;margin-block-start:12pt}
+.doc-verify img,.doc-verify svg{width:80pt;height:80pt}
+.doc-footer{margin-block-start:24pt;font-size:8pt;color:#6b7280;text-align:center}
+.muted{color:#6b7280}
+.doc-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8pt;margin-block-end:8pt}
+.doc-photos figure{margin:0;break-inside:avoid;border:1px solid #d1d5db;padding:4pt}
+.doc-photos figcaption{font-size:8.5pt;margin-block-end:3pt}
+.doc-photos img{width:100%;height:auto}
+</style>
+</head>
+<body>
+<style>
+.guide h1{font-size:20pt;margin:0 0 10pt}
+.guide h2{font-size:14pt;margin:18pt 0 6pt;border-block-end:1px solid #d1d5db;padding-block-end:3pt;break-after:avoid}
+.guide h3{font-size:11.5pt;margin:12pt 0 4pt;break-after:avoid}
+.guide h4{font-size:10.5pt;margin:10pt 0 4pt;break-after:avoid}
+.guide ul,.guide ol{margin:0 0 6pt;padding-inline-start:16pt}
+.guide li{margin-block-end:2pt}
+.guide table{border-collapse:collapse;width:100%;margin-block-end:8pt;font-size:9.5pt}
+.guide th,.guide td{border:1px solid #d1d5db;padding:3pt 5pt;text-align:start;vertical-align:top}
+.guide th{background:#f3f4f6}
+.guide code{font-family:"DejaVu Sans Mono",monospace;font-size:9pt;background:#f3f4f6;padding:0 2pt}
+.guide blockquote{margin:6pt 0;padding:6pt 8pt;border-inline-start:3pt solid var(--primary);background:#f9fafb;color:#374151;break-inside:avoid}
+.guide blockquote p:last-child{margin:0}
+</style>
+<article class="guide"><h1 id="add-ons-user-guide">Add-ons user guide</h1>
+<p>This guide covers the add-on modules of the Olexfilms panel: what each add-on does, who switches it on, how to request it, what to do on each screen and which permissions are needed. The guide is available to the whole network in the document center (<strong>Documents → Document library</strong>, folder &quot;Kılavuzlar&quot;). It exists in Turkish and English; other languages open the English version.</p>
+<blockquote>
+<p><strong>Screenshots:</strong> boxes marked <code>[Screenshot: …]</code> are screenshot placeholders. Images will be added in a later version.</p>
+</blockquote>
+<h2 id="1-module-levels">1. Module levels</h2>
+<p>Every feature of the panel is a <strong>module</strong>. Modules have three levels:</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Meaning</th>
+<th>Price</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core</td>
+<td>Always on, cannot be switched off (e.g. stock, orders, services, customers, accounting).</td>
+<td>Free</td>
+</tr>
+<tr>
+<td>Standard</td>
+<td>On by default (e.g. contracts, measurements, leads, appointments, announcements, dealer accounting).</td>
+<td>Free; no service record needed, does not recur</td>
+</tr>
+<tr>
+<td>Add-on</td>
+<td>Off by default. Requested, or switched on by a level above.</td>
+<td>Mostly paid; the price is shown on the <strong>Features</strong> page</td>
+</tr>
+</tbody>
+</table>
+<p>The add-ons in this guide (module key in brackets):</p>
+<table>
+<thead>
+<tr>
+<th>Add-on</th>
+<th>Module key</th>
+<th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dealer showcase and lead form</td>
+<td><code>dealer_showcase</code></td>
+<td>Dealer, distributor; review queue at the center</td>
+</tr>
+<tr>
+<td>Fleet customers</td>
+<td><code>fleet</code></td>
+<td>Dealer, distributor, center; fleet manager in the portal</td>
+</tr>
+<tr>
+<td>Certificates</td>
+<td><code>certificates</code></td>
+<td>Dealer, distributor, center</td>
+</tr>
+<tr>
+<td>Stock forecast and order suggestions</td>
+<td><code>stock_forecast</code></td>
+<td>Dealer, distributor, center</td>
+</tr>
+<tr>
+<td>Performance and targets (bonus included)</td>
+<td><code>performance</code></td>
+<td>Center, distributor, dealer</td>
+</tr>
+<tr>
+<td>Efficiency and waste analysis</td>
+<td><code>efficiency</code></td>
+<td>Center, distributor, dealer</td>
+</tr>
+<tr>
+<td>Photo standard</td>
+<td><code>photo_standard</code></td>
+<td>Center, distributor; applied at dealer intake</td>
+</tr>
+<tr>
+<td>E-invoice (UBL-TR)</td>
+<td><code>e_invoice</code></td>
+<td>Center only, Türkiye only</td>
+</tr>
+<tr>
+<td>Recommended retail price</td>
+<td>not a module, permission: <code>pricing.recommended.read</code></td>
+<td>Center publishes; distributors and dealers see it</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-who-switches-an-add-on-on-chain-rules">2. Who switches an add-on on: chain rules</h2>
+<p>Whether an add-on is on for an organization is decided by a chain from top to bottom: <strong>platform admin (center) → distributor → dealer</strong>. Values are not copied; the chain is resolved on every read and a change reaches everyone within 30 seconds.</p>
+<ol>
+<li><strong>Core modules</strong> are always on.</li>
+<li>A module <strong>closed system wide</strong> cannot be enabled anywhere. The platform admin can close a module system wide on the <strong>Modules</strong> page (<code>/platform/modules</code>) and change its default and paid flags.</li>
+<li><strong>A distributor, the center and a dealer without a distributor</strong> use their own value; without one, the module default applies.</li>
+<li>For <strong>a dealer under a distributor</strong>, in priority order:
+<ol>
+<li>A value the platform admin set for the dealer (applies even when the distributor has the module off).</li>
+<li>If the distributor has it off, it is off for the dealer and the module is <strong>hidden</strong> from the dealer (&quot;Off at the level above&quot;).</li>
+<li>The dealer's own value (set by the distributor for that dealer).</li>
+<li>The distributor's <strong>dealer standard</strong>.</li>
+<li>The module default.</li>
+</ol>
+</li>
+</ol>
+<p>When a level above closes a module, nothing below is deleted; the dealer simply sees it off. When the level above opens it again, the dealer's earlier value applies again.</p>
+<h3 id="21-a-distributor-switching-modules-for-its-dealers">2.1 A distributor switching modules for its dealers</h3>
+<p>On <strong>Features → Dealers</strong> a distributor switches a module on or off directly for its dealers. Rules:</p>
+<ul>
+<li>A distributor cannot switch on for dealers a module that is off for itself.</li>
+<li>Only its own direct dealers can be selected; the whole selection is applied or none of it.</li>
+<li>A dealer whose value the platform admin set cannot be changed by the distributor (<code>MODULE_ADMIN_OVERRIDE</code>).</li>
+<li>&quot;Clear&quot; returns the dealer to the dealer standard.</li>
+</ul>
+<h3 id="22-dealer-standard">2.2 Dealer standard</h3>
+<p>The <strong>Features → Dealer standard</strong> tab is the distributor's default module set for its dealers. Dealers without their own value, and newly created dealers, follow the standard immediately. A distributor cannot add a module that is off for itself.</p>
+<h3 id="23-platform-admin-switching-independently">2.3 Platform admin switching independently</h3>
+<p>The platform admin can switch a module on or off <strong>independently</strong> for any organization (source: &quot;Platform admin&quot;). This value applies to a dealer even when its distributor has the module off; it is refused only for a module closed system wide. &quot;Clear&quot; puts the organization back into the chain.</p>
+<h3 id="24-module-package">2.4 Module package</h3>
+<p>The center's service catalog has services of type <strong>module package</strong> (<code>module_bundle</code>). When a module package subscription is assigned to an organization, the modules of the package are switched on (source: &quot;Service record&quot;, badge: &quot;On by subscription&quot;). A module closed at a level above cannot be opened by a package either; the assignment is then refused as a whole. When the subscription is cancelled or expires, the module is closed unless another active subscription covers it. Expiry is checked by an hourly job.</p>
+<p>The price of an add-on comes from the module package on sale that contains it. If there are several, the one with the fewest modules, then the cheapest, is shown. If a distributor has a price override, the distributor and its dealers see that price. Without a package on sale, &quot;Contact us for the price&quot; is shown.</p>
+<h3 id="25-source-badges-on-the-features-page">2.5 Source badges on the Features page</h3>
+<table>
+<thead>
+<tr>
+<th>Badge</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core (always on)</td>
+<td>Core module</td>
+</tr>
+<tr>
+<td>Closed system wide</td>
+<td>The platform admin closed it system wide</td>
+</tr>
+<tr>
+<td>Default</td>
+<td>The module's default value</td>
+</tr>
+<tr>
+<td>Off at the level above</td>
+<td>Off for the dealer because it is off for the distributor</td>
+</tr>
+<tr>
+<td>Dealer standard</td>
+<td>From the distributor's dealer standard</td>
+</tr>
+<tr>
+<td>Platform admin</td>
+<td>The admin's independent value</td>
+</tr>
+<tr>
+<td>Distributor</td>
+<td>The value the distributor set for this dealer</td>
+</tr>
+<tr>
+<td>Service record</td>
+<td>From a module package subscription</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-requesting-an-add-on">3. Requesting an add-on</h2>
+<blockquote>
+<p><strong>[Screenshot: features-page]</strong> Features page: level groups, description, price label, status and source badge, &quot;Request&quot; button.</p>
+</blockquote>
+<ol>
+<li>Open <strong>Business → Features</strong> in the side menu (<code>/t/{organization}/features</code>). Everyone with the <code>modules.read</code> permission sees the page.</li>
+<li>Press <strong>Request</strong> on the row of an add-on that is off.</li>
+<li>Optionally write a note (up to 1000 characters) and send.</li>
+<li>The row shows a <strong>Request pending</strong> badge. Until it is decided you can cancel with <strong>Withdraw request</strong>.</li>
+</ol>
+<p>Where the request goes:</p>
+<ul>
+<li>A request of a dealer under a distributor goes to the <strong>distributor's</strong> <strong>Features → Requests</strong> tab; the distributor owners are notified.</li>
+<li>A request of a distributor, or of a dealer without a distributor, goes to the <strong>center</strong>: the <strong>Requests</strong> tab of the <strong>Modules</strong> page; the platform admins are notified.</li>
+</ul>
+<p>Rules:</p>
+<ul>
+<li>Core modules, modules already on and modules closed system wide cannot be requested.</li>
+<li>An organization has one open request per module; requesting again updates it.</li>
+<li>Statuses: <strong>Pending</strong>, <strong>Approved</strong>, <strong>Rejected</strong>, <strong>Withdrawn</strong>.</li>
+<li>If the module is switched on another way (admin, distributor, dealer standard, module package), the open request becomes <strong>Approved</strong> automatically (&quot;Automatic&quot;).</li>
+<li>On approval or rejection the requesting user receives an in-app notification and an e-mail.</li>
+</ul>
+<h3 id="31-requests-queue-for-approvers">3.1 Requests queue (for approvers)</h3>
+<blockquote>
+<p><strong>[Screenshot: module-requests]</strong> Requests tab: requester, module, status, dates and decision columns, bulk approve.</p>
+</blockquote>
+<ul>
+<li>Distributor: <strong>Features → Requests</strong> (<code>modules.manage</code> permission). An approved module is switched on for that dealer. Approving a module that is off for the distributor itself is refused; the distributor must first request it from the level above.</li>
+<li>Center: <strong>Modules → Requests</strong> (<code>platform.modules.read</code> to view, <code>platform.modules.write</code> to decide). An approved module is switched on for that organization as a platform admin value.</li>
+<li><strong>Approve</strong> or <strong>Reject</strong> from the row; select several requests and use <strong>Approve selected</strong> for bulk approval. An optional note can be written with the decision; it is shown in the <strong>Decision</strong> column.</li>
+</ul>
+<h2 id="4-permissions-overview">4. Permissions overview</h2>
+<table>
+<thead>
+<tr>
+<th>Permission</th>
+<th>Grants</th>
+<th>Held by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>modules.read</code></td>
+<td>View the Features page, request modules</td>
+<td>Distributor and dealer roles</td>
+</tr>
+<tr>
+<td><code>modules.manage</code></td>
+<td>Dealers and dealer standard tabs, approving requests</td>
+<td>Distributor owner</td>
+</tr>
+<tr>
+<td><code>platform.modules.read</code> / <code>platform.modules.write</code></td>
+<td>Modules page, center requests queue</td>
+<td>Platform admin</td>
+</tr>
+</tbody>
+</table>
+<p>Each add-on's own permissions are listed in its section below. To see a screen, the add-on must be on and your role must hold the permission; when the add-on is off the menu item is hidden and the API answers <code>FEATURE_DISABLED</code>.</p>
+<h2 id="5-dealer-showcase-and-lead-form-dealer-showcase">5. Dealer showcase and lead form (<code>dealer_showcase</code>)</h2>
+<p><strong>What it does:</strong> Enriches the dealer's public page (<code>/bayi/{code}</code>): services, photo gallery, working hours, Google rating, quote form and WhatsApp button. A request from the quote form becomes a lead of the dealer.</p>
+<p><strong>Who switches it on:</strong> Add-on (paid). The distributor switches it on for its dealers or the dealer requests it; the center can switch it on independently. While the module is off, the public page keeps only the basics (name, address, map, WhatsApp).</p>
+<p><strong>Screens:</strong></p>
+<blockquote>
+<p><strong>[Screenshot: showcase-editor]</strong> My showcase: language content, working hours, services, gallery, Google rating.</p>
+</blockquote>
+<ul>
+<li><strong>My showcase</strong> (<code>/t/{organization}/showcase</code>, dealer and distributor):
+<ul>
+<li>Language content: headline, about text, SEO keywords.</li>
+<li>Working hours; &quot;Copy from appointment hours&quot; fills them quickly.</li>
+<li>SEO and social links.</li>
+<li>Services: add, hide, reorder.</li>
+<li>Photo gallery: upload, caption, reorder (by default at most 12 photos, each up to 5 MB).</li>
+<li>Google rating: manual entry (1.0–5.0) or a Places ID.</li>
+<li><strong>Preview</strong>, <strong>Save draft</strong>, <strong>Submit for review</strong> (<strong>Publish</strong> when no review is needed).</li>
+<li>Statuses: Draft, Pending review, Published, Rejected (the rejection note is shown).</li>
+<li>A distributor edits its dealers' showcases with the &quot;Target dealer&quot; picker.</li>
+</ul>
+</li>
+<li><strong>Showcase review queue</strong> (<code>/platform/showcases</code>, center): Inspect, <strong>Approve</strong>, <strong>Reject</strong> (a note is required).</li>
+<li><strong>Public dealer page</strong> (<code>/bayi/{code}</code>): &quot;Message on WhatsApp&quot;, Services, Gallery, Google rating and the <strong>Request a quote</strong> form (name, phone, e-mail, vehicle, services of interest, preferred contact, message, KVKK consent).</li>
+</ul>
+<blockquote>
+<p><strong>[Screenshot: showcase-public]</strong> Public dealer page and quote form.</p>
+</blockquote>
+<p><strong>Permissions:</strong> <code>showcase.read</code> (center staff, distributor owner, dealer owner and staff), <code>showcase.write</code> (distributor owner, dealer owner), <code>platform.showcase.review</code> (center staff, center social media).</p>
+<p><strong>FAQ:</strong></p>
+<ul>
+<li><em>Is the showcase published immediately?</em> Center review is off by default; submitting publishes it. If the admin turns review on, the showcase becomes &quot;Pending review&quot; and the decision is sent to the dealer owners. On rejection the previously published version stays live.</li>
+<li><em>Are prices shown on the showcase?</em> No. No price at all (recommended price included) is shown on the showcase.</li>
+<li><em>How is the Google rating updated?</em> If a Google Places key is configured and a Places ID is entered, it is updated daily; otherwise the dealer enters it by hand.</li>
+<li><em>Where do WhatsApp messages go?</em> To the center's number, tagged with the dealer code. Only the system admin sees the conversations; the lead opens at the dealer and the dealer is notified.</li>
+</ul>
+<h2 id="6-fleet-customers-fleet">6. Fleet customers (<code>fleet</code>)</h2>
+<p><strong>What it does:</strong> Manages corporate fleets (by tax number) as a separate account: vehicles, fleet users, bulk service plan, bulk vehicle intake, fleet account statement and a periodic PDF report. The fleet manager uses their own portal.</p>
+<p><strong>Who switches it on:</strong> Add-on (paid). Dealers, distributors and the center can use it; the chain rules apply. The fleet itself is a separate organization type, outside the dealer tree and the module chain.</p>
+<p><strong>Screens:</strong></p>
+<blockquote>
+<p><strong>[Screenshot: fleet-card]</strong> Fleet card: summary, vehicles, users, services, account statement, reports, service plans.</p>
+</blockquote>
+<ul>
+<li><strong>Fleets → Fleet list</strong> (<code>/t/{organization}/fleets</code>): <strong>New fleet</strong> first asks for the tax number and checks whether the fleet already exists.</li>
+<li><strong>Fleet card</strong> (<code>/t/{organization}/fleets/{fleet}</code>): tabs Summary, Vehicles (add, import, remove from fleet), Users (invite, disable), Services, Account statement (opening, services, collections, closing; exportable), Reports, Service plans.</li>
+<li><strong>Bulk service plan</strong> wizard (<code>…/plans/new</code>): Vehicles → Service and schedule (start date, max vehicles per day, preferred hours) → Preview. The plan detail offers cancel and start intake.</li>
+<li><strong>Fleet portal</strong> (for fleet users): Fleet vehicles, Services, Warranties, Account, Reports and approval of link requests from dealers.</li>
+</ul>
+<p><strong>Permissions:</strong> <code>fleets.read</code>, <code>fleets.manage</code> (center staff, distributor owner, dealer owner; dealer staff read only), <code>fleets.plan</code> (dealer owner and staff), <code>fleet.portal.read</code> (fleet role, own fleet only).</p>
+<p><strong>FAQ:</strong></p>
+<ul>
+<li><em>How is the same fleet linked to a second dealer?</em> When the second dealer enters the same tax number a link request is sent; the link is made once a fleet user accepts it in the portal. The requester is notified either way.</li>
+<li><em>How does a fleet user sign in?</em> They set a password with the code in the invitation e-mail. The first user is the primary user and owns the fleet's vehicles.</li>
+<li><em>How much accounting does the fleet portal show?</em> For each dealer only the fleet's account: services billed to the fleet, collections and balance.</li>
+<li><em>When does the periodic report arrive?</em> Monthly by default; quarterly or off can be chosen. The PDF is produced in the fleet's language and e-mailed to the fleet users.</li>
+</ul>
+<h2 id="7-certificates-certificates">7. Certificates (<code>certificates</code>)</h2>
+<p><strong>What it does:</strong> Keeps staff certificates (e.g. application training), tracks their validity and flags services done by uncertified staff on products or categories that require a certificate.</p>
+<p><strong>Who switches it on:</strong> Add-on (paid). The center defines certificate types; the dealer/distributor owner uploads certificates for their own staff; only the center, distributors and super_admin verify them.</p>
+<p><strong>Screens:</strong></p>
+<blockquote>
+<p><strong>[Screenshot: certificates]</strong> Staff certificates list and verification queue.</p>
+</blockquote>
+<ul>
+<li><strong>Certificates → Staff certificates</strong> (<code>/t/{organization}/certificates</code>): <strong>Upload certificate</strong> (PDF only, up to 10 MB), status, PDF download, revoke, coverage view.</li>
+<li><strong>Verification queue</strong> (<code>…/certificates/verification</code>, center and distributor): verify, or reject with a reason.</li>
+<li><strong>Certificate approvals</strong> (<code>…/certificates/approvals</code>, center): approve or reject service status changes waiting because of a missing certificate.</li>
+<li><strong>Certificate types</strong> (<code>/platform/certificate-types</code>, center): validity period and product/category bindings.</li>
+</ul>
+<p><strong>Permissions:</strong> <code>certificate_types.manage</code> and <code>certificates.approve_service</code> (center staff), <code>certificates.read</code> (center staff, distributor owner, dealer owner), <code>certificates.write</code> (distributor owner, dealer owner), <code>certificates.verify</code> (center staff, distributor owner).</p>
+<p><strong>FAQ:</strong></p>
+<ul>
+<li><em>What happens if uncertified staff perform a service?</em> The service gets an internal warning flag. No notification is ever sent to the customer. If the admin turns on &quot;approval on status change&quot;, status changes other than cancel wait for center approval (off by default).</li>
+<li><em>Is there a warning before a certificate expires?</em> A notification is sent 30 days before expiry (admin setting). On expiry a daily job marks the certificate expired.</li>
+</ul>
+<h2 id="8-stock-forecast-and-order-suggestions-stock-forecast">8. Stock forecast and order suggestions (<code>stock_forecast</code>)</h2>
+<p><strong>What it does:</strong> Calculates per product the daily consumption speed, the stock-out date and an order suggestion. The calculation is algorithmic (no AI).</p>
+<p><strong>Who switches it on:</strong> Add-on (paid). Center, distributors and dealers can use it.</p>
+<p><strong>Screens:</strong></p>
+<blockquote>
+<p><strong>[Screenshot: stock-forecast]</strong> Forecast list, product chart and order draft.</p>
+</blockquote>
+<ul>
+<li><strong>Stock → Forecast and suggestions</strong> (<code>/t/{organization}/stock-forecast</code>): product list and search, product chart (actual / projected / threshold), <strong>Create order draft</strong> from the selection (quantities editable), threshold editing.</li>
+<li><strong>Network demand</strong> tab (center, exportable) and <strong>My dealers</strong> tab (distributor).</li>
+<li><strong>Critical stock</strong> card on the dashboard.</li>
+</ul>
+<p><strong>Permissions:</strong> <code>stock_forecast.read</code> (center staff and warehouse, distributor owner/staff/warehouse, dealer owner and staff), <code>stock_forecast.manage</code> (center staff and warehouse, distributor owner, dealer owner), <code>stock_forecast.network.read</code> (center).</p>
+<p><strong>FAQ:</strong></p>
+<ul>
+<li><em>Why do I see &quot;insufficient data&quot;?</em> The forecast needs at least 90 days of movements.</li>
+<li><em>What are the thresholds?</em> Warning at 14 days of stock left, critical at 7 days. The suggestion targets 30 days of cover, minus stock on hand and open orders.</li>
+<li><em>When is it calculated?</em> Every night at 03:00 (organization time zone). A notification is sent only when a product moves &quot;OK → warning&quot; or &quot;warning → critical&quot;.</li>
+</ul>
+<h2 id="9-performance-targets-and-bonus-performance">9. Performance, targets and bonus (<code>performance</code>)</h2>
+<p><strong>What it does:</strong> Monthly performance metrics, ranking and comparison, region map, targets and achievement, weak dealer rules; within a dealer, staff targets and target-based bonuses.</p>
+<p><strong>Who switches it on:</strong> Add-on (paid). Center, distributors and dealers can use it. The bonus screens also require the <strong>Dealer accounting</strong> (<code>dealer_accounting</code>) module.</p>
+<p><strong>Screens</strong> (<code>/t/{organization}/performance</code>, menu <strong>Performance</strong>):</p>
+<blockquote>
+<p><strong>[Screenshot: performance]</strong> Performance panel, ranking and region map.</p>
+</blockquote>
+<ul>
+<li>Center and distributor: <strong>Panel</strong>, <strong>Ranking</strong> (row actions &quot;Set target&quot;, &quot;Open task&quot;; exportable), <strong>Region map</strong> (country/province/district, dealer points, regions without dealers), <strong>Dashboard</strong>, <strong>Targets</strong> (monthly, quarterly, yearly), <strong>Weak dealer rules</strong>.</li>
+<li>Dealer: <strong>Panel</strong> (&quot;My position in the network&quot;; no other dealer names), <strong>Ranking</strong>, <strong>Dashboard</strong>, <strong>Team targets</strong> (staff × month grid), <strong>Bonus rules</strong> (fixed amount or share of service revenue, achievement threshold; <strong>Bonus payment day</strong>), <strong>Bonuses</strong> (approve, change the amount — a note is required, cancel, bulk approve).</li>
+</ul>
+<p><strong>Permissions:</strong> <code>performance.read</code> (center staff, distributor owner and staff, dealer owner), <code>performance.targets.manage</code> and <code>performance.rules.manage</code> (center staff, distributor owner), <code>performance.staff_targets.manage</code> (dealer owner), <code>performance.bonus.manage</code> (dealer owner, dealer accounting).</p>
+<p><strong>FAQ:</strong></p>
+<ul>
+<li><em>When is the bonus paid?</em> It is calculated at month end, approved by the dealer owner and recorded as a planned staff payment on the bonus payment day of the following month (default the 5th, adjustable from 1 to 28).</li>
+<li><em>What does a weak dealer rule do?</em> For a dealer matching the condition (target achievement, or below the network median), the center and distributor owners are notified. An automatic task is opened only for center rules (one task per dealer × rule × month). The dealer receives a neutral &quot;below target&quot; notification.</li>
+</ul>
+<h2 id="10-efficiency-and-waste-analysis-efficiency">10. Efficiency and waste analysis (<code>efficiency</code>)</h2>
+<p><strong>What it does:</strong> Compares the film meters used in completed services with the expected consumption and shows the waste ratio broken down by dealer, staff, product, body type, part and roll.</p>
+<p><strong>Who switches it on:</strong> Add-on (paid). Center, distributors and dealers can use it. The center manages the expected consumption table.</p>
+<p><strong>Screens:</strong></p>
+<blockquote>
+<p><strong>[Screenshot: efficiency]</strong> Efficiency summary, monthly trend and breakdown tabs.</p>
+</blockquote>
+<ul>
+<li><strong>Efficiency and waste</strong> (<code>/t/{organization}/efficiency</code>): period selector; average waste, warning threshold, total meters, top-waste product; Comparison and Monthly trend; tabs Dealers, Staff, Products, Body types, Parts, Rolls (roll detail and the services that used it). Exportable.</li>
+<li><strong>Expected consumption</strong> (<code>/platform/part-consumption-expectations</code>, center): expected meters per product/category × body type × part; add, edit, import.</li>
+</ul>
+<p><strong>Permissions:</strong> <code>efficiency.read</code> (center staff, distributor owner, dealer owner), <code>efficiency.expectations.manage</code> (center staff).</p>
+<p><strong>FAQ:</strong></p>
+<ul>
+<li><em>When is a waste warning raised?</em> At 15% above expected.</li>
+<li><em>What if no expected consumption is defined?</em> The network median of the last 180 days is used (at least 20 samples); with fewer samples, waste is not calculated.</li>
+<li><em>Who is a dealer compared with?</em> Its own distributor's network.</li>
+</ul>
+<h2 id="11-photo-standard-photo-standard">11. Photo standard (<code>photo_standard</code>)</h2>
+<p><strong>What it does:</strong> Defines the photo angles to take at vehicle intake; while a required angle is missing, no contract can be created and the service cannot leave draft. The photos are embedded in the contract PDF.</p>
+<p><strong>Who switches it on:</strong> An add-on, but free: a switch the platform admin turns on or off. The center defines the angles, a distributor can adjust them for its network, and the dealer applies them at intake.</p>
+<p><strong>Screens:</strong></p>
+<blockquote>
+<p><strong>[Screenshot: intake-photos]</strong> Intake photos step in the service wizard (camera).</p>
+</blockquote>
+<ul>
+<li><strong>Photo angles</strong> (<code>/platform/photo-angles</code>, center): the angle set and example images.</li>
+<li><strong>Photo standard</strong> (<code>/t/{organization}/photo-standard</code>, distributor): Required, Hidden or Center default for each angle.</li>
+<li><strong>Intake photos</strong> step (service wizard and service detail): <strong>Take photo</strong> opens the camera on a phone; up to 12 MB per photo.</li>
+</ul>
+<p><strong>Permissions:</strong> <code>photo_standard.manage</code> (center staff), <code>photo_standard.override</code> (distributor owner).</p>
+<p><strong>FAQ:</strong></p>
+<ul>
+<li><em>What if a required angle is missing?</em> No contract can be created; the service cannot leave draft or be completed. Cancelling is always possible.</li>
+<li><em>Who sees the location data?</em> EXIF location and device data are visible only to the dealer owner, the center and super_admin (KVKK). The images in the contract PDF carry no EXIF data.</li>
+</ul>
+<h2 id="12-e-invoice-ubl-tr-e-invoice">12. E-invoice (UBL-TR) (<code>e_invoice</code>)</h2>
+<p><strong>What it does:</strong> For the center's sales, creates UBL-TR e-Fatura and e-Arşiv invoice drafts, validates them (XSD + Schematron), numbers them and archives them as XML and PDF. Nothing is sent to an integrator.</p>
+<p><strong>Who switches it on:</strong> Center only and Türkiye only (TRY). No invoice is issued to a buyer outside Türkiye.</p>
+<p><strong>Screens</strong> (menu <strong>Accounting → e-Invoice (e-Fatura)</strong>):</p>
+<blockquote>
+<p><strong>[Screenshot: einvoice]</strong> Invoice list, billable records and invoice detail.</p>
+</blockquote>
+<ul>
+<li><strong>Invoice list</strong> (<code>/t/{organization}/einvoices</code>): statuses Draft, Validation error, Archived, Voided; CSV download.</li>
+<li><strong>Billable records</strong> (<code>…/einvoices/billable</code>): received distributor orders and dealer service catalog periods; <strong>Create draft</strong>. Missing fields of the buyer's invoice profile are listed.</li>
+<li><strong>Invoice detail</strong>: Preview, Archive, Void (a reason is required), Download XML, Download PDF, Regenerate PDF; validation messages and status history.</li>
+<li><strong>E-invoice settings</strong> (<code>…/einvoices/settings</code>): seller profile, e-Arşiv and e-Fatura series (3 characters; number = series + year + 9 digits, e.g. EAR2026000000001), counters, XSLT (GİB default or custom).</li>
+<li>The buyer's invoice profile is on the organization detail page.</li>
+</ul>
+<p><strong>Permissions:</strong> <code>einvoice.read</code>, <code>einvoice.manage</code> (center accounting; archive and void require identity re-verification), <code>einvoice.settings</code> (super_admin only).</p>
+<p><strong>FAQ:</strong></p>
+<ul>
+<li><em>Is a number used up on a validation error?</em> No. An invoice that fails validation is not archived and gets no number.</li>
+<li><em>What does void do?</em> It marks the invoice voided; the source record can be invoiced again. Return invoices are not part of this version.</li>
+<li><em>Default VAT?</em> 20%. Drafting and archiving stay disabled until the settings are saved.</li>
+</ul>
+<h2 id="13-recommended-retail-price-and-price-discipline">13. Recommended retail price and price discipline</h2>
+<p><strong>What it does:</strong> The center publishes recommended retail prices per product × country × currency; distributors and dealers see the recommended price and the deviation next to their own prices. After each publication a price list PDF is added to the document center.</p>
+<p><strong>Who switches it on:</strong> Not a separate add-on; it runs in the catalog core with permissions. The price list PDF is published when the document center (<code>announcements</code> module) is on.</p>
+<p><strong>Screens:</strong></p>
+<blockquote>
+<p><strong>[Screenshot: recommended-prices]</strong> Recommended prices: price list, publication basket, version history.</p>
+</blockquote>
+<ul>
+<li><strong>Recommended prices</strong> (<code>/t/{organization}/catalog/recommended-prices</code>, center): Price list and Version history tabs, bulk change by percentage, <strong>Publication basket</strong> → <strong>Publish</strong> with an effective date (requires identity re-verification), CSV export and import.</li>
+<li><strong>Price discipline</strong> (<code>…/catalog/price-discipline</code>, center and distributor): deviation list and the &quot;Average deviation by country&quot; chart.</li>
+<li>For distributors and dealers: a &quot;Recommended price&quot; column and deviation badge on <strong>My sale prices</strong> and in the catalog price table.</li>
+<li><strong>Documents → &quot;Fiyat listeleri&quot;</strong> folder: a price list PDF per country/currency.</li>
+</ul>
+<p><strong>Permissions:</strong> <code>pricing.recommended.read</code> (center staff and accounting, distributor owner and accounting, dealer owner and accounting), <code>pricing.recommended.write</code> (publishing; center accounting only), <code>pricing.discipline.read</code> (center staff, distributor owner).</p>
+<p><strong>FAQ:</strong></p>
+<ul>
+<li><em>What is the deviation threshold?</em> ±15%. Threshold breaches are not reported one by one but in a weekly summary (Monday) to the center, and to each distributor for its own network.</li>
+<li><em>When does a future-dated price apply?</em> On its effective day; versions are never overwritten.</li>
+<li><em>Is the recommended price shown on the showcase?</em> No, only in the distributor and dealer panels.</li>
+</ul>
+<h2 id="14-general-faq">14. General FAQ</h2>
+<ul>
+<li><em>I cannot see an add-on.</em> It may be off for your distributor (&quot;Off at the level above&quot;) or closed system wide. Request it on the Features page; if it is off for your distributor too, the distributor must first request it from the center.</li>
+<li><em>The add-on is on but not in the menu.</em> Your role lacks the permission; ask your organization owner.</li>
+<li><em>My module package subscription ended; is my data deleted?</em> No. The module closes, the data is kept and comes back when the module is switched on again.</li>
+<li><em>Where is this guide updated?</em> A new edition is added as a new version of the same document center item; if the content did not change, no new version is opened.</li>
+</ul>
+</article>
+</body>
+</html>

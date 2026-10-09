@@ -95,6 +95,26 @@ func TestService_ListItems_FallsBackToDefaultLocale(t *testing.T) {
 	}
 }
 
+// TEC-510: a language without its own version falls back to English before
+// the default tr (the user guides exist in tr + en only).
+func TestService_ListItems_FallsBackToEnglishBeforeTurkish(t *testing.T) {
+	ctx := context.Background()
+	store := newFakeStore()
+	svc := New(store, &fakeStorage{})
+	item := store.seedItem(1, 10, 100, AccessAllNetwork, []string{"user-guide"})
+	store.seedVersion(item.ID, "tr", 1, "library/guide.tr.pdf")
+	en := store.seedVersion(item.ID, "en", 1, "library/guide.en.pdf")
+	viewer := Actor{UserID: 7, OrganizationID: 200, BrandID: 10, OrgType: OrgDealer, Roles: []string{"dealer_owner"}}
+
+	items, _, err := svc.ListItems(ctx, viewer, ListInput{Locale: "de"})
+	if err != nil {
+		t.Fatalf("ListItems() error = %v", err)
+	}
+	if len(items) != 1 || items[0].LatestVersion == nil || items[0].LatestVersion.UUID != en.Uuid {
+		t.Fatalf("latest version = %+v, want en fallback %s", items, en.Uuid)
+	}
+}
+
 func TestService_AddVersion_RejectsPDFExtensionWithZIPContent(t *testing.T) {
 	ctx := context.Background()
 	store := newFakeStore()
