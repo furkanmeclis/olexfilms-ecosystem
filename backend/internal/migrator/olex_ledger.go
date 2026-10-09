@@ -79,9 +79,11 @@ func (s LedgerStep) whSystem() string {
 	return s.WHSystem
 }
 
-const hubMovementsQuery = `SELECT m.id, m.stock_item_id, m.user_id, m.action, m.description, m.created_at, si.dealer_id
+// hubMovementsQuery keeps movements whose stock item the legacy hub deleted
+// (si.id NULL): the step skips and reports them instead of losing them.
+const hubMovementsQuery = `SELECT m.id, m.stock_item_id, m.user_id, m.action, m.description, m.created_at, si.dealer_id, si.id IS NOT NULL
 FROM stock_movements m
-JOIN stock_items si ON si.id = m.stock_item_id
+LEFT JOIN stock_items si ON si.id = m.stock_item_id
 ORDER BY m.id`
 
 const whMovementsQuery = `SELECT CAST(m.id AS CHAR(36)), CAST(m.product_barcode_id AS CHAR(36)), CAST(m.warehouse_location_id AS CHAR(36)),
@@ -105,6 +107,7 @@ type hubMovement struct {
 	Description     sql.NullString
 	CreatedAt       sql.NullTime
 	DealerID        sql.NullInt64
+	UnitExists      bool
 }
 
 type whMovement struct {
@@ -747,12 +750,16 @@ func (s LedgerStep) hubLegacy(ctx context.Context, u *unitCtx, r hubMovement, c 
 		}
 		return legacyMove{}, uuid.Nil, false, err
 	}
+	if !r.UnitExists {
+		c.inc("hub_skipped_unit_deleted:" + id)
+		return legacyMove{}, uuid.Nil, false, nil
+	}
 	unit, ok, err := u.m.Lookup(ctx, s.system(), "stock_items", strconv.FormatInt(r.StockItemID, 10))
 	if err != nil {
 		return legacyMove{}, uuid.Nil, false, err
 	}
 	if !ok {
-		c.inc("hub_skipped_unit_unmapped")
+		c.inc("hub_skipped_unit_unmapped:" + id)
 		return legacyMove{}, uuid.Nil, false, nil
 	}
 	var dealerOrg int64
@@ -845,7 +852,7 @@ func readHubMovements(ctx context.Context, hub source.LegacySource) ([]hubMoveme
 	var out []hubMovement
 	for rows.Next() {
 		var r hubMovement
-		if err := rows.Scan(&r.ID, &r.StockItemID, &r.UserID, &r.Action, &r.Description, &r.CreatedAt, &r.DealerID); err != nil {
+		if err := rows.Scan(&r.ID, &r.StockItemID, &r.UserID, &r.Action, &r.Description, &r.CreatedAt, &r.DealerID, &r.UnitExists); err != nil {
 			_ = rows.Close()
 			return nil, fmt.Errorf("scan hub stock movement: %w", err)
 		}

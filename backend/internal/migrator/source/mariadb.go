@@ -6,13 +6,25 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
+	_ "time/tzdata" // LegacyTimeZone on images without zoneinfo
 
 	"github.com/go-sql-driver/mysql"
 )
 
-// sessionReadOnly is run on every new MariaDB connection.
-const sessionReadOnly = "SET SESSION TRANSACTION READ ONLY"
+// Session statements run on every new MariaDB connection: read-only mode,
+// and a fixed session time zone so TIMESTAMP columns come back exactly as
+// the legacy app wrote them, whatever the server's own time zone is.
+const (
+	sessionReadOnly = "SET SESSION TRANSACTION READ ONLY"
+	sessionTimeZone = "SET time_zone = '+00:00'"
+)
+
+// LegacyTimeZone is the wall clock of the legacy Laravel apps: both run with
+// app.timezone Europe/Istanbul and no connection time zone, so every legacy
+// timestamp is Istanbul local time stored as is. A DSN loc= overrides it.
+const LegacyTimeZone = "Europe/Istanbul"
 
 // MariaDB is a LegacySource over the legacy hub / warehouse MariaDB
 // (go-sql-driver/mysql). Each connection is put in read-only session mode and
@@ -24,7 +36,8 @@ type MariaDB struct {
 
 // OpenMariaDB opens a read-only MariaDB source. dsn is a go-sql-driver DSN
 // (user:pass@tcp(host:3306)/dbname). Multi-statements and client-side
-// interpolation are forced off; parseTime is forced on.
+// interpolation are forced off; parseTime is forced on. Times are read in
+// LegacyTimeZone unless the DSN sets loc.
 func OpenMariaDB(ctx context.Context, name, dsn string) (*MariaDB, error) {
 	cfg, err := mysql.ParseDSN(dsn)
 	if err != nil {
@@ -33,8 +46,10 @@ func OpenMariaDB(ctx context.Context, name, dsn string) (*MariaDB, error) {
 	cfg.MultiStatements = false
 	cfg.InterpolateParams = false
 	cfg.ParseTime = true
-	if cfg.Loc == nil {
-		cfg.Loc = time.UTC
+	if !dsnSetsLoc(dsn) {
+		if cfg.Loc, err = time.LoadLocation(LegacyTimeZone); err != nil {
+			return nil, fmt.Errorf("source %s: time zone: %w", name, err)
+		}
 	}
 	base, err := mysql.NewConnector(cfg)
 	if err != nil {
@@ -100,11 +115,27 @@ func (c readOnlyConnector) Connect(ctx context.Context) (driver.Conn, error) {
 		_ = conn.Close()
 		return nil, errors.New("source: driver cannot set read-only session")
 	}
-	if _, err := ex.ExecContext(ctx, sessionReadOnly, nil); err != nil {
-		_ = conn.Close()
-		return nil, fmt.Errorf("source: %s: %w", sessionReadOnly, err)
+	for _, stmt := range []string{sessionReadOnly, sessionTimeZone} {
+		if _, err := ex.ExecContext(ctx, stmt, nil); err != nil {
+			_ = conn.Close()
+			return nil, fmt.Errorf("source: %s: %w", stmt, err)
+		}
 	}
 	return conn, nil
+}
+
+// dsnSetsLoc reports whether the DSN's parameters name a loc.
+func dsnSetsLoc(dsn string) bool {
+	_, params, ok := strings.Cut(dsn, "?")
+	if !ok {
+		return false
+	}
+	for _, p := range strings.Split(params, "&") {
+		if strings.HasPrefix(p, "loc=") {
+			return true
+		}
+	}
+	return false
 }
 
 type sqlRows struct {
