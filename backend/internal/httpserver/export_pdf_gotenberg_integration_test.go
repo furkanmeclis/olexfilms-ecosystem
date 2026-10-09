@@ -14,6 +14,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/hibiken/asynq"
@@ -39,7 +40,11 @@ func TestIntegrationExportPDFGotenberg(t *testing.T) {
 	if _, err := it.pool.Exec(ctx, "UPDATE users SET name = 'محمد', surname = '王小明' WHERE id = $1", u.ID); err != nil {
 		t.Fatal(err)
 	}
-	tok := it.adminToken()
+	admin, apw := it.user("t139-admin", rbac.RoleSuperAdmin)
+	tok := it.tokensFrom(it.do("POST", "/v1/auth/login", hostOlex, "", map[string]string{
+		"email": admin.Email.String, "password": apw,
+	})).AccessToken
+	it.stepUp(admin.Uuid)
 	q := "t139pdf-" + it.suffix
 	want := map[string]string{} // job uuid → locale
 	for _, req := range []struct{ format, locale string }{{"pdf", "ar"}, {"pdf", "zh_CN"}, {"pdf", "tr"}, {"csv", "tr"}} {
