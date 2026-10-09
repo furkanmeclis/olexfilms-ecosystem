@@ -36,3 +36,21 @@ storage/whatsmeow/
 # Debug
 debug
 __debug_bin*
+
+# `go build ./cmd/<name>/` outputs in backend root (root-anchored; cmd/<name>/ stays tracked)
+/create-super-admin
+/cutover-delta-report
+/cutover-preflight
+/efficiency-backfill
+/enqueue-ping
+/inventory-rebuild
+/inventory-reconcile
+/measurement-reparse
+/migrator
+/normalize-org-phones
+/publish-guide
+/roles-sync
+/search-reindex
+/seed-demo
+/server
+/worker
