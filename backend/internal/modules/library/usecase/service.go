@@ -29,6 +29,7 @@ import (
 const (
 	MaxUploadBytes     = 50 << 20
 	defaultLocale      = "tr"
+	fallbackLocale     = "en"
 	downloadURLTTL     = 10 * time.Minute
 	AccessAllNetwork   = "all_network"
 	AccessDistributors = "distributors"
@@ -722,24 +723,18 @@ func pickVersion(rows []db.LibraryItemVersion, locale string) (db.LibraryItemVer
 		return db.LibraryItemVersion{}, false
 	}
 	locale = normalizeLocale(locale)
-	var fallback db.LibraryItemVersion
-	hasFallback := false
-	var any db.LibraryItemVersion
-	for i, row := range rows {
-		if i == 0 {
-			any = row
-		}
-		if row.Locale == locale {
+	byLocale := make(map[string]db.LibraryItemVersion, len(rows))
+	for _, row := range rows {
+		byLocale[row.Locale] = row
+	}
+	// Requested language, then en (TEC-510: languages without their own
+	// version fall back to English), then the default tr, then any.
+	for _, l := range []string{locale, fallbackLocale, defaultLocale} {
+		if row, ok := byLocale[l]; ok {
 			return row, true
 		}
-		if row.Locale == defaultLocale {
-			fallback, hasFallback = row, true
-		}
 	}
-	if hasFallback {
-		return fallback, true
-	}
-	return any, true
+	return rows[0], true
 }
 
 func accessLevels(orgType string) []string {
