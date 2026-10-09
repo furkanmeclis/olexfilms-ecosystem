@@ -116,6 +116,10 @@ type Querier interface {
 	// Rotated refresh tokens stay until they expire, for reuse detection.
 	CleanupOAuthTokens(ctx context.Context) (int64, error)
 	ClearAppSettingsLogo(ctx context.Context) (AppSetting, error)
+	// TEC-499 (F5-07b): KVKK anonymization of a customer clears the EXIF
+	// location and device of the intake photos of their services (the photos
+	// and capture time stay as service evidence).
+	ClearCustomerIntakePhotoEXIF(ctx context.Context, customerUserID int64) (int64, error)
 	// Run before setting a new default in the same transaction.
 	ClearDefaultContractTemplate(ctx context.Context, arg ClearDefaultContractTemplateParams) error
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
@@ -263,6 +267,7 @@ type Querier interface {
 	// Open (pending) vehicle transfers that involve the user; the transfer's
 	// current owner is immutable, so a merge waits until they are closed.
 	CountPendingVehicleTransfersForUser(ctx context.Context, userID int64) (int64, error)
+	CountPerformanceMapDealerMissingCoordinates(ctx context.Context, arg CountPerformanceMapDealerMissingCoordinatesParams) (int64, error)
 	CountPermissions(ctx context.Context, q_ pgtype.Text) (int64, error)
 	CountPhoneOTPsSince(ctx context.Context, arg CountPhoneOTPsSinceParams) (int64, error)
 	CountPlatformNotifications(ctx context.Context, arg CountPlatformNotificationsParams) (int64, error)
@@ -1190,6 +1195,7 @@ type Querier interface {
 	GetRecommendedProductPrice(ctx context.Context, arg GetRecommendedProductPriceParams) (pgtype.Numeric, error)
 	GetRefreshTokenByHashAny(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRefreshTokenByUUID(ctx context.Context, argUuid uuid.UUID) (RefreshToken, error)
+	GetReportLayout(ctx context.Context, arg GetReportLayoutParams) (ReportLayout, error)
 	// TEC-239: the newest reusable portal job of the actor for one service
 	// (no organization): a completed job created at or after not_before, or a
 	// queued / processing one created at or after pending_after. Failed and
@@ -2164,6 +2170,10 @@ type Querier interface {
 	// keeps those not touched since then (the scheduler re-enqueues their task;
 	// a still queued task is deduplicated by its task id).
 	ListPendingCampaignRecipientIDs(ctx context.Context, arg ListPendingCampaignRecipientIDsParams) ([]int64, error)
+	ListPerformanceMapDealers(ctx context.Context, arg ListPerformanceMapDealersParams) ([]ListPerformanceMapDealersRow, error)
+	// Staff targets ---------------------------------------------------------------------
+	// Region map ------------------------------------------------------------------------
+	ListPerformanceMapRegions(ctx context.Context, arg ListPerformanceMapRegionsParams) ([]ListPerformanceMapRegionsRow, error)
 	// Metrics of the organizations over a closed period range (YYYY-MM).
 	ListPerformanceMetrics(ctx context.Context, arg ListPerformanceMetricsParams) ([]PerformanceMetricsMonthly, error)
 	// Worker source readers ----------------------------------------------------------
@@ -3156,6 +3166,41 @@ type Querier interface {
 	// Replaces an unconfirmed link of the phase with a manually chosen one.
 	ReplaceServiceMeasurement(ctx context.Context, arg ReplaceServiceMeasurementParams) (int64, error)
 	ReplaceUserRoles(ctx context.Context, userID int64) error
+	ReportCustomerOverview(ctx context.Context, arg ReportCustomerOverviewParams) (ReportCustomerOverviewRow, error)
+	// Customers: a customer belongs to the organizations it is linked to
+	// (customer_organizations); type comes from customer_profiles.
+	ReportCustomerTrend(ctx context.Context, arg ReportCustomerTrendParams) ([]ReportCustomerTrendRow, error)
+	ReportMeasurementCounts(ctx context.Context, arg ReportMeasurementCountsParams) (ReportMeasurementCountsRow, error)
+	// Measurements (NexPTG results) by measured_at.
+	ReportMeasurementTrend(ctx context.Context, arg ReportMeasurementTrendParams) ([]ReportMeasurementTrendRow, error)
+	ReportNetworkCounts(ctx context.Context, arg ReportNetworkCountsParams) (ReportNetworkCountsRow, error)
+	ReportOrderOverview(ctx context.Context, arg ReportOrderOverviewParams) (ReportOrderOverviewRow, error)
+	ReportOrderStatuses(ctx context.Context, arg ReportOrderStatusesParams) ([]ReportOrderStatusesRow, error)
+	// Orders: the caller reaches an order as its owner (organization_id) or
+	// its buyer, like ListOrders side=all.
+	ReportOrderTrend(ctx context.Context, arg ReportOrderTrendParams) ([]ReportOrderTrendRow, error)
+	ReportRecentServices(ctx context.Context, arg ReportRecentServicesParams) ([]ReportRecentServicesRow, error)
+	ReportServiceOverview(ctx context.Context, arg ReportServiceOverviewParams) (ReportServiceOverviewRow, error)
+	ReportServiceStatuses(ctx context.Context, arg ReportServiceStatusesParams) ([]ReportServiceStatusesRow, error)
+	ReportServiceTopModels(ctx context.Context, arg ReportServiceTopModelsParams) ([]ReportServiceTopModelsRow, error)
+	// TEC-495 (F5-05f): /v1/reports aggregates (mobile reports and panel
+	// widgets). Scope arguments follow scopefilter like service_stats.sql:
+	// brand_id is always the domain brand of the active organization (K20),
+	// org_ids NULL = whole brand (brand / all scope) else the organizations in
+	// reach, created_by_user_id narrows own / assigned grants. Ranges are
+	// half open [range_from, range_to); buckets are date_trunc(granularity)
+	// of the timestamp in the caller's timezone, gaps are filled by the
+	// usecase.
+	ReportServiceTrend(ctx context.Context, arg ReportServiceTrendParams) ([]ReportServiceTrendRow, error)
+	ReportStockTotals(ctx context.Context, arg ReportStockTotalsParams) (ReportStockTotalsRow, error)
+	// Stock: a snapshot of the holding organizations in reach (serial units by
+	// status from unit_current_state, quantities from organization_product_stocks).
+	ReportStockUnitStatuses(ctx context.Context, arg ReportStockUnitStatusesParams) ([]ReportStockUnitStatusesRow, error)
+	ReportTopDealersByWarranty(ctx context.Context, arg ReportTopDealersByWarrantyParams) ([]ReportTopDealersByWarrantyRow, error)
+	// Warranties: own / assigned grants reach the warranties of their own
+	// services.
+	ReportWarrantyCounts(ctx context.Context, arg ReportWarrantyCountsParams) (ReportWarrantyCountsRow, error)
+	ReportWarrantyTrend(ctx context.Context, arg ReportWarrantyTrendParams) ([]ReportWarrantyTrendRow, error)
 	// Finishes a claimed action: executing → confirmed | failed.
 	ResolveAIPendingAction(ctx context.Context, arg ResolveAIPendingActionParams) (AiPendingAction, error)
 	ResolveAccountingDispute(ctx context.Context, arg ResolveAccountingDisputeParams) (AccountingDispute, error)
@@ -3662,13 +3707,13 @@ type Querier interface {
 	// permission happens in the use case layer (TEC-146).
 	UpsertProductPrice(ctx context.Context, arg UpsertProductPriceParams) (ProductPrice, error)
 	UpsertPushSubscription(ctx context.Context, arg UpsertPushSubscriptionParams) (PushSubscription, error)
+	UpsertReportLayout(ctx context.Context, arg UpsertReportLayoutParams) (ReportLayout, error)
 	UpsertReviewQuestionLocale(ctx context.Context, arg UpsertReviewQuestionLocaleParams) (ReviewQuestionLocale, error)
 	// ---------------------------------------------------------------------------
 	// Service warnings.
 	UpsertServiceCertificateWarning(ctx context.Context, arg UpsertServiceCertificateWarningParams) (ServiceCertificateWarning, error)
 	UpsertServiceModuleFlag(ctx context.Context, arg UpsertServiceModuleFlagParams) (ModuleFlag, error)
 	UpsertServicePriceOverride(ctx context.Context, arg UpsertServicePriceOverrideParams) (ServicePriceOverride, error)
-	// Staff targets ---------------------------------------------------------------------
 	UpsertStaffTarget(ctx context.Context, arg UpsertStaffTargetParams) (StaffTarget, error)
 	// TEC-483 (F5-04a): stock forecast snapshots, thresholds and center network
 	// demand. Worker/API layers arrive in F5-04b/c; these queries are the

@@ -119,6 +119,7 @@ func RegisterRecommendedRoutes(
 	mux.Handle("GET /v1/tenant/pricing/recommended/versions", middleware.Chain(http.HandlerFunc(h.Versions),
 		authn, org, module, middleware.RequirePermission(rbac.PermPricingRecommendedRead), requireOrgType(center)))
 	mux.Handle("GET /v1/tenant/pricing/recommended/current", read(h.Current))
+	mux.Handle("GET /v1/tenant/pricing/recommended/settings", read(h.Settings))
 
 	mux.Handle("GET /v1/pricing/discipline", discipline(h.Discipline))
 	mux.Handle("GET /v1/pricing/discipline/summary", discipline(h.DisciplineSummary))

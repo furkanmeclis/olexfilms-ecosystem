@@ -19,6 +19,9 @@ import { routes } from "@/config/routes";
 import { Money } from "@/features/accounting/components/shared";
 import { useDealerSalesAccess } from "@/features/dealer-sales/hooks/use-dealer-sales-access";
 import { isBelowCost, normalizeMoney } from "@/features/dealer-sales/lib/sales";
+import { RecommendedPriceCell } from "@/features/pricing/components/deviation-badge";
+import { useDeviationThreshold } from "@/features/pricing/hooks/use-deviation-threshold";
+import type { RecommendedPriceRef } from "@/features/pricing/services/recommended.service";
 import {
   dealerSalesKeys,
   dealerSalesService,
@@ -33,6 +36,22 @@ export const SALE_PRICES_PERSIST_KEY = "tenant-dealer-sale-prices-v1";
 
 function Dash() {
   return <span className="text-muted-foreground">—</span>;
+}
+
+/**
+ * The recommended price in force for the dealer's country (TEC-506 block),
+ * else the currency-wide list column.
+ */
+function recommendedRef(item: PriceCatalogItem): RecommendedPriceRef | null {
+  if (item.recommended) return item.recommended;
+  if (!item.recommended_sale_price) return null;
+  return {
+    price: item.recommended_sale_price,
+    currency: item.currency,
+    country_iso2: "",
+    scope: "currency",
+    effective_from: "",
+  };
 }
 
 /**
@@ -76,6 +95,7 @@ export function SalePricesPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
   const access = useDealerSalesAccess(slug);
   const queryClient = useQueryClient();
+  const threshold = useDeviationThreshold(access.canSeeRecommended);
 
   const columns = useMemo(
     () =>
@@ -122,21 +142,25 @@ export function SalePricesPage({ slug }: { slug: string }) {
               }),
             ]
           : []),
-        createColumn<PriceCatalogItem>({
-          accessorKey: "recommended_sale_price",
-          labelKey: "dealer_sales.fields.recommended_price",
-          enableSorting: true,
-          enableColumnFilter: false,
-          cell: ({ row }) =>
-            row.original.recommended_sale_price ? (
-              <Money
-                amount={row.original.recommended_sale_price}
-                currency={row.original.currency}
-              />
-            ) : (
-              <Dash />
-            ),
-        }),
+        ...(access.canSeeRecommended
+          ? [
+              createColumn<PriceCatalogItem>({
+                id: "recommended_sale_price",
+                accessorFn: (row) =>
+                  row.recommended?.price ?? row.recommended_sale_price,
+                labelKey: "dealer_sales.fields.recommended_price",
+                enableSorting: true,
+                enableColumnFilter: false,
+                cell: ({ row }) => (
+                  <RecommendedPriceCell
+                    recommended={recommendedRef(row.original)}
+                    deviationPct={row.original.deviation_pct}
+                    threshold={threshold}
+                  />
+                ),
+              }),
+            ]
+          : []),
         createColumn<PriceCatalogItem>({
           id: "sale_price",
           accessorFn: (row) => row.sale_price ?? "",
@@ -190,7 +214,13 @@ export function SalePricesPage({ slug }: { slug: string }) {
             ),
         }),
       ] as ColumnDef<PriceCatalogItem, unknown>[],
-    [access.canSeePurchasePrice, format, t],
+    [
+      access.canSeePurchasePrice,
+      access.canSeeRecommended,
+      format,
+      t,
+      threshold,
+    ],
   );
 
   const listState = useServerListState({

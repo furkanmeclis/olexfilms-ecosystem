@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Напишете бележка, за да отхвърлите.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Въведете оценка между 1,0 и 5,0 и брой отзиви 0 или повече.",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Оценката в Google се обновява от Google Places; премахнете Place ID, за да я въведете ръчно.",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "Неподдържан тип файл; качете JPEG, PNG или WebP изображение."
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Неподдържан тип файл; качете JPEG, PNG или WebP изображение.",
+  "codes.EINVOICE_INVALID_TAX_ID": "VKN или TCKN е невалиден (VKN е 10 цифри, TCKN – 11, с валидна контролна цифра).",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "Електронни фактури се издават само в TRY за купувачи в Турция.",
+  "codes.EINVOICE_INVALID_DOCUMENT": "Данните на фактурата са непълни или невалидни.",
+  "codes.EINVOICE_INVALID_VAT_RATE": "ДДС ставката е невалидна; 0% изисква код за освобождаване.",
+  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT файлът със стил е невалиден."
 }

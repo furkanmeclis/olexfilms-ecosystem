@@ -122,6 +122,9 @@ func TestCatalogDefaults(t *testing.T) {
 	if d, _ := Lookup(KeyPricingPriceListAutoPublish); d.Default != true || d.Group != GroupPricing || d.Kind != KindBool {
 		t.Fatalf("pricing auto publish = %v/%s/%s, want true/pricing/bool", d.Default, d.Group, d.Kind)
 	}
+	if d, _ := Lookup(KeyEinvoiceDefaultVATRate); d.Default != int64(20) || d.Group != GroupEinvoice || d.Kind != KindInt {
+		t.Fatalf("einvoice default vat = %v/%s/%s, want 20/einvoice/int", d.Default, d.Group, d.Kind)
+	}
 	if _, ok := Lookup("certificates.notify_customer"); ok {
 		t.Fatal("certificates.notify_customer must not exist per F5 S13")
 	}

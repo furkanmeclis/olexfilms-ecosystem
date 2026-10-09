@@ -217,6 +217,7 @@
   "detail.items.added_at": "Eklenme",
   "wizard.steps.contract": "Sözleşme",
   "stock.errors.CONTRACT_REQUIRED": "Hizmet tamamlanmadan önce araç kabul sözleşmesi imzalanmalı. Sözleşme adımına dönün.",
+  "stock.errors.PHOTO_STANDARD_INCOMPLETE": "Zorunlu araç kabul fotoğrafları eksik. Önce tüm zorunlu açıların fotoğrafını çekin.",
   "contract.title": "Araç kabul sözleşmesi",
   "contract.none": "Bu hizmet için henüz sözleşme oluşturulmadı.",
   "contract.voided_hint": "Önceki sözleşme iptal edildi. Yeni bir sözleşme oluşturun.",

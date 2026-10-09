@@ -77,6 +77,8 @@ export const STOCK_ERROR_CODES = [
   "ORGANIZATION_READ_ONLY",
   // TEC-291: completion needs the executed intake contract.
   "CONTRACT_REQUIRED",
+  // TEC-499: a required intake photo angle is missing (photo standard).
+  "PHOTO_STANDARD_INCOMPLETE",
 ] as const;
 
 export function stockErrorKey(code: string | undefined): string {

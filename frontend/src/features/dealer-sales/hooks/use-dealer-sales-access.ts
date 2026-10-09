@@ -31,6 +31,8 @@ export function useDealerSalesAccess(slug: string) {
       canSuppliers: enabled && can(permissions.dealerSales.suppliersManage),
       canPurchases: enabled && can(permissions.dealerSales.purchasesWrite),
       canSeePurchasePrice: can(permissions.pricing.purchaseRead),
+      // TEC-507: recommended price column + deviation badge.
+      canSeeRecommended: can(permissions.pricing.recommendedRead),
     };
   }, [can, features, org?.type, orgUuid]);
 }

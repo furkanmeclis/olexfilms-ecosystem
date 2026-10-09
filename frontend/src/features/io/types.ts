@@ -143,7 +143,8 @@ export const IMPORT_PATHS: Partial<
 export type ImportResource =
   | IoResource
   | "tenant.fleet.vehicles"
-  | "platform.part_consumption_expectations";
+  | "platform.part_consumption_expectations"
+  | "tenant.pricing.recommended";
 
 export const IMPORT_SCHEMA: Partial<
   Record<
@@ -198,6 +199,26 @@ export const IMPORT_SCHEMA: Partial<
       key: "expected_meters",
       labelKey: "efficiency.expectations.expected_meters",
       required: true,
+    },
+  ],
+  // TEC-506/507: one row = one recommended price version; empty country =
+  // currency-wide, empty effective_from = the job default (today or later).
+  "tenant.pricing.recommended": [
+    { key: "sku", labelKey: "catalog.fields.sku", required: true },
+    { key: "country", labelKey: "catalog.recommended.fields.country" },
+    {
+      key: "currency",
+      labelKey: "catalog.recommended.fields.currency",
+      required: true,
+    },
+    {
+      key: "price",
+      labelKey: "catalog.recommended.fields.price",
+      required: true,
+    },
+    {
+      key: "effective_from",
+      labelKey: "catalog.recommended.fields.effective_from",
     },
   ],
   // TEC-473/477: the fleet comes from the job defaults (fleet_uuid).

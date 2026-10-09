@@ -3735,7 +3735,7 @@ export interface paths {
         put?: never;
         /**
          * Create a contract instance from a service
-         * @description Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided.
+         * @description Requires contracts.write. The service must be draft or pending; the default vehicle_intake template is used unless `template_uuid` is provided. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
          */
         post: operations["createServiceContract"];
         delete?: never;
@@ -3795,7 +3795,7 @@ export interface paths {
         put?: never;
         /**
          * Send customer contract signing OTP
-         * @description Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice.
+         * @description Requires contracts.write. The OTP purpose is `contract_sign` and the message carries the customer's KVKK notice. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
          */
         post: operations["requestContractCustomerOtp"];
         delete?: never;
@@ -3815,7 +3815,7 @@ export interface paths {
         put?: never;
         /**
          * Sign the customer slot
-         * @description Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation.
+         * @description Requires contracts.write. When OTP is required, `code` must match the customer's contract_sign OTP and the signing window is 30 minutes from OTP creation. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
          */
         post: operations["signContractCustomer"];
         delete?: never;
@@ -3835,7 +3835,7 @@ export interface paths {
         put?: never;
         /**
          * Sign the staff slot
-         * @description Requires contracts.write. Uses the authenticated staff user; no OTP is required.
+         * @description Requires contracts.write. Uses the authenticated staff user; no OTP is required. When the photo_standard module is on for the service organization and a required intake photo angle has no photo, answers 422 PHOTO_STANDARD_INCOMPLETE (data.missing_angles lists the angle keys, one error detail per angle; TEC-499).
          */
         post: operations["signContractStaff"];
         delete?: never;
@@ -10753,7 +10753,7 @@ export interface paths {
         put?: never;
         /**
          * Move a service to another status
-         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event. When contracts.intake_required and the intake_contracts module are both enabled for the service organization, draft/pending -> processing and direct completion from draft require the linked contract to be executed; otherwise the transition answers 422 CONTRACT_REQUIRED.
+         * @description Legacy state machine (TEC-179): draft -> pending -> processing -> ready (services.write); center shortcuts draft -> processing and pending -> ready; draft | pending | processing | ready -> cancelled (services.cancel, center only; a dealer gets 403). draft | processing | ready -> completed (services.complete, TEC-180) consumes the stock of every item in the same transaction (consumption for a whole unit, partial_consumption for a cut; idempotency key service:service_item:<id>), links each item to its stock movement and writes one service.completed outbox event. A service without items answers 400; a unit that is no longer held or a cut longer than the rest of the roll answers 409 SERVICE_UNIT_NOT_AVAILABLE and nothing is written. Completed and cancelled are final (409 SERVICE_INVALID_TRANSITION). A request for the current status is a no-op (completing a completed service consumes nothing and emits nothing). Every move writes a status log and a service.* outbox event. When contracts.intake_required and the intake_contracts module are both enabled for the service organization, draft/pending -> processing and direct completion from draft require the linked contract to be executed; otherwise the transition answers 422 CONTRACT_REQUIRED. TEC-499: when the photo_standard module is on for the service organization, leaving draft (any status but cancelled) and completing need a photo for every required (resolved, not hidden) intake angle; otherwise 422 PHOTO_STANDARD_INCOMPLETE with data.missing_angles (angle keys) and one error detail per angle. Cancelling is never blocked.
          */
         post: operations["transitionService"];
         delete?: never;
@@ -10917,6 +10917,46 @@ export interface paths {
          * @description TEC-151 (F1-09c). Counts completed services only (completed_at in the period) of the domain brand (K20): a center organization with a brand-wide services.read grant sees its own brand, super_admin the brand of the selected organization. Dealers and distributors get 403. At most 10 rows, highest count first; ties sort by name. car_brand.uuid is also the logo id (/brand-logos/{uuid}).
          */
         get: operations["getTopVehicleModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Region map with dealer density and territory gaps
+         * @description Requires the `performance` feature and `performance.read`. Center organizations see the brand network; distributors see only their own country/province/district territories. `level` selects the aggregate region granularity; TR provinces have seeded centroids, other regions fall back to the average dealer coordinates when available.
+         */
+        get: operations["getPerformanceRegionMap"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance/map/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dealer point layer for the performance map
+         * @description Requires the `performance` feature and `performance.read`. Dealers without coordinates are included in `missing_coordinates` but omitted from the point layer.
+         */
+        get: operations["getPerformanceDealerMap"];
         put?: never;
         post?: never;
         delete?: never;
@@ -14970,6 +15010,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/pricing/recommended/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recommended price settings visible to the price screens
+         * @description TEC-507. Any organization with pricing.recommended.read. deviation_warning_pct is pricing.deviation_warning_pct: the distributor and dealer price screens flag a deviation at or above it (either way).
+         */
+        get: operations["getRecommendedPriceSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/pricing/discipline": {
         parameters: {
             query?: never;
@@ -15024,6 +15084,90 @@ export interface paths {
          * @description TEC-506. Resource pricing.discipline; query takes the list filters.
          */
         post: operations["exportPriceDiscipline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reports the caller may open
+         * @description TEC-495. Lists the reports whose module is on and whose permission and reach the caller holds, in display order, with localized titles and the accepted period / granularity values.
+         */
+        get: operations["getReportCatalog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview cards (legacy dashboard summary)
+         * @description TEC-495. Same as GET /v1/reports/overview through the generic route: one "cards" series with the card groups of every domain the caller reaches (services, orders, customers, warranties, stock, measurements; dealer counts only for a subtree / brand reach).
+         */
+        get: operations["getReportOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's report widget layout in the active organization
+         * @description TEC-495. Without a stored layout the default (overview only) is returned. Widgets whose report the caller can no longer open are left out.
+         */
+        get: operations["getReportLayout"];
+        /**
+         * Replace the widget layout atomically
+         * @description TEC-495. The full list is sent; sort_order follows the array order. One invalid widget (unknown or unavailable report, duplicate id or report, period / granularity the report does not take) rejects the whole layout with 400 VALIDATION_ERROR (field widgets[i].*) and the stored layout stays unchanged. At most 30 widgets.
+         */
+        put: operations["putReportLayout"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/{report}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One report in the shared envelope
+         * @description TEC-495. report is a catalog key: overview, services.trend, services.status_distribution, services.top_brands, services.top_models, services.top_products, orders.trend, orders.status_distribution, customers.trend, stock.summary, warranties.summary, measurements.summary, dealers.performance (performance module), dealers.top_by_warranty (subtree / brand reach only), activities.recent. Periodic reports take period (7d, 30d default, 90d, 12m) or range_from + range_to (inclusive dates, at most 731 days, period=custom); time series take granularity (day, week, month; default by range). Rankings and tables take limit (1..50, default 10). Parameters a report does not take are 400. Unknown report 404; module off 403 FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
+         */
+        get: operations["getReport"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -18722,7 +18866,7 @@ export interface components {
             /** @example contract_grace_days */
             key: string;
             /** @enum {string} */
-            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims" | "whatsapp" | "mcp" | "campaigns" | "showcase" | "pricing";
+            group: "general" | "contracts" | "forecast" | "services" | "smtp" | "warehouse" | "scanning" | "mobile" | "leads" | "warranty_claims" | "whatsapp" | "mcp" | "campaigns" | "showcase" | "pricing" | "einvoice";
             /** @enum {string} */
             kind: "int" | "bool" | "string";
             default: components["schemas"]["SystemSettingValue"];
@@ -22373,8 +22517,11 @@ export interface components {
             height?: number;
             /** Format: date-time */
             exif_taken_at?: string;
+            /** @description KVKK (TEC-499) — returned only to super admins, the brand center and an owner of the service's dealer; cleared by customer anonymization. Never in PDFs or the portal. */
             exif_lat?: string;
+            /** @description Same visibility as exif_lat. */
             exif_lng?: string;
+            /** @description Same visibility as exif_lat. */
             exif_device?: string;
             /** Format: date-time */
             created_at: string;
@@ -23316,6 +23463,87 @@ export interface components {
             insufficient_data_count: number;
             /** Format: int64 */
             total_count: number;
+        };
+        PerformanceMapDistributor: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        PerformanceRegionMapItem: {
+            /** @enum {string} */
+            level: "country" | "province" | "district";
+            /** Format: int64 */
+            id: number;
+            code: string;
+            name: string;
+            country_iso2: string;
+            country_name: string;
+            province_code?: string;
+            province_name?: string;
+            /** Format: int64 */
+            dealer_count: number;
+            distributor?: components["schemas"]["PerformanceMapDistributor"];
+            metric_avg?: number;
+            latitude?: number;
+            longitude?: number;
+            /** Format: int64 */
+            missing_coordinates: number;
+        };
+        PerformanceEmptyRegion: {
+            /** @enum {string} */
+            level: "country" | "province" | "district";
+            /** Format: int64 */
+            id: number;
+            code: string;
+            name: string;
+            country_iso2: string;
+            /** @enum {string} */
+            empty_reason: "territory_no_dealers" | "unassigned_territory";
+            distributor?: components["schemas"]["PerformanceMapDistributor"];
+        };
+        PerformanceRegionMap: {
+            /** @enum {string} */
+            level: "country" | "province" | "district";
+            country?: string;
+            period: string;
+            metric: string;
+            items: components["schemas"]["PerformanceRegionMapItem"][];
+            empty_regions: components["schemas"]["PerformanceEmptyRegion"][];
+            /** Format: int64 */
+            missing_coordinates: number;
+        };
+        PerformanceDealerPoint: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+            country_iso2: string;
+            province?: string;
+            district?: string;
+            latitude: number;
+            longitude: number;
+            metric_value?: number;
+            showcase_url: string;
+        };
+        PerformanceDealerMap: {
+            country?: string;
+            period: string;
+            metric: string;
+            items: components["schemas"]["PerformanceDealerPoint"][];
+            /** Format: int64 */
+            missing_coordinates: number;
+        };
+        EnvelopePerformanceRegionMap: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PerformanceRegionMap"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopePerformanceDealerMap: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PerformanceDealerMap"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeStockForecastPage: {
             /** @enum {boolean} */
@@ -27126,10 +27354,124 @@ export interface components {
             };
             meta: components["schemas"]["ResponseMeta"];
         };
+        RecommendedPriceSettings: {
+            /** @example 15 */
+            deviation_warning_pct: number;
+        };
+        EnvelopeRecommendedPriceSettings: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["RecommendedPriceSettings"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopePriceDisciplineSummary: {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["PriceDisciplineSummary"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ReportCatalogItem: {
+            key: string;
+            /** @enum {string} */
+            kind: "summary" | "timeseries" | "distribution" | "ranking" | "table";
+            title: string;
+            module: string | null;
+            periodic: boolean;
+            periods: string[];
+            default_period: string | null;
+            granularities: string[];
+            limited: boolean;
+        };
+        EnvelopeReportCatalog: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["ReportCatalogItem"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ReportPoint: {
+            /** @description Bucket start date, status, item uuid or card key */
+            key: string;
+            label: string;
+            value: number;
+        };
+        ReportSeries: {
+            key: string;
+            label: string;
+            unit: string;
+            points: components["schemas"]["ReportPoint"][];
+        };
+        ReportColumn: {
+            key: string;
+            label: string;
+            /** @enum {string} */
+            type: "string" | "integer" | "number" | "datetime";
+        };
+        /** @description Shared envelope of every report: the same keys in all reports; period / range / granularity are null when a report does not take them, columns / rows are empty outside tables. */
+        ReportEnvelope: {
+            report: string;
+            /** @enum {string} */
+            kind: "summary" | "timeseries" | "distribution" | "ranking" | "table";
+            title: string;
+            locale: string;
+            timezone: string;
+            /** @description Reach of the read permission (managed, subtree, brand, all, own, assigned) */
+            scope: string;
+            period: string | null;
+            /** Format: date */
+            range_from: string | null;
+            /** Format: date */
+            range_to: string | null;
+            /** @enum {string|null} */
+            granularity: "day" | "week" | "month" | null;
+            /** Format: date-time */
+            generated_at: string;
+            series: components["schemas"]["ReportSeries"][];
+            columns: components["schemas"]["ReportColumn"][];
+            rows: {
+                [key: string]: unknown;
+            }[];
+        };
+        EnvelopeReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ReportEnvelope"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        ReportWidget: {
+            /** Format: uuid */
+            id: string;
+            report: string;
+            sort_order: number;
+            /** @enum {string|null} */
+            period: "7d" | "30d" | "90d" | "12m" | null;
+            /** @enum {string|null} */
+            granularity: "day" | "week" | "month" | null;
+        };
+        ReportLayout: {
+            version: number;
+            /** Format: date-time */
+            updated_at: string | null;
+            widgets: components["schemas"]["ReportWidget"][];
+        };
+        ReportLayoutInput: {
+            /** @enum {integer} */
+            version?: 1;
+            widgets: {
+                /** Format: uuid */
+                id: string;
+                report: string;
+                /** @enum {string|null} */
+                period?: "7d" | "30d" | "90d" | "12m" | null;
+                /** @enum {string|null} */
+                granularity?: "day" | "week" | "month" | null;
+            }[];
+        };
+        EnvelopeReportLayout: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ReportLayout"];
             meta: components["schemas"]["ResponseMeta"];
         };
     };
@@ -27280,6 +27622,11 @@ export interface components {
         };
     };
     parameters: {
+        ReportPeriod: "7d" | "30d" | "90d" | "12m" | "custom";
+        ReportRangeFrom: string;
+        ReportRangeTo: string;
+        /** @description Label locale (default the request locale chain, K10). */
+        ReportLocale: string;
         AIUsageChannel: ("panel" | "portal" | "whatsapp" | "mcp" | "triage")[];
         AIUsagePurpose: ("chat" | "title" | "triage" | "locale")[];
         AIUsagePool: ("org" | "system")[];
@@ -33778,6 +34125,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     signContractCustomer: {
@@ -33841,6 +34189,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     addContractMedia: {
@@ -46473,6 +46822,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
         };
     };
     cancelCompletedService: {
@@ -46749,6 +47099,61 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getPerformanceRegionMap: {
+        parameters: {
+            query: {
+                level: "country" | "province" | "district";
+                country?: string;
+                period?: string;
+                metric?: "services_count" | "warranty_start_rate" | "measurement_rate" | "review_avg" | "stock_turnover" | "contract_days_left" | "cari_overdue_amount" | "cari_overdue_days" | "certificate_coverage" | "lead_conversion_rate" | "waste_ratio" | "order_volume";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Region aggregates and empty-region reasons */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceRegionMap"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getPerformanceDealerMap: {
+        parameters: {
+            query?: {
+                country?: string;
+                period?: string;
+                metric?: "services_count" | "warranty_start_rate" | "measurement_rate" | "review_avg" | "stock_turnover" | "contract_days_left" | "cari_overdue_amount" | "cari_overdue_days" | "certificate_coverage" | "lead_conversion_rate" | "waste_ratio" | "order_volume";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Dealer points and missing coordinate count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceDealerMap"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     listStockForecasts: {
@@ -54491,6 +54896,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    getRecommendedPriceSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeRecommendedPriceSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listPriceDiscipline: {
         parameters: {
             query?: {
@@ -54585,6 +55012,144 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getReportCatalog: {
+        parameters: {
+            query?: {
+                /** @description Label locale (default the request locale chain, K10). */
+                locale?: components["parameters"]["ReportLocale"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report catalog */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReportCatalog"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getReportOverview: {
+        parameters: {
+            query?: {
+                period?: components["parameters"]["ReportPeriod"];
+                range_from?: components["parameters"]["ReportRangeFrom"];
+                range_to?: components["parameters"]["ReportRangeTo"];
+                /** @description Label locale (default the request locale chain, K10). */
+                locale?: components["parameters"]["ReportLocale"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Overview report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getReportLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Layout */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReportLayout"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    putReportLayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportLayoutInput"];
+            };
+        };
+        responses: {
+            /** @description Saved layout */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReportLayout"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getReport: {
+        parameters: {
+            query?: {
+                period?: components["parameters"]["ReportPeriod"];
+                range_from?: components["parameters"]["ReportRangeFrom"];
+                range_to?: components["parameters"]["ReportRangeTo"];
+                granularity?: "day" | "week" | "month";
+                limit?: number;
+                /** @description Label locale (default the request locale chain, K10). */
+                locale?: components["parameters"]["ReportLocale"];
+            };
+            header?: never;
+            path: {
+                report: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeReport"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
 }

@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Für eine Ablehnung ist eine Notiz erforderlich.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Geben Sie eine Bewertung zwischen 1,0 und 5,0 und eine Rezensionsanzahl von mindestens 0 ein.",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Die Google-Bewertung wird über Google Places aktualisiert; entfernen Sie die Place-ID, um sie manuell einzugeben.",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "Nicht unterstützter Dateityp; laden Sie ein JPEG-, PNG- oder WebP-Bild hoch."
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Nicht unterstützter Dateityp; laden Sie ein JPEG-, PNG- oder WebP-Bild hoch.",
+  "codes.EINVOICE_INVALID_TAX_ID": "Die VKN oder TCKN ist ungültig (VKN 10 Ziffern, TCKN 11 Ziffern mit gültiger Prüfziffer).",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "E-Rechnungen können nur in TRY an Käufer in der Türkei ausgestellt werden.",
+  "codes.EINVOICE_INVALID_DOCUMENT": "Die Rechnungsdaten sind unvollständig oder fehlerhaft.",
+  "codes.EINVOICE_INVALID_VAT_RATE": "Der Mehrwertsteuersatz ist ungültig; 0 % erfordert einen Befreiungscode.",
+  "codes.EINVOICE_INVALID_STYLESHEET": "Das XSLT-Stylesheet ist ungültig."
 }

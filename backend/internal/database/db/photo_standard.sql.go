@@ -12,6 +12,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const clearCustomerIntakePhotoEXIF = `-- name: ClearCustomerIntakePhotoEXIF :execrows
+UPDATE intake_photos ip
+SET exif_lat = NULL, exif_lng = NULL, exif_device = NULL
+FROM services s
+WHERE s.id = ip.service_id
+  AND s.customer_user_id = $1
+  AND (ip.exif_lat IS NOT NULL OR ip.exif_lng IS NOT NULL OR ip.exif_device IS NOT NULL)
+`
+
+// TEC-499 (F5-07b): KVKK anonymization of a customer clears the EXIF
+// location and device of the intake photos of their services (the photos
+// and capture time stay as service evidence).
+func (q *Queries) ClearCustomerIntakePhotoEXIF(ctx context.Context, customerUserID int64) (int64, error) {
+	result, err := q.db.Exec(ctx, clearCustomerIntakePhotoEXIF, customerUserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const createIntakePhoto = `-- name: CreateIntakePhoto :one
 INSERT INTO intake_photos (
     service_id, organization_id, brand_id, angle_id, storage_key, mime, size, sha256,

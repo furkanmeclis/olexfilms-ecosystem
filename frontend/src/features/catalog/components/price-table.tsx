@@ -12,6 +12,8 @@ import {
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
+import { RecommendedPriceCell } from "@/features/pricing/components/deviation-badge";
+import { DEFAULT_DEVIATION_THRESHOLD } from "@/features/pricing/lib/recommended";
 import {
   priceNumber,
   visiblePriceColumns,
@@ -30,6 +32,14 @@ type PriceTableProps = {
   onDelete?: (row: EffectivePrice) => void;
   /** Rows that have something to delete (default: every row). */
   canDelete?: (row: EffectivePrice) => boolean;
+  /**
+   * pricing.recommended.read (TEC-507): distributor and dealer viewers get a
+   * "Recommended" column with the deviation badge. Without the grant the
+   * column is never rendered.
+   */
+  showRecommended?: boolean;
+  /** Deviation threshold in percent (pricing.deviation_warning_pct). */
+  threshold?: number;
 };
 
 export const PRICE_TABLE_PERSIST_KEY = "tenant-catalog-product-prices-v1";
@@ -45,6 +55,8 @@ export function PriceTable({
   onEdit,
   onDelete,
   canDelete,
+  showRecommended = false,
+  threshold = DEFAULT_DEVIATION_THRESHOLD,
 }: PriceTableProps) {
   const { t, format } = useLocale();
   const priceColumns = useMemo(
@@ -52,6 +64,7 @@ export function PriceTable({
     [view.prices, view.viewer],
   );
   const showSource = view.prices.some((p) => p.purchase_price_source);
+  const recommendedColumn = showRecommended && view.viewer !== "center";
 
   const columns = useMemo(() => {
     const cols: ColumnDef<EffectivePrice, unknown>[] = [
@@ -83,6 +96,24 @@ export function PriceTable({
           }) as ColumnDef<EffectivePrice, unknown>,
       ),
     ];
+    if (recommendedColumn) {
+      cols.push(
+        createColumn<EffectivePrice>({
+          id: "recommended",
+          accessorFn: (row) => priceNumber(row.recommended?.price),
+          labelKey: "catalog.recommended.column",
+          enableSorting: true,
+          sortUndefined: "last",
+          cell: ({ row }) => (
+            <RecommendedPriceCell
+              recommended={row.original.recommended}
+              deviationPct={row.original.deviation_pct}
+              threshold={threshold}
+            />
+          ),
+        }) as ColumnDef<EffectivePrice, unknown>,
+      );
+    }
     if (showSource) {
       cols.push(
         createColumn<EffectivePrice>({
@@ -141,8 +172,10 @@ export function PriceTable({
     onDelete,
     onEdit,
     priceColumns,
+    recommendedColumn,
     showSource,
     t,
+    threshold,
   ]);
 
   if (!view.prices.length) {

@@ -59,6 +59,8 @@ import {
   Inbox,
   Plug,
   Repeat,
+  Scale,
+  Tags,
 } from "lucide-react";
 
 import { appleNavIcon } from "@/components/icons/apple-icon";
@@ -477,6 +479,26 @@ export function tenantNav(slug: string) {
             icon: FolderTree,
             permission: permissions.catalog.read,
             feature: "catalog",
+          },
+          {
+            // TEC-507: recommended retail prices (center publishes).
+            id: "catalog-recommended-prices",
+            titleKey: "catalog.recommended.nav",
+            href: routes.tenant.catalog.recommendedPrices(slug),
+            icon: Tags,
+            permission: permissions.pricing.recommendedRead,
+            feature: "catalog",
+            orgTypes: ["center"],
+          },
+          {
+            // TEC-507: price discipline (center: brand, distributor: subtree).
+            id: "catalog-price-discipline",
+            titleKey: "catalog.discipline.nav",
+            href: routes.tenant.catalog.priceDiscipline(slug),
+            icon: Scale,
+            permission: permissions.pricing.disciplineRead,
+            feature: "catalog",
+            orgTypes: ["center", "distributor"],
           },
         ],
       },

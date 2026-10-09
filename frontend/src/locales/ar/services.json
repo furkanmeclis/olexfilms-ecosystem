@@ -217,6 +217,7 @@
   "detail.items.added_at": "تاريخ الإضافة",
   "wizard.steps.contract": "العقد",
   "stock.errors.CONTRACT_REQUIRED": "يجب توقيع عقد استلام المركبة قبل إكمال الخدمة. ارجع إلى خطوة العقد.",
+  "stock.errors.PHOTO_STANDARD_INCOMPLETE": "صور استلام المركبة الإلزامية ناقصة. التقط أولاً صور جميع الزوايا الإلزامية.",
   "contract.title": "عقد استلام المركبة",
   "contract.none": "لم يُنشأ أي عقد لهذه الخدمة بعد.",
   "contract.voided_hint": "أُلغي العقد السابق. أنشئ عقدًا جديدًا.",

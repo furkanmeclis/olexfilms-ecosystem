@@ -170,5 +170,9 @@
   "system.keys.pricing_deviation_warning_pct": "Soglia di avviso scostamento (%)",
   "system.keys.pricing_deviation_warning_pct_hint": "Un prezzo al cliente finale di un rivenditore o distributore che si discosta di questa percentuale dal prezzo consigliato (in entrambe le direzioni) supera la soglia.",
   "system.keys.pricing_price_list_auto_publish": "Pubblica il listino automaticamente",
-  "system.keys.pricing_price_list_auto_publish_hint": "Se attivo, dopo ogni pubblicazione dei prezzi consigliati il PDF del listino viene caricato come nuova versione nel centro documenti."
+  "system.keys.pricing_price_list_auto_publish_hint": "Se attivo, dopo ogni pubblicazione dei prezzi consigliati il PDF del listino viene caricato come nuova versione nel centro documenti.",
+  "system.groups.einvoice": "Fattura elettronica",
+  "system.groups.einvoice_hint": "Fatture UBL-TR e-Fatura ed e-Arşiv.",
+  "system.keys.einvoice_default_vat_rate": "Aliquota IVA predefinita (%)",
+  "system.keys.einvoice_default_vat_rate_hint": "Aliquota applicata a una riga di fattura il cui prodotto o categoria non ha un’aliquota IVA. Lo 0% richiede un codice di esenzione e non è selezionabile qui."
 }

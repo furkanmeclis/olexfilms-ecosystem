@@ -217,6 +217,7 @@
   "detail.items.added_at": "Ajouté le",
   "wizard.steps.contract": "Contrat",
   "stock.errors.CONTRACT_REQUIRED": "Le contrat de réception du véhicule doit être signé avant de pouvoir terminer la prestation. Revenez à l'étape Contrat.",
+  "stock.errors.PHOTO_STANDARD_INCOMPLETE": "Des photos obligatoires de réception du véhicule manquent. Photographiez d'abord tous les angles obligatoires.",
   "contract.title": "Contrat de réception du véhicule",
   "contract.none": "Aucun contrat n'a encore été créé pour cette prestation.",
   "contract.voided_hint": "Le contrat précédent a été annulé. Créez-en un nouveau.",

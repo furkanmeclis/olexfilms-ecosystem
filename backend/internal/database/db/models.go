@@ -1024,6 +1024,8 @@ type District struct {
 	Code       pgtype.Text        `json:"code"`
 	Name       string             `json:"name"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	Latitude   pgtype.Numeric     `json:"latitude"`
+	Longitude  pgtype.Numeric     `json:"longitude"`
 }
 
 type DocumentRender struct {
@@ -2463,6 +2465,8 @@ type Province struct {
 	Code      string             `json:"code"`
 	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Latitude  pgtype.Numeric     `json:"latitude"`
+	Longitude pgtype.Numeric     `json:"longitude"`
 }
 
 type Purchase struct {
@@ -2643,6 +2647,17 @@ type RefreshToken struct {
 	AppVersion         pgtype.Text        `json:"app_version"`
 	FamilyID           pgtype.UUID        `json:"family_id"`
 	RotatedAt          pgtype.Timestamptz `json:"rotated_at"`
+}
+
+type ReportLayout struct {
+	ID             int64              `json:"id"`
+	UserID         int64              `json:"user_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Version        int32              `json:"version"`
+	Widgets        []byte             `json:"widgets"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ReviewQuestion struct {
