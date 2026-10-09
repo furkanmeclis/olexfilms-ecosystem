@@ -4,7 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { Label } from "@/components/ui/label";
-import { nativeSelectClass } from "@/features/warehouse/components/native-select-field";
+import { AsyncCombobox } from "@/components/ui/async-combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   buildLocationTree,
   type LocationNode,
@@ -30,7 +37,7 @@ export function locationOptions(
 }
 
 /**
- * Room, then location, of one warehouse (native selects, scanner friendly).
+ * Room, then location (searchable), of one warehouse.
  * `onRoom` reports the room so a room-scoped form can use it alone.
  */
 export function LocationPicker({
@@ -73,45 +80,40 @@ export function LocationPicker({
     <div className="grid gap-2 sm:grid-cols-2">
       <div className="space-y-1.5">
         <Label htmlFor={`${testId}-room`}>{t("warehouse.fields.room")}</Label>
-        <select
-          id={`${testId}-room`}
-          className={nativeSelectClass}
+        <Select
           value={roomUuid}
           disabled={disabled || !warehouseUuid}
-          data-testid={`${testId}-room`}
-          onChange={(e) => {
-            setRoomUuid(e.target.value);
-            onRoom?.(e.target.value);
+          onValueChange={(next) => {
+            setRoomUuid(next);
+            onRoom?.(next);
             onChange("");
           }}
         >
-          <option value="">{t("warehouse.entry.pick_room")}</option>
-          {(rooms.data?.items ?? []).map((r) => (
-            <option key={r.uuid} value={r.uuid}>
-              {r.code} · {r.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id={`${testId}-room`} data-testid={`${testId}-room`}>
+            <SelectValue placeholder={t("warehouse.entry.pick_room")} />
+          </SelectTrigger>
+          <SelectContent>
+            {(rooms.data?.items ?? []).map((r) => (
+              <SelectItem key={r.uuid} value={r.uuid}>
+                {r.code} · {r.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className={roomOnly ? "hidden" : "space-y-1.5"}>
         <Label htmlFor={`${testId}-location`}>
           {t("warehouse.fields.location")}
         </Label>
-        <select
+        <AsyncCombobox
           id={`${testId}-location`}
-          className={nativeSelectClass}
+          data-testid={`${testId}-location`}
           value={value}
           disabled={disabled || !roomUuid}
-          data-testid={`${testId}-location`}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          <option value="">{t("warehouse.entry.pick_location")}</option>
-          {options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          placeholder={t("warehouse.entry.pick_location")}
+          options={options}
+          onValueChange={onChange}
+        />
       </div>
     </div>
   );

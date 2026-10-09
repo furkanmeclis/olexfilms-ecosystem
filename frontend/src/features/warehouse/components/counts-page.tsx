@@ -28,11 +28,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AsyncCombobox } from "@/components/ui/async-combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { catalogService } from "@/features/catalog/services/catalog.service";
 import { LocationPicker } from "@/features/warehouse/components/location-picker";
-import { nativeSelectClass } from "@/features/warehouse/components/native-select-field";
 import {
   enumFilterOptions,
   useWarehouseFilterOptions,
@@ -494,30 +501,34 @@ export function NewCountForm({
               <Label htmlFor="count-warehouse">
                 {t("warehouse.fields.warehouse")}
               </Label>
-              <select
-                id="count-warehouse"
-                className={nativeSelectClass}
+              <Select
                 value={v.warehouse_uuid}
-                aria-invalid={Boolean(errors.warehouse_uuid)}
-                data-testid="count-warehouse"
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setV((prev) => ({
                     ...prev,
-                    warehouse_uuid: e.target.value,
+                    warehouse_uuid: value,
                     room_uuid: "",
                     location_uuid: "",
                   }))
                 }
               >
-                <option value="">
-                  {t("warehouse.entries.pick_warehouse")}
-                </option>
-                {active.map((w) => (
-                  <option key={w.uuid} value={w.uuid}>
-                    {w.code} · {w.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="count-warehouse"
+                  aria-invalid={Boolean(errors.warehouse_uuid)}
+                  data-testid="count-warehouse"
+                >
+                  <SelectValue
+                    placeholder={t("warehouse.entries.pick_warehouse")}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {active.map((w) => (
+                    <SelectItem key={w.uuid} value={w.uuid}>
+                      {w.code} · {w.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FieldError
                 id="count-warehouse-error"
                 text={errors.warehouse_uuid}
@@ -527,13 +538,10 @@ export function NewCountForm({
               <Label htmlFor="count-method">
                 {t("warehouse.fields.method")}
               </Label>
-              <select
-                id="count-method"
-                className={nativeSelectClass}
+              <Select
                 value={v.method}
-                data-testid="count-method"
-                onChange={(e) => {
-                  const method = e.target.value as CountFormState["method"];
+                onValueChange={(value) => {
+                  const method = value as CountFormState["method"];
                   setV((prev) => ({
                     ...prev,
                     method,
@@ -543,12 +551,17 @@ export function NewCountForm({
                   }));
                 }}
               >
-                {COUNT_METHODS.map((m) => (
-                  <option key={m} value={m}>
-                    {t(`warehouse.count_method.${m}`)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="count-method" data-testid="count-method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNT_METHODS.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {t(`warehouse.count_method.${m}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-muted-foreground text-xs">
                 {t(`warehouse.count_method_hint.${v.method}`)}
               </p>
@@ -557,24 +570,26 @@ export function NewCountForm({
               <Label htmlFor="count-visibility">
                 {t("warehouse.fields.visibility")}
               </Label>
-              <select
-                id="count-visibility"
-                className={nativeSelectClass}
+              <Select
                 value={v.visibility}
-                data-testid="count-visibility"
-                onChange={(e) =>
-                  set(
-                    "visibility",
-                    e.target.value as CountFormState["visibility"],
-                  )
+                onValueChange={(value) =>
+                  set("visibility", value as CountFormState["visibility"])
                 }
               >
-                {COUNT_VISIBILITIES.map((m) => (
-                  <option key={m} value={m}>
-                    {t(`warehouse.count_visibility.${m}`)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="count-visibility"
+                  data-testid="count-visibility"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNT_VISIBILITIES.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {t(`warehouse.count_visibility.${m}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-muted-foreground text-xs">
                 {t(`warehouse.count_visibility_hint.${v.visibility}`)}
               </p>
@@ -583,27 +598,29 @@ export function NewCountForm({
 
           <div className="space-y-1.5">
             <Label htmlFor="count-scope">{t("warehouse.fields.scope")}</Label>
-            <select
-              id="count-scope"
-              className={nativeSelectClass}
+            <Select
               value={v.scope_type}
-              data-testid="count-scope"
-              onChange={(e) =>
+              onValueChange={(value) =>
                 setV((prev) => ({
                   ...prev,
-                  scope_type: e.target.value as CountFormState["scope_type"],
+                  scope_type: value as CountFormState["scope_type"],
                   room_uuid: "",
                   location_uuid: "",
                   product_uuid: "",
                 }))
               }
             >
-              {scopes.map((s) => (
-                <option key={s} value={s}>
-                  {t(`warehouse.count_scope.${s}`)}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="count-scope" data-testid="count-scope">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {scopes.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {t(`warehouse.count_scope.${s}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <FieldError id="count-scope-error" text={errors.scope_type} />
           </div>
 
@@ -642,22 +659,17 @@ export function NewCountForm({
                 <Label htmlFor="count-product">
                   {t("warehouse.fields.product")}
                 </Label>
-                <select
+                <AsyncCombobox
                   id="count-product"
-                  className={nativeSelectClass}
-                  value={v.product_uuid}
                   data-testid="count-product"
-                  onChange={(e) => set("product_uuid", e.target.value)}
-                >
-                  <option value="">
-                    {t("warehouse.generate.pick_product")}
-                  </option>
-                  {(products.data?.items ?? []).map((p) => (
-                    <option key={p.uuid} value={p.uuid}>
-                      {p.sku} · {p.name}
-                    </option>
-                  ))}
-                </select>
+                  value={v.product_uuid}
+                  placeholder={t("warehouse.generate.pick_product")}
+                  options={(products.data?.items ?? []).map((p) => ({
+                    value: p.uuid,
+                    label: `${p.sku} · ${p.name}`,
+                  }))}
+                  onValueChange={(value) => set("product_uuid", value)}
+                />
                 <FieldError
                   id="count-product-error"
                   text={errors.product_uuid}

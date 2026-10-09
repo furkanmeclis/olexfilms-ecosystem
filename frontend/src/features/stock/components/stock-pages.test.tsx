@@ -258,15 +258,6 @@ const columnIds = () =>
 const lastUnitsCall = () =>
   api.listUnits.mock.calls[api.listUnits.mock.calls.length - 1];
 
-async function select(selector: string, value: string) {
-  await act(async () => {
-    const el = container.querySelector(selector) as HTMLSelectElement;
-    el.value = value;
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-  await flush();
-}
-
 describe("MyStockPage (TEC-224, TEC-374 DataTable)", () => {
   it("hides the purchase price column when no row carries a price", async () => {
     state.grants = new Set([Permission.StockRead]);
@@ -463,12 +454,20 @@ describe("MyStockPage (TEC-224, TEC-374 DataTable)", () => {
     api.listDealers.mockResolvedValue([{ uuid: "d-1", name: "Bayi Kadıköy" }]);
     api.listUnits.mockResolvedValue(page([unit()]));
     await render(createElement(MyStockPage, { slug: "acme" }));
-    const picker = byId("stock-dealer") as HTMLSelectElement;
-    expect(picker).not.toBeNull();
-    expect(picker.querySelectorAll("option")).toHaveLength(2);
+    type Combo = {
+      id?: string;
+      options: { value: string }[];
+      onValueChange: (v: string) => void;
+    };
+    const picker = () =>
+      captured.combos.findLast((c) => c.id === "stock-dealer") as
+        Combo | undefined;
+    expect(picker()).toBeDefined();
+    expect(picker()!.options.map((o) => o.value)).toEqual(["own", "d-1"]);
     expect(lastUnitsCall()?.[0]).toBe("org-1");
 
-    await select('[data-testid="stock-dealer"]', "d-1");
+    await act(async () => picker()!.onValueChange("d-1"));
+    await flush();
     expect(api.listUnits).toHaveBeenLastCalledWith(
       "d-1",
       expect.objectContaining({ offset: 0 }),

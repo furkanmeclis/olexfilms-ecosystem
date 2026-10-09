@@ -87,6 +87,7 @@ vi.mock("@/features/catalog/services/catalog.service", async (orig) => ({
 }));
 
 import { ApiError } from "@/lib/api";
+import { optionValues } from "@/test/form-controls";
 
 import type {
   StockCount,
@@ -184,8 +185,8 @@ describe("NewTransferForm (TEC-232)", () => {
       m,
       createElement(NewTransferForm, { slug: "acme", onCancel: vi.fn() }),
     );
-    await fill($<HTMLSelectElement>("transfer-from"), "wh-1");
-    await fill($<HTMLSelectElement>("transfer-to"), "wh-1");
+    await fill($("transfer-from"), "wh-1");
+    await fill($("transfer-to"), "wh-1");
     await submit($("transfer-form")?.querySelector("form") ?? null);
     expect(text()).toContain("warehouse.validation.same_warehouse");
     expect(api.createTransfer).not.toHaveBeenCalled();
@@ -207,8 +208,8 @@ describe("NewTransferForm (TEC-232)", () => {
       m,
       createElement(NewTransferForm, { slug: "acme", onCancel: vi.fn() }),
     );
-    await fill($<HTMLSelectElement>("transfer-from"), "wh-1");
-    await fill($<HTMLSelectElement>("transfer-to"), "wh-2");
+    await fill($("transfer-from"), "wh-1");
+    await fill($("transfer-to"), "wh-2");
     await fill($("transfer-note"), " Van 3 ");
     await submit($("transfer-form")?.querySelector("form") ?? null);
     expect(api.createTransfer).toHaveBeenCalledWith({
@@ -406,8 +407,8 @@ describe("NewCountForm (TEC-232)", () => {
     await submit(form());
     expect(text()).toContain("warehouse.validation.warehouse");
 
-    await fill($<HTMLSelectElement>("count-warehouse"), "wh-1");
-    await fill($<HTMLSelectElement>("count-scope"), "room");
+    await fill($("count-warehouse"), "wh-1");
+    await fill($("count-scope"), "room");
     await submit(form());
     expect(text()).toContain("warehouse.validation.room");
     expect(api.createCount).not.toHaveBeenCalled();
@@ -418,13 +419,10 @@ describe("NewCountForm (TEC-232)", () => {
       m,
       createElement(NewCountForm, { slug: "acme", onCancel: vi.fn() }),
     );
-    const options = () =>
-      [...($<HTMLSelectElement>("count-scope")?.options ?? [])].map(
-        (o) => o.value,
-      );
-    expect(options()).toContain("product");
-    await fill($<HTMLSelectElement>("count-method"), "initial_placement");
-    expect(options()).toEqual(["warehouse", "room", "location"]);
+    const options = () => optionValues($("count-scope"));
+    expect(await options()).toContain("product");
+    await fill($("count-method"), "initial_placement");
+    expect(await options()).toEqual(["warehouse", "room", "location"]);
   });
 
   it("sends only the chosen scope's target", async () => {
@@ -433,12 +431,12 @@ describe("NewCountForm (TEC-232)", () => {
       m,
       createElement(NewCountForm, { slug: "acme", onCancel: vi.fn() }),
     );
-    await fill($<HTMLSelectElement>("count-warehouse"), "wh-1");
-    await fill($<HTMLSelectElement>("count-method"), "product_qty");
-    await fill($<HTMLSelectElement>("count-visibility"), "guided");
-    await fill($<HTMLSelectElement>("count-scope"), "product");
+    await fill($("count-warehouse"), "wh-1");
+    await fill($("count-method"), "product_qty");
+    await fill($("count-visibility"), "guided");
+    await fill($("count-scope"), "product");
     await flush();
-    await fill($<HTMLSelectElement>("count-product"), "p-1");
+    await fill($("count-product"), "p-1");
     await submit(form());
     expect(api.createCount).toHaveBeenCalledWith({
       warehouse_uuid: "wh-1",
@@ -502,10 +500,10 @@ describe("CountReportCard (TEC-232)", () => {
     // The matched line needs no resolution.
     const rows = m.container.querySelectorAll('[data-testid="count-line"]');
     expect(rows).toHaveLength(2);
-    const selects = m.container.querySelectorAll<HTMLSelectElement>(
+    const selects = m.container.querySelectorAll(
       '[data-testid="count-resolution"]',
     );
-    expect(selects[0].value).toBe("ignore");
+    expect(selects[0].textContent).toBe("warehouse.count_resolution.ignore");
     await fill(selects[1], "relocate");
     await click($("count-approve"));
     expect(api.approveCount).toHaveBeenCalledWith("c-1", {

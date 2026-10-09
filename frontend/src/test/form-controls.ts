@@ -66,6 +66,38 @@ export async function pickOption(
   await tick();
 }
 
+/** `data-value` of every open option (SelectItem and cmdk items carry it). */
+export function openOptionValues(): string[] {
+  return [...document.querySelectorAll('[role="option"]')].map(
+    (el) => el.getAttribute("data-value") ?? "",
+  );
+}
+
+/** Opens a Select / combobox, reads its option values, closes it again. */
+export async function optionValues(trigger: Element | null) {
+  await openPicker(trigger);
+  const values = openOptionValues();
+  await closePicker();
+  return values;
+}
+
+/** Opens a Select / combobox and clicks the option with `data-value=value`. */
+export async function chooseValue(trigger: Element | null, value: string) {
+  await openPicker(trigger);
+  const option = [...document.querySelectorAll('[role="option"]')].find(
+    (el) => el.getAttribute("data-value") === value,
+  );
+  if (!option) {
+    throw new Error(
+      `option value ${value} not found; open values: ${openOptionValues().join(" | ")}`,
+    );
+  }
+  await act(async () => {
+    (option as HTMLElement).click();
+  });
+  await tick();
+}
+
 function lastListboxes(count: number): Element[] {
   const all = [...document.querySelectorAll('[role="listbox"]')];
   return all.slice(-count);

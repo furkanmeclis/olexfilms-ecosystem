@@ -2,11 +2,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, createElement, type ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
+import { chooseValue, installRadixPolyfills } from "@/test/form-controls";
+
 /** Test-only helpers for the warehouse component tests (jsdom). */
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 export type Mounted = {
   container: HTMLDivElement;
@@ -42,12 +45,16 @@ export async function render(m: Mounted, node: ReactElement) {
   await flush();
 }
 
-/** Sets an input / select value the way React notices it. */
-export async function fill(
-  el: HTMLInputElement | HTMLSelectElement | null,
-  value: string,
-) {
+/**
+ * Sets an input value the way React notices it; on a Select / combobox
+ * trigger it opens the list and picks the option with that value.
+ */
+export async function fill(el: Element | null, value: string) {
   if (!el) throw new Error("element not found");
+  if (!(el instanceof HTMLInputElement || el instanceof HTMLSelectElement)) {
+    await chooseValue(el, value);
+    return;
+  }
   const proto =
     el instanceof HTMLSelectElement
       ? HTMLSelectElement.prototype

@@ -16,12 +16,11 @@ import {
   type EntityRowAction,
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
-import { AppForm, AppInput } from "@/components/forms";
+import { AppForm, AppInput, AppSelect } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
-import { NativeSelectField } from "@/features/warehouse/components/native-select-field";
 import {
   enumFilterOptions,
   useWarehouseFilterOptions,
@@ -386,7 +385,7 @@ export function NewEntryForm({
           }}
           className="space-y-4"
         >
-          <NativeSelectField
+          <AppSelect
             name="warehouse_uuid"
             label={t("warehouse.fields.warehouse")}
             placeholder={t("warehouse.entries.pick_warehouse")}
@@ -396,7 +395,7 @@ export function NewEntryForm({
             }))}
             testId="entry-warehouse"
           />
-          <NativeSelectField
+          <AppSelect
             name="mode"
             label={t("warehouse.fields.mode")}
             description={
