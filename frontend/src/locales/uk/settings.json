@@ -170,5 +170,9 @@
   "system.keys.pricing_deviation_warning_pct": "Поріг попередження про відхилення (%)",
   "system.keys.pricing_deviation_warning_pct_hint": "Кінцева ціна дилера або дистриб'ютора, що відхиляється від рекомендованої на стільки відсотків (у будь-який бік), перевищує поріг.",
   "system.keys.pricing_price_list_auto_publish": "Автоматично публікувати прайс-лист",
-  "system.keys.pricing_price_list_auto_publish_hint": "Якщо увімкнено, після кожної публікації рекомендованих цін PDF прайс-листа завантажується до центру документів як нова версія."
+  "system.keys.pricing_price_list_auto_publish_hint": "Якщо увімкнено, після кожної публікації рекомендованих цін PDF прайс-листа завантажується до центру документів як нова версія.",
+  "system.groups.einvoice": "Електронний рахунок",
+  "system.groups.einvoice_hint": "Рахунки UBL-TR e-Fatura та e-Arşiv.",
+  "system.keys.einvoice_default_vat_rate": "Ставка ПДВ за замовчуванням (%)",
+  "system.keys.einvoice_default_vat_rate_hint": "Ставка для рядка рахунку, у товару чи категорії якого немає ставки ПДВ. Ставка 0% потребує коду звільнення і тут недоступна."
 }

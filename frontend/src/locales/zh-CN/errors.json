@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "拒绝时请填写备注。",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "请输入 1.0 到 5.0 之间的评分，评价数量不得小于 0。",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Google 评分由 Google Places 自动更新；如需手动填写，请先删除地点 ID。",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "不支持的文件类型；请上传 JPEG、PNG 或 WebP 图片。"
+  "codes.UNSUPPORTED_MEDIA_TYPE": "不支持的文件类型；请上传 JPEG、PNG 或 WebP 图片。",
+  "codes.EINVOICE_INVALID_TAX_ID": "VKN 或 TCKN 无效（VKN 为 10 位、TCKN 为 11 位，且校验位正确）。",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "电子发票只能以 TRY 开具给土耳其境内的买方。",
+  "codes.EINVOICE_INVALID_DOCUMENT": "发票数据不完整或有误。",
+  "codes.EINVOICE_INVALID_VAT_RATE": "增值税税率无效；0% 需要免税代码。",
+  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT 样式表无效。"
 }

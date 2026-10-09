@@ -170,5 +170,9 @@
   "system.keys.pricing_deviation_warning_pct": "حد التنبيه للانحراف (%)",
   "system.keys.pricing_deviation_warning_pct_hint": "يتجاوز سعر الوكيل أو الموزع للعميل النهائي الحد إذا ابتعد عن السعر الموصى به بهذه النسبة المئوية (في أي اتجاه).",
   "system.keys.pricing_price_list_auto_publish": "نشر قائمة الأسعار تلقائيًا",
-  "system.keys.pricing_price_list_auto_publish_hint": "عند التفعيل، تُرفع قائمة الأسعار بصيغة PDF كإصدار جديد إلى مركز المستندات بعد كل نشر للأسعار الموصى بها."
+  "system.keys.pricing_price_list_auto_publish_hint": "عند التفعيل، تُرفع قائمة الأسعار بصيغة PDF كإصدار جديد إلى مركز المستندات بعد كل نشر للأسعار الموصى بها.",
+  "system.groups.einvoice": "الفاتورة الإلكترونية",
+  "system.groups.einvoice_hint": "فواتير UBL-TR الإلكترونية (e-Fatura وe-Arşiv).",
+  "system.keys.einvoice_default_vat_rate": "نسبة ضريبة القيمة المضافة الافتراضية (%)",
+  "system.keys.einvoice_default_vat_rate_hint": "النسبة المطبقة على بند الفاتورة الذي لا يملك منتجه أو فئته نسبة ضريبة. نسبة 0% تتطلب رمز إعفاء ولا يمكن اختيارها هنا."
 }
