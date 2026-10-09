@@ -191,6 +191,18 @@ func TestIntegrationEinvoices(t *testing.T) {
 	if len(prof.Missing) != 0 {
 		t.Fatalf("profile missing = %v", prof.Missing)
 	}
+	// TEC-504: the organization card reads the profile; the settings screen
+	// renders a sample with the current stylesheet.
+	read := decodeData[struct {
+		VKN *string `json:"invoice_vkn"`
+	}](t, mustDo(t, it, "GET", "/v1/platform/organizations/"+dist.Uuid.String()+"/invoice-profile", accTok, nil, http.StatusOK))
+	if read.VKN == nil || *read.VKN != "1234567890" {
+		t.Fatalf("profile read = %+v", read)
+	}
+	if rec := it.raw("GET", "/v1/einvoices/settings/xslt/preview", accTok, "", nil, nil); rec.Code != http.StatusOK ||
+		!strings.Contains(rec.Body.String(), `data-watermark="PREVIEW"`) {
+		t.Fatalf("sample preview = %d", rec.Code)
+	}
 
 	d1 := decodeData[einvoiceResp](t, mustDo(t, it, "POST", "/v1/einvoices", accTok, map[string]any{"source_type": "order", "source_uuid": o1}, http.StatusCreated))
 	d2 := decodeData[einvoiceResp](t, mustDo(t, it, "POST", "/v1/einvoices", accTok, map[string]any{"source_type": "order", "source_uuid": o2}, http.StatusCreated))

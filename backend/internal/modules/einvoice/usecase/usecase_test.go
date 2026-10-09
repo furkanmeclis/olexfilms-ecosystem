@@ -612,6 +612,42 @@ func TestBuyerProfileValidation(t *testing.T) {
 	}
 }
 
+// TEC-504: the settings screen reads the counter state, the sample preview
+// and the buyer profile card.
+func TestSettingsCountersSamplePreviewAndBuyerProfile(t *testing.T) {
+	f := newFixture(t)
+	st, err := f.svc.GetSettings(f.ctx, f.c)
+	if err != nil || st.Counters == nil || len(st.Counters) != 0 {
+		t.Fatalf("counters before any invoice = %+v %v", st.Counters, err)
+	}
+	f.withBuyerProfile(t)
+	for range 2 {
+		d := f.draft(t, f.order(t, 1, "10.00"))
+		if _, err := f.svc.Archive(f.ctx, f.c, d.UUID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	st, err = f.svc.GetSettings(f.ctx, f.c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The reserved draft series stays out; the archive series shows its last number.
+	if len(st.Counters) != 1 || st.Counters[0].Series == DraftSeries || st.Counters[0].LastNo != 2 {
+		t.Fatalf("counters = %+v", st.Counters)
+	}
+	html, err := f.svc.SamplePreview(f.ctx, f.c)
+	if err != nil || !bytes.Contains(html, []byte(`data-watermark="PREVIEW"`)) {
+		t.Fatalf("sample preview = %v", err)
+	}
+	p, err := f.svc.GetBuyerProfile(f.ctx, f.c, f.dist.Uuid)
+	if err != nil || p.OrganizationUUID != f.dist.Uuid || p.Missing == nil {
+		t.Fatalf("buyer profile = %+v %v", p, err)
+	}
+	if _, err := f.svc.GetBuyerProfile(f.ctx, f.c, f.center.Uuid); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("center buyer profile = %v", err)
+	}
+}
+
 func hasIssue(ve *ValidationError, field string) bool {
 	for _, i := range ve.Issues {
 		if i.Field == field {

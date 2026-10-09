@@ -15339,6 +15339,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/einvoices/settings/xslt/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sample invoice rendered with the current stylesheet
+         * @description TEC-504. einvoice.read. A sample invoice (the center as seller, a sample buyer, one line) rendered with the uploaded or the default GİB stylesheet, with a PREVIEW watermark. Nothing is stored. 422 EINVOICE_SETTINGS_REQUIRED before the settings are saved.
+         */
+        get: operations["previewEinvoiceXSLT"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/einvoices/{uuid}": {
         parameters: {
             query?: never;
@@ -15506,7 +15526,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Invoice profile of a distributor or dealer
+         * @description TEC-504. Brand center with einvoice.read (e_invoice add-on); missing_fields lists what an invoice still needs.
+         */
+        get: operations["getOrganizationInvoiceProfile"];
         /**
          * Set the invoice profile of a distributor or dealer
          * @description TEC-503. Brand center with einvoice.manage (e_invoice add-on). Either invoice_vkn or invoice_tckn (valid check digits); missing_fields lists what an invoice still needs.
@@ -28017,6 +28041,21 @@ export interface components {
             pdf_enabled: boolean;
             custom_xslt: boolean;
             xslt_sha1: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+            /** @description TEC-504. Read-only last number per year × series (the reserved TMP draft series is left out), newest year first. */
+            counters: components["schemas"]["EinvoiceCounter"][];
+        };
+        EinvoiceCounter: {
+            /** @example EAR */
+            series: string;
+            /** @example 2026 */
+            year: number;
+            /**
+             * Format: int64
+             * @example 42
+             */
+            last_no: number;
             /** Format: date-time */
             updated_at: string | null;
         };
@@ -56064,6 +56103,29 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    previewEinvoiceXSLT: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HTML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
     getEinvoice: {
         parameters: {
             query?: never;
@@ -56277,6 +56339,31 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getOrganizationInvoiceProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invoice profile */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeInvoiceProfile"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     putOrganizationInvoiceProfile: {

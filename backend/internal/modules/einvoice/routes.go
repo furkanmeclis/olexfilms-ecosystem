@@ -59,6 +59,7 @@ func RegisterRoutes(
 	mux.Handle("PUT /v1/einvoices/settings", route(h.PutSettings, settings))
 	mux.Handle("POST /v1/einvoices/settings/xslt", route(h.UploadXSLT, settings))
 	mux.Handle("DELETE /v1/einvoices/settings/xslt", route(h.ResetXSLT, settings))
+	mux.Handle("GET /v1/einvoices/settings/xslt/preview", route(h.SamplePreview, read))
 	mux.Handle("GET /v1/einvoices/{uuid}", route(h.Get, read))
 	mux.Handle("GET /v1/einvoices/{uuid}/preview", route(h.Preview, read))
 	mux.Handle("POST /v1/einvoices/{uuid}/archive", stepped(h.Archive, manage))
@@ -67,5 +68,6 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/einvoices/{uuid}/xml", route(h.XML, read))
 	mux.Handle("GET /v1/einvoices/{uuid}/pdf", route(h.PDF, read))
 	mux.Handle("GET /v1/einvoices/{uuid}/html", route(h.HTML, read))
+	mux.Handle("GET /v1/platform/organizations/{uuid}/invoice-profile", route(h.GetBuyerProfile, read))
 	mux.Handle("PUT /v1/platform/organizations/{uuid}/invoice-profile", route(h.PutBuyerProfile, manage))
 }

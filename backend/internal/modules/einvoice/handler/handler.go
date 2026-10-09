@@ -461,6 +461,16 @@ func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, v)
 }
 
+// SamplePreview is GET /v1/einvoices/settings/xslt/preview.
+func (h *Handler) SamplePreview(w http.ResponseWriter, r *http.Request) {
+	html, err := h.svc.SamplePreview(r.Context(), caller(r))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	writeHTML(w, html)
+}
+
 type settingsRequest struct {
 	VKN             string `json:"vkn"`
 	TaxOffice       string `json:"tax_office"`
@@ -533,6 +543,21 @@ func (h *Handler) UploadXSLT(w http.ResponseWriter, r *http.Request) {
 // ResetXSLT is DELETE /v1/einvoices/settings/xslt.
 func (h *Handler) ResetXSLT(w http.ResponseWriter, r *http.Request) {
 	v, err := h.svc.ResetXSLT(r.Context(), caller(r))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, v)
+}
+
+// GetBuyerProfile is GET /v1/platform/organizations/{uuid}/invoice-profile.
+func (h *Handler) GetBuyerProfile(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.NotFound(w, r, "Organization not found")
+		return
+	}
+	v, err := h.svc.GetBuyerProfile(r.Context(), caller(r), id)
 	if err != nil {
 		writeError(w, r, err)
 		return
