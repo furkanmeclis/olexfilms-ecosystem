@@ -38,6 +38,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/performance/benchmark", read(h.Benchmark))
 	mux.Handle("GET /v1/performance/map", read(h.RegionMap))
 	mux.Handle("GET /v1/performance/map/dealers", read(h.DealersMap))
+	// TEC-497: member picker (staff targets grid, rule assignee).
+	mux.Handle("GET /v1/performance/members", read(h.ListMembers))
 
 	mux.Handle("GET /v1/performance/targets", read(h.ListTargets))
 	mux.Handle("POST /v1/performance/targets", targets(h.CreateTarget))
@@ -52,6 +54,13 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/performance/bonuses", bonus(h.ListBonuses))
 	mux.Handle("POST /v1/performance/bonuses/{uuid}/approve", bonus(h.ApproveBonus))
 	mux.Handle("POST /v1/performance/bonuses/{uuid}/cancel", bonus(h.CancelBonus))
+	// TEC-497: bonus rules and the payout day of the dealer.
+	mux.Handle("GET /v1/performance/bonus-rules", bonus(h.ListBonusRules))
+	mux.Handle("POST /v1/performance/bonus-rules", bonus(h.CreateBonusRule))
+	mux.Handle("PUT /v1/performance/bonus-rules/{uuid}", bonus(h.UpdateBonusRule))
+	mux.Handle("DELETE /v1/performance/bonus-rules/{uuid}", bonus(h.DeleteBonusRule))
+	mux.Handle("GET /v1/performance/bonus-settings", bonus(h.GetBonusSettings))
+	mux.Handle("PUT /v1/performance/bonus-settings", bonus(h.UpdateBonusSettings))
 
 	mux.Handle("GET /v1/performance/rules", rules(h.ListRules))
 	mux.Handle("POST /v1/performance/rules", rules(h.CreateRule))

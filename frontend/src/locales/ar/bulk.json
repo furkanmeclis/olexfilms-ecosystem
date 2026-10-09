@@ -101,5 +101,7 @@
   "params.ai_mode": "وضع الذكاء الاصطناعي",
   "params.ai_mode.auto": "تلقائي",
   "params.ai_mode.paused": "متوقف مؤقتًا",
-  "params.ai_mode.off": "معطّل"
+  "params.ai_mode.off": "معطّل",
+  "actions.performance_bonuses.approve": "اعتماد المكافآت",
+  "confirm.performance_bonuses.approve": "هل تريد اعتماد المكافآت المحددة بمبالغها المحسوبة؟ تصبح كل واحدة دفعة للموظف."
 }

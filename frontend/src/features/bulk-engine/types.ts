@@ -92,7 +92,8 @@ export type BulkResource =
   | "vehicle_catalog.brands"
   | "vehicle_catalog.models"
   | "leads"
-  | "conversations";
+  | "conversations"
+  | "performance.bonuses";
 
 export const BULK_PATHS: Record<BulkResource, string> = {
   "platform.users": "/v1/platform/users/bulk",
@@ -105,6 +106,7 @@ export const BULK_PATHS: Record<BulkResource, string> = {
   "vehicle_catalog.models": "/v1/platform/vehicle-catalog/models/bulk",
   leads: "/v1/leads/bulk",
   conversations: "/v1/conversations/bulk",
+  "performance.bonuses": "/v1/performance/bonuses/bulk",
 };
 
 /** Platform-scoped resources whose name has no `platform.` prefix. */

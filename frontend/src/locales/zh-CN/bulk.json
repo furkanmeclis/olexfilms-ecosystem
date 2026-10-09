@@ -101,5 +101,7 @@
   "params.ai_mode": "AI 模式",
   "params.ai_mode.auto": "自动",
   "params.ai_mode.paused": "已暂停",
-  "params.ai_mode.off": "关闭"
+  "params.ai_mode.off": "关闭",
+  "actions.performance_bonuses.approve": "批准奖金",
+  "confirm.performance_bonuses.approve": "按计算金额批准所选奖金？每一笔都会成为员工付款。"
 }

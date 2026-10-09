@@ -2142,6 +2142,7 @@ const listPerformanceTargets = `-- name: ListPerformanceTargets :many
 SELECT t.id, t.uuid, t.organization_id, t.brand_id, t.target_org_id, t.metric, t.period_kind, t.period_start, t.period_end, t.value, t.currency, t.contract_ref, t.note, t.created_by_user_id, t.created_at, t.updated_at,
        o.name AS target_name,
        o.type AS target_type,
+       o.uuid AS target_org_uuid,
        a.actual::numeric AS actual,
        CASE WHEN a.actual IS NULL THEN NULL
             ELSE ROUND(a.actual / t.value * 100, 2)
@@ -2237,6 +2238,7 @@ type ListPerformanceTargetsRow struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	TargetName      string             `json:"target_name"`
 	TargetType      string             `json:"target_type"`
+	TargetOrgUuid   uuid.UUID          `json:"target_org_uuid"`
 	Actual          pgtype.Numeric     `json:"actual"`
 	AchievementPct  pgtype.Numeric     `json:"achievement_pct"`
 	TotalCount      int64              `json:"total_count"`
@@ -2286,6 +2288,7 @@ func (q *Queries) ListPerformanceTargets(ctx context.Context, arg ListPerformanc
 			&i.UpdatedAt,
 			&i.TargetName,
 			&i.TargetType,
+			&i.TargetOrgUuid,
 			&i.Actual,
 			&i.AchievementPct,
 			&i.TotalCount,
@@ -2303,9 +2306,25 @@ func (q *Queries) ListPerformanceTargets(ctx context.Context, arg ListPerformanc
 const listStaffTargets = `-- name: ListStaffTargets :many
 SELECT st.id, st.uuid, st.organization_id, st.brand_id, st.user_id, st.period, st.metric, st.value, st.currency, st.created_by_user_id, st.created_at, st.updated_at,
        u.name AS user_name,
-       u.surname AS user_surname
+       u.surname AS user_surname,
+       u.uuid AS user_uuid,
+       a.actual::numeric(18,2) AS actual,
+       ROUND(a.actual / st.value * 100, 2)::numeric AS achievement_pct
 FROM staff_targets st
 JOIN users u ON u.id = st.user_id
+LEFT JOIN LATERAL (
+    SELECT CASE st.metric
+                WHEN 'services_count' THEN COUNT(*)::numeric
+                ELSE COALESCE(SUM(s.income_amount), 0)::numeric
+           END AS actual
+    FROM services s
+    WHERE s.organization_id = st.organization_id
+      AND s.brand_id = st.brand_id
+      AND s.status = 'completed'
+      AND COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) = st.user_id
+      AND COALESCE(s.completed_at, s.created_at) >= ((st.period || '-01')::timestamp AT TIME ZONE 'UTC')
+      AND COALESCE(s.completed_at, s.created_at) < (((st.period || '-01')::timestamp + interval '1 month') AT TIME ZONE 'UTC')
+) a ON true
 WHERE st.organization_id = $1
   AND st.period >= $2::text
   AND st.period <= $3::text
@@ -2335,8 +2354,13 @@ type ListStaffTargetsRow struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	UserName        string             `json:"user_name"`
 	UserSurname     string             `json:"user_surname"`
+	UserUuid        uuid.UUID          `json:"user_uuid"`
+	Actual          pgtype.Numeric     `json:"actual"`
+	AchievementPct  pgtype.Numeric     `json:"achievement_pct"`
 }
 
+// actual: completed services of the staff user in the target month (UTC
+// month like ListBonusCalculationCandidates), count or income by metric.
 func (q *Queries) ListStaffTargets(ctx context.Context, arg ListStaffTargetsParams) ([]ListStaffTargetsRow, error) {
 	rows, err := q.db.Query(ctx, listStaffTargets,
 		arg.OrganizationID,
@@ -2366,6 +2390,9 @@ func (q *Queries) ListStaffTargets(ctx context.Context, arg ListStaffTargetsPara
 			&i.UpdatedAt,
 			&i.UserName,
 			&i.UserSurname,
+			&i.UserUuid,
+			&i.Actual,
+			&i.AchievementPct,
 		); err != nil {
 			return nil, err
 		}
@@ -2380,9 +2407,13 @@ func (q *Queries) ListStaffTargets(ctx context.Context, arg ListStaffTargetsPara
 const listWeakDealerRules = `-- name: ListWeakDealerRules :many
 SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.name, r.metric, r.operator, r.threshold, r.create_task, r.notify, r.assignee_user_id, r.active, r.created_by_user_id, r.created_at, r.updated_at,
        o.name AS owner_name,
-       o.type AS owner_type
+       o.type AS owner_type,
+       au.uuid AS assignee_user_uuid,
+       au.name AS assignee_name,
+       au.surname AS assignee_surname
 FROM weak_dealer_rules r
 JOIN organizations o ON o.id = r.organization_id
+LEFT JOIN users au ON au.id = r.assignee_user_id
 WHERE r.brand_id = $1
   AND ($2::bigint[] IS NULL OR r.organization_id = ANY ($2::bigint[]))
   AND ($3::bool IS NULL OR r.active = $3::bool)
@@ -2396,23 +2427,26 @@ type ListWeakDealerRulesParams struct {
 }
 
 type ListWeakDealerRulesRow struct {
-	ID              int64              `json:"id"`
-	Uuid            uuid.UUID          `json:"uuid"`
-	OrganizationID  int64              `json:"organization_id"`
-	BrandID         int64              `json:"brand_id"`
-	Name            string             `json:"name"`
-	Metric          string             `json:"metric"`
-	Operator        string             `json:"operator"`
-	Threshold       pgtype.Numeric     `json:"threshold"`
-	CreateTask      bool               `json:"create_task"`
-	Notify          bool               `json:"notify"`
-	AssigneeUserID  pgtype.Int8        `json:"assignee_user_id"`
-	Active          bool               `json:"active"`
-	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	OwnerName       string             `json:"owner_name"`
-	OwnerType       string             `json:"owner_type"`
+	ID               int64              `json:"id"`
+	Uuid             uuid.UUID          `json:"uuid"`
+	OrganizationID   int64              `json:"organization_id"`
+	BrandID          int64              `json:"brand_id"`
+	Name             string             `json:"name"`
+	Metric           string             `json:"metric"`
+	Operator         string             `json:"operator"`
+	Threshold        pgtype.Numeric     `json:"threshold"`
+	CreateTask       bool               `json:"create_task"`
+	Notify           bool               `json:"notify"`
+	AssigneeUserID   pgtype.Int8        `json:"assignee_user_id"`
+	Active           bool               `json:"active"`
+	CreatedByUserID  pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	OwnerName        string             `json:"owner_name"`
+	OwnerType        string             `json:"owner_type"`
+	AssigneeUserUuid pgtype.UUID        `json:"assignee_user_uuid"`
+	AssigneeName     pgtype.Text        `json:"assignee_name"`
+	AssigneeSurname  pgtype.Text        `json:"assignee_surname"`
 }
 
 func (q *Queries) ListWeakDealerRules(ctx context.Context, arg ListWeakDealerRulesParams) ([]ListWeakDealerRulesRow, error) {
@@ -2442,6 +2476,9 @@ func (q *Queries) ListWeakDealerRules(ctx context.Context, arg ListWeakDealerRul
 			&i.UpdatedAt,
 			&i.OwnerName,
 			&i.OwnerType,
+			&i.AssigneeUserUuid,
+			&i.AssigneeName,
+			&i.AssigneeSurname,
 		); err != nil {
 			return nil, err
 		}

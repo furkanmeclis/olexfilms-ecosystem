@@ -101,5 +101,7 @@
   "params.ai_mode": "AI modu",
   "params.ai_mode.auto": "Otomatik",
   "params.ai_mode.paused": "Duraklatıldı",
-  "params.ai_mode.off": "Kapalı"
+  "params.ai_mode.off": "Kapalı",
+  "actions.performance_bonuses.approve": "Primleri onayla",
+  "confirm.performance_bonuses.approve": "Seçili primler hesaplanan tutarlarıyla onaylansın mı? Her biri personel ödemesine dönüşür."
 }

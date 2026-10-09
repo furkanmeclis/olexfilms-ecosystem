@@ -101,5 +101,7 @@
   "params.ai_mode": "AI mode",
   "params.ai_mode.auto": "Automatic",
   "params.ai_mode.paused": "Paused",
-  "params.ai_mode.off": "Off"
+  "params.ai_mode.off": "Off",
+  "actions.performance_bonuses.approve": "Approve bonuses",
+  "confirm.performance_bonuses.approve": "Approve the selected bonuses with their calculated amounts? Each one becomes a staff payment."
 }
