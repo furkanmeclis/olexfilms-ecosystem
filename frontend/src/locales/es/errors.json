@@ -151,5 +151,9 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "Las facturas electrónicas solo pueden emitirse en TRY a compradores en Turquía.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Los datos de la factura están incompletos o son incorrectos.",
   "codes.EINVOICE_INVALID_VAT_RATE": "El tipo de IVA no es válido; el 0 % requiere un código de exención.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "La hoja de estilos XSLT no es válida."
+  "codes.EINVOICE_INVALID_STYLESHEET": "La hoja de estilos XSLT no es válida.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Faltan fotos obligatorias de recepción del vehículo. Fotografíe primero todos los ángulos obligatorios.",
+  "codes.PHOTO_FILE_TOO_LARGE": "La foto no puede superar los 12 MB.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "La foto debe ser JPEG, PNG, WebP o HEIC.",
+  "codes.PHOTO_SERVICE_LOCKED": "Las fotos de recepción de este servicio ya no se pueden cambiar."
 }

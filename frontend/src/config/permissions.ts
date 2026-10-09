@@ -213,6 +213,9 @@ export const Permission = {
   /** TEC-489: efficiency and waste screens (efficiency module). */
   EfficiencyRead: "efficiency.read",
   EfficiencyExpectationsManage: "efficiency.expectations.manage",
+  /** TEC-500: photo standard angles (center) and overrides (distributor). */
+  PhotoStandardManage: "photo_standard.manage",
+  PhotoStandardOverride: "photo_standard.override",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -609,5 +612,9 @@ export const permissions = {
   efficiency: {
     read: Permission.EfficiencyRead,
     expectationsManage: Permission.EfficiencyExpectationsManage,
+  },
+  photoStandard: {
+    manage: Permission.PhotoStandardManage,
+    override: Permission.PhotoStandardOverride,
   },
 } as const;

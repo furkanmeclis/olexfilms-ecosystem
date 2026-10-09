@@ -151,5 +151,9 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "لا يمكن إصدار الفواتير الإلكترونية إلا بالليرة التركية لمشترين داخل تركيا.",
   "codes.EINVOICE_INVALID_DOCUMENT": "بيانات الفاتورة ناقصة أو غير صالحة.",
   "codes.EINVOICE_INVALID_VAT_RATE": "نسبة الضريبة غير صالحة؛ نسبة 0% تتطلب رمز إعفاء.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "ملف XSLT غير صالح."
+  "codes.EINVOICE_INVALID_STYLESHEET": "ملف XSLT غير صالح.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "صور الاستلام الإلزامية ناقصة. صوّر أولاً جميع الزوايا الإلزامية.",
+  "codes.PHOTO_FILE_TOO_LARGE": "يجب ألا يتجاوز حجم الصورة 12 ميغابايت.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "يجب أن تكون الصورة بصيغة JPEG أو PNG أو WebP أو HEIC.",
+  "codes.PHOTO_SERVICE_LOCKED": "لم يعد بالإمكان تغيير صور الاستلام لهذه الخدمة."
 }

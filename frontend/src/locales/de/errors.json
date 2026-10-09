@@ -151,5 +151,9 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "E-Rechnungen können nur in TRY an Käufer in der Türkei ausgestellt werden.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Die Rechnungsdaten sind unvollständig oder fehlerhaft.",
   "codes.EINVOICE_INVALID_VAT_RATE": "Der Mehrwertsteuersatz ist ungültig; 0 % erfordert einen Befreiungscode.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "Das XSLT-Stylesheet ist ungültig."
+  "codes.EINVOICE_INVALID_STYLESHEET": "Das XSLT-Stylesheet ist ungültig.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Pflichtfotos der Fahrzeugannahme fehlen. Fotografieren Sie zuerst alle vorgeschriebenen Blickwinkel.",
+  "codes.PHOTO_FILE_TOO_LARGE": "Das Foto darf höchstens 12 MB groß sein.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "Das Foto muss JPEG, PNG, WebP oder HEIC sein.",
+  "codes.PHOTO_SERVICE_LOCKED": "Die Annahmefotos dieses Service können nicht mehr geändert werden."
 }

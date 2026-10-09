@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import {
@@ -54,6 +55,7 @@ import {
 import { CertificateWarningBand } from "@/features/certificates";
 import { ServiceContractCard } from "@/features/services/components/service-contract-card";
 import { ServicePdfButton } from "@/features/services/components/service-pdf-button";
+import { IntakePhotoGallery } from "@/features/photo-standard/components/intake-photo-gallery";
 import { useAccountingAccess } from "@/features/accounting/hooks/use-accounting-access";
 import { ServiceMeasurementsSection } from "@/features/measurements/components/service-measurements-section";
 import { useFeature } from "@/features/modules/hooks/use-features";
@@ -208,17 +210,68 @@ function Items({ service }: { service: Service }) {
   );
 }
 
-function Images({ service }: { service: Service }) {
+/**
+ * Service images; TEC-500: with the photo_standard module the intake
+ * photos sit in their own tab next to them.
+ */
+function Images({
+  service,
+  slug,
+  intakePhotos,
+}: {
+  service: Service;
+  slug: string;
+  intakePhotos: boolean;
+}) {
   const { t } = useLocale();
-  const images = [...(service.images ?? [])].sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
+  if (!intakePhotos) {
+    return (
+      <Section
+        title={t("services.detail.images")}
+        icon={<ImageIcon className="size-4" />}
+        testId="detail-images"
+      >
+        <ServiceImages service={service} />
+      </Section>
+    );
+  }
   return (
     <Section
       title={t("services.detail.images")}
       icon={<ImageIcon className="size-4" />}
       testId="detail-images"
     >
+      <Tabs defaultValue="service">
+        <TabsList>
+          <TabsTrigger value="service" data-testid="tab-service-images">
+            {t("photo_standard.gallery.tab_service")}
+          </TabsTrigger>
+          <TabsTrigger value="intake" data-testid="tab-intake-photos">
+            {t("photo_standard.gallery.tab_intake")}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="service" className="pt-3">
+          <ServiceImages service={service} />
+        </TabsContent>
+        <TabsContent value="intake" className="pt-3">
+          <IntakePhotoGallery
+            slug={slug}
+            serviceUuid={service.uuid}
+            serviceOrgUuid={service.organization.uuid}
+          />
+        </TabsContent>
+      </Tabs>
+    </Section>
+  );
+}
+
+function ServiceImages({ service }: { service: Service }) {
+  const { t } = useLocale();
+  const images = [...(service.images ?? [])].sort(
+    (a, b) => a.sort_order - b.sort_order,
+  );
+  return (
+    <>
       {images.length === 0 ? (
         <Empty testId="detail-images-empty">
           {t("services.detail.images_empty")}
@@ -247,7 +300,7 @@ function Images({ service }: { service: Service }) {
           ))}
         </div>
       )}
-    </Section>
+    </>
   );
 }
 
@@ -402,6 +455,7 @@ export function ServiceDetailPage({
   const access = resolveServiceListAccess(can);
   const measurements = useFeature(slug, "measurements");
   const certificates = useFeature(slug, "certificates");
+  const photoStandard = useFeature(slug, "photo_standard");
 
   const service = useQuery({
     queryKey: serviceWizardKeys.service(uuid),
@@ -543,7 +597,7 @@ export function ServiceDetailPage({
       <Items service={s} />
       <Warranties service={s} slug={slug} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Images service={s} />
+        <Images service={s} slug={slug} intakePhotos={photoStandard.enabled} />
         <StatusHistory service={s} />
       </div>
     </div>

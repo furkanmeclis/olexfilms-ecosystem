@@ -11,15 +11,17 @@ import {
 } from "./wizard";
 
 describe("wizard steps", () => {
-  it("has five steps in order, the contract right before stock", () => {
+  it("has six steps in order, the contract right before stock", () => {
     expect(WIZARD_STEPS).toEqual([
       "customer_vehicle",
+      "photos",
       "parts",
       "measurement",
       "contract",
       "stock",
     ]);
-    expect(nextStep("customer_vehicle")).toBe("parts");
+    expect(nextStep("customer_vehicle", wizardSteps(true))).toBe("parts");
+    expect(nextStep("customer_vehicle")).toBe("photos");
     expect(nextStep("measurement")).toBe("contract");
     expect(nextStep("contract")).toBe("stock");
     expect(nextStep("stock")).toBeNull();
@@ -39,6 +41,24 @@ describe("wizard steps", () => {
     expect(nextStep("measurement", off)).toBe("stock");
     expect(previousStep("stock", off)).toBe("measurement");
     expect(wizardSteps(true)).toContain("contract");
+  });
+
+  it("lists photos after customer_vehicle only with the module (TEC-500)", () => {
+    expect(wizardSteps(true)).not.toContain("photos");
+    expect(wizardSteps(true, false)).not.toContain("photos");
+    const on = wizardSteps(true, true);
+    expect(on.slice(0, 3)).toEqual(["customer_vehicle", "photos", "parts"]);
+    expect(nextStep("customer_vehicle", on)).toBe("photos");
+    expect(previousStep("parts", on)).toBe("photos");
+  });
+
+  it("keeps the steps after the photos closed while an angle is missing", () => {
+    const on = wizardSteps(true, true);
+    expect(canOpenStep("photos", true, false, on, true)).toBe(true);
+    expect(canOpenStep("parts", true, false, on, true)).toBe(false);
+    expect(canOpenStep("contract", true, false, on, true)).toBe(false);
+    expect(canOpenStep("stock", true, false, on, true)).toBe(false);
+    expect(canOpenStep("parts", true, false, on, false)).toBe(true);
   });
 
   it("keeps the steps after the contract closed while it blocks", () => {

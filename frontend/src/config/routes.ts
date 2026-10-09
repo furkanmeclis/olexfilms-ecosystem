@@ -42,6 +42,10 @@ export const routes = {
     showcase: {
       root: (slug: string) => `/t/${slug}/showcase`,
     },
+    /** TEC-500: distributor photo standard overrides. */
+    photoStandard: {
+      root: (slug: string) => `/t/${slug}/photo-standard`,
+    },
     /** TEC-147. Search hits link `/catalog/products/{uuid}` (TEC-145). */
     catalog: {
       products: (slug: string) => `/t/${slug}/catalog/products`,
@@ -381,6 +385,10 @@ export const routes = {
     },
     certificateTypes: {
       root: "/platform/certificate-types",
+    },
+    /** TEC-500: central intake photo angles (photo standard add-on). */
+    photoAngles: {
+      root: "/platform/photo-angles",
     },
     showcases: {
       root: "/platform/showcases",

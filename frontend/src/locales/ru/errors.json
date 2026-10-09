@@ -151,5 +151,9 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "Электронные счета выставляются только в TRY покупателям в Турции.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Данные счёта неполные или неверные.",
   "codes.EINVOICE_INVALID_VAT_RATE": "Ставка НДС недействительна; для 0% нужен код освобождения.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "Таблица стилей XSLT недействительна."
+  "codes.EINVOICE_INVALID_STYLESHEET": "Таблица стилей XSLT недействительна.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Не хватает обязательных фото приёмки. Сначала снимите все обязательные ракурсы.",
+  "codes.PHOTO_FILE_TOO_LARGE": "Размер фото не должен превышать 12 МБ.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "Фото должно быть в формате JPEG, PNG, WebP или HEIC.",
+  "codes.PHOTO_SERVICE_LOCKED": "Фото приёмки этой услуги больше нельзя изменить."
 }

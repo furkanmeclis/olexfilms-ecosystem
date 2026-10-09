@@ -151,5 +151,9 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "e-Fatura yalnız Türkiye'deki alıcılara ve TRY ile kesilebilir.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Fatura bilgileri eksik veya hatalı.",
   "codes.EINVOICE_INVALID_VAT_RATE": "KDV oranı geçersiz; %0 için istisna kodu gerekir.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT görünüm dosyası geçersiz."
+  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT görünüm dosyası geçersiz.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Zorunlu araç kabul fotoğrafları eksik. Önce tüm zorunlu açıların fotoğrafını çekin.",
+  "codes.PHOTO_FILE_TOO_LARGE": "Fotoğraf en çok 12 MB olabilir.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "Fotoğraf JPEG, PNG, WebP veya HEIC olmalı.",
+  "codes.PHOTO_SERVICE_LOCKED": "Bu hizmetin kabul fotoğrafları artık değiştirilemez."
 }

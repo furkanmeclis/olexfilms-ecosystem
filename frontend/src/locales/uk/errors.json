@@ -151,5 +151,9 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "Електронні рахунки виставляються лише в TRY покупцям у Туреччині.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Дані рахунку неповні або хибні.",
   "codes.EINVOICE_INVALID_VAT_RATE": "Ставка ПДВ недійсна; для 0% потрібен код звільнення.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "Таблиця стилів XSLT недійсна."
+  "codes.EINVOICE_INVALID_STYLESHEET": "Таблиця стилів XSLT недійсна.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Бракує обов'язкових фото приймання. Спершу зніміть усі обов'язкові ракурси.",
+  "codes.PHOTO_FILE_TOO_LARGE": "Розмір фото не має перевищувати 12 МБ.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "Фото має бути у форматі JPEG, PNG, WebP або HEIC.",
+  "codes.PHOTO_SERVICE_LOCKED": "Фото приймання цієї послуги більше не можна змінити."
 }
