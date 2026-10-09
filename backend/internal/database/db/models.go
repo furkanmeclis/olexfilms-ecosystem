@@ -2645,6 +2645,17 @@ type RefreshToken struct {
 	RotatedAt          pgtype.Timestamptz `json:"rotated_at"`
 }
 
+type ReportLayout struct {
+	ID             int64              `json:"id"`
+	UserID         int64              `json:"user_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Version        int32              `json:"version"`
+	Widgets        []byte             `json:"widgets"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ReviewQuestion struct {
 	ID           int64              `json:"id"`
 	Uuid         uuid.UUID          `json:"uuid"`

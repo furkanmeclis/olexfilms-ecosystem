@@ -235,6 +235,16 @@ tags:
       conversations; anyone else gets 404 for a conversation. Staff replies
       are queued (sender_type staff) and pause the AI for 30 minutes.
 
+  - name: Reports
+    description: >-
+      Report contract of the mobile app and the panel widgets (TEC-495,
+      F5-05f): the 22 legacy mobile report endpoints redesigned as one
+      catalog with a shared envelope (docs/mobile-reports.md). Access per
+      report = its module + its domain read permission; the scope narrows
+      the records (dealer: own organization, distributor: subtree, center:
+      brand). A report whose module is off answers 403 FEATURE_DISABLED and
+      is missing from the catalog.
+
 paths:
   /healthz:
     get:
@@ -28574,6 +28584,144 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/reports/catalog:
+    get:
+      tags: [Reports]
+      operationId: getReportCatalog
+      summary: Reports the caller may open
+      description: >-
+        TEC-495. Lists the reports whose module is on and whose permission
+        and reach the caller holds, in display order, with localized titles
+        and the accepted period / granularity values.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ReportLocale"
+      responses:
+        "200":
+          description: Report catalog
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeReportCatalog" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/reports/overview:
+    get:
+      tags: [Reports]
+      operationId: getReportOverview
+      summary: Overview cards (legacy dashboard summary)
+      description: >-
+        TEC-495. Same as GET /v1/reports/overview through the generic
+        route: one "cards" series with the card groups of every domain the
+        caller reaches (services, orders, customers, warranties, stock,
+        measurements; dealer counts only for a subtree / brand reach).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ReportPeriod"
+        - $ref: "#/components/parameters/ReportRangeFrom"
+        - $ref: "#/components/parameters/ReportRangeTo"
+        - $ref: "#/components/parameters/ReportLocale"
+      responses:
+        "200":
+          description: Overview report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/reports/layout:
+    get:
+      tags: [Reports]
+      operationId: getReportLayout
+      summary: The caller's report widget layout in the active organization
+      description: >-
+        TEC-495. Without a stored layout the default (overview only) is
+        returned. Widgets whose report the caller can no longer open are
+        left out.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Layout
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeReportLayout" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [Reports]
+      operationId: putReportLayout
+      summary: Replace the widget layout atomically
+      description: >-
+        TEC-495. The full list is sent; sort_order follows the array order.
+        One invalid widget (unknown or unavailable report, duplicate id or
+        report, period / granularity the report does not take) rejects the
+        whole layout with 400 VALIDATION_ERROR (field widgets[i].*) and the
+        stored layout stays unchanged. At most 30 widgets.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReportLayoutInput" }
+      responses:
+        "200":
+          description: Saved layout
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeReportLayout" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/reports/{report}:
+    get:
+      tags: [Reports]
+      operationId: getReport
+      summary: One report in the shared envelope
+      description: >-
+        TEC-495. report is a catalog key: overview, services.trend,
+        services.status_distribution, services.top_brands,
+        services.top_models, services.top_products, orders.trend,
+        orders.status_distribution, customers.trend, stock.summary,
+        warranties.summary, measurements.summary, dealers.performance
+        (performance module), dealers.top_by_warranty (subtree / brand
+        reach only), activities.recent. Periodic reports take period
+        (7d, 30d default, 90d, 12m) or range_from + range_to (inclusive
+        dates, at most 731 days, period=custom); time series take
+        granularity (day, week, month; default by range). Rankings and
+        tables take limit (1..50, default 10). Parameters a report does
+        not take are 400. Unknown report 404; module off 403
+        FEATURE_DISABLED; missing permission / reach 403 FORBIDDEN.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: report
+          in: path
+          required: true
+          schema: { type: string }
+        - $ref: "#/components/parameters/ReportPeriod"
+        - $ref: "#/components/parameters/ReportRangeFrom"
+        - $ref: "#/components/parameters/ReportRangeTo"
+        - name: granularity
+          in: query
+          schema: { type: string, enum: [day, week, month] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50 }
+        - $ref: "#/components/parameters/ReportLocale"
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -28582,6 +28730,23 @@ components:
       bearerFormat: JWT
 
   parameters:
+    ReportPeriod:
+      name: period
+      in: query
+      schema: { type: string, enum: ["7d", "30d", "90d", "12m", custom] }
+    ReportRangeFrom:
+      name: range_from
+      in: query
+      schema: { type: string, format: date }
+    ReportRangeTo:
+      name: range_to
+      in: query
+      schema: { type: string, format: date }
+    ReportLocale:
+      name: locale
+      in: query
+      description: Label locale (default the request locale chain, K10).
+      schema: { type: string }
     AIUsageChannel:
       name: channel
       in: query
@@ -44220,4 +44385,145 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PriceDisciplineSummary" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ReportCatalogItem:
+      type: object
+      required: [key, kind, title, module, periodic, periods, default_period, granularities, limited]
+      properties:
+        key: { type: string }
+        kind: { type: string, enum: [summary, timeseries, distribution, ranking, table] }
+        title: { type: string }
+        module: { type: [string, "null"] }
+        periodic: { type: boolean }
+        periods: { type: array, items: { type: string } }
+        default_period: { type: [string, "null"] }
+        granularities: { type: array, items: { type: string } }
+        limited: { type: boolean }
+
+    EnvelopeReportCatalog:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/ReportCatalogItem" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ReportPoint:
+      type: object
+      required: [key, label, value]
+      properties:
+        key: { type: string, description: "Bucket start date, status, item uuid or card key" }
+        label: { type: string }
+        value: { type: number }
+
+    ReportSeries:
+      type: object
+      required: [key, label, unit, points]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        unit: { type: string }
+        points:
+          type: array
+          items: { $ref: "#/components/schemas/ReportPoint" }
+
+    ReportColumn:
+      type: object
+      required: [key, label, type]
+      properties:
+        key: { type: string }
+        label: { type: string }
+        type: { type: string, enum: [string, integer, number, datetime] }
+
+    ReportEnvelope:
+      type: object
+      description: >-
+        Shared envelope of every report: the same keys in all reports;
+        period / range / granularity are null when a report does not take
+        them, columns / rows are empty outside tables.
+      required: [report, kind, title, locale, timezone, scope, period, range_from, range_to, granularity, generated_at, series, columns, rows]
+      properties:
+        report: { type: string }
+        kind: { type: string, enum: [summary, timeseries, distribution, ranking, table] }
+        title: { type: string }
+        locale: { type: string }
+        timezone: { type: string }
+        scope: { type: string, description: "Reach of the read permission (managed, subtree, brand, all, own, assigned)" }
+        period: { type: [string, "null"] }
+        range_from: { type: [string, "null"], format: date }
+        range_to: { type: [string, "null"], format: date }
+        granularity: { type: [string, "null"], enum: [day, week, month, null] }
+        generated_at: { type: string, format: date-time }
+        series:
+          type: array
+          items: { $ref: "#/components/schemas/ReportSeries" }
+        columns:
+          type: array
+          items: { $ref: "#/components/schemas/ReportColumn" }
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    EnvelopeReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ReportEnvelope" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    ReportWidget:
+      type: object
+      required: [id, report, sort_order, period, granularity]
+      properties:
+        id: { type: string, format: uuid }
+        report: { type: string }
+        sort_order: { type: integer }
+        period: { type: [string, "null"], enum: ["7d", "30d", "90d", "12m", null] }
+        granularity: { type: [string, "null"], enum: [day, week, month, null] }
+
+    ReportLayout:
+      type: object
+      required: [version, updated_at, widgets]
+      properties:
+        version: { type: integer }
+        updated_at: { type: [string, "null"], format: date-time }
+        widgets:
+          type: array
+          items: { $ref: "#/components/schemas/ReportWidget" }
+
+    ReportLayoutInput:
+      type: object
+      required: [widgets]
+      additionalProperties: false
+      properties:
+        version: { type: integer, enum: [1] }
+        widgets:
+          type: array
+          maxItems: 30
+          items:
+            type: object
+            required: [id, report]
+            additionalProperties: false
+            properties:
+              id: { type: string, format: uuid }
+              report: { type: string }
+              period: { type: [string, "null"], enum: ["7d", "30d", "90d", "12m", null] }
+              granularity: { type: [string, "null"], enum: [day, week, month, null] }
+
+    EnvelopeReportLayout:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ReportLayout" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
