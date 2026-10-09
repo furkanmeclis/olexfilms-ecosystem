@@ -21,6 +21,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/repository"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
+	psmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
@@ -67,6 +68,9 @@ func (e *UnknownVariablesError) Error() string {
 
 const MaxTemplateBytes = 512 * 1024
 
+// subjectService is contract_instances.subject_type of a service contract.
+const subjectService = "service"
+
 // Caller is the active organization context.
 type Caller struct {
 	UserID         int64
@@ -108,6 +112,7 @@ type Service struct {
 	pdf     PDFRenderer
 	out     outbox.Enqueuer
 	now     func() time.Time
+	intake  IntakePhotos
 }
 
 // New creates a service.
@@ -128,6 +133,11 @@ func WithStorage(store platstorage.Driver) Option {
 }
 func WithPDFRenderer(pdf PDFRenderer) Option { return func(s *Service) { s.pdf = pdf } }
 func WithOutbox(out outbox.Enqueuer) Option  { return func(s *Service) { s.out = out } }
+
+// WithIntakePhotos wires the photo standard add-on (TEC-499): the intake
+// rule before a contract is created or sent to signing, and the
+// {{intake_photos_html}} grid of the PDF.
+func WithIntakePhotos(p IntakePhotos) Option { return func(s *Service) { s.intake = p } }
 func WithClock(now func() time.Time) Option {
 	return func(s *Service) {
 		if now != nil {
@@ -140,6 +150,15 @@ func WithClock(now func() time.Time) Option {
 type OTPService interface {
 	Request(ctx context.Context, in otp.RequestInput) (otp.RequestResult, error)
 	Verify(ctx context.Context, in otp.VerifyInput) (otp.Verified, error)
+}
+
+// IntakePhotos is the photo standard port (satisfied by the photostandard
+// use case). RequireComplete answers *psmodel.IncompleteError while a
+// required angle is missing and the module is on; IntakePhotosHTML renders
+// the photo grid without EXIF location.
+type IntakePhotos interface {
+	RequireComplete(ctx context.Context, q *db.Queries, ref psmodel.ServiceRef) error
+	IntakePhotosHTML(ctx context.Context, q *db.Queries, ref psmodel.ServiceRef, locale string) (string, error)
 }
 
 // PDFRenderer converts an executed contract HTML snapshot to a PDF.
@@ -446,6 +465,13 @@ func (s *Service) CreateForService(ctx context.Context, c Caller, serviceUUID uu
 	if row.Status != "draft" && row.Status != "pending" {
 		return model.Contract{}, fmt.Errorf("%w: service status %s", ErrUnsupportedStatus, row.Status)
 	}
+	if s.intake != nil {
+		if err := s.intake.RequireComplete(ctx, s.repo.Queries(), psmodel.ServiceRef{
+			ID: row.ID, OrganizationID: row.OrganizationID, BrandID: row.BrandID,
+		}); err != nil {
+			return model.Contract{}, err
+		}
+	}
 	tpl, err := s.resolveTemplateForInstance(ctx, c.BrandID, in.TemplateUUID)
 	if err != nil {
 		return model.Contract{}, err
@@ -468,7 +494,7 @@ func (s *Service) CreateForService(ctx context.Context, c Caller, serviceUUID uu
 	}
 	inst, err := qtx.CreateContractInstance(ctx, db.CreateContractInstanceParams{
 		OrganizationID: row.OrganizationID, BrandID: row.BrandID, ContractNo: no,
-		SubjectType: "service", SubjectID: row.ID, TemplateID: tpl.ID, Kind: tpl.Kind,
+		SubjectType: subjectService, SubjectID: row.ID, TemplateID: tpl.ID, Kind: tpl.Kind,
 		Locale: loc.Locale, TemplateVersion: loc.Version, OtpRequired: tpl.OtpRequired,
 		SignatureRequired: tpl.SignatureRequired, Status: model.StatusPending,
 		RenderedHtml: pgText(rendered), ContentSha256: pgText(sum), CreatedByUserID: int8(c.UserID),
@@ -503,6 +529,18 @@ func (s *Service) CreateForService(ctx context.Context, c Caller, serviceUUID uu
 	return s.viewContract(ctx, inst)
 }
 
+// requireIntakePhotos applies the photo standard rule to the service of a
+// contract before it goes to signing (photos can still be removed after the
+// contract is created, until it is executed).
+func (s *Service) requireIntakePhotos(ctx context.Context, inst db.ContractInstance) error {
+	if s.intake == nil || inst.SubjectType != subjectService {
+		return nil
+	}
+	return s.intake.RequireComplete(ctx, s.repo.Queries(), psmodel.ServiceRef{
+		ID: inst.SubjectID, OrganizationID: inst.OrganizationID, BrandID: inst.BrandID,
+	})
+}
+
 // GetContract returns one contract in the caller's read scope.
 func (s *Service) GetContract(ctx context.Context, c Caller, id uuid.UUID) (model.Contract, error) {
 	inst, err := s.scopedInstance(ctx, c, id)
@@ -523,6 +561,9 @@ func (s *Service) RequestCustomerOTP(ctx context.Context, c Caller, id uuid.UUID
 	}
 	if inst.Status == model.StatusExecuted || inst.Status == model.StatusVoided {
 		return otp.RequestResult{}, ErrAlreadySigned
+	}
+	if err := s.requireIntakePhotos(ctx, inst); err != nil {
+		return otp.RequestResult{}, err
 	}
 	if !inst.OtpRequired {
 		return otp.RequestResult{}, nil
@@ -555,6 +596,9 @@ func (s *Service) SignCustomer(ctx context.Context, c Caller, id uuid.UUID, in S
 	}
 	if signer.SignedAt.Valid {
 		return model.Contract{}, ErrAlreadySigned
+	}
+	if err := s.requireIntakePhotos(ctx, inst); err != nil {
+		return model.Contract{}, err
 	}
 	if inst.OtpRequired {
 		if s.otp == nil {
@@ -604,6 +648,9 @@ func (s *Service) SignStaff(ctx context.Context, c Caller, id uuid.UUID, in Sign
 	}
 	if c.UserID > 0 && signer.UserID.Valid && signer.UserID.Int64 != c.UserID {
 		return model.Contract{}, ErrNotFound
+	}
+	if err := s.requireIntakePhotos(ctx, inst); err != nil {
+		return model.Contract{}, err
 	}
 	return s.sign(ctx, c, inst, signer, in.PNGBase64, in.IP, in.UserAgent)
 }

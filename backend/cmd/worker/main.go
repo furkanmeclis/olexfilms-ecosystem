@@ -48,6 +48,7 @@ import (
 	orgusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	performancemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance"
 	performanceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/usecase"
+	photostandardusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/usecase"
 	pricingmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing"
 	pricingusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/search/indexsync"
@@ -300,6 +301,8 @@ func main() {
 		contractsusecase.WithStorage(store),
 		contractsusecase.WithPDFRenderer(pdfClient),
 		contractsusecase.WithOutbox(outboxStore),
+		// TEC-499: intake photo grid of the executed contract PDF.
+		contractsusecase.WithIntakePhotos(photostandardusecase.New(pool, queries).WithStorage(store)),
 	)
 	_ = docSvc.RegisterLoader(docmodel.KindContract, contractsSvc.ContractDocumentLoader())
 	// TEC-298: measurement PDF (worker-docs renders, pdf_key caches it).

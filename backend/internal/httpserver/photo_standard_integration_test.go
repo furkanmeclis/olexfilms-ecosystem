@@ -91,6 +91,9 @@ func TestIntegrationPhotoStandardIntake(t *testing.T) {
 		for _, org := range []int64{center.ID, dist.ID, dealer.ID} {
 			_, _ = it.srv.features.ClearByAdmin(context.Background(), org, features.ModulePhotoStandard)
 		}
+		// TEC-499: the angle is brand-wide; a leftover one breaks reruns.
+		_, _ = it.pool.Exec(context.Background(), `DELETE FROM intake_photos WHERE organization_id = $1`, dealer.ID)
+		_, _ = it.pool.Exec(context.Background(), `DELETE FROM photo_angles WHERE key = $1`, angleKey)
 	})
 
 	code, env := it.do("POST", "/v1/platform/photo-standard/angles", hostOlex, centerTok, map[string]any{

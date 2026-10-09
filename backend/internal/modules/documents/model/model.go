@@ -191,6 +191,8 @@ var specs = map[string]KindSpec{
 		block("service", "items_table", "Hizmet kalemleri tablosu", "Service items table"),
 		text("service", "notes", "Notlar", "Notes", "Araç teslimde yıkanmıştır.", "Vehicle was washed on delivery."),
 		text("totals", "total_amount", "Genel toplam", "Total", "12.500,00 TRY", "TRY 12,500.00"),
+		// TEC-499: optional vehicle intake photo grid (photo standard add-on).
+		block("service", "intake_photos_html", "Araç kabul fotoğrafları", "Vehicle intake photos"),
 	})},
 	KindMeasurement: {Kind: KindMeasurement, Variables: join(companyVars, documentVars, customerVars, vehicleVars, []Variable{
 		text("measurement", "measured_at", "Ölçüm tarihi", "Measured at", "01.10.2026 14:30", "Oct 1, 2026 2:30 PM"),
@@ -216,6 +218,8 @@ var specs = map[string]KindSpec{
 		block("contract", "signatures_html", "İmza görselleri", "Signature images"),
 		block("contract", "otp_proof_html", "OTP kanıt bloğu", "OTP proof block"),
 		block("contract", "media_html", "Gömülü medya", "Embedded media"),
+		// TEC-499: vehicle intake photo grid (photo standard add-on).
+		block("contract", "intake_photos_html", "Araç kabul fotoğrafları", "Vehicle intake photos"),
 	})},
 	KindOrderSlip: {Kind: KindOrderSlip, Variables: join(companyVars, customerVars, totalsVars, []Variable{
 		text("order", "order_number", "Sipariş no", "Order number", "SIP-2026-000042", "ORD-2026-000042"),
@@ -381,6 +385,16 @@ var sampleBlocks = map[string]func(tr bool) string{
 	},
 	"media_html": func(bool) string {
 		return `<figure><svg xmlns="http://www.w3.org/2000/svg" width="180" height="90"><rect width="180" height="90" fill="#e5e7eb"/><text x="90" y="50" text-anchor="middle" font-family="sans-serif" font-size="12">MEDIA</text></svg></figure>`
+	},
+	// TEC-499: vehicle intake photo grid.
+	"intake_photos_html": func(tr bool) string {
+		cell := func(name string) string {
+			return `<figure><figcaption><strong>` + name + `</strong><br>2026-10-01 14:30 UTC</figcaption><svg xmlns="http://www.w3.org/2000/svg" width="160" height="100"><rect width="160" height="100" fill="#e5e7eb"/></svg></figure>`
+		}
+		if tr {
+			return `<section class="doc-intake-photos"><h2>Araç kabul fotoğrafları</h2><div class="doc-photos">` + cell("Ön") + cell("Arka") + cell("Sol yan") + `</div></section>`
+		}
+		return `<section class="doc-intake-photos"><h2>Vehicle intake photos</h2><div class="doc-photos">` + cell("Front") + cell("Rear") + cell("Left side") + `</div></section>`
 	},
 	// TEC-476: fleet report tables.
 	"dealer_services_table": func(tr bool) string {

@@ -119,4 +119,8 @@ table.doc-totals tr:last-child{font-weight:700;border-block-start:1px solid #6b7
 .doc-verify img,.doc-verify svg{width:80pt;height:80pt}
 .doc-footer{margin-block-start:24pt;font-size:8pt;color:#6b7280;text-align:center}
 .muted{color:#6b7280}
+.doc-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8pt;margin-block-end:8pt}
+.doc-photos figure{margin:0;break-inside:avoid;border:1px solid #d1d5db;padding:4pt}
+.doc-photos figcaption{font-size:8.5pt;margin-block-end:3pt}
+.doc-photos img{width:100%;height:auto}
 `
