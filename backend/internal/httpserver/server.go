@@ -74,6 +74,9 @@ import (
 	efficiencymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency"
 	efficiencyhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency/handler"
 	efficiencyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency/usecase"
+	einvoicemodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/einvoice"
+	einvoicehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/einvoice/handler"
+	einvoiceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/einvoice/usecase"
 	exportmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports"
 	exporthandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/handler"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
@@ -925,6 +928,23 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		s.worker.WithMeasurementPDF(measurementPDF.GeneratePDF)
 	}
 	measurementsmodule.RegisterPDFRoutes(mux, measurementshandler.NewPDF(measurementPDF), tokens, loader, deps.Queries, featureSvc)
+	// TEC-503 (F5-08c): e-invoice drafts, preview, numbering, archive (XML
+	// + PDF on the docs queue), void mark and settings.
+	var einvoiceTx einvoiceusecase.TxBeginner
+	if deps.DB != nil {
+		einvoiceTx = deps.DB
+	}
+	var einvoiceQueue einvoiceusecase.Enqueuer
+	if deps.Queue != nil {
+		einvoiceQueue = deps.Queue
+	}
+	einvoiceSvc := einvoiceusecase.New(einvoiceTx, deps.Queries, deps.Storage, outbox.NewStore(deps.DB, deps.Queries), log).
+		WithPDF(pdfClient, einvoiceQueue).WithSettings(sysSvc)
+	if s.worker != nil {
+		s.worker.WithEinvoicePDF(einvoiceSvc.GeneratePDF)
+	}
+	einvoicemodule.RegisterRoutes(mux, einvoicehandler.New(einvoiceSvc, deps.Queries), tokens, loader, deps.Queries,
+		stepUpSvc, featureSvc)
 	exportmodule.RegisterRoutes(mux, exporthandler.New(exportSvc), tokens, loader, stepUpSvc, deps.Queries)
 	importmodule.RegisterRoutes(mux, importhandler.New(importSvc), tokens, loader, deps.Queries)
 	bulkmodule.RegisterRoutes(mux, bulkhandler.New(bulkSvc), tokens, loader)

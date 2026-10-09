@@ -198,5 +198,15 @@
   "resources.platform.organizations": "المنشآت",
   "actions.mcp.tool_called": "تم استدعاء أداة MCP",
   "resources.mcp_tool": "أداة MCP",
-  "actions.pricing.recommended_published": "تم نشر أسعار البيع الموصى بها"
+  "actions.pricing.recommended_published": "تم نشر أسعار البيع الموصى بها",
+  "actions.einvoice.draft_created": "تم إنشاء مسودة فاتورة إلكترونية",
+  "actions.einvoice.archived": "تمت أرشفة الفاتورة الإلكترونية",
+  "actions.einvoice.archive_failed": "فشل التحقق من الفاتورة الإلكترونية",
+  "actions.einvoice.voided": "تم إلغاء الفاتورة الإلكترونية",
+  "actions.einvoice.pdf_retried": "تمت إعادة إنشاء ملف PDF للفاتورة الإلكترونية",
+  "actions.einvoice.settings_updated": "تم تحديث إعدادات الفواتير الإلكترونية",
+  "actions.einvoice.xslt_uploaded": "تم رفع قالب XSLT للفواتير الإلكترونية",
+  "actions.einvoice.xslt_reset": "تمت إعادة قالب XSLT للفواتير الإلكترونية إلى الافتراضي",
+  "actions.einvoice.buyer_profile_updated": "تم تحديث ملف الفوترة الخاص بالمشتري",
+  "resources.einvoices": "الفواتير الإلكترونية"
 }

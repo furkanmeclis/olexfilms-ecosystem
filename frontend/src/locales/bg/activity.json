@@ -198,5 +198,15 @@
   "resources.platform.organizations": "Организации",
   "actions.mcp.tool_called": "Извикан MCP инструмент",
   "resources.mcp_tool": "MCP инструмент",
-  "actions.pricing.recommended_published": "Публикувани препоръчителни цени"
+  "actions.pricing.recommended_published": "Публикувани препоръчителни цени",
+  "actions.einvoice.draft_created": "Създадена чернова на е-фактура",
+  "actions.einvoice.archived": "Е-фактурата е архивирана",
+  "actions.einvoice.archive_failed": "Проверката на е-фактурата е неуспешна",
+  "actions.einvoice.voided": "Е-фактурата е анулирана",
+  "actions.einvoice.pdf_retried": "PDF на е-фактурата е генериран отново",
+  "actions.einvoice.settings_updated": "Настройките за е-фактури са обновени",
+  "actions.einvoice.xslt_uploaded": "Качен е XSLT шаблон за е-фактури",
+  "actions.einvoice.xslt_reset": "XSLT шаблонът за е-фактури е върнат по подразбиране",
+  "actions.einvoice.buyer_profile_updated": "Профилът за фактуриране на купувача е обновен",
+  "resources.einvoices": "Е-фактури"
 }

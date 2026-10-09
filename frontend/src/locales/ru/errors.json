@@ -155,5 +155,12 @@
   "codes.PHOTO_STANDARD_INCOMPLETE": "Не хватает обязательных фото приёмки. Сначала снимите все обязательные ракурсы.",
   "codes.PHOTO_FILE_TOO_LARGE": "Размер фото не должен превышать 12 МБ.",
   "codes.PHOTO_UNSUPPORTED_MEDIA": "Фото должно быть в формате JPEG, PNG, WebP или HEIC.",
-  "codes.PHOTO_SERVICE_LOCKED": "Фото приёмки этой услуги больше нельзя изменить."
+  "codes.PHOTO_SERVICE_LOCKED": "Фото приёмки этой услуги больше нельзя изменить.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Сначала сохраните настройки продавца и серии электронных счетов.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "Эту запись нельзя выставить в счёт (заказ не получен или период не проведён).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "Для этой записи уже есть активный электронный счёт; аннулируйте его, чтобы выставить заново.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Профиль счетов покупателя неполный; заполните недостающие поля.",
+  "codes.EINVOICE_INVALID_STATUS": "Статус электронного счёта не позволяет выполнить это действие.",
+  "codes.EINVOICE_NOT_ARCHIVED": "Электронный счёт ещё не заархивирован.",
+  "codes.EINVOICE_PDF_NOT_READY": "PDF счёта ещё не готов; попробуйте чуть позже или сформируйте его заново."
 }

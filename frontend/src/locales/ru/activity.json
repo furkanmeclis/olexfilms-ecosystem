@@ -198,5 +198,15 @@
   "resources.platform.organizations": "Организации",
   "actions.mcp.tool_called": "Вызван инструмент MCP",
   "resources.mcp_tool": "Инструмент MCP",
-  "actions.pricing.recommended_published": "Опубликованы рекомендованные цены"
+  "actions.pricing.recommended_published": "Опубликованы рекомендованные цены",
+  "actions.einvoice.draft_created": "Создан черновик электронного счёта",
+  "actions.einvoice.archived": "Электронный счёт заархивирован",
+  "actions.einvoice.archive_failed": "Проверка электронного счёта не пройдена",
+  "actions.einvoice.voided": "Электронный счёт аннулирован",
+  "actions.einvoice.pdf_retried": "PDF электронного счёта сформирован заново",
+  "actions.einvoice.settings_updated": "Настройки электронных счетов обновлены",
+  "actions.einvoice.xslt_uploaded": "Загружен XSLT-шаблон электронных счетов",
+  "actions.einvoice.xslt_reset": "XSLT-шаблон электронных счетов сброшен на стандартный",
+  "actions.einvoice.buyer_profile_updated": "Профиль счетов покупателя обновлён",
+  "resources.einvoices": "Электронные счета"
 }

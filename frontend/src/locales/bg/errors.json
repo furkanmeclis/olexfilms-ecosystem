@@ -155,5 +155,12 @@
   "codes.PHOTO_STANDARD_INCOMPLETE": "Липсват задължителни снимки при приемане. Първо заснемете всички задължителни ъгли.",
   "codes.PHOTO_FILE_TOO_LARGE": "Снимката може да е най-много 12 MB.",
   "codes.PHOTO_UNSUPPORTED_MEDIA": "Снимката трябва да е JPEG, PNG, WebP или HEIC.",
-  "codes.PHOTO_SERVICE_LOCKED": "Снимките при приемане на тази услуга вече не могат да се променят."
+  "codes.PHOTO_SERVICE_LOCKED": "Снимките при приемане на тази услуга вече не могат да се променят.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Първо запазете настройките на продавача и сериите за е-фактури.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "Този запис не може да бъде фактуриран (поръчката не е получена или периодът не е осчетоводен).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "Този запис вече има активна е-фактура; анулирайте я, за да фактурирате отново.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Профилът за фактуриране на купувача е непълен; попълнете липсващите полета.",
+  "codes.EINVOICE_INVALID_STATUS": "Статусът на е-фактурата не позволява това действие.",
+  "codes.EINVOICE_NOT_ARCHIVED": "Е-фактурата все още не е архивирана.",
+  "codes.EINVOICE_PDF_NOT_READY": "PDF файлът на фактурата още не е готов; опитайте след малко или генерирайте отново."
 }
