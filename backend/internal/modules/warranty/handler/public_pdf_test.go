@@ -173,3 +173,38 @@ func TestPublicPDFNotConfigured(t *testing.T) {
 		t.Fatalf("status %d", rec.Code)
 	}
 }
+
+// TEC-521: the issued-at line is printed in the tz query zone; a missing or
+// invalid tz is Europe/Istanbul, never UTC.
+func TestPublicPDFIssuedAtTimezone(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+	r := &fakeRenderer{}
+	h := NewPublic(&pdfLookup{}, ratelimit.New(rdb, "test"), 100, time.Minute).WithPDF(r, "https://olexfilms.app/", 100)
+	h.now = func() time.Time { return time.Date(2026, 10, 9, 11, 32, 0, 0, time.UTC) }
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/public/warranties/{public_code}/pdf", h.PDF)
+
+	for _, tc := range []struct{ name, query, want string }{
+		{"istanbul tr", "?lang=tr&tz=Europe%2FIstanbul", "Düzenlenme: 2026-10-09 14:32 (Europe/Istanbul)"},
+		{"istanbul ar", "?lang=ar&tz=Europe%2FIstanbul", "2026-10-09 14:32 (Europe/Istanbul)"},
+		{"other zone", "?lang=en&tz=America%2FNew_York", "2026-10-09 07:32 (America/New_York)"},
+		{"missing tz", "?lang=tr", "Düzenlenme: 2026-10-09 14:32 (Europe/Istanbul)"},
+		{"invalid tz", "?lang=tr&tz=Not%2FAZone", "Düzenlenme: 2026-10-09 14:32 (Europe/Istanbul)"},
+		{"local tz", "?lang=tr&tz=Local", "Düzenlenme: 2026-10-09 14:32 (Europe/Istanbul)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := getPDF(mux, goodCode, "10.1.9.1", tc.query)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status %d: %s", rec.Code, rec.Body)
+			}
+			if !strings.Contains(r.html, tc.want) {
+				t.Fatalf("document lacks %q", tc.want)
+			}
+			if strings.Contains(r.html, "11:32") || strings.Contains(r.html, " UTC") {
+				t.Fatal("issued-at is still printed in UTC")
+			}
+		})
+	}
+}

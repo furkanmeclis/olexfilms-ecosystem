@@ -461,6 +461,12 @@ func (a *DataExportAdapter) DocumentHTML(ds ioengine.Dataset, locale string, lh 
 	loc := i18n.Normalize(locale)
 	t := func(key string) string { return i18n.Translate(loc, key) }
 	esc := html.EscapeString
+	// TEC-521: the requester's zone, else the customer's, else Istanbul.
+	customerZone := ""
+	if doc.Profile.Timezone != nil {
+		customerZone = *doc.Profile.Timezone
+	}
+	zone := pdfrender.Zone(ds.Timezone, customerZone)
 	var b strings.Builder
 	color := ""
 	if lh != nil {
@@ -476,7 +482,7 @@ func (a *DataExportAdapter) DocumentHTML(ds ioengine.Dataset, locale string, lh 
 		b.WriteString(`<tr><th>` + esc(t(line.LabelKey)) + `</th><td>` + esc(line.Value) + `</td></tr>`)
 	}
 	b.WriteString(`<tr><th>` + esc(t("export.generated_at")) + `</th><td>` +
-		esc(doc.ExportedAt.UTC().Format("2006-01-02 15:04 UTC")) + `</td></tr></table>`)
+		esc(pdfrender.IssuedAt(doc.ExportedAt, zone)) + `</td></tr></table>`)
 	for _, sec := range dataSections(doc, loc) {
 		b.WriteString(`<h2>` + esc(t(sec.key)) + `</h2>`)
 		if len(sec.records) == 0 {

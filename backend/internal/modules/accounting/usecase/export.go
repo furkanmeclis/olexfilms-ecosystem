@@ -228,7 +228,7 @@ func (a *StatementAdapter) DocumentHTML(ds ioengine.Dataset, locale string, lh *
 		{t("accounting.statement.total_credit"), st.TotalCredit + " " + st.Currency},
 		{t("accounting.statement.closing_balance"), st.ClosingBalance + " " + st.Currency},
 	}
-	return documentHTML(loc, lh, title, ds.Info, pdfrender.Table(cols, rows), totals, st.GeneratedAt), nil
+	return documentHTML(loc, lh, title, ds.Info, pdfrender.Table(cols, rows), totals, st.GeneratedAt, pdfrender.Zone(ds.Timezone, st.Timezone)), nil
 }
 
 // --- Balance report ----------------------------------------------------------
@@ -336,7 +336,7 @@ func (a *BalancesAdapter) DocumentHTML(ds ioengine.Dataset, locale string, lh *i
 		{t("accounting.report.receivable"), rep.Totals.Receivable + " " + rep.Currency},
 		{t("accounting.report.payable"), rep.Totals.Payable + " " + rep.Currency},
 	}
-	return documentHTML(loc, lh, title, ds.Info, pdfrender.Table(cols, rows), totals, rep.GeneratedAt), nil
+	return documentHTML(loc, lh, title, ds.Info, pdfrender.Table(cols, rows), totals, rep.GeneratedAt, pdfrender.Zone(ds.Timezone, rep.Timezone)), nil
 }
 
 // --- HTML document -------------------------------------------------------------
@@ -354,7 +354,7 @@ func cellString(v any) string {
 // documentHTML lays out a report on the letterhead: header (logo, company
 // contact), title, info table, the data table and a totals block. Every
 // value is escaped; the skeleton sets lang/dir (RTL for ar) and fonts.
-func documentHTML(loc i18n.Locale, lh *ioengine.Letterhead, title string, info []ioengine.InfoLine, table string, totals [][2]string, generated time.Time) string {
+func documentHTML(loc i18n.Locale, lh *ioengine.Letterhead, title string, info []ioengine.InfoLine, table string, totals [][2]string, generated time.Time, zone *time.Location) string {
 	esc := html.EscapeString
 	var b strings.Builder
 	color := ""
@@ -385,7 +385,7 @@ func documentHTML(loc i18n.Locale, lh *ioengine.Letterhead, title string, info [
 	b.WriteString(`</table><p class="muted">`)
 	b.WriteString(esc(i18n.Translate(loc, "accounting.statement.generated_at")))
 	b.WriteString(`: `)
-	b.WriteString(esc(generated.UTC().Format("2006-01-02 15:04 UTC")))
+	b.WriteString(esc(pdfrender.IssuedAt(generated, zone)))
 	b.WriteString(`</p>`)
 	b.WriteString(ioengine.LetterheadFooterHTML(lh))
 	return pdfrender.Document{

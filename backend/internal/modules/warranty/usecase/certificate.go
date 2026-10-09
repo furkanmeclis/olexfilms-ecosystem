@@ -69,6 +69,10 @@ type Certificate struct {
 	HolderName  string
 	Items       []CertificateItem
 	GeneratedAt time.Time
+	// Timezone is the zone GeneratedAt is printed in (TEC-521): the
+	// requester's zone from the export job, else the dealer organization's,
+	// else Europe/Istanbul.
+	Timezone string
 	// Letterhead is the letterhead of the organization that performed the
 	// service (the dealer), not of the requester.
 	Letterhead ioengine.Letterhead
@@ -274,6 +278,7 @@ func (s *CertificateService) certificate(ctx context.Context, svc db.Service, ro
 			Email: org.Email},
 		Vehicle:     CertificateVehicle{Brand: refs.CarBrandName, Model: refs.CarModelName},
 		GeneratedAt: s.now(),
+		Timezone:    org.Timezone,
 	}
 	if svc.CompletedAt.Valid {
 		c.ServiceDate = FormatCertificateDate(svc.CompletedAt.Time, zone, loc)
@@ -452,6 +457,9 @@ func (a *CertificateAdapter) DocumentHTML(ds ioengine.Dataset, locale string, _ 
 	if !ok {
 		return "", errors.New("warranty certificate: dataset carries no certificate")
 	}
+	if ds.Timezone != "" {
+		c.Timezone = ds.Timezone
+	}
 	return CertificateHTML(c, i18n.Normalize(locale), title)
 }
 
@@ -512,7 +520,7 @@ func CertificateHTML(c Certificate, loc i18n.Locale, title string) (string, erro
 		}
 	}
 	b.WriteString(`</ol><p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
-		esc(c.GeneratedAt.UTC().Format("2006-01-02 15:04 UTC")) + `</p>`)
+		esc(pdfrender.IssuedAt(c.GeneratedAt, pdfrender.Zone(c.Timezone))) + `</p>`)
 	b.WriteString(ioengine.LetterheadFooterHTML(&lh))
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: lh.PrimaryColor}.HTML(), nil
 }

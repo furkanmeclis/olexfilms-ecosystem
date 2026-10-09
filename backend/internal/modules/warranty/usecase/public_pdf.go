@@ -20,10 +20,11 @@ import (
 
 // PublicCertificateHTML renders the public certificate of one warranty.
 // verifyURL is the public page the QR points to; dates are printed as
-// calendar days in zone.
+// calendar days in zone and generatedAt as wall-clock time in zone (nil =
+// Europe/Istanbul, TEC-521).
 func PublicCertificateHTML(w PublicWarranty, verifyURL string, zone *time.Location, loc i18n.Locale, generatedAt time.Time) (string, error) {
 	if zone == nil {
-		zone = time.UTC
+		zone = pdfrender.Zone()
 	}
 	t := func(key string) string { return i18n.Translate(loc, key) }
 	esc := html.EscapeString
@@ -79,7 +80,7 @@ func PublicCertificateHTML(w PublicWarranty, verifyURL string, zone *time.Locati
 		}
 	}
 	b.WriteString(`</ol><p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
-		esc(generatedAt.UTC().Format("2006-01-02 15:04 UTC")) + `</p>`)
+		esc(pdfrender.IssuedAt(generatedAt, zone)) + `</p>`)
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String()}.HTML(), nil
 }
 

@@ -145,3 +145,27 @@ func BenchmarkPDFHTML(b *testing.B) {
 		}
 	}
 }
+
+// TEC-521: the generated-at line is printed in the requester's zone (export
+// job), else the performing organization's, else Europe/Istanbul; never UTC.
+func TestPDFIssuedAtTimezone(t *testing.T) {
+	for _, tc := range []struct{ name, job, org, want string }{
+		{"default", "", "", "2026-10-09 14:32 (Europe/Istanbul)"},
+		{"organization", "", "Asia/Baku", "2026-10-09 15:32 (Asia/Baku)"},
+		{"requester", "America/New_York", "Asia/Baku", "2026-10-09 07:32 (America/New_York)"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := samplePDF(1, 1)
+			d.GeneratedAt, d.Timezone = time.Date(2026, 10, 9, 11, 32, 0, 0, time.UTC), tc.org
+			ds := PDFDataset(d, i18n.LocaleTR)
+			ds.Timezone = tc.job
+			out, err := NewPDFAdapter(nil).DocumentHTML(ds, "tr", nil, "Hizmet raporu")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(out, tc.want) || strings.Contains(out, " UTC") {
+				t.Fatalf("generated-at is not %q", tc.want)
+			}
+		})
+	}
+}

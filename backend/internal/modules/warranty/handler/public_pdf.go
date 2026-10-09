@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 )
 
@@ -37,7 +37,7 @@ func (h *Public) WithPDF(renderer PDFRenderer, frontendURL string, limit int) *P
 // codes all get the lookup's 404. The document is built from the public
 // projection only (masked plate, last four VIN characters, no holder).
 // Query: lang (else Accept-Language, else tr), tz (IANA zone of the
-// printed dates, else UTC).
+// printed dates and issued-at time, else Europe/Istanbul).
 func (h *Public) PDF(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
@@ -62,12 +62,7 @@ func (h *Public) PDF(w http.ResponseWriter, r *http.Request) {
 			loc = i18n.DefaultLocale
 		}
 	}
-	zone := time.UTC
-	if tz := strings.TrimSpace(r.URL.Query().Get("tz")); tz != "" && i18n.ValidTimezone(tz) {
-		if z, err := time.LoadLocation(tz); err == nil {
-			zone = z
-		}
-	}
+	zone := pdfrender.Zone(strings.TrimSpace(r.URL.Query().Get("tz")))
 	doc, err := usecase.PublicCertificateHTML(out, usecase.PublicVerifyURL(h.frontendURL, out.PublicCode), zone, loc, h.now())
 	if err != nil {
 		response.InternalErr(w, r, err, "warranty pdf failed")

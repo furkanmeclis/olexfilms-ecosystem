@@ -61,6 +61,9 @@ type Statement struct {
 	ClosingBalance string          `json:"closing_balance"`
 	Lines          []StatementLine `json:"lines"`
 	GeneratedAt    time.Time       `json:"generated_at"`
+	// Timezone is the book organization's zone, the fallback zone of the
+	// PDF's generated-at line (TEC-521); not part of the API.
+	Timezone string `json:"-"`
 }
 
 // StatementPeriod is the requested period (calendar days, both optional).
@@ -151,6 +154,7 @@ func (s *Service) statement(ctx context.Context, book db.Organization, id uuid.U
 		From:         dayString(p.From),
 		To:           dayString(p.To),
 		GeneratedAt:  time.Now().UTC(),
+		Timezone:     book.Timezone,
 	}
 	inputs := make([]lineInput, 0, len(rows))
 	for _, r := range rows {
@@ -307,6 +311,9 @@ type BalanceReport struct {
 	Accounts     []AccountBalance `json:"accounts"`
 	Totals       BalanceTotals    `json:"totals"`
 	GeneratedAt  time.Time        `json:"generated_at"`
+	// Timezone is the book organization's zone, the fallback zone of the
+	// PDF's generated-at line (TEC-521); not part of the API.
+	Timezone string `json:"-"`
 }
 
 // GetBalanceReport returns the balance report of the book.
@@ -338,7 +345,7 @@ func (s *Service) balanceReport(ctx context.Context, book db.Organization, asOf 
 	}
 	rep := BalanceReport{
 		Organization: Ref{UUID: book.Uuid, Name: book.Name}, Currency: book.Currency,
-		AsOf: dayString(asOf), GeneratedAt: time.Now().UTC(),
+		AsOf: dayString(asOf), GeneratedAt: time.Now().UTC(), Timezone: book.Timezone,
 		Cari: make([]CariBalance, 0, len(cariRows)), Accounts: make([]AccountBalance, 0, len(accRows)),
 	}
 	recv, pay, cash, bank := new(big.Rat), new(big.Rat), new(big.Rat), new(big.Rat)
