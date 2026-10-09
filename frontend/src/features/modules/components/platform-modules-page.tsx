@@ -13,7 +13,12 @@ import {
 import { createColumn } from "@/components/tables";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { permissions } from "@/config/permissions";
+import {
+  ModuleRequestsTable,
+  usePendingModuleRequests,
+} from "@/features/modules/components/module-requests";
 import { modulesKeys } from "@/features/modules/hooks/use-features";
 import { moduleLevelLabel, moduleName } from "@/features/modules/lib/labels";
 import { modulesService } from "@/features/modules/services/modules.service";
@@ -33,7 +38,11 @@ export const MODULE_LEVELS: ModuleLevel[] = ["core", "standard", "addon"];
 
 type SwitchField = keyof PlatformModulePatch;
 
-/** Platform admin: system switches and defaults of every module. */
+/**
+ * Platform admin: system switches and defaults of every module, and
+ * (TEC-509) the module requests the center decides: distributors' and those
+ * of dealers without a distributor.
+ */
 export function PlatformModulesPage() {
   const { t } = useLocale();
   const { can } = usePermission();
@@ -56,6 +65,12 @@ export function PlatformModulesPage() {
       ),
   });
   const { mutate, isPending } = patch;
+  const pending = usePendingModuleRequests("platform");
+  const requestableKeys = useMemo(
+    () =>
+      (data?.items ?? []).filter((m) => m.level !== "core").map((m) => m.key),
+    [data?.items],
+  );
 
   const columns = useMemo<ColumnDef<PlatformModule, unknown>[]>(() => {
     // Inline edit: each switch PATCHes /v1/platform/modules/{key}.
@@ -129,29 +144,56 @@ export function PlatformModulesPage() {
         title={t("modules.platform.title")}
         description={t("modules.platform.description")}
       />
-      <EntityTable
-        columns={columns}
-        data={data?.items ?? []}
-        getRowId={(row) => row.key}
-        manual={CLIENT_SIDE_MANUAL}
-        isLoading={isLoading}
-        isError={isError}
-        errorTitle={t("modules.error.title")}
-        errorDescription={t("modules.error.description")}
-        onRetry={() => void refetch()}
-        initialState={{ pagination: { pageIndex: 0, pageSize: 50 } }}
-        pageSizeOptions={[20, 50, 100]}
-        features={{
-          persistKey: PLATFORM_MODULES_PERSIST_KEY,
-          rowSelection: false,
-        }}
-        toolbarExtra={
-          <EntityToolbar
-            onRefresh={() => void refetch()}
-            refreshDisabled={isFetching}
+      <Tabs defaultValue="modules">
+        <TabsList>
+          <TabsTrigger value="modules">
+            {t("modules.platform.tab_modules")}
+          </TabsTrigger>
+          <TabsTrigger value="requests" data-testid="modules-requests-tab">
+            {t("modules.tabs.requests")}
+            {pending.data ? (
+              <Badge variant="warning" className="ms-1 tabular-nums">
+                {pending.data}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="modules">
+          <EntityTable
+            columns={columns}
+            data={data?.items ?? []}
+            getRowId={(row) => row.key}
+            manual={CLIENT_SIDE_MANUAL}
+            isLoading={isLoading}
+            isError={isError}
+            errorTitle={t("modules.error.title")}
+            errorDescription={t("modules.error.description")}
+            onRetry={() => void refetch()}
+            initialState={{ pagination: { pageIndex: 0, pageSize: 50 } }}
+            pageSizeOptions={[20, 50, 100]}
+            features={{
+              persistKey: PLATFORM_MODULES_PERSIST_KEY,
+              rowSelection: false,
+            }}
+            toolbarExtra={
+              <EntityToolbar
+                onRefresh={() => void refetch()}
+                refreshDisabled={isFetching}
+              />
+            }
           />
-        }
-      />
+        </TabsContent>
+        <TabsContent value="requests" className="space-y-3">
+          <p className="text-muted-foreground text-sm">
+            {t("modules.requests.platform_hint")}
+          </p>
+          <ModuleRequestsTable
+            scope="platform"
+            canDecide={canWrite}
+            moduleKeys={requestableKeys}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
+import { BookOpen } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Loading } from "@/components/common/loading";
@@ -25,6 +27,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { permissions } from "@/config/permissions";
+import { routes } from "@/config/routes";
+import {
+  ModuleNoteDialog,
+  ModuleRequestsTable,
+  usePendingModuleRequests,
+} from "@/features/modules/components/module-requests";
 import {
   modulesKeys,
   useFeatures,
@@ -35,11 +43,18 @@ import {
   moduleSourceLabel,
 } from "@/features/modules/lib/labels";
 import {
+  modulePriceKind,
+  modulePriceText,
+  moduleRequestAction,
+  type ModulePriceKind,
+} from "@/features/modules/lib/module-meta";
+import {
   modulesService,
   type ListDealerModulesParams,
 } from "@/features/modules/services/modules.service";
 import type {
   DealerModuleRow,
+  FeatureListItem,
   ModuleLevel,
   ModuleState,
 } from "@/features/modules/types";
@@ -76,7 +91,11 @@ function errorMessage(error: unknown, fallback: string) {
   return isApiError(error) ? error.message : fallback;
 }
 
-/** "Özellikler" page of the active organization (TEC-86). */
+/**
+ * "Özellikler" page of the active organization (TEC-86, TEC-509). A
+ * distributor manager also gets its dealers' matrix, the dealer standard and
+ * the dealers' module request queue.
+ */
 export function FeaturesPage({ slug }: { slug: string }) {
   const { t } = useLocale();
   const { can } = usePermission();
@@ -93,32 +112,83 @@ export function FeaturesPage({ slug }: { slug: string }) {
       <div className="text-muted-foreground space-y-1 text-sm">
         <p>{t("modules.free_note")}</p>
         <p>{t("modules.upstream_note")}</p>
+        <UserGuideLink slug={slug} />
       </div>
       {canManage && org ? (
-        <Tabs defaultValue="mine">
-          <TabsList>
-            <TabsTrigger value="mine">{t("modules.tabs.mine")}</TabsTrigger>
-            <TabsTrigger value="dealers">
-              {t("modules.tabs.dealers")}
-            </TabsTrigger>
-            <TabsTrigger value="standard">
-              {t("modules.tabs.standard")}
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="mine">
-            <OwnModules slug={slug} />
-          </TabsContent>
-          <TabsContent value="dealers">
-            <DealerModules slug={slug} orgUuid={org.uuid} />
-          </TabsContent>
-          <TabsContent value="standard">
-            <DealerStandard orgUuid={org.uuid} />
-          </TabsContent>
-        </Tabs>
+        <DistributorTabs slug={slug} orgUuid={org.uuid} />
       ) : (
         <OwnModules slug={slug} />
       )}
     </div>
+  );
+}
+
+/**
+ * TEC-509: the add-ons user guide is published to the document library
+ * (F5-10c), so the link opens the library while it is reachable.
+ */
+function UserGuideLink({ slug }: { slug: string }) {
+  const { t } = useLocale();
+  const { can } = usePermission();
+  const { data } = useFeatures(slug);
+  if (!can(permissions.library.read)) return null;
+  if (!data?.enabled.includes("announcements")) return null;
+  return (
+    <p>
+      <Link
+        href={routes.tenant.library.list(slug)}
+        className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
+        data-testid="modules-user-guide"
+      >
+        <BookOpen className="size-4" aria-hidden />
+        {t("modules.user_guide")}
+      </Link>
+    </p>
+  );
+}
+
+function DistributorTabs({ slug, orgUuid }: { slug: string; orgUuid: string }) {
+  const { t } = useLocale();
+  const own = useFeatures(slug);
+  const pending = usePendingModuleRequests("tenant");
+  const moduleKeys = useMemo(
+    () =>
+      (own.data?.items ?? [])
+        .filter((m) => m.level !== "core")
+        .map((m) => m.key),
+    [own.data],
+  );
+  return (
+    <Tabs defaultValue="mine">
+      <TabsList>
+        <TabsTrigger value="mine">{t("modules.tabs.mine")}</TabsTrigger>
+        <TabsTrigger value="dealers">{t("modules.tabs.dealers")}</TabsTrigger>
+        <TabsTrigger value="standard">{t("modules.tabs.standard")}</TabsTrigger>
+        <TabsTrigger value="requests" data-testid="modules-requests-tab">
+          {t("modules.tabs.requests")}
+          {pending.data ? (
+            <Badge variant="warning" className="ms-1 tabular-nums">
+              {pending.data}
+            </Badge>
+          ) : null}
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="mine">
+        <OwnModules slug={slug} />
+      </TabsContent>
+      <TabsContent value="dealers">
+        <DealerModules slug={slug} orgUuid={orgUuid} />
+      </TabsContent>
+      <TabsContent value="standard">
+        <DealerStandard orgUuid={orgUuid} />
+      </TabsContent>
+      <TabsContent value="requests" className="space-y-3">
+        <p className="text-muted-foreground text-sm">
+          {t("modules.requests.tenant_hint")}
+        </p>
+        <ModuleRequestsTable scope="tenant" canDecide moduleKeys={moduleKeys} />
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -153,145 +223,312 @@ export function SubscriptionModuleBadge({ source }: { source?: string }) {
   );
 }
 
-function OwnModules({ slug }: { slug: string }) {
+/**
+ * TEC-509 source badge: default / dealer standard / admin / distributor /
+ * subscription (service) and who set it.
+ */
+export function ModuleSourceBadge({ item }: { item: ModuleState }) {
   const { t } = useLocale();
+  if (item.source === "service") {
+    return <SubscriptionModuleBadge source={item.source} />;
+  }
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      <Badge variant="outline" data-testid="module-source">
+        {moduleSourceLabel(t, item.source)}
+      </Badge>
+      {item.set_by ? (
+        <span className="text-muted-foreground text-xs">
+          {item.set_by.name}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+const PRICE_KINDS: ModulePriceKind[] = [
+  "free_default",
+  "paid",
+  "contact",
+  "free",
+];
+
+export function ownModulesPersistKey(level: ModuleLevel) {
+  return `${OWN_MODULES_PERSIST_KEY}-${level}`;
+}
+
+/**
+ * Own modules grouped by level (TEC-509): core / standard / add-on headings
+ * with counts; each module with its description, price line, status and
+ * source, and the request flow (dialog with a note, pending badge,
+ * withdraw). A module off at the level above has no request button.
+ */
+export function OwnModules({ slug }: { slug: string }) {
+  const { t, format } = useLocale();
   const { can } = usePermission();
+  const queryClient = useQueryClient();
+  const org = useActiveOrganization(slug);
   const canRequest = can(permissions.modules.read);
   const { data, isLoading, isError, isFetching, refetch } = useFeatures(slug);
-  const request = useMutation({
-    mutationFn: (key: string) => modulesService.request(key),
-    onSuccess: () => appToast.success(t("modules.requested")),
-    onError: (error) =>
-      appToast.error(errorMessage(error, t("modules.request_failed"))),
-  });
-  const requestPending = request.isPending;
-  const requestModule = request.mutate;
-
-  const sources = useMemo(
-    () => [...new Set((data?.items ?? []).map((item) => item.source))],
+  const [requesting, setRequesting] = useState<string | null>(null);
+  const items = useMemo<FeatureListItem[]>(
+    () => data?.items ?? [],
     [data?.items],
   );
 
-  const columns = useMemo<ColumnDef<ModuleState, unknown>[]>(
+  const refresh = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: modulesKeys.features(org?.uuid ?? ""),
+    });
+  };
+  const request = useMutation({
+    mutationFn: ({ key, note }: { key: string; note: string }) =>
+      modulesService.request(key, note),
+    onSuccess: async () => {
+      setRequesting(null);
+      appToast.success(t("modules.requested"));
+      await refresh();
+    },
+    onError: (error) =>
+      appToast.error(errorMessage(error, t("modules.request_failed"))),
+  });
+  const cancel = useMutation({
+    mutationFn: (key: string) => modulesService.cancelRequest(key),
+    onSuccess: async () => {
+      appToast.success(t("modules.requests.cancelled"));
+      await refresh();
+    },
+    onError: (error) =>
+      appToast.error(errorMessage(error, t("modules.toast.failed"))),
+  });
+  const cancelPending = cancel.isPending;
+  const cancelRequest = cancel.mutate;
+
+  const sources = useMemo(
+    () => [...new Set(items.map((item) => item.source))],
+    [items],
+  );
+
+  const columns = useMemo<ColumnDef<FeatureListItem, unknown>[]>(
     () => [
-      createColumn<ModuleState>({
+      createColumn<FeatureListItem>({
         id: "module",
-        accessorFn: (row) => moduleName(t, row.key),
+        accessorFn: (row) => `${moduleName(t, row.key)} ${row.description}`,
         labelKey: "modules.columns.module",
         enableSorting: true,
+        sortingFn: (a, b) =>
+          moduleName(t, a.original.key).localeCompare(
+            moduleName(t, b.original.key),
+          ),
         gridPrimary: true,
         cell: ({ row }) => (
-          <span className="inline-flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <span
               className="font-medium"
               data-testid={`module-${row.original.key}`}
             >
               {moduleName(t, row.original.key)}
             </span>
-            <SubscriptionModuleBadge source={row.original.source} />
-          </span>
+            {row.original.description ? (
+              <span className="text-muted-foreground text-xs whitespace-normal">
+                {row.original.description}
+              </span>
+            ) : null}
+          </div>
         ),
       }),
-      createColumn<ModuleState>({
-        accessorKey: "level",
-        labelKey: "modules.columns.level",
-        enableSorting: true,
-        filterVariant: "faceted",
-        filterOptions: MODULE_LEVELS.map((value) => ({
-          value,
-          labelKey: `modules.level.${value}`,
-          label: value,
-        })),
-        cell: ({ row }) => <LevelBadge level={row.original.level} />,
-      }),
-      createColumn<ModuleState>({
+      createColumn<FeatureListItem>({
         accessorKey: "enabled",
         labelKey: "modules.columns.status",
         enableSorting: true,
         filterVariant: "boolean",
         gridSecondary: true,
-        cell: ({ row }) => <StateBadge on={row.original.enabled} />,
+        cell: ({ row }) => <ModuleStatusCell item={row.original} />,
       }),
-      createColumn<ModuleState>({
+      createColumn<FeatureListItem>({
         id: "price",
-        accessorFn: (row) =>
-          row.paid && !row.default_enabled ? "paid" : "free",
+        accessorFn: (row) => modulePriceKind(row),
         labelKey: "modules.columns.price",
         enableSorting: true,
         filterVariant: "faceted",
-        filterOptions: ["paid", "free"].map((value) => ({
+        filterOptions: PRICE_KINDS.map((value) => ({
           value,
-          labelKey: `modules.price.${value}`,
+          labelKey: `modules.price.filter.${value}`,
           label: value,
         })),
-        cell: ({ getValue }) => t(`modules.price.${String(getValue())}`),
+        cell: ({ row }) => (
+          <span
+            className="text-sm whitespace-normal"
+            data-testid={`module-price-${row.original.key}`}
+          >
+            {modulePriceText(
+              t,
+              (amount, code) => format.currency(amount, code),
+              row.original,
+            )}
+          </span>
+        ),
       }),
-      createColumn<ModuleState>({
+      createColumn<FeatureListItem>({
         accessorKey: "source",
         labelKey: "modules.columns.source",
         enableSorting: true,
         filterVariant: "faceted",
         filterOptions: sources.map((value) => ({
           value,
-          label: moduleSourceLabel(t, value),
+          label:
+            value === "service"
+              ? t("modules.via_subscription")
+              : moduleSourceLabel(t, value),
         })),
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">
-            {moduleSourceLabel(t, row.original.source)}
-            {row.original.set_by ? ` · ${row.original.set_by.name}` : null}
-          </span>
-        ),
+        cell: ({ row }) => <ModuleSourceBadge item={row.original} />,
       }),
-      createColumn<ModuleState>({
+      createColumn<FeatureListItem>({
         id: "actions",
         labelKey: "common.actions",
         enableSorting: false,
         enableHiding: false,
         enableResizing: false,
-        cell: ({ row }) =>
-          !row.original.enabled && canRequest ? (
-            <div className="text-end">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={requestPending}
-                onClick={() => requestModule(row.original.key)}
-              >
-                {t("modules.request")}
-              </Button>
-            </div>
-          ) : null,
+        cell: ({ row }) => {
+          if (!canRequest) return null;
+          const action = moduleRequestAction(row.original);
+          if (action === "request") {
+            return (
+              <div className="text-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  data-testid={`module-request-${row.original.key}`}
+                  onClick={() => setRequesting(row.original.key)}
+                >
+                  {t("modules.request")}
+                </Button>
+              </div>
+            );
+          }
+          if (action === "pending") {
+            return (
+              <div className="text-end">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={cancelPending}
+                  data-testid={`module-request-cancel-${row.original.key}`}
+                  onClick={() => cancelRequest(row.original.key)}
+                >
+                  {t("modules.requests.withdraw")}
+                </Button>
+              </div>
+            );
+          }
+          return null;
+        },
       }),
     ],
-    [canRequest, requestModule, requestPending, sources, t],
+    [canRequest, cancelPending, cancelRequest, format, sources, t],
   );
 
+  if (isLoading) return <Loading label={t("common.loading")} />;
+
+  if (isError) {
+    return (
+      <EntityTable
+        columns={columns}
+        data={[]}
+        manual={CLIENT_SIDE_MANUAL}
+        isError
+        errorTitle={t("modules.error.title")}
+        errorDescription={t("modules.error.description")}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
   return (
-    <EntityTable
-      columns={columns}
-      data={data?.items ?? []}
-      getRowId={(row) => row.key}
-      manual={CLIENT_SIDE_MANUAL}
-      isLoading={isLoading}
-      isError={isError}
-      errorTitle={t("modules.error.title")}
-      errorDescription={t("modules.error.description")}
-      onRetry={() => void refetch()}
-      emptyTitle={t("modules.empty")}
-      emptyDescription=""
-      initialState={{ pagination: { pageIndex: 0, pageSize: 50 } }}
-      pageSizeOptions={[20, 50, 100]}
-      features={{
-        persistKey: OWN_MODULES_PERSIST_KEY,
-        rowSelection: false,
-      }}
-      toolbarExtra={
-        <EntityToolbar
-          onRefresh={() => void refetch()}
-          refreshDisabled={isFetching}
-        />
-      }
-    />
+    <div className="space-y-8">
+      {MODULE_LEVELS.map((level) => {
+        const rows = items.filter((item) => item.level === level);
+        if (!rows.length) return null;
+        return (
+          <section
+            key={level}
+            className="space-y-3"
+            data-testid={`module-level-${level}`}
+          >
+            <h2 className="flex items-center gap-2 text-base font-semibold">
+              {moduleLevelLabel(t, level)}
+              <Badge variant="secondary" className="tabular-nums">
+                {rows.length}
+              </Badge>
+            </h2>
+            <EntityTable
+              columns={columns}
+              data={rows}
+              getRowId={(row) => row.key}
+              manual={CLIENT_SIDE_MANUAL}
+              emptyTitle={t("modules.empty")}
+              emptyDescription=""
+              initialState={{ pagination: { pageIndex: 0, pageSize: 50 } }}
+              pageSizeOptions={[20, 50, 100]}
+              features={{
+                persistKey: ownModulesPersistKey(level),
+                rowSelection: false,
+              }}
+              toolbarExtra={
+                <EntityToolbar
+                  onRefresh={() => void refetch()}
+                  refreshDisabled={isFetching}
+                />
+              }
+            />
+          </section>
+        );
+      })}
+      <ModuleNoteDialog
+        open={Boolean(requesting)}
+        title={t("modules.requests.dialog_title", {
+          module: requesting ? moduleName(t, requesting) : "",
+        })}
+        description={t("modules.requests.dialog_description")}
+        submitLabel={t("modules.request")}
+        pending={request.isPending}
+        onOpenChange={(open) => !open && setRequesting(null)}
+        onSubmit={(note) =>
+          requesting && request.mutate({ key: requesting, note })
+        }
+      />
+    </div>
+  );
+}
+
+/** On / off, "off at the level above", and the last request's state. */
+function ModuleStatusCell({ item }: { item: FeatureListItem }) {
+  const { t } = useLocale();
+  const action = moduleRequestAction(item);
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      {action === "upstream_closed" ? (
+        <Badge variant="outline" data-testid="module-upstream-closed">
+          {t("modules.upstream_closed")}
+        </Badge>
+      ) : (
+        <StateBadge on={item.enabled} />
+      )}
+      {action === "pending" ? (
+        <Badge variant="warning" data-testid="module-request-pending">
+          {t("modules.requests.pending_badge")}
+        </Badge>
+      ) : null}
+      {action === "request" && item.request?.status === "rejected" ? (
+        <Badge
+          variant="danger"
+          title={item.request.decision_note || undefined}
+          data-testid="module-request-rejected"
+        >
+          {t("modules.requests.rejected_badge")}
+        </Badge>
+      ) : null}
+    </span>
   );
 }
 

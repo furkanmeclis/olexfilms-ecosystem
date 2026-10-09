@@ -178,6 +178,8 @@ export class MockApi {
   items: Item[] = [];
   logs: Log[] = [];
   warranties: Json[] = [];
+  /** GET /v1/features items (TEC-509: the Özellikler page). */
+  featureItems: Json[] = [];
   /** Panel memberships of the caller (org switcher, by-slug lookup). */
   memberships: Json[] = [membership];
   activeOrg = ORG;
@@ -311,7 +313,7 @@ export class MockApi {
     if (method === "GET" && path === "/v1/features") {
       return ok({
         organization_type: "dealer",
-        items: [],
+        items: this.featureItems,
         enabled: this.features,
       });
     }
