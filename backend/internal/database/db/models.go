@@ -3000,6 +3000,15 @@ type ServiceSubscriptionPeriod struct {
 	Uuid           uuid.UUID          `json:"uuid"`
 }
 
+type ServiceSubscriptionReminder struct {
+	ID             int64              `json:"id"`
+	SubscriptionID int64              `json:"subscription_id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	DaysBefore     int16              `json:"days_before"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type ShortUrl struct {
 	ID              int64              `json:"id"`
 	Uuid            uuid.UUID          `json:"uuid"`

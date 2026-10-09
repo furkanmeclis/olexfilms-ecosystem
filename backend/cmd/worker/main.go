@@ -164,6 +164,10 @@ func main() {
 	warrantyclaimsusecase.RegisterAccountingHandlers(eventBus, pool,
 		accountingposting.New(queries, outboxStore, fxrates.New(queries, nil, log)),
 		sysconfig.New(queries, sysconfig.NoCache{}), log)
+	// TEC-308: an approved early cancellation books its fee on both ledgers.
+	servicecatalogusecase.RegisterAccountingHandlers(eventBus, servicecatalogusecase.New(queries).
+		WithLifecycle(pool, nil, nil, nil).
+		WithAccounting(accountingposting.New(queries, outboxStore, fxrates.New(queries, nil, log))), log)
 	// TEC-192: service.completed schedules the delayed review request.
 	servicereview.RegisterEventHandlers(eventBus, reviewQueue, cfg.Services.ReviewRequestDelay, log)
 	// TEC-352: service.reviewed opens low-score tasks and dealer notifications.
@@ -368,7 +372,11 @@ func main() {
 	// TEC-508: decided module requests (auto-approved after a bundle opens a
 	// module) notify the requester; expired bundles close their modules.
 	featureSvc.WithDecisionNotifier(featurehandler.NewDecisionNotifier(queries, notifSvc, log))
-	subscriptionExpiry := servicecatalogusecase.New(queries).WithLifecycle(pool, nil, nil, featureSvc)
+	// TEC-308: the daily job books periods, activates scheduled
+	// subscriptions and notifies expiry (outbox), so it gets the full wiring.
+	subscriptionExpiry := servicecatalogusecase.New(queries).
+		WithLifecycle(pool, outboxStore, fxrates.New(queries, nil, log), featureSvc).
+		WithAccounting(accountingposting.New(queries, outboxStore, fxrates.New(queries, nil, log)))
 	certificatesCron := certificatesusecase.NewCron(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	stockForecastSvc := stockforecastusecase.New(pool, queries, outboxStore, featureSvc, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	performanceSvc := performanceusecase.New(pool, queries, outboxStore, featureSvc, log)
@@ -464,6 +472,14 @@ func main() {
 			n, err := subscriptionExpiry.ExpireDue(ctx, time.Now().In(loc))
 			if n > 0 {
 				log.Info("service_subscriptions_expired", "count", n)
+			}
+			return err
+		}).
+		WithServiceSubscriptionsPostPeriods(func(ctx context.Context) error {
+			res, err := subscriptionExpiry.RunDaily(ctx)
+			if res != (servicecatalogusecase.DailyResult{}) {
+				log.Info("service_subscriptions_daily", "activated", res.Activated, "posted", res.Posted,
+					"expired", res.Expired, "reminded", res.Reminded)
 			}
 			return err
 		}).

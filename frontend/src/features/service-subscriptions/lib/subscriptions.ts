@@ -13,6 +13,8 @@ export function subscriptionStatusTone(
   switch (status) {
     case "active":
       return "success";
+    case "scheduled":
+      return "default";
     case "cancel_requested":
       return "warning";
     case "cancelled":

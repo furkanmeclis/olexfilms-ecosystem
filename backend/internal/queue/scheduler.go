@@ -96,6 +96,8 @@ func Schedules() []Periodic {
 		{Cron: pricingDailyCron, Type: TaskPricingDaily, Queue: QueueMaintenance, Opts: pricingDailyOpts(), New: NewPricingDailyTask},
 		// TEC-508: hourly expiry of service subscriptions (module bundles close).
 		{Cron: serviceSubscriptionsExpireCron, Type: TaskServiceSubscriptionsExpire, Queue: QueueMaintenance, Opts: serviceSubscriptionsExpireOpts(), New: NewServiceSubscriptionsExpireTask},
+		// TEC-308: subscription periods on both ledgers, activation, reminders.
+		{Cron: serviceSubscriptionsPostPeriodsCron, Type: TaskServiceSubscriptionsPostPeriods, Queue: QueueMaintenance, Opts: serviceSubscriptionsPostPeriodsOpts(), New: NewServiceSubscriptionsPostPeriodsTask},
 	}
 }
 

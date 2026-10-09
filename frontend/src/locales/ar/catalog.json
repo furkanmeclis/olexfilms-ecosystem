@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "التكرار",
   "subscriptions.fields.contract": "العقد",
   "subscriptions.fields.cancellation_fee": "رسوم الإلغاء",
+  "subscriptions.status.scheduled": "مجدول",
   "subscriptions.status.active": "نشط",
   "subscriptions.status.cancel_requested": "طُلب الإلغاء",
   "subscriptions.status.cancelled": "ملغى",

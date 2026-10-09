@@ -27,13 +27,15 @@ FROM (
                 WHEN sys.enabled = FALSE THEN FALSE
                 WHEN o.type = 'dealer' AND parent.type = 'distributor' THEN
                     CASE
-                        WHEN own.source = 'admin' THEN own.enabled
-                        WHEN COALESCE(parent_own.enabled, m.default_enabled) = FALSE THEN FALSE
+                        WHEN own.source = 'admin' THEN own.enabled OR (own_grant.id IS NOT NULL
+                            AND (COALESCE(parent_own.enabled, m.default_enabled) OR parent_grant.id IS NOT NULL))
+                        WHEN NOT (COALESCE(parent_own.enabled, m.default_enabled) OR parent_grant.id IS NOT NULL) THEN FALSE
+                        WHEN own_grant.id IS NOT NULL THEN TRUE
                         WHEN own.id IS NOT NULL THEN own.enabled
                         WHEN dealer_std.id IS NOT NULL THEN dealer_std.enabled
                         ELSE m.default_enabled
                     END
-                ELSE COALESCE(own.enabled, m.default_enabled)
+                ELSE COALESCE(own.enabled, m.default_enabled) OR own_grant.id IS NOT NULL
             END)::boolean AS accepts_appointments,
            (6371.0088 * 2 * asin(sqrt(LEAST(1.0,
                power(sin(radians(o.latitude::float8 - sqlc.arg(lat)::float8) / 2), 2)
@@ -45,8 +47,11 @@ FROM (
     JOIN modules m ON m.key = 'appointments'
     LEFT JOIN organizations parent ON parent.id = o.parent_id
     LEFT JOIN module_flags sys ON sys.scope = 'system' AND sys.module_key = m.key
-    LEFT JOIN module_flags own ON own.scope = 'org' AND own.organization_id = o.id AND own.module_key = m.key
-    LEFT JOIN module_flags parent_own ON parent_own.scope = 'org' AND parent_own.organization_id = parent.id AND parent_own.module_key = m.key
+    LEFT JOIN module_flags own ON own.scope = 'org' AND own.organization_id = o.id AND own.module_key = m.key AND own.source <> 'service'
+    LEFT JOIN module_flags parent_own ON parent_own.scope = 'org' AND parent_own.organization_id = parent.id AND parent_own.module_key = m.key AND parent_own.source <> 'service'
+    -- TEC-308: module bundle subscription grants beside the manual value.
+    LEFT JOIN module_flags own_grant ON own_grant.source = 'service' AND own_grant.organization_id = o.id AND own_grant.module_key = m.key
+    LEFT JOIN module_flags parent_grant ON parent_grant.source = 'service' AND parent_grant.organization_id = parent.id AND parent_grant.module_key = m.key
     LEFT JOIN module_flags dealer_std ON dealer_std.scope = 'dealer_standard' AND dealer_std.organization_id = parent.id AND dealer_std.module_key = m.key
     LEFT JOIN provinces p ON p.id = o.province_id
     LEFT JOIN districts d ON d.id = o.district_id
@@ -83,21 +88,26 @@ FROM (
                 WHEN sys.enabled = FALSE THEN FALSE
                 WHEN o.type = 'dealer' AND parent.type = 'distributor' THEN
                     CASE
-                        WHEN own.source = 'admin' THEN own.enabled
-                        WHEN COALESCE(parent_own.enabled, m.default_enabled) = FALSE THEN FALSE
+                        WHEN own.source = 'admin' THEN own.enabled OR (own_grant.id IS NOT NULL
+                            AND (COALESCE(parent_own.enabled, m.default_enabled) OR parent_grant.id IS NOT NULL))
+                        WHEN NOT (COALESCE(parent_own.enabled, m.default_enabled) OR parent_grant.id IS NOT NULL) THEN FALSE
+                        WHEN own_grant.id IS NOT NULL THEN TRUE
                         WHEN own.id IS NOT NULL THEN own.enabled
                         WHEN dealer_std.id IS NOT NULL THEN dealer_std.enabled
                         ELSE m.default_enabled
                     END
-                ELSE COALESCE(own.enabled, m.default_enabled)
+                ELSE COALESCE(own.enabled, m.default_enabled) OR own_grant.id IS NOT NULL
             END)::boolean AS accepts_appointments
     FROM organizations o
     LEFT JOIN appointment_settings s ON s.organization_id = o.id
     JOIN modules m ON m.key = 'appointments'
     LEFT JOIN organizations parent ON parent.id = o.parent_id
     LEFT JOIN module_flags sys ON sys.scope = 'system' AND sys.module_key = m.key
-    LEFT JOIN module_flags own ON own.scope = 'org' AND own.organization_id = o.id AND own.module_key = m.key
-    LEFT JOIN module_flags parent_own ON parent_own.scope = 'org' AND parent_own.organization_id = parent.id AND parent_own.module_key = m.key
+    LEFT JOIN module_flags own ON own.scope = 'org' AND own.organization_id = o.id AND own.module_key = m.key AND own.source <> 'service'
+    LEFT JOIN module_flags parent_own ON parent_own.scope = 'org' AND parent_own.organization_id = parent.id AND parent_own.module_key = m.key AND parent_own.source <> 'service'
+    -- TEC-308: module bundle subscription grants beside the manual value.
+    LEFT JOIN module_flags own_grant ON own_grant.source = 'service' AND own_grant.organization_id = o.id AND own_grant.module_key = m.key
+    LEFT JOIN module_flags parent_grant ON parent_grant.source = 'service' AND parent_grant.organization_id = parent.id AND parent_grant.module_key = m.key
     LEFT JOIN module_flags dealer_std ON dealer_std.scope = 'dealer_standard' AND dealer_std.organization_id = parent.id AND dealer_std.module_key = m.key
     LEFT JOIN provinces p ON p.id = o.province_id
     LEFT JOIN districts d ON d.id = o.district_id

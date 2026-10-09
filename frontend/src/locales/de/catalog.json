@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Wiederholung",
   "subscriptions.fields.contract": "Vertrag",
   "subscriptions.fields.cancellation_fee": "Stornogebühr",
+  "subscriptions.status.scheduled": "Geplant",
   "subscriptions.status.active": "Aktiv",
   "subscriptions.status.cancel_requested": "Kündigung beantragt",
   "subscriptions.status.cancelled": "Gekündigt",

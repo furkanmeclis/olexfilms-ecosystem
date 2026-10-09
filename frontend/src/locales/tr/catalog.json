@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Tekrar",
   "subscriptions.fields.contract": "Sözleşme",
   "subscriptions.fields.cancellation_fee": "Cayma bedeli",
+  "subscriptions.status.scheduled": "Planlandı",
   "subscriptions.status.active": "Aktif",
   "subscriptions.status.cancel_requested": "İptal talep edildi",
   "subscriptions.status.cancelled": "İptal edildi",

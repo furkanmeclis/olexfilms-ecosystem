@@ -311,6 +311,11 @@ var zhCNCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "保修人工",
 	"accounting.category.warranty_labor_income": "保修人工收入",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "服务销售",
+	"accounting.category.service_purchase":         "服务采购",
+	"accounting.category.service_cancellation_fee": "解约费",
+
 	"accounting.category.utilities":       "水电费",
 	"accounting.category.tax":             "税费",
 	"accounting.category.shipping":        "运费",

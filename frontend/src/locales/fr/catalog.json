@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Récurrence",
   "subscriptions.fields.contract": "Contrat",
   "subscriptions.fields.cancellation_fee": "Frais de résiliation",
+  "subscriptions.status.scheduled": "Planifié",
   "subscriptions.status.active": "Actif",
   "subscriptions.status.cancel_requested": "Résiliation demandée",
   "subscriptions.status.cancelled": "Résilié",

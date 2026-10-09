@@ -50,6 +50,15 @@ const (
 	CategoryWarrantyCost        = "warranty_cost"
 	CategoryWarrantyLabor       = "warranty_labor"
 	CategoryWarrantyLaborIncome = "warranty_labor_income"
+	// Service subscription accounting (TEC-308): a posted period is the
+	// center's service_sale income and the receiver's service_purchase
+	// expense (source_type service_subscription_period); an approved early
+	// cancellation books service_cancellation_fee on both sides (seller
+	// income, receiver expense; source_type service_subscription_cancel).
+	// System only.
+	CategoryServiceSale            = "service_sale"
+	CategoryServicePurchase        = "service_purchase"
+	CategoryServiceCancellationFee = "service_cancellation_fee"
 )
 
 func cat(key, direction string, manual bool) Category {
@@ -64,6 +73,8 @@ var categories = []Category{
 	cat("interest_income", DirectionIncome, true),
 	cat("other_income", DirectionIncome, true),
 	cat(CategoryWarrantyLaborIncome, DirectionIncome, false),
+	cat(CategoryServiceSale, DirectionIncome, false),
+	cat(CategoryServiceCancellationFee, DirectionIncome, false),
 	// Expense.
 	cat(CategoryPurchase, DirectionExpense, false),
 	cat("rent", DirectionExpense, true),
@@ -78,6 +89,7 @@ var categories = []Category{
 	cat("other_expense", DirectionExpense, true),
 	cat(CategoryWarrantyCost, DirectionExpense, false),
 	cat(CategoryWarrantyLabor, DirectionExpense, false),
+	cat(CategoryServicePurchase, DirectionExpense, false),
 	// Cari charge (non-P&L debit of the counterparty).
 	cat("opening_balance", DirectionCharge, true),
 	cat("adjustment", DirectionCharge, true),

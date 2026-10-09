@@ -109,13 +109,13 @@ WHERE item_id = sqlc.arg(item_id) AND brand_id = sqlc.arg(brand_id);
 -- name: CreateServiceSubscription :one
 INSERT INTO service_subscriptions (
     organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id,
-    starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, contract_id
+    starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, contract_id, status
 )
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(seller_org_id), sqlc.arg(item_id),
     sqlc.arg(assigned_by_org_id), sqlc.narg(assigned_by_user_id), sqlc.arg(starts_on), sqlc.arg(ends_on),
     sqlc.arg(recurrence), sqlc.arg(price), sqlc.arg(currency), sqlc.arg(rate_snapshot),
-    sqlc.arg(cancellation_fee), sqlc.narg(contract_id)
+    sqlc.arg(cancellation_fee), sqlc.narg(contract_id), sqlc.arg(status)
 )
 RETURNING *;
 
@@ -151,11 +151,56 @@ SET status = sqlc.arg(status)::text,
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;
 
--- name: ExpireServiceSubscriptions :many
+-- name: ListExpiringServiceSubscriptionIDs :many
+-- TEC-308: open subscriptions past ends_on (scheduled ones that never
+-- started included), oldest end first.
+SELECT id, brand_id FROM service_subscriptions
+WHERE status IN ('scheduled', 'active', 'cancel_requested') AND ends_on < sqlc.arg(today)::date
+ORDER BY ends_on, id;
+
+-- name: ExpireServiceSubscription :one
 UPDATE service_subscriptions
 SET status = 'expired', expired_at = NOW()
-WHERE status IN ('active', 'cancel_requested') AND ends_on < sqlc.arg(today)::date
+WHERE id = sqlc.arg(id) AND status IN ('scheduled', 'active', 'cancel_requested')
 RETURNING *;
+
+-- name: ListDueScheduledServiceSubscriptionIDs :many
+-- TEC-308: scheduled subscriptions whose start day has come.
+SELECT id, brand_id FROM service_subscriptions
+WHERE status = 'scheduled' AND starts_on <= sqlc.arg(today)::date
+ORDER BY starts_on, id;
+
+-- name: ActivateScheduledServiceSubscription :one
+UPDATE service_subscriptions
+SET status = 'active'
+WHERE id = sqlc.arg(id) AND status = 'scheduled'
+RETURNING *;
+
+-- name: ListPostableServiceSubscriptionIDs :many
+-- TEC-308: running subscriptions that have started; their due periods are
+-- posted by the daily job.
+SELECT id, brand_id FROM service_subscriptions
+WHERE status IN ('active', 'cancel_requested') AND starts_on <= sqlc.arg(today)::date
+ORDER BY id;
+
+-- name: ListServiceSubscriptionsEndingBetween :many
+-- TEC-308: running subscriptions ending in [from, to] (expiry reminders).
+SELECT * FROM service_subscriptions
+WHERE status IN ('active', 'cancel_requested')
+  AND ends_on BETWEEN sqlc.arg(from_day)::date AND sqlc.arg(to_day)::date
+ORDER BY ends_on, id;
+
+-- name: InsertServiceSubscriptionReminder :one
+-- Idempotent: a reminder already sent returns no row.
+INSERT INTO service_subscription_reminders (subscription_id, organization_id, brand_id, days_before)
+VALUES (sqlc.arg(subscription_id), sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(days_before))
+ON CONFLICT (subscription_id, days_before) DO NOTHING
+RETURNING *;
+
+-- name: GetServiceSubscriptionPeriodByStart :one
+SELECT * FROM service_subscription_periods
+WHERE subscription_id = sqlc.arg(subscription_id) AND period_start = sqlc.arg(period_start)
+FOR UPDATE;
 
 -- name: SetServiceSubscriptionCancelRequested :one
 UPDATE service_subscriptions

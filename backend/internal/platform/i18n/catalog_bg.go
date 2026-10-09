@@ -311,6 +311,11 @@ var bgCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "Гаранционен труд",
 	"accounting.category.warranty_labor_income": "Приход от гаранционен труд",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Продажба на услуги",
+	"accounting.category.service_purchase":         "Покупка на услуги",
+	"accounting.category.service_cancellation_fee": "Такса за прекратяване",
+
 	"accounting.category.utilities":       "Комунални услуги",
 	"accounting.category.tax":             "Данъци",
 	"accounting.category.shipping":        "Доставка",
