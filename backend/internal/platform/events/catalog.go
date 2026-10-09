@@ -700,6 +700,8 @@ func catalogConstants() []string {
 		StockForecastComputed,
 		StockForecastLow,
 		PerformanceComputed,
+		PerformanceBonusCalculated,
+		PerformanceBonusApproved,
 		PricingRecommendedPublished,
 		PricingDisciplineDigest,
 		ServiceIntakePhotosCompleted,
@@ -821,9 +823,11 @@ const (
 // rule evaluation; weak_dealer reaches center and distributor owners;
 // below_target reaches the dealer with neutral text.
 const (
-	PerformanceComputed    = "performance.computed"
-	PerformanceWeakDealer  = "performance.weak_dealer"
-	PerformanceBelowTarget = "performance.below_target"
+	PerformanceComputed        = "performance.computed"
+	PerformanceWeakDealer      = "performance.weak_dealer"
+	PerformanceBelowTarget     = "performance.below_target"
+	PerformanceBonusCalculated = "performance.bonus_calculated"
+	PerformanceBonusApproved   = "performance.bonus_approved"
 )
 
 // ServiceIntakePhotosCompleted (TEC-499, F5-07b) is written in the intake

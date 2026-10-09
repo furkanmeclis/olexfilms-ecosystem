@@ -119,6 +119,14 @@ func TestIntegrationPerformanceAPIAndRules(t *testing.T) {
 		t.Fatal("performance notifications were not enqueued")
 	}
 
+	if _, err := it.srv.features.SetByAdmin(ctx, 0, dealerA.ID, features.ModuleDealerAccounting, false); err != nil {
+		t.Fatal(err)
+	}
+	code, env = it.do("GET", "/v1/performance/bonuses?period=2026-10", hostOlex, dealerTok, nil)
+	if code != http.StatusForbidden {
+		t.Fatalf("dealer_accounting off bonuses = %d %s, want 403", code, errCode(env))
+	}
+
 	if _, err := it.srv.features.SetByAdmin(ctx, 0, dealerA.ID, features.ModulePerformance, false); err != nil {
 		t.Fatal(err)
 	}

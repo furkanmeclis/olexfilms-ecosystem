@@ -767,6 +767,49 @@ ON CONFLICT (organization_id) DO UPDATE
 SET payout_day = EXCLUDED.payout_day
 RETURNING *;
 
+-- name: ListBonusCalculationCandidates :many
+-- Dealer month-end bonus calculation: every active rule x matching staff
+-- target with actual service count / service revenue for the same staff user.
+WITH actuals AS (
+    SELECT COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) AS user_id,
+           COUNT(*)::numeric(18,2) AS services_count,
+           COALESCE(SUM(s.income_amount), 0)::numeric(18,2) AS service_revenue
+    FROM services s
+    WHERE s.organization_id = sqlc.arg(organization_id)
+      AND s.brand_id = sqlc.arg(brand_id)
+      AND s.status = 'completed'
+      AND COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id) IS NOT NULL
+      AND COALESCE(s.completed_at, s.created_at) >= sqlc.arg(period_from)::timestamptz
+      AND COALESCE(s.completed_at, s.created_at) < sqlc.arg(period_to)::timestamptz
+    GROUP BY COALESCE(s.performed_by_user_id, s.completed_by_user_id, s.created_by_user_id)
+)
+SELECT st.user_id,
+       st.metric,
+       st.value AS target_value,
+       CASE st.metric
+            WHEN 'services_count' THEN COALESCE(a.services_count, 0)
+            WHEN 'service_revenue' THEN COALESCE(a.service_revenue, 0)
+       END::numeric(18,2) AS actual_value,
+       COALESCE(a.service_revenue, 0)::numeric(18,2) AS actual_revenue,
+       r.id AS rule_id,
+       r.uuid AS rule_uuid,
+       r.name AS rule_name,
+       r.threshold_pct,
+       r.kind,
+       r.amount,
+       r.percent,
+       r.currency
+FROM staff_targets st
+JOIN bonus_rules r
+  ON r.organization_id = st.organization_id
+ AND r.metric = st.metric
+ AND r.active
+LEFT JOIN actuals a ON a.user_id = st.user_id
+WHERE st.organization_id = sqlc.arg(organization_id)
+  AND st.brand_id = sqlc.arg(brand_id)
+  AND st.period = sqlc.arg(period)::text
+ORDER BY st.user_id, r.id;
+
 -- name: UpsertBonusAccrual :one
 -- Month-end calculation. A recalculation refreshes a still 'calculated'
 -- accrual; approved/posted ones are left untouched (no row returned).
@@ -792,6 +835,7 @@ FOR UPDATE;
 -- name: ApproveBonusAccrual :one
 UPDATE bonus_accruals
 SET status = 'approved',
+    amount = COALESCE(sqlc.narg(amount), amount),
     approved_by_user_id = sqlc.narg(approved_by_user_id),
     approved_at = NOW()
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id) AND status = 'calculated'
@@ -827,6 +871,14 @@ WHERE a.organization_id = sqlc.arg(organization_id)
   AND (sqlc.narg(user_id)::bigint IS NULL OR a.user_id = sqlc.narg(user_id)::bigint)
 ORDER BY a.period DESC, u.name, u.surname, a.id
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: GetStaffProfileByUserID :one
+SELECT * FROM staff_profiles
+WHERE organization_id = sqlc.arg(organization_id)
+  AND user_id = sqlc.arg(user_id)
+  AND active
+ORDER BY id
+LIMIT 1;
 
 -- Weak dealer rules -------------------------------------------------------------
 
