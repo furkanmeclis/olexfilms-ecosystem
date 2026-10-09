@@ -16,6 +16,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AsyncCombobox } from "@/components/ui/async-combobox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { customerErrorMessage } from "@/features/customers/lib/errors";
 import {
   customerKeys,
@@ -32,9 +40,6 @@ export type CustomerActionKind = "anonymize" | "export" | "upgrade";
 
 /** The word typed to confirm the irreversible anonymization. */
 export const ANONYMIZE_CONFIRM_WORD = "ANONYMIZE";
-
-const selectClass =
-  "border-input bg-background h-9 w-full rounded-md border px-2 text-sm";
 
 /**
  * Anonymization (K19, irreversible): the user types the confirmation word;
@@ -166,16 +171,19 @@ export function DataExportDialog({
           <Label htmlFor="export-format">
             {t("customers.actions.export.format")}
           </Label>
-          <select
-            id="export-format"
-            className={selectClass}
+          <Select
             value={format}
             disabled={jobUuid !== null}
-            onChange={(e) => setFormat(e.target.value as DataExportFormat)}
+            onValueChange={(value) => setFormat(value as DataExportFormat)}
           >
-            <option value="pdf">PDF</option>
-            <option value="json">JSON</option>
-          </select>
+            <SelectTrigger id="export-format">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pdf">PDF</SelectItem>
+              <SelectItem value="json">JSON</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         {status ? (
           <p
@@ -281,43 +289,43 @@ export function UpgradeDialog({
             <Label htmlFor="upgrade-dealer">
               {t("customers.actions.upgrade.dealer")}
             </Label>
-            <select
+            <AsyncCombobox
               id="upgrade-dealer"
-              className={selectClass}
               value={dealer}
-              onChange={(e) => setDealer(e.target.value)}
-            >
-              <option value="">
-                {dealers.isLoading
+              placeholder={
+                dealers.isLoading
                   ? t("customers.loading")
-                  : t("customers.actions.upgrade.dealer_placeholder")}
-              </option>
-              {(dealers.data ?? []).map((d) => (
-                <option key={d.uuid} value={d.uuid}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+                  : t("customers.actions.upgrade.dealer_placeholder")
+              }
+              options={(dealers.data ?? []).map((d) => ({
+                value: d.uuid,
+                label: d.name,
+              }))}
+              onValueChange={setDealer}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="upgrade-role">
               {t("customers.actions.upgrade.role")}
             </Label>
-            <select
-              id="upgrade-role"
-              className={selectClass}
+            <Select
               value={role}
-              onChange={(e) =>
-                setRole(e.target.value as "dealer_owner" | "dealer_staff")
+              onValueChange={(value) =>
+                setRole(value as "dealer_owner" | "dealer_staff")
               }
             >
-              <option value="dealer_staff">
-                {t("customers.actions.upgrade.role_staff")}
-              </option>
-              <option value="dealer_owner">
-                {t("customers.actions.upgrade.role_owner")}
-              </option>
-            </select>
+              <SelectTrigger id="upgrade-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dealer_staff">
+                  {t("customers.actions.upgrade.role_staff")}
+                </SelectItem>
+                <SelectItem value="dealer_owner">
+                  {t("customers.actions.upgrade.role_owner")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <DialogFooter>

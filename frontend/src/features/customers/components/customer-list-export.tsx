@@ -15,6 +15,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { customerErrorMessage } from "@/features/customers/lib/errors";
 import {
   customerKeys,
@@ -31,9 +38,6 @@ const FORMATS: { value: ListExportFormat; label: string }[] = [
   { value: "xlsx", label: "XLSX" },
   { value: "pdf", label: "PDF" },
 ];
-const selectClass =
-  "border-input bg-background h-9 w-full rounded-md border px-2 text-sm";
-
 /**
  * Customer list export (TEC-199 on the TEC-164 endpoints): the button opens a
  * dialog, the user picks CSV / XLSX / PDF and the job is queued with the
@@ -115,19 +119,22 @@ function CustomerListExportDialog({
           <Label htmlFor="list-export-format">
             {t("customers.actions.export.format")}
           </Label>
-          <select
-            id="list-export-format"
-            className={selectClass}
+          <Select
             value={format}
             disabled={jobUuid !== null}
-            onChange={(e) => setFormat(e.target.value as ListExportFormat)}
+            onValueChange={(value) => setFormat(value as ListExportFormat)}
           >
-            {FORMATS.map((f) => (
-              <option key={f.value} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="list-export-format">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FORMATS.map((f) => (
+                <SelectItem key={f.value} value={f.value}>
+                  {f.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         {status ? (
           <p

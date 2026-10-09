@@ -15,9 +15,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { AsyncCombobox } from "@/components/ui/async-combobox";
+import { Checkbox } from "@/components/ui/checkbox";
 import { routes } from "@/config/routes";
 import { ratesService } from "@/features/exchange-rates/services/rates.service";
-import { leadInputClass } from "@/features/leads/components/lead-fields";
 import {
   convertBody,
   convertKinds,
@@ -35,7 +36,6 @@ import {
   serviceCatalogService,
 } from "@/features/service-catalog/services/service-catalog.service";
 import { isApiError } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -201,25 +201,21 @@ export function LeadConvertDialog({
             <Label htmlFor="lead-convert-distributor">
               {t("leads.convert.distributor")}
             </Label>
-            <select
+            <AsyncCombobox
               id="lead-convert-distributor"
               data-testid="lead-convert-distributor"
-              className={cn(
-                leadInputClass,
-                errors.distributor_uuid && "border-destructive",
-              )}
+              className="h-10"
               value={form.distributor_uuid}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, distributor_uuid: e.target.value }))
+              aria-invalid={errors.distributor_uuid ? true : undefined}
+              placeholder={t("leads.convert.select")}
+              options={(distributors.data ?? []).map((d) => ({
+                value: d.uuid,
+                label: d.name,
+              }))}
+              onValueChange={(value) =>
+                setForm((f) => ({ ...f, distributor_uuid: value }))
               }
-            >
-              <option value="">{t("leads.convert.select")}</option>
-              {(distributors.data ?? []).map((d) => (
-                <option key={d.uuid} value={d.uuid}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+            />
             {errors.distributor_uuid ? (
               <p className="text-destructive text-xs">
                 {t(errors.distributor_uuid)}
@@ -234,43 +230,41 @@ export function LeadConvertDialog({
               <Label htmlFor="lead-convert-currency">
                 {t("leads.convert.currency")}
               </Label>
-              <select
+              <AsyncCombobox
                 id="lead-convert-currency"
                 data-testid="lead-convert-currency"
-                className={cn(
-                  leadInputClass,
-                  errors.currency && "border-destructive",
-                )}
+                className="h-10"
                 value={form.currency}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, currency: e.target.value }))
+                aria-invalid={errors.currency ? true : undefined}
+                placeholder={t("leads.convert.select")}
+                options={(currencies.data?.items ?? []).map((c) => ({
+                  value: c.code,
+                  label: `${c.code} · ${c.name}`,
+                }))}
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, currency: value }))
                 }
-              >
-                <option value="">{t("leads.convert.select")}</option>
-                {(currencies.data?.items ?? []).map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code} · {c.name}
-                  </option>
-                ))}
-              </select>
+              />
               {errors.currency ? (
                 <p className="text-destructive text-xs">{t(errors.currency)}</p>
               ) : null}
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="lead-convert-warehouse"
                 data-testid="lead-convert-warehouse"
                 checked={form.register_as_warehouse}
-                onChange={(e) =>
+                onCheckedChange={(checked) =>
                   setForm((f) => ({
                     ...f,
-                    register_as_warehouse: e.target.checked,
+                    register_as_warehouse: checked === true,
                   }))
                 }
               />
-              {t("leads.convert.warehouse_preset")}
-            </label>
+              <Label htmlFor="lead-convert-warehouse" className="font-normal">
+                {t("leads.convert.warehouse_preset")}
+              </Label>
+            </div>
           </div>
         ) : null}
 

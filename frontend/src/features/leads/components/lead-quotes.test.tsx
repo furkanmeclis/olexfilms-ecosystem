@@ -20,6 +20,14 @@ const api = vi.hoisted(() => ({
   convert: vi.fn(),
 }));
 const leadsApi = vi.hoisted(() => ({ create: vi.fn() }));
+/** Latest props of each mocked AsyncCombobox, by data-testid. */
+const combos = vi.hoisted(
+  () =>
+    new Map<
+      string,
+      { options?: { value: string }[]; onValueChange?: (v: string) => void }
+    >(),
+);
 const state = vi.hoisted(() => ({
   grants: new Set<string>(),
   orgType: "center",
@@ -81,7 +89,14 @@ vi.mock("@/features/catalog/services/catalog.service", () => ({
   catalogService: { listProducts: vi.fn() },
 }));
 vi.mock("@/components/ui/async-combobox", () => ({
-  AsyncCombobox: () => createElement("div", { "data-combobox": true }),
+  AsyncCombobox: (props: Record<string, unknown>) => {
+    const testId = props["data-testid"] as string | undefined;
+    if (testId) combos.set(testId, props);
+    return createElement("div", {
+      "data-combobox": true,
+      "data-testid": testId,
+    });
+  },
 }));
 vi.mock("@/components/ui/dialog", () => {
   const Pass = ({ children }: { children?: ReactNode }) =>
@@ -113,6 +128,8 @@ import type { Lead } from "@/features/leads/services/leads.service";
 import type { Quote } from "@/features/leads/services/quotes.service";
 import { convertKinds } from "@/features/leads/lib/quotes";
 
+import { installRadixPolyfills, optionValues } from "@/test/form-controls";
+
 import { LeadConvertDialog } from "./lead-convert-dialog";
 import { LeadFormPage } from "./lead-form-page";
 import { LeadQuotesTab } from "./lead-quotes-tab";
@@ -120,6 +137,7 @@ import { LeadQuotesTab } from "./lead-quotes-tab";
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -407,9 +425,7 @@ describe("LeadConvertDialog", () => {
     expect(q("[data-testid=lead-convert-org]")?.textContent).toContain(
       "Kuzey Oto",
     );
-    const select = q<HTMLSelectElement>(
-      "[data-testid=lead-convert-distributor]",
-    )!;
+    const select = q("[data-testid=lead-convert-distributor]");
     expect(select).not.toBeNull();
     expect(q("[data-testid=lead-convert-currency]")).toBeNull();
 
@@ -420,10 +436,9 @@ describe("LeadConvertDialog", () => {
       "leads.convert.errors.distributor_required",
     );
 
-    await act(async () => {
-      select.value = "d-1";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    await act(async () =>
+      combos.get("lead-convert-distributor")?.onValueChange?.("d-1"),
+    );
     api.convert.mockResolvedValue({ lead: lead({ status: "won" }) });
     await click("[data-testid=lead-convert-submit]");
     expect(api.convert).toHaveBeenCalledWith("l-1", {
@@ -452,13 +467,12 @@ describe("LeadConvertDialog", () => {
     expect(q("[data-testid=lead-convert-warehouse]")).not.toBeNull();
     expect(q("[data-testid=lead-convert-distributor]")).toBeNull();
 
-    const currency = q<HTMLSelectElement>(
-      "[data-testid=lead-convert-currency]",
-    )!;
-    await act(async () => {
-      currency.value = "EUR";
-      currency.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    expect(
+      combos.get("lead-convert-currency")?.options?.map((o) => o.value),
+    ).toEqual(["EUR"]);
+    await act(async () =>
+      combos.get("lead-convert-currency")?.onValueChange?.("EUR"),
+    );
     api.convert.mockResolvedValue({ lead: lead({ status: "won" }) });
     await click("[data-testid=lead-convert-submit]");
     expect(api.convert).toHaveBeenCalledWith("l-1", {
@@ -504,18 +518,14 @@ describe("lead target type options", () => {
     state.orgType = "dealer";
     state.grants = new Set([permissions.leads.write]);
     await render(createElement(LeadFormPage, { slug: "olex" }));
-    const options = all("[data-testid=lead-target-type] option").map(
-      (o) => (o as HTMLOptionElement).value,
-    );
+    const options = await optionValues(q("[data-testid=lead-target-type]"));
     expect(options).toEqual(["customer", "dealer_candidate"]);
   });
 
   it("a center user keeps the distributor candidate option", async () => {
     state.grants = new Set([permissions.leads.write]);
     await render(createElement(LeadFormPage, { slug: "olex" }));
-    const options = all("[data-testid=lead-target-type] option").map(
-      (o) => (o as HTMLOptionElement).value,
-    );
+    const options = await optionValues(q("[data-testid=lead-target-type]"));
     expect(options).toContain("distributor_candidate");
   });
 });

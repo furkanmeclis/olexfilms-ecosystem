@@ -13,6 +13,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { AppLocale } from "@/config/i18n";
 import { normalizePhone } from "@/features/public-leads/lib/dealer-application";
 
@@ -266,19 +274,22 @@ export function ShowcaseLeadForm({
 
           <div className="grid gap-3 sm:grid-cols-[7rem_1fr]">
             <Field label={labels.country} id={`${formId}-country`}>
-              <select
-                id={`${formId}-country`}
+              <Select
                 name="country"
                 value={values.country}
-                className="border-border bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm shadow-sm focus-visible:ring-2 focus-visible:outline-none"
-                onChange={(e) => set("country", e.target.value)}
+                onValueChange={(value) => set("country", value)}
               >
-                {COUNTRIES.map((country) => (
-                  <option key={country} value={country}>
-                    {country}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id={`${formId}-country`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map((country) => (
+                    <SelectItem key={country} value={country}>
+                      {country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field
               label={labels.phone}
@@ -349,17 +360,17 @@ export function ShowcaseLeadForm({
                     key={service.uuid}
                     className="border-border flex gap-2 rounded-md border p-2 text-sm"
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       name="interested_services"
-                      className="accent-primary mt-0.5 size-4 shrink-0"
+                      value={service.uuid}
+                      className="mt-0.5"
                       checked={values.interested_services.includes(
                         service.uuid,
                       )}
-                      onChange={(event) => {
+                      onCheckedChange={(checked) => {
                         set(
                           "interested_services",
-                          event.target.checked
+                          checked === true
                             ? [...values.interested_services, service.uuid]
                             : values.interested_services.filter(
                                 (id) => id !== service.uuid,
@@ -385,22 +396,24 @@ export function ShowcaseLeadForm({
           </Field>
 
           <Field label={labels.channel} id={`${formId}-channel`}>
-            <select
-              id={`${formId}-channel`}
+            <Select
               name="preferred_channel"
               value={values.preferred_channel}
-              className="border-border bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm shadow-sm focus-visible:ring-2 focus-visible:outline-none"
-              onChange={(e) =>
-                set(
-                  "preferred_channel",
-                  e.target.value as Values["preferred_channel"],
-                )
+              onValueChange={(value) =>
+                set("preferred_channel", value as Values["preferred_channel"])
               }
             >
-              <option value="whatsapp">{labels.channelWhatsapp}</option>
-              <option value="phone">{labels.channelPhone}</option>
-              <option value="email">{labels.channelEmail}</option>
-            </select>
+              <SelectTrigger id={`${formId}-channel`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="whatsapp">
+                  {labels.channelWhatsapp}
+                </SelectItem>
+                <SelectItem value="phone">{labels.channelPhone}</SelectItem>
+                <SelectItem value="email">{labels.channelEmail}</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
 
           <div aria-hidden="true" className="hidden">
@@ -417,15 +430,16 @@ export function ShowcaseLeadForm({
 
           <div className="space-y-1">
             <div className="flex items-start gap-2">
-              <input
+              <Checkbox
                 id={`${formId}-kvkk`}
-                type="checkbox"
                 name="kvkk_consent"
-                className="accent-primary mt-0.5 size-4 shrink-0"
+                className="mt-0.5"
                 checked={values.kvkk_consent}
                 aria-label="KVKK"
                 aria-invalid={Boolean(errors.kvkk_consent) || undefined}
-                onChange={(event) => set("kvkk_consent", event.target.checked)}
+                onCheckedChange={(checked) =>
+                  set("kvkk_consent", checked === true)
+                }
               />
               <label
                 htmlFor={`${formId}-kvkk`}

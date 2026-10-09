@@ -124,6 +124,12 @@ import type {
   Vehicle,
 } from "@/features/customers/services/customers.service";
 
+import {
+  chooseValue,
+  installRadixPolyfills,
+  optionValues,
+} from "@/test/form-controls";
+
 import { CustomerDetailPage } from "./customer-detail-page";
 import { CustomerForm } from "./customer-form-page";
 import { CustomerListExportButton } from "./customer-list-export";
@@ -132,6 +138,7 @@ import { VehicleForm } from "./vehicle-form-dialog";
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -268,16 +275,8 @@ describe("customer list export (TEC-199, TEC-372)", () => {
 
     await click($("[data-testid=customer-list-export]"));
     const select = $("#list-export-format");
-    if (!(select instanceof HTMLSelectElement)) throw new Error("no select");
-    expect(Array.from(select.options).map((o) => o.value)).toEqual([
-      "csv",
-      "xlsx",
-      "pdf",
-    ]);
-    await act(async () => {
-      select.value = "csv";
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+    expect(await optionValues(select)).toEqual(["csv", "xlsx", "pdf"]);
+    await chooseValue(select, "csv");
     await click($("[data-testid=list-export-confirm]"));
     expect(api.requestListExport).toHaveBeenCalledWith("csv", filters);
     expect(api.getListExport).toHaveBeenCalledWith("le1");
@@ -513,7 +512,7 @@ describe("vehicle form: plate format", () => {
         onSaved: () => {},
       }),
     );
-    expect(($("#vehicle-plate-country") as HTMLSelectElement).value).toBe("TR");
+    expect($("#vehicle-plate-country")?.textContent).toContain("TR");
     await type($("#vehicle-plate"), "99 ABC 123");
     await click($("[data-testid=vehicle-submit]"));
     expect(api.createVehicle).not.toHaveBeenCalled();
