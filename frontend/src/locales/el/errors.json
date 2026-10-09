@@ -146,5 +146,10 @@
   "codes.SHOWCASE_REVIEW_NOTE_REQUIRED": "Γράψτε μια σημείωση για να απορρίψετε.",
   "codes.SHOWCASE_RATING_OUT_OF_RANGE": "Εισαγάγετε βαθμολογία από 1,0 έως 5,0 και αριθμό κριτικών 0 ή περισσότερο.",
   "codes.SHOWCASE_RATING_MANAGED_BY_PLACES": "Η βαθμολογία Google ενημερώνεται από το Google Places· αφαιρέστε το Place ID για να την εισαγάγετε χειροκίνητα.",
-  "codes.UNSUPPORTED_MEDIA_TYPE": "Μη υποστηριζόμενος τύπος αρχείου· ανεβάστε εικόνα JPEG, PNG ή WebP."
+  "codes.UNSUPPORTED_MEDIA_TYPE": "Μη υποστηριζόμενος τύπος αρχείου· ανεβάστε εικόνα JPEG, PNG ή WebP.",
+  "codes.EINVOICE_INVALID_TAX_ID": "Το VKN ή TCKN δεν είναι έγκυρο (VKN 10 ψηφία, TCKN 11, με σωστό ψηφίο ελέγχου).",
+  "codes.EINVOICE_UNSUPPORTED_BUYER": "Τα ηλεκτρονικά τιμολόγια εκδίδονται μόνο σε TRY για αγοραστές στην Τουρκία.",
+  "codes.EINVOICE_INVALID_DOCUMENT": "Τα στοιχεία του τιμολογίου είναι ελλιπή ή λανθασμένα.",
+  "codes.EINVOICE_INVALID_VAT_RATE": "Ο συντελεστής ΦΠΑ δεν είναι έγκυρος· το 0% απαιτεί κωδικό απαλλαγής.",
+  "codes.EINVOICE_INVALID_STYLESHEET": "Το φύλλο στυλ XSLT δεν είναι έγκυρο."
 }

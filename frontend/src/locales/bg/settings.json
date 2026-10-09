@@ -170,5 +170,9 @@
   "system.keys.pricing_deviation_warning_pct": "Праг за предупреждение при отклонение (%)",
   "system.keys.pricing_deviation_warning_pct_hint": "Крайна цена на дилър или дистрибутор, която се отклонява с толкова процента от препоръчителната (в двете посоки), надхвърля прага.",
   "system.keys.pricing_price_list_auto_publish": "Автоматично публикуване на ценовата листа",
-  "system.keys.pricing_price_list_auto_publish_hint": "Когато е включено, след всяко публикуване на препоръчителни цени PDF ценовата листа се качва като нова версия в центъра за документи."
+  "system.keys.pricing_price_list_auto_publish_hint": "Когато е включено, след всяко публикуване на препоръчителни цени PDF ценовата листа се качва като нова версия в центъра за документи.",
+  "system.groups.einvoice": "Електронна фактура",
+  "system.groups.einvoice_hint": "Фактури UBL-TR e-Fatura и e-Arşiv.",
+  "system.keys.einvoice_default_vat_rate": "ДДС ставка по подразбиране (%)",
+  "system.keys.einvoice_default_vat_rate_hint": "Ставка за ред от фактура, чийто продукт или категория няма ДДС ставка. 0% изисква код за освобождаване и не може да се избере тук."
 }

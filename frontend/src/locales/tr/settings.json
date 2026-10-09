@@ -170,5 +170,9 @@
   "system.keys.pricing_deviation_warning_pct": "Sapma uyarı eşiği (%)",
   "system.keys.pricing_deviation_warning_pct_hint": "Bayi veya distribütör son müşteri fiyatı tavsiye fiyattan bu yüzde kadar (iki yönde) saparsa eşik aşılmış sayılır.",
   "system.keys.pricing_price_list_auto_publish": "Fiyat listesini otomatik yayınla",
-  "system.keys.pricing_price_list_auto_publish_hint": "Açıkken her tavsiye fiyat yayınından sonra fiyat listesi PDF'i doküman merkezine yeni sürüm olarak yüklenir."
+  "system.keys.pricing_price_list_auto_publish_hint": "Açıkken her tavsiye fiyat yayınından sonra fiyat listesi PDF'i doküman merkezine yeni sürüm olarak yüklenir.",
+  "system.groups.einvoice": "e-Fatura",
+  "system.groups.einvoice_hint": "UBL-TR e-Fatura ve e-Arşiv faturaları.",
+  "system.keys.einvoice_default_vat_rate": "Varsayılan KDV oranı (%)",
+  "system.keys.einvoice_default_vat_rate_hint": "Ürününde veya kategorisinde KDV oranı tanımlı olmayan fatura satırına uygulanan oran. %0 istisna kodu gerektirdiği için burada seçilemez."
 }

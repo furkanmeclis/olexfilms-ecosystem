@@ -170,5 +170,9 @@
   "system.keys.pricing_deviation_warning_pct": "偏差预警阈值（%）",
   "system.keys.pricing_deviation_warning_pct_hint": "经销商或分销商的终端客户价格偏离建议价达到该百分比（任一方向）即视为超过阈值。",
   "system.keys.pricing_price_list_auto_publish": "自动发布价目表",
-  "system.keys.pricing_price_list_auto_publish_hint": "开启后，每次发布建议价后，价目表 PDF 会作为新版本上传到文档中心。"
+  "system.keys.pricing_price_list_auto_publish_hint": "开启后，每次发布建议价后，价目表 PDF 会作为新版本上传到文档中心。",
+  "system.groups.einvoice": "电子发票",
+  "system.groups.einvoice_hint": "UBL-TR e-Fatura 与 e-Arşiv 发票。",
+  "system.keys.einvoice_default_vat_rate": "默认增值税税率（%）",
+  "system.keys.einvoice_default_vat_rate_hint": "当发票行的产品或类别未设置增值税税率时使用的税率。0% 需要免税代码，此处不可选择。"
 }
