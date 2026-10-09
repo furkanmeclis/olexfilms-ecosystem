@@ -792,7 +792,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	efficiencymodule.RegisterRoutes(mux, efficiencyhandler.New(efficiencySvc, exportSvc, importSvc).WithSettings(sysSvc), tokens, loader, deps.Queries, featureSvc)
 	pricingmodule.RegisterRecommendedRoutes(mux, pricinghandler.NewRecommended(recommendedSvc, exportSvc, importSvc, activityRec),
 		tokens, loader, deps.Queries, stepUpSvc, featureSvc)
-	performanceSvc := performanceusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)).
+	performanceSvc := performanceusecase.New(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries), featureSvc, accountingPoster).
 		WithPanelURL(cfg.Auth.FrontendURL)
 	performancemodule.RegisterRoutes(mux, performancehandler.New(performanceSvc), tokens, loader, deps.Queries, featureSvc)
 	bulkReg := bulkengine.NewRegistry(

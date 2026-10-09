@@ -7,8 +7,10 @@ import (
 )
 
 var PerformanceEventCodes = map[string]string{
-	events.PerformanceWeakDealer:  catalog.EventPerformanceWeakDealer,
-	events.PerformanceBelowTarget: catalog.EventPerformanceBelowTarget,
+	events.PerformanceWeakDealer:      catalog.EventPerformanceWeakDealer,
+	events.PerformanceBelowTarget:     catalog.EventPerformanceBelowTarget,
+	events.PerformanceBonusCalculated: catalog.EventPerformanceBonusCalculated,
+	events.PerformanceBonusApproved:   catalog.EventPerformanceBonusApproved,
 }
 
 func performanceDispatcher(code string) func(events.Event) (notifmodel.DispatchInput, bool) {
@@ -17,20 +19,25 @@ func performanceDispatcher(code string) func(events.Event) (notifmodel.DispatchI
 		if len(ids) == 0 {
 			return notifmodel.DispatchInput{}, false
 		}
+		vars := map[string]string{
+			"dealer_name":  stringFromPayload(event.Payload, "dealer_name"),
+			"rule_name":    stringFromPayload(event.Payload, "rule_name"),
+			"period":       stringFromPayload(event.Payload, "period"),
+			"metric":       stringFromPayload(event.Payload, "metric"),
+			"metric_value": stringFromPayload(event.Payload, "metric_value"),
+			"threshold":    stringFromPayload(event.Payload, "threshold"),
+			"count":        stringFromPayload(event.Payload, "count"),
+			"amount":       stringFromPayload(event.Payload, "amount"),
+			"currency":     stringFromPayload(event.Payload, "currency"),
+			"paid_on":      stringFromPayload(event.Payload, "paid_on"),
+		}
 		in := notifmodel.DispatchInput{
-			EventCode: code, UserIDs: ids,
-			Vars: map[string]string{
-				"dealer_name":  stringFromPayload(event.Payload, "dealer_name"),
-				"rule_name":    stringFromPayload(event.Payload, "rule_name"),
-				"period":       stringFromPayload(event.Payload, "period"),
-				"metric":       stringFromPayload(event.Payload, "metric"),
-				"metric_value": stringFromPayload(event.Payload, "metric_value"),
-				"threshold":    stringFromPayload(event.Payload, "threshold"),
-			},
+			EventCode: code, UserIDs: ids, Vars: vars,
 			Payload: map[string]any{
 				"rule_uuid":   stringFromPayload(event.Payload, "rule_uuid"),
 				"dealer_uuid": stringFromPayload(event.Payload, "dealer_uuid"),
 				"period":      stringFromPayload(event.Payload, "period"),
+				"status":      stringFromPayload(event.Payload, "status"),
 			},
 			ActionURL: performanceStringPtr(stringFromPayload(event.Payload, "panel_url")),
 		}
