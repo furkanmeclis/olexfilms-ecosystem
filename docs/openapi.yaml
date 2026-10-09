@@ -21437,6 +21437,21 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/performance/members:
+    get:
+      tags: [Performance]
+      operationId: listPerformanceMembers
+      summary: Active members of the active organization (TEC-497 pickers)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePerformanceMembers" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/performance/targets:
     get:
       tags: [Performance]
@@ -29589,6 +29604,7 @@ components:
       properties:
         uuid: { type: string, format: uuid }
         user_id: { type: integer, format: int64 }
+        user_uuid: { type: string, format: uuid }
         user_name: { type: string }
         period: { type: string }
         metric: { type: string, enum: [services_count, service_revenue] }
@@ -29616,6 +29632,10 @@ components:
         create_task: { type: boolean }
         notify: { type: boolean }
         assignee_user_id: { type: [integer, "null"], format: int64 }
+        assignee_user_uuid: { type: [string, "null"], format: uuid }
+        assignee_name: { type: [string, "null"] }
+        owner_name: { type: string }
+        owner_type: { type: string }
         active: { type: boolean }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -29627,9 +29647,17 @@ components:
         metric: { type: string }
         operator: { type: string, enum: [lt, lte, gt, gte, below_median_pct] }
         threshold: { type: string }
-        create_task: { type: boolean }
+        create_task:
+          type: boolean
+          description: Center rules only (a distributor rule only notifies).
         notify: { type: boolean }
         assignee_user_id: { type: [integer, "null"], format: int64 }
+        assignee_user_uuid:
+          type: [string, "null"]
+          format: uuid
+          description: >-
+            Task assignee (TEC-497), a member of the rule's organization; wins
+            over assignee_user_id; requires create_task.
         active: { type: boolean }
     PerformanceBonus:
       type: object
@@ -29649,6 +29677,21 @@ components:
         cancelled_at: { type: [string, "null"], format: date-time }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+    PerformanceMember:
+      type: object
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string }
+    EnvelopePerformanceMembers:
+      type: object
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/PerformanceMember" } }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
     PerformanceBonusRule:
       type: object
       properties:

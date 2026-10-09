@@ -398,3 +398,12 @@ func (h *Handler) UpdateBonusSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	response.JSON(w, r, http.StatusOK, item)
 }
+
+func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
+	items, err := h.svc.ListMembers(r.Context(), caller(r))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
+}

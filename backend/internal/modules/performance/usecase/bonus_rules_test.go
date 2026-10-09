@@ -185,3 +185,75 @@ func TestTargetListCarriesTargetOrganizationUUID(t *testing.T) {
 		t.Fatalf("list = %+v, %v", items, err)
 	}
 }
+
+func TestWeakDealerRuleAssigneeUUIDAndCenterOnlyTasks(t *testing.T) {
+	f := newPerfFixture(t)
+	distOwner := f.member(t, f.dist, "rule-dist")
+	centerOwner := f.member(t, f.center, "rule-center")
+	svc := New(f.tx, f.q, outbox.NewMemory(), featureMap{})
+	dist := callerFor(f.dist, distOwner)
+	center := callerFor(f.center, centerOwner)
+	var ve *ValidationError
+
+	in := RuleInput{Name: "Zayif", Metric: model.RuleMetricTargetAchievement, Operator: model.OpLT, Threshold: "50", CreateTask: true, Notify: true, Active: true}
+	if _, err := svc.CreateRule(f.ctx, dist, in); !errors.As(err, &ve) || ve.Field != "create_task" {
+		t.Fatalf("distributor create_task error = %v, want create_task validation", err)
+	}
+	in.CreateTask = false
+	if _, err := svc.CreateRule(f.ctx, dist, in); err != nil {
+		t.Fatalf("distributor notify rule: %v", err)
+	}
+	distMembers, err := svc.ListMembers(f.ctx, dist)
+	if err != nil || len(distMembers) != 1 {
+		t.Fatalf("members = %+v, %v", distMembers, err)
+	}
+	in.AssigneeUserUUID = &distMembers[0].UUID
+	if _, err := svc.CreateRule(f.ctx, dist, in); !errors.As(err, &ve) || ve.Field != "assignee_user_uuid" {
+		t.Fatalf("assignee without task error = %v, want assignee validation", err)
+	}
+
+	centerIn := RuleInput{Name: "Merkez", Metric: model.MetricServicesCount, Operator: model.OpLT, Threshold: "3", CreateTask: true, Notify: true, Active: true}
+	centerIn.AssigneeUserUUID = &distMembers[0].UUID
+	if _, err := svc.CreateRule(f.ctx, center, centerIn); !errors.As(err, &ve) || ve.Field != "assignee_user_uuid" {
+		t.Fatalf("foreign assignee error = %v, want assignee validation", err)
+	}
+	centerMembers, err := svc.ListMembers(f.ctx, center)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var own *MemberView
+	for i := range centerMembers {
+		if centerMembers[i].Name == "rule-center T491" {
+			own = &centerMembers[i]
+		}
+	}
+	if own == nil {
+		t.Fatalf("center members = %+v", centerMembers)
+	}
+	centerIn.AssigneeUserUUID = &own.UUID
+	rule, err := svc.CreateRule(f.ctx, center, centerIn)
+	if err != nil {
+		t.Fatalf("center rule: %v", err)
+	}
+	if rule.AssigneeUserID == nil || *rule.AssigneeUserID != centerOwner || rule.AssigneeUserUUID == nil || *rule.AssigneeUserUUID != own.UUID.String() || rule.AssigneeName == nil || *rule.AssigneeName != own.Name {
+		t.Fatalf("rule assignee = %+v", rule)
+	}
+
+	staffUserID := f.member(t, f.dealer1, "rule-staff")
+	staffUser, err := f.q.GetUserByID(f.ctx, staffUserID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dealer := callerFor(f.dealer1, staffUserID)
+	if _, err := svc.CreateRule(f.ctx, dealer, RuleInput{Name: "x", Metric: model.MetricServicesCount, Operator: model.OpLT, Threshold: "1", Notify: true}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("dealer rule error = %v, want ErrForbidden", err)
+	}
+	staff, err := svc.UpsertStaffTarget(f.ctx, dealer, StaffTargetInput{UserUUID: staffUser.Uuid, Period: "2026-10", Metric: model.MetricServicesCount, Value: "12"})
+	if err != nil || staff.UserUUID != staffUser.Uuid {
+		t.Fatalf("staff target = %+v, %v", staff, err)
+	}
+	list, err := svc.ListStaffTargets(f.ctx, dealer, StaffTargetFilter{PeriodFrom: "2026-10", PeriodTo: "2026-10"})
+	if err != nil || len(list) != 1 || list[0].UserUUID != staffUser.Uuid {
+		t.Fatalf("staff targets = %+v, %v", list, err)
+	}
+}

@@ -722,7 +722,8 @@ WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
 -- name: ListStaffTargets :many
 SELECT st.*,
        u.name AS user_name,
-       u.surname AS user_surname
+       u.surname AS user_surname,
+       u.uuid AS user_uuid
 FROM staff_targets st
 JOIN users u ON u.id = st.user_id
 WHERE st.organization_id = sqlc.arg(organization_id)
@@ -938,9 +939,13 @@ WHERE wr.id = sqlc.arg(id) AND wr.brand_id = sqlc.arg(brand_id)
 -- name: ListWeakDealerRules :many
 SELECT r.*,
        o.name AS owner_name,
-       o.type AS owner_type
+       o.type AS owner_type,
+       au.uuid AS assignee_user_uuid,
+       au.name AS assignee_name,
+       au.surname AS assignee_surname
 FROM weak_dealer_rules r
 JOIN organizations o ON o.id = r.organization_id
+LEFT JOIN users au ON au.id = r.assignee_user_id
 WHERE r.brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(owner_org_ids)::bigint[] IS NULL OR r.organization_id = ANY (sqlc.narg(owner_org_ids)::bigint[]))
   AND (sqlc.narg(active)::bool IS NULL OR r.active = sqlc.narg(active)::bool)

@@ -11158,6 +11158,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/performance/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Active members of the active organization (TEC-497 pickers) */
+        get: operations["listPerformanceMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/performance/targets": {
         parameters: {
             query?: never;
@@ -15362,6 +15379,8 @@ export interface components {
             uuid?: string;
             /** Format: int64 */
             user_id?: number;
+            /** Format: uuid */
+            user_uuid?: string;
             user_name?: string;
             period?: string;
             /** @enum {string} */
@@ -15394,6 +15413,11 @@ export interface components {
             notify?: boolean;
             /** Format: int64 */
             assignee_user_id?: number | null;
+            /** Format: uuid */
+            assignee_user_uuid?: string | null;
+            assignee_name?: string | null;
+            owner_name?: string;
+            owner_type?: string;
             active?: boolean;
             /** Format: date-time */
             created_at?: string;
@@ -15406,10 +15430,16 @@ export interface components {
             /** @enum {string} */
             operator: "lt" | "lte" | "gt" | "gte" | "below_median_pct";
             threshold: string;
+            /** @description Center rules only (a distributor rule only notifies). */
             create_task?: boolean;
             notify?: boolean;
             /** Format: int64 */
             assignee_user_id?: number | null;
+            /**
+             * Format: uuid
+             * @description Task assignee (TEC-497), a member of the rule's organization; wins over assignee_user_id; requires create_task.
+             */
+            assignee_user_uuid?: string | null;
             active?: boolean;
         };
         PerformanceBonus: {
@@ -15437,6 +15467,20 @@ export interface components {
             created_at?: string;
             /** Format: date-time */
             updated_at?: string;
+        };
+        PerformanceMember: {
+            /** Format: uuid */
+            uuid?: string;
+            name?: string;
+            role?: string;
+        };
+        EnvelopePerformanceMembers: {
+            /** @enum {boolean} */
+            success?: true;
+            data?: {
+                items?: components["schemas"]["PerformanceMember"][];
+            };
+            meta?: components["schemas"]["ResponseMeta"];
         };
         PerformanceBonusRule: {
             /** Format: uuid */
@@ -47596,6 +47640,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopePerformanceBenchmark"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPerformanceMembers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Members */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePerformanceMembers"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

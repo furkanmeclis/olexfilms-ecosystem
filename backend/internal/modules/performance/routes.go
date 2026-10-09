@@ -38,6 +38,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/performance/benchmark", read(h.Benchmark))
 	mux.Handle("GET /v1/performance/map", read(h.RegionMap))
 	mux.Handle("GET /v1/performance/map/dealers", read(h.DealersMap))
+	// TEC-497: member picker (staff targets grid, rule assignee).
+	mux.Handle("GET /v1/performance/members", read(h.ListMembers))
 
 	mux.Handle("GET /v1/performance/targets", read(h.ListTargets))
 	mux.Handle("POST /v1/performance/targets", targets(h.CreateTarget))
