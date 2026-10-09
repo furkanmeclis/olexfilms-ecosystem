@@ -31,6 +31,7 @@ export type SubscriptionListQuery = Record<string, string | number | undefined>;
 const enc = encodeURIComponent;
 
 export const SUBSCRIPTION_STATUSES = [
+  "scheduled",
   "active",
   "cancel_requested",
   "cancelled",

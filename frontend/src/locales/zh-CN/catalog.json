@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "周期",
   "subscriptions.fields.contract": "合同",
   "subscriptions.fields.cancellation_fee": "解约费",
+  "subscriptions.status.scheduled": "已排期",
   "subscriptions.status.active": "生效中",
   "subscriptions.status.cancel_requested": "已申请取消",
   "subscriptions.status.cancelled": "已取消",

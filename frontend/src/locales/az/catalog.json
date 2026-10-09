@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Təkrarlanma",
   "subscriptions.fields.contract": "Müqavilə",
   "subscriptions.fields.cancellation_fee": "Ləğv cəriməsi",
+  "subscriptions.status.scheduled": "Planlaşdırılıb",
   "subscriptions.status.active": "Aktiv",
   "subscriptions.status.cancel_requested": "Ləğv tələb edilib",
   "subscriptions.status.cancelled": "Ləğv edilib",

@@ -39,7 +39,7 @@ var CancelRequestsSortSpec = apiquery.SortSpec{
 
 // Filter values of the lists.
 var (
-	SubscriptionStatuses  = []string{StatusActive, StatusCancelRequested, StatusCancelled, "expired"}
+	SubscriptionStatuses  = []string{StatusScheduled, StatusActive, StatusCancelRequested, StatusCancelled, StatusExpired}
 	CancelRequestStatuses = []string{"pending", StatusApproved, StatusRejected}
 )
 

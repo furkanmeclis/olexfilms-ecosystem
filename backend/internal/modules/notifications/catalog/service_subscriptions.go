@@ -7,6 +7,9 @@ const (
 	EventServiceSubscriptionCancelRequested = "SERVICE_SUBSCRIPTION_CANCEL_REQUESTED"
 	EventServiceSubscriptionCancelled       = "SERVICE_SUBSCRIPTION_CANCELLED"
 	EventServiceSubscriptionCancelRejected  = "SERVICE_SUBSCRIPTION_CANCEL_REJECTED"
+	// TEC-308: expiry and the 30 / 7 day reminder.
+	EventServiceSubscriptionExpired  = "SERVICE_SUBSCRIPTION_EXPIRED"
+	EventServiceSubscriptionExpiring = "SERVICE_SUBSCRIPTION_EXPIRING"
 )
 
 var ServiceSubscriptionChannels = []string{ChannelInapp, ChannelEmail}
@@ -16,6 +19,8 @@ var serviceSubscriptionEvents = []string{
 	EventServiceSubscriptionCancelRequested,
 	EventServiceSubscriptionCancelled,
 	EventServiceSubscriptionCancelRejected,
+	EventServiceSubscriptionExpired,
+	EventServiceSubscriptionExpiring,
 }
 
 var serviceSubscriptionTexts = map[string]map[string]localizedText{
@@ -34,6 +39,14 @@ var serviceSubscriptionTexts = map[string]map[string]localizedText{
 	EventServiceSubscriptionCancelRejected: {
 		"tr": {"Iptal talebi reddedildi: {{item_name}}", "{{item_name}} aboneligi icin erken iptal talebi reddedildi."},
 		"en": {"Cancellation request rejected: {{item_name}}", "The early cancellation request for {{item_name}} was rejected."},
+	},
+	EventServiceSubscriptionExpired: {
+		"tr": {"Abonelik sona erdi: {{item_name}}", "{{organization_name}} icin {{item_name}} aboneligi {{ends_on}} tarihinde sona erdi."},
+		"en": {"Subscription ended: {{item_name}}", "The {{item_name}} subscription of {{organization_name}} ended on {{ends_on}}."},
+	},
+	EventServiceSubscriptionExpiring: {
+		"tr": {"Abonelik {{days_before}} gun icinde bitiyor: {{item_name}}", "{{organization_name}} icin {{item_name}} aboneligi {{ends_on}} tarihinde sona erecek."},
+		"en": {"Subscription ends within {{days_before}} days: {{item_name}}", "The {{item_name}} subscription of {{organization_name}} ends on {{ends_on}}."},
 	},
 }
 
@@ -75,6 +88,7 @@ func serviceSubscriptionPlaceholders() []msgtemplate.Placeholder {
 		ph("reason", "Kullanilmiyor", "No longer used"),
 		ph("cancellation_fee", "100.00", "100.00"),
 		ph("currency", "EUR", "EUR"),
+		ph("days_before", "30", "30"),
 	}
 }
 

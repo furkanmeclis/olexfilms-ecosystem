@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Periodicidad",
   "subscriptions.fields.contract": "Contrato",
   "subscriptions.fields.cancellation_fee": "Penalización por cancelación",
+  "subscriptions.status.scheduled": "Programada",
   "subscriptions.status.active": "Activa",
   "subscriptions.status.cancel_requested": "Cancelación solicitada",
   "subscriptions.status.cancelled": "Cancelada",

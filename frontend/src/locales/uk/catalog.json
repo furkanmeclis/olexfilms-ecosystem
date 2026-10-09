@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Періодичність",
   "subscriptions.fields.contract": "Договір",
   "subscriptions.fields.cancellation_fee": "Штраф за розірвання",
+  "subscriptions.status.scheduled": "Запланована",
   "subscriptions.status.active": "Активна",
   "subscriptions.status.cancel_requested": "Запитано розірвання",
   "subscriptions.status.cancelled": "Розірвана",

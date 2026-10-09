@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Периодичност",
   "subscriptions.fields.contract": "Договор",
   "subscriptions.fields.cancellation_fee": "Неустойка при прекратяване",
+  "subscriptions.status.scheduled": "Насрочен",
   "subscriptions.status.active": "Активен",
   "subscriptions.status.cancel_requested": "Поискано прекратяване",
   "subscriptions.status.cancelled": "Прекратен",

@@ -17743,7 +17743,7 @@ paths:
       parameters:
         - name: status
           in: query
-          description: CSV of active, cancel_requested, cancelled, expired.
+          description: CSV of scheduled, active, cancel_requested, cancelled, expired.
           schema: { type: string }
         - name: organization_uuid
           in: query
@@ -17863,6 +17863,10 @@ paths:
       tags: [ServiceCatalog]
       operationId: requestServiceSubscriptionCancel
       summary: Request early cancellation for own subscription
+      description: >-
+        An active subscription moves to cancel_requested; a scheduled one
+        (TEC-308) keeps its status and the request freezes a zero fee. 409
+        when another request is pending or the status is final.
       security:
         - bearerAuth: []
       parameters:
@@ -38784,7 +38788,11 @@ components:
 
     ServiceSubscriptionStatus:
       type: string
-      enum: [active, cancel_requested, cancelled, expired]
+      description: >-
+        scheduled (TEC-308): starts_on is after the assignment day; modules
+        stay closed and no period is booked until the daily job activates it
+        on starts_on. A scheduled subscription can be cancelled without a fee.
+      enum: [scheduled, active, cancel_requested, cancelled, expired]
 
     ServiceSubscriptionInput:
       type: object

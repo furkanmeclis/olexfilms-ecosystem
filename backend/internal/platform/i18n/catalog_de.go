@@ -311,6 +311,11 @@ var deCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "Garantiearbeitslohn",
 	"accounting.category.warranty_labor_income": "Garantiearbeitserlös",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Dienstleistungsverkauf",
+	"accounting.category.service_purchase":         "Dienstleistungseinkauf",
+	"accounting.category.service_cancellation_fee": "Kündigungsgebühr",
+
 	"accounting.category.utilities":       "Nebenkosten",
 	"accounting.category.tax":             "Steuern",
 	"accounting.category.shipping":        "Versand",

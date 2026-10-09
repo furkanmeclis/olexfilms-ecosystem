@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
@@ -19,15 +20,21 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const (
+	// StatusScheduled: starts_on is after the assignment day (TEC-308);
+	// modules stay closed and no period is posted until the daily job
+	// activates it on starts_on.
+	StatusScheduled       = "scheduled"
 	StatusActive          = "active"
 	StatusCancelRequested = "cancel_requested"
 	StatusApproved        = "approved"
 	StatusCancelled       = "cancelled"
 	StatusRejected        = "rejected"
+	StatusExpired         = "expired"
 )
 
 var (
@@ -169,9 +176,21 @@ func (s *Service) Assign(ctx context.Context, c Caller, in SubscriptionInput) (S
 	if err != nil {
 		return SubscriptionView{}, err
 	}
-	snap, err := s.rateSnapshot(ctx, in.StartsOn, price.Currency, target.Currency)
+	seller, err := s.q.GetOrganizationByID(ctx, item.OrganizationID)
 	if err != nil {
 		return SubscriptionView{}, err
+	}
+	// TEC-308: the seller's pair is frozen next to the receiver's so both
+	// ledger sides of every period use the assignment-day value (K7).
+	snap, err := s.rateSnapshot(ctx, in.StartsOn, price.Currency, target.Currency, seller.Currency)
+	if err != nil {
+		return SubscriptionView{}, err
+	}
+	// TEC-308: a start after today waits as scheduled; the daily job opens
+	// its modules on starts_on.
+	status := StatusActive
+	if dateArg(in.StartsOn).Time.After(s.today()) {
+		status = StatusScheduled
 	}
 	var sub db.ServiceSubscription
 	if err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
@@ -180,7 +199,7 @@ func (s *Service) Assign(ctx context.Context, c Caller, in SubscriptionInput) (S
 			ItemID: item.ID, AssignedByOrgID: c.Org.InternalID, AssignedByUserID: c.actor(),
 			StartsOn: dateArg(in.StartsOn), EndsOn: dateArg(in.EndsOn), Recurrence: item.Recurrence,
 			Price: priceNum, Currency: price.Currency, RateSnapshot: snap,
-			CancellationFee: item.CancellationFee,
+			CancellationFee: item.CancellationFee, Status: status,
 		})
 		if err != nil {
 			return mapDBError(err)
@@ -191,14 +210,18 @@ func (s *Service) Assign(ctx context.Context, c Caller, in SubscriptionInput) (S
 				return err
 			}
 		}
-		if err := s.openModules(ctx, q, sub, item, c.Principal.UserInternal); err != nil {
-			return err
+		if sub.Status == StatusActive {
+			if err := s.openModules(ctx, q, sub, item, c.Principal.UserInternal); err != nil {
+				return err
+			}
 		}
 		return s.emit(ctx, tx, events.ServiceSubscriptionAssigned, sub, item, c.Principal.UserInternal, nil)
 	}); err != nil {
 		return SubscriptionView{}, err
 	}
-	s.invalidateModules(ctx, sub, item)
+	if sub.Status == StatusActive {
+		s.invalidateModules(ctx, sub, item)
+	}
 	return s.subscriptionView(ctx, sub)
 }
 
@@ -233,18 +256,37 @@ func (s *Service) RequestCancel(ctx context.Context, c Caller, id uuid.UUID, in 
 	}
 	var req db.ServiceSubscriptionCancelRequest
 	if err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
-		sub, err = q.SetServiceSubscriptionCancelRequested(ctx, db.SetServiceSubscriptionCancelRequestedParams{ID: sub.ID, BrandID: sub.BrandID})
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrInvalidStatus
-		}
+		sub, err = q.LockServiceSubscription(ctx, db.LockServiceSubscriptionParams{ID: sub.ID, BrandID: sub.BrandID})
 		if err != nil {
 			return err
+		}
+		// TEC-308: a scheduled subscription has not started; it keeps its
+		// status while the request is pending and is cancelled without a
+		// fee.
+		fee := sub.CancellationFee
+		switch sub.Status {
+		case StatusScheduled:
+			fee = pgtype.Numeric{Int: big.NewInt(0), Exp: -2, Valid: true}
+		case StatusActive:
+			sub, err = q.SetServiceSubscriptionCancelRequested(ctx, db.SetServiceSubscriptionCancelRequestedParams{ID: sub.ID, BrandID: sub.BrandID})
+			if errors.Is(err, pgx.ErrNoRows) {
+				return ErrInvalidStatus
+			}
+			if err != nil {
+				return err
+			}
+		default:
+			return ErrInvalidStatus
 		}
 		req, err = q.CreateServiceSubscriptionCancelRequest(ctx, db.CreateServiceSubscriptionCancelRequestParams{
 			SubscriptionID: sub.ID, OrganizationID: sub.OrganizationID, BrandID: sub.BrandID,
 			RequestedByUserID: c.actor(), RequestedByOrgID: c.Org.InternalID, Reason: reason,
-			CancellationFee: sub.CancellationFee, Currency: sub.Currency,
+			CancellationFee: fee, Currency: sub.Currency,
 		})
+		var pgerr *pgconn.PgError
+		if errors.As(err, &pgerr) && pgerr.Code == "23505" {
+			return ErrInvalidStatus // a request is already pending
+		}
 		if err != nil {
 			return mapDBError(err)
 		}
@@ -305,19 +347,23 @@ func (s *Service) decide(ctx context.Context, c Caller, id uuid.UUID, status, ev
 		case status == StatusApproved:
 			// The subscription may have expired while the request was
 			// pending; final states cannot change (409).
-			if sub.Status != StatusActive && sub.Status != StatusCancelRequested {
+			if sub.Status != StatusActive && sub.Status != StatusCancelRequested && sub.Status != StatusScheduled {
 				return ErrInvalidStatus
 			}
+			started := sub.Status != StatusScheduled
 			sub, err = q.SetServiceSubscriptionStatus(ctx, db.SetServiceSubscriptionStatusParams{
 				Status: StatusCancelled, ID: sub.ID, BrandID: sub.BrandID,
 			})
 			if err != nil {
 				return err
 			}
-			if err := s.closeModules(ctx, q, sub, item); err != nil {
-				return err
+			// A scheduled subscription never opened its modules.
+			if started {
+				if err := s.closeModules(ctx, q, sub, item); err != nil {
+					return err
+				}
+				closed = item.Category == CategoryModuleBundle
 			}
-			closed = item.Category == CategoryModuleBundle
 		case sub.Status == StatusCancelRequested:
 			// A rejected request returns the subscription to active so it
 			// keeps running and can be cancelled again later.
@@ -328,7 +374,12 @@ func (s *Service) decide(ctx context.Context, c Caller, id uuid.UUID, status, ev
 				return err
 			}
 		}
-		return s.emit(ctx, tx, eventName, sub, item, c.Principal.UserInternal, map[string]any{"decision_note": valueOrEmpty(in.Note)})
+		// TEC-308: the accounting consumer of service_subscription.cancelled
+		// books the frozen fee of this request.
+		return s.emit(ctx, tx, eventName, sub, item, c.Principal.UserInternal, map[string]any{
+			"decision_note": valueOrEmpty(in.Note), "cancel_request_uuid": req.Uuid.String(),
+			"cancellation_fee": numText(req.CancellationFee),
+		})
 	}); err != nil {
 		return CancelRequestView{}, err
 	}
@@ -377,13 +428,25 @@ func (s *Service) targetOrg(ctx context.Context, c Caller, id uuid.UUID) (db.Org
 	}
 }
 
-func (s *Service) rateSnapshot(ctx context.Context, on time.Time, base, quote string) ([]byte, error) {
+// rateSnapshot freezes base/quote on the day, plus base/extra (the
+// seller's currency) as a nested pair when it is another currency.
+func (s *Service) rateSnapshot(ctx context.Context, on time.Time, base, quote, extra string) ([]byte, error) {
 	snap, err := s.rates.ResolveRate(ctx, on, base, quote)
 	if errors.Is(err, fxrates.ErrRateNotFound) {
 		return nil, ErrRateNotFound
 	}
 	if err != nil {
 		return nil, err
+	}
+	if extra != "" && extra != base && extra != quote {
+		pair, err := s.rates.ResolveRate(ctx, on, base, extra)
+		if errors.Is(err, fxrates.ErrRateNotFound) {
+			return nil, ErrRateNotFound
+		}
+		if err != nil {
+			return nil, err
+		}
+		snap.Pairs = []fxrates.Snapshot{pair}
 	}
 	return json.Marshal(snap)
 }
@@ -476,7 +539,8 @@ func (s *Service) notificationUsers(ctx context.Context, name string, sub db.Ser
 	switch name {
 	case events.ServiceSubscriptionCancelRequested:
 		return s.q.ListUserIDsByRoleSlug(ctx, rbac.RoleSuperAdmin)
-	case events.ServiceSubscriptionAssigned, events.ServiceSubscriptionCancelled, events.ServiceSubscriptionCancelRejected:
+	case events.ServiceSubscriptionAssigned, events.ServiceSubscriptionCancelled, events.ServiceSubscriptionCancelRejected,
+		events.ServiceSubscriptionExpired, events.ServiceSubscriptionExpiring:
 		return s.q.ListOrganizationOwnerUserIDs(ctx, sub.OrganizationID)
 	default:
 		return nil, nil
@@ -679,44 +743,4 @@ func valueOrEmpty(v *string) string {
 		return ""
 	}
 	return *v
-}
-
-// ExpireDue marks every active (or cancel-requested) subscription whose
-// ends_on is before today as expired and closes the modules of expired
-// module bundles, unless another active subscription still covers them
-// (TEC-508). Run daily by the worker; returns the expired count.
-func (s *Service) ExpireDue(ctx context.Context, today time.Time) (int, error) {
-	if s.pool == nil {
-		return 0, ErrNotConfigured
-	}
-	var expired []db.ServiceSubscription
-	if err := s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		var err error
-		expired, err = q.ExpireServiceSubscriptions(ctx, dateArg(today))
-		if err != nil {
-			return err
-		}
-		for _, sub := range expired {
-			item, err := q.GetServiceCatalogItem(ctx, db.GetServiceCatalogItemParams{ID: sub.ItemID, BrandID: sub.BrandID})
-			if err != nil {
-				return err
-			}
-			if err := s.closeModules(ctx, q, sub, item); err != nil {
-				return err
-			}
-		}
-		return nil
-	}); err != nil {
-		return 0, err
-	}
-	if s.feature != nil {
-		seen := map[int64]bool{}
-		for _, sub := range expired {
-			if !seen[sub.OrganizationID] {
-				seen[sub.OrganizationID] = true
-				s.feature.InvalidateOrg(ctx, sub.OrganizationID)
-			}
-		}
-	}
-	return len(expired), nil
 }

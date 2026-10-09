@@ -311,6 +311,11 @@ var arCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "عمالة الضمان",
 	"accounting.category.warranty_labor_income": "إيرادات عمالة الضمان",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "بيع الخدمات",
+	"accounting.category.service_purchase":         "شراء الخدمات",
+	"accounting.category.service_cancellation_fee": "رسوم الإلغاء",
+
 	"accounting.category.utilities":       "المرافق",
 	"accounting.category.tax":             "الضرائب",
 	"accounting.category.shipping":        "الشحن",

@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Recurrence",
   "subscriptions.fields.contract": "Contract",
   "subscriptions.fields.cancellation_fee": "Cancellation fee",
+  "subscriptions.status.scheduled": "Scheduled",
   "subscriptions.status.active": "Active",
   "subscriptions.status.cancel_requested": "Cancellation requested",
   "subscriptions.status.cancelled": "Cancelled",

@@ -12,6 +12,42 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const activateScheduledServiceSubscription = `-- name: ActivateScheduledServiceSubscription :one
+UPDATE service_subscriptions
+SET status = 'active'
+WHERE id = $1 AND status = 'scheduled'
+RETURNING id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at
+`
+
+func (q *Queries) ActivateScheduledServiceSubscription(ctx context.Context, id int64) (ServiceSubscription, error) {
+	row := q.db.QueryRow(ctx, activateScheduledServiceSubscription, id)
+	var i ServiceSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.ItemID,
+		&i.AssignedByOrgID,
+		&i.AssignedByUserID,
+		&i.StartsOn,
+		&i.EndsOn,
+		&i.Recurrence,
+		&i.Price,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.CancellationFee,
+		&i.Status,
+		&i.ContractID,
+		&i.CancelledAt,
+		&i.ExpiredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const addServiceCatalogModule = `-- name: AddServiceCatalogModule :exec
 INSERT INTO service_catalog_modules (item_id, module_key)
 VALUES ($1, $2)
@@ -213,13 +249,13 @@ func (q *Queries) CreateServiceCatalogItem(ctx context.Context, arg CreateServic
 const createServiceSubscription = `-- name: CreateServiceSubscription :one
 INSERT INTO service_subscriptions (
     organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id,
-    starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, contract_id
+    starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, contract_id, status
 )
 VALUES (
     $1, $2, $3, $4,
     $5, $6, $7, $8,
     $9, $10, $11, $12,
-    $13, $14
+    $13, $14, $15
 )
 RETURNING id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at
 `
@@ -239,6 +275,7 @@ type CreateServiceSubscriptionParams struct {
 	RateSnapshot     []byte         `json:"rate_snapshot"`
 	CancellationFee  pgtype.Numeric `json:"cancellation_fee"`
 	ContractID       pgtype.Int8    `json:"contract_id"`
+	Status           string         `json:"status"`
 }
 
 func (q *Queries) CreateServiceSubscription(ctx context.Context, arg CreateServiceSubscriptionParams) (ServiceSubscription, error) {
@@ -257,6 +294,7 @@ func (q *Queries) CreateServiceSubscription(ctx context.Context, arg CreateServi
 		arg.RateSnapshot,
 		arg.CancellationFee,
 		arg.ContractID,
+		arg.Status,
 	)
 	var i ServiceSubscription
 	err := row.Scan(
@@ -422,53 +460,40 @@ func (q *Queries) DeleteServicePriceOverride(ctx context.Context, arg DeleteServ
 	return result.RowsAffected(), nil
 }
 
-const expireServiceSubscriptions = `-- name: ExpireServiceSubscriptions :many
+const expireServiceSubscription = `-- name: ExpireServiceSubscription :one
 UPDATE service_subscriptions
 SET status = 'expired', expired_at = NOW()
-WHERE status IN ('active', 'cancel_requested') AND ends_on < $1::date
+WHERE id = $1 AND status IN ('scheduled', 'active', 'cancel_requested')
 RETURNING id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at
 `
 
-func (q *Queries) ExpireServiceSubscriptions(ctx context.Context, today pgtype.Date) ([]ServiceSubscription, error) {
-	rows, err := q.db.Query(ctx, expireServiceSubscriptions, today)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ServiceSubscription{}
-	for rows.Next() {
-		var i ServiceSubscription
-		if err := rows.Scan(
-			&i.ID,
-			&i.Uuid,
-			&i.OrganizationID,
-			&i.BrandID,
-			&i.SellerOrgID,
-			&i.ItemID,
-			&i.AssignedByOrgID,
-			&i.AssignedByUserID,
-			&i.StartsOn,
-			&i.EndsOn,
-			&i.Recurrence,
-			&i.Price,
-			&i.Currency,
-			&i.RateSnapshot,
-			&i.CancellationFee,
-			&i.Status,
-			&i.ContractID,
-			&i.CancelledAt,
-			&i.ExpiredAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) ExpireServiceSubscription(ctx context.Context, id int64) (ServiceSubscription, error) {
+	row := q.db.QueryRow(ctx, expireServiceSubscription, id)
+	var i ServiceSubscription
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.SellerOrgID,
+		&i.ItemID,
+		&i.AssignedByOrgID,
+		&i.AssignedByUserID,
+		&i.StartsOn,
+		&i.EndsOn,
+		&i.Recurrence,
+		&i.Price,
+		&i.Currency,
+		&i.RateSnapshot,
+		&i.CancellationFee,
+		&i.Status,
+		&i.ContractID,
+		&i.CancelledAt,
+		&i.ExpiredAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getPrimaryOrganizationOwnerForServiceContract = `-- name: GetPrimaryOrganizationOwnerForServiceContract :one
@@ -701,6 +726,34 @@ func (q *Queries) GetServiceSubscriptionCancelRequestByUUID(ctx context.Context,
 	return i, err
 }
 
+const getServiceSubscriptionPeriodByStart = `-- name: GetServiceSubscriptionPeriodByStart :one
+SELECT id, subscription_id, organization_id, brand_id, period_start, period_end, posted_at, created_at, uuid FROM service_subscription_periods
+WHERE subscription_id = $1 AND period_start = $2
+FOR UPDATE
+`
+
+type GetServiceSubscriptionPeriodByStartParams struct {
+	SubscriptionID int64       `json:"subscription_id"`
+	PeriodStart    pgtype.Date `json:"period_start"`
+}
+
+func (q *Queries) GetServiceSubscriptionPeriodByStart(ctx context.Context, arg GetServiceSubscriptionPeriodByStartParams) (ServiceSubscriptionPeriod, error) {
+	row := q.db.QueryRow(ctx, getServiceSubscriptionPeriodByStart, arg.SubscriptionID, arg.PeriodStart)
+	var i ServiceSubscriptionPeriod
+	err := row.Scan(
+		&i.ID,
+		&i.SubscriptionID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.PeriodStart,
+		&i.PeriodEnd,
+		&i.PostedAt,
+		&i.CreatedAt,
+		&i.Uuid,
+	)
+	return i, err
+}
+
 const insertServiceSubscriptionPeriod = `-- name: InsertServiceSubscriptionPeriod :one
 INSERT INTO service_subscription_periods (subscription_id, organization_id, brand_id, period_start, period_end)
 VALUES ($1, $2, $3,
@@ -739,6 +792,138 @@ func (q *Queries) InsertServiceSubscriptionPeriod(ctx context.Context, arg Inser
 		&i.Uuid,
 	)
 	return i, err
+}
+
+const insertServiceSubscriptionReminder = `-- name: InsertServiceSubscriptionReminder :one
+INSERT INTO service_subscription_reminders (subscription_id, organization_id, brand_id, days_before)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (subscription_id, days_before) DO NOTHING
+RETURNING id, subscription_id, organization_id, brand_id, days_before, created_at
+`
+
+type InsertServiceSubscriptionReminderParams struct {
+	SubscriptionID int64 `json:"subscription_id"`
+	OrganizationID int64 `json:"organization_id"`
+	BrandID        int64 `json:"brand_id"`
+	DaysBefore     int16 `json:"days_before"`
+}
+
+// Idempotent: a reminder already sent returns no row.
+func (q *Queries) InsertServiceSubscriptionReminder(ctx context.Context, arg InsertServiceSubscriptionReminderParams) (ServiceSubscriptionReminder, error) {
+	row := q.db.QueryRow(ctx, insertServiceSubscriptionReminder,
+		arg.SubscriptionID,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.DaysBefore,
+	)
+	var i ServiceSubscriptionReminder
+	err := row.Scan(
+		&i.ID,
+		&i.SubscriptionID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.DaysBefore,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listDueScheduledServiceSubscriptionIDs = `-- name: ListDueScheduledServiceSubscriptionIDs :many
+SELECT id, brand_id FROM service_subscriptions
+WHERE status = 'scheduled' AND starts_on <= $1::date
+ORDER BY starts_on, id
+`
+
+type ListDueScheduledServiceSubscriptionIDsRow struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+// TEC-308: scheduled subscriptions whose start day has come.
+func (q *Queries) ListDueScheduledServiceSubscriptionIDs(ctx context.Context, today pgtype.Date) ([]ListDueScheduledServiceSubscriptionIDsRow, error) {
+	rows, err := q.db.Query(ctx, listDueScheduledServiceSubscriptionIDs, today)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDueScheduledServiceSubscriptionIDsRow{}
+	for rows.Next() {
+		var i ListDueScheduledServiceSubscriptionIDsRow
+		if err := rows.Scan(&i.ID, &i.BrandID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listExpiringServiceSubscriptionIDs = `-- name: ListExpiringServiceSubscriptionIDs :many
+SELECT id, brand_id FROM service_subscriptions
+WHERE status IN ('scheduled', 'active', 'cancel_requested') AND ends_on < $1::date
+ORDER BY ends_on, id
+`
+
+type ListExpiringServiceSubscriptionIDsRow struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+// TEC-308: open subscriptions past ends_on (scheduled ones that never
+// started included), oldest end first.
+func (q *Queries) ListExpiringServiceSubscriptionIDs(ctx context.Context, today pgtype.Date) ([]ListExpiringServiceSubscriptionIDsRow, error) {
+	rows, err := q.db.Query(ctx, listExpiringServiceSubscriptionIDs, today)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListExpiringServiceSubscriptionIDsRow{}
+	for rows.Next() {
+		var i ListExpiringServiceSubscriptionIDsRow
+		if err := rows.Scan(&i.ID, &i.BrandID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPostableServiceSubscriptionIDs = `-- name: ListPostableServiceSubscriptionIDs :many
+SELECT id, brand_id FROM service_subscriptions
+WHERE status IN ('active', 'cancel_requested') AND starts_on <= $1::date
+ORDER BY id
+`
+
+type ListPostableServiceSubscriptionIDsRow struct {
+	ID      int64 `json:"id"`
+	BrandID int64 `json:"brand_id"`
+}
+
+// TEC-308: running subscriptions that have started; their due periods are
+// posted by the daily job.
+func (q *Queries) ListPostableServiceSubscriptionIDs(ctx context.Context, today pgtype.Date) ([]ListPostableServiceSubscriptionIDsRow, error) {
+	rows, err := q.db.Query(ctx, listPostableServiceSubscriptionIDs, today)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPostableServiceSubscriptionIDsRow{}
+	for rows.Next() {
+		var i ListPostableServiceSubscriptionIDsRow
+		if err := rows.Scan(&i.ID, &i.BrandID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listServiceCatalogItems = `-- name: ListServiceCatalogItems :many
@@ -1054,6 +1239,61 @@ func (q *Queries) ListServiceSubscriptionPeriods(ctx context.Context, subscripti
 			&i.PostedAt,
 			&i.CreatedAt,
 			&i.Uuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listServiceSubscriptionsEndingBetween = `-- name: ListServiceSubscriptionsEndingBetween :many
+SELECT id, uuid, organization_id, brand_id, seller_org_id, item_id, assigned_by_org_id, assigned_by_user_id, starts_on, ends_on, recurrence, price, currency, rate_snapshot, cancellation_fee, status, contract_id, cancelled_at, expired_at, created_at, updated_at FROM service_subscriptions
+WHERE status IN ('active', 'cancel_requested')
+  AND ends_on BETWEEN $1::date AND $2::date
+ORDER BY ends_on, id
+`
+
+type ListServiceSubscriptionsEndingBetweenParams struct {
+	FromDay pgtype.Date `json:"from_day"`
+	ToDay   pgtype.Date `json:"to_day"`
+}
+
+// TEC-308: running subscriptions ending in [from, to] (expiry reminders).
+func (q *Queries) ListServiceSubscriptionsEndingBetween(ctx context.Context, arg ListServiceSubscriptionsEndingBetweenParams) ([]ServiceSubscription, error) {
+	rows, err := q.db.Query(ctx, listServiceSubscriptionsEndingBetween, arg.FromDay, arg.ToDay)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ServiceSubscription{}
+	for rows.Next() {
+		var i ServiceSubscription
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.BrandID,
+			&i.SellerOrgID,
+			&i.ItemID,
+			&i.AssignedByOrgID,
+			&i.AssignedByUserID,
+			&i.StartsOn,
+			&i.EndsOn,
+			&i.Recurrence,
+			&i.Price,
+			&i.Currency,
+			&i.RateSnapshot,
+			&i.CancellationFee,
+			&i.Status,
+			&i.ContractID,
+			&i.CancelledAt,
+			&i.ExpiredAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

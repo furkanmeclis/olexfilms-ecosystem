@@ -311,6 +311,11 @@ var azCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "Zəmanət işçiliyi",
 	"accounting.category.warranty_labor_income": "Zəmanət işçilik gəliri",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Xidmət satışı",
+	"accounting.category.service_purchase":         "Xidmət alışı",
+	"accounting.category.service_cancellation_fee": "İmtina haqqı",
+
 	"accounting.category.utilities":       "Kommunal xərclər",
 	"accounting.category.tax":             "Vergilər",
 	"accounting.category.shipping":        "Göndərmə",

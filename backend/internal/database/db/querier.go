@@ -12,6 +12,7 @@ import (
 )
 
 type Querier interface {
+	ActivateScheduledServiceSubscription(ctx context.Context, id int64) (ServiceSubscription, error)
 	// Projection of one ledger row (period = YYYY-MM of created_at, UTC).
 	AddAIUsageMonthly(ctx context.Context, arg AddAIUsageMonthlyParams) (AiUsageMonthly, error)
 	AddAnnouncementAudience(ctx context.Context, arg AddAnnouncementAudienceParams) (AnnouncementAudience, error)
@@ -765,7 +766,7 @@ type Querier interface {
 	// Daily cron (decision 4/5): end_at is the end of the last covered day in
 	// the organization's time zone, so expiry is a plain comparison.
 	ExpireDueWarranties(ctx context.Context, now pgtype.Timestamptz) ([]Warranty, error)
-	ExpireServiceSubscriptions(ctx context.Context, today pgtype.Date) ([]ServiceSubscription, error)
+	ExpireServiceSubscription(ctx context.Context, id int64) (ServiceSubscription, error)
 	ExtensionExists(ctx context.Context, extname string) (bool, error)
 	// Records a validation failure: the draft keeps its temporary number (no
 	// series number is consumed) and can be archived again after a fix.
@@ -1123,6 +1124,7 @@ type Querier interface {
 	GetOrderItemUnit(ctx context.Context, arg GetOrderItemUnitParams) (OrderItemUnit, error)
 	GetOrderOutbound(ctx context.Context, arg GetOrderOutboundParams) (OrderOutbound, error)
 	GetOrderOutboundByID(ctx context.Context, id int64) (OrderOutbound, error)
+	// The manual value (admin / distributor / dealer standard), never a grant.
 	GetOrgModuleFlag(ctx context.Context, arg GetOrgModuleFlagParams) (ModuleFlag, error)
 	GetOrganizationByID(ctx context.Context, id int64) (Organization, error)
 	GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error)
@@ -1268,6 +1270,7 @@ type Querier interface {
 	GetServiceSubscriptionByUUID(ctx context.Context, arg GetServiceSubscriptionByUUIDParams) (ServiceSubscription, error)
 	GetServiceSubscriptionCancelRequestByUUID(ctx context.Context, arg GetServiceSubscriptionCancelRequestByUUIDParams) (ServiceSubscriptionCancelRequest, error)
 	GetServiceSubscriptionForContractByID(ctx context.Context, id int64) (ServiceSubscription, error)
+	GetServiceSubscriptionPeriodByStart(ctx context.Context, arg GetServiceSubscriptionPeriodByStartParams) (ServiceSubscriptionPeriod, error)
 	// Tells an expired token of the brand apart from an unknown one.
 	GetShortURLExpiry(ctx context.Context, arg GetShortURLExpiryParams) (pgtype.Timestamptz, error)
 	GetShortURLStats(ctx context.Context, token string) (GetShortURLStatsRow, error)
@@ -1499,6 +1502,8 @@ type Querier interface {
 	InsertServiceStatusLog(ctx context.Context, arg InsertServiceStatusLogParams) (ServiceStatusLog, error)
 	// Idempotent: a period already written returns no row.
 	InsertServiceSubscriptionPeriod(ctx context.Context, arg InsertServiceSubscriptionPeriodParams) (ServiceSubscriptionPeriod, error)
+	// Idempotent: a reminder already sent returns no row.
+	InsertServiceSubscriptionReminder(ctx context.Context, arg InsertServiceSubscriptionReminderParams) (ServiceSubscriptionReminder, error)
 	// ---------------------------------------------------------------------------
 	// Lines.
 	InsertStockCountLine(ctx context.Context, arg InsertStockCountLineParams) (StockCountLine, error)
@@ -1847,6 +1852,8 @@ type Querier interface {
 	// "today" in the brand center's timezone.
 	ListDueRecommendedPriceVersionsForBrand(ctx context.Context, arg ListDueRecommendedPriceVersionsForBrandParams) ([]RecommendedPriceVersion, error)
 	ListDueScheduledCampaigns(ctx context.Context, arg ListDueScheduledCampaignsParams) ([]Campaign, error)
+	// TEC-308: scheduled subscriptions whose start day has come.
+	ListDueScheduledServiceSubscriptionIDs(ctx context.Context, today pgtype.Date) ([]ListDueScheduledServiceSubscriptionIDsRow, error)
 	// ListDueStaffPayments is the scan of the posting job: planned payments
 	// whose paid_on has arrived in their organization's time zone.
 	ListDueStaffPayments(ctx context.Context, arg ListDueStaffPaymentsParams) ([]ListDueStaffPaymentsRow, error)
@@ -1877,6 +1884,9 @@ type Querier interface {
 	ListEinvoices(ctx context.Context, arg ListEinvoicesParams) ([]ListEinvoicesRow, error)
 	ListEnabledLogPurgeRules(ctx context.Context) ([]LogPurgeRule, error)
 	ListExchangeRatesByDate(ctx context.Context, arg ListExchangeRatesByDateParams) ([]ListExchangeRatesByDateRow, error)
+	// TEC-308: open subscriptions past ends_on (scheduled ones that never
+	// started included), oldest end first.
+	ListExpiringServiceSubscriptionIDs(ctx context.Context, today pgtype.Date) ([]ListExpiringServiceSubscriptionIDsRow, error)
 	// TEC-365: platform (actor_id = own jobs, or NULL for admins) and tenant
 	// (organization_id) export lists. Sort: docs/list-contract.md, keys from
 	// exports/usecase.SortSpec.
@@ -2270,6 +2280,9 @@ type Querier interface {
 	// customer are closed to Glorian), even on a Glorian host. Draft services
 	// are dealer-internal and stay out. No measurement column is selected.
 	ListPortalVehicles(ctx context.Context, arg ListPortalVehiclesParams) ([]ListPortalVehiclesRow, error)
+	// TEC-308: running subscriptions that have started; their due periods are
+	// posted by the daily job.
+	ListPostableServiceSubscriptionIDs(ctx context.Context, today pgtype.Date) ([]ListPostableServiceSubscriptionIDsRow, error)
 	// Organizations with at least one product over the threshold on a day (the
 	// weekly digest): the count of such products and the largest deviation.
 	ListPriceDisciplineOverThresholdOrgs(ctx context.Context, arg ListPriceDisciplineOverThresholdOrgsParams) ([]ListPriceDisciplineOverThresholdOrgsRow, error)
@@ -2441,6 +2454,8 @@ type Querier interface {
 	// from servicecatalog usecase CancelRequestsSortSpec.
 	ListServiceSubscriptionCancelRequestsPage(ctx context.Context, arg ListServiceSubscriptionCancelRequestsPageParams) ([]ListServiceSubscriptionCancelRequestsPageRow, error)
 	ListServiceSubscriptionPeriods(ctx context.Context, subscriptionID int64) ([]ServiceSubscriptionPeriod, error)
+	// TEC-308: running subscriptions ending in [from, to] (expiry reminders).
+	ListServiceSubscriptionsEndingBetween(ctx context.Context, arg ListServiceSubscriptionsEndingBetweenParams) ([]ServiceSubscription, error)
 	// TEC-311: paged subscription list (docs/list-contract.md). Sort keys from
 	// servicecatalog usecase SubscriptionsSortSpec; organization_ids NULL = no
 	// organization restriction (all/brand scope).
@@ -3738,6 +3753,8 @@ type Querier interface {
 	UpsertNotificationTemplate(ctx context.Context, arg UpsertNotificationTemplateParams) (NotificationTemplate, error)
 	// Consent creates the user's connected app or brings a revoked one back.
 	UpsertOAuthGrant(ctx context.Context, arg UpsertOAuthGrantParams) (OauthGrant, error)
+	// TEC-308: manual values only; a module bundle grant (source=service) is a
+	// separate row (uq_module_flags_service).
 	UpsertOrgModuleFlag(ctx context.Context, arg UpsertOrgModuleFlagParams) (ModuleFlag, error)
 	UpsertOrganizationProductStockForRepair(ctx context.Context, arg UpsertOrganizationProductStockForRepairParams) error
 	// TEC-508 (F5-10a): persistent module requests (migration 000131).

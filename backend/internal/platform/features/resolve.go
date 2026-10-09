@@ -123,16 +123,32 @@ type flagKey struct {
 //     - otherwise the module is off while the distributor has it off;
 //     - otherwise its own value, else the distributor's dealer standard,
 //     else the module default.
+//  5. a module bundle subscription grant (source=service, TEC-308) sits
+//     beside the manual value: the module is on when the manual value or
+//     the grant is on. Closing the subscription removes only the grant. A
+//     grant obeys rule 2 and, for a dealer, a closed distributor; a
+//     distributor's grant counts as "distributor on" for its dealers.
 //
 // Inheritance is computed here on read; no row is ever copied.
 func Resolve(in Input) []State {
 	idx := make(map[flagKey]FlagRow, len(in.Flags))
+	grants := make(map[flagKey]FlagRow)
 	for _, f := range in.Flags {
 		org := f.OrgID
 		if f.Scope == ScopeSystem {
 			org = 0
 		}
+		if f.Source == SourceService {
+			if f.Scope == ScopeOrg && f.Enabled {
+				grants[flagKey{ScopeOrg, org, f.Key}] = f
+			}
+			continue
+		}
 		idx[flagKey{f.Scope, org, f.Key}] = f
+	}
+	grant := func(org int64, key string) (FlagRow, bool) {
+		f, ok := grants[flagKey{ScopeOrg, org, key}]
+		return f, ok
 	}
 	get := func(scope string, org int64, key string) (FlagRow, bool) {
 		f, ok := idx[flagKey{scope, org, key}]
@@ -157,6 +173,7 @@ func Resolve(in Input) []State {
 		}
 		own, hasOwn := get(ScopeOrg, in.Org.ID, m.Key)
 		st.AdminOverride = hasOwn && own.Source == SourceAdmin
+		granted, hasGrant := grant(in.Org.ID, m.Key)
 
 		if !underDistributor {
 			st.UpstreamEnabled, st.Visible = true, true
@@ -166,6 +183,7 @@ func Resolve(in Input) []State {
 			} else {
 				st.Enabled, st.Source = m.DefaultEnabled, FromDefault
 			}
+			applyGrant(&st, granted, hasGrant)
 			out = append(out, st)
 			continue
 		}
@@ -173,6 +191,9 @@ func Resolve(in Input) []State {
 		parentOn := m.DefaultEnabled
 		if pf, ok := get(ScopeOrg, in.Org.ParentID, m.Key); ok {
 			parentOn = pf.Enabled
+		}
+		if _, ok := grant(in.Org.ParentID, m.Key); ok {
+			parentOn = true
 		}
 		st.UpstreamEnabled = parentOn
 		switch {
@@ -193,9 +214,22 @@ func Resolve(in Input) []State {
 				st.Enabled, st.Source = m.DefaultEnabled, FromDefault
 			}
 		}
+		if parentOn {
+			applyGrant(&st, granted, hasGrant)
+		}
 		out = append(out, st)
 	}
 	return out
+}
+
+// applyGrant switches a module on through a subscription grant when the
+// manual value leaves it off; the manual source stays when it is on.
+func applyGrant(st *State, g FlagRow, ok bool) {
+	if !ok || st.Enabled {
+		return
+	}
+	st.Enabled, st.Visible, st.Source = true, true, SourceService
+	apply(st, g)
 }
 
 func apply(st *State, f FlagRow) {

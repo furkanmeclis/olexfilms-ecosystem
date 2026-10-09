@@ -46,7 +46,9 @@ RETURNING *;
 INSERT INTO module_flags (scope, organization_id, module_key, enabled, source, set_by_user_id, note)
 VALUES (sqlc.arg(scope), sqlc.arg(organization_id), sqlc.arg(module_key), sqlc.arg(enabled),
         sqlc.arg(source), sqlc.narg(set_by_user_id), sqlc.narg(note))
-ON CONFLICT (scope, organization_id, module_key) WHERE organization_id IS NOT NULL DO UPDATE SET
+-- TEC-308: manual values only; a module bundle grant (source=service) is a
+-- separate row (uq_module_flags_service).
+ON CONFLICT (scope, organization_id, module_key) WHERE organization_id IS NOT NULL AND source <> 'service' DO UPDATE SET
     enabled = EXCLUDED.enabled,
     source = EXCLUDED.source,
     set_by_user_id = EXCLUDED.set_by_user_id,
@@ -57,9 +59,8 @@ RETURNING *;
 INSERT INTO module_flags (scope, organization_id, module_key, enabled, source, set_by_user_id, service_id, note)
 VALUES ('org', sqlc.arg(organization_id), sqlc.arg(module_key), sqlc.arg(enabled), 'service',
         sqlc.narg(set_by_user_id), sqlc.arg(service_id), sqlc.narg(note))
-ON CONFLICT (scope, organization_id, module_key) WHERE organization_id IS NOT NULL DO UPDATE SET
+ON CONFLICT (organization_id, module_key) WHERE source = 'service' DO UPDATE SET
     enabled = EXCLUDED.enabled,
-    source = EXCLUDED.source,
     set_by_user_id = EXCLUDED.set_by_user_id,
     service_id = EXCLUDED.service_id,
     note = EXCLUDED.note
@@ -73,12 +74,15 @@ WHERE scope = 'org'
   AND source = 'service';
 
 -- name: GetOrgModuleFlag :one
+-- The manual value (admin / distributor / dealer standard), never a grant.
 SELECT * FROM module_flags
-WHERE scope = sqlc.arg(scope) AND organization_id = sqlc.arg(organization_id) AND module_key = sqlc.arg(module_key);
+WHERE scope = sqlc.arg(scope) AND organization_id = sqlc.arg(organization_id) AND module_key = sqlc.arg(module_key)
+  AND source <> 'service';
 
 -- name: DeleteOrgModuleFlag :execrows
 DELETE FROM module_flags
-WHERE scope = sqlc.arg(scope) AND organization_id = sqlc.arg(organization_id) AND module_key = sqlc.arg(module_key);
+WHERE scope = sqlc.arg(scope) AND organization_id = sqlc.arg(organization_id) AND module_key = sqlc.arg(module_key)
+  AND source <> 'service';
 
 -- name: DeleteSystemModuleFlag :execrows
 DELETE FROM module_flags WHERE scope = 'system' AND module_key = $1;

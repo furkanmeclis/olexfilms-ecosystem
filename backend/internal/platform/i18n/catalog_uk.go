@@ -311,6 +311,11 @@ var ukCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "Гарантійні роботи",
 	"accounting.category.warranty_labor_income": "Дохід від гарантійних робіт",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Продаж послуг",
+	"accounting.category.service_purchase":         "Закупівля послуг",
+	"accounting.category.service_cancellation_fee": "Плата за дострокове скасування",
+
 	"accounting.category.utilities":       "Комунальні послуги",
 	"accounting.category.tax":             "Податки",
 	"accounting.category.shipping":        "Доставка",

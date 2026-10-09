@@ -293,6 +293,16 @@ const (
 	ServiceSubscriptionCancelRejected  = "service_subscription.cancel_rejected"
 )
 
+// Service subscription cron events (TEC-308): a scheduled subscription
+// started, a subscription passed its end day, and the 30 / 7 day expiry
+// reminder (payload days_before). Notifications consume expired and
+// expiring.
+const (
+	ServiceSubscriptionActivated = "service_subscription.activated"
+	ServiceSubscriptionExpired   = "service_subscription.expired"
+	ServiceSubscriptionExpiring  = "service_subscription.expiring"
+)
+
 // Appointment domain events (TEC-323): written when a booking is created,
 // rescheduled or cancelled.
 const (

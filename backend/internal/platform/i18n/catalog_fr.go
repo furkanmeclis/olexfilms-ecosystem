@@ -311,6 +311,11 @@ var frCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "Main-d'œuvre sous garantie",
 	"accounting.category.warranty_labor_income": "Revenus de main-d'œuvre sous garantie",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Vente de services",
+	"accounting.category.service_purchase":         "Achat de services",
+	"accounting.category.service_cancellation_fee": "Frais de résiliation",
+
 	"accounting.category.utilities":       "Charges courantes",
 	"accounting.category.tax":             "Impôts et taxes",
 	"accounting.category.shipping":        "Expédition",

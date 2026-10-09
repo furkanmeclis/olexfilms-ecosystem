@@ -153,6 +153,7 @@
   "subscriptions.fields.recurrence": "Επανάληψη",
   "subscriptions.fields.contract": "Σύμβαση",
   "subscriptions.fields.cancellation_fee": "Τέλος ακύρωσης",
+  "subscriptions.status.scheduled": "Προγραμματισμένη",
   "subscriptions.status.active": "Ενεργή",
   "subscriptions.status.cancel_requested": "Ζητήθηκε ακύρωση",
   "subscriptions.status.cancelled": "Ακυρώθηκε",

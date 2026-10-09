@@ -311,6 +311,11 @@ var elCatalog = map[string]string{
 	"accounting.category.warranty_labor":        "Εργασία εγγύησης",
 	"accounting.category.warranty_labor_income": "Έσοδα εργασίας εγγύησης",
 
+	// TEC-308: service subscription accounting categories.
+	"accounting.category.service_sale":             "Πώληση υπηρεσιών",
+	"accounting.category.service_purchase":         "Αγορά υπηρεσιών",
+	"accounting.category.service_cancellation_fee": "Τέλος ακύρωσης",
+
 	"accounting.category.utilities":       "Λογαριασμοί κοινής ωφέλειας",
 	"accounting.category.tax":             "Φόροι",
 	"accounting.category.shipping":        "Αποστολή",
