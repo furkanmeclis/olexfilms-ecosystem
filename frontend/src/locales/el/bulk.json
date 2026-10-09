@@ -101,5 +101,7 @@
   "params.ai_mode": "Λειτουργία AI",
   "params.ai_mode.auto": "Αυτόματη",
   "params.ai_mode.paused": "Σε παύση",
-  "params.ai_mode.off": "Ανενεργή"
+  "params.ai_mode.off": "Ανενεργή",
+  "actions.performance_bonuses.approve": "Έγκριση μπόνους",
+  "confirm.performance_bonuses.approve": "Έγκριση των επιλεγμένων μπόνους με τα υπολογισμένα ποσά; Το καθένα γίνεται πληρωμή προσωπικού."
 }

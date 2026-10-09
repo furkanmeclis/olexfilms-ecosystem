@@ -101,5 +101,7 @@
   "params.ai_mode": "Режим ИИ",
   "params.ai_mode.auto": "Автоматически",
   "params.ai_mode.paused": "Приостановлен",
-  "params.ai_mode.off": "Выключен"
+  "params.ai_mode.off": "Выключен",
+  "actions.performance_bonuses.approve": "Одобрить премии",
+  "confirm.performance_bonuses.approve": "Одобрить выбранные премии с рассчитанными суммами? Каждая станет выплатой сотруднику."
 }

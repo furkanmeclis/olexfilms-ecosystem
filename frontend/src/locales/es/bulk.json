@@ -101,5 +101,7 @@
   "params.ai_mode": "Modo de IA",
   "params.ai_mode.auto": "Automático",
   "params.ai_mode.paused": "En pausa",
-  "params.ai_mode.off": "Desactivado"
+  "params.ai_mode.off": "Desactivado",
+  "actions.performance_bonuses.approve": "Aprobar primas",
+  "confirm.performance_bonuses.approve": "¿Aprobar las primas seleccionadas con sus importes calculados? Cada una se convierte en un pago al personal."
 }

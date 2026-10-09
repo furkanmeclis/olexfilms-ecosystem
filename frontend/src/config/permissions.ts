@@ -216,6 +216,10 @@ export const Permission = {
   /** TEC-496: performance panel, ranking and map (performance module). */
   PerformanceRead: "performance.read",
   PerformanceTargetsManage: "performance.targets.manage",
+  /** TEC-497: team targets, bonuses and weak dealer rules. */
+  PerformanceStaffTargetsManage: "performance.staff_targets.manage",
+  PerformanceBonusManage: "performance.bonus.manage",
+  PerformanceRulesManage: "performance.rules.manage",
 } as const;
 
 export type PermissionSlug = (typeof Permission)[keyof typeof Permission];
@@ -616,5 +620,8 @@ export const permissions = {
   performance: {
     read: Permission.PerformanceRead,
     targetsManage: Permission.PerformanceTargetsManage,
+    staffTargetsManage: Permission.PerformanceStaffTargetsManage,
+    bonusManage: Permission.PerformanceBonusManage,
+    rulesManage: Permission.PerformanceRulesManage,
   },
 } as const;
