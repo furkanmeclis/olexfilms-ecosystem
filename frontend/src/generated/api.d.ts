@@ -15515,7 +15515,7 @@ export interface components {
             amount?: string | null;
             /** @description percent_of_revenue: percent (0-100] */
             percent?: string | null;
-            /** @description fixed: ISO 4217 */
+            /** @description fixed: ISO 4217, default the dealer currency */
             currency?: string | null;
             active?: boolean;
         };

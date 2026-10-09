@@ -26,7 +26,8 @@ func TestBonusRulesCRUDValidationAndSettings(t *testing.T) {
 		{Name: "", Metric: model.MetricServicesCount, ThresholdPct: "100", Kind: model.BonusFixed, Amount: strp("500"), Currency: strp("TRY")},
 		{Name: "x", Metric: "order_volume", ThresholdPct: "100", Kind: model.BonusFixed, Amount: strp("500"), Currency: strp("TRY")},
 		{Name: "x", Metric: model.MetricServicesCount, ThresholdPct: "1001", Kind: model.BonusFixed, Amount: strp("500"), Currency: strp("TRY")},
-		{Name: "x", Metric: model.MetricServicesCount, ThresholdPct: "100", Kind: model.BonusFixed, Amount: strp("500")},
+		{Name: "x", Metric: model.MetricServicesCount, ThresholdPct: "100", Kind: model.BonusFixed, Amount: strp("500"), Currency: strp("TRYX")},
+		{Name: "x", Metric: model.MetricServicesCount, ThresholdPct: "100", Kind: model.BonusFixed, Currency: strp("TRY")},
 		{Name: "x", Metric: model.MetricServiceRevenue, ThresholdPct: "100", Kind: model.BonusPercentOfRevenue, Percent: strp("101")},
 		{Name: "x", Metric: model.MetricServiceRevenue, ThresholdPct: "100", Kind: "other"},
 	}
@@ -56,6 +57,16 @@ func TestBonusRulesCRUDValidationAndSettings(t *testing.T) {
 	}
 	if updated.Kind != model.BonusPercentOfRevenue || updated.Amount != nil || updated.Currency != nil || updated.Percent == nil {
 		t.Fatalf("updated = %+v", updated)
+	}
+	// A fixed rule without currency takes the dealer currency.
+	defaulted, err := svc.CreateBonusRule(f.ctx, c, BonusRuleInput{
+		Name: "Varsayilan", Metric: model.MetricServicesCount, ThresholdPct: "80", Kind: model.BonusFixed, Amount: strp("100"),
+	})
+	if err != nil || defaulted.Currency == nil || *defaulted.Currency != f.dealer1.Currency {
+		t.Fatalf("defaulted currency = %+v, %v", defaulted, err)
+	}
+	if err := svc.DeleteBonusRule(f.ctx, c, defaulted.UUID); err != nil {
+		t.Fatal(err)
 	}
 	rules, err := svc.ListBonusRules(f.ctx, c, nil)
 	if err != nil || len(rules) != 1 || rules[0].UUID != created.UUID {
@@ -257,8 +268,12 @@ func TestWeakDealerRuleAssigneeUUIDAndCenterOnlyTasks(t *testing.T) {
 	if err != nil || staff.UserUUID != staffUser.Uuid {
 		t.Fatalf("staff target = %+v, %v", staff, err)
 	}
+	revenue, err := svc.UpsertStaffTarget(f.ctx, dealer, StaffTargetInput{UserUUID: staffUser.Uuid, Period: "2026-10", Metric: model.MetricServiceRevenue, Value: "5000"})
+	if err != nil || revenue.Currency == nil || *revenue.Currency != f.dealer1.Currency {
+		t.Fatalf("revenue target currency = %+v, %v", revenue, err)
+	}
 	list, err := svc.ListStaffTargets(f.ctx, dealer, StaffTargetFilter{PeriodFrom: "2026-10", PeriodTo: "2026-10"})
-	if err != nil || len(list) != 1 || list[0].UserUUID != staffUser.Uuid {
+	if err != nil || len(list) != 2 || list[0].UserUUID != staffUser.Uuid {
 		t.Fatalf("staff targets = %+v, %v", list, err)
 	}
 }

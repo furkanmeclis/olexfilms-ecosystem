@@ -29721,7 +29721,7 @@ components:
         kind: { type: string, enum: [fixed, percent_of_revenue] }
         amount: { type: [string, "null"], description: "fixed: amount" }
         percent: { type: [string, "null"], description: "percent_of_revenue: percent (0-100]" }
-        currency: { type: [string, "null"], description: "fixed: ISO 4217" }
+        currency: { type: [string, "null"], description: "fixed: ISO 4217, default the dealer currency" }
         active: { type: boolean }
     PerformanceBonusSettings:
       type: object

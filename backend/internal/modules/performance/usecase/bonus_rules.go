@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/model"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // DefaultBonusPayoutDay is the payout day of a dealer without bonus
@@ -88,8 +89,8 @@ func bonusRuleArgs(in BonusRuleInput) (db.UpdateBonusRuleParams, error) {
 			return out, invalid("amount", "must be a positive decimal")
 		}
 		cur := currencyArg(in.Currency)
-		if len(cur.String) != 3 {
-			return out, invalid("currency", "is required")
+		if cur.Valid && len(cur.String) != 3 {
+			return out, invalid("currency", "must be an ISO 4217 code")
 		}
 		out.Amount, out.Currency = amount, cur
 	case model.BonusPercentOfRevenue:
@@ -105,6 +106,25 @@ func bonusRuleArgs(in BonusRuleInput) (db.UpdateBonusRuleParams, error) {
 		return out, invalid("kind", "invalid")
 	}
 	return out, nil
+}
+
+// withRuleCurrency defaults a fixed rule without currency to the dealer
+// currency.
+func (s *Service) withRuleCurrency(ctx context.Context, c Caller, arg *db.UpdateBonusRuleParams) error {
+	if arg.Kind != model.BonusFixed || arg.Currency.Valid {
+		return nil
+	}
+	cur, err := s.orgCurrency(ctx, c)
+	arg.Currency = cur
+	return err
+}
+
+func (s *Service) orgCurrency(ctx context.Context, c Caller) (pgtype.Text, error) {
+	org, err := s.q.GetOrganizationByID(ctx, c.Org.InternalID)
+	if err != nil {
+		return pgtype.Text{}, err
+	}
+	return pgtype.Text{String: org.Currency, Valid: org.Currency != ""}, nil
 }
 
 func (s *Service) bonusDealer(ctx context.Context, c Caller) error {
@@ -137,6 +157,9 @@ func (s *Service) CreateBonusRule(ctx context.Context, c Caller, in BonusRuleInp
 	if err != nil {
 		return BonusRuleView{}, err
 	}
+	if err := s.withRuleCurrency(ctx, c, &arg); err != nil {
+		return BonusRuleView{}, err
+	}
 	row, err := s.q.CreateBonusRule(ctx, db.CreateBonusRuleParams{
 		OrganizationID: c.Org.InternalID, BrandID: c.Org.BrandID, Name: arg.Name, Metric: arg.Metric,
 		ThresholdPct: arg.ThresholdPct, Kind: arg.Kind, Amount: arg.Amount, Percent: arg.Percent,
@@ -166,6 +189,9 @@ func (s *Service) UpdateBonusRule(ctx context.Context, c Caller, id uuid.UUID, i
 	}
 	arg, err := bonusRuleArgs(in)
 	if err != nil {
+		return BonusRuleView{}, err
+	}
+	if err := s.withRuleCurrency(ctx, c, &arg); err != nil {
 		return BonusRuleView{}, err
 	}
 	arg.ID, arg.OrganizationID = cur.ID, c.Org.InternalID

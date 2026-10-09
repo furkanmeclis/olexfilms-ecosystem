@@ -605,7 +605,17 @@ func (s *Service) UpsertStaffTarget(ctx context.Context, c Caller, in StaffTarge
 	if !contains(model.StaffMetrics, in.Metric) {
 		return StaffTargetView{}, invalid("metric", "invalid")
 	}
-	row, err := s.q.UpsertStaffTarget(ctx, db.UpsertStaffTargetParams{OrganizationID: c.Org.InternalID, BrandID: c.Org.BrandID, UserID: u.UserID, Period: in.Period, Metric: in.Metric, Value: val, Currency: currencyArg(in.Currency), CreatedByUserID: userArg(c)})
+	cur := currencyArg(in.Currency)
+	switch {
+	case in.Metric == model.MetricServicesCount:
+		cur = pgtype.Text{}
+	case !cur.Valid:
+		// TEC-497: revenue targets default to the dealer currency.
+		if cur, err = s.orgCurrency(ctx, c); err != nil {
+			return StaffTargetView{}, err
+		}
+	}
+	row, err := s.q.UpsertStaffTarget(ctx, db.UpsertStaffTargetParams{OrganizationID: c.Org.InternalID, BrandID: c.Org.BrandID, UserID: u.UserID, Period: in.Period, Metric: in.Metric, Value: val, Currency: cur, CreatedByUserID: userArg(c)})
 	if err != nil {
 		return StaffTargetView{}, mapPG(err)
 	}
