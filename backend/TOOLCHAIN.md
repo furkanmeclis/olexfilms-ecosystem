@@ -67,5 +67,5 @@ Infra is started from the **repo root**: `make infra` / `make local-dev`.
 - Migrations: **golang-migrate** only; create with **`-seq`** via `make migrate-create`.
 - SQL access: **sqlc** + pgx — see [`DATABASE_RULES.md`](DATABASE_RULES.md).
 - Postgres image is **`postgres:18-alpine`**. `000001` enables `pgcrypto`.
-- Queue: in-process by default (`QUEUE_WORKER_INPROCESS=true`) or `make worker`.
+- Queue: in-process by default (`QUEUE_WORKER_INPROCESS=true`: worker, periodic scheduler and WhatsApp delivery as in `cmd/worker`) or `make worker`.
 - Storage: SeaweedFS (S3 API) via Compose (`STORAGE_DRIVER=s3`).

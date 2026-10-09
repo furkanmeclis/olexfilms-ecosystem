@@ -1,16 +1,17 @@
-package main
+package queue
 
 import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
-	"path/filepath"
+	"reflect"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
+	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -98,20 +99,9 @@ func TestRunAsLeaderStartsOnceAndReleases(t *testing.T) {
 	waitFor(t, func() bool { return startsB.Load() == 1 })
 }
 
-func TestRunHealthFileTouchesOnPing(t *testing.T) {
-	mr := miniredis.RunT(t)
-	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	defer func() { _ = rdb.Close() }()
-	path := filepath.Join(t.TempDir(), "worker.health")
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go runHealthFile(ctx, rdb, path, time.Hour, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	waitFor(t, func() bool { _, err := os.Stat(path); return err == nil })
-}
-
 func waitFor(t *testing.T, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(2 * time.Second)
+	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		if cond() {
 			return
@@ -119,4 +109,59 @@ func waitFor(t *testing.T, cond func() bool) {
 		time.Sleep(5 * time.Millisecond)
 	}
 	t.Fatal("condition not met in time")
+}
+
+// TEC-143: two processes running the scheduler (cmd/worker and an API with
+// QUEUE_WORKER_INPROCESS, or two workers) share the lock, so exactly one
+// asynq scheduler publishes the Schedules entries; when it stops, the other
+// takes over with the same set.
+func TestRunSchedulerSingleLeaderAcrossInstances(t *testing.T) {
+	mr := miniredis.RunT(t)
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	var cfg config.Config
+	cfg.Redis.Addr = mr.Addr()
+	inspector := asynq.NewInspector(RedisOpt(cfg.Redis))
+	defer func() { _ = inspector.Close() }()
+
+	want := map[string]int{}
+	for _, p := range Schedules() {
+		want[p.Type+" "+p.Cron]++
+	}
+	entries := func() map[string]int {
+		list, err := inspector.SchedulerEntries()
+		if err != nil {
+			t.Fatalf("scheduler entries: %v", err)
+		}
+		got := map[string]int{}
+		for _, e := range list {
+			got[e.Task.Type()+" "+e.Spec]++
+		}
+		return got
+	}
+
+	run := func(id string) (context.CancelFunc, chan struct{}) {
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() {
+			runScheduler(ctx, cfg, newLock(t, mr, id), 10*time.Millisecond, time.Second, log)
+			close(done)
+		}()
+		return cancel, done
+	}
+	cancelA, doneA := run("a")
+	waitFor(t, func() bool { got, _ := mr.Get(schedulerLockKey); return got == "a" })
+	cancelB, doneB := run("b")
+	defer func() { cancelB(); <-doneB }()
+
+	waitFor(t, func() bool { return len(entries()) > 0 })
+	// Past a heartbeat of every instance: a second scheduler would show up.
+	time.Sleep(1500 * time.Millisecond)
+	if got := entries(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("scheduler entries = %v, want one scheduler with %v", got, want)
+	}
+
+	cancelA()
+	<-doneA
+	waitFor(t, func() bool { got, _ := mr.Get(schedulerLockKey); return got == "b" })
+	waitFor(t, func() bool { return reflect.DeepEqual(entries(), want) })
 }

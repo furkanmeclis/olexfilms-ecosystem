@@ -96,6 +96,15 @@ func Schedules() []Periodic {
 		{Cron: pricingDailyCron, Type: TaskPricingDaily, Queue: QueueMaintenance, Opts: pricingDailyOpts(), New: NewPricingDailyTask},
 		// TEC-508: hourly expiry of service subscriptions (module bundles close).
 		{Cron: serviceSubscriptionsExpireCron, Type: TaskServiceSubscriptionsExpire, Queue: QueueMaintenance, Opts: serviceSubscriptionsExpireOpts(), New: NewServiceSubscriptionsExpireTask},
+		// TEC-92: wuzapi session status poll; TEC-87: notification retention.
+		// TEC-143: listed here (not registered by cmd/worker alone) so the
+		// in-process scheduler runs them too.
+		{Cron: whatsAppPollCron, Type: TaskWhatsAppStatusPoll, Queue: QueueMaintenance, New: func() (*asynq.Task, error) {
+			return NewWhatsAppStatusPollTask(), nil
+		}},
+		{Cron: notificationPurgeCron, Type: TaskNotificationPurge, Queue: QueueMaintenance, New: func() (*asynq.Task, error) {
+			return NewNotificationPurgeTask(), nil
+		}},
 		// TEC-308: subscription periods on both ledgers, activation, reminders.
 		{Cron: serviceSubscriptionsPostPeriodsCron, Type: TaskServiceSubscriptionsPostPeriods, Queue: QueueMaintenance, Opts: serviceSubscriptionsPostPeriodsOpts(), New: NewServiceSubscriptionsPostPeriodsTask},
 	}
@@ -126,8 +135,15 @@ func RegisterSchedules(r Registrar, log *slog.Logger) error {
 }
 
 // StartScheduler builds the worker-core scheduler with every periodic task.
-// The caller starts it under the leader lock (one scheduler per cluster).
+// The caller starts it under the leader lock (one scheduler per cluster);
+// RunScheduler does both.
 func StartScheduler(cfg config.Config, log *slog.Logger) (*asynq.Scheduler, error) {
+	return newScheduler(cfg, log, 0)
+}
+
+// newScheduler is StartScheduler with the asynq heartbeat interval (how
+// often the entries are published to Redis; 0 = asynq default).
+func newScheduler(cfg config.Config, log *slog.Logger, heartbeat time.Duration) (*asynq.Scheduler, error) {
 	if log == nil {
 		log = slog.Default()
 	}
@@ -136,7 +152,8 @@ func StartScheduler(cfg config.Config, log *slog.Logger) (*asynq.Scheduler, erro
 		return nil, fmt.Errorf("queue: scheduler timezone: %w", err)
 	}
 	scheduler := asynq.NewScheduler(RedisOpt(cfg.Redis), &asynq.SchedulerOpts{
-		Location: loc,
+		Location:          loc,
+		HeartbeatInterval: heartbeat,
 		// PostEnqueueFunc gets a nil TaskInfo on failure (no task type), so
 		// the deprecated error handler stays the only hook with task + error.
 		EnqueueErrorHandler: SchedulerErrorHandler(log), //nolint:staticcheck // see above

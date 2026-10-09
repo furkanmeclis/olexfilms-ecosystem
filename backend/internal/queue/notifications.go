@@ -2,7 +2,6 @@ package queue
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hibiken/asynq"
 )
@@ -36,12 +35,4 @@ func (w *Worker) handleNotificationPurge(ctx context.Context, _ *asynq.Task) err
 	}
 	_, err := w.purgeNotifications(ctx)
 	return err
-}
-
-// RegisterNotificationPurge adds the hourly sweep to a scheduler.
-func RegisterNotificationPurge(s *asynq.Scheduler) error {
-	if _, err := s.Register(notificationPurgeCron, NewNotificationPurgeTask(), asynq.Queue(QueueMaintenance)); err != nil {
-		return fmt.Errorf("queue: register notification purge: %w", err)
-	}
-	return nil
 }

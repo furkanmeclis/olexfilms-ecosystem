@@ -10,9 +10,12 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/providers"
 	notifusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/notifications/usecase"
+	whatsappmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp"
+	whatsappusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sms"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/realtime"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Deps are the drivers shared by the server and the worker.
@@ -59,6 +62,22 @@ func NewService(d Deps) *notifusecase.Service {
 		Subject:    d.Config.VAPID.Subject,
 	})
 	return svc
+}
+
+// NewWithWhatsApp builds the notification center (NewService) together with
+// the WhatsApp service it delivers through, and registers the real WhatsApp
+// provider in place of the placeholder. cmd/worker, the in-process worker
+// (QUEUE_WORKER_INPROCESS) and the API server all build their delivery
+// side here, so their provider sets cannot drift apart (TEC-143).
+func NewWithWhatsApp(d Deps, pool *pgxpool.Pool, box whatsappusecase.SecretBox) (*notifusecase.Service, *whatsappusecase.Service) {
+	log := d.Log
+	if log == nil {
+		log = slog.Default()
+	}
+	svc := NewService(d)
+	wa := whatsappmodule.NewService(d.Config.Wuzapi, pool, d.Queries, box, svc, log)
+	svc.RegisterProvider(providers.WhatsAppProvider{WA: wa.Provider()})
+	return svc, wa
 }
 
 func emailBrand(q *db.Queries, cfg config.NotifyConfig) func(context.Context, int64) providers.EmailBrand {
