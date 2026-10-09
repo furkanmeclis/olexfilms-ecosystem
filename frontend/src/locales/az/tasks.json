@@ -80,5 +80,8 @@
   "comments.error": "Şərhi əlavə etmək mümkün olmadı.",
   "errors.FORBIDDEN": "Tapşırıqları yalnız mərkəz idarə edir.",
   "errors.NOT_FOUND": "Tapşırıq tapılmadı.",
-  "errors.VALIDATION_ERROR": "İşarələnmiş sahələri yoxlayın."
+  "errors.VALIDATION_ERROR": "İşarələnmiş sahələri yoxlayın.",
+  "columns.source": "Mənbə",
+  "source.manual": "Əl ilə",
+  "source.auto": "Avtomatik"
 }

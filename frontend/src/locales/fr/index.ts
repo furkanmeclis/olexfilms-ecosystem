@@ -44,6 +44,7 @@ import modules from "./modules.json";
 import notifications from "./notifications.json";
 import orders from "./orders.json";
 import organizations from "./organizations.json";
+import performance from "./performance.json";
 import permissions from "./permissions.json";
 import portal from "./portal.json";
 import rates from "./rates.json";
@@ -111,6 +112,7 @@ const catalog: LocaleCatalog = {
   notifications,
   orders,
   organizations,
+  performance,
   permissions,
   portal,
   rates,

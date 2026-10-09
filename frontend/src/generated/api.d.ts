@@ -11128,7 +11128,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Network performance ranking */
+        /**
+         * Network performance ranking
+         * @description Sort keys: name, distributor, province and every metric key (default -services_count, metrics NULLS LAST, id tiebreak).
+         */
         get: operations["listPerformanceRanking"];
         put?: never;
         post?: never;
@@ -15190,6 +15193,15 @@ export interface components {
             organization_uuid?: string;
             name?: string;
             type?: string;
+            /** @description TEC-496. The row itself for a distributor, the parent distributor for a dealer. */
+            distributor?: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+            /** Format: int64 */
+            province_id?: number;
+            province_name?: string;
             currency?: string;
             metrics?: {
                 [key: string]: components["schemas"]["PerformanceMetricValue"];
@@ -47406,6 +47418,12 @@ export interface operations {
                 offset?: components["parameters"]["Offset"];
                 period?: string;
                 type?: "distributor" | "dealer";
+                /** @description TEC-496. CSV of distributor uuids; keeps those distributors and their dealers. */
+                distributor_uuid?: string;
+                /** @description CSV of internal distributor ids (same as distributor_uuid). */
+                distributor_id?: string;
+                /** @description CSV of province ids of the organization address. */
+                province_id?: string;
             };
             header?: never;
             path?: never;
@@ -49439,6 +49457,8 @@ export interface operations {
                 status?: string;
                 /** @description CSV of low, normal, high, urgent. Unknown value → 400. */
                 priority?: string;
+                /** @description TEC-496. CSV of manual, auto (auto = opened by a weak dealer rule of the performance module). Unknown value → 400. */
+                source?: string;
                 /** @description CSV of subject organization UUIDs. */
                 subject_organization_uuid?: string;
                 assignee_user_uuid?: string;

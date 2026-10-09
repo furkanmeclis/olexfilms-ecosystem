@@ -80,5 +80,8 @@
   "comments.error": "تعذّرت إضافة التعليق.",
   "errors.FORBIDDEN": "المركز وحده يدير المهام.",
   "errors.NOT_FOUND": "المهمة غير موجودة.",
-  "errors.VALIDATION_ERROR": "تحقق من الحقول المحددة."
+  "errors.VALIDATION_ERROR": "تحقق من الحقول المحددة.",
+  "columns.source": "المصدر",
+  "source.manual": "يدوي",
+  "source.auto": "تلقائي"
 }

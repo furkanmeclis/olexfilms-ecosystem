@@ -11,9 +11,10 @@ import (
 )
 
 // RankingSort is the list-contract whitelist of the ranking list: every
-// metric key and the organization name; default -services_count.
+// metric key, the organization name, its distributor and province
+// (TEC-496); default -services_count.
 var RankingSort = func() apiquery.SortSpec {
-	cols := apiquery.SortColumns{"name": "name"}
+	cols := apiquery.SortColumns{"name": "name", "distributor": "distributor", "province": "province"}
 	for _, m := range model.Metrics {
 		cols[m] = m
 	}

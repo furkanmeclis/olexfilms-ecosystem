@@ -21379,6 +21379,9 @@ paths:
       tags: [Performance]
       operationId: listPerformanceRanking
       summary: Network performance ranking
+      description: >-
+        Sort keys: name, distributor, province and every metric key
+        (default -services_count, metrics NULLS LAST, id tiebreak).
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "#/components/parameters/Q"
@@ -21391,6 +21394,20 @@ paths:
         - name: type
           in: query
           schema: { type: string, enum: [distributor, dealer] }
+        - name: distributor_uuid
+          in: query
+          description: >-
+            TEC-496. CSV of distributor uuids; keeps those distributors and
+            their dealers.
+          schema: { type: string }
+        - name: distributor_id
+          in: query
+          description: CSV of internal distributor ids (same as distributor_uuid).
+          schema: { type: string }
+        - name: province_id
+          in: query
+          description: CSV of province ids of the organization address.
+          schema: { type: string }
       responses:
         "200":
           description: Ranking page
@@ -23444,6 +23461,12 @@ paths:
         - name: priority
           in: query
           description: CSV of low, normal, high, urgent. Unknown value → 400.
+          schema: { type: string }
+        - name: source
+          in: query
+          description: >-
+            TEC-496. CSV of manual, auto (auto = opened by a weak dealer
+            rule of the performance module). Unknown value → 400.
           schema: { type: string }
         - name: subject_organization_uuid
           in: query
@@ -29328,6 +29351,15 @@ components:
         organization_uuid: { type: string, format: uuid }
         name: { type: string }
         type: { type: string }
+        distributor:
+          description: TEC-496. The row itself for a distributor, the parent distributor for a dealer.
+          type: object
+          required: [uuid, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+        province_id: { type: integer, format: int64 }
+        province_name: { type: string }
         currency: { type: string }
         metrics:
           type: object

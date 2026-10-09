@@ -80,5 +80,8 @@
   "comments.error": "Не вдалося додати коментар.",
   "errors.FORBIDDEN": "Завданнями керує лише центр.",
   "errors.NOT_FOUND": "Завдання не знайдено.",
-  "errors.VALIDATION_ERROR": "Перевірте позначені поля."
+  "errors.VALIDATION_ERROR": "Перевірте позначені поля.",
+  "columns.source": "Джерело",
+  "source.manual": "Вручну",
+  "source.auto": "Автоматично"
 }

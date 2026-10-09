@@ -80,5 +80,8 @@
   "comments.error": "无法添加评论。",
   "errors.FORBIDDEN": "只有总部可以管理任务。",
   "errors.NOT_FOUND": "未找到任务。",
-  "errors.VALIDATION_ERROR": "请检查标记的字段。"
+  "errors.VALIDATION_ERROR": "请检查标记的字段。",
+  "columns.source": "来源",
+  "source.manual": "手动",
+  "source.auto": "自动"
 }

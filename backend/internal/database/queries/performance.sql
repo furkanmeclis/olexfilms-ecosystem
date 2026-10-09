@@ -42,8 +42,10 @@ ORDER BY m.organization_id, m.period, m.scope, m.metric;
 -- name: ListPerformanceRanking :many
 -- Ranking list of distributors and dealers for one month, one column per
 -- metric (NULL = not computed). Sort: docs/list-contract.md, keys from
--- performance/repository.RankingSort (metric keys | name); metric columns
--- sort NULLS LAST in both directions; id tiebreak.
+-- performance/repository.RankingSort (metric keys | name | distributor |
+-- province); metric columns sort NULLS LAST in both directions; id
+-- tiebreak. distributor is the row itself for a distributor and the parent
+-- distributor for a dealer (NULL for a dealer directly under the center).
 WITH m AS (
     SELECT pm.organization_id,
            MAX(pm.value) FILTER (WHERE pm.metric = 'services_count') AS services_count,
@@ -85,9 +87,18 @@ SELECT o.id AS organization_id,
        m.waste_ratio::numeric AS waste_ratio,
        m.order_volume::numeric AS order_volume,
        m.computed_at AS computed_at,
+       dist.uuid AS distributor_uuid,
+       dist.name AS distributor_name,
+       prov.name AS province_name,
        COUNT(*) OVER()::bigint AS total_count
 FROM organizations o
 LEFT JOIN m ON m.organization_id = o.id
+LEFT JOIN organizations par ON par.id = o.parent_id
+LEFT JOIN organizations dist ON dist.id = CASE
+         WHEN o.type = 'distributor' THEN o.id
+         WHEN par.type = 'distributor' THEN par.id
+       END
+LEFT JOIN provinces prov ON prov.id = o.province_id
 WHERE o.brand_id = sqlc.arg(brand_id)
   AND o.deleted_at IS NULL
   AND o.type IN ('distributor', 'dealer')
@@ -99,9 +110,15 @@ WHERE o.brand_id = sqlc.arg(brand_id)
        OR o.parent_id = ANY (sqlc.narg(distributor_ids)::bigint[]))
   AND (COALESCE(cardinality(sqlc.narg(province_ids)::bigint[]), 0) = 0
        OR o.province_id = ANY (sqlc.narg(province_ids)::bigint[]))
+  AND (COALESCE(cardinality(sqlc.narg(distributor_uuids)::uuid[]), 0) = 0
+       OR dist.uuid = ANY (sqlc.narg(distributor_uuids)::uuid[]))
 ORDER BY
   CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'name' THEN o.name END ASC,
   CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'name' THEN o.name END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'distributor' THEN dist.name END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'distributor' THEN dist.name END DESC NULLS LAST,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'province' THEN prov.name END ASC NULLS LAST,
+  CASE WHEN sqlc.arg(sort_desc)::bool AND sqlc.arg(sort_key)::text = 'province' THEN prov.name END DESC NULLS LAST,
   CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN
     CASE sqlc.arg(sort_key)::text
       WHEN 'services_count' THEN m.services_count

@@ -34,19 +34,22 @@ const StatusActive = "active"
 var (
 	Statuses   = []string{StatusOpen, StatusInProgress, StatusDone, StatusCancelled}
 	Priorities = []string{PriorityLow, PriorityNormal, PriorityHigh, PriorityUrgent}
+	// Sources is the source filter enum (TEC-496: auto = performance rules).
+	Sources = []string{SourceManual, SourceAuto}
 )
 
 // List query keys.
 const (
 	QueryStatus         = "status"
 	QueryPriority       = "priority"
+	QuerySource         = "source"
 	QuerySubjectOrgUUID = "subject_organization_uuid"
 	QueryAssigneeUUID   = "assignee_user_uuid"
 	QueryMine           = "mine"
 )
 
 // ParseListFilter reads status (CSV, "active" = open + in_progress),
-// priority (CSV), subject_organization_uuid (CSV), assignee_user_uuid,
+// priority (CSV), source (CSV: manual, auto), subject_organization_uuid (CSV), assignee_user_uuid,
 // mine (true: assignee = me; me nil rejects it), due_after / due_before
 // (RFC 3339) or due_from / due_to, created_from / created_to, q, sort,
 // limit and offset. Errors are *apiquery.ValidationError (400).
@@ -67,6 +70,9 @@ func ParseListFilter(values url.Values, me *uuid.UUID) (Filter, error) {
 	slices.Sort(f.Statuses)
 	f.Statuses = slices.Compact(f.Statuses)
 	if f.Priorities, err = apiquery.EnumList(values, QueryPriority, Priorities...); err != nil {
+		return f, err
+	}
+	if f.Sources, err = apiquery.EnumList(values, QuerySource, Sources...); err != nil {
 		return f, err
 	}
 	for _, raw := range apiquery.CSVValues(values, QuerySubjectOrgUUID) {

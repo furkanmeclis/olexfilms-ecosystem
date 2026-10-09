@@ -80,5 +80,8 @@
   "comments.error": "Der Kommentar konnte nicht hinzugefügt werden.",
   "errors.FORBIDDEN": "Nur die Zentrale verwaltet Aufgaben.",
   "errors.NOT_FOUND": "Aufgabe nicht gefunden.",
-  "errors.VALIDATION_ERROR": "Prüfen Sie die markierten Felder."
+  "errors.VALIDATION_ERROR": "Prüfen Sie die markierten Felder.",
+  "columns.source": "Quelle",
+  "source.manual": "Manuell",
+  "source.auto": "Automatisch"
 }

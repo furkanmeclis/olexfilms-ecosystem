@@ -402,4 +402,44 @@ describe("TasksListPage (TEC-380)", () => {
     openRow.find((a) => a.id === "open")!.onSelect();
     expect(captured.push).toHaveBeenCalledWith("/t/olex/tasks/t-1");
   });
+
+  it("shows the auto badge only on tasks opened by a performance rule", async () => {
+    captured.grants = new Set([Permission.TasksRead]);
+    await render();
+    const title = (table().columns ?? []).find(
+      (c: ColumnDef<AnyRow, unknown>) =>
+        (c as { accessorKey?: string }).accessorKey === "title",
+    )!;
+    const host = document.createElement("div");
+    const cellRoot = createRoot(host);
+    const renderCell = (row: Task) =>
+      act(() => {
+        cellRoot.render(
+          (title.cell as (ctx: unknown) => ReactNode)({
+            row: { original: row },
+          }),
+        );
+      });
+    renderCell(task({ source: "auto" }));
+    const badge = host.querySelector('[data-testid="task-source-auto"]');
+    expect(badge?.textContent).toBe("tasks.source.auto");
+    renderCell(task({ source: "manual" }));
+    expect(host.querySelector('[data-testid="task-source-auto"]')).toBeNull();
+    act(() => cellRoot.unmount());
+  });
+
+  it("filters by source (manual / auto) through the source param", async () => {
+    captured.grants = new Set([Permission.TasksRead]);
+    await render();
+    const source = (table().columns ?? []).find(
+      (c: ColumnDef<AnyRow, unknown>) =>
+        (c as { accessorKey?: string }).accessorKey === "source",
+    )!;
+    expect(source.meta).toMatchObject({
+      filterVariant: "faceted",
+      param: "source",
+    });
+    await setFilters([{ id: "source", value: ["auto"] }]);
+    expect(lastList()).toMatchObject({ source: "auto" });
+  });
 });
