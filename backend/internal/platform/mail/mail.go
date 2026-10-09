@@ -2,6 +2,7 @@ package mail
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"mime"
@@ -9,6 +10,7 @@ import (
 	"net/smtp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/config"
 )
@@ -46,7 +48,16 @@ type SMTPSender struct {
 	password string
 	from     string
 	fromName string
+	// tlsConfig overrides the implicit-TLS client config (tests).
+	tlsConfig *tls.Config
 }
+
+// implicitTLSPort is SMTPS (RFC 8314): TLS from the first byte, no STARTTLS.
+// smtp.SendMail only speaks plain + STARTTLS, so on this port it waits for
+// a greeting the server never sends until the TLS handshake.
+const implicitTLSPort = 465
+
+const smtpDialTimeout = 30 * time.Second
 
 // NewSMTPSender builds a sender from config.
 func NewSMTPSender(cfg config.SMTPConfig) *SMTPSender {
@@ -101,10 +112,57 @@ func (s *SMTPSender) Send(_ context.Context, msg Message) error {
 	payload.WriteString("\r\n")
 	payload.WriteString("MIME-Version: 1.0\r\n")
 	writeBody(&payload, msg)
-	if err := smtp.SendMail(addr, auth, from, msg.To, []byte(payload.String())); err != nil {
+	send := smtp.SendMail
+	if s.port == implicitTLSPort {
+		send = s.sendImplicitTLS
+	}
+	if err := send(addr, auth, from, msg.To, []byte(payload.String())); err != nil {
 		return fmt.Errorf("mail: send: %w", err)
 	}
 	return nil
+}
+
+// sendImplicitTLS is smtp.SendMail over a connection that is TLS from the
+// start (port 465).
+func (s *SMTPSender) sendImplicitTLS(addr string, auth smtp.Auth, from string, to []string, body []byte) error {
+	cfg := s.tlsConfig
+	if cfg == nil {
+		cfg = &tls.Config{ServerName: s.host, MinVersion: tls.VersionTLS12}
+	}
+	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: smtpDialTimeout}, "tcp", addr, cfg)
+	if err != nil {
+		return err
+	}
+	c, err := smtp.NewClient(conn, s.host)
+	if err != nil {
+		_ = conn.Close()
+		return err
+	}
+	defer func() { _ = c.Close() }()
+	if auth != nil {
+		if err := c.Auth(auth); err != nil {
+			return err
+		}
+	}
+	if err := c.Mail(from); err != nil {
+		return err
+	}
+	for _, rcpt := range to {
+		if err := c.Rcpt(rcpt); err != nil {
+			return err
+		}
+	}
+	w, err := c.Data()
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write(body); err != nil {
+		return err
+	}
+	if err := w.Close(); err != nil {
+		return err
+	}
+	return c.Quit()
 }
 
 // writeBody writes the content headers and body: plain text, or
