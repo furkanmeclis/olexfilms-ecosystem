@@ -32,7 +32,15 @@ import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
@@ -66,7 +74,6 @@ import { usePermission } from "@/providers/permission-provider";
 
 const inputClass =
   "border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
-const selectClass = inputClass;
 
 export const ANNOUNCEMENT_READS_PERSIST_KEY = "tenant-announcement-reads-v1";
 
@@ -506,47 +513,54 @@ function AnnouncementComposer({
               <Label htmlFor="announcement-default-locale">
                 {t("announcements.form.fields.default_locale")}
               </Label>
-              <select
-                id="announcement-default-locale"
-                className={selectClass}
+              <Select
                 value={values.defaultLocale}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setValues((v) => ({
                     ...v,
-                    defaultLocale: e.target.value as LocaleCode,
+                    defaultLocale: value as LocaleCode,
                   }))
                 }
               >
-                {ANNOUNCEMENT_LOCALES.map((localeCode) => (
-                  <option key={localeCode} value={localeCode}>
-                    {localeLabel(localeCode)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="announcement-default-locale">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ANNOUNCEMENT_LOCALES.map((localeCode) => (
+                    <SelectItem key={localeCode} value={localeCode}>
+                      {localeLabel(localeCode)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="announcement-audience">
                 {t("announcements.form.fields.audience")}
               </Label>
-              <select
-                id="announcement-audience"
-                data-testid="announcement-audience"
-                className={selectClass}
+              <Select
                 value={values.audience}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setValues((v) => ({
                     ...v,
-                    audience: e.target
-                      .value as AnnouncementFormValues["audience"],
+                    audience: value as AnnouncementFormValues["audience"],
                   }))
                 }
               >
-                {options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {t(option.labelKey)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  id="announcement-audience"
+                  data-testid="announcement-audience"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {options.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {t(option.labelKey)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             {values.audience === "role" ? (
               <div className="space-y-1.5">
@@ -570,14 +584,12 @@ function AnnouncementComposer({
               <Label htmlFor="announcement-publish-at">
                 {t("announcements.form.fields.publish_at")}
               </Label>
-              <input
+              <DateTimePicker
                 id="announcement-publish-at"
                 data-testid="announcement-publish-at"
-                type="datetime-local"
-                className={inputClass}
                 value={values.publishAt}
-                onChange={(e) =>
-                  setValues((v) => ({ ...v, publishAt: e.target.value }))
+                onChange={(value) =>
+                  setValues((v) => ({ ...v, publishAt: value }))
                 }
               />
             </div>
@@ -585,14 +597,12 @@ function AnnouncementComposer({
               <Label htmlFor="announcement-expires-at">
                 {t("announcements.form.fields.expires_at")}
               </Label>
-              <input
+              <DateTimePicker
                 id="announcement-expires-at"
                 data-testid="announcement-expires-at"
-                type="datetime-local"
-                className={inputClass}
                 value={values.expiresAt}
-                onChange={(e) =>
-                  setValues((v) => ({ ...v, expiresAt: e.target.value }))
+                onChange={(value) =>
+                  setValues((v) => ({ ...v, expiresAt: value }))
                 }
               />
               {errors.expiresAt ? (

@@ -52,12 +52,20 @@ vi.mock("@/features/tasks/services/tasks.service", async (orig) => ({
 import { Permission } from "@/config/permissions";
 import type { Task } from "@/features/tasks/services/tasks.service";
 
+import {
+  installRadixPolyfills,
+  pickDateTime,
+  pickOption,
+} from "@/test/form-controls";
+
 import { TaskDetailPage } from "./task-detail-page";
 import { TaskFormPage } from "./task-form-page";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -130,12 +138,8 @@ function task(patch: Partial<Task> = {}): Task {
 const q = <T extends Element>(sel: string) =>
   container.querySelector(sel) as T | null;
 
-async function choose(sel: string, value: string) {
-  const el = q<HTMLSelectElement>(sel)!;
-  await act(async () => {
-    el.value = value;
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-  });
+async function choose(sel: string, label: string) {
+  await pickOption(q(sel), label);
   await flush();
 }
 
@@ -174,10 +178,14 @@ describe("TaskFormPage", () => {
     );
 
     await type("[data-testid=task-title]", "  Ziyaret  ");
-    await choose("[data-testid=task-subject]", "o-2");
-    await choose("[data-testid=task-assignee]", "u-1");
-    await choose("[data-testid=task-priority]", "urgent");
-    await type("[data-testid=task-due]", "2026-10-31T17:00");
+    await choose(
+      "[data-testid=task-subject]",
+      "Ege Dağıtım · tasks.org_type.distributor",
+    );
+    await choose("[data-testid=task-assignee]", "Ayşe Merkez");
+    await choose("[data-testid=task-priority]", "tasks.priority.urgent");
+    await pickDateTime(q("[data-testid=task-due]"), "2026-10-31T17:00");
+    await flush();
     await click(q("[data-testid=task-submit]"));
 
     expect(api.create).toHaveBeenCalledWith({
@@ -217,8 +225,8 @@ describe("TaskDetailPage", () => {
     );
 
     await type("[data-testid=task-title]", "Aylık ziyaret (Ekim)");
-    await choose("[data-testid=task-assignee]", "");
-    await choose("[data-testid=task-priority]", "high");
+    await click(q('[data-testid=task-assignee] [aria-label="form.clear"]'));
+    await choose("[data-testid=task-priority]", "tasks.priority.high");
     await click(q("[data-testid=task-save]"));
 
     expect(api.update).toHaveBeenCalledWith("t-1", {

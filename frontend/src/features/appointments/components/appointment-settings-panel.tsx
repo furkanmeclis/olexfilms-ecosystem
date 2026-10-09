@@ -16,6 +16,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TimePicker } from "@/components/ui/time-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { addDays, todayIn } from "@/features/appointments/lib/time";
@@ -225,29 +226,25 @@ function SettingsForm({ settings }: { settings: AppointmentSettings }) {
                         return (
                           <div key={i} data-window={i} className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <Input
-                                type="time"
-                                dir="ltr"
+                              <TimePicker
                                 className="w-32"
                                 aria-label={t("appointments.settings.opens")}
                                 name={`${day}-${i}-start`}
                                 value={w.start}
                                 aria-invalid={invalid}
-                                onChange={(e) =>
-                                  setWindow(day, i, { start: e.target.value })
+                                onChange={(value) =>
+                                  setWindow(day, i, { start: value })
                                 }
                               />
                               <span className="text-muted-foreground">–</span>
-                              <Input
-                                type="time"
-                                dir="ltr"
+                              <TimePicker
                                 className="w-32"
                                 aria-label={t("appointments.settings.closes")}
                                 name={`${day}-${i}-end`}
                                 value={w.end}
                                 aria-invalid={invalid}
-                                onChange={(e) =>
-                                  setWindow(day, i, { end: e.target.value })
+                                onChange={(value) =>
+                                  setWindow(day, i, { end: value })
                                 }
                               />
                               {h.windows.length > 1 ? (

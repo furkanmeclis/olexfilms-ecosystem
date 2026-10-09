@@ -72,6 +72,13 @@ vi.mock("@/features/announcements/services/announcements.service", () => ({
 import { Permission } from "@/config/permissions";
 import type { Announcement } from "@/features/announcements";
 
+import {
+  installRadixPolyfills,
+  openOptions,
+  openPicker,
+  pickDateTime,
+} from "@/test/form-controls";
+
 import { AnnouncementsPage } from "./announcements-page";
 
 (
@@ -88,13 +95,7 @@ window.matchMedia ??= ((query: string) => ({
   removeListener: () => {},
   dispatchEvent: () => false,
 })) as typeof window.matchMedia;
-(
-  globalThis as typeof globalThis & { ResizeObserver?: typeof ResizeObserver }
-).ResizeObserver = class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-} as typeof ResizeObserver;
+installRadixPolyfills();
 
 let container: HTMLDivElement;
 let root: Root;
@@ -257,12 +258,8 @@ describe("AnnouncementsPage", () => {
     state.orgType = "distributor";
     await renderPage();
 
-    const options = Array.from(
-      container.querySelectorAll<HTMLSelectElement>(
-        "#announcement-audience option",
-      ),
-    );
-    expect(options.map((o) => o.value)).toEqual(["subtree"]);
+    await openPicker(container.querySelector("#announcement-audience"));
+    expect(openOptions()).toEqual(["announcements.audience.subtree"]);
   });
 
   it("invalidates list and unread badge when a detail is opened", async () => {
@@ -282,8 +279,14 @@ describe("AnnouncementsPage", () => {
     await renderPage();
     await type("#announcement-title", "Plan");
     await type("#announcement-body", "Body");
-    await type("#announcement-publish-at", "2026-10-05T10:00");
-    await type("#announcement-expires-at", "2026-10-04T10:00");
+    await pickDateTime(
+      container.querySelector("#announcement-publish-at"),
+      "2026-10-05T10:00",
+    );
+    await pickDateTime(
+      container.querySelector("#announcement-expires-at"),
+      "2026-10-04T10:00",
+    );
     await click("[data-testid=announcement-form] button[type=submit]");
 
     expect(container.textContent).toContain(

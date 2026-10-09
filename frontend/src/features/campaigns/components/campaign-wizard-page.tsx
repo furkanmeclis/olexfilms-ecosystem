@@ -16,6 +16,7 @@ import { EntityPage } from "@/components/entity";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,7 +31,6 @@ import {
   contentIssues,
   plansDirectly,
   requiredLocales,
-  toZonedInput,
   type ContentIssue,
 } from "@/features/campaigns/lib/campaigns";
 import {
@@ -524,15 +524,11 @@ export function CampaignWizardPage({ slug }: { slug: string }) {
               <Label htmlFor="campaign-scheduled-at">
                 {t("campaigns.fields.scheduled_at")}
               </Label>
-              <Input
+              <DateTimePicker
                 id="campaign-scheduled-at"
-                type="datetime-local"
+                className="w-auto min-w-56"
                 value={scheduledAt}
-                placeholder={toZonedInput(
-                  new Date().toISOString(),
-                  user?.timeZone ?? "Europe/Istanbul",
-                )}
-                onChange={(event) => setScheduledAt(event.target.value)}
+                onChange={setScheduledAt}
               />
             </div>
             <Button

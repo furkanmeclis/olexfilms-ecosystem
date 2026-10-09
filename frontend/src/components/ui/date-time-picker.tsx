@@ -48,7 +48,7 @@ export type DateTimePickerProps = {
 /**
  * Shared date + time picker (Popover + Calendar + hour/minute columns).
  * Value is a zone-less wall-clock `yyyy-MM-ddTHH:mm` (empty string when
- * cleared), exactly like `<input type="datetime-local">`; callers keep doing
+ * cleared), exactly like a native datetime-local input; callers keep doing
  * their own timezone conversion. Picking a day keeps the chosen time (or
  * `00:00`); picking a time first uses today's date.
  */

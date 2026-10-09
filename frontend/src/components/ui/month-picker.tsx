@@ -46,7 +46,7 @@ export type MonthPickerProps = {
 /**
  * Shared month picker (Popover + year switcher + 12-month grid).
  * Value is always `yyyy-MM` (empty string when cleared), like
- * `<input type="month">`.
+ * a native month input.
  */
 export function MonthPicker({
   id,

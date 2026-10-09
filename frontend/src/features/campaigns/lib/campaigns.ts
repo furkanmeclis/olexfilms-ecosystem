@@ -202,7 +202,7 @@ export function campaignStats(c: Campaign) {
 }
 
 /**
- * Value for an `<input type="datetime-local">` showing `iso` in `timeZone`
+ * Value for a datetime-local picker showing `iso` in `timeZone`
  * (YYYY-MM-DDTHH:MM). The API reads such a local value in the
  * organization time zone.
  */

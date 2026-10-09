@@ -145,7 +145,7 @@ export type TimePickerProps = {
 
 /**
  * Shared time picker (Popover + hour/minute columns).
- * Value is always `HH:mm` (empty string when cleared), like `<input type="time">`.
+ * Value is always `HH:mm` (empty string when cleared), like a native time input.
  */
 export function TimePicker({
   id,

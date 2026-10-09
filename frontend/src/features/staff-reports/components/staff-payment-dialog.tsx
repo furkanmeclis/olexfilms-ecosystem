@@ -15,6 +15,7 @@ import {
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MonthPicker } from "@/components/ui/month-picker";
 import { Textarea } from "@/components/ui/textarea";
 import {
   FieldError,
@@ -121,17 +122,16 @@ export function StaffPaymentForm({
           <Label htmlFor="staff-payment-period">
             {t("staff_reports.fields.period")}
           </Label>
-          <Input
+          <MonthPicker
             id="staff-payment-period"
             name="period"
-            type="month"
-            dir="ltr"
             value={values.period}
+            clearable
             aria-invalid={errors.period ? true : undefined}
             aria-describedby={
               errors.period ? "staff-payment-period-error" : undefined
             }
-            onChange={(e) => set("period", e.target.value)}
+            onChange={(value) => set("period", value)}
           />
           <FieldError id="staff-payment-period-error" message={errors.period} />
         </div>

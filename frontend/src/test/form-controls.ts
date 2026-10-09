@@ -63,11 +63,31 @@ export async function pickOption(
   await act(async () => {
     (option as HTMLElement).click();
   });
+  await tick();
 }
 
 function lastListboxes(count: number): Element[] {
   const all = [...document.querySelectorAll('[role="listbox"]')];
   return all.slice(-count);
+}
+
+/**
+ * Closes the open popover with Escape and lets Radix finish returning focus
+ * to the trigger, so the next picker does not get dismissed by that focus.
+ */
+export async function closePicker() {
+  await act(async () => {
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+  });
+  await tick();
+}
+
+async function tick() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
 
 /** Opens a TimePicker and picks `HH:mm`. */
@@ -76,11 +96,7 @@ export async function pickTime(trigger: Element | null, value: string) {
   await openPicker(trigger);
   await clickTimeColumns(hour, minute);
   // Close the popover again so the next picker opens cleanly.
-  await act(async () => {
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    );
-  });
+  await closePicker();
 }
 
 async function clickTimeColumns(hour: string, minute: string) {
@@ -117,11 +133,12 @@ export async function pickMonth(trigger: Element | null, value: string) {
   await act(async () => {
     (month as HTMLElement).click();
   });
+  await tick();
 }
 
 /**
  * Opens a DateTimePicker and picks `yyyy-MM-ddTHH:mm`: the day in the
- * calendar (must be in the month shown) then the time columns.
+ * calendar then the time columns.
  */
 export async function pickDateTime(trigger: Element | null, value: string) {
   const [date, time] = value.split("T");
@@ -129,21 +146,33 @@ export async function pickDateTime(trigger: Element | null, value: string) {
   await clickDay(date);
   const [hour, minute] = time.split(":");
   await clickTimeColumns(hour, minute);
-  await act(async () => {
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
-    );
-  });
+  await closePicker();
 }
 
-/** Opens a DatePicker and picks `yyyy-MM-dd` (must be in the month shown). */
+/** Opens a DatePicker and picks `yyyy-MM-dd`. */
 export async function pickDate(trigger: Element | null, value: string) {
   await openPicker(trigger);
   await clickDay(value);
+  await closePicker();
 }
 
 async function clickDay(date: string) {
-  const cell = document.querySelector(`[data-day="${date}"]`);
+  // Page the calendar (react-day-picker cells carry `data-day="yyyy-MM-dd"`)
+  // until the target month is shown.
+  for (let i = 0; i < 600; i++) {
+    if (document.querySelector(`td[data-day="${date}"]`)) break;
+    const cells = [...document.querySelectorAll("td[data-day]")];
+    const middle =
+      cells[Math.floor(cells.length / 2)]?.getAttribute("data-day");
+    if (!middle) break;
+    const nav = document.querySelector<HTMLElement>(
+      date < middle ? ".rdp-button_previous" : ".rdp-button_next",
+    );
+    await act(async () => {
+      nav?.click();
+    });
+  }
+  const cell = document.querySelector(`td[data-day="${date}"]`);
   const button = cell?.querySelector("button") ?? cell;
   if (!button) throw new Error(`day ${date} not shown in calendar`);
   await act(async () => {

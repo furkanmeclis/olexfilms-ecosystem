@@ -19,6 +19,7 @@ import { StatusChip } from "@/components/common/status-chip";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -226,13 +227,11 @@ function TaskCard({ uuid, show }: { uuid: string; show: boolean }) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="lead-task-due">{t("leads.task.due_at")}</Label>
-            <input
+            <DateTimePicker
               id="lead-task-due"
               data-testid="lead-task-due"
-              className={leadInputClass}
-              type="datetime-local"
               value={due}
-              onChange={(e) => setDue(e.target.value)}
+              onChange={setDue}
             />
           </div>
           <div className="flex items-end">

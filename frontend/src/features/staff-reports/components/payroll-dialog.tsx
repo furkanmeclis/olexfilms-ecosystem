@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MonthPicker } from "@/components/ui/month-picker";
 import { accountingKeys } from "@/features/accounting/hooks/use-accounting-access";
 import { Money, FieldError } from "@/features/accounting/components/shared";
 import {
@@ -132,16 +133,14 @@ export function PayrollDialog({
           <Label htmlFor="payroll-period">
             {t("staff_reports.fields.period")}
           </Label>
-          <Input
+          <MonthPicker
             id="payroll-period"
             name="period"
-            type="month"
-            dir="ltr"
             className="w-44"
             value={period}
             aria-invalid={validPeriod ? undefined : true}
-            onChange={(e) => {
-              setPeriod(e.target.value);
+            onChange={(value) => {
+              setPeriod(value);
               setOutcome(null);
             }}
           />
