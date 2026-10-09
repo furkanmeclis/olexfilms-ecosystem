@@ -12,6 +12,7 @@ export const modulesKeys = {
   dealers: (orgUuid: string) => ["modules", "dealers", orgUuid] as const,
   standard: (orgUuid: string) => ["modules", "standard", orgUuid] as const,
   platform: ["modules", "platform"] as const,
+  requests: (scope: string) => ["modules", "requests", scope] as const,
   platformOrg: (uuid: string) => ["modules", "platform", "org", uuid] as const,
 };
 
