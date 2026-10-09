@@ -76,6 +76,8 @@ func TestHubOwnership(t *testing.T) {
 		{"trash", "used", 0, ownership{Status: unitUsed, OwnerType: ownerTrash, OwnerID: center, Holder: center, Quantity: 1}, true},
 		{"trash", "used", dealer, ownership{Status: unitUsed, OwnerType: ownerTrash, OwnerID: dealer, Holder: dealer, Quantity: 1}, true},
 		{"service", "used", dealer, ownership{Status: unitUsed, Pending: "service"}, true},
+		{"dealer", "used", dealer, ownership{Status: unitUsed, Pending: "service"}, true},
+		{"center", "used", 0, ownership{Status: unitUsed, Pending: "service"}, true},
 		{"service", "available", dealer, ownership{}, false},
 		{"moon", "used", 0, ownership{}, false},
 	}

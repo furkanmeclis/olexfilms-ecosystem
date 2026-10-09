@@ -130,12 +130,17 @@ func OlexReportTables() []ReportTable {
 		{Source: SourceHub, Table: "stock_items", TargetTable: "units", Step: "units",
 			MergeReason: "barcode_match", MergeWith: []ReportTableRef{wh("product_barcodes")},
 			SkipPrefixes: []string{"hub_skipped_"}},
-		{Source: SourceHub, Table: "stock_movements", TargetTable: "stock_movements", Step: "ledger"},
+		{Source: SourceHub, Table: "stock_movements", TargetTable: "stock_movements", Step: "ledger",
+			SkipPrefixes: []string{"hub_skipped_"}},
 		{Source: SourceHub, Table: "orders", TargetTable: "orders", Step: "orders",
 			MergeReason: "external_reference", MergeWith: []ReportTableRef{wh("orders")},
 			SkipPrefixes: []string{"order_skipped_"}},
 		{Source: SourceHub, Table: "order_items", TargetTable: "order_items", Step: "orders",
 			MergeReason: "external_reference", MergeWith: []ReportTableRef{wh("order_items")},
+			// Lines whose order the legacy hub deleted are never read.
+			OutOfScope: []ReportRule{{Reason: "order_deleted", Query: `SELECT oi.id FROM order_items oi
+LEFT JOIN orders o ON o.id = oi.order_id
+WHERE o.id IS NULL`}},
 			SkipPrefixes: []string{"lines_skipped_"}},
 		{Source: SourceHub, Table: "services", TargetTable: "services", Step: "services",
 			SkipPrefixes: []string{"service_skipped_"}},

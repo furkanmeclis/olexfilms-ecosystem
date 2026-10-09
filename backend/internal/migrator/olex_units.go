@@ -31,6 +31,8 @@ import (
 //	hub   dealer / available|reserved  -> dealer organization, available
 //	hub   trash  / used                -> trash of the dealer (else center), used
 //	hub   service / used               -> no owner yet: the service arrives with F2-01h
+//	hub   dealer|center / used         -> same as service / used (the legacy hub
+//	                                      leaves a consumed unit where it was)
 //	wh    placed + location            -> that warehouse location (center), placed
 //	wh    reserved | printed           -> not in stock yet: no owner (like a new label)
 //	wh    void                         -> center trash, void
@@ -352,7 +354,7 @@ func hubOwnership(location, status string, dealerOrg, centerID int64) (ownership
 			org = dealerOrg
 		}
 		return ownership{Status: unitUsed, OwnerType: ownerTrash, OwnerID: org, Holder: org, Quantity: 1}, true
-	case loc == "service" && st == "used":
+	case (loc == "service" || loc == "dealer" || loc == "center") && st == "used":
 		return ownership{Status: unitUsed, Pending: "service"}, true
 	}
 	return ownership{}, false
