@@ -25,6 +25,7 @@ import dealerSales from "./dealer_sales.json";
 import documents from "./documents.json";
 import editor from "./editor.json";
 import efficiency from "./efficiency.json";
+import einvoice from "./einvoice.json";
 import entity from "./entity.json";
 import errors from "./errors.json";
 import exports from "./exports.json";
@@ -94,6 +95,7 @@ const catalog: LocaleCatalog = {
   documents,
   editor,
   efficiency,
+  einvoice,
   entity,
   errors,
   exports,

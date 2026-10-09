@@ -101,5 +101,7 @@
   "params.ai_mode": "Режим ИИ",
   "params.ai_mode.auto": "Автоматически",
   "params.ai_mode.paused": "Приостановлен",
-  "params.ai_mode.off": "Выключен"
+  "params.ai_mode.off": "Выключен",
+  "actions.einvoices.create_draft": "Создать черновик",
+  "confirm.einvoices.create_draft": "Создать черновики электронных счетов для выбранных записей? Записи покупателей с неполным профилем будут пропущены."
 }

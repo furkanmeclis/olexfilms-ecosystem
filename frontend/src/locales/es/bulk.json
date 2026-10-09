@@ -101,5 +101,7 @@
   "params.ai_mode": "Modo de IA",
   "params.ai_mode.auto": "Automático",
   "params.ai_mode.paused": "En pausa",
-  "params.ai_mode.off": "Desactivado"
+  "params.ai_mode.off": "Desactivado",
+  "actions.einvoices.create_draft": "Crear borrador",
+  "confirm.einvoices.create_draft": "¿Crear borradores de factura electrónica para los registros seleccionados? Se omiten los registros de compradores con perfil incompleto."
 }

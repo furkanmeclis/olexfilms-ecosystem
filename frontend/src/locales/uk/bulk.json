@@ -101,5 +101,7 @@
   "params.ai_mode": "Режим ШІ",
   "params.ai_mode.auto": "Автоматично",
   "params.ai_mode.paused": "Призупинено",
-  "params.ai_mode.off": "Вимкнено"
+  "params.ai_mode.off": "Вимкнено",
+  "actions.einvoices.create_draft": "Створити чернетку",
+  "confirm.einvoices.create_draft": "Створити чернетки електронних рахунків для вибраних записів? Записи покупців із неповним профілем буде пропущено."
 }

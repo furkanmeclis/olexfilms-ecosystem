@@ -101,5 +101,7 @@
   "params.ai_mode": "وضع الذكاء الاصطناعي",
   "params.ai_mode.auto": "تلقائي",
   "params.ai_mode.paused": "متوقف مؤقتًا",
-  "params.ai_mode.off": "معطّل"
+  "params.ai_mode.off": "معطّل",
+  "actions.einvoices.create_draft": "إنشاء مسودة",
+  "confirm.einvoices.create_draft": "إنشاء مسودات فواتير إلكترونية للسجلات المحددة؟ تُتخطى سجلات المشترين ذوي الملفات غير المكتملة."
 }

@@ -101,5 +101,7 @@
   "params.ai_mode": "Λειτουργία AI",
   "params.ai_mode.auto": "Αυτόματη",
   "params.ai_mode.paused": "Σε παύση",
-  "params.ai_mode.off": "Ανενεργή"
+  "params.ai_mode.off": "Ανενεργή",
+  "actions.einvoices.create_draft": "Δημιουργία πρόχειρου",
+  "confirm.einvoices.create_draft": "Δημιουργία πρόχειρων ηλεκτρονικών τιμολογίων για τις επιλεγμένες εγγραφές; Οι εγγραφές αγοραστών με ελλιπές προφίλ παραλείπονται."
 }

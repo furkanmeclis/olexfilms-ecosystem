@@ -101,5 +101,7 @@
   "params.ai_mode": "KI-Modus",
   "params.ai_mode.auto": "Automatisch",
   "params.ai_mode.paused": "Pausiert",
-  "params.ai_mode.off": "Aus"
+  "params.ai_mode.off": "Aus",
+  "actions.einvoices.create_draft": "Entwurf erstellen",
+  "confirm.einvoices.create_draft": "E-Rechnungsentwürfe für die ausgewählten Datensätze erstellen? Datensätze von Käufern mit unvollständigem Profil werden übersprungen."
 }

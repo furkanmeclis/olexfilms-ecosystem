@@ -92,7 +92,8 @@ export type BulkResource =
   | "vehicle_catalog.brands"
   | "vehicle_catalog.models"
   | "leads"
-  | "conversations";
+  | "conversations"
+  | "einvoices.billable";
 
 export const BULK_PATHS: Record<BulkResource, string> = {
   "platform.users": "/v1/platform/users/bulk",
@@ -105,6 +106,8 @@ export const BULK_PATHS: Record<BulkResource, string> = {
   "vehicle_catalog.models": "/v1/platform/vehicle-catalog/models/bulk",
   leads: "/v1/leads/bulk",
   conversations: "/v1/conversations/bulk",
+  // TEC-504: e-invoice drafts of the billable center sales.
+  "einvoices.billable": "/v1/einvoices/billable/bulk",
 };
 
 /** Platform-scoped resources whose name has no `platform.` prefix. */

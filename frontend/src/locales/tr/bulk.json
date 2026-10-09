@@ -101,5 +101,7 @@
   "params.ai_mode": "AI modu",
   "params.ai_mode.auto": "Otomatik",
   "params.ai_mode.paused": "Duraklatıldı",
-  "params.ai_mode.off": "Kapalı"
+  "params.ai_mode.off": "Kapalı",
+  "actions.einvoices.create_draft": "Taslak oluştur",
+  "confirm.einvoices.create_draft": "Seçili kayıtlar için e-Fatura taslağı oluşturulsun mu? Profili eksik alıcıların kayıtları atlanır."
 }

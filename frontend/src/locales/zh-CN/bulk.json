@@ -101,5 +101,7 @@
   "params.ai_mode": "AI 模式",
   "params.ai_mode.auto": "自动",
   "params.ai_mode.paused": "已暂停",
-  "params.ai_mode.off": "关闭"
+  "params.ai_mode.off": "关闭",
+  "actions.einvoices.create_draft": "创建草稿",
+  "confirm.einvoices.create_draft": "为所选记录创建电子发票草稿？开票资料不完整的买方记录将被跳过。"
 }

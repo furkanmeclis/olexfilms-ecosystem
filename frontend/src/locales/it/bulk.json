@@ -101,5 +101,7 @@
   "params.ai_mode": "Modalità IA",
   "params.ai_mode.auto": "Automatica",
   "params.ai_mode.paused": "In pausa",
-  "params.ai_mode.off": "Disattivata"
+  "params.ai_mode.off": "Disattivata",
+  "actions.einvoices.create_draft": "Crea bozza",
+  "confirm.einvoices.create_draft": "Creare bozze di fattura elettronica per i record selezionati? I record degli acquirenti con profilo incompleto vengono saltati."
 }

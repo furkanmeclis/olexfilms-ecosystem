@@ -101,5 +101,7 @@
   "params.ai_mode": "AI mode",
   "params.ai_mode.auto": "Automatic",
   "params.ai_mode.paused": "Paused",
-  "params.ai_mode.off": "Off"
+  "params.ai_mode.off": "Off",
+  "actions.einvoices.create_draft": "Create draft",
+  "confirm.einvoices.create_draft": "Create e-invoice drafts for the selected records? Records of buyers with an incomplete profile are skipped."
 }

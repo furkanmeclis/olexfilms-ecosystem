@@ -5,6 +5,7 @@ import {
   CircleCheck,
   Lock,
   CircleOff,
+  FilePlus,
   Flag,
   FolderInput,
   ListChecks,
@@ -69,6 +70,9 @@ const bulkActionIconCatalog: Record<
     close: Lock,
     assign: UserPlus,
     set_ai_mode: Bot,
+  },
+  "einvoices.billable": {
+    create_draft: FilePlus,
   },
 };
 
