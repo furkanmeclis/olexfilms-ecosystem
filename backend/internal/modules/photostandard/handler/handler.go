@@ -243,6 +243,91 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// IntakeFile serves GET /v1/services/{uuid}/intake-photos/{angle_key}/file
+// (TEC-500): the active photo of the angle.
+func (h *Handler) IntakeFile(w http.ResponseWriter, r *http.Request) {
+	id, ok := serviceUUID(w, r)
+	if !ok {
+		return
+	}
+	key, mime, err := h.svc.IntakePhotoObject(r.Context(), caller(r), id, r.PathValue("angle_key"))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	h.stream(w, r, key, mime)
+}
+
+// UploadExample serves POST /v1/platform/photo-standard/angles/{uuid}/example
+// (TEC-500): multipart `image` (JPEG, PNG or WebP) replacing the example.
+func (h *Handler) UploadExample(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.NotFound(w, r, "Photo standard record not found")
+		return
+	}
+	if h.store == nil {
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "storage is not configured")
+		return
+	}
+	body, header, meta, ok := readUpload(w, r)
+	if !ok {
+		return
+	}
+	slot, err := h.svc.SetExample(r.Context(), caller(r), id, meta)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	if err := h.store.Upload(r.Context(), storage.File{
+		Body: bytes.NewReader(body), Size: int64(len(body)), ContentType: meta.Mime, Filename: header.Filename,
+	}, slot.ObjectKey); err != nil {
+		response.InternalErr(w, r, err, "example image upload failed")
+		return
+	}
+	if slot.OldKey != "" && slot.OldKey != slot.ObjectKey {
+		_ = h.store.Delete(r.Context(), slot.OldKey)
+	}
+	response.JSON(w, r, http.StatusOK, slot.Angle)
+}
+
+// Example serves GET /v1/photo-standard/angles/{uuid}/example (TEC-500):
+// the example image shown on the wizard angle cards.
+func (h *Handler) Example(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.NotFound(w, r, "Photo standard record not found")
+		return
+	}
+	key, err := h.svc.ExampleObject(r.Context(), caller(r), id)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	h.stream(w, r, key, storage.MIMEFromLogoKey(key))
+}
+
+func (h *Handler) stream(w http.ResponseWriter, r *http.Request, key, mime string) {
+	if h.store == nil {
+		response.NotFound(w, r, "Photo standard record not found")
+		return
+	}
+	rc, size, err := h.store.Download(r.Context(), key)
+	if err != nil {
+		response.NotFound(w, r, "Photo standard record not found")
+		return
+	}
+	defer func() { _ = rc.Close() }()
+	w.Header().Set("Content-Type", mime)
+	w.Header().Set("Cache-Control", "private, max-age=300")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if size > 0 {
+		w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, rc)
+}
+
 func serviceUUID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	id, err := uuid.Parse(r.PathValue("uuid"))
 	if err != nil {

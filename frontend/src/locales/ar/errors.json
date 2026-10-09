@@ -151,5 +151,16 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "لا يمكن إصدار الفواتير الإلكترونية إلا بالليرة التركية لمشترين داخل تركيا.",
   "codes.EINVOICE_INVALID_DOCUMENT": "بيانات الفاتورة ناقصة أو غير صالحة.",
   "codes.EINVOICE_INVALID_VAT_RATE": "نسبة الضريبة غير صالحة؛ نسبة 0% تتطلب رمز إعفاء.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "ملف XSLT غير صالح."
+  "codes.EINVOICE_INVALID_STYLESHEET": "ملف XSLT غير صالح.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "صور الاستلام الإلزامية ناقصة. صوّر أولاً جميع الزوايا الإلزامية.",
+  "codes.PHOTO_FILE_TOO_LARGE": "يجب ألا يتجاوز حجم الصورة 12 ميغابايت.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "يجب أن تكون الصورة بصيغة JPEG أو PNG أو WebP أو HEIC.",
+  "codes.PHOTO_SERVICE_LOCKED": "لم يعد بالإمكان تغيير صور الاستلام لهذه الخدمة.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "احفظ أولاً إعدادات البائع وسلاسل الفواتير الإلكترونية.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "لا يمكن إصدار فاتورة لهذا السجل (الطلب لم يُستلم أو الفترة لم تُرحَّل).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "لهذا السجل فاتورة إلكترونية نشطة بالفعل؛ ألغِها لإصدار فاتورة جديدة.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "ملف الفوترة الخاص بالمشتري غير مكتمل؛ أكمل الحقول الناقصة.",
+  "codes.EINVOICE_INVALID_STATUS": "حالة الفاتورة الإلكترونية لا تسمح بهذا الإجراء.",
+  "codes.EINVOICE_NOT_ARCHIVED": "لم تتم أرشفة الفاتورة الإلكترونية بعد.",
+  "codes.EINVOICE_PDF_NOT_READY": "ملف PDF للفاتورة غير جاهز بعد؛ حاول بعد قليل أو أعد إنشاءه."
 }

@@ -151,5 +151,16 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "Електронні рахунки виставляються лише в TRY покупцям у Туреччині.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Дані рахунку неповні або хибні.",
   "codes.EINVOICE_INVALID_VAT_RATE": "Ставка ПДВ недійсна; для 0% потрібен код звільнення.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "Таблиця стилів XSLT недійсна."
+  "codes.EINVOICE_INVALID_STYLESHEET": "Таблиця стилів XSLT недійсна.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Бракує обов'язкових фото приймання. Спершу зніміть усі обов'язкові ракурси.",
+  "codes.PHOTO_FILE_TOO_LARGE": "Розмір фото не має перевищувати 12 МБ.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "Фото має бути у форматі JPEG, PNG, WebP або HEIC.",
+  "codes.PHOTO_SERVICE_LOCKED": "Фото приймання цієї послуги більше не можна змінити.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Спочатку збережіть налаштування продавця та серії е-рахунків.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "Цей запис не можна виставити в рахунок (замовлення не отримано або період не проведено).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "Для цього запису вже є активний е-рахунок; анулюйте його, щоб виставити знову.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Профіль рахунків покупця неповний; заповніть відсутні поля.",
+  "codes.EINVOICE_INVALID_STATUS": "Статус е-рахунку не дозволяє цю дію.",
+  "codes.EINVOICE_NOT_ARCHIVED": "Е-рахунок ще не заархівовано.",
+  "codes.EINVOICE_PDF_NOT_READY": "PDF рахунку ще не готовий; спробуйте трохи пізніше або згенеруйте його повторно."
 }

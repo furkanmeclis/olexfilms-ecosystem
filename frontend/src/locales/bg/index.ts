@@ -46,6 +46,7 @@ import orders from "./orders.json";
 import organizations from "./organizations.json";
 import performance from "./performance.json";
 import permissions from "./permissions.json";
+import photoStandard from "./photo_standard.json";
 import portal from "./portal.json";
 import rates from "./rates.json";
 import realtime from "./realtime.json";
@@ -114,6 +115,7 @@ const catalog: LocaleCatalog = {
   organizations,
   performance,
   permissions,
+  photo_standard: photoStandard,
   portal,
   rates,
   realtime,

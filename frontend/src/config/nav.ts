@@ -5,6 +5,7 @@ import {
   BellRing,
   BookOpen,
   Building2,
+  Camera,
   Car,
   ClipboardList,
   Blocks,
@@ -204,6 +205,14 @@ export const platformNav = defineNav({
           href: routes.platform.certificateTypes.root,
           icon: BadgeCheck,
           permission: permissions.certificates.typesManage,
+        },
+        {
+          // TEC-500: central intake angles of the photo standard add-on.
+          id: "photo-angles",
+          titleKey: "photo_standard.angles.nav",
+          href: routes.platform.photoAngles.root,
+          icon: Camera,
+          permission: permissions.photoStandard.manage,
         },
         {
           id: "territories",
@@ -437,6 +446,16 @@ export function tenantNav(slug: string) {
             permission: permissions.showcase.read,
             feature: "dealer_showcase",
             orgTypes: ["dealer", "distributor"],
+          },
+          {
+            // TEC-500: the distributor's photo standard overrides.
+            id: "photo-standard",
+            titleKey: "photo_standard.settings.nav",
+            href: routes.tenant.photoStandard.root(slug),
+            icon: Camera,
+            permission: permissions.photoStandard.override,
+            feature: "photo_standard",
+            orgTypes: ["distributor"],
           },
           {
             // TEC-390: AI assistant (ai_assistant module + ai.use; the

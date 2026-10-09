@@ -705,6 +705,8 @@ func catalogConstants() []string {
 		PricingRecommendedPublished,
 		PricingDisciplineDigest,
 		ServiceIntakePhotosCompleted,
+		EinvoiceArchived,
+		EinvoiceVoided,
 	}
 }
 
@@ -836,3 +838,14 @@ const (
 // payload: service_id, service_uuid, organization_id, brand_id, angle_keys.
 // No EXIF data in the payload (KVKK).
 const ServiceIntakePhotosCompleted = "service.intake_photos_completed"
+
+// e-Invoice (TEC-503, F5-08c): written in the transaction that archives or
+// voids an invoice; tenant is the brand center. archived payload:
+// einvoice_uuid (ETTN), number, profile, source_type, source_uuid,
+// buyer_org_id, payable, currency, issue_date, xml_sha256. voided payload:
+// einvoice_uuid, number, previous_status, source_type, source_uuid, reason.
+// Nothing is sent to GİB or an integrator (design §9).
+const (
+	EinvoiceArchived = "einvoice.archived"
+	EinvoiceVoided   = "einvoice.voided"
+)

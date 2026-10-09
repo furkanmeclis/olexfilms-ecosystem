@@ -75,10 +75,17 @@ type AngleView struct {
 	Name              json.RawMessage `json:"name"`
 	Hint              json.RawMessage `json:"hint"`
 	ExampleStorageKey *string         `json:"example_storage_key,omitempty"`
-	Required          bool            `json:"required"`
-	Hidden            bool            `json:"hidden,omitempty"`
-	SortOrder         int32           `json:"sort_order"`
-	Active            bool            `json:"active"`
+	// ExampleURL is the authenticated path of the example image (TEC-500).
+	ExampleURL string `json:"example_url,omitempty"`
+	Required   bool   `json:"required"`
+	Hidden     bool   `json:"hidden,omitempty"`
+	SortOrder  int32  `json:"sort_order"`
+	Active     bool   `json:"active"`
+	// Override form only (TEC-500): the central default and whether the
+	// target organization has its own override row.
+	DefaultRequired *bool `json:"default_required,omitempty"`
+	DefaultHidden   *bool `json:"default_hidden,omitempty"`
+	Overridden      *bool `json:"overridden,omitempty"`
 }
 
 type OverrideInput struct {
@@ -251,7 +258,7 @@ func (s *Service) PutOverrides(ctx context.Context, c Caller, target uuid.UUID, 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("photo_standard: commit: %w", err)
 	}
-	return s.ResolvedAngles(ctx, org.ID, org.BrandID)
+	return s.OverrideAngles(ctx, org.ID, org.BrandID)
 }
 
 func (s *Service) GetOverrides(ctx context.Context, c Caller, target uuid.UUID) ([]AngleView, error) {
@@ -265,7 +272,24 @@ func (s *Service) GetOverrides(ctx context.Context, c Caller, target uuid.UUID) 
 	if org.BrandID != c.Org.BrandID || !c.Filter.AllowsOrg(org.ID, org.BrandID) {
 		return nil, ErrForbidden
 	}
-	return s.ResolvedAngles(ctx, org.ID, org.BrandID)
+	return s.OverrideAngles(ctx, org.ID, org.BrandID)
+}
+
+// OverrideAngles is the override form view of an organization (TEC-500):
+// every active angle, hidden ones included, with the resolved values, the
+// central default and whether the organization overrides it.
+func (s *Service) OverrideAngles(ctx context.Context, orgID, brandID int64) ([]AngleView, error) {
+	rows, err := s.allResolvedRows(ctx, s.q, orgID, brandID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AngleView, 0, len(rows))
+	for _, row := range rows {
+		v := resolvedView(row)
+		v.DefaultRequired, v.DefaultHidden, v.Overridden = &row.DefaultRequired, &row.DefaultHidden, &row.Overridden
+		out = append(out, v)
+	}
+	return out, nil
 }
 
 func (s *Service) ResolvedAngles(ctx context.Context, serviceOrgID, brandID int64) ([]AngleView, error) {
@@ -275,13 +299,18 @@ func (s *Service) ResolvedAngles(ctx context.Context, serviceOrgID, brandID int6
 	}
 	out := make([]AngleView, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, AngleView{
-			UUID: textUUID(row.Uuid), Key: row.Key, Name: copyJSON(row.Name), Hint: copyJSON(row.Hint),
-			ExampleStorageKey: textPtr(row.ExampleStorageKey), Required: row.ResolvedRequired,
-			Hidden: row.ResolvedHidden, SortOrder: row.SortOrder, Active: row.Active,
-		})
+		out = append(out, resolvedView(row))
 	}
 	return out, nil
+}
+
+func resolvedView(row db.ListResolvedPhotoAnglesRow) AngleView {
+	id := textUUID(row.Uuid)
+	return AngleView{
+		UUID: id, Key: row.Key, Name: copyJSON(row.Name), Hint: copyJSON(row.Hint),
+		ExampleStorageKey: textPtr(row.ExampleStorageKey), ExampleURL: exampleURL(id, row.ExampleStorageKey),
+		Required: row.ResolvedRequired, Hidden: row.ResolvedHidden, SortOrder: row.SortOrder, Active: row.Active,
+	}
 }
 
 func (s *Service) Intake(ctx context.Context, c Caller, serviceID uuid.UUID) (IntakeListView, error) {
@@ -500,9 +529,21 @@ func Digest(body []byte) string {
 func angleView(row db.PhotoAngle, required, hidden bool) AngleView {
 	return AngleView{
 		UUID: row.Uuid, Key: row.Key, Name: copyJSON(row.Name), Hint: copyJSON(row.Hint),
-		ExampleStorageKey: textPtr(row.ExampleStorageKey), Required: required, Hidden: hidden,
-		SortOrder: row.SortOrder, Active: row.Active,
+		ExampleStorageKey: textPtr(row.ExampleStorageKey), ExampleURL: exampleURL(row.Uuid, row.ExampleStorageKey),
+		Required: required, Hidden: hidden, SortOrder: row.SortOrder, Active: row.Active,
 	}
+}
+
+// ExampleURL is the authenticated path of an angle's example image.
+func ExampleURL(angleUUID uuid.UUID) string {
+	return fmt.Sprintf("/v1/photo-standard/angles/%s/example", angleUUID.String())
+}
+
+func exampleURL(angleUUID uuid.UUID, key pgtype.Text) string {
+	if !key.Valid {
+		return ""
+	}
+	return ExampleURL(angleUUID)
 }
 
 func photoView(row db.IntakePhoto, serviceUUID uuid.UUID, angleKey string) IntakePhotoView {

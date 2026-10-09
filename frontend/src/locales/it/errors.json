@@ -151,5 +151,16 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "Le fatture elettroniche possono essere emesse solo in TRY ad acquirenti in Turchia.",
   "codes.EINVOICE_INVALID_DOCUMENT": "I dati della fattura sono incompleti o errati.",
   "codes.EINVOICE_INVALID_VAT_RATE": "L’aliquota IVA non è valida; lo 0% richiede un codice di esenzione.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "Il foglio di stile XSLT non è valido."
+  "codes.EINVOICE_INVALID_STYLESHEET": "Il foglio di stile XSLT non è valido.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Mancano foto obbligatorie di accettazione. Fotografa prima tutte le angolazioni obbligatorie.",
+  "codes.PHOTO_FILE_TOO_LARGE": "La foto non può superare i 12 MB.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "La foto deve essere JPEG, PNG, WebP o HEIC.",
+  "codes.PHOTO_SERVICE_LOCKED": "Le foto di accettazione di questo servizio non possono più essere modificate.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Salva prima i dati del venditore e le serie della fattura elettronica.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "Questo record non può essere fatturato (ordine non ricevuto o periodo non registrato).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "Questo record ha già una fattura elettronica attiva; annullala per fatturare di nuovo.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Il profilo di fatturazione dell'acquirente è incompleto; compila i campi mancanti.",
+  "codes.EINVOICE_INVALID_STATUS": "Lo stato della fattura elettronica non consente questa azione.",
+  "codes.EINVOICE_NOT_ARCHIVED": "La fattura elettronica non è ancora archiviata.",
+  "codes.EINVOICE_PDF_NOT_READY": "Il PDF della fattura non è ancora pronto; riprova tra poco o rigeneralo."
 }

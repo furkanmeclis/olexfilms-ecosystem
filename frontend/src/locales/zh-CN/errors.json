@@ -151,5 +151,16 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "电子发票只能以 TRY 开具给土耳其境内的买方。",
   "codes.EINVOICE_INVALID_DOCUMENT": "发票数据不完整或有误。",
   "codes.EINVOICE_INVALID_VAT_RATE": "增值税税率无效；0% 需要免税代码。",
-  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT 样式表无效。"
+  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT 样式表无效。",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "缺少必拍的接车照片。请先拍摄所有必拍角度。",
+  "codes.PHOTO_FILE_TOO_LARGE": "照片不能超过 12 MB。",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "照片必须为 JPEG、PNG、WebP 或 HEIC 格式。",
+  "codes.PHOTO_SERVICE_LOCKED": "该服务的接车照片已无法修改。",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "请先保存电子发票的销售方设置和编号系列。",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "该记录无法开票（订单未收货或期间未入账）。",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "该记录已有有效的电子发票；请先作废后再重新开票。",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "买方开票资料不完整，请补全缺失的字段。",
+  "codes.EINVOICE_INVALID_STATUS": "电子发票当前状态不允许此操作。",
+  "codes.EINVOICE_NOT_ARCHIVED": "电子发票尚未归档。",
+  "codes.EINVOICE_PDF_NOT_READY": "发票 PDF 尚未生成，请稍后再试或重新生成。"
 }

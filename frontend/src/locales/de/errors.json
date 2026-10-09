@@ -151,5 +151,16 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "E-Rechnungen können nur in TRY an Käufer in der Türkei ausgestellt werden.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Die Rechnungsdaten sind unvollständig oder fehlerhaft.",
   "codes.EINVOICE_INVALID_VAT_RATE": "Der Mehrwertsteuersatz ist ungültig; 0 % erfordert einen Befreiungscode.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "Das XSLT-Stylesheet ist ungültig."
+  "codes.EINVOICE_INVALID_STYLESHEET": "Das XSLT-Stylesheet ist ungültig.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Pflichtfotos der Fahrzeugannahme fehlen. Fotografieren Sie zuerst alle vorgeschriebenen Blickwinkel.",
+  "codes.PHOTO_FILE_TOO_LARGE": "Das Foto darf höchstens 12 MB groß sein.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "Das Foto muss JPEG, PNG, WebP oder HEIC sein.",
+  "codes.PHOTO_SERVICE_LOCKED": "Die Annahmefotos dieses Service können nicht mehr geändert werden.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Speichern Sie zuerst die Verkäuferdaten und Nummernkreise für E-Rechnungen.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "Dieser Datensatz kann nicht fakturiert werden (Bestellung nicht empfangen oder Zeitraum nicht gebucht).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "Für diesen Datensatz gibt es bereits eine aktive E-Rechnung; stornieren Sie sie, um erneut abzurechnen.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Das Rechnungsprofil des Käufers ist unvollständig; ergänzen Sie die fehlenden Felder.",
+  "codes.EINVOICE_INVALID_STATUS": "Der Status der E-Rechnung lässt diese Aktion nicht zu.",
+  "codes.EINVOICE_NOT_ARCHIVED": "Die E-Rechnung ist noch nicht archiviert.",
+  "codes.EINVOICE_PDF_NOT_READY": "Das Rechnungs-PDF ist noch nicht bereit; versuchen Sie es gleich erneut oder erzeugen Sie es neu."
 }

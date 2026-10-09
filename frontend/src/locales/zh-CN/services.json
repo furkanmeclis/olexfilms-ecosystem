@@ -338,5 +338,6 @@
   "review_questions.validation.key": "键为必填项，最多 64 个字符。",
   "review_questions.validation.text_tr": "土耳其语问题文本为必填项。",
   "review_questions.toast.saved": "问题已保存。",
-  "review_questions.toast.failed": "操作失败，请重试。"
+  "review_questions.toast.failed": "操作失败，请重试。",
+  "wizard.steps.photos": "接车照片"
 }

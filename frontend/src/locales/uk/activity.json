@@ -198,5 +198,15 @@
   "resources.platform.organizations": "Організації",
   "actions.mcp.tool_called": "Викликано інструмент MCP",
   "resources.mcp_tool": "Інструмент MCP",
-  "actions.pricing.recommended_published": "Опубліковано рекомендовані ціни"
+  "actions.pricing.recommended_published": "Опубліковано рекомендовані ціни",
+  "actions.einvoice.draft_created": "Створено чернетку е-рахунку",
+  "actions.einvoice.archived": "Е-рахунок заархівовано",
+  "actions.einvoice.archive_failed": "Перевірка е-рахунку не пройдена",
+  "actions.einvoice.voided": "Е-рахунок анульовано",
+  "actions.einvoice.pdf_retried": "PDF е-рахунку згенеровано повторно",
+  "actions.einvoice.settings_updated": "Налаштування е-рахунків оновлено",
+  "actions.einvoice.xslt_uploaded": "Завантажено XSLT-шаблон е-рахунків",
+  "actions.einvoice.xslt_reset": "XSLT-шаблон е-рахунків скинуто до стандартного",
+  "actions.einvoice.buyer_profile_updated": "Профіль рахунків покупця оновлено",
+  "resources.einvoices": "Е-рахунки"
 }

@@ -151,5 +151,16 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "e-Fatura yalnız Türkiye'deki alıcılara ve TRY ile kesilebilir.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Fatura bilgileri eksik veya hatalı.",
   "codes.EINVOICE_INVALID_VAT_RATE": "KDV oranı geçersiz; %0 için istisna kodu gerekir.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT görünüm dosyası geçersiz."
+  "codes.EINVOICE_INVALID_STYLESHEET": "XSLT görünüm dosyası geçersiz.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Zorunlu araç kabul fotoğrafları eksik. Önce tüm zorunlu açıların fotoğrafını çekin.",
+  "codes.PHOTO_FILE_TOO_LARGE": "Fotoğraf en çok 12 MB olabilir.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "Fotoğraf JPEG, PNG, WebP veya HEIC olmalı.",
+  "codes.PHOTO_SERVICE_LOCKED": "Bu hizmetin kabul fotoğrafları artık değiştirilemez.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Önce e-Fatura satıcı ayarlarını ve serilerini kaydedin.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "Bu kayıt faturalanamaz (sipariş teslim alınmamış veya dönem işlenmemiş).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "Bu kaydın zaten etkin bir e-Faturası var; yeniden faturalamak için iptal edin.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Alıcının fatura profili eksik; eksik alanları doldurun.",
+  "codes.EINVOICE_INVALID_STATUS": "e-Faturanın durumu bu işleme izin vermiyor.",
+  "codes.EINVOICE_NOT_ARCHIVED": "e-Fatura henüz arşivlenmedi.",
+  "codes.EINVOICE_PDF_NOT_READY": "Fatura PDF'i henüz hazır değil; biraz sonra deneyin veya PDF'i yeniden oluşturun."
 }

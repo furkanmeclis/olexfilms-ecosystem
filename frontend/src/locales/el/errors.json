@@ -151,5 +151,16 @@
   "codes.EINVOICE_UNSUPPORTED_BUYER": "Τα ηλεκτρονικά τιμολόγια εκδίδονται μόνο σε TRY για αγοραστές στην Τουρκία.",
   "codes.EINVOICE_INVALID_DOCUMENT": "Τα στοιχεία του τιμολογίου είναι ελλιπή ή λανθασμένα.",
   "codes.EINVOICE_INVALID_VAT_RATE": "Ο συντελεστής ΦΠΑ δεν είναι έγκυρος· το 0% απαιτεί κωδικό απαλλαγής.",
-  "codes.EINVOICE_INVALID_STYLESHEET": "Το φύλλο στυλ XSLT δεν είναι έγκυρο."
+  "codes.EINVOICE_INVALID_STYLESHEET": "Το φύλλο στυλ XSLT δεν είναι έγκυρο.",
+  "codes.PHOTO_STANDARD_INCOMPLETE": "Λείπουν υποχρεωτικές φωτογραφίες παραλαβής. Φωτογραφίστε πρώτα όλες τις υποχρεωτικές γωνίες.",
+  "codes.PHOTO_FILE_TOO_LARGE": "Η φωτογραφία πρέπει να είναι έως 12 MB.",
+  "codes.PHOTO_UNSUPPORTED_MEDIA": "Η φωτογραφία πρέπει να είναι JPEG, PNG, WebP ή HEIC.",
+  "codes.PHOTO_SERVICE_LOCKED": "Οι φωτογραφίες παραλαβής αυτής της υπηρεσίας δεν αλλάζουν πλέον.",
+  "codes.EINVOICE_SETTINGS_REQUIRED": "Αποθηκεύστε πρώτα τις ρυθμίσεις πωλητή και τις σειρές ηλεκτρονικών τιμολογίων.",
+  "codes.EINVOICE_SOURCE_NOT_BILLABLE": "Αυτή η εγγραφή δεν μπορεί να τιμολογηθεί (η παραγγελία δεν παραλήφθηκε ή η περίοδος δεν καταχωρίστηκε).",
+  "codes.EINVOICE_SOURCE_ALREADY_INVOICED": "Αυτή η εγγραφή έχει ήδη ενεργό ηλεκτρονικό τιμολόγιο· ακυρώστε το για να τιμολογήσετε ξανά.",
+  "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Το προφίλ τιμολόγησης του αγοραστή είναι ελλιπές· συμπληρώστε τα πεδία που λείπουν.",
+  "codes.EINVOICE_INVALID_STATUS": "Η κατάσταση του ηλεκτρονικού τιμολογίου δεν επιτρέπει αυτή την ενέργεια.",
+  "codes.EINVOICE_NOT_ARCHIVED": "Το ηλεκτρονικό τιμολόγιο δεν έχει αρχειοθετηθεί ακόμη.",
+  "codes.EINVOICE_PDF_NOT_READY": "Το PDF του τιμολογίου δεν είναι ακόμη έτοιμο· δοκιμάστε σε λίγο ή δημιουργήστε το ξανά."
 }

@@ -198,5 +198,15 @@
   "resources.platform.organizations": "组织",
   "actions.mcp.tool_called": "已调用 MCP 工具",
   "resources.mcp_tool": "MCP 工具",
-  "actions.pricing.recommended_published": "已发布建议价格"
+  "actions.pricing.recommended_published": "已发布建议价格",
+  "actions.einvoice.draft_created": "已创建电子发票草稿",
+  "actions.einvoice.archived": "电子发票已归档",
+  "actions.einvoice.archive_failed": "电子发票校验失败",
+  "actions.einvoice.voided": "电子发票已作废",
+  "actions.einvoice.pdf_retried": "已重新生成电子发票 PDF",
+  "actions.einvoice.settings_updated": "电子发票设置已更新",
+  "actions.einvoice.xslt_uploaded": "已上传电子发票 XSLT 样式表",
+  "actions.einvoice.xslt_reset": "电子发票 XSLT 样式表已恢复默认",
+  "actions.einvoice.buyer_profile_updated": "买方开票资料已更新",
+  "resources.einvoices": "电子发票"
 }

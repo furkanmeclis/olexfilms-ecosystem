@@ -338,5 +338,6 @@
   "review_questions.validation.key": "Το κλειδί είναι υποχρεωτικό, έως 64 χαρακτήρες.",
   "review_questions.validation.text_tr": "Το τουρκικό κείμενο της ερώτησης είναι υποχρεωτικό.",
   "review_questions.toast.saved": "Η ερώτηση αποθηκεύτηκε.",
-  "review_questions.toast.failed": "Η ενέργεια απέτυχε. Δοκιμάστε ξανά."
+  "review_questions.toast.failed": "Η ενέργεια απέτυχε. Δοκιμάστε ξανά.",
+  "wizard.steps.photos": "Φωτογραφίες παραλαβής"
 }

@@ -66,3 +66,7 @@ func invalidVATRate(field, msg string) error {
 func stylesheetError(msg string) error {
 	return &Error{Code: CodeInvalidStylesheet, Message: msg, base: ErrInvalidStylesheet}
 }
+
+// StylesheetError is the 422 ErrInvalidStylesheet of an uploaded XSLT the
+// caller rejected before rendering (wrong root element, too large).
+func StylesheetError(msg string) error { return stylesheetError(msg) }

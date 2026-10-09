@@ -198,5 +198,15 @@
   "resources.platform.organizations": "Organisationen",
   "actions.mcp.tool_called": "MCP-Werkzeug aufgerufen",
   "resources.mcp_tool": "MCP-Werkzeug",
-  "actions.pricing.recommended_published": "Preisempfehlungen veröffentlicht"
+  "actions.pricing.recommended_published": "Preisempfehlungen veröffentlicht",
+  "actions.einvoice.draft_created": "E-Rechnungsentwurf erstellt",
+  "actions.einvoice.archived": "E-Rechnung archiviert",
+  "actions.einvoice.archive_failed": "Prüfung der E-Rechnung fehlgeschlagen",
+  "actions.einvoice.voided": "E-Rechnung storniert",
+  "actions.einvoice.pdf_retried": "PDF der E-Rechnung neu erzeugt",
+  "actions.einvoice.settings_updated": "E-Rechnungseinstellungen aktualisiert",
+  "actions.einvoice.xslt_uploaded": "XSLT-Vorlage für E-Rechnungen hochgeladen",
+  "actions.einvoice.xslt_reset": "XSLT-Vorlage für E-Rechnungen auf Standard zurückgesetzt",
+  "actions.einvoice.buyer_profile_updated": "Rechnungsprofil des Käufers aktualisiert",
+  "resources.einvoices": "E-Rechnungen"
 }

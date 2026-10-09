@@ -106,6 +106,12 @@ tags:
       Price list and effective price views (TEC-146, K8). The center writes the
       list price and distributor-specific prices, a distributor writes its
       price to dealers; every reader gets one view masked by pricing.* grants.
+  - name: EInvoice
+    description: >-
+      e-Invoice (UBL-TR) of the brand center (TEC-503, F5-08c): drafts from
+      billable sales, unnumbered preview, numbering and archive (XML + PDF),
+      void mark, seller settings and buyer invoice profiles. Nothing is sent
+      to GİB or an integrator.
   - name: ServiceCatalog
     description: >-
       Non-product service catalog (TEC-306): center-managed items, module
@@ -3860,12 +3866,72 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /v1/platform/photo-standard/angles/{uuid}/example:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [PhotoStandard]
+      operationId: uploadPhotoStandardAngleExample
+      summary: Upload or replace the example image of an angle
+      description: >-
+        TEC-500. Multipart field `image` (at most 12 MiB). The server sniffs
+        bytes and accepts JPEG, PNG and WebP; the previous example object is
+        deleted. Requires photo_standard.manage.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "200":
+          description: Angle with the new example_url
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopePhotoStandardAngle" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+
+  /v1/photo-standard/angles/{uuid}/example:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [PhotoStandard]
+      operationId: getPhotoStandardAngleExample
+      summary: Example image of an angle
+      description: TEC-500. Requires the photo_standard add-on and services.read. 404 without an uploaded example.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/photo-standard/overrides:
     get:
       tags: [PhotoStandard]
       operationId: getPhotoStandardOverrides
       summary: Resolve photo standard overrides for an organization
-      description: TEC-498. Dealer override wins over distributor override, which wins over the central definition.
+      description: >-
+        TEC-498. Dealer override wins over distributor override, which wins
+        over the central definition. TEC-500: every active angle is listed,
+        hidden ones included, with default_required, default_hidden and
+        overridden.
       security:
         - bearerAuth: []
       parameters:
@@ -20984,6 +21050,31 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
+  /v1/services/{uuid}/intake-photos/{angle_key}/file:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+      - name: angle_key
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [PhotoStandard]
+      operationId: getServiceIntakePhotoFile
+      summary: Active intake photo bytes of an angle
+      description: TEC-500. The IntakePhoto.url path. Requires services.read and the photo_standard add-on.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Image bytes
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+            image/heic: { schema: { type: string, format: binary } }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /v1/services/{uuid}/items/{item}/consumption-correction:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -29106,6 +29197,427 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeReport" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/einvoices/billable:
+    get:
+      tags: [EInvoice]
+      operationId: listEinvoiceBillable
+      summary: Billable center sales without an active e-invoice
+      description: >-
+        TEC-503. Brand center with einvoice.read; the center's e_invoice add-on
+        must be on (403 FEATURE_DISABLED). Received orders to distributors and
+        posted service catalog subscription periods of dealers that have no
+        draft, failed or archived invoice (a voided invoice frees the source).
+        Sort: billable_at (default -billable_at), source_no, payable,
+        buyer_name; (source_type, id) tiebreak. source_type CSV (order,
+        service_subscription); buyer CSV of organization uuids;
+        billable_at_from / billable_at_to; payable_min / payable_max; q
+        matches the source number and buyer name.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: source_type
+          in: query
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string, enum: [order, service_subscription] } }
+        - { name: buyer, in: query, schema: { type: string }, description: CSV of buyer organization uuids }
+        - { name: billable_at_from, in: query, schema: { type: string } }
+        - { name: billable_at_to, in: query, schema: { type: string } }
+        - { name: payable_min, in: query, schema: { type: number } }
+        - { name: payable_max, in: query, schema: { type: number } }
+      responses:
+        "200":
+          description: Billable source page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoiceBillablePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/einvoices:
+    get:
+      tags: [EInvoice]
+      operationId: listEinvoices
+      summary: E-invoices of the brand center
+      description: >-
+        TEC-503. Brand center with einvoice.read (e_invoice add-on). Sort:
+        issue_date (default -issue_date), number, payable, status, created_at;
+        id tiebreak. status / profile CSV; buyer CSV of organization uuids;
+        issue_date_from / issue_date_to (inclusive days); payable_min /
+        payable_max; q matches the number, the ETTN and the buyer name.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: status
+          in: query
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string, enum: [draft, failed, archived, voided] } }
+        - name: profile
+          in: query
+          style: form
+          explode: false
+          schema: { type: array, items: { type: string, enum: [EARSIVFATURA, TEMELFATURA, TICARIFATURA] } }
+        - { name: buyer, in: query, schema: { type: string }, description: CSV of buyer organization uuids }
+        - { name: issue_date_from, in: query, schema: { type: string, format: date } }
+        - { name: issue_date_to, in: query, schema: { type: string, format: date } }
+        - { name: payable_min, in: query, schema: { type: number } }
+        - { name: payable_max, in: query, schema: { type: number } }
+      responses:
+        "200":
+          description: E-invoice page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoicePage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [EInvoice]
+      operationId: createEinvoiceDraft
+      summary: Draft an e-invoice from a billable source
+      description: >-
+        TEC-503. Brand center with einvoice.manage. The draft reserves the
+        source under a temporary TMP number (number stays null) and freezes a
+        snapshot of the parties, lines and totals; KDV comes from
+        einvoice.default_vat_rate. 422 EINVOICE_SETTINGS_REQUIRED before the
+        seller settings are saved; 422 EINVOICE_BUYER_PROFILE_INCOMPLETE with
+        details[].field and data.missing_fields (invoice_vkn,
+        invoice_tax_office, address, city, district); 422
+        EINVOICE_UNSUPPORTED_BUYER outside Türkiye / TRY; 422
+        EINVOICE_SOURCE_NOT_BILLABLE (order not received, period not posted);
+        409 EINVOICE_SOURCE_ALREADY_INVOICED.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EinvoiceDraftRequest" }
+      responses:
+        "201":
+          description: Draft
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoice" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/einvoices/settings:
+    get:
+      tags: [EInvoice]
+      operationId: getEinvoiceSettings
+      summary: Seller profile, series and stylesheet of the center
+      description: >-
+        TEC-503. Brand center with einvoice.read. Before the first save the
+        defaults come back with configured false (archiving is closed).
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoiceSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [EInvoice]
+      operationId: putEinvoiceSettings
+      summary: Save the seller profile and series
+      description: >-
+        TEC-503. einvoice.settings (super_admin) in the brand center. VKN with
+        a valid check digit; series 3 characters A-Z/0-9, the two series
+        differ and TMP is reserved for drafts. The stylesheet is kept.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EinvoiceSettingsRequest" }
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoiceSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/einvoices/settings/xslt:
+    post:
+      tags: [EInvoice]
+      operationId: uploadEinvoiceXSLT
+      summary: Upload a custom invoice stylesheet
+      description: >-
+        TEC-503. einvoice.settings. Multipart field file, at most 1 MB, root
+        element xsl:stylesheet. A sample invoice is rendered with it first; a
+        broken stylesheet is 422 EINVOICE_INVALID_STYLESHEET. 422
+        EINVOICE_SETTINGS_REQUIRED before the settings are saved.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoiceSettings" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+    delete:
+      tags: [EInvoice]
+      operationId: resetEinvoiceXSLT
+      summary: Return to the default GİB stylesheet
+      description: TEC-503. einvoice.settings.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoiceSettings" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/einvoices/{uuid}:
+    get:
+      tags: [EInvoice]
+      operationId: getEinvoice
+      summary: E-invoice detail
+      description: >-
+        TEC-503. einvoice.read. finance_entry is the center's ledger row of
+        the source (orders book source "order"); the invoice writes no ledger
+        row.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid }, description: ETTN }
+      responses:
+        "200":
+          description: E-invoice
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoice" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/einvoices/{uuid}/preview:
+    get:
+      tags: [EInvoice]
+      operationId: previewEinvoice
+      summary: Unnumbered HTML preview of a draft
+      description: >-
+        TEC-503. einvoice.read. Draft or failed invoices only (409
+        EINVOICE_INVALID_STATUS otherwise): rendered with the current data,
+        without a number and with a PREVIEW watermark. Nothing is stored.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: HTML
+          content:
+            text/html:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/einvoices/{uuid}/archive:
+    post:
+      tags: [EInvoice]
+      operationId: archiveEinvoice
+      summary: Number, validate and archive a draft
+      description: >-
+        TEC-503. einvoice.manage + step-up (403 STEP_UP_REQUIRED). The XML is
+        validated (XSD + Schematron) with the temporary number first; invalid
+        or rule_warnings answer 200 with status failed, validation_status and
+        validation_messages and consume no number. A valid invoice takes the
+        next number of its series (e-Arşiv or e-Fatura) in the same
+        transaction, is stored at einvoices/{year}/{number}.xml with its
+        sha256 and becomes archived (event einvoice.archived). The PDF follows
+        on the docs queue; a PDF failure only fills error. 409
+        EINVOICE_INVALID_STATUS for archived or voided invoices.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Archived or failed invoice
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoice" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+
+  /v1/einvoices/{uuid}/void:
+    post:
+      tags: [EInvoice]
+      operationId: voidEinvoice
+      summary: Mark an e-invoice voided
+      description: >-
+        TEC-503. einvoice.manage + step-up. A mark only: nothing is sent, the
+        row and its files stay, the source becomes billable again (event
+        einvoice.voided). reason is required. Return invoices (IADE) are
+        deferred.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EinvoiceVoidRequest" }
+      responses:
+        "200":
+          description: Voided invoice
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoice" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/einvoices/{uuid}/pdf/retry:
+    post:
+      tags: [EInvoice]
+      operationId: retryEinvoicePDF
+      summary: Render the PDF of an archived invoice again
+      description: >-
+        TEC-503. einvoice.manage. Queues the PDF render (docs queue); error is
+        cleared when it succeeds. 409 EINVOICE_NOT_ARCHIVED for drafts.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "202":
+          description: Invoice
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeEinvoice" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/einvoices/{uuid}/xml:
+    get:
+      tags: [EInvoice]
+      operationId: downloadEinvoiceXML
+      summary: Download the archived UBL-TR XML
+      description: TEC-503. einvoice.read. Streamed from private storage; 409 EINVOICE_NOT_ARCHIVED for drafts.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: XML
+          content:
+            application/xml:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/einvoices/{uuid}/pdf:
+    get:
+      tags: [EInvoice]
+      operationId: downloadEinvoicePDF
+      summary: Download the invoice PDF
+      description: TEC-503. einvoice.read. 409 EINVOICE_PDF_NOT_READY while the PDF is pending or failed.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/einvoices/{uuid}/html:
+    get:
+      tags: [EInvoice]
+      operationId: renderEinvoiceHTML
+      summary: HTML view of the archived invoice
+      description: >-
+        TEC-503. einvoice.read. The stored XML rendered with the center's
+        stylesheet (voided invoices carry a VOID watermark).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: HTML
+          content:
+            text/html:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/platform/organizations/{uuid}/invoice-profile:
+    put:
+      tags: [EInvoice]
+      operationId: putOrganizationInvoiceProfile
+      summary: Set the invoice profile of a distributor or dealer
+      description: >-
+        TEC-503. Brand center with einvoice.manage (e_invoice add-on). Either
+        invoice_vkn or invoice_tckn (valid check digits); missing_fields lists
+        what an invoice still needs.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceProfileRequest" }
+      responses:
+        "200":
+          description: Invoice profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeInvoiceProfile" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -39097,10 +39609,22 @@ components:
           type: object
           additionalProperties: { type: string }
         example_storage_key: { type: [string, "null"] }
+        example_url:
+          type: string
+          description: TEC-500. Authenticated example image path; absent without an uploaded example.
         required: { type: boolean }
         hidden: { type: boolean }
         sort_order: { type: integer }
         active: { type: boolean }
+        default_required:
+          type: boolean
+          description: TEC-500, override endpoints only. Central default (center override, else the angle).
+        default_hidden:
+          type: boolean
+          description: TEC-500, override endpoints only. Central default hidden flag.
+        overridden:
+          type: boolean
+          description: TEC-500, override endpoints only. The target organization has its own override row.
 
     PhotoStandardOverridesInput:
       type: object
@@ -45169,4 +45693,273 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/ReportLayout" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EinvoiceOrgRef:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+    EinvoiceParty:
+      type: object
+      required: [name, einvoice_registered]
+      properties:
+        name: { type: string }
+        vkn: { type: string }
+        tckn: { type: string }
+        tax_office: { type: string }
+        street: { type: string }
+        district: { type: string }
+        city: { type: string }
+        country_code: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        einvoice_registered: { type: boolean }
+    EinvoiceLine:
+      type: object
+      required: [name, quantity, unit_code, unit_price, vat_rate, line_extension]
+      properties:
+        name: { type: string }
+        quantity: { type: string, example: "2" }
+        unit_code: { type: string, example: C62 }
+        unit_price: { type: string, example: "100.00" }
+        vat_rate: { type: string, example: "20" }
+        line_extension: { type: string, example: "200.00" }
+    EinvoiceTax:
+      type: object
+      required: [percent, taxable_amount, tax_amount]
+      properties:
+        percent: { type: string }
+        taxable_amount: { type: string }
+        tax_amount: { type: string }
+    EinvoiceFinanceEntry:
+      type: object
+      required: [uuid, direction, amount, currency, source_type]
+      properties:
+        uuid: { type: string, format: uuid }
+        direction: { type: string }
+        amount: { type: string }
+        currency: { type: string }
+        source_type: { type: string }
+    Einvoice:
+      type: object
+      required:
+        - uuid
+        - number
+        - profile
+        - invoice_type
+        - status
+        - validation_status
+        - validation_messages
+        - source_type
+        - source_uuid
+        - buyer_organization
+        - buyer
+        - seller
+        - lines
+        - tax_breakdown
+        - currency
+        - line_extension
+        - tax_exclusive
+        - tax_total
+        - payable
+        - issue_date
+        - xml_sha256
+        - has_xml
+        - has_pdf
+        - error
+        - voided_at
+        - void_reason
+        - created_at
+        - updated_at
+      properties:
+        uuid: { type: string, format: uuid, description: ETTN }
+        number:
+          type: [string, "null"]
+          description: GİB number (SSSYYYY000000001); null while only a temporary draft number exists
+        profile: { type: string, enum: [EARSIVFATURA, TEMELFATURA, TICARIFATURA] }
+        invoice_type: { type: string, enum: [SATIS] }
+        status: { type: string, enum: [draft, failed, archived, voided] }
+        validation_status: { type: string, enum: [valid, rule_warnings, invalid] }
+        validation_messages: { type: array, items: { type: string } }
+        source_type: { type: string, enum: [order, service_subscription] }
+        source_uuid: { type: string, format: uuid }
+        buyer_organization:
+          oneOf:
+            - { $ref: "#/components/schemas/EinvoiceOrgRef" }
+            - { type: "null" }
+        buyer: { $ref: "#/components/schemas/EinvoiceParty" }
+        seller: { $ref: "#/components/schemas/EinvoiceParty" }
+        lines: { type: array, items: { $ref: "#/components/schemas/EinvoiceLine" } }
+        tax_breakdown: { type: array, items: { $ref: "#/components/schemas/EinvoiceTax" } }
+        currency: { type: string, example: TRY }
+        line_extension: { type: string, example: "300.00" }
+        tax_exclusive: { type: string, example: "300.00" }
+        tax_total: { type: string, example: "60.00" }
+        payable: { type: string, example: "360.00" }
+        issue_date: { type: string, format: date }
+        xml_sha256: { type: [string, "null"] }
+        has_xml: { type: boolean }
+        has_pdf: { type: boolean }
+        error:
+          type: [string, "null"]
+          description: Validation failure summary (status failed) or the last PDF error (status unchanged)
+        voided_at: { type: [string, "null"], format: date-time }
+        void_reason: { type: [string, "null"] }
+        finance_entry: { $ref: "#/components/schemas/EinvoiceFinanceEntry" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    EnvelopeEinvoice:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/Einvoice" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EnvelopeEinvoicePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/Einvoice" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EinvoiceBillable:
+      type: object
+      required: [source_type, source_uuid, source_no, buyer_organization, currency, line_extension, tax_total, payable, billable_at, period_start, period_end]
+      properties:
+        source_type: { type: string, enum: [order, service_subscription] }
+        source_uuid: { type: string, format: uuid }
+        source_no: { type: string, description: Order number or service catalog item name }
+        buyer_organization: { $ref: "#/components/schemas/EinvoiceOrgRef" }
+        currency: { type: string }
+        line_extension: { type: string }
+        tax_total: { type: string }
+        payable: { type: string }
+        billable_at: { type: [string, "null"], format: date-time }
+        period_start: { type: [string, "null"], format: date }
+        period_end: { type: [string, "null"], format: date }
+    EnvelopeEinvoiceBillablePage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/EinvoiceBillable" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EinvoiceDraftRequest:
+      type: object
+      additionalProperties: false
+      required: [source_type, source_uuid]
+      properties:
+        source_type: { type: string, enum: [order, service_subscription] }
+        source_uuid: { type: string, format: uuid, description: orders.uuid or service_subscription_periods.uuid }
+    EinvoiceVoidRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1, maxLength: 1000 }
+    EinvoiceSettings:
+      type: object
+      required: [configured, vkn, tax_office, legal_name, address, city, district, country, iban, email, phone, website, trade_registry_no, mersis_no, default_note, earchive_series, efatura_series, pdf_enabled, custom_xslt, xslt_sha1, updated_at]
+      properties:
+        configured: { type: boolean }
+        vkn: { type: string }
+        tax_office: { type: string }
+        legal_name: { type: string }
+        address: { type: string }
+        city: { type: string }
+        district: { type: string }
+        country: { type: string, example: TR }
+        iban: { type: [string, "null"] }
+        email: { type: [string, "null"] }
+        phone: { type: [string, "null"] }
+        website: { type: [string, "null"] }
+        trade_registry_no: { type: [string, "null"] }
+        mersis_no: { type: [string, "null"] }
+        default_note: { type: [string, "null"] }
+        earchive_series: { type: string, example: EAR }
+        efatura_series: { type: string, example: EFN }
+        pdf_enabled: { type: boolean }
+        custom_xslt: { type: boolean }
+        xslt_sha1: { type: [string, "null"] }
+        updated_at: { type: [string, "null"], format: date-time }
+    EnvelopeEinvoiceSettings:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/EinvoiceSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+    EinvoiceSettingsRequest:
+      type: object
+      additionalProperties: false
+      required: [vkn, tax_office, legal_name, address, city, district, earchive_series, efatura_series]
+      properties:
+        vkn: { type: string, pattern: "^[0-9]{10}$" }
+        tax_office: { type: string, maxLength: 120 }
+        legal_name: { type: string, maxLength: 255 }
+        address: { type: string, maxLength: 2000 }
+        city: { type: string, maxLength: 100 }
+        district: { type: string, maxLength: 100 }
+        iban: { type: string }
+        email: { type: string }
+        phone: { type: string, description: E.164 }
+        website: { type: string }
+        trade_registry_no: { type: string, maxLength: 64 }
+        mersis_no: { type: string, pattern: "^[0-9]{16}$" }
+        default_note: { type: string, maxLength: 4000 }
+        earchive_series: { type: string, pattern: "^[A-Z0-9]{3}$" }
+        efatura_series: { type: string, pattern: "^[A-Z0-9]{3}$" }
+        pdf_enabled: { type: boolean, default: true }
+    InvoiceProfileRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        invoice_vkn: { type: string, description: 10 digit VKN (or invoice_tckn) }
+        invoice_tckn: { type: string, description: 11 digit TCKN }
+        invoice_tax_office: { type: string, maxLength: 120 }
+        invoice_legal_name: { type: string, maxLength: 255 }
+        einvoice_registered: { type: boolean }
+        einvoice_alias: { type: string, maxLength: 255 }
+        invoice_email: { type: string }
+    InvoiceProfile:
+      type: object
+      required: [organization_uuid, organization_name, organization_type, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, missing_fields]
+      properties:
+        organization_uuid: { type: string, format: uuid }
+        organization_name: { type: string }
+        organization_type: { type: string, enum: [distributor, dealer] }
+        invoice_vkn: { type: [string, "null"] }
+        invoice_tckn: { type: [string, "null"] }
+        invoice_tax_office: { type: [string, "null"] }
+        invoice_legal_name: { type: [string, "null"] }
+        einvoice_registered: { type: boolean }
+        einvoice_alias: { type: [string, "null"] }
+        invoice_email: { type: [string, "null"] }
+        missing_fields: { type: array, items: { type: string } }
+    EnvelopeInvoiceProfile:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/InvoiceProfile" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
