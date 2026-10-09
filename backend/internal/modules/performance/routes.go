@@ -22,11 +22,32 @@ func RegisterRoutes(
 	authn := middleware.Authenticate(tokens, loader)
 	org := middleware.RequireOrganization(tokens, q)
 	module := middleware.RequireFeature(checker, features.ModulePerformance)
-	read := middleware.RequireScope(q, rbac.PermPerformanceRead)
-	route := func(fn http.HandlerFunc) http.Handler {
-		return middleware.Chain(fn, authn, org, module, read)
+	route := func(fn http.HandlerFunc, perm string) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, perm))
 	}
+	read := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermPerformanceRead) }
+	targets := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermPerformanceTargetsManage) }
+	staff := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermPerformanceStaffTargetsManage) }
+	rules := func(fn http.HandlerFunc) http.Handler { return route(fn, rbac.PermPerformanceRulesManage) }
 
-	mux.Handle("GET /v1/performance/map", route(h.RegionMap))
-	mux.Handle("GET /v1/performance/map/dealers", route(h.DealersMap))
+	mux.Handle("GET /v1/performance/dashboard", read(h.Dashboard))
+	mux.Handle("GET /v1/performance/ranking", read(h.Ranking))
+	mux.Handle("GET /v1/performance/benchmark", read(h.Benchmark))
+	mux.Handle("GET /v1/performance/map", read(h.RegionMap))
+	mux.Handle("GET /v1/performance/map/dealers", read(h.DealersMap))
+
+	mux.Handle("GET /v1/performance/targets", read(h.ListTargets))
+	mux.Handle("POST /v1/performance/targets", targets(h.CreateTarget))
+	mux.Handle("PUT /v1/performance/targets/{uuid}", targets(h.UpdateTarget))
+	mux.Handle("DELETE /v1/performance/targets/{uuid}", targets(h.DeleteTarget))
+
+	mux.Handle("GET /v1/performance/staff-targets", staff(h.ListStaffTargets))
+	mux.Handle("POST /v1/performance/staff-targets", staff(h.UpsertStaffTarget))
+	mux.Handle("PUT /v1/performance/staff-targets", staff(h.UpsertStaffTarget))
+	mux.Handle("DELETE /v1/performance/staff-targets/{uuid}", staff(h.DeleteStaffTarget))
+
+	mux.Handle("GET /v1/performance/rules", rules(h.ListRules))
+	mux.Handle("POST /v1/performance/rules", rules(h.CreateRule))
+	mux.Handle("PUT /v1/performance/rules/{uuid}", rules(h.UpdateRule))
+	mux.Handle("DELETE /v1/performance/rules/{uuid}", rules(h.DeleteRule))
 }

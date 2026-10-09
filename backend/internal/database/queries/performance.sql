@@ -370,6 +370,7 @@ LEFT JOIN LATERAL (
     SELECT SUM(pm.value) AS actual
     FROM performance_metrics_monthly pm
     WHERE pm.organization_id = t.target_org_id
+      AND pm.scope = 'org'
       AND pm.metric = t.metric
       AND pm.currency IS NOT DISTINCT FROM t.currency
       AND pm.period >= to_char(t.period_start, 'YYYY-MM')
@@ -890,3 +891,83 @@ VALUES (
     'auto', sqlc.arg(auto_rule_id), sqlc.arg(auto_period)
 )
 RETURNING *;
+
+-- name: GetBrandCenterOrganization :one
+SELECT *
+FROM organizations
+WHERE brand_id = sqlc.arg(brand_id) AND type = 'center' AND deleted_at IS NULL
+ORDER BY id
+LIMIT 1;
+
+-- name: ListPerformanceRuleEvaluations :many
+WITH rules AS (
+    SELECT r.*
+    FROM weak_dealer_rules r
+    WHERE r.brand_id = sqlc.arg(brand_id)
+      AND r.active = true
+      AND (sqlc.narg(owner_org_ids)::bigint[] IS NULL OR r.organization_id = ANY (sqlc.narg(owner_org_ids)::bigint[]))
+),
+dealers AS (
+    SELECT r.id AS rule_id, o.id AS dealer_org_id, o.uuid AS dealer_uuid, o.name AS dealer_name,
+           o.parent_id AS distributor_org_id, o.currency
+    FROM rules r
+    JOIN organizations owner ON owner.id = r.organization_id AND owner.deleted_at IS NULL
+    JOIN organizations o ON o.brand_id = r.brand_id AND o.type = 'dealer' AND o.deleted_at IS NULL
+    WHERE owner.type = 'center'
+       OR (owner.type = 'distributor' AND o.parent_id = owner.id)
+),
+target_actual AS (
+    SELECT d.rule_id, d.dealer_org_id, t.id AS target_id, t.value AS target_value,
+           SUM(pm.value) AS actual_value
+    FROM dealers d
+    JOIN rules r ON r.id = d.rule_id AND r.metric = 'target_achievement'
+    JOIN performance_targets t
+      ON t.target_org_id = d.dealer_org_id
+     AND t.metric = 'services_count'
+     AND t.period_start <= (sqlc.arg(period)::text || '-01')::date
+     AND t.period_end > (sqlc.arg(period)::text || '-01')::date
+    LEFT JOIN performance_metrics_monthly pm
+      ON pm.organization_id = d.dealer_org_id
+     AND pm.scope = 'org'
+     AND pm.metric = t.metric
+     AND pm.currency IS NOT DISTINCT FROM t.currency
+     AND pm.period >= to_char(t.period_start, 'YYYY-MM')
+     AND pm.period < to_char(t.period_end, 'YYYY-MM')
+    GROUP BY d.rule_id, d.dealer_org_id, t.id, t.value
+),
+values AS (
+    SELECT r.id AS rule_id, r.uuid AS rule_uuid, r.organization_id AS rule_owner_org_id,
+           owner.name AS rule_owner_name, owner.type AS rule_owner_type, r.brand_id,
+           r.name AS rule_name, r.metric, r.operator, r.threshold, r.create_task, r.notify,
+           r.assignee_user_id, d.dealer_org_id, d.dealer_uuid, d.dealer_name,
+           d.distributor_org_id, d.currency,
+           CASE WHEN r.metric = 'target_achievement'
+                THEN CASE WHEN ta.target_value IS NULL OR ta.actual_value IS NULL THEN NULL
+                          ELSE ROUND(ta.actual_value / ta.target_value * 100, 2)
+                     END
+                ELSE pm.value
+           END::numeric AS metric_value,
+           ta.target_value::numeric AS target_value,
+           ta.actual_value::numeric AS actual_value
+    FROM rules r
+    JOIN organizations owner ON owner.id = r.organization_id
+    JOIN dealers d ON d.rule_id = r.id
+    LEFT JOIN performance_metrics_monthly pm
+      ON pm.organization_id = d.dealer_org_id
+     AND pm.scope = 'org'
+     AND pm.metric = r.metric
+     AND pm.period = sqlc.arg(period)::text
+    LEFT JOIN target_actual ta ON ta.rule_id = r.id AND ta.dealer_org_id = d.dealer_org_id
+),
+medians AS (
+    SELECT rule_id,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY metric_value)::numeric AS median_value
+    FROM values
+    WHERE metric_value IS NOT NULL
+    GROUP BY rule_id
+)
+SELECT v.*, m.median_value
+FROM values v
+JOIN medians m ON m.rule_id = v.rule_id
+WHERE v.metric_value IS NOT NULL
+ORDER BY v.rule_id, v.dealer_name, v.dealer_org_id;

@@ -44,6 +44,7 @@
   "kinds.invoice_view": "Faktura görünüşü",
   "kinds.warranty": "Zəmanət sertifikatı",
   "kinds.fleet_report": "Avtopark hesabatı",
+  "kinds.price_list": "Tövsiyə qiymət siyahısı",
   "languages.tr": "Türk dili",
   "languages.en": "İngilis dili",
   "languages.bg": "Bolqar dili",
@@ -69,5 +70,6 @@
   "variable_groups.warranty": "Zəmanət",
   "variable_groups.totals": "Yekunlar",
   "variable_groups.fleet_report": "Avtopark hesabatı",
+  "variable_groups.price_list": "Tövsiyə qiymət siyahısı",
   "fields.updated_at": "Yenilənib"
 }

@@ -707,6 +707,67 @@ func (q *Queries) GetBonusSettings(ctx context.Context, organizationID int64) (B
 	return i, err
 }
 
+const getBrandCenterOrganization = `-- name: GetBrandCenterOrganization :one
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email
+FROM organizations
+WHERE brand_id = $1 AND type = 'center' AND deleted_at IS NULL
+ORDER BY id
+LIMIT 1
+`
+
+func (q *Queries) GetBrandCenterOrganization(ctx context.Context, brandID int64) (Organization, error) {
+	row := q.db.QueryRow(ctx, getBrandCenterOrganization, brandID)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+		&i.InvoiceVkn,
+		&i.InvoiceTckn,
+		&i.InvoiceTaxOffice,
+		&i.InvoiceLegalName,
+		&i.EinvoiceRegistered,
+		&i.EinvoiceAlias,
+		&i.InvoiceEmail,
+	)
+	return i, err
+}
+
 const getPerformanceTarget = `-- name: GetPerformanceTarget :one
 SELECT id, uuid, organization_id, brand_id, target_org_id, metric, period_kind, period_start, period_end, value, currency, contract_ref, note, created_by_user_id, created_at, updated_at FROM performance_targets
 WHERE uuid = $1 AND brand_id = $2
@@ -1720,6 +1781,154 @@ func (q *Queries) ListPerformanceRanking(ctx context.Context, arg ListPerformanc
 	return items, nil
 }
 
+const listPerformanceRuleEvaluations = `-- name: ListPerformanceRuleEvaluations :many
+WITH rules AS (
+    SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.name, r.metric, r.operator, r.threshold, r.create_task, r.notify, r.assignee_user_id, r.active, r.created_by_user_id, r.created_at, r.updated_at
+    FROM weak_dealer_rules r
+    WHERE r.brand_id = $1
+      AND r.active = true
+      AND ($2::bigint[] IS NULL OR r.organization_id = ANY ($2::bigint[]))
+),
+dealers AS (
+    SELECT r.id AS rule_id, o.id AS dealer_org_id, o.uuid AS dealer_uuid, o.name AS dealer_name,
+           o.parent_id AS distributor_org_id, o.currency
+    FROM rules r
+    JOIN organizations owner ON owner.id = r.organization_id AND owner.deleted_at IS NULL
+    JOIN organizations o ON o.brand_id = r.brand_id AND o.type = 'dealer' AND o.deleted_at IS NULL
+    WHERE owner.type = 'center'
+       OR (owner.type = 'distributor' AND o.parent_id = owner.id)
+),
+target_actual AS (
+    SELECT d.rule_id, d.dealer_org_id, t.id AS target_id, t.value AS target_value,
+           SUM(pm.value) AS actual_value
+    FROM dealers d
+    JOIN rules r ON r.id = d.rule_id AND r.metric = 'target_achievement'
+    JOIN performance_targets t
+      ON t.target_org_id = d.dealer_org_id
+     AND t.metric = 'services_count'
+     AND t.period_start <= ($3::text || '-01')::date
+     AND t.period_end > ($3::text || '-01')::date
+    LEFT JOIN performance_metrics_monthly pm
+      ON pm.organization_id = d.dealer_org_id
+     AND pm.scope = 'org'
+     AND pm.metric = t.metric
+     AND pm.currency IS NOT DISTINCT FROM t.currency
+     AND pm.period >= to_char(t.period_start, 'YYYY-MM')
+     AND pm.period < to_char(t.period_end, 'YYYY-MM')
+    GROUP BY d.rule_id, d.dealer_org_id, t.id, t.value
+),
+values AS (
+    SELECT r.id AS rule_id, r.uuid AS rule_uuid, r.organization_id AS rule_owner_org_id,
+           owner.name AS rule_owner_name, owner.type AS rule_owner_type, r.brand_id,
+           r.name AS rule_name, r.metric, r.operator, r.threshold, r.create_task, r.notify,
+           r.assignee_user_id, d.dealer_org_id, d.dealer_uuid, d.dealer_name,
+           d.distributor_org_id, d.currency,
+           CASE WHEN r.metric = 'target_achievement'
+                THEN CASE WHEN ta.target_value IS NULL OR ta.actual_value IS NULL THEN NULL
+                          ELSE ROUND(ta.actual_value / ta.target_value * 100, 2)
+                     END
+                ELSE pm.value
+           END::numeric AS metric_value,
+           ta.target_value::numeric AS target_value,
+           ta.actual_value::numeric AS actual_value
+    FROM rules r
+    JOIN organizations owner ON owner.id = r.organization_id
+    JOIN dealers d ON d.rule_id = r.id
+    LEFT JOIN performance_metrics_monthly pm
+      ON pm.organization_id = d.dealer_org_id
+     AND pm.scope = 'org'
+     AND pm.metric = r.metric
+     AND pm.period = $3::text
+    LEFT JOIN target_actual ta ON ta.rule_id = r.id AND ta.dealer_org_id = d.dealer_org_id
+),
+medians AS (
+    SELECT rule_id,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY metric_value)::numeric AS median_value
+    FROM values
+    WHERE metric_value IS NOT NULL
+    GROUP BY rule_id
+)
+SELECT v.rule_id, v.rule_uuid, v.rule_owner_org_id, v.rule_owner_name, v.rule_owner_type, v.brand_id, v.rule_name, v.metric, v.operator, v.threshold, v.create_task, v.notify, v.assignee_user_id, v.dealer_org_id, v.dealer_uuid, v.dealer_name, v.distributor_org_id, v.currency, v.metric_value, v.target_value, v.actual_value, m.median_value
+FROM values v
+JOIN medians m ON m.rule_id = v.rule_id
+WHERE v.metric_value IS NOT NULL
+ORDER BY v.rule_id, v.dealer_name, v.dealer_org_id
+`
+
+type ListPerformanceRuleEvaluationsParams struct {
+	BrandID     int64   `json:"brand_id"`
+	OwnerOrgIds []int64 `json:"owner_org_ids"`
+	Period      string  `json:"period"`
+}
+
+type ListPerformanceRuleEvaluationsRow struct {
+	RuleID           int64          `json:"rule_id"`
+	RuleUuid         uuid.UUID      `json:"rule_uuid"`
+	RuleOwnerOrgID   int64          `json:"rule_owner_org_id"`
+	RuleOwnerName    string         `json:"rule_owner_name"`
+	RuleOwnerType    string         `json:"rule_owner_type"`
+	BrandID          int64          `json:"brand_id"`
+	RuleName         string         `json:"rule_name"`
+	Metric           string         `json:"metric"`
+	Operator         string         `json:"operator"`
+	Threshold        pgtype.Numeric `json:"threshold"`
+	CreateTask       bool           `json:"create_task"`
+	Notify           bool           `json:"notify"`
+	AssigneeUserID   pgtype.Int8    `json:"assignee_user_id"`
+	DealerOrgID      int64          `json:"dealer_org_id"`
+	DealerUuid       uuid.UUID      `json:"dealer_uuid"`
+	DealerName       string         `json:"dealer_name"`
+	DistributorOrgID pgtype.Int8    `json:"distributor_org_id"`
+	Currency         string         `json:"currency"`
+	MetricValue      pgtype.Numeric `json:"metric_value"`
+	TargetValue      pgtype.Numeric `json:"target_value"`
+	ActualValue      pgtype.Numeric `json:"actual_value"`
+	MedianValue      pgtype.Numeric `json:"median_value"`
+}
+
+func (q *Queries) ListPerformanceRuleEvaluations(ctx context.Context, arg ListPerformanceRuleEvaluationsParams) ([]ListPerformanceRuleEvaluationsRow, error) {
+	rows, err := q.db.Query(ctx, listPerformanceRuleEvaluations, arg.BrandID, arg.OwnerOrgIds, arg.Period)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPerformanceRuleEvaluationsRow{}
+	for rows.Next() {
+		var i ListPerformanceRuleEvaluationsRow
+		if err := rows.Scan(
+			&i.RuleID,
+			&i.RuleUuid,
+			&i.RuleOwnerOrgID,
+			&i.RuleOwnerName,
+			&i.RuleOwnerType,
+			&i.BrandID,
+			&i.RuleName,
+			&i.Metric,
+			&i.Operator,
+			&i.Threshold,
+			&i.CreateTask,
+			&i.Notify,
+			&i.AssigneeUserID,
+			&i.DealerOrgID,
+			&i.DealerUuid,
+			&i.DealerName,
+			&i.DistributorOrgID,
+			&i.Currency,
+			&i.MetricValue,
+			&i.TargetValue,
+			&i.ActualValue,
+			&i.MedianValue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPerformanceSubtreeOrgIDs = `-- name: ListPerformanceSubtreeOrgIDs :many
 WITH RECURSIVE tree AS (
     SELECT o.id
@@ -1769,6 +1978,7 @@ LEFT JOIN LATERAL (
     SELECT SUM(pm.value) AS actual
     FROM performance_metrics_monthly pm
     WHERE pm.organization_id = t.target_org_id
+      AND pm.scope = 'org'
       AND pm.metric = t.metric
       AND pm.currency IS NOT DISTINCT FROM t.currency
       AND pm.period >= to_char(t.period_start, 'YYYY-MM')

@@ -197,5 +197,6 @@
   "filters.actor": "İstifadəçiyə görə süz",
   "resources.platform.organizations": "Təşkilatlar",
   "actions.mcp.tool_called": "MCP aləti çağırıldı",
-  "resources.mcp_tool": "MCP aləti"
+  "resources.mcp_tool": "MCP aləti",
+  "actions.pricing.recommended_published": "Tövsiyə olunan satış qiymətləri dərc edildi"
 }

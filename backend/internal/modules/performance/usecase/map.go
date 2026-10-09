@@ -11,7 +11,6 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/performance/model"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -25,10 +24,6 @@ const (
 	LevelProvince = "province"
 	LevelDistrict = "district"
 )
-
-type Caller struct {
-	Org orgctx.Scope
-}
 
 type MapFilter struct {
 	Level      string `json:"level"`
@@ -149,7 +144,7 @@ func (s *Service) RegionMap(ctx context.Context, caller Caller, f MapFilter) (Re
 			CountryISO: row.CountryIso2, CountryName: row.CountryName,
 			ProvinceCode: row.ProvinceCode, ProvinceName: row.ProvinceName.String,
 			DealerCount: row.DealerCount, MissingCoordinates: row.MissingCoordinates,
-			MetricAvg: numeric(row.MetricAvg), Latitude: numeric(row.Latitude), Longitude: numeric(row.Longitude),
+			MetricAvg: mapNumeric(row.MetricAvg), Latitude: mapNumeric(row.Latitude), Longitude: mapNumeric(row.Longitude),
 		}
 		if row.DistributorID > 0 {
 			item.Distributor = &Distributor{UUID: row.DistributorUuid, Name: row.DistributorName}
@@ -183,14 +178,14 @@ func (s *Service) DealerMap(ctx context.Context, caller Caller, f MapFilter) (De
 	}
 	out := DealerMap{Country: f.CountryISO, Period: f.Period, Metric: f.Metric, MissingCoordinates: missing, Items: []DealerPoint{}}
 	for _, row := range rows {
-		lat, lon := numeric(row.Latitude), numeric(row.Longitude)
+		lat, lon := mapNumeric(row.Latitude), mapNumeric(row.Longitude)
 		if lat == nil || lon == nil {
 			continue
 		}
 		out.Items = append(out.Items, DealerPoint{
 			UUID: row.OrganizationUuid, Code: row.Slug, Name: row.Name,
 			CountryISO: row.CountryIso2, Province: row.ProvinceName.String, District: row.DistrictName.String,
-			Latitude: *lat, Longitude: *lon, MetricValue: numeric(row.MetricValue),
+			Latitude: *lat, Longitude: *lon, MetricValue: mapNumeric(row.MetricValue),
 			ShowcaseURL: "/bayi/" + row.Slug,
 		})
 	}
@@ -201,7 +196,7 @@ func text(v string) pgtype.Text {
 	return pgtype.Text{String: v, Valid: v != ""}
 }
 
-func numeric(n pgtype.Numeric) *float64 {
+func mapNumeric(n pgtype.Numeric) *float64 {
 	if !n.Valid {
 		return nil
 	}
