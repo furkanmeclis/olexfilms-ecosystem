@@ -92,6 +92,11 @@ func (s *Service) AnonymizeCustomer(ctx context.Context, c Caller, id uuid.UUID,
 		userUUID = user.Uuid
 		res = AnonymizeResult{UUID: user.Uuid, Status: StatusAnonymized}
 		if user.Status == StatusAnonymized {
+			// TEC-499: a repeated call still clears intake photo EXIF
+			// (customers anonymized before the photo standard existed).
+			if _, err := q.ClearCustomerIntakePhotoEXIF(ctx, user.ID); err != nil {
+				return fmt.Errorf("customers: clear intake photo exif: %w", err)
+			}
 			prof, err := q.GetCustomerProfile(ctx, user.ID)
 			if err == nil && prof.AnonymizedAt.Valid {
 				res.AnonymizedAt = prof.AnonymizedAt.Time
@@ -114,6 +119,10 @@ func (s *Service) AnonymizeCustomer(ctx context.Context, c Caller, id uuid.UUID,
 		hash, err := unusablePasswordHash()
 		if err != nil {
 			return fmt.Errorf("customers: password: %w", err)
+		}
+		// TEC-499: EXIF location / device of intake photos is personal data.
+		if _, err := q.ClearCustomerIntakePhotoEXIF(ctx, user.ID); err != nil {
+			return fmt.Errorf("customers: clear intake photo exif: %w", err)
 		}
 		if _, err := q.AnonymizeUser(ctx, db.AnonymizeUserParams{ID: user.ID, PasswordHash: hash}); err != nil {
 			return fmt.Errorf("customers: anonymize user: %w", err)

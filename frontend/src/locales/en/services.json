@@ -217,6 +217,7 @@
   "detail.items.added_at": "Added",
   "wizard.steps.contract": "Contract",
   "stock.errors.CONTRACT_REQUIRED": "The intake contract must be signed before the service can be completed. Go back to the Contract step.",
+  "stock.errors.PHOTO_STANDARD_INCOMPLETE": "Required vehicle intake photos are missing. Photograph every required angle first.",
   "contract.title": "Intake contract",
   "contract.none": "No contract has been created for this service yet.",
   "contract.voided_hint": "The previous contract was voided. Create a new one.",
