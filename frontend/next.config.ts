@@ -8,6 +8,9 @@ import type { NextConfig } from "next";
  * `connect-src` either: the browser error-tracking SDK posts to the
  * same-origin /api/monitoring tunnel, so a future `connect-src 'self'`
  * already covers it (never the DSN host).
+ * A future `script-src` / `frame-src` / `connect-src` must allow
+ * https://issue.technowide.tr: the revision-request widget (TEC-628) loads
+ * its embed script, html2canvas and the form iframe from that host.
  */
 const securityHeaders = [
   {
