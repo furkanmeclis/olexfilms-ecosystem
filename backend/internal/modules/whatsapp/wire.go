@@ -18,12 +18,13 @@ import (
 // NewService builds the WhatsApp use case on the wuzapi driver (server and
 // worker share it). notifier may be nil.
 func NewService(cfg config.WuzapiConfig, pool *pgxpool.Pool, q *db.Queries, box usecase.SecretBox, notifier usecase.Notifier, log *slog.Logger) *usecase.Service {
-	gw := wuzapi.New(wuzapi.Config{
+	var gw usecase.Gateway = wuzapi.New(wuzapi.Config{
 		BaseURL:    cfg.URL,
 		AdminToken: cfg.AdminToken,
 		HMACKey:    cfg.WebhookSecret,
 		WebhookURL: cfg.WebhookURL,
 	})
+	gw = withRecipientAllowlist(gw, cfg.AllowedRecipients, log)
 	var tx usecase.TxBeginner
 	if pool != nil {
 		tx = pool
