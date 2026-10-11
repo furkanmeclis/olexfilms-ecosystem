@@ -327,6 +327,18 @@ VALUES ($1, $2, CASE WHEN $3 LIKE '%owner' THEN 'owner' ELSE 'staff' END)
 ON CONFLICT (organization_id, user_id) DO NOTHING`, a.orgs[r.OrgSlug], id, r.Role); err != nil {
 			return err
 		}
+		// TEC-609: organization permissions resolve through
+		// organization_member_roles (ResolveAccess ignores organization-type
+		// roles in user_roles), so the member row must carry the role.
+		if _, err := tx.Exec(ctx, `
+INSERT INTO organization_member_roles (member_id, role_id)
+SELECT om.id, r.id
+FROM organization_members om
+JOIN roles r ON r.slug = $3
+WHERE om.organization_id = $1 AND om.user_id = $2
+ON CONFLICT DO NOTHING`, a.orgs[r.OrgSlug], id, r.Role); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `
 INSERT INTO user_roles (user_id, role_id)
 SELECT $1, id FROM roles WHERE slug IN ($2, 'organization_user')
