@@ -3863,6 +3863,13 @@ type WhatsappConnectionEvent struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type WhatsappLidMap struct {
+	Lid         string             `json:"lid"`
+	PhoneE164   string             `json:"phone_e164"`
+	FirstSeenAt pgtype.Timestamptz `json:"first_seen_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type WhatsappSetting struct {
 	ID                 int16              `json:"id"`
 	Provider           string             `json:"provider"`

@@ -103,6 +103,29 @@ func TestParseWebhookLIDSender(t *testing.T) {
 	}
 }
 
+// TEC-623: a privacy-mode sender arrives as a bare linked id; the parser
+// keeps the LID so the use case can resolve it from the learned map.
+func TestParseWebhookLIDWithoutAlt(t *testing.T) {
+	c := New(Config{HMACKey: testKey})
+	body := `{"type":"Message","event":{"Info":{"ID":"L2","Chat":"105510284038294@lid","Sender":"105510284038294@lid","SenderAlt":"","IsFromMe":false,"PushName":"X"},"Message":{"conversation":"selam"}}}`
+	evs, err := c.ParseWebhook(signed(body), []byte(body))
+	if err != nil || len(evs) != 1 || evs[0].From != "" || evs[0].ContactLID != "105510284038294@lid" || evs[0].Text != "selam" {
+		t.Fatalf("lid without alt: %+v %v", evs, err)
+	}
+	// Outbound to a LID chat with the phone attached: both are kept.
+	body = `{"type":"Message","event":{"Info":{"ID":"L3","Chat":"105510284038294@lid","Sender":"9616717033477:47@lid","IsFromMe":true,"RecipientAlt":"905063857026@s.whatsapp.net"},"Message":{"conversation":"out"}}}`
+	evs, err = c.ParseWebhook(signed(body), []byte(body))
+	if err != nil || len(evs) != 1 || evs[0].To != "+905063857026" || evs[0].ContactLID != "105510284038294@lid" {
+		t.Fatalf("outbound lid: %+v %v", evs, err)
+	}
+	// A receipt from a LID chat keeps the LID (device suffix dropped).
+	body = `{"type":"ReadReceipt","state":"Delivered","event":{"Chat":"105510284038294@lid","Sender":"105510284038294:2@lid","MessageIDs":["M1"]}}`
+	evs, err = c.ParseWebhook(signed(body), []byte(body))
+	if err != nil || len(evs) != 1 || evs[0].Kind != whatsapp.KindStatus || evs[0].ContactLID != "105510284038294@lid" || evs[0].From != "" {
+		t.Fatalf("receipt lid: %+v %v", evs, err)
+	}
+}
+
 // TEC-397: a shared location becomes location media with its coordinates.
 func TestParseWebhookLocation(t *testing.T) {
 	c := New(Config{HMACKey: testKey})

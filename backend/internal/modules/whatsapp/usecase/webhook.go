@@ -24,6 +24,9 @@ type WebhookResult struct {
 	Statuses    int
 	Connections int
 	Alarms      int
+	// Unresolved counts inbound messages whose sender arrived as a bare
+	// linked id the backend has no phone for yet (TEC-623).
+	Unresolved int
 }
 
 // HandleWebhook verifies and applies a raw wuzapi webhook body. It returns
@@ -44,6 +47,11 @@ func (s *Service) HandleWebhook(ctx context.Context, header http.Header, body []
 	for _, ev := range evs {
 		switch ev.Kind {
 		case whatsapp.KindMessage:
+			ev, ok := s.resolveContactLID(ctx, ev)
+			if !ok {
+				res.Unresolved++
+				continue
+			}
 			stored, err := s.storeMessage(ctx, ev, "contact")
 			if err != nil {
 				return res, err
@@ -57,6 +65,7 @@ func (s *Service) HandleWebhook(ctx context.Context, header http.Header, body []
 				res.Duplicates++
 			}
 		case whatsapp.KindStatus:
+			s.learnLIDFromReceipt(ctx, ev)
 			// TEC-395: forward-only delivered/read + delivery_status_at.
 			if s.msgs != nil {
 				if _, err := s.msgs.ApplyReceipt(ctx, ev); err != nil {
@@ -78,6 +87,71 @@ func (s *Service) HandleWebhook(ctx context.Context, header http.Header, body []
 		}
 	}
 	return res, nil
+}
+
+// resolveContactLID (TEC-623) keeps the LID -> phone map from events that
+// carry both and fills From from the map when an inbound message arrives
+// with the linked id alone (whatsmeow omits SenderAlt for a privacy-mode
+// contact it has not matched yet). It returns false when the sender stays
+// unknown; the message is then skipped and logged instead of dropped
+// silently.
+func (s *Service) resolveContactLID(ctx context.Context, ev whatsapp.InboundEvent) (whatsapp.InboundEvent, bool) {
+	lid := strings.TrimSpace(ev.ContactLID)
+	if lid == "" {
+		return ev, true
+	}
+	phone := ev.From
+	if ev.FromMe {
+		phone = ev.To
+	}
+	if phone != "" {
+		if err := s.q.UpsertWhatsAppLID(ctx, db.UpsertWhatsAppLIDParams{Lid: lid, PhoneE164: phone}); err != nil {
+			s.log.Warn("whatsapp_lid_map_write_failed", "lid", lid, "error", err)
+		}
+		return ev, true
+	}
+	if ev.FromMe {
+		return ev, true
+	}
+	known, err := s.q.GetWhatsAppLIDPhone(ctx, lid)
+	if err != nil || known == "" {
+		s.log.Warn("whatsapp_inbound_lid_unresolved", "lid", lid, "external_id", ev.ExternalID, "push_name", ev.PushName)
+		return ev, false
+	}
+	ev.From = known
+	return ev, true
+}
+
+// learnLIDFromReceipt (TEC-623) pairs a receipt's linked-id chat with the
+// phone of the message it acknowledges: messages sent through the API get
+// no outbound Message event, so the receipt is the first place the LID of
+// a privacy-mode contact shows up next to something we know the phone of.
+func (s *Service) learnLIDFromReceipt(ctx context.Context, ev whatsapp.InboundEvent) {
+	lid := strings.TrimSpace(ev.ContactLID)
+	if lid == "" || len(ev.MessageIDs) == 0 {
+		return
+	}
+	// Same transaction scope as the message writes (the receipt may follow
+	// the message in one webhook batch).
+	tx, err := s.tx.Begin(ctx)
+	if err != nil {
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := s.q.WithTx(tx)
+	phone := ev.From
+	if phone == "" {
+		known, err := q.GetWhatsAppContactByExternalIDs(ctx, ev.MessageIDs)
+		if err != nil || known == "" {
+			return
+		}
+		phone = known
+	}
+	if err := q.UpsertWhatsAppLID(ctx, db.UpsertWhatsAppLIDParams{Lid: lid, PhoneE164: phone}); err != nil {
+		s.log.Warn("whatsapp_lid_map_write_failed", "lid", lid, "error", err)
+		return
+	}
+	_ = tx.Commit(ctx)
 }
 
 // storedMessage is a message newly stored by storeMessage.

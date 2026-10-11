@@ -633,6 +633,65 @@ func TestMessagingPublishesToAssignedUser(t *testing.T) {
 	}
 }
 
+// TEC-623: an outbound event teaches the LID -> phone pair; an inbound
+// message that carries only the LID is then stored under that phone, and an
+// unknown LID is counted as unresolved instead of being dropped silently.
+func TestMessagingWebhookResolvesLIDSender(t *testing.T) {
+	f := newMsgFixture(t)
+	lockConn, err := f.pool.Acquire(f.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := lockConn.Exec(f.ctx, `SELECT pg_advisory_lock(920092)`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = lockConn.Exec(context.Background(), `SELECT pg_advisory_unlock(920092)`)
+		lockConn.Release()
+	})
+	box, _ := crypto.NewSecretBox("app-dev-encryption-key-32bytes!!")
+	svc := usecase.New(f.q, f.tx, &gateway{Provider: f.wa}, box, nil, nil, nil)
+	svc.AttachMessaging(f.m)
+	conv := f.conversation(t)
+	lid := "105510284038294@lid"
+	inID := fmt.Sprintf("TEC623IN%s", f.phone[1:])
+	f.wa.Events = []whatsapp.InboundEvent{
+		{Kind: whatsapp.KindMessage, ExternalID: "TEC623OUT" + f.phone[1:], FromMe: true, To: conv.ContactE164, ContactLID: lid, Text: "out", Timestamp: time.Now()},
+		{Kind: whatsapp.KindMessage, ExternalID: inID, ContactLID: lid, Text: "lid only", Timestamp: time.Now()},
+		{Kind: whatsapp.KindMessage, ExternalID: "TEC623UNK" + f.phone[1:], ContactLID: "999000111@lid", Text: "unknown", Timestamp: time.Now()},
+	}
+	res, err := svc.HandleWebhook(f.ctx, nil, []byte(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Messages != 2 || res.Unresolved != 1 {
+		t.Fatalf("webhook result = %+v, want 2 stored (out + resolved in) and 1 unresolved", res)
+	}
+	var contact, direction string
+	if err := f.tx.QueryRow(f.ctx, `SELECT c.contact_e164, m.direction FROM messages m JOIN conversations c ON c.id = m.conversation_id WHERE m.external_id = $1`, inID).Scan(&contact, &direction); err != nil {
+		t.Fatal(err)
+	}
+	if contact != conv.ContactE164 || direction != "in" {
+		t.Fatalf("lid-only inbound stored as %s/%s, want %s/in", contact, direction, conv.ContactE164)
+	}
+	var mapped string
+	if err := f.tx.QueryRow(f.ctx, `SELECT phone_e164 FROM whatsapp_lid_map WHERE lid = $1`, lid).Scan(&mapped); err != nil || mapped != conv.ContactE164 {
+		t.Fatalf("lid map = %q, %v", mapped, err)
+	}
+	// A receipt for a message we stored teaches the pair too (API-sent
+	// messages produce no outbound Message event, only receipts).
+	receiptLID := "777000111222@lid"
+	f.wa.Events = []whatsapp.InboundEvent{
+		{Kind: whatsapp.KindStatus, Status: "delivered", MessageIDs: []string{"TEC623OUT" + f.phone[1:]}, ContactLID: receiptLID, Timestamp: time.Now()},
+	}
+	if _, err := svc.HandleWebhook(f.ctx, nil, []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.tx.QueryRow(f.ctx, `SELECT phone_e164 FROM whatsapp_lid_map WHERE lid = $1`, receiptLID).Scan(&mapped); err != nil || mapped != conv.ContactE164 {
+		t.Fatalf("lid map from receipt = %q, %v", mapped, err)
+	}
+}
+
 // The webhook path: an inbound message with media is published and its
 // media task enqueued; a read receipt from the gateway is stored.
 func TestMessagingWebhookPublishesAndAppliesReceipt(t *testing.T) {

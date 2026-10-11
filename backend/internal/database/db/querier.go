@@ -1375,6 +1375,10 @@ type Querier interface {
 	GetWeakDealerRule(ctx context.Context, arg GetWeakDealerRuleParams) (WeakDealerRule, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
+	// TEC-623: the contact of a stored message, used to learn a LID -> phone
+	// pair from a receipt that names the message by id.
+	GetWhatsAppContactByExternalIDs(ctx context.Context, externalIds []string) (string, error)
+	GetWhatsAppLIDPhone(ctx context.Context, lid string) (string, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
 	GetWhatsAppSettings(ctx context.Context) (WhatsappSetting, error)
 	HasExecutedServiceContract(ctx context.Context, serviceID int64) (bool, error)
@@ -3796,6 +3800,8 @@ type Querier interface {
 	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)
 	UpsertUnitCurrentStateForRepair(ctx context.Context, arg UpsertUnitCurrentStateForRepairParams) error
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
+	// TEC-623: LID -> phone map learned from webhook events.
+	UpsertWhatsAppLID(ctx context.Context, arg UpsertWhatsAppLIDParams) error
 	// Marking the code used is the claim; an expired or used code returns no row.
 	UseOAuthCode(ctx context.Context, arg UseOAuthCodeParams) (OauthCode, error)
 	UserHasRoleSlug(ctx context.Context, arg UserHasRoleSlugParams) (bool, error)
