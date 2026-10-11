@@ -17,6 +17,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/contracts/model"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	psmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
@@ -103,12 +104,17 @@ func (s *Service) renderExecutedPDF(ctx context.Context, q *db.Queries, row db.C
 		return nil, "", err
 	}
 	spec, _ := docmodel.Spec(docmodel.KindContract)
-	body := pdfrender.Fill(withEvidenceBlocks(pdfrender.SanitizeHTML(tpl.Html)), vars, spec.RawHTMLKeys())
-	title := fmt.Sprintf("Contract %d", row.ContractNo)
+	loc := contractLocale(row.Locale)
+	hashLabel := i18n.Translate(loc, "contracts.pdf.proof.content_sha256")
+	body := pdfrender.Fill(withEvidenceBlocks(pdfrender.SanitizeHTML(tpl.Html), hashLabel), vars, spec.RawHTMLKeys())
+	// TEC-526: the document language (and so its direction) follows the
+	// contract's locale, not the document template's: an ar contract rendered
+	// through the tr/en fallback template still comes out RTL.
+	lang := string(loc)
 	htmlDoc := pdfrender.Document{
-		Lang: tpl.Language, Title: title, Body: body, PrimaryColor: org.PrimaryColor, Fonts: pdfrender.FontsEmbedded,
+		Lang: lang, Title: contractTitle(loc, row.ContractNo), Body: body, PrimaryColor: org.PrimaryColor, Fonts: pdfrender.FontsEmbedded,
 	}.HTML()
-	data, err := s.pdf.Convert(ctx, pdfrender.Request{HTML: htmlDoc, FooterHTML: pdfrender.FooterHTML(tpl.Language, org.Name)})
+	data, err := s.pdf.Convert(ctx, pdfrender.Request{HTML: htmlDoc, FooterHTML: pdfrender.FooterHTML(lang, org.Name)})
 	if err != nil {
 		return nil, "", err
 	}
@@ -118,8 +124,9 @@ func (s *Service) renderExecutedPDF(ctx context.Context, q *db.Queries, row db.C
 // withEvidenceBlocks appends the signature, OTP proof, content hash and
 // media placeholders a template does not reference itself. The seeded
 // system contract template (000030) predates them, and the executed PDF must
-// always carry the signing evidence.
-func withEvidenceBlocks(tpl string) string {
+// always carry the signing evidence. hashLabel is the localized caption of
+// the content hash line.
+func withEvidenceBlocks(tpl, hashLabel string) string {
 	used := map[string]bool{}
 	for _, k := range msgtemplate.Placeholders(tpl) {
 		used[k] = true
@@ -132,7 +139,9 @@ func withEvidenceBlocks(tpl string) string {
 		b.WriteString("{{otp_proof_html}}")
 	}
 	if !used["content_sha256"] && !used["otp_proof_html"] {
-		b.WriteString(`<p class="doc-hash">SHA-256: {{content_sha256}}</p>`)
+		b.WriteString(`<p class="doc-hash">`)
+		b.WriteString(html.EscapeString(hashLabel))
+		b.WriteString(`: {{content_sha256}}</p>`)
 	}
 	if !used["media_html"] {
 		b.WriteString("{{media_html}}")
@@ -171,6 +180,7 @@ func (s *Service) contractDocumentVars(ctx context.Context, q *db.Queries, row d
 	if err != nil {
 		return nil, err
 	}
+	loc := contractLocale(row.Locale)
 	vars := map[string]string{
 		"company_name":       org.Name,
 		"company_address":    org.Address,
@@ -179,13 +189,17 @@ func (s *Service) contractDocumentVars(ctx context.Context, q *db.Queries, row d
 		"company_website":    org.Website,
 		"footer_text":        org.FooterText,
 		"document_number":    strconv.FormatInt(row.ContractNo, 10),
-		"contract_title":     "Contract " + strconv.FormatInt(row.ContractNo, 10),
+		"contract_title":     contractTitle(loc, row.ContractNo),
+		"label_contract_no":  i18n.Translate(loc, "contracts.pdf.number"),
+		"label_date":         i18n.Translate(loc, "contracts.pdf.date"),
+		"label_party":        i18n.Translate(loc, "contracts.pdf.party"),
+		"label_signed_at":    i18n.Translate(loc, "contracts.pdf.signed_at"),
 		"contract_body_html": pdfrender.SanitizeHTML(row.RenderedHtml.String),
 		"content_sha256":     row.ContentSha256.String,
-		"otp_proof_html":     otpProofHTML(signers, row.ContentSha256.String),
-		"signatures_html":    s.signaturesHTML(ctx, signers),
-		"signature_image":    s.signaturesHTML(ctx, signers),
-		"media_html":         s.mediaHTML(ctx, media),
+		"otp_proof_html":     otpProofHTML(loc, signers, row.ContentSha256.String),
+		"signatures_html":    s.signaturesHTML(ctx, loc, signers),
+		"signature_image":    s.signaturesHTML(ctx, loc, signers),
+		"media_html":         s.mediaHTML(ctx, loc, media),
 	}
 	if row.ExecutedAt.Valid {
 		ts := row.ExecutedAt.Time.UTC()
@@ -218,22 +232,22 @@ func (s *Service) contractDocumentVars(ctx context.Context, q *db.Queries, row d
 	return vars, nil
 }
 
-func (s *Service) signaturesHTML(ctx context.Context, signers []db.ListContractPDFSignersRow) string {
+func (s *Service) signaturesHTML(ctx context.Context, loc i18n.Locale, signers []db.ListContractPDFSignersRow) string {
 	if len(signers) == 0 {
 		return ""
 	}
 	var b strings.Builder
 	b.WriteString(`<div class="doc-sign">`)
 	for _, sg := range signers {
-		alt := sg.Name + " signature"
+		role := signerRoleLabel(loc, sg.Role)
 		img := ""
 		if strings.TrimSpace(sg.SignatureStorageKey) != "" {
-			img = s.imageTag(ctx, sg.SignatureStorageKey, "image/png", alt)
+			img = s.imageTag(ctx, sg.SignatureStorageKey, "image/png", sg.Name+" / "+role)
 		}
 		b.WriteString(`<div><strong>`)
 		b.WriteString(html.EscapeString(sg.Name))
 		b.WriteString(`</strong><br>`)
-		b.WriteString(html.EscapeString(sg.Role))
+		b.WriteString(html.EscapeString(role))
 		if img != "" {
 			b.WriteString(`<br>`)
 			b.WriteString(img)
@@ -244,12 +258,14 @@ func (s *Service) signaturesHTML(ctx context.Context, signers []db.ListContractP
 	return b.String()
 }
 
-func (s *Service) mediaHTML(ctx context.Context, media []db.ContractMedium) string {
+func (s *Service) mediaHTML(ctx context.Context, loc i18n.Locale, media []db.ContractMedium) string {
 	if len(media) == 0 {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString(`<section><h2>Media</h2>`)
+	b.WriteString(`<section><h2>`)
+	b.WriteString(html.EscapeString(i18n.Translate(loc, "contracts.pdf.attachments")))
+	b.WriteString(`</h2>`)
 	for _, m := range media {
 		tag := s.imageTag(ctx, m.StorageKey, m.MimeType, m.Title.String)
 		if tag == "" {
@@ -284,7 +300,7 @@ func (s *Service) imageTag(ctx context.Context, key, mime, alt string) string {
 	return pdfrender.ImageTag(mime, data, alt)
 }
 
-func otpProofHTML(rows []db.ListContractPDFSignersRow, contentSHA string) string {
+func otpProofHTML(loc i18n.Locale, rows []db.ListContractPDFSignersRow, contentSHA string) string {
 	table := [][]string{}
 	for _, sg := range rows {
 		if !sg.OtpVerifiedAt.Valid && !sg.KvkkVersion.Valid {
@@ -302,8 +318,34 @@ func otpProofHTML(rows []db.ListContractPDFSignersRow, contentSHA string) string
 		table = append(table, []string{"-", "-", "-", "-", contentSHA})
 	}
 	return pdfrender.Table([]pdfrender.Column{
-		{Label: "Signer"}, {Label: "Masked phone"}, {Label: "Verified at"}, {Label: "KVKK notice version"}, {Label: "Content SHA-256"},
+		{Label: i18n.Translate(loc, "contracts.pdf.proof.signer")},
+		{Label: i18n.Translate(loc, "contracts.pdf.proof.phone")},
+		{Label: i18n.Translate(loc, "contracts.pdf.proof.verified_at")},
+		{Label: i18n.Translate(loc, "contracts.pdf.proof.kvkk_version")},
+		{Label: i18n.Translate(loc, "contracts.pdf.proof.content_sha256")},
 	}, table)
+}
+
+// contractLocale maps the instance's stored locale (tr, en, ..., zh_CN) to the
+// backend catalog locale; empty or unknown falls back to the default (tr).
+func contractLocale(raw string) i18n.Locale {
+	return i18n.Normalize(raw)
+}
+
+// contractTitle is the localized "Contract N" caption used for the document
+// title, the {{contract_title}} variable and the document-center source name.
+func contractTitle(loc i18n.Locale, no int64) string {
+	return i18n.TranslateParams(loc, "contracts.pdf.title", map[string]string{"no": strconv.FormatInt(no, 10)})
+}
+
+// signerRoleLabel translates a fixed signer slot (customer, staff); an
+// unknown role is printed as is rather than as a dotted key.
+func signerRoleLabel(loc i18n.Locale, role string) string {
+	key := "contracts.pdf.role." + strings.TrimSpace(role)
+	if v := i18n.Translate(loc, key); v != key {
+		return v
+	}
+	return role
 }
 
 func maskPhone(e164 string) string {
@@ -399,7 +441,7 @@ func (l contractDocumentLoader) Load(ctx context.Context, viewer docmodel.Viewer
 	}
 	return docmodel.Source{
 		OrganizationID: row.OrganizationID, BrandID: row.BrandID, Version: version,
-		Vars: vars, Title: fmt.Sprintf("Contract %d", row.ContractNo),
+		Vars: vars, Title: contractTitle(contractLocale(row.Locale), row.ContractNo),
 	}, nil
 }
 

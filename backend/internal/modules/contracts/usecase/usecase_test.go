@@ -203,6 +203,30 @@ func TestSigningFlowExecutesOnce(t *testing.T) {
 	}
 }
 
+// TEC-526: the OTP message and its KVKK notice follow the contract's locale,
+// not the staff browser's Accept-Language that the handler forwards.
+func TestRequestCustomerOTPUsesContractLocale(t *testing.T) {
+	d := newTestDB(t)
+	f := d.signingFixture(t, d.caller.OrganizationID)
+	if f.contract.Locale != "tr" {
+		t.Fatalf("fixture contract locale = %q, want tr", f.contract.Locale)
+	}
+	if _, err := f.svc.RequestCustomerOTP(d.ctx, f.caller, f.contract.UUID, OTPInput{
+		Locale: "en-US,en;q=0.9", IP: "203.0.113.10", UserAgent: "go-test",
+	}); err != nil {
+		t.Fatalf("request otp: %v", err)
+	}
+	if got := f.otp.last.Locale; got != "tr" {
+		t.Fatalf("otp request locale = %q, want tr (contract locale)", got)
+	}
+	if got := otp.NormalizeLocale(f.otp.last.Locale); got != "tr" {
+		t.Fatalf("kvkk notice locale = %q, want tr", got)
+	}
+	if f.otp.last.Purpose != otp.PurposeContractSign || f.otp.last.Phone == "" {
+		t.Fatalf("otp request = %+v, want contract_sign with the customer phone", f.otp.last)
+	}
+}
+
 func TestCustomerSignWindowExpires(t *testing.T) {
 	d := newTestDB(t)
 	f := d.signingFixture(t, d.caller.OrganizationID)
@@ -271,7 +295,7 @@ func TestExecutedContractPDFHTMLContainsEvidence(t *testing.T) {
 		t.Fatalf("generate pdf: %v", err)
 	}
 	html := gotb.LastHTML()
-	for _, want := range []string{"data:image/png;base64", "KVKK notice version", row.ContentSha256.String} {
+	for _, want := range []string{"data:image/png;base64", "KVKK bildirim sürümü", row.ContentSha256.String} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("rendered HTML missing %q:\n%s", want, html)
 		}
@@ -299,6 +323,7 @@ func TestInvalidPNGAndOtherOrgService(t *testing.T) {
 type signingFixture struct {
 	svc      *Service
 	caller   Caller
+	template model.Template
 	contract model.Contract
 	otp      *fakeOTP
 	out      *outbox.Memory
@@ -326,7 +351,7 @@ func (d *testDB) signingFixture(t *testing.T, orgID int64) signingFixture {
 	if err != nil {
 		t.Fatalf("create contract: %v", err)
 	}
-	return signingFixture{svc: svc, caller: caller, contract: contract, otp: fake, out: out, store: store, now: now}
+	return signingFixture{svc: svc, caller: caller, template: tpl, contract: contract, otp: fake, out: out, store: store, now: now}
 }
 
 func (f signingFixture) execute(t *testing.T) model.Contract {
@@ -434,9 +459,12 @@ type fakeOTP struct {
 	q         *db.Queries
 	now       time.Time
 	createdAt time.Time
+	// last is the most recent Request input (TEC-526 locale assertions).
+	last otp.RequestInput
 }
 
-func (f *fakeOTP) Request(context.Context, otp.RequestInput) (otp.RequestResult, error) {
+func (f *fakeOTP) Request(_ context.Context, in otp.RequestInput) (otp.RequestResult, error) {
+	f.last = in
 	return otp.RequestResult{Channel: "fake", ExpiresAt: f.now.Add(5 * time.Minute), ResendAt: f.now.Add(time.Minute)}, nil
 }
 
