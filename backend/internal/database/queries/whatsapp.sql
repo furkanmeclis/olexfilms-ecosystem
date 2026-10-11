@@ -116,3 +116,13 @@ WHERE whatsapp_lid_map.phone_e164 <> EXCLUDED.phone_e164;
 
 -- name: GetWhatsAppLIDPhone :one
 SELECT phone_e164 FROM whatsapp_lid_map WHERE lid = sqlc.arg(lid);
+
+-- name: GetWhatsAppContactByExternalIDs :one
+-- TEC-623: the contact of a stored message, used to learn a LID -> phone
+-- pair from a receipt that names the message by id.
+SELECT c.contact_e164
+FROM messages m
+JOIN conversations c ON c.id = m.conversation_id
+WHERE m.channel = 'whatsapp' AND m.external_id = ANY(sqlc.arg(external_ids)::text[])
+ORDER BY m.id DESC
+LIMIT 1;

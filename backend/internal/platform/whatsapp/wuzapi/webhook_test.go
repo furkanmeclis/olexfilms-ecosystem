@@ -118,6 +118,12 @@ func TestParseWebhookLIDWithoutAlt(t *testing.T) {
 	if err != nil || len(evs) != 1 || evs[0].To != "+905063857026" || evs[0].ContactLID != "105510284038294@lid" {
 		t.Fatalf("outbound lid: %+v %v", evs, err)
 	}
+	// A receipt from a LID chat keeps the LID (device suffix dropped).
+	body = `{"type":"ReadReceipt","state":"Delivered","event":{"Chat":"105510284038294@lid","Sender":"105510284038294:2@lid","MessageIDs":["M1"]}}`
+	evs, err = c.ParseWebhook(signed(body), []byte(body))
+	if err != nil || len(evs) != 1 || evs[0].Kind != whatsapp.KindStatus || evs[0].ContactLID != "105510284038294@lid" || evs[0].From != "" {
+		t.Fatalf("receipt lid: %+v %v", evs, err)
+	}
 }
 
 // TEC-397: a shared location becomes location media with its coordinates.

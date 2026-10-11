@@ -1375,6 +1375,9 @@ type Querier interface {
 	GetWeakDealerRule(ctx context.Context, arg GetWeakDealerRuleParams) (WeakDealerRule, error)
 	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID string) (WebauthnCredential, error)
 	GetWebAuthnCredentialByUUID(ctx context.Context, arg GetWebAuthnCredentialByUUIDParams) (WebauthnCredential, error)
+	// TEC-623: the contact of a stored message, used to learn a LID -> phone
+	// pair from a receipt that names the message by id.
+	GetWhatsAppContactByExternalIDs(ctx context.Context, externalIds []string) (string, error)
 	GetWhatsAppLIDPhone(ctx context.Context, lid string) (string, error)
 	// WhatsApp gateway, KVKK notices, conversations and messages (TEC-92).
 	GetWhatsAppSettings(ctx context.Context) (WhatsappSetting, error)

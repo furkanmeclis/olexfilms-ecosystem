@@ -654,11 +654,11 @@ func TestMessagingWebhookResolvesLIDSender(t *testing.T) {
 	svc.AttachMessaging(f.m)
 	conv := f.conversation(t)
 	lid := "105510284038294@lid"
-	inID := fmt.Sprintf("TEC622IN%s", f.phone[1:])
+	inID := fmt.Sprintf("TEC623IN%s", f.phone[1:])
 	f.wa.Events = []whatsapp.InboundEvent{
-		{Kind: whatsapp.KindMessage, ExternalID: "TEC622OUT" + f.phone[1:], FromMe: true, To: conv.ContactE164, ContactLID: lid, Text: "out", Timestamp: time.Now()},
+		{Kind: whatsapp.KindMessage, ExternalID: "TEC623OUT" + f.phone[1:], FromMe: true, To: conv.ContactE164, ContactLID: lid, Text: "out", Timestamp: time.Now()},
 		{Kind: whatsapp.KindMessage, ExternalID: inID, ContactLID: lid, Text: "lid only", Timestamp: time.Now()},
-		{Kind: whatsapp.KindMessage, ExternalID: "TEC622UNK" + f.phone[1:], ContactLID: "999000111@lid", Text: "unknown", Timestamp: time.Now()},
+		{Kind: whatsapp.KindMessage, ExternalID: "TEC623UNK" + f.phone[1:], ContactLID: "999000111@lid", Text: "unknown", Timestamp: time.Now()},
 	}
 	res, err := svc.HandleWebhook(f.ctx, nil, []byte(`{}`))
 	if err != nil {
@@ -677,6 +677,18 @@ func TestMessagingWebhookResolvesLIDSender(t *testing.T) {
 	var mapped string
 	if err := f.tx.QueryRow(f.ctx, `SELECT phone_e164 FROM whatsapp_lid_map WHERE lid = $1`, lid).Scan(&mapped); err != nil || mapped != conv.ContactE164 {
 		t.Fatalf("lid map = %q, %v", mapped, err)
+	}
+	// A receipt for a message we stored teaches the pair too (API-sent
+	// messages produce no outbound Message event, only receipts).
+	receiptLID := "777000111222@lid"
+	f.wa.Events = []whatsapp.InboundEvent{
+		{Kind: whatsapp.KindStatus, Status: "delivered", MessageIDs: []string{"TEC623OUT" + f.phone[1:]}, ContactLID: receiptLID, Timestamp: time.Now()},
+	}
+	if _, err := svc.HandleWebhook(f.ctx, nil, []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.tx.QueryRow(f.ctx, `SELECT phone_e164 FROM whatsapp_lid_map WHERE lid = $1`, receiptLID).Scan(&mapped); err != nil || mapped != conv.ContactE164 {
+		t.Fatalf("lid map from receipt = %q, %v", mapped, err)
 	}
 }
 

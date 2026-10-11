@@ -67,6 +67,7 @@ type Store interface {
 	GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (db.User, error)
 	UpsertWhatsAppLID(ctx context.Context, arg db.UpsertWhatsAppLIDParams) error
 	GetWhatsAppLIDPhone(ctx context.Context, lid string) (string, error)
+	GetWhatsAppContactByExternalIDs(ctx context.Context, externalIds []string) (string, error)
 	ConversationAIRunStatsBetween(ctx context.Context, arg db.ConversationAIRunStatsBetweenParams) (db.ConversationAIRunStatsBetweenRow, error)
 	WithTx(tx pgx.Tx) *db.Queries
 }

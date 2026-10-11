@@ -203,6 +203,7 @@ func normalize(p webhookPayload) (whatsapp.InboundEvent, bool, error) {
 		ev.MessageIDs = r.MessageIDs
 		ev.Timestamp = r.Timestamp
 		ev.From = firstPhone(r.Sender, r.Chat)
+		ev.ContactLID = firstLID(r.Chat, r.Sender)
 		state := strings.ToLower(p.State)
 		switch {
 		case state == "read" || r.Type == "read" || r.Type == "read-self":

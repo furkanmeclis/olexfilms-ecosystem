@@ -49,6 +49,24 @@ func (q *Queries) GetLatestKVKKNotice(ctx context.Context, locale string) (KvkkN
 	return i, err
 }
 
+const getWhatsAppContactByExternalIDs = `-- name: GetWhatsAppContactByExternalIDs :one
+SELECT c.contact_e164
+FROM messages m
+JOIN conversations c ON c.id = m.conversation_id
+WHERE m.channel = 'whatsapp' AND m.external_id = ANY($1::text[])
+ORDER BY m.id DESC
+LIMIT 1
+`
+
+// TEC-623: the contact of a stored message, used to learn a LID -> phone
+// pair from a receipt that names the message by id.
+func (q *Queries) GetWhatsAppContactByExternalIDs(ctx context.Context, externalIds []string) (string, error) {
+	row := q.db.QueryRow(ctx, getWhatsAppContactByExternalIDs, externalIds)
+	var contact_e164 string
+	err := row.Scan(&contact_e164)
+	return contact_e164, err
+}
+
 const getWhatsAppLIDPhone = `-- name: GetWhatsAppLIDPhone :one
 SELECT phone_e164 FROM whatsapp_lid_map WHERE lid = $1
 `
