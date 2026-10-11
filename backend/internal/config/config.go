@@ -163,6 +163,10 @@ type WuzapiConfig struct {
 	WebhookSecret string
 	// WebhookURL is registered on the instance user (backend /hooks/wuzapi).
 	WebhookURL string
+	// AllowedRecipients (WUZAPI_ALLOWED_RECIPIENTS, comma-separated E.164)
+	// restricts outbound messages to these numbers; empty allows everyone.
+	// A dev/demo guard for stacks that link a real phone over seed data.
+	AllowedRecipients []string
 }
 
 // AuthConfig holds NextAuth adapter integration settings.
@@ -429,6 +433,8 @@ func Load() (Config, error) {
 			AdminToken:    getEnv("WUZAPI_ADMIN_TOKEN", ""),
 			WebhookSecret: getEnv("WUZAPI_WEBHOOK_SECRET", ""),
 			WebhookURL:    getEnv("WUZAPI_WEBHOOK_URL", ""),
+			// Dev/demo guard, see WuzapiConfig.AllowedRecipients.
+			AllowedRecipients: splitCSV(getEnv("WUZAPI_ALLOWED_RECIPIENTS", "")),
 		},
 		Rates: RatesConfig{
 			TCMBURL: getEnv("RATES_TCMB_URL", "https://www.tcmb.gov.tr/kurlar/today.xml"),
