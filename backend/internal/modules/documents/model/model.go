@@ -212,6 +212,12 @@ var specs = map[string]KindSpec{
 		text("contract", "contract_title", "Sözleşme başlığı", "Contract title", "Bayilik Sözleşmesi", "Dealership Agreement"),
 		text("contract", "party_name", "Karşı taraf", "Counterparty", "Tech Oto Ltd. Şti.", "Tech Oto Ltd."),
 		text("contract", "signed_at", "İmza tarihi", "Signed at", "01.10.2026", "Oct 1, 2026"),
+		// TEC-526: meta-table captions in the contract's own locale, so the
+		// tr/en system templates serve all 13 contract languages.
+		text("contract", "label_contract_no", "Etiket: sözleşme no", "Label: contract no", "Sözleşme no", "Contract no"),
+		text("contract", "label_date", "Etiket: tarih", "Label: date", "Tarih", "Date"),
+		text("contract", "label_party", "Etiket: taraf", "Label: party", "Taraf", "Party"),
+		text("contract", "label_signed_at", "Etiket: imza tarihi", "Label: signed at", "İmza tarihi", "Signed at"),
 		text("contract", "content_sha256", "İçerik SHA-256", "Content SHA-256", strings.Repeat("a", 64), strings.Repeat("a", 64)),
 		block("contract", "contract_body_html", "Sözleşme metni", "Contract body"),
 		block("contract", "signature_image", "İmza görseli", "Signature image"),

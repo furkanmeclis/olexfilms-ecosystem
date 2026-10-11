@@ -579,9 +579,25 @@ func (s *Service) RequestCustomerOTP(ctx context.Context, c Caller, id uuid.UUID
 		return otp.RequestResult{}, fmt.Errorf("%w: customer phone is required", ErrInvalidRequest)
 	}
 	return s.otp.Request(ctx, otp.RequestInput{
-		Phone: signer.PhoneE164.String, Purpose: otp.PurposeContractSign, Locale: in.Locale,
+		Phone: signer.PhoneE164.String, Purpose: otp.PurposeContractSign, Locale: s.otpLocale(ctx, inst, signer, in.Locale),
 		IP: strings.TrimSpace(in.IP), UserAgent: trimUA(in.UserAgent),
 	})
+}
+
+// otpLocale picks the language of the OTP message and its KVKK notice
+// (TEC-526): the contract's own locale first, then the customer's profile
+// locale, and only then the caller's Accept-Language, which is the staff
+// member's browser rather than the customer's.
+func (s *Service) otpLocale(ctx context.Context, inst db.ContractInstance, signer db.ContractSigner, fallback string) string {
+	if l := strings.TrimSpace(inst.Locale); l != "" {
+		return l
+	}
+	if signer.UserID.Valid {
+		if u, err := s.repo.Queries().GetUserByID(ctx, signer.UserID.Int64); err == nil && strings.TrimSpace(u.Locale.String) != "" {
+			return strings.TrimSpace(u.Locale.String)
+		}
+	}
+	return fallback
 }
 
 // SignCustomer verifies OTP when required and stores customer signature evidence.

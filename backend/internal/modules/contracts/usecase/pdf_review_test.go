@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/documentstest"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -91,6 +93,126 @@ func TestExecutedContractPDFDefaultTemplateCarriesEvidence(t *testing.T) {
 	if count := strings.Count(html, "data:image/png;base64"); count < 3 {
 		t.Fatalf("embedded images = %d, want >= 3 (2 signatures + media)", count)
 	}
+}
+
+// TEC-526: the executed PDF's chrome (title, OTP proof table, signer roles,
+// media heading, hash caption) is printed in the contract's locale; a tr
+// contract carries no English fixed text.
+func TestExecutedContractPDFChromeFollowsContractLocale(t *testing.T) {
+	d := newTestDB(t)
+	f := d.signingFixture(t, d.caller.OrganizationID)
+	d.publishContractDocumentTemplate(t)
+	gotb := documentstest.NewGotenberg(t, 0)
+	f.svc.pdf = pdfrender.New(gotb.URL)
+	png := testPNG()
+	if _, err := f.svc.AddMedia(d.ctx, f.caller, f.contract.UUID, MediaInput{
+		Body: bytes.NewReader(png), Size: int64(len(png)), Filename: "front.png", Title: "Ön tampon", ContentType: "image/png",
+	}); err != nil {
+		t.Fatalf("add media: %v", err)
+	}
+	executed := f.execute(t)
+	row, err := d.q.GetContractInstanceByUUID(d.ctx, executed.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.GenerateExecutedPDF(d.ctx, row.ID); err != nil {
+		t.Fatalf("generate pdf: %v", err)
+	}
+	html := gotb.LastHTML()
+	for _, want := range []string{
+		`<html lang="tr" dir="ltr">`, "<title>Sözleşme " + strconv.FormatInt(row.ContractNo, 10) + "</title>",
+		"İmzacı", "Maskeli telefon", "Doğrulama zamanı", "KVKK bildirim sürümü", "İçerik SHA-256",
+		"Müşteri", "Personel", "Görseller ve ekler",
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("tr rendered HTML missing %q:\n%s", want, html)
+		}
+	}
+	for _, stale := range []string{
+		"Contract ", "Signer", "Masked phone", "Verified at", "KVKK notice version", "Content SHA-256",
+		">customer<", ">staff<", "<h2>Media</h2>", "doc-hash\">SHA-256:",
+	} {
+		if strings.Contains(html, stale) {
+			t.Fatalf("tr rendered HTML still carries %q:\n%s", stale, html)
+		}
+	}
+	// The meta-table captions the system template prints through
+	// {{label_*}} (migration 000133) come from the tr catalog.
+	assertContractLabelVars(t, d, f, row, map[string]string{
+		"label_contract_no": "Sözleşme no", "label_date": "Tarih", "label_party": "Taraf", "label_signed_at": "İmza zamanı",
+		"contract_title": "Sözleşme " + strconv.FormatInt(row.ContractNo, 10),
+	})
+}
+
+func assertContractLabelVars(t *testing.T, d *testDB, f signingFixture, row db.ContractInstance, want map[string]string) {
+	t.Helper()
+	org, err := d.q.GetOrganizationByID(d.ctx, row.OrganizationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vars, err := f.svc.contractDocumentVars(d.ctx, d.q, row, org)
+	if err != nil {
+		t.Fatalf("contract document vars: %v", err)
+	}
+	for k, v := range want {
+		if got := vars[k]; got != v {
+			t.Fatalf("vars[%s] = %q, want %q", k, got, v)
+		}
+	}
+}
+
+// TEC-526: an ar contract renders right-to-left with Arabic chrome even when
+// the document template itself falls back to tr/en.
+func TestExecutedContractPDFArabicIsRTL(t *testing.T) {
+	d := newTestDB(t)
+	f := d.signingFixture(t, d.caller.OrganizationID)
+	d.publishContractDocumentTemplate(t)
+	gotb := documentstest.NewGotenberg(t, 0)
+	f.svc.pdf = pdfrender.New(gotb.URL)
+	if _, err := f.svc.PutLocale(d.ctx, d.caller, f.template.UUID, LocaleInput{
+		Locale: "ar", HTML: `<p>{{customer_name}} {{service_no}}</p>`,
+	}); err != nil {
+		t.Fatalf("put ar locale: %v", err)
+	}
+	svcRow := d.createService(t, d.caller.OrganizationID)
+	contract, err := f.svc.CreateForService(d.ctx, f.caller, svcRow.Uuid, CreateFromServiceInput{Locale: "ar"})
+	if err != nil {
+		t.Fatalf("create ar contract: %v", err)
+	}
+	if contract.Locale != "ar" {
+		t.Fatalf("contract locale = %q, want ar", contract.Locale)
+	}
+	if _, err := f.svc.SignCustomer(d.ctx, f.caller, contract.UUID, SignatureInput{
+		Code: "123456", PNGBase64: pngBase64(), IP: "203.0.113.10", UserAgent: "go-test",
+	}); err != nil {
+		t.Fatalf("customer sign: %v", err)
+	}
+	if _, err := f.svc.SignStaff(d.ctx, f.caller, contract.UUID, SignatureInput{PNGBase64: pngBase64()}); err != nil {
+		t.Fatalf("staff sign: %v", err)
+	}
+	row, err := d.q.GetContractInstanceByUUID(d.ctx, contract.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.GenerateExecutedPDF(d.ctx, row.ID); err != nil {
+		t.Fatalf("generate pdf: %v", err)
+	}
+	html := gotb.LastHTML()
+	for _, want := range []string{
+		`<html lang="ar" dir="rtl">`, "الموقّع", "العميل", "الموظف", "العقد " + strconv.FormatInt(row.ContractNo, 10),
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("ar rendered HTML missing %q:\n%s", want, html)
+		}
+	}
+	for _, stale := range []string{"Signer", "Masked phone", "Contract ", "<th>Party</th>", "<th>Date</th>", ">customer<", ">staff<"} {
+		if strings.Contains(html, stale) {
+			t.Fatalf("ar rendered HTML still carries %q:\n%s", stale, html)
+		}
+	}
+	assertContractLabelVars(t, d, f, row, map[string]string{
+		"label_contract_no": "رقم العقد", "label_date": "التاريخ", "label_party": "الطرف", "label_signed_at": "تاريخ التوقيع",
+	})
 }
 
 func TestMaskPhoneHidesSubscriberDigits(t *testing.T) {
