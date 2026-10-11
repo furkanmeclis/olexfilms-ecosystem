@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { cookies, headers } from "next/headers";
+import Script from "next/script";
 
 import { brand } from "@/config/brand";
 import { i18nConfig } from "@/config/i18n";
@@ -60,6 +61,17 @@ export const viewport: Viewport = {
   ],
 };
 
+/**
+ * TEC-628: Linear revision-request widget (issue.technowide.tr). The script
+ * builds its own button, Shadow DOM and iframe; the allowed origin, Linear
+ * team and project mapping live on the widget server (/configure), so no
+ * Linear credential is needed here. Loaded once, in the root layout, with
+ * afterInteractive: it reads its data-* options from document.currentScript
+ * and guards against a second load with the #lpi-embed-host id. It must run
+ * in the top-level document (not inside an iframe) for the screenshot flow.
+ */
+const FEEDBACK_WIDGET_SRC = "https://issue.technowide.tr/embed.js";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -89,6 +101,11 @@ export default async function RootLayout({
         <AppProviders locale={locale} messages={messages} timeZone={timeZone}>
           {children}
         </AppProviders>
+        <Script
+          id="technowide-issue-widget"
+          src={FEEDBACK_WIDGET_SRC}
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
