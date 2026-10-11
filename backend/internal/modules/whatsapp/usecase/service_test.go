@@ -47,6 +47,8 @@ func (n *notes) Enqueue(_ context.Context, in notifmodel.EnqueueInput) ([]notifm
 	return nil, nil
 }
 
+func (g *gateway) ConfigureHMAC(context.Context) error { return nil }
+
 // PollStatus: a dropped websocket on a linked device reconnects; a session
 // unlinked on the phone raises the logout alarm.
 func TestPollStatus(t *testing.T) {

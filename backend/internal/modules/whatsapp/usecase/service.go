@@ -46,6 +46,9 @@ type Gateway interface {
 	SetUserToken(token string)
 	UserToken() string
 	SetWebhook(ctx context.Context) error
+	// ConfigureHMAC writes the webhook signing key onto the instance user
+	// (wuzapi 1.0.9 signs only with the per-user key, TEC-621).
+	ConfigureHMAC(ctx context.Context) error
 	WebhookURL() string
 }
 
@@ -153,6 +156,7 @@ func (s *Service) EnsureReady(ctx context.Context) error {
 			return fmt.Errorf("whatsapp: decrypt token: %w", err)
 		}
 		s.gw.SetUserToken(token)
+		s.ensureHMAC(ctx)
 		s.ready = true
 		return nil
 	}
@@ -177,10 +181,22 @@ func (s *Service) EnsureReady(ctx context.Context) error {
 		if err := s.gw.SetWebhook(ctx); err != nil {
 			s.log.Warn("whatsapp_set_webhook_failed", "error", err)
 		}
+	} else if !created {
+		s.ensureHMAC(ctx)
 	}
 	s.ready = true
 	s.log.Info("whatsapp_instance_ready", "instance", st.InstanceName, "created", created)
 	return nil
+}
+
+// ensureHMAC (TEC-621) makes sure the instance user carries the webhook
+// signing key on every start, also for instances provisioned before the key
+// was written at creation; best effort, the webhook stays refused (401,
+// fail closed) until it succeeds.
+func (s *Service) ensureHMAC(ctx context.Context) {
+	if err := s.gw.ConfigureHMAC(ctx); err != nil {
+		s.log.Warn("whatsapp_configure_hmac_failed", "error", err)
+	}
 }
 
 // Overview is the admin status payload.

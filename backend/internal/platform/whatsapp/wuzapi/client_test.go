@@ -13,16 +13,20 @@ import (
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
+	"time"
 )
 
 // mockWuzapi imitates the 1.0.9 endpoints with fixed answers.
 type mockWuzapi struct {
-	mu        sync.Mutex
-	users     []User
-	lastSend  map[string]any
-	lastPath  string
-	connected bool
-	loggedIn  bool
+	mu              sync.Mutex
+	users           []User
+	lastSend        map[string]any
+	lastPath        string
+	connected       bool
+	loggedIn        bool
+	hmacKey         string
+	createHmacKey   string
+	stringTimestamp bool
 }
 
 func (m *mockWuzapi) handler(t *testing.T) http.Handler {
@@ -51,6 +55,7 @@ func (m *mockWuzapi) handler(t *testing.T) http.Handler {
 				var in map[string]any
 				_ = json.NewDecoder(r.Body).Decode(&in)
 				u := User{ID: "u1", Name: in["name"].(string), Token: in["token"].(string), Webhook: in["webhook"].(string), Events: in["events"].(string)}
+				m.createHmacKey, _ = in["hmacKey"].(string)
 				m.users = append(m.users, u)
 				ok(w, 201, u)
 			}
@@ -83,6 +88,15 @@ func (m *mockWuzapi) handler(t *testing.T) http.Handler {
 			ok(w, 200, map[string]any{"Details": "Logged out"})
 		case "/webhook":
 			ok(w, 200, map[string]any{"webhook": "x"})
+		case "/session/hmac/config":
+			var in map[string]string
+			_ = json.NewDecoder(r.Body).Decode(&in)
+			if len(in["hmac_key"]) < 32 {
+				fail(w, 400, "HMAC key must be at least 32 characters long")
+				return
+			}
+			m.hmacKey = in["hmac_key"]
+			ok(w, 200, map[string]any{"Details": "HMAC configured successfully"})
 		case "/chat/send/text", "/chat/send/document", "/chat/send/image":
 			raw, _ := io.ReadAll(r.Body)
 			m.lastSend = map[string]any{}
@@ -91,7 +105,13 @@ func (m *mockWuzapi) handler(t *testing.T) http.Handler {
 			if id == "" {
 				id = "SRV1"
 			}
-			ok(w, 200, map[string]any{"Details": "Sent", "Id": id, "Timestamp": "2026-10-01T12:00:00+03:00"})
+			// wuzapi 1.0.9 answers with a unix-seconds number; older builds
+			// used an RFC3339 string (TEC-621).
+			var ts any = 1791733000
+			if m.stringTimestamp {
+				ts = "2026-10-01T12:00:00+03:00"
+			}
+			ok(w, 200, map[string]any{"Details": "Sent", "Id": id, "Timestamp": ts})
 		default:
 			fail(w, 404, "not found")
 		}
@@ -113,6 +133,10 @@ func TestEnsureUserIdempotent(t *testing.T) {
 	u, created, err := c.EnsureUser(ctx, "olexfilms")
 	if err != nil || !created || u.Token == "" || u.Webhook != "http://backend.app:8080/hooks/wuzapi" {
 		t.Fatalf("first ensure: %+v %v %v", u, created, err)
+	}
+	// TEC-621: the user is created with the webhook signing key.
+	if m.createHmacKey != "hmac-secret-0123456789abcdef0123456789" {
+		t.Fatalf("create hmacKey = %q, want the configured HMACKey", m.createHmacKey)
 	}
 	again, created, err := c.EnsureUser(ctx, "olexfilms")
 	if err != nil || created || again.Token != u.Token || len(m.users) != 1 {
@@ -170,6 +194,19 @@ func TestSendText(t *testing.T) {
 	if ref.ID != "ABC123" || ref.Provider != ProviderName {
 		t.Fatalf("ref = %+v", ref)
 	}
+	// TEC-621: wuzapi 1.0.9 returns Timestamp as a unix number.
+	if want := time.Unix(1791733000, 0).UTC(); !ref.Timestamp.Equal(want) {
+		t.Fatalf("numeric timestamp = %v, want %v", ref.Timestamp, want)
+	}
+	m.stringTimestamp = true
+	ref, err = c.SendText(context.Background(), "+905551234567", "Merhaba", whatsapp.SendOptions{ID: "ABC124"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC); !ref.Timestamp.Equal(want) {
+		t.Fatalf("string timestamp = %v, want %v", ref.Timestamp, want)
+	}
+	m.stringTimestamp = false
 	if _, err := c.SendText(context.Background(), "12", "x", whatsapp.SendOptions{}); !errors.Is(err, whatsapp.ErrInvalidRecipient) {
 		t.Fatalf("invalid recipient: %v", err)
 	}
@@ -184,6 +221,47 @@ func TestSendText(t *testing.T) {
 	}
 	if m.lastSend["FileName"] != "a.pdf" {
 		t.Fatalf("document = %v", m.lastSend)
+	}
+}
+
+// TEC-621: SetWebhook also writes the per-user signing key, which is the
+// only key wuzapi 1.0.9 signs webhooks with.
+func TestSetWebhookConfiguresHMAC(t *testing.T) {
+	c, m := newTestClient(t)
+	c.SetUserToken("user-token")
+	if err := c.SetWebhook(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if m.hmacKey != "hmac-secret-0123456789abcdef0123456789" {
+		t.Fatalf("hmac_key = %q, want the configured HMACKey", m.hmacKey)
+	}
+	short := New(Config{BaseURL: c.cfg.BaseURL, AdminToken: "admin-token", HMACKey: "short", WebhookURL: c.cfg.WebhookURL})
+	short.SetUserToken("user-token")
+	m.hmacKey = ""
+	if err := short.SetWebhook(context.Background()); err != nil {
+		t.Fatalf("short key must be skipped, not fail: %v", err)
+	}
+	if m.hmacKey != "" {
+		t.Fatalf("short key must not be sent, got %q", m.hmacKey)
+	}
+}
+
+func TestFlexTime(t *testing.T) {
+	for raw, want := range map[string]time.Time{
+		`1791733000`:                  time.Unix(1791733000, 0).UTC(),
+		`1791733000123`:               time.UnixMilli(1791733000123).UTC(),
+		`"2026-10-01T12:00:00+03:00"`: time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC),
+		`"1791733000"`:                time.Unix(1791733000, 0).UTC(),
+		`null`:                        {},
+		`"garbage"`:                   {},
+	} {
+		var out struct{ Timestamp flexTime }
+		if err := json.Unmarshal([]byte(`{"Timestamp":`+raw+`}`), &out); err != nil {
+			t.Fatalf("%s: %v", raw, err)
+		}
+		if !out.Timestamp.Equal(want) {
+			t.Fatalf("%s = %v, want %v", raw, out.Timestamp.Time, want)
+		}
 	}
 }
 

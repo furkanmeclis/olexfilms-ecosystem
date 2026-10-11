@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -46,8 +47,9 @@ const maxMediaBytes = 16 << 20
 type Config struct {
 	BaseURL    string
 	AdminToken string
-	// HMACKey verifies webhook signatures (WUZAPI_WEBHOOK_SECRET; wuzapi
-	// signs with WUZAPI_GLOBAL_HMAC_KEY set to the same value).
+	// HMACKey verifies webhook signatures (WUZAPI_WEBHOOK_SECRET). wuzapi
+	// 1.0.9 signs only with the per-user hmac_key, so the client writes the
+	// same value onto the instance user (EnsureUser, SetWebhook).
 	HMACKey string
 	// WebhookURL is registered on the instance user (WUZAPI_WEBHOOK_URL).
 	WebhookURL string
@@ -211,6 +213,9 @@ func (c *Client) EnsureUser(ctx context.Context, name string) (User, bool, error
 		"webhook": c.cfg.WebhookURL,
 		"events":  strings.Join(DefaultEvents, ","),
 	}
+	if c.hmacKeyUsable() {
+		in["hmacKey"] = c.cfg.HMACKey
+	}
 	var created User
 	if err := c.do(ctx, http.MethodPost, "/admin/users", true, in, &created); err != nil {
 		return User{}, false, err
@@ -221,14 +226,41 @@ func (c *Client) EnsureUser(ctx context.Context, name string) (User, bool, error
 	return created, true, nil
 }
 
-// SetWebhook points the instance user at the configured webhook URL.
+// SetWebhook points the instance user at the configured webhook URL and
+// (TEC-621) writes the webhook signing key onto the user: wuzapi 1.0.9 signs
+// x-hmac-signature only with the per-user hmac_key, never with
+// WUZAPI_GLOBAL_HMAC_KEY, so without this every webhook is refused as
+// unsigned.
 func (c *Client) SetWebhook(ctx context.Context) error {
 	if c.cfg.WebhookURL == "" {
 		return nil
 	}
-	return c.do(ctx, http.MethodPost, "/webhook", false, map[string]any{
+	if err := c.do(ctx, http.MethodPost, "/webhook", false, map[string]any{
 		"webhookURL": c.cfg.WebhookURL,
 		"events":     DefaultEvents,
+	}, nil); err != nil {
+		return err
+	}
+	return c.ConfigureHMAC(ctx)
+}
+
+// minHMACKeyLen is wuzapi's lower bound for a per-user hmac_key.
+const minHMACKeyLen = 32
+
+func (c *Client) hmacKeyUsable() bool {
+	return len(strings.TrimSpace(c.cfg.HMACKey)) >= minHMACKeyLen
+}
+
+// ConfigureHMAC stores HMACKey as the instance user's webhook signing key
+// (POST /session/hmac/config). Idempotent; a key shorter than wuzapi's
+// 32-character minimum is skipped (the webhook then stays unsigned and the
+// backend refuses it, fail closed).
+func (c *Client) ConfigureHMAC(ctx context.Context) error {
+	if !c.hmacKeyUsable() {
+		return nil
+	}
+	return c.do(ctx, http.MethodPost, "/session/hmac/config", false, map[string]any{
+		"hmac_key": strings.TrimSpace(c.cfg.HMACKey),
 	}, nil)
 }
 
@@ -293,16 +325,58 @@ func (c *Client) Status(ctx context.Context) (whatsapp.ConnState, error) {
 }
 
 type sendResult struct {
-	ID        string `json:"Id"`
-	Timestamp string `json:"Timestamp"`
+	ID        string   `json:"Id"`
+	Timestamp flexTime `json:"Timestamp"`
 }
 
 func (r sendResult) ref() whatsapp.MsgRef {
-	ts, err := time.Parse(time.RFC3339, r.Timestamp)
-	if err != nil {
+	ts := r.Timestamp.Time
+	if ts.IsZero() {
 		ts = time.Now().UTC()
 	}
 	return whatsapp.MsgRef{ID: r.ID, Provider: ProviderName, Timestamp: ts}
+}
+
+// flexTime decodes the send timestamp wuzapi returns either as an RFC3339
+// string (older builds) or as a unix number in seconds or milliseconds
+// (1.0.9). Anything else leaves Time zero (TEC-621).
+type flexTime struct{ time.Time }
+
+func (t *flexTime) UnmarshalJSON(b []byte) error {
+	raw := strings.TrimSpace(string(b))
+	if raw == "" || raw == "null" {
+		return nil
+	}
+	if strings.HasPrefix(raw, "\"") {
+		var s string
+		if err := json.Unmarshal(b, &s); err != nil {
+			return nil
+		}
+		if ts, err := time.Parse(time.RFC3339, s); err == nil {
+			t.Time = ts
+		} else if n, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64); err == nil {
+			t.Time = unixFlex(n)
+		}
+		return nil
+	}
+	var n json.Number
+	if err := json.Unmarshal(b, &n); err != nil {
+		return nil
+	}
+	if i, err := n.Int64(); err == nil {
+		t.Time = unixFlex(i)
+	} else if f, err := n.Float64(); err == nil {
+		t.Time = unixFlex(int64(f))
+	}
+	return nil
+}
+
+// unixFlex treats values beyond year 2286 in seconds as milliseconds.
+func unixFlex(n int64) time.Time {
+	if n > 9_999_999_999 {
+		return time.UnixMilli(n).UTC()
+	}
+	return time.Unix(n, 0).UTC()
 }
 
 func recipient(to string) (string, error) {
