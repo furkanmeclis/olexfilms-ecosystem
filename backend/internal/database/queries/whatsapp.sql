@@ -103,3 +103,16 @@ LEFT JOIN permissions p ON p.id = rp.permission_id
 WHERE u.deleted_at IS NULL
   AND u.status = 'active'
   AND (r.slug = 'super_admin' OR p.slug = 'whatsapp.manage');
+
+-- TEC-623: LID -> phone map learned from webhook events.
+
+-- name: UpsertWhatsAppLID :exec
+INSERT INTO whatsapp_lid_map (lid, phone_e164)
+VALUES (sqlc.arg(lid), sqlc.arg(phone_e164))
+ON CONFLICT (lid) DO UPDATE
+SET phone_e164 = EXCLUDED.phone_e164,
+    updated_at = NOW()
+WHERE whatsapp_lid_map.phone_e164 <> EXCLUDED.phone_e164;
+
+-- name: GetWhatsAppLIDPhone :one
+SELECT phone_e164 FROM whatsapp_lid_map WHERE lid = sqlc.arg(lid);

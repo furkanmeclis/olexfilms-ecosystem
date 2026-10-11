@@ -65,6 +65,8 @@ type Store interface {
 	ApplyMessageReceipt(ctx context.Context, arg db.ApplyMessageReceiptParams) ([]db.Message, error)
 	ListWhatsAppAlarmRecipients(ctx context.Context) ([]db.ListWhatsAppAlarmRecipientsRow, error)
 	GetUserByPhone(ctx context.Context, phoneE164 pgtype.Text) (db.User, error)
+	UpsertWhatsAppLID(ctx context.Context, arg db.UpsertWhatsAppLIDParams) error
+	GetWhatsAppLIDPhone(ctx context.Context, lid string) (string, error)
 	ConversationAIRunStatsBetween(ctx context.Context, arg db.ConversationAIRunStatsBetweenParams) (db.ConversationAIRunStatsBetweenRow, error)
 	WithTx(tx pgx.Tx) *db.Queries
 }

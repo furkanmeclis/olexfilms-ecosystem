@@ -175,8 +175,10 @@ func normalize(p webhookPayload) (whatsapp.InboundEvent, bool, error) {
 		contact := firstPhone(m.Info.SenderAlt, m.Info.Sender, m.Info.Chat, m.Info.RecipientAlt)
 		if m.Info.IsFromMe {
 			ev.To = firstPhone(m.Info.RecipientAlt, m.Info.Chat)
+			ev.ContactLID = firstLID(m.Info.Chat)
 		} else {
 			ev.From = contact
+			ev.ContactLID = firstLID(m.Info.Sender, m.Info.Chat)
 		}
 		ev.Text, ev.Media = messageContent(m.Message)
 		if ev.Media != nil {
@@ -310,6 +312,24 @@ func messageContent(m messageBody) (string, *whatsapp.InboundMedia) {
 		}
 	}
 	return "", nil
+}
+
+// firstLID returns the first linked-id JID (…@lid), without a device suffix
+// ("123:2@lid" -> "123@lid"), or "" (TEC-623).
+func firstLID(jids ...string) string {
+	for _, j := range jids {
+		if !strings.HasSuffix(j, "@lid") {
+			continue
+		}
+		user := strings.TrimSuffix(j, "@lid")
+		if i := strings.IndexByte(user, ':'); i >= 0 {
+			user = user[:i]
+		}
+		if user != "" {
+			return user + "@lid"
+		}
+	}
+	return ""
 }
 
 // firstPhone returns the first JID that resolves to a phone number. LID

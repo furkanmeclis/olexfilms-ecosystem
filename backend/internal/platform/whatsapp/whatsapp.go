@@ -87,13 +87,17 @@ type InboundEvent struct {
 	Kind       string
 	ExternalID string
 	// From / To are E.164 when they could be resolved, else empty.
-	From      string
-	To        string
-	FromMe    bool
-	PushName  string
-	Timestamp time.Time
-	Text      string
-	Media     *InboundMedia
+	From string
+	To   string
+	// ContactLID is the contact's linked-id JID ("…@lid") when the gateway
+	// addressed it that way (privacy mode). It pairs with From/To when the
+	// phone was attached and is the only handle when it was not (TEC-623).
+	ContactLID string
+	FromMe     bool
+	PushName   string
+	Timestamp  time.Time
+	Text       string
+	Media      *InboundMedia
 	// Status: delivered | read (KindStatus); MessageIDs lists the targets.
 	Status     string
 	MessageIDs []string

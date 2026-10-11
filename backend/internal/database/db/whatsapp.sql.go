@@ -49,6 +49,17 @@ func (q *Queries) GetLatestKVKKNotice(ctx context.Context, locale string) (KvkkN
 	return i, err
 }
 
+const getWhatsAppLIDPhone = `-- name: GetWhatsAppLIDPhone :one
+SELECT phone_e164 FROM whatsapp_lid_map WHERE lid = $1
+`
+
+func (q *Queries) GetWhatsAppLIDPhone(ctx context.Context, lid string) (string, error) {
+	row := q.db.QueryRow(ctx, getWhatsAppLIDPhone, lid)
+	var phone_e164 string
+	err := row.Scan(&phone_e164)
+	return phone_e164, err
+}
+
 const getWhatsAppSettings = `-- name: GetWhatsAppSettings :one
 
 SELECT id, provider, instance_name, instance_id, user_token_enc, status, jid, phone_e164, last_seen_at, last_event_at, last_error_reason, sms_fallback_enabled, created_at, updated_at FROM whatsapp_settings WHERE id = 1
@@ -521,4 +532,25 @@ func (q *Queries) UpsertConversation(ctx context.Context, arg UpsertConversation
 		&i.ReferredDealerOrgID,
 	)
 	return i, err
+}
+
+const upsertWhatsAppLID = `-- name: UpsertWhatsAppLID :exec
+
+INSERT INTO whatsapp_lid_map (lid, phone_e164)
+VALUES ($1, $2)
+ON CONFLICT (lid) DO UPDATE
+SET phone_e164 = EXCLUDED.phone_e164,
+    updated_at = NOW()
+WHERE whatsapp_lid_map.phone_e164 <> EXCLUDED.phone_e164
+`
+
+type UpsertWhatsAppLIDParams struct {
+	Lid       string `json:"lid"`
+	PhoneE164 string `json:"phone_e164"`
+}
+
+// TEC-623: LID -> phone map learned from webhook events.
+func (q *Queries) UpsertWhatsAppLID(ctx context.Context, arg UpsertWhatsAppLIDParams) error {
+	_, err := q.db.Exec(ctx, upsertWhatsAppLID, arg.Lid, arg.PhoneE164)
+	return err
 }
