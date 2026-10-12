@@ -29,7 +29,23 @@ type SetupState = {
   otpauthUrl: string;
 };
 
-export function TotpManager() {
+/**
+ * The four authenticator 2FA calls. The panel uses its BFF (authService);
+ * the portal passes its own client so fleet users (TEC-637) go through the
+ * portal session.
+ */
+export type TotpApi = Pick<
+  typeof authService,
+  "getTOTPStatus" | "setupTOTP" | "confirmTOTP" | "disableTOTP"
+>;
+
+export function TotpManager({
+  api = authService,
+  queryKey = ["account", "totp"],
+}: {
+  api?: TotpApi;
+  queryKey?: readonly unknown[];
+} = {}) {
   const { t } = useLocale();
   const [setup, setSetup] = useState<SetupState | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
@@ -40,10 +56,10 @@ export function TotpManager() {
   const [pending, setPending] = useState(false);
 
   const statusQuery = useQuery({
-    queryKey: ["account", "totp"],
+    queryKey,
     queryFn: async () => {
       try {
-        return await authService.getTOTPStatus();
+        return await api.getTOTPStatus();
       } catch (error) {
         toast.error(
           isApiError(error) ? error.message : t("auth.totp.error.load"),
@@ -58,7 +74,7 @@ export function TotpManager() {
   const beginSetup = async () => {
     setPending(true);
     try {
-      const result = await authService.setupTOTP();
+      const result = await api.setupTOTP();
       const url = await QRCode.toDataURL(result.otpauth_url, {
         width: 200,
         margin: 1,
@@ -79,7 +95,7 @@ export function TotpManager() {
   const confirmSetup = async () => {
     setPending(true);
     try {
-      const result = await authService.confirmTOTP(confirmCode.trim());
+      const result = await api.confirmTOTP(confirmCode.trim());
       setRecoveryCodes(result.recovery_codes);
       setSetup(null);
       setQrDataUrl(null);
@@ -97,7 +113,7 @@ export function TotpManager() {
   const disableTotp = async () => {
     setPending(true);
     try {
-      await authService.disableTOTP(disableCode.trim());
+      await api.disableTOTP(disableCode.trim());
       setSetup(null);
       setQrDataUrl(null);
       setDisableOpen(false);

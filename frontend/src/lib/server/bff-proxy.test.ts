@@ -234,6 +234,10 @@ describe("BFF realms (TEC-90)", () => {
       "auth/otp/request",
       "auth/password/forgot",
       "auth/password/reset",
+      "auth/totp",
+      "auth/totp/setup",
+      "auth/totp/confirm",
+      "auth/totp/disable",
       "public/brand",
       "portal/consents",
     ]) {
