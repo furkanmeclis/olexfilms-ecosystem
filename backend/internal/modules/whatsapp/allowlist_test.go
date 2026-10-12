@@ -67,3 +67,37 @@ func TestAllowlistGatewayBlocksOtherRecipients(t *testing.T) {
 		t.Fatalf("provider received %v, want only the two allowed sends", stub.sent)
 	}
 }
+
+// downloaderGateway is a stub gateway that can also download inbound media.
+type downloaderGateway struct {
+	stubGateway
+	downloads int
+}
+
+func (d *downloaderGateway) DownloadMedia(_ context.Context, _ platwa.InboundMedia, _ int64) ([]byte, error) {
+	d.downloads++
+	return []byte("media"), nil
+}
+
+// TEC-634: the wrapper keeps media download support exactly when the wrapped
+// gateway has it, and still blocks sends outside the list.
+func TestAllowlistGatewayKeepsMediaDownloader(t *testing.T) {
+	ctx := context.Background()
+	inner := &downloaderGateway{}
+	gw := withRecipientAllowlist(inner, []string{"+905551112233"}, nil)
+	d, ok := gw.(platwa.MediaDownloader)
+	if !ok {
+		t.Fatal("wrapped downloader gateway must stay a MediaDownloader")
+	}
+	if data, err := d.DownloadMedia(ctx, platwa.InboundMedia{}, 10); err != nil || string(data) != "media" || inner.downloads != 1 {
+		t.Fatalf("download = %q, %v (calls %d)", data, err, inner.downloads)
+	}
+	if _, err := gw.SendText(ctx, "+905558800001", "hi", platwa.SendOptions{}); !errors.Is(err, platwa.ErrRecipientNotAllowed) {
+		t.Fatalf("blocked send err = %v", err)
+	}
+
+	plain := withRecipientAllowlist(&stubGateway{}, []string{"+905551112233"}, nil)
+	if _, ok := plain.(platwa.MediaDownloader); ok {
+		t.Fatal("a gateway without media download must not gain it through the wrapper")
+	}
+}
