@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: frontend
@@ -34,7 +34,11 @@ jobs:
       - name: Build
         run: pnpm build
       - name: Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        # --with-deps installs apt packages: Linux runners only; the macOS
+        # self-hosted runner already has what Chromium needs (TEC-629).
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then pnpm exec playwright install --with-deps chromium
+          else pnpm exec playwright install chromium; fi
       - name: E2E with screenshots
         env:
           E2E_CAPTURE: "1"

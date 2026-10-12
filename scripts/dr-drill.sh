@@ -123,7 +123,9 @@ log "migrating and loading data"
 if command -v migrate >/dev/null; then
   migrate -path "$ROOT/backend/migrations" -database "$DB_URL" up >/dev/null
 else
-  docker run --rm --network host -v "$ROOT/backend/migrations:/m:ro" migrate/migrate:v4.19.1 -path /m -database "$DB_URL" up >/dev/null
+  # go run, not `docker run --network host`: host networking is off by default
+  # on Docker Desktop (macOS self-hosted runner, TEC-629); Go is required anyway.
+  ( cd "$ROOT/backend" && go run -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1 -path migrations -database "$DB_URL" up >/dev/null )
 fi
 HEAD_VERSION="$(psql_q -c 'SELECT version FROM schema_migrations')"
 "$WORK/create-super-admin" -email drill@example.test -password 'Drill1234x' -name Drill -surname Admin >/dev/null

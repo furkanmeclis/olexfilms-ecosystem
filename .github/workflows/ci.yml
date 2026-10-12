@@ -20,6 +20,10 @@ env:
   SQLC_VERSION: "1.31.1"
   MIGRATE_VERSION: v4.19.1
 
+# Runner (TEC-629): the repository variable CI_RUNS_ON picks the runner for
+# every job ("self-hosted" = the macOS/ARM64 runner on the owner's machine,
+# no billed minutes); unset, GitHub-hosted ubuntu-latest. Nothing below may
+# depend on Linux-only runner features (service containers, apt).
 jobs:
   # Decides which heavy jobs a PR needs (plain git diff, no third-party
   # action). Push to main, tags, workflow_dispatch and PRs labelled
@@ -32,7 +36,7 @@ jobs:
   #   .github/**                  -> everything (incl. image-build, dr-drill)
   #   Makefile, scripts/, other   -> backend, frontend, contracts
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
@@ -79,40 +83,34 @@ jobs:
   backend:
     needs: [changes]
     if: needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: backend
-    services:
-      postgres:
-        image: postgres:18-alpine
-        env:
-          POSTGRES_USER: app
-          POSTGRES_PASSWORD: app
-          POSTGRES_DB: app_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U app -d app_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:8-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       # Integration tests skip when these are unset; here they always run
-      # against the migrated service database.
-      TEST_DATABASE_URL: postgres://app:app@localhost:5432/app_test?sslmode=disable
-      TEST_REDIS_URL: redis://localhost:6379/0
+      # against the migrated database started below.
+      TEST_DATABASE_URL: postgres://app:app@127.0.0.1:5436/app_test?sslmode=disable
+      TEST_REDIS_URL: redis://127.0.0.1:6383/0
+      CI_PG: ci-pg-${{ github.run_id }}
+      CI_REDIS: ci-redis-${{ github.run_id }}
     steps:
       - uses: actions/checkout@v7
+      # `docker run` instead of `services:` (TEC-629): service containers
+      # need a Linux runner; this works on the macOS self-hosted runner too.
+      # Ports 5436/6383 stay clear of the local projects on that machine.
+      - name: Start Postgres and Redis
+        run: |
+          docker rm -f "$CI_PG" "$CI_REDIS" >/dev/null 2>&1 || true
+          docker run -d --name "$CI_PG" -e POSTGRES_USER=app -e POSTGRES_PASSWORD=app -e POSTGRES_DB=app_test \
+            -p 127.0.0.1:5436:5432 postgres:18-alpine >/dev/null
+          docker run -d --name "$CI_REDIS" -p 127.0.0.1:6383:6379 redis:8-alpine >/dev/null
+          for i in $(seq 1 30); do
+            if docker exec "$CI_PG" pg_isready -U app -d app_test >/dev/null 2>&1 \
+               && [ "$(docker exec "$CI_REDIS" redis-cli ping 2>/dev/null)" = "PONG" ]; then exit 0; fi
+            sleep 2
+          done
+          echo "::error::postgres/redis did not become ready"; docker logs "$CI_PG"; exit 1
       - uses: actions/setup-go@v7
         with:
           go-version-file: backend/go.mod
@@ -147,11 +145,14 @@ jobs:
       - name: OpenAPI lint
         working-directory: .
         run: make openapi-lint
+      - name: Stop Postgres and Redis
+        if: always()
+        run: docker rm -f "$CI_PG" "$CI_REDIS" >/dev/null 2>&1 || true
 
   frontend:
     needs: [changes]
     if: needs.changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: frontend
@@ -186,7 +187,11 @@ jobs:
       # TEC-183: mocked end-to-end run on the build above; page.route
       # answers the BFF calls, so no backend or database is needed.
       - name: Playwright Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        # --with-deps installs apt packages: Linux runners only; the macOS
+        # self-hosted runner already has what Chromium needs (TEC-629).
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then pnpm exec playwright install --with-deps chromium
+          else pnpm exec playwright install chromium; fi
       - name: E2E (mocked API)
         run: pnpm test:e2e
 
@@ -195,7 +200,7 @@ jobs:
   contracts:
     needs: [changes]
     if: needs.changes.outputs.contracts == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -225,7 +230,7 @@ jobs:
   image-build:
     needs: [changes]
     if: needs.changes.outputs.full == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -248,7 +253,7 @@ jobs:
   dr-drill:
     needs: [changes]
     if: needs.changes.outputs.full == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -265,7 +270,7 @@ jobs:
     name: ci
     if: always()
     needs: [changes, backend, frontend, contracts, image-build, dr-drill]
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
     steps:
       - name: All jobs green
         env:
@@ -286,7 +291,7 @@ jobs:
   release-tag:
     needs: [ci]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNS_ON || 'ubuntu-latest' }}
     permissions:
       contents: write
     steps:
