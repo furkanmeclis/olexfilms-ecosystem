@@ -291,6 +291,7 @@ var zhCNCatalog = map[string]string{
 	"contracts.pdf.number":                             "合同编号",
 	"contracts.pdf.date":                               "日期",
 	"contracts.pdf.party":                              "当事方",
+	"showcase.whatsapp_prefill":                        "您好，我想了解{{name}}的服务。",
 	"contracts.pdf.signatures":                         "签名",
 	"contracts.pdf.signed_at":                          "签署时间",
 	"contracts.pdf.otp_verified":                       "已通过 OTP 验证",

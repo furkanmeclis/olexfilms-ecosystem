@@ -42,6 +42,7 @@ describe("GET /portal/dealers/nearby", () => {
             "x-real-ip": "203.0.113.9",
             "x-forwarded-host": "olexfilms.test",
             cookie: "session=secret",
+            "accept-language": "de-DE,de;q=0.9",
           },
         },
       ),
@@ -57,6 +58,7 @@ describe("GET /portal/dealers/nearby", () => {
     expect(headers.get("x-forwarded-for")).toBe("203.0.113.9");
     expect(headers.get("x-forwarded-host")).toBe("olexfilms.test");
     expect(headers.get("cookie")).toBeNull();
+    expect(headers.get("accept-language")).toBe("de-DE,de;q=0.9");
   });
 
   it("passes 429 and Retry-After through", async () => {

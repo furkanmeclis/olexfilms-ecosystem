@@ -49,7 +49,7 @@ func (f *fakeApps) Submit(_ context.Context, _ int64, app usecase.Application) (
 	return usecase.ApplicationResult{}, nil
 }
 
-func (f *fakeApps) ShowcaseLeadConfig(context.Context, int64, string, string, string, string) (usecase.ShowcaseLeadConfig, error) {
+func (f *fakeApps) ShowcaseLeadConfig(context.Context, int64, string, string, string) (usecase.ShowcaseLeadConfig, error) {
 	return usecase.ShowcaseLeadConfig{}, nil
 }
 

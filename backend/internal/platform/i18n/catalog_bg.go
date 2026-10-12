@@ -291,6 +291,7 @@ var bgCatalog = map[string]string{
 	"contracts.pdf.number":                             "Договор №",
 	"contracts.pdf.date":                               "Дата",
 	"contracts.pdf.party":                              "Страна",
+	"showcase.whatsapp_prefill":                        "Здравейте, бих искал информация за {{name}}.",
 	"contracts.pdf.signatures":                         "Подписи",
 	"contracts.pdf.signed_at":                          "Подписан на",
 	"contracts.pdf.otp_verified":                       "Потвърден с OTP",

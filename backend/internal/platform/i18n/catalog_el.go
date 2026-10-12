@@ -291,6 +291,7 @@ var elCatalog = map[string]string{
 	"contracts.pdf.number":                             "Αρ. σύμβασης",
 	"contracts.pdf.date":                               "Ημερομηνία",
 	"contracts.pdf.party":                              "Συμβαλλόμενος",
+	"showcase.whatsapp_prefill":                        "Γεια σας, θα ήθελα πληροφορίες για το {{name}}.",
 	"contracts.pdf.signatures":                         "Υπογραφές",
 	"contracts.pdf.signed_at":                          "Υπογράφηκε στις",
 	"contracts.pdf.otp_verified":                       "Επαληθεύτηκε με OTP",

@@ -291,6 +291,7 @@ var ukCatalog = map[string]string{
 	"contracts.pdf.number":                             "№ договору",
 	"contracts.pdf.date":                               "Дата",
 	"contracts.pdf.party":                              "Сторона",
+	"showcase.whatsapp_prefill":                        "Вітаю, я хотів би дізнатися більше про {{name}}.",
 	"contracts.pdf.signatures":                         "Підписи",
 	"contracts.pdf.signed_at":                          "Підписано",
 	"contracts.pdf.otp_verified":                       "Підтверджено одноразовим кодом",

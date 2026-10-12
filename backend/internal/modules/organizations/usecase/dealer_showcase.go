@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	platwa "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -31,6 +32,10 @@ type PublicDealer struct {
 	Latitude  *float64 `json:"latitude"`
 	Longitude *float64 `json:"longitude"`
 	WhatsApp  *string  `json:"whatsapp"`
+	// WhatsAppChatURL is the click-to-chat link through the center number
+	// with "#<code>" (TEC-468, TEC-638); absent when no center number is
+	// configured (the page then falls back to the dealer's own number).
+	WhatsAppChatURL *string `json:"whatsapp_chat_url,omitempty"`
 	// Showcase is the F5 dealer showcase block (TEC-467): present only
 	// while the dealer_showcase module is on and a snapshot is published;
 	// otherwise the body stays the F2 skeleton above, key for key.
@@ -70,6 +75,11 @@ func (s *Service) PublicDealerByCode(ctx context.Context, brandID int64, code, l
 		return PublicDealer{}, err
 	}
 	d := mapPublicDealer(row)
+	if st, err := s.q.GetWhatsAppSettings(ctx); err == nil && st.PhoneE164.Valid {
+		if u := platwa.DealerChatURL(st.PhoneE164.String, locale, row.Name, row.Slug); u != "" {
+			d.WhatsAppChatURL = &u
+		}
+	}
 	if s.showcases != nil {
 		block, err := s.showcases.PublicBlock(ctx, brandID, code, locale)
 		if err != nil {

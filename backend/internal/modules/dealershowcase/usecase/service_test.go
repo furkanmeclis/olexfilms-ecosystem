@@ -572,6 +572,17 @@ func TestPublicBlockLocaleAndOpenNow(t *testing.T) {
 	}
 	ist, _ := time.LoadLocation("Europe/Istanbul")
 	f.svc.now = func() time.Time { return time.Date(2026, 10, 5, 10, 0, 0, 0, ist) } // Monday 10:00
+	// TEC-638: without a center number the button falls back to the dealer.
+	if _, err := f.tx.Exec(f.ctx, `UPDATE whatsapp_settings SET phone_e164 = NULL WHERE id = 1`); err != nil {
+		t.Fatal(err)
+	}
+	if b, err := f.svc.PublicBlock(f.ctx, f.brandID, f.dealer.Slug, "en"); err != nil || b == nil ||
+		b.(PublicShowcase).WhatsAppChatURL == nil || *b.(PublicShowcase).WhatsAppChatURL != "https://wa.me/905321112233" {
+		t.Fatalf("dealer fallback: %+v %v", b, err)
+	}
+	if _, err := f.tx.Exec(f.ctx, `UPDATE whatsapp_settings SET phone_e164 = '+905550000001' WHERE id = 1`); err != nil {
+		t.Fatal(err)
+	}
 	b, err := f.svc.PublicBlock(f.ctx, f.brandID, f.dealer.Slug, "en")
 	if err != nil || b == nil {
 		t.Fatal(b, err)
@@ -587,8 +598,10 @@ func TestPublicBlockLocaleAndOpenNow(t *testing.T) {
 	if len(pb.Services) != 1 || pb.Services[0].Title != "Window film" {
 		t.Fatalf("services: %+v", pb.Services)
 	}
-	if pb.WhatsAppChatURL == nil || *pb.WhatsAppChatURL != "https://wa.me/905321112233" || !pb.LeadFormEnabled {
-		t.Fatalf("contact: %+v", pb)
+	// The center number with the localized prefill and "#<code>" (TEC-468).
+	wantChat := "https://wa.me/905550000001?text=" + url.QueryEscape("Hello, I would like information about "+f.dealer.Name+". #"+f.dealer.Slug)
+	if pb.WhatsAppChatURL == nil || *pb.WhatsAppChatURL != wantChat || !pb.LeadFormEnabled {
+		t.Fatalf("contact: %v want %s", pb.WhatsAppChatURL, wantChat)
 	}
 	raw, _ := json.Marshal(pb)
 	if strings.Contains(strings.ToLower(string(raw)), "price") || strings.Contains(string(raw), "storage_key") {

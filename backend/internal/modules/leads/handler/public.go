@@ -48,7 +48,7 @@ type Applications interface {
 	Enabled(ctx context.Context) (bool, error)
 	Validate(ctx context.Context, in usecase.ApplicationInput) (usecase.Application, error)
 	Submit(ctx context.Context, brandID int64, app usecase.Application) (usecase.ApplicationResult, error)
-	ShowcaseLeadConfig(ctx context.Context, brandID int64, code, lang, formToken, whatsappText string) (usecase.ShowcaseLeadConfig, error)
+	ShowcaseLeadConfig(ctx context.Context, brandID int64, code, lang, formToken string) (usecase.ShowcaseLeadConfig, error)
 	ValidateShowcaseLead(ctx context.Context, brandID int64, code string, in usecase.ShowcaseLeadInput) (usecase.ShowcaseLead, db.GetShowcaseLeadTargetBySlugRow, error)
 	SubmitShowcaseLead(ctx context.Context, target db.GetShowcaseLeadTargetBySlugRow, in usecase.ShowcaseLead) (usecase.ShowcaseLeadResult, error)
 }
@@ -226,8 +226,7 @@ func (h *Public) ShowcaseConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	code := r.PathValue("code")
 	token := h.signShowcaseToken(code, time.Now().UTC())
-	waText := url.QueryEscape(showcaseWhatsAppText(r.URL.Query().Get("lang"), code))
-	cfg, err := h.apps.ShowcaseLeadConfig(r.Context(), b.ID, code, r.URL.Query().Get("lang"), token, waText)
+	cfg, err := h.apps.ShowcaseLeadConfig(r.Context(), b.ID, code, r.URL.Query().Get("lang"), token)
 	if err != nil {
 		if errors.Is(err, usecase.ErrNotFound) {
 			response.NotFound(w, r, "Dealer was not found")
@@ -342,13 +341,6 @@ func (h *Public) verifyShowcaseToken(code, token string) (time.Time, bool) {
 	_, _ = mac.Write([]byte(payload))
 	want := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 	return issued, hmac.Equal([]byte(want), []byte(parts[2]))
-}
-
-func showcaseWhatsAppText(lang, code string) string {
-	if strings.TrimSpace(lang) == "en" {
-		return "Hello, I would like information about your services. #" + code
-	}
-	return "Merhaba, hizmetleriniz hakkında bilgi almak istiyorum. #" + code
 }
 
 // Quote answers GET /v1/public/quotes/{token}; it never exposes recipient

@@ -291,6 +291,7 @@ var itCatalog = map[string]string{
 	"contracts.pdf.number":                             "N. contratto",
 	"contracts.pdf.date":                               "Data",
 	"contracts.pdf.party":                              "Parte",
+	"showcase.whatsapp_prefill":                        "Ciao, vorrei informazioni su {{name}}.",
 	"contracts.pdf.signatures":                         "Firme",
 	"contracts.pdf.signed_at":                          "Firmato il",
 	"contracts.pdf.otp_verified":                       "Verificato con codice monouso",

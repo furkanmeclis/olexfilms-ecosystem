@@ -291,6 +291,7 @@ var azCatalog = map[string]string{
 	"contracts.pdf.number":                             "Müqavilə №",
 	"contracts.pdf.date":                               "Tarix",
 	"contracts.pdf.party":                              "Tərəf",
+	"showcase.whatsapp_prefill":                        "Salam, {{name}} haqqında məlumat almaq istəyirəm.",
 	"contracts.pdf.signatures":                         "İmzalar",
 	"contracts.pdf.signed_at":                          "İmzalanma vaxtı",
 	"contracts.pdf.otp_verified":                       "OTP ilə təsdiqlənib",

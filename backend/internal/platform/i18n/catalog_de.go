@@ -291,6 +291,7 @@ var deCatalog = map[string]string{
 	"contracts.pdf.number":                             "Vertragsnr.",
 	"contracts.pdf.date":                               "Datum",
 	"contracts.pdf.party":                              "Vertragspartei",
+	"showcase.whatsapp_prefill":                        "Hallo, ich möchte Informationen zu {{name}}.",
 	"contracts.pdf.signatures":                         "Unterschriften",
 	"contracts.pdf.signed_at":                          "Unterschrieben am",
 	"contracts.pdf.otp_verified":                       "Per Einmalcode bestätigt",

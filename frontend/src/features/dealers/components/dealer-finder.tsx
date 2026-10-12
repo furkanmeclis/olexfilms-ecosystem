@@ -312,7 +312,8 @@ function DealerResults({
       </h2>
       <ul className="space-y-3" data-testid="dealer-list">
         {result.dealers.map((d) => {
-          const wa = whatsappHref(d.whatsapp);
+          // TEC-638: the center number with "#code" when set, else the dealer.
+          const wa = d.whatsapp_chat_url ?? whatsappHref(d.whatsapp);
           const place = [d.district, d.city].filter(Boolean).join(", ");
           return (
             <li key={d.slug}>
