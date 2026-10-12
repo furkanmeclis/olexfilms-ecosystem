@@ -35,7 +35,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/fxrates"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/anthropic"
+	llmdriver "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/driver"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sysconfig"
@@ -122,7 +122,7 @@ func newWhatsAppAIPipeline(d whatsAppAIDeps) *wapipeline.Pipeline {
 
 	store := airepo.New(pool)
 	actions := aiusecase.NewActions(store, reg, d.activity, log)
-	provider := anthropic.NewFromConfig(cfg.AI)
+	provider := llmdriver.NewFromConfig(cfg.AI)
 	models := llm.ModelsFromConfig(cfg.AI)
 	chat := aiusecase.NewChat(aiusecase.ChatDeps{
 		Store: store, Tools: reg, Actions: actions, Provider: provider, Models: models,

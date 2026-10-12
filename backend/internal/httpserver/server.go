@@ -207,7 +207,7 @@ import (
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/anthropic"
+	llmdriver "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/driver"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/otp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
@@ -758,7 +758,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// warranty_claim:ai_triage on the default queue; manual re-trigger).
 	triageProvider := deps.LLM
 	if triageProvider == nil {
-		triageProvider = anthropic.NewFromConfig(cfg.AI)
+		triageProvider = llmdriver.NewFromConfig(cfg.AI)
 	}
 	var triagePhotos llm.ObjectReader
 	if deps.Storage != nil {
@@ -988,7 +988,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-388 (F4-01f): panel and portal chat with SSE streaming.
 	aiProvider := deps.LLM
 	if aiProvider == nil {
-		aiProvider = anthropic.NewFromConfig(cfg.AI)
+		aiProvider = llmdriver.NewFromConfig(cfg.AI)
 	}
 	s.aiChat = aiusecase.NewChat(aiusecase.ChatDeps{
 		Store: airepo.New(deps.DB), Tools: s.aiTools, Actions: s.aiActions,

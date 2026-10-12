@@ -75,7 +75,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	ioadapters "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm"
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/anthropic"
+	llmdriver "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/llm/driver"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/mail"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
@@ -423,7 +423,7 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		triagePhotos = store
 	}
 	w.WithWarrantyClaimTriage(warrantyclaimsusecase.NewTriage(warrantyclaimsusecase.TriageDeps{
-		Conn: pool, Provider: anthropic.NewFromConfig(cfg.AI), Models: llm.ModelsFromConfig(cfg.AI),
+		Conn: pool, Provider: llmdriver.NewFromConfig(cfg.AI), Models: llm.ModelsFromConfig(cfg.AI),
 		Features: featureSvc, Storage: triagePhotos, Log: log,
 	}).Auto)
 	// TEC-396 (F4-02c): WhatsApp AI pipeline (whatsapp queue).

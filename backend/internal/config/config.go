@@ -57,13 +57,37 @@ type PlacesConfig struct {
 // ai_settings.default_model / fast_model; AllowedModels is the allow list
 // (empty = the two env models).
 type AIConfig struct {
-	APIKey         string
-	BaseURL        string
+	// Provider selects the driver (TEC-636): AIProviderAnthropic (default)
+	// or AIProviderOpenAI, any OpenAI-compatible Chat Completions API
+	// (OpenAI, OpenRouter, Gemini, Groq, DeepSeek, Ollama, LM Studio, vLLM).
+	Provider string
+	// APIKey / BaseURL are the Anthropic credentials (ANTHROPIC_*).
+	APIKey  string
+	BaseURL string
+	// OpenAIAPIKey / OpenAIBaseURL are the OpenAI-compatible endpoint
+	// (OPENAI_*). A local server needs no key: a set base URL enables it.
+	OpenAIAPIKey   string
+	OpenAIBaseURL  string
 	DefaultModel   string
 	FastModel      string
 	AllowedModels  []string
 	MaxTokens      int
 	RequestTimeout time.Duration
+}
+
+// AI providers (AI_PROVIDER).
+const (
+	AIProviderAnthropic = "anthropic"
+	AIProviderOpenAI    = "openai"
+)
+
+// DefaultAIModels is the chat and fast model used when AI_MODEL_DEFAULT /
+// AI_MODEL_FAST are unset, per provider.
+func DefaultAIModels(provider string) (chat, fast string) {
+	if provider == AIProviderOpenAI {
+		return "gpt-4.1", "gpt-4.1-mini"
+	}
+	return "claude-sonnet-5-5", "claude-haiku-4-5"
 }
 
 // LeadsConfig caps the public dealer application form
@@ -330,6 +354,8 @@ func Load() (Config, error) {
 
 	frontendURL := getEnv("PUBLIC_FRONTEND_URL", "http://localhost:3000")
 
+	aiProvider := strings.ToLower(strings.TrimSpace(getEnv("AI_PROVIDER", AIProviderAnthropic)))
+	aiDefaultModel, aiFastModel := DefaultAIModels(aiProvider)
 	cfg := Config{
 		App: AppConfig{
 			Name:             getEnv("APP_NAME", "api"),
@@ -480,10 +506,13 @@ func Load() (Config, error) {
 			MaxRetryAfter:  getDuration("GLORIAN_INVENTORY_MAX_RETRY_AFTER", 60*time.Second),
 		},
 		AI: AIConfig{
+			Provider:       aiProvider,
 			APIKey:         strings.TrimSpace(getEnv("ANTHROPIC_API_KEY", "")),
 			BaseURL:        getEnv("ANTHROPIC_BASE_URL", ""),
-			DefaultModel:   getEnv("AI_MODEL_DEFAULT", "claude-sonnet-5-5"),
-			FastModel:      getEnv("AI_MODEL_FAST", "claude-haiku-4-5"),
+			OpenAIAPIKey:   strings.TrimSpace(getEnv("OPENAI_API_KEY", "")),
+			OpenAIBaseURL:  strings.TrimSpace(getEnv("OPENAI_BASE_URL", "")),
+			DefaultModel:   getEnv("AI_MODEL_DEFAULT", aiDefaultModel),
+			FastModel:      getEnv("AI_MODEL_FAST", aiFastModel),
 			AllowedModels:  splitCSV(getEnv("AI_ALLOWED_MODELS", "")),
 			MaxTokens:      getInt("AI_MAX_TOKENS", 8000),
 			RequestTimeout: getDuration("AI_REQUEST_TIMEOUT", 120*time.Second),
@@ -508,6 +537,11 @@ const (
 func (c Config) validate() error {
 	if c.App.Name == "" {
 		return fmt.Errorf("config: APP_NAME is required")
+	}
+	switch c.AI.Provider {
+	case "", AIProviderAnthropic, AIProviderOpenAI:
+	default:
+		return fmt.Errorf("config: AI_PROVIDER must be %q or %q", AIProviderAnthropic, AIProviderOpenAI)
 	}
 	if c.HTTP.Addr == "" {
 		return fmt.Errorf("config: APP_HTTP_ADDR is required")
