@@ -194,13 +194,17 @@ set_kv WUZAPI_WEBHOOK_SECRET "$(secret WUZAPI_WEBHOOK_SECRET hex 32)"
 set_kv WUZAPI_WEBHOOK_URL "$(keep WUZAPI_WEBHOOK_URL "http://backend.$NET:8080/hooks/wuzapi")"
 # AES-256 key, exactly 32 characters. Never rotated by this script.
 set_kv WUZAPI_GLOBAL_ENCRYPTION_KEY "$(stable WUZAPI_GLOBAL_ENCRYPTION_KEY 0 hex 16)"
-# --- AI assistant (Anthropic). The API key is entered by hand and kept on
-# re-run; empty = AI disabled (503 AI_UNAVAILABLE). ---
+# --- AI assistant. AI_PROVIDER anthropic | openai (any OpenAI-compatible
+# API, TEC-636). Keys are entered by hand and kept on re-run; no credentials
+# = AI disabled (503 AI_UNAVAILABLE). Empty models = provider defaults. ---
+set_kv AI_PROVIDER "$(keep AI_PROVIDER anthropic)"
 set_kv ANTHROPIC_API_KEY "$(keep ANTHROPIC_API_KEY "")"
 set_kv ANTHROPIC_BASE_URL "$(keep ANTHROPIC_BASE_URL "")"
-set_kv AI_MODEL_DEFAULT "$(keep AI_MODEL_DEFAULT claude-sonnet-5-5)"
-set_kv AI_MODEL_FAST "$(keep AI_MODEL_FAST claude-haiku-4-5)"
-set_kv AI_ALLOWED_MODELS "$(keep AI_ALLOWED_MODELS claude-sonnet-5-5,claude-haiku-4-5)"
+set_kv OPENAI_API_KEY "$(keep OPENAI_API_KEY "")"
+set_kv OPENAI_BASE_URL "$(keep OPENAI_BASE_URL "")"
+set_kv AI_MODEL_DEFAULT "$(keep AI_MODEL_DEFAULT "")"
+set_kv AI_MODEL_FAST "$(keep AI_MODEL_FAST "")"
+set_kv AI_ALLOWED_MODELS "$(keep AI_ALLOWED_MODELS "")"
 set_kv AI_MAX_TOKENS "$(keep AI_MAX_TOKENS 8000)"
 set_kv AI_REQUEST_TIMEOUT "$(keep AI_REQUEST_TIMEOUT 120s)"
 # --- Dealer showcase Google rating (Places API New, optional, paid). Entered
