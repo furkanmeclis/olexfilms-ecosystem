@@ -93,17 +93,20 @@ func main() {
 		log.Error("encryption_init_failed", "error", err)
 		os.Exit(1)
 	}
+	reviewQueue := queue.NewClient(cfg.Redis)
+	defer func() { _ = reviewQueue.Close() }()
 	// TEC-143: same factory as the in-process worker and the API server.
+	// TEC-632: with the queue, a failed delivery is retried by asynq; without
+	// it the service ran in sync mode and a transient failure (WhatsApp
+	// session down, SMTP hiccup) dropped the notification for good.
 	notifSvc, waSvc := notifmodule.NewWithWhatsApp(notifmodule.Deps{
-		Config: cfg, Queries: queries, Realtime: publisher,
+		Config: cfg, Queries: queries, Queue: reviewQueue, Realtime: publisher,
 		Mail: mail.NewSMTPSender(cfg.SMTP), SMS: sms.Noop{Log: log}, Log: log,
 	}, pool, secretBox)
 	if err := notifusecase.SyncCatalog(ctx, queries); err != nil {
 		log.Warn("notification_catalog_sync_failed", "error", err)
 	}
 
-	reviewQueue := queue.NewClient(cfg.Redis)
-	defer func() { _ = reviewQueue.Close() }()
 	eventBus := events.NewBus(log)
 	outboxStore := outbox.NewStore(pool, queries)
 	notifmodule.RegisterEventHandlers(eventBus, notifSvc, log,

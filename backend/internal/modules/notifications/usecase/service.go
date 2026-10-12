@@ -268,7 +268,8 @@ func (s *Service) scheduleDeliver(ctx context.Context, id int64) error {
 	}
 	// TaskID = notification id: a retried dispatch never enqueues twice.
 	_, err = s.queue.Enqueue(task, asynq.Queue(queue.QueueNotifications),
-		asynq.TaskID(fmt.Sprintf("notification:%d", id)))
+		asynq.TaskID(fmt.Sprintf("notification:%d", id)),
+		asynq.MaxRetry(DeliverMaxRetry))
 	if errors.Is(err, asynq.ErrTaskIDConflict) {
 		return nil
 	}
@@ -276,6 +277,13 @@ func (s *Service) scheduleDeliver(ctx context.Context, id int64) error {
 }
 
 const DefaultStuckProcessingMinutes int32 = 2
+
+// DeliverMaxRetry caps asynq retries of one delivery (TEC-632): 5 attempts in
+// all, matching notifications.max_attempts. With asynq's default backoff the
+// last retry lands about a quarter of an hour after the first try, enough for
+// a transient failure, and a message is never sent days late (the default of
+// 25 retries spans weeks).
+const DeliverMaxRetry = 4
 
 // Deliver processes one queued notification.
 func (s *Service) Deliver(ctx context.Context, id int64) error {
