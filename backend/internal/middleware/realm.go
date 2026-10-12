@@ -15,6 +15,9 @@ var portalAuthRoutes = []string{
 	"/v1/auth/profile",
 	"/v1/auth/password/change",
 	"/v1/auth/sessions",
+	// TEC-637: fleet users sign in with e-mail + password and manage their
+	// own authenticator 2FA; the handlers refuse other portal accounts.
+	"/v1/auth/totp",
 }
 
 // RealmAllows reports whether a token of realm may call path (TEC-90, TEC-91):

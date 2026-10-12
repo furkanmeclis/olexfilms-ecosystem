@@ -500,3 +500,33 @@ export const portalApi = {
     );
   },
 };
+
+/**
+ * Authenticator 2FA of a fleet account through the portal BFF (TEC-637);
+ * same responses as the panel's authService calls.
+ */
+export const portalTotpApi = {
+  getTOTPStatus() {
+    return portalRequest<{ enabled: boolean; confirmed_at?: string | null }>(
+      "auth/totp",
+    );
+  },
+  setupTOTP() {
+    return portalRequest<{ secret: string; otpauth_url: string }>(
+      "auth/totp/setup",
+      { method: "POST" },
+    );
+  },
+  confirmTOTP(code: string) {
+    return portalRequest<{ enabled: boolean; recovery_codes: string[] }>(
+      "auth/totp/confirm",
+      { method: "POST", body: { code } },
+    );
+  },
+  disableTOTP(code: string) {
+    return portalRequest<{ status: string }>("auth/totp/disable", {
+      method: "POST",
+      body: { code },
+    });
+  },
+};

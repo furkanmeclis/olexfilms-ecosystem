@@ -513,6 +513,8 @@ const PORTAL_PATHS: readonly RegExp[] = [
   /^auth\/password\/(forgot|reset|change)$/,
   /^auth\/otp\/request$/,
   /^auth\/sessions(\/[^/]+)?$/,
+  // Fleet accounts manage their authenticator 2FA (TEC-637).
+  /^auth\/totp(\/(setup|confirm|disable))?$/,
   // Vehicle catalog reads for portal tokens (TEC-149/150); also covered by
   // the portal/* rule below, listed so the contract is explicit.
   /^portal\/vehicle-catalog\/(brands|models)$/,
