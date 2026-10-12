@@ -30,7 +30,26 @@ func withRecipientAllowlist(gw usecase.Gateway, numbers []string, log *slog.Logg
 		log = slog.Default()
 	}
 	log.Warn("whatsapp_recipient_allowlist_active", "count", list.Len())
-	return &allowlistGateway{Gateway: gw, list: list, log: log}
+	g := &allowlistGateway{Gateway: gw, list: list, log: log}
+	// TEC-634: the service finds media download support with a type
+	// assertion on the gateway, so the wrapper must keep exposing it when
+	// (and only when) the wrapped gateway has it; inbound media is not an
+	// outbound send and is not subject to the allowlist.
+	if d, ok := gw.(platwa.MediaDownloader); ok {
+		return &allowlistMediaGateway{allowlistGateway: g, downloader: d}
+	}
+	return g
+}
+
+// allowlistMediaGateway is allowlistGateway over a gateway that can also
+// download inbound media.
+type allowlistMediaGateway struct {
+	*allowlistGateway
+	downloader platwa.MediaDownloader
+}
+
+func (g *allowlistMediaGateway) DownloadMedia(ctx context.Context, m platwa.InboundMedia, max int64) ([]byte, error) {
+	return g.downloader.DownloadMedia(ctx, m, max)
 }
 
 func (g *allowlistGateway) check(to, kind string) error {
