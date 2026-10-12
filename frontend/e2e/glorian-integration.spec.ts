@@ -121,6 +121,7 @@ test("glorian admin: masked key, test, replay, reconcile drift", async ({
 
   await page.route(
     (url) =>
+      url.hostname === "127.0.0.1" &&
       url.pathname.startsWith("/api/") &&
       !url.pathname.startsWith("/api/auth/"),
     async (route: Route) => {

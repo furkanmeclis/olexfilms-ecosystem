@@ -476,6 +476,7 @@ export async function installF4Platform(page: Page) {
   };
   await page.route(
     (url) =>
+      url.hostname === "127.0.0.1" &&
       url.pathname.startsWith("/api/") &&
       !url.pathname.startsWith("/api/auth/"),
     async (route) => {

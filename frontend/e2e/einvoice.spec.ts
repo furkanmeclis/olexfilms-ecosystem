@@ -277,6 +277,7 @@ test("the e-invoice menu sits under Muhasebe only with the module", async ({
   await page.unrouteAll({ behavior: "ignoreErrors" });
   await page.route(
     (url) =>
+      url.hostname === "127.0.0.1" &&
       url.pathname.startsWith("/api/") &&
       !url.pathname.startsWith("/api/auth/"),
     (route) => off.handle(route),

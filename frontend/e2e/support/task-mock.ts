@@ -264,6 +264,7 @@ export async function mockTasks(page: Page): Promise<TaskMock> {
   const api = new TaskMock();
   await page.route(
     (url) =>
+      url.hostname === "127.0.0.1" &&
       url.pathname.startsWith("/api/") &&
       !url.pathname.startsWith("/api/auth/"),
     (route) => api.handle(route),

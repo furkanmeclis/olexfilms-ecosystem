@@ -240,6 +240,7 @@ async function mockDealerFlow(page: Page): Promise<DealerFlow> {
   const api = new DealerFlow();
   await page.route(
     (url) =>
+      url.hostname === "127.0.0.1" &&
       url.pathname.startsWith("/api/") &&
       !url.pathname.startsWith("/api/auth/"),
     (route) => api.handle(route),
