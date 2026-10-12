@@ -119,6 +119,7 @@ test("platform inbox: list, split view, reply, attachment limit, AI mode", async
   let current = { ...conversation };
   await page.route(
     (url) =>
+      url.hostname === "127.0.0.1" &&
       url.pathname.startsWith("/api/") &&
       !url.pathname.startsWith("/api/auth/"),
     async (route: Route) => {
