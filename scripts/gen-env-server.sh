@@ -74,7 +74,13 @@ NET="$PREFIX-app"
 
 hex() { openssl rand -hex "$1"; }
 b64() { openssl rand -base64 "$1" | tr -d '\n'; }
-alnum() { LC_ALL=C tr -dc 'A-Z0-9' </dev/urandom | head -c "$1" || true; }
+# Finite input, not `tr </dev/urandom | head`: where SIGPIPE is ignored
+# (launchd services such as the self-hosted CI runner) tr never exits.
+alnum() {
+  local s=""
+  while [ "${#s}" -lt "$1" ]; do s="$s$(openssl rand -base64 64 | LC_ALL=C tr -dc 'A-Z0-9')"; done
+  printf '%s' "${s:0:$1}"
+}
 
 # Existing value of KEY in the current output file.
 existing() {
