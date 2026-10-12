@@ -31,6 +31,7 @@ func (h *Handler) PublicNearbyDealers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	in, details := parseNearbyQuery(r)
+	in.Locale = publicLocale(r)
 	if len(details) > 0 {
 		response.ErrorWithDetails(w, r, http.StatusBadRequest, response.CodeValidationError, "Invalid nearby query", details)
 		return

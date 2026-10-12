@@ -291,6 +291,7 @@ var frCatalog = map[string]string{
 	"contracts.pdf.number":                             "N° de contrat",
 	"contracts.pdf.date":                               "Date du contrat",
 	"contracts.pdf.party":                              "Partie",
+	"showcase.whatsapp_prefill":                        "Bonjour, je souhaite des informations sur {{name}}.",
 	"contracts.pdf.signatures":                         "Signatures des parties",
 	"contracts.pdf.signed_at":                          "Signé le",
 	"contracts.pdf.otp_verified":                       "Vérifié par code à usage unique",

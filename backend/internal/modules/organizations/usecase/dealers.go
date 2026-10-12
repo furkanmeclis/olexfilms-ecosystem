@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	platwa "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -112,6 +113,8 @@ type NearbyInput struct {
 	Lat      float64
 	Lng      float64
 	RadiusKm float64
+	// Locale is the language of the click-to-chat prefill (TEC-638).
+	Locale string
 }
 
 // NearbyDealer is one row of GET /v1/public/dealers/nearby.
@@ -127,6 +130,9 @@ type NearbyDealer struct {
 	DistanceKm          float64   `json:"distance_km"`
 	AcceptsAppointments bool      `json:"accepts_appointments"`
 	WhatsApp            *string   `json:"whatsapp"`
+	// WhatsAppChatURL routes the chat through the center number with
+	// "#<slug>" (TEC-468, TEC-638); absent without a center number.
+	WhatsAppChatURL *string `json:"whatsapp_chat_url,omitempty"`
 	// TEC-467: the dealer serves a published showcase (module on) and its
 	// Google rating (null when unrated or without a showcase).
 	HasShowcase  bool     `json:"has_showcase"`
@@ -142,6 +148,10 @@ func (s *Service) NearbyDealers(ctx context.Context, brandID int64, in NearbyInp
 	if err != nil {
 		return nil, err
 	}
+	center := ""
+	if st, err := s.q.GetWhatsAppSettings(ctx); err == nil && st.PhoneE164.Valid {
+		center = st.PhoneE164.String
+	}
 	out := make([]NearbyDealer, 0, len(rows))
 	for _, r := range rows {
 		d := NearbyDealer{
@@ -153,6 +163,9 @@ func (s *Service) NearbyDealers(ctx context.Context, brandID int64, in NearbyInp
 		if e164.MatchString(r.Phone) {
 			p := r.Phone
 			d.WhatsApp = &p
+		}
+		if u := platwa.DealerChatURL(center, in.Locale, r.Name, r.Slug); u != "" {
+			d.WhatsAppChatURL = &u
 		}
 		out = append(out, d)
 	}

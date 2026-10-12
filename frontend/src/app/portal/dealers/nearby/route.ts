@@ -2,6 +2,7 @@ import {
   nearbyQueryString,
   parseNearbyQuery,
 } from "@/features/dealers/lib/dealers";
+import { acceptLanguageFor } from "@/lib/server/accept-language";
 import {
   clientIpFromHeaders,
   fetchUpstream,
@@ -13,7 +14,9 @@ import {
  * → Go `GET /v1/public/dealers/nearby` (TEC-240). No session and no cookies;
  * the client IP (Go's per-IP limit) and host (brand, K3) are forwarded.
  * A malformed query is 400 without calling Go; Go's status, body and
- * Retry-After are passed through.
+ * Retry-After are passed through. The visitor's language goes along as
+ * Accept-Language so each dealer's center WhatsApp link is prefilled in it
+ * (TEC-638).
  */
 export const dynamic = "force-dynamic";
 
@@ -40,6 +43,7 @@ export async function GET(request: Request) {
   if (ip) headers.set("X-Forwarded-For", ip);
   const host = forwardedHostFromHeaders(request.headers);
   if (host) headers.set("X-Forwarded-Host", host);
+  headers.set("Accept-Language", acceptLanguageFor(request));
 
   let res;
   try {

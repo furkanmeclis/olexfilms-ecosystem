@@ -291,6 +291,7 @@ var arCatalog = map[string]string{
 	"contracts.pdf.number":                             "رقم العقد",
 	"contracts.pdf.date":                               "التاريخ",
 	"contracts.pdf.party":                              "الطرف",
+	"showcase.whatsapp_prefill":                        "مرحبًا، أود الحصول على معلومات عن {{name}}.",
 	"contracts.pdf.signatures":                         "التواقيع",
 	"contracts.pdf.signed_at":                          "تاريخ التوقيع",
 	"contracts.pdf.otp_verified":                       "تم التحقق برمز OTP",

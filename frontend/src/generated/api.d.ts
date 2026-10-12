@@ -18741,6 +18741,8 @@ export interface components {
             accepts_appointments: boolean;
             /** @description E.164 phone */
             whatsapp: string | null;
+            /** @description TEC-638 click-to-chat link through the center WhatsApp number (wa.me, localized prefill ending in "#<code>"); absent when no center number is set. Locale from ?locale= or Accept-Language. */
+            whatsapp_chat_url?: string;
             /** @description TEC-467. A published showcase with the dealer_showcase module on */
             has_showcase: boolean;
             /** @description TEC-467. Google rating of the showcase (null without one); TEC-469: same pick as the public showcase block */
@@ -18768,6 +18770,8 @@ export interface components {
             longitude: number | null;
             /** @description E.164 phone */
             whatsapp: string | null;
+            /** @description TEC-638 click-to-chat link through the center WhatsApp number (wa.me with a localized prefilled message ending in "#<code>", TEC-468). Absent when no center number is configured. */
+            whatsapp_chat_url?: string;
             /**
              * @description TEC-467. Present only while the dealer_showcase module is on and
              *     a showcase is published; otherwise the key is absent and the
@@ -19079,7 +19083,7 @@ export interface components {
             google_place_id: string | null;
             /** @description The leads module is on for the dealer */
             lead_form_enabled: boolean;
-            /** @description wa.me link of the dealer phone (E.164) */
+            /** @description TEC-638: wa.me link of the center number with a localized prefill ending in "#<code>"; falls back to the dealer phone when no center number is set */
             whatsapp_chat_url: string | null;
             /** Format: date-time */
             published_at: string;

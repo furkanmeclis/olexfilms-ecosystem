@@ -198,7 +198,9 @@ function DealerCard({
   const locality = dealerLocality(dealer);
   const logo = dealerLogoSrc(dealer);
   const showcase = dealer.showcase;
+  // TEC-638: the center number with "#code" first, the dealer phone last.
   const wa =
+    dealer.whatsapp_chat_url ??
     showcase?.whatsapp_chat_url ??
     whatsappHref(
       dealer.whatsapp,

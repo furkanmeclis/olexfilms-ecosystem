@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/dealershowcase/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	platwa "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -177,7 +178,11 @@ func (s *Service) PublicBlock(ctx context.Context, brandID int64, code, locale s
 	} else {
 		out.LeadFormEnabled = true
 	}
-	if e164.MatchString(org.Phone) {
+	// TEC-638: the center number with "#<code>" (TEC-468); the dealer's own
+	// phone only when no center number is configured.
+	if u := s.centerChatURL(ctx, chain[0], org.Name, code); u != "" {
+		out.WhatsAppChatURL = &u
+	} else if e164.MatchString(org.Phone) {
 		u := "https://wa.me/" + strings.TrimPrefix(org.Phone, "+")
 		out.WhatsAppChatURL = &u
 	}
@@ -312,4 +317,14 @@ func (s *Service) PublishedDates(ctx context.Context, brandID int64) (map[string
 		}
 	}
 	return out, nil
+}
+
+// centerChatURL is the click-to-chat link through the center's WhatsApp
+// number; empty when the number is not set.
+func (s *Service) centerChatURL(ctx context.Context, locale, name, code string) string {
+	st, err := s.q.GetWhatsAppSettings(ctx)
+	if err != nil || !st.PhoneE164.Valid {
+		return ""
+	}
+	return platwa.DealerChatURL(st.PhoneE164.String, locale, name, code)
 }

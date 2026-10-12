@@ -18,6 +18,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sysconfig"
+	platwa "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -336,7 +337,7 @@ func (a *Applications) showcaseTarget(ctx context.Context, brandID int64, code s
 	return row, nil
 }
 
-func (a *Applications) ShowcaseLeadConfig(ctx context.Context, brandID int64, code, lang, formToken, whatsappText string) (ShowcaseLeadConfig, error) {
+func (a *Applications) ShowcaseLeadConfig(ctx context.Context, brandID int64, code, lang, formToken string) (ShowcaseLeadConfig, error) {
 	target, err := a.showcaseTarget(ctx, brandID, code)
 	if err != nil {
 		return ShowcaseLeadConfig{}, err
@@ -356,9 +357,11 @@ func (a *Applications) ShowcaseLeadConfig(ctx context.Context, brandID int64, co
 	if err != nil {
 		return ShowcaseLeadConfig{}, err
 	}
+	// TEC-638: same click-to-chat link as the dealer page (center number,
+	// localized prefill with the dealer name, "#<code>").
 	wa := ""
 	if st, err := a.q.GetWhatsAppSettings(ctx); err == nil && st.PhoneE164.Valid {
-		wa = "https://wa.me/" + strings.TrimPrefix(st.PhoneE164.String, "+") + "?text=" + whatsappText
+		wa = platwa.DealerChatURL(st.PhoneE164.String, locale, target.Name, target.Slug)
 	}
 	iso2 := target.CountryIso2.String
 	if iso2 == "" {

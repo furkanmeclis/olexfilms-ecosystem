@@ -34204,6 +34204,12 @@ components:
         distance_km: { type: number, description: Haversine distance in km (2 decimals) }
         accepts_appointments: { type: boolean }
         whatsapp: { type: [string, "null"], description: E.164 phone }
+        whatsapp_chat_url:
+          type: string
+          description: >-
+            TEC-638 click-to-chat link through the center WhatsApp number
+            (wa.me, localized prefill ending in "#<code>"); absent when no
+            center number is set. Locale from ?locale= or Accept-Language.
         has_showcase: { type: boolean, description: "TEC-467. A published showcase with the dealer_showcase module on" }
         google_rating: { type: [number, "null"], description: "TEC-467. Google rating of the showcase (null without one); TEC-469: same pick as the public showcase block" }
 
@@ -34235,6 +34241,12 @@ components:
         latitude: { type: [number, "null"] }
         longitude: { type: [number, "null"] }
         whatsapp: { type: [string, "null"], description: E.164 phone }
+        whatsapp_chat_url:
+          type: string
+          description: >-
+            TEC-638 click-to-chat link through the center WhatsApp number
+            (wa.me with a localized prefilled message ending in "#<code>",
+            TEC-468). Absent when no center number is configured.
         showcase:
           $ref: "#/components/schemas/PublicDealerShowcaseBlock"
           description: |
@@ -34624,7 +34636,7 @@ components:
             snapshot. JSON-LD aggregateRating is written only for `places`.
         google_place_id: { type: [string, "null"] }
         lead_form_enabled: { type: boolean, description: The leads module is on for the dealer }
-        whatsapp_chat_url: { type: [string, "null"], description: "wa.me link of the dealer phone (E.164)" }
+        whatsapp_chat_url: { type: [string, "null"], description: "TEC-638: wa.me link of the center number with a localized prefill ending in \"#<code>\"; falls back to the dealer phone when no center number is set" }
         published_at: { type: string, format: date-time }
 
     PublicDealerCode:

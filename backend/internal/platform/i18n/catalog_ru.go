@@ -291,6 +291,7 @@ var ruCatalog = map[string]string{
 	"contracts.pdf.number":                             "№ договора",
 	"contracts.pdf.date":                               "Дата",
 	"contracts.pdf.party":                              "Сторона",
+	"showcase.whatsapp_prefill":                        "Здравствуйте, я хотел бы узнать подробнее о {{name}}.",
 	"contracts.pdf.signatures":                         "Подписи",
 	"contracts.pdf.signed_at":                          "Подписан",
 	"contracts.pdf.otp_verified":                       "Подтверждено одноразовым кодом",
