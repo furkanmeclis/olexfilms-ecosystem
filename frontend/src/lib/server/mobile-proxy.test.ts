@@ -15,6 +15,9 @@ vi.mock("@/lib/server/upstream", () => ({
       method: init.method,
       headers: new Headers(init.headers),
     });
+    if (path.endsWith("/no-content")) {
+      return { status: 204, headers: new Headers(), body: new ArrayBuffer(0) };
+    }
     const body = JSON.stringify({
       success: true,
       data: { access_token: "a", refresh_token: "r" },
@@ -87,6 +90,19 @@ describe("mobile Bearer passthrough (TEC-91)", () => {
     expect(res.headers.get("x-mobile-api-version")).toBe("1");
     expect(res.headers.get("set-cookie")).toBeNull();
     expect(sessionTouched).not.toHaveBeenCalled();
+  });
+
+  // TEC-649: a 204 used to throw in the Response constructor (500).
+  it("passes a 204 through without a body", async () => {
+    const res = await proxyMobileToUpstream(
+      ["notifications", "no-content"],
+      req("notifications/no-content", {
+        method: "DELETE",
+        headers: { Authorization: "Bearer mobile-access" },
+      }),
+    );
+    expect(res.status).toBe(204);
+    expect(res.body).toBeNull();
   });
 
   it("refuses a request that carries cookies with 400", async () => {
