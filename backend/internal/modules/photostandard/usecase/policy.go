@@ -1,14 +1,10 @@
 package usecase
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"html"
-	"image"
-	"image/jpeg"
-	_ "image/png" // decoder for intake photos
 	"io"
 	"strings"
 
@@ -16,13 +12,12 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/imagefit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/jackc/pgx/v5"
-	xdraw "golang.org/x/image/draw"
-	"golang.org/x/image/webp"
 )
 
 // TEC-499 (F5-07b): the photo standard rule, the intake photo grid of the
@@ -251,43 +246,11 @@ func (s *Service) pdfImage(ctx context.Context, p db.IntakePhoto) []byte {
 	return out
 }
 
-// DownscaleJPEG decodes a JPEG, PNG or WebP image, fits it into maxPx on the
-// longer side and re-encodes it as a metadata-free JPEG.
+// DownscaleJPEG decodes a JPEG, PNG or WebP image, turns it upright by its
+// EXIF orientation (TEC-643), fits it into maxPx on the longer side and
+// re-encodes it as a metadata-free JPEG.
 func DownscaleJPEG(raw []byte, mime string, maxPx int) ([]byte, error) {
-	var (
-		src image.Image
-		err error
-	)
-	if mime == "image/webp" {
-		src, err = webp.Decode(bytes.NewReader(raw))
-	} else {
-		src, _, err = image.Decode(bytes.NewReader(raw))
-	}
-	if err != nil {
-		return nil, err
-	}
-	bounds := src.Bounds()
-	w, h := bounds.Dx(), bounds.Dy()
-	if w <= 0 || h <= 0 {
-		return nil, fmt.Errorf("photo_standard: empty image")
-	}
-	if w > maxPx || h > maxPx {
-		if w >= h {
-			h = h * maxPx / w
-			w = maxPx
-		} else {
-			w = w * maxPx / h
-			h = maxPx
-		}
-		w, h = max(w, 1), max(h, 1)
-	}
-	dst := image.NewRGBA(image.Rect(0, 0, w, h))
-	xdraw.ApproxBiLinear.Scale(dst, dst.Bounds(), src, bounds, xdraw.Src, nil)
-	var buf bytes.Buffer
-	if err := jpeg.Encode(&buf, dst, &jpeg.Options{Quality: 80}); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return imagefit.JPEG(raw, mime, maxPx)
 }
 
 // AngleName picks the angle label in locale (then tr, en, any), falling back
