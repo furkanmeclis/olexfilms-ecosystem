@@ -56,7 +56,10 @@ const (
 
 	MaxSignatureBytes = 1 << 20
 	MaxMediaBytes     = 12 << 20
-	signWindow        = 30 * time.Minute
+	// PDFMediaMaxPx is the longer side of a contract image in the PDF
+	// (TEC-642).
+	PDFMediaMaxPx = 1600
+	signWindow    = 30 * time.Minute
 )
 
 // UnknownVariablesError lists placeholders that are not allowed.

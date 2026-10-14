@@ -18,6 +18,7 @@ import (
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	psmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/imagefit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
@@ -296,6 +297,11 @@ func (s *Service) imageTag(ctx context.Context, key, mime, alt string) string {
 	data, err := io.ReadAll(io.LimitReader(rc, MaxMediaBytes))
 	if err != nil {
 		return ""
+	}
+	// TEC-642: a phone photo embedded as is is decoded to a raw bitmap in
+	// the PDF (tens of MB); shrink it, upright, as JPEG.
+	if small, err := imagefit.JPEG(data, mime, PDFMediaMaxPx); err == nil {
+		data, mime = small, "image/jpeg"
 	}
 	return pdfrender.ImageTag(mime, data, alt)
 }
