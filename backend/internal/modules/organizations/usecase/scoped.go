@@ -29,12 +29,9 @@ func (s *Service) ListInScope(ctx context.Context, f scopefilter.Filter, in Scop
 	if err != nil {
 		return nil, err
 	}
-	typ := pgtype.Text{}
-	if t := strings.TrimSpace(in.Type); t != "" {
-		if t != TypeCenter && t != TypeDistributor && t != TypeDealer {
-			return nil, fmt.Errorf("%w: invalid type", ErrInvalidRequest)
-		}
-		typ = pgtype.Text{String: t, Valid: true}
+	typ, err := scopedType(in.Type)
+	if err != nil {
+		return nil, err
 	}
 	if in.Limit <= 0 || in.Limit > 200 {
 		in.Limit = 50
@@ -70,7 +67,40 @@ func (s *Service) ListInScope(ctx context.Context, f scopefilter.Filter, in Scop
 	return out, nil
 }
 
-// GetInScope returns one organization when the filter reaches it. Anything
+// CountInScope counts what ListInScope matches without paging, minus the
+// exclude organization (the AI tools leave the caller's own row out). Q is
+// matched by SQL (name / dealer code), not the index (TEC-647).
+func (s *Service) CountInScope(ctx context.Context, f scopefilter.Filter, in ScopedListInput, exclude uuid.UUID) (int64, error) {
+	brand, err := RequestBrand(ctx)
+	if err != nil {
+		return 0, err
+	}
+	typ, err := scopedType(in.Type)
+	if err != nil {
+		return 0, err
+	}
+	return s.q.CountOrganizationsInScope(ctx, db.CountOrganizationsInScopeParams{
+		OrgIds:      f.OrgIDsArg(),
+		BrandID:     pgtype.Int8{Int64: brand.ID, Valid: true},
+		Type:        typ,
+		Q:           scopedQuery(in.Q),
+		ExcludeUuid: pgtype.UUID{Bytes: exclude, Valid: exclude != uuid.Nil},
+	})
+}
+
+// scopedType validates the optional organization type filter.
+func scopedType(t string) (pgtype.Text, error) {
+	t = strings.TrimSpace(t)
+	if t == "" {
+		return pgtype.Text{}, nil
+	}
+	if t != TypeCenter && t != TypeDistributor && t != TypeDealer {
+		return pgtype.Text{}, fmt.Errorf("%w: invalid type", ErrInvalidRequest)
+	}
+	return pgtype.Text{String: t, Valid: true}, nil
+}
+
+// GetInScope returns// GetInScope returns one organization when the filter reaches it. Anything
 // outside the scope reads as not found, so other distributors' dealers are
 // not even confirmed to exist.
 func (s *Service) GetInScope(ctx context.Context, f scopefilter.Filter, id uuid.UUID) (Organization, error) {

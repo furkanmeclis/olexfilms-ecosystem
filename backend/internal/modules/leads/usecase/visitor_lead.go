@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/geo"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -251,6 +252,9 @@ func (a *Applications) UpsertVisitorLead(ctx context.Context, brandID int64, in 
 		if err != nil {
 			return fmt.Errorf("leads: visitor lead: %w", err)
 		}
+		if err := EnqueueChange(ctx, q, events.LeadsCreated, row, pgtype.Int8{}); err != nil {
+			return err
+		}
 		if err := addEvent(ctx, q, row, EventMessage, event, pgtype.Int8{}); err != nil {
 			return fmt.Errorf("leads: visitor lead event: %w", err)
 		}
@@ -289,6 +293,9 @@ func (a *Applications) updateVisitorLead(ctx context.Context, cur db.Lead, v vis
 		})
 		if err != nil {
 			return fmt.Errorf("leads: visitor lead update: %w", err)
+		}
+		if err := EnqueueChange(ctx, q, events.LeadsUpdated, row, pgtype.Int8{}); err != nil {
+			return err
 		}
 		if err := addEvent(ctx, q, row, EventMessage, event, pgtype.Int8{}); err != nil {
 			return fmt.Errorf("leads: visitor lead event: %w", err)

@@ -27,25 +27,42 @@ const ExportNotice = "Tools do not create CSV / XLSX files: for a complete list 
 	"use Export on the matching list screen in the panel."
 
 // List is the common envelope of list results. Total is the number of
-// matching records; Truncated tells the model there are more than it got.
+// matching records, left out when it is not known (TEC-647: never a guess
+// from a capped row set); Truncated tells the model there are more than it
+// got.
 type List[T any] struct {
 	Items     []T    `json:"items"`
 	Returned  int    `json:"returned"`
-	Total     int64  `json:"total"`
+	Total     *int64 `json:"total,omitempty"`
 	Truncated bool   `json:"truncated,omitempty"`
 	Hint      string `json:"hint,omitempty"`
 }
 
-// NewList builds the list envelope.
+// NewList builds the list envelope from an exact total.
 func NewList[T any](items []T, total int64) List[T] {
 	if items == nil {
 		items = []T{}
 	}
-	l := List[T]{Items: items, Returned: len(items), Total: total}
+	l := List[T]{Items: items, Returned: len(items), Total: &total}
 	if total > int64(len(items)) {
 		l.Truncated = true
 		l.Hint = fmt.Sprintf("Showing %d of %d records. Narrow the search (more specific query or filters) instead of paging. ",
 			len(items), total) + ExportNotice
+	}
+	return l
+}
+
+// NewCutList builds the envelope when the total is unknown: the reader
+// fetched one row past the limit (or hit its own cap) and only knows
+// whether more records exist.
+func NewCutList[T any](items []T, truncated bool) List[T] {
+	if items == nil {
+		items = []T{}
+	}
+	l := List[T]{Items: items, Returned: len(items), Truncated: truncated}
+	if truncated {
+		l.Hint = fmt.Sprintf("Showing the first %d records; there are more (total not counted). "+
+			"Narrow the search (more specific query or filters) instead of paging. ", len(items)) + ExportNotice
 	}
 	return l
 }

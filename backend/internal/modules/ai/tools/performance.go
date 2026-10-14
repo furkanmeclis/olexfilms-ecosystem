@@ -47,7 +47,7 @@ type PerformanceDashboard struct{ performanceBase }
 func (PerformanceDashboard) Spec() Spec {
 	return Spec{
 		Name:        "performance_dashboard",
-		Description: "Read the performance dashboard for the active organization: current metrics, previous-period deltas, 12-month trend, targets and subtree summary.",
+		Description: "Read the performance dashboard for the active organization: current metrics, previous-period deltas, 12-month trend, targets and subtree summary. For a center or distributor the metrics are the rollup of its whole subtree (itself and every descendant dealer).",
 		InputSchema: object(map[string]any{"period": str("Optional month in YYYY-MM.", 7)}),
 		Kind:        KindRead, Realm: RealmPanel, Feature: features.ModulePerformance,
 		Permissions: []string{rbac.PermPerformanceRead},

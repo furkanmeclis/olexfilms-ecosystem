@@ -103,6 +103,24 @@ func TestSyncRoutesTEC210Events(t *testing.T) {
 	}
 }
 
+// TEC-645: leads.created / leads.updated refresh the lead document; the
+// notification-only lead events do not enqueue a second upsert.
+func TestSyncRoutesLeadEvents(t *testing.T) {
+	r := &rec{}
+	bus := events.NewBus(nil)
+	Register(bus, &store{}, r, nil)
+	ctx := context.Background()
+
+	l1, l2 := uuid.New(), uuid.New()
+	_ = bus.Publish(ctx, ev(events.LeadsCreated, "lead", l1, nil))
+	_ = bus.Publish(ctx, ev(events.LeadsUpdated, "other", uuid.New(), map[string]any{"lead_uuid": l2.String()}))
+	_ = bus.Publish(ctx, ev(events.LeadsApplicationReceived, "lead", l1, nil))
+	want := []string{"leads/" + l1.String(), "leads/" + l2.String()}
+	if !slices.Equal(r.upserts, want) {
+		t.Fatalf("upserts = %v, want %v", r.upserts, want)
+	}
+}
+
 type disabled struct{ rec }
 
 func (disabled) Enabled() bool { return false }
