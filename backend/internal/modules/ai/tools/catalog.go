@@ -89,6 +89,7 @@ func (t SearchProducts) Run(ctx context.Context, env Env, raw json.RawMessage) (
 // OrganizationsReader is the organizations use case surface the tools use.
 type OrganizationsReader interface {
 	ListInScope(ctx context.Context, f scopefilter.Filter, in orgusecase.ScopedListInput) ([]orgusecase.Organization, error)
+	CountInScope(ctx context.Context, f scopefilter.Filter, in orgusecase.ScopedListInput, exclude uuid.UUID) (int64, error)
 }
 
 // ListSubOrganizations: alt bayiler listesi (distribütör / merkez).
@@ -146,8 +147,10 @@ func (t ListSubOrganizations) Run(ctx context.Context, env Env, raw json.RawMess
 		in.Type = orgusecase.TypeDealer
 	}
 	limit := limitArg(in.Limit)
-	// One extra row tells whether the list was cut.
-	rows, err := t.orgs.ListInScope(ctx, f, orgusecase.ScopedListInput{Type: in.Type, Q: strings.TrimSpace(in.Query), Limit: limit + 1})
+	q := strings.TrimSpace(in.Query)
+	// Two extra rows tell whether the list was cut even when the caller's
+	// own organization (left out below) is among them.
+	rows, err := t.orgs.ListInScope(ctx, f, orgusecase.ScopedListInput{Type: in.Type, Q: q, Limit: limit + 2})
 	if errors.Is(err, orgusecase.ErrInvalidRequest) {
 		return invalidArg(err.Error()), nil
 	}
@@ -166,9 +169,22 @@ func (t ListSubOrganizations) Run(ctx context.Context, env Env, raw json.RawMess
 		}
 		out = append(out, r)
 	}
-	total := int64(len(out))
-	if len(out) > int(limit) {
+	cut := len(out) > int(limit)
+	if cut {
 		out = out[:limit]
+	}
+	// TEC-647: the total is a real count, never the fetched row count. A
+	// query may be answered by the index, whose matches a SQL count would
+	// not reproduce; then only the cut is reported.
+	if q != "" {
+		return JSONResult(NewCutList(out, cut))
+	}
+	total := int64(len(out))
+	if cut {
+		total, err = t.orgs.CountInScope(ctx, f, orgusecase.ScopedListInput{Type: in.Type}, p.Org.UUID)
+		if err != nil {
+			return errs.result(err)
+		}
 	}
 	return JSONResult(NewList(out, total))
 }

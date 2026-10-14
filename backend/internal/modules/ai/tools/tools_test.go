@@ -162,6 +162,10 @@ func (fakeOrgs) ListInScope(context.Context, scopefilter.Filter, orgusecase.Scop
 	return []orgusecase.Organization{{UUID: uuid.New(), Slug: "d1", Name: "Dealer", Type: "dealer"}}, nil
 }
 
+func (fakeOrgs) CountInScope(context.Context, scopefilter.Filter, orgusecase.ScopedListInput, uuid.UUID) (int64, error) {
+	return 1, nil
+}
+
 type fakeFeatures map[string]bool
 
 func (f fakeFeatures) Enabled(_ context.Context, _ int64, key string) (bool, error) {

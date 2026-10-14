@@ -326,6 +326,19 @@ WHERE o.deleted_at IS NULL
 ORDER BY o.type ASC, o.name ASC
 LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 
+-- name: CountOrganizationsInScope :one
+-- TEC-647: the ListOrganizationsInScope filter block (without the uuid set)
+-- counted; exclude_uuid drops the caller's own organization.
+SELECT COUNT(*)::bigint
+FROM organizations o
+WHERE o.deleted_at IS NULL
+  AND o.type <> 'fleet'
+  AND (sqlc.narg(org_ids)::bigint[] IS NULL OR o.id = ANY (sqlc.narg(org_ids)::bigint[]))
+  AND (sqlc.narg(brand_id)::bigint IS NULL OR o.brand_id = sqlc.narg(brand_id))
+  AND (sqlc.narg(type)::text IS NULL OR o.type = sqlc.narg(type))
+  AND (sqlc.narg(q)::text IS NULL OR o.name ILIKE '%' || sqlc.narg(q)::text || '%' OR o.slug ILIKE '%' || sqlc.narg(q)::text || '%')
+  AND (sqlc.narg(exclude_uuid)::uuid IS NULL OR o.uuid <> sqlc.narg(exclude_uuid)::uuid);
+
 -- name: SetOrganizationBulkState :one
 -- TEC-365: platform bulk actions (status change, extend access) and their
 -- undo. Both columns are written as given; the adapter passes the current
