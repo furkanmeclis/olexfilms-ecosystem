@@ -529,6 +529,9 @@ func (a *Applications) SubmitShowcaseLead(ctx context.Context, target db.GetShow
 			if err != nil {
 				return fmt.Errorf("leads: showcase lead: %w", err)
 			}
+			if err := EnqueueChange(ctx, q, events.LeadsCreated, row, pgtype.Int8{}); err != nil {
+				return err
+			}
 			if err := addEvent(ctx, q, row, EventMessage, event, pgtype.Int8{}); err != nil {
 				return fmt.Errorf("leads: showcase lead event: %w", err)
 			}
@@ -634,6 +637,9 @@ func (a *Applications) Submit(ctx context.Context, brandID int64, app Applicatio
 		})
 		if err != nil {
 			return fmt.Errorf("leads: application: %w", err)
+		}
+		if err := EnqueueChange(ctx, q, events.LeadsCreated, row, pgtype.Int8{}); err != nil {
+			return err
 		}
 		if err := addEvent(ctx, q, row, EventMessage, map[string]any{
 			"kind": SourceApplicationForm, "body": app.message, "language": app.language,

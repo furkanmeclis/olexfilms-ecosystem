@@ -688,6 +688,8 @@ func catalogConstants() []string {
 		QuoteSent,
 		LeadsApplicationReceived,
 		LeadsWebsiteReceived,
+		LeadsCreated,
+		LeadsUpdated,
 		MeasurementMatchSuggested,
 		MeasurementDiffCheckRequired,
 		CampaignsSubmitted,
@@ -737,6 +739,15 @@ const LeadsApplicationReceived = "leads.application_received"
 // LeadsWebsiteReceived (TEC-468) is written when the public dealer showcase
 // form opens or updates a customer lead in that dealer's list.
 const LeadsWebsiteReceived = "leads.website_received"
+
+// LeadsCreated / LeadsUpdated (TEC-645) are written in the transaction of
+// every lead write (panel, AI approval, public forms, WhatsApp, bulk,
+// appointment no-show); the search index sync refreshes the lead document
+// from them. Payload carries only the lead uuid and the tenant ids.
+const (
+	LeadsCreated = "leads.created"
+	LeadsUpdated = "leads.updated"
+)
 
 // QuoteSent (TEC-315) is written when a quote is sent or reminded over
 // WhatsApp. Payload carries the recipient phone and public quote URL.

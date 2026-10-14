@@ -24,3 +24,11 @@ Hedef `backend/cmd/search-reindex`'i çalıştırır; bir spec başarısız olur
 arama adapter'ı yalnız oraya eklenir, eklenmezse `TestAdaptersCoverEverySearchAdapter` kırılır.
 Tek bir spec'i worker üzerinden yeniden kurmak için `app:search:reindex` görevi
 `{"spec":"leads"}` yüküyle kuyruğa alınır; boş `spec` hepsini kurar.
+
+Kayıt değişiklikleri indekse outbox üzerinden gider (`backend/internal/modules/search/indexsync`).
+Lead'ler TEC-645'e kadar yalnız tam reindex ile indekse giriyordu; o sürümden önce açılan veya
+değişen lead'lerin aramada görünmesi için bir kez leads spec'i yeniden kurulur:
+
+```sh
+make search-reindex   # ya da worker'da app:search:reindex {"spec":"leads"}
+```

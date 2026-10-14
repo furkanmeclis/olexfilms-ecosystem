@@ -15,6 +15,7 @@ import (
 	orguc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/organizations/usecase"
 	serviceuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/services/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -171,6 +172,9 @@ func (s *Service) Convert(ctx context.Context, c Caller, id uuid.UUID, in Conver
 	out.payload["won_ref_type"] = out.refType
 	out.payload["won_ref_id"] = out.refID
 	if err := addEvent(ctx, q, won, EventConverted, out.payload, c.actor()); err != nil {
+		return ConvertResult{}, err
+	}
+	if err := EnqueueChange(ctx, q, events.LeadsUpdated, won, c.actor()); err != nil {
 		return ConvertResult{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -107,6 +108,9 @@ func (a *Applications) UpsertCustomerAppointmentLead(ctx context.Context, brandI
 		})
 		if err != nil {
 			return fmt.Errorf("leads: customer lead: %w", err)
+		}
+		if err := EnqueueChange(ctx, q, events.LeadsCreated, row, pgtype.Int8{}); err != nil {
+			return err
 		}
 		if err := addEvent(ctx, q, row, EventMessage, event, pgtype.Int8{}); err != nil {
 			return fmt.Errorf("leads: customer lead event: %w", err)
