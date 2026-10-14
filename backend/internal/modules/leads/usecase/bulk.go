@@ -27,6 +27,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/bulkengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -247,6 +248,9 @@ func (a *BulkAdapter) ApplyItem(ctx context.Context, action, entityUUID string) 
 		if err := addEvent(ctx, a.q, row, EventAssigned, map[string]any{"assignee_user_id": assignee, "bulk": true}, c.actor()); err != nil {
 			return bulkengine.BulkItemResult{}, err
 		}
+		if err := EnqueueChange(ctx, a.q, events.LeadsUpdated, row, c.actor()); err != nil {
+			return bulkengine.BulkItemResult{}, err
+		}
 		return res, nil
 	case BulkSetStatus:
 		to := strings.TrimSpace(run.Params[ParamStatus])
@@ -265,10 +269,14 @@ func (a *BulkAdapter) ApplyItem(ctx context.Context, action, entityUUID string) 
 		if to == StatusLost {
 			lost = pgtype.Text{String: strings.TrimSpace(run.Params[ParamLostReason]), Valid: true}
 		}
-		if _, err := a.q.SetLeadStatus(ctx, db.SetLeadStatusParams{
+		row, err := a.q.SetLeadStatus(ctx, db.SetLeadStatusParams{
 			ID: cur.ID, OrganizationID: cur.OrganizationID, Status: to, LostReason: lost,
-		}); err != nil {
+		})
+		if err != nil {
 			return bulkengine.BulkItemResult{}, fmt.Errorf("leads: bulk status: %w", err)
+		}
+		if err := EnqueueChange(ctx, a.q, events.LeadsUpdated, row, c.actor()); err != nil {
+			return bulkengine.BulkItemResult{}, err
 		}
 		return res, nil
 	default:
@@ -327,7 +335,10 @@ func (a *BulkAdapter) RevertItem(ctx context.Context, action, entityUUID string,
 		if assignee.Valid {
 			v = &assignee.Int64
 		}
-		return addEvent(ctx, a.q, row, EventAssigned, map[string]any{"assignee_user_id": v, "bulk_undo": true}, c.actor())
+		if err := addEvent(ctx, a.q, row, EventAssigned, map[string]any{"assignee_user_id": v, "bulk_undo": true}, c.actor()); err != nil {
+			return err
+		}
+		return EnqueueChange(ctx, a.q, events.LeadsUpdated, row, c.actor())
 	case BulkSetStatus:
 		status, _ := previous["status"].(string)
 		if !validStatus(status) {
@@ -343,8 +354,11 @@ func (a *BulkAdapter) RevertItem(ctx context.Context, action, entityUUID string,
 		if id, ok := numberOf(previous["won_ref_id"]); ok {
 			p.WonRefID = pgtype.Int8{Int64: id, Valid: true}
 		}
-		_, err := a.q.SetLeadStatus(ctx, p)
-		return err
+		row, err := a.q.SetLeadStatus(ctx, p)
+		if err != nil {
+			return err
+		}
+		return EnqueueChange(ctx, a.q, events.LeadsUpdated, row, c.actor())
 	default:
 		return errors.New("unsupported action")
 	}

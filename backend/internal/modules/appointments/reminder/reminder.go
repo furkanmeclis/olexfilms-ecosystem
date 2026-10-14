@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	leadsuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/leads/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
@@ -255,6 +256,9 @@ func (s *NoShowScanner) handleLead(ctx context.Context, q *db.Queries, a db.Appo
 		})
 		if err != nil {
 			return fmt.Errorf("appointment no-show: create lead: %w", err)
+		}
+		if err := leadsuc.EnqueueChange(ctx, q, events.LeadsCreated, lead, pgtype.Int8{}); err != nil {
+			return fmt.Errorf("appointment no-show: %w", err)
 		}
 	} else if err != nil {
 		return fmt.Errorf("appointment no-show: find lead: %w", err)

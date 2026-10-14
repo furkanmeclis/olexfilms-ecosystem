@@ -108,10 +108,14 @@ func (s *Service) SendQuote(ctx context.Context, c Caller, id uuid.UUID) (QuoteS
 		}
 		if firstSend {
 			if lead.Status != StatusQuoted {
-				if _, err := q.SetLeadStatus(ctx, db.SetLeadStatusParams{
+				quoted, err := q.SetLeadStatus(ctx, db.SetLeadStatusParams{
 					ID: lead.ID, OrganizationID: lead.OrganizationID, Status: StatusQuoted,
-				}); err != nil {
+				})
+				if err != nil {
 					return fmt.Errorf("quotes: lead quoted: %w", err)
+				}
+				if err := EnqueueChange(ctx, q, events.LeadsUpdated, quoted, c.actor()); err != nil {
+					return err
 				}
 			}
 			if err := addEvent(ctx, q, lead, "quote_sent", map[string]any{
