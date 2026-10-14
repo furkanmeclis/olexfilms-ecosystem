@@ -81,6 +81,9 @@ vi.mock("@/lib/server/upstream", () => ({
       res.headers.set("Retry-After", "59");
       return res;
     }
+    if (path.endsWith("/no-content")) {
+      return { status: 204, headers: new Headers(), body: new ArrayBuffer(0) };
+    }
     if (auth === "Bearer access-new") return json(200, { success: true });
     if (path.startsWith("portal/") || path === "auth/me") {
       return json(200, { success: true });
@@ -192,6 +195,14 @@ describe("BFF response headers (TEC-142)", () => {
     const res = await portalGet("portal/otp/rate-limited");
     expect(res.status).toBe(429);
     expect(res.headers.get("retry-after")).toBe("59");
+  });
+
+  // TEC-649: a null body status (204) used to throw in the Response
+  // constructor and reach the browser as 500 internal_error.
+  it("passes a 204 through without a body", async () => {
+    const res = await get("platform/oauth/clients/no-content");
+    expect(res.status).toBe(204);
+    expect(res.body).toBeNull();
   });
 });
 

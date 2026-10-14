@@ -3,6 +3,7 @@ import {
   fetchUpstream,
   forwardedHostFromHeaders,
 } from "@/lib/server/upstream";
+import { isNullBodyStatus } from "@/lib/server/http-status";
 
 /**
  * Mobile API passthrough (TEC-91): `/api/v1/mobile/*` → Go `/v1/mobile/*`.
@@ -118,5 +119,8 @@ export async function proxyMobileToUpstream(
     const value = result.headers.get(key);
     if (value) headers.set(key, value);
   }
-  return new Response(result.body, { status: result.status, headers });
+  return new Response(isNullBodyStatus(result.status) ? null : result.body, {
+    status: result.status,
+    headers,
+  });
 }

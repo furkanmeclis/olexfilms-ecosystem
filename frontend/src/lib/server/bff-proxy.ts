@@ -15,6 +15,7 @@ import {
   fetchUpstreamStream,
   type UpstreamResult,
 } from "@/lib/server/upstream";
+import { isNullBodyStatus } from "@/lib/server/http-status";
 import { acceptLanguageFor } from "@/lib/server/accept-language";
 
 type TokensData = {
@@ -395,7 +396,7 @@ async function proxyBuffered(
     }
   }
 
-  return new Response(responseBody, {
+  return new Response(isNullBodyStatus(result.status) ? null : responseBody, {
     status: result.status,
     headers: passthroughHeaders(result.headers),
   });
