@@ -501,8 +501,10 @@ services:
       NEXT_PUBLIC_REALTIME_ENABLED: ${NEXT_PUBLIC_REALTIME_ENABLED:-true}
       NEXT_PUBLIC_CENTRIFUGO_URL: ${NEXT_PUBLIC_CENTRIFUGO_URL:-}
       NEXT_PUBLIC_DEFAULT_LOCALE: ${NEXT_PUBLIC_DEFAULT_LOCALE:-tr}
-      # Server/edge error tracking (browser DSN is a build arg above).
-      SENTRY_DSN: ${SENTRY_DSN:-}
+      # Server/edge error tracking goes to the frontend source, not the
+      # backend one: SENTRY_DSN here would win over NEXT_PUBLIC_SENTRY_DSN
+      # (lib/errtrack/options.ts). The browser DSN is a build arg above.
+      SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
       SENTRY_RELEASE: ${SENTRY_RELEASE:-}
     # Starts last. Workers only need to have started: an unhealthy worker
