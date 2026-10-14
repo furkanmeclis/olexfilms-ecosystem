@@ -24,11 +24,11 @@ var universalLabels = map[string]bool{
 // sameAsEN lists real cognates that are correct translations in a locale.
 var sameAsEN = map[Locale]map[string]bool{
 	LocaleFR: {"Active": true, "Notes": true},
-	LocaleES: {"No": true},
+	LocaleES: {"No": true, "Normal": true},
 	LocaleIT: {"No": true},
 	LocaleEL: {"Email": true, "Barcode": true},
-	LocaleDE: {"Status": true},
-	LocaleAZ: {"Status": true},
+	LocaleDE: {"Status": true, "Normal": true},
+	LocaleAZ: {"Status": true, "Normal": true},
 }
 
 var paramRE = regexp.MustCompile(`{{\s*([a-zA-Z0-9_]+)\s*}}`)

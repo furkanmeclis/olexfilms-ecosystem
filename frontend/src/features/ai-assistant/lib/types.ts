@@ -14,12 +14,15 @@ export type LegalText = components["schemas"]["LegalText"];
 export type ActionPreview = {
   action?: string;
   summary?: string;
-  fields?: { key: string; value: string }[];
+  /** `code` is the raw value of an enum field; `value` is localized (TEC-648). */
+  fields?: { key: string; value: string; code?: string }[];
   edit?: {
     key: string;
     type: "text" | "textarea" | "date" | "time" | "select" | "number";
     value: string;
     options?: string[];
+    /** Localized option labels keyed by option value (TEC-648). */
+    option_labels?: Record<string, string>;
     required?: boolean;
   }[];
   warnings?: string[];

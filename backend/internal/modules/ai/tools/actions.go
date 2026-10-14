@@ -65,10 +65,95 @@ func FieldLabel(locale i18n.Locale, key string) string {
 	return strings.ReplaceAll(key, "_", " ")
 }
 
-// Field is one "label: value" row of a preview.
+// enumValueKeys maps a preview field key whose value is an enum to the
+// catalog prefix of its value labels (TEC-648).
+var enumValueKeys = map[string]string{
+	"priority":    "ai.actions.values.priority.",
+	"target_type": "leads.export.target_type.",
+	"source":      "leads.export.source.",
+	"temperature": "leads.export.temperature.",
+}
+
+// FieldValue is the localized label of an enum value of a preview field; a
+// field or value outside the catalog keeps the value.
+func FieldValue(locale i18n.Locale, key, value string) string {
+	prefix, ok := enumValueKeys[key]
+	if !ok || value == "" {
+		return value
+	}
+	if label := i18n.Translate(locale, prefix+value); label != prefix+value {
+		return label
+	}
+	return value
+}
+
+// appliedPart is an applied part key of a service item with its localized
+// name (TEC-648).
+type appliedPart struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+}
+
+// appliedParts names the part keys in the locale; a key outside the
+// catalog keeps the key as its label.
+func appliedParts(locale i18n.Locale, keys []string) []appliedPart {
+	if len(keys) == 0 {
+		return nil
+	}
+	out := make([]appliedPart, 0, len(keys))
+	for _, k := range keys {
+		label := i18n.Translate(locale, "services.parts."+k)
+		if label == "services.parts."+k {
+			label = k
+		}
+		out = append(out, appliedPart{Key: k, Label: label})
+	}
+	return out
+}
+
+// Field is one "label: value" row of a preview. Code is the raw enum value
+// of an enum field (TEC-648); Value is then its label in the principal's
+// locale.
 type Field struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
+	Code  string `json:"code,omitempty"`
+}
+
+// enumField is a preview row whose value is an enum; Propose localizes it.
+func enumField(key, code string) Field {
+	return Field{Key: key, Value: code, Code: code}
+}
+
+// LocalizedValue renders the value in the locale: an enum field is
+// translated from its code, any other field keeps Value.
+func (f Field) LocalizedValue(locale i18n.Locale) string {
+	if f.Code == "" {
+		return f.Value
+	}
+	return FieldValue(locale, f.Key, f.Code)
+}
+
+// localize translates the enum values and select options of the preview.
+func (pv *Preview) localize(locale i18n.Locale) {
+	pv.Summary = pv.LocalizedSummary(locale)
+	for i := range pv.Fields {
+		pv.Fields[i].Value = pv.Fields[i].LocalizedValue(locale)
+	}
+	for i, e := range pv.Edit {
+		if e.Type != EditSelect {
+			continue
+		}
+		labels := map[string]string{}
+		for _, o := range e.Options {
+			if l := FieldValue(locale, e.Key, o); l != o {
+				labels[o] = l
+			}
+		}
+		if len(labels) > 0 {
+			pv.Edit[i].OptionLabels = labels
+		}
+	}
 }
 
 // Edit field types.
@@ -83,11 +168,14 @@ const (
 
 // EditField is an editable input of the confirmation card.
 type EditField struct {
-	Key      string   `json:"key"`
-	Type     string   `json:"type"`
-	Value    string   `json:"value"`
-	Options  []string `json:"options,omitempty"`
-	Required bool     `json:"required,omitempty"`
+	Key     string   `json:"key"`
+	Type    string   `json:"type"`
+	Value   string   `json:"value"`
+	Options []string `json:"options,omitempty"`
+	// OptionLabels are the localized labels of Options (TEC-648); an
+	// option without a label is shown as it is.
+	OptionLabels map[string]string `json:"option_labels,omitempty"`
+	Required     bool              `json:"required,omitempty"`
 }
 
 // Link points the UI at the record a confirmed action created or changed.
@@ -131,7 +219,7 @@ func (r *Registry) Propose(ctx context.Context, p Principal, name string, input 
 		return nil, bad, nil
 	}
 	prop.Preview.Action = name
-	prop.Preview.Summary = prop.Preview.LocalizedSummary(p.Locale)
+	prop.Preview.localize(p.Locale)
 	if len(prop.Input) == 0 {
 		prop.Input = input
 	}

@@ -170,7 +170,7 @@ export function ActionConfirmCard({
                     <SelectContent>
                       {(f.options ?? []).filter(Boolean).map((o) => (
                         <SelectItem key={o} value={o}>
-                          {o}
+                          {f.option_labels?.[o] ?? o}
                         </SelectItem>
                       ))}
                     </SelectContent>

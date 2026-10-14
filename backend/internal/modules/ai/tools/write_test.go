@@ -333,3 +333,107 @@ func TestWriteCardSummaryLocalized(t *testing.T) {
 		}
 	}
 }
+
+// TEC-648: enum values on the card (task priority, lead target type,
+// source and temperature) and the select options are shown in the
+// principal's locale; the raw value stays in Code and in the input.
+func TestWriteCardEnumValuesLocalized(t *testing.T) {
+	ctx := context.Background()
+	propose := func(t *testing.T, name, orgType, input string, locale i18n.Locale) Proposal {
+		t.Helper()
+		p := superAdminOf(orgType)
+		p.Locale = locale
+		prop, bad, err := writeRegistry(&writeLog{}, appointmentsuc.StatusScheduled).Propose(ctx, p, name, json.RawMessage(input))
+		if err != nil || bad != nil {
+			t.Fatalf("%s/%s: %+v %v", name, locale, bad, err)
+		}
+		return *prop
+	}
+	fields := func(pv Preview) map[string]Field {
+		m := map[string]Field{}
+		for _, f := range pv.Fields {
+			m[f.Key] = f
+		}
+		return m
+	}
+	task := `{"subject_organization_uuid":"` + orgUUID.String() + `","title":"Ziyaret","priority":"low"}`
+	lead := validWrites[1].input
+	cases := []struct {
+		name, orgType, input string
+		want                 map[i18n.Locale]map[string]string
+	}{
+		{ToolCreateTask, OrgCenter, task, map[i18n.Locale]map[string]string{
+			i18n.LocaleTR: {"priority": "Düşük"},
+			i18n.LocaleEN: {"priority": "Low"},
+		}},
+		{ToolCreateLead, OrgDealer, lead, map[i18n.Locale]map[string]string{
+			i18n.LocaleTR: {"target_type": "Müşteri", "source": "Diğer", "temperature": "Soğuk"},
+			i18n.LocaleEN: {"target_type": "Customer", "source": "Other", "temperature": "Cold"},
+		}},
+	}
+	codes := map[string]string{"priority": "low", "target_type": "customer", "source": "other", "temperature": "cold"}
+	for _, tc := range cases {
+		for l, want := range tc.want {
+			prop := propose(t, tc.name, tc.orgType, tc.input, l)
+			got := fields(prop.Preview)
+			for k, v := range want {
+				if got[k].Value != v || got[k].Code != codes[k] {
+					t.Errorf("%s/%s %s: %+v, want %q (code %q)", tc.name, l, k, got[k], v, codes[k])
+				}
+				// A channel can render the stored card in another language.
+				if r := got[k].LocalizedValue(i18n.LocaleTR); r != tc.want[i18n.LocaleTR][k] {
+					t.Errorf("%s/%s %s re-render: %q", tc.name, l, k, r)
+				}
+				if !strings.Contains(string(prop.Input), `"`+codes[k]+`"`) {
+					t.Errorf("%s/%s: input lost the raw %s: %s", tc.name, l, k, prop.Input)
+				}
+			}
+			for _, e := range prop.Preview.Edit {
+				if e.Type != EditSelect {
+					continue
+				}
+				for _, o := range e.Options {
+					if lbl := e.OptionLabels[o]; lbl == "" || (l == i18n.LocaleTR && lbl == o) {
+						t.Errorf("%s/%s %s option %q label %q", tc.name, l, e.Key, o, lbl)
+					}
+				}
+			}
+		}
+		// Every catalog locale has a label for the enum values.
+		for _, l := range i18n.Supported {
+			for k, f := range fields(propose(t, tc.name, tc.orgType, tc.input, l).Preview) {
+				if f.Code != "" && f.Value == f.Code {
+					t.Errorf("%s/%s %s: raw value %q", tc.name, l, k, f.Value)
+				}
+			}
+		}
+	}
+	// Non-enum fields keep their value and carry no code.
+	for _, tc := range validWrites {
+		for _, f := range propose(t, tc.name, tc.orgType, tc.input, i18n.LocaleTR).Preview.Fields {
+			if _, enum := enumValueKeys[f.Key]; !enum && f.Code != "" {
+				t.Errorf("%s %s: unexpected code %q", tc.name, f.Key, f.Code)
+			}
+		}
+	}
+}
+
+// TEC-648: applied parts carry the localized part name next to the key.
+func TestAppliedPartsLabeled(t *testing.T) {
+	got := appliedParts(i18n.LocaleTR, []string{"body_kaput", "window_on_cam", "unknown_part"})
+	want := []appliedPart{{"body_kaput", "Kaput"}, {"window_on_cam", "Ön cam"}, {"unknown_part", "unknown_part"}}
+	if len(got) != len(want) {
+		t.Fatalf("%+v", got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("%d: %+v, want %+v", i, got[i], want[i])
+		}
+	}
+	if en := appliedParts(i18n.LocaleEN, []string{"body_kaput"}); en[0].Label != "Hood" {
+		t.Errorf("en: %+v", en)
+	}
+	if appliedParts(i18n.LocaleTR, nil) != nil {
+		t.Error("no parts must stay omitted")
+	}
+}

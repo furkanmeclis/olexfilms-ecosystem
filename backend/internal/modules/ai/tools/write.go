@@ -239,7 +239,7 @@ func (t CreateTask) Propose(ctx context.Context, env Env, raw json.RawMessage) (
 	}
 	fields := []Field{{Key: "subject_organization", Value: subject.Name}, {Key: "title", Value: in.Title}}
 	fields = fieldIf(fields, "description", in.Description)
-	fields = append(fields, Field{Key: "priority", Value: in.Priority})
+	fields = append(fields, enumField("priority", in.Priority))
 	fields = fieldIf(fields, "due_date", in.DueDate)
 	return proposal(in, Preview{
 		SummaryArgs: map[string]string{"title": in.Title, "subject": subject.Name},
@@ -359,12 +359,12 @@ func (t CreateLead) Propose(_ context.Context, env Env, raw json.RawMessage) (Pr
 	if name == "" {
 		name = in.Phone
 	}
-	fields := []Field{{Key: "target_type", Value: in.TargetType}}
+	fields := []Field{enumField("target_type", in.TargetType)}
 	fields = fieldIf(fields, "contact_name", in.ContactName)
 	fields = fieldIf(fields, "company_name", in.CompanyName)
 	fields = fieldIf(fields, "phone", in.Phone)
 	fields = fieldIf(fields, "email", in.Email)
-	fields = append(fields, Field{Key: "source", Value: in.Source}, Field{Key: "temperature", Value: in.Temperature})
+	fields = append(fields, enumField("source", in.Source), enumField("temperature", in.Temperature))
 	fields = fieldIf(fields, "follow_up_date", in.FollowUpDate)
 	fields = fieldIf(fields, "notes", in.Notes)
 	return proposal(in, Preview{

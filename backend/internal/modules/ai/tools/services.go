@@ -138,13 +138,13 @@ func (GetService) Spec() Spec {
 }
 
 type serviceItem struct {
-	Product  string   `json:"product"`
-	SKU      string   `json:"sku"`
-	Barcode  string   `json:"barcode"`
-	Kind     string   `json:"kind"`
-	Quantity *int32   `json:"quantity,omitempty"`
-	Meters   *string  `json:"meters,omitempty"`
-	Parts    []string `json:"applied_parts,omitempty"`
+	Product  string        `json:"product"`
+	SKU      string        `json:"sku"`
+	Barcode  string        `json:"barcode"`
+	Kind     string        `json:"kind"`
+	Quantity *int32        `json:"quantity,omitempty"`
+	Meters   *string       `json:"meters,omitempty"`
+	Parts    []appliedPart `json:"applied_parts,omitempty"`
 }
 
 type serviceWarranty struct {
@@ -216,7 +216,7 @@ func (t GetService) Run(ctx context.Context, env Env, raw json.RawMessage) (Resu
 	for _, it := range v.Items {
 		d.Items = append(d.Items, serviceItem{
 			Product: dataText(it.Product.Name, maxNameChars), SKU: it.Product.SKU, Barcode: it.Barcode,
-			Kind: it.Kind, Quantity: it.Quantity, Meters: it.Meters, Parts: it.AppliedParts,
+			Kind: it.Kind, Quantity: it.Quantity, Meters: it.Meters, Parts: appliedParts(env.Principal.Locale, it.AppliedParts),
 		})
 	}
 	for _, w := range v.Warranties {
