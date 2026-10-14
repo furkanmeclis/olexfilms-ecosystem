@@ -8925,6 +8925,10 @@ paths:
           in: query
           description: CSV of active, revoked. Unknown value → 400.
           schema: { type: string }
+        - name: used
+          in: query
+          description: true = a user ever connected the client, false = never used registrations (TEC-650).
+          schema: { type: boolean }
         - $ref: "#/components/parameters/Q"
         - $ref: "#/components/parameters/Sort"
         - $ref: "#/components/parameters/Limit"
@@ -30893,7 +30897,7 @@ components:
 
     OAuthClientSummary:
       type: object
-      required: [uuid, client_id, client_name, redirect_uris, created_ip, status, active_grants, created_at, last_used_at, revoked_at]
+      required: [uuid, client_id, client_name, redirect_uris, created_ip, status, active_grants, used, created_at, last_used_at, revoked_at]
       properties:
         uuid: { type: string, format: uuid }
         client_id: { type: string }
@@ -30902,6 +30906,9 @@ components:
         created_ip: { type: [string, "null"] }
         status: { type: string, enum: [active, revoked] }
         active_grants: { type: integer, format: int64 }
+        used:
+          type: boolean
+          description: A user ever connected the client (any grant, even revoked). Never used registrations are deleted OAUTH_UNUSED_CLIENT_DAYS after registration (TEC-650).
         created_at: { type: string, format: date-time }
         last_used_at: { type: [string, "null"], format: date-time }
         revoked_at: { type: [string, "null"], format: date-time }

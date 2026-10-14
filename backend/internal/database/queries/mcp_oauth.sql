@@ -98,10 +98,14 @@ DELETE FROM oauth_codes WHERE expires_at < NOW() - INTERVAL '1 day';
 DELETE FROM oauth_tokens WHERE expires_at < NOW() - INTERVAL '1 day';
 
 -- name: CleanupOAuthClients :execrows
--- Registrations never connected within a day (abandoned DCR attempts).
+-- Registrations that never connected (abandoned or duplicate DCR attempts,
+-- TEC-650): no grant, token or pending request, older than created_before.
+-- The FK cascades (requests, codes, grants, tokens) have nothing left to
+-- remove; a client with any grant, even a revoked one, stays.
 DELETE FROM oauth_clients c
-WHERE c.created_at < NOW() - INTERVAL '1 day'
+WHERE c.created_at < sqlc.arg(created_before)::timestamptz
   AND NOT EXISTS (SELECT 1 FROM oauth_grants g WHERE g.client_id = c.client_id)
+  AND NOT EXISTS (SELECT 1 FROM oauth_tokens t WHERE t.client_id = c.client_id)
   AND NOT EXISTS (SELECT 1 FROM oauth_auth_requests r WHERE r.client_id = c.client_id);
 
 -- TEC-401 (F4-03b): consent, connected apps, platform client list.
@@ -183,12 +187,18 @@ WHERE oauth_tokens.grant_id = sqlc.arg(grant_id) AND revoked_at IS NULL;
 -- Sort: docs/list-contract.md, keys from oauth usecase ClientsSortSpec.
 SELECT c.id, c.uuid, c.client_id, c.client_name, c.redirect_uris, c.created_ip,
        c.last_used_at, c.revoked_at, c.created_at,
-       (SELECT COUNT(*) FROM oauth_grants g WHERE g.client_id = c.client_id AND g.revoked_at IS NULL)::bigint AS active_grants
+       (SELECT COUNT(*) FROM oauth_grants g WHERE g.client_id = c.client_id AND g.revoked_at IS NULL)::bigint AS active_grants,
+       EXISTS (SELECT 1 FROM oauth_grants ug WHERE ug.client_id = c.client_id) AS used
 FROM oauth_clients c
 WHERE (
     sqlc.narg(status)::text IS NULL
     OR (sqlc.narg(status)::text = 'active' AND c.revoked_at IS NULL)
     OR (sqlc.narg(status)::text = 'revoked' AND c.revoked_at IS NOT NULL)
+  )
+  -- TEC-650: used = the client ever got a grant (a user connected it).
+  AND (
+    sqlc.narg(used)::bool IS NULL
+    OR sqlc.narg(used)::bool = EXISTS (SELECT 1 FROM oauth_grants ug WHERE ug.client_id = c.client_id)
   )
   AND (sqlc.narg(q)::text IS NULL OR c.client_name ILIKE '%' || sqlc.narg(q)::text || '%' OR c.client_id ILIKE '%' || sqlc.narg(q)::text || '%')
 ORDER BY
@@ -209,6 +219,11 @@ WHERE (
     sqlc.narg(status)::text IS NULL
     OR (sqlc.narg(status)::text = 'active' AND c.revoked_at IS NULL)
     OR (sqlc.narg(status)::text = 'revoked' AND c.revoked_at IS NOT NULL)
+  )
+  -- TEC-650: used = the client ever got a grant (a user connected it).
+  AND (
+    sqlc.narg(used)::bool IS NULL
+    OR sqlc.narg(used)::bool = EXISTS (SELECT 1 FROM oauth_grants ug WHERE ug.client_id = c.client_id)
   )
   AND (sqlc.narg(q)::text IS NULL OR c.client_name ILIKE '%' || sqlc.narg(q)::text || '%' OR c.client_id ILIKE '%' || sqlc.narg(q)::text || '%');
 

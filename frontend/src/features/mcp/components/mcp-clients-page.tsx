@@ -34,8 +34,9 @@ export const MCP_CLIENTS_PERSIST_KEY = "platform-mcp-clients-v1";
 
 /**
  * Registered MCP clients (TEC-403, super_admin / mcp.clients.manage):
- * client, registration IP, connected users, last use. "Revoke" blocks the
- * client and ends every connection of it.
+ * client, registration IP, connected users, whether it was ever used
+ * (TEC-650), last use. "Revoke" blocks the client and ends every connection
+ * of it.
  */
 export function McpClientsPage() {
   const { t, format } = useLocale();
@@ -120,6 +121,21 @@ export function McpClientsPage() {
             <span className="text-sm tabular-nums">
               {format.number(row.original.active_grants)}
             </span>
+          ),
+        }),
+        createColumn<OAuthClientSummary>({
+          // TEC-650: never used registrations (a client often registers
+          // twice per connection); `used=false` lists them.
+          accessorKey: "used",
+          labelKey: "mcp.clients.used",
+          enableSorting: false,
+          filterVariant: "boolean",
+          param: "used",
+          cell: ({ row }) => (
+            <StatusChip
+              label={t(`mcp.clients.used_value.${row.original.used}`)}
+              tone={row.original.used ? "success" : "default"}
+            />
           ),
         }),
         createColumn<OAuthClientSummary>({

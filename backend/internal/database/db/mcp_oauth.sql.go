@@ -26,14 +26,18 @@ func (q *Queries) CleanupOAuthAuthRequests(ctx context.Context) (int64, error) {
 
 const cleanupOAuthClients = `-- name: CleanupOAuthClients :execrows
 DELETE FROM oauth_clients c
-WHERE c.created_at < NOW() - INTERVAL '1 day'
+WHERE c.created_at < $1::timestamptz
   AND NOT EXISTS (SELECT 1 FROM oauth_grants g WHERE g.client_id = c.client_id)
+  AND NOT EXISTS (SELECT 1 FROM oauth_tokens t WHERE t.client_id = c.client_id)
   AND NOT EXISTS (SELECT 1 FROM oauth_auth_requests r WHERE r.client_id = c.client_id)
 `
 
-// Registrations never connected within a day (abandoned DCR attempts).
-func (q *Queries) CleanupOAuthClients(ctx context.Context) (int64, error) {
-	result, err := q.db.Exec(ctx, cleanupOAuthClients)
+// Registrations that never connected (abandoned or duplicate DCR attempts,
+// TEC-650): no grant, token or pending request, older than created_before.
+// The FK cascades (requests, codes, grants, tokens) have nothing left to
+// remove; a client with any grant, even a revoked one, stays.
+func (q *Queries) CleanupOAuthClients(ctx context.Context, createdBefore pgtype.Timestamptz) (int64, error) {
+	result, err := q.db.Exec(ctx, cleanupOAuthClients, createdBefore)
 	if err != nil {
 		return 0, err
 	}
@@ -74,16 +78,22 @@ WHERE (
     OR ($1::text = 'active' AND c.revoked_at IS NULL)
     OR ($1::text = 'revoked' AND c.revoked_at IS NOT NULL)
   )
-  AND ($2::text IS NULL OR c.client_name ILIKE '%' || $2::text || '%' OR c.client_id ILIKE '%' || $2::text || '%')
+  -- TEC-650: used = the client ever got a grant (a user connected it).
+  AND (
+    $2::bool IS NULL
+    OR $2::bool = EXISTS (SELECT 1 FROM oauth_grants ug WHERE ug.client_id = c.client_id)
+  )
+  AND ($3::text IS NULL OR c.client_name ILIKE '%' || $3::text || '%' OR c.client_id ILIKE '%' || $3::text || '%')
 `
 
 type CountOAuthClientsParams struct {
 	Status pgtype.Text `json:"status"`
+	Used   pgtype.Bool `json:"used"`
 	Q      pgtype.Text `json:"q"`
 }
 
 func (q *Queries) CountOAuthClients(ctx context.Context, arg CountOAuthClientsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countOAuthClients, arg.Status, arg.Q)
+	row := q.db.QueryRow(ctx, countOAuthClients, arg.Status, arg.Used, arg.Q)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -499,28 +509,35 @@ func (q *Queries) GetUsedOAuthCodeFamily(ctx context.Context, codeHash string) (
 const listOAuthClients = `-- name: ListOAuthClients :many
 SELECT c.id, c.uuid, c.client_id, c.client_name, c.redirect_uris, c.created_ip,
        c.last_used_at, c.revoked_at, c.created_at,
-       (SELECT COUNT(*) FROM oauth_grants g WHERE g.client_id = c.client_id AND g.revoked_at IS NULL)::bigint AS active_grants
+       (SELECT COUNT(*) FROM oauth_grants g WHERE g.client_id = c.client_id AND g.revoked_at IS NULL)::bigint AS active_grants,
+       EXISTS (SELECT 1 FROM oauth_grants ug WHERE ug.client_id = c.client_id) AS used
 FROM oauth_clients c
 WHERE (
     $1::text IS NULL
     OR ($1::text = 'active' AND c.revoked_at IS NULL)
     OR ($1::text = 'revoked' AND c.revoked_at IS NOT NULL)
   )
-  AND ($2::text IS NULL OR c.client_name ILIKE '%' || $2::text || '%' OR c.client_id ILIKE '%' || $2::text || '%')
+  -- TEC-650: used = the client ever got a grant (a user connected it).
+  AND (
+    $2::bool IS NULL
+    OR $2::bool = EXISTS (SELECT 1 FROM oauth_grants ug WHERE ug.client_id = c.client_id)
+  )
+  AND ($3::text IS NULL OR c.client_name ILIKE '%' || $3::text || '%' OR c.client_id ILIKE '%' || $3::text || '%')
 ORDER BY
-  CASE WHEN NOT $3::bool AND $4::text = 'client_name' THEN c.client_name END ASC,
-  CASE WHEN $3::bool AND $4::text = 'client_name' THEN c.client_name END DESC,
-  CASE WHEN NOT $3::bool AND $4::text = 'created_at' THEN c.created_at END ASC,
-  CASE WHEN $3::bool AND $4::text = 'created_at' THEN c.created_at END DESC,
-  CASE WHEN NOT $3::bool AND $4::text = 'last_used_at' THEN c.last_used_at END ASC NULLS LAST,
-  CASE WHEN $3::bool AND $4::text = 'last_used_at' THEN c.last_used_at END DESC NULLS LAST,
-  CASE WHEN $3::bool THEN c.id END DESC,
+  CASE WHEN NOT $4::bool AND $5::text = 'client_name' THEN c.client_name END ASC,
+  CASE WHEN $4::bool AND $5::text = 'client_name' THEN c.client_name END DESC,
+  CASE WHEN NOT $4::bool AND $5::text = 'created_at' THEN c.created_at END ASC,
+  CASE WHEN $4::bool AND $5::text = 'created_at' THEN c.created_at END DESC,
+  CASE WHEN NOT $4::bool AND $5::text = 'last_used_at' THEN c.last_used_at END ASC NULLS LAST,
+  CASE WHEN $4::bool AND $5::text = 'last_used_at' THEN c.last_used_at END DESC NULLS LAST,
+  CASE WHEN $4::bool THEN c.id END DESC,
   c.id ASC
-LIMIT $6 OFFSET $5
+LIMIT $7 OFFSET $6
 `
 
 type ListOAuthClientsParams struct {
 	Status    pgtype.Text `json:"status"`
+	Used      pgtype.Bool `json:"used"`
 	Q         pgtype.Text `json:"q"`
 	SortDesc  bool        `json:"sort_desc"`
 	SortKey   string      `json:"sort_key"`
@@ -539,12 +556,14 @@ type ListOAuthClientsRow struct {
 	RevokedAt    pgtype.Timestamptz `json:"revoked_at"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	ActiveGrants int64              `json:"active_grants"`
+	Used         bool               `json:"used"`
 }
 
 // Sort: docs/list-contract.md, keys from oauth usecase ClientsSortSpec.
 func (q *Queries) ListOAuthClients(ctx context.Context, arg ListOAuthClientsParams) ([]ListOAuthClientsRow, error) {
 	rows, err := q.db.Query(ctx, listOAuthClients,
 		arg.Status,
+		arg.Used,
 		arg.Q,
 		arg.SortDesc,
 		arg.SortKey,
@@ -569,6 +588,7 @@ func (q *Queries) ListOAuthClients(ctx context.Context, arg ListOAuthClientsPara
 			&i.RevokedAt,
 			&i.CreatedAt,
 			&i.ActiveGrants,
+			&i.Used,
 		); err != nil {
 			return nil, err
 		}

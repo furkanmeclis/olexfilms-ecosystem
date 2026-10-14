@@ -75,8 +75,11 @@ type Service struct {
 	access   AccessChecker
 	tools    ToolCounter
 	issuer   string
-	log      *slog.Logger
-	now      func() time.Time
+	// unusedClientAge is how old a never connected registration must be
+	// before Cleanup deletes it (TEC-650).
+	unusedClientAge time.Duration
+	log             *slog.Logger
+	now             func() time.Time
 }
 
 // New builds the service. issuer is the public origin clients reach (the
@@ -87,8 +90,21 @@ func New(conn DB, featureChecker FeatureChecker, limiter Limiter, issuer string,
 	}
 	return &Service{
 		db: conn, q: db.New(conn), features: featureChecker, limiter: limiter,
-		issuer: strings.TrimRight(issuer, "/"), log: log, now: time.Now,
+		issuer: strings.TrimRight(issuer, "/"), unusedClientAge: DefaultUnusedClientAge, log: log, now: time.Now,
 	}
+}
+
+// DefaultUnusedClientAge is the Cleanup age of never connected client
+// registrations (OAUTH_UNUSED_CLIENT_DAYS, TEC-650).
+const DefaultUnusedClientAge = 7 * 24 * time.Hour
+
+// WithUnusedClientAge sets how long a never connected registration is kept;
+// non-positive keeps the default.
+func (s *Service) WithUnusedClientAge(d time.Duration) *Service {
+	if d > 0 {
+		s.unusedClientAge = d
+	}
+	return s
 }
 
 // SetClock overrides the clock (tests).
@@ -780,12 +796,16 @@ func (s *Service) ResourceMetadataURL(resource string) string {
 
 // --- maintenance ------------------------------------------------------------------------
 
-// Cleanup removes expired requests, codes, tokens and abandoned client
-// registrations (periodic worker task).
+// Cleanup removes expired requests, codes, tokens and client registrations
+// that never connected (no grant, token or pending request) and are older
+// than the unused client age (periodic worker task, idempotent). Clients
+// often register twice per connection and use one (TEC-650).
 func (s *Service) Cleanup(ctx context.Context) error {
+	createdBefore := ts(s.now().Add(-s.unusedClientAge))
 	var total int64
 	for _, f := range []func(context.Context) (int64, error){
-		s.q.CleanupOAuthAuthRequests, s.q.CleanupOAuthCodes, s.q.CleanupOAuthTokens, s.q.CleanupOAuthClients,
+		s.q.CleanupOAuthAuthRequests, s.q.CleanupOAuthCodes, s.q.CleanupOAuthTokens,
+		func(ctx context.Context) (int64, error) { return s.q.CleanupOAuthClients(ctx, createdBefore) },
 	} {
 		n, err := f(ctx)
 		if err != nil {

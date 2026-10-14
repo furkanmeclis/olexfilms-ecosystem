@@ -16330,6 +16330,8 @@ export interface components {
             status: "active" | "revoked";
             /** Format: int64 */
             active_grants: number;
+            /** @description A user ever connected the client (any grant, even revoked). Never used registrations are deleted OAUTH_UNUSED_CLIENT_DAYS after registration (TEC-650). */
+            used: boolean;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -37274,6 +37276,8 @@ export interface operations {
             query?: {
                 /** @description CSV of active, revoked. Unknown value → 400. */
                 status?: string;
+                /** @description true = a user ever connected the client, false = never used registrations (TEC-650). */
+                used?: boolean;
                 q?: components["parameters"]["Q"];
                 /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];
