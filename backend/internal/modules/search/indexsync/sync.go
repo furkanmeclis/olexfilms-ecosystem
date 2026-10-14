@@ -1,8 +1,8 @@
 // Package indexsync keeps the TEC-209 record indexes (services,
-// warranties, vehicles) and the TEC-210 ones (organizations, orders, stock
-// units) in step with the outbox: every service, warranty
-// and vehicle event the outbox publisher hands to the bus enqueues an
-// upsert of the touched document. The adapter rebuilds the document from
+// warranties, vehicles), the TEC-210 ones (organizations, orders, stock
+// units) and the TEC-645 leads index in step with the outbox: every
+// record event the outbox publisher hands to the bus enqueues an upsert of
+// the touched document. The adapter rebuilds the document from
 // Postgres, so the event payload is only a pointer (no personal data is
 // read from it), and a record that must leave the index (deleted vehicle,
 // anonymized owner) is removed by the indexer (ErrSkipDocument).
@@ -70,6 +70,9 @@ func Register(bus events.Bus, q Store, idx Indexer, log *slog.Logger) {
 	bus.Subscribe(events.ShowcasePublished, s.HandleOrganization)
 	bus.Subscribe("orders.*", s.HandleOrder)
 	bus.Subscribe("stock.*", s.HandleStock)
+	// TEC-645: every lead write path writes leads.created / leads.updated.
+	bus.Subscribe(events.LeadsCreated, s.HandleLead)
+	bus.Subscribe(events.LeadsUpdated, s.HandleLead)
 }
 
 // HandleService refreshes the service document; a new service may link
@@ -157,6 +160,15 @@ func (s *Sync) HandleOrder(ctx context.Context, ev events.Event) error {
 func (s *Sync) HandleStock(ctx context.Context, ev events.Event) error {
 	if id := entityUUID(ev, "stock_unit", "unit_uuid"); id != "" {
 		s.idx.EnqueueUpsert(ctx, searchengine.SpecStockUnits, id)
+	}
+	return nil
+}
+
+// HandleLead refreshes the lead document (created, edited, assigned,
+// status moved, converted).
+func (s *Sync) HandleLead(ctx context.Context, ev events.Event) error {
+	if id := entityUUID(ev, "lead", "lead_uuid"); id != "" {
+		s.idx.EnqueueUpsert(ctx, searchengine.SpecLeads, id)
 	}
 	return nil
 }

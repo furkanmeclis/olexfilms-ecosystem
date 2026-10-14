@@ -236,7 +236,14 @@ func (t FindNearestDealers) Run(ctx context.Context, env Env, raw json.RawMessag
 		}
 		out = append(out, r)
 	}
-	l := NewList(out, int64(len(rows)))
+	// The finder caps its rows (NearbyMaxResults): at the cap the real
+	// count is unknown (TEC-647).
+	var l List[dealerRow]
+	if len(rows) >= orgusecase.NearbyMaxResults {
+		l = NewCutList(out, true)
+	} else {
+		l = NewList(out, int64(len(rows)))
+	}
 	if len(rows) == 0 {
 		l.Hint = "No dealer found there. Try the city without the district, a neighbouring city or ask for a location."
 	}

@@ -154,6 +154,41 @@ func (q *Queries) CountOrganizations(ctx context.Context, arg CountOrganizations
 	return column_1, err
 }
 
+const countOrganizationsInScope = `-- name: CountOrganizationsInScope :one
+SELECT COUNT(*)::bigint
+FROM organizations o
+WHERE o.deleted_at IS NULL
+  AND o.type <> 'fleet'
+  AND ($1::bigint[] IS NULL OR o.id = ANY ($1::bigint[]))
+  AND ($2::bigint IS NULL OR o.brand_id = $2)
+  AND ($3::text IS NULL OR o.type = $3)
+  AND ($4::text IS NULL OR o.name ILIKE '%' || $4::text || '%' OR o.slug ILIKE '%' || $4::text || '%')
+  AND ($5::uuid IS NULL OR o.uuid <> $5::uuid)
+`
+
+type CountOrganizationsInScopeParams struct {
+	OrgIds      []int64     `json:"org_ids"`
+	BrandID     pgtype.Int8 `json:"brand_id"`
+	Type        pgtype.Text `json:"type"`
+	Q           pgtype.Text `json:"q"`
+	ExcludeUuid pgtype.UUID `json:"exclude_uuid"`
+}
+
+// TEC-647: the ListOrganizationsInScope filter block (without the uuid set)
+// counted; exclude_uuid drops the caller's own organization.
+func (q *Queries) CountOrganizationsInScope(ctx context.Context, arg CountOrganizationsInScopeParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOrganizationsInScope,
+		arg.OrgIds,
+		arg.BrandID,
+		arg.Type,
+		arg.Q,
+		arg.ExcludeUuid,
+	)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const createOrganization = `-- name: CreateOrganization :one
 INSERT INTO organizations (
     slug, name, city, district, phone, address, status, plan_code,

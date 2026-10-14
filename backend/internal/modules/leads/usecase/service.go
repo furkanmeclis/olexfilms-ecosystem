@@ -18,6 +18,7 @@ import (
 	shorturlsuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls/usecase"
 	tasksuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -552,9 +553,16 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Lead, e
 		return Lead{}, err
 	}
 	p.OrganizationID, p.BrandID, p.CreatedByUserID = c.Org.InternalID, c.Org.BrandID, c.actor()
-	row, err := s.q.CreateLead(ctx, p)
+	var row db.Lead
+	err = s.inTx(ctx, func(q *db.Queries) error {
+		row, err = q.CreateLead(ctx, p)
+		if err != nil {
+			return fmt.Errorf("leads: create: %w", err)
+		}
+		return EnqueueChange(ctx, q, events.LeadsCreated, row, c.actor())
+	})
 	if err != nil {
-		return Lead{}, fmt.Errorf("leads: create: %w", err)
+		return Lead{}, err
 	}
 	return s.toLead(ctx, row)
 }
@@ -691,6 +699,9 @@ func (s *Service) Patch(ctx context.Context, c Caller, id uuid.UUID, in PatchInp
 		if len(fields) == 1 && fields[0] == "follow_up_date" {
 			typ = EventFollowUpSet
 		}
+		if err := EnqueueChange(ctx, q, events.LeadsUpdated, row, c.actor()); err != nil {
+			return err
+		}
 		return addEvent(ctx, q, row, typ, map[string]any{"kind": "updated", "fields": fields}, c.actor())
 	})
 	if err != nil {
@@ -737,18 +748,25 @@ func (s *Service) SetStatus(ctx context.Context, c Caller, id uuid.UUID, in Stat
 		}
 		lost = pgtype.Text{String: strings.TrimSpace(*in.LostReason), Valid: true}
 	}
-	row, err := s.q.SetLeadStatus(ctx, db.SetLeadStatusParams{
-		ID: cur.ID, OrganizationID: cur.OrganizationID, Status: to, LostReason: lost,
-		WonRefType: func() pgtype.Text {
-			if in.WonRefType != nil {
-				return pgtype.Text{String: strings.TrimSpace(*in.WonRefType), Valid: true}
-			}
-			return pgtype.Text{}
-		}(),
-		WonRefID: int8(in.WonRefID),
+	var row db.Lead
+	err = s.inTx(ctx, func(q *db.Queries) error {
+		row, err = q.SetLeadStatus(ctx, db.SetLeadStatusParams{
+			ID: cur.ID, OrganizationID: cur.OrganizationID, Status: to, LostReason: lost,
+			WonRefType: func() pgtype.Text {
+				if in.WonRefType != nil {
+					return pgtype.Text{String: strings.TrimSpace(*in.WonRefType), Valid: true}
+				}
+				return pgtype.Text{}
+			}(),
+			WonRefID: int8(in.WonRefID),
+		})
+		if err != nil {
+			return fmt.Errorf("leads: status: %w", err)
+		}
+		return EnqueueChange(ctx, q, events.LeadsUpdated, row, c.actor())
 	})
 	if err != nil {
-		return Lead{}, fmt.Errorf("leads: status: %w", err)
+		return Lead{}, err
 	}
 	return s.toLead(ctx, row)
 }
@@ -781,6 +799,9 @@ func (s *Service) Assign(ctx context.Context, c Caller, id uuid.UUID, assignee *
 		row, err = q.AssignLead(ctx, db.AssignLeadParams{ID: cur.ID, OrganizationID: cur.OrganizationID, AssigneeUserID: int8(assignee)})
 		if err != nil {
 			return fmt.Errorf("leads: assign: %w", err)
+		}
+		if err := EnqueueChange(ctx, q, events.LeadsUpdated, row, c.actor()); err != nil {
+			return err
 		}
 		return addEvent(ctx, q, row, EventAssigned, map[string]any{"assignee_user_id": assignee}, c.actor())
 	})

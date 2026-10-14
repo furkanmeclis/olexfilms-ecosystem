@@ -268,6 +268,9 @@ type Querier interface {
 	CountOrganizationStockUnitRows(ctx context.Context, arg CountOrganizationStockUnitRowsParams) (int64, error)
 	// Same filter block as ListOrganizationsFiltered.
 	CountOrganizations(ctx context.Context, arg CountOrganizationsParams) (int64, error)
+	// TEC-647: the ListOrganizationsInScope filter block (without the uuid set)
+	// counted; exclude_uuid drops the caller's own organization.
+	CountOrganizationsInScope(ctx context.Context, arg CountOrganizationsInScopeParams) (int64, error)
 	CountOutboxByStatus(ctx context.Context, status string) (int64, error)
 	CountPendingCampaignRecipients(ctx context.Context, campaignID int64) (int64, error)
 	// Open (pending) vehicle transfers that involve the user; the transfer's
