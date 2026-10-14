@@ -12,7 +12,9 @@ const EventLeadWebsiteReceived = "LEAD_WEBSITE_RECEIVED"
 
 // LeadApplicationChannels are the default channels of the event.
 var LeadApplicationChannels = []string{ChannelInapp, ChannelEmail}
-var LeadWebsiteChannels = []string{ChannelInapp, ChannelEmail, ChannelWhatsApp}
+
+// LeadWebsiteChannels: TEC-641 adds Expo push (the dealer app on the phone).
+var LeadWebsiteChannels = []string{ChannelInapp, ChannelEmail, ChannelWhatsApp, ChannelExpoPush}
 
 var leadApplicationTexts = map[string]localizedText{
 	"tr": {"Yeni bayi başvurusu: {{company_name}}",

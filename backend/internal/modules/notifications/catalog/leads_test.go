@@ -35,3 +35,30 @@ func TestLeadApplicationTemplatesCoverEveryLocale(t *testing.T) {
 		}
 	}
 }
+
+// TEC-641: the showcase lead also reaches the dealer app (Expo push), with
+// a template in every locale on every default channel.
+func TestLeadWebsiteTemplatesCoverEveryChannelAndLocale(t *testing.T) {
+	ev, ok := Lookup(EventLeadWebsiteReceived)
+	if !ok {
+		t.Fatal("not registered")
+	}
+	want := []string{ChannelInapp, ChannelEmail, ChannelWhatsApp, ChannelExpoPush}
+	if strings.Join(ev.DefaultChannels, ",") != strings.Join(want, ",") {
+		t.Fatalf("default channels = %v, want %v", ev.DefaultChannels, want)
+	}
+	seen := map[string]bool{}
+	for _, tpl := range ev.Templates {
+		seen[tpl.Channel+"/"+tpl.Language] = true
+		if unknown := msgtemplate.Unknown(ev.Spec(), tpl.Subject, tpl.Body); len(unknown) > 0 {
+			t.Errorf("%s/%s: unknown placeholders %v", tpl.Channel, tpl.Language, unknown)
+		}
+	}
+	for _, ch := range want {
+		for _, l := range msgtemplate.Locales {
+			if !seen[ch+"/"+l] {
+				t.Errorf("no %s template in %s", ch, l)
+			}
+		}
+	}
+}

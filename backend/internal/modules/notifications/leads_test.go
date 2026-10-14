@@ -33,3 +33,26 @@ func TestLeadApplicationDispatch(t *testing.T) {
 		t.Fatal("no recipient must send nothing")
 	}
 }
+
+// TEC-641: the showcase lead notification links to the lead in the dealer
+// panel (push data action_url).
+func TestLeadWebsiteDispatchLinksTheLead(t *testing.T) {
+	ev := events.New(events.LeadsWebsiteReceived).WithPayload(map[string]any{
+		"notify_user_ids": []any{float64(21)}, "brand_id": float64(1), "lead_uuid": "l-8",
+		"dealer_code": "demo-istanbul-detailing", "contact_name": "Ayşe", "phone": "+905551234567",
+	})
+	in, ok := leadWebsiteDispatch(ev)
+	if !ok || in.EventCode != catalog.EventLeadWebsiteReceived || !slices.Equal(in.UserIDs, []int64{21}) {
+		t.Fatalf("dispatch = %+v, %v", in, ok)
+	}
+	if in.ActionURL == nil || *in.ActionURL != "/t/demo-istanbul-detailing/leads/l-8" {
+		t.Fatalf("action url = %v", in.ActionURL)
+	}
+	if in.Payload["lead_uuid"] != "l-8" {
+		t.Fatalf("payload = %v", in.Payload)
+	}
+	delete(ev.Payload, "dealer_code")
+	if in, _ := leadWebsiteDispatch(ev); in.ActionURL != nil {
+		t.Fatalf("no dealer code must leave the link empty, got %q", *in.ActionURL)
+	}
+}

@@ -46,9 +46,20 @@ func leadWebsiteDispatch(event events.Event) (notifmodel.DispatchInput, bool) {
 			"dealer_code":  stringFromPayload(event.Payload, "dealer_code"),
 		},
 		Payload: map[string]any{"lead_uuid": stringFromPayload(event.Payload, "lead_uuid")},
+		// TEC-641: tapping the notification (push data action_url, in-app,
+		// e-mail) opens the lead in the dealer panel.
+		ActionURL: leadPanelPath(stringFromPayload(event.Payload, "dealer_code"), stringFromPayload(event.Payload, "lead_uuid")),
 	}
 	if brand, ok := int64FromPayload(event.Payload, "brand_id"); ok && brand > 0 {
 		in.BrandID = &brand
 	}
 	return in, true
+}
+
+// leadPanelPath is the panel page of a lead in the organization slug.
+func leadPanelPath(slug, leadUUID string) *string {
+	if slug == "" || leadUUID == "" {
+		return nil
+	}
+	return stringPtr("/t/" + slug + "/leads/" + leadUUID)
 }
