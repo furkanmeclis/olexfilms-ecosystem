@@ -888,10 +888,11 @@ func cardText(locale string, c aiusecase.Card) string {
 		sb.WriteString("*")
 	}
 	for _, f := range c.Preview.Fields {
-		if strings.TrimSpace(f.Value) == "" {
+		v := f.LocalizedValue(loc)
+		if strings.TrimSpace(v) == "" {
 			continue
 		}
-		fmt.Fprintf(&sb, "\n• %s: %s", aitools.FieldLabel(loc, f.Key), f.Value)
+		fmt.Fprintf(&sb, "\n• %s: %s", aitools.FieldLabel(loc, f.Key), v)
 	}
 	sb.WriteString("\n\n")
 	sb.WriteString(text(locale, textConfirmQuestion))

@@ -304,9 +304,9 @@ func (t MyServiceDetail) Run(ctx context.Context, env Env, raw json.RawMessage) 
 		return derefResult(res), err
 	}
 	type product struct {
-		Name     string   `json:"name"`
-		Category string   `json:"category"`
-		Parts    []string `json:"applied_parts,omitempty"`
+		Name     string        `json:"name"`
+		Category string        `json:"category"`
+		Parts    []appliedPart `json:"applied_parts,omitempty"`
 	}
 	type dealer struct {
 		Name     string  `json:"name"`
@@ -334,7 +334,7 @@ func (t MyServiceDetail) Run(ctx context.Context, env Env, raw json.RawMessage) 
 	}
 	for _, p := range v.Products {
 		out.Products = append(out.Products, product{Name: dataText(p.Name, maxNameChars),
-			Category: dataText(p.Category, maxNameChars), Parts: p.AppliedParts})
+			Category: dataText(p.Category, maxNameChars), Parts: appliedParts(env.Principal.Locale, p.AppliedParts)})
 	}
 	for _, w := range v.Warranties {
 		days, _ := portaluc.TimeLeft(w.StartAt, w.EndAt, env.Now)
