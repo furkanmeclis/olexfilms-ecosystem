@@ -72,6 +72,11 @@ roles-sync:
 normalize-org-phones:
 	@$(load_env) go run ./cmd/normalize-org-phones $(ARGS)
 
+# TEC-640: talk to the WhatsApp AI as a simulated contact (no phone).
+.PHONY: wa-sim
+wa-sim:
+	@$(load_env) go run ./cmd/wa-sim $(ARGS)
+
 # TEC-294: normalize measurement_results rows with parsed_at NULL (NexPTG
 # parser backfill, migrator rows included). Idempotent.
 .PHONY: measurement-reparse
