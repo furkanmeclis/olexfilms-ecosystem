@@ -229,22 +229,39 @@ type customerServices struct {
 
 // own returns the uuid of the customer's service. A number is looked up
 // only among the customer's own services, so another customer's number is
-// not found.
+// not found. Customers name their car rather than a service number, so a
+// plate ("34 AB 123") resolves to that car's latest service (TEC-411).
 func (b customerServices) own(ctx context.Context, p Principal, ref string) (uuid.UUID, bool, error) {
 	if id, ok := parseID(ref); ok {
 		return id, true, nil
 	}
 	no := strings.ToUpper(strings.TrimSpace(ref))
-	rows, _, err := b.portal.ListServices(ctx, portalCaller(p), portaluc.ServiceListFilter{Page: portaluc.Page{Limit: 5}, Q: no})
-	if err != nil {
-		return uuid.Nil, false, err
-	}
-	for _, r := range rows {
-		if strings.EqualFold(r.ServiceNo, no) {
-			return r.UUID, true, nil
+	plate := compactPlate(no)
+	for _, q := range uniqueStrings(no, plate) {
+		// Newest first (the portal list's default sort).
+		rows, _, err := b.portal.ListServices(ctx, portalCaller(p), portaluc.ServiceListFilter{Page: portaluc.Page{Limit: 5}, Q: q})
+		if err != nil {
+			return uuid.Nil, false, err
+		}
+		for _, r := range rows {
+			if strings.EqualFold(r.ServiceNo, no) {
+				return r.UUID, true, nil
+			}
+		}
+		for _, r := range rows {
+			if r.Plate != nil && compactPlate(*r.Plate) == plate {
+				return r.UUID, true, nil
+			}
 		}
 	}
 	return uuid.Nil, false, nil
+}
+
+func uniqueStrings(a, b string) []string {
+	if a == b || b == "" {
+		return []string{a}
+	}
+	return []string{a, b}
 }
 
 // detail loads the portal view of the customer's service.
@@ -267,7 +284,8 @@ func (b customerServices) detail(ctx context.Context, p Principal, ref string) (
 
 func serviceRefSchema() map[string]any {
 	return object(map[string]any{
-		"service": strMin("Service number (e.g. DSAB12CD34) or uuid of one of the customer's services.", 2, 64),
+		"service": strMin("Service number (e.g. DSAB12CD34) or uuid of one of the customer's services, "+
+			"or the car's plate for its latest service.", 2, 64),
 	}, "service")
 }
 
