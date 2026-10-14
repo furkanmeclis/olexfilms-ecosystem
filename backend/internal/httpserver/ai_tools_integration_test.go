@@ -174,6 +174,10 @@ func TestIntegrationAIToolsScope(t *testing.T) {
 			t.Fatalf("dealer A found another organization's service %s: %+v", plate, a)
 		}
 	}
+	// TEC-410: no query lists the latest services of the scope.
+	if a := it.aiTool(tokA, "search_services", `{}`); !found(a, plateA) || strings.Contains(a.Content, plateB) {
+		t.Fatalf("dealer A latest services: %+v", a)
+	}
 	// A spaced plate is matched too ("34 A..." -> "34A...").
 	if a := search(tokA, "34 A"+sfx); !found(a, plateA) {
 		t.Fatalf("dealer A spaced plate: %+v", a)

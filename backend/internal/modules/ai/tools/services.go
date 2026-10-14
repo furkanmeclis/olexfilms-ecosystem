@@ -72,13 +72,16 @@ type SearchServices struct{ servicesBase }
 func (SearchServices) Spec() Spec {
 	return Spec{
 		Name: "search_services",
-		Description: "Search services (vehicle film / coating jobs) the user can see by plate, VIN, service number " +
-			"or customer name / phone. Returns at most 50 rows, newest first. Use get_service for the details of one service.",
+		Description: "Search or list services (vehicle film / coating jobs) the user can see, by plate, VIN, service " +
+			"number or customer name / phone. Without a query it lists the latest services (\"show my services\"). " +
+			"Returns at most 50 rows, newest first. Use get_service for the details of one service.",
+		// TEC-410: query is optional; requiring it made the model ask the
+		// user for a search term when they wanted their latest services.
 		InputSchema: object(map[string]any{
-			"query":  strMin("Plate, VIN, service number, customer name or phone.", 2, 100),
+			"query":  strMin("Optional plate, VIN, service number, customer name or phone; omit to list the latest.", 2, 100),
 			"status": enum("Optional status filter.", svcuc.StatusDraft, svcuc.StatusPending, svcuc.StatusProcessing, svcuc.StatusReady, svcuc.StatusCompleted, svcuc.StatusCancelled),
 			"limit":  limitProp(),
-		}, "query"),
+		}),
 		Kind: KindRead, Realm: RealmPanel, Feature: features.ModuleServices,
 		Permissions: []string{rbac.PermServicesRead},
 	}
@@ -103,7 +106,7 @@ func (t SearchServices) Run(ctx context.Context, env Env, raw json.RawMessage) (
 		f.Statuses = []string{in.Status}
 	}
 	rows, total, err := t.svc.List(ctx, c, f)
-	if err == nil && total == 0 {
+	if err == nil && total == 0 && f.Q != "" {
 		// Plates are stored without spaces ("34 ABC 123" -> "34ABC123").
 		if compact := compactPlate(in.Query); compact != strings.ToUpper(f.Q) && len(compact) >= 2 {
 			f.Q = compact
