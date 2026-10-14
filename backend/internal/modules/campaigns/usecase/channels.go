@@ -153,6 +153,10 @@ func (w ConversationWhatsApp) SendCampaignWhatsApp(ctx context.Context, m WhatsA
 	for _, part := range parts {
 		part.ConversationID = conv.ID
 		part.SenderType = whatsappmodel.SenderSystem
+		if m.RecipientID > 0 {
+			rid := m.RecipientID
+			part.CampaignRecipientID = &rid
+		}
 		if _, err := w.Messaging.Queue(ctx, part); err != nil {
 			if errors.Is(err, whatsappusecase.ErrInvalidRequest) || errors.Is(err, whatsappusecase.ErrNotConfigured) {
 				return &PermanentError{Err: err}

@@ -8,12 +8,13 @@
 INSERT INTO messages (
     uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type,
     external_id, body, media, status, sender_user_id, ai_run_id,
-    media_storage_key, media_mime, media_size
+    media_storage_key, media_mime, media_size, campaign_recipient_id
 ) VALUES (
     sqlc.arg(uuid), sqlc.arg(conversation_id), sqlc.narg(organization_id), sqlc.narg(brand_id),
     sqlc.arg(channel), 'out', sqlc.arg(sender_type), sqlc.arg(external_id), sqlc.narg(body),
     sqlc.narg(media), 'queued', sqlc.narg(sender_user_id), sqlc.narg(ai_run_id),
-    sqlc.narg(media_storage_key), sqlc.narg(media_mime), sqlc.narg(media_size)
+    sqlc.narg(media_storage_key), sqlc.narg(media_mime), sqlc.narg(media_size),
+    sqlc.narg(campaign_recipient_id)
 )
 RETURNING *;
 

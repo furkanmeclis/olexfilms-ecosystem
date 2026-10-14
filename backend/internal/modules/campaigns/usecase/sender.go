@@ -132,11 +132,14 @@ type WhatsAppMedia struct {
 
 // WhatsAppMessage is a campaign WhatsApp message (text + media).
 type WhatsAppMessage struct {
-	UserID int64
-	Phone  string
-	Name   string
-	Body   string
-	Media  []WhatsAppMedia
+	// RecipientID is the campaign_recipients row: a send that fails after
+	// the hand-off moves it to failed (TEC-635).
+	RecipientID int64
+	UserID      int64
+	Phone       string
+	Name        string
+	Body        string
+	Media       []WhatsAppMedia
 }
 
 // PushSender sends a push; ErrNoAddress when the user has no token.
@@ -723,7 +726,7 @@ func (s *Sender) sendWhatsApp(ctx context.Context, q *db.Queries, row db.Campaig
 		return err
 	}
 	return s.d.WhatsApp.SendCampaignWhatsApp(ctx, WhatsAppMessage{
-		UserID: r.UserID, Phone: phone, Name: strings.TrimSpace(contact.Name + " " + contact.Surname),
+		RecipientID: r.ID, UserID: r.UserID, Phone: phone, Name: strings.TrimSpace(contact.Name + " " + contact.Surname),
 		Body: whatsAppBody(ct), Media: media,
 	})
 }

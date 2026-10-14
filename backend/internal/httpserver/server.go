@@ -926,6 +926,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	}
 	campaignsSvc := campaignsusecase.New(deps.DB, deps.Queries, campaignStorage)
 	campaignsSvc.SetOutbox(outbox.NewStore(deps.DB, deps.Queries)) // TEC-406: approval notifications
+	// TEC-635: a campaign WhatsApp message that fails after the hand-off.
+	campaignsSvc.RegisterEventHandlers(eventBus)
 	campaignsmodule.RegisterRoutes(mux, campaignshandler.New(campaignsSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-467 (F5-01b): dealer showcase editor, center review and the
 	// showcase block of the public dealer endpoints.

@@ -771,6 +771,9 @@ type Querier interface {
 	// Records a validation failure: the draft keeps its temporary number (no
 	// series number is consumed) and can be archived again after a fix.
 	FailEinvoice(ctx context.Context, arg FailEinvoiceParams) (Einvoice, error)
+	// TEC-635: a WhatsApp recipient handed off as sent whose message failed
+	// afterwards; no row when it is not sent (already failed or skipped).
+	FailSentCampaignRecipient(ctx context.Context, arg FailSentCampaignRecipientParams) (CampaignRecipient, error)
 	// TEC-387: actions left executing since before stale_before (the process
 	// stopped mid-run) become failed with an "outcome unknown" error.
 	// updated_at is the claim time (set_updated_at trigger).
@@ -2892,6 +2895,9 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	// TEC-635: a finished (sent) campaign with a recipient that failed after
+	// the hand-off; finished_at stays.
+	MarkSentCampaignPartiallyFailed(ctx context.Context, id int64) (Campaign, error)
 	MarkServiceCertificateWarningsPending(ctx context.Context, arg MarkServiceCertificateWarningsPendingParams) (int64, error)
 	MarkServiceMeasurementChecked(ctx context.Context, arg MarkServiceMeasurementCheckedParams) (int64, error)
 	// Idempotent: an already processed review returns no row (pgx.ErrNoRows).

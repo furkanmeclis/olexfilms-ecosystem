@@ -687,3 +687,41 @@ func TestUnsubscribeToken(t *testing.T) {
 		t.Fatal("garbage verified")
 	}
 }
+
+// TEC-635 acceptance: a WhatsApp recipient handed off as sent whose message
+// fails afterwards shows as failed in the statistics; the finished campaign
+// becomes partially_failed once, and a repeated event changes nothing.
+func TestCampaignWhatsAppLateFailureCountsAsFailed(t *testing.T) {
+	e := newSenderEnv(t)
+	u := e.customerWithConsent(t, "late-fail")
+	camp := e.scheduled(t, ChannelWhatsApp)
+	e.tick(t)
+	r := e.recipientOf(t, camp.ID, u.ID, ChannelWhatsApp)
+	e.mustProcess(t, r.ID)
+	if len(e.ch.whatsapp) != 1 || e.ch.whatsapp[0].RecipientID != r.ID {
+		t.Fatalf("whatsapp messages = %+v, want one carrying recipient %d", e.ch.whatsapp, r.ID)
+	}
+	if st := e.campaignRow(t, camp.Uuid).Status; st != StatusSent {
+		t.Fatalf("campaign = %s, want sent", st)
+	}
+
+	ev := events.New(events.WhatsAppMessageFailed)
+	// The outbox round trip decodes numbers as float64.
+	ev.Payload = map[string]any{"campaign_recipient_id": float64(r.ID), "reason": "whatsapp: recipient not in allowlist"}
+	for i := 0; i < 2; i++ {
+		if err := e.svc.HandleWhatsAppMessageFailed(e.ctx, ev); err != nil {
+			t.Fatalf("handle %d: %v", i, err)
+		}
+	}
+	got := e.recipientOf(t, camp.ID, u.ID, ChannelWhatsApp)
+	if got.Status != RecipientFailed || got.Reason != "whatsapp: recipient not in allowlist" {
+		t.Fatalf("recipient = %+v, want failed with the send error", got)
+	}
+	row := e.campaignRow(t, camp.Uuid)
+	if row.Status != StatusPartiallyFailed || row.RecipientsSent != 0 || row.RecipientsFailed != 1 || !row.FinishedAt.Valid {
+		t.Fatalf("campaign = %s sent=%d failed=%d finished=%v", row.Status, row.RecipientsSent, row.RecipientsFailed, row.FinishedAt.Valid)
+	}
+	if n := e.count(t, `SELECT COUNT(*) FROM campaign_events WHERE campaign_id = $1 AND event_type = 'delivery_failed'`, camp.ID); n != 1 {
+		t.Fatalf("delivery_failed events = %d, want 1", n)
+	}
+}
