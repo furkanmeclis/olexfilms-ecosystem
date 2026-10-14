@@ -18,6 +18,19 @@ SET daily_vehicle_capacity = EXCLUDED.daily_vehicle_capacity,
     portal_appointments_enabled = EXCLUDED.portal_appointments_enabled
 RETURNING *;
 
+-- TEC-410: an organization that never saved its settings gets the defaults
+-- on first use; a row saved meanwhile is kept.
+-- name: InsertDefaultAppointmentSettings :exec
+INSERT INTO appointment_settings (
+    organization_id, brand_id, daily_vehicle_capacity, default_estimated_minutes,
+    slot_interval_minutes, working_hours, portal_appointments_enabled
+) VALUES (
+    sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(daily_vehicle_capacity),
+    sqlc.arg(default_estimated_minutes), sqlc.arg(slot_interval_minutes),
+    sqlc.arg(working_hours), false
+)
+ON CONFLICT (organization_id) DO NOTHING;
+
 -- name: GetAppointmentSettings :one
 SELECT * FROM appointment_settings
 WHERE organization_id = sqlc.arg(organization_id);

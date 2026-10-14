@@ -822,6 +822,41 @@ func (q *Queries) GetPortalAppointmentDealer(ctx context.Context, arg GetPortalA
 	return i, err
 }
 
+const insertDefaultAppointmentSettings = `-- name: InsertDefaultAppointmentSettings :exec
+INSERT INTO appointment_settings (
+    organization_id, brand_id, daily_vehicle_capacity, default_estimated_minutes,
+    slot_interval_minutes, working_hours, portal_appointments_enabled
+) VALUES (
+    $1, $2, $3,
+    $4, $5,
+    $6, false
+)
+ON CONFLICT (organization_id) DO NOTHING
+`
+
+type InsertDefaultAppointmentSettingsParams struct {
+	OrganizationID          int64  `json:"organization_id"`
+	BrandID                 int64  `json:"brand_id"`
+	DailyVehicleCapacity    int32  `json:"daily_vehicle_capacity"`
+	DefaultEstimatedMinutes int32  `json:"default_estimated_minutes"`
+	SlotIntervalMinutes     int32  `json:"slot_interval_minutes"`
+	WorkingHours            []byte `json:"working_hours"`
+}
+
+// TEC-410: an organization that never saved its settings gets the defaults
+// on first use; a row saved meanwhile is kept.
+func (q *Queries) InsertDefaultAppointmentSettings(ctx context.Context, arg InsertDefaultAppointmentSettingsParams) error {
+	_, err := q.db.Exec(ctx, insertDefaultAppointmentSettings,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.DailyVehicleCapacity,
+		arg.DefaultEstimatedMinutes,
+		arg.SlotIntervalMinutes,
+		arg.WorkingHours,
+	)
+	return err
+}
+
 const linkAppointmentLead = `-- name: LinkAppointmentLead :one
 UPDATE appointments
 SET lead_id = $1
