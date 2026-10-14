@@ -21,7 +21,7 @@ WHERE channel = $3
   AND direction = 'out'
   AND status <> 'read'
   AND ($1::text = 'read' OR status <> 'delivered')
-RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason
+RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason, campaign_recipient_id
 `
 
 type ApplyMessageReceiptParams struct {
@@ -71,6 +71,7 @@ func (q *Queries) ApplyMessageReceipt(ctx context.Context, arg ApplyMessageRecei
 			&i.DeliveryStatusAt,
 			&i.SendAttempts,
 			&i.FailureReason,
+			&i.CampaignRecipientID,
 		); err != nil {
 			return nil, err
 		}
@@ -83,7 +84,7 @@ func (q *Queries) ApplyMessageReceipt(ctx context.Context, arg ApplyMessageRecei
 }
 
 const getMessageByID = `-- name: GetMessageByID :one
-SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason FROM messages WHERE id = $1
+SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason, campaign_recipient_id FROM messages WHERE id = $1
 `
 
 func (q *Queries) GetMessageByID(ctx context.Context, id int64) (Message, error) {
@@ -113,6 +114,7 @@ func (q *Queries) GetMessageByID(ctx context.Context, id int64) (Message, error)
 		&i.DeliveryStatusAt,
 		&i.SendAttempts,
 		&i.FailureReason,
+		&i.CampaignRecipientID,
 	)
 	return i, err
 }
@@ -122,31 +124,33 @@ const insertQueuedMessage = `-- name: InsertQueuedMessage :one
 INSERT INTO messages (
     uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type,
     external_id, body, media, status, sender_user_id, ai_run_id,
-    media_storage_key, media_mime, media_size
+    media_storage_key, media_mime, media_size, campaign_recipient_id
 ) VALUES (
     $1, $2, $3, $4,
     $5, 'out', $6, $7, $8,
     $9, 'queued', $10, $11,
-    $12, $13, $14
+    $12, $13, $14,
+    $15
 )
-RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason
+RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason, campaign_recipient_id
 `
 
 type InsertQueuedMessageParams struct {
-	Uuid            uuid.UUID   `json:"uuid"`
-	ConversationID  int64       `json:"conversation_id"`
-	OrganizationID  pgtype.Int8 `json:"organization_id"`
-	BrandID         pgtype.Int8 `json:"brand_id"`
-	Channel         string      `json:"channel"`
-	SenderType      string      `json:"sender_type"`
-	ExternalID      string      `json:"external_id"`
-	Body            pgtype.Text `json:"body"`
-	Media           []byte      `json:"media"`
-	SenderUserID    pgtype.Int8 `json:"sender_user_id"`
-	AiRunID         pgtype.Int8 `json:"ai_run_id"`
-	MediaStorageKey pgtype.Text `json:"media_storage_key"`
-	MediaMime       pgtype.Text `json:"media_mime"`
-	MediaSize       pgtype.Int8 `json:"media_size"`
+	Uuid                uuid.UUID   `json:"uuid"`
+	ConversationID      int64       `json:"conversation_id"`
+	OrganizationID      pgtype.Int8 `json:"organization_id"`
+	BrandID             pgtype.Int8 `json:"brand_id"`
+	Channel             string      `json:"channel"`
+	SenderType          string      `json:"sender_type"`
+	ExternalID          string      `json:"external_id"`
+	Body                pgtype.Text `json:"body"`
+	Media               []byte      `json:"media"`
+	SenderUserID        pgtype.Int8 `json:"sender_user_id"`
+	AiRunID             pgtype.Int8 `json:"ai_run_id"`
+	MediaStorageKey     pgtype.Text `json:"media_storage_key"`
+	MediaMime           pgtype.Text `json:"media_mime"`
+	MediaSize           pgtype.Int8 `json:"media_size"`
+	CampaignRecipientID pgtype.Int8 `json:"campaign_recipient_id"`
 }
 
 // TEC-395 (F4-02d): WhatsApp outgoing queue, delivery receipts and inbound
@@ -170,6 +174,7 @@ func (q *Queries) InsertQueuedMessage(ctx context.Context, arg InsertQueuedMessa
 		arg.MediaStorageKey,
 		arg.MediaMime,
 		arg.MediaSize,
+		arg.CampaignRecipientID,
 	)
 	var i Message
 	err := row.Scan(
@@ -196,6 +201,7 @@ func (q *Queries) InsertQueuedMessage(ctx context.Context, arg InsertQueuedMessa
 		&i.DeliveryStatusAt,
 		&i.SendAttempts,
 		&i.FailureReason,
+		&i.CampaignRecipientID,
 	)
 	return i, err
 }
@@ -240,7 +246,7 @@ func (q *Queries) ListStaleQueuedMessages(ctx context.Context, arg ListStaleQueu
 }
 
 const lockQueuedMessage = `-- name: LockQueuedMessage :one
-SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason FROM messages
+SELECT id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason, campaign_recipient_id FROM messages
 WHERE id = $1 AND status = 'queued' AND direction = 'out'
 FOR UPDATE SKIP LOCKED
 `
@@ -274,6 +280,7 @@ func (q *Queries) LockQueuedMessage(ctx context.Context, id int64) (Message, err
 		&i.DeliveryStatusAt,
 		&i.SendAttempts,
 		&i.FailureReason,
+		&i.CampaignRecipientID,
 	)
 	return i, err
 }
@@ -285,7 +292,7 @@ SET status = CASE WHEN $1::boolean THEN 'failed' ELSE 'queued' END,
     failure_reason = $2,
     delivery_status_at = CASE WHEN $1::boolean THEN $3::timestamptz ELSE delivery_status_at END
 WHERE id = $4
-RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason
+RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason, campaign_recipient_id
 `
 
 type MarkMessageSendErrorParams struct {
@@ -329,6 +336,7 @@ func (q *Queries) MarkMessageSendError(ctx context.Context, arg MarkMessageSendE
 		&i.DeliveryStatusAt,
 		&i.SendAttempts,
 		&i.FailureReason,
+		&i.CampaignRecipientID,
 	)
 	return i, err
 }
@@ -342,7 +350,7 @@ SET status = 'sent',
     failure_reason = NULL,
     delivery_status_at = $2
 WHERE id = $3
-RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason
+RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason, campaign_recipient_id
 `
 
 type MarkMessageSentParams struct {
@@ -378,6 +386,7 @@ func (q *Queries) MarkMessageSent(ctx context.Context, arg MarkMessageSentParams
 		&i.DeliveryStatusAt,
 		&i.SendAttempts,
 		&i.FailureReason,
+		&i.CampaignRecipientID,
 	)
 	return i, err
 }
@@ -386,7 +395,7 @@ const setMessageMediaNote = `-- name: SetMessageMediaNote :one
 UPDATE messages
 SET media = COALESCE(media, '{}'::jsonb) || jsonb_build_object('storage_skipped', $1::text)
 WHERE id = $2
-RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason
+RETURNING id, uuid, conversation_id, organization_id, brand_id, channel, direction, sender_type, external_id, body, media, status, raw, sent_at, created_at, sender_user_id, ai_run_id, media_storage_key, media_mime, media_size, delivery_status_at, send_attempts, failure_reason, campaign_recipient_id
 `
 
 type SetMessageMediaNoteParams struct {
@@ -423,6 +432,7 @@ func (q *Queries) SetMessageMediaNote(ctx context.Context, arg SetMessageMediaNo
 		&i.DeliveryStatusAt,
 		&i.SendAttempts,
 		&i.FailureReason,
+		&i.CampaignRecipientID,
 	)
 	return i, err
 }

@@ -67,7 +67,7 @@ func NewMessaging(svc *usecase.Service, pool *pgxpool.Pool, q *db.Queries, d Mes
 	m := usecase.NewMessaging(usecase.MessagingDeps{
 		Queries: q, Tx: tx, Provider: svc.Provider(), Downloader: svc.MediaDownloader(),
 		Storage: d.Storage, Queue: d.Queue, Limiter: d.Limiter, SendPerMinute: d.SendPerMinute,
-		Publisher: d.Publisher, Log: log,
+		Publisher: d.Publisher, Outbox: outbox.NewStore(pool, q), Log: log,
 	})
 	svc.AttachMessaging(m)
 	return m

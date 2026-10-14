@@ -1722,29 +1722,30 @@ type MeasurementValue struct {
 }
 
 type Message struct {
-	ID               int64              `json:"id"`
-	Uuid             uuid.UUID          `json:"uuid"`
-	ConversationID   int64              `json:"conversation_id"`
-	OrganizationID   pgtype.Int8        `json:"organization_id"`
-	BrandID          pgtype.Int8        `json:"brand_id"`
-	Channel          string             `json:"channel"`
-	Direction        string             `json:"direction"`
-	SenderType       string             `json:"sender_type"`
-	ExternalID       string             `json:"external_id"`
-	Body             pgtype.Text        `json:"body"`
-	Media            []byte             `json:"media"`
-	Status           string             `json:"status"`
-	Raw              []byte             `json:"raw"`
-	SentAt           pgtype.Timestamptz `json:"sent_at"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	SenderUserID     pgtype.Int8        `json:"sender_user_id"`
-	AiRunID          pgtype.Int8        `json:"ai_run_id"`
-	MediaStorageKey  pgtype.Text        `json:"media_storage_key"`
-	MediaMime        pgtype.Text        `json:"media_mime"`
-	MediaSize        pgtype.Int8        `json:"media_size"`
-	DeliveryStatusAt pgtype.Timestamptz `json:"delivery_status_at"`
-	SendAttempts     int16              `json:"send_attempts"`
-	FailureReason    pgtype.Text        `json:"failure_reason"`
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	ConversationID      int64              `json:"conversation_id"`
+	OrganizationID      pgtype.Int8        `json:"organization_id"`
+	BrandID             pgtype.Int8        `json:"brand_id"`
+	Channel             string             `json:"channel"`
+	Direction           string             `json:"direction"`
+	SenderType          string             `json:"sender_type"`
+	ExternalID          string             `json:"external_id"`
+	Body                pgtype.Text        `json:"body"`
+	Media               []byte             `json:"media"`
+	Status              string             `json:"status"`
+	Raw                 []byte             `json:"raw"`
+	SentAt              pgtype.Timestamptz `json:"sent_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	SenderUserID        pgtype.Int8        `json:"sender_user_id"`
+	AiRunID             pgtype.Int8        `json:"ai_run_id"`
+	MediaStorageKey     pgtype.Text        `json:"media_storage_key"`
+	MediaMime           pgtype.Text        `json:"media_mime"`
+	MediaSize           pgtype.Int8        `json:"media_size"`
+	DeliveryStatusAt    pgtype.Timestamptz `json:"delivery_status_at"`
+	SendAttempts        int16              `json:"send_attempts"`
+	FailureReason       pgtype.Text        `json:"failure_reason"`
+	CampaignRecipientID pgtype.Int8        `json:"campaign_recipient_id"`
 }
 
 type MigrationMap struct {

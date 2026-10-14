@@ -228,6 +228,24 @@ SET status   = sqlc.arg(status)::varchar,
 WHERE id = sqlc.arg(id) AND status = 'pending'
 RETURNING *;
 
+-- name: FailSentCampaignRecipient :one
+-- TEC-635: a WhatsApp recipient handed off as sent whose message failed
+-- afterwards; no row when it is not sent (already failed or skipped).
+UPDATE campaign_recipients
+SET status  = 'failed',
+    reason  = sqlc.arg(reason)::text,
+    sent_at = NULL
+WHERE id = sqlc.arg(id) AND status = 'sent'
+RETURNING *;
+
+-- name: MarkSentCampaignPartiallyFailed :one
+-- TEC-635: a finished (sent) campaign with a recipient that failed after
+-- the hand-off; finished_at stays.
+UPDATE campaigns
+SET status = 'partially_failed'
+WHERE id = sqlc.arg(id) AND status = 'sent'
+RETURNING *;
+
 -- name: SkipPendingCampaignRecipients :execrows
 -- Cancellation while sending: the remaining pending recipients are skipped.
 UPDATE campaign_recipients

@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/crypto"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp/fake"
@@ -744,5 +745,64 @@ func TestMessagingWebhookPublishesAndAppliesReceipt(t *testing.T) {
 	}
 	if _, ok := f.pub.last(realtime.ChannelConversations, usecase.EventMessageCreated, in.Uuid); !ok {
 		t.Fatal("inbound message not published")
+	}
+}
+
+// TEC-635: a campaign message that fails for good reports
+// whatsapp.message.failed with its campaign recipient; an allowlist refusal
+// is permanent (one attempt), and a non-campaign failure emits nothing.
+func TestMessagingCampaignMessageFailureEmitsEvent(t *testing.T) {
+	f := newMsgFixture(t)
+	out := &fakeOutbox{}
+	f.m = usecase.NewMessaging(usecase.MessagingDeps{
+		Queries: f.q, Tx: f.tx, Provider: f.wa, Storage: f.store, Queue: f.queue, Limiter: f.lim,
+		SendPerMinute: func(context.Context) int { return 30 }, Publisher: f.pub, Outbox: out,
+	})
+	var orgID, brandID, userID, recipientID int64
+	if err := f.tx.QueryRow(f.ctx, `SELECT id, brand_id FROM organizations ORDER BY id LIMIT 1`).Scan(&orgID, &brandID); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.tx.QueryRow(f.ctx, `INSERT INTO users (email, password_hash, name, surname, status)
+		VALUES ($1, 'x', 'Kampanya', 'Alıcı', 'active') RETURNING id`,
+		fmt.Sprintf("tec635-%d@example.test", time.Now().UnixNano())).Scan(&userID); err != nil {
+		t.Fatal(err)
+	}
+	conv := f.conversation(t)
+	if err := f.tx.QueryRow(f.ctx, `WITH c AS (
+			INSERT INTO campaigns (organization_id, brand_id, name, channels, status)
+			VALUES ($1, $2, 'TEC-635', ARRAY['whatsapp'], 'sending') RETURNING id)
+		INSERT INTO campaign_recipients (campaign_id, organization_id, brand_id, user_id, channel, locale, target_address, status, sent_at)
+		SELECT c.id, $1, $2, $3, 'whatsapp', 'tr', $4, 'sent', NOW() FROM c RETURNING id`,
+		orgID, brandID, userID, conv.ContactE164).Scan(&recipientID); err != nil {
+		t.Fatal(err)
+	}
+
+	msg, err := f.m.Queue(f.ctx, usecase.OutgoingMessage{
+		ConversationID: conv.ID, SenderType: model.SenderSystem, Body: "Kampanya", CampaignRecipientID: &recipientID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !msg.CampaignRecipientID.Valid || msg.CampaignRecipientID.Int64 != recipientID {
+		t.Fatalf("campaign_recipient_id = %+v", msg.CampaignRecipientID)
+	}
+	f.wa.Err = whatsapp.ErrRecipientNotAllowed
+	if err := f.m.ProcessSend(f.ctx, msg.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.get(t, msg.ID); got.Status != "failed" || got.SendAttempts != 1 {
+		t.Fatalf("allowlist refusal: status=%s attempts=%d, want failed after one attempt", got.Status, got.SendAttempts)
+	}
+	if len(out.got) != 1 || out.got[0].Name != events.WhatsAppMessageFailed ||
+		out.got[0].Payload["campaign_recipient_id"] != recipientID {
+		t.Fatalf("outbox = %+v, want one whatsapp.message.failed for recipient %d", out.got, recipientID)
+	}
+
+	plain := f.queueText(t, conv, "AI")
+	if err := f.m.ProcessSend(f.ctx, plain.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.got) != 1 {
+		t.Fatalf("a non-campaign failure wrote %d events", len(out.got)-1)
 	}
 }

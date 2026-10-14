@@ -310,6 +310,45 @@ func (q *Queries) DeleteDraftCampaign(ctx context.Context, id int64) (int64, err
 	return result.RowsAffected(), nil
 }
 
+const failSentCampaignRecipient = `-- name: FailSentCampaignRecipient :one
+UPDATE campaign_recipients
+SET status  = 'failed',
+    reason  = $1::text,
+    sent_at = NULL
+WHERE id = $2 AND status = 'sent'
+RETURNING id, campaign_id, organization_id, brand_id, user_id, channel, locale, target_address, push_token_count, status, reason, attempts, sent_at, created_at, updated_at
+`
+
+type FailSentCampaignRecipientParams struct {
+	Reason string `json:"reason"`
+	ID     int64  `json:"id"`
+}
+
+// TEC-635: a WhatsApp recipient handed off as sent whose message failed
+// afterwards; no row when it is not sent (already failed or skipped).
+func (q *Queries) FailSentCampaignRecipient(ctx context.Context, arg FailSentCampaignRecipientParams) (CampaignRecipient, error) {
+	row := q.db.QueryRow(ctx, failSentCampaignRecipient, arg.Reason, arg.ID)
+	var i CampaignRecipient
+	err := row.Scan(
+		&i.ID,
+		&i.CampaignID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.UserID,
+		&i.Channel,
+		&i.Locale,
+		&i.TargetAddress,
+		&i.PushTokenCount,
+		&i.Status,
+		&i.Reason,
+		&i.Attempts,
+		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getCampaignByID = `-- name: GetCampaignByID :one
 SELECT id, uuid, organization_id, brand_id, name, channels, audience_filter, status, scheduled_at, approver_org_id, started_at, finished_at, recipients_total, recipients_sent, recipients_failed, recipients_skipped, created_by_user_id, updated_by_user_id, created_at, updated_at FROM campaigns
 WHERE id = $1
@@ -1457,6 +1496,43 @@ func (q *Queries) LockCampaignRecipient(ctx context.Context, id int64) (Campaign
 		&i.Reason,
 		&i.Attempts,
 		&i.SentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const markSentCampaignPartiallyFailed = `-- name: MarkSentCampaignPartiallyFailed :one
+UPDATE campaigns
+SET status = 'partially_failed'
+WHERE id = $1 AND status = 'sent'
+RETURNING id, uuid, organization_id, brand_id, name, channels, audience_filter, status, scheduled_at, approver_org_id, started_at, finished_at, recipients_total, recipients_sent, recipients_failed, recipients_skipped, created_by_user_id, updated_by_user_id, created_at, updated_at
+`
+
+// TEC-635: a finished (sent) campaign with a recipient that failed after
+// the hand-off; finished_at stays.
+func (q *Queries) MarkSentCampaignPartiallyFailed(ctx context.Context, id int64) (Campaign, error) {
+	row := q.db.QueryRow(ctx, markSentCampaignPartiallyFailed, id)
+	var i Campaign
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.Name,
+		&i.Channels,
+		&i.AudienceFilter,
+		&i.Status,
+		&i.ScheduledAt,
+		&i.ApproverOrgID,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.RecipientsTotal,
+		&i.RecipientsSent,
+		&i.RecipientsFailed,
+		&i.RecipientsSkipped,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

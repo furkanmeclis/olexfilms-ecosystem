@@ -19,6 +19,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/whatsapp/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sysconfig"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
@@ -138,7 +139,10 @@ type MessagingDeps struct {
 	SendPerMinute func(ctx context.Context) int
 	Publisher     realtime.Publisher
 	Documents     DocumentRenderer
-	Log           *slog.Logger
+	// Outbox carries whatsapp.message.failed of campaign messages
+	// (TEC-635); nil drops the event.
+	Outbox Outbox
+	Log    *slog.Logger
 }
 
 // Messaging is the outgoing queue, receipt, inbound media and realtime use
@@ -180,8 +184,11 @@ type OutgoingMessage struct {
 	SenderType     string
 	SenderUserID   *int64
 	AIRunID        *int64
-	Body           string
-	Media          *OutgoingMedia
+	// CampaignRecipientID links a campaign message to its recipient: a
+	// final send failure reports whatsapp.message.failed (TEC-635).
+	CampaignRecipientID *int64
+	Body                string
+	Media               *OutgoingMedia
 }
 
 // storedMedia is the messages.media JSON of an outgoing file.
@@ -236,6 +243,7 @@ func (m *Messaging) Queue(ctx context.Context, in OutgoingMessage) (db.Message, 
 		Uuid: id, ConversationID: conv.ID, OrganizationID: conv.OrganizationID, BrandID: conv.BrandID,
 		Channel: whatsapp.ChannelWhatsApp, SenderType: in.SenderType, ExternalID: ClientMessageID(id),
 		Body: text(body), SenderUserID: int8Ptr(in.SenderUserID), AiRunID: int8Ptr(in.AIRunID),
+		CampaignRecipientID: int8Ptr(in.CampaignRecipientID),
 	}
 	if in.Media != nil {
 		mime, err := whatsapp.ValidateMedia(in.Media.Data, in.Media.FileName)
@@ -399,6 +407,21 @@ func (m *Messaging) sendFailed(ctx context.Context, tx pgx.Tx, q *db.Queries, co
 	if err != nil {
 		return err
 	}
+	if failed && msg.CampaignRecipientID.Valid && m.d.Outbox != nil {
+		// TEC-635: the campaign counted the recipient as sent at hand-off.
+		e := events.New(events.WhatsAppMessageFailed)
+		e.EntityType = "message"
+		e.EntityID = &msg.ID
+		e.EntityUUID = &msg.Uuid
+		e.Payload = map[string]any{
+			"message_uuid":          msg.Uuid.String(),
+			"campaign_recipient_id": msg.CampaignRecipientID.Int64,
+			"reason":                reason,
+		}
+		if err := m.d.Outbox.Enqueue(ctx, tx, e); err != nil {
+			return err
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
@@ -412,7 +435,8 @@ func (m *Messaging) sendFailed(ctx context.Context, tx pgx.Tx, q *db.Queries, co
 
 // permanentSendError reports provider errors a retry cannot fix.
 func permanentSendError(err error) bool {
-	return errors.Is(err, whatsapp.ErrInvalidRecipient) || errors.Is(err, whatsapp.ErrMediaType) ||
+	return errors.Is(err, whatsapp.ErrInvalidRecipient) || errors.Is(err, whatsapp.ErrRecipientNotAllowed) ||
+		errors.Is(err, whatsapp.ErrMediaType) ||
 		errors.Is(err, whatsapp.ErrMediaMismatch) || errors.Is(err, whatsapp.ErrMediaTooLarge)
 }
 
