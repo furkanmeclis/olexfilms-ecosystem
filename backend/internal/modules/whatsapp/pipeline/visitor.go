@@ -66,6 +66,8 @@ const (
 // VisitorLeads stores visitor lead requests (*leadsusecase.Applications).
 type VisitorLeads interface {
 	UpsertVisitorLead(ctx context.Context, brandID int64, in leadsusecase.VisitorLeadInput) (leadsusecase.VisitorLeadResult, error)
+	// UpsertCustomerAppointmentLead backs request_appointment (TEC-639).
+	UpsertCustomerAppointmentLead(ctx context.Context, brandID int64, in leadsusecase.CustomerAppointmentInput) (leadsusecase.VisitorLeadResult, error)
 }
 
 // VisitorSettings are the system settings of the visitor limits
@@ -262,7 +264,7 @@ func (p *Pipeline) dealerReferral(ctx context.Context, r *run, a actor, batch []
 // --- lead tool -------------------------------------------------------------------
 
 // visitorTurn is the conversation state of an agent turn, for the tools of
-// this package (request_dealer_contact).
+// this package (request_dealer_contact, request_appointment).
 type visitorTurn struct {
 	p *Pipeline
 	r *run
