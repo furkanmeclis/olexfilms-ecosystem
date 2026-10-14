@@ -36,8 +36,8 @@ type WireDeps struct {
 	Downloader       whatsapp.MediaDownloader
 	DefaultBrandSlug string
 	Log              *slog.Logger
-	// TEC-397 visitor flow: Tools gets request_dealer_contact when Leads is
-	// set.
+	// TEC-397 visitor flow: Tools gets request_dealer_contact (and, TEC-639,
+	// the customer's request_appointment) when Leads is set.
 	Tools           *aitools.Registry
 	Dealers         aitools.DealerFinder
 	Leads           VisitorLeads
@@ -58,6 +58,7 @@ func Wire(d WireDeps) *Pipeline {
 	}
 	if d.Tools != nil && d.Leads != nil {
 		d.Tools.Register(RequestDealerContact{})
+		d.Tools.Register(RequestAppointment{})
 	}
 	identity := wausecase.NewIdentityResolver(d.Queries, cache, d.Provider, d.Models, d.Log).
 		WithUsageRecorder(LocaleUsage{Store: d.AIStore, Queries: d.Queries, DefaultBrandSlug: d.DefaultBrandSlug})

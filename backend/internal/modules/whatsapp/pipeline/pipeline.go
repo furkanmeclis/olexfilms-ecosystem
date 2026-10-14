@@ -1044,8 +1044,9 @@ func (p *Pipeline) answer(ctx context.Context, r *run, a actor, history []llm.Me
 	a.facts.Locale = r.locale
 	// TEC-461: the confirmation card summary is written in this language.
 	a.principal.Locale = cardLocale(r.locale)
-	if a.facts.Visitor {
-		// The visitor tools of this package read the conversation.
+	if a.facts.Visitor || a.facts.Customer {
+		// The visitor and customer tools of this package read the
+		// conversation.
 		ctx = withVisitorTurn(ctx, &visitorTurn{p: p, r: r, a: a})
 	}
 	res, err := p.d.Agent.RunAgent(ctx, aiusecase.AgentInput{

@@ -206,7 +206,7 @@ func (a *Applications) UpsertVisitorLead(ctx context.Context, brandID int64, in 
 	})
 	switch {
 	case err == nil:
-		return a.updateVisitorLead(ctx, cur, v, event)
+		return a.updateVisitorLead(ctx, cur, v, v.notes(), event)
 	case !errors.Is(err, pgx.ErrNoRows):
 		return VisitorLeadResult{}, fmt.Errorf("leads: visitor lead: %w", err)
 	}
@@ -263,12 +263,14 @@ func (a *Applications) UpsertVisitorLead(ctx context.Context, brandID int64, in 
 	return res, nil
 }
 
-func (a *Applications) updateVisitorLead(ctx context.Context, cur db.Lead, v visitorLead, event map[string]any) (VisitorLeadResult, error) {
+// updateVisitorLead appends body to the lead's notes and renames the
+// contact; the address is filled only when the lead had none.
+func (a *Applications) updateVisitorLead(ctx context.Context, cur db.Lead, v visitorLead, body string, event map[string]any) (VisitorLeadResult, error) {
 	country, province, district := cur.CountryID, cur.ProvinceID, cur.DistrictID
 	if !country.Valid && v.address != nil {
 		country, province, district = v.address.IDs()
 	}
-	notes := strings.TrimSpace(cur.Notes + "\n\n" + v.notes())
+	notes := strings.TrimSpace(cur.Notes + "\n\n" + body)
 	if utf8.RuneCountInString(notes) > maxNotes {
 		notes = string([]rune(notes)[:maxNotes])
 	}
