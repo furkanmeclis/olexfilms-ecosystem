@@ -1452,6 +1452,9 @@ type Querier interface {
 	InsertDealerShowcasePhoto(ctx context.Context, arg InsertDealerShowcasePhotoParams) (DealerShowcasePhoto, error)
 	// A new service goes to the end of the list.
 	InsertDealerShowcaseService(ctx context.Context, arg InsertDealerShowcaseServiceParams) (DealerShowcaseService, error)
+	// TEC-410: an organization that never saved its settings gets the defaults
+	// on first use; a row saved meanwhile is kept.
+	InsertDefaultAppointmentSettings(ctx context.Context, arg InsertDefaultAppointmentSettingsParams) error
 	// Cron run: writes the report only when the scope and day has none (no
 	// row returned otherwise), so a rerun or a manual report wins.
 	InsertEODReportIfMissing(ctx context.Context, arg InsertEODReportIfMissingParams) (EodReport, error)

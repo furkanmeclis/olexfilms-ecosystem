@@ -235,14 +235,53 @@ type OccupancyRow struct {
 }
 
 func (s *Service) GetSettings(ctx context.Context, c Caller) (Settings, error) {
-	row, err := s.q.GetAppointmentSettings(ctx, c.Org.InternalID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Settings{}, ErrNotFound
-	}
+	row, err := s.settingsOrDefault(ctx, c.Org.InternalID, c.Org.BrandID)
 	if err != nil {
-		return Settings{}, fmt.Errorf("appointments: settings: %w", err)
+		return Settings{}, err
 	}
 	return settingsView(row), nil
+}
+
+// Defaults of an organization that never saved its appointment settings
+// (TEC-410): without a row no appointment could be booked at all, from the
+// panel, the portal or the assistant.
+const (
+	DefaultDailyVehicleCapacity = 8
+	DefaultEstimatedMinutes     = 60
+	DefaultSlotIntervalMinutes  = 30
+	defaultWorkdayStart         = "09:00"
+	defaultWorkdayEnd           = "18:00"
+)
+
+// DefaultWorkingHours is Monday to Saturday, 09:00-18:00.
+func DefaultWorkingHours() []byte {
+	day := []WorkWindow{{Start: defaultWorkdayStart, End: defaultWorkdayEnd}}
+	byDay := map[string][]WorkWindow{}
+	for _, d := range []string{"monday", "tuesday", "wednesday", "thursday", "friday", "saturday"} {
+		byDay[d] = day
+	}
+	raw, _ := json.Marshal(byDay)
+	return raw
+}
+
+// settingsOrDefault reads the organization's settings, first writing the
+// defaults when it has none.
+func (s *Service) settingsOrDefault(ctx context.Context, orgID, brandID int64) (db.AppointmentSetting, error) {
+	row, err := s.q.GetAppointmentSettings(ctx, orgID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		if err := s.q.InsertDefaultAppointmentSettings(ctx, db.InsertDefaultAppointmentSettingsParams{
+			OrganizationID: orgID, BrandID: brandID,
+			DailyVehicleCapacity: DefaultDailyVehicleCapacity, DefaultEstimatedMinutes: DefaultEstimatedMinutes,
+			SlotIntervalMinutes: DefaultSlotIntervalMinutes, WorkingHours: DefaultWorkingHours(),
+		}); err != nil {
+			return db.AppointmentSetting{}, fmt.Errorf("appointments: default settings: %w", err)
+		}
+		row, err = s.q.GetAppointmentSettings(ctx, orgID)
+	}
+	if err != nil {
+		return db.AppointmentSetting{}, fmt.Errorf("appointments: settings: %w", err)
+	}
+	return row, nil
 }
 
 func (s *Service) PutSettings(ctx context.Context, c Caller, in Settings) (Settings, error) {
@@ -980,12 +1019,9 @@ func (s *Service) orgSettings(ctx context.Context, orgID int64) (db.Organization
 	if err != nil {
 		return db.Organization{}, db.AppointmentSetting{}, nil, fmt.Errorf("appointments: organization: %w", err)
 	}
-	setting, err := s.q.GetAppointmentSettings(ctx, org.ID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return db.Organization{}, db.AppointmentSetting{}, nil, ErrNotFound
-	}
+	setting, err := s.settingsOrDefault(ctx, org.ID, org.BrandID)
 	if err != nil {
-		return db.Organization{}, db.AppointmentSetting{}, nil, fmt.Errorf("appointments: settings: %w", err)
+		return db.Organization{}, db.AppointmentSetting{}, nil, err
 	}
 	return org, setting, loadLocation(org.Timezone), nil
 }

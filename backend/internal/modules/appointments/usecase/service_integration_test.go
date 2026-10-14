@@ -657,3 +657,32 @@ func TestListAndAvailabilityOrganizationFilterStaysInScope(t *testing.T) {
 		t.Fatalf("distributor foreign availability err = %v, want ErrNotFound", err)
 	}
 }
+
+// TEC-410: an organization that never saved its settings books with the
+// defaults (Mon-Sat 09:00-18:00, 8 a day, 60 min) instead of failing with
+// "appointment not found"; the panel then reads the defaults.
+func TestCreateWithoutSettingsUsesDefaults(t *testing.T) {
+	f := newFixture(t)
+	f.link(f.user, f.dealer)
+	c := f.caller(f.dealer, rbac.ScopeManaged, []int64{f.dealer.ID})
+	start := time.Date(2026, 10, 5, 7, 0, 0, 0, time.UTC) // Monday
+	a, err := f.svc.Create(f.ctx, c, CreateInput{CustomerUserID: f.user.ID, StartsAt: start})
+	if err != nil {
+		t.Fatalf("create without settings: %v", err)
+	}
+	if got := a.EndsAt.Sub(a.StartsAt); got != DefaultEstimatedMinutes*time.Minute {
+		t.Fatalf("duration = %v, want the default %d min", got, DefaultEstimatedMinutes)
+	}
+	s, err := f.svc.GetSettings(f.ctx, c)
+	if err != nil {
+		t.Fatalf("settings after default: %v", err)
+	}
+	if s.DailyVehicleCapacity != DefaultDailyVehicleCapacity || s.PortalAppointmentsEnabled {
+		t.Fatalf("settings = %+v, want defaults with the portal off", s)
+	}
+	// A saved setting is never overwritten by the defaults.
+	f.settings(f.dealer, 3)
+	if s, _ := f.svc.GetSettings(f.ctx, c); s.DailyVehicleCapacity != 3 {
+		t.Fatalf("saved capacity = %d, want 3", s.DailyVehicleCapacity)
+	}
+}
