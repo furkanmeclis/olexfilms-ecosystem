@@ -54,10 +54,13 @@ func (fakePortal) ListVehicles(_ context.Context, c portaluc.Caller, _ portaluc.
 }
 
 func (fakePortal) ListServices(_ context.Context, c portaluc.Caller, f portaluc.ServiceListFilter) ([]portaluc.ServiceView, int64, error) {
-	if c.UserID != ownerUser || (f.Q != "" && !strings.EqualFold(f.Q, "DSOWN00001")) {
+	// Like the SQL: q matches the service number or the stored plate.
+	plate := "34 OWN 1"
+	if c.UserID != ownerUser || (f.Q != "" && !strings.EqualFold(f.Q, "DSOWN00001") &&
+		!strings.EqualFold(f.Q, plate) && !strings.EqualFold(f.Q, "34OWN1")) {
 		return []portaluc.ServiceView{}, 0, nil
 	}
-	return []portaluc.ServiceView{{UUID: ownServiceUUID, ServiceNo: "DSOWN00001", Status: "completed",
+	return []portaluc.ServiceView{{UUID: ownServiceUUID, ServiceNo: "DSOWN00001", Status: "completed", Plate: &plate,
 		Organization: portaluc.OrganizationRef{Name: "Dealer"}}}, 1, nil
 }
 
@@ -211,6 +214,17 @@ func TestCustomerLinksAndDays(t *testing.T) {
 	d.Links = links
 	RegisterCustomer(r, d)
 	p := realmPrincipal(RealmCustomer)
+
+	// TEC-411: customers name the car, not the service number.
+	for _, plate := range []string{"34 own 1", "34-OWN-1"} {
+		if res := call(t, r, p, "my_service_pdf_link", `{"service":"`+plate+`"}`); res.IsError {
+			t.Fatalf("plate %q: %+v", plate, res)
+		}
+	}
+	if res := call(t, r, p, "my_service_pdf_link", `{"service":"06 XYZ 99"}`); !res.IsError {
+		t.Fatalf("unknown plate resolved: %+v", res)
+	}
+	links.targets = nil
 
 	res := call(t, r, p, "my_service_pdf_link", `{"service":"DSOWN00001"}`)
 	if res.IsError || !strings.Contains(res.Content, `"service_page_url":"https://olex.test/s/`) || strings.Contains(res.Content, "WVOID") {
