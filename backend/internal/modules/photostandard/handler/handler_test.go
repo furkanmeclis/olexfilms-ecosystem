@@ -3,7 +3,9 @@ package handler
 import (
 	"errors"
 	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/usecase"
 )
@@ -59,4 +61,41 @@ var png1x1 = []byte{
 	0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x62, 0x60, 0x60, 0x60, 0x00,
 	0x00, 0x00, 0x04, 0x00, 0x01, 0xf6, 0x17, 0x38, 0x55, 0x00, 0x00, 0x00,
 	0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+}
+
+// TEC-513: the EXIF wall clock is read in the camera's offset, else in
+// Europe/Istanbul, never in the server's zone.
+func TestParseEXIFTime(t *testing.T) {
+	cases := []struct {
+		raw, offset string
+		want        string // UTC
+	}{
+		{"2026:10:14 22:04:15", "+03:00", "2026-10-14T19:04:15Z"},
+		{"2026:10:14 22:04:15", "+01:00", "2026-10-14T21:04:15Z"},
+		{"2026:10:14 22:04:15", "", "2026-10-14T19:04:15Z"},
+		{"2026:10:14 22:04:15", "garbage", "2026-10-14T19:04:15Z"},
+	}
+	for _, c := range cases {
+		got, ok := parseEXIFTime(c.raw, c.offset)
+		if !ok || got.UTC().Format(time.RFC3339) != c.want {
+			t.Fatalf("parseEXIFTime(%q, %q) = %v %v, want %s", c.raw, c.offset, got.UTC(), ok, c.want)
+		}
+	}
+	if _, ok := parseEXIFTime("", "+03:00"); ok {
+		t.Fatal("empty date parsed")
+	}
+}
+
+func TestInspectEXIFDeviceUnquoted(t *testing.T) {
+	body, err := os.ReadFile("testdata/exif.jpg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	meta, err := inspect(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta.ExifDevice != nil && strings.Contains(*meta.ExifDevice, `"`) {
+		t.Fatalf("device = %q", *meta.ExifDevice)
+	}
 }

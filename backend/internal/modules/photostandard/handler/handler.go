@@ -12,9 +12,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/photostandard/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -431,7 +433,7 @@ func readEXIF(body []byte, meta *usecase.UploadMeta) {
 	if err != nil {
 		return
 	}
-	if tm, err := x.DateTime(); err == nil {
+	if tm, ok := exifTakenAt(x); ok {
 		meta.ExifTakenAt = &tm
 	}
 	if lat, lng, err := x.LatLong(); err == nil {
@@ -440,14 +442,69 @@ func readEXIF(body []byte, meta *usecase.UploadMeta) {
 		meta.ExifLat, meta.ExifLng = &latS, &lngS
 	}
 	var parts []string
-	if makeTag, err := x.Get(exif.Make); err == nil && makeTag != nil {
-		parts = append(parts, makeTag.String())
+	for _, f := range []exif.FieldName{exif.Make, exif.Model} {
+		// StringVal, not String: String quotes ASCII values, which left
+		// `samsung" "SM-S901E` in exif_device (TEC-513).
+		if v := exifString(x, f); v != "" {
+			parts = append(parts, v)
+		}
 	}
-	if modelTag, err := x.Get(exif.Model); err == nil && modelTag != nil {
-		parts = append(parts, modelTag.String())
-	}
-	device := strings.TrimSpace(strings.Trim(strings.Join(parts, " "), "\" "))
-	if device != "" && device != "<nil> <nil>" {
+	if device := strings.Join(parts, " "); device != "" {
 		meta.ExifDevice = &device
 	}
 }
+
+// exifString is an ASCII tag's trimmed value; "" when absent.
+func exifString(x *exif.Exif, f exif.FieldName) string {
+	tag, err := x.Get(f)
+	if err != nil || tag == nil {
+		return ""
+	}
+	v, err := tag.StringVal()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(strings.TrimRight(v, "\x00"))
+}
+
+// exifTakenAt reads DateTimeOriginal (else DateTime). The value is the
+// camera's wall clock without a zone: OffsetTimeOriginal (0x9011, else
+// OffsetTime 0x9010) gives it when the camera writes one; otherwise it is
+// taken as Europe/Istanbul. goexif reads it as the server's zone (UTC),
+// which put a 22:04 Istanbul photo three hours in the future (TEC-513).
+func exifTakenAt(x *exif.Exif) (time.Time, bool) {
+	raw := exifString(x, exif.DateTimeOriginal)
+	if raw == "" {
+		raw = exifString(x, exif.DateTime)
+	}
+	offset := exifString(x, exif.FieldName(exif.UnknownPrefix+"9011"))
+	if offset == "" {
+		offset = exifString(x, exif.FieldName(exif.UnknownPrefix+"9010"))
+	}
+	return parseEXIFTime(raw, offset)
+}
+
+// parseEXIFTime parses "2006:01:02 15:04:05" in the "+03:00" offset, or
+// in i18n.DefaultTimezone when the offset is missing or malformed.
+func parseEXIFTime(raw, offset string) (time.Time, bool) {
+	if raw == "" {
+		return time.Time{}, false
+	}
+	loc := exifFallbackZone
+	if o, err := time.Parse("-07:00", strings.TrimSpace(offset)); err == nil {
+		_, secs := o.Zone()
+		loc = time.FixedZone("", secs)
+	}
+	t, err := time.ParseInLocation("2006:01:02 15:04:05", raw, loc)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
+var exifFallbackZone = func() *time.Location {
+	if loc, err := time.LoadLocation(i18n.DefaultTimezone); err == nil {
+		return loc
+	}
+	return time.FixedZone(i18n.DefaultTimezone, 3*60*60)
+}()
