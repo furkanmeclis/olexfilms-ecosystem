@@ -15,6 +15,8 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -385,6 +387,93 @@ func TestPerformanceRunComputesMetricsIdempotentlyAndUpdatesPreviousMonth(t *tes
 		t.Fatalf("dist run: %v", err)
 	}
 	assertMetric(t, f, f.dist.ID, "2026-10", ScopeSubtree, model.MetricServicesCount, "3.0000")
+}
+
+// TestDashboardCenterAndDistributorReadSubtree (TEC-646): the center does no
+// services itself, so its dashboard must show the subtree rollup of its
+// dealers and list them in the subtree summary.
+func TestDashboardCenterAndDistributorReadSubtree(t *testing.T) {
+	f := newPerfFixture(t)
+	// A far-future month keeps seed data of the shared test DB out of the sums.
+	month := time.Date(2031, 3, 1, 0, 0, 0, 0, time.UTC)
+	at := time.Date(2031, 3, 14, 12, 0, 0, 0, time.UTC)
+	staff := f.user(t, "staff")
+	dealerA := f.org(t, "dealer", "center-dealer-a", f.center.ID)
+	dealerB := f.org(t, "dealer", "center-dealer-b", f.center.ID)
+	for i := 0; i < 3; i++ {
+		f.service(t, dealerA, time.Date(2031, 3, 2+i, 12, 0, 0, 0, time.UTC), false, 0, false, staff)
+	}
+	f.service(t, dealerB, time.Date(2031, 3, 5, 12, 0, 0, 0, time.UTC), false, 0, false, staff)
+	f.service(t, dealerB, time.Date(2031, 2, 5, 12, 0, 0, 0, time.UTC), false, 0, false, staff)
+	f.service(t, f.dealer1, time.Date(2031, 3, 6, 12, 0, 0, 0, time.UTC), false, 0, false, staff)
+
+	svc := New(f.tx, f.q, outbox.NewMemory(), featureMap{}, nil).WithClock(func() time.Time { return at })
+	for _, org := range []db.Organization{dealerA, dealerB, f.dealer1, f.dealer2, f.dist, f.center} {
+		for _, m := range []time.Time{month.AddDate(0, -1, 0), month} {
+			if _, err := svc.ComputeMonth(f.ctx, org, m, at); err != nil {
+				t.Fatalf("compute %s %s: %v", org.Name, period(m), err)
+			}
+		}
+	}
+
+	center := callerFor(f.center, staff)
+	center.Filter = scopefilter.Filter{Scope: rbac.ScopeBrand, BrandID: f.brandID}
+	got, err := svc.Dashboard(f.ctx, center, "2031-03")
+	if err != nil {
+		t.Fatalf("center dashboard: %v", err)
+	}
+	// 3 (A) + 1 (B) + 1 (dealer1 under the distributor) this month, 1 last month.
+	assertDelta(t, got, model.MetricServicesCount, "5.00", "1.00")
+	if p := got.Trend[len(got.Trend)-1]; p.Metrics[model.MetricServicesCount] == nil || p.Metrics[model.MetricServicesCount].Value != "5.00" {
+		t.Fatalf("center trend last point = %+v", p.Metrics[model.MetricServicesCount])
+	}
+	sub := subtreeServices(got)
+	if sub[dealerA.Uuid] != "3.00" || sub[dealerB.Uuid] != "1.00" || sub[f.dist.Uuid] == "" {
+		t.Fatalf("center subtree services = %v", sub)
+	}
+
+	dist := callerFor(f.dist, staff)
+	got, err = svc.Dashboard(f.ctx, dist, "2031-03")
+	if err != nil {
+		t.Fatalf("distributor dashboard: %v", err)
+	}
+	assertDelta(t, got, model.MetricServicesCount, "1.00", "0.00")
+	sub = subtreeServices(got)
+	if sub[f.dealer1.Uuid] != "1.00" {
+		t.Fatalf("distributor subtree services = %v", sub)
+	}
+	if _, ok := sub[dealerA.Uuid]; ok {
+		t.Fatalf("distributor subtree leaks a center dealer: %v", sub)
+	}
+
+	got, err = svc.Dashboard(f.ctx, callerFor(dealerA, staff), "2031-03")
+	if err != nil {
+		t.Fatalf("dealer dashboard: %v", err)
+	}
+	assertDelta(t, got, model.MetricServicesCount, "3.00", "0.00")
+	if len(got.Subtree) != 0 {
+		t.Fatalf("dealer subtree = %+v, want none", got.Subtree)
+	}
+}
+
+func assertDelta(t *testing.T, d Dashboard, metric, cur, prev string) {
+	t.Helper()
+	m := d.Metrics[metric]
+	if m.Current == nil || m.Current.Value != cur || m.Previous == nil || m.Previous.Value != prev {
+		t.Fatalf("%s %s = %+v / %+v, want %s / %s", d.OrganizationName, metric, m.Current, m.Previous, cur, prev)
+	}
+}
+
+func subtreeServices(d Dashboard) map[uuid.UUID]string {
+	out := map[uuid.UUID]string{}
+	for _, r := range d.Subtree {
+		v := ""
+		if mv := r.Metrics[model.MetricServicesCount]; mv != nil {
+			v = mv.Value
+		}
+		out[r.OrganizationUUID] = v
+	}
+	return out
 }
 
 func TestBonusCalculationApprovalAndCancellation(t *testing.T) {

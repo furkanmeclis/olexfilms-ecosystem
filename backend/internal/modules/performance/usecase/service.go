@@ -390,15 +390,23 @@ func (s *Service) Dashboard(ctx context.Context, c Caller, period string) (Dashb
 	if err != nil {
 		return Dashboard{}, err
 	}
+	network := c.Org.OrgType == "center" || c.Org.OrgType == "distributor"
+	// A center or distributor reads its subtree rollup (itself + every
+	// descendant, written by ComputeMonth); its own-org row only holds the
+	// services it performed itself, which is ~0 for a center (TEC-646).
+	scope := ScopeOrg
+	if network {
+		scope = ScopeSubtree
+	}
 	metrics, err := s.q.ListPerformanceMetrics(ctx, db.ListPerformanceMetricsParams{
-		BrandID: c.Org.BrandID, OrgIds: []int64{c.Org.InternalID}, PeriodFrom: addMonths(period, -1), PeriodTo: period, Scope: textArg(ScopeOrg),
+		BrandID: c.Org.BrandID, OrgIds: []int64{c.Org.InternalID}, PeriodFrom: addMonths(period, -1), PeriodTo: period, Scope: textArg(scope),
 	})
 	if err != nil {
 		return Dashboard{}, fmt.Errorf("performance: dashboard metrics: %w", err)
 	}
 	trendFrom := addMonths(period, -11)
 	trendRows, err := s.q.ListPerformanceMetrics(ctx, db.ListPerformanceMetricsParams{
-		BrandID: c.Org.BrandID, OrgIds: []int64{c.Org.InternalID}, PeriodFrom: trendFrom, PeriodTo: period, Scope: textArg(ScopeOrg),
+		BrandID: c.Org.BrandID, OrgIds: []int64{c.Org.InternalID}, PeriodFrom: trendFrom, PeriodTo: period, Scope: textArg(scope),
 	})
 	if err != nil {
 		return Dashboard{}, fmt.Errorf("performance: dashboard trend: %w", err)
@@ -425,7 +433,9 @@ func (s *Service) Dashboard(ctx context.Context, c Caller, period string) (Dashb
 		p := addMonths(period, -i)
 		out.Trend = append(out.Trend, TrendPoint{Period: p, Metrics: byPeriod[p]})
 	}
-	if len(orgIDs) > 0 && (c.Org.OrgType == "center" || c.Org.OrgType == "distributor") {
+	// orgIDs is nil for a brand/all-scope center (no restriction), so the
+	// summary must not be gated on len(orgIDs) (TEC-646).
+	if network {
 		rows, err := s.store.ListRanking(ctx, db.ListPerformanceRankingParams{
 			BrandID: c.Org.BrandID, OrgIds: orgIDs, Period: period, Scope: ScopeOrg, RowLimit: 20,
 		}, nil)
