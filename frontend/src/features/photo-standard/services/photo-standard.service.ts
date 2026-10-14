@@ -20,6 +20,9 @@ export function photoSrc(path: string): string {
   return `${apiConfig.baseUrl.replace(/\/$/, "")}${path}`;
 }
 
+/** A 12 MB photo over a slow mobile uplink (~0.5 Mbps) still fits. */
+const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
+
 /**
  * Multipart POST with upload progress (fetch has none): resolves the
  * envelope data, rejects with the parsed ApiError.
@@ -55,7 +58,12 @@ function uploadWithProgress<T>(
           : (payload as T),
       );
     };
+    // TEC-750: a stalled connection must end in an error, not a progress
+    // bar that never moves.
+    xhr.timeout = UPLOAD_TIMEOUT_MS;
     xhr.onerror = () => reject(new Error("Upload failed"));
+    xhr.ontimeout = () => reject(new Error("Upload timed out"));
+    xhr.onabort = () => reject(new Error("Upload aborted"));
     xhr.send(form);
   });
 }
