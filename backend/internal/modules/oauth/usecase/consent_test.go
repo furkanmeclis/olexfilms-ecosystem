@@ -533,3 +533,34 @@ func TestConsentToolCount(t *testing.T) {
 		t.Fatal("counter error swallowed")
 	}
 }
+
+// TEC-650: used=true|false splits clients by whether a user ever connected.
+func TestClientListUsedFilter(t *testing.T) {
+	f := newConsentFixture(t)
+	connected := f.register(t)
+	f.consentTokens(t, connected.ClientID)
+	unused := f.register(t)
+	if _, err := usecase.ParseClientListFilter(url.Values{"used": {"maybe"}}); err == nil {
+		t.Fatal("used=maybe accepted")
+	}
+	for _, tc := range []struct {
+		clientID, used string
+		want           int64
+	}{
+		{connected.ClientID, "true", 1}, {connected.ClientID, "false", 0},
+		{unused.ClientID, "true", 0}, {unused.ClientID, "false", 1}, {unused.ClientID, "", 1},
+	} {
+		v := url.Values{"q": {tc.clientID}}
+		if tc.used != "" {
+			v.Set("used", tc.used)
+		}
+		filter, err := usecase.ParseClientListFilter(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		clients, total, err := f.svc.ListClients(f.ctx, filter)
+		if err != nil || total != tc.want || int64(len(clients)) != tc.want {
+			t.Fatalf("%s used=%q: %d rows, total %d, %v", tc.clientID, tc.used, len(clients), total, err)
+		}
+	}
+}

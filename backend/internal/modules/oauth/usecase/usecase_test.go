@@ -467,3 +467,63 @@ func TestCleanupRemovesExpiredRows(t *testing.T) {
 	}
 	_ = tok
 }
+
+// TEC-650: clients often register twice per connection and use one. Cleanup
+// deletes old registrations that never connected; connected and fresh ones
+// stay, and a second pass is a no-op.
+func TestCleanupRemovesUnusedOldClients(t *testing.T) {
+	f := newFixture(t)
+	connected := f.register(t)
+	f.tokens(t, connected.ClientID, model.ResourceDealer)
+	unusedOld := f.register(t)
+	unusedNew := f.register(t)
+	pending := f.register(t)
+	if _, err := f.svc.CreateAuthRequest(f.ctx, f.authorizeInput(pending.ClientID, model.ResourceDealer)); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{connected.ClientID, unusedOld.ClientID, pending.ClientID} {
+		if _, err := f.tx.Exec(f.ctx, `UPDATE oauth_clients SET created_at = NOW() - INTERVAL '8 days' WHERE client_id = $1`, id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exists := func(id string) bool {
+		var n int
+		if err := f.tx.QueryRow(f.ctx, `SELECT count(*) FROM oauth_clients WHERE client_id = $1`, id).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n == 1
+	}
+	for range 2 {
+		if err := f.svc.Cleanup(f.ctx); err != nil {
+			t.Fatal(err)
+		}
+		if !exists(connected.ClientID) {
+			t.Fatal("connected client deleted")
+		}
+		if exists(unusedOld.ClientID) {
+			t.Fatal("old unused client kept")
+		}
+		if !exists(unusedNew.ClientID) {
+			t.Fatal("fresh unused client deleted")
+		}
+		if !exists(pending.ClientID) {
+			t.Fatal("client with a pending authorization deleted")
+		}
+	}
+	// The connected client still works.
+	tok := f.tokens(t, connected.ClientID, model.ResourceDealer)
+	if _, err := f.svc.ValidateAccessToken(f.ctx, tok.AccessToken, model.ResourceDealer); err != nil {
+		t.Fatalf("connected client token: %v", err)
+	}
+
+	// A shorter configured age reaches the fresh registration too.
+	if _, err := f.tx.Exec(f.ctx, `UPDATE oauth_clients SET created_at = NOW() - INTERVAL '2 days' WHERE client_id = $1`, unusedNew.ClientID); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.svc.WithUnusedClientAge(24 * time.Hour).Cleanup(f.ctx); err != nil {
+		t.Fatal(err)
+	}
+	if exists(unusedNew.ClientID) {
+		t.Fatal("unused client older than the configured age kept")
+	}
+}

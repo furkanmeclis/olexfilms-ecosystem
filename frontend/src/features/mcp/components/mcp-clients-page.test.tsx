@@ -16,6 +16,7 @@ const client: OAuthClientSummary = {
   created_ip: "203.0.113.7",
   status: "active",
   active_grants: 3,
+  used: true,
   created_at: "2026-10-01T09:00:00Z",
   last_used_at: null,
   revoked_at: null,
@@ -180,6 +181,17 @@ describe("McpClientsPage", () => {
     expect(captured.table?.features?.persistKey).toBe(
       "platform-mcp-clients-v1",
     );
+  });
+
+  it("lists never used registrations with used=false (TEC-650)", async () => {
+    await render();
+    await act(async () => {
+      captured.table?.state?.onColumnFiltersChange?.([
+        { id: "used", value: false },
+      ]);
+    });
+    await flush();
+    expect(lastGet()[2].query).toMatchObject({ used: "false" });
   });
 
   it("revokes a client after the confirmation", async () => {

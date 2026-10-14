@@ -26,8 +26,14 @@ export type Page<T> = {
 
 /** GET /v1/oauth/grants: `realm` CSV, sort created_at | last_used_at | client_name. */
 export type GrantListParams = ServerListParams & { realm?: string };
-/** GET /v1/platform/oauth/clients: `status` CSV (active, revoked). */
-export type ClientListParams = ServerListParams & { status?: string };
+/**
+ * GET /v1/platform/oauth/clients: `status` CSV (active, revoked), `used`
+ * true|false (TEC-650).
+ */
+export type ClientListParams = ServerListParams & {
+  status?: string;
+  used?: string;
+};
 /** GET /v1/ai/pending-actions: `source` CSV (mcp, whatsapp). */
 export type PendingActionListParams = ServerListParams & { source?: string };
 

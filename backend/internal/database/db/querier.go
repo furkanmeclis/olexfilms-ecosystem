@@ -114,8 +114,11 @@ type Querier interface {
 	// not send a stale "due soon" after the deadline.
 	ClaimTasksOverdue(ctx context.Context, arg ClaimTasksOverdueParams) ([]ClaimTasksOverdueRow, error)
 	CleanupOAuthAuthRequests(ctx context.Context) (int64, error)
-	// Registrations never connected within a day (abandoned DCR attempts).
-	CleanupOAuthClients(ctx context.Context) (int64, error)
+	// Registrations that never connected (abandoned or duplicate DCR attempts,
+	// TEC-650): no grant, token or pending request, older than created_before.
+	// The FK cascades (requests, codes, grants, tokens) have nothing left to
+	// remove; a client with any grant, even a revoked one, stays.
+	CleanupOAuthClients(ctx context.Context, createdBefore pgtype.Timestamptz) (int64, error)
 	// Used codes stay one day past expiry so a late replay still revokes.
 	CleanupOAuthCodes(ctx context.Context) (int64, error)
 	// Rotated refresh tokens stay until they expire, for reuse detection.

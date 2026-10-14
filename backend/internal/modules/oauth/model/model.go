@@ -285,16 +285,19 @@ type Grant struct {
 
 // ClientSummary is a registered client in the platform list.
 type ClientSummary struct {
-	UUID         uuid.UUID  `json:"uuid"`
-	ClientID     string     `json:"client_id"`
-	ClientName   string     `json:"client_name"`
-	RedirectURIs []string   `json:"redirect_uris"`
-	CreatedIP    *string    `json:"created_ip"`
-	Status       string     `json:"status"`
-	ActiveGrants int64      `json:"active_grants"`
-	CreatedAt    time.Time  `json:"created_at"`
-	LastUsedAt   *time.Time `json:"last_used_at"`
-	RevokedAt    *time.Time `json:"revoked_at"`
+	UUID         uuid.UUID `json:"uuid"`
+	ClientID     string    `json:"client_id"`
+	ClientName   string    `json:"client_name"`
+	RedirectURIs []string  `json:"redirect_uris"`
+	CreatedIP    *string   `json:"created_ip"`
+	Status       string    `json:"status"`
+	ActiveGrants int64     `json:"active_grants"`
+	// Used: a user ever connected the client (TEC-650); never connected
+	// registrations are deleted by the cleanup task after a while.
+	Used       bool       `json:"used"`
+	CreatedAt  time.Time  `json:"created_at"`
+	LastUsedAt *time.Time `json:"last_used_at"`
+	RevokedAt  *time.Time `json:"revoked_at"`
 }
 
 // Client statuses of the platform list.

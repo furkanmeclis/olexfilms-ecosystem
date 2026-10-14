@@ -203,6 +203,9 @@ type AuthConfig struct {
 	AdapterSecret string
 	WebAuthnRPID  string
 	FrontendURL   string
+	// OAuthUnusedClientDays: MCP OAuth client registrations that never
+	// connected are deleted this many days after registration (TEC-650).
+	OAuthUnusedClientDays int
 }
 
 // VAPIDConfig holds Web Push keys (empty = push disabled).
@@ -422,9 +425,10 @@ func Load() (Config, error) {
 			TokenTTL:  getDuration("CENTRIFUGO_TOKEN_TTL", time.Hour),
 		},
 		Auth: AuthConfig{
-			AdapterSecret: getEnv("AUTH_ADAPTER_SECRET", defaultAdapterSecret),
-			WebAuthnRPID:  getEnv("AUTH_WEBAUTHN_RP_ID", hostOf(frontendURL, "localhost")),
-			FrontendURL:   frontendURL,
+			AdapterSecret:         getEnv("AUTH_ADAPTER_SECRET", defaultAdapterSecret),
+			WebAuthnRPID:          getEnv("AUTH_WEBAUTHN_RP_ID", hostOf(frontendURL, "localhost")),
+			FrontendURL:           frontendURL,
+			OAuthUnusedClientDays: getInt("OAUTH_UNUSED_CLIENT_DAYS", 7),
 		},
 		JWT: JWTConfig{
 			AccessSecret:     getEnv("JWT_ACCESS_SECRET", "app-dev-access-secret-change-me-32b"),

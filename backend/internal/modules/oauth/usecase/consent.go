@@ -376,9 +376,11 @@ type ListFilter struct {
 	Q        string
 	Realms   []string
 	Statuses []string
-	Sort     apiquery.ResolvedSort
-	Limit    int32
-	Offset   int32
+	// Used filters clients by whether any user ever connected them (TEC-650).
+	Used   *bool
+	Sort   apiquery.ResolvedSort
+	Limit  int32
+	Offset int32
 }
 
 func parseList(values url.Values, spec apiquery.SortSpec) (ListFilter, error) {
@@ -399,14 +401,17 @@ func ParseGrantListFilter(values url.Values) (ListFilter, error) {
 	return f, err
 }
 
-// ParseClientListFilter reads q, status (CSV active,revoked), sort, limit
-// and offset.
+// ParseClientListFilter reads q, status (CSV active,revoked), used
+// (true|false), sort, limit and offset.
 func ParseClientListFilter(values url.Values) (ListFilter, error) {
 	f, err := parseList(values, ClientsSortSpec)
 	if err != nil {
 		return f, err
 	}
-	f.Statuses, err = apiquery.EnumList(values, "status", model.ClientStatusActive, model.ClientStatusRevoked)
+	if f.Statuses, err = apiquery.EnumList(values, "status", model.ClientStatusActive, model.ClientStatusRevoked); err != nil {
+		return f, err
+	}
+	f.Used, err = apiquery.Bool(values, "used")
 	return f, err
 }
 
@@ -473,14 +478,18 @@ func (s *Service) ListClients(ctx context.Context, f ListFilter) ([]model.Client
 	if len(f.Statuses) == 1 {
 		status = textNarg(f.Statuses[0])
 	}
+	var used pgtype.Bool
+	if f.Used != nil {
+		used = pgtype.Bool{Bool: *f.Used, Valid: true}
+	}
 	rows, err := s.q.ListOAuthClients(ctx, db.ListOAuthClientsParams{
-		Status: status, Q: textNarg(f.Q),
+		Status: status, Used: used, Q: textNarg(f.Q),
 		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc, RowLimit: f.Limit, RowOffset: f.Offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("oauth: clients: %w", err)
 	}
-	total, err := s.q.CountOAuthClients(ctx, db.CountOAuthClientsParams{Status: status, Q: textNarg(f.Q)})
+	total, err := s.q.CountOAuthClients(ctx, db.CountOAuthClientsParams{Status: status, Used: used, Q: textNarg(f.Q)})
 	if err != nil {
 		return nil, 0, fmt.Errorf("oauth: clients count: %w", err)
 	}
@@ -488,7 +497,7 @@ func (s *Service) ListClients(ctx context.Context, f ListFilter) ([]model.Client
 	for _, r := range rows {
 		c := model.ClientSummary{
 			UUID: r.Uuid, ClientID: r.ClientID, ClientName: r.ClientName, RedirectURIs: r.RedirectUris,
-			Status: model.ClientStatusActive, ActiveGrants: r.ActiveGrants, CreatedAt: r.CreatedAt.Time,
+			Status: model.ClientStatusActive, ActiveGrants: r.ActiveGrants, Used: r.Used, CreatedAt: r.CreatedAt.Time,
 			LastUsedAt: timePtr(r.LastUsedAt), RevokedAt: timePtr(r.RevokedAt),
 		}
 		if r.CreatedIp.Valid {

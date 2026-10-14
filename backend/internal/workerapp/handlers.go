@@ -345,8 +345,10 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		// TEC-314: daily quote expiry (valid_until passed).
 		WithQuoteExpire(leadsSvc.ExpireDueQuotesTask).
 		WithQuoteReminder(leadsSvc.QuoteReminderTask).
-		// TEC-400: hourly MCP OAuth cleanup (expired rows, abandoned clients).
-		WithOAuthCleanup(oauthmodule.New(pool, featureSvc, nil, cfg.Auth.FrontendURL, log).Cleanup).
+		// TEC-400: hourly MCP OAuth cleanup (expired rows, abandoned clients;
+		// TEC-650: never connected clients after OAUTH_UNUSED_CLIENT_DAYS).
+		WithOAuthCleanup(oauthmodule.New(pool, featureSvc, nil, cfg.Auth.FrontendURL, log).
+			WithUnusedClientAge(time.Duration(cfg.Auth.OAuthUnusedClientDays)*24*time.Hour).Cleanup).
 		// TEC-221: hourly center task due date reminders.
 		WithTasksDueScan(tasksusecase.NewCron(pool, queries, outbox.NewStore(pool, queries)).DueScanTask).
 		// TEC-207: hourly end-of-day warehouse reports (previous local day).
