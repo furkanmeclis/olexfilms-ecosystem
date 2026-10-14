@@ -39,6 +39,7 @@ func TestValidateRejectsDefaultSecretsInProduction(t *testing.T) {
 		"missing pii key":        func(c *Config) { c.Encryption.CustomerPIIKey = "" },
 		"raw pii key":            func(c *Config) { c.Encryption.CustomerPIIKey = strings.Repeat("p", 32) },
 		"pii key equals app key": func(c *Config) { c.Encryption.Key = c.Encryption.CustomerPIIKey },
+		"whatsapp sandbox":       func(c *Config) { c.Wuzapi.SandboxPrefixes = []string{"90500000"} },
 	}
 	for name, mut := range mutations {
 		c := validProdConfig()
@@ -50,6 +51,7 @@ func TestValidateRejectsDefaultSecretsInProduction(t *testing.T) {
 	dev := validProdConfig()
 	dev.App.Env = "development"
 	dev.Encryption.Key = defaultEncryptionKey
+	dev.Wuzapi.SandboxPrefixes = []string{"90500000"}
 	if err := dev.validate(); err != nil {
 		t.Fatalf("development must accept defaults: %v", err)
 	}

@@ -197,6 +197,11 @@ inventory-reconcile:
 normalize-org-phones:
 	@$(load_env) $(MAKE) -C backend normalize-org-phones ARGS="$(ARGS)"
 
+# TEC-640: WhatsApp AI simulator, e.g. make wa-sim ARGS='-m "Merhaba"'.
+.PHONY: wa-sim
+wa-sim:
+	@$(load_env) $(MAKE) -C backend wa-sim ARGS='$(ARGS)'
+
 # TEC-294: NexPTG parser backfill (measurement:reparse), idempotent.
 .PHONY: measurement-reparse
 measurement-reparse:

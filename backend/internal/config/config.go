@@ -191,6 +191,11 @@ type WuzapiConfig struct {
 	// restricts outbound messages to these numbers; empty allows everyone.
 	// A dev/demo guard for stacks that link a real phone over seed data.
 	AllowedRecipients []string
+	// SandboxPrefixes (WHATSAPP_SANDBOX_PREFIXES, comma-separated digit
+	// prefixes, development/test only): outbound messages to numbers with
+	// one of these prefixes never reach wuzapi and count as sent. The
+	// simulated contacts of cmd/wa-sim (TEC-640).
+	SandboxPrefixes []string
 }
 
 // AuthConfig holds NextAuth adapter integration settings.
@@ -461,6 +466,7 @@ func Load() (Config, error) {
 			WebhookURL:    getEnv("WUZAPI_WEBHOOK_URL", ""),
 			// Dev/demo guard, see WuzapiConfig.AllowedRecipients.
 			AllowedRecipients: splitCSV(getEnv("WUZAPI_ALLOWED_RECIPIENTS", "")),
+			SandboxPrefixes:   splitCSV(getEnv("WHATSAPP_SANDBOX_PREFIXES", "")),
 		},
 		Rates: RatesConfig{
 			TCMBURL: getEnv("RATES_TCMB_URL", "https://www.tcmb.gov.tr/kurlar/today.xml"),
@@ -559,6 +565,9 @@ func (c Config) validate() error {
 		return fmt.Errorf("config: JWT TTLs must be positive")
 	}
 	if c.App.Env != "development" && c.App.Env != "test" {
+		if len(c.Wuzapi.SandboxPrefixes) > 0 {
+			return fmt.Errorf("config: WHATSAPP_SANDBOX_PREFIXES is allowed only in development")
+		}
 		if c.JWT.AccessSecret == "" || c.JWT.RefreshSecret == "" {
 			return fmt.Errorf("config: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET are required outside development")
 		}

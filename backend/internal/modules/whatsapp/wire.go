@@ -25,6 +25,8 @@ func NewService(cfg config.WuzapiConfig, pool *pgxpool.Pool, q *db.Queries, box 
 		WebhookURL: cfg.WebhookURL,
 	})
 	gw = withRecipientAllowlist(gw, cfg.AllowedRecipients, log)
+	// Outermost: sandbox numbers (TEC-640) never reach the allowlist or wuzapi.
+	gw = withSandbox(gw, cfg.SandboxPrefixes, log)
 	var tx usecase.TxBeginner
 	if pool != nil {
 		tx = pool
