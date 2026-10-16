@@ -10627,6 +10627,79 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/warehouse/warehouses/{uuid}/locations/import:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Warehouse]
+      operationId: importWarehouseLocations
+      summary: Upload a warehouse location tree
+      description: >-
+        TEC-762. Requires warehouse.write and a warehouse owned by the active
+        center or distributor. The mapped columns are room_code, room_name,
+        aisle_code, shelf_code, bin_code, name and active (evet/hayır). Each
+        row defines one path; missing ancestors are created. The 5000-row
+        limit applies. Preview, confirm and undo use the tenant import job
+        endpoints. Existing paths are skipped; existing names and active
+        flags are not changed. Undo removes only nodes created by the job
+        that have no dependent stock, movement or child records.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, tsv, xlsx, json], default: xlsx }
+                locale: { type: string, example: tr }
+      responses:
+        "201":
+          description: Import job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeImportJob"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/warehouse/warehouses/{uuid}/locations/import/sample:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [Warehouse]
+      operationId: warehouseLocationsImportSample
+      summary: Download a warehouse location import template
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, tsv, xlsx, json], default: xlsx }
+        - name: locale
+          in: query
+          schema: { type: string, example: tr }
+      responses:
+        "200":
+          description: Sample file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/warehouse/warehouses/{uuid}/rooms:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -11358,14 +11431,19 @@ paths:
       summary: QR label sheet PDF of warehouse locations
       description: >-
         Needs `warehouse.read` with the warehouse module on (center or
-        distributor, K12). Prints every typed location of `room` and/or the
-        listed `location` uuids of the active organization (at most 1000).
+        distributor, K12). Prints every typed location of `warehouse` or
+        `room` and/or the listed `location` uuids of the active organization
+        (at most 1000).
         Each label carries the QR payload `OFW:LOC:<full_code>` and the
         full_code text. Template: `template`, else the organization's default
         location template, else the built-in QR 50x50 mm sheet.
       security:
         - bearerAuth: []
       parameters:
+        - name: warehouse
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
         - name: room
           in: query
           required: false
