@@ -76,15 +76,15 @@ export function ScanInput({
           expect: expect ?? "any",
           ...(warehouseUuid ? { warehouse_uuid: warehouseUuid } : {}),
         });
-        if (result.status !== "ok") {
+        // Block only a definite mismatch; an unknown code goes on to the
+        // screen's own endpoint, whose error is more specific.
+        if (result.status !== "ok" && result.status !== "unknown") {
           setScanError(scanStatusMessage(result, expect ?? "any", t));
           ref.current?.focus();
           return;
         }
       } catch {
-        setScanError(t("warehouse.scan.failed"));
-        ref.current?.focus();
-        return;
+        // The pre-check is advisory: a failed lookup must not block the scan.
       }
     }
     void onScan(code);

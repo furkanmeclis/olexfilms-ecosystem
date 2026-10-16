@@ -146,4 +146,22 @@ describe("ScanInput (TEC-231)", () => {
       "warehouse.scan_status.warehouse_mismatch",
     );
   });
+
+  it("passes an unknown code or a failed lookup on to the screen", async () => {
+    const onScan = vi.fn();
+    await render(m, createElement(ScanInput, { onScan, expect: "unit" }));
+
+    scan.mockResolvedValueOnce({ status: "unknown", type: "unknown" });
+    await fill(input(), "OLEX-99999999");
+    await submit(form());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    scan.mockRejectedValueOnce(new Error("SCAN_NO_MATCH"));
+    await fill(input(), "OLEX-88888888");
+    await submit(form());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(onScan.mock.calls).toEqual([["OLEX-99999999"], ["OLEX-88888888"]]);
+    expect(m.container.querySelector('[role="alert"]')).toBeNull();
+  });
 });
