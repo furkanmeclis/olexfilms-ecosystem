@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { ActiveWarehouseSelect } from "@/features/warehouse/components/active-warehouse";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
@@ -86,7 +87,14 @@ export function WarehouseShell({
           ...crumbs,
           { label: title },
         ]}
-        actions={access.allowed ? actions : null}
+        actions={
+          access.allowed ? (
+            <>
+              <ActiveWarehouseSelect slug={slug} />
+              {actions}
+            </>
+          ) : null
+        }
       />
       {access.allowed ? (
         children

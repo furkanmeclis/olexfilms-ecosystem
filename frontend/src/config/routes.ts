@@ -272,6 +272,8 @@ export const routes = {
       endOfDay: (slug: string) => `/t/${slug}/warehouse/end-of-day`,
       endOfDayReport: (slug: string, uuid: string) =>
         `/t/${slug}/warehouse/end-of-day/${uuid}`,
+      // TEC-769: organization warehouse settings (end-of-day cutoff).
+      settings: (slug: string) => `/t/${slug}/warehouse/settings`,
     },
   },
   /** Customer / fleet portal (TEC-90): its own Auth.js instance and BFF. */

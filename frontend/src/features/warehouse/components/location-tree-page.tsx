@@ -20,6 +20,7 @@ import {
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
 import { WarehouseExportMenu } from "@/features/warehouse/components/warehouse-export";
+import { WarehouseMembersCard } from "@/features/warehouse/components/warehouse-members";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import type { NodeFormValues } from "@/features/warehouse/lib/forms";
 import {
@@ -617,6 +618,14 @@ export function LocationTreePage({ slug }: { slug: string }) {
           </CardContent>
         </Card>
       </div>
+      {/* TEC-769: who may write in the selected warehouse. */}
+      {currentWarehouse ? (
+        <WarehouseMembersCard
+          key={currentWarehouse.uuid}
+          warehouse={currentWarehouse}
+          canManage={access.can(Permission.MembersWrite)}
+        />
+      ) : null}
     </WarehouseShell>
   );
 }

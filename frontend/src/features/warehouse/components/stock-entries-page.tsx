@@ -26,6 +26,7 @@ import {
   useWarehouseFilterOptions,
 } from "@/features/warehouse/components/table-options";
 import { StockImportButton } from "@/features/warehouse/components/stock-import-button";
+import { useActiveWarehouse } from "@/features/warehouse/components/active-warehouse";
 import {
   useWarehouseAccess,
   WarehouseShell,
@@ -379,6 +380,9 @@ export function NewEntryForm({
   const active: Warehouse[] = (warehouses.data?.items ?? []).filter(
     (w) => w.active,
   );
+  // TEC-769: the header's active warehouse is the default target.
+  const { activeUuid } = useActiveWarehouse(slug, true);
+  const preset = active.some((w) => w.uuid === activeUuid) ? activeUuid : null;
 
   const create = useMutation({
     mutationFn: (v: EntryFormValues) =>
@@ -409,7 +413,12 @@ export function NewEntryForm({
         ) : null}
         <AppForm<EntryFormValues>
           schema={entryFormSchema(t, modes) as never}
-          defaultValues={{ warehouse_uuid: "", mode: modes[0], note: "" }}
+          key={preset ?? "none"}
+          defaultValues={{
+            warehouse_uuid: preset ?? "",
+            mode: modes[0],
+            note: "",
+          }}
           onSubmit={async (v) => {
             setError(null);
             try {
