@@ -111,7 +111,9 @@ func (q *Queries) ListOrderAssignedUnitLocations(ctx context.Context, orderID in
 const listOrderSuggestFixedCandidates = `-- name: ListOrderSuggestFixedCandidates :many
 SELECT u.id, u.uuid, u.barcode, u.created_at,
        COALESCE(SUM(h.quantity_on_hand) FILTER (WHERE h.owner_type = 'warehouse_location'), 0)::bigint AS located_quantity,
-       COALESCE(SUM(h.quantity_on_hand) FILTER (WHERE h.owner_type = 'organization'), 0)::bigint AS unlocated_quantity
+       COALESCE(SUM(h.quantity_on_hand) FILTER (WHERE h.owner_type = 'organization'), 0)::bigint AS unlocated_quantity,
+       COALESCE(MAX(h.quantity_on_hand) FILTER (WHERE h.owner_type = 'warehouse_location'), 0)::bigint AS located_max,
+       COALESCE(MAX(h.quantity_on_hand) FILTER (WHERE h.owner_type = 'organization'), 0)::bigint AS unlocated_max
 FROM units u
 JOIN fixed_barcode_holdings h ON h.unit_id = u.id
 WHERE u.product_id = $1
@@ -135,10 +137,13 @@ type ListOrderSuggestFixedCandidatesRow struct {
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	LocatedQuantity   int64              `json:"located_quantity"`
 	UnlocatedQuantity int64              `json:"unlocated_quantity"`
+	LocatedMax        int64              `json:"located_max"`
+	UnlocatedMax      int64              `json:"unlocated_max"`
 }
 
 // Fixed barcodes of a product the seller holds: the quantity at warehouse
-// locations and in total, oldest entry first.
+// locations and without one, and the largest single holding of each (one
+// assignment ships from one owner), oldest entry first.
 func (q *Queries) ListOrderSuggestFixedCandidates(ctx context.Context, arg ListOrderSuggestFixedCandidatesParams) ([]ListOrderSuggestFixedCandidatesRow, error) {
 	rows, err := q.db.Query(ctx, listOrderSuggestFixedCandidates, arg.ProductID, arg.SellerOrgID)
 	if err != nil {
@@ -155,6 +160,8 @@ func (q *Queries) ListOrderSuggestFixedCandidates(ctx context.Context, arg ListO
 			&i.CreatedAt,
 			&i.LocatedQuantity,
 			&i.UnlocatedQuantity,
+			&i.LocatedMax,
+			&i.UnlocatedMax,
 		); err != nil {
 			return nil, err
 		}

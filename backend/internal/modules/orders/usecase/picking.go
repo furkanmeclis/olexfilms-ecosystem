@@ -9,7 +9,8 @@ package usecase
 // prefer the first roll that covers the missing meters (a longer roll is
 // split on assignment); without one, whole rolls are taken in the same order
 // and the last one is cut. Fixed barcodes propose a quantity from the
-// unreserved holding (located quantity only, unless include_unlocated).
+// unreserved holding that one owner can ship (located holdings only,
+// unless include_unlocated).
 //
 // ApplySuggestions assigns the units the user confirmed through the same
 // assignment rules as a scan (assignLocked), all in one transaction.
@@ -244,11 +245,12 @@ func (s *Service) suggestFixed(ctx context.Context, q *db.Queries, o db.Order, i
 			return nil, fmt.Errorf("orders: reserved quantity: %w", err)
 		}
 		// Reservations are not tied to an owner: they come off the whole
-		// holding, and the pool never offers more than that.
+		// holding. One assignment ships from one owner (fixedSource), so
+		// the quantity is bounded by the largest holding of the pool.
 		free := r.LocatedQuantity + r.UnlocatedQuantity - reserved
-		pool := r.LocatedQuantity
+		pool := r.LocatedMax
 		if in.IncludeUnlocated {
-			pool += r.UnlocatedQuantity
+			pool = max(pool, r.UnlocatedMax)
 		}
 		qty := min(free, pool, rest.Num().Int64()/max(rest.Denom().Int64(), 1))
 		if qty <= 0 {

@@ -2187,7 +2187,8 @@ type Querier interface {
 	ListOrderOutboundsByState(ctx context.Context, arg ListOrderOutboundsByStateParams) ([]OrderOutbound, error)
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
 	// Fixed barcodes of a product the seller holds: the quantity at warehouse
-	// locations and in total, oldest entry first.
+	// locations and without one, and the largest single holding of each (one
+	// assignment ships from one owner), oldest entry first.
 	ListOrderSuggestFixedCandidates(ctx context.Context, arg ListOrderSuggestFixedCandidatesParams) ([]ListOrderSuggestFixedCandidatesRow, error)
 	// TEC-768: barcode suggestions, pick locations and the pick list of an order.
 	// Serial units (pieces, rolls) of a product the seller can assign: held in
