@@ -404,6 +404,7 @@ type Querier interface {
 	CreateDocumentTemplate(ctx context.Context, arg CreateDocumentTemplateParams) (DocumentTemplate, error)
 	// Archive -------------------------------------------------------------------
 	CreateEinvoice(ctx context.Context, arg CreateEinvoiceParams) (Einvoice, error)
+	CreateEntryBarcodeImport(ctx context.Context, arg CreateEntryBarcodeImportParams) error
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
 	// TEC-171: accounting primitives for the finance/cari use cases (TEC-99b)
 	// and the source API (TEC-99c). finance_entries is append-only: corrections
@@ -994,6 +995,7 @@ type Querier interface {
 	GetEinvoiceForUpdate(ctx context.Context, arg GetEinvoiceForUpdateParams) (Einvoice, error)
 	GetEinvoiceSettingsByOrg(ctx context.Context, arg GetEinvoiceSettingsByOrgParams) (EinvoiceSetting, error)
 	GetEinvoiceSubscriptionPeriod(ctx context.Context, arg GetEinvoiceSubscriptionPeriodParams) (GetEinvoiceSubscriptionPeriodRow, error)
+	GetEntryBarcodeImport(ctx context.Context, jobID int64) (EntryBarcodeImport, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
 	GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
 	GetFinanceAccount(ctx context.Context, arg GetFinanceAccountParams) (FinanceAccount, error)
@@ -2774,6 +2776,7 @@ type Querier interface {
 	// Serializes photo inserts and status moves of one showcase (the caller
 	// runs in a transaction).
 	LockDealerShowcase(ctx context.Context, id int64) (DealerShowcase, error)
+	LockEntryBarcodeImport(ctx context.Context, jobID int64) (EntryBarcodeImport, error)
 	// ---------------------------------------------------------------------------
 	// Fixed barcode holdings (quantity per unit and owner).
 	LockFixedBarcodeHolding(ctx context.Context, arg LockFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
@@ -3399,6 +3402,7 @@ type Querier interface {
 	// a retry succeeds.
 	SetEinvoicePDFError(ctx context.Context, arg SetEinvoicePDFErrorParams) error
 	SetEinvoiceSettingsXSLT(ctx context.Context, arg SetEinvoiceSettingsXSLTParams) (EinvoiceSetting, error)
+	SetEntryBarcodeImport(ctx context.Context, arg SetEntryBarcodeImportParams) error
 	// Records the fleet cari in the dealer's ledger once (CAS on NULL).
 	SetFleetDealerLinkCari(ctx context.Context, arg SetFleetDealerLinkCariParams) (FleetDealerLink, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.

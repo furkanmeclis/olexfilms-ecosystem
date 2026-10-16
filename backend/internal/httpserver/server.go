@@ -706,6 +706,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		customersusecase.NewListExportAdapter(customersSvc),
 		// TEC-158: staged stock import (writes through ledger.Post).
 		stockusecase.NewImporter(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)),
+		warehouseusecase.NewEntryBarcodeImporter(warehouseusecase.NewStockEntries(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
 		// TEC-188: warranty certificate PDF (panel and portal).
 		warrantyusecase.NewCertificateAdapter(warrantyCert),
 		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
@@ -1035,6 +1036,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-204: stock entry documents (confirm posts entry + placement via the ledger).
 	warehousemodule.RegisterEntryRoutes(mux, warehousehandler.NewEntries(warehouseusecase.NewStockEntries(deps.DB, deps.Queries,
 		outbox.NewStore(deps.DB, deps.Queries))), featureSvc, tokens, loader, deps.Queries)
+	entryImportEntries := warehouseusecase.NewStockEntries(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))
+	warehousemodule.RegisterEntryImportRoutes(mux, warehousehandler.NewEntryImport(entryImportEntries,
+		warehouseusecase.NewEntryBarcodeImporter(entryImportEntries), importSvc), featureSvc, tokens, loader, deps.Queries)
 	// TEC-205: bin <-> bin moves, warehouse transfer documents, order receipt placement.
 	warehousemodule.RegisterTransferRoutes(mux, warehousehandler.NewTransfers(warehouseusecase.NewWarehouseTransfers(deps.DB, deps.Queries,
 		outbox.NewStore(deps.DB, deps.Queries))), featureSvc, tokens, loader, deps.Queries)
