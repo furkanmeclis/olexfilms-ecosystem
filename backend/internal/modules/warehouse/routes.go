@@ -128,6 +128,7 @@ func RegisterTransferRoutes(
 
 	mux.Handle("POST /v1/warehouse/moves", write(h.Move))
 	mux.Handle("POST /v1/warehouse/orders/{uuid}/place", write(h.PlaceOrder))
+	mux.Handle("GET /v1/warehouse/orders/{uuid}/unplaced", read(h.OrderUnplaced))
 	mux.Handle("GET /v1/warehouse/transfers", read(h.List))
 	mux.Handle("POST /v1/warehouse/transfers", write(h.Create))
 	mux.Handle("GET /v1/warehouse/transfers/{uuid}", read(h.Get))
