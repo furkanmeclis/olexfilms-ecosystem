@@ -17,7 +17,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => "/platform/contract-templates",
+  usePathname: () => "/platform/settings/contract-templates",
 }));
 
 vi.mock("@/providers/locale-provider", () => ({
