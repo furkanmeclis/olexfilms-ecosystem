@@ -94,3 +94,13 @@ func TestCSSUsesNamedFullBleedPage(t *testing.T) {
 		}
 	}
 }
+
+func TestMeasurementCSSIsFullBleedDark(t *testing.T) {
+	css := MeasurementCSS()
+	for _, want := range []string{"@page{margin:0}", "html{background:" + pageColor + "}", "box-decoration-break:clone",
+		".ct-measure table.doc-table th", ".ct-measure .mm-card{", `font-family:"Michroma"`} {
+		if !strings.Contains(css, want) {
+			t.Errorf("measurement css misses %q", want)
+		}
+	}
+}

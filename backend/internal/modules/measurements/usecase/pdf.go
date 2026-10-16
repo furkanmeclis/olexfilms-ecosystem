@@ -34,6 +34,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/svg"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/certtheme"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
@@ -215,7 +216,11 @@ func (p *PDFService) GeneratePDF(ctx context.Context, resultID int64) error {
 	if err != nil {
 		return err
 	}
-	data, err := p.pdf.Convert(ctx, pdfrender.Request{HTML: doc.HTML, FooterHTML: pdfrender.FooterHTML(doc.Lang, org.Name)})
+	req := pdfrender.Request{HTML: doc.HTML}
+	if !doc.FullBleed {
+		req.FooterHTML = pdfrender.FooterHTML(doc.Lang, org.Name)
+	}
+	data, err := p.pdf.Convert(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -241,6 +246,9 @@ type Document struct {
 	HTML string
 	Lang string
 	Vars map[string]string
+	// FullBleed is the dark legacy measurement document of the Olex brand
+	// (TEC-772): it has no page margin, so no Gotenberg footer.
+	FullBleed bool
 }
 
 // pdfData is everything one measurement document shows.
@@ -308,10 +316,16 @@ func (p *PDFService) buildDocument(ctx context.Context, q *db.Queries, row db.Me
 		title += " " + v
 	}
 	docLang := strings.ReplaceAll(tpl.Language, "_", "-")
+	body += measurementCSS
+	fullBleed := false
+	if brand, err := q.GetBrandByID(ctx, row.BrandID); err == nil && certtheme.ForBrand(brand.Slug) {
+		body = `<div class="ct-measure">` + body + `</div>` + certtheme.MeasurementCSS()
+		fullBleed = true
+	}
 	out := pdfrender.Document{
-		Lang: docLang, Title: title, Body: body + measurementCSS, PrimaryColor: org.PrimaryColor, Fonts: p.fonts,
+		Lang: docLang, Title: title, Body: body, PrimaryColor: org.PrimaryColor, Fonts: p.fonts,
 	}.HTML()
-	return Document{HTML: out, Lang: docLang, Vars: vars}, nil
+	return Document{HTML: out, Lang: docLang, Vars: vars, FullBleed: fullBleed}, nil
 }
 
 // RenderHTML builds the HTML of a measurement without converting it (the
