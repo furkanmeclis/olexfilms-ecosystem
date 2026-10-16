@@ -22,6 +22,7 @@ type stockImportJob struct {
 	Status         string `json:"status"`
 	PreviewSummary struct {
 		Total     int            `json:"total"`
+		Invalid   int            `json:"invalid"`
 		BatchUUID string         `json:"batch_uuid"`
 		Counts    map[string]int `json:"counts"`
 		Rows      []struct {
