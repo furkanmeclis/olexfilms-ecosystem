@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/mail"
 	"net/url"
 	"strings"
 	"time"
@@ -82,10 +83,51 @@ func (a *UsersAdapter) ImportSchema() []ioengine.ImportField {
 		{Key: "email", LabelKey: "users.email", Type: ioengine.ColumnTypeString, Required: true},
 		{Key: "name", LabelKey: "users.name", Type: ioengine.ColumnTypeString, Required: true},
 		{Key: "surname", LabelKey: "users.surname", Type: ioengine.ColumnTypeString, Required: true},
-		{Key: "status", LabelKey: "users.status", Type: ioengine.ColumnTypeEnum, DefaultHint: "pending"},
+		{Key: "status", LabelKey: "users.status", Type: ioengine.ColumnTypeEnum, DefaultHint: "pending",
+			Enum: []string{"pending", "active", "disabled"}},
 		{Key: "locale", LabelKey: "users.locale", Type: ioengine.ColumnTypeString, DefaultHint: "tr"},
 		{Key: "role_slugs", LabelKey: "users.role_slugs", Type: ioengine.ColumnTypeString},
 	}
+}
+
+// ValidateRow implements ioengine.RowValidator (TEC-757): the preview
+// reports an invalid or taken e-mail and an unsupported locale.
+func (a *UsersAdapter) ValidateRow(ctx context.Context, row, defaults map[string]any, loc i18n.Locale) ([]ioengine.RowError, error) {
+	fields := schemaByKey(a.ImportSchema())
+	var errs []ioengine.RowError
+	if email := strings.ToLower(ioengine.Cell(row, nil, "email")); email != "" {
+		if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email {
+			errs = append(errs, ioengine.NewRowError(loc, fields["email"], ioengine.CodeInvalidFormat, map[string]string{"value": email}))
+		} else if _, err := a.q.GetUserByEmail(ctx, pgtype.Text{String: email, Valid: true}); err == nil {
+			errs = append(errs, ioengine.NewRowError(loc, fields["email"], ioengine.CodeAlreadyExists, map[string]string{"value": email}))
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+	}
+	if l := ioengine.Cell(row, defaults, "locale"); l != "" {
+		if _, ok := i18n.Parse(l); !ok {
+			errs = append(errs, ioengine.NewRowError(loc, fields["locale"], ioengine.CodeInvalidValue, map[string]string{
+				"value": l, "values": strings.Join(localeCodes(), ", "),
+			}))
+		}
+	}
+	return errs, nil
+}
+
+func localeCodes() []string {
+	out := make([]string, 0, len(i18n.Supported))
+	for _, l := range i18n.Supported {
+		out = append(out, string(l))
+	}
+	return out
+}
+
+func schemaByKey(fields []ioengine.ImportField) map[string]ioengine.ImportField {
+	out := make(map[string]ioengine.ImportField, len(fields))
+	for _, f := range fields {
+		out[f.Key] = f
+	}
+	return out
 }
 
 func (a *UsersAdapter) ApplyRow(ctx context.Context, row map[string]any, defaults map[string]any) (ioengine.RowResult, error) {
@@ -231,10 +273,29 @@ func (a *RolesAdapter) Export(ctx context.Context, query ioengine.ExportQuery, _
 func (a *RolesAdapter) ImportSchema() []ioengine.ImportField {
 	return []ioengine.ImportField{
 		{Key: "name", LabelKey: "roles.name", Type: ioengine.ColumnTypeString, Required: true},
-		{Key: "slug", LabelKey: "roles.slug", Type: ioengine.ColumnTypeString, Required: true},
+		{Key: "slug", LabelKey: "roles.slug", Type: ioengine.ColumnTypeString, Required: true, Kind: ioengine.FieldCode},
 		{Key: "description", LabelKey: "roles.description", Type: ioengine.ColumnTypeString},
 		{Key: "permission_slugs", LabelKey: "roles.permission_slugs", Type: ioengine.ColumnTypeString},
 	}
+}
+
+// ValidateRow implements ioengine.RowValidator (TEC-757): a system role
+// slug or a taken slug is reported in the preview.
+func (a *RolesAdapter) ValidateRow(ctx context.Context, row, _ map[string]any, loc i18n.Locale) ([]ioengine.RowError, error) {
+	slugVal := normalizeSlug(ioengine.Cell(row, nil, "slug"))
+	if slugVal == "" {
+		return nil, nil
+	}
+	f := schemaByKey(a.ImportSchema())["slug"]
+	if rbac.IsSystemRole(slugVal) {
+		return []ioengine.RowError{ioengine.NewRowError(loc, f, ioengine.CodeNotAllowed, map[string]string{"value": slugVal})}, nil
+	}
+	if _, err := a.q.GetRoleBySlug(ctx, slugVal); err == nil {
+		return []ioengine.RowError{ioengine.NewRowError(loc, f, ioengine.CodeAlreadyExists, map[string]string{"value": slugVal})}, nil
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	return nil, nil
 }
 
 func (a *RolesAdapter) ApplyRow(ctx context.Context, row map[string]any, _ map[string]any) (ioengine.RowResult, error) {
@@ -451,7 +512,11 @@ func SampleRows(resource string) []map[string]any {
 	}
 }
 
-var _ ioengine.ResourceAdapter = (*UsersAdapter)(nil)
+var (
+	_ ioengine.ResourceAdapter = (*UsersAdapter)(nil)
+	_ ioengine.RowValidator    = (*UsersAdapter)(nil)
+	_ ioengine.RowValidator    = (*RolesAdapter)(nil)
+)
 
 // Activity export adapter lives in activity module — placeholder to satisfy registry if needed.
 

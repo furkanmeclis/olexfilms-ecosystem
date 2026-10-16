@@ -30,14 +30,6 @@ func TestCountAllowedResolutions(t *testing.T) {
 	}
 }
 
-func TestCountCSVSafe(t *testing.T) {
-	for in, want := range map[string]string{"": "", "ABC-1": "ABC-1", "=SUM(A1)": "'=SUM(A1)", "-5": "'-5", "@x": "'@x"} {
-		if got := csvSafe(in); got != want {
-			t.Errorf("csvSafe(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
 func TestCountMeters(t *testing.T) {
 	n := cmToNum(850)
 	if cm, ok := numToCm(n); !ok || cm != 850 {

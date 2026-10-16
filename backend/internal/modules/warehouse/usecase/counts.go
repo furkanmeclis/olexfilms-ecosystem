@@ -47,6 +47,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
@@ -1597,24 +1598,16 @@ func (s *Counts) Export(ctx context.Context, c ScanCaller, id uuid.UUID, w io.Wr
 			barcode = l.Unit.Barcode
 		}
 		if err := cw.Write([]string{
-			l.UUID.String(), l.LineKind, csvSafe(barcode), csvSafe(l.Product.SKU), csvSafe(l.Product.Name),
-			csvSafe(loc(l.ExpectedLocation)), csvSafe(loc(l.CountedLocation)),
+			l.UUID.String(), l.LineKind, ioengine.CSVSafe(barcode), ioengine.CSVSafe(l.Product.SKU), ioengine.CSVSafe(l.Product.Name),
+			ioengine.CSVSafe(loc(l.ExpectedLocation)), ioengine.CSVSafe(loc(l.CountedLocation)),
 			strconv.Itoa(int(l.ExpectedQuantity)), strconv.Itoa(int(l.CountedQuantity)),
-			str(l.ExpectedMeters), str(l.CountedMeters), l.Result, str(l.Resolution), csvSafe(str(l.Note)),
+			str(l.ExpectedMeters), str(l.CountedMeters), l.Result, str(l.Resolution), ioengine.CSVSafe(str(l.Note)),
 		}); err != nil {
 			return err
 		}
 	}
 	cw.Flush()
 	return cw.Error()
-}
-
-// csvSafe neutralises spreadsheet formula injection.
-func csvSafe(v string) string {
-	if v != "" && strings.ContainsRune("=+-@\t\r", rune(v[0])) {
-		return "'" + v
-	}
-	return v
 }
 
 // ---------------------------------------------------------------------------

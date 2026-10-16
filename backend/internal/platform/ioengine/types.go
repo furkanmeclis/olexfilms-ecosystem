@@ -97,6 +97,21 @@ type ExportQuery map[string]string
 // Clients must not set this key; RequestExport strips it.
 const QueryOrganizationID = "_organization_id"
 
+// FieldKind is the cell kind of an import field in the template (TEC-757).
+type FieldKind string
+
+const (
+	// FieldText is a general cell (the zero value).
+	FieldText FieldKind = ""
+	// FieldCode is a text-formatted cell (barcode, SKU, code): Excel keeps
+	// leading zeros and never turns it into a number.
+	FieldCode FieldKind = "code"
+	// FieldInteger is a whole number cell.
+	FieldInteger FieldKind = "integer"
+	// FieldDecimal is a decimal number cell (two decimals).
+	FieldDecimal FieldKind = "decimal"
+)
+
 // ImportField describes an importable schema field.
 type ImportField struct {
 	Key         string     `json:"key"`
@@ -104,6 +119,58 @@ type ImportField struct {
 	Type        ColumnType `json:"type"`
 	Required    bool       `json:"required"`
 	DefaultHint string     `json:"default_hint,omitempty"`
+	// Kind types the template cell and the preview check (TEC-757).
+	Kind FieldKind `json:"kind,omitempty"`
+	// Enum lists the accepted values: a drop-down in the template and a
+	// preview check (case-insensitive).
+	Enum []string `json:"enum,omitempty"`
+	// HintKey is the i18n key of the column description on the template
+	// instructions sheet.
+	HintKey string `json:"hint_key,omitempty"`
+}
+
+// SampleLookuper is implemented by adapters whose template offers
+// drop-down lists of live values (field key -> values, e.g. the brand's
+// active SKUs). The context carries the requester's organization
+// (orgctx); a field without values gets no list.
+type SampleLookuper interface {
+	SampleLookups(ctx context.Context) (map[string][]string, error)
+}
+
+// RowValidator is implemented by row-by-row importers to check a mapped
+// row in the preview (TEC-757) before anything is applied. The returned
+// errors carry Field, Code and a message in the locale (Index is set by
+// the caller); err is an infrastructure failure.
+type RowValidator interface {
+	ValidateRow(ctx context.Context, row, defaults map[string]any, locale i18n.Locale) ([]RowError, error)
+}
+
+// RowLimiter overrides the import row limit (DefaultMaxImportRows).
+type RowLimiter interface {
+	MaxImportRows() int
+}
+
+// ImportPermissioner names the permission (besides being the uploader)
+// that may confirm and roll back a tenant import job of the resource,
+// e.g. stock.import.
+type ImportPermissioner interface {
+	ImportPermission() string
+}
+
+// RowReport is the status and errors of one staged row (error report).
+type RowReport struct {
+	Index       int
+	Status      string
+	StatusLabel string
+	Errors      []string
+	// Failed rows are listed first and highlighted.
+	Failed bool
+}
+
+// RowReporter is implemented by staged importers that report every staged
+// row (the preview summary keeps only the first rows).
+type RowReporter interface {
+	ReportRows(ctx context.Context, job ImportJob) ([]RowReport, error)
 }
 
 // RowResult is the outcome of applying one import row.
