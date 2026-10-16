@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { CheckCircle2, FileText, Plus, RotateCcw, XCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import {
   EntityPage,
@@ -12,6 +12,10 @@ import {
   useServerListState,
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
+import {
+  AsyncCombobox,
+  type ComboboxOption,
+} from "@/components/ui/async-combobox";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,6 +47,10 @@ import {
   type CertificateType,
   type CertificateWarning,
 } from "@/features/certificates/services/certificates.service";
+import { CatalogBindingPicker } from "./catalog-binding-picker";
+import { usePermission } from "@/providers/permission-provider";
+import { UserFilterCombobox } from "@/features/users/components/user-filter-combobox";
+import { useAuthStore } from "@/lib/auth/session-store";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -74,8 +82,8 @@ function TypeDialog({
     nameEn: string;
     validity: string;
     active: boolean;
-    categories: string;
-    products: string;
+    categories: string[];
+    products: string[];
   }) => void;
 }) {
   const { t } = useLocale();
@@ -83,8 +91,8 @@ function TypeDialog({
   const [nameEn, setNameEn] = useState("");
   const [validity, setValidity] = useState("");
   const [active, setActive] = useState(true);
-  const [categories, setCategories] = useState("");
-  const [products, setProducts] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
+  const [products, setProducts] = useState<string[]>([]);
 
   function openChanged(next: boolean) {
     if (next) {
@@ -92,8 +100,8 @@ function TypeDialog({
       setNameEn(localizedName(type?.name, "en"));
       setValidity(type?.validity_months ? String(type.validity_months) : "");
       setActive(type?.active ?? true);
-      setCategories("");
-      setProducts("");
+      setCategories([]);
+      setProducts([]);
     }
     onOpenChange(next);
   }
@@ -148,20 +156,22 @@ function TypeDialog({
               <Label htmlFor="cert-cats">
                 {t("certificates.fields.category_uuids")}
               </Label>
-              <Textarea
+              <CatalogBindingPicker
                 id="cert-cats"
+                resource="categories"
                 value={categories}
-                onChange={(e) => setCategories(e.target.value)}
+                onChange={setCategories}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="cert-products">
                 {t("certificates.fields.product_uuids")}
               </Label>
-              <Textarea
+              <CatalogBindingPicker
                 id="cert-products"
+                resource="products"
                 value={products}
-                onChange={(e) => setProducts(e.target.value)}
+                onChange={setProducts}
               />
             </div>
           </div>
@@ -282,11 +292,6 @@ export function CertificateTypesPage() {
         ? V
         : never,
     ) => {
-      const csv = (text: string) =>
-        text
-          .split(/[,\s]+/)
-          .map((v) => v.trim())
-          .filter(Boolean);
       const body = {
         name: {
           tr: values.nameTr.trim(),
@@ -297,8 +302,8 @@ export function CertificateTypesPage() {
           : null,
         active: values.active,
         sort_order: editing?.sort_order ?? 1000,
-        category_uuids: csv(values.categories),
-        product_uuids: csv(values.products),
+        category_uuids: values.categories,
+        product_uuids: values.products,
       };
       return editing
         ? certificatesService.updateType(editing.uuid, body)
@@ -357,10 +362,33 @@ function UploadDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const queryClient = useQueryClient();
   const [userUuid, setUserUuid] = useState("");
   const [typeUuid, setTypeUuid] = useState("");
+  const { can } = usePermission();
+  const canListTypes = can(permissions.certificates.typesManage);
+  const isSuperAdmin = useAuthStore((s) => Boolean(s.user?.isSuperAdmin));
+  const canListUsers = isSuperAdmin && can(permissions.users.read);
+  const [typeOptions, setTypeOptions] = useState<ComboboxOption[]>([]);
+  const loadTypes = useCallback(
+    async (q: string) => {
+      const page = await certificatesService.listTypes({
+        q,
+        limit: 20,
+        offset: 0,
+      });
+      const options = page.items.map((type) => ({
+        value: type.uuid,
+        label: localizedName(type.name, locale),
+      }));
+      setTypeOptions((prev) => [
+        ...new Map([...prev, ...options].map((o) => [o.value, o])).values(),
+      ]);
+      return options;
+    },
+    [locale],
+  );
   const [issuedAt, setIssuedAt] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -399,18 +427,38 @@ function UploadDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
-          <Input
-            aria-label={t("certificates.fields.staff_uuid")}
-            placeholder={t("certificates.fields.staff_uuid")}
-            value={userUuid}
-            onChange={(e) => setUserUuid(e.target.value)}
-          />
-          <Input
-            aria-label={t("certificates.fields.type_uuid")}
-            placeholder={t("certificates.fields.type_uuid")}
-            value={typeUuid}
-            onChange={(e) => setTypeUuid(e.target.value)}
-          />
+          {canListUsers ? (
+            <UserFilterCombobox
+              value={userUuid}
+              onValueChange={setUserUuid}
+              placeholder={t("certificates.fields.staff")}
+            />
+          ) : (
+            <Input
+              aria-label={t("certificates.fields.staff_uuid")}
+              placeholder={t("certificates.fields.staff_uuid")}
+              value={userUuid}
+              onChange={(e) => setUserUuid(e.target.value)}
+            />
+          )}
+          {canListTypes ? (
+            <AsyncCombobox
+              aria-label={t("certificates.fields.type")}
+              placeholder={t("certificates.fields.type")}
+              value={typeUuid}
+              onValueChange={setTypeUuid}
+              loadOptions={loadTypes}
+              options={typeOptions}
+              clearable
+            />
+          ) : (
+            <Input
+              aria-label={t("certificates.fields.type_uuid")}
+              placeholder={t("certificates.fields.type_uuid")}
+              value={typeUuid}
+              onChange={(e) => setTypeUuid(e.target.value)}
+            />
+          )}
           <Input
             inputMode="numeric"
             placeholder="2026-10-08"

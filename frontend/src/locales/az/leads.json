@@ -192,5 +192,8 @@
   "convert.done": "Lead çevrildi.",
   "convert.error": "Çevirmə alınmadı.",
   "convert.errors.distributor_required": "Distribütor seçin.",
-  "convert.errors.currency_required": "Valyuta seçin."
+  "convert.errors.currency_required": "Valyuta seçin.",
+  "form.assignee": "Məsul şəxs",
+  "form.customer": "Müştəri",
+  "form.vehicle": "Nəqliyyat vasitəsi"
 }

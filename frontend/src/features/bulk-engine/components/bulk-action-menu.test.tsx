@@ -95,4 +95,66 @@ describe("BulkActionMenu params (TEC-372)", () => {
     await act(async () => confirm?.click());
     expect(mocks.mutateAsync).not.toHaveBeenCalled();
   });
+  it("submits a UUID selected by a resource picker and requires a selection", async () => {
+    const action: BulkActionDef = {
+      id: "assign",
+      label_key: "bulk.actions.leads.assign",
+      permission: "leads.write",
+      icon: ListChecks,
+      params: [
+        {
+          key: "assignee_user_uuid",
+          kind: "uuid",
+          required: true,
+          label_key: "bulk.params.assignee",
+        },
+      ],
+    };
+    await act(async () => {
+      root.render(
+        createElement(BulkActionMenu, {
+          resource: "leads",
+          actions: [action],
+          scope: { mode: "page", ids: ["lead-1"] },
+          selectedCount: 1,
+          renderParam: (_param, value, onValueChange) =>
+            createElement(
+              "button",
+              {
+                type: "button",
+                "data-testid": "staff-picker",
+                onClick: () => onValueChange("user-uuid"),
+              },
+              value || "Choose staff",
+            ),
+        }),
+      );
+    });
+    await act(async () => container.querySelector("button")?.click());
+    const confirm = [...document.querySelectorAll("button")].find(
+      (b) => b.textContent === "common.confirm",
+    )!;
+    await act(async () => confirm.click());
+    expect(mocks.mutateAsync).not.toHaveBeenCalled();
+    expect(
+      document.querySelector("[data-param=assignee_user_uuid] input"),
+    ).toBeNull();
+    await act(async () =>
+      (
+        document.querySelector("[data-testid=staff-picker]") as HTMLElement
+      ).click(),
+    );
+    await act(async () => confirm.click());
+    expect(mocks.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resource: "leads",
+        action: "assign",
+        target: {
+          scope: "ids",
+          ids: ["lead-1"],
+          params: { assignee_user_uuid: "user-uuid" },
+        },
+      }),
+    );
+  });
 });

@@ -1,10 +1,11 @@
 "use client";
 
 import { ChevronDown, Layers } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import type {
   BulkActionDef,
+  BulkActionParam,
   BulkResource,
   SelectionScope,
 } from "@/features/bulk-engine/types";
@@ -50,6 +51,12 @@ type BulkActionMenuProps = {
    * category of `set_category`). A param with options renders a select.
    */
   paramOptions?: Record<string, { value: string; label: string }[]>;
+  /** Resource-specific searchable parameter picker. Undefined uses the default control. */
+  renderParam?: (
+    param: BulkActionParam,
+    value: string,
+    onValueChange: (value: string) => void,
+  ) => ReactNode;
 };
 
 export function BulkActionMenu({
@@ -59,6 +66,7 @@ export function BulkActionMenu({
   selectedCount,
   onComplete,
   paramOptions,
+  renderParam,
 }: BulkActionMenuProps) {
   const { t } = useLocale();
   const { can } = usePermission();
@@ -140,6 +148,17 @@ export function BulkActionMenu({
           {(pending?.params ?? []).map((param) => {
             const setValue = (value: string) =>
               setParamValues((prev) => ({ ...prev, [param.key]: value }));
+            const custom = renderParam?.(
+              param,
+              paramValues[param.key] ?? "",
+              setValue,
+            );
+            if (custom !== undefined)
+              return (
+                <div key={param.key} data-param={param.key}>
+                  {custom}
+                </div>
+              );
             const options =
               paramOptions?.[param.key] ??
               (param.kind === "enum"

@@ -29,6 +29,12 @@ export type VehicleListPage = {
 
 /** Tenant vehicle list (TEC-372): vehicles of the customers in scope. */
 export const vehiclesService = {
+  get(uuid: string) {
+    return platformRequest<Vehicle>(
+      "GET",
+      `/v1/vehicles/${encodeURIComponent(uuid)}`,
+    );
+  },
   list(params: VehicleListQuery) {
     return platformRequest<VehicleListPage>("GET", "/v1/vehicles", {
       query: params,

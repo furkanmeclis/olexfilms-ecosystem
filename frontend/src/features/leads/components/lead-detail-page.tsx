@@ -30,6 +30,7 @@ import {
   LeadFields,
   leadInputClass,
 } from "@/features/leads/components/lead-fields";
+import { LeadReferencePicker } from "./lead-reference-picker";
 import { LeadQuotesTab } from "@/features/leads/components/lead-quotes-tab";
 import {
   LEAD_STATUSES,
@@ -291,6 +292,7 @@ function EditCard({
         <form className="space-y-6" onSubmit={onSubmit} noValidate>
           <LeadFields
             targetTypes={leadTargetTypesFor(orgType)}
+            organizationUuid={lead.organization_uuid}
             values={values}
             errors={errors}
             disabled={update.isPending}
@@ -353,12 +355,14 @@ export function LeadDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
     onError: () => toast.error(t("leads.status.error")),
   });
   const assign = useMutation({
-    mutationFn: (assignee_user_id: number | null) =>
-      leadsService.assign(uuid, { assignee_user_id }),
+    mutationFn: (assignee_user_uuid: string | null) =>
+      leadsService.assign(uuid, { assignee_user_uuid }),
     onSuccess: async (updated) => {
       qc.setQueryData(leadKeys.detail(uuid), updated);
       await qc.invalidateQueries({ queryKey: leadKeys.lists });
+      await qc.invalidateQueries({ queryKey: leadKeys.events(uuid) });
     },
+    onError: () => toast.error(t("leads.form.error")),
   });
 
   const lead = detail.data;
@@ -493,16 +497,13 @@ export function LeadDetailPage({ slug, uuid }: { slug: string; uuid: string }) {
           ) : null}
           {canWrite ? (
             <div className="grid max-w-md gap-2 sm:grid-cols-[1fr_auto]">
-              <input
-                data-testid="lead-assign-input"
-                className={leadInputClass}
-                type="number"
-                placeholder={t("leads.form.assignee_user_id")}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    assign.mutate(Number(e.currentTarget.value) || null);
-                  }
-                }}
+              <LeadReferencePicker
+                id="lead-assign-input"
+                kind="assignee"
+                value={lead.assignee_user_uuid ?? ""}
+                organizationUuid={lead.organization_uuid}
+                disabled={assign.isPending}
+                onValueChange={(value) => assign.mutate(value || null)}
               />
               <Button
                 type="button"

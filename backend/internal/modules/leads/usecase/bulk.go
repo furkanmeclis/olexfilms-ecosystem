@@ -6,8 +6,8 @@ package usecase
 // (ExecuteTenantScoped); every item is re-checked against that scope
 // (JobCaller), so a run never reaches a lead the list would not show.
 //
-//   - assign: params.assignee_user_id (user id, a member of the lead's or
-//     of the active organization); a timeline "assigned" event like
+//   - assign: params.assignee_user_uuid (preferred) or assignee_user_id
+//     (a member of the lead's organization); a timeline "assigned" event like
 //     POST /v1/leads/{uuid}/assign. Undo restores the previous assignee.
 //   - set_status: params.status (+ lost_reason for lost); the pipeline
 //     rules of POST /v1/leads/{uuid}/status apply per item (a disallowed
@@ -39,13 +39,14 @@ const ResourceBulk = "leads"
 
 // Bulk action ids and params.
 const (
-	BulkAssign           = "assign"
-	BulkSetStatus        = "set_status"
-	ParamAssigneeUserID  = "assignee_user_id"
-	ParamStatus          = "status"
-	ParamLostReason      = "lost_reason"
-	maxBulkQueryTargets  = 10000
-	queryOrganizationKey = "organization_uuid"
+	BulkAssign            = "assign"
+	BulkSetStatus         = "set_status"
+	ParamAssigneeUserUUID = "assignee_user_uuid"
+	ParamAssigneeUserID   = "assignee_user_id"
+	ParamStatus           = "status"
+	ParamLostReason       = "lost_reason"
+	maxBulkQueryTargets   = 10000
+	queryOrganizationKey  = "organization_uuid"
 )
 
 // BulkAdapter implements bulkengine.BulkAdapter for leads.
@@ -66,7 +67,7 @@ func (a *BulkAdapter) BulkActions() []bulkengine.BulkActionDef {
 		{
 			ID: BulkAssign, LabelKey: "bulk.actions.leads.assign", Permission: rbac.PermLeadsWrite, Reversible: true,
 			Params: []bulkengine.BulkActionParam{
-				{Key: ParamAssigneeUserID, Kind: "number", Required: true, LabelKey: "bulk.params.assignee"},
+				{Key: ParamAssigneeUserUUID, Kind: "uuid", Required: true, LabelKey: "bulk.params.assignee"},
 			},
 		},
 		{
@@ -99,6 +100,12 @@ func bulkParamsError(action string, params map[string]string) error {
 }
 
 func assigneeParam(params map[string]string) (int64, error) {
+	if raw, present := params[ParamAssigneeUserUUID]; present {
+		if _, err := uuid.Parse(strings.TrimSpace(raw)); err != nil {
+			return 0, fmt.Errorf("%s must be a user UUID", ParamAssigneeUserUUID)
+		}
+		return 0, nil
+	}
 	id, err := strconv.ParseInt(strings.TrimSpace(params[ParamAssigneeUserID]), 10, 64)
 	if err != nil || id <= 0 {
 		return 0, fmt.Errorf("%s must be a user id", ParamAssigneeUserID)
@@ -226,18 +233,25 @@ func (a *BulkAdapter) ApplyItem(ctx context.Context, action, entityUUID string) 
 	res := bulkengine.BulkItemResult{EntityUUID: entityUUID, EntityType: "lead", OK: true, Op: "update"}
 	switch action {
 	case BulkAssign:
-		assignee, _ := assigneeParam(run.Params)
+		assigneeID, _ := assigneeParam(run.Params)
+		var assigneeUUID *uuid.UUID
+		if raw := strings.TrimSpace(run.Params[ParamAssigneeUserUUID]); raw != "" {
+			value, _ := uuid.Parse(raw)
+			assigneeUUID = &value
+		}
+		resolved, err := New(nil, a.q, nil).resolveAssignee(ctx, cur.OrganizationID, &assigneeID, assigneeUUID)
+		if err != nil {
+			var validation *ValidationError
+			if errors.As(err, &validation) {
+				return fail("assignee is not a member of the organization")
+			}
+			return bulkengine.BulkItemResult{}, err
+		}
+		assignee := *resolved
 		res.Previous = leadState(action, cur)
 		res.Applied = map[string]any{"assignee_user_id": assignee}
 		if cur.AssigneeUserID.Valid && cur.AssigneeUserID.Int64 == assignee {
 			return res, nil
-		}
-		member, err := a.isMember(ctx, assignee, cur.OrganizationID, c.Org.InternalID)
-		if err != nil {
-			return bulkengine.BulkItemResult{}, err
-		}
-		if !member {
-			return fail("assignee is not a member of the organization")
 		}
 		row, err := a.q.AssignLead(ctx, db.AssignLeadParams{
 			ID: cur.ID, OrganizationID: cur.OrganizationID, AssigneeUserID: pgtype.Int8{Int64: assignee, Valid: true},
@@ -282,20 +296,6 @@ func (a *BulkAdapter) ApplyItem(ctx context.Context, action, entityUUID string) 
 	default:
 		return fail("unknown action")
 	}
-}
-
-// isMember reports whether user is a member of one of the organizations.
-func (a *BulkAdapter) isMember(ctx context.Context, user int64, orgs ...int64) (bool, error) {
-	for _, org := range orgs {
-		_, err := a.q.GetOrganizationMember(ctx, db.GetOrganizationMemberParams{OrganizationID: org, UserID: user})
-		if err == nil {
-			return true, nil
-		}
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return false, err
-		}
-	}
-	return false, nil
 }
 
 // CurrentState implements bulkengine.StateReader (undo conflict check).

@@ -12286,6 +12286,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/leads/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List organization members eligible for lead assignment
+         * @description Requires leads.write; organization must be in the caller's scope. Defaults to the active organization.
+         */
+        get: operations["listLeadAssignees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/leads/bulk": {
         parameters: {
             query?: never;
@@ -12297,7 +12317,7 @@ export interface paths {
         put?: never;
         /**
          * Run a logged, undoable bulk action on leads (TEC-371)
-         * @description leads.write; the run stays inside the caller's leads.write scope. Actions: `assign` with `target.params.assignee_user_id` (a member of the lead's or the active organization; others fail per item); `set_status` with `target.params.status` (new, contacted, quoted, won, lost) and `target.params.lost_reason` (required for lost); the pipeline rules of POST /v1/leads/{uuid}/status apply per item. Target scope `ids`, or `query` with the GET /v1/leads filters ("select all matching", at most 10000). Undo through `/v1/tenant/bulk-operations/{uuid}/undo`.
+         * @description leads.write; the run stays inside the caller's leads.write scope. Actions: `assign` with `target.params.assignee_user_uuid` or legacy `target.params.assignee_user_id` (UUID takes precedence; a member of the lead's organization; others fail per item); `set_status` with `target.params.status` (new, contacted, quoted, won, lost) and `target.params.lost_reason` (required for lost); the pipeline rules of POST /v1/leads/{uuid}/status apply per item. Target scope `ids`, or `query` with the GET /v1/leads filters ("select all matching", at most 10000). Undo through `/v1/tenant/bulk-operations/{uuid}/undo`.
          */
         post: operations["bulkLeads"];
         delete?: never;
@@ -25070,8 +25090,12 @@ export interface components {
             target_type: components["schemas"]["LeadTargetType"];
             /** Format: int64 */
             customer_user_id?: number;
+            /** Format: uuid */
+            customer_uuid?: string;
             /** Format: int64 */
             vehicle_id?: number;
+            /** Format: uuid */
+            vehicle_uuid?: string;
             candidate_company_name?: string;
             candidate_contact_name?: string;
             candidate_phone_e164?: string;
@@ -25091,6 +25115,8 @@ export interface components {
             follow_up_date?: string;
             /** Format: int64 */
             assignee_user_id?: number;
+            /** Format: uuid */
+            assignee_user_uuid?: string;
             notes: string;
             /** @enum {string} */
             won_ref_type?: "service" | "appointment" | "organization";
@@ -25107,8 +25133,18 @@ export interface components {
             target_type: components["schemas"]["LeadTargetType"];
             /** Format: int64 */
             customer_user_id?: number | null;
+            /**
+             * Format: uuid
+             * @description Takes precedence over customer_user_id; validated in the same scope.
+             */
+            customer_uuid?: string | null;
             /** Format: int64 */
             vehicle_id?: number | null;
+            /**
+             * Format: uuid
+             * @description Takes precedence over vehicle_id; validated in the same scope.
+             */
+            vehicle_uuid?: string | null;
             candidate_company_name?: string | null;
             candidate_contact_name?: string | null;
             candidate_phone_e164?: string | null;
@@ -25126,14 +25162,29 @@ export interface components {
             follow_up_date?: string | null;
             /** Format: int64 */
             assignee_user_id?: number | null;
+            /**
+             * Format: uuid
+             * @description Takes precedence over assignee_user_id; validated in the same scope.
+             */
+            assignee_user_uuid?: string | null;
             notes?: string;
         };
         LeadPatchInput: {
             target_type?: components["schemas"]["LeadTargetType"];
             /** Format: int64 */
             customer_user_id?: number | null;
+            /**
+             * Format: uuid
+             * @description Takes precedence over customer_user_id; validated in the same scope.
+             */
+            customer_uuid?: string | null;
             /** Format: int64 */
             vehicle_id?: number | null;
+            /**
+             * Format: uuid
+             * @description Takes precedence over vehicle_id; validated in the same scope.
+             */
+            vehicle_uuid?: string | null;
             candidate_company_name?: string | null;
             candidate_contact_name?: string | null;
             candidate_phone_e164?: string | null;
@@ -25151,6 +25202,11 @@ export interface components {
             follow_up_date?: string | null;
             /** Format: int64 */
             assignee_user_id?: number | null;
+            /**
+             * Format: uuid
+             * @description Takes precedence over assignee_user_id; validated in the same scope.
+             */
+            assignee_user_uuid?: string | null;
             notes?: string;
         };
         LeadStatusInput: {
@@ -25194,6 +25250,11 @@ export interface components {
         LeadAssignInput: {
             /** Format: int64 */
             assignee_user_id?: number | null;
+            /**
+             * Format: uuid
+             * @description Takes precedence over assignee_user_id; validated in the same scope.
+             */
+            assignee_user_uuid?: string | null;
         };
         LeadTaskInput: {
             title: string;
@@ -51027,6 +51088,47 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listLeadAssignees: {
+        parameters: {
+            query?: {
+                organization_uuid?: string;
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Organization members */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: {
+                            items: {
+                                /** Format: uuid */
+                                uuid: string;
+                                name: string;
+                                surname: string;
+                                /** Format: email */
+                                email?: string;
+                            }[];
+                        };
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     bulkLeads: {

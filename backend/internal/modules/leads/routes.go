@@ -38,6 +38,7 @@ func RegisterRoutes(
 	quoteWrite := middleware.RequirePermission(rbac.PermQuotesWrite)
 
 	mux.Handle("GET /v1/leads", route(h.List))
+	mux.Handle("GET /v1/leads/assignees", middleware.Chain(http.HandlerFunc(h.Assignees), authn, org, module, middleware.RequireScope(q, rbac.PermLeadsWrite)))
 	mux.Handle("POST /v1/leads", route(h.Create, write))
 	mux.Handle("GET /v1/leads/follow-up-count", route(h.FollowUpCount))
 	// TEC-371: list export (same scope as the list).

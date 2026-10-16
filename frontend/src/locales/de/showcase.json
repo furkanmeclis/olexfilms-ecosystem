@@ -81,5 +81,5 @@
   "queue.empty_title": "Keine Schaufenster",
   "queue.empty_description": "Keine Schaufenster entsprechen diesen Filtern.",
   "dealer_selector.label": "Zielhändler",
-  "dealer_selector.placeholder": "UUID der Händlerorganisation"
+  "dealer_selector.placeholder": "Händler auswählen"
 }
