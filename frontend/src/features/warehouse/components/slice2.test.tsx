@@ -24,6 +24,8 @@ const catalog = vi.hoisted(() => ({ listProducts: vi.fn() }));
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 const dialogs = vi.hoisted(() => ({ confirm: vi.fn() }));
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+const stepUp = vi.hoisted(() => ({ ensure: vi.fn() }));
+const auth = vi.hoisted(() => ({ user: { uuid: "reviewer-1" } }));
 const files = vi.hoisted(() => ({
   platformDownloadFile: vi.fn(),
   triggerBrowserDownload: vi.fn(),
@@ -68,6 +70,8 @@ vi.mock("@/hooks/use-active-organization", () => ({
 }));
 vi.mock("@/providers/dialog-provider", () => ({ useDialogs: () => dialogs }));
 vi.mock("@/providers/toast-provider", () => ({ appToast: toast }));
+vi.mock("@/features/step-up-engine", () => ({ useStepUp: () => stepUp }));
+vi.mock("@/providers/auth-provider", () => ({ useAuth: () => auth }));
 vi.mock("@/hooks/use-mobile", () => ({
   useIsMobile: () => false,
   useIsXl: () => true,
@@ -127,6 +131,7 @@ beforeEach(() => {
     items: [{ uuid: "p-1", sku: "PPF-190", name: "Olex PPF 190" }],
   });
   dialogs.confirm.mockResolvedValue(true);
+  stepUp.ensure.mockResolvedValue(true);
 });
 afterEach(() => {
   unmount(m);
@@ -506,6 +511,7 @@ describe("CountReportCard (TEC-232)", () => {
     expect(selects[0].textContent).toBe("warehouse.count_resolution.ignore");
     await fill(selects[1], "relocate");
     await click($("count-approve"));
+    expect(stepUp.ensure).toHaveBeenCalledOnce();
     expect(api.approveCount).toHaveBeenCalledWith("c-1", {
       resolutions: [
         { line_uuid: "l-1", resolution: "ignore" },
@@ -530,6 +536,62 @@ describe("CountReportCard (TEC-232)", () => {
     await click($("count-approve"));
     await flush();
     expect($("count-approve-error")?.textContent).toBe("ERR COUNT_STALE");
+  });
+
+  it("shows four-eyes rejection from the server", async () => {
+    api.getCountReport.mockResolvedValue({
+      count: COUNT,
+      lines: [countLine({})],
+    });
+    api.approveCount.mockRejectedValue(
+      new ApiError({
+        status: 403,
+        code: "STOCK_COUNT_SELF_APPROVAL",
+        message: "self approval",
+      }),
+    );
+    await render(
+      m,
+      createElement(CountReportCard, { count: COUNT, canApprove: true }),
+    );
+    await click($("count-approve"));
+    await flush();
+    expect($("count-approve-error")?.textContent).toBe(
+      "ERR STOCK_COUNT_SELF_APPROVAL",
+    );
+  });
+
+  it("disables approval for the count creator", async () => {
+    api.getCountReport.mockResolvedValue({
+      count: COUNT,
+      lines: [countLine({})],
+    });
+    await render(
+      m,
+      createElement(CountReportCard, {
+        count: { ...COUNT, created_by_user_uuid: "reviewer-1" },
+        canApprove: true,
+      }),
+    );
+    expect(($("count-approve") as HTMLButtonElement).disabled).toBe(true);
+    expect($("count-self-approval-hint")?.textContent).toBe(
+      "warehouse.count.self_approval_hint",
+    );
+  });
+
+  it("does not send approval when step-up is cancelled", async () => {
+    api.getCountReport.mockResolvedValue({
+      count: COUNT,
+      lines: [countLine({})],
+    });
+    stepUp.ensure.mockResolvedValue(false);
+    await render(
+      m,
+      createElement(CountReportCard, { count: COUNT, canApprove: true }),
+    );
+    await click($("count-approve"));
+    await flush();
+    expect(api.approveCount).not.toHaveBeenCalled();
   });
 
   it("read-only without the approval right", async () => {
