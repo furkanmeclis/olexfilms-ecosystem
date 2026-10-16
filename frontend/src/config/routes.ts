@@ -157,9 +157,17 @@ export const routes = {
       createReturn: (slug: string) => `/t/${slug}/transfers/returns/new`,
       detail: (slug: string, uuid: string) => `/t/${slug}/transfers/${uuid}`,
     },
-    /** TEC-224 dealer "My stock" (units on hand, consumed in services). */
+    /**
+     * TEC-224 "My stock" (units on hand, consumed in services); TEC-763
+     * unit history and reclassification requests.
+     */
     stock: {
       root: (slug: string) => `/t/${slug}/stock`,
+      unit: (slug: string, barcode: string) =>
+        `/t/${slug}/stock/units/${encodeURIComponent(barcode)}`,
+      reclassifications: (slug: string) => `/t/${slug}/stock/reclassifications`,
+      reclassification: (slug: string, uuid: string) =>
+        `/t/${slug}/stock/reclassifications/${uuid}`,
     },
     /** TEC-486: stock forecast and order suggestions add-on. */
     stockForecast: {

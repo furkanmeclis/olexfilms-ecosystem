@@ -61,6 +61,7 @@ import {
   Inbox,
   Plug,
   Repeat,
+  Replace,
   Scale,
   Tags,
 } from "lucide-react";
@@ -923,13 +924,16 @@ export function tenantNav(slug: string) {
         // TEC-224: the dealer's own stock (K12: units, no bins or counts);
         // same gates as /v1/stock/organizations/{uuid}/units (stock.read
         // and the stock module). A distributor reads its dealers too.
+        // TEC-763: the center gets its stock list (by product and unit) and
+        // every type the reclassification requests (/v1/stock/
+        // reclassifications, stock.read).
         id: "stock",
         labelKey: "stock.nav",
         icon: Boxes,
         defaultOpen: true,
         permission: permissions.stock.read,
         feature: "stock",
-        orgTypes: ["distributor", "dealer"],
+        orgTypes: ["center", "distributor", "dealer"],
         items: [
           {
             id: "stock-mine",
@@ -939,6 +943,24 @@ export function tenantNav(slug: string) {
             permission: permissions.stock.read,
             feature: "stock",
             orgTypes: ["distributor", "dealer"],
+          },
+          {
+            id: "stock-center",
+            titleKey: "stock.nav_center",
+            href: routes.tenant.stock.root(slug),
+            icon: Boxes,
+            permission: permissions.stock.read,
+            feature: "stock",
+            orgTypes: ["center"],
+          },
+          {
+            id: "stock-reclassifications",
+            titleKey: "stock.nav_reclassifications",
+            href: routes.tenant.stock.reclassifications(slug),
+            icon: Replace,
+            permission: permissions.stock.read,
+            feature: "stock",
+            orgTypes: ["center", "distributor", "dealer"],
           },
         ],
       },

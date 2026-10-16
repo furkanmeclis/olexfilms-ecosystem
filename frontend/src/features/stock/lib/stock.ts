@@ -4,10 +4,13 @@ import type {
   StockUnitStatus,
 } from "@/features/stock/services/stock.service";
 
-/** The two tabs of the page: units on hand, units consumed in services. */
-export type StockTab = "stock" | "consumed";
+/**
+ * The tabs of the page: units on hand, units consumed in services and
+ * (TEC-763) the stock by product.
+ */
+export type StockTab = "stock" | "consumed" | "products";
 
-export const STOCK_TABS: StockTab[] = ["stock", "consumed"];
+export const STOCK_TABS: StockTab[] = ["stock", "consumed", "products"];
 
 /** Statuses offered in the on-hand filter (the list default is both). */
 export const STOCK_FILTER_STATUSES = [
