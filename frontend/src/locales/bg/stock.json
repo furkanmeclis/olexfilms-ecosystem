@@ -183,5 +183,6 @@
   "widget.quantity_value": "{{quantity}} бр.",
   "widget.truncated": "Обобщението обхваща първите {{limit}} продукта.",
   "filters.product_search": "Име на продукт или артикулен номер",
-  "filters.product_none": "Няма продукти в тази наличност."
+  "filters.product_none": "Няма продукти в тази наличност.",
+  "export_products": "Експорт на наличността по продукти"
 }

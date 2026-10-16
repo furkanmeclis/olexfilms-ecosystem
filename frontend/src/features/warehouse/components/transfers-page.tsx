@@ -22,7 +22,7 @@ import {
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
-import { createColumn } from "@/components/tables";
+import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { AppForm, AppInput, AppSelect } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,7 +57,14 @@ import {
   type Warehouse,
   type WarehouseMoveResult,
   type WarehouseTransfer,
+  warehouseExportPaths,
 } from "@/features/warehouse/services/warehouse.service";
+import {
+  listExportQuery,
+  TransferSummaryExport,
+  useExportSelection,
+  WarehouseExportMenu,
+} from "@/features/warehouse/components/warehouse-export";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -115,6 +122,7 @@ export function TransfersPage({ slug }: { slug: string }) {
       if (ok) runFinish({ uuid: transfer.uuid, action });
     };
     return [
+      createSelectColumnDef<WarehouseTransfer>(),
       createColumn<WarehouseTransfer>({
         accessorKey: "transfer_no",
         labelKey: "warehouse.transfers.columns.no",
@@ -274,6 +282,13 @@ export function TransfersPage({ slug }: { slug: string }) {
     persistKey: TRANSFERS_PERSIST_KEY,
   });
   const query: TransferListQuery = listState.params;
+  // TEC-761: the export keeps the list filters, q, sort and the selection.
+  const selection = useExportSelection();
+  const exportQuery = listExportQuery(
+    listState.filterParams,
+    listState.params,
+    selection.selected,
+  );
   const list = useQuery({
     queryKey: warehouseKeys.transfers(query),
     queryFn: () => warehouseService.listTransfers(query),
@@ -324,10 +339,14 @@ export function TransfersPage({ slug }: { slug: string }) {
             emptyTitle={t("warehouse.transfers.empty_title")}
             emptyDescription={t("warehouse.transfers.empty_description")}
             rowCount={list.data?.total ?? 0}
-            state={listState.tableState}
+            state={{
+              ...listState.tableState,
+              rowSelection: selection.rowSelection,
+              onRowSelectionChange: selection.onRowSelectionChange,
+            }}
             features={{
               persistKey: TRANSFERS_PERSIST_KEY,
-              rowSelection: false,
+              rowSelection: true,
               viewMode: true,
             }}
             renderGridItem={(r) => (
@@ -353,10 +372,19 @@ export function TransfersPage({ slug }: { slug: string }) {
               </div>
             )}
             toolbarExtra={
-              <EntityToolbar
-                onRefresh={() => void list.refetch()}
-                refreshDisabled={list.isFetching}
-              />
+              <>
+                <WarehouseExportMenu
+                  slug={slug}
+                  exportPath={warehouseExportPaths.transfers}
+                  query={exportQuery}
+                  testId="transfers-export"
+                />
+                <TransferSummaryExport slug={slug} query={exportQuery} />
+                <EntityToolbar
+                  onRefresh={() => void list.refetch()}
+                  refreshDisabled={list.isFetching}
+                />
+              </>
             }
           />
         </CardContent>

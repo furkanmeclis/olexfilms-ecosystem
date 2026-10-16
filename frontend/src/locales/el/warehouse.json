@@ -30,8 +30,6 @@
   "count.expected": "Αναμενόμενο",
   "count.expected_title": "Αναμενόμενο απόθεμα",
   "count.expected_totals": "{{units}} σειριακές μονάδες · {{quantity}} τεμ. σταθερού barcode",
-  "count.export": "CSV",
-  "count.export_failed": "Το CSV δεν λήφθηκε.",
   "count.fixed_quantity": "Τεμάχια σταθερού γραμμωτού κώδικα",
   "count.last_scan": "Μετρήθηκε {{code}} × {{quantity}}.",
   "count.meters_hint": "Μετρημένο μήκος ρολού (προαιρετικό).",
@@ -427,5 +425,15 @@
   "validation.scope": "Αυτό το εύρος δεν είναι διαθέσιμο για τη μέθοδο.",
   "validation.too_long": "Έως {{max}} χαρακτήρες.",
   "validation.type": "Αυτός ο τύπος δεν επιτρέπεται εδώ.",
-  "validation.warehouse": "Επιλέξτε αποθήκη."
+  "validation.warehouse": "Επιλέξτε αποθήκη.",
+  "export.count_report": "Εξαγωγή αναφοράς απογραφής",
+  "export.count_report_xlsx": "Αναφορά απογραφής (Excel)",
+  "export.summary": "Συγκεντρωτική αναφορά (ανά προϊόν)",
+  "export.summary_all_products": "Σύνοψη: όλα τα προϊόντα",
+  "export.summary_product_search": "Αναζήτηση προϊόντων",
+  "export.summary_product_none": "Δεν βρέθηκαν προϊόντα.",
+  "export.locations_all": "Εξαγωγή όλων των θέσεων",
+  "export.locations_room": "Εξαγωγή θέσεων αυτού του χώρου",
+  "export.location_stock": "Εξαγωγή αποθέματος θέσης",
+  "export.unit_history": "Εξαγωγή ιστορικού κινήσεων"
 }

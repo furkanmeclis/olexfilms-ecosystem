@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "Автопарки",
   "resources.tenant.fleet.statement": "Выписка автопарка",
   "resources.warranties.list": "Гарантии",
-  "resources.ai.usage": "Использование ИИ"
+  "resources.ai.usage": "Использование ИИ",
+  "resources.warehouse.stock_count_report": "Отчёт инвентаризации",
+  "resources.warehouse.stock_counts": "Инвентаризации",
+  "resources.warehouse.stock_entries": "Поступления",
+  "resources.warehouse.transfers": "Складские перемещения",
+  "resources.warehouse.transfer_summary": "Сводный отчёт перемещений",
+  "resources.warehouse.locations": "Складские места",
+  "resources.warehouse.eod_reports": "Отчёты на конец дня",
+  "resources.stock.products": "Остатки по товарам",
+  "resources.stock.location_stock": "Остатки места",
+  "resources.stock.unit_history": "История движения единицы",
+  "resources.stock.barcode_batches": "Партии штрихкодов"
 }

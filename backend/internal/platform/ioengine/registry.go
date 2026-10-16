@@ -19,6 +19,15 @@ func NewRegistry(adapters ...ResourceAdapter) *Registry {
 	return &Registry{byResource: m}
 }
 
+// Register adds adapters (a module exposing several resources, TEC-761).
+func (r *Registry) Register(adapters ...ResourceAdapter) {
+	for _, a := range adapters {
+		if a != nil {
+			r.byResource[a.Resource()] = a
+		}
+	}
+}
+
 // Get returns an adapter by resource slug.
 func (r *Registry) Get(resource string) (ResourceAdapter, error) {
 	a, ok := r.byResource[resource]

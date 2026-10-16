@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "Flotten",
   "resources.tenant.fleet.statement": "Flottenauszug",
   "resources.warranties.list": "Garantien",
-  "resources.ai.usage": "KI-Nutzung"
+  "resources.ai.usage": "KI-Nutzung",
+  "resources.warehouse.stock_count_report": "Inventurbericht",
+  "resources.warehouse.stock_counts": "Inventuren",
+  "resources.warehouse.stock_entries": "Wareneingänge",
+  "resources.warehouse.transfers": "Lagerumbuchungen",
+  "resources.warehouse.transfer_summary": "Transfer-Sammelbericht",
+  "resources.warehouse.locations": "Lagerplätze",
+  "resources.warehouse.eod_reports": "Tagesabschlussberichte",
+  "resources.stock.products": "Bestand nach Produkt",
+  "resources.stock.location_stock": "Lagerplatzbestand",
+  "resources.stock.unit_history": "Bewegungsverlauf der Einheit",
+  "resources.stock.barcode_batches": "Barcode-Chargen"
 }

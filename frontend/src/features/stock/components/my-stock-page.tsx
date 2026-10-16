@@ -41,6 +41,7 @@ import {
 } from "@/features/stock/lib/stock";
 import {
   stockKeys,
+  stockProductsExportPath,
   stockService,
   stockUnitsExportPath,
   type StockProduct,
@@ -632,6 +633,16 @@ export function MyStockPage({
               formats={["xlsx", "csv", "pdf"]}
               disabled={targetUuid === ""}
               jobsHref={routes.tenant.exports.root(slug)}
+            />
+            <ExportMenu
+              exportPath={stockProductsExportPath(targetUuid)}
+              query={{ product_uuid: product?.value }}
+              formats={["xlsx", "csv", "pdf"]}
+              disabled={targetUuid === ""}
+              jobsHref={routes.tenant.exports.root(slug)}
+              label={t("stock.export_products")}
+              icon={Boxes}
+              testId="stock-products-export"
             />
             <EntityToolbar
               onRefresh={() => void list.refetch()}

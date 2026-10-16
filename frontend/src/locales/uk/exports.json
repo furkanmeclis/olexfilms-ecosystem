@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "Автопарки",
   "resources.tenant.fleet.statement": "Виписка автопарку",
   "resources.warranties.list": "Гарантії",
-  "resources.ai.usage": "Використання ШІ"
+  "resources.ai.usage": "Використання ШІ",
+  "resources.warehouse.stock_count_report": "Звіт інвентаризації",
+  "resources.warehouse.stock_counts": "Інвентаризації",
+  "resources.warehouse.stock_entries": "Надходження",
+  "resources.warehouse.transfers": "Складські переміщення",
+  "resources.warehouse.transfer_summary": "Зведений звіт переміщень",
+  "resources.warehouse.locations": "Складські місця",
+  "resources.warehouse.eod_reports": "Звіти на кінець дня",
+  "resources.stock.products": "Залишки за товарами",
+  "resources.stock.location_stock": "Залишки місця",
+  "resources.stock.unit_history": "Історія руху одиниці",
+  "resources.stock.barcode_batches": "Партії штрихкодів"
 }

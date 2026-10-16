@@ -3,8 +3,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LabelButton } from "@/features/warehouse/components/label-button";
+import { WarehouseExportMenu } from "@/features/warehouse/components/warehouse-export";
 import {
   locationLabelsPath,
+  warehouseExportPaths,
   type WarehouseScanResult,
 } from "@/features/warehouse/services/warehouse.service";
 import { ScanUnitOperations } from "@/features/stock/components/unit-operations";
@@ -45,10 +47,26 @@ function Row({
   );
 }
 
-/** What a scan resolved to (TEC-203): a location, a unit or a product. */
-export function ScanResultCard({ result }: { result: WarehouseScanResult }) {
+/**
+ * What a scan resolved to (TEC-203): a location, a unit or a product. With
+ * `slug` a unit offers its movement history export and a location its
+ * stock export (TEC-761).
+ */
+export function ScanResultCard({
+  result,
+  slug,
+}: {
+  result: WarehouseScanResult;
+  slug?: string;
+}) {
   const { t, format } = useLocale();
   const { location, unit, product } = result;
+  const exportPath =
+    result.type === "unit" && unit
+      ? warehouseExportPaths.unitHistory(unit.barcode)
+      : result.type === "location" && location
+        ? warehouseExportPaths.locationStock(location.uuid)
+        : null;
 
   return (
     <Card data-testid="scan-result" data-type={result.type}>
@@ -62,9 +80,23 @@ export function ScanResultCard({ result }: { result: WarehouseScanResult }) {
               result.code}
           </span>
         </CardTitle>
-        <span className="text-muted-foreground text-xs">
-          {t(`warehouse.scan.matched_by.${result.matched_by}`)}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-xs">
+            {t(`warehouse.scan.matched_by.${result.matched_by}`)}
+          </span>
+          {slug && exportPath ? (
+            <WarehouseExportMenu
+              slug={slug}
+              exportPath={exportPath}
+              label={
+                result.type === "unit"
+                  ? t("warehouse.export.unit_history")
+                  : t("warehouse.export.location_stock")
+              }
+              testId="scan-export"
+            />
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {result.type === "location" && location ? (

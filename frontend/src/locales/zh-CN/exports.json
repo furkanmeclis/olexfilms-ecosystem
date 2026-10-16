@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "车队",
   "resources.tenant.fleet.statement": "车队对账单",
   "resources.warranties.list": "质保",
-  "resources.ai.usage": "AI 使用情况"
+  "resources.ai.usage": "AI 使用情况",
+  "resources.warehouse.stock_count_report": "盘点报告",
+  "resources.warehouse.stock_counts": "库存盘点",
+  "resources.warehouse.stock_entries": "入库单",
+  "resources.warehouse.transfers": "仓库调拨",
+  "resources.warehouse.transfer_summary": "调拨汇总报告",
+  "resources.warehouse.locations": "仓库库位",
+  "resources.warehouse.eod_reports": "日终报告",
+  "resources.stock.products": "按产品库存",
+  "resources.stock.location_stock": "库位库存",
+  "resources.stock.unit_history": "单元移动历史",
+  "resources.stock.barcode_batches": "条码批次"
 }

@@ -183,5 +183,6 @@
   "widget.quantity_value": "{{quantity}} шт.",
   "widget.truncated": "Зведення охоплює перші {{limit}} товарів.",
   "filters.product_search": "Назва товару або артикул",
-  "filters.product_none": "У цьому запасі немає товарів."
+  "filters.product_none": "У цьому запасі немає товарів.",
+  "export_products": "Експортувати залишки за товарами"
 }

@@ -15,7 +15,7 @@ import {
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
-import { createColumn } from "@/components/tables";
+import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -51,7 +51,13 @@ import {
   warehouseService,
   type EodListQuery,
   type EodReport,
+  warehouseExportPaths,
 } from "@/features/warehouse/services/warehouse.service";
+import {
+  listExportQuery,
+  useExportSelection,
+  WarehouseExportMenu,
+} from "@/features/warehouse/components/warehouse-export";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -88,6 +94,7 @@ export function EodReportsPage({ slug }: { slug: string }) {
       }
     };
     return [
+      createSelectColumnDef<EodReport>(),
       createColumn<EodReport>({
         accessorKey: "report_date",
         labelKey: "warehouse.eod.columns.date",
@@ -212,6 +219,13 @@ export function EodReportsPage({ slug }: { slug: string }) {
     persistKey: EOD_PERSIST_KEY,
   });
   const query: EodListQuery = listState.params;
+  // TEC-761: the export keeps the list filters, q, sort and the selection.
+  const selection = useExportSelection();
+  const exportQuery = listExportQuery(
+    listState.filterParams,
+    listState.params,
+    selection.selected,
+  );
   const list = useQuery({
     queryKey: warehouseKeys.eodReports(query),
     queryFn: () => warehouseService.listEodReports(query),
@@ -241,10 +255,14 @@ export function EodReportsPage({ slug }: { slug: string }) {
         emptyTitle={t("warehouse.eod.empty_title")}
         emptyDescription={t("warehouse.eod.empty_description")}
         rowCount={list.data?.total ?? 0}
-        state={listState.tableState}
+        state={{
+          ...listState.tableState,
+          rowSelection: selection.rowSelection,
+          onRowSelectionChange: selection.onRowSelectionChange,
+        }}
         features={{
           persistKey: EOD_PERSIST_KEY,
-          rowSelection: false,
+          rowSelection: true,
           viewMode: true,
         }}
         renderGridItem={(r) => (
@@ -268,10 +286,18 @@ export function EodReportsPage({ slug }: { slug: string }) {
           </div>
         )}
         toolbarExtra={
-          <EntityToolbar
-            onRefresh={() => void list.refetch()}
-            refreshDisabled={list.isFetching}
-          />
+          <>
+            <WarehouseExportMenu
+              slug={slug}
+              exportPath={warehouseExportPaths.eodReports}
+              query={exportQuery}
+              testId="eod-export"
+            />
+            <EntityToolbar
+              onRefresh={() => void list.refetch()}
+              refreshDisabled={list.isFetching}
+            />
+          </>
         }
       />
     </WarehouseShell>

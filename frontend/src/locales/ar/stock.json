@@ -183,5 +183,6 @@
   "widget.quantity_value": "{{quantity}} قطعة",
   "widget.truncated": "يغطي الملخص أول {{limit}} منتج.",
   "filters.product_search": "اسم المنتج أو رمز SKU",
-  "filters.product_none": "لا توجد منتجات في هذا المخزون."
+  "filters.product_none": "لا توجد منتجات في هذا المخزون.",
+  "export_products": "تصدير المخزون حسب المنتج"
 }
