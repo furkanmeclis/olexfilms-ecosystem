@@ -26,7 +26,7 @@ const (
 )
 
 // Transfers serves /v1/warehouse/moves, /v1/warehouse/transfers and
-// /v1/warehouse/orders/{uuid}/place.
+// /v1/warehouse/orders/{uuid}/place|unplaced.
 type Transfers struct {
 	svc *wh.WarehouseTransfers
 }
@@ -114,6 +114,20 @@ func (h *Transfers) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := h.svc.PlaceOrder(r.Context(), entryCaller(r), id, wh.MoveInput{Barcodes: b.Barcodes, LocationUUID: b.LocationUUID, LocationCode: b.LocationCode})
+	if err != nil {
+		writeTransferError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// OrderUnplaced (GET /v1/warehouse/orders/{uuid}/unplaced).
+func (h *Transfers) OrderUnplaced(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.OrderUnplaced(r.Context(), entryCaller(r), id)
 	if err != nil {
 		writeTransferError(w, r, err)
 		return
