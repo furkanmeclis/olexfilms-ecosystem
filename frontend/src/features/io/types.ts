@@ -62,12 +62,49 @@ export type ImportJob = {
   created_at: string;
 };
 
+/**
+ * Row class of staged importers (TEC-158): stock uses new / duplicate /
+ * invalid / conflict / applied / undone / undo_rejected, the fleet import
+ * also `link`. Unknown values are shown with their `status_label`.
+ */
+export type ImportRowStatus =
+  | "new"
+  | "link"
+  | "duplicate"
+  | "invalid"
+  | "conflict"
+  | "applied"
+  | "undone"
+  | "undo_rejected"
+  | (string & {});
+
+export type ImportPreviewRow = {
+  index: number;
+  data?: Record<string, unknown>;
+  status?: ImportRowStatus;
+  /** Localized status (job locale). */
+  status_label?: string;
+  /** Where the row is (or would be) written, e.g. product / location. */
+  target?: Record<string, unknown>;
+};
+
+export type ImportRowError = {
+  index: number;
+  field?: string;
+  /** Localized message; staged importers also send a stable `code`. */
+  error: string;
+  code?: string;
+};
+
 export type ImportPreviewSummary = {
   total: number;
   valid: number;
   invalid: number;
-  rows?: { index: number; data: Record<string, unknown> }[];
-  errors?: { index: number; field?: string; error: string }[];
+  /** Staged importers: batch id and the number of rows per row status. */
+  batch_uuid?: string;
+  counts?: Partial<Record<ImportRowStatus, number>>;
+  rows?: ImportPreviewRow[];
+  errors?: ImportRowError[];
 };
 
 export type AppSettings = {
@@ -144,13 +181,24 @@ export type ImportResource =
   | IoResource
   | "tenant.fleet.vehicles"
   | "platform.part_consumption_expectations"
-  | "tenant.pricing.recommended";
+  | "tenant.pricing.recommended"
+  | "tenant.stock.units";
+
+/** Stock import upload / sample (TEC-158; center only, tenant jobs). */
+export const STOCK_IMPORT_PATHS = {
+  upload: "/v1/stock/import",
+  sample: "/v1/stock/import/sample",
+};
+
+/** One target field of an import (column step, row table). */
+export type ImportSchemaField = {
+  key: string;
+  labelKey: string;
+  required?: boolean;
+};
 
 export const IMPORT_SCHEMA: Partial<
-  Record<
-    ImportResource,
-    { key: string; labelKey: string; required?: boolean }[]
-  >
+  Record<ImportResource, ImportSchemaField[]>
 > = {
   "platform.users": [
     { key: "email", labelKey: "users.fields.email", required: true },
@@ -220,6 +268,23 @@ export const IMPORT_SCHEMA: Partial<
       key: "effective_from",
       labelKey: "catalog.recommended.fields.effective_from",
     },
+  ],
+  // TEC-158: one row = one unit; meters for roll products, quantity for
+  // fixed-barcode ones, the location code is optional.
+  "tenant.stock.units": [
+    {
+      key: "barcode",
+      labelKey: "imports.fields.stock.barcode",
+      required: true,
+    },
+    {
+      key: "product_sku",
+      labelKey: "imports.fields.stock.product_sku",
+      required: true,
+    },
+    { key: "quantity", labelKey: "imports.fields.stock.quantity" },
+    { key: "meters", labelKey: "imports.fields.stock.meters" },
+    { key: "location_code", labelKey: "imports.fields.stock.location_code" },
   ],
   // TEC-473/477: the fleet comes from the job defaults (fleet_uuid).
   "tenant.fleet.vehicles": [

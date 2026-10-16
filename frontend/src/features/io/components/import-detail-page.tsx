@@ -24,8 +24,14 @@ import {
   resourceLabelKey,
   rollbackWindowOpen,
 } from "@/features/io/lib/display";
+import { isPartiallyUndone } from "@/features/io/lib/import-summary";
 import { apiMappingToUi } from "@/features/io/lib/suggest-mapping";
-import { IMPORT_SCHEMA, type ExportJobScope } from "@/features/io/types";
+import { ImportPreviewPanel } from "@/features/io/components/import-preview-panel";
+import {
+  IMPORT_SCHEMA,
+  type ExportJobScope,
+  type ImportResource,
+} from "@/features/io/types";
 import { importsService } from "@/features/io/services/imports.service";
 import { useAppMutation } from "@/lib/query/mutation";
 import { useLocale } from "@/providers/locale-provider";
@@ -93,9 +99,14 @@ export function ImportDetailPage({
     job?.status === "applied" && rollbackWindowOpen(job.rollback_until, nowMs);
 
   const uiMapping = apiMappingToUi(job?.mapping);
-  const schema =
-    IMPORT_SCHEMA[job?.resource as keyof typeof IMPORT_SCHEMA] ?? [];
+  const schema = IMPORT_SCHEMA[job?.resource as ImportResource] ?? [];
   const preview = job?.preview_summary;
+  const partial = isPartiallyUndone(job);
+  const statusLabel = job
+    ? partial
+      ? t("imports.status.partially_undone")
+      : formatImportStatus(t, job.status)
+    : "";
 
   return (
     <EntityPage
@@ -145,8 +156,8 @@ export function ImportDetailPage({
             title={resourceName}
             description={formatImportFormat(t, job.format)}
             badges={
-              <Badge variant={statusVariant(job.status)}>
-                {formatImportStatus(t, job.status)}
+              <Badge variant={partial ? "warning" : statusVariant(job.status)}>
+                {statusLabel}
               </Badge>
             }
           />
@@ -177,7 +188,7 @@ export function ImportDetailPage({
                     {
                       key: "status",
                       label: t("imports.columns.status"),
-                      value: formatImportStatus(t, job.status),
+                      value: statusLabel,
                     },
                     {
                       key: "created_at",
@@ -252,42 +263,22 @@ export function ImportDetailPage({
 
           {preview ? (
             <EntitySectionCard title={t("imports.detail.preview_section")}>
-              <div className="mb-4 grid grid-cols-3 gap-2 text-sm">
-                <div className="rounded-md border p-2 text-center">
-                  <div className="font-medium">{preview.total}</div>
-                  <div className="text-muted-foreground text-xs">
-                    {t("imports.preview_total")}
-                  </div>
-                </div>
-                <div className="rounded-md border p-2 text-center">
-                  <div className="font-medium text-green-600">
-                    {preview.valid}
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    {t("imports.preview_valid")}
-                  </div>
-                </div>
-                <div className="rounded-md border p-2 text-center">
-                  <div className="text-destructive font-medium">
-                    {preview.invalid}
-                  </div>
-                  <div className="text-muted-foreground text-xs">
-                    {t("imports.preview_invalid")}
-                  </div>
-                </div>
-              </div>
-              {(preview.errors?.length ?? 0) > 0 ? (
-                <ul className="text-destructive mb-4 max-h-40 list-disc overflow-y-auto ps-4 text-sm">
-                  {preview.errors?.map((err) => (
-                    <li key={`${err.index}-${err.error}`}>
-                      {t("imports.preview_row_error", {
-                        row: err.index,
-                        error: err.error,
-                      })}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+              <ImportPreviewPanel
+                summary={preview}
+                schema={schema}
+                jobUuid={job.uuid}
+                scope={scope}
+                notice={
+                  partial ? (
+                    <p
+                      className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+                      data-testid="import-undo-rejected-note"
+                    >
+                      {t("imports.undo_rejected_hint")}
+                    </p>
+                  ) : null
+                }
+              />
             </EntitySectionCard>
           ) : null}
 

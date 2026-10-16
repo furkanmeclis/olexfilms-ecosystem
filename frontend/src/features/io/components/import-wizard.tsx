@@ -1,36 +1,47 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useParams } from "next/navigation";
 
+import { Loading } from "@/components/common/loading";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { routes } from "@/config/routes";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { importsService } from "@/features/io/services/imports.service";
+  ImportColumnsStep,
+  missingRequiredFields,
+} from "@/features/io/components/import-columns-step";
+import { ImportConfirmStep } from "@/features/io/components/import-confirm-step";
+import { ImportFileStep } from "@/features/io/components/import-file-step";
+import { ImportPreviewPanel } from "@/features/io/components/import-preview-panel";
+import {
+  ImportResultStep,
+  type ImportResultLink,
+} from "@/features/io/components/import-result-step";
+import {
+  detectImportFormat,
+  readImportFileHead,
+  type ImportFileHead,
+} from "@/features/io/lib/import-file";
+import {
+  importConfirmCopy,
+  importPlan,
+  type ImportConfirmBuilder,
+} from "@/features/io/lib/import-summary";
 import {
   applyAutoDefaults,
   apiMappingToUi,
-  countMappedFields,
   MAPPING_SKIP,
   suggestColumnMapping,
   uiMappingToApi,
 } from "@/features/io/lib/suggest-mapping";
+import { importsService } from "@/features/io/services/imports.service";
 import {
   IMPORT_PATHS,
   IMPORT_SCHEMA,
@@ -40,12 +51,18 @@ import {
   type ImportResource,
   type IoResource,
 } from "@/features/io/types";
-import { routes } from "@/config/routes";
+import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 import { cn } from "@/lib/utils";
 
-type ImportWizardProps = {
+/** Values of the resource-specific options and their setter. */
+export type ImportWizardOptions = {
+  values: Record<string, string>;
+  setValue: (key: string, value: string) => void;
+};
+
+export type ImportWizardProps = {
   resource: ImportResource;
   /** Upload / sample endpoints of a record-scoped import (TEC-477). */
   paths?: { upload: string; sample: string };
@@ -53,71 +70,64 @@ type ImportWizardProps = {
   fixedDefaults?: Record<string, string>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Called when the job settled (applied, failed or rolled back). */
   onComplete?: () => void;
+  /** Import job list (secondary link on the result step). */
   jobsHref?: string;
   scope?: ExportJobScope;
+  /**
+   * Resource-specific settings on the file step (e.g. the existing barcode
+   * policy of TEC-760). Their values go with the upload form and into the
+   * job defaults.
+   */
+  extraOptions?: (options: ImportWizardOptions) => ReactNode;
+  initialOptions?: Record<string, string>;
+  /** Overrides the confirmation copy of the resource. */
+  confirmCopy?: ImportConfirmBuilder;
+  /** Link to what an applied job created (default: the job detail only). */
+  resultLink?: (job: ImportJob) => ImportResultLink | null;
+  title?: string;
 };
 
-type Step = "upload" | "mapping" | "defaults" | "preview" | "done";
+type Step = "file" | "columns" | "preview" | "confirm" | "result";
 
-const FORMATS: ImportFormat[] = ["xlsx", "csv", "tsv", "json"];
-const STEPS: Step[] = ["upload", "mapping", "defaults", "preview", "done"];
+const STEPS: Step[] = ["file", "columns", "preview", "confirm", "result"];
 
-function parseCsvHeaders(text: string, delimiter: string): string[] {
-  const line = text.split(/\r?\n/).find((l) => l.trim());
-  if (!line) return [];
-  return line.split(delimiter).map((h) => h.trim().replace(/^"|"$/g, ""));
-}
-
-async function readFileHeaders(
-  file: File,
-  format: ImportFormat,
-): Promise<string[]> {
-  if (format === "csv") {
-    const text = await file.slice(0, 4096).text();
-    return parseCsvHeaders(text, ",");
-  }
-  if (format === "tsv") {
-    const text = await file.slice(0, 4096).text();
-    return parseCsvHeaders(text, "\t");
-  }
-  if (format === "json") {
-    try {
-      const text = await file.slice(0, 65536).text();
-      const data = JSON.parse(text) as unknown;
-      if (Array.isArray(data) && data[0] && typeof data[0] === "object") {
-        return Object.keys(data[0] as Record<string, unknown>);
-      }
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-function StepIndicator({ step, t }: { step: Step; t: (k: string) => string }) {
+function StepIndicator({ step }: { step: Step }) {
+  const { t } = useLocale();
   const activeIndex = STEPS.indexOf(step);
   return (
-    <ol className="flex flex-wrap gap-2 text-xs">
+    <ol
+      className="flex flex-wrap items-center gap-2 text-xs"
+      data-testid="import-steps"
+    >
       {STEPS.map((s, index) => (
-        <li
-          key={s}
-          className={cn(
-            "rounded-full border px-2.5 py-0.5",
-            index === activeIndex
-              ? "border-primary bg-primary/10 text-primary font-medium"
-              : index < activeIndex
-                ? "text-muted-foreground border-border"
-                : "text-muted-foreground/70 border-dashed",
-          )}
-        >
-          {t(`imports.step.${s}`)}
+        <li key={s} className="flex items-center gap-2">
+          <span
+            aria-current={index === activeIndex ? "step" : undefined}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-2.5 py-1",
+              index === activeIndex
+                ? "border-primary bg-primary/10 text-primary font-medium"
+                : index < activeIndex
+                  ? "text-foreground border-border"
+                  : "text-muted-foreground border-dashed",
+            )}
+          >
+            <span className="tabular-nums">{index + 1}</span>
+            {t(`imports.wizard_step.${s}`)}
+          </span>
         </li>
       ))}
     </ol>
   );
 }
 
+/**
+ * Import wizard v2 (TEC-758): File → Columns → Preview → Confirm → Result
+ * on a wide sheet. Shared by every import (users, roles, catalog, fleet,
+ * consumption expectations, recommended prices, stock).
+ */
 export function ImportWizard({
   resource,
   paths: pathsOverride,
@@ -127,54 +137,57 @@ export function ImportWizard({
   onComplete,
   jobsHref,
   scope = "platform",
+  extraOptions,
+  initialOptions,
+  confirmCopy,
+  resultLink,
+  title,
 }: ImportWizardProps) {
-  const { t, locale } = useLocale();
+  const { t, tp, locale } = useLocale();
+  const params = useParams<{ slug?: string }>();
+  const slug = typeof params?.slug === "string" ? params.slug : undefined;
   const paths = pathsOverride ?? IMPORT_PATHS[resource as IoResource];
   const schema = useMemo(() => IMPORT_SCHEMA[resource] ?? [], [resource]);
 
-  const [step, setStep] = useState<Step>("upload");
-  const [format, setFormat] = useState<ImportFormat>("xlsx");
+  const [step, setStep] = useState<Step>("file");
   const [file, setFile] = useState<File | null>(null);
   const [job, setJob] = useState<ImportJob | null>(null);
-  const [headers, setHeaders] = useState<string[]>([]);
+  const [head, setHead] = useState<ImportFileHead>({
+    headers: [],
+    samples: [],
+  });
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [autoFields, setAutoFields] = useState<Set<string>>(new Set());
   const [defaults, setDefaults] = useState<Record<string, string>>({});
+  const [options, setOptions] = useState<Record<string, string>>(
+    initialOptions ?? {},
+  );
+  const [acknowledged, setAcknowledged] = useState(false);
   const [pending, setPending] = useState(false);
   const [mappingError, setMappingError] = useState<string | null>(null);
 
+  const format = file ? detectImportFormat(file.name) : null;
+
   const reset = useCallback(() => {
-    setStep("upload");
-    setFormat("xlsx");
+    setStep("file");
     setFile(null);
     setJob(null);
-    setHeaders([]);
+    setHead({ headers: [], samples: [] });
     setMapping({});
+    setAutoFields(new Set());
     setDefaults({});
+    setOptions(initialOptions ?? {});
+    setAcknowledged(false);
     setPending(false);
     setMappingError(null);
-  }, []);
+  }, [initialOptions]);
 
-  const handleClose = (next: boolean) => {
+  const handleOpenChange = (next: boolean) => {
     if (!next) reset();
     onOpenChange(next);
   };
 
-  const runAutoMatch = useCallback(
-    (headerList: string[], baseMapping?: Record<string, string>) => {
-      const suggested = suggestColumnMapping(headerList, schema, (key) =>
-        t(key),
-      );
-      const merged = { ...baseMapping, ...suggested };
-      const count = countMappedFields(merged);
-      setMapping(merged);
-      setDefaults((prev) => applyAutoDefaults(resource, merged, prev));
-      if (count > 0) {
-        appToast.success(t("imports.toast.auto_mapped", { count }));
-      }
-      return count;
-    },
-    [resource, schema, t],
-  );
+  const label = useCallback((key: string) => t(key), [t]);
 
   const downloadSample = async (sampleFormat: ImportFormat) => {
     if (!paths) return;
@@ -184,49 +197,38 @@ export function ImportWizard({
         sampleFormat,
         locale,
       );
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `sample.${sampleFormat === "json" ? "json" : sampleFormat}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      triggerBrowserDownload(blob, `sample.${sampleFormat}`);
     } catch {
       appToast.error(t("imports.toast.sample_failed"));
     }
   };
 
+  const jobDefaults = () => ({ ...options, ...defaults, ...fixedDefaults });
+
   const handleUpload = async () => {
-    if (!file || !paths) return;
+    if (!file || !format || !paths) return;
     setPending(true);
     try {
-      const created = await importsService.upload(
-        paths.upload,
-        file,
-        format,
-        locale,
-      );
-      const detected = await readFileHeaders(file, format);
-      setHeaders(
-        detected.length ? detected : Object.keys(created.mapping ?? {}),
-      );
-
-      let uiMapping = apiMappingToUi(created.mapping);
-      if (detected.length) {
-        const local = suggestColumnMapping(detected, schema, (key) => t(key));
-        uiMapping = { ...local, ...uiMapping };
+      const [created, fileHead] = await Promise.all([
+        importsService.upload(paths.upload, file, format, locale, options),
+        readImportFileHead(file, format),
+      ]);
+      const serverMapping = apiMappingToUi(created.mapping);
+      const headers = [...fileHead.headers];
+      for (const header of Object.values(serverMapping)) {
+        if (!headers.includes(header)) headers.push(header);
       }
-      const matched = countMappedFields(uiMapping);
-      setMapping(uiMapping);
-      setDefaults(applyAutoDefaults(resource, uiMapping, {}));
+      const merged = {
+        ...suggestColumnMapping(fileHead.headers, schema, label),
+        ...serverMapping,
+      };
+      setHead({ headers, samples: fileHead.samples });
+      setMapping(merged);
+      setAutoFields(new Set(Object.keys(merged)));
+      setDefaults((prev) => applyAutoDefaults(resource, merged, prev));
       setJob(created);
-
-      if (matched > 0) {
-        appToast.success(t("imports.toast.auto_mapped", { count: matched }));
-      } else if (format === "xlsx" && !detected.length) {
-        appToast.info(t("imports.mapping_none"));
-      }
-
-      setStep("mapping");
+      setMappingError(null);
+      setStep("columns");
     } catch {
       appToast.error(t("imports.toast.upload_failed"));
     } finally {
@@ -234,59 +236,61 @@ export function ImportWizard({
     }
   };
 
-  const validateMapping = useCallback(() => {
-    const used = new Map<string, string>();
-    for (const [fieldKey, header] of Object.entries(mapping)) {
+  const autoMatch = () => {
+    const suggested = suggestColumnMapping(head.headers, schema, label);
+    const count = Object.keys(suggested).length;
+    if (!count) {
+      appToast.info(t("imports.mapping_none"));
+      return;
+    }
+    setMapping(suggested);
+    setAutoFields(new Set(Object.keys(suggested)));
+    setDefaults((prev) => applyAutoDefaults(resource, suggested, prev));
+    appToast.success(t("imports.toast.auto_mapped", { count }));
+  };
+
+  const validateMapping = () => {
+    const used = new Set<string>();
+    for (const header of Object.values(mapping)) {
       if (!header || header === MAPPING_SKIP) continue;
       if (used.has(header)) {
         setMappingError(t("imports.mapping_duplicate"));
         return false;
       }
-      used.set(header, fieldKey);
+      used.add(header);
+    }
+    const missing = missingRequiredFields(
+      schema,
+      mapping,
+      defaults,
+      fixedDefaults,
+    );
+    if (missing.length) {
+      setMappingError(
+        t("imports.defaults_required", { count: missing.length }),
+      );
+      return false;
     }
     setMappingError(null);
     return true;
-  }, [mapping, t]);
-
-  const handleSaveMapping = async () => {
-    if (!job || !validateMapping()) return;
-    setPending(true);
-    try {
-      const updated = await importsService.updateMapping(
-        job.uuid,
-        {
-          mapping: uiMappingToApi(mapping),
-          defaults: { ...defaults, ...fixedDefaults },
-        },
-        scope,
-      );
-      setJob(updated);
-      setStep("defaults");
-    } catch {
-      appToast.error(t("imports.toast.mapping_failed"));
-    } finally {
-      setPending(false);
-    }
   };
 
-  const handleSaveDefaults = async () => {
-    if (!job) return;
+  const handlePreview = async () => {
+    if (!job || !validateMapping()) return;
     setPending(true);
+    setStep("preview");
     try {
       const updated = await importsService.updateMapping(
         job.uuid,
-        {
-          mapping: uiMappingToApi(mapping),
-          defaults: { ...defaults, ...fixedDefaults },
-        },
+        { mapping: uiMappingToApi(mapping), defaults: jobDefaults() },
         scope,
       );
-      setJob(updated);
-      setStep("preview");
       const previewed = await importsService.preview(updated.uuid, scope);
       setJob(previewed);
+      setAcknowledged(false);
     } catch {
       appToast.error(t("imports.toast.preview_failed"));
+      setStep("columns");
     } finally {
       setPending(false);
     }
@@ -298,9 +302,8 @@ export function ImportWizard({
     try {
       const confirmed = await importsService.confirm(job.uuid, scope);
       setJob(confirmed);
-      setStep("done");
+      setStep("result");
       appToast.success(t("imports.toast.confirmed"));
-      onComplete?.();
     } catch {
       appToast.error(t("imports.toast.confirm_failed"));
     } finally {
@@ -308,371 +311,193 @@ export function ImportWizard({
     }
   };
 
-  const preview = job?.preview_summary;
-  const mappedCount = countMappedFields(mapping);
+  const summary = job?.preview_summary;
+  const plan = importPlan(summary);
+  const copy = importConfirmCopy(resource, { summary, t, tp }, confirmCopy);
+  const confirmBlocked =
+    plan.importable === 0 || (plan.skipped > 0 && !acknowledged);
 
-  const usedHeaders = useMemo(() => {
-    const set = new Set<string>();
-    for (const header of Object.values(mapping)) {
-      if (header && header !== MAPPING_SKIP) set.add(header);
-    }
-    return set;
-  }, [mapping]);
-
-  const requiredDefaults = useMemo(
-    () =>
-      schema.filter(
-        (field) =>
-          field.required &&
-          (!mapping[field.key] || mapping[field.key] === MAPPING_SKIP) &&
-          !defaults[field.key],
-      ),
-    [schema, mapping, defaults],
-  );
+  const detailHref = job
+    ? scope === "tenant" && slug
+      ? routes.tenant.imports.detail(slug, job.uuid)
+      : routes.platform.imports.detail(job.uuid)
+    : "";
+  const listHref =
+    jobsHref ??
+    (scope === "tenant" && slug
+      ? routes.tenant.imports.root(slug)
+      : routes.platform.imports.root);
 
   if (!paths) return null;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-        <DialogHeader className="space-y-3">
-          <DialogTitle>{t("imports.wizard_title")}</DialogTitle>
-          <DialogDescription>
-            {t("imports.wizard_description")}
-          </DialogDescription>
-          <StepIndicator step={step} t={t} />
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-5xl"
+        data-testid="import-wizard"
+      >
+        <SheetHeader className="space-y-3 border-b px-6 py-4 text-start">
+          <SheetTitle>{title ?? t("imports.wizard_title")}</SheetTitle>
+          <SheetDescription>{t("imports.wizard_description")}</SheetDescription>
+          <StepIndicator step={step} />
+        </SheetHeader>
 
-        {step === "upload" ? (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t("imports.format")}</Label>
-              <Select
-                value={format}
-                onValueChange={(v) => setFormat(v as ImportFormat)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FORMATS.map((f) => (
-                    <SelectItem key={f} value={f}>
-                      {t(`imports.formats.${f}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-muted-foreground text-xs">
-                {t("imports.format_hint")}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="import-file">{t("imports.file")}</Label>
-              <Input
-                id="import-file"
-                type="file"
-                accept=".csv,.tsv,.xlsx,.json"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {step === "file" ? (
+            <ImportFileStep
+              file={file}
+              format={format}
+              onFile={setFile}
+              onDownloadSample={(f) => void downloadSample(f)}
+              extraOptions={extraOptions?.({
+                values: options,
+                setValue: (key, value) =>
+                  setOptions((prev) => ({ ...prev, [key]: value })),
+              })}
+            />
+          ) : null}
+
+          {step === "columns" ? (
+            <ImportColumnsStep
+              resource={resource}
+              schema={schema}
+              headers={head.headers}
+              samples={head.samples}
+              mapping={mapping}
+              autoFields={autoFields}
+              defaults={defaults}
+              fixedDefaults={fixedDefaults}
+              error={mappingError}
+              onMappingChange={(fieldKey, header) => {
+                setMapping((prev) => ({ ...prev, [fieldKey]: header }));
+                setAutoFields((prev) => {
+                  const next = new Set(prev);
+                  next.delete(fieldKey);
+                  return next;
+                });
+              }}
+              onDefaultChange={(fieldKey, value) =>
+                setDefaults((prev) => ({ ...prev, [fieldKey]: value }))
+              }
+              onAutoMatch={autoMatch}
+            />
+          ) : null}
+
+          {step === "preview" ? (
+            pending || !summary || !job ? (
+              <Loading label={t("imports.preview_loading")} />
+            ) : (
+              <ImportPreviewPanel
+                summary={summary}
+                schema={schema}
+                jobUuid={job.uuid}
+                scope={scope}
               />
-              <p className="text-muted-foreground text-xs">
-                {t("imports.file_hint")}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">
-                {t("imports.samples_title")}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {FORMATS.map((f) => (
-                  <Button
-                    key={f}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void downloadSample(f)}
-                  >
-                    {t("imports.download_sample", {
-                      format: t(`imports.formats.${f}`),
-                    })}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
+            )
+          ) : null}
 
-        {step === "mapping" ? (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-sm font-medium">
-                  {t("imports.mapping_title")}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  {t("imports.mapping_hint")}
-                </p>
-              </div>
+          {step === "confirm" && summary ? (
+            <ImportConfirmStep
+              summary={summary}
+              copy={copy}
+              importable={plan.importable}
+              skipped={plan.skipped}
+              acknowledged={acknowledged}
+              onAcknowledgedChange={setAcknowledged}
+            />
+          ) : null}
+
+          {step === "result" && job ? (
+            <ImportResultStep
+              initialJob={job}
+              scope={scope}
+              detailHref={detailHref}
+              jobsHref={listHref}
+              resultLink={resultLink?.(job)}
+              onSettled={() => onComplete?.()}
+            />
+          ) : null}
+        </div>
+
+        <div className="bg-background flex flex-wrap items-center justify-between gap-2 border-t px-6 py-3">
+          <div>
+            {step === "columns" || step === "preview" || step === "confirm" ? (
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                onClick={() => {
-                  const count = runAutoMatch(headers, {});
-                  if (count === 0) appToast.info(t("imports.mapping_none"));
-                }}
+                disabled={pending}
+                onClick={() =>
+                  setStep(
+                    step === "columns"
+                      ? "file"
+                      : step === "preview"
+                        ? "columns"
+                        : "preview",
+                  )
+                }
               >
-                <Sparkles className="me-1.5 size-3.5" />
-                {t("imports.mapping_auto")}
+                {t("imports.back")}
               </Button>
-            </div>
-            {mappedCount > 0 ? (
-              <p className="text-muted-foreground text-xs">
-                {t("imports.mapping_matched", { count: mappedCount })}
-              </p>
-            ) : null}
-            {mappingError ? (
-              <p className="text-destructive text-sm">{mappingError}</p>
-            ) : null}
-            {schema.map((field) => (
-              <div key={field.key} className="grid gap-1.5">
-                <Label>
-                  {t(field.labelKey)}
-                  {field.required ? " *" : ""}
-                </Label>
-                <Select
-                  value={mapping[field.key] ?? MAPPING_SKIP}
-                  onValueChange={(v) =>
-                    setMapping((prev) => ({ ...prev, [field.key]: v }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("imports.mapping_skip")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={MAPPING_SKIP}>
-                      {t("imports.mapping_skip")}
-                    </SelectItem>
-                    {headers.map((header) => (
-                      <SelectItem
-                        key={header}
-                        value={header}
-                        disabled={
-                          usedHeaders.has(header) &&
-                          mapping[field.key] !== header
-                        }
-                      >
-                        {header}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
-            <p className="text-muted-foreground text-xs">
-              {t("imports.mapping_auto_hint")}
-            </p>
-          </div>
-        ) : null}
-
-        {step === "defaults" ? (
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm font-medium">
-                {t("imports.defaults_title")}
-              </p>
-              <p className="text-muted-foreground text-sm">
-                {t("imports.defaults_hint")}
-              </p>
-            </div>
-            {resource === "platform.users" ? (
-              <p className="text-muted-foreground text-xs">
-                {t("imports.defaults_users_status")} ·{" "}
-                {t("imports.defaults_users_locale")}
-              </p>
-            ) : null}
-            {schema.map((field) => (
-              <div key={field.key} className="grid gap-1.5">
-                <Label>{t(field.labelKey)}</Label>
-                <Input
-                  value={defaults[field.key] ?? ""}
-                  placeholder={
-                    mapping[field.key] && mapping[field.key] !== MAPPING_SKIP
-                      ? t("imports.defaults_mapped")
-                      : t("imports.defaults_optional")
-                  }
-                  disabled={Boolean(
-                    mapping[field.key] && mapping[field.key] !== MAPPING_SKIP,
-                  )}
-                  onChange={(e) =>
-                    setDefaults((prev) => ({
-                      ...prev,
-                      [field.key]: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            ))}
-            {requiredDefaults.length ? (
-              <p className="text-destructive text-sm">
-                {t("imports.defaults_required", {
-                  count: requiredDefaults.length,
-                })}
-              </p>
             ) : null}
           </div>
-        ) : null}
-
-        {step === "preview" && preview ? (
-          <div className="space-y-3 text-sm">
-            <div>
-              <p className="font-medium">{t("imports.preview_title")}</p>
-              <p className="text-muted-foreground text-xs">
-                {t("imports.preview_hint")}
-              </p>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-md border p-2 text-center">
-                <div className="font-medium">{preview.total}</div>
-                <div className="text-muted-foreground">
-                  {t("imports.preview_total")}
-                </div>
-              </div>
-              <div className="rounded-md border p-2 text-center">
-                <div className="font-medium text-green-600">
-                  {preview.valid}
-                </div>
-                <div className="text-muted-foreground">
-                  {t("imports.preview_valid")}
-                </div>
-              </div>
-              <div className="rounded-md border p-2 text-center">
-                <div className="text-destructive font-medium">
-                  {preview.invalid}
-                </div>
-                <div className="text-muted-foreground">
-                  {t("imports.preview_invalid")}
-                </div>
-              </div>
-            </div>
-            {(preview.errors?.length ?? 0) > 0 ? (
-              <>
-                <ul className="text-destructive max-h-32 list-disc overflow-y-auto ps-4">
-                  {preview.errors?.slice(0, 10).map((err) => (
-                    <li key={`${err.index}-${err.error}`}>
-                      {t("imports.preview_row_error", {
-                        row: err.index,
-                        error: err.error,
-                      })}
-                    </li>
-                  ))}
-                </ul>
-                {(preview.errors?.length ?? 0) > 10 ? (
-                  <p className="text-muted-foreground text-xs">
-                    {t("imports.preview_more_errors", {
-                      count: (preview.errors?.length ?? 0) - 10,
-                    })}
-                  </p>
-                ) : null}
-              </>
-            ) : null}
-            <p className="text-muted-foreground text-xs">
-              {t("imports.confirm_hint")}
-            </p>
-          </div>
-        ) : null}
-
-        {step === "done" ? (
-          <div className="space-y-3 text-sm">
-            <p className="font-medium">{t("imports.done_title")}</p>
-            <p>{t("imports.done_message")}</p>
-            <Button asChild variant="outline" size="sm">
-              <Link href={jobsHref ?? routes.platform.imports.root}>
-                {t("imports.view_jobs")}
-              </Link>
-            </Button>
-          </div>
-        ) : null}
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          {step === "upload" ? (
-            <>
+          <div className="flex flex-wrap items-center gap-2">
+            {step !== "result" ? (
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => handleClose(false)}
+                onClick={() => handleOpenChange(false)}
               >
                 {t("imports.cancel")}
               </Button>
+            ) : null}
+            {step === "file" ? (
               <Button
                 type="button"
-                disabled={!file || pending}
+                disabled={!file || !format || pending}
                 onClick={() => void handleUpload()}
+                data-testid="import-next"
               >
                 {pending ? t("common.loading") : t("imports.next")}
               </Button>
-            </>
-          ) : null}
-          {step === "mapping" ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep("upload")}
-              >
-                {t("imports.back")}
-              </Button>
+            ) : null}
+            {step === "columns" ? (
               <Button
                 type="button"
                 disabled={pending}
-                onClick={() => void handleSaveMapping()}
-              >
-                {t("imports.next")}
-              </Button>
-            </>
-          ) : null}
-          {step === "defaults" ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setStep("mapping")}
-              >
-                {t("imports.back")}
-              </Button>
-              <Button
-                type="button"
-                disabled={pending || requiredDefaults.length > 0}
-                onClick={() => void handleSaveDefaults()}
+                onClick={() => void handlePreview()}
+                data-testid="import-next"
               >
                 {t("imports.preview_action")}
               </Button>
-            </>
-          ) : null}
-          {step === "preview" ? (
-            <>
+            ) : null}
+            {step === "preview" ? (
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => setStep("defaults")}
+                disabled={pending || !summary}
+                onClick={() => setStep("confirm")}
+                data-testid="import-next"
               >
-                {t("imports.back")}
+                {t("imports.next")}
               </Button>
+            ) : null}
+            {step === "confirm" ? (
               <Button
                 type="button"
-                disabled={pending}
+                disabled={pending || confirmBlocked}
                 onClick={() => void handleConfirm()}
+                data-testid="import-confirm"
               >
-                {t("imports.confirm")}
+                {copy.action}
               </Button>
-            </>
-          ) : null}
-          {step === "done" ? (
-            <Button type="button" onClick={() => handleClose(false)}>
-              {t("common.close")}
-            </Button>
-          ) : null}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            ) : null}
+            {step === "result" ? (
+              <Button type="button" onClick={() => handleOpenChange(false)}>
+                {t("common.close")}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
