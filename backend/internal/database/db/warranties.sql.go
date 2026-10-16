@@ -740,7 +740,7 @@ type GetWarrantyByPublicCodeParams struct {
 	BrandID    int64  `json:"brand_id"`
 }
 
-// Public page /garanti/{public_code} (decision 1).
+// Public page /warranty/{public_code} (decision 1).
 func (q *Queries) GetWarrantyByPublicCode(ctx context.Context, arg GetWarrantyByPublicCodeParams) (Warranty, error) {
 	row := q.db.QueryRow(ctx, getWarrantyByPublicCode, arg.PublicCode, arg.BrandID)
 	var i Warranty

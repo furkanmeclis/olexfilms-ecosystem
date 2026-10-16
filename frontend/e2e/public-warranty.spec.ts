@@ -3,7 +3,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 import { E2E_UPSTREAM_PORT, E2E_WARRANTY } from "./support/constants";
 
 /**
- * TEC-218: the public warranty page `/garanti/{public_code}` (TEC-189).
+ * TEC-218: the public warranty page `/warranty/{public_code}` (TEC-189).
  * It renders on the server, so Go is the upstream mock (no session, no
  * browser call): a valid code, an unknown code, a malformed code (no
  * upstream call at all) and the per-IP rate limit (429 + Retry-After).
@@ -20,7 +20,7 @@ test("valid code shows the warranty without personal data", async ({
   page,
   request,
 }) => {
-  await page.goto(`/garanti/${E2E_WARRANTY.ok}`);
+  await page.goto(`/warranty/${E2E_WARRANTY.ok}`);
 
   const card = page.locator('[data-screen="warranty"]');
   await expect(card).toBeVisible();
@@ -45,7 +45,7 @@ test("valid code shows the warranty without personal data", async ({
 });
 
 test("unknown code shows not found", async ({ page }) => {
-  await page.goto(`/garanti/${E2E_WARRANTY.missing}`);
+  await page.goto(`/warranty/${E2E_WARRANTY.missing}`);
 
   const notice = page.locator('[data-screen="not-found"]');
   await expect(notice).toBeVisible();
@@ -57,7 +57,7 @@ test("malformed code is not found without asking the API", async ({
   page,
   request,
 }) => {
-  await page.goto("/garanti/abc");
+  await page.goto("/warranty/abc");
 
   await expect(page.locator('[data-screen="not-found"]')).toBeVisible();
   const calls = await upstreamCalls(request);
@@ -65,7 +65,7 @@ test("malformed code is not found without asking the API", async ({
 });
 
 test("rate limited (429) shows the retry notice", async ({ page }) => {
-  await page.goto(`/garanti/${E2E_WARRANTY.limited}`);
+  await page.goto(`/warranty/${E2E_WARRANTY.limited}`);
 
   const notice = page.locator('[data-screen="rate-limited"]');
   await expect(notice).toBeVisible();

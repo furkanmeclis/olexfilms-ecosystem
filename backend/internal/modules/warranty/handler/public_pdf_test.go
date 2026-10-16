@@ -95,7 +95,7 @@ func TestPublicPDFValidCode(t *testing.T) {
 	if !bytes.HasPrefix(rec.Body.Bytes(), []byte("%PDF")) {
 		t.Fatalf("body = %q", rec.Body.String())
 	}
-	for _, want := range []string{"34 *** 12", "6752", "Olex PPF Gloss", "https://olexfilms.app/garanti/" + goodCode, `lang="en"`} {
+	for _, want := range []string{"34 *** 12", "6752", "Olex PPF Gloss", "https://olexfilms.app/warranty/" + goodCode, `lang="en"`} {
 		if !strings.Contains(r.html, want) {
 			t.Errorf("document lacks %q", want)
 		}

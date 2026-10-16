@@ -11,4 +11,18 @@ describe("next.config redirects", () => {
       permanent: false,
     });
   });
+
+  it("keeps /garanti links on the /warranty page (TEC-753)", async () => {
+    const redirects = (await nextConfig.redirects?.()) ?? [];
+    expect(redirects).toContainEqual({
+      source: "/garanti/:code",
+      destination: "/warranty/:code",
+      permanent: true,
+    });
+    expect(redirects).toContainEqual({
+      source: "/garanti/:code/pdf",
+      destination: "/warranty/:code/pdf",
+      permanent: true,
+    });
+  });
 });

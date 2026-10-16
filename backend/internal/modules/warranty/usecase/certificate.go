@@ -24,7 +24,7 @@ import (
 // TEC-188 (F1-06d): the warranty certificate. One PDF per service
 // (TEC-98 decision 2) lists every active warranty of the service with its
 // product, unit / barcode, period and its own QR code pointing at the
-// public page {PUBLIC_FRONTEND_URL}/garanti/{public_code} (decision 1). It
+// public page {PUBLIC_FRONTEND_URL}/warranty/{public_code} (decision 1). It
 // runs as an I/O engine export job (queue "exports", worker-docs) and is
 // rendered by Gotenberg in the job locale (pdfrender skeleton: lang/dir,
 // RTL for ar, embedded Noto fonts). The certificate is handed to the

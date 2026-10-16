@@ -50,6 +50,19 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/_/:token", destination: "/s/:token", permanent: false },
+      // The public warranty page is /warranty/{public_code}, the path the
+      // old hub printed on its QR codes. /garanti was used for a while
+      // (links already sent by SMS / e-mail); it stays a redirect.
+      {
+        source: "/garanti/:code",
+        destination: "/warranty/:code",
+        permanent: true,
+      },
+      {
+        source: "/garanti/:code/pdf",
+        destination: "/warranty/:code/pdf",
+        permanent: true,
+      },
       {
         source: "/portal/quotes/:token",
         destination: "/teklif/:token",

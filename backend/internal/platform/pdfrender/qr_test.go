@@ -31,7 +31,7 @@ func decodeQR(t *testing.T, data []byte) string {
 
 // TEC-188 acceptance: the QR code decodes to the verify URL.
 func TestQRCodePNGDecodesToURL(t *testing.T) {
-	url := "https://olexfilms.app/garanti/AbCdEfGhIjKlMnOpQrStUv"
+	url := "https://olexfilms.app/warranty/AbCdEfGhIjKlMnOpQrStUv"
 	data, err := QRCodePNG(url, DefaultQRSize)
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +64,7 @@ func TestQRCodePNGDecodesToURL(t *testing.T) {
 }
 
 func TestQRCodeImageTag(t *testing.T) {
-	url := "http://localhost:3000/garanti/x-_y123456789012"
+	url := "http://localhost:3000/warranty/x-_y123456789012"
 	tag, err := QRCodeImageTag(url, `QR "a"`)
 	if err != nil {
 		t.Fatal(err)

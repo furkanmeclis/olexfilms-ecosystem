@@ -92,7 +92,7 @@ export function portalTransferError(err: {
 
 /** Public warranty page path (TEC-248); the QR code points here. */
 export function publicWarrantyPath(publicCode: string): string {
-  return `/garanti/${encodeURIComponent(publicCode)}`;
+  return `/warranty/${encodeURIComponent(publicCode)}`;
 }
 
 /** Query key of the portal session hydration (GET /v1/auth/me). */

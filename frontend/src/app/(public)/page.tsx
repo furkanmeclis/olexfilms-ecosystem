@@ -17,7 +17,7 @@ import {
 
 /**
  * Public landing page (TEC-247). Language: `?lang=`, else the language
- * cookie, else the browser's Accept-Language (same order as /garanti).
+ * cookie, else the browser's Accept-Language (same order as /warranty).
  */
 export const dynamic = "force-dynamic";
 

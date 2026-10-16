@@ -121,14 +121,14 @@ describe("LandingView", () => {
     expect(input.getAttribute("aria-invalid")).toBe("true");
   });
 
-  it("navigates to /garanti/{no} with the trimmed, encoded number", () => {
+  it("navigates to /warranty/{no} with the trimmed, encoded number", () => {
     render();
     const input = container.querySelector<HTMLInputElement>(
       'input[name="warranty_no"]',
     )!;
     typeInto(input, "  AbC/12 ");
     submit();
-    expect(push).toHaveBeenCalledWith("/garanti/AbC%2F12");
+    expect(push).toHaveBeenCalledWith("/warranty/AbC%2F12");
     expect(container.querySelector('[role="alert"]')).toBeNull();
   });
 
@@ -139,7 +139,7 @@ describe("LandingView", () => {
     )!;
     typeInto(input, "XYZ");
     submit();
-    expect(push).toHaveBeenCalledWith("/garanti/XYZ?lang=tr");
+    expect(push).toHaveBeenCalledWith("/warranty/XYZ?lang=tr");
   });
 
   it("is right-to-left in Arabic", () => {

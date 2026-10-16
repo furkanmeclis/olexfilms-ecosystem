@@ -96,7 +96,7 @@ func TestWarrantyCron(t *testing.T) {
 			t.Fatal(err)
 		}
 		if holder != f.customer.ID || brand != due.BrandID || endDate == "" ||
-			verify != "https://olexfilms.app/garanti/"+due.PublicCode {
+			verify != "https://olexfilms.app/warranty/"+due.PublicCode {
 			t.Fatalf("payload holder=%d brand=%d end=%q verify=%q", holder, brand, endDate, verify)
 		}
 	})

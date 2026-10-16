@@ -19,7 +19,7 @@ import (
 // visitors (and anyone else the channel serves without an identity). They
 // read only brand-wide public data of the conversation brand: the catalog
 // (no prices, Q10), the public dealer directory, the admin knowledge text
-// and the public warranty lookup with the masking of /garanti/{code}. Every
+// and the public warranty lookup with the masking of /warranty/{code}. Every
 // output is a tool-owned DTO with a fixed field set; nothing personal (a
 // customer's name, phone, e-mail, full plate or VIN) is ever returned.
 
@@ -374,7 +374,7 @@ func fold(s string) string {
 var turkishFold = strings.NewReplacer("İ", "i", "I", "i", "ı", "i", "Ş", "s", "ş", "s", "Ğ", "g", "ğ", "g",
 	"Ü", "u", "ü", "u", "Ö", "o", "ö", "o", "Ç", "c", "ç", "c")
 
-// LookupWarranty: garanti sorgula (public /garanti/{no} maskelemesi).
+// LookupWarranty: garanti sorgula (public /warranty/{no} maskelemesi).
 type LookupWarranty struct{ lookup PublicWarrantyLookup }
 
 // Spec implements Tool.

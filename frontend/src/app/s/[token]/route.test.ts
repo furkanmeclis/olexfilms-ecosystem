@@ -42,12 +42,12 @@ describe("GET /s/[token]", () => {
   it("302s to the internal target and forwards IP and host", async () => {
     reply(200, {
       token: TOKEN,
-      target_path: "/garanti/AbCdEfGh?lang=tr",
+      target_path: "/warranty/AbCdEfGh?lang=tr",
       expires_at: null,
     });
     const res = await call(TOKEN);
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("/garanti/AbCdEfGh?lang=tr");
+    expect(res.headers.get("location")).toBe("/warranty/AbCdEfGh?lang=tr");
     expect(res.headers.get("cache-control")).toBe("no-store");
     const [path, init] = upstream.fetch.mock.calls[0]!;
     expect(path).toBe(`public/short-urls/${TOKEN}`);

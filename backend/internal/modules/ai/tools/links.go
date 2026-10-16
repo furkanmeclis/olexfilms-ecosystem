@@ -32,7 +32,7 @@ func shortLink(ctx context.Context, links LinkMaker, p Principal, target string)
 }
 
 // pdfLink is one warranty certificate PDF (the public pdfrender output of
-// /garanti/{code}/pdf).
+// /warranty/{code}/pdf).
 type pdfLink struct {
 	PublicCode string `json:"public_code"`
 	Product    string `json:"product"`
@@ -49,7 +49,7 @@ func certificateLinks(ctx context.Context, links LinkMaker, p Principal, ws []ce
 		if w.Status == "void" {
 			continue
 		}
-		u, err := shortLink(ctx, links, p, "/garanti/"+w.Code+"/pdf")
+		u, err := shortLink(ctx, links, p, "/warranty/"+w.Code+"/pdf")
 		if err != nil {
 			return nil, err
 		}

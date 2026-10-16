@@ -1363,7 +1363,7 @@ type Querier interface {
 	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
 	GetWarehouseTransferByUUID(ctx context.Context, arg GetWarehouseTransferByUUIDParams) (WarehouseTransfer, error)
 	GetWarranty(ctx context.Context, arg GetWarrantyParams) (Warranty, error)
-	// Public page /garanti/{public_code} (decision 1).
+	// Public page /warranty/{public_code} (decision 1).
 	GetWarrantyByPublicCode(ctx context.Context, arg GetWarrantyByPublicCodeParams) (Warranty, error)
 	GetWarrantyByServiceItem(ctx context.Context, serviceItemID int64) (Warranty, error)
 	GetWarrantyByUUID(ctx context.Context, arg GetWarrantyByUUIDParams) (Warranty, error)

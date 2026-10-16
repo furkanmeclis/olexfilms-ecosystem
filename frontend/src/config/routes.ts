@@ -7,7 +7,7 @@ export const routes = {
       signed: (token: string) => `/share/s/${token}`,
     },
     /** TEC-247: landing warranty lookup target (TEC-189 public page). */
-    warranty: (no: string) => `/garanti/${encodeURIComponent(no)}`,
+    warranty: (no: string) => `/warranty/${encodeURIComponent(no)}`,
     /** TEC-250: public dealer showcase. */
     dealer: (code: string) => `/bayi/${encodeURIComponent(code)}`,
     /** TEC-320: public read-only quote (TEC-315 token link). */

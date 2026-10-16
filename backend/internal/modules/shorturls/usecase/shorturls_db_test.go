@@ -44,7 +44,7 @@ func dbFixture(t *testing.T) (context.Context, pgx.Tx, *db.Queries, int64) {
 func TestDBCreateResolveCountsHits(t *testing.T) {
 	ctx, _, q, brandID := dbFixture(t)
 	svc := New(q)
-	out, err := svc.Create(ctx, CreateInput{BrandID: brandID, Target: "/garanti/AbCdEfGh?lang=tr"})
+	out, err := svc.Create(ctx, CreateInput{BrandID: brandID, Target: "/warranty/AbCdEfGh?lang=tr"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestDBCreateResolveCountsHits(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if res.TargetPath != "/garanti/AbCdEfGh?lang=tr" {
+		if res.TargetPath != "/warranty/AbCdEfGh?lang=tr" {
 			t.Fatalf("target %q", res.TargetPath)
 		}
 	}

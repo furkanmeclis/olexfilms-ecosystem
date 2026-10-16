@@ -122,7 +122,7 @@ func TestIntegrationServicePDF(t *testing.T) {
 			t.Fatalf("%s service pdf html missing", name)
 		}
 		for _, want := range []string{svc.ServiceNo, plate, film.Name, roll.Name, uFilm.Barcode, uRoll.Barcode,
-			dealerA.Name, ws[0].PublicCode, frontend + "/garanti/" + ws[0].PublicCode} {
+			dealerA.Name, ws[0].PublicCode, frontend + "/warranty/" + ws[0].PublicCode} {
 			if !strings.Contains(h, want) {
 				t.Errorf("%s service pdf misses %q", name, want)
 			}

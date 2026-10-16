@@ -2909,7 +2909,7 @@ paths:
     get:
       tags: [Public]
       operationId: getPublicWarranty
-      summary: Public warranty lookup (QR page /garanti/{public_code})
+      summary: Public warranty lookup (QR page /warranty/{public_code})
       description: |
         TEC-189. No authentication. Looks up a warranty by its random public
         code inside the brand of the request domain (K20). Returns no personal
@@ -2966,7 +2966,7 @@ paths:
         PDF of one active warranty from the public projection only: product,
         period, vehicle brand / model / year, masked plate, last four VIN
         characters, dealer name and city, and a QR code to
-        /garanti/{public_code}. No holder and no dealer contact. Malformed,
+        /warranty/{public_code}. No holder and no dealer contact. Malformed,
         unknown, other-brand, expired and void codes share the lookup's 404.
         Rate limited per client IP in its own bucket
         (WARRANTY_PUBLIC_PDF_RATE_LIMIT per WARRANTY_PUBLIC_RATE_WINDOW);
@@ -3032,7 +3032,7 @@ paths:
         TEC-249. No authentication. Resolves a short URL token inside the
         brand of the request domain (K3) and counts the hit (`hit_count`,
         `last_hit_at`). The target is always an internal path of the brand
-        frontend under `/portal`, `/garanti` or `/bayi` (never another
+        frontend under `/portal`, `/warranty` or `/bayi` (never another
         origin); the frontend route `/s/{token}` answers 302 to it. Tokens are
         case-sensitive base62: new tokens are 10 characters, the old hub's
         migrated tokens 8 (TEC-263). Malformed (outside
@@ -3169,7 +3169,7 @@ paths:
         the vehicle (brand, model, year, plate, VIN), every item with its
         unit barcode, amount (pieces / metres / whole unit) and applied parts,
         and the warranty summary with a QR code per warranty pointing at
-        PUBLIC_FRONTEND_URL/garanti/{public_code}. The job runs on
+        PUBLIC_FRONTEND_URL/warranty/{public_code}. The job runs on
         worker-docs (exports queue) and is rendered by Gotenberg in the
         requested language (RTL for ar). Needs services.read; a service
         outside the scope answers 404. Poll and download through
@@ -3256,7 +3256,7 @@ paths:
       description: >-
         TEC-188. One PDF per service listing every active warranty (product,
         unit / barcode, start and end day in the organization's time zone)
-        with its own QR code pointing at PUBLIC_FRONTEND_URL/garanti/{public_code},
+        with its own QR code pointing at PUBLIC_FRONTEND_URL/warranty/{public_code},
         the dealer letterhead, the vehicle (full plate and VIN, the
         certificate is handed to the owner) and the warranty terms. The job
         runs on worker-docs (exports queue) and is rendered by Gotenberg in
@@ -33170,8 +33170,8 @@ components:
         token: { type: string, example: "aZ3kP9qXbT" }
         target_path:
           type: string
-          description: Internal path (with optional query / fragment) under /portal, /garanti or /bayi.
-          example: "/garanti/AbCdEfGhIjKlMnOpQrSt_-"
+          description: Internal path (with optional query / fragment) under /portal, /warranty or /bayi.
+          example: "/warranty/AbCdEfGhIjKlMnOpQrSt_-"
         expires_at:
           type: [string, "null"]
           format: date-time

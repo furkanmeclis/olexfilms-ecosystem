@@ -6,7 +6,7 @@ import type { PublicDealerCode } from "@/features/dealers/lib/dealer-sitemap";
 
 /**
  * hreflang alternates of a public page (TEC-251). Public pages pick their
- * language from `?lang=` (landing, /bayi, /garanti, /bayi-basvuru), so each of the 13
+ * language from `?lang=` (landing, /bayi, /warranty, /bayi-basvuru), so each of the 13
  * languages is the same URL with that parameter; x-default is the plain URL.
  */
 export function localeAlternates(url: string): Record<string, string> {

@@ -633,7 +633,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	pricingmodule.RegisterEventHandlers(eventBus, recommendedSvc)
 	// TEC-209: service / warranty / vehicle outbox events refresh the indexes.
 	indexsync.Register(eventBus, deps.Queries, searchIndexer, log)
-	// TEC-189: public warranty lookup behind /garanti/{public_code}.
+	// TEC-189: public warranty lookup behind /warranty/{public_code}.
 	warrantymodule.RegisterPublicRoutes(mux, deps.Queries, ratelimit.New(deps.Redis, cfg.App.Env),
 		cfg.Warranty.PublicRateLimit, cfg.Warranty.PublicRateWindow,
 		pdfClient, cfg.Auth.FrontendURL, cfg.Warranty.PublicPDFRateLimit)

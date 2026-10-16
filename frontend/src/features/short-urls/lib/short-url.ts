@@ -8,7 +8,7 @@
 export const SHORT_URL_TOKEN_RE = /^[A-Za-z0-9]{4,16}$/;
 
 /** Frontend areas a short URL may point at (same list as the Go usecase). */
-export const SHORT_URL_ALLOWED_PREFIXES = ["/portal", "/garanti", "/bayi"];
+export const SHORT_URL_ALLOWED_PREFIXES = ["/portal", "/warranty", "/bayi"];
 
 /** Page shown for an expired, unknown or failed short link. */
 export const SHORT_URL_UNAVAILABLE_PATH = "/link-unavailable";

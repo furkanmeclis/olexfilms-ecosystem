@@ -304,7 +304,7 @@ func (t ServiceActivity) Run(ctx context.Context, env Env, raw json.RawMessage) 
 
 // ServicePDFLink: hizmetin garanti sertifikası PDF linkleri (eski
 // dealer_service_pdf paritesi, TEC-386). Dosya üretilmez; mevcut
-// /garanti/{code}/pdf çıktısına kısa link verilir.
+// /warranty/{code}/pdf çıktısına kısa link verilir.
 type ServicePDFLink struct {
 	servicesBase
 	links LinkMaker

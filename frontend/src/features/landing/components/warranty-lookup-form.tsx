@@ -23,7 +23,7 @@ export type WarrantyLookupFormProps = {
 
 /**
  * Landing warranty lookup (TEC-247): sends the visitor to the public
- * warranty page `/garanti/{no}` (TEC-189). An empty entry shows an inline
+ * warranty page `/warranty/{no}` (TEC-189). An empty entry shows an inline
  * error instead of navigating. Texts come translated from the server.
  */
 export function WarrantyLookupForm({ labels, lang }: WarrantyLookupFormProps) {

@@ -59,8 +59,8 @@ func (m *memStore) GetShortURLExpiry(_ context.Context, arg db.GetShortURLExpiry
 
 func TestNormalizeTarget(t *testing.T) {
 	ok := []string{
-		"/portal", "/portal/services/abc", "/garanti/AbCdEfGh?lang=tr", "/bayi/olex-kadikoy#map",
-		"  /garanti/X  ",
+		"/portal", "/portal/services/abc", "/warranty/AbCdEfGh?lang=tr", "/bayi/olex-kadikoy#map",
+		"  /warranty/X  ",
 	}
 	for _, in := range ok {
 		if _, err := NormalizeTarget(in); err != nil {
@@ -70,7 +70,7 @@ func TestNormalizeTarget(t *testing.T) {
 	bad := []string{
 		"", "https://evil.example/portal", "//evil.example/portal", "/\\evil.example",
 		"javascript:alert(1)", "portal", "/admin", "/portalx", "/portal/../platform",
-		"/portal/%2e%2e/platform", "/garanti/a b", "/garanti/\x00", "http:/portal",
+		"/portal/%2e%2e/platform", "/warranty/a b", "/warranty/\x00", "http:/portal",
 		"/" + strings.Repeat("a", MaxTargetLength),
 	}
 	for _, in := range bad {
@@ -115,7 +115,7 @@ func TestCreateAndResolve(t *testing.T) {
 	store := newMemStore()
 	svc := New(store).WithClock(func() time.Time { return now })
 
-	out, err := svc.Create(context.Background(), CreateInput{BrandID: 1, Target: "/garanti/AbCdEfGh?lang=tr"})
+	out, err := svc.Create(context.Background(), CreateInput{BrandID: 1, Target: "/warranty/AbCdEfGh?lang=tr"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestCreateAndResolve(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if res.TargetPath != "/garanti/AbCdEfGh?lang=tr" {
+		if res.TargetPath != "/warranty/AbCdEfGh?lang=tr" {
 			t.Fatalf("target %q", res.TargetPath)
 		}
 		if got := store.rows[out.Token].hits; got != int64(i) {

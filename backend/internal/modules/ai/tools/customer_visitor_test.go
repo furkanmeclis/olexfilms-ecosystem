@@ -230,7 +230,7 @@ func TestCustomerLinksAndDays(t *testing.T) {
 	if res.IsError || !strings.Contains(res.Content, `"service_page_url":"https://olex.test/s/`) || strings.Contains(res.Content, "WVOID") {
 		t.Fatalf("pdf link: %+v", res)
 	}
-	want := []string{"/portal/services/" + ownServiceUUID.String(), "/garanti/WOK1/pdf"}
+	want := []string{"/portal/services/" + ownServiceUUID.String(), "/warranty/WOK1/pdf"}
 	if fmt.Sprint(links.targets) != fmt.Sprint(want) {
 		t.Fatalf("link targets = %v, want %v (void warranty skipped)", links.targets, want)
 	}

@@ -247,7 +247,7 @@ var specs = map[string]KindSpec{
 		text("warranty", "valid_until", "Geçerlilik", "Valid until", "01.10.2036", "Oct 1, 2036"),
 		text("warranty", "coverage_text", "Kapsam", "Coverage", "Sararma, çatlama ve kabarmaya karşı 10 yıl garanti.", "10-year warranty against yellowing, cracking and blistering."),
 		block("warranty", "qr_code", "Doğrulama QR kodu", "Verification QR code"),
-		text("warranty", "verify_url", "Doğrulama adresi", "Verification URL", "https://olexfilms.app/garanti/OLX-W-000042", "https://olexfilms.app/garanti/OLX-W-000042"),
+		text("warranty", "verify_url", "Doğrulama adresi", "Verification URL", "https://olexfilms.app/warranty/OLX-W-000042", "https://olexfilms.app/warranty/OLX-W-000042"),
 	})},
 	KindQuote: {Kind: KindQuote, Variables: join(companyVars, documentVars, customerVars, totalsVars, []Variable{
 		text("quote", "quote_number", "Teklif no", "Quote number", "Q-000042", "Q-000042"),

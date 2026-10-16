@@ -66,7 +66,7 @@ function render(
         result,
         locale,
         timeZone: "Europe/Istanbul",
-        path: "/garanti/AbCdEfGhIjKlMnOpQrSt_-",
+        path: "/warranty/AbCdEfGhIjKlMnOpQrSt_-",
         // Half way through 2026-01-15 → 2027-01-15.
         now: new Date("2026-07-16T15:30:00Z"),
         ...extra,
@@ -160,7 +160,7 @@ describe("PublicWarrantyView", () => {
       '[data-slot="pdf-download"]',
     );
     expect(link?.getAttribute("href")).toBe(
-      "/garanti/AbCdEfGhIjKlMnOpQrSt_-/pdf?lang=tr&tz=Europe%2FIstanbul",
+      "/warranty/AbCdEfGhIjKlMnOpQrSt_-/pdf?lang=tr&tz=Europe%2FIstanbul",
     );
     expect(link?.textContent).toContain("Garanti belgesini indir");
     expect(container.querySelector('[data-slot="pdf-notice"]')).toBeNull();
@@ -196,7 +196,7 @@ describe("PublicWarrantyView", () => {
     const links = container.querySelectorAll("nav a");
     expect(links).toHaveLength(13);
     expect(links[0]?.getAttribute("href")).toBe(
-      "/garanti/AbCdEfGhIjKlMnOpQrSt_-?lang=tr",
+      "/warranty/AbCdEfGhIjKlMnOpQrSt_-?lang=tr",
     );
   });
 });
