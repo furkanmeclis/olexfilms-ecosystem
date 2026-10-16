@@ -1168,6 +1168,16 @@ type EinvoiceSetting struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type EntryBarcodeImport struct {
+	JobID          int64  `json:"job_id"`
+	EntryID        int64  `json:"entry_id"`
+	OrganizationID int64  `json:"organization_id"`
+	BrandID        int64  `json:"brand_id"`
+	ExistingPolicy string `json:"existing_policy"`
+	Status         string `json:"status"`
+	Rows           []byte `json:"rows"`
+}
+
 type EodReport struct {
 	ID                int64              `json:"id"`
 	Uuid              uuid.UUID          `json:"uuid"`

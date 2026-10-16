@@ -13,20 +13,49 @@ import (
 )
 
 const countStockReclassificationsScoped = `-- name: CountStockReclassificationsScoped :one
-SELECT COUNT(*)::bigint FROM stock_reclassifications
-WHERE ($1::bigint IS NULL OR brand_id = $1::bigint)
-  AND ($2::bigint[] IS NULL OR organization_id = ANY($2::bigint[]))
-  AND ($3::text IS NULL OR status = $3::text)
+SELECT COUNT(*)::bigint FROM stock_reclassifications r
+WHERE ($1::bigint IS NULL OR r.brand_id = $1::bigint)
+  AND ($2::bigint[] IS NULL OR r.organization_id = ANY($2::bigint[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR r.status = ANY($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM users ru WHERE ru.id = r.requested_by_user_id AND ru.uuid = ANY($4::uuid[])))
+  AND ($5::uuid IS NULL
+       OR EXISTS (SELECT 1 FROM products fp WHERE fp.id = r.from_product_id AND fp.uuid = $5::uuid))
+  AND ($6::uuid IS NULL
+       OR EXISTS (SELECT 1 FROM products tp WHERE tp.id = r.to_product_id AND tp.uuid = $6::uuid))
+  AND ($7::timestamptz IS NULL OR r.created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR r.created_at < $8::timestamptz)
+  AND ($9::text IS NULL
+       OR EXISTS (SELECT 1 FROM units qu WHERE qu.id = r.unit_id AND qu.barcode ILIKE $9::text || '%')
+       OR EXISTS (SELECT 1 FROM products qp WHERE qp.id IN (r.from_product_id, r.to_product_id)
+                    AND (qp.name ILIKE '%' || $9::text || '%' OR qp.sku ILIKE '%' || $9::text || '%'))
+       OR r.reason ILIKE '%' || $9::text || '%')
 `
 
 type CountStockReclassificationsScopedParams struct {
-	BrandID pgtype.Int8 `json:"brand_id"`
-	OrgIds  []int64     `json:"org_ids"`
-	Status  pgtype.Text `json:"status"`
+	BrandID         pgtype.Int8        `json:"brand_id"`
+	OrgIds          []int64            `json:"org_ids"`
+	Statuses        []string           `json:"statuses"`
+	RequestedBy     []uuid.UUID        `json:"requested_by"`
+	FromProductUuid pgtype.UUID        `json:"from_product_uuid"`
+	ToProductUuid   pgtype.UUID        `json:"to_product_uuid"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
+	Q               pgtype.Text        `json:"q"`
 }
 
 func (q *Queries) CountStockReclassificationsScoped(ctx context.Context, arg CountStockReclassificationsScopedParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countStockReclassificationsScoped, arg.BrandID, arg.OrgIds, arg.Status)
+	row := q.db.QueryRow(ctx, countStockReclassificationsScoped,
+		arg.BrandID,
+		arg.OrgIds,
+		arg.Statuses,
+		arg.RequestedBy,
+		arg.FromProductUuid,
+		arg.ToProductUuid,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+	)
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -128,27 +157,76 @@ func (q *Queries) GetStockReclassificationByUUID(ctx context.Context, argUuid uu
 }
 
 const listStockReclassificationsScoped = `-- name: ListStockReclassificationsScoped :many
-SELECT id, uuid, organization_id, brand_id, unit_id, from_product_id, to_product_id, reason, status, requested_by_user_id, decided_by_user_id, decided_at, decision_note, movement_id, created_at, updated_at FROM stock_reclassifications
-WHERE ($1::bigint IS NULL OR brand_id = $1::bigint)
-  AND ($2::bigint[] IS NULL OR organization_id = ANY($2::bigint[]))
-  AND ($3::text IS NULL OR status = $3::text)
-ORDER BY created_at DESC, id DESC
-LIMIT $5 OFFSET $4
+SELECT r.id, r.uuid, r.organization_id, r.brand_id, r.unit_id, r.from_product_id, r.to_product_id, r.reason, r.status, r.requested_by_user_id, r.decided_by_user_id, r.decided_at, r.decision_note, r.movement_id, r.created_at, r.updated_at FROM stock_reclassifications r
+WHERE ($1::bigint IS NULL OR r.brand_id = $1::bigint)
+  AND ($2::bigint[] IS NULL OR r.organization_id = ANY($2::bigint[]))
+  AND (COALESCE(cardinality($3::text[]), 0) = 0 OR r.status = ANY($3::text[]))
+  AND (COALESCE(cardinality($4::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM users ru WHERE ru.id = r.requested_by_user_id AND ru.uuid = ANY($4::uuid[])))
+  AND ($5::uuid IS NULL
+       OR EXISTS (SELECT 1 FROM products fp WHERE fp.id = r.from_product_id AND fp.uuid = $5::uuid))
+  AND ($6::uuid IS NULL
+       OR EXISTS (SELECT 1 FROM products tp WHERE tp.id = r.to_product_id AND tp.uuid = $6::uuid))
+  AND ($7::timestamptz IS NULL OR r.created_at >= $7::timestamptz)
+  AND ($8::timestamptz IS NULL OR r.created_at < $8::timestamptz)
+  AND ($9::text IS NULL
+       OR EXISTS (SELECT 1 FROM units qu WHERE qu.id = r.unit_id AND qu.barcode ILIKE $9::text || '%')
+       OR EXISTS (SELECT 1 FROM products qp WHERE qp.id IN (r.from_product_id, r.to_product_id)
+                    AND (qp.name ILIKE '%' || $9::text || '%' OR qp.sku ILIKE '%' || $9::text || '%'))
+       OR r.reason ILIKE '%' || $9::text || '%')
+ORDER BY
+  CASE WHEN NOT $10::bool THEN
+    CASE $11::text WHEN 'status' THEN r.status::text END
+  END ASC,
+  CASE WHEN $10::bool THEN
+    CASE $11::text WHEN 'status' THEN r.status::text END
+  END DESC,
+  CASE WHEN NOT $10::bool THEN
+    CASE $11::text WHEN 'created_at' THEN r.created_at END
+  END ASC,
+  CASE WHEN $10::bool THEN
+    CASE $11::text WHEN 'created_at' THEN r.created_at END
+  END DESC,
+  CASE WHEN NOT $10::bool AND $11::text = 'decided_at' THEN r.decided_at END ASC NULLS LAST,
+  CASE WHEN $10::bool AND $11::text = 'decided_at' THEN r.decided_at END DESC NULLS LAST,
+  CASE WHEN $10::bool THEN r.id END DESC,
+  r.id ASC
+LIMIT $13 OFFSET $12
 `
 
 type ListStockReclassificationsScopedParams struct {
-	BrandID     pgtype.Int8 `json:"brand_id"`
-	OrgIds      []int64     `json:"org_ids"`
-	Status      pgtype.Text `json:"status"`
-	OffsetCount int32       `json:"offset_count"`
-	LimitCount  int32       `json:"limit_count"`
+	BrandID         pgtype.Int8        `json:"brand_id"`
+	OrgIds          []int64            `json:"org_ids"`
+	Statuses        []string           `json:"statuses"`
+	RequestedBy     []uuid.UUID        `json:"requested_by"`
+	FromProductUuid pgtype.UUID        `json:"from_product_uuid"`
+	ToProductUuid   pgtype.UUID        `json:"to_product_uuid"`
+	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
+	CreatedBefore   pgtype.Timestamptz `json:"created_before"`
+	Q               pgtype.Text        `json:"q"`
+	SortDesc        bool               `json:"sort_desc"`
+	SortKey         string             `json:"sort_key"`
+	OffsetCount     int32              `json:"offset_count"`
+	LimitCount      int32              `json:"limit_count"`
 }
 
+// TEC-763 list contract (docs/list-contract.md): status and requested_by
+// (user uuids) are CSV, created_from/_to, from/to product, q (barcode
+// prefix, product name or SKU, reason). Sort keys from
+// usecase.ReclassificationSort, id tiebreak.
 func (q *Queries) ListStockReclassificationsScoped(ctx context.Context, arg ListStockReclassificationsScopedParams) ([]StockReclassification, error) {
 	rows, err := q.db.Query(ctx, listStockReclassificationsScoped,
 		arg.BrandID,
 		arg.OrgIds,
-		arg.Status,
+		arg.Statuses,
+		arg.RequestedBy,
+		arg.FromProductUuid,
+		arg.ToProductUuid,
+		arg.CreatedFrom,
+		arg.CreatedBefore,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
 		arg.OffsetCount,
 		arg.LimitCount,
 	)

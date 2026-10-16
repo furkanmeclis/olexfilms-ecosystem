@@ -47,3 +47,36 @@ describe("tenant nav: my stock (TEC-224)", () => {
     );
   });
 });
+
+describe("tenant nav: center stock and reclassifications (TEC-763)", () => {
+  it("links the center stock list and the request list", () => {
+    const group = tenantNav("acme").groups.find((g) => g.id === "stock");
+    expect(group?.items.find((i) => i.id === "stock-center")?.href).toBe(
+      routes.tenant.stock.root("acme"),
+    );
+    expect(
+      group?.items.find((i) => i.id === "stock-reclassifications")?.href,
+    ).toBe(routes.tenant.stock.reclassifications("acme"));
+  });
+
+  it("shows the center its stock list instead of My stock", () => {
+    const ids = visibleIds([Permission.StockRead], "center");
+    expect(ids).toContain("stock-center");
+    expect(ids).toContain("stock-reclassifications");
+    expect(visibleIds([Permission.StockRead])).not.toContain("stock-center");
+  });
+
+  it("shows the requests to every type with stock.read", () => {
+    for (const type of ["center", "distributor", "dealer"]) {
+      expect(visibleIds([Permission.StockRead], type)).toContain(
+        "stock-reclassifications",
+      );
+    }
+    expect(visibleIds([Permission.WarehouseRead], "center")).not.toContain(
+      "stock-reclassifications",
+    );
+    expect(visibleIds([Permission.StockRead], "center", [])).not.toContain(
+      "stock-center",
+    );
+  });
+});

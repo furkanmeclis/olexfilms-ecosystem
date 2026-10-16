@@ -404,6 +404,7 @@ type Querier interface {
 	CreateDocumentTemplate(ctx context.Context, arg CreateDocumentTemplateParams) (DocumentTemplate, error)
 	// Archive -------------------------------------------------------------------
 	CreateEinvoice(ctx context.Context, arg CreateEinvoiceParams) (Einvoice, error)
+	CreateEntryBarcodeImport(ctx context.Context, arg CreateEntryBarcodeImportParams) error
 	CreateExportJob(ctx context.Context, arg CreateExportJobParams) (ExportJob, error)
 	// TEC-171: accounting primitives for the finance/cari use cases (TEC-99b)
 	// and the source API (TEC-99c). finance_entries is append-only: corrections
@@ -994,6 +995,7 @@ type Querier interface {
 	GetEinvoiceForUpdate(ctx context.Context, arg GetEinvoiceForUpdateParams) (Einvoice, error)
 	GetEinvoiceSettingsByOrg(ctx context.Context, arg GetEinvoiceSettingsByOrgParams) (EinvoiceSetting, error)
 	GetEinvoiceSubscriptionPeriod(ctx context.Context, arg GetEinvoiceSubscriptionPeriodParams) (GetEinvoiceSubscriptionPeriodRow, error)
+	GetEntryBarcodeImport(ctx context.Context, jobID int64) (EntryBarcodeImport, error)
 	GetExportJobByID(ctx context.Context, id int64) (ExportJob, error)
 	GetExportJobByUUID(ctx context.Context, argUuid uuid.UUID) (ExportJob, error)
 	GetFinanceAccount(ctx context.Context, arg GetFinanceAccountParams) (FinanceAccount, error)
@@ -2562,6 +2564,10 @@ type Querier interface {
 	ListStockForecasts(ctx context.Context, arg ListStockForecastsParams) ([]ListStockForecastsRow, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
 	ListStockImportRows(ctx context.Context, arg ListStockImportRowsParams) ([]StockImportRow, error)
+	// TEC-763: the document behind each movement of a history page (entry,
+	// warehouse transfer, count, service, order, dealer transfer request,
+	// reclassification); line references resolve to their parent document.
+	ListStockMovementDocuments(ctx context.Context, ids []int64) ([]ListStockMovementDocumentsRow, error)
 	ListStockMovementsByOrganization(ctx context.Context, arg ListStockMovementsByOrganizationParams) ([]StockMovement, error)
 	ListStockMovementsByReference(ctx context.Context, arg ListStockMovementsByReferenceParams) ([]StockMovement, error)
 	// Barcode history in ledger order.
@@ -2575,6 +2581,10 @@ type Querier interface {
 	// Barcode history page in ledger order (oldest first).
 	ListStockMovementsByUnitPage(ctx context.Context, arg ListStockMovementsByUnitPageParams) ([]StockMovement, error)
 	ListStockReclassifications(ctx context.Context, arg ListStockReclassificationsParams) ([]StockReclassification, error)
+	// TEC-763 list contract (docs/list-contract.md): status and requested_by
+	// (user uuids) are CSV, created_from/_to, from/to product, q (barcode
+	// prefix, product name or SKU, reason). Sort keys from
+	// usecase.ReclassificationSort, id tiebreak.
 	ListStockReclassificationsScoped(ctx context.Context, arg ListStockReclassificationsScopedParams) ([]StockReclassification, error)
 	// Scope list: requests where any of org_ids is the giver, the receiver or
 	// the approver (org_ids NULL = whole brand).
@@ -2786,6 +2796,7 @@ type Querier interface {
 	// Serializes photo inserts and status moves of one showcase (the caller
 	// runs in a transaction).
 	LockDealerShowcase(ctx context.Context, id int64) (DealerShowcase, error)
+	LockEntryBarcodeImport(ctx context.Context, jobID int64) (EntryBarcodeImport, error)
 	// ---------------------------------------------------------------------------
 	// Fixed barcode holdings (quantity per unit and owner).
 	LockFixedBarcodeHolding(ctx context.Context, arg LockFixedBarcodeHoldingParams) (FixedBarcodeHolding, error)
@@ -3412,6 +3423,7 @@ type Querier interface {
 	// a retry succeeds.
 	SetEinvoicePDFError(ctx context.Context, arg SetEinvoicePDFErrorParams) error
 	SetEinvoiceSettingsXSLT(ctx context.Context, arg SetEinvoiceSettingsXSLTParams) (EinvoiceSetting, error)
+	SetEntryBarcodeImport(ctx context.Context, arg SetEntryBarcodeImportParams) error
 	// Records the fleet cari in the dealer's ledger once (CAS on NULL).
 	SetFleetDealerLinkCari(ctx context.Context, arg SetFleetDealerLinkCariParams) (FleetDealerLink, error)
 	// TEC-158: staged importers keep their apply/undo report in preview_json.
