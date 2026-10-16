@@ -12732,6 +12732,41 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/warehouse/orders/{uuid}/unplaced:
+    get:
+      tags: [Warehouse]
+      operationId: getOrderUnplacedUnits
+      summary: Units of a received order still waiting for a shelf (TEC-765)
+      description: >-
+        Needs `warehouse.read`. The order must be bought by the active
+        organization (404 otherwise); any status is answered, but units
+        count as unplaced only once the order is received. `units` holds
+        every serial unit of the order; `unplaced` marks the ones still on
+        hand unplaced in the organization (available, owned by the
+        organization itself) — the ones POST
+        /v1/warehouse/orders/{uuid}/place shelves (`unplaced_count`).
+        `placed_count` counts the received serial units already shelved or
+        moved on.
+        `fixed` lists the fixed barcodes of the order, which are never
+        placed by this step.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Placement state of the order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseOrderPlacement"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/warehouse/transfers:
     get:
       tags: [Warehouse]
@@ -37882,6 +37917,43 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/WarehouseMoveResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    WarehouseOrderPlacementUnit:
+      type: object
+      required: [unit_uuid, barcode, unit_kind, product, meters, quantity, unplaced]
+      properties:
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        product: { $ref: "#/components/schemas/StockEntryProduct" }
+        meters: { type: [string, "null"], description: Remaining roll meters (else the assigned meters) }
+        quantity: { type: [integer, "null"], description: Assigned pieces }
+        unplaced: { type: boolean, description: Still on hand unplaced in the organization }
+
+    WarehouseOrderPlacement:
+      type: object
+      required: [order_uuid, order_no, status, unplaced_count, placed_count, units, fixed]
+      properties:
+        order_uuid: { type: string, format: uuid }
+        order_no: { type: string }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        unplaced_count: { type: integer }
+        placed_count: { type: integer }
+        units:
+          type: array
+          items: { $ref: "#/components/schemas/WarehouseOrderPlacementUnit" }
+        fixed:
+          type: array
+          description: Fixed barcodes of the order (not placed by this step)
+          items: { $ref: "#/components/schemas/WarehouseOrderPlacementUnit" }
+
+    EnvelopeWarehouseOrderPlacement:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseOrderPlacement" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     WarehouseTransferStatus:

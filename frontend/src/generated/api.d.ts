@@ -6784,6 +6784,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/orders/{uuid}/unplaced": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Units of a received order still waiting for a shelf (TEC-765)
+         * @description Needs `warehouse.read`. The order must be bought by the active organization (404 otherwise); any status is answered, but units count as unplaced only once the order is received. `units` holds every serial unit of the order; `unplaced` marks the ones still on hand unplaced in the organization (available, owned by the organization itself) — the ones POST /v1/warehouse/orders/{uuid}/place shelves (`unplaced_count`). `placed_count` counts the received serial units already shelved or moved on. `fixed` lists the fixed barcodes of the order, which are never placed by this step.
+         */
+        get: operations["getOrderUnplacedUnits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warehouse/transfers": {
         parameters: {
             query?: never;
@@ -21478,6 +21498,37 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["WarehouseMoveResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        WarehouseOrderPlacementUnit: {
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            product: components["schemas"]["StockEntryProduct"];
+            /** @description Remaining roll meters (else the assigned meters) */
+            meters: string | null;
+            /** @description Assigned pieces */
+            quantity: number | null;
+            /** @description Still on hand unplaced in the organization */
+            unplaced: boolean;
+        };
+        WarehouseOrderPlacement: {
+            /** Format: uuid */
+            order_uuid: string;
+            order_no: string;
+            status: components["schemas"]["OrderStatus"];
+            unplaced_count: number;
+            placed_count: number;
+            units: components["schemas"]["WarehouseOrderPlacementUnit"][];
+            /** @description Fixed barcodes of the order (not placed by this step) */
+            fixed: components["schemas"]["WarehouseOrderPlacementUnit"][];
+        };
+        EnvelopeWarehouseOrderPlacement: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseOrderPlacement"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -40973,6 +41024,32 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getOrderUnplacedUnits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Placement state of the order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseOrderPlacement"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listWarehouseTransfers: {
