@@ -190,6 +190,7 @@
   "resources.tenant.stock.units": "Stock units",
   "confirm_step.stock_located_one": "{{count}} of them will be placed on the location given in the file.",
   "confirm_step.stock_located_other": "{{count}} of them will be placed on the location given in the file.",
+  "row_status.exists": "Exists",
   "fields.entry_barcodes.product_name": "Product name",
   "fields.entry_barcodes.product_sku": "Product SKU",
   "fields.entry_barcodes.barcode": "Barcode",

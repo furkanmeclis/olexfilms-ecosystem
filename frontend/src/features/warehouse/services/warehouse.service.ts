@@ -109,10 +109,12 @@ export function bffUrl(path: string): string {
 /** QR label sheet of a room's locations and/or the given locations. */
 export function locationLabelsPath(opts: {
   room?: string;
+  warehouse?: string;
   locations?: string[];
 }): string {
   const params = new URLSearchParams();
   if (opts.room) params.set("room", opts.room);
+  if (opts.warehouse) params.set("warehouse", opts.warehouse);
   for (const uuid of opts.locations ?? []) params.append("location", uuid);
   return `/v1/warehouse/labels/locations.pdf?${params.toString()}`;
 }
