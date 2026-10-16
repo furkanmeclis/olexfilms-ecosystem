@@ -12395,6 +12395,78 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/warehouse/stock-entries/{uuid}/import:
+    post:
+      tags: [Warehouse]
+      operationId: importStockEntryBarcodes
+      summary: Upload barcodes for a draft stock entry
+      description: >-
+        Needs warehouse.write and a with_existing draft in the active organization.
+        Columns are barcode (required), product_name, product_sku, and
+        location_code (optional). At least one product identifier is required
+        per row. Product matching uses the brand's active catalog. At most
+        2000 rows are accepted. existing_policy controls existing barcodes:
+        none, all_existing, or conflicts_only. Preview, confirm and undo use
+        /v1/tenant/imports/{uuid}. Confirm adds lines in one transaction;
+        normal stock entry confirmation later posts ledger movements. Undo
+        removes untouched draft lines and newly created units.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, tsv, xlsx, json], default: csv }
+                locale: { type: string, example: tr }
+                existing_policy: { type: string, enum: [none, all_existing, conflicts_only], default: none }
+      responses:
+        "201":
+          description: Import job created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeImportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/warehouse/stock-entries/{uuid}/import/sample:
+    get:
+      tags: [Warehouse]
+      operationId: stockEntryBarcodeImportSample
+      summary: Download the entry barcode import template
+      description: >-
+        Needs warehouse.write and a with_existing draft. XLSX contains active
+        brand SKUs and active bins of the entry's warehouse as drop-down lists.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, tsv, xlsx, json], default: xlsx }
+        - name: locale
+          in: query
+          schema: { type: string, example: tr }
+      responses:
+        "200":
+          description: Sample file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
   /v1/warehouse/stock-entries/{uuid}/lines:
     post:
       tags: [Warehouse]

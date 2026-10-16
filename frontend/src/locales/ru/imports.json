@@ -205,5 +205,9 @@
   "confirm_step.stock_located_one": "{{count}} из них будет размещена в ячейке, указанной в файле.",
   "confirm_step.stock_located_few": "{{count}} из них будут размещены в ячейке, указанной в файле.",
   "confirm_step.stock_located_many": "{{count}} из них будут размещены в ячейке, указанной в файле.",
-  "confirm_step.stock_located_other": "{{count}} из них будут размещены в ячейке, указанной в файле."
+  "confirm_step.stock_located_other": "{{count}} из них будут размещены в ячейке, указанной в файле.",
+  "fields.entry_barcodes.product_name": "Название товара",
+  "fields.entry_barcodes.product_sku": "SKU товара",
+  "fields.entry_barcodes.barcode": "Штрихкод",
+  "fields.entry_barcodes.location_code": "Код ячейки"
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine/adapters"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
 	"github.com/google/uuid"
@@ -592,8 +593,16 @@ func (s *Service) getAccessible(ctx context.Context, jobUUID uuid.UUID, actorID 
 // a holder of the resource's import permission (ioengine.ImportPermissioner).
 func (s *Service) getWritable(ctx context.Context, jobUUID uuid.UUID, actorID int64, orgID *int64, can func(string) bool) (db.ImportJob, error) {
 	job, err := s.getAccessible(ctx, jobUUID, actorID, orgID)
-	if err != nil || orgID == nil || job.ActorID == actorID {
+	if err != nil {
 		return job, err
+	}
+	// A warehouse import always needs the current warehouse.write grant, even
+	// when its uploader confirms or rolls it back later.
+	if job.Resource == "tenant.warehouse.entry_barcodes" && (can == nil || !can(rbac.PermWarehouseWrite)) {
+		return db.ImportJob{}, ErrForbidden
+	}
+	if orgID == nil || job.ActorID == actorID {
+		return job, nil
 	}
 	adapter, err := s.registry.Get(job.Resource)
 	if err != nil {

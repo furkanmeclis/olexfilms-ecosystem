@@ -67,7 +67,7 @@ export function importStatusCounts(
     ];
   }
   const entries = Object.entries(summary.counts ?? {}).filter(
-    ([, count]) => (count ?? 0) > 0,
+    ([status, count]) => status !== "placed" && (count ?? 0) > 0,
   );
   const rank = (status: string) => {
     const i = STATUS_ORDER.indexOf(status);

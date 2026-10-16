@@ -165,7 +165,8 @@ export type ImportResource =
   | "tenant.fleet.vehicles"
   | "platform.part_consumption_expectations"
   | "tenant.pricing.recommended"
-  | "tenant.stock.units";
+  | "tenant.stock.units"
+  | "tenant.warehouse.entry_barcodes";
 
 /** Stock import upload / sample (TEC-158; center only, tenant jobs). */
 export const STOCK_IMPORT_PATHS = {
@@ -286,6 +287,25 @@ export const IMPORT_SCHEMA: Partial<
     { key: "quantity", labelKey: "imports.fields.stock.quantity" },
     { key: "meters", labelKey: "imports.fields.stock.meters" },
     { key: "location_code", labelKey: "imports.fields.stock.location_code" },
+  ],
+  "tenant.warehouse.entry_barcodes": [
+    {
+      key: "product_name",
+      labelKey: "imports.fields.entry_barcodes.product_name",
+    },
+    {
+      key: "product_sku",
+      labelKey: "imports.fields.entry_barcodes.product_sku",
+    },
+    {
+      key: "barcode",
+      labelKey: "imports.fields.entry_barcodes.barcode",
+      required: true,
+    },
+    {
+      key: "location_code",
+      labelKey: "imports.fields.entry_barcodes.location_code",
+    },
   ],
   // TEC-473/477: the fleet comes from the job defaults (fleet_uuid).
   "tenant.fleet.vehicles": [

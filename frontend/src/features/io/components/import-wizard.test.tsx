@@ -5,6 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import en from "@/locales/en/imports.json";
+import warehouseEn from "@/locales/en/warehouse.json";
 import type { ImportJob, ImportPreviewSummary } from "@/features/io/types";
 
 const catalog = en as Record<string, string>;
@@ -13,7 +14,9 @@ const fill = (text: string, params?: Record<string, string | number>) =>
 const t = (key: string, params?: Record<string, string | number>) => {
   const text = key.startsWith("imports.")
     ? catalog[key.slice("imports.".length)]
-    : undefined;
+    : key.startsWith("warehouse.")
+      ? (warehouseEn as Record<string, string>)[key.slice("warehouse.".length)]
+      : undefined;
   return text === undefined ? key : fill(text, params);
 };
 const tp = (
@@ -108,6 +111,7 @@ vi.mock("@/features/io/services/imports.service", () => ({
 
 import { ImportWizard } from "@/features/io/components/import-wizard";
 import { STOCK_IMPORT_PATHS } from "@/features/io/types";
+import { entryImportConfirmCopy } from "@/features/warehouse/lib/entry-import";
 
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -252,5 +256,85 @@ describe("ImportWizard with the stock import preview", () => {
     );
     expect(byTestId("result-action")?.textContent).toBe("applied");
     expect(onComplete).toHaveBeenCalled();
+  });
+});
+
+describe("record-scoped entry barcode wizard", () => {
+  it("sends the policy with upload and confirms the entry-specific counts", async () => {
+    const entryPreview: ImportPreviewSummary = {
+      total: 3,
+      valid: 2,
+      invalid: 1,
+      counts: { link: 1, new: 1, placed: 1, duplicate: 1 },
+      rows: [],
+      errors: [],
+    };
+    service.preview.mockResolvedValue(job("previewed", entryPreview));
+    const paths = {
+      upload: "/v1/warehouse/stock-entries/entry-1/import",
+      sample: "/v1/warehouse/stock-entries/entry-1/import/sample",
+    };
+    act(() =>
+      root.render(
+        createElement(
+          QueryClientProvider,
+          { client: new QueryClient() },
+          createElement(ImportWizard, {
+            resource: "tenant.warehouse.entry_barcodes",
+            paths,
+            scope: "tenant",
+            open: true,
+            onOpenChange: () => undefined,
+            initialOptions: { existing_policy: "none" },
+            jobsHref: "",
+            resultDetailHref: "/t/olex/warehouse/stock-entries/entry-1",
+            confirmCopy: entryImportConfirmCopy,
+            extraOptions: ({ values, setValue }) =>
+              createElement(
+                "button",
+                {
+                  type: "button",
+                  "data-testid": "choose-all-existing",
+                  onClick: () => setValue("existing_policy", "all_existing"),
+                },
+                values.existing_policy,
+              ),
+          }),
+        ),
+      ),
+    );
+    await click(byTestId("choose-all-existing"));
+    expect(byTestId("choose-all-existing")?.textContent).toBe("all_existing");
+    const input = document.querySelector<HTMLInputElement>("#import-file")!;
+    const file = new File(
+      ["product_sku,barcode\nPPF-GLOSS,OLX-1\n"],
+      "entry.csv",
+      { type: "text/csv" },
+    );
+    Object.defineProperty(input, "files", { value: [file] });
+    await act(async () =>
+      input.dispatchEvent(new Event("change", { bubbles: true })),
+    );
+    await click(byTestId("import-next"));
+    expect(service.upload).toHaveBeenCalledWith(
+      paths.upload,
+      file,
+      "csv",
+      "en",
+      {
+        existing_policy: "all_existing",
+      },
+    );
+    await click(byTestId("import-next"));
+    await click(byTestId("import-next"));
+    expect(byTestId("import-confirm-sentence")?.textContent).toContain(
+      "1 barcodes will be linked",
+    );
+    expect(byTestId("import-confirm-sentence")?.textContent).toContain(
+      "1 placed in bins",
+    );
+    expect(byTestId("import-confirm")?.textContent).toContain(
+      "2 matching rows",
+    );
   });
 });

@@ -205,5 +205,9 @@
   "confirm_step.stock_located_one": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
   "confirm_step.stock_located_few": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
   "confirm_step.stock_located_many": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
-  "confirm_step.stock_located_other": "{{count}} з них буде розміщено в комірці, указаній у файлі."
+  "confirm_step.stock_located_other": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
+  "fields.entry_barcodes.product_name": "Назва товару",
+  "fields.entry_barcodes.product_sku": "SKU товару",
+  "fields.entry_barcodes.barcode": "Штрихкод",
+  "fields.entry_barcodes.location_code": "Код комірки"
 }
