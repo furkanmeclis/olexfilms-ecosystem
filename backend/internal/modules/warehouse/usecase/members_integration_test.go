@@ -103,6 +103,11 @@ func TestWarehouseMembershipLimitsWrites(t *testing.T) {
 		t.Fatalf("list = %+v total %d err %v", list, total, err)
 	}
 
+	cands, err := members.Candidates(e.ctx, admin.Caller, "t769 staff")
+	if err != nil || len(cands) != 1 || cands[0].UUID != user.Uuid {
+		t.Fatalf("candidates = %+v, %v", cands, err)
+	}
+
 	mine, err = members.Mine(e.ctx, uc)
 	if err != nil {
 		t.Fatalf("mine: %v", err)

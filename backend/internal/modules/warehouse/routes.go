@@ -179,6 +179,7 @@ func RegisterMemberRoutes(
 	mux.Handle("GET /v1/warehouse/warehouses/{uuid}/members", read(h.List))
 	mux.Handle("POST /v1/warehouse/warehouses/{uuid}/members", manage(h.Add))
 	mux.Handle("DELETE /v1/warehouse/warehouses/{uuid}/members/{user_uuid}", manage(h.Remove))
+	mux.Handle("GET /v1/warehouse/member-candidates", manage(h.Candidates))
 	mux.Handle("GET /v1/warehouse/my-warehouses", read(h.Mine))
 	mux.Handle("PUT /v1/warehouse/my-warehouses/default", read(h.SetDefault))
 }

@@ -3380,6 +3380,9 @@ type Querier interface {
 	// account name or the cari counterparty name; id is the tiebreak (an empty
 	// sort_key orders by id only, as the single-entry lookup does).
 	SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error)
+	// Member picker: active users of the organization, matched on name,
+	// surname or email (at most row_limit).
+	SearchOrganizationMemberUsers(ctx context.Context, arg SearchOrganizationMemberUsersParams) ([]SearchOrganizationMemberUsersRow, error)
 	// TEC-769: bin picker of the Glorian location map (active locations of one
 	// warehouse, matched on the full code or the name).
 	SearchWarehouseLocationsForMap(ctx context.Context, arg SearchWarehouseLocationsForMapParams) ([]WarehouseLocation, error)

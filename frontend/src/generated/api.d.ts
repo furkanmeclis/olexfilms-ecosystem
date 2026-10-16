@@ -7006,6 +7006,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Organization users for the warehouse member picker (TEC-769)
+         * @description Needs `members.write`. Active users of the active organization matched on name, surname or email (`q`); at most 50.
+         */
+        get: operations["listWarehouseMemberCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warehouse/my-warehouses": {
         parameters: {
             query?: never;
@@ -21961,6 +21981,14 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseMemberUserList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarehouseMemberUser"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -41957,6 +41985,30 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    listWarehouseMemberCandidates: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseMemberUserList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     getMyWarehouses: {

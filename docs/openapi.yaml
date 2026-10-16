@@ -13175,6 +13175,30 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/warehouse/member-candidates:
+    get:
+      tags: [Warehouse]
+      operationId: listWarehouseMemberCandidates
+      summary: Organization users for the warehouse member picker (TEC-769)
+      description: >-
+        Needs `members.write`. Active users of the active organization
+        matched on name, surname or email (`q`); at most 50.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseMemberUserList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /v1/warehouse/my-warehouses:
     get:
       tags: [Warehouse]
@@ -38787,6 +38811,20 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseMemberUserList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/WarehouseMemberUser" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeMyWarehouses:

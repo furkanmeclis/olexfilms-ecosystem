@@ -333,6 +333,61 @@ func (q *Queries) ListWarehouseMembers(ctx context.Context, arg ListWarehouseMem
 	return items, nil
 }
 
+const searchOrganizationMemberUsers = `-- name: SearchOrganizationMemberUsers :many
+SELECT u.id, u.uuid, u.name, u.surname, u.email
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+WHERE om.organization_id = $1
+  AND ($2::text IS NULL
+       OR u.name ILIKE '%' || $2::text || '%'
+       OR u.surname ILIKE '%' || $2::text || '%'
+       OR u.email ILIKE '%' || $2::text || '%')
+ORDER BY lower(u.name || ' ' || u.surname), u.id
+LIMIT $3
+`
+
+type SearchOrganizationMemberUsersParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	Q              pgtype.Text `json:"q"`
+	RowLimit       int32       `json:"row_limit"`
+}
+
+type SearchOrganizationMemberUsersRow struct {
+	ID      int64       `json:"id"`
+	Uuid    uuid.UUID   `json:"uuid"`
+	Name    string      `json:"name"`
+	Surname string      `json:"surname"`
+	Email   pgtype.Text `json:"email"`
+}
+
+// Member picker: active users of the organization, matched on name,
+// surname or email (at most row_limit).
+func (q *Queries) SearchOrganizationMemberUsers(ctx context.Context, arg SearchOrganizationMemberUsersParams) ([]SearchOrganizationMemberUsersRow, error) {
+	rows, err := q.db.Query(ctx, searchOrganizationMemberUsers, arg.OrganizationID, arg.Q, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchOrganizationMemberUsersRow{}
+	for rows.Next() {
+		var i SearchOrganizationMemberUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.Name,
+			&i.Surname,
+			&i.Email,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setWarehouseMemberDefault = `-- name: SetWarehouseMemberDefault :execrows
 UPDATE warehouse_members SET is_default = true
 WHERE organization_id = $1 AND user_id = $2

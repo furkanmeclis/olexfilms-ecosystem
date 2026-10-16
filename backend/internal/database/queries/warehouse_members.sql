@@ -85,3 +85,17 @@ INSERT INTO warehouse_settings (organization_id, eod_cutoff_minutes)
 VALUES (sqlc.arg(organization_id), sqlc.narg(eod_cutoff_minutes))
 ON CONFLICT (organization_id) DO UPDATE SET eod_cutoff_minutes = EXCLUDED.eod_cutoff_minutes
 RETURNING *;
+
+-- name: SearchOrganizationMemberUsers :many
+-- Member picker: active users of the organization, matched on name,
+-- surname or email (at most row_limit).
+SELECT u.id, u.uuid, u.name, u.surname, u.email
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+WHERE om.organization_id = sqlc.arg(organization_id)
+  AND (sqlc.narg(q)::text IS NULL
+       OR u.name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR u.surname ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR u.email ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY lower(u.name || ' ' || u.surname), u.id
+LIMIT sqlc.arg(row_limit);

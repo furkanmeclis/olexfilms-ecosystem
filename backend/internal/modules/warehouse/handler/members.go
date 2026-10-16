@@ -86,3 +86,13 @@ func (h *Members) SetDefault(w http.ResponseWriter, r *http.Request) {
 	}
 	response.JSON(w, r, http.StatusOK, out)
 }
+
+// Candidates (GET /v1/warehouse/member-candidates?q): the member picker.
+func (h *Members) Candidates(w http.ResponseWriter, r *http.Request) {
+	items, err := h.svc.Candidates(r.Context(), caller(r), r.URL.Query().Get("q"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, listResponse[wh.MemberUser]{Items: items})
+}

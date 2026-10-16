@@ -374,6 +374,26 @@ func (s *Members) SetDefault(ctx context.Context, c EntryCaller, warehouseUUID s
 	return s.Mine(ctx, c)
 }
 
+// Candidates lists the organization's active users for the member picker
+// (at most 50).
+func (s *Members) Candidates(ctx context.Context, c Caller, q string) ([]MemberUser, error) {
+	org, err := guard(c)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.q.SearchOrganizationMemberUsers(ctx, db.SearchOrganizationMemberUsersParams{
+		OrganizationID: org, Q: listQ(q), RowLimit: 50,
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]MemberUser, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, MemberUser{UUID: r.Uuid, Name: r.Name, Surname: r.Surname, Email: textPtr(r.Email)})
+	}
+	return out, nil
+}
+
 func (s *Members) inTx(ctx context.Context, fn func(q *db.Queries) error) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
