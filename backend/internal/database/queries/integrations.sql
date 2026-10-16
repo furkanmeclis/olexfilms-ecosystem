@@ -55,30 +55,70 @@ RETURNING *;
 DELETE FROM integration_connections
 WHERE id = sqlc.arg(id);
 
--- name: UpsertConnectionLocationMap :one
+-- name: CreateConnectionLocationMap :one
+-- TEC-769: remote location name -> warehouse (+ optional bin).
 INSERT INTO connection_location_maps (
-    organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code
+    organization_id, brand_id, connection_id, warehouse_id, warehouse_location_id, remote_location_code
 )
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id), sqlc.arg(connection_id),
-    sqlc.arg(warehouse_location_id), sqlc.arg(remote_location_code)
+    sqlc.arg(warehouse_id), sqlc.narg(warehouse_location_id), sqlc.arg(remote_location_code)
 )
-ON CONFLICT (connection_id, warehouse_location_id)
-DO UPDATE SET remote_location_code = EXCLUDED.remote_location_code
+RETURNING *;
+
+-- name: UpdateConnectionLocationMap :one
+UPDATE connection_location_maps
+SET warehouse_id = sqlc.arg(warehouse_id),
+    warehouse_location_id = sqlc.narg(warehouse_location_id),
+    remote_location_code = sqlc.arg(remote_location_code)
+WHERE connection_id = sqlc.arg(connection_id) AND uuid = sqlc.arg(uuid)
 RETURNING *;
 
 -- name: ListConnectionLocationMaps :many
-SELECT * FROM connection_location_maps
-WHERE connection_id = sqlc.arg(connection_id)
-ORDER BY remote_location_code;
+-- List contract: sort keys remote_location_code, warehouse, created_at (id
+-- tiebreak); q on the remote code, warehouse name/code and bin full code.
+SELECT m.*, w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_name,
+       l.uuid AS location_uuid, l.code AS location_code, l.full_code AS location_full_code
+FROM connection_location_maps m
+JOIN warehouses w ON w.id = m.warehouse_id
+LEFT JOIN warehouse_locations l ON l.id = m.warehouse_location_id
+WHERE m.connection_id = sqlc.arg(connection_id)
+  AND (sqlc.narg(q)::text IS NULL
+       OR m.remote_location_code ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR w.name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR w.code ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR l.full_code ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'remote_location_code' THEN lower(m.remote_location_code) WHEN 'warehouse' THEN lower(w.name) END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'remote_location_code' THEN lower(m.remote_location_code) WHEN 'warehouse' THEN lower(w.name) END END DESC,
+  CASE WHEN NOT sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN m.created_at END END ASC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN CASE sqlc.arg(sort_key)::text WHEN 'created_at' THEN m.created_at END END DESC,
+  CASE WHEN sqlc.arg(sort_desc)::bool THEN m.id END DESC,
+  m.id ASC
+LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
+
+-- name: CountConnectionLocationMaps :one
+SELECT count(*) FROM connection_location_maps m
+JOIN warehouses w ON w.id = m.warehouse_id
+LEFT JOIN warehouse_locations l ON l.id = m.warehouse_location_id
+WHERE m.connection_id = sqlc.arg(connection_id)
+  AND (sqlc.narg(q)::text IS NULL
+       OR m.remote_location_code ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR w.name ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR w.code ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR l.full_code ILIKE '%' || sqlc.narg(q)::text || '%');
 
 -- name: GetConnectionLocationMapByRemote :one
 SELECT * FROM connection_location_maps
 WHERE connection_id = sqlc.arg(connection_id) AND remote_location_code = sqlc.arg(remote_location_code);
 
+-- name: GetConnectionLocationMapByUUID :one
+SELECT * FROM connection_location_maps
+WHERE connection_id = sqlc.arg(connection_id) AND uuid = sqlc.arg(uuid);
+
 -- name: DeleteConnectionLocationMap :execrows
 DELETE FROM connection_location_maps
-WHERE connection_id = sqlc.arg(connection_id) AND warehouse_location_id = sqlc.arg(warehouse_location_id);
+WHERE connection_id = sqlc.arg(connection_id) AND uuid = sqlc.arg(uuid);
 
 -- name: StartIntegrationSyncRun :one
 INSERT INTO integration_sync_runs (organization_id, brand_id, connection_id, kind)

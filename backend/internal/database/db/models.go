@@ -653,10 +653,12 @@ type ConnectionLocationMap struct {
 	OrganizationID      int64              `json:"organization_id"`
 	BrandID             int64              `json:"brand_id"`
 	ConnectionID        int64              `json:"connection_id"`
-	WarehouseLocationID int64              `json:"warehouse_location_id"`
+	WarehouseLocationID pgtype.Int8        `json:"warehouse_location_id"`
 	RemoteLocationCode  string             `json:"remote_location_code"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	WarehouseID         int64              `json:"warehouse_id"`
 }
 
 type Consent struct {
@@ -3683,6 +3685,25 @@ type WarehouseLocation struct {
 	Type           pgtype.Text        `json:"type"`
 	FullCode       pgtype.Text        `json:"full_code"`
 	SortOrder      int32              `json:"sort_order"`
+}
+
+type WarehouseMember struct {
+	ID              int64              `json:"id"`
+	Uuid            uuid.UUID          `json:"uuid"`
+	OrganizationID  int64              `json:"organization_id"`
+	WarehouseID     int64              `json:"warehouse_id"`
+	UserID          int64              `json:"user_id"`
+	IsDefault       bool               `json:"is_default"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WarehouseSetting struct {
+	OrganizationID   int64              `json:"organization_id"`
+	EodCutoffMinutes pgtype.Int2        `json:"eod_cutoff_minutes"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type WarehouseTransfer struct {

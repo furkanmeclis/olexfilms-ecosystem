@@ -27,6 +27,76 @@ func (q *Queries) BrandHasIntegrationConnection(ctx context.Context, brandID int
 	return column_1, err
 }
 
+const countConnectionLocationMaps = `-- name: CountConnectionLocationMaps :one
+SELECT count(*) FROM connection_location_maps m
+JOIN warehouses w ON w.id = m.warehouse_id
+LEFT JOIN warehouse_locations l ON l.id = m.warehouse_location_id
+WHERE m.connection_id = $1
+  AND ($2::text IS NULL
+       OR m.remote_location_code ILIKE '%' || $2::text || '%'
+       OR w.name ILIKE '%' || $2::text || '%'
+       OR w.code ILIKE '%' || $2::text || '%'
+       OR l.full_code ILIKE '%' || $2::text || '%')
+`
+
+type CountConnectionLocationMapsParams struct {
+	ConnectionID int64       `json:"connection_id"`
+	Q            pgtype.Text `json:"q"`
+}
+
+func (q *Queries) CountConnectionLocationMaps(ctx context.Context, arg CountConnectionLocationMapsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countConnectionLocationMaps, arg.ConnectionID, arg.Q)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createConnectionLocationMap = `-- name: CreateConnectionLocationMap :one
+INSERT INTO connection_location_maps (
+    organization_id, brand_id, connection_id, warehouse_id, warehouse_location_id, remote_location_code
+)
+VALUES (
+    $1, $2, $3,
+    $4, $5, $6
+)
+RETURNING id, organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code, created_at, updated_at, uuid, warehouse_id
+`
+
+type CreateConnectionLocationMapParams struct {
+	OrganizationID      int64       `json:"organization_id"`
+	BrandID             int64       `json:"brand_id"`
+	ConnectionID        int64       `json:"connection_id"`
+	WarehouseID         int64       `json:"warehouse_id"`
+	WarehouseLocationID pgtype.Int8 `json:"warehouse_location_id"`
+	RemoteLocationCode  string      `json:"remote_location_code"`
+}
+
+// TEC-769: remote location name -> warehouse (+ optional bin).
+func (q *Queries) CreateConnectionLocationMap(ctx context.Context, arg CreateConnectionLocationMapParams) (ConnectionLocationMap, error) {
+	row := q.db.QueryRow(ctx, createConnectionLocationMap,
+		arg.OrganizationID,
+		arg.BrandID,
+		arg.ConnectionID,
+		arg.WarehouseID,
+		arg.WarehouseLocationID,
+		arg.RemoteLocationCode,
+	)
+	var i ConnectionLocationMap
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ConnectionID,
+		&i.WarehouseLocationID,
+		&i.RemoteLocationCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Uuid,
+		&i.WarehouseID,
+	)
+	return i, err
+}
+
 const createIntegrationConnection = `-- name: CreateIntegrationConnection :one
 
 INSERT INTO integration_connections (
@@ -134,16 +204,16 @@ func (q *Queries) CreateOrderOutbound(ctx context.Context, arg CreateOrderOutbou
 
 const deleteConnectionLocationMap = `-- name: DeleteConnectionLocationMap :execrows
 DELETE FROM connection_location_maps
-WHERE connection_id = $1 AND warehouse_location_id = $2
+WHERE connection_id = $1 AND uuid = $2
 `
 
 type DeleteConnectionLocationMapParams struct {
-	ConnectionID        int64 `json:"connection_id"`
-	WarehouseLocationID int64 `json:"warehouse_location_id"`
+	ConnectionID int64     `json:"connection_id"`
+	Uuid         uuid.UUID `json:"uuid"`
 }
 
 func (q *Queries) DeleteConnectionLocationMap(ctx context.Context, arg DeleteConnectionLocationMapParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deleteConnectionLocationMap, arg.ConnectionID, arg.WarehouseLocationID)
+	result, err := q.db.Exec(ctx, deleteConnectionLocationMap, arg.ConnectionID, arg.Uuid)
 	if err != nil {
 		return 0, err
 	}
@@ -209,7 +279,7 @@ func (q *Queries) FinishIntegrationSyncRun(ctx context.Context, arg FinishIntegr
 }
 
 const getConnectionLocationMapByRemote = `-- name: GetConnectionLocationMapByRemote :one
-SELECT id, organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code, created_at, updated_at FROM connection_location_maps
+SELECT id, organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code, created_at, updated_at, uuid, warehouse_id FROM connection_location_maps
 WHERE connection_id = $1 AND remote_location_code = $2
 `
 
@@ -230,6 +300,36 @@ func (q *Queries) GetConnectionLocationMapByRemote(ctx context.Context, arg GetC
 		&i.RemoteLocationCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Uuid,
+		&i.WarehouseID,
+	)
+	return i, err
+}
+
+const getConnectionLocationMapByUUID = `-- name: GetConnectionLocationMapByUUID :one
+SELECT id, organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code, created_at, updated_at, uuid, warehouse_id FROM connection_location_maps
+WHERE connection_id = $1 AND uuid = $2
+`
+
+type GetConnectionLocationMapByUUIDParams struct {
+	ConnectionID int64     `json:"connection_id"`
+	Uuid         uuid.UUID `json:"uuid"`
+}
+
+func (q *Queries) GetConnectionLocationMapByUUID(ctx context.Context, arg GetConnectionLocationMapByUUIDParams) (ConnectionLocationMap, error) {
+	row := q.db.QueryRow(ctx, getConnectionLocationMapByUUID, arg.ConnectionID, arg.Uuid)
+	var i ConnectionLocationMap
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ConnectionID,
+		&i.WarehouseLocationID,
+		&i.RemoteLocationCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Uuid,
+		&i.WarehouseID,
 	)
 	return i, err
 }
@@ -512,20 +612,73 @@ func (q *Queries) LastSucceededIntegrationSyncRun(ctx context.Context, arg LastS
 }
 
 const listConnectionLocationMaps = `-- name: ListConnectionLocationMaps :many
-SELECT id, organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code, created_at, updated_at FROM connection_location_maps
-WHERE connection_id = $1
-ORDER BY remote_location_code
+SELECT m.id, m.organization_id, m.brand_id, m.connection_id, m.warehouse_location_id, m.remote_location_code, m.created_at, m.updated_at, m.uuid, m.warehouse_id, w.uuid AS warehouse_uuid, w.code AS warehouse_code, w.name AS warehouse_name,
+       l.uuid AS location_uuid, l.code AS location_code, l.full_code AS location_full_code
+FROM connection_location_maps m
+JOIN warehouses w ON w.id = m.warehouse_id
+LEFT JOIN warehouse_locations l ON l.id = m.warehouse_location_id
+WHERE m.connection_id = $1
+  AND ($2::text IS NULL
+       OR m.remote_location_code ILIKE '%' || $2::text || '%'
+       OR w.name ILIKE '%' || $2::text || '%'
+       OR w.code ILIKE '%' || $2::text || '%'
+       OR l.full_code ILIKE '%' || $2::text || '%')
+ORDER BY
+  CASE WHEN NOT $3::bool THEN CASE $4::text WHEN 'remote_location_code' THEN lower(m.remote_location_code) WHEN 'warehouse' THEN lower(w.name) END END ASC,
+  CASE WHEN $3::bool THEN CASE $4::text WHEN 'remote_location_code' THEN lower(m.remote_location_code) WHEN 'warehouse' THEN lower(w.name) END END DESC,
+  CASE WHEN NOT $3::bool THEN CASE $4::text WHEN 'created_at' THEN m.created_at END END ASC,
+  CASE WHEN $3::bool THEN CASE $4::text WHEN 'created_at' THEN m.created_at END END DESC,
+  CASE WHEN $3::bool THEN m.id END DESC,
+  m.id ASC
+LIMIT $6 OFFSET $5
 `
 
-func (q *Queries) ListConnectionLocationMaps(ctx context.Context, connectionID int64) ([]ConnectionLocationMap, error) {
-	rows, err := q.db.Query(ctx, listConnectionLocationMaps, connectionID)
+type ListConnectionLocationMapsParams struct {
+	ConnectionID int64       `json:"connection_id"`
+	Q            pgtype.Text `json:"q"`
+	SortDesc     bool        `json:"sort_desc"`
+	SortKey      string      `json:"sort_key"`
+	PageOffset   int32       `json:"page_offset"`
+	PageLimit    int32       `json:"page_limit"`
+}
+
+type ListConnectionLocationMapsRow struct {
+	ID                  int64              `json:"id"`
+	OrganizationID      int64              `json:"organization_id"`
+	BrandID             int64              `json:"brand_id"`
+	ConnectionID        int64              `json:"connection_id"`
+	WarehouseLocationID pgtype.Int8        `json:"warehouse_location_id"`
+	RemoteLocationCode  string             `json:"remote_location_code"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	WarehouseID         int64              `json:"warehouse_id"`
+	WarehouseUuid       uuid.UUID          `json:"warehouse_uuid"`
+	WarehouseCode       string             `json:"warehouse_code"`
+	WarehouseName       string             `json:"warehouse_name"`
+	LocationUuid        pgtype.UUID        `json:"location_uuid"`
+	LocationCode        pgtype.Text        `json:"location_code"`
+	LocationFullCode    pgtype.Text        `json:"location_full_code"`
+}
+
+// List contract: sort keys remote_location_code, warehouse, created_at (id
+// tiebreak); q on the remote code, warehouse name/code and bin full code.
+func (q *Queries) ListConnectionLocationMaps(ctx context.Context, arg ListConnectionLocationMapsParams) ([]ListConnectionLocationMapsRow, error) {
+	rows, err := q.db.Query(ctx, listConnectionLocationMaps,
+		arg.ConnectionID,
+		arg.Q,
+		arg.SortDesc,
+		arg.SortKey,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ConnectionLocationMap{}
+	items := []ListConnectionLocationMapsRow{}
 	for rows.Next() {
-		var i ConnectionLocationMap
+		var i ListConnectionLocationMapsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrganizationID,
@@ -535,6 +688,14 @@ func (q *Queries) ListConnectionLocationMaps(ctx context.Context, connectionID i
 			&i.RemoteLocationCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Uuid,
+			&i.WarehouseID,
+			&i.WarehouseUuid,
+			&i.WarehouseCode,
+			&i.WarehouseName,
+			&i.LocationUuid,
+			&i.LocationCode,
+			&i.LocationFullCode,
 		); err != nil {
 			return nil, err
 		}
@@ -852,6 +1013,47 @@ func (q *Queries) StartIntegrationSyncRun(ctx context.Context, arg StartIntegrat
 	return i, err
 }
 
+const updateConnectionLocationMap = `-- name: UpdateConnectionLocationMap :one
+UPDATE connection_location_maps
+SET warehouse_id = $1,
+    warehouse_location_id = $2,
+    remote_location_code = $3
+WHERE connection_id = $4 AND uuid = $5
+RETURNING id, organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code, created_at, updated_at, uuid, warehouse_id
+`
+
+type UpdateConnectionLocationMapParams struct {
+	WarehouseID         int64       `json:"warehouse_id"`
+	WarehouseLocationID pgtype.Int8 `json:"warehouse_location_id"`
+	RemoteLocationCode  string      `json:"remote_location_code"`
+	ConnectionID        int64       `json:"connection_id"`
+	Uuid                uuid.UUID   `json:"uuid"`
+}
+
+func (q *Queries) UpdateConnectionLocationMap(ctx context.Context, arg UpdateConnectionLocationMapParams) (ConnectionLocationMap, error) {
+	row := q.db.QueryRow(ctx, updateConnectionLocationMap,
+		arg.WarehouseID,
+		arg.WarehouseLocationID,
+		arg.RemoteLocationCode,
+		arg.ConnectionID,
+		arg.Uuid,
+	)
+	var i ConnectionLocationMap
+	err := row.Scan(
+		&i.ID,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.ConnectionID,
+		&i.WarehouseLocationID,
+		&i.RemoteLocationCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Uuid,
+		&i.WarehouseID,
+	)
+	return i, err
+}
+
 const updateIntegrationConnection = `-- name: UpdateIntegrationConnection :one
 UPDATE integration_connections
 SET base_url = $1,
@@ -1008,49 +1210,6 @@ func (q *Queries) UpdateSyncedProduct(ctx context.Context, arg UpdateSyncedProdu
 		&i.ExternalID,
 		&i.ConnectionID,
 		&i.LockedFields,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const upsertConnectionLocationMap = `-- name: UpsertConnectionLocationMap :one
-INSERT INTO connection_location_maps (
-    organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code
-)
-VALUES (
-    $1, $2, $3,
-    $4, $5
-)
-ON CONFLICT (connection_id, warehouse_location_id)
-DO UPDATE SET remote_location_code = EXCLUDED.remote_location_code
-RETURNING id, organization_id, brand_id, connection_id, warehouse_location_id, remote_location_code, created_at, updated_at
-`
-
-type UpsertConnectionLocationMapParams struct {
-	OrganizationID      int64  `json:"organization_id"`
-	BrandID             int64  `json:"brand_id"`
-	ConnectionID        int64  `json:"connection_id"`
-	WarehouseLocationID int64  `json:"warehouse_location_id"`
-	RemoteLocationCode  string `json:"remote_location_code"`
-}
-
-func (q *Queries) UpsertConnectionLocationMap(ctx context.Context, arg UpsertConnectionLocationMapParams) (ConnectionLocationMap, error) {
-	row := q.db.QueryRow(ctx, upsertConnectionLocationMap,
-		arg.OrganizationID,
-		arg.BrandID,
-		arg.ConnectionID,
-		arg.WarehouseLocationID,
-		arg.RemoteLocationCode,
-	)
-	var i ConnectionLocationMap
-	err := row.Scan(
-		&i.ID,
-		&i.OrganizationID,
-		&i.BrandID,
-		&i.ConnectionID,
-		&i.WarehouseLocationID,
-		&i.RemoteLocationCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

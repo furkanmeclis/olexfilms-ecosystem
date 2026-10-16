@@ -133,6 +133,7 @@ type Querier interface {
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	ClearServiceIncome(ctx context.Context, arg ClearServiceIncomeParams) (Service, error)
+	ClearWarehouseMemberDefault(ctx context.Context, arg ClearWarehouseMemberDefaultParams) error
 	// A cancelled re-application service releases the claim for a new attempt.
 	ClearWarrantyClaimReapplyService(ctx context.Context, arg ClearWarrantyClaimReapplyServiceParams) (WarrantyClaim, error)
 	// Closes the source account. phone_e164/email are the values it keeps (the
@@ -195,6 +196,7 @@ type Querier interface {
 	CountCertificateTypeBindings(ctx context.Context, arg CountCertificateTypeBindingsParams) (int64, error)
 	CountCertificateTypes(ctx context.Context, arg CountCertificateTypesParams) (int64, error)
 	CountCertificates(ctx context.Context, arg CountCertificatesParams) (int64, error)
+	CountConnectionLocationMaps(ctx context.Context, arg CountConnectionLocationMapsParams) (int64, error)
 	CountConsentsOfUser(ctx context.Context, userID int64) (int64, error)
 	CountContractInstances(ctx context.Context, arg CountContractInstancesParams) (int64, error)
 	// TEC-397 (F4-02e): WhatsApp visitor flow — abuse limits, the KVKK notice
@@ -334,6 +336,7 @@ type Querier interface {
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error)
+	CountWarehouseMembers(ctx context.Context, arg CountWarehouseMembersParams) (int64, error)
 	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
@@ -387,6 +390,8 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Certificate types.
 	CreateCertificateType(ctx context.Context, arg CreateCertificateTypeParams) (CertificateType, error)
+	// TEC-769: remote location name -> warehouse (+ optional bin).
+	CreateConnectionLocationMap(ctx context.Context, arg CreateConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// ---------------------------------------------------------------------------
 	// Instances.
 	CreateContractInstance(ctx context.Context, arg CreateContractInstanceParams) (ContractInstance, error)
@@ -728,6 +733,7 @@ type Querier interface {
 	DeleteUnusedProductCategory(ctx context.Context, arg DeleteUnusedProductCategoryParams) (int64, error)
 	DeleteUserTOTP(ctx context.Context, userID int64) error
 	DeleteWarehouse(ctx context.Context, arg DeleteWarehouseParams) (int64, error)
+	DeleteWarehouseMember(ctx context.Context, arg DeleteWarehouseMemberParams) (int64, error)
 	DeleteWarehouseTransferLine(ctx context.Context, arg DeleteWarehouseTransferLineParams) (int64, error)
 	DeleteWarrantyClaimPart(ctx context.Context, arg DeleteWarrantyClaimPartParams) (int64, error)
 	// Returns the storage key so the caller can remove the object.
@@ -943,6 +949,7 @@ type Querier interface {
 	GetCertificateType(ctx context.Context, arg GetCertificateTypeParams) (CertificateType, error)
 	GetCertificateTypeByUUID(ctx context.Context, arg GetCertificateTypeByUUIDParams) (CertificateType, error)
 	GetConnectionLocationMapByRemote(ctx context.Context, arg GetConnectionLocationMapByRemoteParams) (ConnectionLocationMap, error)
+	GetConnectionLocationMapByUUID(ctx context.Context, arg GetConnectionLocationMapByUUIDParams) (ConnectionLocationMap, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetContactOptOutState(ctx context.Context, arg GetContactOptOutStateParams) (ContactOptOutState, error)
 	GetContractInstanceByID(ctx context.Context, id int64) (ContractInstance, error)
@@ -1147,6 +1154,8 @@ type Querier interface {
 	GetOrganizationMemberByUserAndOrgUUID(ctx context.Context, arg GetOrganizationMemberByUserAndOrgUUIDParams) (GetOrganizationMemberByUserAndOrgUUIDRow, error)
 	GetOrganizationMemberByUserAndSlug(ctx context.Context, arg GetOrganizationMemberByUserAndSlugParams) (GetOrganizationMemberByUserAndSlugRow, error)
 	GetOrganizationMemberByUserUUID(ctx context.Context, arg GetOrganizationMemberByUserUUIDParams) (GetOrganizationMemberByUserUUIDRow, error)
+	// An active user that is a member of the organization (member picker).
+	GetOrganizationMemberUser(ctx context.Context, arg GetOrganizationMemberUserParams) (GetOrganizationMemberUserRow, error)
 	GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error)
 	GetPartConsumptionExpectationByUUID(ctx context.Context, arg GetPartConsumptionExpectationByUUIDParams) (PartConsumptionExpectation, error)
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
@@ -1364,6 +1373,8 @@ type Querier interface {
 	// code.
 	GetWarehouseLocationByCode(ctx context.Context, arg GetWarehouseLocationByCodeParams) (WarehouseLocation, error)
 	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
+	GetWarehouseMember(ctx context.Context, arg GetWarehouseMemberParams) (GetWarehouseMemberRow, error)
+	GetWarehouseSettings(ctx context.Context, organizationID int64) (WarehouseSetting, error)
 	GetWarehouseTransferByUUID(ctx context.Context, arg GetWarehouseTransferByUUIDParams) (WarehouseTransfer, error)
 	GetWarranty(ctx context.Context, arg GetWarrantyParams) (Warranty, error)
 	// Public page /warranty/{public_code} (decision 1).
@@ -1554,6 +1565,7 @@ type Querier interface {
 	// Unit current state (serial units; one active owner).
 	InsertUnitCurrentState(ctx context.Context, arg InsertUnitCurrentStateParams) (UnitCurrentState, error)
 	InsertUserRole(ctx context.Context, arg InsertUserRoleParams) error
+	InsertWarehouseMember(ctx context.Context, arg InsertWarehouseMemberParams) (WarehouseMember, error)
 	InsertWarehouseTransferLine(ctx context.Context, arg InsertWarehouseTransferLineParams) (WarehouseTransferLine, error)
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
@@ -1768,7 +1780,9 @@ type Querier interface {
 	ListCertificates(ctx context.Context, arg ListCertificatesParams) ([]ListCertificatesRow, error)
 	ListCertificatesDueForExpiry(ctx context.Context, arg ListCertificatesDueForExpiryParams) ([]Certificate, error)
 	ListCertificatesDueForExpiryNotice(ctx context.Context, arg ListCertificatesDueForExpiryNoticeParams) ([]Certificate, error)
-	ListConnectionLocationMaps(ctx context.Context, connectionID int64) ([]ConnectionLocationMap, error)
+	// List contract: sort keys remote_location_code, warehouse, created_at (id
+	// tiebreak); q on the remote code, warehouse name/code and bin full code.
+	ListConnectionLocationMaps(ctx context.Context, arg ListConnectionLocationMapsParams) ([]ListConnectionLocationMapsRow, error)
 	ListContactOptOutHistory(ctx context.Context, arg ListContactOptOutHistoryParams) ([]ContactOptOut, error)
 	ListContactOptOutStates(ctx context.Context, contactE164 string) ([]ContactOptOutState, error)
 	// org_ids is the caller's scope (empty = no organization).
@@ -2657,6 +2671,7 @@ type Querier interface {
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
 	ListUserRolesByUserUUID(ctx context.Context, argUuid uuid.UUID) ([]Role, error)
 	ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsForBulkParams) ([]uuid.UUID, error)
+	ListUserWarehouseMemberships(ctx context.Context, arg ListUserWarehouseMembershipsParams) ([]ListUserWarehouseMembershipsRow, error)
 	ListUsersByIDs(ctx context.Context, ids []int64) ([]ListUsersByIDsRow, error)
 	// Platform users list. Sort follows docs/list-contract.md: sort_key is the
 	// trusted key from apiquery.UsersSortSpec, one CASE pair per column type,
@@ -2687,6 +2702,9 @@ type Querier interface {
 	ListVisibleLibraryFolders(ctx context.Context, arg ListVisibleLibraryFoldersParams) ([]LibraryFolder, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
+	// List contract: sort keys name, email, created_at (id tiebreak); q on
+	// name, surname, email.
+	ListWarehouseMembers(ctx context.Context, arg ListWarehouseMembersParams) ([]ListWarehouseMembersRow, error)
 	// ---------------------------------------------------------------------------
 	// Scope.
 	// Typed locations of a warehouse, optionally one room.
@@ -3524,6 +3542,7 @@ type Querier interface {
 	// customer snapshot, 000050).
 	SetVehicleOwner(ctx context.Context, arg SetVehicleOwnerParams) (Vehicle, error)
 	SetVehicleTransferVerified(ctx context.Context, arg SetVehicleTransferVerifiedParams) (VehicleTransfer, error)
+	SetWarehouseMemberDefault(ctx context.Context, arg SetWarehouseMemberDefaultParams) (int64, error)
 	SetWarehouseSortOrder(ctx context.Context, arg SetWarehouseSortOrderParams) (int64, error)
 	SetWarehouseTransferLineIn(ctx context.Context, arg SetWarehouseTransferLineInParams) error
 	SetWarehouseTransferLineOut(ctx context.Context, arg SetWarehouseTransferLineOutParams) error
@@ -3644,6 +3663,7 @@ type Querier interface {
 	UpdateCertificateExpiry(ctx context.Context, arg UpdateCertificateExpiryParams) (Certificate, error)
 	UpdateCertificateStorageKey(ctx context.Context, arg UpdateCertificateStorageKeyParams) (Certificate, error)
 	UpdateCertificateType(ctx context.Context, arg UpdateCertificateTypeParams) (CertificateType, error)
+	UpdateConnectionLocationMap(ctx context.Context, arg UpdateConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// Re-renders an open contract (draft or pending).
 	UpdateContractInstanceContent(ctx context.Context, arg UpdateContractInstanceContentParams) (ContractInstance, error)
 	UpdateContractTemplate(ctx context.Context, arg UpdateContractTemplateParams) (ContractTemplate, error)
@@ -3759,7 +3779,6 @@ type Querier interface {
 	UpsertBonusSettings(ctx context.Context, arg UpsertBonusSettingsParams) (BonusSetting, error)
 	// Contents ------------------------------------------------------------------
 	UpsertCampaignContent(ctx context.Context, arg UpsertCampaignContentParams) (CampaignContent, error)
-	UpsertConnectionLocationMap(ctx context.Context, arg UpsertConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// ---------------------------------------------------------------------------
 	// Signers.
 	// Fills the customer or staff slot of an open contract; a changed person
@@ -3847,6 +3866,7 @@ type Querier interface {
 	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)
 	UpsertUnitCurrentStateForRepair(ctx context.Context, arg UpsertUnitCurrentStateForRepairParams) error
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
+	UpsertWarehouseSettings(ctx context.Context, arg UpsertWarehouseSettingsParams) (WarehouseSetting, error)
 	// TEC-623: LID -> phone map learned from webhook events.
 	UpsertWhatsAppLID(ctx context.Context, arg UpsertWhatsAppLIDParams) error
 	// Marking the code used is the claim; an expired or used code returns no row.
@@ -3868,6 +3888,10 @@ type Querier interface {
 	// expiry stamp is cleared with the status change (the voided_at stamp and
 	// the activity log keep the history).
 	VoidWarrantyWithReason(ctx context.Context, arg VoidWarrantyWithReasonParams) (Warranty, error)
+	// TEC-769: user <-> warehouse membership and organization warehouse settings.
+	// has_any: the user has at least one membership in the organization (the
+	// restriction is on); is_member: one of them is the given warehouse.
+	WarehouseMembershipCheck(ctx context.Context, arg WarehouseMembershipCheckParams) (WarehouseMembershipCheckRow, error)
 	// Transfer aggregate report: per product, the transfers and units of the
 	// organization's warehouse transfers matching the list filters (status,
 	// from / to warehouse, created range, q) and the product filter. shipped:
