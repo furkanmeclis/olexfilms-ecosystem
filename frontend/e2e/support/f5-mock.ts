@@ -756,34 +756,33 @@ export function mockShowcase(api: MockApi) {
 }
 
 /**
- * Stock forecast list (TEC-486). The paths are the ones the screen calls
- * (stock-forecast.service.ts); see the PR note on the API contract.
+ * Stock forecast screen (TEC-486, TEC-755): the backend routes of
+ * stockforecast/routes.go with the OpenAPI shapes.
  */
 export function mockStockForecast(api: MockApi) {
-  const drafts: Json[] = [];
+  const calls = { drafts: [] as Json[], thresholds: [] as Json[] };
+  const thresholds = { warning_days: 14, cover_days: 30, overrides: [] };
   const row = (over: Json) => ({
     uuid: "f-ok",
     product: {
       uuid: F5.product,
       sku: "PPF-190",
       name: "Olex PPF 190",
-      category: { uuid: "c1", name: "PPF" },
+      category_uuid: "0b9c4c1e-0000-4000-8000-0000000051c1",
+      category_name: "PPF",
       unit_type: "piece",
     },
+    computed_on: "2026-10-09",
     on_hand_qty: 4,
-    avg_daily_30: "1.0",
-    avg_daily_90: "0.8",
-    seasonality_factor: "1.0",
-    days_left: "4",
+    on_hand_meters: "0",
+    avg_daily_30: "1.0000",
+    avg_daily_90: "0.8000",
+    seasonality_factor: "1.000",
+    days_left: "4.00",
     depletion_date: "2026-10-13",
     data_days: 120,
-    min_data_days: 90,
     status: "critical",
     suggested_qty: 10,
-    suggested_meters: null,
-    warning_days: 14,
-    cover_days: 30,
-    vehicles_left: null,
     ...over,
   });
   api.extra.push(async ({ method, path, body, ok }) => {
@@ -797,23 +796,48 @@ export function mockStockForecast(api: MockApi) {
               uuid: "0b9c4c1e-0000-4000-8000-000000005171",
               sku: "PPF-150",
               name: "Olex PPF 150",
+              unit_type: "piece",
             },
             status: "insufficient_data",
             data_days: 40,
-            suggested_qty: null,
+            suggested_qty: undefined,
           }),
         ]),
       );
       return true;
     }
-    if (method === "POST" && path === "/v1/stock-forecasts/order-drafts") {
-      drafts.push(body ?? {});
-      await ok({ uuid: F5.order, order_no: "ORD-2026-0516" }, 201);
+    if (method === "GET" && path === "/v1/stock-forecasts/meta") {
+      await ok({
+        default_sort: "days_left",
+        sortable_fields: ["days_left", "depletion_date", "product_name"],
+        statuses: ["critical", "warning", "ok", "no_consumption"],
+        thresholds,
+        parameters: {
+          min_data_days: 90,
+          warning_days: 14,
+          critical_days: 7,
+          cover_days: 30,
+          horizon_days: 90,
+        },
+      });
+      return true;
+    }
+    if (method === "PUT" && path === "/v1/stock-forecasts/thresholds") {
+      calls.thresholds.push(body ?? {});
+      await ok(thresholds);
+      return true;
+    }
+    if (method === "POST" && path === "/v1/stock-forecasts/order-draft") {
+      calls.drafts.push(body ?? {});
+      await ok(
+        { order: { uuid: F5.order, order_no: "ORD-2026-0516" }, created: true },
+        201,
+      );
       return true;
     }
     return false;
   });
-  return drafts;
+  return calls;
 }
 
 /** Performance panel (TEC-496) for the center: ranking and region map. */
