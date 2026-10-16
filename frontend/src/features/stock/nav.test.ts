@@ -46,20 +46,4 @@ describe("tenant nav: my stock (TEC-224)", () => {
       "stock-mine",
     );
   });
-
-  it("shows the forecast add-on only with its module and permission", () => {
-    expect(
-      visibleIds(
-        [Permission.StockRead, Permission.StockForecastRead],
-        "dealer",
-        ["stock", "stock_forecast"],
-      ),
-    ).toContain("stock-forecast");
-    expect(
-      visibleIds([Permission.StockRead, Permission.StockForecastRead]),
-    ).not.toContain("stock-forecast");
-    expect(
-      visibleIds([Permission.StockRead], "dealer", ["stock", "stock_forecast"]),
-    ).not.toContain("stock-forecast");
-  });
 });

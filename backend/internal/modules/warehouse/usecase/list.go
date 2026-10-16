@@ -49,6 +49,8 @@ type EntryListFilter struct {
 	Statuses       []string
 	Modes          []string
 	WarehouseUUIDs []uuid.UUID
+	// ImportJobUUIDs: entries written by these stock import jobs (TEC-759).
+	ImportJobUUIDs []uuid.UUID
 	CreatedFrom    *time.Time
 	CreatedBefore  *time.Time
 	Q              string
@@ -82,7 +84,7 @@ type TransferListFilter struct {
 	Limit, Offset      int32
 }
 
-// ParseEntryListFilter reads status, mode, warehouse_uuid (all CSV),
+// ParseEntryListFilter reads status, mode, warehouse_uuid, import_job_uuid (all CSV),
 // created_from / created_to, q, sort, limit and offset. Errors are
 // *apiquery.ValidationError (400).
 func ParseEntryListFilter(values url.Values) (EntryListFilter, error) {
@@ -97,6 +99,9 @@ func ParseEntryListFilter(values url.Values) (EntryListFilter, error) {
 		return f, err
 	}
 	if f.WarehouseUUIDs, err = uuidList(values, "warehouse_uuid"); err != nil {
+		return f, err
+	}
+	if f.ImportJobUUIDs, err = uuidList(values, "import_job_uuid"); err != nil {
 		return f, err
 	}
 	if f.CreatedFrom, f.CreatedBefore, err = createdRange(values); err != nil {

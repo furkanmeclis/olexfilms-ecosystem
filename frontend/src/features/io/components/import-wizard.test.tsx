@@ -180,6 +180,12 @@ describe("ImportWizard with the stock import preview", () => {
             onOpenChange: () => undefined,
             onComplete,
             initialOptions: { barcode_policy: "skip" },
+            resultAction: (settled: ImportJob) =>
+              createElement(
+                "span",
+                { "data-testid": "result-action" },
+                settled.status,
+              ),
             extraOptions: ({ values }) =>
               createElement(
                 "p",
@@ -230,7 +236,7 @@ describe("ImportWizard with the stock import preview", () => {
 
     await click(byTestId("import-next"));
     expect(byTestId("import-confirm-sentence")?.textContent).toBe(
-      "2 units will be added to the Merkez Depo stock and a single stock entry document will be created. 1 row will be skipped.",
+      "2 units will be added to the Merkez Depo stock and a single stock entry document will be created. 2 of them will be placed on the location given in the file. 1 row will be skipped.",
     );
     const confirm = byTestId("import-confirm") as HTMLButtonElement;
     expect(confirm.textContent).toBe("Import 2 units");
@@ -244,6 +250,7 @@ describe("ImportWizard with the stock import preview", () => {
     expect(byTestId("import-result-detail")?.getAttribute("href")).toBe(
       `/t/olex/imports/${JOB}`,
     );
+    expect(byTestId("result-action")?.textContent).toBe("applied");
     expect(onComplete).toHaveBeenCalled();
   });
 });

@@ -179,19 +179,24 @@ type EntryLine struct {
 
 // StockEntry is the entry document.
 type StockEntry struct {
-	UUID            uuid.UUID         `json:"uuid"`
-	Mode            string            `json:"mode"`
-	Status          string            `json:"status"`
-	Note            *string           `json:"note"`
-	Warehouse       *EntryWarehouse   `json:"warehouse"`
-	ImportBatchUUID *uuid.UUID        `json:"import_batch_uuid"`
-	LineCount       int64             `json:"line_count"`
-	PlacedCount     *int64            `json:"placed_count,omitempty"`
-	Lines           []EntryLine       `json:"lines,omitempty"`
-	LabelBatches    []EntryLabelBatch `json:"label_batches,omitempty"`
-	CreatedAt       time.Time         `json:"created_at"`
-	ConfirmedAt     *time.Time        `json:"confirmed_at"`
-	CancelledAt     *time.Time        `json:"cancelled_at"`
+	UUID            uuid.UUID       `json:"uuid"`
+	Mode            string          `json:"mode"`
+	Status          string          `json:"status"`
+	Note            *string         `json:"note"`
+	Warehouse       *EntryWarehouse `json:"warehouse"`
+	ImportBatchUUID *uuid.UUID      `json:"import_batch_uuid"`
+	// Import entries (TEC-759): the import job, its file and the batch
+	// status (applied / undone / partially_undone).
+	ImportJobUUID        *uuid.UUID        `json:"import_job_uuid,omitempty"`
+	ImportSourceFilename *string           `json:"import_source_filename,omitempty"`
+	ImportStatus         *string           `json:"import_status,omitempty"`
+	LineCount            int64             `json:"line_count"`
+	PlacedCount          *int64            `json:"placed_count,omitempty"`
+	Lines                []EntryLine       `json:"lines,omitempty"`
+	LabelBatches         []EntryLabelBatch `json:"label_batches,omitempty"`
+	CreatedAt            time.Time         `json:"created_at"`
+	ConfirmedAt          *time.Time        `json:"confirmed_at"`
+	CancelledAt          *time.Time        `json:"cancelled_at"`
 }
 
 // --- inputs ------------------------------------------------------------------
@@ -287,11 +292,13 @@ func (s *StockEntries) List(ctx context.Context, c EntryCaller, f EntryListFilte
 	f.Sort = orDefault(f.Sort, EntrySort)
 	cp := db.CountStockEntriesParams{
 		OrganizationID: org, Statuses: f.Statuses, Modes: f.Modes, WarehouseUuids: f.WarehouseUUIDs,
-		CreatedFrom: listTS(f.CreatedFrom), CreatedBefore: listTS(f.CreatedBefore), Q: listQ(f.Q),
+		ImportJobUuids: f.ImportJobUUIDs,
+		CreatedFrom:    listTS(f.CreatedFrom), CreatedBefore: listTS(f.CreatedBefore), Q: listQ(f.Q),
 	}
 	rows, err := s.q.ListStockEntries(ctx, db.ListStockEntriesParams{
 		OrganizationID: cp.OrganizationID, Statuses: cp.Statuses, Modes: cp.Modes, WarehouseUuids: cp.WarehouseUuids,
-		CreatedFrom: cp.CreatedFrom, CreatedBefore: cp.CreatedBefore, Q: cp.Q,
+		ImportJobUuids: cp.ImportJobUuids,
+		CreatedFrom:    cp.CreatedFrom, CreatedBefore: cp.CreatedBefore, Q: cp.Q,
 		SortKey: f.Sort.Key, SortDesc: f.Sort.Desc, PageLimit: f.Limit, PageOffset: f.Offset,
 	})
 	if err != nil {
@@ -856,11 +863,18 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 		out.Warehouse = &EntryWarehouse{UUID: w.Uuid, Code: w.Code, Name: w.Name}
 	}
 	if e.ImportBatchID.Valid {
-		id, err := q.GetStockImportBatchUUID(ctx, e.ImportBatchID.Int64)
+		src, err := q.GetStockEntryImportSource(ctx, e.ImportBatchID.Int64)
 		if err != nil {
 			return out, err
 		}
-		out.ImportBatchUUID = &id
+		out.ImportBatchUUID, out.ImportStatus = &src.Uuid, &src.Status
+		if src.ImportJobUuid.Valid {
+			id := uuid.UUID(src.ImportJobUuid.Bytes)
+			out.ImportJobUUID = &id
+		}
+		if src.SourceFilename != "" {
+			out.ImportSourceFilename = &src.SourceFilename
+		}
 	}
 	if !full {
 		n, err := q.CountStockEntryLines(ctx, e.ID)

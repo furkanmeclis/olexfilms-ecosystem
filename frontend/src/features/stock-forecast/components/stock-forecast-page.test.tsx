@@ -9,12 +9,13 @@ import type { StockForecastRow } from "@/features/stock-forecast/services/stock-
 
 const api = vi.hoisted(() => ({
   list: vi.fn(),
+  meta: vi.fn(),
   detail: vi.fn(),
-  updateThreshold: vi.fn(),
+  putThresholds: vi.fn(),
   createOrderDraft: vi.fn(),
-  networkDemand: vi.fn(),
-  dealerSummary: vi.fn(),
-  widget: vi.fn(),
+  network: vi.fn(),
+  subtree: vi.fn(),
+  criticalCount: vi.fn(),
 }));
 const state = vi.hoisted(() => ({
   grants: new Set<string>(),
@@ -110,24 +111,31 @@ function row(partial: Partial<StockForecastRow>): StockForecastRow {
       uuid: "p1",
       sku: "SKU-1",
       name: "Film A",
-      category: { uuid: "c1", name: "PPF" },
+      category_uuid: "c1",
+      category_name: "PPF",
       unit_type: "piece",
     },
+    computed_on: "2026-10-08",
     on_hand_qty: partial.on_hand_qty ?? 4,
+    on_hand_meters: "0",
     avg_daily_30: partial.avg_daily_30 ?? "1.0",
     avg_daily_90: partial.avg_daily_90 ?? "0.8",
     seasonality_factor: partial.seasonality_factor ?? "1.0",
     days_left: partial.days_left ?? "4",
     depletion_date: partial.depletion_date ?? "2026-10-12",
     data_days: partial.data_days ?? 90,
-    min_data_days: partial.min_data_days ?? 90,
     status: partial.status ?? "critical",
-    suggested_qty: partial.suggested_qty ?? 10,
-    suggested_meters: partial.suggested_meters ?? null,
-    warning_days: partial.warning_days ?? 14,
-    cover_days: partial.cover_days ?? 30,
-    vehicles_left: partial.vehicles_left ?? null,
+    suggested_qty: "suggested_qty" in partial ? partial.suggested_qty : 10,
+    suggested_meters: partial.suggested_meters,
+    vehicles_left: partial.vehicles_left,
   };
+}
+
+/** Props of the ExportMenu inside a table's toolbar (EntityToolbar is mocked). */
+function exportProps(table: Record<string, unknown>) {
+  const toolbar = table.toolbarExtra as
+    { props: { children?: { props: Record<string, unknown> } } } | undefined;
+  return toolbar?.props.children?.props;
 }
 
 let container: HTMLDivElement;
@@ -153,25 +161,64 @@ beforeEach(() => {
       row({ uuid: "ok", status: "critical" }),
       row({
         uuid: "no",
-        product: { uuid: "p2", sku: "SKU-2", name: "Film B" },
+        product: {
+          uuid: "p2",
+          sku: "SKU-2",
+          name: "Film B",
+          unit_type: "piece",
+        },
         status: "insufficient_data",
         data_days: 50,
-        min_data_days: 90,
-        suggested_qty: null,
+        suggested_qty: undefined,
       }),
     ],
     total: 2,
     limit: 20,
     offset: 0,
   });
-  api.createOrderDraft.mockResolvedValue({ uuid: "o1", order_no: "ORD-1" });
-  api.networkDemand.mockResolvedValue({
-    items: [],
-    total: 0,
+  api.meta.mockResolvedValue({
+    default_sort: "days_left",
+    sortable_fields: ["days_left"],
+    statuses: ["critical"],
+    thresholds: {
+      warning_days: 14,
+      cover_days: 30,
+      overrides: [{ uuid: "t0", warning_days: 14, cover_days: 30 }],
+    },
+    parameters: {
+      min_data_days: 90,
+      warning_days: 14,
+      critical_days: 7,
+      cover_days: 30,
+      horizon_days: 90,
+    },
+  });
+  api.putThresholds.mockResolvedValue({
+    warning_days: 14,
+    cover_days: 30,
+    overrides: [],
+  });
+  api.createOrderDraft.mockResolvedValue({
+    order: { uuid: "o1", order_no: "ORD-1" },
+    created: true,
+  });
+  api.network.mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
+  api.subtree.mockResolvedValue({
+    items: [
+      {
+        organization_uuid: "d1",
+        slug: "d1",
+        name: "Dealer One",
+        critical_count: 2,
+        warning_count: 1,
+        insufficient_data_count: 0,
+        total_count: 9,
+      },
+    ],
+    total: 1,
     limit: 20,
     offset: 0,
   });
-  api.dealerSummary.mockResolvedValue({ items: [] });
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
@@ -226,7 +273,7 @@ describe("StockForecastPage (TEC-486)", () => {
       false,
     );
     expect(container.textContent).toContain(
-      "stock_forecast.insufficient.banner",
+      'stock_forecast.insufficient.banner {"min":90,"left":40}',
     );
   });
 
@@ -243,9 +290,9 @@ describe("StockForecastPage (TEC-486)", () => {
     ) as HTMLButtonElement;
     await act(async () => create.click());
     await flush();
-    expect(api.createOrderDraft).toHaveBeenCalledWith([
-      { product_uuid: "p1", quantity: 10, meters: null },
-    ]);
+    expect(api.createOrderDraft).toHaveBeenCalledWith({
+      items: [{ product_uuid: "p1", quantity: 10 }],
+    });
     const link = container.querySelector(
       '[data-testid="stock-forecast-draft-link"]',
     ) as HTMLAnchorElement | null;
@@ -260,6 +307,68 @@ describe("StockForecastPage (TEC-486)", () => {
     const threshold = columns.find((col) => col.id === "cover_days");
     expect(threshold?.meta?.editVariant).toBeUndefined();
     expect(props.features).toMatchObject({ inlineEdit: false });
+  });
+
+  it("saves a cover-days edit as a product override", async () => {
+    await renderPage();
+    // The latest render of the list table, after /meta loaded the thresholds.
+    const props = captured.tables.findLast(
+      (t) =>
+        (t.features as { persistKey?: string }).persistKey ===
+        "tenant-stock-forecast-v1",
+    )!;
+    expect(props.features).toMatchObject({ inlineEdit: true });
+    const onCellEdit = props.onCellEdit as (p: {
+      row: StockForecastRow;
+      value: unknown;
+    }) => void;
+    await act(async () => onCellEdit({ row: row({}), value: "45" }));
+    await flush();
+    expect(api.putThresholds).toHaveBeenCalledWith({
+      warning_days: 14,
+      cover_days: 30,
+      products: [{ product_uuid: "p1", warning_days: 14, cover_days: 45 }],
+    });
+    expect(captured.toasts).toContain("stock_forecast.threshold.saved");
+  });
+
+  it("exports the list through POST /v1/stock-forecasts/export", async () => {
+    await renderPage();
+    expect(exportProps(captured.tables[0]!)).toMatchObject({
+      exportPath: "/v1/stock-forecasts/export",
+      formats: ["xlsx", "csv"],
+    });
+  });
+
+  it("shows network demand to the center with its xlsx export", async () => {
+    state.orgType = "center";
+    await renderPage();
+    expect(api.network).toHaveBeenCalled();
+    expect(api.subtree).not.toHaveBeenCalled();
+    expect(
+      captured.tables
+        .map(exportProps)
+        .some(
+          (e) =>
+            e?.exportPath === "/v1/stock-forecasts/network/export" &&
+            JSON.stringify(e.formats) === '["xlsx"]',
+        ),
+    ).toBe(true);
+  });
+
+  it("lists the distributor's dealers from the subtree summary", async () => {
+    state.orgType = "distributor";
+    await renderPage();
+    expect(api.subtree).toHaveBeenCalled();
+    expect(api.network).not.toHaveBeenCalled();
+    const table = captured.tables
+      .filter((t) => (t.data as unknown[]).length > 0)
+      .find((t) =>
+        (t.data as { organization_uuid?: string }[]).some(
+          (r) => r.organization_uuid === "d1",
+        ),
+      );
+    expect(table).toBeDefined();
   });
 
   it("hides the menu item when the module is disabled", () => {

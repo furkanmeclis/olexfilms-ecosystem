@@ -25,11 +25,14 @@ import {
   enumFilterOptions,
   useWarehouseFilterOptions,
 } from "@/features/warehouse/components/table-options";
+import { StockImportButton } from "@/features/warehouse/components/stock-import-button";
 import {
   useWarehouseAccess,
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
+import { useFeature } from "@/features/modules/hooks/use-features";
 import {
+  canImportStock,
   ENTRY_MODES,
   entryStatusTone,
   ENTRY_STATUSES,
@@ -67,7 +70,8 @@ export const ENTRIES_PERSIST_KEY = "tenant-warehouse-entries-v1";
  * warehouse / created filters, row actions (open, cancel a draft) and
  * mobile cards — and a new draft at one of its warehouses. Only the center
  * reserves new barcodes in an entry (generate_new, K14); a distributor
- * takes in printed labels (with_existing).
+ * takes in printed labels (with_existing). The center also imports opening
+ * stock / bulk barcodes from Excel (TEC-759, mode import).
  */
 export function StockEntriesPage({ slug }: { slug: string }) {
   const { t, format } = useLocale();
@@ -76,6 +80,8 @@ export function StockEntriesPage({ slug }: { slug: string }) {
   const { confirm } = useDialogs();
   const access = useWarehouseAccess(slug);
   const canWrite = access.can(Permission.WarehouseWrite);
+  const stockModule = useFeature(slug, "stock").enabled;
+  const canImport = canImportStock(access, stockModule);
   const [creating, setCreating] = useState(false);
   const warehouseOptions = useWarehouseFilterOptions(access.allowed);
 
@@ -256,15 +262,20 @@ export function StockEntriesPage({ slug }: { slug: string }) {
       description={t("warehouse.entries.description")}
       icon={<PackagePlus className="size-6" />}
       actions={
-        canWrite && !creating ? (
-          <Button
-            type="button"
-            onClick={() => setCreating(true)}
-            data-testid="entry-new"
-          >
-            <Plus className="size-4" />
-            {t("warehouse.entries.new")}
-          </Button>
+        (canWrite && !creating) || canImport ? (
+          <div className="flex flex-wrap gap-2">
+            {canImport ? <StockImportButton slug={slug} /> : null}
+            {canWrite && !creating ? (
+              <Button
+                type="button"
+                onClick={() => setCreating(true)}
+                data-testid="entry-new"
+              >
+                <Plus className="size-4" />
+                {t("warehouse.entries.new")}
+              </Button>
+            ) : null}
+          </div>
         ) : null
       }
     >

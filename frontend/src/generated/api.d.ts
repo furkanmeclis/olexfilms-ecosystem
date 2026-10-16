@@ -6514,7 +6514,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a completed count and apply the resolutions
-         * @description Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+         * @description Needs `warehouse.write`, `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN), and a recent step-up grant (403 STEP_UP_REQUIRED). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
          */
         post: operations["approveStockCount"];
         delete?: never;
@@ -6572,7 +6572,7 @@ export interface paths {
         };
         /**
          * List the stock entry documents of the active organization
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Newest first; entries written by an applied stock import (TEC-158) have mode `import`. TEC-375 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), status (flow rank draft, confirmed, undone, cancelled), warehouse (name; import entries last), with an id tiebreak; `status`, `mode` and `warehouse_uuid` are comma separated any-of filters; `q` matches the note and the warehouse name or code. An unknown value is 400 VALIDATION_ERROR.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Newest first; entries written by an applied stock import (TEC-158) have mode `import`. TEC-375 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), status (flow rank draft, confirmed, undone, cancelled), warehouse (name; import entries last), with an id tiebreak; `status`, `mode`, `warehouse_uuid` and `import_job_uuid` are comma separated any-of filters; `q` matches the note and the warehouse name or code. An unknown value is 400 VALIDATION_ERROR.
          */
         get: operations["listStockEntries"];
         put?: never;
@@ -9083,7 +9083,7 @@ export interface paths {
          * Mobile: Approve a completed count and apply the resolutions
          * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/approve`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+         *     Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). The mobile API has no step-up verification contract. Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
          */
         post: operations["mobileApproveStockCount"];
         delete?: never;
@@ -11482,6 +11482,26 @@ export interface paths {
         get: operations["getStockForecastMeta"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock-forecasts/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the stock forecast list export
+         * @description TEC-755. Queues an I/O engine export job (`stock_forecasts.list`) over the active organization's forecast list. `query` carries the list parameters of `GET /v1/stock-forecasts` (`q`, `sort`, `status`, `days_left_min`, `days_left_max`); format is `csv` or `xlsx`. Poll and download through `/v1/tenant/exports/{uuid}`.
+         */
+        post: operations["exportStockForecasts"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20976,6 +20996,11 @@ export interface components {
         StockCount: {
             /** Format: uuid */
             uuid: string;
+            /**
+             * Format: uuid
+             * @description Present on detail and report responses; null in lists or for legacy counts.
+             */
+            created_by_user_uuid: string | null;
             status: components["schemas"]["StockCountStatus"];
             /** @enum {string} */
             method: "location_first" | "unit_first" | "product_qty" | "initial_placement";
@@ -21323,6 +21348,15 @@ export interface components {
             warehouse: null | components["schemas"]["StockEntryWarehouse"];
             /** Format: uuid */
             import_batch_uuid: string | null;
+            /**
+             * Format: uuid
+             * @description Import entries (TEC-759) - the stock import job that wrote the entry.
+             */
+            import_job_uuid?: string;
+            /** @description Import entries - the uploaded file name. */
+            import_source_filename?: string;
+            /** @description Import entries - status of the import batch (applied, undone, partially_undone when some rows moved after the import and were not undone). */
+            import_status?: string;
             /** Format: int64 */
             line_count: number;
             /**
@@ -24508,13 +24542,21 @@ export interface components {
                 stock_meters: string;
             }[];
             thresholds: components["schemas"]["StockForecastThresholds"];
-            parameters: {
-                min_data_days: number;
-                warning_days: number;
-                critical_days: number;
-                cover_days: number;
-                horizon_days: number;
-            };
+            parameters: components["schemas"]["StockForecastParameters"];
+        };
+        StockForecastParameters: {
+            min_data_days: number;
+            warning_days: number;
+            critical_days: number;
+            cover_days: number;
+            horizon_days: number;
+        };
+        StockForecastMeta: {
+            default_sort: string;
+            sortable_fields: string[];
+            statuses: components["schemas"]["StockForecastStatus"][];
+            thresholds: components["schemas"]["StockForecastThresholds"];
+            parameters: components["schemas"]["StockForecastParameters"];
         };
         StockForecastThresholdInput: {
             warning_days: number;
@@ -24678,7 +24720,7 @@ export interface components {
         EnvelopeStockForecastMeta: {
             /** @enum {boolean} */
             success: true;
-            data: Record<string, never>;
+            data: components["schemas"]["StockForecastMeta"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeStockForecastOrderDraft: {
@@ -40399,7 +40441,15 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            /** @description Forbidden: STEP_UP_REQUIRED, COUNT_ADJUST_FORBIDDEN, STOCK_COUNT_SELF_APPROVAL, or missing warehouse.write scope. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };
@@ -40476,6 +40526,8 @@ export interface operations {
                 mode?: string;
                 /** @description Comma separated warehouse uuids (any of). */
                 warehouse_uuid?: string;
+                /** @description Comma separated import job uuids (any of): the entries written by these stock import jobs (TEC-759). */
+                import_job_uuid?: string;
                 q?: components["parameters"]["Q"];
                 /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];
@@ -44852,7 +44904,15 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            /** @description Forbidden: REALM_FORBIDDEN, COUNT_ADJUST_FORBIDDEN, STOCK_COUNT_SELF_APPROVAL, or missing warehouse.write scope. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             426: components["responses"]["MobileApiVersionUnsupported"];
@@ -49269,6 +49329,33 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeStockForecastMeta"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportStockForecasts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Export job */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };

@@ -30,7 +30,7 @@ package usecase
 //	any difference         ignore             -> nothing
 //
 // Approval needs warehouse.write (route) plus stock.adjust in the active
-// organization (checked here).
+// organization (checked here). The web route also requires step-up.
 
 import (
 	"context"
@@ -128,6 +128,8 @@ var (
 	ErrCountUnitScanned = errors.New("warehouse: unit already scanned in this count")
 	// ErrCountAdjustForbidden: approval needs stock.adjust.
 	ErrCountAdjustForbidden = errors.New("warehouse: stock count approval needs stock.adjust")
+	// ErrCountSelfApproval: the creator or sole scanner cannot approve the count.
+	ErrCountSelfApproval = errors.New("warehouse: stock count creator or sole scanner cannot approve")
 	// ErrCountStale: the stock changed since completion; the line can no
 	// longer be applied (recount or ignore it).
 	ErrCountStale = errors.New("warehouse: stock changed since the count was completed")
@@ -217,6 +219,7 @@ type CountSummary struct {
 // StockCount is the API view of a count.
 type StockCount struct {
 	UUID                  uuid.UUID      `json:"uuid"`
+	CreatedByUserUUID     *uuid.UUID     `json:"created_by_user_uuid"`
 	Status                string         `json:"status"`
 	Method                string         `json:"method"`
 	Visibility            string         `json:"visibility"`
@@ -707,6 +710,13 @@ func (s *Counts) detail(ctx context.Context, q *db.Queries, cnt db.StockCount) (
 	out, err := s.view(ctx, q, cnt)
 	if err != nil {
 		return StockCount{}, err
+	}
+	if cnt.CreatedByUserID.Valid {
+		creator, err := q.GetUserByID(ctx, cnt.CreatedByUserID.Int64)
+		if err != nil {
+			return StockCount{}, fmt.Errorf("warehouse: count creator: %w", err)
+		}
+		out.CreatedByUserUUID = &creator.Uuid
 	}
 	scans, err := q.ListStockCountScans(ctx, cnt.ID)
 	if err != nil {
@@ -1631,6 +1641,28 @@ func (s *Counts) Approve(ctx context.Context, c ScanCaller, id uuid.UUID, in []C
 		}
 		if cnt.Status != CountStatusPendingReview {
 			return ErrCountStatus
+		}
+		actor := c.Principal.UserInternal
+		if actor > 0 {
+			if cnt.CreatedByUserID.Valid && cnt.CreatedByUserID.Int64 == actor {
+				return ErrCountSelfApproval
+			}
+			scans, err := q.ListStockCountScans(ctx, cnt.ID)
+			if err != nil {
+				return fmt.Errorf("warehouse: count scans for approval: %w", err)
+			}
+			if len(scans) > 0 {
+				soleScanner := true
+				for _, scan := range scans {
+					if !scan.ScannedByUserID.Valid || scan.ScannedByUserID.Int64 != actor {
+						soleScanner = false
+						break
+					}
+				}
+				if soleScanner {
+					return ErrCountSelfApproval
+				}
+			}
 		}
 		lines, err := q.ListStockCountLines(ctx, cnt.ID)
 		if err != nil {

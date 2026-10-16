@@ -262,7 +262,7 @@ test("F5 gate tour: stock forecast list → bulk order draft", async ({
   const world = await installF5(page);
   world.adminSet(ORG, "stock_forecast", true);
   world.api.permissions.push("stock_forecast.manage");
-  const drafts = mockStockForecast(world.api);
+  const calls = mockStockForecast(world.api);
 
   await page.goto(`/t/${SLUG}/stock-forecast`);
   await expect(page.getByTestId("stock-forecast-row").first()).toBeVisible();
@@ -273,8 +273,8 @@ test("F5 gate tour: stock forecast list → bulk order draft", async ({
   await expect(page.getByTestId("stock-forecast-draft-link")).toHaveText(
     "ORD-2026-0516",
   );
-  expect(drafts).toEqual([
-    { lines: [{ product_uuid: F5.product, quantity: 10, meters: null }] },
+  expect(calls.drafts).toEqual([
+    { items: [{ product_uuid: F5.product, quantity: 10 }] },
   ]);
 });
 

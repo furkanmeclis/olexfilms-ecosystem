@@ -2,7 +2,7 @@
 
 import { CheckCircle2, Loader2, Undo2, XCircle } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ type ImportResultStepProps = {
   jobsHref?: string;
   /** Resource-specific link to what the import created (e.g. stock entry). */
   resultLink?: ImportResultLink | null;
+  /** Resource-specific action, rendered once the job settled (not failed). */
+  resultAction?: (job: ImportJob) => ReactNode;
   /** Called once the job reached applied / failed / rolled back. */
   onSettled?: (job: ImportJob) => void;
 };
@@ -45,6 +47,7 @@ export function ImportResultStep({
   detailHref,
   jobsHref,
   resultLink,
+  resultAction,
   onSettled,
 }: ImportResultStepProps) {
   const { t, format } = useLocale();
@@ -155,6 +158,9 @@ export function ImportResultStep({
             <Link href={resultLink.href}>{resultLink.label}</Link>
           </Button>
         ) : null}
+        {resultAction && !running && job.status !== "failed"
+          ? resultAction(job)
+          : null}
         <Button asChild variant="outline" size="sm">
           <Link href={detailHref} data-testid="import-result-detail">
             {t("imports.result.view_detail")}

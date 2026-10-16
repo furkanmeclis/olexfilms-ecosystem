@@ -206,7 +206,7 @@ func (h *Handler) Network(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
-type networkExportBody struct {
+type exportBody struct {
 	Format string            `json:"format"`
 	Query  map[string]string `json:"query"`
 	Locale string            `json:"locale"`
@@ -217,7 +217,7 @@ func (h *Handler) RequestNetworkExport(w http.ResponseWriter, r *http.Request) {
 		response.ServiceUnavailable(w, r, response.CodeInternalError, "exports are not configured")
 		return
 	}
-	var body networkExportBody
+	var body exportBody
 	if !decode(w, r, &body) {
 		return
 	}
@@ -226,18 +226,49 @@ func (h *Handler) RequestNetworkExport(w http.ResponseWriter, r *http.Request) {
 		response.ValidationError(w, r, []response.Detail{{Field: "format", Message: "must be xlsx", Code: "invalid"}})
 		return
 	}
-	c := caller(r)
 	query, err := usecase.NetworkExportQuery(body.Query, time.Now())
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
+	h.requestExport(w, r, usecase.ResourceNetworkExport, format, query, body.Locale)
+}
+
+// RequestListExport queues the stock forecast list export (TEC-755) with
+// the list parameters of GET /v1/stock-forecasts.
+func (h *Handler) RequestListExport(w http.ResponseWriter, r *http.Request) {
+	if h.exports == nil {
+		response.ServiceUnavailable(w, r, response.CodeInternalError, "exports are not configured")
+		return
+	}
+	var body exportBody
+	if !decode(w, r, &body) {
+		return
+	}
+	format := ioengine.ExportFormat(strings.ToLower(strings.TrimSpace(body.Format)))
+	switch format {
+	case ioengine.ExportCSV, ioengine.ExportXLSX:
+	default:
+		response.ValidationError(w, r, []response.Detail{{Field: "format", Message: "must be csv or xlsx", Code: "invalid"}})
+		return
+	}
+	query, err := usecase.ListExportQuery(body.Query)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	h.requestExport(w, r, usecase.ResourceListExport, format, query, body.Locale)
+}
+
+func (h *Handler) requestExport(w http.ResponseWriter, r *http.Request, resource string,
+	format ioengine.ExportFormat, query ioengine.ExportQuery, bodyLocale string) {
+	c := caller(r)
 	locale := string(i18n.FromContext(r.Context()).Locale)
-	if l, ok := i18n.Parse(body.Locale); ok {
+	if l, ok := i18n.Parse(bodyLocale); ok {
 		locale = string(l)
 	}
 	orgID := c.Org.InternalID
-	job, err := h.exports.RequestExport(r.Context(), c.Principal.UserInternal, &orgID, usecase.ResourceNetworkExport, format, query, locale)
+	job, err := h.exports.RequestExport(r.Context(), c.Principal.UserInternal, &orgID, resource, format, query, locale)
 	if errors.Is(err, exportusecase.ErrInvalidRequest) {
 		response.BadRequest(w, r, response.CodeValidationError, err.Error())
 		return

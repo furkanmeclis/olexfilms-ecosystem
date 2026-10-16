@@ -31,8 +31,21 @@ export const PRODUCT = {
   name: "Olex PPF 190",
 };
 
+/** Extra handler of a spec; returns true when it answered the request. */
+export type WarehouseExtra = (ctx: {
+  method: string;
+  path: string;
+  url: URL;
+  body: Json;
+  route: Route;
+  ok: (data: unknown, status?: number) => Promise<void>;
+}) => Promise<boolean>;
+
 export class WarehouseMock {
   type: "center" | "distributor" = "center";
+  permissions: string[] = [...PERMISSIONS];
+  /** Spec handlers tried before the built-in routes (TEC-759). */
+  extra: WarehouseExtra[] = [];
   warehouses: Node[] = [];
   rooms: Node[] = [];
   locations: Node[] = [];
@@ -88,8 +101,10 @@ export class WarehouseMock {
         timezone: "Europe/Istanbul",
       },
       roles: [],
-      permissions: PERMISSIONS,
-      grants: Object.fromEntries(PERMISSIONS.map((p) => [p, "organization"])),
+      permissions: this.permissions,
+      grants: Object.fromEntries(
+        this.permissions.map((p) => [p, "organization"]),
+      ),
       active_organization_uuid: ORG,
       organization_roles: ["owner"],
       organizations: [this.membership()],
@@ -125,7 +140,13 @@ export class WarehouseMock {
     const path = url.pathname.replace(/^\/api/, "");
     const method = req.method();
     this.calls.push(`${method} ${path}${url.search}`);
-    const body = (req.postDataJSON() ?? {}) as Json;
+    // Multipart uploads (the stock import) have no JSON body.
+    let body: Json = {};
+    try {
+      body = (req.postDataJSON() ?? {}) as Json;
+    } catch {
+      body = {};
+    }
     if (method !== "GET") {
       (this.bodies[`${method} ${path}`] ??= []).push(body);
     }
@@ -133,6 +154,10 @@ export class WarehouseMock {
       route.fulfill({ status, json: envelope(data) });
     const fail = (status: number, code: string) =>
       route.fulfill({ status, json: { error: { code, message: code } } });
+
+    for (const handler of this.extra) {
+      if (await handler({ method, path, url, body, route, ok })) return;
+    }
 
     if (
       method === "GET" &&
@@ -257,11 +282,18 @@ export class WarehouseMock {
     // --- Stock entries (TEC-204) ---
     if (path === "/v1/warehouse/stock-entries") {
       if (method === "GET") {
-        const items = this.entries.map((e) => {
-          const v = this.entryView(e) as Json;
-          delete v.lines;
-          return v;
-        });
+        const mode = url.searchParams.get("mode");
+        const job = url.searchParams.get("import_job_uuid");
+        const items = this.entries
+          .filter((e) => !mode || mode.split(",").includes(String(e.mode)))
+          .filter(
+            (e) => !job || job.split(",").includes(String(e.import_job_uuid)),
+          )
+          .map((e) => {
+            const v = this.entryView(e) as Json;
+            delete v.lines;
+            return v;
+          });
         return ok({ items, total: items.length, limit: 20, offset: 0 });
       }
       const wh = this.warehouses.find((w) => w.uuid === body.warehouse_uuid);

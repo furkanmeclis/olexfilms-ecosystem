@@ -200,5 +200,10 @@
   "fields.stock.quantity": "Количество",
   "fields.stock.meters": "Метры",
   "fields.stock.location_code": "Код ячейки",
-  "confirm_step.sentence_end": "."
+  "confirm_step.sentence_end": ".",
+  "resources.tenant.stock.units": "Складские единицы",
+  "confirm_step.stock_located_one": "{{count}} из них будет размещена в ячейке, указанной в файле.",
+  "confirm_step.stock_located_few": "{{count}} из них будут размещены в ячейке, указанной в файле.",
+  "confirm_step.stock_located_many": "{{count}} из них будут размещены в ячейке, указанной в файле.",
+  "confirm_step.stock_located_other": "{{count}} из них будут размещены в ячейке, указанной в файле."
 }

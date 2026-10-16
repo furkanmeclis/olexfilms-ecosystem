@@ -49,7 +49,6 @@ import {
   type ImportFormat,
   type ImportJob,
   type ImportResource,
-  type IoResource,
 } from "@/features/io/types";
 import { triggerBrowserDownload } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
@@ -86,6 +85,11 @@ export type ImportWizardProps = {
   confirmCopy?: ImportConfirmBuilder;
   /** Link to what an applied job created (default: the job detail only). */
   resultLink?: (job: ImportJob) => ImportResultLink | null;
+  /**
+   * Resource-specific action on the result step once the job settled (e.g.
+   * the stock entry, looked up after the apply); gets the polled job.
+   */
+  resultAction?: (job: ImportJob) => ReactNode;
   title?: string;
 };
 
@@ -141,12 +145,13 @@ export function ImportWizard({
   initialOptions,
   confirmCopy,
   resultLink,
+  resultAction,
   title,
 }: ImportWizardProps) {
   const { t, tp, locale } = useLocale();
   const params = useParams<{ slug?: string }>();
   const slug = typeof params?.slug === "string" ? params.slug : undefined;
-  const paths = pathsOverride ?? IMPORT_PATHS[resource as IoResource];
+  const paths = pathsOverride ?? IMPORT_PATHS[resource];
   const schema = useMemo(() => IMPORT_SCHEMA[resource] ?? [], [resource]);
 
   const [step, setStep] = useState<Step>("file");
@@ -414,6 +419,7 @@ export function ImportWizard({
               detailHref={detailHref}
               jobsHref={listHref}
               resultLink={resultLink?.(job)}
+              resultAction={resultAction}
               onSettled={() => onComplete?.()}
             />
           ) : null}

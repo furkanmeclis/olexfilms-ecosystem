@@ -12123,7 +12123,9 @@ paths:
       operationId: approveStockCount
       summary: Approve a completed count and apply the resolutions
       description: >-
-        Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN).
+        Needs `warehouse.write`, `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN),
+        and a recent step-up grant (403 STEP_UP_REQUIRED). The creator or sole
+        scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL).
         Every line that is not matched needs a resolution from its
         `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one
         transaction, through the stock ledger with the idempotency keys
@@ -12154,7 +12156,10 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
-          $ref: "#/components/responses/Forbidden"
+          description: "Forbidden: STEP_UP_REQUIRED, COUNT_ADJUST_FORBIDDEN, STOCK_COUNT_SELF_APPROVAL, or missing warehouse.write scope."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
@@ -12248,9 +12253,9 @@ paths:
         (docs/list-contract.md): `sort` is one of created_at (default
         `-created_at`), status (flow rank draft, confirmed, undone,
         cancelled), warehouse (name; import entries last), with an id
-        tiebreak; `status`, `mode` and `warehouse_uuid` are comma separated
-        any-of filters; `q` matches the note and the warehouse name or
-        code. An unknown value is 400 VALIDATION_ERROR.
+        tiebreak; `status`, `mode`, `warehouse_uuid` and `import_job_uuid`
+        are comma separated any-of filters; `q` matches the note and the
+        warehouse name or code. An unknown value is 400 VALIDATION_ERROR.
       security:
         - bearerAuth: []
       parameters:
@@ -12268,6 +12273,12 @@ paths:
           in: query
           description: >-
             Comma separated warehouse uuids (any of).
+          schema: { type: string }
+        - name: import_job_uuid
+          in: query
+          description: >-
+            Comma separated import job uuids (any of): the entries written
+            by these stock import jobs (TEC-759).
           schema: { type: string }
         - $ref: "#/components/parameters/Q"
         - $ref: "#/components/parameters/Sort"
@@ -17099,7 +17110,7 @@ paths:
       description: |
         Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/approve`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
 
-        Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+        Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). The mobile API has no step-up verification contract. Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
       security:
       - bearerAuth: []
       parameters:
@@ -17123,7 +17134,11 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          description: 'Forbidden: REALM_FORBIDDEN, COUNT_ADJUST_FORBIDDEN, STOCK_COUNT_SELF_APPROVAL, or missing warehouse.write scope.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -22011,6 +22026,33 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeStockForecastMeta" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/stock-forecasts/export:
+    post:
+      tags: [Stock Forecasts]
+      operationId: exportStockForecasts
+      summary: Queue the stock forecast list export
+      description: >-
+        TEC-755. Queues an I/O engine export job (`stock_forecasts.list`) over
+        the active organization's forecast list. `query` carries the list
+        parameters of `GET /v1/stock-forecasts` (`q`, `sort`, `status`,
+        `days_left_min`, `days_left_max`); format is `csv` or `xlsx`. Poll and
+        download through `/v1/tenant/exports/{uuid}`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ListExportRequest" }
+      responses:
+        "202":
+          description: Export job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -37153,9 +37195,10 @@ components:
     StockCount:
       type: object
       required: [uuid, status, method, visibility, scope_type, warehouse, scope_room, scope_location, scope_product, note,
-        start_approval_required, start_approved_at, started_at, completed_at, approved_at, cancelled_at, created_at, updated_at]
+        created_by_user_uuid, start_approval_required, start_approved_at, started_at, completed_at, approved_at, cancelled_at, created_at, updated_at]
       properties:
         uuid: { type: string, format: uuid }
+        created_by_user_uuid: { type: [string, "null"], format: uuid, description: "Present on detail and report responses; null in lists or for legacy counts." }
         status: { $ref: "#/components/schemas/StockCountStatus" }
         method: { type: string, enum: [location_first, unit_first, product_qty, initial_placement] }
         visibility: { type: string, enum: [blind, guided] }
@@ -37608,6 +37651,19 @@ components:
             - type: "null"
             - $ref: "#/components/schemas/StockEntryWarehouse"
         import_batch_uuid: { type: [string, "null"], format: uuid }
+        import_job_uuid:
+          type: string
+          format: uuid
+          description: Import entries (TEC-759) - the stock import job that wrote the entry.
+        import_source_filename:
+          type: string
+          description: Import entries - the uploaded file name.
+        import_status:
+          type: string
+          description: >-
+            Import entries - status of the import batch (applied, undone,
+            partially_undone when some rows moved after the import and were
+            not undone).
         line_count: { type: integer, format: int64 }
         placed_count: { type: integer, format: int64, description: Detail responses only. }
         lines:
@@ -41784,15 +41840,31 @@ components:
               stock_qty: { type: integer }
               stock_meters: { type: string }
         thresholds: { $ref: "#/components/schemas/StockForecastThresholds" }
-        parameters:
-          type: object
-          required: [min_data_days, warning_days, critical_days, cover_days, horizon_days]
-          properties:
-            min_data_days: { type: integer }
-            warning_days: { type: integer }
-            critical_days: { type: integer }
-            cover_days: { type: integer }
-            horizon_days: { type: integer }
+        parameters: { $ref: "#/components/schemas/StockForecastParameters" }
+
+    StockForecastParameters:
+      type: object
+      required: [min_data_days, warning_days, critical_days, cover_days, horizon_days]
+      properties:
+        min_data_days: { type: integer }
+        warning_days: { type: integer }
+        critical_days: { type: integer }
+        cover_days: { type: integer }
+        horizon_days: { type: integer }
+
+    StockForecastMeta:
+      type: object
+      required: [default_sort, sortable_fields, statuses, thresholds, parameters]
+      properties:
+        default_sort: { type: string }
+        sortable_fields:
+          type: array
+          items: { type: string }
+        statuses:
+          type: array
+          items: { $ref: "#/components/schemas/StockForecastStatus" }
+        thresholds: { $ref: "#/components/schemas/StockForecastThresholds" }
+        parameters: { $ref: "#/components/schemas/StockForecastParameters" }
 
     StockForecastThresholdInput:
       type: object
@@ -41997,7 +42069,7 @@ components:
       required: [success, data, meta]
       properties:
         success: { type: boolean, enum: [true] }
-        data: { type: object }
+        data: { $ref: "#/components/schemas/StockForecastMeta" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockForecastOrderDraft:

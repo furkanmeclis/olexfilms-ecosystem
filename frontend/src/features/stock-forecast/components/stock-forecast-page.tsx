@@ -49,9 +49,12 @@ import { routes } from "@/config/routes";
 import { ExportMenu } from "@/features/io/components/export-menu";
 import {
   STOCK_FORECAST_STATUSES,
+  cleanDraftLine,
+  effectiveThreshold,
   forecastDraftLine,
   isSelectableForecast,
   missingDataDays,
+  productThresholdInput,
   stockForecastStatusTone,
 } from "@/features/stock-forecast/lib/stock-forecast";
 import {
@@ -61,7 +64,10 @@ import {
   stockForecastService,
   type NetworkDemandRow,
   type StockForecastDraftLine,
+  type StockForecastOrderDraft,
   type StockForecastRow,
+  type StockForecastThresholds,
+  type SubtreeSummaryRow,
 } from "@/features/stock-forecast/services/stock-forecast.service";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useLocale } from "@/providers/locale-provider";
@@ -72,8 +78,15 @@ export const STOCK_FORECAST_PAGE_SIZE = 20;
 export const STOCK_FORECAST_PERSIST_KEY = "tenant-stock-forecast-v1";
 export const STOCK_FORECAST_NETWORK_PERSIST_KEY =
   "tenant-stock-forecast-network-v1";
+export const STOCK_FORECAST_SUBTREE_PERSIST_KEY =
+  "tenant-stock-forecast-subtree-v1";
 
-const categoryParam = "category_uuid";
+/** Fallback until /meta answers (backend default of forecast.min_days). */
+const DEFAULT_MIN_DATA_DAYS = 90;
+
+function isRoll(row: StockForecastRow) {
+  return row.product.unit_type === "roll_meter";
+}
 
 function numberValue(value: unknown) {
   if (value == null || value === "") return 0;
@@ -108,6 +121,15 @@ function DraftDialog({
     onOpenChange(next);
   }
 
+  function update(index: number, patch: Partial<StockForecastDraftLine>) {
+    setLines((prev) =>
+      rows.map((source, i) => {
+        const item = prev[i] ?? forecastDraftLine(source);
+        return i === index ? { ...item, ...patch } : item;
+      }),
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={changed}>
       <DialogContent>
@@ -131,38 +153,31 @@ function DraftDialog({
                     {row.product.sku}
                   </div>
                 </div>
-                <Input
-                  aria-label={t("stock_forecast.columns.suggested_qty")}
-                  inputMode="numeric"
-                  value={line.quantity ?? ""}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setLines((prev) =>
-                      rows.map((source, i) => {
-                        const item = prev[i] ?? forecastDraftLine(source);
-                        return i === index
-                          ? { ...item, quantity: value ? Number(value) : null }
-                          : item;
-                      }),
-                    );
-                  }}
-                />
-                <Input
-                  aria-label={t("stock_forecast.columns.suggested_meters")}
-                  inputMode="decimal"
-                  value={line.meters ?? ""}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setLines((prev) =>
-                      rows.map((source, i) => {
-                        const item = prev[i] ?? forecastDraftLine(source);
-                        return i === index
-                          ? { ...item, meters: value ? Number(value) : null }
-                          : item;
-                      }),
-                    );
-                  }}
-                />
+                {isRoll(row) ? (
+                  <Input
+                    aria-label={t("stock_forecast.columns.suggested_meters")}
+                    inputMode="decimal"
+                    className="sm:col-span-2"
+                    value={line.meters ?? ""}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      update(index, { meters: value });
+                    }}
+                  />
+                ) : (
+                  <Input
+                    aria-label={t("stock_forecast.columns.suggested_qty")}
+                    inputMode="numeric"
+                    className="sm:col-span-2"
+                    value={line.quantity ?? ""}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      update(index, {
+                        quantity: value ? Number(value) : undefined,
+                      });
+                    }}
+                  />
+                )}
               </div>
             );
           })}
@@ -178,7 +193,13 @@ function DraftDialog({
           <Button
             type="button"
             disabled={pending || lines.length === 0}
-            onClick={() => onSubmit(lines)}
+            onClick={() =>
+              onSubmit(
+                rows.map((row, i) =>
+                  cleanDraftLine(lines[i] ?? forecastDraftLine(row)),
+                ),
+              )
+            }
           >
             {t("stock_forecast.draft.create")}
           </Button>
@@ -205,17 +226,22 @@ function ProductDrawer({
     enabled: open && Boolean(productUuid),
   });
   const detail = query.data;
-  const data = useMemo(
-    () =>
-      (detail?.history ?? []).map((point) => ({
+  const data = useMemo(() => {
+    if (!detail) return [];
+    const roll = detail.forecast.product.unit_type === "roll_meter";
+    return [
+      ...detail.consumption.map((point) => ({
         date: point.date,
-        actual: point.actual_meters ?? point.actual_qty ?? null,
-        projected: point.projected_meters ?? point.projected_qty ?? null,
-        threshold: point.threshold ?? null,
-        vehicles: point.vehicles_left ?? null,
+        consumption: roll ? numberValue(point.meters) : point.qty,
+        projected: null as number | null,
       })),
-    [detail?.history],
-  );
+      ...detail.projection.map((point) => ({
+        date: point.date,
+        consumption: null as number | null,
+        projected: roll ? numberValue(point.stock_meters) : point.stock_qty,
+      })),
+    ];
+  }, [detail]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -240,16 +266,12 @@ function ProductDrawer({
               data={data}
               categoryKey="date"
               config={{
-                actual: { label: t("stock_forecast.detail.actual") },
+                consumption: { label: t("stock_forecast.detail.consumption") },
                 projected: { label: t("stock_forecast.detail.projected") },
-                threshold: { label: t("stock_forecast.detail.threshold") },
-                vehicles: { label: t("stock_forecast.detail.vehicles") },
               }}
               series={[
-                { key: "actual", type: "line" },
+                { key: "consumption", type: "bar", yAxisId: "right" },
                 { key: "projected", type: "line", strokeDasharray: "5 5" },
-                { key: "threshold", type: "line" },
-                { key: "vehicles", type: "bar", yAxisId: "right" },
               ]}
               showRightYAxis
               loading={query.isLoading}
@@ -278,7 +300,9 @@ function ProductDrawer({
               />
               <Stat
                 label={t("stock_forecast.columns.cover_days")}
-                value={format.number(row.cover_days)}
+                value={
+                  detail ? format.number(detail.thresholds.cover_days) : "—"
+                }
               />
             </dl>
           ) : null}
@@ -307,10 +331,19 @@ export function StockForecastPage({ slug }: { slug: string }) {
   const canNetwork = can(Permission.StockForecastNetworkRead);
   const [draftRows, setDraftRows] = useState<StockForecastRow[]>([]);
   const [detailRow, setDetailRow] = useState<StockForecastRow | null>(null);
-  const [createdDraft, setCreatedDraft] = useState<{
-    uuid: string;
-    order_no: string;
-  } | null>(null);
+  const [createdDraft, setCreatedDraft] = useState<
+    StockForecastOrderDraft["order"] | null
+  >(null);
+  const meta = useQuery({
+    queryKey: stockForecastKeys.meta,
+    queryFn: () => stockForecastService.meta(),
+    enabled: canRead,
+    staleTime: 60_000,
+  });
+  const thresholds: StockForecastThresholds | undefined = meta.data?.thresholds;
+  const minDataDays =
+    meta.data?.parameters.min_data_days ?? DEFAULT_MIN_DATA_DAYS;
+  const canEditThreshold = canManage && Boolean(thresholds);
 
   const columns = useMemo(
     () =>
@@ -321,6 +354,7 @@ export function StockForecastPage({ slug }: { slug: string }) {
           accessorFn: (row) => row.product.name,
           labelKey: "stock_forecast.columns.product",
           enableSorting: true,
+          sortParam: "product_name",
           gridPrimary: true,
           cell: ({ row }) => (
             <button
@@ -338,21 +372,23 @@ export function StockForecastPage({ slug }: { slug: string }) {
           ),
         }),
         createColumn<StockForecastRow>({
-          id: categoryParam,
-          accessorFn: (row) => row.product.category?.uuid ?? "",
+          id: "category",
+          accessorFn: (row) => row.product.category_name ?? "",
           labelKey: "stock_forecast.columns.category",
           enableSorting: false,
-          filterVariant: "faceted",
-          filterOptions: [],
-          param: categoryParam,
-          cell: ({ row }) => row.original.product.category?.name ?? "—",
+          cell: ({ row }) => row.original.product.category_name || "—",
         }),
         createColumn<StockForecastRow>({
           accessorKey: "on_hand_qty",
           labelKey: "stock_forecast.columns.on_hand",
-          enableSorting: true,
+          enableSorting: false,
           meta: { cellClassName: "text-end tabular-nums" },
-          cell: ({ row }) => format.number(row.original.on_hand_qty),
+          cell: ({ row }) =>
+            format.number(
+              isRoll(row.original)
+                ? numberValue(row.original.on_hand_meters)
+                : row.original.on_hand_qty,
+            ),
         }),
         createColumn<StockForecastRow>({
           accessorKey: "avg_daily_30",
@@ -365,7 +401,7 @@ export function StockForecastPage({ slug }: { slug: string }) {
         createColumn<StockForecastRow>({
           accessorKey: "avg_daily_90",
           labelKey: "stock_forecast.columns.avg90",
-          enableSorting: true,
+          enableSorting: false,
           meta: { cellClassName: "text-end tabular-nums" },
           cell: ({ row }) =>
             format.number(numberValue(row.original.avg_daily_90)),
@@ -373,7 +409,7 @@ export function StockForecastPage({ slug }: { slug: string }) {
         createColumn<StockForecastRow>({
           accessorKey: "seasonality_factor",
           labelKey: "stock_forecast.columns.seasonality",
-          enableSorting: true,
+          enableSorting: false,
           meta: { cellClassName: "text-end tabular-nums" },
           cell: ({ row }) =>
             format.number(numberValue(row.original.seasonality_factor)),
@@ -420,24 +456,35 @@ export function StockForecastPage({ slug }: { slug: string }) {
         createColumn<StockForecastRow>({
           accessorKey: "suggested_qty",
           labelKey: "stock_forecast.columns.suggested_qty",
-          enableSorting: true,
+          enableSorting: false,
           meta: { cellClassName: "text-end tabular-nums" },
-          cell: ({ row }) =>
-            row.original.suggested_qty == null
-              ? "—"
-              : format.number(row.original.suggested_qty),
+          cell: ({ row }) => {
+            const value = isRoll(row.original)
+              ? row.original.suggested_meters
+              : row.original.suggested_qty;
+            return value == null ? "—" : format.number(numberValue(value));
+          },
         }),
         createColumn<StockForecastRow>({
-          accessorKey: "cover_days",
+          id: "cover_days",
+          accessorFn: (row) =>
+            effectiveThreshold(thresholds, row.product.uuid)?.cover_days ??
+            null,
           labelKey: "stock_forecast.columns.cover_days",
           enableSorting: false,
-          editVariant: canManage ? "number" : undefined,
+          editVariant: canEditThreshold ? "number" : undefined,
           meta: { cellClassName: "text-end tabular-nums" },
-          cell: ({ row }) => (
-            <span data-testid="stock-forecast-threshold">
-              {format.number(row.original.cover_days)}
-            </span>
-          ),
+          cell: ({ row }) => {
+            const value = effectiveThreshold(
+              thresholds,
+              row.original.product.uuid,
+            )?.cover_days;
+            return (
+              <span data-testid="stock-forecast-threshold">
+                {value == null ? "—" : format.number(value)}
+              </span>
+            );
+          },
         }),
         createColumn<StockForecastRow>({
           id: "actions",
@@ -459,12 +506,12 @@ export function StockForecastPage({ slug }: { slug: string }) {
           ),
         }),
       ] satisfies ColumnDef<StockForecastRow, unknown>[],
-    [canManage, format, t],
+    [canEditThreshold, format, t, thresholds],
   );
 
   const listState = useServerListState({
     columns,
-    initialSort: "days_left",
+    initialSort: meta.data?.default_sort ?? "days_left",
     initialPageSize: STOCK_FORECAST_PAGE_SIZE,
     persistKey: STOCK_FORECAST_PERSIST_KEY,
   });
@@ -477,13 +524,13 @@ export function StockForecastPage({ slug }: { slug: string }) {
   const insufficient = rows.find((row) => row.status === "insufficient_data");
 
   const draftMutation = useMutation({
-    mutationFn: (lines: StockForecastDraftLine[]) =>
-      stockForecastService.createOrderDraft(lines),
+    mutationFn: (items: StockForecastDraftLine[]) =>
+      stockForecastService.createOrderDraft({ items }),
     onSuccess: (draft) => {
       setDraftRows([]);
-      setCreatedDraft(draft);
+      setCreatedDraft(draft.order);
       appToast.success(
-        t("stock_forecast.draft.success", { no: draft.order_no }),
+        t("stock_forecast.draft.success", { no: draft.order.order_no }),
       );
     },
     onError: () => appToast.error(t("stock_forecast.draft.failed")),
@@ -497,11 +544,14 @@ export function StockForecastPage({ slug }: { slug: string }) {
       row: StockForecastRow;
       cover_days: number;
     }) =>
-      stockForecastService.updateThreshold(row.product.uuid, {
-        warning_days: row.warning_days,
-        cover_days,
-      }),
-    onSuccess: () => {
+      stockForecastService.putThresholds(
+        productThresholdInput(thresholds!, row.product.uuid, cover_days),
+      ),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(stockForecastKeys.meta, {
+        ...meta.data!,
+        thresholds: saved,
+      });
       void queryClient.invalidateQueries({ queryKey: stockForecastKeys.all });
       appToast.success(t("stock_forecast.threshold.saved"));
     },
@@ -530,7 +580,7 @@ export function StockForecastPage({ slug }: { slug: string }) {
           id: "product",
           accessorFn: (row) => row.product.name,
           labelKey: "stock_forecast.columns.product",
-          enableSorting: true,
+          enableSorting: false,
           gridPrimary: true,
           cell: ({ row }) => (
             <div>
@@ -544,27 +594,27 @@ export function StockForecastPage({ slug }: { slug: string }) {
         createColumn<NetworkDemandRow>({
           accessorKey: "forecast_month",
           labelKey: "stock_forecast.network.month",
-          enableSorting: true,
+          enableSorting: false,
           cell: ({ row }) => format.date(row.original.forecast_month),
         }),
         createColumn<NetworkDemandRow>({
           accessorKey: "network_on_hand_qty",
           labelKey: "stock_forecast.network.stock",
-          enableSorting: true,
+          enableSorting: false,
           meta: { cellClassName: "text-end tabular-nums" },
           cell: ({ row }) => format.number(row.original.network_on_hand_qty),
         }),
         createColumn<NetworkDemandRow>({
           accessorKey: "open_order_qty",
           labelKey: "stock_forecast.network.open_orders",
-          enableSorting: true,
+          enableSorting: false,
           meta: { cellClassName: "text-end tabular-nums" },
           cell: ({ row }) => format.number(row.original.open_order_qty),
         }),
         createColumn<NetworkDemandRow>({
           accessorKey: "suggested_production_qty",
           labelKey: "stock_forecast.network.suggested",
-          enableSorting: true,
+          enableSorting: false,
           meta: { cellClassName: "text-end tabular-nums" },
           cell: ({ row }) =>
             format.number(row.original.suggested_production_qty),
@@ -574,18 +624,59 @@ export function StockForecastPage({ slug }: { slug: string }) {
   );
   const networkState = useServerListState({
     columns: networkColumns,
-    initialSort: "forecast_month",
+    initialSort: null,
     initialPageSize: STOCK_FORECAST_PAGE_SIZE,
     persistKey: STOCK_FORECAST_NETWORK_PERSIST_KEY,
   });
   const network = useQuery({
     queryKey: stockForecastKeys.network(networkState.params),
-    queryFn: () => stockForecastService.networkDemand(networkState.params),
+    queryFn: () => stockForecastService.network(networkState.params),
     enabled: canNetwork && org?.type === "center",
   });
-  const dealers = useQuery({
-    queryKey: stockForecastKeys.dealers,
-    queryFn: () => stockForecastService.dealerSummary(),
+
+  const subtreeColumns = useMemo(
+    () =>
+      [
+        createColumn<SubtreeSummaryRow>({
+          accessorKey: "name",
+          labelKey: "stock_forecast.dealers.organization",
+          enableSorting: false,
+          gridPrimary: true,
+          cell: ({ row }) => (
+            <span className="font-medium">{row.original.name}</span>
+          ),
+        }),
+        ...(
+          [
+            ["critical_count", "stock_forecast.status.critical"],
+            ["warning_count", "stock_forecast.status.warning"],
+            [
+              "insufficient_data_count",
+              "stock_forecast.status.insufficient_data",
+            ],
+            ["total_count", "stock_forecast.dealers.total"],
+          ] as const
+        ).map(([key, labelKey]) =>
+          createColumn<SubtreeSummaryRow>({
+            accessorKey: key,
+            labelKey,
+            enableSorting: false,
+            meta: { cellClassName: "text-end tabular-nums" },
+            cell: ({ row }) => format.number(row.original[key]),
+          }),
+        ),
+      ] satisfies ColumnDef<SubtreeSummaryRow, unknown>[],
+    [format],
+  );
+  const subtreeState = useServerListState({
+    columns: subtreeColumns,
+    initialSort: null,
+    initialPageSize: STOCK_FORECAST_PAGE_SIZE,
+    persistKey: STOCK_FORECAST_SUBTREE_PERSIST_KEY,
+  });
+  const subtree = useQuery({
+    queryKey: stockForecastKeys.subtree(subtreeState.params),
+    queryFn: () => stockForecastService.subtree(subtreeState.params),
     enabled: canRead && org?.type === "distributor",
   });
 
@@ -623,8 +714,8 @@ export function StockForecastPage({ slug }: { slug: string }) {
           data-testid="stock-forecast-insufficient-banner"
         >
           {t("stock_forecast.insufficient.banner", {
-            min: insufficient.min_data_days,
-            left: missingDataDays(insufficient),
+            min: minDataDays,
+            left: missingDataDays(insufficient, minDataDays),
           })}
         </div>
       ) : null}
@@ -653,17 +744,18 @@ export function StockForecastPage({ slug }: { slug: string }) {
           persistKey: STOCK_FORECAST_PERSIST_KEY,
           rowSelection: ((row: Row<StockForecastRow>) =>
             isSelectableForecast(row.original)) as unknown as boolean,
-          inlineEdit: canManage,
+          inlineEdit: canEditThreshold,
           columnOrdering: true,
           columnPinning: true,
         }}
         bulkActions={bulkActions}
         onCellEdit={({ row, value }) => {
-          if (!canManage) return;
-          thresholdMutation.mutate({
-            row,
-            cover_days: thresholdFromValue(value, row.cover_days),
-          });
+          if (!canEditThreshold) return;
+          const current = effectiveThreshold(thresholds, row.product.uuid);
+          if (!current) return;
+          const cover = thresholdFromValue(value, current.cover_days);
+          if (cover === current.cover_days) return;
+          thresholdMutation.mutate({ row, cover_days: cover });
         }}
         toolbarExtra={
           <EntityToolbar>
@@ -710,13 +802,9 @@ export function StockForecastPage({ slug }: { slug: string }) {
               <EntityToolbar>
                 <ExportMenu
                   exportPath={STOCK_FORECAST_NETWORK_EXPORT_PATH}
-                  query={{
-                    ...networkState.filterParams,
-                    q: networkState.params.q,
-                    sort: networkState.params.sort,
-                  }}
+                  query={{ q: networkState.params.q }}
                   jobsHref={routes.tenant.exports.root(slug)}
-                  formats={["xlsx", "csv"]}
+                  formats={["xlsx"]}
                 />
               </EntityToolbar>
             }
@@ -732,34 +820,22 @@ export function StockForecastPage({ slug }: { slug: string }) {
               {t("stock_forecast.dealers.title")}
             </h2>
           </div>
-          {dealers.isError ? (
-            <ErrorState
-              title={t("common.error_generic")}
-              onRetry={() => void dealers.refetch()}
-            />
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {(dealers.data?.items ?? []).map((dealer) => (
-                <div key={dealer.uuid} className="rounded-md border p-3">
-                  <div className="font-medium">{dealer.dealer_name}</div>
-                  <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
-                    <Stat
-                      label={t("stock_forecast.status.critical")}
-                      value={format.number(dealer.critical_count)}
-                    />
-                    <Stat
-                      label={t("stock_forecast.status.warning")}
-                      value={format.number(dealer.warning_count)}
-                    />
-                    <Stat
-                      label={t("stock_forecast.columns.suggested_qty")}
-                      value={format.number(dealer.suggested_qty)}
-                    />
-                  </dl>
-                </div>
-              ))}
-            </div>
-          )}
+          <EntityTable
+            columns={subtreeColumns}
+            data={subtree.data?.items ?? []}
+            getRowId={(row) => row.organization_uuid}
+            rowCount={subtree.data?.total ?? 0}
+            isLoading={subtree.isLoading}
+            isError={subtree.isError}
+            onRetry={() => void subtree.refetch()}
+            state={subtreeState.tableState}
+            features={{
+              persistKey: STOCK_FORECAST_SUBTREE_PERSIST_KEY,
+              rowSelection: false,
+              columnOrdering: true,
+              columnPinning: true,
+            }}
+          />
         </section>
       ) : null}
 

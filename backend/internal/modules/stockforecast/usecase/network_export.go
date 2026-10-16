@@ -88,7 +88,7 @@ func (a *NetworkExportAdapter) RevertRow(context.Context, string, string, map[st
 
 // Export implements ioengine.ResourceAdapter.
 func (a *NetworkExportAdapter) Export(ctx context.Context, q ioengine.ExportQuery, loc i18n.Locale) (ioengine.Dataset, error) {
-	c, err := a.svc.networkJobCaller(ctx, q)
+	c, err := a.svc.jobCaller(ctx, q)
 	if err != nil {
 		return ioengine.Dataset{}, err
 	}
@@ -126,14 +126,16 @@ func (a *NetworkExportAdapter) Export(ctx context.Context, q ioengine.ExportQuer
 	return ioengine.Dataset{Resource: ResourceNetworkExport, Columns: a.ExportColumns(), Rows: rows}, nil
 }
 
-func (s *Service) networkJobCaller(ctx context.Context, q ioengine.ExportQuery) (Caller, error) {
+// jobCaller rebuilds the caller of an export job: the job organization as
+// the active organization (the forecast lists read only the organization).
+func (s *Service) jobCaller(ctx context.Context, q ioengine.ExportQuery) (Caller, error) {
 	orgID, err := strconv.ParseInt(q[ioengine.QueryOrganizationID], 10, 64)
 	if err != nil || orgID <= 0 {
-		return Caller{}, errors.New("stock forecast network export: organization is required")
+		return Caller{}, errors.New("stock forecast export: organization is required")
 	}
 	org, err := s.q.GetOrganizationByID(ctx, orgID)
 	if err != nil {
-		return Caller{}, fmt.Errorf("stock forecast network export: organization: %w", err)
+		return Caller{}, fmt.Errorf("stock forecast export: organization: %w", err)
 	}
 	return Caller{Org: orgctx.Scope{InternalID: org.ID, UUID: org.Uuid, Name: org.Name, OrgType: org.Type, BrandID: org.BrandID}}, nil
 }

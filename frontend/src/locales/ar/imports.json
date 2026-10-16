@@ -186,5 +186,8 @@
   "fields.stock.quantity": "الكمية",
   "fields.stock.meters": "الأمتار",
   "fields.stock.location_code": "رمز الموقع",
-  "confirm_step.sentence_end": "."
+  "confirm_step.sentence_end": ".",
+  "resources.tenant.stock.units": "وحدات المخزون",
+  "confirm_step.stock_located_one": "ستوضع وحدة واحدة منها في الموقع المحدد في الملف.",
+  "confirm_step.stock_located_other": "ستوضع {{count}} وحدة منها في الموقع المحدد في الملف."
 }

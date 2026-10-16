@@ -728,6 +728,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		stockusecase.NewUnitsExportAdapter(stockusecase.New(deps.Queries)),
 		// TEC-485: center network demand forecast export.
 		stockforecastusecase.NewNetworkExportAdapter(stockForecastSvc),
+		// TEC-755: stock forecast list export.
+		stockforecastusecase.NewListExportAdapter(stockForecastSvc),
 		// TEC-377: service and warranty list exports.
 		servicesusecase.NewListExportAdapter(servicesSvc),
 		warrantyusecase.NewListExportAdapter(warrantyReader),
@@ -1034,7 +1036,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-206: stock counts (scans through the TEC-203 resolver, approval via the ledger).
 	warehousemodule.RegisterCountRoutes(mux, warehousehandler.NewCounts(warehouseusecase.NewCounts(deps.DB, deps.Queries,
 		outbox.NewStore(deps.DB, deps.Queries), warehouseusecase.NewScanner(deps.Queries, sysSvc))),
-		featureSvc, tokens, loader, deps.Queries)
+		featureSvc, tokens, loader, deps.Queries, stepUpSvc)
 
 	// TEC-203: universal scan resolver (scan.* settings from sysconfig).
 	warehousemodule.RegisterScanRoutes(mux, warehousehandler.NewScan(warehouseusecase.NewScanner(deps.Queries, sysSvc)),
