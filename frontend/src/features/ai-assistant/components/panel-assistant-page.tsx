@@ -22,6 +22,7 @@ export function PanelAssistantPage({ slug }: { slug: string }) {
         icon={<Bot className="size-6" />}
       />
       <AssistantChat
+        key={slug}
         transport={transport}
         scope={`panel:${slug}`}
         layout="page"

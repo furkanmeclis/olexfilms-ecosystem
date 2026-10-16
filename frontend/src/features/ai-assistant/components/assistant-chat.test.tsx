@@ -121,13 +121,19 @@ async function flush() {
   }
 }
 
-async function mount(transport: AssistantTransport, showToolChips = true) {
+async function mount(
+  transport: AssistantTransport,
+  showToolChips = true,
+  options: { client?: QueryClient; layout?: "page" | "sheet" } = {},
+) {
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  const client =
+    options.client ??
+    new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
   await act(async () => {
     // Strict Mode runs state updaters twice, like `next dev`.
     root.render(
@@ -140,6 +146,7 @@ async function mount(transport: AssistantTransport, showToolChips = true) {
           createElement(AssistantChat, {
             transport,
             scope: "test",
+            layout: options.layout,
             showToolChips,
           }),
         ),
@@ -186,6 +193,217 @@ describe("AssistantChat", () => {
     act(() => root.unmount());
     host.remove();
     document.body.innerHTML = "";
+  });
+
+  it("offers realm-specific suggestions, fills the composer and focuses it", async () => {
+    await mount(fakeTransport({ realm: "portal" }), false);
+    expect(qa("ai-suggestion")).toHaveLength(3);
+    expect(qa("ai-suggestion")[0]?.textContent).toBe(
+      "ai.suggestions.portal.first",
+    );
+    await act(async () => qa("ai-suggestion")[0]!.click());
+    expect((q("ai-input") as HTMLTextAreaElement).value).toBe(
+      "ai.suggestions.portal.first",
+    );
+    expect(document.activeElement).toBe(q("ai-input"));
+  });
+
+  it("submits on Enter, keeps Shift+Enter for a newline and ignores IME Enter", async () => {
+    const transport = fakeTransport();
+    await mount(transport);
+    await type("Hello");
+    await act(async () => {
+      q("ai-input")!.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          shiftKey: true,
+          bubbles: true,
+        }),
+      );
+      q("ai-input")!.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          isComposing: true,
+          bubbles: true,
+        }),
+      );
+    });
+    expect(transport.sendMessage).not.toHaveBeenCalled();
+    await act(async () => {
+      q("ai-input")!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+      );
+    });
+    await flush();
+    expect(transport.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens mobile history and returns to the chat for a new conversation", async () => {
+    await mount(fakeTransport());
+    const history = host.querySelector("aside")!;
+    expect(history.classList.contains("hidden")).toBe(true);
+    const historyButton = Array.from(host.querySelectorAll("button")).find(
+      (b) => b.textContent === "ai.history.title",
+    )!;
+    await act(async () => historyButton.click());
+    expect(history.classList.contains("hidden")).toBe(false);
+    await act(async () => q("ai-new-conversation")!.click());
+    expect(history.classList.contains("hidden")).toBe(true);
+    expect(document.activeElement).toBe(q("ai-input"));
+  });
+
+  it("restores the widget conversation on the full page without creating another", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const transport = fakeTransport({
+      getConversation: vi.fn(
+        async () =>
+          ({
+            messages: [
+              {
+                uuid: "saved",
+                role: "assistant",
+                status: "complete",
+                ui: [{ type: "text", text: "Saved answer" }],
+              },
+            ],
+          }) as never,
+      ),
+    });
+    await mount(transport, true, { client, layout: "sheet" });
+    await send("Hello");
+    await act(async () => root.unmount());
+    host.remove();
+    await mount(transport, true, { client });
+    expect(transport.getConversation).toHaveBeenCalledWith("c1");
+    expect(q("ai-messages")?.textContent).toContain("Saved answer");
+    expect(transport.createConversation).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not autoscroll streaming text while the user reads earlier messages", async () => {
+    let controller: ReadableStreamDefaultController<Uint8Array>;
+    const transport = fakeTransport({
+      sendMessage: vi.fn(
+        async () =>
+          new ReadableStream<Uint8Array>({
+            start(c) {
+              controller = c;
+            },
+          }),
+      ),
+    });
+    const scroll = vi.fn();
+    const previous = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scroll;
+    try {
+      await mount(transport);
+      await send("Hello");
+      const viewport = q("ai-scroll")!;
+      Object.defineProperties(viewport, {
+        scrollHeight: { value: 1000 },
+        clientHeight: { value: 200 },
+      });
+      await act(async () => {
+        viewport.scrollTop = 100;
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      scroll.mockClear();
+      const delta = (text: string) =>
+        new TextEncoder().encode(
+          `event: text_delta\ndata: ${JSON.stringify({ text })}\n\n`,
+        );
+      await act(async () => controller!.enqueue(delta("First part")));
+      expect(scroll).not.toHaveBeenCalled();
+      expect(q("ai-streaming")).not.toBeNull();
+      expect(q("ai-messages")?.getAttribute("aria-busy")).toBe("true");
+      await act(async () => {
+        viewport.scrollTop = 800;
+        viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      await act(async () => controller!.enqueue(delta(" next part")));
+      expect(scroll).toHaveBeenCalled();
+      await act(async () => controller!.close());
+      await flush();
+      expect(q("ai-messages")?.getAttribute("aria-busy")).toBe("false");
+    } finally {
+      HTMLElement.prototype.scrollIntoView = previous;
+    }
+  });
+
+  it("renames and deletes a stored conversation using the supported API operations", async () => {
+    const conversation = {
+      uuid: "old",
+      title: "Original",
+      message_count: 0,
+      last_message_at: null,
+      created_at: "2026-10-07",
+      updated_at: "2026-10-07",
+    };
+    const transport = fakeTransport({
+      listConversations: vi.fn(async () => [conversation]),
+      renameConversation: vi.fn(async (_uuid, title) => ({
+        ...conversation,
+        title,
+      })),
+      deleteConversation: vi.fn(async () => undefined),
+    });
+    await mount(transport);
+    const rename = host.querySelector(
+      '[aria-label="ai.history.rename"]',
+    ) as HTMLButtonElement;
+    await act(async () => rename.click());
+    const input = host.querySelector(
+      'input[aria-label="ai.history.rename"]',
+    ) as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(input, "Renamed");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () =>
+      (
+        host.querySelector(
+          '[aria-label="ai.history.save"]',
+        ) as HTMLButtonElement
+      ).click(),
+    );
+    await flush();
+    expect(transport.renameConversation).toHaveBeenCalledWith("old", "Renamed");
+    expect(host.querySelector("aside")?.textContent).toContain("Renamed");
+    await act(async () =>
+      (
+        host.querySelector(
+          '[aria-label="ai.history.delete"]',
+        ) as HTMLButtonElement
+      ).click(),
+    );
+    const confirm = Array.from(
+      document.querySelectorAll('[role="dialog"] button'),
+    ).find((b) => b.textContent === "ai.history.delete") as HTMLButtonElement;
+    await act(async () => confirm.click());
+    await flush();
+    expect(transport.deleteConversation).toHaveBeenCalledWith("old");
+    expect(host.querySelector("aside")?.textContent).not.toContain("Renamed");
+  });
+
+  it("recovers from a status request failure", async () => {
+    const transport = fakeTransport({
+      status: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("offline"))
+        .mockResolvedValue(status()),
+    });
+    await mount(transport);
+    expect(q("ai-input")).toBeNull();
+    const retry = Array.from(host.querySelectorAll("button")).find(
+      (b) => b.textContent === "ai.chat.retry",
+    )!;
+    await act(async () => retry.click());
+    await flush();
+    expect(q("ai-input")).not.toBeNull();
   });
 
   it("joins text_delta parts into one assistant message", async () => {

@@ -1,4 +1,11 @@
 {
+  "chat.back": "Retour à la discussion",
+  "suggestions.panel.first": "Comment peux-tu m’aider ?",
+  "suggestions.panel.second": "Trouve mes dernières entrées",
+  "suggestions.panel.third": "Aide-moi à planifier mes prochaines étapes",
+  "suggestions.portal.first": "Affiche mes véhicules",
+  "suggestions.portal.second": "Aide-moi à prendre rendez-vous",
+  "suggestions.portal.third": "Trouve mes garanties",
   "nav_title": "Assistant IA",
   "page.title": "Assistant IA",
   "page.description": "Posez vos questions sur vos dossiers ; les modifications ne s'appliquent qu'après votre confirmation.",

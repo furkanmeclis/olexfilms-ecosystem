@@ -1,4 +1,11 @@
 {
+  "chat.back": "Назад към чата",
+  "suggestions.panel.first": "С какво можеш да ми помогнеш?",
+  "suggestions.panel.second": "Намери последните ми записи",
+  "suggestions.panel.third": "Помогни ми да планирам следващите стъпки",
+  "suggestions.portal.first": "Покажи моите автомобили",
+  "suggestions.portal.second": "Помогни ми да запазя час",
+  "suggestions.portal.third": "Намери моите гаранции",
   "nav_title": "AI асистент",
   "page.title": "AI асистент",
   "page.description": "Питайте за своите записи; промените се изпълняват само след ваше потвърждение.",
