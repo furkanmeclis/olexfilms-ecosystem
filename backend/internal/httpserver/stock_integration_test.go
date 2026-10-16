@@ -105,6 +105,13 @@ type unitHistoryView struct {
 			Organization       *stockOrgRef    `json:"organization"`
 			OrganizationMasked bool            `json:"organization_masked"`
 			ToOwner            *stockOwnerView `json:"to_owner"`
+			Document           *struct {
+				Type string `json:"type"`
+				UUID string `json:"uuid"`
+			} `json:"document"`
+			Actor *struct {
+				UUID string `json:"uuid"`
+			} `json:"actor"`
 		} `json:"items"`
 	} `json:"movements"`
 }

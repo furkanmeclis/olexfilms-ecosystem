@@ -2552,6 +2552,10 @@ type Querier interface {
 	ListStockForecasts(ctx context.Context, arg ListStockForecastsParams) ([]ListStockForecastsRow, error)
 	ListStockImportBatches(ctx context.Context, organizationID int64) ([]StockImportBatch, error)
 	ListStockImportRows(ctx context.Context, arg ListStockImportRowsParams) ([]StockImportRow, error)
+	// TEC-763: the document behind each movement of a history page (entry,
+	// warehouse transfer, count, service, order, dealer transfer request,
+	// reclassification); line references resolve to their parent document.
+	ListStockMovementDocuments(ctx context.Context, ids []int64) ([]ListStockMovementDocumentsRow, error)
 	ListStockMovementsByOrganization(ctx context.Context, arg ListStockMovementsByOrganizationParams) ([]StockMovement, error)
 	ListStockMovementsByReference(ctx context.Context, arg ListStockMovementsByReferenceParams) ([]StockMovement, error)
 	// Barcode history in ledger order.

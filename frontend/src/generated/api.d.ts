@@ -20399,9 +20399,19 @@ export interface components {
             organization: components["schemas"]["StockOrgRef"] | null;
             organization_masked: boolean;
             reference_type: string | null;
+            /** @description Document behind the movement (TEC-763); null when masked or the reference has no document page. */
+            document: components["schemas"]["StockMovementDocument"] | null;
+            /** @description User who wrote the movement (TEC-763); null when masked or a system write. */
+            actor: components["schemas"]["StockUserRef"] | null;
             reason: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        StockMovementDocument: {
+            /** @enum {string} */
+            type: "stock_entry" | "warehouse_transfer" | "stock_count" | "service" | "order" | "transfer_request" | "stock_reclassification";
+            /** Format: uuid */
+            uuid: string;
         };
         StockUnitHistory: {
             unit: components["schemas"]["StockUnit"];

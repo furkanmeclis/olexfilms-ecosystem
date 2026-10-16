@@ -185,6 +185,13 @@ func TestIntegrationStockReclassification(t *testing.T) {
 	if code != http.StatusOK || hist.Current == nil || hist.Current.Status != "available" {
 		t.Fatalf("history = %d %+v", code, hist)
 	}
+	// TEC-763: the history links the movement to its request and names the
+	// approver.
+	last := hist.Movements.Items[len(hist.Movements.Items)-1]
+	if last.Type != "reclassification" || last.Document == nil || last.Document.Type != "stock_reclassification" ||
+		last.Document.UUID != done.UUID || last.Actor == nil || last.Actor.UUID != wh.Uuid.String() {
+		t.Fatalf("history reclassification row = %+v", last)
+	}
 	code, stock := it.productStock(distTok, "/v1/stock/organizations/"+dist.Uuid.String()+"/products")
 	if code != http.StatusOK {
 		t.Fatalf("dist stock = %d", code)
