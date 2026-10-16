@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Permission } from "@/config/permissions";
 import { LabelButton } from "@/features/warehouse/components/label-button";
+import { LocationImportButton } from "@/features/warehouse/components/location-import-button";
 import { LocationTree } from "@/features/warehouse/components/location-tree";
 import {
   NodeForm,
@@ -347,6 +348,20 @@ export function LocationTreePage({ slug }: { slug: string }) {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <CardTitle>{t("warehouse.locations.warehouses")}</CardTitle>
+              {canWrite && warehouseUuid ? (
+                <LocationImportButton
+                  key={warehouseUuid}
+                  warehouseUuid={warehouseUuid}
+                  onComplete={() => {
+                    void qc.invalidateQueries({
+                      queryKey: warehouseKeys.rooms(warehouseUuid),
+                    });
+                    void qc.invalidateQueries({
+                      queryKey: ["warehouse", "locations"],
+                    });
+                  }}
+                />
+              ) : null}
               {canWrite ? (
                 <Button
                   type="button"

@@ -189,5 +189,6 @@
   "confirm_step.sentence_end": ".",
   "resources.tenant.stock.units": "Stock units",
   "confirm_step.stock_located_one": "{{count}} of them will be placed on the location given in the file.",
-  "confirm_step.stock_located_other": "{{count}} of them will be placed on the location given in the file."
+  "confirm_step.stock_located_other": "{{count}} of them will be placed on the location given in the file.",
+"row_status.exists": "Exists"
 }

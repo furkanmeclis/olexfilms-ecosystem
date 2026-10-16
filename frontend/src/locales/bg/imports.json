@@ -189,5 +189,6 @@
   "confirm_step.sentence_end": ".",
   "resources.tenant.stock.units": "Складови единици",
   "confirm_step.stock_located_one": "{{count}} от тях ще бъде поставена на местоположението от файла.",
-  "confirm_step.stock_located_other": "{{count}} от тях ще бъдат поставени на местоположението от файла."
+  "confirm_step.stock_located_other": "{{count}} от тях ще бъдат поставени на местоположението от файла.",
+"row_status.exists": "Съществува"
 }

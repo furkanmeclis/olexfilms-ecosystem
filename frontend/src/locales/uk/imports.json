@@ -205,5 +205,6 @@
   "confirm_step.stock_located_one": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
   "confirm_step.stock_located_few": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
   "confirm_step.stock_located_many": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
-  "confirm_step.stock_located_other": "{{count}} з них буде розміщено в комірці, указаній у файлі."
+  "confirm_step.stock_located_other": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
+"row_status.exists": "Існує"
 }

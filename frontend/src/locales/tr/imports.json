@@ -189,5 +189,6 @@
   "confirm_step.sentence_end": ".",
   "resources.tenant.stock.units": "Stok birimleri",
   "confirm_step.stock_located_one": "Bunlardan {{count}} birim dosyadaki konuma yerleşecek.",
-  "confirm_step.stock_located_other": "Bunlardan {{count}} birim dosyadaki konuma yerleşecek."
+  "confirm_step.stock_located_other": "Bunlardan {{count}} birim dosyadaki konuma yerleşecek.",
+"row_status.exists": "Zaten var"
 }

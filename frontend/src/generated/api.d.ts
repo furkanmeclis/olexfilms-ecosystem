@@ -5743,6 +5743,47 @@ export interface paths {
         patch: operations["updateWarehouse"];
         trace?: never;
     };
+    "/v1/warehouse/warehouses/{uuid}/locations/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a warehouse location tree
+         * @description TEC-762. Requires warehouse.write and a warehouse owned by the active center or distributor. The mapped columns are room_code, room_name, aisle_code, shelf_code, bin_code, name and active (evet/hayır). Each row defines one path; missing ancestors are created. The 5000-row limit applies. Preview, confirm and undo use the tenant import job endpoints. Existing paths are skipped; existing names and active flags are not changed. Undo removes only nodes created by the job that have no dependent stock, movement or child records.
+         */
+        post: operations["importWarehouseLocations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/warehouses/{uuid}/locations/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        /** Download a warehouse location import template */
+        get: operations["warehouseLocationsImportSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warehouse/warehouses/{uuid}/rooms": {
         parameters: {
             query?: never;
@@ -6089,7 +6130,7 @@ export interface paths {
         };
         /**
          * QR label sheet PDF of warehouse locations
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Prints every typed location of `room` and/or the listed `location` uuids of the active organization (at most 1000). Each label carries the QR payload `OFW:LOC:<full_code>` and the full_code text. Template: `template`, else the organization's default location template, else the built-in QR 50x50 mm sheet.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Prints every typed location of `warehouse` or `room` and/or the listed `location` uuids of the active organization (at most 1000). Each label carries the QR payload `OFW:LOC:<full_code>` and the full_code text. Template: `template`, else the organization's default location template, else the built-in QR 50x50 mm sheet.
          */
         get: operations["printLocationLabels"];
         put?: never;
@@ -38832,6 +38873,74 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    importWarehouseLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default xlsx
+                     * @enum {string}
+                     */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @example tr */
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    warehouseLocationsImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listWarehouseRooms: {
         parameters: {
             query?: never;
@@ -39501,6 +39610,7 @@ export interface operations {
     printLocationLabels: {
         parameters: {
             query?: {
+                warehouse?: string;
                 room?: string;
                 location?: string[];
                 template?: string;
