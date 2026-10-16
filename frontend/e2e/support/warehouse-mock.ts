@@ -524,6 +524,17 @@ export class WarehouseMock {
       }
     }
 
+    // --- Warehouse membership (TEC-769): no restriction in this flow ---
+    if (method === "GET" && path === "/v1/warehouse/my-warehouses") {
+      return ok({ restricted: false, default_warehouse_uuid: null, items: [] });
+    }
+    if (
+      method === "GET" &&
+      /^\/v1\/warehouse\/warehouses\/[^/]+\/members$/.test(path)
+    ) {
+      return ok({ items: [], total: 0, limit: 20, offset: 0 });
+    }
+
     // --- Universal scan (TEC-203) ---
     if (method === "POST" && path === "/v1/warehouse/scan") {
       const code = String(body.code ?? "");
