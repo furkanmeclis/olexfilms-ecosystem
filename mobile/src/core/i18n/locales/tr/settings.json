@@ -1,0 +1,17 @@
+{
+  "title": "Ayarlar",
+  "language": "Dil",
+  "theme": "Görünüm",
+  "theme.system": "Sistem",
+  "theme.light": "Açık",
+  "theme.dark": "Koyu",
+  "unit": "Kalınlık birimi",
+  "unit.um": "Mikron (µm)",
+  "unit.mil": "Mil",
+  "switch_space": "Alan değiştir",
+  "sign_out": "Çıkış yap",
+  "restart_title": "Yeniden başlatma gerekli",
+  "restart_body": "Yazı yönünün değişmesi için uygulama yeniden başlar.",
+  "restart_now": "Yeniden başlat",
+  "version": "Sürüm {{version}}"
+}

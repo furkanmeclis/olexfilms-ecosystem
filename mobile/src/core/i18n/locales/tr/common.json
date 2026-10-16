@@ -1,0 +1,17 @@
+{
+  "app_name": "Olex Films",
+  "loading": "Yükleniyor…",
+  "retry": "Tekrar dene",
+  "cancel": "Vazgeç",
+  "save": "Kaydet",
+  "close": "Kapat",
+  "back": "Geri",
+  "continue": "Devam",
+  "done": "Tamam",
+  "error_generic": "Bir şeyler ters gitti. Tekrar dene.",
+  "error_network": "Bağlantı yok. İnternetini kontrol edip tekrar dene.",
+  "coming_soon_title": "Bu ekran hazırlanıyor",
+  "coming_soon_body": "Bu bölüm bir sonraki adımda eklenecek.",
+  "search_placeholder": "Plaka, telefon, isim veya barkod",
+  "offline": "Çevrimdışı"
+}

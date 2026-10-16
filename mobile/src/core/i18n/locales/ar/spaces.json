@@ -1,0 +1,14 @@
+{
+  "title": "تبديل المساحة",
+  "kind.bayi": "الوكيل",
+  "kind.depo": "المستودع",
+  "kind.admin": "المدير",
+  "kind.musteri": "العميل",
+  "org_type.center": "المركز",
+  "org_type.distributor": "الموزّع",
+  "org_type.dealer": "الوكيل",
+  "active": "مفتوح",
+  "switching": "جارٍ التبديل…",
+  "none_title": "لا توجد مساحة متاحة",
+  "none_body": "حسابك غير مرتبط بأي مؤسسة بعد. تواصل مع المسؤول."
+}

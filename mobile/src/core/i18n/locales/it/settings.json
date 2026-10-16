@@ -1,0 +1,17 @@
+{
+  "title": "Impostazioni",
+  "language": "Lingua",
+  "theme": "Aspetto",
+  "theme.system": "Sistema",
+  "theme.light": "Chiaro",
+  "theme.dark": "Scuro",
+  "unit": "Unità di spessore",
+  "unit.um": "Micron (µm)",
+  "unit.mil": "Mil",
+  "switch_space": "Cambia spazio",
+  "sign_out": "Esci",
+  "restart_title": "Riavvio necessario",
+  "restart_body": "L'app si riavvia per cambiare la direzione del testo.",
+  "restart_now": "Riavvia",
+  "version": "Versione {{version}}"
+}

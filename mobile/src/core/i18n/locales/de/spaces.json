@@ -1,0 +1,14 @@
+{
+  "title": "Bereich wechseln",
+  "kind.bayi": "Händler",
+  "kind.depo": "Lager",
+  "kind.admin": "Admin",
+  "kind.musteri": "Kunde",
+  "org_type.center": "Zentrale",
+  "org_type.distributor": "Distributor",
+  "org_type.dealer": "Händler",
+  "active": "Offen",
+  "switching": "Wird gewechselt…",
+  "none_title": "Kein Bereich verfügbar",
+  "none_body": "Ihr Konto ist noch keiner Organisation zugeordnet. Wenden Sie sich an Ihren Administrator."
+}

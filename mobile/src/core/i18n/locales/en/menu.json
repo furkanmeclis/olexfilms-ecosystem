@@ -1,0 +1,12 @@
+{
+  "customers": "Customers",
+  "appointments": "Appointments",
+  "stock": "Stock",
+  "orders": "Orders",
+  "warranty_claims": "Warranty claims",
+  "leads": "Leads and quotes",
+  "reports": "Reports",
+  "accounting": "Cash and accounts",
+  "tasks": "Tasks",
+  "announcements": "Announcements"
+}

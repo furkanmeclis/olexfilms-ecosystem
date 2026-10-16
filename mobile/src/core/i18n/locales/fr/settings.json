@@ -1,0 +1,17 @@
+{
+  "title": "Réglages",
+  "language": "Langue",
+  "theme": "Apparence",
+  "theme.system": "Système",
+  "theme.light": "Clair",
+  "theme.dark": "Sombre",
+  "unit": "Unité d'épaisseur",
+  "unit.um": "Microns (µm)",
+  "unit.mil": "Mils",
+  "switch_space": "Changer d'espace",
+  "sign_out": "Se déconnecter",
+  "restart_title": "Redémarrage nécessaire",
+  "restart_body": "L'application redémarre pour changer le sens d'écriture.",
+  "restart_now": "Redémarrer",
+  "version": "Version {{version}}"
+}

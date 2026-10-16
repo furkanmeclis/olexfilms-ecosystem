@@ -1,0 +1,13 @@
+{
+  "hint": "Fit the barcode or QR code in the frame",
+  "permission_title": "Camera access needed",
+  "permission_body": "Allow camera access to read barcodes and QR codes.",
+  "permission_button": "Allow camera",
+  "open_settings": "Open Settings",
+  "result.qr_login": "Web panel sign-in",
+  "result.location": "Warehouse location",
+  "result.unit": "Product unit",
+  "result.warranty": "Warranty",
+  "result.unknown": "Unrecognized code",
+  "scan_again": "Scan again"
+}

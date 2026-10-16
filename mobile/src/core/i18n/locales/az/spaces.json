@@ -1,0 +1,14 @@
+{
+  "title": "Sahəni dəyiş",
+  "kind.bayi": "Diler",
+  "kind.depo": "Anbar",
+  "kind.admin": "Admin",
+  "kind.musteri": "Müştəri",
+  "org_type.center": "Mərkəz",
+  "org_type.distributor": "Distribyutor",
+  "org_type.dealer": "Diler",
+  "active": "Açıq",
+  "switching": "Keçid edilir…",
+  "none_title": "Əlçatan sahə yoxdur",
+  "none_body": "Hesabınız hələ heç bir təşkilata bağlı deyil. Administratorla əlaqə saxlayın."
+}

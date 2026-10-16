@@ -1,0 +1,14 @@
+{
+  "title": "Changer d'espace",
+  "kind.bayi": "Revendeur",
+  "kind.depo": "Entrepôt",
+  "kind.admin": "Admin",
+  "kind.musteri": "Client",
+  "org_type.center": "Siège",
+  "org_type.distributor": "Distributeur",
+  "org_type.dealer": "Revendeur",
+  "active": "Ouvert",
+  "switching": "Changement…",
+  "none_title": "Aucun espace disponible",
+  "none_body": "Votre compte n'est encore lié à aucune organisation. Contactez votre administrateur."
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Cambiar de espacio",
+  "kind.bayi": "Distribuidor local",
+  "kind.depo": "Almacén",
+  "kind.admin": "Admin",
+  "kind.musteri": "Cliente",
+  "org_type.center": "Central",
+  "org_type.distributor": "Distribuidor",
+  "org_type.dealer": "Distribuidor local",
+  "active": "Abierto",
+  "switching": "Cambiando…",
+  "none_title": "No hay espacios disponibles",
+  "none_body": "Tu cuenta aún no está vinculada a ninguna organización. Contacta con tu administrador."
+}

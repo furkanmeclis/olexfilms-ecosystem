@@ -1,0 +1,17 @@
+{
+  "title": "Ajustes",
+  "language": "Idioma",
+  "theme": "Apariencia",
+  "theme.system": "Sistema",
+  "theme.light": "Claro",
+  "theme.dark": "Oscuro",
+  "unit": "Unidad de espesor",
+  "unit.um": "Micras (µm)",
+  "unit.mil": "Mils",
+  "switch_space": "Cambiar de espacio",
+  "sign_out": "Cerrar sesión",
+  "restart_title": "Reinicio necesario",
+  "restart_body": "La app se reinicia para cambiar la dirección del texto.",
+  "restart_now": "Reiniciar",
+  "version": "Versión {{version}}"
+}

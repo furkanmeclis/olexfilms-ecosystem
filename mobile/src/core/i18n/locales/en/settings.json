@@ -1,0 +1,17 @@
+{
+  "title": "Settings",
+  "language": "Language",
+  "theme": "Appearance",
+  "theme.system": "System",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
+  "unit": "Thickness unit",
+  "unit.um": "Microns (µm)",
+  "unit.mil": "Mils",
+  "switch_space": "Switch space",
+  "sign_out": "Sign out",
+  "restart_title": "Restart needed",
+  "restart_body": "The app restarts to change the text direction.",
+  "restart_now": "Restart",
+  "version": "Version {{version}}"
+}

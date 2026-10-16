@@ -1,0 +1,17 @@
+{
+  "title": "Einstellungen",
+  "language": "Sprache",
+  "theme": "Darstellung",
+  "theme.system": "System",
+  "theme.light": "Hell",
+  "theme.dark": "Dunkel",
+  "unit": "Schichtdicken-Einheit",
+  "unit.um": "Mikrometer (µm)",
+  "unit.mil": "Mil",
+  "switch_space": "Bereich wechseln",
+  "sign_out": "Abmelden",
+  "restart_title": "Neustart erforderlich",
+  "restart_body": "Die App startet neu, um die Schreibrichtung zu ändern.",
+  "restart_now": "Neu starten",
+  "version": "Version {{version}}"
+}

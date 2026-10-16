@@ -1,0 +1,14 @@
+{
+  "title": "Сменить раздел",
+  "kind.bayi": "Дилер",
+  "kind.depo": "Склад",
+  "kind.admin": "Админ",
+  "kind.musteri": "Клиент",
+  "org_type.center": "Центр",
+  "org_type.distributor": "Дистрибьютор",
+  "org_type.dealer": "Дилер",
+  "active": "Открыт",
+  "switching": "Переключение…",
+  "none_title": "Нет доступных разделов",
+  "none_body": "Ваш аккаунт пока не привязан к организации. Обратитесь к администратору."
+}

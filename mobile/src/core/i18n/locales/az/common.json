@@ -1,0 +1,17 @@
+{
+  "app_name": "Olex Films",
+  "loading": "Yüklənir…",
+  "retry": "Yenidən cəhd et",
+  "cancel": "Ləğv et",
+  "save": "Yadda saxla",
+  "close": "Bağla",
+  "back": "Geri",
+  "continue": "Davam et",
+  "done": "Hazırdır",
+  "error_generic": "Nəsə səhv getdi. Yenidən cəhd edin.",
+  "error_network": "Bağlantı yoxdur. İnterneti yoxlayıb yenidən cəhd edin.",
+  "coming_soon_title": "Bu ekran hazırlanır",
+  "coming_soon_body": "Bu bölmə növbəti addımda əlavə olunacaq.",
+  "search_placeholder": "Nömrə, telefon, ad və ya barkod",
+  "offline": "Oflayn"
+}
