@@ -112,7 +112,9 @@ func TestFixedBarcodeMoveTransferAndRestore(t *testing.T) {
 	}
 	conflict := move
 	conflict.Quantity = 4
-	if _,err = tr.Move(e.ctx,c,wh.MoveInput{Fixed:[]wh.FixedMoveInput{conflict},LocationUUID:&src.b.UUID}); !errors.Is(err,wh.ErrTransferLedger) { t.Fatalf("changed retry: %v",err) }
+	if _, err = tr.Move(e.ctx, c, wh.MoveInput{Fixed: []wh.FixedMoveInput{conflict}, LocationUUID: &src.b.UUID}); !errors.Is(err, wh.ErrTransferLedger) {
+		t.Fatalf("changed retry: %v", err)
+	}
 	move.Quantity = 8
 	move.RequestUUID = uuid.New()
 	if _, err = tr.Move(e.ctx, c, wh.MoveInput{Fixed: []wh.FixedMoveInput{move}, LocationUUID: &src.b.UUID}); !errors.Is(err, ledger.ErrInsufficientStock) {
