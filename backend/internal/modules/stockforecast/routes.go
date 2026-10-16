@@ -31,6 +31,7 @@ func RegisterRoutes(
 
 	mux.Handle("GET /v1/stock-forecasts", read(h.List))
 	mux.Handle("GET /v1/stock-forecasts/meta", read(h.Meta))
+	mux.Handle("POST /v1/stock-forecasts/export", read(h.RequestListExport)) // TEC-755
 	mux.Handle("GET /v1/stock-forecasts/{product_uuid}", read(h.Detail))
 	mux.Handle("PUT /v1/stock-forecasts/thresholds", manage(h.PutThresholds))
 	mux.Handle("POST /v1/stock-forecasts/order-draft", manage(h.OrderDraft))

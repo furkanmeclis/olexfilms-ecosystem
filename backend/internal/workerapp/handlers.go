@@ -31,6 +31,7 @@ import (
 	docmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	docusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/usecase"
 	efficiencymodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency"
+	efficiencyusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/efficiency/usecase"
 	einvoiceusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/einvoice/usecase"
 	exportusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/exports/usecase"
 	featurehandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/features/handler"
@@ -157,8 +158,11 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 	workerFleet := fleetusecase.New(pool)
 	workerFleet.SetOutbox(outbox.NewStore(pool, queries))
 	workerFleet.SetPlates(geo.New(pool, queries))
+	// TEC-485/TEC-755: the stock forecast exports only read.
+	stockForecastExports := stockforecastusecase.New(pool, queries, outboxStore, nil, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	ioReg := ioengine.NewRegistry(
-		catalogusecase.NewIOAdapter(catalogSvc, queries),
+		// TEC-211: price columns behind pricing.* grants (as the API).
+		catalogusecase.NewIOAdapter(catalogSvc, queries).WithPrices(pricingusecase.New(queries)),
 		ioadapters.NewUsers(queries),
 		ioadapters.NewRoles(queries),
 		ioadapters.NewNotifications(queries),
@@ -188,6 +192,8 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
 		// TEC-196: service PDF (read only).
 		servicesusecase.NewPDFAdapter(servicePDF),
+		// TEC-239: service PDF requested from the portal.
+		servicesusecase.NewPortalPDFAdapter(servicePDF),
 		// TEC-352: service reviews list export (read only).
 		servicesusecase.NewReviewsExportAdapter(servicesusecase.New(pool, queries, nil)),
 		// TEC-207: end-of-day report PDF (read only).
@@ -202,7 +208,9 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		ordersusecase.NewListExportAdapter(ordersusecase.New(pool, queries, nil, nil)),
 		stockusecase.NewUnitsExportAdapter(stockusecase.New(queries)),
 		// TEC-485: center network demand forecast export.
-		stockforecastusecase.NewNetworkExportAdapter(stockforecastusecase.New(pool, queries, outboxStore, nil, sysconfig.New(queries, sysconfig.NoCache{}), log)),
+		stockforecastusecase.NewNetworkExportAdapter(stockForecastExports),
+		// TEC-755: stock forecast list export.
+		stockforecastusecase.NewListExportAdapter(stockForecastExports),
 		// TEC-377: service and warranty list exports (read only).
 		servicesusecase.NewListExportAdapter(servicesusecase.New(pool, queries, nil)),
 		warrantyusecase.NewListExportAdapter(warrantyusecase.NewReader(pool, queries, nil, cfg.Auth.FrontendURL)),
@@ -212,6 +220,11 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		fleetusecase.NewStatementAdapter(workerFleet),
 		fleetusecase.NewListExportAdapter(workerFleet),
 		fleetusecase.NewImporter(workerFleet),
+		// TEC-488: efficiency list exports and the expectations import
+		// (applied here, import queue).
+		efficiencyusecase.NewSummaryExportAdapter(efficiencyusecase.New(queries)),
+		efficiencyusecase.NewRollsExportAdapter(efficiencyusecase.New(queries)),
+		efficiencyusecase.NewExpectationsImportAdapter(efficiencyusecase.New(queries)),
 		// TEC-506: recommended price import (staged) and discipline export.
 		pricingusecase.NewRecommendedImporter(recommendedSvc),
 		pricingusecase.NewDisciplineExportAdapter(recommendedSvc, pricingusecase.ParseDisciplineFilter),

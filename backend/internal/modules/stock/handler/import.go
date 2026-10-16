@@ -97,6 +97,9 @@ func (h *Import) Sample(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeImportError(w http.ResponseWriter, r *http.Request, err error) {
+	if response.Coded(w, r, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, importusecase.ErrInvalidRequest):
 		response.BadRequest(w, r, response.CodeValidationError, err.Error())

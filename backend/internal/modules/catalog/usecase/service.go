@@ -88,6 +88,8 @@ type Store interface {
 	GetProductCategory(ctx context.Context, arg db.GetProductCategoryParams) (db.ProductCategory, error)
 	GetProductCategoryByUUID(ctx context.Context, arg db.GetProductCategoryByUUIDParams) (db.ProductCategory, error)
 	GetProductCategoryByName(ctx context.Context, arg db.GetProductCategoryByNameParams) (db.ProductCategory, error)
+	// TEC-757: category drop-down of the import template.
+	ListActiveProductCategoryNames(ctx context.Context, brandID int64) ([]string, error)
 	UpdateProductCategory(ctx context.Context, arg db.UpdateProductCategoryParams) (db.ProductCategory, error)
 	DeleteProductCategory(ctx context.Context, arg db.DeleteProductCategoryParams) (int64, error)
 	ListProductCategories(ctx context.Context, arg db.ListProductCategoriesParams) ([]db.ProductCategory, error)

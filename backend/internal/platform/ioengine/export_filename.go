@@ -2,6 +2,7 @@ package ioengine
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -24,4 +25,17 @@ func ExportDownloadFilename(resource string, format ExportFormat, at time.Time) 
 	}
 	date := at.UTC().Format("20060102")
 	return fmt.Sprintf("%s_%s.%s", slug, date, FileExtForExport(format))
+}
+
+// AttachmentDisposition is a Content-Disposition attachment header: an
+// ASCII filename (other runes, quotes and backslashes become _) plus the
+// UTF-8 filename* form.
+func AttachmentDisposition(filename string) string {
+	safe := strings.Map(func(r rune) rune {
+		if r < 0x20 || r > 0x7e || r == '"' || r == '\\' {
+			return '_'
+		}
+		return r
+	}, filename)
+	return fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`, safe, url.PathEscape(filename))
 }

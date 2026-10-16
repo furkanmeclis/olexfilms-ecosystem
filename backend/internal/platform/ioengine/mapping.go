@@ -13,7 +13,7 @@ func SuggestMapping(headers []string, fields []ImportField, locale i18n.Locale) 
 	used := map[string]struct{}{}
 	for _, h := range headers {
 		hNorm := normalizeKey(h)
-		if hNorm == "" {
+		if hNorm == "" || IsReportHeader(h, locale) {
 			continue
 		}
 		bestKey := ""

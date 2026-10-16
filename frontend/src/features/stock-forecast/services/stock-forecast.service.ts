@@ -1,40 +1,29 @@
 import type { ServerListQuery } from "@/components/entity";
+import type { components } from "@/generated/api";
+import { apiPath } from "@/lib/api/api-path";
 import { platformRequest } from "@/lib/api/platform-request";
 
-export type StockForecastStatus =
-  "critical" | "warning" | "healthy" | "insufficient_data";
+type Schemas = components["schemas"];
 
-export type StockForecastProduct = {
-  uuid: string;
-  sku: string;
-  name: string;
-  category?: { uuid: string; name: string } | null;
-  unit_type?: "piece" | "roll_meter" | string;
-};
-
-export type StockForecastRow = {
-  uuid: string;
-  product: StockForecastProduct;
-  on_hand_qty: number;
-  on_hand_meters?: string | number | null;
-  avg_daily_30: string | number;
-  avg_daily_90: string | number;
-  seasonality_factor: string | number;
-  days_left?: string | number | null;
-  depletion_date?: string | null;
-  data_days: number;
-  min_data_days: number;
-  status: StockForecastStatus;
-  suggested_qty?: number | null;
-  suggested_meters?: string | number | null;
-  warning_days: number;
-  cover_days: number;
-  vehicles_left?: string | number | null;
-};
+export type StockForecastStatus = Schemas["StockForecastStatus"];
+export type StockForecastProduct = Schemas["StockForecastProductRef"];
+export type StockForecastRow = Schemas["StockForecast"];
+export type StockForecastDetail = Schemas["StockForecastDetail"];
+export type StockForecastThresholds = Schemas["StockForecastThresholds"];
+export type StockForecastThresholdInput =
+  Schemas["StockForecastThresholdInput"];
+export type StockForecastParameters = Schemas["StockForecastParameters"];
+export type StockForecastMeta = Schemas["StockForecastMeta"];
+export type StockForecastOrderDraftInput =
+  Schemas["StockForecastOrderDraftInput"];
+export type StockForecastDraftLine =
+  StockForecastOrderDraftInput["items"][number];
+export type StockForecastOrderDraft = Schemas["StockForecastOrderDraft"];
+export type NetworkDemandRow = Schemas["StockForecastNetworkDemand"];
+export type SubtreeSummaryRow = Schemas["StockForecastSubtreeSummary"];
 
 export type StockForecastListQuery = ServerListQuery & {
   status?: string;
-  category_uuid?: string;
   days_left_min?: number | string;
   days_left_max?: number | string;
 };
@@ -46,116 +35,76 @@ export type Page<T> = {
   offset: number;
 };
 
-export type StockForecastHistoryPoint = {
-  date: string;
-  actual_qty?: number | null;
-  actual_meters?: number | null;
-  projected_qty?: number | null;
-  projected_meters?: number | null;
-  threshold?: number | null;
-  vehicles_left?: number | null;
-};
-
-export type StockForecastDetail = {
-  forecast: StockForecastRow;
-  history: StockForecastHistoryPoint[];
-};
-
-export type StockForecastThresholdInput = {
-  warning_days: number;
-  cover_days: number;
-};
-
-export type StockForecastDraftLine = {
-  product_uuid: string;
-  quantity?: number | null;
-  meters?: number | null;
-};
-
-export type StockForecastOrderDraft = {
-  uuid: string;
-  order_no: string;
-};
-
-export type NetworkDemandRow = {
-  uuid: string;
-  product: StockForecastProduct;
-  forecast_month: string;
-  network_on_hand_qty: number;
-  network_on_hand_meters?: string | number | null;
-  open_order_qty: number;
-  open_order_meters?: string | number | null;
-  suggested_production_qty: number;
-  suggested_production_meters?: string | number | null;
-};
-
-export type DealerSummaryRow = {
-  uuid: string;
-  dealer_name: string;
-  critical_count: number;
-  warning_count: number;
-  suggested_qty: number;
-  suggested_meters?: string | number | null;
-};
-
-export type StockForecastWidgetSummary = {
-  critical_count: number;
-};
-
-export const STOCK_FORECAST_EXPORT_PATH = "/v1/stock-forecasts/export";
-export const STOCK_FORECAST_NETWORK_EXPORT_PATH =
-  "/v1/stock-forecasts/network-demand/export";
-
-const enc = encodeURIComponent;
+/** List export (csv, xlsx): `stock_forecasts.list`. */
+export const STOCK_FORECAST_EXPORT_PATH = apiPath(
+  "post",
+  "/v1/stock-forecasts/export",
+);
+/** Center network demand export (xlsx): `stock_forecasts.network`. */
+export const STOCK_FORECAST_NETWORK_EXPORT_PATH = apiPath(
+  "post",
+  "/v1/stock-forecasts/network/export",
+);
 
 export const stockForecastService = {
   list(params: StockForecastListQuery) {
     return platformRequest<Page<StockForecastRow>>(
       "GET",
-      "/v1/stock-forecasts",
-      {
-        query: params,
-      },
+      apiPath("get", "/v1/stock-forecasts"),
+      { query: params },
+    );
+  },
+  meta() {
+    return platformRequest<StockForecastMeta>(
+      "GET",
+      apiPath("get", "/v1/stock-forecasts/meta"),
     );
   },
   detail(productUuid: string) {
     return platformRequest<StockForecastDetail>(
       "GET",
-      `/v1/stock-forecasts/${enc(productUuid)}`,
+      apiPath("get", "/v1/stock-forecasts/{product_uuid}", {
+        product_uuid: productUuid,
+      }),
     );
   },
-  updateThreshold(productUuid: string, input: StockForecastThresholdInput) {
-    return platformRequest<StockForecastRow>(
+  /** Organization defaults plus the product overrides to upsert. */
+  putThresholds(input: StockForecastThresholdInput) {
+    return platformRequest<StockForecastThresholds>(
       "PUT",
-      `/v1/stock-forecasts/${enc(productUuid)}/threshold`,
+      apiPath("put", "/v1/stock-forecasts/thresholds"),
       { body: input },
     );
   },
-  createOrderDraft(lines: StockForecastDraftLine[]) {
+  createOrderDraft(input: StockForecastOrderDraftInput) {
     return platformRequest<StockForecastOrderDraft>(
       "POST",
-      "/v1/stock-forecasts/order-drafts",
-      { body: { lines } },
+      apiPath("post", "/v1/stock-forecasts/order-draft"),
+      { body: input },
     );
   },
-  networkDemand(params: ServerListQuery) {
+  network(params: ServerListQuery) {
     return platformRequest<Page<NetworkDemandRow>>(
       "GET",
-      "/v1/stock-forecasts/network-demand",
+      apiPath("get", "/v1/stock-forecasts/network"),
       { query: params },
     );
   },
-  dealerSummary() {
-    return platformRequest<{ items: DealerSummaryRow[] }>(
+  subtree(params: ServerListQuery) {
+    return platformRequest<Page<SubtreeSummaryRow>>(
       "GET",
-      "/v1/stock-forecasts/dealers-summary",
+      apiPath("get", "/v1/stock-forecasts/subtree"),
+      { query: params },
     );
   },
-  widget() {
-    return platformRequest<StockForecastWidgetSummary>(
-      "GET",
-      "/v1/stock-forecasts/widget",
-    );
+  /** Home widget: number of critical products (the list total). */
+  async criticalCount() {
+    const page = await stockForecastService.list({
+      status: "critical",
+      limit: 1,
+      offset: 0,
+    });
+    return page.total;
   },
 };
 
@@ -163,9 +112,11 @@ export const stockForecastKeys = {
   all: ["stock-forecast"] as const,
   list: (params: StockForecastListQuery) =>
     ["stock-forecast", "list", params] as const,
+  meta: ["stock-forecast", "meta"] as const,
   detail: (uuid: string) => ["stock-forecast", "detail", uuid] as const,
   network: (params: ServerListQuery) =>
     ["stock-forecast", "network", params] as const,
-  dealers: ["stock-forecast", "dealers"] as const,
+  subtree: (params: ServerListQuery) =>
+    ["stock-forecast", "subtree", params] as const,
   widget: ["stock-forecast", "widget"] as const,
 };

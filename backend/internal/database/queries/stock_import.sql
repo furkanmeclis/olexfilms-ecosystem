@@ -60,3 +60,9 @@ WHERE organization_id = sqlc.arg(organization_id)
   AND (full_code = sqlc.arg(code)::text OR (room_id IS NULL AND code = sqlc.arg(code)::text))
 ORDER BY (room_id IS NOT NULL) DESC
 LIMIT 1;
+
+-- name: ListActiveProductSKUsByBrand :many
+-- TEC-757: SKU drop-down of the stock import template.
+SELECT sku FROM products
+WHERE brand_id = sqlc.arg(brand_id) AND active
+ORDER BY sku;

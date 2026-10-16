@@ -1566,6 +1566,50 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/platform/imports/{uuid}/error-report:
+    get:
+      tags: [Platform]
+      operationId: getPlatformImportErrorReport
+      summary: Download the import error report (XLSX)
+      description: |
+        TEC-757: the uploaded (mapped) rows with their source headers plus the
+        "Row", "Status" and "Error" columns (in the job locale); failed rows
+        come first and are highlighted. Staged importers (stock) report their
+        staged row statuses and error codes, row-by-row importers the preview
+        check (after apply, the apply result). Available once the job is
+        previewed (previewed, queued, applying, applied, failed,
+        rolled_back); earlier → 400. Access follows the job detail (platform.imports.read; own jobs, every platform job for platform admins).
+        A re-uploaded report maps only its data columns.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Error report workbook
+          headers:
+            Content-Disposition:
+              description: 'attachment; filename="<source file name>-hatalar.xlsx" (plus filename*)'
+              schema: { type: string }
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/platform/logs/meta:
     get:
       tags: [Platform]
@@ -6083,6 +6127,50 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/tenant/imports/{uuid}/error-report:
+    get:
+      tags: [Tenant]
+      operationId: getTenantImportErrorReport
+      summary: Download the import error report (XLSX)
+      description: |
+        TEC-757: the uploaded (mapped) rows with their source headers plus the
+        "Row", "Status" and "Error" columns (in the job locale); failed rows
+        come first and are highlighted. Staged importers (stock) report their
+        staged row statuses and error codes, row-by-row importers the preview
+        check (after apply, the apply result). Available once the job is
+        previewed (previewed, queued, applying, applied, failed,
+        rolled_back); earlier → 400. Access follows the job detail (tenant.imports.read, same organization).
+        A re-uploaded report maps only its data columns.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Error report workbook
+          headers:
+            Content-Disposition:
+              description: 'attachment; filename="<source file name>-hatalar.xlsx" (plus filename*)'
+              schema: { type: string }
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /v1/tenant/imports/{uuid}/mapping:
     patch:
       tags: [Tenant]
@@ -6118,6 +6206,12 @@ paths:
       tags: [Tenant]
       operationId: previewTenantImport
       summary: Preview import rows
+      description: |
+        TEC-757: row-by-row importers check every row (required cells,
+        numbers, enums and the adapter's rules, e.g. catalog category and
+        lengths); invalid rows are listed in preview_summary.errors with a
+        stable code (IMPORT_*) and a localized message. A file over the row
+        limit (default 5000) → 400 IMPORT_TOO_MANY_ROWS.
       security:
         - bearerAuth: []
       parameters:
@@ -6148,6 +6242,10 @@ paths:
       tags: [Tenant]
       operationId: confirmTenantImport
       summary: Confirm and queue import apply
+      description: |
+        TEC-757: only the user who uploaded the job or a holder of the
+        resource's import permission (stock: stock.import; catalog:
+        catalog.write) may run it; other organization members → 403.
       security:
         - bearerAuth: []
       parameters:
@@ -6178,6 +6276,10 @@ paths:
       tags: [Tenant]
       operationId: rollbackTenantImport
       summary: Roll back an applied import
+      description: |
+        TEC-757: only the user who uploaded the job or a holder of the
+        resource's import permission (stock: stock.import; catalog:
+        catalog.write) may run it; other organization members → 403.
       security:
         - bearerAuth: []
       parameters:
@@ -9742,7 +9844,8 @@ paths:
       operationId: importStockUnits
       summary: Upload a stock import file (brand center, staged)
       description: >-
-        Needs `stock.import` and the brand center (K14). Columns: barcode,
+        Needs `stock.import` and the brand center (K14). A file over 5000
+        rows → 400 IMPORT_TOO_MANY_ROWS (TEC-757). Columns: barcode,
         product_sku (required), quantity (fixed barcodes), meters (rolls),
         location_code (optional, a location of the center; default the
         organization). Map, preview, confirm and undo through
@@ -21572,6 +21675,33 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/EnvelopeStockForecastMeta" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /v1/stock-forecasts/export:
+    post:
+      tags: [Stock Forecasts]
+      operationId: exportStockForecasts
+      summary: Queue the stock forecast list export
+      description: >-
+        TEC-755. Queues an I/O engine export job (`stock_forecasts.list`) over
+        the active organization's forecast list. `query` carries the list
+        parameters of `GET /v1/stock-forecasts` (`q`, `sort`, `status`,
+        `days_left_min`, `days_left_max`); format is `csv` or `xlsx`. Poll and
+        download through `/v1/tenant/exports/{uuid}`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ListExportRequest" }
+      responses:
+        "202":
+          description: Export job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -41341,15 +41471,31 @@ components:
               stock_qty: { type: integer }
               stock_meters: { type: string }
         thresholds: { $ref: "#/components/schemas/StockForecastThresholds" }
-        parameters:
-          type: object
-          required: [min_data_days, warning_days, critical_days, cover_days, horizon_days]
-          properties:
-            min_data_days: { type: integer }
-            warning_days: { type: integer }
-            critical_days: { type: integer }
-            cover_days: { type: integer }
-            horizon_days: { type: integer }
+        parameters: { $ref: "#/components/schemas/StockForecastParameters" }
+
+    StockForecastParameters:
+      type: object
+      required: [min_data_days, warning_days, critical_days, cover_days, horizon_days]
+      properties:
+        min_data_days: { type: integer }
+        warning_days: { type: integer }
+        critical_days: { type: integer }
+        cover_days: { type: integer }
+        horizon_days: { type: integer }
+
+    StockForecastMeta:
+      type: object
+      required: [default_sort, sortable_fields, statuses, thresholds, parameters]
+      properties:
+        default_sort: { type: string }
+        sortable_fields:
+          type: array
+          items: { type: string }
+        statuses:
+          type: array
+          items: { $ref: "#/components/schemas/StockForecastStatus" }
+        thresholds: { $ref: "#/components/schemas/StockForecastThresholds" }
+        parameters: { $ref: "#/components/schemas/StockForecastParameters" }
 
     StockForecastThresholdInput:
       type: object
@@ -41554,7 +41700,7 @@ components:
       required: [success, data, meta]
       properties:
         success: { type: boolean, enum: [true] }
-        data: { type: object }
+        data: { $ref: "#/components/schemas/StockForecastMeta" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockForecastOrderDraft:

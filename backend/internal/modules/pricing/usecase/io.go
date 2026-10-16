@@ -19,6 +19,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/pricing/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -475,3 +476,6 @@ func ParseDisciplineFilter(values url.Values) (DisciplineFilter, error) {
 	}
 	return f, nil
 }
+
+// ImportPermission implements ioengine.ImportPermissioner (TEC-757).
+func (im *RecommendedImporter) ImportPermission() string { return rbac.PermPricingRecommendedWrite }

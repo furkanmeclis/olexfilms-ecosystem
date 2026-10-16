@@ -155,6 +155,9 @@ func (h *RecommendedHandler) Import(w http.ResponseWriter, r *http.Request) {
 	orgID := v.OrgID
 	job, err := h.imports.Upload(r.Context(), v.UserID, &orgID, pricing.ResourceRecommendedImport, format, locale, header.Filename, file)
 	if err != nil {
+		if response.Coded(w, r, err) {
+			return
+		}
 		writeIOError(w, r, err)
 		return
 	}

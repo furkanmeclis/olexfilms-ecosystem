@@ -218,16 +218,92 @@ func exportRow(p model.Product) map[string]any {
 // ImportSchema implements ioengine.ResourceAdapter.
 func (a *IOAdapter) ImportSchema() []ioengine.ImportField {
 	return []ioengine.ImportField{
-		{Key: "sku", LabelKey: "catalog.products.sku", Type: ioengine.ColumnTypeString, Required: true},
-		{Key: "name", LabelKey: "catalog.products.name", Type: ioengine.ColumnTypeString, Required: true},
-		{Key: "category", LabelKey: "catalog.products.category", Type: ioengine.ColumnTypeString, Required: true},
-		{Key: "unit_type", LabelKey: "catalog.products.unit", Type: ioengine.ColumnTypeEnum, DefaultHint: model.UnitPiece},
-		{Key: "warranty_duration_months", LabelKey: "catalog.products.warranty_months", Type: ioengine.ColumnTypeString},
-		{Key: "micron_thickness", LabelKey: "catalog.products.micron_thickness", Type: ioengine.ColumnTypeString},
-		{Key: "uses_fixed_barcode", LabelKey: "catalog.products.uses_fixed_barcode", Type: ioengine.ColumnTypeBoolean, DefaultHint: "false"},
+		{Key: "sku", LabelKey: "catalog.products.sku", Type: ioengine.ColumnTypeString, Required: true,
+			Kind: ioengine.FieldCode, HintKey: "catalog.products.import_hint.sku"},
+		{Key: "name", LabelKey: "catalog.products.name", Type: ioengine.ColumnTypeString, Required: true,
+			HintKey: "catalog.products.import_hint.name"},
+		{Key: "category", LabelKey: "catalog.products.category", Type: ioengine.ColumnTypeString, Required: true,
+			HintKey: "catalog.products.import_hint.category"},
+		{Key: "unit_type", LabelKey: "catalog.products.unit", Type: ioengine.ColumnTypeEnum, DefaultHint: model.UnitPiece,
+			Enum: []string{model.UnitPiece, model.UnitRollMeter}, HintKey: "catalog.products.import_hint.unit_type"},
+		{Key: "warranty_duration_months", LabelKey: "catalog.products.warranty_months", Type: ioengine.ColumnTypeString,
+			Kind: ioengine.FieldInteger, HintKey: "catalog.products.import_hint.warranty_duration_months"},
+		{Key: "micron_thickness", LabelKey: "catalog.products.micron_thickness", Type: ioengine.ColumnTypeString,
+			Kind: ioengine.FieldDecimal, HintKey: "catalog.products.import_hint.micron_thickness"},
+		{Key: "uses_fixed_barcode", LabelKey: "catalog.products.uses_fixed_barcode", Type: ioengine.ColumnTypeBoolean, DefaultHint: "false",
+			HintKey: "catalog.products.import_hint.uses_fixed_barcode"},
 		{Key: "active", LabelKey: "catalog.products.is_active", Type: ioengine.ColumnTypeBoolean, DefaultHint: "true"},
 		{Key: "description_md", LabelKey: "catalog.products.description", Type: ioengine.ColumnTypeString},
 	}
+}
+
+// SampleRows is the template example (TEC-757).
+func (a *IOAdapter) SampleRows() []map[string]any {
+	return []map[string]any{
+		{"sku": "PPF-GLOSS-152", "name": "PPF Gloss 152 cm", "category": "PPF", "unit_type": model.UnitRollMeter,
+			"warranty_duration_months": "120", "micron_thickness": "190", "uses_fixed_barcode": "false", "active": "true"},
+		{"sku": "CLEANER-500", "name": "Cleaner 500 ml", "category": "Care", "unit_type": model.UnitPiece,
+			"warranty_duration_months": "", "micron_thickness": "", "uses_fixed_barcode": "true", "active": "true"},
+	}
+}
+
+// SampleLookups implements ioengine.SampleLookuper: the brand's active
+// categories.
+func (a *IOAdapter) SampleLookups(ctx context.Context) (map[string][]string, error) {
+	org, ok := orgctx.ScopeFrom(ctx)
+	if !ok || org.BrandID == 0 {
+		return nil, nil
+	}
+	names, err := a.svc.store.ListActiveProductCategoryNames(ctx, org.BrandID)
+	if err != nil {
+		return nil, fmt.Errorf("catalog import: category lookup: %w", err)
+	}
+	return map[string][]string{"category": names}, nil
+}
+
+// ImportPermission implements ioengine.ImportPermissioner.
+func (a *IOAdapter) ImportPermission() string { return rbac.PermCatalogWrite }
+
+// ValidateRow implements ioengine.RowValidator (TEC-757): the preview
+// reports the rows ApplyRow would refuse (lengths, ranges, unknown
+// category) before anything is written. Required cells, numbers, booleans
+// and the unit type are checked by the schema.
+func (a *IOAdapter) ValidateRow(ctx context.Context, row, defaults map[string]any, loc i18n.Locale) ([]ioengine.RowError, error) {
+	fields := map[string]ioengine.ImportField{}
+	for _, f := range a.ImportSchema() {
+		fields[f.Key] = f
+	}
+	get := func(k string) string { return ioengine.Cell(row, defaults, k) }
+	var errs []ioengine.RowError
+	errs = append(errs, ioengine.CheckLength(loc, fields["sku"], get("sku"), maxSKULen)...)
+	errs = append(errs, ioengine.CheckLength(loc, fields["name"], get("name"), maxNameLen)...)
+	errs = append(errs, ioengine.CheckLength(loc, fields["description_md"], get("description_md"), maxDescriptionLen)...)
+	if v := get("warranty_duration_months"); v != "" {
+		if n, ok := ioengine.ParseInteger(v); ok && (n < 0 || n > maxWarrantyMonths) {
+			errs = append(errs, ioengine.NewRowError(loc, fields["warranty_duration_months"], ioengine.CodeOutOfRange,
+				map[string]string{"min": "0", "max": strconv.Itoa(maxWarrantyMonths)}))
+		}
+	}
+	if v := get("micron_thickness"); v != "" {
+		if n, ok := ioengine.ParseDecimal(v); ok && (n <= 0 || n > maxMicron) {
+			errs = append(errs, ioengine.NewRowError(loc, fields["micron_thickness"], ioengine.CodeOutOfRange,
+				map[string]string{"min": "0", "max": strconv.FormatFloat(maxMicron, 'f', -1, 64)}))
+		}
+	}
+	if name := get("category"); name != "" {
+		org, ok := orgctx.ScopeFrom(ctx)
+		if !ok {
+			return errs, nil
+		}
+		_, err := a.svc.store.GetProductCategoryByName(ctx, db.GetProductCategoryByNameParams{BrandID: org.BrandID, Name: name})
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			errs = append(errs, ioengine.NewRowError(loc, fields["category"], ioengine.CodeNotFound, map[string]string{"value": name}))
+		case err != nil:
+			return nil, err
+		}
+	}
+	return errs, nil
 }
 
 // ApplyRow implements ioengine.ResourceAdapter: creates the product, or
@@ -404,4 +480,8 @@ func rowError(err error) (ioengine.RowResult, error) {
 	return ioengine.RowResult{}, err
 }
 
-var _ ioengine.ResourceAdapter = (*IOAdapter)(nil)
+var (
+	_ ioengine.ResourceAdapter = (*IOAdapter)(nil)
+	_ ioengine.RowValidator    = (*IOAdapter)(nil)
+	_ ioengine.SampleLookuper  = (*IOAdapter)(nil)
+)

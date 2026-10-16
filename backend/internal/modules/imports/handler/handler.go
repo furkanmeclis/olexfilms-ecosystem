@@ -168,7 +168,7 @@ func (h *Handler) Confirm(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
 		return
 	}
-	job, err := h.svc.Confirm(r.Context(), id, p.UserInternal, nil)
+	job, err := h.svc.Confirm(r.Context(), id, p.UserInternal, nil, p.HasPermission)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -183,7 +183,7 @@ func (h *Handler) Rollback(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
 		return
 	}
-	job, err := h.svc.Rollback(r.Context(), id, p.UserInternal, nil)
+	job, err := h.svc.Rollback(r.Context(), id, p.UserInternal, nil, p.HasPermission)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -276,7 +276,7 @@ func (h *Handler) ConfirmTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orgID := scope.InternalID
-	job, err := h.svc.Confirm(r.Context(), id, p.UserInternal, &orgID)
+	job, err := h.svc.Confirm(r.Context(), id, p.UserInternal, &orgID, p.HasPermission)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -293,7 +293,7 @@ func (h *Handler) RollbackTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orgID := scope.InternalID
-	job, err := h.svc.Rollback(r.Context(), id, p.UserInternal, &orgID)
+	job, err := h.svc.Rollback(r.Context(), id, p.UserInternal, &orgID, p.HasPermission)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -301,8 +301,50 @@ func (h *Handler) RollbackTenant(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, job)
 }
 
+// ErrorReport serves GET /v1/platform/imports/{uuid}/error-report (TEC-757).
+func (h *Handler) ErrorReport(w http.ResponseWriter, r *http.Request) {
+	p := authctx.MustPrincipal(r.Context())
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
+		return
+	}
+	admin := p.HasPermission(rbac.PermPlatformSettingsWrite)
+	file, err := h.svc.ErrorReport(r.Context(), id, p.UserInternal, admin, nil)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	writeReport(w, file)
+}
+
+// ErrorReportTenant serves GET /v1/tenant/imports/{uuid}/error-report.
+func (h *Handler) ErrorReportTenant(w http.ResponseWriter, r *http.Request) {
+	p := authctx.MustPrincipal(r.Context())
+	scope := orgctx.MustScope(r.Context())
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
+		return
+	}
+	orgID := scope.InternalID
+	file, err := h.svc.ErrorReport(r.Context(), id, p.UserInternal, false, &orgID)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	writeReport(w, file)
+}
+
+func writeReport(w http.ResponseWriter, file importusecase.ErrorReportFile) {
+	w.Header().Set("Content-Type", ioengine.ContentTypeForExport(ioengine.ExportXLSX))
+	w.Header().Set("Content-Disposition", ioengine.AttachmentDisposition(file.Filename))
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(file.Data)
+}
+
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
-	if response.QueryValidation(w, r, err) {
+	if response.QueryValidation(w, r, err) || response.Coded(w, r, err) {
 		return
 	}
 	switch {
