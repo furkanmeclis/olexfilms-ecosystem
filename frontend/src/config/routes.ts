@@ -168,6 +168,8 @@ export const routes = {
       reclassifications: (slug: string) => `/t/${slug}/stock/reclassifications`,
       reclassification: (slug: string, uuid: string) =>
         `/t/${slug}/stock/reclassifications/${uuid}`,
+      /** TEC-764 stock settings: unit and location label templates. */
+      labelTemplates: (slug: string) => `/t/${slug}/stock/label-templates`,
     },
     /** TEC-486: stock forecast and order suggestions add-on. */
     stockForecast: {

@@ -962,6 +962,18 @@ export function tenantNav(slug: string) {
             feature: "stock",
             orgTypes: ["center", "distributor", "dealer"],
           },
+          {
+            // TEC-764: stock settings › label templates (center and
+            // distributor print labels, K12; same gates as
+            // /v1/stock/label-templates).
+            id: "stock-label-templates",
+            titleKey: "stock.nav_label_templates",
+            href: routes.tenant.stock.labelTemplates(slug),
+            icon: Tags,
+            permission: permissions.stock.read,
+            feature: "stock",
+            orgTypes: ["center", "distributor"],
+          },
         ],
       },
       {
