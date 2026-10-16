@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	wh "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
@@ -24,7 +26,9 @@ type ScanHandler struct {
 func NewScan(svc *wh.Scanner) *ScanHandler { return &ScanHandler{svc: svc} }
 
 type scanBody struct {
-	Code string `json:"code"`
+	Code          string     `json:"code"`
+	Expect        string     `json:"expect"`
+	WarehouseUUID *uuid.UUID `json:"warehouse_uuid"`
 }
 
 // Scan (POST /v1/warehouse/scan) resolves one scanned string.
@@ -34,7 +38,7 @@ func (h *ScanHandler) Scan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := wh.ScanCaller{Caller: caller(r), Principal: authctx.MustPrincipal(r.Context())}
-	res, err := h.svc.Resolve(r.Context(), c, body.Code)
+	res, err := h.svc.ResolveWith(r.Context(), c, body.Code, wh.ScanOptions{Expect: body.Expect, WarehouseUUID: body.WarehouseUUID})
 	switch {
 	case err == nil:
 		response.JSON(w, r, http.StatusOK, res)

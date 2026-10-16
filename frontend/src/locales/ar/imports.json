@@ -190,6 +190,7 @@
   "resources.tenant.stock.units": "وحدات المخزون",
   "confirm_step.stock_located_one": "ستوضع وحدة واحدة منها في الموقع المحدد في الملف.",
   "confirm_step.stock_located_other": "ستوضع {{count}} وحدة منها في الموقع المحدد في الملف.",
+  "row_status.exists": "موجود",
   "fields.entry_barcodes.product_name": "اسم المنتج",
   "fields.entry_barcodes.product_sku": "رمز SKU",
   "fields.entry_barcodes.barcode": "الرمز الشريطي",

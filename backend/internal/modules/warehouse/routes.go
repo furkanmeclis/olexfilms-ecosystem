@@ -57,6 +57,20 @@ func RegisterRoutes(
 	mux.Handle("DELETE /v1/warehouse/locations/{uuid}", write(h.DeleteLocation))
 }
 
+// RegisterImportRoutes mounts the warehouse-scoped location import.
+func RegisterImportRoutes(mux *http.ServeMux, h *whhandler.LocationImport,
+	checker middleware.FeatureChecker, tokens *jwt.Manager, loader middleware.IdentityLoader, q *db.Queries,
+) {
+	chain := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn,
+			middleware.Authenticate(tokens, loader), middleware.RequireOrganization(tokens, q),
+			middleware.RequireFeature(checker, features.ModuleWarehouse),
+			middleware.RequireScope(q, rbac.PermWarehouseWrite))
+	}
+	mux.Handle("POST /v1/warehouse/warehouses/{uuid}/locations/import", chain(h.Upload))
+	mux.Handle("GET /v1/warehouse/warehouses/{uuid}/locations/import/sample", chain(h.Sample))
+}
+
 // RegisterScanRoutes mounts the TEC-203 universal scan resolver. It needs
 // warehouse.read (center and distributor, K12); units additionally follow
 // the caller's stock.read reach inside the use case.

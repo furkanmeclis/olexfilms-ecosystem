@@ -3234,6 +3234,7 @@ type Querier interface {
 	NextLibraryItemVersionNo(ctx context.Context, arg NextLibraryItemVersionNoParams) (int32, error)
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
 	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
+	OrganizationRequiresPlacement(ctx context.Context, organizationID int64) (bool, error)
 	PingDB(ctx context.Context) (int32, error)
 	// Country x currency summary of one snapshot day in the caller's scope
 	// (org_ids NULL = whole brand): average / median deviation and the

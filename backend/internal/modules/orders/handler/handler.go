@@ -17,20 +17,21 @@ import (
 
 // Error codes specific to orders.
 const (
-	CodeInvalidTransition     = "ORDER_INVALID_TRANSITION"
-	CodeTransitionUnavailable = "ORDER_TRANSITION_UNAVAILABLE"
-	CodeNotEditable           = "ORDER_NOT_EDITABLE"
-	CodeNoSupplier            = "ORDER_NO_SUPPLIER"
-	CodeNotAssignable         = "ORDER_NOT_ASSIGNABLE"
-	CodeUnitAlreadyAssigned   = "ORDER_UNIT_ALREADY_ASSIGNED"
-	CodeUnitReserved          = "ORDER_UNIT_RESERVED"
-	CodeUnitNotAvailable      = "ORDER_UNIT_NOT_AVAILABLE"
-	CodeInsufficientStock     = "ORDER_INSUFFICIENT_STOCK"
-	CodeOverAssigned          = "ORDER_ITEM_OVER_ASSIGNED"
-	CodeRollMetersExceed      = "ROLL_METERS_EXCEED_REMAINING"
-	CodeNotFullyAssigned      = "ORDER_NOT_FULLY_ASSIGNED"
-	CodeStockUnavailable      = "ORDER_STOCK_UNAVAILABLE"
-	CodePriceNotFound         = ord.CodePriceNotFound
+	CodeInvalidTransition         = "ORDER_INVALID_TRANSITION"
+	CodeTransitionUnavailable     = "ORDER_TRANSITION_UNAVAILABLE"
+	CodeNotEditable               = "ORDER_NOT_EDITABLE"
+	CodeNoSupplier                = "ORDER_NO_SUPPLIER"
+	CodeNotAssignable             = "ORDER_NOT_ASSIGNABLE"
+	CodeUnitAlreadyAssigned       = "ORDER_UNIT_ALREADY_ASSIGNED"
+	CodeUnitReserved              = "ORDER_UNIT_RESERVED"
+	CodeUnitNotAvailable          = "ORDER_UNIT_NOT_AVAILABLE"
+	CodeLocationPlacementRequired = "ORDER_LOCATION_PLACEMENT_REQUIRED"
+	CodeInsufficientStock         = "ORDER_INSUFFICIENT_STOCK"
+	CodeOverAssigned              = "ORDER_ITEM_OVER_ASSIGNED"
+	CodeRollMetersExceed          = "ROLL_METERS_EXCEED_REMAINING"
+	CodeNotFullyAssigned          = "ORDER_NOT_FULLY_ASSIGNED"
+	CodeStockUnavailable          = "ORDER_STOCK_UNAVAILABLE"
+	CodePriceNotFound             = ord.CodePriceNotFound
 )
 
 // Handler serves order endpoints.
@@ -71,6 +72,8 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeUnitAlreadyAssigned, "The unit is already assigned to this order line")
 	case errors.Is(err, ord.ErrUnitReserved):
 		response.Conflict(w, r, CodeUnitReserved, "The unit is reserved by another order")
+	case errors.Is(err, ord.ErrLocationPlacementRequired):
+		response.Conflict(w, r, CodeLocationPlacementRequired, "Place the unit in a warehouse location before assigning it")
 	case errors.Is(err, ord.ErrUnitNotAvailable):
 		response.Conflict(w, r, CodeUnitNotAvailable, "The unit is not in the seller's stock")
 	case errors.Is(err, ord.ErrInsufficientStock):

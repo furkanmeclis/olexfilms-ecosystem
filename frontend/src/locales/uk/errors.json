@@ -162,5 +162,6 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Профіль рахунків покупця неповний; заповніть відсутні поля.",
   "codes.EINVOICE_INVALID_STATUS": "Статус е-рахунку не дозволяє цю дію.",
   "codes.EINVOICE_NOT_ARCHIVED": "Е-рахунок ще не заархівовано.",
-  "codes.EINVOICE_PDF_NOT_READY": "PDF рахунку ще не готовий; спробуйте трохи пізніше або згенеруйте його повторно."
+  "codes.EINVOICE_PDF_NOT_READY": "PDF рахунку ще не готовий; спробуйте трохи пізніше або згенеруйте його повторно.",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Розмістіть цю одиницю на складі перед призначенням."
 }

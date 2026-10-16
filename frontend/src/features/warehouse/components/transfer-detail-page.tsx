@@ -301,6 +301,8 @@ export function TransferDetailPage({
               </CardHeader>
               <CardContent className="space-y-3">
                 <ScanInput
+                  expect="unit"
+                  warehouseUuid={transfer.from_warehouse.uuid}
                   id="transfer-barcode"
                   label={t("warehouse.entry.scan_barcode")}
                   hint={t("warehouse.transfer.scan_unit_hint")}
@@ -340,6 +342,8 @@ export function TransferDetailPage({
               </CardHeader>
               <CardContent className="grid gap-6 lg:grid-cols-2">
                 <ScanInput
+                  expect="bin"
+                  warehouseUuid={transfer.to_warehouse.uuid}
                   id="transfer-location"
                   autoFocus={transfer.status === "in_transit"}
                   label={t("warehouse.entry.scan_location")}

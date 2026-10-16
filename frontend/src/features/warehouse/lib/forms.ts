@@ -57,6 +57,7 @@ export function nodeFormSchema(
         .max(500, t("warehouse.validation.too_long", { max: 500 })),
       type: z.string(),
       active: z.boolean(),
+      require_location_placement: z.boolean(),
     })
     .superRefine((v, ctx) => {
       if (
