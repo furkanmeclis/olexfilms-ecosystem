@@ -13085,6 +13085,200 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/warehouse/warehouses/{uuid}/members:
+    get:
+      tags: [Warehouse]
+      operationId: listWarehouseMembers
+      summary: Members of a warehouse (TEC-769)
+      description: >-
+        Needs `warehouse.read`. A user without any membership works in every warehouse of the organization; a member of at least one warehouse writes (stock entry, transfer, count, move) only in its member warehouses. List contract: `sort` is name (default), email or created_at with an id tiebreak; `q` matches name, surname and email.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseMemberPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Warehouse]
+      operationId: addWarehouseMember
+      summary: Add an organization member to a warehouse (TEC-769)
+      description: >-
+        Needs `members.write` (staff administration; a warehouse-restricted user with only `warehouse.write` cannot widen its reach). Idempotent; `is_default` also moves the user's default warehouse here. 404 WAREHOUSE_MEMBER_NOT_FOUND when the user is not a member of the organization.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseMemberInput" }
+      responses:
+        "200":
+          description: Membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseMember"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/warehouses/{uuid}/members/{user_uuid}:
+    delete:
+      tags: [Warehouse]
+      operationId: removeWarehouseMember
+      summary: Remove a user from a warehouse (TEC-769)
+      description: >-
+        Needs `members.write`. Removing the last membership lifts the restriction. 404 WAREHOUSE_MEMBER_NOT_FOUND when the user is not a member.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: user_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/my-warehouses:
+    get:
+      tags: [Warehouse]
+      operationId: getMyWarehouses
+      summary: The caller's warehouse context (TEC-769)
+      description: >-
+        Needs `warehouse.read`. Every active warehouse with `member` (writable for the caller) and `is_default`; `restricted` tells whether memberships limit the caller. The panel keeps an unrestricted user's active warehouse locally.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Warehouse context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMyWarehouses"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/warehouse/my-warehouses/default:
+    put:
+      tags: [Warehouse]
+      operationId: setMyDefaultWarehouse
+      summary: Move the caller default warehouse (TEC-769)
+      description: >-
+        Needs `warehouse.read`. The caller must be a member of the warehouse (403 WAREHOUSE_NOT_MEMBER).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MyDefaultWarehouseInput" }
+      responses:
+        "200":
+          description: Warehouse context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMyWarehouses"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: >-
+            Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER
+            (TEC-769: the caller is limited to its member warehouses)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/settings:
+    get:
+      tags: [Warehouse]
+      operationId: getWarehouseSettings
+      summary: Warehouse settings of the active organization (TEC-769)
+      description: >-
+        Needs `warehouse.read`. `eod_cutoff` is the end-of-day close (HH:MM) in the organization time zone; null keeps the calendar day.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseSettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags: [Warehouse]
+      operationId: updateWarehouseSettings
+      summary: Update the warehouse settings (TEC-769)
+      description: >-
+        Needs `warehouse.write`. With `eod_cutoff` = 18:00 the business day D covers [D-1 18:00, D 18:00) in the organization time zone and the hourly cron writes day D once 18:00 passed; null, empty or 00:00 restores the calendar day (00:00-24:00, written after midnight). A manual run without a date reports the open business day.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseSettingsInput" }
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /v1/warehouse/eod-reports:
     get:
       tags: [Warehouse]
@@ -17666,6 +17860,430 @@ paths:
           $ref: '#/components/responses/MobileApiVersionUnsupported'
 
   # --- TEC-91: QR web sign-in (web side) ---------------------------------
+  /v1/mobile/warehouse/my-warehouses:
+    get:
+      tags: [Mobile]
+      operationId: mobileGetMyWarehouses
+      summary: "Mobile: The caller's warehouse context (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `GET /v1/warehouse/my-warehouses`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Every active warehouse of the organization with `member` (writable) and `is_default`; `restricted` is true once the user is a member of at least one warehouse. The app sends `warehouse_uuid` per request or relies on `default_warehouse_uuid`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      responses:
+        "200":
+          description: Warehouse context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMyWarehouses"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/my-warehouses/default:
+    put:
+      tags: [Mobile]
+      operationId: mobileSetMyDefaultWarehouse
+      summary: "Mobile: Move the caller default warehouse (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `PUT /v1/warehouse/my-warehouses/default`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. The caller must be a member of the warehouse (403 WAREHOUSE_NOT_MEMBER); an unrestricted user keeps the preference on the device.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MyDefaultWarehouseInput" }
+      responses:
+        "200":
+          description: Warehouse context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeMyWarehouses"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: >-
+            Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER
+            (TEC-769: the caller is limited to its member warehouses)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries:
+    get:
+      tags: [Mobile]
+      operationId: mobileListStockEntries
+      summary: "Mobile: List the stock entry documents (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `GET /v1/warehouse/stock-entries`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Same list contract as the panel endpoint; reads are organization-wide.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - name: status
+          in: query
+          description: Comma separated StockEntryStatus values (any of).
+          schema: { type: string }
+        - name: mode
+          in: query
+          description: Comma separated modes (with_existing, generate_new, import).
+          schema: { type: string }
+        - name: warehouse_uuid
+          in: query
+          description: Comma separated warehouse uuids (any of); the app sends its active warehouse.
+          schema: { type: string }
+        - name: import_job_uuid
+          in: query
+          description: Comma separated import job uuids (any of).
+          schema: { type: string }
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Entries (without lines)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+    post:
+      tags: [Mobile]
+      operationId: mobileCreateStockEntry
+      summary: "Mobile: Open a draft stock entry (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Without `warehouse_uuid` the entry opens at the caller's default warehouse (400 VALIDATION_ERROR when there is none). `generate_new` is center only (403 STOCK_ENTRY_CENTER_ONLY, K14).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MobileStockEntryInput" }
+      responses:
+        "201":
+          description: Draft entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: >-
+            Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER
+            (TEC-769: the caller is limited to its member warehouses)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}:
+    get:
+      tags: [Mobile]
+      operationId: mobileGetStockEntry
+      summary: "Mobile: One stock entry with its lines (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `GET /v1/warehouse/stock-entries/{uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/lines:
+    post:
+      tags: [Mobile]
+      operationId: mobileAddStockEntryLines
+      summary: "Mobile: Link or reserve barcodes on a draft entry (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/lines`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write` and, for a restricted user, membership of the entry warehouse.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryLinesInput" }
+      responses:
+        "200":
+          description: Entry with the new lines
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: >-
+            Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER
+            (TEC-769: the caller is limited to its member warehouses)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/lines/{line_uuid}:
+    delete:
+      tags: [Mobile]
+      operationId: mobileDeleteStockEntryLine
+      summary: "Mobile: Remove a line from a draft entry (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `DELETE /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: line_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: >-
+            Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER
+            (TEC-769: the caller is limited to its member warehouses)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/place:
+    post:
+      tags: [Mobile]
+      operationId: mobilePlaceStockEntryLines
+      summary: "Mobile: Place lines of a draft entry on a location (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/place`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. `location_code` takes a scanned `OFW:LOC:<full_code>` QR.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryPlaceInput" }
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: >-
+            Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER
+            (TEC-769: the caller is limited to its member warehouses)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/confirm:
+    post:
+      tags: [Mobile]
+      operationId: mobileConfirmStockEntry
+      summary: "Mobile: Confirm a stock entry (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/confirm`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Ledger entry + placement per line in one transaction (center only, K14).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Confirmed entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: >-
+            Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER
+            (TEC-769: the caller is limited to its member warehouses)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/stock-entries/{uuid}/cancel:
+    post:
+      tags: [Mobile]
+      operationId: mobileCancelStockEntry
+      summary: "Mobile: Cancel a draft stock entry (TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/cancel`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Cancelled entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: >-
+            Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER
+            (TEC-769: the caller is limited to its member warehouses)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
+  /v1/mobile/warehouse/moves:
+    post:
+      tags: [Mobile]
+      operationId: mobileMoveWarehouseUnits
+      summary: "Mobile: Move scanned units onto a location (bin -> bin, TEC-769)"
+      description: >-
+        Mobile mirror (TEC-769) of `POST /v1/warehouse/moves`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write` and, for a restricted user, membership of the target warehouse. A placed unit stays in its warehouse.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/MobileApiVersion"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseMoveInput" }
+      responses:
+        "200":
+          description: Moved units
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseMoveResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          description: >-
+            Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER
+            (TEC-769: the caller is limited to its member warehouses)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "426":
+          $ref: "#/components/responses/MobileApiVersionUnsupported"
+
   /v1/auth/qr/start:
     post:
       tags: [Mobile]
@@ -25648,6 +26266,172 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+
+  /v1/platform/integrations/glorian/location-maps:
+    get:
+      tags: [Platform]
+      operationId: listGlorianLocationMaps
+      summary: List the Glorian location map
+      description: >-
+        Glorian location map (TEC-769): a remote location name of the hub -> a local warehouse and optional bin of the connection organization. The current Inventory API contract only knows the hub locations center/dealer, so no sync path reads the map yet. Needs `integrations.glorian.view`. `sort`: remote_location_code (default), warehouse, created_at; `q` matches the remote name, warehouse name/code and bin full code.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Map rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianLocationMapPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [Platform]
+      operationId: createGlorianLocationMap
+      summary: Add a Glorian location map row
+      description: >-
+        Glorian location map (TEC-769): a remote location name of the hub -> a local warehouse and optional bin of the connection organization. The current Inventory API contract only knows the hub locations center/dealer, so no sync path reads the map yet. Needs `integrations.glorian.manage`. 409 GLORIAN_REMOTE_LOCATION_TAKEN when the remote name is mapped; a bin must belong to the warehouse and maps once.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GlorianLocationMapInput" }
+      responses:
+        "201":
+          description: Map row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianLocationMap"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/platform/integrations/glorian/location-maps/warehouses:
+    get:
+      tags: [Platform]
+      operationId: listGlorianMapWarehouses
+      summary: Warehouses of the Glorian connection organization (map picker)
+      description: >-
+        Needs `integrations.glorian.view`.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Warehouses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianMapWarehouseList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/integrations/glorian/location-maps/warehouses/{uuid}/locations:
+    get:
+      tags: [Platform]
+      operationId: listGlorianMapLocations
+      summary: Active locations of a warehouse (map picker)
+      description: >-
+        Needs `integrations.glorian.view`. At most 50, `q` matches the full code or the name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - $ref: "#/components/parameters/Q"
+      responses:
+        "200":
+          description: Locations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianMapLocationList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/platform/integrations/glorian/location-maps/{uuid}:
+    put:
+      tags: [Platform]
+      operationId: updateGlorianLocationMap
+      summary: Replace a Glorian location map row
+      description: >-
+        Needs `integrations.glorian.manage`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GlorianLocationMapInput" }
+      responses:
+        "200":
+          description: Map row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeGlorianLocationMap"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Platform]
+      operationId: deleteGlorianLocationMap
+      summary: Delete a Glorian location map row
+      description: >-
+        Needs `integrations.glorian.manage`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/library/folders:
     get:
@@ -37862,6 +38646,216 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    MobileStockEntryInput:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      description: TEC-769 mobile stock entry; without warehouse_uuid the caller's default warehouse is used.
+      properties:
+        warehouse_uuid: { type: string, format: uuid }
+        mode: { type: string, enum: [with_existing, generate_new] }
+        note: { type: [string, "null"], maxLength: 500 }
+
+    WarehouseMemberUser:
+      type: object
+      required: [uuid, name, surname, email]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        surname: { type: string }
+        email: { type: [string, "null"] }
+
+    WarehouseMember:
+      type: object
+      required: [uuid, user, is_default, created_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        user: { $ref: "#/components/schemas/WarehouseMemberUser" }
+        is_default: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    WarehouseMemberInput:
+      type: object
+      additionalProperties: false
+      required: [user_uuid]
+      properties:
+        user_uuid: { type: string, format: uuid }
+        is_default: { type: boolean }
+
+    MyWarehouse:
+      allOf:
+        - $ref: "#/components/schemas/Warehouse"
+        - type: object
+          required: [member, is_default]
+          properties:
+            member: { type: boolean, description: The caller may write here. }
+            is_default: { type: boolean }
+
+    MyWarehouses:
+      type: object
+      required: [restricted, default_warehouse_uuid, items]
+      properties:
+        restricted: { type: boolean }
+        default_warehouse_uuid: { type: [string, "null"], format: uuid }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MyWarehouse" }
+
+    MyDefaultWarehouseInput:
+      type: object
+      additionalProperties: false
+      required: [warehouse_uuid]
+      properties:
+        warehouse_uuid: { type: string, format: uuid }
+
+    WarehouseSettings:
+      type: object
+      required: [eod_cutoff, timezone]
+      properties:
+        eod_cutoff: { type: [string, "null"], pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+        timezone: { type: string }
+
+    WarehouseSettingsInput:
+      type: object
+      additionalProperties: false
+      properties:
+        eod_cutoff: { type: [string, "null"], description: "HH:MM; null, empty or 00:00 clears it." }
+
+    GlorianMapWarehouse:
+      type: object
+      required: [uuid, code, name, active]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        active: { type: boolean }
+
+    GlorianMapLocation:
+      type: object
+      required: [uuid, code, full_code]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        full_code: { type: [string, "null"] }
+        name: { type: string }
+
+    GlorianLocationMap:
+      type: object
+      required: [uuid, remote_location_code, warehouse, location, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        remote_location_code: { type: string }
+        warehouse: { $ref: "#/components/schemas/GlorianMapWarehouse" }
+        location:
+          oneOf:
+            - $ref: "#/components/schemas/GlorianMapLocation"
+            - type: "null"
+        created_at: { type: [string, "null"], format: date-time }
+        updated_at: { type: [string, "null"], format: date-time }
+
+    GlorianLocationMapInput:
+      type: object
+      additionalProperties: false
+      required: [remote_location_code, warehouse_uuid]
+      properties:
+        remote_location_code: { type: string, minLength: 1, maxLength: 64 }
+        warehouse_uuid: { type: string, format: uuid }
+        location_uuid: { type: [string, "null"], format: uuid }
+
+    EnvelopeWarehouseMember:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseMember" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseMemberPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/WarehouseMember" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeMyWarehouses:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/MyWarehouses" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseSettings:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseSettings" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianLocationMap:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/GlorianLocationMap" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianLocationMapPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/GlorianLocationMap" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianMapWarehouseList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/GlorianMapWarehouse" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeGlorianMapLocationList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/GlorianMapLocation" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     WarehouseMoveInput:
