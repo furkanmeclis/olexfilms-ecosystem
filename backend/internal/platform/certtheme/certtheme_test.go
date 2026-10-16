@@ -64,7 +64,7 @@ func TestOpeningPages(t *testing.T) {
 	// No services table and no make logo without data; QR-like plain
 	// <img src= tags never come from the theme (export tests count QRs).
 	bare := OpeningPages(Input{Vehicle: Vehicle{Make: "BMW"}}, i18n.LocaleEN)
-	if strings.Contains(bare, "ct-services") || strings.Contains(bare, "ct-watermark") || strings.Contains(h+bare, `<img src="`) {
+	if strings.Contains(bare, "ct-services") || strings.Contains(bare, "ct-map") || strings.Contains(bare, "ct-watermark") || strings.Contains(h+bare, `<img src="`) {
 		t.Error("unexpected services table, watermark or unclassed image")
 	}
 }
