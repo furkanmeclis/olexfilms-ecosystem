@@ -30,8 +30,6 @@
   "count.expected": "Expected",
   "count.expected_title": "Expected stock",
   "count.expected_totals": "{{units}} serial units · {{quantity}} fixed-barcode pieces",
-  "count.export": "CSV",
-  "count.export_failed": "The CSV could not be downloaded.",
   "count.fixed_quantity": "Fixed-barcode pieces",
   "count.last_scan": "Counted {{code}} × {{quantity}}.",
   "count.meters_hint": "Measured length of a roll (optional).",
@@ -427,5 +425,15 @@
   "validation.scope": "This scope is not available for the method.",
   "validation.too_long": "At most {{max}} characters.",
   "validation.type": "This type is not allowed here.",
-  "validation.warehouse": "Pick a warehouse."
+  "validation.warehouse": "Pick a warehouse.",
+  "export.count_report": "Export the count report",
+  "export.count_report_xlsx": "Count report (Excel)",
+  "export.summary": "Summary report (by product)",
+  "export.summary_all_products": "Summary: all products",
+  "export.summary_product_search": "Search products",
+  "export.summary_product_none": "No products found.",
+  "export.locations_all": "Export all locations",
+  "export.locations_room": "Export this room's locations",
+  "export.location_stock": "Export the location stock",
+  "export.unit_history": "Export the movement history"
 }

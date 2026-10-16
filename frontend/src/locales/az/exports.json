@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "Avtoparklar",
   "resources.tenant.fleet.statement": "Avtopark çıxarışı",
   "resources.warranties.list": "Zəmanətlər",
-  "resources.ai.usage": "Süni intellekt istifadəsi"
+  "resources.ai.usage": "Süni intellekt istifadəsi",
+  "resources.warehouse.stock_count_report": "Sayım hesabatı",
+  "resources.warehouse.stock_counts": "Stok sayımları",
+  "resources.warehouse.stock_entries": "Stok girişləri",
+  "resources.warehouse.transfers": "Anbar transferləri",
+  "resources.warehouse.transfer_summary": "Transfer xülasə hesabatı",
+  "resources.warehouse.locations": "Anbar yerləri",
+  "resources.warehouse.eod_reports": "Gün sonu hesabatları",
+  "resources.stock.products": "Məhsul üzrə stok",
+  "resources.stock.location_stock": "Yer stoku",
+  "resources.stock.unit_history": "Vahid hərəkət tarixçəsi",
+  "resources.stock.barcode_batches": "Barkod partiyaları"
 }
