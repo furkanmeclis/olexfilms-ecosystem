@@ -2,8 +2,15 @@
 
 import { Bot, Gauge, Loader2, Send, ShieldCheck, Square } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 
+import { ErrorState } from "@/components/common/error-state";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +39,8 @@ export function AssistantChat({
   layout = "page",
   showToolChips,
   fullPageHref,
+  loadingFallback,
+  emptyFallback,
 }: {
   transport: AssistantTransport;
   /** Query-cache scope (realm + organization). */
@@ -39,6 +48,8 @@ export function AssistantChat({
   layout?: "page" | "sheet";
   showToolChips: boolean;
   fullPageHref?: string;
+  loadingFallback?: ReactNode;
+  emptyFallback?: ReactNode;
 }) {
   const { t, dir } = useLocale();
   const { can } = usePermission();
@@ -59,10 +70,24 @@ export function AssistantChat({
   const status = chat.status.data;
   if (chat.status.isLoading) {
     return (
-      <div className="text-muted-foreground flex items-center gap-2 p-6 text-sm">
-        <Loader2 className="size-4 animate-spin" />
-        {t("ai.chat.loading")}
-      </div>
+      loadingFallback ?? (
+        <div
+          role="status"
+          className="text-muted-foreground flex items-center gap-2 p-6 text-sm"
+        >
+          <Loader2 className="size-4 animate-spin" />
+          {t("ai.chat.loading")}
+        </div>
+      )
+    );
+  }
+  if (chat.status.isError) {
+    return (
+      <ErrorState
+        title={t("common.error_generic")}
+        onRetry={() => void chat.status.refetch()}
+        retryLabel={t("common.retry")}
+      />
     );
   }
   if (!status || !status.enabled || !status.allowed) {
@@ -120,24 +145,23 @@ export function AssistantChat({
     <div
       dir={dir}
       className={cn(
-        "flex min-h-0 flex-1 gap-4",
-        layout === "page" ? "h-[calc(100svh-12rem)]" : "h-full",
+        "flex min-h-80 min-w-0 flex-1 gap-4",
+        layout === "page" ? "h-[calc(100svh-12rem)]" : "h-full min-h-0",
       )}
       data-testid="ai-assistant-chat"
     >
       {conversationList}
       <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {layout === "sheet" ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void chat.open(null)}
-              disabled={chat.streaming}
-            >
-              {t("ai.history.new")}
-            </Button>
-          ) : null}
+          <Button
+            className={layout === "page" ? "md:hidden" : undefined}
+            variant="outline"
+            size="sm"
+            onClick={() => void chat.open(null)}
+            disabled={chat.streaming}
+          >
+            {t("ai.history.new")}
+          </Button>
           {layout === "sheet" && fullPageHref ? (
             <Button variant="ghost" size="sm" asChild>
               <Link href={fullPageHref}>{t("ai.chat.open_full")}</Link>
@@ -179,17 +203,32 @@ export function AssistantChat({
           </Alert>
         ) : null}
 
+        {chat.conversations.isError ? (
+          <ErrorState
+            title={t("common.error_generic")}
+            onRetry={() => void chat.conversations.refetch()}
+            retryLabel={t("common.retry")}
+            className="py-4"
+          />
+        ) : null}
         <div className="min-h-0 flex-1 overflow-y-auto pe-1">
           {chat.loadingConversation ? (
-            <div className="text-muted-foreground flex items-center gap-2 text-sm">
-              <Loader2 className="size-4 animate-spin" />
-              {t("ai.chat.loading")}
-            </div>
+            (loadingFallback ?? (
+              <div
+                role="status"
+                className="text-muted-foreground flex items-center gap-2 text-sm"
+              >
+                <Loader2 className="size-4 animate-spin" />
+                {t("ai.chat.loading")}
+              </div>
+            ))
           ) : chat.messages.length === 0 ? (
-            <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-center text-sm">
-              <Bot className="size-8" />
-              <p>{t("ai.chat.empty")}</p>
-            </div>
+            (emptyFallback ?? (
+              <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-center text-sm">
+                <Bot className="size-8" />
+                <p>{t("ai.chat.empty")}</p>
+              </div>
+            ))
           ) : (
             <MessageList
               messages={chat.messages}

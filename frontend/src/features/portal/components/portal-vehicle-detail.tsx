@@ -15,7 +15,11 @@ import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalPage,
+  PortalEmpty,
+  PortalLoading,
+} from "@/features/portal/components/portal-page";
 import { PortalVehicleTransferDialog } from "@/features/portal/components/portal-vehicle-transfer";
 import { PortalWarrantyQr } from "@/features/portal/components/portal-warranty-qr";
 import {
@@ -123,14 +127,11 @@ export function PortalVehicleDetail({
     return (
       <PortalPage title={t("portal.vehicles.title")} back={back}>
         {notFound ? (
-          <Card>
-            <CardContent
-              className="py-10 text-center"
-              data-testid="portal-vehicle-not-found"
-            >
-              {t("portal.vehicle.not_found")}
-            </CardContent>
-          </Card>
+          <PortalEmpty
+            icon={<Car />}
+            title={t("portal.vehicle.not_found")}
+            testId="portal-vehicle-not-found"
+          />
         ) : (
           <ErrorState
             title={t("common.error_generic")}
@@ -144,9 +145,7 @@ export function PortalVehicleDetail({
   if (!detail.data) {
     return (
       <PortalPage title={t("portal.vehicles.title")} back={back}>
-        <p className="text-muted-foreground text-sm">
-          {t("portal.vehicles.loading")}
-        </p>
+        <PortalLoading label={t("portal.vehicles.loading")} />
       </PortalPage>
     );
   }

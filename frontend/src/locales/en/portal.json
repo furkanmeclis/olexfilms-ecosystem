@@ -406,5 +406,11 @@
   "profile.links_title": "Account links",
   "profile.preferences_hint": "E-mail, in-app and campaign notifications",
   "profile.contracts_hint": "Contracts you signed and their PDFs",
-  "profile.phone_login_hint": "You sign in with a code sent to your phone; no password is needed."
+  "profile.phone_login_hint": "You sign in with a code sent to your phone; no password is needed.",
+  "home.vehicles_hint": "Your vehicles and their service history",
+  "home.warranties_hint": "Your warranty certificates and their status",
+  "home.appointments_hint": "Your upcoming and past appointments",
+  "home.dealers_hint": "Authorized dealers near you",
+  "home.profile_hint": "Your name, language and sessions",
+  "home.book": "Book an appointment"
 }

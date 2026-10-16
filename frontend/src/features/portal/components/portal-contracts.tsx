@@ -11,11 +11,15 @@ import {
   EntityToolbar,
   useServerListState,
 } from "@/components/entity";
+import { ErrorState } from "@/components/common/error-state";
 import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { routes } from "@/config/routes";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalEmpty,
+  PortalLoading,
+  PortalPage,
+} from "@/features/portal/components/portal-page";
 import {
   portalApi,
   portalContractPdfUrl,
@@ -128,19 +132,21 @@ export function PortalContracts() {
       icon={<FileSignature className="size-6" />}
       testId="portal-contracts-page"
     >
-      {empty ? (
-        <Card>
-          <CardContent
-            className="flex flex-col items-center gap-2 py-10 text-center"
-            data-testid="portal-contracts-empty"
-          >
-            <FileSignature className="text-muted-foreground size-10" />
-            <p className="font-medium">{t("portal.contracts.empty_title")}</p>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              {t("portal.contracts.empty_hint")}
-            </p>
-          </CardContent>
-        </Card>
+      {list.isError ? (
+        <ErrorState
+          title={t("common.error_generic")}
+          onRetry={() => void list.refetch()}
+          retryLabel={t("common.retry")}
+        />
+      ) : list.isPending ? (
+        <PortalLoading label={t("common.loading")} />
+      ) : empty ? (
+        <PortalEmpty
+          icon={<FileSignature />}
+          title={t("portal.contracts.empty_title")}
+          description={t("portal.contracts.empty_hint")}
+          testId="portal-contracts-empty"
+        />
       ) : (
         <div data-testid="portal-contracts">
           <EntityTable
