@@ -1,5 +1,5 @@
-import { SettingsPage } from "@/features/io";
+import { SettingsIndexPage } from "@/components/layout/settings-layout";
 
 export default function Page() {
-  return <SettingsPage />;
+  return <SettingsIndexPage variant="platform" />;
 }

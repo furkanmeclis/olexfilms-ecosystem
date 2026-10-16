@@ -398,5 +398,13 @@
   "dealer_page.form_rate_limited": "Trop de demandes. Réessayez plus tard.",
   "dealer_page.form_failed": "La demande n’a pas pu être envoyée. Réessayez.",
   "dealer_page.form_success_title": "Demande reçue",
-  "dealer_page.form_success_body": "Le revendeur vous contactera bientôt."
+  "dealer_page.form_success_body": "Le revendeur vous contactera bientôt.",
+  "nav.profile": "Mon profil",
+  "profile.title": "Mon profil",
+  "profile.saved": "Vos informations ont été enregistrées.",
+  "profile.failed": "Vos informations n'ont pas pu être enregistrées.",
+  "profile.links_title": "Liens du compte",
+  "profile.preferences_hint": "Notifications par e-mail, dans l'application et de campagne",
+  "profile.contracts_hint": "Contrats que vous avez signés et leurs PDF",
+  "profile.phone_login_hint": "Vous vous connectez avec un code envoyé sur votre téléphone ; aucun mot de passe n'est nécessaire."
 }

@@ -398,5 +398,13 @@
   "dealer_page.form_rate_limited": "Πάρα πολλά αιτήματα. Δοκιμάστε αργότερα.",
   "dealer_page.form_failed": "Το αίτημα δεν στάλθηκε. Δοκιμάστε ξανά.",
   "dealer_page.form_success_title": "Το αίτημα ελήφθη",
-  "dealer_page.form_success_body": "Ο αντιπρόσωπος θα επικοινωνήσει σύντομα μαζί σας."
+  "dealer_page.form_success_body": "Ο αντιπρόσωπος θα επικοινωνήσει σύντομα μαζί σας.",
+  "nav.profile": "Το προφίλ μου",
+  "profile.title": "Το προφίλ μου",
+  "profile.saved": "Τα στοιχεία σας αποθηκεύτηκαν.",
+  "profile.failed": "Δεν ήταν δυνατή η αποθήκευση των στοιχείων σας.",
+  "profile.links_title": "Σύνδεσμοι λογαριασμού",
+  "profile.preferences_hint": "Ειδοποιήσεις μέσω e-mail, εντός εφαρμογής και καμπανιών",
+  "profile.contracts_hint": "Συμβάσεις που υπογράψατε και τα PDF τους",
+  "profile.phone_login_hint": "Συνδέεστε με κωδικό που αποστέλλεται στο τηλέφωνό σας· δεν χρειάζεται συνθηματικό."
 }

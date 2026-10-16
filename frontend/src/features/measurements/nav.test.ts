@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { tenantNav } from "@/config/nav";
+import { tenantSettingsNav } from "@/config/settings-nav";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
@@ -12,7 +13,11 @@ function visibleIds(granted: string[], features = ["measurements"]) {
     canAny: (ps: string[]) => ps.some((x) => granted.includes(x)),
     org: { type: "dealer", role: "owner", features },
   };
-  return tenantNav("acme").groups.flatMap((group) =>
+  const groups = [
+    ...tenantNav("acme").groups,
+    ...tenantSettingsNav("acme").groups,
+  ];
+  return groups.flatMap((group) =>
     visibleNavItems(group, access).map((item) => item.id),
   );
 }
@@ -22,8 +27,12 @@ describe("tenant nav: measurements (TEC-299)", () => {
     const group = tenantNav("acme").groups.find((g) => g.id === "measurements");
     expect(group?.items.map((i) => i.href)).toEqual([
       routes.tenant.measurements.list("acme"),
-      routes.tenant.measurements.devices("acme"),
     ]);
+    // TEC-771: the devices page lives in the settings area.
+    const devices = tenantSettingsNav("acme")
+      .groups.flatMap((g) => g.items)
+      .find((i) => i.id === "measurement-devices");
+    expect(devices?.href).toBe("/t/acme/settings/measurement-devices");
   });
 
   it("shows the list with measurements.read", () => {

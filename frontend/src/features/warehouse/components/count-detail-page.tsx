@@ -353,6 +353,8 @@ export function CountScanCard({ count }: { count: StockCount }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <ScanInput
+          expect="any"
+          warehouseUuid={count.warehouse.uuid}
           id="count-code"
           label={t("warehouse.scan.label")}
           hint={t(`warehouse.count_method_hint.${count.method}`)}

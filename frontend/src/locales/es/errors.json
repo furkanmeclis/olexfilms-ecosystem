@@ -162,5 +162,7 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "El perfil de facturación del comprador está incompleto; complete los campos que faltan.",
   "codes.EINVOICE_INVALID_STATUS": "El estado de la factura electrónica no permite esta acción.",
   "codes.EINVOICE_NOT_ARCHIVED": "La factura electrónica aún no está archivada.",
-  "codes.EINVOICE_PDF_NOT_READY": "El PDF de la factura aún no está listo; inténtelo en breve o vuelva a generarlo."
+  "codes.EINVOICE_PDF_NOT_READY": "El PDF de la factura aún no está listo; inténtelo en breve o vuelva a generarlo.",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Ubique esta unidad en el almacén antes de asignarla.",
+  "page_forbidden_body": "No tiene permiso para ver esta página."
 }

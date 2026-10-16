@@ -261,7 +261,7 @@ describe("PortalNav", () => {
       "/portal/appointments",
       "/portal/dealers",
       "/portal/contracts",
-      "/portal/preferences",
+      "/portal/profile",
     ]);
     expect(
       container
@@ -281,7 +281,7 @@ describe("PortalNav", () => {
       "/portal/fleet/warranties",
       "/portal/fleet/account",
       "/portal/fleet/reports",
-      "/portal/preferences",
+      "/portal/profile",
     ]);
     expect(container.textContent).not.toContain("portal.nav.dealers");
     expect(container.textContent).not.toContain("portal.nav.contracts");

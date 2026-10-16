@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { NavRouteGuard } from "@/components/common/route-guard";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
@@ -42,7 +43,9 @@ export function AppLayout({
           </Header>
           <div className="flex min-w-0 flex-1 flex-col gap-4 px-4 pt-2 pb-6 md:px-6">
             <ImpersonationBanner />
-            {children}
+            <NavRouteGuard variant={variant} tenantSlug={tenantSlug}>
+              {children}
+            </NavRouteGuard>
           </div>
           <Footer />
         </SidebarInset>

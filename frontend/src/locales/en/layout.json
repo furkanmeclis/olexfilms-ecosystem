@@ -87,5 +87,18 @@
   "nav_service_catalog": "Service catalog",
   "nav_service_subscriptions": "Service subscriptions",
   "nav_service_subscription_cancels": "Cancellation requests",
-  "nav_review_questions": "Review questions"
+  "nav_review_questions": "Review questions",
+  "settings_description": "Manage organization and system settings here.",
+  "settings_menu": "Settings menu",
+  "settings_empty": "There are no settings you can view.",
+  "settings_group_access": "Access and security",
+  "settings_group_integrations": "Integrations",
+  "settings_group_system": "Modules and system",
+  "settings_group_catalogs": "Catalogs",
+  "settings_group_regional": "Regions and pricing",
+  "settings_group_templates": "Templates",
+  "settings_group_data": "Data and monitoring",
+  "settings_group_organization": "Organization",
+  "settings_group_operations": "Operations",
+  "settings_group_ai": "AI"
 }

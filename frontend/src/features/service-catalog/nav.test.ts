@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { platformNav, tenantNav } from "@/config/nav";
+import { tenantNav } from "@/config/nav";
+import { platformSettingsNav } from "@/config/settings-nav";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
@@ -11,7 +12,7 @@ function visiblePlatformIds(granted: string[]) {
       (Array.isArray(p) ? p : [p]).every((x) => granted.includes(x)),
     canAny: (ps: string[]) => ps.some((x) => granted.includes(x)),
   };
-  return platformNav.groups.flatMap((group) =>
+  return platformSettingsNav.groups.flatMap((group) =>
     visibleNavItems(group, access).map((item) => item.id),
   );
 }
@@ -34,7 +35,7 @@ function visibleTenantIds(
 
 describe("service catalog nav (TEC-310)", () => {
   it("links platform menu to service catalog management", () => {
-    const item = platformNav.groups
+    const item = platformSettingsNav.groups
       .flatMap((g) => g.items)
       .find((i) => i.id === "service-catalog");
     expect(item?.href).toBe(routes.platform.serviceCatalog.root);

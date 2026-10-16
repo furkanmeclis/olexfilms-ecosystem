@@ -151,5 +151,6 @@ describe("dealer application texts (TEC-320)", () => {
       for (const [key, text] of Object.entries(messages))
         expect(text, `${locale} ${key}`).not.toBe(key);
     }
-  });
+    // Loads every locale's full catalog; a loaded CI runner needs more than 5s.
+  }, 30_000);
 });

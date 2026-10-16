@@ -190,6 +190,7 @@
   "resources.tenant.stock.units": "Bestandseinheiten",
   "confirm_step.stock_located_one": "{{count}} davon wird direkt am Lagerplatz aus der Datei eingelagert.",
   "confirm_step.stock_located_other": "{{count}} davon werden direkt am Lagerplatz aus der Datei eingelagert.",
+  "row_status.exists": "Vorhanden",
   "fields.entry_barcodes.product_name": "Produktname",
   "fields.entry_barcodes.product_sku": "Produkt-SKU",
   "fields.entry_barcodes.barcode": "Barcode",

@@ -206,6 +206,7 @@
   "confirm_step.stock_located_few": "{{count}} из них будут размещены в ячейке, указанной в файле.",
   "confirm_step.stock_located_many": "{{count}} из них будут размещены в ячейке, указанной в файле.",
   "confirm_step.stock_located_other": "{{count}} из них будут размещены в ячейке, указанной в файле.",
+  "row_status.exists": "Существует",
   "fields.entry_barcodes.product_name": "Название товара",
   "fields.entry_barcodes.product_sku": "SKU товара",
   "fields.entry_barcodes.barcode": "Штрихкод",
