@@ -783,6 +783,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/imports/{uuid}/error-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the import error report (XLSX)
+         * @description TEC-757: the uploaded (mapped) rows with their source headers plus the
+         *     "Row", "Status" and "Error" columns (in the job locale); failed rows
+         *     come first and are highlighted. Staged importers (stock) report their
+         *     staged row statuses and error codes, row-by-row importers the preview
+         *     check (after apply, the apply result). Available once the job is
+         *     previewed (previewed, queued, applying, applied, failed,
+         *     rolled_back); earlier → 400. Access follows the job detail (platform.imports.read; own jobs, every platform job for platform admins).
+         *     A re-uploaded report maps only its data columns.
+         */
+        get: operations["getPlatformImportErrorReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/logs/meta": {
         parameters: {
             query?: never;
@@ -3426,6 +3453,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/imports/{uuid}/error-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the import error report (XLSX)
+         * @description TEC-757: the uploaded (mapped) rows with their source headers plus the
+         *     "Row", "Status" and "Error" columns (in the job locale); failed rows
+         *     come first and are highlighted. Staged importers (stock) report their
+         *     staged row statuses and error codes, row-by-row importers the preview
+         *     check (after apply, the apply result). Available once the job is
+         *     previewed (previewed, queued, applying, applied, failed,
+         *     rolled_back); earlier → 400. Access follows the job detail (tenant.imports.read, same organization).
+         *     A re-uploaded report maps only its data columns.
+         */
+        get: operations["getTenantImportErrorReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/imports/{uuid}/mapping": {
         parameters: {
             query?: never;
@@ -3452,7 +3506,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Preview import rows */
+        /**
+         * Preview import rows
+         * @description TEC-757: row-by-row importers check every row (required cells,
+         *     numbers, enums and the adapter's rules, e.g. catalog category and
+         *     lengths); invalid rows are listed in preview_summary.errors with a
+         *     stable code (IMPORT_*) and a localized message. A file over the row
+         *     limit (default 5000) → 400 IMPORT_TOO_MANY_ROWS.
+         */
         post: operations["previewTenantImport"];
         delete?: never;
         options?: never;
@@ -3469,7 +3530,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Confirm and queue import apply */
+        /**
+         * Confirm and queue import apply
+         * @description TEC-757: only the user who uploaded the job or a holder of the
+         *     resource's import permission (stock: stock.import; catalog:
+         *     catalog.write) may run it; other organization members → 403.
+         */
         post: operations["confirmTenantImport"];
         delete?: never;
         options?: never;
@@ -3486,7 +3552,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Roll back an applied import */
+        /**
+         * Roll back an applied import
+         * @description TEC-757: only the user who uploaded the job or a holder of the
+         *     resource's import permission (stock: stock.import; catalog:
+         *     catalog.write) may run it; other organization members → 403.
+         */
         post: operations["rollbackTenantImport"];
         delete?: never;
         options?: never;
@@ -5301,7 +5372,7 @@ export interface paths {
         put?: never;
         /**
          * Upload a stock import file (brand center, staged)
-         * @description Needs `stock.import` and the brand center (K14). Columns: barcode, product_sku (required), quantity (fixed barcodes), meters (rolls), location_code (optional, a location of the center; default the organization). Map, preview, confirm and undo through `/v1/tenant/imports/{uuid}`: the preview stages the rows of the batch (batch uuid = job uuid) and classifies them as new, duplicate, invalid or conflict with their target; confirm (worker-core import queue) creates the new units and posts their entry movements through the stock ledger in one transaction, and confirming again writes nothing; rollback voids the units that saw no other movement and refuses the others row by row (STOCK_IMPORT_UNDO_UNIT_TOUCHED).
+         * @description Needs `stock.import` and the brand center (K14). A file over 5000 rows → 400 IMPORT_TOO_MANY_ROWS (TEC-757). Columns: barcode, product_sku (required), quantity (fixed barcodes), meters (rolls), location_code (optional, a location of the center; default the organization). Map, preview, confirm and undo through `/v1/tenant/imports/{uuid}`: the preview stages the rows of the batch (batch uuid = job uuid) and classifies them as new, duplicate, invalid or conflict with their target; confirm (worker-core import queue) creates the new units and posts their entry movements through the stock ledger in one transaction, and confirming again writes nothing; rollback voids the units that saw no other movement and refuses the others row by row (STOCK_IMPORT_UNDO_UNIT_TOUCHED).
          */
         post: operations["importStockUnits"];
         delete?: never;
@@ -30062,6 +30133,35 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    getPlatformImportErrorReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Error report workbook */
+            200: {
+                headers: {
+                    /** @description attachment; filename="<source file name>-hatalar.xlsx" (plus filename*) */
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
     getPlatformLogsMeta: {
         parameters: {
             query?: never;
@@ -34497,6 +34597,35 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeImportJob"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    getTenantImportErrorReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Error report workbook */
+            200: {
+                headers: {
+                    /** @description attachment; filename="<source file name>-hatalar.xlsx" (plus filename*) */
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
