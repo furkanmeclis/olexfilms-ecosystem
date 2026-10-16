@@ -4,7 +4,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { platformNav } from "@/config/nav";
+import { platformSettingsNav } from "@/config/settings-nav";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
@@ -17,7 +17,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
-  usePathname: () => "/platform/contract-templates",
+  usePathname: () => "/platform/settings/contract-templates",
 }));
 
 vi.mock("@/providers/locale-provider", () => ({
@@ -250,13 +250,13 @@ describe("platform nav: contract templates (TEC-290)", () => {
         (Array.isArray(p) ? p : [p]).every((x) => granted.includes(x)),
       canAny: (ps: string[]) => ps.some((x) => granted.includes(x)),
     };
-    return platformNav.groups.flatMap((group) =>
+    return platformSettingsNav.groups.flatMap((group) =>
       visibleNavItems(group, access).map((item) => item.id),
     );
   }
 
   it("links to the contract template screen", () => {
-    const item = platformNav.groups
+    const item = platformSettingsNav.groups
       .flatMap((g) => g.items)
       .find((i) => i.id === "contract-templates");
     expect(item?.href).toBe(routes.platform.contractTemplates.root);

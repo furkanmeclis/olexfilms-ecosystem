@@ -32,7 +32,7 @@ test("F5 gate: platform admin closes performance system wide → the distributor
   const world = await installF5(page);
   world.as("platform");
 
-  await page.goto("/platform/modules");
+  await page.goto("/platform/settings/modules");
   const row = page.getByRole("row", { name: /Performance and targets/ });
   const system = row.getByRole("switch", { name: "Available system wide" });
   await expect(system).toBeChecked();
@@ -43,7 +43,7 @@ test("F5 gate: platform admin closes performance system wide → the distributor
   ]);
 
   world.as("distributor");
-  await page.goto("/t/dist/features");
+  await page.goto("/t/dist/settings/modules");
   const addon = page.getByTestId("module-level-addon");
   await expect(addon.getByTestId("module-fleet")).toBeVisible();
   // Closed system wide: GET /v1/features leaves it out, so there is no
@@ -68,7 +68,7 @@ test("F5 gate: distributor turns stock_forecast on in the dealer standard → a 
   world.adminSet(F5.distributor, "stock_forecast", true);
 
   world.as("distributor");
-  await page.goto("/t/dist/features");
+  await page.goto("/t/dist/settings/modules");
   await page.getByRole("tab", { name: "Dealer standard" }).click();
   const toggle = page.getByRole("switch", {
     name: "Stock forecast and order suggestions",
@@ -81,7 +81,7 @@ test("F5 gate: distributor turns stock_forecast on in the dealer standard → a 
   ).toEqual([{ enabled: true }]);
 
   world.as("newDealer");
-  await page.goto("/t/yeni/features");
+  await page.goto("/t/yeni/settings/modules");
   const row = page.getByRole("row", {
     name: /Stock forecast and order suggestions/,
   });
@@ -101,7 +101,7 @@ test("F5 gate: dealer requests certificates, the distributor approves, the menu 
   const world = await installF5(page);
   world.adminSet(F5.distributor, "certificates", true);
 
-  await page.goto(`/t/${SLUG}/features`);
+  await page.goto(`/t/${SLUG}/settings/modules`);
   await expect(page.getByTestId("module-level-addon")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Staff certificates" }),
@@ -118,7 +118,7 @@ test("F5 gate: dealer requests certificates, the distributor approves, the menu 
   ]);
 
   world.as("distributor");
-  await page.goto("/t/dist/features");
+  await page.goto("/t/dist/settings/modules");
   const tab = page.getByTestId("modules-requests-tab");
   await expect(tab).toContainText("1");
   await tab.click();
@@ -132,7 +132,7 @@ test("F5 gate: dealer requests certificates, the distributor approves, the menu 
   ).toHaveLength(1);
 
   world.as("dealer");
-  await page.goto(`/t/${SLUG}/features`);
+  await page.goto(`/t/${SLUG}/settings/modules`);
   await expect(
     page
       .getByRole("row", { name: /Certificates/ })
@@ -150,7 +150,7 @@ test("F5 gate: admin opens fleet for one dealer → fleet list, card and bulk pl
   const previews = mockFleet(world.api);
 
   // The distributor has no fleet add-on: the dealer does not see it.
-  await page.goto(`/t/${SLUG}/features`);
+  await page.goto(`/t/${SLUG}/settings/modules`);
   await expect(page.getByTestId("module-level-core")).toBeVisible();
   await expect(page.getByTestId("module-fleet")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Fleet list" })).toHaveCount(0);
@@ -196,7 +196,7 @@ test("F5 gate: module bundle subscription ends → efficiency off, menu hidden, 
   world.adminSet(F5.distributor, "efficiency", true);
   world.subscribe(ORG, "efficiency");
 
-  await page.goto(`/t/${SLUG}/features`);
+  await page.goto(`/t/${SLUG}/settings/modules`);
   const row = page.getByRole("row", { name: /Efficiency and waste analysis/ });
   await expect(row.getByTestId("module-via-subscription")).toHaveText(
     "On by subscription",
@@ -227,7 +227,7 @@ test("F5 gate tour: showcase is published → public dealer page takes a quote",
   world.api.permissions.push("showcase.read", "showcase.write");
   const showcase = mockShowcase(world.api);
 
-  await page.goto(`/t/${SLUG}/showcase`);
+  await page.goto(`/t/${SLUG}/settings/showcase`);
   await expect(page.getByText("Draft").first()).toBeVisible();
   await page.getByRole("button", { name: "Publish" }).click();
   await expect(page.getByText("Showcase published.")).toBeVisible();
@@ -425,7 +425,7 @@ test("F5 gate: Özellikler shows level counts and price / free lines", async ({
   world.adminSet(F5.distributor, "certificates", true);
   world.adminSet(F5.distributor, "photo_standard", true);
 
-  await page.goto(`/t/${SLUG}/features`);
+  await page.goto(`/t/${SLUG}/settings/modules`);
   const level = (key: string) =>
     page.getByTestId(`module-level-${key}`).getByRole("heading");
   await expect(level("core")).toHaveText(/^Core\s*14$/);

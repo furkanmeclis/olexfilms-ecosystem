@@ -80,7 +80,7 @@ type HubLink = {
 export const HUB_LINKS: HubLink[] = [
   {
     id: "export-settings",
-    href: routes.platform.settings.root,
+    href: routes.platform.settings.exportDefaults,
     titleKey: "layout.nav_export_settings",
     descriptionKey: "settings.system.hub.export_settings",
     icon: Settings2,
