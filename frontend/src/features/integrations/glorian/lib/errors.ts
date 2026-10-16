@@ -10,6 +10,8 @@ const CODE_KEYS: Record<string, string> = {
   GLORIAN_CONNECTION_INACTIVE: "integrations.glorian.errors.inactive",
   GLORIAN_OUTBOUND_NOT_REPLAYABLE: "integrations.glorian.errors.not_replayable",
   GLORIAN_CENTER_MISSING: "integrations.glorian.errors.center_missing",
+  GLORIAN_REMOTE_LOCATION_TAKEN:
+    "integrations.glorian.errors.remote_location_taken",
   QUEUE_UNAVAILABLE: "integrations.glorian.errors.queue_unavailable",
   VALIDATION_ERROR: "integrations.glorian.errors.validation",
 };
