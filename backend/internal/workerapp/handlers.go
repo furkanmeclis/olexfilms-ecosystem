@@ -157,6 +157,8 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 	workerFleet := fleetusecase.New(pool)
 	workerFleet.SetOutbox(outbox.NewStore(pool, queries))
 	workerFleet.SetPlates(geo.New(pool, queries))
+	// TEC-485/TEC-755: the stock forecast exports only read.
+	stockForecastExports := stockforecastusecase.New(pool, queries, outboxStore, nil, sysconfig.New(queries, sysconfig.NoCache{}), log)
 	ioReg := ioengine.NewRegistry(
 		catalogusecase.NewIOAdapter(catalogSvc, queries),
 		ioadapters.NewUsers(queries),
@@ -202,7 +204,9 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		ordersusecase.NewListExportAdapter(ordersusecase.New(pool, queries, nil, nil)),
 		stockusecase.NewUnitsExportAdapter(stockusecase.New(queries)),
 		// TEC-485: center network demand forecast export.
-		stockforecastusecase.NewNetworkExportAdapter(stockforecastusecase.New(pool, queries, outboxStore, nil, sysconfig.New(queries, sysconfig.NoCache{}), log)),
+		stockforecastusecase.NewNetworkExportAdapter(stockForecastExports),
+		// TEC-755: stock forecast list export.
+		stockforecastusecase.NewListExportAdapter(stockForecastExports),
 		// TEC-377: service and warranty list exports (read only).
 		servicesusecase.NewListExportAdapter(servicesusecase.New(pool, queries, nil)),
 		warrantyusecase.NewListExportAdapter(warrantyusecase.NewReader(pool, queries, nil, cfg.Auth.FrontendURL)),

@@ -728,6 +728,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		stockusecase.NewUnitsExportAdapter(stockusecase.New(deps.Queries)),
 		// TEC-485: center network demand forecast export.
 		stockforecastusecase.NewNetworkExportAdapter(stockForecastSvc),
+		// TEC-755: stock forecast list export.
+		stockforecastusecase.NewListExportAdapter(stockForecastSvc),
 		// TEC-377: service and warranty list exports.
 		servicesusecase.NewListExportAdapter(servicesSvc),
 		warrantyusecase.NewListExportAdapter(warrantyReader),

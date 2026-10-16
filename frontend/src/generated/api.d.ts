@@ -11202,6 +11202,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock-forecasts/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the stock forecast list export
+         * @description TEC-755. Queues an I/O engine export job (`stock_forecasts.list`) over the active organization's forecast list. `query` carries the list parameters of `GET /v1/stock-forecasts` (`q`, `sort`, `status`, `days_left_min`, `days_left_max`); format is `csv` or `xlsx`. Poll and download through `/v1/tenant/exports/{uuid}`.
+         */
+        post: operations["exportStockForecasts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock-forecasts/{product_uuid}": {
         parameters: {
             query?: never;
@@ -24212,13 +24232,21 @@ export interface components {
                 stock_meters: string;
             }[];
             thresholds: components["schemas"]["StockForecastThresholds"];
-            parameters: {
-                min_data_days: number;
-                warning_days: number;
-                critical_days: number;
-                cover_days: number;
-                horizon_days: number;
-            };
+            parameters: components["schemas"]["StockForecastParameters"];
+        };
+        StockForecastParameters: {
+            min_data_days: number;
+            warning_days: number;
+            critical_days: number;
+            cover_days: number;
+            horizon_days: number;
+        };
+        StockForecastMeta: {
+            default_sort: string;
+            sortable_fields: string[];
+            statuses: components["schemas"]["StockForecastStatus"][];
+            thresholds: components["schemas"]["StockForecastThresholds"];
+            parameters: components["schemas"]["StockForecastParameters"];
         };
         StockForecastThresholdInput: {
             warning_days: number;
@@ -24382,7 +24410,7 @@ export interface components {
         EnvelopeStockForecastMeta: {
             /** @enum {boolean} */
             success: true;
-            data: Record<string, never>;
+            data: components["schemas"]["StockForecastMeta"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeStockForecastOrderDraft: {
@@ -48602,6 +48630,33 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeStockForecastMeta"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportStockForecasts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Export job */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
         };
