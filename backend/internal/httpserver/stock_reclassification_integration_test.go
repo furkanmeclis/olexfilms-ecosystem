@@ -240,6 +240,59 @@ func TestIntegrationStockReclassification(t *testing.T) {
 	}
 	it.reclass("GET", base+"/"+done.UUID, distTok, nil, http.StatusOK, "")
 
+	// TEC-763 list contract: CSV status, requester, products, q, created
+	// range, sort with id tiebreak; an unknown sort or status answers 400.
+	list := func(query string) (int, []reclassView, int64) {
+		t.Helper()
+		code, env := it.do("GET", base+"?"+query, hostOlex, whTok, nil)
+		var p struct {
+			Items []reclassView `json:"items"`
+			Total int64         `json:"total"`
+		}
+		if code == http.StatusOK {
+			if err := json.Unmarshal(env.Data, &p); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return code, p.Items, p.Total
+	}
+	mine := func(items []reclassView) []string {
+		var out []string
+		for _, v := range items {
+			for _, id := range []string{done.UUID, r2.UUID, r6.UUID} {
+				if v.UUID == id {
+					out = append(out, v.Status)
+				}
+			}
+		}
+		return out
+	}
+	if _, items, _ := list("status=approved,rejected&limit=100"); fmt.Sprint(mine(items)) != "[rejected approved]" {
+		t.Fatalf("status CSV = %v", mine(items))
+	}
+	if _, items, _ := list("requested_by=" + wh.Uuid.String() + "&limit=100"); fmt.Sprint(mine(items)) != "[cancelled]" {
+		t.Fatalf("requested_by = %v", mine(items))
+	}
+	if _, items, total := list("q=" + u2.Barcode); total != 1 || items[0].UUID != r2.UUID {
+		t.Fatalf("q barcode = %d %+v", total, items)
+	}
+	if _, items, _ := list("to_product_uuid=" + pieceB.Uuid.String() + "&from_product_uuid=" + pieceA.Uuid.String() +
+		"&created_from=2000-01-01&limit=100"); len(mine(items)) != 3 {
+		t.Fatalf("product filters = %v", mine(items))
+	}
+	if _, items, _ := list("created_to=2000-01-01"); len(mine(items)) != 0 {
+		t.Fatalf("created_to = %v", mine(items))
+	}
+	if _, items, _ := list("sort=status&limit=100"); fmt.Sprint(mine(items)) != "[approved cancelled rejected]" {
+		t.Fatalf("sort status = %v", mine(items))
+	}
+	if code, _, _ := list("sort=reason"); code != http.StatusBadRequest {
+		t.Fatalf("unknown sort = %d", code)
+	}
+	if code, _, _ := list("status=nope"); code != http.StatusBadRequest {
+		t.Fatalf("unknown status = %d", code)
+	}
+
 	// 9. Rebuild/replay after the reclassification: no drift, no anomaly.
 	for _, org := range []int64{dist.ID, center.ID} {
 		rep, err := stockrebuild.New(it.pool, it.q).Check(ctx, org)

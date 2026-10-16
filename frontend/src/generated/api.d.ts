@@ -5561,7 +5561,7 @@ export interface paths {
         };
         /**
          * Reclassification requests (barcode kept, product changed)
-         * @description Needs `stock.read`; requests of the organizations inside the viewer's reach (the requesting organization is the one holding the unit), newest first. `status` filters pending, approved, rejected or cancelled requests (TEC-157).
+         * @description Needs `stock.read`; requests of the organizations inside the viewer's reach (the requesting organization is the one holding the unit). List contract (TEC-763, docs/list-contract.md): `sort` created_at (default `-created_at`), decided_at or status with an id tiebreak; `q` matches a barcode prefix, a product name or SKU or the reason; `status` and `requested_by` are comma separated; `from_product_uuid`, `to_product_uuid` and `created_from` / `created_to` narrow the list. An unknown sort field or status answers 400 (TEC-157).
          */
         get: operations["listStockReclassifications"];
         put?: never;
@@ -38501,7 +38501,19 @@ export interface operations {
             query?: {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
-                status?: components["schemas"]["StockReclassificationStatus"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated statuses (pending, approved, rejected, cancelled). */
+                status?: components["schemas"]["StockReclassificationStatus"][];
+                /** @description Comma separated user uuids of the requesters. */
+                requested_by?: string[];
+                from_product_uuid?: string;
+                to_product_uuid?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
             };
             header?: never;
             path?: never;
@@ -38518,6 +38530,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeStockReclassificationPage"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["UnprocessableEntity"];

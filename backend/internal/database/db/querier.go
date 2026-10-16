@@ -2565,6 +2565,10 @@ type Querier interface {
 	// Barcode history page in ledger order (oldest first).
 	ListStockMovementsByUnitPage(ctx context.Context, arg ListStockMovementsByUnitPageParams) ([]StockMovement, error)
 	ListStockReclassifications(ctx context.Context, arg ListStockReclassificationsParams) ([]StockReclassification, error)
+	// TEC-763 list contract (docs/list-contract.md): status and requested_by
+	// (user uuids) are CSV, created_from/_to, from/to product, q (barcode
+	// prefix, product name or SKU, reason). Sort keys from
+	// usecase.ReclassificationSort, id tiebreak.
 	ListStockReclassificationsScoped(ctx context.Context, arg ListStockReclassificationsScopedParams) ([]StockReclassification, error)
 	// Scope list: requests where any of org_ids is the giver, the receiver or
 	// the approver (org_ids NULL = whole brand).

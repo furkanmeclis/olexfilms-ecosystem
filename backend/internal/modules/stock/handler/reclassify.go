@@ -150,17 +150,20 @@ func (h *Reclassify) Create(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, out)
 }
 
-// List serves GET /v1/stock/reclassifications?status&limit&offset.
+// List serves GET /v1/stock/reclassifications with the list contract
+// (stockusecase.ParseListFilter).
 func (h *Reclassify) List(w http.ResponseWriter, r *http.Request) {
-	q := apiquery.Parse(r.URL.Query())
-	items, total, err := h.svc.List(r.Context(), reclassCaller(r), stockusecase.ListFilter{
-		Status: r.URL.Query().Get("status"), Limit: q.Limit, Offset: q.Offset,
-	})
+	f, err := stockusecase.ParseListFilter(r.URL.Query())
+	if err != nil {
+		writeQueryError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.List(r.Context(), reclassCaller(r), f)
 	if err != nil {
 		writeReclassError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, f.Limit, f.Offset))
 }
 
 // Get serves GET /v1/stock/reclassifications/{uuid}.
