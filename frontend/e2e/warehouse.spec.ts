@@ -306,6 +306,7 @@ test("warehouse: fixed barcode transfer collects source bin and quantity", async
       body.code === "FIX-01"
     ) {
       await ok({
+        status: "ok",
         type: "unit",
         unit: { barcode: "FIX-01", unit_kind: "fixed" },
         product: { uuid: product, name: "Fixed cleaner" },
