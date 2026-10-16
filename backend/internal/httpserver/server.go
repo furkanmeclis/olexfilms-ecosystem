@@ -596,6 +596,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Sessions: uc,
 	}, tokens, loader, deps.Queries, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
+	// TEC-768: shipping note PDF and delivery receipts of orders.
+	ordersSvc.WithDocuments(deps.Storage, pdfClient, log)
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 
 	nh := notifhandler.New(notifSvc)
