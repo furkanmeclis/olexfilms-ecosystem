@@ -66,6 +66,8 @@ var deCatalog = map[string]string{
 	"users.status.pending":                             "Ausstehend",
 	"export.document":                                  "Exportdokument",
 	"export.generated_at":                              "Erstellt am",
+	"letterhead.tax_office":                            "Finanzamt",
+	"letterhead.tax_number":                            "Steuernr.",
 	"export.title.platform.users":                      "Export der Benutzer",
 	"export.title.platform.organizations":              "Export der Organisationen",
 	"export.title.platform.roles":                      "Export der Rollen",

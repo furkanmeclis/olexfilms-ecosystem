@@ -66,6 +66,8 @@ var arCatalog = map[string]string{
 	"users.status.pending":                             "قيد الانتظار",
 	"export.document":                                  "تصدير",
 	"export.generated_at":                              "تاريخ الإنشاء",
+	"letterhead.tax_office":                            "مكتب الضرائب",
+	"letterhead.tax_number":                            "الرقم الضريبي",
 	"export.title.platform.users":                      "تصدير المستخدمين",
 	"export.title.platform.organizations":              "تصدير المؤسسات",
 	"export.title.platform.roles":                      "تصدير الأدوار",

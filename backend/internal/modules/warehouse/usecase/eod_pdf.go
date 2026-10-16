@@ -289,7 +289,7 @@ func EODPDFHTML(d EODPDFDoc, loc i18n.Locale, title string) string {
 	}
 	b.WriteString(`<p class="muted">` + esc(t("warehouse.eod.generated_at")) + `: ` +
 		esc(pdfrender.IssuedAt(r.GeneratedAt, pdfrender.Zone(d.Timezone, r.Timezone))) + `</p>`)
-	b.WriteString(ioengine.LetterheadFooterHTML(&lh))
+	b.WriteString(ioengine.LetterheadFooterHTMLFor(&lh, string(loc)))
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: lh.PrimaryColor}.HTML()
 }
 

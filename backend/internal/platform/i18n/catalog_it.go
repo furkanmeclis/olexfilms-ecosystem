@@ -66,6 +66,8 @@ var itCatalog = map[string]string{
 	"users.status.pending":                             "In attesa",
 	"export.document":                                  "Esportazione",
 	"export.generated_at":                              "Generato",
+	"letterhead.tax_office":                            "Ufficio imposte",
+	"letterhead.tax_number":                            "P. IVA",
 	"export.title.platform.users":                      "Esportazione utenti",
 	"export.title.platform.organizations":              "Esportazione organizzazioni",
 	"export.title.platform.roles":                      "Esportazione ruoli",

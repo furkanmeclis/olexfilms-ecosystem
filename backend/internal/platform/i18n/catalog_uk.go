@@ -66,6 +66,8 @@ var ukCatalog = map[string]string{
 	"users.status.pending":                             "Очікує",
 	"export.document":                                  "Експорт",
 	"export.generated_at":                              "Сформовано",
+	"letterhead.tax_office":                            "Податкова",
+	"letterhead.tax_number":                            "ІПН",
 	"export.title.platform.users":                      "Експорт користувачів",
 	"export.title.platform.organizations":              "Експорт організацій",
 	"export.title.platform.roles":                      "Експорт ролей",

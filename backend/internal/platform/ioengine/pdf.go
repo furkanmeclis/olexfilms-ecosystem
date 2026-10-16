@@ -95,7 +95,7 @@ func ExportTableHTML(ds Dataset, locale string, lh *Letterhead, title string) st
 		b.WriteString(`</tfoot>`)
 	}
 	b.WriteString(`</table>`)
-	b.WriteString(LetterheadFooterHTML(lh))
+	b.WriteString(LetterheadFooterHTMLFor(lh, string(loc)))
 	color := ""
 	if lh != nil {
 		color = lh.PrimaryColor
@@ -108,7 +108,7 @@ func ExportTableHTML(ds Dataset, locale string, lh *Letterhead, title string) st
 // primary color, smaller text, long values wrap instead of being cut.
 const exportTableCSS = `table.export-table{table-layout:fixed;font-size:8pt}
 table.export-table th,table.export-table td{padding:2pt 4pt;overflow-wrap:anywhere}
-table.export-table thead th{background:var(--primary);color:#fff}
+table.export-table thead th{background:var(--primary);color:var(--on-primary)}
 table.export-table tfoot td{background:#f1f5f9;font-weight:700}`
 
 func writeExportRow(b *strings.Builder, columns []Column, row map[string]any, loc i18n.Locale) {

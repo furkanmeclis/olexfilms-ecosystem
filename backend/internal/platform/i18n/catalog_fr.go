@@ -66,6 +66,8 @@ var frCatalog = map[string]string{
 	"users.status.pending":                             "En attente",
 	"export.document":                                  "Exportation",
 	"export.generated_at":                              "Généré le",
+	"letterhead.tax_office":                            "Centre des impôts",
+	"letterhead.tax_number":                            "N° fiscal",
 	"export.title.platform.users":                      "Export des utilisateurs",
 	"export.title.platform.organizations":              "Export des organisations",
 	"export.title.platform.roles":                      "Export des rôles",
