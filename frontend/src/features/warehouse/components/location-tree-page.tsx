@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FolderTree, Pencil, Plus, Trash2 } from "lucide-react";
+import { Boxes, FolderTree, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -19,6 +19,7 @@ import {
   useWarehouseAccess,
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
+import { WarehouseExportMenu } from "@/features/warehouse/components/warehouse-export";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import type { NodeFormValues } from "@/features/warehouse/lib/forms";
 import {
@@ -30,6 +31,7 @@ import {
 } from "@/features/warehouse/lib/tree";
 import {
   locationLabelsPath,
+  warehouseExportPaths,
   warehouseKeys,
   warehouseService,
   type Warehouse,
@@ -317,6 +319,14 @@ export function LocationTreePage({ slug }: { slug: string }) {
       title={t("warehouse.locations.title")}
       description={t("warehouse.locations.description")}
       icon={<FolderTree className="size-6" />}
+      actions={
+        <WarehouseExportMenu
+          slug={slug}
+          exportPath={warehouseExportPaths.locations}
+          label={t("warehouse.export.locations_all")}
+          testId="locations-export-all"
+        />
+      }
     >
       {panel ? (
         <NodeForm
@@ -563,6 +573,29 @@ export function LocationTreePage({ slug }: { slug: string }) {
                   >
                     {t("warehouse.tree.collapse_all")}
                   </Button>
+                  <div className="ms-auto flex items-center gap-2">
+                    <WarehouseExportMenu
+                      slug={slug}
+                      exportPath={warehouseExportPaths.locations}
+                      query={{
+                        room_uuid: roomUuid ?? undefined,
+                        q: filter.trim() || undefined,
+                      }}
+                      label={t("warehouse.export.locations_room")}
+                      testId="locations-export-room"
+                    />
+                    {selected && access.can(Permission.StockRead) ? (
+                      <WarehouseExportMenu
+                        slug={slug}
+                        exportPath={warehouseExportPaths.locationStock(
+                          selected,
+                        )}
+                        label={t("warehouse.export.location_stock")}
+                        icon={Boxes}
+                        testId="location-stock-export"
+                      />
+                    ) : null}
+                  </div>
                 </div>
                 {visibleTree.length === 0 ? (
                   <p className="text-muted-foreground text-sm">

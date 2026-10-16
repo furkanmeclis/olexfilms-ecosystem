@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   ClipboardCheck,
-  FileDown,
   Play,
   ShieldCheck,
   XCircle,
@@ -46,7 +45,7 @@ import {
   countQuantityError,
 } from "@/features/warehouse/lib/forms";
 import {
-  countExportPath,
+  warehouseExportPaths,
   warehouseKeys,
   warehouseService,
   type StockCount,
@@ -54,10 +53,7 @@ import {
   type StockCountScan,
   type StockCountScanResult,
 } from "@/features/warehouse/services/warehouse.service";
-import {
-  platformDownloadFile,
-  triggerBrowserDownload,
-} from "@/lib/api/platform-form-request";
+import { WarehouseExportMenu } from "@/features/warehouse/components/warehouse-export";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -263,6 +259,7 @@ export function CountDetailPage({
 
           {reviewed ? (
             <CountReportCard
+              slug={slug}
               count={count}
               canApprove={
                 canWrite &&
@@ -504,9 +501,11 @@ function ScansCard({
  * its allowed resolutions) and the approval, plus the CSV export.
  */
 export function CountReportCard({
+  slug,
   count,
   canApprove,
 }: {
+  slug: string;
   count: StockCount;
   canApprove: boolean;
 }) {
@@ -517,7 +516,6 @@ export function CountReportCard({
     Record<string, StockCountResolution | undefined>
   >({});
   const [error, setError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
 
   const report = useQuery({
     queryKey: warehouseKeys.countReport(count.uuid),
@@ -561,20 +559,6 @@ export function CountReportCard({
     if (ok) approve.mutate(resolutions);
   };
 
-  const onExport = async () => {
-    setDownloading(true);
-    try {
-      const { blob, filename } = await platformDownloadFile(
-        countExportPath(count.uuid),
-      );
-      triggerBrowserDownload(blob, filename ?? `count-${count.uuid}.csv`);
-    } catch {
-      appToast.error(t("warehouse.count.export_failed"));
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   return (
     <Card data-testid="count-report">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
@@ -590,17 +574,12 @@ export function CountReportCard({
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={downloading}
-            onClick={() => void onExport()}
-            data-testid="count-export"
-          >
-            <FileDown className="size-4" />
-            {t("warehouse.count.export")}
-          </Button>
+          <WarehouseExportMenu
+            slug={slug}
+            exportPath={warehouseExportPaths.countReport(count.uuid)}
+            label={t("warehouse.export.count_report")}
+            testId="count-export"
+          />
           {canApprove ? (
             <Button
               type="button"

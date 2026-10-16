@@ -1,6 +1,6 @@
 "use client";
 
-import { Download } from "lucide-react";
+import { Download, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -35,6 +35,11 @@ type ExportMenuProps = {
   exportPath?: string;
   /** Formats the endpoint accepts (default: pdf, xlsx, csv, json). */
   formats?: ExportFormat[];
+  /** Trigger tooltip / aria label (default: exports.menu_label). */
+  label?: string;
+  /** Icon of the trigger (default: Download). */
+  icon?: LucideIcon;
+  testId?: string;
 };
 
 const FORMATS: ExportFormat[] = ["pdf", "xlsx", "csv", "json"];
@@ -46,8 +51,12 @@ export function ExportMenu({
   jobsHref,
   exportPath,
   formats = FORMATS,
+  label,
+  icon: Icon = Download,
+  testId,
 }: ExportMenuProps) {
   const { t, locale } = useLocale();
+  const menuLabel = label ?? t("exports.menu_label");
   const [pending, setPending] = useState<ExportFormat | null>(null);
 
   const handleExport = async (format: ExportFormat) => {
@@ -85,13 +94,14 @@ export function ExportMenu({
               size="icon"
               className="size-8"
               disabled={disabled || Boolean(pending)}
-              aria-label={t("exports.menu_label")}
+              aria-label={menuLabel}
+              data-testid={testId}
             >
-              <Download className="size-4" />
+              <Icon className="size-4" />
             </Button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
-        <TooltipContent side="bottom">{t("exports.menu_label")}</TooltipContent>
+        <TooltipContent side="bottom">{menuLabel}</TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="end">
         {formats.map((format) => (

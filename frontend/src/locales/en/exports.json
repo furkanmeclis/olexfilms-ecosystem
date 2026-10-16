@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "Fleets",
   "resources.tenant.fleet.statement": "Fleet statement",
   "resources.warranties.list": "Warranties",
-  "resources.ai.usage": "AI usage"
+  "resources.ai.usage": "AI usage",
+  "resources.warehouse.stock_count_report": "Stock count report",
+  "resources.warehouse.stock_counts": "Stock counts",
+  "resources.warehouse.stock_entries": "Stock entries",
+  "resources.warehouse.transfers": "Warehouse transfers",
+  "resources.warehouse.transfer_summary": "Transfer summary report",
+  "resources.warehouse.locations": "Warehouse locations",
+  "resources.warehouse.eod_reports": "End-of-day reports",
+  "resources.stock.products": "Stock by product",
+  "resources.stock.location_stock": "Location stock",
+  "resources.stock.unit_history": "Unit movement history",
+  "resources.stock.barcode_batches": "Barcode batches"
 }

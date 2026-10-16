@@ -30,8 +30,6 @@
   "count.expected": "Очаквано",
   "count.expected_title": "Очаквана наличност",
   "count.expected_totals": "{{units}} серийни единици · {{quantity}} бр. с фиксиран баркод",
-  "count.export": "CSV",
-  "count.export_failed": "CSV файлът не можа да бъде изтеглен.",
   "count.fixed_quantity": "Бройки с фиксиран баркод",
   "count.last_scan": "Преброено {{code}} × {{quantity}}.",
   "count.meters_hint": "Измерена дължина на руло (по избор).",
@@ -418,5 +416,15 @@
   "validation.scope": "Този обхват не е достъпен за метода.",
   "validation.too_long": "Най-много {{max}} знака.",
   "validation.type": "Този тип не е разрешен тук.",
-  "validation.warehouse": "Изберете склад."
+  "validation.warehouse": "Изберете склад.",
+  "export.count_report": "Експорт на отчета от инвентаризация",
+  "export.count_report_xlsx": "Отчет от инвентаризация (Excel)",
+  "export.summary": "Обобщен отчет (по продукти)",
+  "export.summary_all_products": "Обобщение: всички продукти",
+  "export.summary_product_search": "Търсене на продукти",
+  "export.summary_product_none": "Няма намерени продукти.",
+  "export.locations_all": "Експорт на всички местоположения",
+  "export.locations_room": "Експорт на местоположенията в тази стая",
+  "export.location_stock": "Експорт на наличността на местоположението",
+  "export.unit_history": "Експорт на историята на движенията"
 }

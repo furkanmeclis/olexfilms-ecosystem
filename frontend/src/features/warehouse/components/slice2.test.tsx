@@ -495,7 +495,11 @@ describe("CountReportCard (TEC-232)", () => {
     });
     await render(
       m,
-      createElement(CountReportCard, { count: COUNT, canApprove: true }),
+      createElement(CountReportCard, {
+        slug: "acme",
+        count: COUNT,
+        canApprove: true,
+      }),
     );
     // The matched line needs no resolution.
     const rows = m.container.querySelectorAll('[data-testid="count-line"]');
@@ -525,7 +529,11 @@ describe("CountReportCard (TEC-232)", () => {
     );
     await render(
       m,
-      createElement(CountReportCard, { count: COUNT, canApprove: true }),
+      createElement(CountReportCard, {
+        slug: "acme",
+        count: COUNT,
+        canApprove: true,
+      }),
     );
     await click($("count-approve"));
     await flush();
@@ -539,7 +547,11 @@ describe("CountReportCard (TEC-232)", () => {
     });
     await render(
       m,
-      createElement(CountReportCard, { count: COUNT, canApprove: false }),
+      createElement(CountReportCard, {
+        slug: "acme",
+        count: COUNT,
+        canApprove: false,
+      }),
     );
     expect($("count-approve")).toBeNull();
     expect($("count-resolution")).toBeNull();

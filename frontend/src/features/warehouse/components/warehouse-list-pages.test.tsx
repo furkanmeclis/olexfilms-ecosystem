@@ -30,7 +30,9 @@ const state = vi.hoisted(() => ({
 }));
 const captured = vi.hoisted(() => ({
   tables: [] as Record<string, unknown>[],
+  menus: [] as Record<string, unknown>[],
 }));
+const exportsApi = vi.hoisted(() => ({ request: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => nav }));
 vi.mock("next/link", () => ({
@@ -69,6 +71,15 @@ vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
 }));
 vi.mock("@/lib/api/platform-form-request", () => files);
+vi.mock("@/features/io/services/exports.service", () => ({
+  exportsService: exportsApi,
+}));
+vi.mock("@/features/io/components/export-menu", () => ({
+  ExportMenu: (props: Record<string, unknown>) => {
+    captured.menus.push(props);
+    return null;
+  },
+}));
 vi.mock("@/features/warehouse/components/eod-report-detail-page", () => eodPdf);
 vi.mock("@/features/warehouse/services/warehouse.service", async (orig) => ({
   ...(await orig<object>()),
@@ -108,6 +119,8 @@ type TableProps<T> = {
   rowCount?: number;
   features?: { persistKey?: string };
   state?: {
+    rowSelection?: Record<string, boolean>;
+    onRowSelectionChange?: (v: Record<string, boolean>) => void;
     onColumnFiltersChange?: (v: { id: string; value: unknown }[]) => void;
     onSortingChange?: (v: { id: string; desc: boolean }[]) => void;
     onGlobalFilterChange?: (v: string) => void;
@@ -121,6 +134,8 @@ let m: Mounted;
 beforeEach(() => {
   window.localStorage.clear();
   captured.tables = [];
+  captured.menus = [];
+  exportsApi.request.mockResolvedValue({ uuid: "job-1" });
   state.grants = new Set([
     Permission.WarehouseRead,
     Permission.WarehouseWrite,
@@ -190,6 +205,30 @@ async function apply<T>(
 }
 
 const lastCall = (fn: ReturnType<typeof vi.fn>) => fn.mock.calls.at(-1)?.[0];
+
+type Menu = {
+  exportPath: string;
+  query?: Record<string, string | undefined>;
+  formats?: string[];
+  jobsHref?: string;
+  label?: string;
+};
+
+/** The last rendered export menu with the given path (TEC-761). */
+function menu(path: string): Menu {
+  const found = captured.menus.filter((p) => p.exportPath === path);
+  expect(found.length).toBeGreaterThan(0);
+  return found[found.length - 1] as unknown as Menu;
+}
+
+async function select<T>(ids: string[]) {
+  await act(async () => {
+    lastTable<T>().state?.onRowSelectionChange?.(
+      Object.fromEntries(ids.map((id) => [id, true])),
+    );
+  });
+  await flush();
+}
 
 describe("StockEntriesPage (TEC-376 DataTable)", () => {
   const entry = (over: Partial<StockEntry> = {}) =>
@@ -320,12 +359,8 @@ describe("CountsPage (TEC-376 DataTable)", () => {
     });
   });
 
-  it("row actions: approve the start, start, cancel and the CSV", async () => {
+  it("row actions: approve the start, start, cancel and the report export", async () => {
     api.countAction.mockResolvedValue(count({ status: "in_progress" }));
-    files.platformDownloadFile.mockResolvedValue({
-      blob: new Blob(["x"]),
-      filename: "count.csv",
-    });
     await render(m, createElement(CountsPage, { slug: "acme" }));
 
     const approval = count({ start_approval_required: true });
@@ -349,13 +384,11 @@ describe("CountsPage (TEC-376 DataTable)", () => {
     expect(review.map((a) => a.id)).toEqual(["view", "export", "cancel"]);
     await act(async () => review[1].onSelect());
     await flush();
-    expect(files.platformDownloadFile).toHaveBeenCalledWith(
+    expect(exportsApi.request).toHaveBeenCalledWith(
       "/v1/warehouse/stock-counts/c-1/export",
+      { format: "xlsx", query: {}, locale: "en" },
     );
-    expect(files.triggerBrowserDownload).toHaveBeenCalledWith(
-      expect.any(Blob),
-      "count.csv",
-    );
+    expect(toast.success).toHaveBeenCalledWith("exports.toast.queued");
   });
 });
 
@@ -543,5 +576,66 @@ describe("BarcodesPage (TEC-376 DataTable)", () => {
     await render(m, createElement(BarcodesPage, { slug: "acme" }));
     expect(api.listBatches).not.toHaveBeenCalled();
     expect(m.container.textContent).toContain("warehouse.barcodes.forbidden");
+  });
+});
+
+describe("Warehouse list exports (TEC-761)", () => {
+  it("stock entries: the list filters, search, sort and the selection", async () => {
+    await render(m, createElement(StockEntriesPage, { slug: "acme" }));
+    let entries = menu("/v1/warehouse/stock-entries/export");
+    expect(entries.formats).toEqual(["xlsx", "csv", "pdf"]);
+    expect(entries.jobsHref).toBe("/t/acme/exports");
+    expect(entries.query?.uuid).toBeUndefined();
+    expect(column("__select")).toBeDefined();
+
+    await apply(
+      [
+        { id: "status", value: ["confirmed"] },
+        { id: "warehouse", value: ["wh-1"] },
+      ],
+      { id: "warehouse", desc: false },
+      "Container",
+    );
+    await select(["e-1", "e-2"]);
+    entries = menu("/v1/warehouse/stock-entries/export");
+    expect(entries.query).toMatchObject({
+      status: "confirmed",
+      warehouse_uuid: "wh-1",
+      q: "Container",
+      sort: "warehouse",
+      uuid: "e-1,e-2",
+    });
+  });
+
+  it("counts, end-of-day reports and barcode batches have their export", async () => {
+    await render(m, createElement(CountsPage, { slug: "acme" }));
+    await select(["c-9"]);
+    expect(menu("/v1/warehouse/stock-counts/export").query?.uuid).toBe("c-9");
+    unmount(m);
+
+    m = mount();
+    await render(m, createElement(EodReportsPage, { slug: "acme" }));
+    expect(menu("/v1/warehouse/eod-reports/export").query?.sort).toBe(
+      "-report_date",
+    );
+    unmount(m);
+
+    m = mount();
+    await render(m, createElement(BarcodesPage, { slug: "acme" }));
+    expect(menu("/v1/stock/barcodes/export")).toBeDefined();
+  });
+
+  it("transfers: the list export and the per product summary report", async () => {
+    await render(m, createElement(TransfersPage, { slug: "acme" }));
+    await apply([{ id: "status", value: ["in_transit"] }]);
+    await select(["t-1"]);
+    expect(menu("/v1/warehouse/transfers/export").query).toMatchObject({
+      status: "in_transit",
+      uuid: "t-1",
+    });
+    const summary = menu("/v1/warehouse/transfers/summary/export");
+    expect(summary.label).toBe("warehouse.export.summary");
+    expect(summary.query).toMatchObject({ status: "in_transit", uuid: "t-1" });
+    expect(summary.query?.product_uuid).toBeUndefined();
   });
 });

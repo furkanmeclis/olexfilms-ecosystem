@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "Στόλοι",
   "resources.tenant.fleet.statement": "Κατάσταση λογαριασμού στόλου",
   "resources.warranties.list": "Εγγυήσεις",
-  "resources.ai.usage": "Χρήση AI"
+  "resources.ai.usage": "Χρήση AI",
+  "resources.warehouse.stock_count_report": "Αναφορά απογραφής",
+  "resources.warehouse.stock_counts": "Απογραφές",
+  "resources.warehouse.stock_entries": "Εισαγωγές αποθέματος",
+  "resources.warehouse.transfers": "Μεταφορές αποθήκης",
+  "resources.warehouse.transfer_summary": "Συγκεντρωτική αναφορά μεταφορών",
+  "resources.warehouse.locations": "Θέσεις αποθήκης",
+  "resources.warehouse.eod_reports": "Αναφορές τέλους ημέρας",
+  "resources.stock.products": "Απόθεμα ανά προϊόν",
+  "resources.stock.location_stock": "Απόθεμα θέσης",
+  "resources.stock.unit_history": "Ιστορικό κινήσεων μονάδας",
+  "resources.stock.barcode_batches": "Παρτίδες γραμμωτών κωδικών"
 }

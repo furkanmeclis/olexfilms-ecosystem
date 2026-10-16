@@ -392,16 +392,19 @@ describe("MyStockPage (TEC-224, TEC-374 DataTable)", () => {
       lastTable().state?.onGlobalFilterChange?.("ppf");
     });
     await flush();
-    const props = captured.exports[captured.exports.length - 1];
-    expect(props?.exportPath).toBe(
-      "/v1/stock/organizations/org-1/units/export",
-    );
+    const last = (path: string) =>
+      captured.exports.filter((p) => p?.exportPath === path).at(-1);
+    const props = last("/v1/stock/organizations/org-1/units/export");
     expect(props?.formats).toEqual(["xlsx", "csv", "pdf"]);
     expect(props?.query).toEqual({
       status: "available",
       q: "ppf",
       sort: "product",
     });
+    // TEC-761: the product stock (organization_product_stocks) export.
+    const products = last("/v1/stock/organizations/org-1/products/export");
+    expect(products?.formats).toEqual(["xlsx", "csv", "pdf"]);
+    expect(products?.query).toEqual({ product_uuid: undefined });
   });
 
   it("prints labels for the selected units and for one row", async () => {

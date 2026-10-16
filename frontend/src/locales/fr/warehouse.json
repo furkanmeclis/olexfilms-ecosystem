@@ -30,8 +30,6 @@
   "count.expected": "Attendu",
   "count.expected_title": "Stock attendu",
   "count.expected_totals": "{{units}} unités sérialisées · {{quantity}} pièces à code fixe",
-  "count.export": "CSV",
-  "count.export_failed": "Le CSV n'a pas pu être téléchargé.",
   "count.fixed_quantity": "Pièces à code-barres fixe",
   "count.last_scan": "{{code}} × {{quantity}} compté.",
   "count.meters_hint": "Longueur mesurée d'un rouleau (facultatif).",
@@ -418,5 +416,15 @@
   "validation.scope": "Ce périmètre n'est pas disponible pour cette méthode.",
   "validation.too_long": "{{max}} caractères maximum.",
   "validation.type": "Ce type n'est pas autorisé ici.",
-  "validation.warehouse": "Choisissez un entrepôt."
+  "validation.warehouse": "Choisissez un entrepôt.",
+  "export.count_report": "Exporter le rapport d'inventaire",
+  "export.count_report_xlsx": "Rapport d'inventaire (Excel)",
+  "export.summary": "Rapport récapitulatif (par produit)",
+  "export.summary_all_products": "Récapitulatif : tous les produits",
+  "export.summary_product_search": "Rechercher des produits",
+  "export.summary_product_none": "Aucun produit trouvé.",
+  "export.locations_all": "Exporter tous les emplacements",
+  "export.locations_room": "Exporter les emplacements de cette salle",
+  "export.location_stock": "Exporter le stock de l'emplacement",
+  "export.unit_history": "Exporter l'historique des mouvements"
 }

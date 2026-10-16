@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "Flotte",
   "resources.tenant.fleet.statement": "Estratto conto della flotta",
   "resources.warranties.list": "Garanzie",
-  "resources.ai.usage": "Utilizzo dell'IA"
+  "resources.ai.usage": "Utilizzo dell'IA",
+  "resources.warehouse.stock_count_report": "Rapporto di inventario",
+  "resources.warehouse.stock_counts": "Inventari",
+  "resources.warehouse.stock_entries": "Entrate di magazzino",
+  "resources.warehouse.transfers": "Trasferimenti di magazzino",
+  "resources.warehouse.transfer_summary": "Rapporto riepilogativo trasferimenti",
+  "resources.warehouse.locations": "Ubicazioni di magazzino",
+  "resources.warehouse.eod_reports": "Report di fine giornata",
+  "resources.stock.products": "Giacenza per prodotto",
+  "resources.stock.location_stock": "Giacenza dell'ubicazione",
+  "resources.stock.unit_history": "Storico movimenti dell'unità",
+  "resources.stock.barcode_batches": "Lotti di codici a barre"
 }

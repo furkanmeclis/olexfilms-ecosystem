@@ -58,5 +58,6 @@
   "widget.quantity_value": "{{quantity}} Stk.",
   "widget.truncated": "Die Übersicht umfasst die ersten {{limit}} Produkte.",
   "filters.product_search": "Produktname oder Artikelnummer",
-  "filters.product_none": "Kein Produkt in diesem Bestand."
+  "filters.product_none": "Kein Produkt in diesem Bestand.",
+  "export_products": "Bestand nach Produkt exportieren"
 }

@@ -58,5 +58,6 @@
   "widget.quantity_value": "{{quantity}} pcs",
   "widget.truncated": "Le résumé couvre les {{limit}} premiers produits.",
   "filters.product_search": "Nom du produit ou référence",
-  "filters.product_none": "Aucun produit dans ce stock."
+  "filters.product_none": "Aucun produit dans ce stock.",
+  "export_products": "Exporter le stock par produit"
 }

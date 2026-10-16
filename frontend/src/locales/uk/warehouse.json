@@ -30,8 +30,6 @@
   "count.expected": "Очікувалось",
   "count.expected_title": "Очікувані залишки",
   "count.expected_totals": "{{units}} серійних од. · {{quantity}} шт. з фікс. штрихкодом",
-  "count.export": "CSV",
-  "count.export_failed": "Не вдалося завантажити CSV.",
   "count.fixed_quantity": "Штук із фіксованим штрихкодом",
   "count.last_scan": "Пораховано {{code}} × {{quantity}}.",
   "count.meters_hint": "Виміряна довжина рулону (необов'язково).",
@@ -418,5 +416,15 @@
   "validation.scope": "Це охоплення недоступне для методу.",
   "validation.too_long": "Не більше {{max}} символів.",
   "validation.type": "Цей тип тут неприпустимий.",
-  "validation.warehouse": "Виберіть склад."
+  "validation.warehouse": "Виберіть склад.",
+  "export.count_report": "Експортувати звіт інвентаризації",
+  "export.count_report_xlsx": "Звіт інвентаризації (Excel)",
+  "export.summary": "Зведений звіт (за товарами)",
+  "export.summary_all_products": "Зведення: усі товари",
+  "export.summary_product_search": "Пошук товарів",
+  "export.summary_product_none": "Товарів не знайдено.",
+  "export.locations_all": "Експортувати всі місця",
+  "export.locations_room": "Експортувати місця цієї кімнати",
+  "export.location_stock": "Експортувати залишки місця",
+  "export.unit_history": "Експортувати історію руху"
 }

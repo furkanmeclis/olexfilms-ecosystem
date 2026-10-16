@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "Filolar",
   "resources.tenant.fleet.statement": "Filo ekstresi",
   "resources.warranties.list": "Garantiler",
-  "resources.ai.usage": "AI kullanımı"
+  "resources.ai.usage": "AI kullanımı",
+  "resources.warehouse.stock_count_report": "Sayım raporu",
+  "resources.warehouse.stock_counts": "Stok sayımları",
+  "resources.warehouse.stock_entries": "Stok girişleri",
+  "resources.warehouse.transfers": "Depo transferleri",
+  "resources.warehouse.transfer_summary": "Transfer toplu raporu",
+  "resources.warehouse.locations": "Depo konumları",
+  "resources.warehouse.eod_reports": "Gün sonu raporları",
+  "resources.stock.products": "Ürün bazında stok",
+  "resources.stock.location_stock": "Konum stoğu",
+  "resources.stock.unit_history": "Birim hareket geçmişi",
+  "resources.stock.barcode_batches": "Barkod partileri"
 }

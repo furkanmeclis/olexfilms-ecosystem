@@ -15,7 +15,7 @@ import {
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
-import { createColumn } from "@/components/tables";
+import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { AppForm, AppInput, AppSelect } from "@/components/forms";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,7 +46,13 @@ import {
   type StockEntry,
   type StockEntryListQuery,
   type Warehouse,
+  warehouseExportPaths,
 } from "@/features/warehouse/services/warehouse.service";
+import {
+  listExportQuery,
+  useExportSelection,
+  WarehouseExportMenu,
+} from "@/features/warehouse/components/warehouse-export";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -97,6 +103,7 @@ export function StockEntriesPage({ slug }: { slug: string }) {
       if (ok) runCancel(entry.uuid);
     };
     return [
+      createSelectColumnDef<StockEntry>(),
       createColumn<StockEntry>({
         id: "warehouse",
         accessorFn: (e) => e.warehouse?.name ?? "",
@@ -228,6 +235,13 @@ export function StockEntriesPage({ slug }: { slug: string }) {
     persistKey: ENTRIES_PERSIST_KEY,
   });
   const query: StockEntryListQuery = listState.params;
+  // TEC-761: the export keeps the list filters, q, sort and the selection.
+  const selection = useExportSelection();
+  const exportQuery = listExportQuery(
+    listState.filterParams,
+    listState.params,
+    selection.selected,
+  );
   const list = useQuery({
     queryKey: warehouseKeys.entries(query),
     queryFn: () => warehouseService.listEntries(query),
@@ -275,10 +289,14 @@ export function StockEntriesPage({ slug }: { slug: string }) {
         emptyTitle={t("warehouse.entries.empty_title")}
         emptyDescription={t("warehouse.entries.empty_description")}
         rowCount={list.data?.total ?? 0}
-        state={listState.tableState}
+        state={{
+          ...listState.tableState,
+          rowSelection: selection.rowSelection,
+          onRowSelectionChange: selection.onRowSelectionChange,
+        }}
         features={{
           persistKey: ENTRIES_PERSIST_KEY,
-          rowSelection: false,
+          rowSelection: true,
           viewMode: true,
         }}
         renderGridItem={(e) => (
@@ -307,10 +325,18 @@ export function StockEntriesPage({ slug }: { slug: string }) {
           </div>
         )}
         toolbarExtra={
-          <EntityToolbar
-            onRefresh={() => void list.refetch()}
-            refreshDisabled={list.isFetching}
-          />
+          <>
+            <WarehouseExportMenu
+              slug={slug}
+              exportPath={warehouseExportPaths.entries}
+              query={exportQuery}
+              testId="entries-export"
+            />
+            <EntityToolbar
+              onRefresh={() => void list.refetch()}
+              refreshDisabled={list.isFetching}
+            />
+          </>
         }
       />
     </WarehouseShell>

@@ -80,5 +80,16 @@
   "resources.tenant.fleets": "الأساطيل",
   "resources.tenant.fleet.statement": "كشف حساب الأسطول",
   "resources.warranties.list": "الضمانات",
-  "resources.ai.usage": "استخدام الذكاء الاصطناعي"
+  "resources.ai.usage": "استخدام الذكاء الاصطناعي",
+  "resources.warehouse.stock_count_report": "تقرير الجرد",
+  "resources.warehouse.stock_counts": "عمليات الجرد",
+  "resources.warehouse.stock_entries": "إدخالات المخزون",
+  "resources.warehouse.transfers": "تحويلات المستودع",
+  "resources.warehouse.transfer_summary": "تقرير ملخص التحويلات",
+  "resources.warehouse.locations": "مواقع المستودع",
+  "resources.warehouse.eod_reports": "تقارير نهاية اليوم",
+  "resources.stock.products": "المخزون حسب المنتج",
+  "resources.stock.location_stock": "مخزون الموقع",
+  "resources.stock.unit_history": "سجل حركة الوحدة",
+  "resources.stock.barcode_batches": "دفعات الباركود"
 }

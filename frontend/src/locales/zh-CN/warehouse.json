@@ -30,8 +30,6 @@
   "count.expected": "预期",
   "count.expected_title": "预期库存",
   "count.expected_totals": "{{units}} 个序列单元 · {{quantity}} 件固定条码",
-  "count.export": "CSV",
-  "count.export_failed": "无法下载 CSV。",
   "count.fixed_quantity": "固定条码件数",
   "count.last_scan": "已盘点 {{code}} × {{quantity}}。",
   "count.meters_hint": "卷材实测长度（可选）。",
@@ -418,5 +416,15 @@
   "validation.scope": "该方式不支持此范围。",
   "validation.too_long": "最多 {{max}} 个字符。",
   "validation.type": "此处不允许该类型。",
-  "validation.warehouse": "请选择仓库。"
+  "validation.warehouse": "请选择仓库。",
+  "export.count_report": "导出盘点报告",
+  "export.count_report_xlsx": "盘点报告（Excel）",
+  "export.summary": "汇总报告（按产品）",
+  "export.summary_all_products": "汇总：全部产品",
+  "export.summary_product_search": "搜索产品",
+  "export.summary_product_none": "未找到产品。",
+  "export.locations_all": "导出全部库位",
+  "export.locations_room": "导出此房间的库位",
+  "export.location_stock": "导出库位库存",
+  "export.unit_history": "导出移动历史"
 }

@@ -25,6 +25,18 @@ const EXPORT_ONLY_RESOURCES = new Set<string>([
   "ai.usage",
   "tenant.fleets",
   "tenant.fleet.statement",
+  // TEC-761: warehouse screen exports.
+  "warehouse.stock_count_report",
+  "warehouse.stock_counts",
+  "warehouse.stock_entries",
+  "warehouse.transfers",
+  "warehouse.transfer_summary",
+  "warehouse.locations",
+  "warehouse.eod_reports",
+  "stock.products",
+  "stock.location_stock",
+  "stock.unit_history",
+  "stock.barcode_batches",
 ]);
 
 export function resourceLabelKey(resource: string): string | null {
