@@ -398,5 +398,13 @@
   "dealer_page.form_rate_limited": "Забагато запитів. Спробуйте пізніше.",
   "dealer_page.form_failed": "Запит не надіслано. Спробуйте ще раз.",
   "dealer_page.form_success_title": "Запит отримано",
-  "dealer_page.form_success_body": "Дилер скоро звʼяжеться з вами."
+  "dealer_page.form_success_body": "Дилер скоро звʼяжеться з вами.",
+  "nav.profile": "Мій профіль",
+  "profile.title": "Мій профіль",
+  "profile.saved": "Ваші дані збережено.",
+  "profile.failed": "Не вдалося зберегти ваші дані.",
+  "profile.links_title": "Посилання облікового запису",
+  "profile.preferences_hint": "Сповіщення електронною поштою, у застосунку та про кампанії",
+  "profile.contracts_hint": "Підписані вами договори та їхні PDF",
+  "profile.phone_login_hint": "Ви входите за кодом, надісланим на телефон; пароль не потрібен."
 }

@@ -398,5 +398,13 @@
   "dealer_page.form_rate_limited": "Too many requests. Try again later.",
   "dealer_page.form_failed": "The request could not be sent. Try again.",
   "dealer_page.form_success_title": "Request received",
-  "dealer_page.form_success_body": "The dealer will contact you shortly."
+  "dealer_page.form_success_body": "The dealer will contact you shortly.",
+  "nav.profile": "My profile",
+  "profile.title": "My profile",
+  "profile.saved": "Your details were saved.",
+  "profile.failed": "Your details could not be saved.",
+  "profile.links_title": "Account links",
+  "profile.preferences_hint": "E-mail, in-app and campaign notifications",
+  "profile.contracts_hint": "Contracts you signed and their PDFs",
+  "profile.phone_login_hint": "You sign in with a code sent to your phone; no password is needed."
 }
