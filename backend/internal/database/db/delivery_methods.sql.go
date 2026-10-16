@@ -117,7 +117,10 @@ func (q *Queries) DeleteDeliveryMethod(ctx context.Context, id int64) (int64, er
 const ensureSystemDeliveryMethod = `-- name: EnsureSystemDeliveryMethod :exec
 
 INSERT INTO delivery_methods (organization_id, brand_id, code, name, is_system, sort_order)
-VALUES ($1, $2, 'warehouse_pickup', $3, true, 0)
+SELECT $1::bigint, $2::bigint, 'warehouse_pickup', $3::text, true, 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM delivery_methods WHERE organization_id = $1 AND is_system
+)
 ON CONFLICT DO NOTHING
 `
 
@@ -129,6 +132,8 @@ type EnsureSystemDeliveryMethodParams struct {
 
 // TEC-768: delivery method catalog of a selling organization.
 // The system method "warehouse_pickup" (Ambar teslim), one per organization.
+// The NOT EXISTS guard skips the insert (and its sequence value) once the
+// method exists; ON CONFLICT covers a concurrent first use.
 func (q *Queries) EnsureSystemDeliveryMethod(ctx context.Context, arg EnsureSystemDeliveryMethodParams) error {
 	_, err := q.db.Exec(ctx, ensureSystemDeliveryMethod, arg.OrganizationID, arg.BrandID, arg.Name)
 	return err

@@ -2,8 +2,13 @@
 
 -- name: EnsureSystemDeliveryMethod :exec
 -- The system method "warehouse_pickup" (Ambar teslim), one per organization.
+-- The NOT EXISTS guard skips the insert (and its sequence value) once the
+-- method exists; ON CONFLICT covers a concurrent first use.
 INSERT INTO delivery_methods (organization_id, brand_id, code, name, is_system, sort_order)
-VALUES (sqlc.arg(organization_id), sqlc.arg(brand_id), 'warehouse_pickup', sqlc.arg(name), true, 0)
+SELECT sqlc.arg(organization_id)::bigint, sqlc.arg(brand_id)::bigint, 'warehouse_pickup', sqlc.arg(name)::text, true, 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM delivery_methods WHERE organization_id = sqlc.arg(organization_id) AND is_system
+)
 ON CONFLICT DO NOTHING;
 
 -- name: ListDeliveryMethodsFiltered :many

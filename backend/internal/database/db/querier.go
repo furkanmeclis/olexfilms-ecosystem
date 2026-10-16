@@ -766,6 +766,8 @@ type Querier interface {
 	EnsureQuoteSent(ctx context.Context, arg EnsureQuoteSentParams) (Quote, error)
 	// TEC-768: delivery method catalog of a selling organization.
 	// The system method "warehouse_pickup" (Ambar teslim), one per organization.
+	// The NOT EXISTS guard skips the insert (and its sequence value) once the
+	// method exists; ON CONFLICT covers a concurrent first use.
 	EnsureSystemDeliveryMethod(ctx context.Context, arg EnsureSystemDeliveryMethodParams) error
 	ExecuteContractInstance(ctx context.Context, arg ExecuteContractInstanceParams) (ContractInstance, error)
 	// TEC-387: one pending action past its expiry becomes expired (a late
