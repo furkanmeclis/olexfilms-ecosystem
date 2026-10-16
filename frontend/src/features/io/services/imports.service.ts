@@ -3,7 +3,9 @@ import type {
   ImportJob,
   ExportJobScope,
 } from "@/features/io/types";
+import { apiConfig } from "@/config/api";
 import {
+  parseContentDispositionFilename,
   platformDownloadRequest,
   platformFormRequest,
 } from "@/lib/api/platform-form-request";
@@ -17,16 +19,30 @@ export type ListJobsResult = {
   offset: number;
 };
 
+/** Error report download: `missing` when the endpoint is not there (404). */
+export type ImportErrorReport =
+  { kind: "file"; blob: Blob; filename: string | null } | { kind: "missing" };
+
 function importsBase(scope: ExportJobScope = "platform") {
   return scope === "tenant" ? "/v1/tenant/imports" : "/v1/platform/imports";
 }
 
 export const importsService = {
-  async upload(path: string, file: File, format: ImportFormat, locale: string) {
+  /** `extra`: resource-specific options sent with the file (wizard extraOptions). */
+  async upload(
+    path: string,
+    file: File,
+    format: ImportFormat,
+    locale: string,
+    extra?: Record<string, string>,
+  ) {
     const form = new FormData();
     form.append("file", file);
     form.append("format", format);
     form.append("locale", locale);
+    for (const [key, value] of Object.entries(extra ?? {})) {
+      if (!["file", "format", "locale"].includes(key)) form.append(key, value);
+    }
     return platformFormRequest<ImportJob>("POST", path, form);
   },
 
@@ -88,6 +104,35 @@ export const importsService = {
         created_to: params.created_to,
       },
     });
+  },
+
+  /**
+   * XLSX of the rows that are not imported, with their errors (TEC-757,
+   * `GET /imports/{uuid}/error-report`; requested through the BFF by hand
+   * until it is in the generated API).
+   */
+  async errorReport(
+    uuid: string,
+    scope: ExportJobScope = "platform",
+  ): Promise<ImportErrorReport> {
+    const base = apiConfig.baseUrl.replace(/\/$/, "");
+    const response = await fetch(
+      `${base}${importsBase(scope)}/${encodeURIComponent(uuid)}/error-report`,
+      { credentials: "include" },
+    );
+    if (response.status === 404 || response.status === 405) {
+      return { kind: "missing" };
+    }
+    if (!response.ok) {
+      throw new Error(`Error report failed (${response.status})`);
+    }
+    return {
+      kind: "file",
+      blob: await response.blob(),
+      filename: parseContentDispositionFilename(
+        response.headers.get("Content-Disposition"),
+      ),
+    };
   },
 
   async get(uuid: string, scope: ExportJobScope = "platform") {
