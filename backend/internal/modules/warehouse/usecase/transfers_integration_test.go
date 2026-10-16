@@ -541,6 +541,12 @@ func TestWarehouseTransferRequiresPlacement(t *testing.T) {
 	if _, err := e.tree.UpdateWarehouse(e.ctx, c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &required}); err != nil {
 		t.Fatal(err)
 	}
+	// The flag is organization-wide for order assignment; never leave it on
+	// for the shared center when the test stops early.
+	t.Cleanup(func() {
+		off := false
+		_, _ = e.tree.UpdateWarehouse(context.Background(), c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &off})
+	})
 	doc, err := tr.CreateTransfer(e.ctx, c, wh.TransferInput{FromWarehouseUUID: src.w.UUID.String(), ToWarehouseUUID: dst.w.UUID.String()})
 	if err != nil {
 		t.Fatal(err)
@@ -577,6 +583,12 @@ func TestOrderAssignmentRequiresPlacement(t *testing.T) {
 	if _, err := e.tree.UpdateWarehouse(e.ctx, c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &required}); err != nil {
 		t.Fatal(err)
 	}
+	// The flag is organization-wide for order assignment; never leave it on
+	// for the shared center when the test stops early.
+	t.Cleanup(func() {
+		off := false
+		_, _ = e.tree.UpdateWarehouse(context.Background(), c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &off})
+	})
 	entry, err := e.entries.Create(e.ctx, c, wh.EntryInput{WarehouseUUID: src.w.UUID.String(), Mode: wh.EntryModeGenerateNew})
 	if err != nil {
 		t.Fatal(err)
