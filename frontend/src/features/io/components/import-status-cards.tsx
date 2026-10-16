@@ -58,13 +58,13 @@ export function ImportStatusCards({
       data-testid="import-status-cards"
     >
       {cards.map(({ status, count }) => {
-        const active = selected === status;
+        const active = Boolean(onSelect) && selected === status;
         const tone = status ? importStatusTone(status) : "default";
         return (
           <button
             key={status ?? "all"}
             type="button"
-            aria-pressed={active}
+            aria-pressed={onSelect ? active : undefined}
             disabled={!onSelect}
             onClick={() => onSelect?.(active && status ? null : status)}
             data-testid={`import-status-card-${status ?? "all"}`}

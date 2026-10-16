@@ -105,7 +105,7 @@ export function ImportFileStep({
             <FileSpreadsheet className="text-primary size-10" />
             <div className="space-y-1">
               <p className="font-medium break-all">{file.name}</p>
-              <p className="text-muted-foreground flex flex-wrap items-center justify-center gap-2 text-xs">
+              <div className="text-muted-foreground flex flex-wrap items-center justify-center gap-2 text-xs">
                 <span>{fileSize(file.size)}</span>
                 {format ? (
                   <Badge
@@ -115,7 +115,7 @@ export function ImportFileStep({
                     {t(`imports.formats.${format}`)}
                   </Badge>
                 ) : null}
-              </p>
+              </div>
             </div>
             {unsupported ? (
               <p className="text-destructive text-sm">
