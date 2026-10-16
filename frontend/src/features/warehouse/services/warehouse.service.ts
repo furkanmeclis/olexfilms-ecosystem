@@ -421,11 +421,6 @@ export const warehouseService = {
   },
 };
 
-/** CSV export of a completed count (GET, through the BFF). */
-export function countExportPath(uuid: string): string {
-  return `/v1/warehouse/stock-counts/${enc(uuid)}/export`;
-}
-
 /**
  * End-of-day PDF (TEC-207): the same export-job flow as the service PDF,
  * so it plugs into `fetchCertificate` (request, poll, download).
@@ -473,3 +468,23 @@ export const warehouseKeys = {
     ["warehouse", "eod-reports", params] as const,
   eodReport: (uuid: string) => ["warehouse", "eod-report", uuid] as const,
 };
+
+/**
+ * Export job endpoints of the warehouse screens (TEC-761, I/O engine):
+ * POST `{format, query, locale}`, poll and download in the export center.
+ */
+export const warehouseExportPaths = {
+  entries: "/v1/warehouse/stock-entries/export",
+  counts: "/v1/warehouse/stock-counts/export",
+  countReport: (uuid: string) =>
+    `/v1/warehouse/stock-counts/${enc(uuid)}/export`,
+  transfers: "/v1/warehouse/transfers/export",
+  transferSummary: "/v1/warehouse/transfers/summary/export",
+  locations: "/v1/warehouse/locations/export",
+  eodReports: "/v1/warehouse/eod-reports/export",
+  batches: "/v1/stock/barcodes/export",
+  locationStock: (uuid: string) =>
+    `/v1/stock/locations/${enc(uuid)}/products/export`,
+  unitHistory: (barcode: string) =>
+    `/v1/stock/units/by-barcode/${enc(barcode)}/export`,
+} as const;

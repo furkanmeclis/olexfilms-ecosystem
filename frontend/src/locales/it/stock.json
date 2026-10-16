@@ -58,5 +58,6 @@
   "widget.quantity_value": "{{quantity}} pz",
   "widget.truncated": "Il riepilogo copre i primi {{limit}} prodotti.",
   "filters.product_search": "Nome del prodotto o codice articolo",
-  "filters.product_none": "Nessun prodotto in questo magazzino."
+  "filters.product_none": "Nessun prodotto in questo magazzino.",
+  "export_products": "Esporta la giacenza per prodotto"
 }

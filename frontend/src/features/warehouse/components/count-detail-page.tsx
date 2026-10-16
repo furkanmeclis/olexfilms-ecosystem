@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   ClipboardCheck,
-  FileDown,
   Play,
   ShieldCheck,
   XCircle,
@@ -41,12 +40,13 @@ import {
   showsQuantity,
 } from "@/features/warehouse/lib/counts";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
+import { useStepUp } from "@/features/step-up-engine";
 import {
   countMetersError,
   countQuantityError,
 } from "@/features/warehouse/lib/forms";
 import {
-  countExportPath,
+  warehouseExportPaths,
   warehouseKeys,
   warehouseService,
   type StockCount,
@@ -54,11 +54,9 @@ import {
   type StockCountScan,
   type StockCountScanResult,
 } from "@/features/warehouse/services/warehouse.service";
-import {
-  platformDownloadFile,
-  triggerBrowserDownload,
-} from "@/lib/api/platform-form-request";
+import { WarehouseExportMenu } from "@/features/warehouse/components/warehouse-export";
 import { useDialogs } from "@/providers/dialog-provider";
+import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -263,6 +261,7 @@ export function CountDetailPage({
 
           {reviewed ? (
             <CountReportCard
+              slug={slug}
               count={count}
               canApprove={
                 canWrite &&
@@ -504,20 +503,24 @@ function ScansCard({
  * its allowed resolutions) and the approval, plus the CSV export.
  */
 export function CountReportCard({
+  slug,
   count,
   canApprove,
 }: {
+  slug: string;
   count: StockCount;
   canApprove: boolean;
 }) {
   const { t } = useLocale();
   const qc = useQueryClient();
   const { confirm } = useDialogs();
+  const { ensure } = useStepUp();
+  const { user } = useAuth();
+  const isCreator = Boolean(user && count.created_by_user_uuid === user.uuid);
   const [choices, setChoices] = useState<
     Record<string, StockCountResolution | undefined>
   >({});
   const [error, setError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
 
   const report = useQuery({
     queryKey: warehouseKeys.countReport(count.uuid),
@@ -558,21 +561,7 @@ export function CountReportCard({
       }),
       confirmLabel: t("warehouse.count.approve"),
     });
-    if (ok) approve.mutate(resolutions);
-  };
-
-  const onExport = async () => {
-    setDownloading(true);
-    try {
-      const { blob, filename } = await platformDownloadFile(
-        countExportPath(count.uuid),
-      );
-      triggerBrowserDownload(blob, filename ?? `count-${count.uuid}.csv`);
-    } catch {
-      appToast.error(t("warehouse.count.export_failed"));
-    } finally {
-      setDownloading(false);
-    }
+    if (ok && (await ensure())) approve.mutate(resolutions);
   };
 
   return (
@@ -590,22 +579,20 @@ export function CountReportCard({
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={downloading}
-            onClick={() => void onExport()}
-            data-testid="count-export"
-          >
-            <FileDown className="size-4" />
-            {t("warehouse.count.export")}
-          </Button>
+          <WarehouseExportMenu
+            slug={slug}
+            exportPath={warehouseExportPaths.countReport(count.uuid)}
+            label={t("warehouse.export.count_report")}
+            testId="count-export"
+          />
           {canApprove ? (
             <Button
               type="button"
               size="sm"
-              disabled={approve.isPending || report.isLoading}
+              disabled={approve.isPending || report.isLoading || isCreator}
+              title={
+                isCreator ? t("warehouse.count.self_approval_hint") : undefined
+              }
               onClick={() => void onApprove()}
               data-testid="count-approve"
             >
@@ -616,6 +603,14 @@ export function CountReportCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {canApprove && isCreator ? (
+          <p
+            className="text-muted-foreground text-sm"
+            data-testid="count-self-approval-hint"
+          >
+            {t("warehouse.count.self_approval_hint")}
+          </p>
+        ) : null}
         {error ? (
           <p
             role="alert"

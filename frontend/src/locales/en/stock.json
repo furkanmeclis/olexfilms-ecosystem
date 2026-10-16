@@ -58,5 +58,6 @@
   "widget.quantity_value": "{{quantity}} pcs",
   "widget.truncated": "The summary covers the first {{limit}} products.",
   "filters.product_search": "Product name or SKU",
-  "filters.product_none": "No product in this stock."
+  "filters.product_none": "No product in this stock.",
+  "export_products": "Export stock by product"
 }

@@ -42,6 +42,14 @@ export function stockUnitsExportPath(orgUuid: string): string {
 }
 
 /**
+ * POST /v1/stock/organizations/{uuid}/products/export (TEC-761): the
+ * product stock (organization_product_stocks) of the organization.
+ */
+export function stockProductsExportPath(orgUuid: string): string {
+  return `/v1/stock/organizations/${encodeURIComponent(orgUuid)}/products/export`;
+}
+
+/**
  * GET /v1/stock/labels/units.pdf with one `barcode` per unit (TEC-373:
  * labels for the selected units).
  */

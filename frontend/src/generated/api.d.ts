@@ -5489,6 +5489,241 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/stock-entries/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a stock entry list export (one row per line)
+         * @description TEC-761. warehouse.read (center and distributor). `query` holds the stock entry list parameters (status, mode, warehouse_uuid, created_from, created_to, q, sort) and optionally `uuid` (CSV of the selected entries: only those are exported). Resource `warehouse.stock_entries`: entry date, warehouse, method, status, product, SKU, barcode, quantity, meters, location, placed, note.
+         */
+        post: operations["requestWarehouseStockEntryExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a stock count list export (one row per count)
+         * @description TEC-761. warehouse.read. `query` holds the count list parameters (status, method, visibility, scope_type, warehouse_uuid, created_from, created_to, q, sort) and optionally `uuid` (selected counts). Resource `warehouse.stock_counts`.
+         */
+        post: operations["requestWarehouseStockCountListExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-counts/{uuid}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Count report as CSV (legacy, synchronous)
+         * @description Needs `warehouse.read`. Completed counts only (409 COUNT_INVALID_STATUS). Kept for existing clients; the panel queues POST /v1/warehouse/stock-counts/{uuid}/export (TEC-761).
+         */
+        get: operations["exportStockCount"];
+        put?: never;
+        /**
+         * Queue a stock count report export (CSV, XLSX or PDF)
+         * @description TEC-761. warehouse.read; completed counts only (409 COUNT_INVALID_STATUS). Resource `warehouse.stock_count_report`: header lines (warehouse, scope, method, visibility, status, dates, counted by, approved by; XLSX and PDF) and one row per line with location, product, SKU, barcode, expected / counted quantity and meters, their difference, the translated result and resolution. `query` is ignored.
+         */
+        post: operations["requestWarehouseStockCountReportExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a warehouse transfer list export (one row per line)
+         * @description TEC-761. warehouse.read. `query` holds the transfer list parameters (status, from_warehouse_uuid, to_warehouse_uuid, created_from, created_to, q, sort) and optionally `uuid` (selected transfers). Resource `warehouse.transfers`: transfer no, date, source and target warehouse, status, product, SKU, barcode, source / target location, line status, shipped and completed dates, note.
+         */
+        post: operations["requestWarehouseTransferExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/transfers/summary/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the transfer summary report (per product)
+         * @description TEC-761. warehouse.read. The aggregate transfer report: per product the transfers, units, shipped (not restored), delivered, in transit and cancelled units of the transfers matching `query` (the transfer list parameters: status, from_warehouse_uuid, to_warehouse_uuid, created_from, created_to, q; plus product_uuid (CSV) and `uuid`, the selected transfers). Resource `warehouse.transfer_summary`; the filters are printed as header lines (XLSX and PDF).
+         */
+        post: operations["requestWarehouseTransferSummaryExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/locations/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a warehouse location export
+         * @description TEC-761. warehouse.read. Every aisle, shelf and bin of the active organization (`query`: warehouse_uuid, room_uuid, type (CSV), active, q, `uuid` selection) with warehouse, room, aisle, shelf, bin, type, name, full code, the QR payload `OFW:LOC:<full_code>` and the active flag. Resource `warehouse.locations`.
+         */
+        post: operations["requestWarehouseLocationExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/eod-reports/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue an end-of-day report list export
+         * @description TEC-761. warehouse.read. `query` holds the report list parameters (warehouse_uuid, scope, date_from, date_to, kind, sort) and optionally `uuid` (selected reports). Resource `warehouse.eod_reports`: date, scope, run, movement and quantity / meters totals, generated at.
+         */
+        post: operations["requestWarehouseEODListExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/organizations/{uuid}/products/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a product stock export of an organization
+         * @description TEC-761. stock.read with the list's scope (the center reaches every organization of its brand); the organization must be inside it (404 otherwise). `query`: product_uuid, category_uuid, status, q, sort. Resource `stock.products`: product, SKU, category, quantity, meters, fixed barcodes, updated at.
+         */
+        post: operations["requestStockProductExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/locations/{uuid}/products/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the product stock export of one location
+         * @description TEC-761. stock.read; the location's organization must be inside the scope (404 otherwise). `query`: product_uuid, category_uuid, status, q, sort. Resource `stock.location_stock`.
+         */
+        post: operations["requestStockLocationProductExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/units/by-barcode/{barcode}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                barcode: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue the movement history export of a barcode
+         * @description TEC-761. stock.read; the caller must reach the unit like GET /v1/stock/units/by-barcode/{barcode} (404 otherwise). Owners and organizations outside the reach are masked as in the lookup. Resource `stock.unit_history`: date, movement type, quantity and meters change, from / to status and owner, organization, reason. `query` is ignored.
+         */
+        post: operations["requestStockUnitHistoryExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/barcodes/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a barcode batch list export (center only)
+         * @description TEC-761. stock.read, center only (403 BARCODES_CENTER_ONLY). `query`: product_uuid, printed, created_from, created_to, q, sort and optionally `uuid` (selected batches). Resource `stock.barcode_batches`.
+         */
+        post: operations["requestStockBarcodeBatchExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock/locations/{uuid}/products": {
         parameters: {
             query?: never;
@@ -6309,26 +6544,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/warehouse/stock-counts/{uuid}/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Count report as CSV
-         * @description Needs `warehouse.read`. Completed counts only (409 COUNT_INVALID_STATUS).
-         */
-        get: operations["exportStockCount"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/warehouse/stock-counts/{uuid}/approve": {
         parameters: {
             query?: never;
@@ -6340,7 +6555,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a completed count and apply the resolutions
-         * @description Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+         * @description Needs `warehouse.write`, `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN), and a recent step-up grant (403 STEP_UP_REQUIRED). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
          */
         post: operations["approveStockCount"];
         delete?: never;
@@ -8909,7 +9124,7 @@ export interface paths {
          * Mobile: Approve a completed count and apply the resolutions
          * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/approve`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+         *     Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). The mobile API has no step-up verification contract. Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
          */
         post: operations["mobileApproveStockCount"];
         delete?: never;
@@ -18550,6 +18765,16 @@ export interface components {
             /** @description Document language (defaults to the request locale). */
             locale?: string;
         };
+        WarehouseExportInput: {
+            /** @enum {string} */
+            format: "csv" | "xlsx" | "pdf";
+            /** @description List parameters of the exported screen as strings (filters, q, sort); `uuid` (CSV) keeps only the selected rows (TEC-761). */
+            query?: {
+                [key: string]: string;
+            };
+            /** @description Document language (defaults to the request locale). */
+            locale?: string;
+        };
         CustomerDataExportInput: {
             /** @enum {string} */
             format: "json" | "pdf";
@@ -20812,6 +21037,11 @@ export interface components {
         StockCount: {
             /** Format: uuid */
             uuid: string;
+            /**
+             * Format: uuid
+             * @description Present on detail and report responses; null in lists or for legacy counts.
+             */
+            created_by_user_uuid: string | null;
             status: components["schemas"]["StockCountStatus"];
             /** @enum {string} */
             method: "location_first" | "unit_first" | "product_qty" | "initial_placement";
@@ -38428,6 +38658,346 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    requestWarehouseStockEntryExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestWarehouseStockCountListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    exportStockCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSV, one row per line */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    requestWarehouseStockCountReportExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    requestWarehouseTransferExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestWarehouseTransferSummaryExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestWarehouseLocationExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestWarehouseEODListExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    requestStockProductExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestStockLocationProductExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestStockUnitHistoryExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                barcode: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    requestStockBarcodeBatchExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseExportInput"];
+            };
+        };
+        responses: {
+            /** @description Export job queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeExportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listStockLocationProducts: {
         parameters: {
             query?: {
@@ -39954,33 +40524,6 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
-    exportStockCount: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Resource UUID */
-                uuid: components["parameters"]["ResourceUUID"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description CSV, one row per line */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/csv": string;
-                };
-            };
-            401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-        };
-    };
     approveStockCount: {
         parameters: {
             query?: never;
@@ -40008,7 +40551,15 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            /** @description Forbidden: STEP_UP_REQUIRED, COUNT_ADJUST_FORBIDDEN, STOCK_COUNT_SELF_APPROVAL, or missing warehouse.write scope. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
         };
@@ -44463,7 +45014,15 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
-            403: components["responses"]["Forbidden"];
+            /** @description Forbidden: REALM_FORBIDDEN, COUNT_ADJUST_FORBIDDEN, STOCK_COUNT_SELF_APPROVAL, or missing warehouse.write scope. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             426: components["responses"]["MobileApiVersionUnsupported"];

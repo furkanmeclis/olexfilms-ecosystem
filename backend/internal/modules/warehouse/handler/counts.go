@@ -7,6 +7,7 @@ import (
 
 	wh "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
 	"github.com/google/uuid"
@@ -25,6 +26,7 @@ const (
 	CodeCountScanKind          = "COUNT_SCAN_KIND_NOT_ALLOWED"
 	CodeCountLocationRequired  = "COUNT_LOCATION_REQUIRED"
 	CodeCountAdjustNotGranted  = "COUNT_ADJUST_FORBIDDEN"
+	CodeCountSelfApproval      = "STOCK_COUNT_SELF_APPROVAL"
 	countUnprocessableFallback = "The scan does not fit this count"
 )
 
@@ -75,6 +77,8 @@ func writeCountError(w http.ResponseWriter, r *http.Request, err error) {
 		unprocessable(CodeCountLocationRequired)
 	case errors.Is(err, wh.ErrCountAdjustForbidden):
 		response.Error(w, r, http.StatusForbidden, CodeCountAdjustNotGranted, "Approving a stock count needs stock.adjust")
+	case errors.Is(err, wh.ErrCountSelfApproval):
+		response.Error(w, r, http.StatusForbidden, CodeCountSelfApproval, i18n.Translate(i18n.FromContext(r.Context()).Locale, "warehouse.count.self_approval"))
 	default:
 		writeError(w, r, err)
 	}

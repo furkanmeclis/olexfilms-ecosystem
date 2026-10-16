@@ -12,7 +12,7 @@ import {
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
-import { createColumn } from "@/components/tables";
+import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Permission } from "@/config/permissions";
 import { catalogService } from "@/features/catalog/services/catalog.service";
@@ -27,7 +27,13 @@ import {
   warehouseService,
   type BarcodeBatch,
   type BatchListQuery,
+  warehouseExportPaths,
 } from "@/features/warehouse/services/warehouse.service";
+import {
+  listExportQuery,
+  useExportSelection,
+  WarehouseExportMenu,
+} from "@/features/warehouse/components/warehouse-export";
 import {
   platformDownloadFile,
   triggerBrowserDownload,
@@ -93,6 +99,7 @@ export function BarcodesPage({ slug }: { slug: string }) {
       }
     };
     return [
+      createSelectColumnDef<BarcodeBatch>(),
       createColumn<BarcodeBatch>({
         id: "product",
         accessorFn: (b) => b.product.name,
@@ -184,6 +191,13 @@ export function BarcodesPage({ slug }: { slug: string }) {
     persistKey: BATCHES_PERSIST_KEY,
   });
   const query: BatchListQuery = listState.params;
+  // TEC-761: the export keeps the list filters, q, sort and the selection.
+  const selection = useExportSelection();
+  const exportQuery = listExportQuery(
+    listState.filterParams,
+    listState.params,
+    selection.selected,
+  );
   const list = useQuery({
     queryKey: warehouseKeys.batches(query),
     queryFn: () => warehouseService.listBatches(query),
@@ -246,10 +260,14 @@ export function BarcodesPage({ slug }: { slug: string }) {
             emptyTitle={t("warehouse.barcodes.empty")}
             emptyDescription=""
             rowCount={list.data?.total ?? 0}
-            state={listState.tableState}
+            state={{
+              ...listState.tableState,
+              rowSelection: selection.rowSelection,
+              onRowSelectionChange: selection.onRowSelectionChange,
+            }}
             features={{
               persistKey: BATCHES_PERSIST_KEY,
-              rowSelection: false,
+              rowSelection: true,
               viewMode: true,
             }}
             renderGridItem={(b) => (
@@ -275,10 +293,18 @@ export function BarcodesPage({ slug }: { slug: string }) {
               </div>
             )}
             toolbarExtra={
-              <EntityToolbar
-                onRefresh={() => void list.refetch()}
-                refreshDisabled={list.isFetching}
-              />
+              <>
+                <WarehouseExportMenu
+                  slug={slug}
+                  exportPath={warehouseExportPaths.batches}
+                  query={exportQuery}
+                  testId="batches-export"
+                />
+                <EntityToolbar
+                  onRefresh={() => void list.refetch()}
+                  refreshDisabled={list.isFetching}
+                />
+              </>
             }
           />
         </CardContent>
