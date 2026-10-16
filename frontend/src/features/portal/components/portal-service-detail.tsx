@@ -19,7 +19,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { PortalCarParts } from "@/features/portal/components/portal-car-parts";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalPage,
+  PortalLoading,
+} from "@/features/portal/components/portal-page";
 import { PortalServiceReview } from "@/features/portal/components/portal-service-review";
 import {
   PortalApiError,
@@ -372,9 +375,7 @@ export function PortalServiceDetail({
           reviewFromLink={reviewFromLink}
         />
       ) : (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.vehicles.loading")}
-        </p>
+        <PortalLoading label={t("portal.vehicles.loading")} />
       )}
     </PortalPage>
   );

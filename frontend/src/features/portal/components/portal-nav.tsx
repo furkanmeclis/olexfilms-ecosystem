@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { routes } from "@/config/routes";
@@ -124,13 +125,24 @@ export function PortalNav() {
   const baseItems = fleet ? FLEET_ITEMS : ITEMS;
   const items =
     !fleet && assistant ? [...baseItems, ASSISTANT_ITEM] : baseItems;
+  // TEC-771: on a phone the menu scrolls sideways; keep the current
+  // section in view after a navigation.
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    listRef.current
+      ?.querySelector<HTMLElement>('[aria-current="page"]')
+      ?.scrollIntoView?.({ block: "nearest", inline: "center" });
+  }, [pathname, items.length]);
   return (
     <nav
       aria-label={t("portal.nav.label")}
       className="bg-background/95 sticky top-0 z-10 border-b backdrop-blur"
       data-testid="portal-nav"
     >
-      <ul className="mx-auto flex w-full max-w-3xl gap-1 overflow-x-auto px-4 py-2">
+      <ul
+        ref={listRef}
+        className="mx-auto flex w-full max-w-3xl gap-1 overflow-x-auto px-4 py-2"
+      >
         {items.map(({ href, key, icon: Icon }) => {
           const active = isPortalNavActive(href, pathname);
           return (

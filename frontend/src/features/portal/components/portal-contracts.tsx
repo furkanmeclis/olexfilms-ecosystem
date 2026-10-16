@@ -13,9 +13,11 @@ import {
 } from "@/components/entity";
 import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { routes } from "@/config/routes";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalEmpty,
+  PortalPage,
+} from "@/features/portal/components/portal-page";
 import {
   portalApi,
   portalContractPdfUrl,
@@ -129,18 +131,12 @@ export function PortalContracts() {
       testId="portal-contracts-page"
     >
       {empty ? (
-        <Card>
-          <CardContent
-            className="flex flex-col items-center gap-2 py-10 text-center"
-            data-testid="portal-contracts-empty"
-          >
-            <FileSignature className="text-muted-foreground size-10" />
-            <p className="font-medium">{t("portal.contracts.empty_title")}</p>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              {t("portal.contracts.empty_hint")}
-            </p>
-          </CardContent>
-        </Card>
+        <PortalEmpty
+          icon={<FileSignature />}
+          title={t("portal.contracts.empty_title")}
+          description={t("portal.contracts.empty_hint")}
+          testId="portal-contracts-empty"
+        />
       ) : (
         <div data-testid="portal-contracts">
           <EntityTable

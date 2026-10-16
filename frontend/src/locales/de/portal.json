@@ -406,5 +406,11 @@
   "profile.links_title": "Konto-Links",
   "profile.preferences_hint": "E-Mail-, In-App- und Kampagnenbenachrichtigungen",
   "profile.contracts_hint": "Von Ihnen unterschriebene Verträge und ihre PDFs",
-  "profile.phone_login_hint": "Sie melden sich mit einem Code an, der an Ihr Telefon gesendet wird; ein Passwort ist nicht nötig."
+  "profile.phone_login_hint": "Sie melden sich mit einem Code an, der an Ihr Telefon gesendet wird; ein Passwort ist nicht nötig.",
+  "home.vehicles_hint": "Ihre Fahrzeuge und ihre Servicehistorie",
+  "home.warranties_hint": "Ihre Garantiezertifikate und ihr Status",
+  "home.appointments_hint": "Ihre anstehenden und vergangenen Termine",
+  "home.dealers_hint": "Autorisierte Händler in Ihrer Nähe",
+  "home.profile_hint": "Ihr Name, Ihre Sprache und Sitzungen",
+  "home.book": "Termin buchen"
 }

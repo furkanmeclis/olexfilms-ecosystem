@@ -37,6 +37,10 @@ import {
 } from "@/features/warranty/lib/warranty-list";
 import { portalCertificateClient } from "@/features/warranty/services/certificate.service";
 import { useDebounce } from "@/hooks/use-debounce";
+import {
+  PortalEmpty,
+  PortalLoading,
+} from "@/features/portal/components/portal-page";
 import { useLocale } from "@/providers/locale-provider";
 
 export const PORTAL_WARRANTY_PAGE_SIZE = 10;
@@ -156,23 +160,18 @@ export function PortalWarranties() {
           retryLabel={t("common.retry")}
         />
       ) : list.isLoading ? (
-        <p className="text-muted-foreground text-sm">
-          {t("warranty.list.loading")}
-        </p>
+        <PortalLoading label={t("warranty.list.loading")} />
       ) : rows.length === 0 ? (
-        <Card>
-          <CardContent
-            className="py-8 text-center"
-            data-testid="portal-warranties-empty"
-          >
-            <p className="font-medium">{t("warranty.portal.empty_title")}</p>
-            <p className="text-muted-foreground text-sm">
-              {hasWarrantyFilters(filters)
-                ? t("warranty.list.empty_filtered")
-                : t("warranty.portal.empty_description")}
-            </p>
-          </CardContent>
-        </Card>
+        <PortalEmpty
+          icon={<ShieldCheck />}
+          title={t("warranty.portal.empty_title")}
+          description={
+            hasWarrantyFilters(filters)
+              ? t("warranty.list.empty_filtered")
+              : t("warranty.portal.empty_description")
+          }
+          testId="portal-warranties-empty"
+        />
       ) : (
         <ul className="space-y-3" data-testid="portal-warranties">
           {rows.map((w) => (

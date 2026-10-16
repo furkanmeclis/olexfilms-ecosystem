@@ -28,6 +28,7 @@ import {
   pendingTransfer,
   verifyBody,
 } from "@/features/vehicles/lib/transfer";
+import { PortalLoading } from "@/features/portal/components/portal-page";
 import { useLocale } from "@/providers/locale-provider";
 
 export const portalTransferKey = (vehicleUuid: string) =>
@@ -317,11 +318,7 @@ export function PortalVehicleTransferFlow({
       </div>
     );
   } else if (transfers.isLoading) {
-    body = (
-      <p className="text-muted-foreground text-sm">
-        {t("portal.vehicles.loading")}
-      </p>
-    );
+    body = <PortalLoading label={t("portal.vehicles.loading")} rows={1} />;
   } else if (pending) {
     body = (
       <CodeStep

@@ -54,6 +54,7 @@ import {
   type FleetPortalWarranty,
 } from "@/features/portal/lib/portal-client";
 import { portalVehicleTitle } from "@/features/portal/lib/portal-vehicles";
+import { PortalLoading } from "@/features/portal/components/portal-page";
 import { useLocale } from "@/providers/locale-provider";
 
 const PAGE_SIZE = 20;
@@ -252,9 +253,7 @@ export function PortalFleetHome() {
         </div>
       </div>
       {overview.isLoading || !data ? (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.vehicles.loading")}
-        </p>
+        <PortalLoading label={t("portal.vehicles.loading")} />
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -506,9 +505,7 @@ export function PortalFleetVehicleDetail({ uuid }: { uuid: string }) {
           retryLabel={t("common.retry")}
         />
       ) : !v ? (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.vehicles.loading")}
-        </p>
+        <PortalLoading label={t("portal.vehicles.loading")} />
       ) : (
         <>
           <Card>

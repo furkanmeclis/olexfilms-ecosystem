@@ -25,7 +25,11 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { routes } from "@/config/routes";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalEmpty,
+  PortalLoading,
+  PortalPage,
+} from "@/features/portal/components/portal-page";
 import {
   PORTAL_APPOINTMENT_PAGE_SIZE,
   portalAppointmentErrorKey,
@@ -136,23 +140,17 @@ export function PortalAppointments({ now }: { now?: Date }) {
           retryLabel={t("common.retry")}
         />
       ) : list.isLoading ? (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.appointments.loading")}
-        </p>
+        <PortalLoading label={t("portal.appointments.loading")} />
       ) : rows.length === 0 ? (
-        <Card>
-          <CardContent
-            className="flex flex-col items-center gap-2 py-10 text-center"
-            data-testid="portal-appointments-empty"
-          >
-            <CalendarClock className="text-muted-foreground size-10" />
-            <p className="font-medium">
-              {period === "upcoming"
-                ? t("portal.appointments.empty_upcoming")
-                : t("portal.appointments.empty_past")}
-            </p>
-          </CardContent>
-        </Card>
+        <PortalEmpty
+          icon={<CalendarClock />}
+          title={
+            period === "upcoming"
+              ? t("portal.appointments.empty_upcoming")
+              : t("portal.appointments.empty_past")
+          }
+          testId="portal-appointments-empty"
+        />
       ) : (
         <ul className="space-y-3" data-testid="portal-appointments">
           {rows.map((a) => (

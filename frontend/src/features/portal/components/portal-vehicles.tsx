@@ -9,7 +9,11 @@ import { ErrorState } from "@/components/common/error-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { routes } from "@/config/routes";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalEmpty,
+  PortalLoading,
+  PortalPage,
+} from "@/features/portal/components/portal-page";
 import { portalApi } from "@/features/portal/lib/portal-client";
 import {
   PORTAL_VEHICLE_PAGE_SIZE,
@@ -51,22 +55,14 @@ export function PortalVehicles() {
           retryLabel={t("common.retry")}
         />
       ) : list.isLoading ? (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.vehicles.loading")}
-        </p>
+        <PortalLoading label={t("portal.vehicles.loading")} />
       ) : rows.length === 0 ? (
-        <Card>
-          <CardContent
-            className="flex flex-col items-center gap-2 py-10 text-center"
-            data-testid="portal-vehicles-empty"
-          >
-            <Car className="text-muted-foreground size-10" />
-            <p className="font-medium">{t("portal.vehicles.empty_title")}</p>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              {t("portal.vehicles.empty_description")}
-            </p>
-          </CardContent>
-        </Card>
+        <PortalEmpty
+          icon={<Car />}
+          title={t("portal.vehicles.empty_title")}
+          description={t("portal.vehicles.empty_description")}
+          testId="portal-vehicles-empty"
+        />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2" data-testid="portal-vehicles">
           {rows.map((v) => (

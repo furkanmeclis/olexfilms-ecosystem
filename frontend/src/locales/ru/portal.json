@@ -406,5 +406,11 @@
   "profile.links_title": "Ссылки аккаунта",
   "profile.preferences_hint": "Уведомления по e-mail, в приложении и о кампаниях",
   "profile.contracts_hint": "Подписанные вами договоры и их PDF",
-  "profile.phone_login_hint": "Вы входите по коду, отправленному на телефон; пароль не нужен."
+  "profile.phone_login_hint": "Вы входите по коду, отправленному на телефон; пароль не нужен.",
+  "home.vehicles_hint": "Ваши автомобили и история обслуживания",
+  "home.warranties_hint": "Ваши гарантийные сертификаты и их статус",
+  "home.appointments_hint": "Ваши предстоящие и прошедшие записи",
+  "home.dealers_hint": "Авторизованные дилеры рядом с вами",
+  "home.profile_hint": "Ваше имя, язык и сеансы",
+  "home.book": "Записаться"
 }

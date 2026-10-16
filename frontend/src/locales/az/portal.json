@@ -406,5 +406,11 @@
   "profile.links_title": "Hesab keçidləri",
   "profile.preferences_hint": "E-poçt, tətbiqdaxili və kampaniya bildirişləri",
   "profile.contracts_hint": "İmzaladığınız müqavilələr və onların PDF-ləri",
-  "profile.phone_login_hint": "Telefonunuza göndərilən kodla daxil olursunuz; şifrə lazım deyil."
+  "profile.phone_login_hint": "Telefonunuza göndərilən kodla daxil olursunuz; şifrə lazım deyil.",
+  "home.vehicles_hint": "Avtomobilləriniz və servis tarixçəsi",
+  "home.warranties_hint": "Zəmanət sertifikatlarınız və statusları",
+  "home.appointments_hint": "Gələcək və keçmiş görüşləriniz",
+  "home.dealers_hint": "Yaxınlığınızdakı səlahiyyətli dilerlər",
+  "home.profile_hint": "Adınız, diliniz və sessiyalarınız",
+  "home.book": "Görüş təyin edin"
 }

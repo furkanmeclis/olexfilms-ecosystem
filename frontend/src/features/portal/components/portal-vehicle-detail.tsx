@@ -15,7 +15,10 @@ import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalPage,
+  PortalLoading,
+} from "@/features/portal/components/portal-page";
 import { PortalVehicleTransferDialog } from "@/features/portal/components/portal-vehicle-transfer";
 import { PortalWarrantyQr } from "@/features/portal/components/portal-warranty-qr";
 import {
@@ -144,9 +147,7 @@ export function PortalVehicleDetail({
   if (!detail.data) {
     return (
       <PortalPage title={t("portal.vehicles.title")} back={back}>
-        <p className="text-muted-foreground text-sm">
-          {t("portal.vehicles.loading")}
-        </p>
+        <PortalLoading label={t("portal.vehicles.loading")} />
       </PortalPage>
     );
   }
