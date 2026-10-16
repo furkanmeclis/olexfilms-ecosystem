@@ -27,7 +27,7 @@ func TestEndDateInOrganizationZone(t *testing.T) {
 
 func TestVerifyURL(t *testing.T) {
 	s := NewCron(nil, nil, nil, "https://olexfilms.app/")
-	if got := s.VerifyURL("Ab3dEf6hIj9k"); got != "https://olexfilms.app/garanti/Ab3dEf6hIj9k" {
+	if got := s.VerifyURL("Ab3dEf6hIj9k"); got != "https://olexfilms.app/warranty/Ab3dEf6hIj9k" {
 		t.Fatalf("verify url = %s", got)
 	}
 	if got := NewCron(nil, nil, nil, "").VerifyURL("x"); got != "" {

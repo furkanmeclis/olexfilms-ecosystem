@@ -290,7 +290,7 @@ export function WarrantyDetailPage({
                 {w.public_code}
               </span>
               <a
-                href={`/garanti/${encodeURIComponent(w.public_code)}`}
+                href={`/warranty/${encodeURIComponent(w.public_code)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-primary ms-2 inline-flex items-center gap-1 text-xs hover:underline"

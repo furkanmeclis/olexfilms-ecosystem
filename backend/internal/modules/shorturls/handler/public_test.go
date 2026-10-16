@@ -70,13 +70,13 @@ func decode(t *testing.T, rec *httptest.ResponseRecorder) envelope {
 }
 
 func TestPublicGetResolves(t *testing.T) {
-	f := &fakeResolver{out: usecase.Resolved{TargetPath: "/garanti/AbCdEfGh"}}
+	f := &fakeResolver{out: usecase.Resolved{TargetPath: "/warranty/AbCdEfGh"}}
 	rec := serve(NewPublic(f, nil, 0, 0), "aZ3kP9qX", true)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status %d", rec.Code)
 	}
 	e := decode(t, rec)
-	if e.Data.TargetPath != "/garanti/AbCdEfGh" || e.Data.Token != "aZ3kP9qX" || f.brandID != 7 {
+	if e.Data.TargetPath != "/warranty/AbCdEfGh" || e.Data.Token != "aZ3kP9qX" || f.brandID != 7 {
 		t.Fatalf("body %+v brand %d", e, f.brandID)
 	}
 	if rec.Header().Get("Cache-Control") != "no-store" {

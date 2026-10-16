@@ -6,7 +6,7 @@ import {
 } from "@/lib/server/upstream";
 
 /**
- * Anonymous warranty PDF (TEC-248): `/garanti/{code}/pdf?lang=&tz=` →
+ * Anonymous warranty PDF (TEC-248): `/warranty/{code}/pdf?lang=&tz=` →
  * Go `GET /v1/public/warranties/{code}/pdf`. No session, no cookies; the
  * client IP and host are forwarded for Go's per-IP limit and brand (K3).
  * A miss or failure goes back to the page (303), which shows the warranty
@@ -22,7 +22,7 @@ function backToPage(
   lang: string | null,
   notice?: "rate_limited" | "unavailable",
 ) {
-  const url = new URL(`/garanti/${encodeURIComponent(code)}`, request.url);
+  const url = new URL(`/warranty/${encodeURIComponent(code)}`, request.url);
   if (lang) url.searchParams.set("lang", lang);
   if (notice) url.searchParams.set("pdf", notice);
   return new Response(null, {

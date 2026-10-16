@@ -213,7 +213,7 @@ export function PortalWarranties() {
                       {w.organization.name}
                     </span>
                     <a
-                      href={`/garanti/${encodeURIComponent(w.public_code)}`}
+                      href={`/warranty/${encodeURIComponent(w.public_code)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-primary inline-flex items-center gap-1 hover:underline"

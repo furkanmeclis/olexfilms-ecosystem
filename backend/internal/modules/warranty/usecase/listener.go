@@ -74,7 +74,7 @@ type Listener struct {
 }
 
 // NewListener builds the consumer. verifyBaseURL is the public frontend
-// origin of the /garanti/{public_code} link; log may be nil.
+// origin of the /warranty/{public_code} link; log may be nil.
 func NewListener(pool TxBeginner, q *db.Queries, out outbox.Enqueuer, verifyBaseURL string, log *slog.Logger) *Listener {
 	if log == nil {
 		log = slog.Default()

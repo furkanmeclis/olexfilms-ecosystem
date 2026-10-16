@@ -7,7 +7,7 @@ import { publicWarrantyPath } from "@/features/portal/lib/portal-vehicles";
 import { useLocale } from "@/providers/locale-provider";
 
 /**
- * QR code of the public warranty page (/garanti/{code}, TEC-248), drawn in
+ * QR code of the public warranty page (/warranty/{code}, TEC-248), drawn in
  * the browser from the current origin; the code itself stays readable
  * under it.
  */

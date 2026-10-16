@@ -283,7 +283,7 @@ describe("PortalWarranties", () => {
     expect(items[0].textContent).toContain("34 ABC 123");
     expect(container.textContent).not.toContain("Ayşe");
     expect(items[0].querySelector("a")?.getAttribute("href")).toBe(
-      "/garanti/PUBCODE123456",
+      "/warranty/PUBCODE123456",
     );
     // PDF only for the active warranty.
     expect(

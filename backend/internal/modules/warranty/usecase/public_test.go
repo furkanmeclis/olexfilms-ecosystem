@@ -116,7 +116,7 @@ func TestPublicCertificateHTMLHasNoPII(t *testing.T) {
 			t.Errorf("document carries %q", banned)
 		}
 	}
-	for _, want := range []string{"34 *** 12", "6752", "Film X", "Dealer A", "https://olexfilms.app/garanti/" + w.PublicCode} {
+	for _, want := range []string{"34 *** 12", "6752", "Film X", "Dealer A", "https://olexfilms.app/warranty/" + w.PublicCode} {
 		if !strings.Contains(doc, want) {
 			t.Errorf("document lacks %q", want)
 		}

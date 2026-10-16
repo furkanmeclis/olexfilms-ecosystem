@@ -64,15 +64,15 @@ const (
 //   - /customer/{hash} (route customer.notify: the customer's panel behind a
 //     non-expiring encrypted id) -> /portal, where the customer signs in
 //     with an OTP; the hash itself is dropped.
-//   - a path already under the new public areas (/portal, /garanti, /bayi)
-//     is kept, query included.
-//   - /warranty/{serviceNo}[/pdf] (the hub's warranty page) ->
-//     /garanti/{serviceNo}[/pdf]: the warranty step keeps the service
-//     number as a public_code or an alias, and an unknown one answers the
-//     page's own not found.
+//   - a path already under the new public areas (/portal, /bayi) is kept,
+//     query included.
+//   - /warranty/{serviceNo}[/pdf] (the hub's warranty page, same path in the
+//     new frontend) is kept: the warranty step keeps the service number as
+//     a public_code or an alias, and an unknown one answers the page's own
+//     not found. /garanti/... (an earlier spelling) maps to /warranty/....
 //
 // Anything else (external sites such as Google Business review links) is
-// unmapped. The result always passes
+// // unmapped. The result always passes
 // shorturls.NormalizeTarget, so the resolver can never become an open
 // redirect.
 func MapLegacyShortTarget(raw string) (string, string) {
@@ -86,12 +86,12 @@ func MapLegacyShortTarget(raw string) (string, string) {
 	switch {
 	case len(segs) == 2 && segs[0] == "customer" && segs[1] != "":
 		target = "/portal"
-	case segs[0] == "warranty" && (len(segs) == 2 || len(segs) == 3 && segs[2] == "pdf") && segs[1] != "":
-		target = "/garanti/" + strings.Join(segs[1:], "/")
+	case (segs[0] == "warranty" || segs[0] == "garanti") && (len(segs) == 2 || len(segs) == 3 && segs[2] == "pdf") && segs[1] != "":
+		target = "/warranty/" + strings.Join(segs[1:], "/")
 		if u.RawQuery != "" {
 			target += "?" + u.RawQuery
 		}
-	case len(segs) >= 1 && (segs[0] == "portal" || segs[0] == "garanti" || segs[0] == "bayi"):
+	case len(segs) >= 1 && (segs[0] == "portal" || segs[0] == "bayi"):
 		target = p
 		if u.RawQuery != "" {
 			target += "?" + u.RawQuery

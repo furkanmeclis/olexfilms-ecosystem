@@ -17,7 +17,7 @@ const CODE = "AbCdEfGhIjKlMnOpQrSt_-";
 
 function call(code: string, query = "?lang=tr&tz=Europe%2FIstanbul") {
   return GET(
-    new Request(`http://localhost/garanti/${code}/pdf${query}`, {
+    new Request(`http://localhost/warranty/${code}/pdf${query}`, {
       headers: { "x-real-ip": "203.0.113.5", host: "olexfilms.app" },
     }),
     { params: Promise.resolve({ code }) },
@@ -37,7 +37,7 @@ beforeEach(() => {
   upstream.down = false;
 });
 
-describe("GET /garanti/[code]/pdf", () => {
+describe("GET /warranty/[code]/pdf", () => {
   it("streams the PDF and forwards lang, tz, IP and host", async () => {
     reply(200, {
       "content-type": "application/pdf",
@@ -74,15 +74,15 @@ describe("GET /garanti/[code]/pdf", () => {
   it("maps 404, 429 and failures to the page", async () => {
     reply(404);
     expect((await call(CODE)).headers.get("location")).toBe(
-      `/garanti/${CODE}?lang=tr`,
+      `/warranty/${CODE}?lang=tr`,
     );
     reply(429, { "retry-after": "30" });
     expect((await call(CODE)).headers.get("location")).toBe(
-      `/garanti/${CODE}?lang=tr&pdf=rate_limited`,
+      `/warranty/${CODE}?lang=tr&pdf=rate_limited`,
     );
     reply(503);
     expect((await call(CODE)).headers.get("location")).toBe(
-      `/garanti/${CODE}?lang=tr&pdf=unavailable`,
+      `/warranty/${CODE}?lang=tr&pdf=unavailable`,
     );
   });
 
@@ -90,7 +90,7 @@ describe("GET /garanti/[code]/pdf", () => {
     upstream.down = true;
     const res = await call(CODE);
     expect(res.headers.get("location")).toBe(
-      `/garanti/${CODE}?lang=tr&pdf=unavailable`,
+      `/warranty/${CODE}?lang=tr&pdf=unavailable`,
     );
   });
 });

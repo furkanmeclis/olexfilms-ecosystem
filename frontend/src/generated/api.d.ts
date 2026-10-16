@@ -1600,7 +1600,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Public warranty lookup (QR page /garanti/{public_code})
+         * Public warranty lookup (QR page /warranty/{public_code})
          * @description TEC-189. No authentication. Looks up a warranty by its random public
          *     code inside the brand of the request domain (K20). Returns no personal
          *     data: no holder name, phone, e-mail or address; the plate is masked
@@ -1636,7 +1636,7 @@ export interface paths {
          *     PDF of one active warranty from the public projection only: product,
          *     period, vehicle brand / model / year, masked plate, last four VIN
          *     characters, dealer name and city, and a QR code to
-         *     /garanti/{public_code}. No holder and no dealer contact. Malformed,
+         *     /warranty/{public_code}. No holder and no dealer contact. Malformed,
          *     unknown, other-brand, expired and void codes share the lookup's 404.
          *     Rate limited per client IP in its own bucket
          *     (WARRANTY_PUBLIC_PDF_RATE_LIMIT per WARRANTY_PUBLIC_RATE_WINDOW);
@@ -1663,7 +1663,7 @@ export interface paths {
          * @description TEC-249. No authentication. Resolves a short URL token inside the
          *     brand of the request domain (K3) and counts the hit (`hit_count`,
          *     `last_hit_at`). The target is always an internal path of the brand
-         *     frontend under `/portal`, `/garanti` or `/bayi` (never another
+         *     frontend under `/portal`, `/warranty` or `/bayi` (never another
          *     origin); the frontend route `/s/{token}` answers 302 to it. Tokens are
          *     case-sensitive base62: new tokens are 10 characters, the old hub's
          *     migrated tokens 8 (TEC-263). Malformed (outside
@@ -1751,7 +1751,7 @@ export interface paths {
         put?: never;
         /**
          * Queue the PDF of a service
-         * @description TEC-196. One PDF per service on the letterhead of the organization that performed it: service number, created / completed day and status, the customer (phone masked, anonymized customers labelled), the vehicle (brand, model, year, plate, VIN), every item with its unit barcode, amount (pieces / metres / whole unit) and applied parts, and the warranty summary with a QR code per warranty pointing at PUBLIC_FRONTEND_URL/garanti/{public_code}. The job runs on worker-docs (exports queue) and is rendered by Gotenberg in the requested language (RTL for ar). Needs services.read; a service outside the scope answers 404. Poll and download through /v1/service-pdfs/{uuid}.
+         * @description TEC-196. One PDF per service on the letterhead of the organization that performed it: service number, created / completed day and status, the customer (phone masked, anonymized customers labelled), the vehicle (brand, model, year, plate, VIN), every item with its unit barcode, amount (pieces / metres / whole unit) and applied parts, and the warranty summary with a QR code per warranty pointing at PUBLIC_FRONTEND_URL/warranty/{public_code}. The job runs on worker-docs (exports queue) and is rendered by Gotenberg in the requested language (RTL for ar). Needs services.read; a service outside the scope answers 404. Poll and download through /v1/service-pdfs/{uuid}.
          */
         post: operations["requestServicePdf"];
         delete?: never;
@@ -1808,7 +1808,7 @@ export interface paths {
         put?: never;
         /**
          * Queue the warranty certificate PDF of a service
-         * @description TEC-188. One PDF per service listing every active warranty (product, unit / barcode, start and end day in the organization's time zone) with its own QR code pointing at PUBLIC_FRONTEND_URL/garanti/{public_code}, the dealer letterhead, the vehicle (full plate and VIN, the certificate is handed to the owner) and the warranty terms. The job runs on worker-docs (exports queue) and is rendered by Gotenberg in the requested language (RTL for ar). Needs warranties.read; a service outside the scope answers 404, a service without an active warranty 409 NO_ACTIVE_WARRANTY. Poll and download through /v1/warranty-certificates/{uuid}.
+         * @description TEC-188. One PDF per service listing every active warranty (product, unit / barcode, start and end day in the organization's time zone) with its own QR code pointing at PUBLIC_FRONTEND_URL/warranty/{public_code}, the dealer letterhead, the vehicle (full plate and VIN, the certificate is handed to the owner) and the warranty terms. The job runs on worker-docs (exports queue) and is rendered by Gotenberg in the requested language (RTL for ar). Needs warranties.read; a service outside the scope answers 404, a service without an active warranty 409 NO_ACTIVE_WARRANTY. Poll and download through /v1/warranty-certificates/{uuid}.
          */
         post: operations["requestServiceWarrantyCertificate"];
         delete?: never;
@@ -17933,8 +17933,8 @@ export interface components {
             /** @example aZ3kP9qXbT */
             token: string;
             /**
-             * @description Internal path (with optional query / fragment) under /portal, /garanti or /bayi.
-             * @example /garanti/AbCdEfGhIjKlMnOpQrSt_-
+             * @description Internal path (with optional query / fragment) under /portal, /warranty or /bayi.
+             * @example /warranty/AbCdEfGhIjKlMnOpQrSt_-
              */
             target_path: string;
             /** Format: date-time */

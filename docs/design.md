@@ -230,7 +230,7 @@ Dış ağa yalnızca frontend ve centrifugo bağlı. Lokal compose aynı liste +
 
 | Path | Kim |
 | --- | --- |
-| `/`, `/bayi/{kod}`, `/garanti/{no}` | herkese açık |
+| `/`, `/bayi/{kod}`, `/warranty/{no}` | herkese açık |
 | `/s/{token}` | kısa URL |
 | `/panel` | merkez, distribütör, bayi (tek panel, org değiştirici) |
 | `/portal` | müşteri (telefon OTP), filo (e-posta + şifre) |
@@ -321,7 +321,7 @@ Mobil uygulama F5 sonrası ayrı proje; F1'deki API sözleşmesi değişmez.
 
 | Kaynak | GitHub | Yerel yol | Bu dokümanda kullanıldığı yer |
 | --- | --- | --- | --- |
-| olexfilms (hub) | https://github.com/furkanmeclis/olexfilms | /Users/furkanmeclis/Documents/Projects/olexfilms | Hizmet/garanti, müşteri, bildirim, push kampanya, araç parça seçici, NexPTG, Inventory + Chatbot M2M API, mobil API, kısa URL |
+| olexfilms (hub) | https://github.com/furkanmeclis/olexfilms | /Users/furkanmeclis/Documents/Projects/olexfilms | Hizmet/warranty, müşteri, bildirim, push kampanya, araç parça seçici, NexPTG, Inventory + Chatbot M2M API, mobil API, kısa URL |
 | olexfilms-warehouse | https://github.com/furkanmeclis/olexfilms-warehouse | /Users/furkanmeclis/Documents/Projects/olexfilms-warehouse | Depo, ledger, barkod, transfer, sayım, sipariş outbound, Glorian senkron, source-of-truth (D1–D12), mobil API fazları |
 | olexfilms-ai-layer-go | https://github.com/furkanmeclis/olexfilms-ai-layer-go | /Users/furkanmeclis/Documents/Projects/olexfilms-ai-layer-go | AI pipeline, tool kataloğu, prompt kuralları, bildirim gönderim API'si (kaldırılıp içeri alınır) |
 | glorian | https://github.com/furkanmeclis/glorian | /Users/furkanmeclis/Documents/Projects/glorian | Fork tespiti; senkron karşı tarafı |

@@ -18,7 +18,7 @@ import {
 
 /**
  * Public warranty page (TEC-189), the target of the warranty QR code and
- * the notification links (PUBLIC_FRONTEND_URL/garanti/{public_code}).
+ * the notification links (PUBLIC_FRONTEND_URL/warranty/{public_code}).
  * No session: rendered on the server from Go's public lookup, which rate
  * limits per client IP and returns no personal data. Language: `?lang=`,
  * else the language cookie, else the browser's Accept-Language.
@@ -124,7 +124,7 @@ export default async function PublicWarrantyPage({
       result={result}
       locale={locale}
       timeZone={timeZone}
-      path={`/garanti/${encodeURIComponent(code)}`}
+      path={`/warranty/${encodeURIComponent(code)}`}
       pdfNotice={parsePdfNotice(pdf)}
     />
   );

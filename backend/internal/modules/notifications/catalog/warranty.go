@@ -99,7 +99,7 @@ func warrantyPlaceholders(withDays bool) []msgtemplate.Placeholder {
 		ph("product_name", "PPF Parlak", "PPF Gloss"),
 		ph("end_date", "2027-03-31", "2027-03-31"),
 		ph("organization_name", "Tech Oto", "Tech Oto"),
-		ph("verify_url", "https://olexfilms.app/garanti/Ab3dEf6hIj9k", "https://olexfilms.app/garanti/Ab3dEf6hIj9k"),
+		ph("verify_url", "https://olexfilms.app/warranty/Ab3dEf6hIj9k", "https://olexfilms.app/warranty/Ab3dEf6hIj9k"),
 	}
 	if withDays {
 		out = append(out, ph("days", "30", "30"))

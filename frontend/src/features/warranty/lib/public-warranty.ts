@@ -1,7 +1,7 @@
 import type { components } from "@/generated/api";
 
 /**
- * Public warranty page (TEC-189): `/garanti/{public_code}` reads Go
+ * Public warranty page (TEC-189): `/warranty/{public_code}` reads Go
  * `GET /v1/public/warranties/{public_code}` on the server. The response has
  * no personal data (masked plate, last 4 VIN characters only).
  */
@@ -35,7 +35,7 @@ export function publicWarrantyPdfHref(
   timeZone: string,
 ): string {
   const q = new URLSearchParams({ lang: locale, tz: timeZone });
-  return `/garanti/${encodeURIComponent(code)}/pdf?${q.toString()}`;
+  return `/warranty/${encodeURIComponent(code)}/pdf?${q.toString()}`;
 }
 
 export type PublicWarrantyResult =

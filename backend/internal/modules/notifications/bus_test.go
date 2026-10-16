@@ -13,7 +13,7 @@ func TestWarrantyDispatch(t *testing.T) {
 	ev := events.New(events.WarrantyExpiringSoon).WithPayload(map[string]any{
 		"holder_user_id": int64(42), "brand_id": int64(3), "days": int64(7),
 		"plate": "34 ABC 123", "product_name": "PPF", "end_date": "2027-03-31",
-		"organization_name": "Tech Oto", "verify_url": "https://olexfilms.app/garanti/abc",
+		"organization_name": "Tech Oto", "verify_url": "https://olexfilms.app/warranty/abc",
 		"warranty_uuid": "u-1", "public_code": "abc",
 	})
 	in, ok := warrantyDispatch(ev, catalog.EventWarrantyExpiringSoon, 7)
@@ -29,7 +29,7 @@ func TestWarrantyDispatch(t *testing.T) {
 	if in.Vars["days"] != "7" || in.Vars["plate"] != "34 ABC 123" || in.Vars["end_date"] != "2027-03-31" {
 		t.Fatalf("vars = %v", in.Vars)
 	}
-	if in.ActionURL == nil || *in.ActionURL != "https://olexfilms.app/garanti/abc" {
+	if in.ActionURL == nil || *in.ActionURL != "https://olexfilms.app/warranty/abc" {
 		t.Fatalf("action url = %v", in.ActionURL)
 	}
 

@@ -45,7 +45,7 @@ describe("modules", () => {
     expect(moduleFromPath("/platform/users")).toBe("auth");
     expect(moduleFromPath("/api/v1/tenant/orders/5?x=1")).toBe("order");
     expect(moduleFromPath("/t/bayi-a/warranties")).toBe("warranty");
-    expect(moduleFromPath("/garanti/ABC123")).toBe("warranty");
+    expect(moduleFromPath("/warranty/ABC123")).toBe("warranty");
     expect(moduleFromPath("/platform/storage")).toBe("unknown");
     expect(moduleFromPath("/")).toBe("unknown");
     expect(moduleFromPath(undefined)).toBe("unknown");

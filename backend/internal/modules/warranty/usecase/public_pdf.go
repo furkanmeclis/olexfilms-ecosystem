@@ -12,7 +12,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 )
 
-// TEC-248 (F2-04b): the anonymous warranty PDF of /garanti/{public_code}.
+// TEC-248 (F2-04b): the anonymous warranty PDF of /warranty/{public_code}.
 // It is built only from the public projection (PublicWarranty), so it
 // carries exactly what the public page shows: a masked plate, the last four
 // VIN characters, no holder and no dealer contact. The full certificate

@@ -42,7 +42,7 @@ const createAttempts = 5
 // AllowedPrefixes are the frontend areas a short URL may point at. Nothing
 // else, and never another origin: the public resolver is not an open
 // redirect.
-var AllowedPrefixes = []string{"/portal", "/garanti", "/bayi"}
+var AllowedPrefixes = []string{"/portal", "/warranty", "/bayi"}
 
 var (
 	// ErrNotFound: the token is malformed, unknown or another brand's.
@@ -139,7 +139,7 @@ func RandomToken() (string, error) {
 }
 
 // NormalizeTarget checks a target and returns its stored form. It must be
-// a same-origin absolute path ("/garanti/X?lang=tr") under one of
+// a same-origin absolute path ("/warranty/X?lang=tr") under one of
 // AllowedPrefixes: no scheme, host, "//", backslash, whitespace, control
 // characters or dot segments.
 func NormalizeTarget(raw string) (string, error) {

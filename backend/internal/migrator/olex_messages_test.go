@@ -104,7 +104,7 @@ func TestOlexShortURLsAndLegacyMessages(t *testing.T) {
 		return rec.Code, env.Data.TargetPath
 	}
 	for token, want := range map[string]string{
-		"synA1b2C3": "/garanti/SYN-S-0001",
+		"synA1b2C3": "/warranty/SYN-S-0001",
 		"synD4e5F6": "/bayi/SYN00001",
 		"synG7h8J9": "/portal",
 	} {

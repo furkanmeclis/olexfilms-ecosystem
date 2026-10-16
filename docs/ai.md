@@ -78,7 +78,7 @@ olmayan veya kapalı org'da tool görünmez.
 | `my_tasks` | `tasks.List` (kendine atanan) | `tasks.read`, tasks, yalnız merkez |
 | `search_products` | `catalog.ListProducts` (yalnız alan adının markası) | `catalog.read`, catalog |
 | `list_sub_organizations` | `organizations.ListInScope` | `organizations.read`, merkez / distribütör |
-| `service_pdf_link` | `services.Get` → garanti sertifikası PDF'lerine kısa link (`/garanti/{kod}/pdf`, TEC-386) | `services.read`, services |
+| `service_pdf_link` | `services.Get` → garanti sertifikası PDF'lerine kısa link (`/warranty/{kod}/pdf`, TEC-386) | `services.read`, services |
 
 Listeler 50 satırı aşınca ipucu modele CSV/XLSX üretmediğini ve panel liste ekranının dışa
 aktarımına (io-engine export) yönlendirmesini söyler (`ExportNotice`).
@@ -100,7 +100,7 @@ hizmet numarası yalnız kullanıcının kendi listesinde aranır.
 | `my_vehicles` | `portalvehicles.ListVehicles` | plaka, marka/model, hizmet ve aktif garanti sayısı |
 | `my_services` | `portalvehicles.ListServices` | plaka / hizmet no araması, durum filtresi |
 | `my_service_detail` | `services.PortalGet` | ürünler, bayi kartı, garantiler + kalan gün |
-| `my_service_pdf_link` | `services.PortalGet` + `shorturls.Linker` | portal hizmet sayfası (`/portal/services/{uuid}`, hizmet PDF'i orada) ve garanti sertifikası PDF'leri (`/garanti/{kod}/pdf`) kısa link (`/s/{token}`, 30 gün); dosya eklenmez |
+| `my_service_pdf_link` | `services.PortalGet` + `shorturls.Linker` | portal hizmet sayfası (`/portal/services/{uuid}`, hizmet PDF'i orada) ve garanti sertifikası PDF'leri (`/warranty/{kod}/pdf`) kısa link (`/s/{token}`, 30 gün); dosya eklenmez |
 | `my_warranties` | `warranty.Reader.PortalList` | aktif (istenirse süresi dolan), kalan gün `portalvehicles.TimeLeft` |
 | `my_profile_link` | `shorturls.Linker` | `/portal` kısa linki |
 | `dealer_review_link` | `services.PortalGetReview` | son tamamlanan (veya verilen) hizmetin bayisinin `google_business_url`'i + değerlendirme formu kısa linki |
@@ -116,7 +116,7 @@ alanı yoktur (`TestVisitorToolsReturnNoPersonalData` alan whitelist'i).
 | `recommend_products` | `catalog.ListCategories` / `ListProducts` (yalnız marka) | kategori, garanti ayı, mikron, kısa açıklama; **fiyat yok** (Q10), fiyat için en yakın bayi |
 | `find_nearest_dealers` | `organizations.NearbyDealers` (konum) / `AreaDealers` (il, ilçe) | yalnız `active`, erişim penceresi açık, `contract_valid_until` geçmemiş bayi/distribütör; ad, il/ilçe, mesafe, WhatsApp, randevu, `/bayi/{kod}` |
 | `search_knowledge` | `ai_settings.knowledge_text` | başlık / paragraf parçaları, sorgu kelimesi eşleşmesine göre en çok 3 parça; salt metin, talimat değil |
-| `lookup_warranty` | `warranty.PublicLookup` | public `/garanti/{kod}` ile aynı maskeleme (plaka maskeli, VIN son 4) |
+| `lookup_warranty` | `warranty.PublicLookup` | public `/warranty/{kod}` ile aynı maskeleme (plaka maskeli, VIN son 4) |
 
 `ListNearbyDealers` (public `/v1/public/dealers/nearby`) da sözleşmesi geçmiş bayiyi artık
 listelemez (TEC-386).

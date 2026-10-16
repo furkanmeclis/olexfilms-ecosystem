@@ -15,7 +15,7 @@ import (
 )
 
 // RegisterPublicRoutes mounts the public warranty lookup (TEC-189). The
-// frontend page /garanti/{public_code} reads it; no authentication, a per-IP
+// frontend page /warranty/{public_code} reads it; no authentication, a per-IP
 // limit of limit hits per window. The anonymous PDF (TEC-248) has its own,
 // tighter bucket of pdfLimit hits per window; renderer draws it and
 // frontendURL is the origin of its QR link.

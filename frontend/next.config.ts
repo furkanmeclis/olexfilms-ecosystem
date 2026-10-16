@@ -50,17 +50,17 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/_/:token", destination: "/s/:token", permanent: false },
-      // Printed QR codes and SMS links of the old hub point at
-      // /warranty/{service_no}; the migrator keeps that number as the
-      // warranty's public_code (or an alias), so the path maps 1:1.
+      // The public warranty page is /warranty/{public_code}, the path the
+      // old hub printed on its QR codes. /garanti was used for a while
+      // (links already sent by SMS / e-mail); it stays a redirect.
       {
-        source: "/warranty/:code",
-        destination: "/garanti/:code",
+        source: "/garanti/:code",
+        destination: "/warranty/:code",
         permanent: true,
       },
       {
-        source: "/warranty/:code/pdf",
-        destination: "/garanti/:code/pdf",
+        source: "/garanti/:code/pdf",
+        destination: "/warranty/:code/pdf",
         permanent: true,
       },
       {

@@ -48,7 +48,7 @@ type CronService struct {
 	q    *db.Queries
 	out  outbox.Enqueuer
 	// verifyBaseURL is the public frontend origin; the verify link is
-	// {verifyBaseURL}/garanti/{public_code} (decision 1).
+	// {verifyBaseURL}/warranty/{public_code} (decision 1).
 	verifyBaseURL string
 	now           func() time.Time
 }
@@ -240,7 +240,7 @@ func verifyURL(base, publicCode string) string {
 	if base == "" || publicCode == "" {
 		return ""
 	}
-	return base + "/garanti/" + publicCode
+	return base + "/warranty/" + publicCode
 }
 
 // EndDate formats the last covered day in the organization's zone. end_at

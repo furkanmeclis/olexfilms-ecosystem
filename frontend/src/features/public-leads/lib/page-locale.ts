@@ -7,7 +7,7 @@ import { resolveRequestLocale } from "@/lib/i18n/request-locale";
 type LangParam = string | string[] | undefined;
 
 /**
- * Language of a public page (TEC-320), same order as /garanti and the
+ * Language of a public page (TEC-320), same order as /warranty and the
  * landing: `?lang=`, else the language cookie, else Accept-Language. The
  * catalog is loaded before it returns.
  */

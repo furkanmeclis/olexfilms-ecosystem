@@ -35,7 +35,7 @@ WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id);
 SELECT * FROM warranties
 WHERE service_item_id = sqlc.arg(service_item_id);
 
--- Public page /garanti/{public_code} (decision 1).
+-- Public page /warranty/{public_code} (decision 1).
 -- name: GetWarrantyByPublicCode :one
 SELECT * FROM warranties
 WHERE public_code = sqlc.arg(public_code) AND brand_id = sqlc.arg(brand_id);

@@ -2,7 +2,7 @@
 //
 // `page.route` only sees browser traffic. Three flows call Go from the
 // Next.js server instead: the Auth.js credentials login (auth/login + the
-// adapter's user lookup), the public warranty page (/garanti/{code},
+// adapter's user lookup), the public warranty page (/warranty/{code},
 // rendered on the server), the portal phone OTP sign-in
 // (auth/otp/verify, TEC-246) and the TEC-320 public quote page and dealer
 // application config. The organization switch also goes through

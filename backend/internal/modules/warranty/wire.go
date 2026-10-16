@@ -15,7 +15,7 @@ import (
 )
 
 // NewCron wires the warranty:expire and warranty:expiring_scan handlers.
-// frontendURL is the public origin used for the /garanti/{public_code} link.
+// frontendURL is the public origin used for the /warranty/{public_code} link.
 func NewCron(pool *pgxpool.Pool, q *db.Queries, frontendURL string) *usecase.CronService {
 	return usecase.NewCron(pool, q, outbox.NewStore(pool, q), frontendURL)
 }

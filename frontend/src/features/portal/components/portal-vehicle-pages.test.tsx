@@ -377,7 +377,7 @@ describe("PortalVehicleDetail", () => {
       container.querySelector('[data-testid="warranty-pdf-w-1"]'),
     ).not.toBeNull();
     const qr = container.querySelector('[data-testid="warranty-qr"]');
-    expect(qr?.getAttribute("href")).toBe("/garanti/PUBCODE123456");
+    expect(qr?.getAttribute("href")).toBe("/warranty/PUBCODE123456");
     expect(qr?.querySelector("img")?.getAttribute("src")).toBe(
       "data:image/png;base64,QR",
     );

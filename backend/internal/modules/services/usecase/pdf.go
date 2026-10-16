@@ -128,7 +128,7 @@ type PDFService struct {
 }
 
 // NewPDF builds the service PDF use case. cert provides the public verify
-// URL of a warranty (PUBLIC_FRONTEND_URL/garanti/{code}; nil prints no QR);
+// URL of a warranty (PUBLIC_FRONTEND_URL/warranty/{code}; nil prints no QR);
 // store loads the dealer logo (nil prints the letterhead without logo).
 func NewPDF(svc *Service, cert *warrantyuc.CertificateService, store storage.Driver, log *slog.Logger) *PDFService {
 	if log == nil {

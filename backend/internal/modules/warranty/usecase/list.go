@@ -197,7 +197,7 @@ type Reader struct {
 }
 
 // NewReader builds the reader; verifyBaseURL is the public origin of the
-// /garanti/{public_code} link written into the void event.
+// /warranty/{public_code} link written into the void event.
 func NewReader(pool TxBeginner, q *db.Queries, out outbox.Enqueuer, verifyBaseURL string) *Reader {
 	return &Reader{pool: pool, q: q, out: out, verifyBaseURL: verifyBaseURL, now: time.Now}
 }

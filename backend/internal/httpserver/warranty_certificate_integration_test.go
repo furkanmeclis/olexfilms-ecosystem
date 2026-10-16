@@ -25,7 +25,7 @@ import (
 // TEC-188 acceptance: the warranty certificate of a service is an export
 // job on the exports queue (worker-docs); the HTML sent to (mock) Gotenberg
 // carries every active warranty's code and QR code (verify URL
-// PUBLIC_FRONTEND_URL/garanti/{public_code}) and is dir=rtl in Arabic.
+// PUBLIC_FRONTEND_URL/warranty/{public_code}) and is dir=rtl in Arabic.
 // Another dealer's service is 404, a service without an active warranty
 // 409; the portal customer gets the certificate of the warranties they
 // hold, another customer 404.
@@ -159,7 +159,7 @@ func TestIntegrationWarrantyCertificate(t *testing.T) {
 			t.Fatalf("%s certificate: %d QR images, want %d", name, n, len(ws))
 		}
 		for _, w := range ws {
-			if !strings.Contains(h, w.PublicCode) || !strings.Contains(h, frontend+"/garanti/"+w.PublicCode) {
+			if !strings.Contains(h, w.PublicCode) || !strings.Contains(h, frontend+"/warranty/"+w.PublicCode) {
 				t.Fatalf("%s certificate misses warranty %s or its verify url", name, w.PublicCode)
 			}
 		}

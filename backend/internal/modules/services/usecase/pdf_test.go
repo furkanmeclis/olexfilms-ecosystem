@@ -34,7 +34,7 @@ func samplePDF(items, warranties int) PDFDoc {
 	for i := 0; i < warranties; i++ {
 		code := strings.Repeat(string(rune('A'+i%26)), 22)
 		d.Warranties = append(d.Warranties, PDFWarranty{PublicCode: code, Product: "PPF Ultra", Kind: "full", Status: "active",
-			StartDate: "02.10.2026", EndDate: "02.10.2036", VerifyURL: "https://olexfilms.app/garanti/" + code})
+			StartDate: "02.10.2026", EndDate: "02.10.2036", VerifyURL: "https://olexfilms.app/warranty/" + code})
 	}
 	return d
 }
@@ -52,7 +52,7 @@ func TestPDFHTML(t *testing.T) {
 		`dir="ltr"`, "DS-2026-000196", "34 ABC 196", "WBA00000000000196", "PPF Ultra 0", "OLX-1",
 		"Kaput", "Tavan", "custom_part", "10.50 m", "Birimin tamamı", "Tam birim", "Kısmi kesim",
 		"********4567", "12000 km", "Tech &lt;Oto&gt;", "Ön tampon &lt;dikkat&gt;", "Garanti özeti", "Aktif",
-		"https://olexfilms.app/garanti/AAAAAAAAAAAAAAAAAAAAAA",
+		"https://olexfilms.app/warranty/AAAAAAAAAAAAAAAAAAAAAA",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("html misses %q", want)

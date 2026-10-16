@@ -213,7 +213,7 @@ func TestIntegrationWarrantyListener(t *testing.T) {
 	if err := it.pool.QueryRow(ctx, `SELECT COUNT(*) FROM outbox_events o JOIN warranties w
 		ON w.uuid::text = o.payload->'data'->>'warranty_uuid'
 		WHERE o.event_name = 'warranty.created' AND w.service_id = $1
-		  AND o.payload->'data'->>'verify_url' = 'http://localhost:3000/garanti/' || w.public_code
+		  AND o.payload->'data'->>'verify_url' = 'http://localhost:3000/warranty/' || w.public_code
 		  AND (o.payload->'data'->>'holder_user_id')::bigint = $2`, s1.ID, cust.ID).Scan(&withVerify); err != nil {
 		t.Fatal(err)
 	}

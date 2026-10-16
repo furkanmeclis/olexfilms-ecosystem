@@ -17,9 +17,9 @@ func sampleCertificate() Certificate {
 		HolderName: "Ayşe Kaya",
 		Items: []CertificateItem{
 			{PublicCode: "AAAAAAAAAAAAAAAAAAAAAA", Product: "PPF Ultra", Barcode: "OLX-1", Kind: "full",
-				StartDate: "01.10.2026", EndDate: "01.10.2036", VerifyURL: "https://olexfilms.app/garanti/AAAAAAAAAAAAAAAAAAAAAA"},
+				StartDate: "01.10.2026", EndDate: "01.10.2036", VerifyURL: "https://olexfilms.app/warranty/AAAAAAAAAAAAAAAAAAAAAA"},
 			{PublicCode: "BBBBBBBBBBBBBBBBBBBBBB", Product: "PPF Roll", Barcode: "OLX-R", Kind: "partial", Meters: "10.50",
-				StartDate: "01.10.2026", EndDate: "01.10.2028", VerifyURL: "https://olexfilms.app/garanti/BBBBBBBBBBBBBBBBBBBBBB"},
+				StartDate: "01.10.2026", EndDate: "01.10.2028", VerifyURL: "https://olexfilms.app/warranty/BBBBBBBBBBBBBBBBBBBBBB"},
 		},
 		GeneratedAt: time.Date(2026, 10, 2, 9, 0, 0, 0, time.UTC),
 		Letterhead:  ioengine.Letterhead{CompanyName: "Tech <Oto>", FooterText: "olexfilms.app"},
@@ -37,7 +37,7 @@ func TestCertificateHTML(t *testing.T) {
 	}
 	for _, want := range []string{
 		`dir="ltr"`, "AAAAAAAAAAAAAAAAAAAAAA", "BBBBBBBBBBBBBBBBBBBBBB", "34 ABC 123", "WBA00000000000001",
-		"https://olexfilms.app/garanti/AAAAAAAAAAAAAAAAAAAAAA", "Kısmi kesim (10.50 m)", "Tam birim",
+		"https://olexfilms.app/warranty/AAAAAAAAAAAAAAAAAAAAAA", "Kısmi kesim (10.50 m)", "Tam birim",
 		"Garanti koşulları", "Tech &lt;Oto&gt;", "Ayşe Kaya", "DS-2026-000042",
 	} {
 		if !strings.Contains(out, want) {
@@ -94,7 +94,7 @@ func TestFormatCertificateDate(t *testing.T) {
 
 func TestCertificateVerifyURL(t *testing.T) {
 	s := NewCertificate(nil, nil, "https://olexfilms.app/", nil)
-	if got := s.VerifyURL("abcdefghijkl"); got != "https://olexfilms.app/garanti/abcdefghijkl" {
+	if got := s.VerifyURL("abcdefghijkl"); got != "https://olexfilms.app/warranty/abcdefghijkl" {
 		t.Fatalf("verify url = %s", got)
 	}
 }
