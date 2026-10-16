@@ -202,11 +202,19 @@ describe("stock entry helpers (TEC-204)", () => {
       { uuid: "2", undone: false },
     ] as StockEntryLine[];
     const imported = (import_status: string) =>
-      ({ mode: "import", status: "confirmed", import_status, lines }) as StockEntry;
+      ({
+        mode: "import",
+        status: "confirmed",
+        import_status,
+        lines,
+      }) as StockEntry;
     expect(importLinesKept(imported("partially_undone"))).toBe(1);
     expect(importLinesKept(imported("applied"))).toBeNull();
     expect(
-      importLinesKept({ ...imported("partially_undone"), mode: "generate_new" }),
+      importLinesKept({
+        ...imported("partially_undone"),
+        mode: "generate_new",
+      }),
     ).toBeNull();
   });
 });
