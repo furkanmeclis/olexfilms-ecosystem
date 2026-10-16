@@ -753,6 +753,30 @@ func (q *Queries) MarkBarcodeBatchPrinted(ctx context.Context, id int64) (Barcod
 	return i, err
 }
 
+const markBatchUnitsPrinted = `-- name: MarkBatchUnitsPrinted :execrows
+UPDATE units SET status = 'printed' WHERE batch_id = $1 AND status = 'reserved'
+`
+
+func (q *Queries) MarkBatchUnitsPrinted(ctx context.Context, batchID pgtype.Int8) (int64, error) {
+	result, err := q.db.Exec(ctx, markBatchUnitsPrinted, batchID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const markSelectedUnitsPrinted = `-- name: MarkSelectedUnitsPrinted :execrows
+UPDATE units SET status = 'printed' WHERE id = ANY($1::bigint[]) AND status = 'reserved'
+`
+
+func (q *Queries) MarkSelectedUnitsPrinted(ctx context.Context, ids []int64) (int64, error) {
+	result, err := q.db.Exec(ctx, markSelectedUnitsPrinted, ids)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setBarcodeCounter = `-- name: SetBarcodeCounter :exec
 UPDATE barcode_counters SET next_seq = $1
 WHERE brand_id = $2 AND prefix = $3

@@ -123,6 +123,20 @@ func (h *Labels) CreateBatch(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, out)
 }
 
+// Void serves POST /v1/stock/barcodes/void.
+func (h *Labels) Void(w http.ResponseWriter, r *http.Request) {
+	var body stockusecase.VoidInput
+	if !decodeOptional(w, r, &body) {
+		return
+	}
+	out, err := h.batches.Void(r.Context(), reclassCaller(r), body)
+	if err != nil {
+		writeLabelError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
 // ListBatches serves GET /v1/stock/barcodes
 // (?product_uuid&printed&created_from&created_to&q&sort&limit&offset).
 func (h *Labels) ListBatches(w http.ResponseWriter, r *http.Request) {

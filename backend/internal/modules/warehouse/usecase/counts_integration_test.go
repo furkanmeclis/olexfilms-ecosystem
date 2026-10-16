@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -249,6 +250,82 @@ func (e *countEnv) unit(t *testing.T, p db.Product, meters string, loc *countLoc
 		e.post(t, ledger.Movement{Type: ledger.TypePlacement, UnitID: u.ID, To: loc.owner(e.center.ID), Source: "test", RefType: "t206", RefID: ref})
 	}
 	return u
+}
+
+func TestStockCountUnexpectedAddToStock(t *testing.T) {
+	e := newCountEnv(t)
+	c := e.caller(true)
+	w, _, locs := e.warehouse(t, "U", "A1")
+	loc := locs[0]
+	makeUnit := func(org int64) db.Unit {
+		t.Helper()
+		u, err := e.q.CreateUnit(e.ctx, db.CreateUnitParams{OrganizationID: org, BrandID: e.brand.ID,
+			ProductID: e.piece.ID, Barcode: "T206-UNEXPECTED-" + uuid.NewString(), UnitKind: ledger.KindSerial,
+			Source: "generated", Status: string(ledger.StatusPrinted)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return u
+	}
+	count := func(u db.Unit) (wh.StockCount, wh.CountLine) {
+		t.Helper()
+		cnt, err := e.counts.Create(e.ctx, c, wh.CountInput{WarehouseUUID: w.UUID.String(), Method: wh.CountMethodLocationFirst,
+			Visibility: wh.CountVisibilityBlind})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = e.counts.Start(e.ctx, c, cnt.UUID); err != nil {
+			t.Fatal(err)
+		}
+		mustScan(t, e, c, cnt.UUID, wh.CountScanInput{Code: loc.qr()})
+		mustScan(t, e, c, cnt.UUID, wh.CountScanInput{Code: u.Barcode})
+		if _, err = e.counts.Complete(e.ctx, c, cnt.UUID); err != nil {
+			t.Fatal(err)
+		}
+		rep, err := e.counts.Report(e.ctx, c, cnt.UUID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		line := lineFor(t, rep, u.Barcode)
+		if line.Result != wh.CountResultUnexpected || !slices.Contains(line.AllowedResolutions, wh.CountResolveAddToStock) {
+			t.Fatalf("unexpected line: %+v", line)
+		}
+		return cnt, line
+	}
+	u := makeUnit(e.center.ID)
+	cnt, line := count(u)
+	if _, err := e.counts.Approve(e.ctx, c, cnt.UUID, []wh.CountResolution{{LineUUID: line.UUID.String(), Resolution: wh.CountResolveAddToStock}}); err != nil {
+		t.Fatalf("add to stock: %v", err)
+	}
+	if typ, id, status := e.state(t, u); typ != "warehouse_location" || id != loc.id || status != "available" {
+		t.Fatalf("counted unit: %s %d %s", typ, id, status)
+	}
+	dist, err := e.q.CreateOrganization(e.ctx, db.CreateOrganizationParams{Slug: "t206-foreign-" + uuid.NewString(), Name: "foreign", Status: "active",
+		AccessStartsAt: pgtype.Timestamptz{Time: time.Now().Add(-time.Hour), Valid: true}, Type: "distributor",
+		ParentID: pgtype.Int8{Int64: e.center.ID, Valid: true}, BrandID: e.brand.ID, Currency: "TRY", Locale: "tr", Timezone: "Europe/Istanbul", Settings: []byte("{}")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreign := makeUnit(e.center.ID)
+	cnt, line = count(foreign)
+	centerOwner := ledger.Owner{Type: ledger.OwnerOrganization, ID: e.center.ID, OrgID: e.center.ID}
+	distOwner := ledger.Owner{Type: ledger.OwnerOrganization, ID: dist.ID, OrgID: dist.ID}
+	e.post(t, ledger.Movement{Type: ledger.TypeEntry, UnitID: foreign.ID, To: &centerOwner, Source: "test", RefType: "foreign", RefID: foreign.ID})
+	e.post(t, ledger.Movement{Type: ledger.TypeTransferOut, UnitID: foreign.ID, From: &centerOwner, To: &distOwner, Source: "test", RefType: "foreign_transfer", RefID: foreign.ID})
+	e.post(t, ledger.Movement{Type: ledger.TypeTransferIn, UnitID: foreign.ID, To: &distOwner, Source: "test", RefType: "foreign_transfer", RefID: foreign.ID})
+	rep, err := e.counts.Report(e.ctx, c, cnt.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolutions := []wh.CountResolution{{LineUUID: line.UUID.String(), Resolution: wh.CountResolveAddToStock}}
+	for _, other := range rep.Lines {
+		if other.UUID != line.UUID && other.Result != wh.CountResultMatched {
+			resolutions = append(resolutions, wh.CountResolution{LineUUID: other.UUID.String(), Resolution: wh.CountResolveIgnore})
+		}
+	}
+	if _, err = e.counts.Approve(e.ctx, c, cnt.UUID, resolutions); !errors.Is(err, wh.ErrCountStale) {
+		t.Fatalf("foreign unit: %v", err)
+	}
 }
 
 // state returns (owner_type, owner_id, status) of a serial unit.

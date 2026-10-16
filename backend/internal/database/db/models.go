@@ -3720,6 +3720,7 @@ type WarehouseTransferLine struct {
 	PlacementMovementID pgtype.Int8        `json:"placement_movement_id"`
 	RestoreMovementID   pgtype.Int8        `json:"restore_movement_id"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	Quantity            int32              `json:"quantity"`
 }
 
 type Warranty struct {

@@ -144,6 +144,12 @@ SET print_count = print_count + 1, last_printed_at = NOW()
 WHERE id = sqlc.arg(id)
 RETURNING *;
 
+-- name: MarkBatchUnitsPrinted :execrows
+UPDATE units SET status = 'printed' WHERE batch_id = sqlc.arg(batch_id) AND status = 'reserved';
+
+-- name: MarkSelectedUnitsPrinted :execrows
+UPDATE units SET status = 'printed' WHERE id = ANY(sqlc.arg(ids)::bigint[]) AND status = 'reserved';
+
 -- name: CreateBatchUnit :one
 INSERT INTO units (
     organization_id, brand_id, product_id, barcode, unit_kind, source, status,

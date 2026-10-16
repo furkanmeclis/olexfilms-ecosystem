@@ -218,6 +218,9 @@ func (p *post) serial(ctx context.Context) (Result, error) {
 }
 
 func (p *post) fixed(ctx context.Context) (Result, error) {
+	if p.m.Type == TypeVoid && (p.unit.Status == string(StatusReserved) || p.unit.Status == string(StatusPrinted)) {
+		return p.fixedUnstockedVoid(ctx)
+	}
 	plan, err := planFixed(p.m, Status(p.unit.Status))
 	if err != nil {
 		return Result{}, err
@@ -292,6 +295,40 @@ func (p *post) fixed(ctx context.Context) (Result, error) {
 		return Result{}, err
 	}
 	return p.publish(ctx, mv, plan.owner.OrgID)
+}
+
+// An unstocked fixed barcode has no holding to debit. Its void movement
+// records the status change with zero quantity; projections stay unchanged.
+func (p *post) fixedUnstockedVoid(ctx context.Context) (Result, error) {
+	if p.m.Quantity != 0 || p.m.Centimeters != 0 || p.m.From != nil || p.m.To != nil {
+		return Result{}, fmt.Errorf("%w: unstocked fixed void takes no quantity or owner", ErrInvalidMovement)
+	}
+	holdings, err := p.q.ListFixedBarcodeHoldingsByUnit(ctx, p.unit.ID)
+	if err != nil {
+		return Result{}, err
+	}
+	for _, h := range holdings {
+		if h.QuantityOnHand != 0 {
+			return Result{}, fmt.Errorf("%w: fixed barcode still has stock", ErrTransitionNotAllowed)
+		}
+	}
+	arg, err := p.baseArgs()
+	if err != nil {
+		return Result{}, err
+	}
+	arg.OrganizationID = p.unit.OrganizationID
+	arg.QuantityDelta = 0
+	arg.MetersDelta = cmToNumeric(0)
+	arg.FromStatus = text(p.unit.Status)
+	arg.ToStatus = text(string(StatusVoid))
+	mv, replayed, err := p.insert(ctx, arg)
+	if err != nil || replayed {
+		return Result{Movement: mv, Replayed: replayed}, err
+	}
+	if _, err := p.q.UpdateUnitStatus(ctx, db.UpdateUnitStatusParams{ID: p.unit.ID, Status: string(StatusVoid)}); err != nil {
+		return Result{}, dbErr("unit status", err)
+	}
+	return p.publish(ctx, mv, p.unit.OrganizationID)
 }
 
 // checkPairedFixed requires an *_out of the same reference for the unit

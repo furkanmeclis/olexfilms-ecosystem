@@ -2884,6 +2884,7 @@ type Querier interface {
 	MarkAppointmentReminder24h(ctx context.Context, arg MarkAppointmentReminder24hParams) (Appointment, error)
 	MarkAppointmentReminder2h(ctx context.Context, arg MarkAppointmentReminder2hParams) (Appointment, error)
 	MarkBarcodeBatchPrinted(ctx context.Context, id int64) (BarcodeBatch, error)
+	MarkBatchUnitsPrinted(ctx context.Context, batchID pgtype.Int8) (int64, error)
 	MarkBonusAccrualPosted(ctx context.Context, arg MarkBonusAccrualPostedParams) (BonusAccrual, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
@@ -2932,6 +2933,7 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	MarkSelectedUnitsPrinted(ctx context.Context, ids []int64) (int64, error)
 	// TEC-635: a finished (sent) campaign with a recipient that failed after
 	// the hand-off; finished_at stays.
 	MarkSentCampaignPartiallyFailed(ctx context.Context, id int64) (Campaign, error)
