@@ -320,6 +320,9 @@ func (h *Handler) ImportVehicles(w http.ResponseWriter, r *http.Request) {
 	orgID := c.OrgID
 	job, err := h.imports.Upload(r.Context(), c.UserID, &orgID, usecase.ImportResource, format, locale, header.Filename, file)
 	if err != nil {
+		if response.Coded(w, r, err) {
+			return
+		}
 		writeImportErr(w, r, err)
 		return
 	}

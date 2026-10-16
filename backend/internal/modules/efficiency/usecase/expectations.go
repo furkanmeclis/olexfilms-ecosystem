@@ -10,6 +10,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -383,4 +384,9 @@ func importCell(row map[string]any, key string) string {
 		return ""
 	}
 	return strings.TrimSpace(fmt.Sprint(row[key]))
+}
+
+// ImportPermission implements ioengine.ImportPermissioner (TEC-757).
+func (a *ExpectationsImportAdapter) ImportPermission() string {
+	return rbac.PermEfficiencyExpectationsManage
 }

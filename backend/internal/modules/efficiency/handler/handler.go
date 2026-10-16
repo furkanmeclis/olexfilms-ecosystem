@@ -251,6 +251,9 @@ func (h *Handler) ImportExpectations(w http.ResponseWriter, r *http.Request) {
 	orgID := org.InternalID
 	job, err := h.imports.Upload(r.Context(), p.UserInternal, &orgID, usecase.ResourceExpectations, format, locale, header.Filename, file)
 	if err != nil {
+		if response.Coded(w, r, err) {
+			return
+		}
 		writeError(w, r, err)
 		return
 	}

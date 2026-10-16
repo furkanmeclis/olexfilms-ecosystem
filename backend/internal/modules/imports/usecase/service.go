@@ -112,12 +112,20 @@ func cleanSourceFilename(name string) string {
 
 // Upload creates a job from file bytes.
 func (s *Service) Upload(ctx context.Context, actorID int64, organizationID *int64, resource string, format ioengine.ImportFormat, locale string, filename string, r io.Reader) (ImportJobView, error) {
-	if _, err := s.registry.Get(resource); err != nil {
+	adapter, err := s.registry.Get(resource)
+	if err != nil {
 		return ImportJobView{}, fmt.Errorf("%w: %v", ErrInvalidRequest, err)
 	}
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return ImportJobView{}, err
+	}
+	// TEC-757: a file over the row limit is refused before a job exists.
+	headers, rawRows, parseErr := ioengine.ParseUpload(format, bytes.NewReader(data))
+	if parseErr == nil {
+		if err := ioengine.CheckRowLimit(adapter, len(rawRows), i18n.Normalize(locale)); err != nil {
+			return ImportJobView{}, err
+		}
 	}
 	row, err := s.q.CreateImportJob(ctx, db.CreateImportJobParams{
 		Resource: resource, ActorID: actorID, Format: string(format), Locale: locale,
@@ -143,16 +151,14 @@ func (s *Service) Upload(ctx context.Context, actorID int64, organizationID *int
 	if err != nil {
 		return ImportJobView{}, err
 	}
-	if adapter, err := s.registry.Get(resource); err == nil {
-		if headers, _, parseErr := ioengine.ParseUpload(format, bytes.NewReader(data)); parseErr == nil && len(headers) > 0 {
-			suggested := ioengine.SuggestMapping(headers, adapter.ImportSchema(), i18n.Normalize(locale))
-			if len(suggested) > 0 {
-				mb, _ := json.Marshal(suggested)
-				if mapped, mapErr := s.q.UpdateImportJobMapping(ctx, db.UpdateImportJobMappingParams{
-					Uuid: updated.Uuid, MappingJson: mb, DefaultsJson: []byte("{}"),
-				}); mapErr == nil {
-					updated = mapped
-				}
+	if parseErr == nil && len(headers) > 0 {
+		suggested := ioengine.SuggestMapping(headers, adapter.ImportSchema(), i18n.Normalize(locale))
+		if len(suggested) > 0 {
+			mb, _ := json.Marshal(suggested)
+			if mapped, mapErr := s.q.UpdateImportJobMapping(ctx, db.UpdateImportJobMappingParams{
+				Uuid: updated.Uuid, MappingJson: mb, DefaultsJson: []byte("{}"),
+			}); mapErr == nil {
+				updated = mapped
 			}
 		}
 	}
@@ -165,7 +171,9 @@ func (s *Service) Upload(ctx context.Context, actorID int64, organizationID *int
 	return mapImportJob(updated), nil
 }
 
-// SampleFile builds localized sample document.
+// Sample builds the localized import template (TEC-757: XLSX v2 with an
+// instructions sheet and drop-down lists). ctx carries the requester's
+// organization for the adapter lookups.
 func (s *Service) Sample(ctx context.Context, resource string, format ioengine.ImportFormat, locale string) ([]byte, string, error) {
 	adapter, err := s.registry.Get(resource)
 	if err != nil {
@@ -179,7 +187,15 @@ func (s *Service) Sample(ctx context.Context, resource string, format ioengine.I
 	if sp, ok := adapter.(interface{ SampleRows() []map[string]any }); ok {
 		rows = sp.SampleRows()
 	}
-	return ioengine.EncodeSample(format, locale, fields, rows)
+	sample := ioengine.Sample{
+		Resource: resource, Fields: fields, Rows: rows, MaxRows: ioengine.MaxImportRows(adapter),
+	}
+	if lk, ok := adapter.(ioengine.SampleLookuper); ok && format == ioengine.ImportXLSX {
+		if sample.Lookups, err = lk.SampleLookups(ctx); err != nil {
+			return nil, "", err
+		}
+	}
+	return ioengine.EncodeSample(format, locale, sample)
 }
 
 // UpdateMapping saves column mapping and defaults.
@@ -218,9 +234,11 @@ func (s *Service) Preview(ctx context.Context, jobUUID uuid.UUID, actorID int64,
 	return mapImportJob(row), nil
 }
 
-// Confirm queues apply task.
-func (s *Service) Confirm(ctx context.Context, jobUUID uuid.UUID, actorID int64, orgID *int64) (ImportJobView, error) {
-	job, err := s.getAccessible(ctx, jobUUID, actorID, orgID)
+// Confirm queues apply task. can reports the caller's permissions: a
+// tenant job is confirmed by its uploader or a holder of the resource's
+// import permission (TEC-757).
+func (s *Service) Confirm(ctx context.Context, jobUUID uuid.UUID, actorID int64, orgID *int64, can func(string) bool) (ImportJobView, error) {
+	job, err := s.getWritable(ctx, jobUUID, actorID, orgID, can)
 	if err != nil {
 		return ImportJobView{}, err
 	}
@@ -340,9 +358,9 @@ func (s *Service) ProcessImport(ctx context.Context, jobID int64) error {
 	return nil
 }
 
-// Rollback reverts an applied import within window.
-func (s *Service) Rollback(ctx context.Context, jobUUID uuid.UUID, actorID int64, orgID *int64) (ImportJobView, error) {
-	job, err := s.getAccessible(ctx, jobUUID, actorID, orgID)
+// Rollback reverts an applied import within window (same rule as Confirm).
+func (s *Service) Rollback(ctx context.Context, jobUUID uuid.UUID, actorID int64, orgID *int64, can func(string) bool) (ImportJobView, error) {
+	job, err := s.getWritable(ctx, jobUUID, actorID, orgID, can)
 	if err != nil {
 		return ImportJobView{}, err
 	}
@@ -420,29 +438,52 @@ func (s *Service) ListJobs(ctx context.Context, actorID int64, admin bool, orgID
 }
 
 func (s *Service) GetJob(ctx context.Context, jobUUID uuid.UUID, actorID int64, admin bool, orgID *int64) (ImportJobView, error) {
-	row, err := s.q.GetImportJobByUUID(ctx, jobUUID)
+	row, err := s.getReadable(ctx, jobUUID, actorID, admin, orgID)
 	if err != nil {
-		return ImportJobView{}, ErrNotFound
-	}
-	if orgID != nil {
-		if !row.OrganizationID.Valid || row.OrganizationID.Int64 != *orgID {
-			return ImportJobView{}, ErrForbidden
-		}
-		return mapImportJob(row), nil
-	}
-	if row.OrganizationID.Valid {
-		return ImportJobView{}, ErrForbidden
-	}
-	if !admin && row.ActorID != actorID {
-		return ImportJobView{}, ErrForbidden
+		return ImportJobView{}, err
 	}
 	return mapImportJob(row), nil
 }
+
+// getReadable loads a job under the job detail rules: a tenant job by its
+// organization, a platform job by its uploader or an admin.
+func (s *Service) getReadable(ctx context.Context, jobUUID uuid.UUID, actorID int64, admin bool, orgID *int64) (db.ImportJob, error) {
+	row, err := s.q.GetImportJobByUUID(ctx, jobUUID)
+	if err != nil {
+		return db.ImportJob{}, ErrNotFound
+	}
+	if orgID != nil {
+		if !row.OrganizationID.Valid || row.OrganizationID.Int64 != *orgID {
+			return db.ImportJob{}, ErrForbidden
+		}
+		return row, nil
+	}
+	if row.OrganizationID.Valid {
+		return db.ImportJob{}, ErrForbidden
+	}
+	if !admin && row.ActorID != actorID {
+		return db.ImportJob{}, ErrForbidden
+	}
+	return row, nil
+}
+
+// Preview row statuses of row-by-row importers (staged importers have
+// their own) and the rows copied into the job summary.
+const (
+	previewValid    = "valid"
+	previewInvalid  = "invalid"
+	previewRowLimit = 1000
+)
 
 func (s *Service) buildPreview(ctx context.Context, job db.ImportJob) (ioengine.PreviewSummary, error) {
 	rows, _, defaults, err := s.loadMappedRows(ctx, job)
 	if err != nil {
 		return ioengine.PreviewSummary{}, err
+	}
+	if adapter, err := s.registry.Get(job.Resource); err == nil {
+		if err := ioengine.CheckRowLimit(adapter, len(rows), i18n.Normalize(job.Locale)); err != nil {
+			return ioengine.PreviewSummary{}, err
+		}
 	}
 	if st, ok := s.staged(job.Resource); ok {
 		ctx, err = s.withJobOrganization(ctx, job)
@@ -451,22 +492,46 @@ func (s *Service) buildPreview(ctx context.Context, job db.ImportJob) (ioengine.
 		}
 		return st.Stage(ctx, jobRef(job), rows, defaults)
 	}
-	summary := ioengine.PreviewSummary{Total: len(rows)}
-	previews := make([]ioengine.RowPreview, 0, min(len(rows), 50))
+	adapter, err := s.registry.Get(job.Resource)
+	if err != nil {
+		return ioengine.PreviewSummary{}, err
+	}
+	ctx, err = s.withJobOrganization(ctx, job)
+	if err != nil {
+		return ioengine.PreviewSummary{}, err
+	}
+	// TEC-757: every row is checked against the schema and the adapter's
+	// RowValidator; the invalid rows are reported before anything applies.
+	loc := i18n.Normalize(job.Locale)
+	fields := adapter.ImportSchema()
+	validator, _ := adapter.(ioengine.RowValidator)
+	summary := ioengine.PreviewSummary{Total: len(rows), Errors: []ioengine.RowError{}}
+	previews := make([]ioengine.RowPreview, 0, min(len(rows), previewRowLimit))
 	for i, row := range rows {
-		ok := true
-		for k, v := range row {
-			if v == nil || fmt.Sprint(v) == "" {
-				_ = k
+		errs := ioengine.ValidateSchema(fields, row, defaults, loc)
+		if validator != nil {
+			more, err := validator.ValidateRow(ctx, row, defaults, loc)
+			if err != nil {
+				return ioengine.PreviewSummary{}, err
 			}
+			errs = append(errs, more...)
 		}
-		if ok {
-			summary.Valid++
-			if len(previews) < 50 {
-				previews = append(previews, ioengine.RowPreview{Index: i + 1, Data: row})
+		status := previewValid
+		if len(errs) > 0 {
+			status = previewInvalid
+			summary.Invalid++
+			for _, e := range errs {
+				e.Index = i + 1
+				summary.Errors = append(summary.Errors, e)
 			}
 		} else {
-			summary.Invalid++
+			summary.Valid++
+		}
+		if len(previews) < previewRowLimit {
+			previews = append(previews, ioengine.RowPreview{
+				Index: i + 1, Data: row, Status: status,
+				StatusLabel: i18n.Translate(loc, "imports.report.status."+status),
+			})
 		}
 	}
 	summary.Rows = previews
@@ -474,21 +539,7 @@ func (s *Service) buildPreview(ctx context.Context, job db.ImportJob) (ioengine.
 }
 
 func (s *Service) loadMappedRows(ctx context.Context, job db.ImportJob) ([]map[string]any, map[string]string, map[string]any, error) {
-	if !job.FileKey.Valid || job.FileKey.String == "" {
-		ext := string(job.Format)
-		key := storage.ImportSourceObjectKey(job.Uuid.String(), ext)
-		job.FileKey = pgtype.Text{String: key, Valid: true}
-	}
-	rc, _, err := s.storage.Download(ctx, job.FileKey.String)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	defer func() { _ = rc.Close() }()
-	data, err := io.ReadAll(rc)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	headers, rawRows, err := ioengine.ParseUpload(ioengine.ImportFormat(job.Format), bytes.NewReader(data))
+	headers, rawRows, err := s.loadSource(ctx, job)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -506,6 +557,14 @@ func (s *Service) loadMappedRows(ctx context.Context, job db.ImportJob) ([]map[s
 	}
 	rows := ioengine.ApplyMapping(rawRows, mapping, defaults)
 	return rows, mapping, defAny, nil
+}
+
+// sourceKey is the storage key of a job's uploaded file.
+func (s *Service) sourceKey(job db.ImportJob) string {
+	if job.FileKey.Valid && job.FileKey.String != "" {
+		return job.FileKey.String
+	}
+	return storage.ImportSourceObjectKey(job.Uuid.String(), job.Format)
 }
 
 func (s *Service) getAccessible(ctx context.Context, jobUUID uuid.UUID, actorID int64, orgID *int64) (db.ImportJob, error) {
@@ -526,6 +585,24 @@ func (s *Service) getAccessible(ctx context.Context, jobUUID uuid.UUID, actorID 
 		return db.ImportJob{}, ErrForbidden
 	}
 	return row, nil
+}
+
+// getWritable loads a job the caller may confirm or roll back: a platform
+// job by its uploader; a tenant job of the organization by its uploader or
+// a holder of the resource's import permission (ioengine.ImportPermissioner).
+func (s *Service) getWritable(ctx context.Context, jobUUID uuid.UUID, actorID int64, orgID *int64, can func(string) bool) (db.ImportJob, error) {
+	job, err := s.getAccessible(ctx, jobUUID, actorID, orgID)
+	if err != nil || orgID == nil || job.ActorID == actorID {
+		return job, err
+	}
+	adapter, err := s.registry.Get(job.Resource)
+	if err != nil {
+		return db.ImportJob{}, ErrForbidden
+	}
+	if p, ok := adapter.(ioengine.ImportPermissioner); ok && p.ImportPermission() != "" && can != nil && can(p.ImportPermission()) {
+		return job, nil
+	}
+	return db.ImportJob{}, ErrForbidden
 }
 
 func (s *Service) withJobOrganization(ctx context.Context, job db.ImportJob) (context.Context, error) {
@@ -591,11 +668,4 @@ func mapImportJob(row db.ImportJob) ImportJobView {
 		Mapping: mapping, Defaults: defaults, PreviewSummary: preview, Error: errMsg,
 		RollbackUntil: rb, AppliedAt: ap, SourceFilename: row.SourceFilename, CreatedAt: row.CreatedAt.Time,
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

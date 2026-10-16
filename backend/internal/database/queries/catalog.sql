@@ -313,3 +313,9 @@ UPDATE products
 SET category_id = sqlc.arg(category_id)
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
 RETURNING *;
+
+-- name: ListActiveProductCategoryNames :many
+-- TEC-757: category drop-down of the product import template.
+SELECT name FROM product_categories
+WHERE brand_id = sqlc.arg(brand_id) AND active
+ORDER BY sort, name, id;

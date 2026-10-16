@@ -13,6 +13,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -515,3 +516,6 @@ func (im *Importer) undoChange(ctx context.Context, q *db.Queries, tx pgx.Tx, c 
 	}
 	return ImportRowUndone, im.svc.vehicleEvent(ctx, tx, c, events.VehicleUpdated, row)
 }
+
+// ImportPermission implements ioengine.ImportPermissioner (TEC-757).
+func (im *Importer) ImportPermission() string { return rbac.PermFleetsManage }
