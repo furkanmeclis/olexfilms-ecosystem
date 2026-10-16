@@ -96,16 +96,18 @@ type reorderBody struct {
 // Warehouses.
 
 type warehouseBody struct {
-	Code    string  `json:"code"`
-	Name    string  `json:"name"`
-	Address *string `json:"address"`
+	Code                     string  `json:"code"`
+	Name                     string  `json:"name"`
+	Address                  *string `json:"address"`
+	RequireLocationPlacement bool    `json:"require_location_placement"`
 }
 
 type warehousePatchBody struct {
-	Code    *string `json:"code"`
-	Name    *string `json:"name"`
-	Address *string `json:"address"`
-	Active  *bool   `json:"active"`
+	Code                     *string `json:"code"`
+	Name                     *string `json:"name"`
+	Address                  *string `json:"address"`
+	Active                   *bool   `json:"active"`
+	RequireLocationPlacement *bool   `json:"require_location_placement"`
 }
 
 // ListWarehouses (GET /v1/warehouse/warehouses?active).
@@ -133,7 +135,7 @@ func (h *Handler) CreateWarehouse(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &b) {
 		return
 	}
-	out, err := h.svc.CreateWarehouse(r.Context(), caller(r), wh.WarehouseInput{Code: b.Code, Name: b.Name, Address: b.Address})
+	out, err := h.svc.CreateWarehouse(r.Context(), caller(r), wh.WarehouseInput{Code: b.Code, Name: b.Name, Address: b.Address, RequireLocationPlacement: b.RequireLocationPlacement})
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -166,7 +168,7 @@ func (h *Handler) UpdateWarehouse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := h.svc.UpdateWarehouse(r.Context(), caller(r), id, wh.WarehousePatch{
-		Code: b.Code, Name: b.Name, Address: b.Address, Active: b.Active,
+		Code: b.Code, Name: b.Name, Address: b.Address, Active: b.Active, RequireLocationPlacement: b.RequireLocationPlacement,
 	})
 	if err != nil {
 		writeError(w, r, err)

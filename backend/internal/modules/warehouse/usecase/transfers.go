@@ -70,7 +70,8 @@ var (
 	ErrTransferUnplaced = errors.New("warehouse: every line needs a target location")
 	// ErrUnitUnavailable: the unit is not on hand in the expected place of
 	// the active organization.
-	ErrUnitUnavailable = errors.New("warehouse: unit is not available here")
+	ErrUnitUnavailable           = errors.New("warehouse: unit is not available here")
+	ErrLocationPlacementRequired = errors.New("warehouse: unit must be placed before transfer")
 	// ErrUnitBusy: the unit is in transit, on another open warehouse
 	// transfer, on an open stock transfer request or reserved by an order.
 	ErrUnitBusy = errors.New("warehouse: unit is held by another operation")
@@ -402,13 +403,30 @@ func (s *WarehouseTransfers) AddTransferLines(ctx context.Context, c EntryCaller
 		if have+int64(len(codes)) > MaxTransferLines {
 			return invalid("barcodes", fmt.Sprintf("a transfer holds at most %d lines", MaxTransferLines))
 		}
+		source, err := q.GetWarehouseByID(ctx, db.GetWarehouseByIDParams{ID: t.FromWarehouseID, OrganizationID: org})
+		if err != nil {
+			return err
+		}
 		for _, code := range codes {
 			u, err := s.serialUnit(ctx, q, c, code)
 			if err != nil {
 				return err
 			}
-			if _, err := s.inSourceWarehouse(ctx, q, u, t); err != nil {
-				return err
+			if source.RequireLocationPlacement && u.Status != string(ledger.StatusPlaced) {
+				return ErrLocationPlacementRequired
+			}
+			// Selection may precede the stock entry; shipping still checks placement.
+			printedHere := u.Status == string(ledger.StatusPrinted) && u.OrganizationID == org
+			if !printedHere {
+				st, err := onHand(ctx, q, u, org)
+				if err != nil {
+					return err
+				}
+				if st.OwnerType != string(ledger.OwnerOrganization) || source.RequireLocationPlacement {
+					if _, err := s.inSourceWarehouse(ctx, q, u, t); err != nil {
+						return err
+					}
+				}
 			}
 			if err := checkFree(ctx, q, u); err != nil {
 				return err
