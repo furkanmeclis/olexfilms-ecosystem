@@ -45,6 +45,10 @@ WHERE e.organization_id = sqlc.arg(organization_id)
   AND (COALESCE(cardinality(sqlc.narg(warehouse_uuids)::uuid[]), 0) = 0
        OR EXISTS (SELECT 1 FROM warehouses fw
                   WHERE fw.id = e.warehouse_id AND fw.uuid = ANY (sqlc.narg(warehouse_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(import_job_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM stock_import_batches ib
+                  JOIN import_jobs ij ON ij.id = ib.import_job_id
+                  WHERE ib.id = e.import_batch_id AND ij.uuid = ANY (sqlc.narg(import_job_uuids)::uuid[])))
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR e.created_at >= sqlc.narg(created_from)::timestamptz)
   AND (sqlc.narg(created_before)::timestamptz IS NULL OR e.created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL
@@ -75,6 +79,10 @@ WHERE e.organization_id = sqlc.arg(organization_id)
   AND (COALESCE(cardinality(sqlc.narg(warehouse_uuids)::uuid[]), 0) = 0
        OR EXISTS (SELECT 1 FROM warehouses fw
                   WHERE fw.id = e.warehouse_id AND fw.uuid = ANY (sqlc.narg(warehouse_uuids)::uuid[])))
+  AND (COALESCE(cardinality(sqlc.narg(import_job_uuids)::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM stock_import_batches ib
+                  JOIN import_jobs ij ON ij.id = ib.import_job_id
+                  WHERE ib.id = e.import_batch_id AND ij.uuid = ANY (sqlc.narg(import_job_uuids)::uuid[])))
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR e.created_at >= sqlc.narg(created_from)::timestamptz)
   AND (sqlc.narg(created_before)::timestamptz IS NULL OR e.created_at < sqlc.narg(created_before)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL
@@ -146,5 +154,10 @@ LIMIT 1;
 -- name: GetUnitBatchUUID :one
 SELECT b.uuid FROM barcode_batches b WHERE b.id = sqlc.arg(id);
 
--- name: GetStockImportBatchUUID :one
-SELECT uuid FROM stock_import_batches WHERE id = sqlc.arg(id);
+-- name: GetStockEntryImportSource :one
+-- TEC-759: the import batch of an import entry with its job and file.
+SELECT b.uuid, b.status, ij.uuid AS import_job_uuid,
+       COALESCE(NULLIF(ij.source_filename, ''), b.source_filename, '')::text AS source_filename
+FROM stock_import_batches b
+LEFT JOIN import_jobs ij ON ij.id = b.import_job_id
+WHERE b.id = sqlc.arg(id);

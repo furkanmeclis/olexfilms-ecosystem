@@ -271,16 +271,32 @@ export function dominantTargetValue(
 }
 
 /**
- * Stock import (TEC-158): "412 units will be added to Merkez Depo stock and
- * one stock entry document is recorded. 23 rows will be skipped."
+ * New rows with a location code, or null when the preview does not list
+ * every new row (the backend caps the preview rows).
+ */
+export function locatedNewRows(
+  summary?: ImportPreviewSummary | null,
+): number | null {
+  const rows = (summary?.rows ?? []).filter((row) => row.status === "new");
+  if (rows.length !== (summary?.counts?.new ?? 0)) return null;
+  return rows.filter((row) => Boolean(row.target?.location_code)).length;
+}
+
+/**
+ * Stock import (TEC-158, TEC-759): "412 units will be added to Merkez Depo
+ * stock and one stock entry document is recorded. 40 of them go straight
+ * to the location in the file. 23 rows will be skipped."
  */
 export const stockConfirmCopy: ImportConfirmBuilder = ({ summary, t, tp }) => {
   const plan = importPlan(summary);
   const target =
     dominantTargetValue(summary, "organization_name") ??
     t("imports.confirm_step.stock_target_fallback");
+  const located = locatedNewRows(summary) ?? 0;
+  const locatedSentence =
+    located > 0 ? ` ${tp("imports.confirm_step.stock_located", located)}` : "";
   return {
-    sentence: `${tp("imports.confirm_step.stock_sentence", plan.importable, { target })}${skippedSentence(plan.skipped, tp)}`,
+    sentence: `${tp("imports.confirm_step.stock_sentence", plan.importable, { target })}${locatedSentence}${skippedSentence(plan.skipped, tp)}`,
     action: tp("imports.confirm_step.stock_action", plan.importable),
   };
 };

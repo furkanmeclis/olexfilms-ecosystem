@@ -27,12 +27,16 @@ const eodPdf = vi.hoisted(() => ({ downloadEodPdf: vi.fn() }));
 const state = vi.hoisted(() => ({
   grants: new Set<string>(),
   orgType: "center",
+  modules: ["warehouse", "stock"],
 }));
 const captured = vi.hoisted(() => ({
   tables: [] as Record<string, unknown>[],
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => nav }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => nav,
+  useParams: () => ({ slug: "acme" }),
+}));
 vi.mock("next/link", () => ({
   default: ({
     href,
@@ -45,6 +49,7 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
     locale: "en",
     t: (key: string) => key,
+    tp: (key: string) => key,
     format: {
       timeZone: "Europe/Istanbul",
       number: (v: number) => String(v),
@@ -61,6 +66,13 @@ vi.mock("@/hooks/use-active-organization", () => ({
     uuid: "org-1",
     slug: "acme",
     type: state.orgType,
+  }),
+}));
+vi.mock("@/features/modules/hooks/use-features", () => ({
+  useFeature: (_slug: string, key: string) => ({
+    enabled: state.modules.includes(key),
+    isLoading: false,
+    isError: false,
   }),
 }));
 vi.mock("@/providers/dialog-provider", () => ({ useDialogs: () => dialogs }));
@@ -127,6 +139,7 @@ beforeEach(() => {
     Permission.StockRead,
   ]);
   state.orgType = "center";
+  state.modules = ["warehouse", "stock"];
   dialogs.confirm.mockResolvedValue(true);
   api.listWarehouses.mockResolvedValue({
     items: [
@@ -265,6 +278,38 @@ describe("StockEntriesPage (TEC-376 DataTable)", () => {
     state.grants.delete(Permission.WarehouseWrite);
     await render(m, createElement(StockEntriesPage, { slug: "acme" }));
     expect(rowActions(entry()).map((a) => a.id)).toEqual(["view"]);
+  });
+
+  // TEC-759: "Import from Excel" — center with stock.import (and
+  // tenant.imports.read) and the stock module only.
+  it("shows the Excel import to the center with stock.import only", async () => {
+    const importButton = () =>
+      m.container.querySelector('[data-testid="stock-import-open"]');
+    state.grants.add(Permission.StockImport);
+    state.grants.add(Permission.TenantImportsRead);
+    await render(m, createElement(StockEntriesPage, { slug: "acme" }));
+    expect(importButton()?.textContent).toBe("warehouse.entries.import");
+
+    state.orgType = "distributor";
+    await render(m, createElement(StockEntriesPage, { slug: "acme" }));
+    expect(importButton()).toBeNull();
+    expect(
+      m.container.querySelector('[data-testid="entry-new"]'),
+    ).not.toBeNull();
+
+    state.orgType = "dealer";
+    await render(m, createElement(StockEntriesPage, { slug: "acme" }));
+    expect(importButton()).toBeNull();
+
+    state.orgType = "center";
+    state.modules = ["warehouse"];
+    await render(m, createElement(StockEntriesPage, { slug: "acme" }));
+    expect(importButton()).toBeNull();
+
+    state.modules = ["warehouse", "stock"];
+    state.grants.delete(Permission.StockImport);
+    await render(m, createElement(StockEntriesPage, { slug: "acme" }));
+    expect(importButton()).toBeNull();
   });
 });
 

@@ -11,6 +11,7 @@ import {
   importTableRows,
   importTargetParts,
   isPartiallyUndone,
+  locatedNewRows,
 } from "@/features/io/lib/import-summary";
 import type { ImportPreviewSummary } from "@/features/io/types";
 
@@ -188,9 +189,47 @@ describe("confirmation copy", () => {
     };
     const copy = importConfirmCopy("tenant.stock.units", { summary, t, tp });
     expect(copy.sentence).toBe(
-      "1 unit will be added to the Merkez Depo stock and a single stock entry document will be created.",
+      "1 unit will be added to the Merkez Depo stock and a single stock entry document will be created. 1 of them will be placed on the location given in the file.",
     );
     expect(copy.action).toBe("Import 1 unit");
+  });
+
+  // TEC-759: rows with a location code, said when the preview lists every
+  // new row (the backend caps the preview rows).
+  it("stock (tr/en): says how many units go to their location", () => {
+    const row = (index: number, location?: string) => ({
+      index,
+      data: { barcode: `OLX-${index}`, product_sku: "PPF-GLOSS" },
+      status: "new" as const,
+      target: {
+        organization_name: "Merkez Depo",
+        ...(location ? { location_code: location } : {}),
+      },
+    });
+    const summary: ImportPreviewSummary = {
+      total: 5,
+      valid: 3,
+      invalid: 2,
+      counts: { new: 3, duplicate: 1, invalid: 1 },
+      rows: [row(1, "A-01"), row(2, "A-02"), row(3)],
+    };
+    expect(locatedNewRows(summary)).toBe(2);
+    const trCopy = importConfirmCopy("tenant.stock.units", {
+      summary,
+      ...translator(tr as Catalog),
+    });
+    expect(trCopy.sentence).toBe(
+      "3 birim Merkez Depo stoğuna eklenecek ve tek bir stok girişi belgesi oluşacak. Bunlardan 2 birim dosyadaki konuma yerleşecek. 2 satır atlanacak.",
+    );
+    const enCopy = importConfirmCopy("tenant.stock.units", {
+      summary: { ...summary, rows: [row(1, "A-01"), row(2), row(3)] },
+      ...translator(en as Catalog),
+    });
+    expect(enCopy.sentence).toBe(
+      "3 units will be added to the Merkez Depo stock and a single stock entry document will be created. 1 of them will be placed on the location given in the file. 2 rows will be skipped.",
+    );
+    // A capped preview does not know every new row: no location sentence.
+    expect(locatedNewRows(stockPreview)).toBeNull();
   });
 
   it("generic staged: created, updated and skipped", () => {

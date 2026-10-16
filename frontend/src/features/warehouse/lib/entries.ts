@@ -1,3 +1,4 @@
+import { Permission } from "@/config/permissions";
 import type {
   StockEntry,
   StockEntryLine,
@@ -58,4 +59,32 @@ export function canConfirm(entry: StockEntry): boolean {
     lines.length > 0 &&
     lines.every((l) => Boolean(l.location))
   );
+}
+
+/**
+ * Stock import from Excel (TEC-759): center only (K14) with stock.import,
+ * the stock module on and tenant.imports.read (the wizard previews,
+ * confirms and undoes on /v1/tenant/imports).
+ */
+export function canImportStock(
+  access: { isCenter: boolean; can: (permission: string) => boolean },
+  stockModule: boolean,
+): boolean {
+  return (
+    access.isCenter &&
+    stockModule &&
+    access.can(Permission.StockImport) &&
+    access.can(Permission.TenantImportsRead)
+  );
+}
+
+/**
+ * Lines a partial import undo left in stock (they moved after the import),
+ * or null when the import entry was not partially undone.
+ */
+export function importLinesKept(entry: StockEntry): number | null {
+  if (entry.mode !== "import" || entry.import_status !== "partially_undone") {
+    return null;
+  }
+  return (entry.lines ?? []).filter((l) => !l.undone).length;
 }

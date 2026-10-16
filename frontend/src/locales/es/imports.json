@@ -186,5 +186,8 @@
   "fields.stock.quantity": "Cantidad",
   "fields.stock.meters": "Metros",
   "fields.stock.location_code": "Código de ubicación",
-  "confirm_step.sentence_end": "."
+  "confirm_step.sentence_end": ".",
+  "resources.tenant.stock.units": "Unidades de stock",
+  "confirm_step.stock_located_one": "{{count}} de ellas se colocará en la ubicación indicada en el archivo.",
+  "confirm_step.stock_located_other": "{{count}} de ellas se colocarán en la ubicación indicada en el archivo."
 }
