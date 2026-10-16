@@ -153,3 +153,32 @@ func RegisterTransferRoutes(
 	mux.Handle("POST /v1/warehouse/transfers/{uuid}/complete", write(h.Complete))
 	mux.Handle("POST /v1/warehouse/transfers/{uuid}/cancel", write(h.Cancel))
 }
+
+// RegisterMemberRoutes mounts the TEC-769 user <-> warehouse membership.
+// Listing members and the caller's own warehouse context need
+// warehouse.read; adding or removing a member is staff administration and
+// needs members.write (a warehouse-restricted user with warehouse.write
+// cannot widen its own reach).
+func RegisterMemberRoutes(
+	mux *http.ServeMux,
+	h *whhandler.Members,
+	checker middleware.FeatureChecker,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	module := middleware.RequireFeature(checker, features.ModuleWarehouse)
+	scoped := func(fn http.HandlerFunc, slug string) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, slug))
+	}
+	read := func(fn http.HandlerFunc) http.Handler { return scoped(fn, rbac.PermWarehouseRead) }
+	manage := func(fn http.HandlerFunc) http.Handler { return scoped(fn, rbac.PermMembersWrite) }
+
+	mux.Handle("GET /v1/warehouse/warehouses/{uuid}/members", read(h.List))
+	mux.Handle("POST /v1/warehouse/warehouses/{uuid}/members", manage(h.Add))
+	mux.Handle("DELETE /v1/warehouse/warehouses/{uuid}/members/{user_uuid}", manage(h.Remove))
+	mux.Handle("GET /v1/warehouse/my-warehouses", read(h.Mine))
+	mux.Handle("PUT /v1/warehouse/my-warehouses/default", read(h.SetDefault))
+}

@@ -1054,6 +1054,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-207: end-of-day reports (manual run + PDF export job on worker-docs).
 	warehousemodule.RegisterEODRoutes(mux, warehousehandler.NewEOD(eodSvc, eodPDF, exportSvc),
 		featureSvc, tokens, loader, deps.Queries)
+	// TEC-769: user <-> warehouse membership and the caller's warehouse context.
+	warehousemodule.RegisterMemberRoutes(mux, warehousehandler.NewMembers(warehouseusecase.NewMembers(deps.DB, deps.Queries)),
+		featureSvc, tokens, loader, deps.Queries)
 	// TEC-235: mobile mirrors (/v1/mobile/warehouse/*) of the scan, count and
 	// transfer routes for distributor staff; same use cases and scope.
 	warehousemodule.RegisterMobileRoutes(mux, warehousemodule.MobileHandlers{
@@ -1063,6 +1066,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			outbox.NewStore(deps.DB, deps.Queries), warehouseusecase.NewScanner(deps.Queries, sysSvc))),
 		Transfers: warehousehandler.NewTransfers(warehouseusecase.NewWarehouseTransfers(deps.DB, deps.Queries,
 			outbox.NewStore(deps.DB, deps.Queries))),
+		Entries: warehousehandler.NewEntries(warehouseusecase.NewStockEntries(deps.DB, deps.Queries,
+			outbox.NewStore(deps.DB, deps.Queries))),
+		Members: warehousehandler.NewMembers(warehouseusecase.NewMembers(deps.DB, deps.Queries)),
 	}, featureSvc, tokens, loader, deps.Queries, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
 		settingshandler.NewSystem(sysSvc), tokens, loader)

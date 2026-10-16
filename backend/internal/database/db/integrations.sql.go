@@ -943,6 +943,65 @@ func (q *Queries) LockOrderOutbound(ctx context.Context, id int64) (OrderOutboun
 	return i, err
 }
 
+const searchWarehouseLocationsForMap = `-- name: SearchWarehouseLocationsForMap :many
+SELECT l.id, l.uuid, l.organization_id, l.parent_id, l.code, l.name, l.active, l.created_at, l.updated_at, l.warehouse_id, l.room_id, l.type, l.full_code, l.sort_order FROM warehouse_locations l
+WHERE l.organization_id = $1 AND l.warehouse_id = $2 AND l.active
+  AND ($3::text IS NULL
+       OR l.full_code ILIKE '%' || $3::text || '%'
+       OR l.name ILIKE '%' || $3::text || '%')
+ORDER BY l.full_code NULLS LAST, l.id
+LIMIT $4
+`
+
+type SearchWarehouseLocationsForMapParams struct {
+	OrganizationID int64       `json:"organization_id"`
+	WarehouseID    pgtype.Int8 `json:"warehouse_id"`
+	Q              pgtype.Text `json:"q"`
+	RowLimit       int32       `json:"row_limit"`
+}
+
+// TEC-769: bin picker of the Glorian location map (active locations of one
+// warehouse, matched on the full code or the name).
+func (q *Queries) SearchWarehouseLocationsForMap(ctx context.Context, arg SearchWarehouseLocationsForMapParams) ([]WarehouseLocation, error) {
+	rows, err := q.db.Query(ctx, searchWarehouseLocationsForMap,
+		arg.OrganizationID,
+		arg.WarehouseID,
+		arg.Q,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WarehouseLocation{}
+	for rows.Next() {
+		var i WarehouseLocation
+		if err := rows.Scan(
+			&i.ID,
+			&i.Uuid,
+			&i.OrganizationID,
+			&i.ParentID,
+			&i.Code,
+			&i.Name,
+			&i.Active,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.WarehouseID,
+			&i.RoomID,
+			&i.Type,
+			&i.FullCode,
+			&i.SortOrder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setIntegrationConnectionAPIKey = `-- name: SetIntegrationConnectionAPIKey :one
 UPDATE integration_connections
 SET api_key_enc = $1

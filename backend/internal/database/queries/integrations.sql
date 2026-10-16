@@ -248,3 +248,14 @@ RETURNING *;
 SELECT EXISTS (
     SELECT 1 FROM integration_connections WHERE brand_id = sqlc.arg(brand_id)
 )::bool;
+
+-- name: SearchWarehouseLocationsForMap :many
+-- TEC-769: bin picker of the Glorian location map (active locations of one
+-- warehouse, matched on the full code or the name).
+SELECT l.* FROM warehouse_locations l
+WHERE l.organization_id = sqlc.arg(organization_id) AND l.warehouse_id = sqlc.arg(warehouse_id) AND l.active
+  AND (sqlc.narg(q)::text IS NULL
+       OR l.full_code ILIKE '%' || sqlc.narg(q)::text || '%'
+       OR l.name ILIKE '%' || sqlc.narg(q)::text || '%')
+ORDER BY l.full_code NULLS LAST, l.id
+LIMIT sqlc.arg(row_limit);

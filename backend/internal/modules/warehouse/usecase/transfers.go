@@ -225,6 +225,9 @@ func (s *WarehouseTransfers) Move(ctx context.Context, c EntryCaller, in MoveInp
 		if err != nil {
 			return err
 		}
+		if err := requireMember(ctx, q, c.Principal, org, loc.WarehouseID.Int64); err != nil {
+			return err
+		}
 		out = MoveResult{Location: locView(loc), Units: make([]MovedUnit, 0, len(codes))}
 		target := ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: loc.ID, OrgID: org}
 		for _, code := range codes {
@@ -304,6 +307,9 @@ func (s *WarehouseTransfers) CreateTransfer(ctx context.Context, c EntryCaller, 
 	}
 	if from.ID == to.ID {
 		return WarehouseTransfer{}, invalid("to_warehouse_uuid", "must differ from the source warehouse; use a move inside one warehouse")
+	}
+	if err := requireMember(ctx, s.q, c.Principal, org, from.ID); err != nil {
+		return WarehouseTransfer{}, err
 	}
 	var toLoc pgtype.Int8
 	if in.ToLocationUUID != nil {
@@ -393,7 +399,7 @@ func (s *WarehouseTransfers) AddTransferLines(ctx context.Context, c EntryCaller
 	}
 	var t db.WarehouseTransfer
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		if t, err = s.lock(ctx, q, org, id, TransferStatusDraft); err != nil {
+		if t, err = s.lockFor(ctx, q, c, sideSource, org, id, TransferStatusDraft); err != nil {
 			return err
 		}
 		have, err := q.CountWarehouseTransferLines(ctx, t.ID)
@@ -441,7 +447,7 @@ func (s *WarehouseTransfers) DeleteTransferLine(ctx context.Context, c EntryCall
 	}
 	var t db.WarehouseTransfer
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		if t, err = s.lock(ctx, q, org, id, TransferStatusDraft); err != nil {
+		if t, err = s.lockFor(ctx, q, c, sideSource, org, id, TransferStatusDraft); err != nil {
 			return err
 		}
 		n, err := q.DeleteWarehouseTransferLine(ctx, db.DeleteWarehouseTransferLineParams{Uuid: lineID, TransferID: t.ID})
@@ -480,7 +486,7 @@ func (s *WarehouseTransfers) PlaceTransferLines(ctx context.Context, c EntryCall
 	}
 	var t db.WarehouseTransfer
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		if t, err = s.lock(ctx, q, org, id, TransferStatusDraft, TransferStatusInTransit); err != nil {
+		if t, err = s.lockFor(ctx, q, c, sideEither, org, id, TransferStatusDraft, TransferStatusInTransit); err != nil {
 			return err
 		}
 		loc, err := targetLocation(ctx, q, org, t.ToWarehouseID, "location_uuid", in.LocationUUID, code)
@@ -517,7 +523,7 @@ func (s *WarehouseTransfers) Ship(ctx context.Context, c EntryCaller, id uuid.UU
 	}
 	var t db.WarehouseTransfer
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
-		if t, err = s.lock(ctx, q, org, id, TransferStatusDraft); err != nil {
+		if t, err = s.lockFor(ctx, q, c, sideSource, org, id, TransferStatusDraft); err != nil {
 			return err
 		}
 		lines, err := q.ListWarehouseTransferLines(ctx, t.ID)
@@ -583,7 +589,7 @@ func (s *WarehouseTransfers) Complete(ctx context.Context, c EntryCaller, id uui
 	}
 	var t db.WarehouseTransfer
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
-		if t, err = s.lock(ctx, q, org, id, TransferStatusInTransit); err != nil {
+		if t, err = s.lockFor(ctx, q, c, sideTarget, org, id, TransferStatusInTransit); err != nil {
 			return err
 		}
 		fallback := t.ToLocationID
@@ -672,7 +678,7 @@ func (s *WarehouseTransfers) Cancel(ctx context.Context, c EntryCaller, id uuid.
 	}
 	var t db.WarehouseTransfer
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
-		if t, err = s.lock(ctx, q, org, id, TransferStatusDraft, TransferStatusInTransit); err != nil {
+		if t, err = s.lockFor(ctx, q, c, sideEither, org, id, TransferStatusDraft, TransferStatusInTransit); err != nil {
 			return err
 		}
 		restored := 0
@@ -764,6 +770,9 @@ func (s *WarehouseTransfers) PlaceOrder(ctx context.Context, c EntryCaller, orde
 			}
 		default:
 			return invalid("location_uuid", "is required (the order names no buyer location)")
+		}
+		if err := requireMember(ctx, q, c.Principal, org, loc.WarehouseID.Int64); err != nil {
+			return err
 		}
 		units, err := q.ListOrderItemUnitsByOrder(ctx, o.ID)
 		if err != nil {
@@ -1141,6 +1150,33 @@ func pickTransferLines(ctx context.Context, q *db.Queries, lines []db.WarehouseT
 		}
 	}
 	return ids, nil
+}
+
+// Membership side of a transfer write (TEC-769): the source warehouse
+// prepares and ships, the target completes, either may place or cancel.
+type transferSide int
+
+const (
+	sideSource transferSide = iota
+	sideTarget
+	sideEither
+)
+
+// lockFor locks a transfer the caller may change.
+func (s *WarehouseTransfers) lockFor(ctx context.Context, q *db.Queries, c EntryCaller, side transferSide, org int64, id uuid.UUID, statuses ...string) (db.WarehouseTransfer, error) {
+	t, err := s.lock(ctx, q, org, id, statuses...)
+	if err != nil {
+		return t, err
+	}
+	switch side {
+	case sideSource:
+		err = requireMember(ctx, q, c.Principal, org, t.FromWarehouseID)
+	case sideTarget:
+		err = requireMember(ctx, q, c.Principal, org, t.ToWarehouseID)
+	default:
+		err = requireAnyMember(ctx, q, c.Principal, org, t.FromWarehouseID, t.ToWarehouseID)
+	}
+	return t, err
 }
 
 func (s *WarehouseTransfers) lock(ctx context.Context, q *db.Queries, org int64, id uuid.UUID, statuses ...string) (db.WarehouseTransfer, error) {

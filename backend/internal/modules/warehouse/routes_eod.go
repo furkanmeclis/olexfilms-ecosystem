@@ -37,4 +37,7 @@ func RegisterEODRoutes(
 	mux.Handle("POST /v1/warehouse/eod-reports/{uuid}/pdf", read(h.RequestPDF))
 	mux.Handle("GET /v1/warehouse/eod-report-pdfs/{uuid}", read(h.GetPDF))
 	mux.Handle("GET /v1/warehouse/eod-report-pdfs/{uuid}/download", read(h.DownloadPDF))
+	// TEC-769: organization warehouse settings (end-of-day cutoff).
+	mux.Handle("GET /v1/warehouse/settings", read(h.Settings))
+	mux.Handle("PUT /v1/warehouse/settings", write(h.UpdateSettings))
 }
