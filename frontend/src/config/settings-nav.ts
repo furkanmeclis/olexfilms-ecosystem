@@ -25,6 +25,7 @@ import {
   Settings2,
   Shield,
   SlidersHorizontal,
+  Truck,
   Upload,
   Warehouse,
 } from "lucide-react";
@@ -388,6 +389,17 @@ export function tenantSettingsNav(slug: string): NavCatalog {
             icon: Cpu,
             permission: permissions.measurements.devicesManage,
             feature: "measurements",
+          },
+          {
+            // TEC-768: the seller's delivery method catalog (same gates as
+            // /v1/delivery-methods writes; buyers only pick from it).
+            id: "delivery-methods",
+            titleKey: "orders.nav_delivery_methods",
+            href: routes.tenant.orders.deliveryMethods(slug),
+            icon: Truck,
+            permission: permissions.orders.ship,
+            orgTypes: ["center", "distributor"],
+            feature: "orders",
           },
         ],
       },

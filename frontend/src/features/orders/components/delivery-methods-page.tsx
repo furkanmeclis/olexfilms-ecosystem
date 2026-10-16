@@ -418,8 +418,8 @@ export function DeliveryMethodsPage({ slug }: { slug: string }) {
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.tenant.home(slug) },
         {
-          label: t("orders.list.title"),
-          href: routes.tenant.orders.list(slug),
+          label: t("layout.nav_settings"),
+          href: routes.tenant.settings.root(slug),
         },
         { label: t("orders.delivery_methods.title") },
       ]}

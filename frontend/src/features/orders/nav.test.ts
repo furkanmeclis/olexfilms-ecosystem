@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { tenantNav } from "@/config/nav";
+import { tenantSettingsNav } from "@/config/settings-nav";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
@@ -12,7 +13,11 @@ function visibleIds(granted: string[], type = "dealer") {
     canAny: (ps: string[]) => ps.some((x) => granted.includes(x)),
     org: { type, role: "owner", features: ["orders", "catalog"] },
   };
-  return tenantNav("acme").groups.flatMap((group) =>
+  const groups = [
+    ...tenantNav("acme").groups,
+    ...tenantSettingsNav("acme").groups,
+  ];
+  return groups.flatMap((group) =>
     visibleNavItems(group, access).map((item) => item.id),
   );
 }
@@ -51,15 +56,22 @@ describe("tenant nav: orders (TEC-170)", () => {
 });
 
 describe("tenant nav: delivery methods (TEC-768)", () => {
+  it("lives in the settings area (TEC-771)", () => {
+    const item = tenantSettingsNav("acme")
+      .groups.find((g) => g.id === "operations")
+      ?.items.find((i) => i.id === "delivery-methods");
+    expect(item?.href).toBe("/t/acme/settings/delivery-methods");
+    const main = tenantNav("acme").groups.flatMap((g) => g.items);
+    expect(main.some((i) => i.href === item?.href)).toBe(false);
+  });
+
   it("is shown to a seller with orders.ship", () => {
     const ship = [Permission.OrdersRead, Permission.OrdersShip];
-    expect(visibleIds(ship, "center")).toContain("orders-delivery-methods");
-    expect(visibleIds(ship, "distributor")).toContain(
-      "orders-delivery-methods",
-    );
-    expect(visibleIds(ship, "dealer")).not.toContain("orders-delivery-methods");
+    expect(visibleIds(ship, "center")).toContain("delivery-methods");
+    expect(visibleIds(ship, "distributor")).toContain("delivery-methods");
+    expect(visibleIds(ship, "dealer")).not.toContain("delivery-methods");
     expect(visibleIds([Permission.OrdersRead], "center")).not.toContain(
-      "orders-delivery-methods",
+      "delivery-methods",
     );
   });
 });

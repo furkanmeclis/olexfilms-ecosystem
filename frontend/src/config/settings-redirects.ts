@@ -44,6 +44,7 @@ const TENANT_MOVES: Array<[string, string]> = [
   ["showcase", "showcase"],
   ["photo-standard", "photo-standard"],
   ["measurements/devices", "measurement-devices"],
+  ["orders/delivery-methods", "delivery-methods"],
   ["ai-usage", "ai-usage"],
   ["imports", "imports"],
   ["exports", "exports"],
