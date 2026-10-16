@@ -78,7 +78,7 @@ export function ScanPage({ slug }: { slug: string }) {
 
       {latest ? (
         latest.result ? (
-          <ScanResultCard result={latest.result} />
+          <ScanResultCard result={latest.result} slug={slug} />
         ) : (
           <Card data-testid="scan-error">
             <CardContent className="pt-6">

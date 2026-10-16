@@ -30,8 +30,6 @@
   "count.expected": "Gözlənilən",
   "count.expected_title": "Gözlənilən stok",
   "count.expected_totals": "{{units}} seriyalı vahid · {{quantity}} sabit barkodlu ədəd",
-  "count.export": "CSV",
-  "count.export_failed": "CSV yüklənə bilmədi.",
   "count.fixed_quantity": "Sabit barkodlu ədəd",
   "count.last_scan": "{{code}} × {{quantity}} sayıldı.",
   "count.meters_hint": "Rulonun ölçülmüş uzunluğu (isteğe bağlı).",
@@ -438,5 +436,15 @@
   "entry_import.policy.conflicts_only.title": "Ziddiyyətləri ötür",
   "entry_import.policy.conflicts_only.description": "Uyğun barkodları bağla, ziddiyyətləri ötür.",
   "entry_import.confirm_sentence": "{{linked}} barkod bağlanacaq; {{created}} vahid yaradılacaq ({{placed}} gözdə yerləşdiriləcək). {{skipped}} sətir ötürüləcək.",
-  "entry_import.confirm_action": "{{count}} uyğun sətri idxal et ({{skipped}} ötürüldü)"
+  "entry_import.confirm_action": "{{count}} uyğun sətri idxal et ({{skipped}} ötürüldü)",
+  "export.count_report": "Sayım hesabatını ixrac et",
+  "export.count_report_xlsx": "Sayım hesabatı (Excel)",
+  "export.summary": "Xülasə hesabatı (məhsul üzrə)",
+  "export.summary_all_products": "Xülasə: bütün məhsullar",
+  "export.summary_product_search": "Məhsul axtar",
+  "export.summary_product_none": "Məhsul tapılmadı.",
+  "export.locations_all": "Bütün yerləri ixrac et",
+  "export.locations_room": "Bu otağın yerlərini ixrac et",
+  "export.location_stock": "Yer stokunu ixrac et",
+  "export.unit_history": "Hərəkət tarixçəsini ixrac et"
 }

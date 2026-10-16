@@ -58,5 +58,6 @@
   "widget.quantity_value": "{{quantity}} adet",
   "widget.truncated": "Özet ilk {{limit}} ürünü kapsar.",
   "filters.product_search": "Ürün adı veya SKU",
-  "filters.product_none": "Bu stokta ürün yok."
+  "filters.product_none": "Bu stokta ürün yok.",
+  "export_products": "Ürün bazında stoğu dışa aktar"
 }

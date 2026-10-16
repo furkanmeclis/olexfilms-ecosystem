@@ -748,6 +748,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		pricingusecase.NewRecommendedImporter(recommendedSvc),
 		pricingusecase.NewDisciplineExportAdapter(recommendedSvc, pricingusecase.ParseDisciplineFilter),
 	)
+	// TEC-761: warehouse screen exports (warehouse and stock lists).
+	whExporter := warehouseusecase.NewExporter(deps.DB, deps.Queries)
+	stockExporter := stockusecase.NewStockExporter(deps.DB, stockusecase.New(deps.Queries))
+	ioReg.Register(whExporter.Adapters()...)
+	ioReg.Register(stockExporter.Adapters()...)
 	exportSvc := exportusecase.New(deps.Queries, deps.Storage, ioReg, deps.Queue, notifSvc, activityRec, log)
 	exportSvc.SetDocumentPDF(pdfClient)
 	servicesH.WithExports(exportSvc)
@@ -757,6 +762,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	stockForecastH.WithExports(exportSvc)
 	warrantymodule.RegisterListExportRoutes(mux, deps.Queries, tokens, loader, featureSvc,
 		warrantyhandler.NewListExport(exportSvc)) // TEC-377
+	warehousemodule.RegisterExportRoutes(mux, warehousehandler.NewExports(whExporter, exportSvc),
+		featureSvc, tokens, loader, deps.Queries) // TEC-761
+	stockmodule.RegisterExportRoutes(mux, stockhandler.NewStockExports(stockExporter, exportSvc),
+		featureSvc, tokens, loader, deps.Queries) // TEC-761
 	// TEC-392 (F4-01j): AI first triage of warranty claims (status event →
 	// warranty_claim:ai_triage on the default queue; manual re-trigger).
 	triageProvider := deps.LLM

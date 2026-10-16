@@ -30,8 +30,6 @@
   "count.expected": "Atteso",
   "count.expected_title": "Stock atteso",
   "count.expected_totals": "{{units}} unità seriali · {{quantity}} pezzi a codice fisso",
-  "count.export": "CSV",
-  "count.export_failed": "Impossibile scaricare il CSV.",
   "count.fixed_quantity": "Pezzi a codice fisso",
   "count.last_scan": "Contato {{code}} × {{quantity}}.",
   "count.meters_hint": "Lunghezza misurata di un rotolo (facoltativa).",
@@ -438,5 +436,15 @@
   "entry_import.policy.conflicts_only.title": "Salta i conflitti",
   "entry_import.policy.conflicts_only.description": "Collega i codici utilizzabili e salta i conflitti.",
   "entry_import.confirm_sentence": "Saranno collegati {{linked}} codici; create {{created}} unità ({{placed}} collocate). Saranno saltate {{skipped}} righe.",
-  "entry_import.confirm_action": "Importa {{count}} righe corrispondenti ({{skipped}} saltate)"
+  "entry_import.confirm_action": "Importa {{count}} righe corrispondenti ({{skipped}} saltate)",
+  "export.count_report": "Esporta il rapporto di inventario",
+  "export.count_report_xlsx": "Rapporto di inventario (Excel)",
+  "export.summary": "Rapporto riepilogativo (per prodotto)",
+  "export.summary_all_products": "Riepilogo: tutti i prodotti",
+  "export.summary_product_search": "Cerca prodotti",
+  "export.summary_product_none": "Nessun prodotto trovato.",
+  "export.locations_all": "Esporta tutte le ubicazioni",
+  "export.locations_room": "Esporta le ubicazioni di questa stanza",
+  "export.location_stock": "Esporta la giacenza dell'ubicazione",
+  "export.unit_history": "Esporta lo storico movimenti"
 }

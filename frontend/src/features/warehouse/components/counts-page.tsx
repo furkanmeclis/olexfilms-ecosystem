@@ -23,7 +23,7 @@ import {
   useServerListState,
   type EntityRowAction,
 } from "@/components/entity";
-import { createColumn } from "@/components/tables";
+import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -65,17 +65,19 @@ import {
 } from "@/features/warehouse/lib/counts";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import {
-  countExportPath,
   warehouseKeys,
   warehouseService,
   type CountListQuery,
   type StockCount,
+  warehouseExportPaths,
 } from "@/features/warehouse/services/warehouse.service";
-import { useDebounce } from "@/hooks/use-debounce";
 import {
-  platformDownloadFile,
-  triggerBrowserDownload,
-} from "@/lib/api/platform-form-request";
+  listExportQuery,
+  useExportSelection,
+  WarehouseExportMenu,
+} from "@/features/warehouse/components/warehouse-export";
+import { useDebounce } from "@/hooks/use-debounce";
+import { exportsService } from "@/features/io/services/exports.service";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -118,7 +120,7 @@ function hasReport(c: StockCount): boolean {
  * (warehouse, method, blind / guided, scope).
  */
 export function CountsPage({ slug }: { slug: string }) {
-  const { t, format } = useLocale();
+  const { t, format, locale } = useLocale();
   const router = useRouter();
   const qc = useQueryClient();
   const { confirm } = useDialogs();
@@ -151,17 +153,20 @@ export function CountsPage({ slug }: { slug: string }) {
       });
       if (ok) runAction({ uuid: count.uuid, action: "cancel" });
     };
-    const downloadCsv = async (count: StockCount) => {
+    // TEC-761: the count report is an export job (XLSX) of the export center.
+    const exportReport = async (count: StockCount) => {
       try {
-        const { blob, filename } = await platformDownloadFile(
-          countExportPath(count.uuid),
+        await exportsService.request(
+          warehouseExportPaths.countReport(count.uuid),
+          { format: "xlsx", query: {}, locale },
         );
-        triggerBrowserDownload(blob, filename ?? `count-${count.uuid}.csv`);
+        appToast.success(t("exports.toast.queued"));
       } catch {
-        appToast.error(t("warehouse.count.export_failed"));
+        appToast.error(t("exports.toast.failed"));
       }
     };
     return [
+      createSelectColumnDef<StockCount>(),
       createColumn<StockCount>({
         id: "warehouse",
         accessorFn: (c) => c.warehouse.name,
@@ -296,9 +301,9 @@ export function CountsPage({ slug }: { slug: string }) {
           if (hasReport(count)) {
             items.push({
               id: "export",
-              label: t("warehouse.count.export"),
+              label: t("warehouse.export.count_report_xlsx"),
               icon: FileDown,
-              onSelect: () => void downloadCsv(count),
+              onSelect: () => void exportReport(count),
             });
           }
           if (canWrite && canCancelCount(count)) {
@@ -320,6 +325,7 @@ export function CountsPage({ slug }: { slug: string }) {
     canWrite,
     confirm,
     format,
+    locale,
     router,
     runAction,
     slug,
@@ -336,6 +342,13 @@ export function CountsPage({ slug }: { slug: string }) {
     persistKey: COUNTS_PERSIST_KEY,
   });
   const query: CountListQuery = listState.params;
+  // TEC-761: the export keeps the list filters, q, sort and the selection.
+  const selection = useExportSelection();
+  const exportQuery = listExportQuery(
+    listState.filterParams,
+    listState.params,
+    selection.selected,
+  );
   const list = useQuery({
     queryKey: warehouseKeys.counts(query),
     queryFn: () => warehouseService.listCounts(query),
@@ -379,10 +392,14 @@ export function CountsPage({ slug }: { slug: string }) {
         emptyTitle={t("warehouse.counts.empty_title")}
         emptyDescription={t("warehouse.counts.empty_description")}
         rowCount={list.data?.total ?? 0}
-        state={listState.tableState}
+        state={{
+          ...listState.tableState,
+          rowSelection: selection.rowSelection,
+          onRowSelectionChange: selection.onRowSelectionChange,
+        }}
         features={{
           persistKey: COUNTS_PERSIST_KEY,
-          rowSelection: false,
+          rowSelection: true,
           viewMode: true,
         }}
         renderGridItem={(c) => (
@@ -407,10 +424,18 @@ export function CountsPage({ slug }: { slug: string }) {
           </div>
         )}
         toolbarExtra={
-          <EntityToolbar
-            onRefresh={() => void list.refetch()}
-            refreshDisabled={list.isFetching}
-          />
+          <>
+            <WarehouseExportMenu
+              slug={slug}
+              exportPath={warehouseExportPaths.counts}
+              query={exportQuery}
+              testId="counts-export"
+            />
+            <EntityToolbar
+              onRefresh={() => void list.refetch()}
+              refreshDisabled={list.isFetching}
+            />
+          </>
         }
       />
     </WarehouseShell>

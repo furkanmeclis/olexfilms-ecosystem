@@ -30,8 +30,6 @@
   "count.expected": "Esperado",
   "count.expected_title": "Stock esperado",
   "count.expected_totals": "{{units}} unidades con serie · {{quantity}} piezas de código fijo",
-  "count.export": "CSV",
-  "count.export_failed": "No se pudo descargar el CSV.",
   "count.fixed_quantity": "Piezas con código fijo",
   "count.last_scan": "Contado {{code}} × {{quantity}}.",
   "count.meters_hint": "Longitud medida de un rollo (opcional).",
@@ -438,5 +436,15 @@
   "entry_import.policy.conflicts_only.title": "Omitir conflictos",
   "entry_import.policy.conflicts_only.description": "Vincular códigos aptos y omitir conflictos.",
   "entry_import.confirm_sentence": "Se vincularán {{linked}} códigos; se crearán {{created}} unidades ({{placed}} ubicadas). Se omitirán {{skipped}} filas.",
-  "entry_import.confirm_action": "Importar {{count}} filas coincidentes ({{skipped}} omitidas)"
+  "entry_import.confirm_action": "Importar {{count}} filas coincidentes ({{skipped}} omitidas)",
+  "export.count_report": "Exportar el informe de recuento",
+  "export.count_report_xlsx": "Informe de recuento (Excel)",
+  "export.summary": "Informe resumen (por producto)",
+  "export.summary_all_products": "Resumen: todos los productos",
+  "export.summary_product_search": "Buscar productos",
+  "export.summary_product_none": "No se encontraron productos.",
+  "export.locations_all": "Exportar todas las ubicaciones",
+  "export.locations_room": "Exportar las ubicaciones de esta sala",
+  "export.location_stock": "Exportar el stock de la ubicación",
+  "export.unit_history": "Exportar el historial de movimientos"
 }

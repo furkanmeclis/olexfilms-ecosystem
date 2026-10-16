@@ -30,8 +30,6 @@
   "count.expected": "المتوقع",
   "count.expected_title": "المخزون المتوقع",
   "count.expected_totals": "{{units}} وحدة تسلسلية · {{quantity}} قطعة بباركود ثابت",
-  "count.export": "CSV",
-  "count.export_failed": "تعذر تنزيل ملف CSV.",
   "count.fixed_quantity": "قطع بباركود ثابت",
   "count.last_scan": "تم عد {{code}} × {{quantity}}.",
   "count.meters_hint": "الطول المقاس للفافة (اختياري).",
@@ -438,5 +436,15 @@
   "entry_import.policy.conflicts_only.title": "تخطي التعارضات",
   "entry_import.policy.conflicts_only.description": "ربط الرموز الصالحة وتخطي التعارضات.",
   "entry_import.confirm_sentence": "سيتم ربط {{linked}} رمزًا وإنشاء {{created}} وحدة (توضع {{placed}} في المواقع). سيتم تخطي {{skipped}} صفوف.",
-  "entry_import.confirm_action": "استيراد {{count}} صفوف مطابقة (تم تخطي {{skipped}})"
+  "entry_import.confirm_action": "استيراد {{count}} صفوف مطابقة (تم تخطي {{skipped}})",
+  "export.count_report": "تصدير تقرير الجرد",
+  "export.count_report_xlsx": "تقرير الجرد (Excel)",
+  "export.summary": "تقرير ملخص (حسب المنتج)",
+  "export.summary_all_products": "الملخص: جميع المنتجات",
+  "export.summary_product_search": "البحث عن المنتجات",
+  "export.summary_product_none": "لم يتم العثور على منتجات.",
+  "export.locations_all": "تصدير جميع المواقع",
+  "export.locations_room": "تصدير مواقع هذه الغرفة",
+  "export.location_stock": "تصدير مخزون الموقع",
+  "export.unit_history": "تصدير سجل الحركة"
 }

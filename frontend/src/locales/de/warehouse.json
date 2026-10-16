@@ -30,8 +30,6 @@
   "count.expected": "Soll",
   "count.expected_title": "Sollbestand",
   "count.expected_totals": "{{units}} Serieneinheiten · {{quantity}} Stück mit festem Barcode",
-  "count.export": "CSV",
-  "count.export_failed": "Die CSV konnte nicht heruntergeladen werden.",
   "count.fixed_quantity": "Stück mit festem Barcode",
   "count.last_scan": "{{code}} × {{quantity}} gezählt.",
   "count.meters_hint": "Gemessene Rollenlänge (optional).",
@@ -438,5 +436,15 @@
   "entry_import.policy.conflicts_only.title": "Konflikte überspringen",
   "entry_import.policy.conflicts_only.description": "Geeignete Barcodes verknüpfen und Konflikte überspringen.",
   "entry_import.confirm_sentence": "{{linked}} Barcodes werden verknüpft; {{created}} Einheiten werden erstellt ({{placed}} in Lagerplätzen). {{skipped}} Zeilen werden übersprungen.",
-  "entry_import.confirm_action": "{{count}} passende Zeilen importieren ({{skipped}} übersprungen)"
+  "entry_import.confirm_action": "{{count}} passende Zeilen importieren ({{skipped}} übersprungen)",
+  "export.count_report": "Inventurbericht exportieren",
+  "export.count_report_xlsx": "Inventurbericht (Excel)",
+  "export.summary": "Sammelbericht (nach Produkt)",
+  "export.summary_all_products": "Sammelbericht: alle Produkte",
+  "export.summary_product_search": "Produkte suchen",
+  "export.summary_product_none": "Keine Produkte gefunden.",
+  "export.locations_all": "Alle Lagerplätze exportieren",
+  "export.locations_room": "Lagerplätze dieses Raums exportieren",
+  "export.location_stock": "Lagerplatzbestand exportieren",
+  "export.unit_history": "Bewegungsverlauf exportieren"
 }

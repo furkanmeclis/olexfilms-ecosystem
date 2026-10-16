@@ -2192,6 +2192,9 @@ type Querier interface {
 	// organizations (inside the scope above). Sort: docs/list-contract.md, keys
 	// from customers usecase customersSortSpec.
 	ListOrganizationCustomers(ctx context.Context, arg ListOrganizationCustomersParams) ([]ListOrganizationCustomersRow, error)
+	// Every typed location (aisle, shelf, bin) of the organization with its
+	// warehouse and room; callers resolve the parents from the same set.
+	ListOrganizationLocationsForExport(ctx context.Context, organizationID int64) ([]ListOrganizationLocationsForExportRow, error)
 	ListOrganizationMemberOptions(ctx context.Context, organizationID int64) ([]ListOrganizationMemberOptionsRow, error)
 	ListOrganizationMembers(ctx context.Context, organizationID int64) ([]ListOrganizationMembersRow, error)
 	ListOrganizationMembersByUserID(ctx context.Context, arg ListOrganizationMembersByUserIDParams) ([]ListOrganizationMembersByUserIDRow, error)
@@ -2346,6 +2349,9 @@ type Querier interface {
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
 	// TEC-211: product refs of the brand for the catalog export price columns.
 	ListProductsByUUIDs(ctx context.Context, arg ListProductsByUUIDsParams) ([]ListProductsByUUIDsRow, error)
+	// Product names of an export filter (the warehouse side is brand
+	// independent, K20).
+	ListProductsByUUIDsAnyBrand(ctx context.Context, uuids []uuid.UUID) ([]ListProductsByUUIDsAnyBrandRow, error)
 	// Search indexer only (full reindex across brands).
 	ListProductsForIndex(ctx context.Context) ([]Product, error)
 	ListProvincesByCountry(ctx context.Context, countryID int64) ([]ListProvincesByCountryRow, error)
@@ -2540,6 +2546,10 @@ type Querier interface {
 	// usecase EntrySort. status sorts by flow rank; warehouse by name (import
 	// entries have none and come last). q: note, warehouse name or code.
 	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]StockEntry, error)
+	// TEC-761: warehouse exports (I/O engine). Read only; every query is bound
+	// to one organization (the export job organization).
+	// The lines of the given entries with their unit, product and location.
+	ListStockEntryExportLines(ctx context.Context, arg ListStockEntryExportLinesParams) ([]ListStockEntryExportLinesRow, error)
 	ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error)
 	ListStockForecastHistory(ctx context.Context, arg ListStockForecastHistoryParams) ([]StockForecast, error)
 	ListStockForecastNetworkInputs(ctx context.Context, arg ListStockForecastNetworkInputsParams) ([]ListStockForecastNetworkInputsRow, error)
@@ -2670,6 +2680,8 @@ type Querier interface {
 	// Scope.
 	// Typed locations of a warehouse, optionally one room.
 	ListWarehouseScopeLocationIDs(ctx context.Context, arg ListWarehouseScopeLocationIDsParams) ([]int64, error)
+	// The lines of the given transfers with their unit, product and locations.
+	ListWarehouseTransferExportLines(ctx context.Context, arg ListWarehouseTransferExportLinesParams) ([]ListWarehouseTransferExportLinesRow, error)
 	ListWarehouseTransferLines(ctx context.Context, transferID int64) ([]WarehouseTransferLine, error)
 	// TEC-375: list contract (docs/list-contract.md), keys from warehouse
 	// usecase TransferSort. status sorts by flow rank. q: transfer no, note.
@@ -3845,6 +3857,12 @@ type Querier interface {
 	// expiry stamp is cleared with the status change (the voided_at stamp and
 	// the activity log keep the history).
 	VoidWarrantyWithReason(ctx context.Context, arg VoidWarrantyWithReasonParams) (Warranty, error)
+	// Transfer aggregate report: per product, the transfers and units of the
+	// organization's warehouse transfers matching the list filters (status,
+	// from / to warehouse, created range, q) and the product filter. shipped:
+	// left the source and not restored; delivered: received in the target;
+	// in_transit: shipped, neither received nor restored.
+	WarehouseTransferProductSummary(ctx context.Context, arg WarehouseTransferProductSummaryParams) ([]WarehouseTransferProductSummaryRow, error)
 	WarrantyClaimFailureRateByLot(ctx context.Context, arg WarrantyClaimFailureRateByLotParams) ([]WarrantyClaimFailureRateByLotRow, error)
 	WarrantyClaimFailureRateByProduct(ctx context.Context, arg WarrantyClaimFailureRateByProductParams) ([]WarrantyClaimFailureRateByProductRow, error)
 	WarrantyClaimPartsReport(ctx context.Context, arg WarrantyClaimPartsReportParams) ([]WarrantyClaimPartsReportRow, error)

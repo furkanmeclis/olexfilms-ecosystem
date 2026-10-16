@@ -30,8 +30,6 @@
   "count.expected": "Beklenen",
   "count.expected_title": "Beklenen stok",
   "count.expected_totals": "{{units}} seri birim · {{quantity}} sabit barkodlu adet",
-  "count.export": "CSV",
-  "count.export_failed": "CSV indirilemedi.",
   "count.fixed_quantity": "Sabit barkodlu adet",
   "count.last_scan": "{{code}} × {{quantity}} sayıldı.",
   "count.meters_hint": "Rulonun ölçülen uzunluğu (isteğe bağlı).",
@@ -438,5 +436,15 @@
   "entry_import.policy.conflicts_only.title": "Çakışan barkodları atla",
   "entry_import.policy.conflicts_only.description": "Uygun mevcut barkodları bağla, çakışanları atla.",
   "entry_import.confirm_sentence": "{{linked}} barkod bağlanacak; {{created}} yeni birim oluşturulacak ({{placed}} tanesi göze yerleşecek). {{skipped}} satır atlanacak.",
-  "entry_import.confirm_action": "Eşleşen {{count}} satırı içeri al ({{skipped}} atlandı)"
+  "entry_import.confirm_action": "Eşleşen {{count}} satırı içeri al ({{skipped}} atlandı)",
+  "export.count_report": "Sayım raporunu dışa aktar",
+  "export.count_report_xlsx": "Sayım raporu (Excel)",
+  "export.summary": "Toplu rapor (ürün bazında)",
+  "export.summary_all_products": "Toplu rapor: tüm ürünler",
+  "export.summary_product_search": "Ürün ara",
+  "export.summary_product_none": "Ürün bulunamadı.",
+  "export.locations_all": "Tüm konumları dışa aktar",
+  "export.locations_room": "Bu odanın konumlarını dışa aktar",
+  "export.location_stock": "Konum stoğunu dışa aktar",
+  "export.unit_history": "Hareket geçmişini dışa aktar"
 }
