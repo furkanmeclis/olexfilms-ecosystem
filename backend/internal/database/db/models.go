@@ -3675,6 +3675,23 @@ type WarehouseLocation struct {
 	SortOrder      int32              `json:"sort_order"`
 }
 
+type WarehouseLocationImportNode struct {
+	JobID  int64  `json:"job_id"`
+	Kind   string `json:"kind"`
+	NodeID int64  `json:"node_id"`
+	Depth  int32  `json:"depth"`
+	Undone bool   `json:"undone"`
+}
+
+type WarehouseLocationImportRow struct {
+	JobID     int64       `json:"job_id"`
+	RowNumber int32       `json:"row_number"`
+	Path      []byte      `json:"path"`
+	Status    string      `json:"status"`
+	ErrorCode pgtype.Text `json:"error_code"`
+	Target    pgtype.Text `json:"target"`
+}
+
 type WarehouseTransfer struct {
 	ID                int64              `json:"id"`
 	Uuid              uuid.UUID          `json:"uuid"`
