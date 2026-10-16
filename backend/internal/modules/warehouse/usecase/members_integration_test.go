@@ -51,7 +51,7 @@ func TestWarehouseMembershipLimitsWrites(t *testing.T) {
 	w2, loc2 := e.location(t, e.dist, "MB")
 	user := e.orgUser(t, e.dist, "staff")
 	uc := e.userCaller(e.dist, user)
-	scanCaller := wh.ScanCaller{Caller: uc.Caller, Principal: uc.Principal}
+	scanCaller := wh.ScanCaller(uc)
 
 	// No membership: every warehouse is writable.
 	mine, err := members.Mine(e.ctx, uc)

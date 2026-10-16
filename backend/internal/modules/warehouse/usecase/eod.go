@@ -31,6 +31,11 @@ import (
 // once (kind auto); POST /v1/warehouse/eod-reports regenerates a day on
 // demand (kind manual). The PDF is an export job rendered on worker-docs
 // from the stored summary (eod_pdf.go).
+//
+// TEC-769: with an end-of-day cutoff (warehouse_settings, e.g. 18:00) the
+// business day D covers [D-1 cutoff, D cutoff) and the cron writes it once
+// the cutoff has passed (EODPeriod, EODClosedDay); no cutoff keeps the
+// calendar day above.
 
 // Report kinds (eod_reports.kind).
 const (
