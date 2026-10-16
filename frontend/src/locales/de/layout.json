@@ -87,5 +87,18 @@
   "nav_service_catalog": "Leistungskatalog",
   "nav_service_subscriptions": "Service-Abonnements",
   "nav_service_subscription_cancels": "Kündigungsanträge",
-  "nav_review_questions": "Bewertungsfragen"
+  "nav_review_questions": "Bewertungsfragen",
+  "settings_description": "Verwalten Sie hier Organisations- und Systemeinstellungen.",
+  "settings_menu": "Einstellungsmenü",
+  "settings_empty": "Es gibt keine Einstellungen, die Sie sehen können.",
+  "settings_group_access": "Zugriff und Sicherheit",
+  "settings_group_integrations": "Integrationen",
+  "settings_group_system": "Module und System",
+  "settings_group_catalogs": "Kataloge",
+  "settings_group_regional": "Regionen und Preise",
+  "settings_group_templates": "Vorlagen",
+  "settings_group_data": "Daten und Überwachung",
+  "settings_group_organization": "Organisation",
+  "settings_group_operations": "Betrieb",
+  "settings_group_ai": "KI"
 }

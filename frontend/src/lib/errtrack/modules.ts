@@ -91,6 +91,8 @@ const SCOPE_SEGMENTS = new Set([
   "portal",
   "t",
   "hooks",
+  // TEC-771: /platform/settings/{page}, /t/{slug}/settings/{page}.
+  "settings",
 ]);
 
 /**

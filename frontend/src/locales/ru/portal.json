@@ -398,5 +398,13 @@
   "dealer_page.form_rate_limited": "Слишком много запросов. Попробуйте позже.",
   "dealer_page.form_failed": "Запрос не отправлен. Попробуйте снова.",
   "dealer_page.form_success_title": "Запрос получен",
-  "dealer_page.form_success_body": "Дилер скоро свяжется с вами."
+  "dealer_page.form_success_body": "Дилер скоро свяжется с вами.",
+  "nav.profile": "Мой профиль",
+  "profile.title": "Мой профиль",
+  "profile.saved": "Ваши данные сохранены.",
+  "profile.failed": "Не удалось сохранить ваши данные.",
+  "profile.links_title": "Ссылки аккаунта",
+  "profile.preferences_hint": "Уведомления по e-mail, в приложении и о кампаниях",
+  "profile.contracts_hint": "Подписанные вами договоры и их PDF",
+  "profile.phone_login_hint": "Вы входите по коду, отправленному на телефон; пароль не нужен."
 }

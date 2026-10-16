@@ -66,6 +66,8 @@ var ruCatalog = map[string]string{
 	"users.status.pending":                             "Ожидает",
 	"export.document":                                  "Экспорт",
 	"export.generated_at":                              "Сформировано",
+	"letterhead.tax_office":                            "Налоговая",
+	"letterhead.tax_number":                            "ИНН",
 	"export.title.platform.users":                      "Экспорт пользователей",
 	"export.title.platform.organizations":              "Экспорт организаций",
 	"export.title.platform.roles":                      "Экспорт ролей",

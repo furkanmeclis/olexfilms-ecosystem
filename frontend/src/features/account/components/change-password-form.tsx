@@ -16,7 +16,22 @@ import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { authService } from "@/services/auth.service";
 
-export function ChangePasswordForm() {
+type ChangePassword = (body: {
+  current_password: string;
+  new_password: string;
+}) => Promise<unknown>;
+
+/**
+ * Password change. The panel signs out to its login afterwards; the portal
+ * (fleet accounts, TEC-771) passes its own call and sign-out.
+ */
+export function ChangePasswordForm({
+  change,
+  afterChange,
+}: {
+  change?: ChangePassword;
+  afterChange?: () => Promise<void>;
+} = {}) {
   const { t } = useLocale();
   const { logout } = useAuth();
   const [pending, setPending] = useState(false);
@@ -27,11 +42,15 @@ export function ChangePasswordForm() {
     setFormError(null);
     setPending(true);
     try {
-      await authService.changePassword({
+      await (change ?? authService.changePassword)({
         current_password: values.current_password,
         new_password: values.new_password,
       });
       toast.success(t("auth.password.success"));
+      if (afterChange) {
+        await afterChange();
+        return;
+      }
       try {
         await logout();
       } catch {

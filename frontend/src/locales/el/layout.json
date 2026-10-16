@@ -87,5 +87,18 @@
   "nav_service_catalog": "Κατάλογος υπηρεσιών",
   "nav_service_subscriptions": "Συνδρομές υπηρεσιών",
   "nav_service_subscription_cancels": "Αιτήματα ακύρωσης",
-  "nav_review_questions": "Ερωτήσεις αξιολόγησης"
+  "nav_review_questions": "Ερωτήσεις αξιολόγησης",
+  "settings_description": "Διαχειριστείτε εδώ τις ρυθμίσεις του οργανισμού και του συστήματος.",
+  "settings_menu": "Μενού ρυθμίσεων",
+  "settings_empty": "Δεν υπάρχουν ρυθμίσεις που μπορείτε να δείτε.",
+  "settings_group_access": "Πρόσβαση και ασφάλεια",
+  "settings_group_integrations": "Ενσωματώσεις",
+  "settings_group_system": "Ενότητες και σύστημα",
+  "settings_group_catalogs": "Κατάλογοι",
+  "settings_group_regional": "Περιοχές και τιμές",
+  "settings_group_templates": "Πρότυπα",
+  "settings_group_data": "Δεδομένα και παρακολούθηση",
+  "settings_group_organization": "Οργανισμός",
+  "settings_group_operations": "Λειτουργίες",
+  "settings_group_ai": "ΤΝ"
 }

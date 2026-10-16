@@ -320,7 +320,7 @@ test("center imports opening stock from Excel, opens the entry, undoes", async (
   await expect(source).toContainText("opening-stock.csv");
   await expect(page.getByTestId("entry-import-job")).toHaveAttribute(
     "href",
-    `/t/${WAREHOUSE_SLUG}/imports/${JOB}`,
+    `/t/${WAREHOUSE_SLUG}/settings/imports/${JOB}`,
   );
   await expect(page.getByTestId("entry-import-partial")).toContainText(
     "Units that moved after the import were not undone and stay in stock (1)",

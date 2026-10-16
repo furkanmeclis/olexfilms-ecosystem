@@ -663,7 +663,7 @@ describe("Warehouse list exports (TEC-761)", () => {
     await render(m, createElement(StockEntriesPage, { slug: "acme" }));
     let entries = menu("/v1/warehouse/stock-entries/export");
     expect(entries.formats).toEqual(["xlsx", "csv", "pdf"]);
-    expect(entries.jobsHref).toBe("/t/acme/exports");
+    expect(entries.jobsHref).toBe("/t/acme/settings/exports");
     expect(entries.query?.uuid).toBeUndefined();
     expect(column("__select")).toBeDefined();
 

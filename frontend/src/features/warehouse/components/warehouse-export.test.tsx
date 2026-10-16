@@ -61,7 +61,7 @@ describe("ScanResultCard exports (TEC-761)", () => {
     expect(last()?.exportPath).toBe(
       "/v1/stock/units/by-barcode/OLX%201/export",
     );
-    expect(last()?.jobsHref).toBe("/t/acme/exports");
+    expect(last()?.jobsHref).toBe("/t/acme/settings/exports");
   });
 
   it("a location exports its stock; without slug nothing", async () => {

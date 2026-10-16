@@ -1,7 +1,8 @@
 "use client";
 
+import { Settings } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import { usePathname } from "next/navigation";
 
 import { AppSidebarLogo } from "@/components/brand";
 import type { AppLayoutVariant } from "@/components/layout/app-layout";
@@ -14,11 +15,10 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { cmsNav, platformNav, tenantNav } from "@/config/nav";
-import { routes } from "@/config/routes";
-import { useEnabledFeatures } from "@/features/modules/hooks/use-features";
+import { useShellNav } from "@/components/layout/use-shell-nav";
 import { NavEngine } from "@/features/nav-engine";
-import { useActiveOrganization } from "@/hooks/use-active-organization";
+import { visibleNavItems } from "@/features/nav-engine/lib/access";
+import { useLocale } from "@/providers/locale-provider";
 
 export function AppSidebar({
   variant = "platform",
@@ -27,30 +27,23 @@ export function AppSidebar({
   variant?: AppLayoutVariant;
   tenantSlug?: string;
 }) {
-  const catalog = useMemo(() => {
-    if (variant === "tenant" && tenantSlug) return tenantNav(tenantSlug);
-    if (variant === "cms") return cmsNav;
-    return platformNav;
-  }, [tenantSlug, variant]);
+  const { t } = useLocale();
+  const pathname = usePathname();
+  const nav = useShellNav(variant, tenantSlug);
 
-  const activeOrg = useActiveOrganization(
-    variant === "tenant" ? tenantSlug : null,
+  // TEC-771: one entry into the settings area, shown when any of its
+  // pages is open to the user.
+  const settingsHref = nav.settingsHref;
+  const hasSettings = Boolean(
+    settingsHref &&
+    nav.settings?.groups.some(
+      (group) => visibleNavItems(group, nav.access).length > 0,
+    ),
   );
-  const features = useEnabledFeatures(variant === "tenant" ? tenantSlug : null);
-  const navOrg = useMemo(
-    () =>
-      activeOrg
-        ? { type: activeOrg.type, role: activeOrg.role, features }
-        : null,
-    [activeOrg, features],
+  const settingsActive = Boolean(
+    settingsHref &&
+    (pathname === settingsHref || pathname.startsWith(`${settingsHref}/`)),
   );
-
-  const homeHref =
-    variant === "platform"
-      ? routes.platform.home
-      : variant === "tenant" && tenantSlug
-        ? routes.tenant.home(tenantSlug)
-        : routes.cms.home;
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -58,7 +51,7 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href={homeHref}>
+              <Link href={nav.homeHref}>
                 <AppSidebarLogo />
               </Link>
             </SidebarMenuButton>
@@ -66,9 +59,26 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <NavEngine catalog={catalog} homeHref={homeHref} org={navOrg} />
+      <NavEngine catalog={nav.main} homeHref={nav.homeHref} org={nav.org} />
 
-      <SidebarFooter />
+      <SidebarFooter>
+        {hasSettings && settingsHref ? (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={settingsActive}
+                tooltip={t("layout.nav_settings")}
+              >
+                <Link href={settingsHref} data-testid="sidebar-settings">
+                  <Settings />
+                  <span>{t("layout.nav_settings")}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        ) : null}
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

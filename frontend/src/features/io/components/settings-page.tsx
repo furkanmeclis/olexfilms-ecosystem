@@ -70,8 +70,8 @@ export function SettingsPage({ scope = "platform", slug }: SettingsPageProps) {
     tenant && slug ? routes.tenant.home(slug) : routes.platform.home;
   const settingsHref =
     tenant && slug
-      ? routes.tenant.settings.root(slug)
-      : routes.platform.settings.root;
+      ? routes.tenant.settings.exportDefaults(slug)
+      : routes.platform.settings.exportDefaults;
 
   return (
     <EntityPage

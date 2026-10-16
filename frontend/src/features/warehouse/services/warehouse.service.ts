@@ -18,6 +18,9 @@ export type WarehouseLocationInput = Schemas["WarehouseLocationInput"];
 export type WarehouseLocationPatch = Schemas["WarehouseLocationPatch"];
 export type WarehouseScanResult = Schemas["WarehouseScanResult"];
 export type StockProduct = Schemas["StockProduct"];
+export type WarehouseGenerateInput = Schemas["WarehouseGenerateInput"];
+export type WarehouseGenerateLevel = Schemas["WarehouseGenerateLevel"];
+export type WarehouseGenerateResult = Schemas["WarehouseGenerateResult"];
 export type StockEntry = Schemas["StockEntry"];
 export type StockEntryLine = Schemas["StockEntryLine"];
 export type StockEntryInput = Schemas["StockEntryInput"];
@@ -202,6 +205,21 @@ export const warehouseService = {
       "DELETE",
       `/v1/warehouse/locations/${enc(uuid)}`,
     );
+  },
+
+  /** One tree level grid under a room or a location (TEC-764 wizard). */
+  generateLocations(body: WarehouseGenerateInput) {
+    return platformRequest<WarehouseGenerateResult>(
+      "POST",
+      "/v1/warehouse/locations/generate",
+      { body },
+    );
+  },
+  /** sort_order = position in `uuids` (TEC-764 drag and drop). */
+  reorder(kind: "warehouses" | "rooms" | "locations", uuids: string[]) {
+    return platformRequest<void>("POST", `/v1/warehouse/${kind}/reorder`, {
+      body: { uuids },
+    });
   },
 
   // --- Universal scan (TEC-203) ---------------------------------------------

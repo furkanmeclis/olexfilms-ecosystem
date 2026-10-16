@@ -1,12 +1,11 @@
 import type { AppLayoutVariant } from "@/components/layout/app-layout";
-import { cmsNav, platformNav, tenantNav } from "@/config/nav";
+import { shellNav, shellNavCatalogs } from "@/config/shell-nav";
 import {
   isNavEntryVisible,
   type NavAccess,
 } from "@/features/nav-engine/lib/access";
 import { resolveSearchIcon } from "@/features/search-engine/lib/icons";
 import type { PaletteItem } from "@/features/search-engine/types";
-import type { NavCatalog } from "@/features/nav-engine/types";
 import { createElement } from "react";
 
 export function buildNavPageItems(
@@ -16,15 +15,11 @@ export function buildNavPageItems(
   tenantSlug?: string,
   hiddenItemIds: ReadonlySet<string> = new Set(),
 ): PaletteItem[] {
-  const catalog: NavCatalog =
-    variant === "tenant" && tenantSlug
-      ? tenantNav(tenantSlug)
-      : variant === "cms"
-        ? cmsNav
-        : platformNav;
+  // TEC-771: settings pages are searchable like the sidebar ones.
+  const catalogs = shellNavCatalogs(shellNav(variant, tenantSlug));
   const items: PaletteItem[] = [];
 
-  for (const group of catalog.groups) {
+  for (const group of catalogs.flatMap((catalog) => catalog.groups)) {
     if (!isNavEntryVisible(group, access)) continue;
     const groupLabel = t(group.labelKey);
     for (const item of group.items) {

@@ -1,21 +1,41 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Boxes, FolderTree, Pencil, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+} from "@tanstack/react-query";
+import {
+  Boxes,
+  FolderTree,
+  LayoutGrid,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Permission } from "@/config/permissions";
+import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { LabelButton } from "@/features/warehouse/components/label-button";
+import { LocationGenerateWizard } from "@/features/warehouse/components/location-generate-wizard";
 import { LocationImportButton } from "@/features/warehouse/components/location-import-button";
+import { LocationStockSheet } from "@/features/warehouse/components/location-stock-sheet";
 import { LocationTree } from "@/features/warehouse/components/location-tree";
 import {
   NodeForm,
   type NodeKind,
 } from "@/features/warehouse/components/node-form";
+import {
+  SortableArea,
+  SortableGroup,
+  SortableRow,
+} from "@/features/warehouse/components/sortable";
 import {
   useWarehouseAccess,
   WarehouseShell,
@@ -23,11 +43,13 @@ import {
 import { WarehouseExportMenu } from "@/features/warehouse/components/warehouse-export";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import type { NodeFormValues } from "@/features/warehouse/lib/forms";
+import { withSortOrder } from "@/features/warehouse/lib/reorder";
 import {
   allowedChildTypes,
   branchUuids,
   buildLocationTree,
   filterLocationTree,
+  findNode,
   type LocationNode,
 } from "@/features/warehouse/lib/tree";
 import {
@@ -61,7 +83,9 @@ type Panel =
 /**
  * Warehouse > Locations (TEC-201): warehouses of the active organization,
  * their rooms and the aisle > shelf > bin tree of the selected room, with
- * create / edit / delete and the QR label sheet (TEC-202).
+ * create / edit / delete and the QR label sheet (TEC-202). TEC-764 adds the
+ * bulk generation wizard, drag and drop ordering of warehouses, rooms and
+ * sibling locations, and the stock sheet of a selected bin.
  */
 export function LocationTreePage({ slug }: { slug: string }) {
   const { t } = useLocale();
@@ -77,6 +101,13 @@ export function LocationTreePage({ slug }: { slug: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+  // TEC-764: bulk wizard (parent null = room root) and the bin stock sheet.
+  const [bulk, setBulk] = useState<{ parent: LocationNode | null } | null>(
+    null,
+  );
+  const [stockLocation, setStockLocation] = useState<LocationNode | null>(null);
+  const org = useActiveOrganization(slug);
+  const canReadStock = access.can(Permission.StockRead);
 
   const warehouses = useQuery({
     queryKey: warehouseKeys.warehouses,
@@ -215,6 +246,62 @@ export function LocationTreePage({ slug }: { slug: string }) {
     },
   });
 
+  // Optimistic reorder (TEC-764): the cached list takes the new order at
+  // once and goes back to the snapshot when the server refuses it.
+  type Sortable = { uuid: string; sort_order: number };
+  const reorder = useMutation({
+    mutationFn: ({
+      kind,
+      order,
+    }: {
+      kind: "warehouses" | "rooms" | "locations";
+      key: QueryKey;
+      order: string[];
+    }) => warehouseService.reorder(kind, order),
+    onMutate: async ({ key, order }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<{ items: Sortable[] }>(key);
+      if (prev) {
+        qc.setQueryData(key, {
+          ...prev,
+          items: withSortOrder(prev.items, order),
+        });
+      }
+      return { prev };
+    },
+    onError: (err, { key }, ctx) => {
+      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
+      appToast.error(warehouseErrorMessage(err, t, t("warehouse.sort.failed")));
+    },
+    onSettled: (_d, _e, { key }) => qc.invalidateQueries({ queryKey: key }),
+  });
+
+  const reorderLocations = (parentUuid: string | null, order: string[]) => {
+    if (!roomUuid) return;
+    reorder.mutate({
+      kind: "locations",
+      key: warehouseKeys.locations(roomUuid),
+      order,
+    });
+    if (parentUuid) setExpanded((prev) => new Set(prev).add(parentUuid));
+  };
+
+  const baseCode = [currentWarehouse?.code, currentRoom?.code]
+    .filter(Boolean)
+    .join("-");
+
+  const onGenerated = async () => {
+    if (!roomUuid) return;
+    await qc.invalidateQueries({
+      queryKey: warehouseKeys.locations(roomUuid),
+    });
+    const data = qc.getQueryData<{ items: WarehouseLocation[] }>(
+      warehouseKeys.locations(roomUuid),
+    );
+    // Show the new grid: open every branch of the room.
+    setExpanded(new Set(branchUuids(buildLocationTree(data?.items ?? []))));
+  };
+
   const askDelete = async (kind: NodeKind, uuid: string, code: string) => {
     const ok = await confirmDelete({
       title: t("warehouse.delete.title", { code }),
@@ -236,6 +323,22 @@ export function LocationTreePage({ slug }: { slug: string }) {
     const childTypes = allowedChildTypes(node.type);
     return (
       <>
+        {canWrite && childTypes.length > 0 ? (
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label={t("warehouse.bulk.open_under", { code: node.code })}
+            title={t("warehouse.bulk.open_under", { code: node.code })}
+            data-testid="location-bulk-under"
+            // The full node: under a filter `node` holds only the matches.
+            onClick={() =>
+              setBulk({ parent: findNode(tree, node.uuid) ?? node })
+            }
+          >
+            <LayoutGrid className="size-4" />
+          </Button>
+        ) : null}
         <LabelButton
           path={locationLabelsPath({ locations: [node.uuid] })}
           filename={`${node.full_code}.pdf`}
@@ -298,9 +401,7 @@ export function LocationTreePage({ slug }: { slug: string }) {
     if (p.kind === "room") return currentWarehouse?.code;
     if (p.kind === "location") {
       if (p.mode === "edit") return p.target.full_code;
-      return p.parent
-        ? p.parent.full_code
-        : [currentWarehouse?.code, currentRoom?.code].filter(Boolean).join("-");
+      return p.parent ? p.parent.full_code : baseCode;
     }
     return undefined;
   };
@@ -412,35 +513,47 @@ export function LocationTreePage({ slug }: { slug: string }) {
                   {t("warehouse.locations.no_warehouses")}
                 </p>
               ) : (
-                warehouseList.map((w) => (
-                  <SideRow
-                    key={w.uuid}
-                    active={w.uuid === warehouseUuid}
-                    code={w.code}
-                    name={w.name}
-                    inactive={!w.active}
-                    testId="warehouse-row"
-                    onSelect={() => {
-                      setWarehouseUuid(w.uuid);
-                      setRoomUuid(null);
-                    }}
-                    onEdit={
-                      canWrite
-                        ? () =>
-                            setPanel({
-                              kind: "warehouse",
-                              mode: "edit",
-                              target: w,
-                            })
-                        : undefined
-                    }
-                    onDelete={
-                      canWrite
-                        ? () => void askDelete("warehouse", w.uuid, w.code)
-                        : undefined
-                    }
-                  />
-                ))
+                <SortableSideList
+                  ids={warehouseList.map((w) => w.uuid)}
+                  disabled={!canWrite}
+                  onMove={(order) =>
+                    reorder.mutate({
+                      kind: "warehouses",
+                      key: warehouseKeys.warehouses,
+                      order,
+                    })
+                  }
+                  render={(w, handle) => (
+                    <SideRow
+                      handle={handle}
+                      active={w.uuid === warehouseUuid}
+                      code={w.code}
+                      name={w.name}
+                      inactive={!w.active}
+                      testId="warehouse-row"
+                      onSelect={() => {
+                        setWarehouseUuid(w.uuid);
+                        setRoomUuid(null);
+                      }}
+                      onEdit={
+                        canWrite
+                          ? () =>
+                              setPanel({
+                                kind: "warehouse",
+                                mode: "edit",
+                                target: w,
+                              })
+                          : undefined
+                      }
+                      onDelete={
+                        canWrite
+                          ? () => void askDelete("warehouse", w.uuid, w.code)
+                          : undefined
+                      }
+                    />
+                  )}
+                  items={warehouseList}
+                />
               )}
             </CardContent>
           </Card>
@@ -475,32 +588,44 @@ export function LocationTreePage({ slug }: { slug: string }) {
                     {t("warehouse.locations.no_rooms")}
                   </p>
                 ) : (
-                  roomList.map((r) => (
-                    <SideRow
-                      key={r.uuid}
-                      active={r.uuid === roomUuid}
-                      code={r.code}
-                      name={r.name}
-                      inactive={!r.active}
-                      testId="room-row"
-                      onSelect={() => setRoomUuid(r.uuid)}
-                      onEdit={
-                        canWrite
-                          ? () =>
-                              setPanel({
-                                kind: "room",
-                                mode: "edit",
-                                target: r,
-                              })
-                          : undefined
-                      }
-                      onDelete={
-                        canWrite
-                          ? () => void askDelete("room", r.uuid, r.code)
-                          : undefined
-                      }
-                    />
-                  ))
+                  <SortableSideList
+                    ids={roomList.map((r) => r.uuid)}
+                    disabled={!canWrite}
+                    onMove={(order) =>
+                      reorder.mutate({
+                        kind: "rooms",
+                        key: warehouseKeys.rooms(warehouseUuid ?? ""),
+                        order,
+                      })
+                    }
+                    items={roomList}
+                    render={(r, handle) => (
+                      <SideRow
+                        handle={handle}
+                        active={r.uuid === roomUuid}
+                        code={r.code}
+                        name={r.name}
+                        inactive={!r.active}
+                        testId="room-row"
+                        onSelect={() => setRoomUuid(r.uuid)}
+                        onEdit={
+                          canWrite
+                            ? () =>
+                                setPanel({
+                                  kind: "room",
+                                  mode: "edit",
+                                  target: r,
+                                })
+                            : undefined
+                        }
+                        onDelete={
+                          canWrite
+                            ? () => void askDelete("room", r.uuid, r.code)
+                            : undefined
+                        }
+                      />
+                    )}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -524,6 +649,18 @@ export function LocationTreePage({ slug }: { slug: string }) {
                   label={t("warehouse.labels.print_room")}
                   testId="room-labels"
                 />
+                {canWrite ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    data-testid="location-bulk"
+                    onClick={() => setBulk({ parent: null })}
+                  >
+                    <LayoutGrid className="size-4" />
+                    {t("warehouse.bulk.open")}
+                  </Button>
+                ) : null}
                 {canWrite ? (
                   <Button
                     type="button"
@@ -629,8 +766,14 @@ export function LocationTreePage({ slug }: { slug: string }) {
                     expanded={effectiveExpanded}
                     onToggle={toggle}
                     selected={selected}
-                    onSelect={(n) => setSelected(n.uuid)}
+                    onSelect={(n) => {
+                      setSelected(n.uuid);
+                      if (n.type === "bin" && canReadStock) setStockLocation(n);
+                    }}
                     renderActions={nodeActions}
+                    onReorder={
+                      canWrite && !filter.trim() ? reorderLocations : undefined
+                    }
                   />
                 )}
               </>
@@ -638,11 +781,75 @@ export function LocationTreePage({ slug }: { slug: string }) {
           </CardContent>
         </Card>
       </div>
+
+      {bulk && currentRoom ? (
+        <LocationGenerateWizard
+          key={bulk.parent?.uuid ?? "root"}
+          open
+          onOpenChange={(o) => !o && setBulk(null)}
+          roomUuid={currentRoom.uuid}
+          baseCode={bulk.parent?.full_code ?? baseCode}
+          parent={bulk.parent}
+          roots={tree}
+          onDone={() => void onGenerated()}
+        />
+      ) : null}
+      {canReadStock ? (
+        <LocationStockSheet
+          key={stockLocation?.uuid ?? "none"}
+          slug={slug}
+          orgUuid={org?.uuid ?? ""}
+          location={stockLocation}
+          onClose={() => setStockLocation(null)}
+        />
+      ) : null}
     </WarehouseShell>
   );
 }
 
+/** A sortable warehouse or room list (TEC-764); grips only with write. */
+function SortableSideList<T extends { uuid: string; code: string }>({
+  ids,
+  items,
+  disabled,
+  onMove,
+  render,
+}: {
+  ids: string[];
+  items: T[];
+  disabled: boolean;
+  onMove: (order: string[]) => void;
+  render: (item: T, handle: ReactNode) => ReactNode;
+}) {
+  const { t } = useLocale();
+  return (
+    <SortableArea onMove={(_group, order) => onMove(order)}>
+      <SortableGroup group="list" ids={ids}>
+        {items.map((item) => (
+          <SortableRow
+            key={item.uuid}
+            id={item.uuid}
+            disabled={disabled}
+            handleLabel={t("warehouse.sort.handle", { code: item.code })}
+          >
+            {({ setNodeRef, style, isDragging, handle }) => (
+              <div
+                ref={setNodeRef}
+                style={style}
+                className={cn(isDragging && "bg-background relative z-10")}
+              >
+                {render(item, handle)}
+              </div>
+            )}
+          </SortableRow>
+        ))}
+      </SortableGroup>
+    </SortableArea>
+  );
+}
+
 function SideRow({
+  handle,
   active,
   code,
   name,
@@ -652,6 +859,7 @@ function SideRow({
   onEdit,
   onDelete,
 }: {
+  handle?: ReactNode;
   active: boolean;
   code: string;
   name: string;
@@ -672,6 +880,7 @@ function SideRow({
       data-testid={testId}
       data-code={code}
     >
+      {handle}
       <button
         type="button"
         className="flex min-w-0 flex-1 items-baseline gap-2 text-start"

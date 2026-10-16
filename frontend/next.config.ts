@@ -1,6 +1,8 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
+import { settingsRedirects } from "./src/config/settings-redirects";
+
 /**
  * Baseline security headers for every route. A full script CSP is not set
  * here (Next inline bootstrap scripts would need nonces); `frame-ancestors`
@@ -68,6 +70,9 @@ const nextConfig: NextConfig = {
         destination: "/teklif/:token",
         permanent: false,
       },
+      // TEC-771: settings pages moved under /platform/settings and
+      // /t/{slug}/settings.
+      ...settingsRedirects,
     ];
   },
 };
