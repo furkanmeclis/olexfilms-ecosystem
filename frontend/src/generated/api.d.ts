@@ -12060,6 +12060,194 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders/{uuid}/items/{item_uuid}/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest units for the rest of a preparing line (seller, orders.ship)
+         * @description TEC-768. Read only, nothing is reserved; only while the order is preparing (409 ORDER_NOT_ASSIGNABLE). Candidates are the seller's units of the line's product in stock (available/placed), not reserved and not on an open warehouse transfer. Placed units (a warehouse location owns them) come first, then the oldest entry (FIFO on the unit's creation). Units the organization holds without a location join only with include_unlocated=true. Pieces: one unit per missing piece. Rolls: the first roll that covers the missing meters (a longer roll is split on assignment); without one, whole rolls in order and the last one cut to the rest. Fixed barcodes: a quantity of the unreserved holding that one owner can ship. `complete` is false when the suggestions do not cover `missing`.
+         */
+        get: operations["suggestOrderUnits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/items/{item_uuid}/suggestions/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign the confirmed suggestions to a line (seller, orders.ship)
+         * @description TEC-768. Every unit goes through the assignment rules of POST .../units (unit_uuid with quantity or meters) in one transaction: a refused unit rolls the whole request back (the error names units[i]). Roll splits are returned in `splits`.
+         */
+        post: operations["applyOrderSuggestions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/items/{item_uuid}/pick-locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Where the seller keeps a line's product (seller, orders.ship)
+         * @description TEC-768. The seller's warehouse locations holding the product (pieces/rolls and meters from the bin stock projection) by location code, and a last row without location_uuid for the stock the organization holds without a location.
+         */
+        get: operations["listOrderItemPickLocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/pick-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Printable pick list of an order (seller, orders.ship)
+         * @description TEC-768. Rows in location order (no location last), then product and barcode: every assigned unit at its current location (fixed barcodes at the location holding the most), and while the order is approved, processing or preparing, the locations holding the product of each line still missing units (kind=stock).
+         */
+        get: operations["getOrderPickList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/shipping-document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Render the shipping note PDF again (seller, orders.ship)
+         * @description TEC-768. The shipping note (sevk irsaliyesi: seller and buyer, the lines with their barcodes, delivery method and tracking number) is rendered on the seller's letterhead in the request language when the order ships; this renders and stores it again. 409 ORDER_NOT_SHIPPED before shipping, 503 ORDER_DOCUMENT_UNAVAILABLE without storage or PDF engine.
+         */
+        post: operations["regenerateOrderShippingDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/documents/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download a document of an order (both sides, orders.read)
+         * @description TEC-768. kind=shipping is the shipping note PDF, kind=receipt the buyer's delivery receipt (PDF or image). 404 when the order has no such document.
+         */
+        get: operations["downloadOrderDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/orders/{uuid}/receipt-document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach the delivery receipt (buyer, orders.receive)
+         * @description TEC-768. Optional delivery receipt (teslim belgesi) while the order is shipped or received (409 ORDER_RECEIPT_NOT_ALLOWED otherwise): PDF, JPEG, PNG or WebP up to 10 MB (400 ORDER_RECEIPT_FILE_INVALID); a new upload replaces the old one.
+         */
+        post: operations["attachOrderReceiptDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/delivery-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Delivery methods of the active organization (orders.read)
+         * @description TEC-768. The organization's carrier catalog. The system method warehouse_pickup (Ambar teslim, localized name) exists for every organization and is created on first use. docs/list-contract.md: sort name, code, sort_order, created_at (default sort_order, id tiebreak); q searches name and code; active and is_system filter.
+         */
+        get: operations["listDeliveryMethods"];
+        put?: never;
+        /**
+         * Add a delivery method (orders.ship)
+         * @description TEC-768. code is 1-32 of a-z, 0-9 and _ (unique per organization, warehouse_pickup is reserved: 400 DELIVERY_METHOD_CODE_TAKEN); tracking_url_template is an http(s) URL where {tracking_no} is replaced by the tracking number (400 TRACKING_URL_TEMPLATE_INVALID).
+         */
+        post: operations["createDeliveryMethod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/delivery-methods/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit a delivery method (orders.ship)
+         * @description TEC-768. The system method answers 409 DELIVERY_METHOD_SYSTEM. Omitted active / sort_order keep their values.
+         */
+        put: operations["updateDeliveryMethod"];
+        post?: never;
+        /**
+         * Delete a delivery method (orders.ship)
+         * @description TEC-768. The system method answers 409 DELIVERY_METHOD_SYSTEM; a method an order shipped with answers 409 DELIVERY_METHOD_IN_USE (deactivate it instead).
+         */
+        delete: operations["deleteDeliveryMethod"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stock-transfers": {
         parameters: {
             query?: never;
@@ -24459,6 +24647,21 @@ export interface components {
             /** @description Status history (detail responses only) */
             history?: components["schemas"]["OrderHistoryEntry"][];
             split?: components["schemas"]["OrderRollSplit"];
+            /** @description Roll splits of an applied suggestion (TEC-768) */
+            splits?: components["schemas"]["OrderRollSplit"][];
+            /** Format: date-time */
+            received_at: string | null;
+            /** @description Delivery method chosen at shipping (TEC-768) */
+            delivery_method: components["schemas"]["OrderDeliveryMethodRef"] | null;
+            /** @enum {string|null} */
+            delivery_mode: "hand" | "warehouse" | null;
+            tracking_no: string | null;
+            /** @description The method's tracking URL template filled with tracking_no */
+            tracking_url: string | null;
+            /** @description The shipping note PDF is stored */
+            has_shipping_document: boolean;
+            /** @description The buyer's delivery receipt is stored */
+            has_receipt_document: boolean;
         };
         /** @description Set on an assignment response when the assignment split the roll (TEC-184): the new unit and its barcode to label. */
         OrderRollSplit: {
@@ -24475,6 +24678,171 @@ export interface components {
             new_unit_uuid: string;
             new_barcode: string;
             replayed: boolean;
+        };
+        /** @description The delivery method an order shipped with (TEC-768). */
+        OrderDeliveryMethodRef: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            /** @description The system method's name is localized */
+            name: string;
+            is_system: boolean;
+        };
+        DeliveryMethod: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example aras */
+            code: string;
+            /** @example Aras Kargo */
+            name: string;
+            /** @example https://kargotakip.araskargo.com.tr/mainpage.aspx?code={tracking_no} */
+            tracking_url_template: string | null;
+            active: boolean;
+            /** Format: int32 */
+            sort_order: number;
+            /** @description The read-only warehouse_pickup method */
+            is_system: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        DeliveryMethodInput: {
+            code: string;
+            name: string;
+            tracking_url_template?: string | null;
+            active?: boolean;
+            /** Format: int32 */
+            sort_order?: number;
+        };
+        EnvelopeDeliveryMethod: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["DeliveryMethod"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeDeliveryMethodPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["DeliveryMethod"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        OrderSuggestion: {
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            /**
+             * Format: int64
+             * @description Pieces (1) and fixed barcodes
+             */
+            quantity: number | null;
+            /** @description Rolls; below remaining_meters the roll is split */
+            meters: string | null;
+            remaining_meters: string | null;
+            /** @description A warehouse location owns the unit */
+            located: boolean;
+            /** Format: uuid */
+            location_uuid: string | null;
+            /** @description Full code of the location */
+            location_code: string | null;
+            /** Format: date-time */
+            entered_at: string;
+        };
+        OrderSuggestions: {
+            /** Format: uuid */
+            item_uuid: string;
+            /** @description Amount still to assign (quantity, or meters for rolls) */
+            missing: string;
+            covered: string;
+            complete: boolean;
+            include_unlocated: boolean;
+            suggestions: components["schemas"]["OrderSuggestion"][];
+        };
+        EnvelopeOrderSuggestions: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["OrderSuggestions"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        OrderSuggestionsApplyInput: {
+            units: {
+                /** Format: uuid */
+                unit_uuid: string;
+                /** Format: int64 */
+                quantity?: number;
+                meters?: string;
+            }[];
+        };
+        OrderPickLocation: {
+            /**
+             * Format: uuid
+             * @description Null for the stock without a location
+             */
+            location_uuid: string | null;
+            location_code: string | null;
+            location_name: string | null;
+            /**
+             * Format: int64
+             * @description Pieces or rolls
+             */
+            quantity: number;
+            /** @description Roll products only */
+            meters: string | null;
+        };
+        EnvelopeOrderPickLocations: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["OrderPickLocation"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        OrderPickRow: {
+            /** @enum {string} */
+            kind: "assigned" | "stock";
+            /** Format: uuid */
+            item_uuid: string;
+            product: components["schemas"]["OrderProductRef"];
+            location_code: string | null;
+            location_name: string | null;
+            barcode: string | null;
+            /** Format: int64 */
+            quantity: number | null;
+            meters: string | null;
+        };
+        OrderPickLine: {
+            /** Format: uuid */
+            item_uuid: string;
+            product: components["schemas"]["OrderProductRef"];
+            quantity: number | null;
+            meters: string | null;
+            assigned: string;
+        };
+        OrderPickList: {
+            /** Format: uuid */
+            order_uuid: string;
+            order_no: string;
+            status: components["schemas"]["OrderStatus"];
+            seller: components["schemas"]["OrderOrgRef"];
+            buyer: components["schemas"]["OrderOrgRef"];
+            /** Format: date-time */
+            generated_at: string;
+            lines: components["schemas"]["OrderPickLine"][];
+            rows: components["schemas"]["OrderPickRow"][];
+        };
+        EnvelopeOrderPickList: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["OrderPickList"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         /** @description Prices are never accepted from the client (K8). */
         OrderItemInput: {
@@ -24767,6 +25135,13 @@ export interface components {
             status: components["schemas"]["OrderStatus"];
             /** @description Kept in the history; the cancel reason for cancelling and cancelled */
             reason?: string;
+            /**
+             * Format: uuid
+             * @description Shipping only (TEC-768): one of the seller's active delivery methods (400 otherwise); the shipping note PDF is rendered after the shipment.
+             */
+            delivery_method_uuid?: string;
+            /** @description Shipping only (TEC-768) */
+            tracking_no?: string;
         };
         EnvelopeOrder: {
             /** @enum {boolean} */
@@ -50451,6 +50826,329 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EnvelopeOrder"];
                 };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    suggestOrderUnits: {
+        parameters: {
+            query?: {
+                include_unlocated?: boolean;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+                item_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suggestions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderSuggestions"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    applyOrderSuggestions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                item_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderSuggestionsApplyInput"];
+            };
+        };
+        responses: {
+            /** @description Order with the assignments */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    listOrderItemPickLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                item_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Locations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderPickLocations"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getOrderPickList: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pick list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrderPickList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    regenerateOrderShippingDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order with the document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            /** @description Document storage or PDF engine unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    downloadOrderDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+                kind: "shipping" | "receipt";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                    "image/jpeg": string;
+                    "image/png": string;
+                    "image/webp": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    attachOrderReceiptDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Order with the receipt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeOrder"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listDeliveryMethods: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                active?: boolean;
+                is_system?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Page of delivery methods */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeliveryMethodPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createDeliveryMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeliveryMethodInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeliveryMethod"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateDeliveryMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeliveryMethodInput"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeDeliveryMethod"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteDeliveryMethod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
