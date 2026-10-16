@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 
 import { shellNav, type ShellNav, type ShellVariant } from "@/config/shell-nav";
-import { useFeatures } from "@/features/modules/hooks/use-features";
+import { useEnabledFeatures } from "@/features/modules/hooks/use-features";
 import type { NavAccess } from "@/features/nav-engine/lib/access";
 import type { NavOrgContext } from "@/features/nav-engine/types";
 import { useActiveOrganization } from "@/hooks/use-active-organization";
@@ -13,8 +13,6 @@ export type ShellNavState = ShellNav & {
   /** Active organization for the tenant shell (type, role, modules). */
   org: NavOrgContext | null;
   access: NavAccess;
-  /** The module list could not be loaded; feature gates are not judged. */
-  featuresFailed: boolean;
 };
 
 export function useShellNav(
@@ -27,8 +25,7 @@ export function useShellNav(
     [variant, tenantSlug],
   );
   const activeOrg = useActiveOrganization(slug);
-  const featuresQuery = useFeatures(slug);
-  const features = featuresQuery.data?.enabled ?? null;
+  const features = useEnabledFeatures(slug);
   const org = useMemo<NavOrgContext | null>(
     () =>
       activeOrg
@@ -42,10 +39,5 @@ export function useShellNav(
     [can, canAny, org],
   );
 
-  return {
-    ...nav,
-    org,
-    access,
-    featuresFailed: featuresQuery.isError,
-  };
+  return { ...nav, org, access };
 }

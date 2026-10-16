@@ -140,31 +140,18 @@ describe("navRouteAccess (TEC-771)", () => {
     ).toBe("denied");
   });
 
-  it("waits for the module list before judging a feature gate", () => {
-    const loading = { type: "dealer", role: "owner", features: null };
+  it("leaves module gates to the page's own off screen", () => {
+    const off = { type: "dealer", role: "owner", features: [] };
     expect(
       navRouteAccess(
         "/t/a/orders",
         [catalog],
-        access(["orders.read"], loading),
+        access(["orders.read"], off),
         "/t/a",
       ),
-    ).toBe("pending");
-    // Missing permission is final even while modules load.
+    ).toBe("allowed");
     expect(
-      navRouteAccess("/t/a/orders", [catalog], access([], loading), "/t/a"),
-    ).toBe("denied");
-    expect(
-      navRouteAccess(
-        "/t/a/orders",
-        [catalog],
-        access(["orders.read"], {
-          type: "dealer",
-          role: "owner",
-          features: [],
-        }),
-        "/t/a",
-      ),
+      navRouteAccess("/t/a/orders", [catalog], access([], off), "/t/a"),
     ).toBe("denied");
   });
 });

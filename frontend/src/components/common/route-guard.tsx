@@ -111,7 +111,7 @@ export function RouteGuard({ children, mode }: RouteGuardProps) {
 /**
  * TEC-771: page level twin of the menu. A page owned by a nav entry (main
  * menu or settings) that the menu hides for this user (permission, org
- * type, member role, module) shows a 403 card instead of its content, so
+ * type, member role) shows a 403 card instead of its content, so
  * a typed or bookmarked URL cannot open what the menu does not offer. The
  * API still enforces every rule; this keeps the UI honest.
  */
@@ -133,14 +133,6 @@ export function NavRouteGuard({
     nav.access,
     nav.homeHref,
   );
-
-  if (access === "pending" && !nav.featuresFailed) {
-    return (
-      <div className="text-muted-foreground flex flex-1 items-center justify-center py-16 text-sm">
-        {t("common.loading")}
-      </div>
-    );
-  }
 
   if (access === "denied") {
     return (

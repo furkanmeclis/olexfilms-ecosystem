@@ -27,9 +27,9 @@ function useSettingsSections(variant: ShellVariant, tenantSlug?: string) {
 }
 
 /**
- * TEC-771: settings area shell. Desktop shows the sub-navigation in a left
- * column; on phones the index page is the menu and sub pages get a back
- * link, so the narrow screen never carries two menus.
+ * TEC-771: settings area shell. The index page is the menu (cards); sub
+ * pages show the sub-navigation in a left column on desktop and a back
+ * link on phones, so no screen carries the same menu twice.
  */
 export function SettingsLayout({
   variant,
@@ -50,7 +50,8 @@ export function SettingsLayout({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 md:flex-row md:gap-8">
-      <aside className="hidden w-56 shrink-0 md:block">
+      {/* The index page lists the same entries as cards. */}
+      <aside className={cn("hidden w-56 shrink-0", !onIndex && "md:block")}>
         <nav
           aria-label={t("layout.settings_menu")}
           className="sticky top-20 space-y-5"

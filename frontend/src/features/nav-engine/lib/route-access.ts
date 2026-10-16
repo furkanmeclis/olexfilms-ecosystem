@@ -10,8 +10,7 @@ import type {
 
 export type NavRouteMatch = { group: NavGroupDef; item: NavItemDef };
 
-/** "pending": a gate depends on data that is still loading (modules). */
-export type NavRouteAccess = "allowed" | "denied" | "pending";
+export type NavRouteAccess = "allowed" | "denied";
 
 function normalizePath(path: string): string {
   const bare = path.split(/[?#]/, 1)[0] ?? "";
@@ -56,9 +55,12 @@ export function matchNavEntries(
 }
 
 /**
- * TEC-771: a page is open when the menu would show one of its entries;
- * pages without a nav entry (details reached from lists, profile, the
- * settings index) stay open and rely on their own guards and the API.
+ * TEC-771: a page is open when the menu would show one of its entries for
+ * the user's permissions, organization type and member role. Module flags
+ * are left out: a page behind an off module renders its own "module is
+ * off" screen (FEATURE_DISABLED), which explains more than a 403. Pages
+ * without a nav entry (details reached from lists, profile, the settings
+ * index) stay open and rely on their own guards and the API.
  */
 export function navRouteAccess(
   pathname: string,
@@ -69,30 +71,12 @@ export function navRouteAccess(
   const matches = matchNavEntries(pathname, catalogs, homeHref);
   if (!matches.length) return "allowed";
 
+  const ignoreFeature = <T extends { feature?: string }>(entry: T) => ({
+    ...entry,
+    feature: undefined,
+  });
   const visible = ({ group, item }: NavRouteMatch) =>
-    isNavEntryVisible(group, access) && isNavEntryVisible(item, access);
-  if (matches.some(visible)) return "allowed";
-
-  // Module flags are fetched after the session; until they arrive a
-  // feature gated entry cannot be judged yet.
-  const waitsForFeatures =
-    access.org?.features == null &&
-    matches.some(({ group, item }) => Boolean(group.feature || item.feature));
-  if (waitsForFeatures) {
-    const withoutFeatures = {
-      ...access,
-      org: { ...access.org, features: undefined },
-    };
-    const strip = <T extends { feature?: string }>(entry: T) => ({
-      ...entry,
-      feature: undefined,
-    });
-    const couldBeVisible = matches.some(
-      ({ group, item }) =>
-        isNavEntryVisible(strip(group), withoutFeatures) &&
-        isNavEntryVisible(strip(item), withoutFeatures),
-    );
-    if (couldBeVisible) return "pending";
-  }
-  return "denied";
+    isNavEntryVisible(ignoreFeature(group), access) &&
+    isNavEntryVisible(ignoreFeature(item), access);
+  return matches.some(visible) ? "allowed" : "denied";
 }
