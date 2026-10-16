@@ -1295,6 +1295,8 @@ type Querier interface {
 	GetStockCountScanByUUID(ctx context.Context, arg GetStockCountScanByUUIDParams) (StockCountScan, error)
 	GetStockEntryByImportBatch(ctx context.Context, importBatchID pgtype.Int8) (StockEntry, error)
 	GetStockEntryByUUID(ctx context.Context, arg GetStockEntryByUUIDParams) (StockEntry, error)
+	// TEC-759: the import batch of an import entry with its job and file.
+	GetStockEntryImportSource(ctx context.Context, id int64) (GetStockEntryImportSourceRow, error)
 	GetStockForecastConsumptionTotals(ctx context.Context, arg GetStockForecastConsumptionTotalsParams) (GetStockForecastConsumptionTotalsRow, error)
 	GetStockForecastFirstMovementDate(ctx context.Context, arg GetStockForecastFirstMovementDateParams) (pgtype.Date, error)
 	GetStockForecastOnHand(ctx context.Context, arg GetStockForecastOnHandParams) (GetStockForecastOnHandRow, error)
@@ -1304,7 +1306,6 @@ type Querier interface {
 	GetStockForecastThreshold(ctx context.Context, arg GetStockForecastThresholdParams) (StockForecastThreshold, error)
 	GetStockImportBatch(ctx context.Context, arg GetStockImportBatchParams) (StockImportBatch, error)
 	GetStockImportBatchByJob(ctx context.Context, importJobID pgtype.Int8) (StockImportBatch, error)
-	GetStockImportBatchUUID(ctx context.Context, id int64) (uuid.UUID, error)
 	GetStockMovement(ctx context.Context, id int64) (StockMovement, error)
 	GetStockMovementByIdempotencyKey(ctx context.Context, idempotencyKey string) (StockMovement, error)
 	GetStockReclassification(ctx context.Context, arg GetStockReclassificationParams) (StockReclassification, error)

@@ -17,6 +17,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -466,6 +467,24 @@ func TestStockImportRecordsEntry(t *testing.T) {
 	if status != wh.EntryStatusConfirmed || mode != wh.EntryModeImport || lines != 2 {
 		t.Fatalf("import entry = %s %s %d", status, mode, lines)
 	}
+	// TEC-759: the list finds the entry by its import job; the document
+	// names the job, the file and the batch status.
+	c := e.caller(e.center)
+	list, total, err := e.entries.List(e.ctx, c, wh.EntryListFilter{
+		Modes: []string{wh.EntryModeImport}, ImportJobUUIDs: []uuid.UUID{job.UUID}, Limit: 5,
+	})
+	if err != nil || total != 1 || len(list) != 1 || list[0].UUID.String() != entryUUID {
+		t.Fatalf("list by import job = %d %v", total, err)
+	}
+	if _, total, err = e.entries.List(e.ctx, c, wh.EntryListFilter{ImportJobUUIDs: []uuid.UUID{uuid.New()}, Limit: 5}); err != nil || total != 0 {
+		t.Fatalf("list by other job = %d %v", total, err)
+	}
+	doc := list[0]
+	if doc.ImportJobUUID == nil || *doc.ImportJobUUID != job.UUID ||
+		doc.ImportSourceFilename == nil || *doc.ImportSourceFilename != "t204.xlsx" ||
+		doc.ImportStatus == nil || *doc.ImportStatus != "applied" {
+		t.Fatalf("import source = %v %v %v", doc.ImportJobUUID, doc.ImportSourceFilename, doc.ImportStatus)
+	}
 	// A second apply records nothing new.
 	if _, err := im.Apply(e.ctx, job); err != nil {
 		t.Fatalf("second apply: %v", err)
@@ -483,5 +502,9 @@ func TestStockImportRecordsEntry(t *testing.T) {
 	}
 	if status != wh.EntryStatusUndone || lines != 2 {
 		t.Fatalf("after undo = %s %d", status, lines)
+	}
+	undone, err := e.entries.Get(e.ctx, c, list[0].UUID)
+	if err != nil || undone.ImportStatus == nil || *undone.ImportStatus != "undone" {
+		t.Fatalf("import status after undo = %v %v", undone.ImportStatus, err)
 	}
 }

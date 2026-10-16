@@ -11803,9 +11803,9 @@ paths:
         (docs/list-contract.md): `sort` is one of created_at (default
         `-created_at`), status (flow rank draft, confirmed, undone,
         cancelled), warehouse (name; import entries last), with an id
-        tiebreak; `status`, `mode` and `warehouse_uuid` are comma separated
-        any-of filters; `q` matches the note and the warehouse name or
-        code. An unknown value is 400 VALIDATION_ERROR.
+        tiebreak; `status`, `mode`, `warehouse_uuid` and `import_job_uuid`
+        are comma separated any-of filters; `q` matches the note and the
+        warehouse name or code. An unknown value is 400 VALIDATION_ERROR.
       security:
         - bearerAuth: []
       parameters:
@@ -11823,6 +11823,12 @@ paths:
           in: query
           description: >-
             Comma separated warehouse uuids (any of).
+          schema: { type: string }
+        - name: import_job_uuid
+          in: query
+          description: >-
+            Comma separated import job uuids (any of): the entries written
+            by these stock import jobs (TEC-759).
           schema: { type: string }
         - $ref: "#/components/parameters/Q"
         - $ref: "#/components/parameters/Sort"
@@ -37146,6 +37152,19 @@ components:
             - type: "null"
             - $ref: "#/components/schemas/StockEntryWarehouse"
         import_batch_uuid: { type: [string, "null"], format: uuid }
+        import_job_uuid:
+          type: string
+          format: uuid
+          description: Import entries (TEC-759) - the stock import job that wrote the entry.
+        import_source_filename:
+          type: string
+          description: Import entries - the uploaded file name.
+        import_status:
+          type: string
+          description: >-
+            Import entries - status of the import batch (applied, undone,
+            partially_undone when some rows moved after the import and were
+            not undone).
         line_count: { type: integer, format: int64 }
         placed_count: { type: integer, format: int64, description: Detail responses only. }
         lines:
