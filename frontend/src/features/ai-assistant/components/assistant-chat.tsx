@@ -1,6 +1,14 @@
 "use client";
 
-import { Bot, Gauge, Loader2, Send, ShieldCheck, Square } from "lucide-react";
+import {
+  ArrowLeft,
+  Bot,
+  Gauge,
+  Loader2,
+  Send,
+  ShieldCheck,
+  Square,
+} from "lucide-react";
 import Link from "next/link";
 import {
   useEffect,
@@ -39,6 +47,7 @@ export function AssistantChat({
   layout = "page",
   showToolChips,
   fullPageHref,
+  onOpenFullPage,
   loadingFallback,
   emptyFallback,
 }: {
@@ -48,6 +57,7 @@ export function AssistantChat({
   layout?: "page" | "sheet";
   showToolChips: boolean;
   fullPageHref?: string;
+  onOpenFullPage?: () => void;
   loadingFallback?: ReactNode;
   emptyFallback?: ReactNode;
 }) {
@@ -55,7 +65,18 @@ export function AssistantChat({
   const { can } = usePermission();
   const chat = useAssistantChat(transport, scope);
   const [input, setInput] = useState("");
+  const historyRef = useRef<HTMLElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const followRef = useRef(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const focusComposer = () => inputRef.current?.focus();
+  const openConversation = async (uuid: string | null) => {
+    setHistoryOpen(false);
+    followRef.current = true;
+    await chat.open(uuid);
+    focusComposer();
+  };
 
   const lastMessage = chat.messages[chat.messages.length - 1];
   const lastLength =
@@ -64,8 +85,16 @@ export function AssistantChat({
       0,
     ) ?? 0;
   useEffect(() => {
-    bottomRef.current?.scrollIntoView?.({ block: "end" });
-  }, [chat.messages.length, lastLength]);
+    if (followRef.current)
+      bottomRef.current?.scrollIntoView?.({ block: "end" });
+  }, [chat.messages.length, lastLength, chat.loadingConversation]);
+
+  useEffect(() => {
+    if (historyOpen) historyRef.current?.querySelector("button")?.focus();
+    if (!historyOpen && chat.status.data?.allowed && !chat.consentRequired) {
+      inputRef.current?.focus();
+    }
+  }, [historyOpen, chat.status.data?.allowed, chat.consentRequired]);
 
   const status = chat.status.data;
   if (chat.status.isLoading) {
@@ -90,6 +119,16 @@ export function AssistantChat({
       />
     );
   }
+  if (chat.status.isError) {
+    return (
+      <Alert variant="destructive" role="alert">
+        <AlertTitle>{t("ai.errors.generic")}</AlertTitle>
+        <Button variant="outline" onClick={() => void chat.status.refetch()}>
+          {t("ai.chat.retry")}
+        </Button>
+      </Alert>
+    );
+  }
   if (!status || !status.enabled || !status.allowed) {
     return (
       <Alert data-testid="ai-unavailable">
@@ -107,14 +146,20 @@ export function AssistantChat({
   }
 
   const percent = quotaRemainingPercent(status.quota);
-  const inputDisabled = chat.consentRequired || chat.quotaExceeded;
+  const inputDisabled =
+    chat.consentRequired ||
+    chat.quotaExceeded ||
+    chat.loadingConversation ||
+    chat.conversationError;
   const canConfirmActions =
     transport.realm !== "panel" || can(permissions.ai.actionsConfirm);
 
   const submit = async () => {
     const text = input.trim();
     if (!text || inputDisabled || chat.streaming) return;
+    followRef.current = true;
     setInput("");
+    focusComposer();
     const sent = await chat.send(text);
     if (!sent) setInput(text);
   };
@@ -128,13 +173,39 @@ export function AssistantChat({
 
   const conversationList =
     layout === "page" ? (
-      <aside className="hidden w-64 shrink-0 border-e pe-4 md:block">
+      <aside
+        ref={historyRef}
+        aria-label={t("ai.history.title")}
+        className={cn(
+          "min-h-0 w-full shrink-0 md:block md:w-64 md:border-e md:pe-4",
+          !historyOpen && "hidden",
+        )}
+      >
+        <Button
+          variant="ghost"
+          className="mb-2 md:hidden"
+          onClick={() => {
+            setHistoryOpen(false);
+            focusComposer();
+          }}
+        >
+          <ArrowLeft className="size-4 rtl:-scale-x-100" />
+          {t("ai.chat.back")}
+        </Button>
+        {chat.conversations.isError ? (
+          <Button
+            variant="outline"
+            onClick={() => void chat.conversations.refetch()}
+          >
+            {t("ai.chat.retry")}
+          </Button>
+        ) : null}
         <ConversationList
           items={chat.conversations.data ?? []}
           activeId={chat.activeId}
           disabled={chat.streaming}
-          onOpen={(uuid) => void chat.open(uuid)}
-          onNew={() => void chat.open(null)}
+          onOpen={(uuid) => void openConversation(uuid)}
+          onNew={() => void openConversation(null)}
           onRename={chat.rename}
           onDelete={chat.remove}
         />
@@ -151,20 +222,51 @@ export function AssistantChat({
       data-testid="ai-assistant-chat"
     >
       {conversationList}
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+      <section
+        className={cn(
+          "min-h-0 min-w-0 flex-1 flex-col gap-3 md:flex",
+          layout === "page" && historyOpen ? "hidden" : "flex",
+        )}
+      >
+        <div
+          className="sr-only"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {chat.streaming
+            ? t("ai.chat.thinking")
+            : lastMessage?.status === "cancelled"
+              ? t("ai.chat.stopped")
+              : ""}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            className={layout === "page" ? "md:hidden" : undefined}
-            variant="outline"
-            size="sm"
-            onClick={() => void chat.open(null)}
-            disabled={chat.streaming}
-          >
-            {t("ai.history.new")}
-          </Button>
+          {layout === "page" ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden"
+              onClick={() => setHistoryOpen(true)}
+            >
+              <ArrowLeft className="size-4 rtl:-scale-x-100" />
+              {t("ai.history.title")}
+            </Button>
+          ) : null}
+          {layout === "sheet" ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void openConversation(null)}
+              disabled={chat.streaming}
+            >
+              {t("ai.history.new")}
+            </Button>
+          ) : null}
           {layout === "sheet" && fullPageHref ? (
             <Button variant="ghost" size="sm" asChild>
-              <Link href={fullPageHref}>{t("ai.chat.open_full")}</Link>
+              <Link href={fullPageHref} onClick={onOpenFullPage}>
+                {t("ai.chat.open_full")}
+              </Link>
             </Button>
           ) : null}
           {percent !== null ? (
@@ -211,7 +313,15 @@ export function AssistantChat({
             className="py-4"
           />
         ) : null}
-        <div className="min-h-0 flex-1 overflow-y-auto pe-1">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain pe-1"
+          data-testid="ai-scroll"
+          onScroll={(event) => {
+            const el = event.currentTarget;
+            followRef.current =
+              el.scrollHeight - el.scrollTop - el.clientHeight < 64;
+          }}
+        >
           {chat.loadingConversation ? (
             (loadingFallback ?? (
               <div
@@ -222,11 +332,44 @@ export function AssistantChat({
                 {t("ai.chat.loading")}
               </div>
             ))
+          ) : chat.conversationError ? (
+            <Alert variant="destructive" role="alert">
+              <AlertTitle>{t("ai.errors.generic")}</AlertTitle>
+              <Button
+                variant="outline"
+                onClick={() => void openConversation(chat.activeId)}
+              >
+                {t("ai.chat.retry")}
+              </Button>
+            </Alert>
           ) : chat.messages.length === 0 ? (
             (emptyFallback ?? (
               <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-center text-sm">
                 <Bot className="size-8" />
                 <p>{t("ai.chat.empty")}</p>
+                <div className="mt-2 flex max-w-md flex-wrap justify-center gap-2">
+                  {["first", "second", "third"].map((suggestion) => {
+                    const text = t(
+                      `ai.suggestions.${transport.realm}.${suggestion}`,
+                    );
+                    return (
+                      <Button
+                        key={suggestion}
+                        type="button"
+                        variant="outline"
+                        className="h-auto text-start whitespace-normal"
+                        disabled={inputDisabled}
+                        onClick={() => {
+                          setInput(text);
+                          focusComposer();
+                        }}
+                        data-testid="ai-suggestion"
+                      >
+                        {text}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             ))
           ) : (
@@ -252,6 +395,7 @@ export function AssistantChat({
           }}
         >
           <Textarea
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}

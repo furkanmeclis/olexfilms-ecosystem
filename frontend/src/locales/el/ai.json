@@ -1,4 +1,11 @@
 {
+  "chat.back": "Επιστροφή στη συνομιλία",
+  "suggestions.panel.first": "Σε τι μπορείς να με βοηθήσεις;",
+  "suggestions.panel.second": "Βρες τις πρόσφατες εγγραφές μου",
+  "suggestions.panel.third": "Βοήθησέ με να σχεδιάσω τα επόμενα βήματα",
+  "suggestions.portal.first": "Δείξε τα οχήματά μου",
+  "suggestions.portal.second": "Βοήθησέ με να κλείσω ραντεβού",
+  "suggestions.portal.third": "Βρες τις εγγυήσεις μου",
   "nav_title": "Βοηθός AI",
   "page.title": "Βοηθός AI",
   "page.description": "Ρωτήστε για τις εγγραφές σας· οι αλλαγές εκτελούνται μόνο αφού τις επιβεβαιώσετε.",

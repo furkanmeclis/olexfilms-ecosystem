@@ -1,4 +1,11 @@
 {
+  "chat.back": "Söhbətə qayıt",
+  "suggestions.panel.first": "Mənə hansı mövzularda kömək edə bilərsən?",
+  "suggestions.panel.second": "Son qeydlərimi tap",
+  "suggestions.panel.third": "Növbəti addımlarımı planlaşdırmağa kömək et",
+  "suggestions.portal.first": "Avtomobillərimi göstər",
+  "suggestions.portal.second": "Görüş təyin etməyə kömək et",
+  "suggestions.portal.third": "Zəmanətlərimi tap",
   "nav_title": "AI köməkçi",
   "page.title": "AI köməkçi",
   "page.description": "Qeydləriniz haqqında soruşun; dəyişikliklər yalnız siz təsdiqlədikdən sonra icra olunur.",
