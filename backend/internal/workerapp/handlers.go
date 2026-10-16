@@ -187,6 +187,7 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		customersusecase.NewListExportAdapter(customersExportSvc),
 		// TEC-158: stock import batches are applied here (import queue).
 		stockusecase.NewImporter(pool, queries, outboxStore),
+		warehouseusecase.NewLocationImporter(pool),
 		// TEC-188: warranty certificate PDF (panel and portal, read only).
 		warrantyusecase.NewCertificateAdapter(warrantyCert),
 		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),
