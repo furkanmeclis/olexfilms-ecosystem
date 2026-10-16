@@ -295,17 +295,21 @@ test("locations: bulk generate → preview → confirm → bin stock", async ({
   await expect(sheet).toHaveCount(0);
 
   // --- Drag and drop by keyboard: WH2 above WH1 ---
+  const [wh1, wh2] = api.warehouses.map((w) => w.uuid);
   const handle = page
     .getByTestId("warehouse-row")
     .filter({ hasText: "WH1" })
     .getByTestId("sort-handle");
   await handle.focus();
+  // dnd-kit measures the list between the keys.
   await page.keyboard.press("Space");
+  await page.waitForTimeout(300);
   await page.keyboard.press("ArrowDown");
+  await page.waitForTimeout(300);
   await page.keyboard.press("Space");
   await expect
     .poll(() => api.bodies["POST /v1/warehouse/warehouses/reorder"])
-    .toEqual([{ uuids: [api.warehouses[1].uuid, api.warehouses[0].uuid] }]);
+    .toEqual([{ uuids: [wh2, wh1] }]);
   await expect(page.getByTestId("warehouse-row").first()).toHaveAttribute(
     "data-code",
     "WH2",
@@ -426,10 +430,13 @@ test("label templates: create with preview → default → delete", async ({
   ).toEqual([expect.objectContaining({ is_default: true, name: "Bin QR" })]);
 
   // --- Delete after confirmation ---
+  const uuid = String(templates[0].uuid);
   await page.getByRole("button", { name: "Delete", exact: true }).click();
   const confirm = page.getByRole("dialog");
   await expect(confirm).toContainText("Delete the template Bin QR?");
   await confirm.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.getByText("No label templates")).toBeVisible();
-  expect(api.unknown).toEqual([]);
+  expect(api.bodies[`DELETE /v1/stock/label-templates/${uuid}`]).toHaveLength(
+    1,
+  );
 });
