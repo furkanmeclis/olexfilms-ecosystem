@@ -228,8 +228,12 @@ type Letterhead struct {
 	Website      string
 	FooterText   string
 	PaperSize    string
-	LogoBytes    []byte
-	LogoMIME     string
+	// TaxOffice and TaxNumber (VKN) close the legacy letterhead footer
+	// (TEC-772); empty for the platform letterhead.
+	TaxOffice string
+	TaxNumber string
+	LogoBytes []byte
+	LogoMIME  string
 }
 
 // ResourceAdapter connects ioengine to a list resource.

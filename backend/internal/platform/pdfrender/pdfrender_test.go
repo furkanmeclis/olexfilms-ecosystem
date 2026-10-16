@@ -296,3 +296,14 @@ func TestPingHealth(t *testing.T) {
 		t.Fatalf("unconfigured Ping = %v", err)
 	}
 }
+
+// TEC-772: header bar and table headers sit on the primary color, so their
+// text color follows its luminance; the amber accent is always present.
+func TestDocumentThemeColors(t *testing.T) {
+	for color, on := range map[string]string{"#003D25": "#ffffff", "#0F172A": "#ffffff", "#FACC15": "#111827", "#fff": "#111827", "": "#ffffff"} {
+		h := Document{Lang: "tr", Body: "x", PrimaryColor: color}.HTML()
+		if !strings.Contains(h, "--on-primary:"+on+";--accent:"+AccentColor) {
+			t.Errorf("color %q: want on-primary %s in %s", color, on, h[:300])
+		}
+	}
+}

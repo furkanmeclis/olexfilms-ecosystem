@@ -66,6 +66,8 @@ var azCatalog = map[string]string{
 	"users.status.pending":                             "Gözləmədə",
 	"export.document":                                  "İxrac",
 	"export.generated_at":                              "Yaradılma vaxtı",
+	"letterhead.tax_office":                            "Vergi orqanı",
+	"letterhead.tax_number":                            "VÖEN",
 	"export.title.platform.users":                      "İstifadəçilərin ixracı",
 	"export.title.platform.organizations":              "Təşkilatların ixracı",
 	"export.title.platform.roles":                      "Rolların ixracı",

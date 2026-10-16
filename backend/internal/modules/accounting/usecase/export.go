@@ -387,7 +387,7 @@ func documentHTML(loc i18n.Locale, lh *ioengine.Letterhead, title string, info [
 	b.WriteString(`: `)
 	b.WriteString(esc(pdfrender.IssuedAt(generated, zone)))
 	b.WriteString(`</p>`)
-	b.WriteString(ioengine.LetterheadFooterHTML(lh))
+	b.WriteString(ioengine.LetterheadFooterHTMLFor(lh, string(loc)))
 	return pdfrender.Document{
 		Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: color,
 	}.HTML()
