@@ -81,7 +81,11 @@ test("order: create → approve → ship → receive", async ({ page }) => {
 
   await act(page, "mark_ready");
   await expect(page.locator('[data-action="ship"]')).toBeVisible();
-  await act(page, "ship");
+  // TEC-768: shipping asks for the delivery method.
+  await page.locator('[data-action="ship"]').click();
+  await page.getByTestId("ship-method").click();
+  await page.getByRole("option", { name: "Warehouse pickup" }).click();
+  await page.getByTestId("action-confirm").click();
   await expect(page.locator('[data-action="cancel"]')).toHaveCount(0);
   await expect(page.locator('[data-action="request_cancel"]')).toBeVisible();
 
@@ -95,6 +99,10 @@ test("order: create → approve → ship → receive", async ({ page }) => {
 
   const moves = (api.bodies[`POST /v1/orders/${ORDER_UUID}/transitions`] ??
     []) as { status: string }[];
+  expect(moves[4]).toEqual({
+    status: "shipped",
+    delivery_method_uuid: "0b9c4c1e-0000-4000-8000-0000000000d1",
+  });
   expect(moves.map((m) => m.status)).toEqual([
     "submitted",
     "approved",

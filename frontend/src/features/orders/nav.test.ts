@@ -49,3 +49,17 @@ describe("tenant nav: orders (TEC-170)", () => {
     expect(visibleIds(buyer, "center")).not.toContain("orders-new");
   });
 });
+
+describe("tenant nav: delivery methods (TEC-768)", () => {
+  it("is shown to a seller with orders.ship", () => {
+    const ship = [Permission.OrdersRead, Permission.OrdersShip];
+    expect(visibleIds(ship, "center")).toContain("orders-delivery-methods");
+    expect(visibleIds(ship, "distributor")).toContain(
+      "orders-delivery-methods",
+    );
+    expect(visibleIds(ship, "dealer")).not.toContain("orders-delivery-methods");
+    expect(visibleIds([Permission.OrdersRead], "center")).not.toContain(
+      "orders-delivery-methods",
+    );
+  });
+});
