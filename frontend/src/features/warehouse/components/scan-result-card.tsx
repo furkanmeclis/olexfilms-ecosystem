@@ -7,6 +7,7 @@ import {
   locationLabelsPath,
   type WarehouseScanResult,
 } from "@/features/warehouse/services/warehouse.service";
+import { ScanUnitOperations } from "@/features/stock/components/unit-operations";
 import { useLocale } from "@/providers/locale-provider";
 
 type Location = NonNullable<WarehouseScanResult["location"]>;
@@ -135,6 +136,15 @@ export function ScanResultCard({ result }: { result: WarehouseScanResult }) {
                 filename={`${unit.barcode}.pdf`}
               />
             </div>
+            {/* TEC-763: history, product fix, roll split. */}
+            <ScanUnitOperations
+              unit={{
+                barcode: unit.barcode,
+                status: unit.status,
+                remaining_meters: unit.remaining_meters,
+                product: product ?? null,
+              }}
+            />
           </dl>
         ) : null}
 

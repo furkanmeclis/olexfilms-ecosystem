@@ -23,6 +23,8 @@ const state = vi.hoisted(() => ({
   feature: true,
 }));
 
+const nav = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => nav }));
 vi.mock("next/link", () => ({
   default: ({
     href,
@@ -427,7 +429,7 @@ describe("MyStockPage (TEC-224, TEC-374 DataTable)", () => {
       container
         .querySelector('[data-testid="row-actions"]')
         ?.getAttribute("data-actions"),
-    ).toBe("print_label");
+    ).toBe("history,print_label");
   });
 
   it("builds the units.pdf path with one barcode per unit", () => {
@@ -489,6 +491,42 @@ describe("MyStockPage (TEC-224, TEC-374 DataTable)", () => {
     await render(createElement(MyStockPage, { slug: "acme" }));
     expect(api.listUnits).not.toHaveBeenCalled();
     expect(container.textContent).toContain("common.error_forbidden");
+  });
+});
+
+describe("MyStockPage center and product tab (TEC-763)", () => {
+  it("titles the center's own stock and has no dealer picker", async () => {
+    state.grants = new Set([Permission.StockRead]);
+    state.orgType = "center";
+    api.listUnits.mockResolvedValue(page([unit()]));
+    await render(createElement(MyStockPage, { slug: "acme" }));
+    expect(container.textContent).toContain("stock.page.title_center");
+    expect(api.listDealers).not.toHaveBeenCalled();
+    expect(api.listUnits).toHaveBeenCalledWith("org-1", expect.anything());
+  });
+
+  it("offers a unit's history on its row", async () => {
+    state.grants = new Set([Permission.StockRead]);
+    api.listUnits.mockResolvedValue(page([unit()]));
+    await render(createElement(MyStockPage, { slug: "acme" }));
+    expect(byId("row-actions")?.getAttribute("data-actions")).toBe(
+      "history,print_label",
+    );
+  });
+
+  it("lists the stock by product and opens a product's units", async () => {
+    state.grants = new Set([Permission.StockRead]);
+    api.listUnits.mockResolvedValue(page([unit()]));
+    api.listProducts.mockResolvedValue(page([product()]));
+    await render(createElement(MyStockPage, { slug: "acme" }));
+    await act(async () => byId("stock-tab-products")?.click());
+    await flush();
+    expect(api.listProducts).toHaveBeenLastCalledWith(
+      "org-1",
+      expect.objectContaining({ sort: "product", limit: 20, offset: 0 }),
+    );
+    expect(byId("stock-product-row")?.textContent).toBe("Olex PPF 190");
+    expect(byId("row-actions")?.getAttribute("data-actions")).toBe("units");
   });
 });
 

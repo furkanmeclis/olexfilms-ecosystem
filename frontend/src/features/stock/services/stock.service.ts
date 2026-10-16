@@ -17,14 +17,20 @@ export type StockProduct = Schemas["StockProduct"];
  */
 export type StockUnitListQuery = ServerListQuery;
 
-/** GET /v1/stock/organizations/{uuid}/products filters. */
-export type StockProductListQuery = {
-  q?: string;
-  product_uuid?: string;
-  status?: "in_stock" | "out_of_stock";
-  limit: number;
-  offset: number;
-};
+/**
+ * GET /v1/stock/organizations/{uuid}/products filters; the TEC-763 table
+ * passes its list state (`sort` product/sku/category/quantity/meters/
+ * updated_at, `q`, `status`).
+ */
+export type StockProductListQuery =
+  | {
+      q?: string;
+      product_uuid?: string;
+      status?: "in_stock" | "out_of_stock";
+      limit: number;
+      offset: number;
+    }
+  | ServerListQuery;
 
 export type Page<T> = {
   items: T[];
