@@ -17859,7 +17859,6 @@ paths:
         '426':
           $ref: '#/components/responses/MobileApiVersionUnsupported'
 
-  # --- TEC-91: QR web sign-in (web side) ---------------------------------
   /v1/mobile/warehouse/my-warehouses:
     get:
       tags: [Mobile]
@@ -18284,6 +18283,7 @@ paths:
         "426":
           $ref: "#/components/responses/MobileApiVersionUnsupported"
 
+  # --- TEC-91: QR web sign-in (web side) ---------------------------------
   /v1/auth/qr/start:
     post:
       tags: [Mobile]
