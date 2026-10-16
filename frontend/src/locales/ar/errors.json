@@ -162,5 +162,13 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "ملف الفوترة الخاص بالمشتري غير مكتمل؛ أكمل الحقول الناقصة.",
   "codes.EINVOICE_INVALID_STATUS": "حالة الفاتورة الإلكترونية لا تسمح بهذا الإجراء.",
   "codes.EINVOICE_NOT_ARCHIVED": "لم تتم أرشفة الفاتورة الإلكترونية بعد.",
-  "codes.EINVOICE_PDF_NOT_READY": "ملف PDF للفاتورة غير جاهز بعد؛ حاول بعد قليل أو أعد إنشاءه."
+  "codes.EINVOICE_PDF_NOT_READY": "ملف PDF للفاتورة غير جاهز بعد؛ حاول بعد قليل أو أعد إنشاءه.",
+  "codes.DELIVERY_METHOD_SYSTEM": "لا يمكن تغيير طريقة التسليم النظامية أو حذفها.",
+  "codes.DELIVERY_METHOD_IN_USE": "توجد طلبات شُحنت بهذه الطريقة؛ عطّلها بدلاً من حذفها.",
+  "codes.DELIVERY_METHOD_CODE_TAKEN": "هذا الرمز مستخدم بالفعل.",
+  "codes.TRACKING_URL_TEMPLATE_INVALID": "يجب أن يكون قالب رابط التتبع عنوان http(s) صالحاً.",
+  "codes.ORDER_NOT_SHIPPED": "لم يُشحن الطلب بعد.",
+  "codes.ORDER_RECEIPT_NOT_ALLOWED": "لا يمكن إرفاق إيصال الاستلام إلا بطلب مشحون أو مستلم.",
+  "codes.ORDER_DOCUMENT_UNAVAILABLE": "تخزين المستندات أو خدمة PDF غير متاحة حالياً.",
+  "codes.ORDER_RECEIPT_FILE_INVALID": "يجب أن يكون إيصال الاستلام PDF أو JPEG أو PNG أو WebP (حتى 10 ميغابايت)."
 }

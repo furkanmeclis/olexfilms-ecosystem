@@ -818,6 +818,16 @@ export function tenantNav(slug: string) {
             orgTypes: ["distributor", "dealer"],
             feature: "orders",
           },
+          {
+            // TEC-768: the seller's delivery method catalog.
+            id: "orders-delivery-methods",
+            titleKey: "orders.nav_delivery_methods",
+            href: routes.tenant.orders.deliveryMethods(slug),
+            icon: Truck,
+            permission: permissions.orders.ship,
+            orgTypes: ["center", "distributor"],
+            feature: "orders",
+          },
         ],
       },
       // TEC-349: staff cards, payments and the own-book reports.

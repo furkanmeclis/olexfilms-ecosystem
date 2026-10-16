@@ -162,5 +162,13 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Das Rechnungsprofil des Käufers ist unvollständig; ergänzen Sie die fehlenden Felder.",
   "codes.EINVOICE_INVALID_STATUS": "Der Status der E-Rechnung lässt diese Aktion nicht zu.",
   "codes.EINVOICE_NOT_ARCHIVED": "Die E-Rechnung ist noch nicht archiviert.",
-  "codes.EINVOICE_PDF_NOT_READY": "Das Rechnungs-PDF ist noch nicht bereit; versuchen Sie es gleich erneut oder erzeugen Sie es neu."
+  "codes.EINVOICE_PDF_NOT_READY": "Das Rechnungs-PDF ist noch nicht bereit; versuchen Sie es gleich erneut oder erzeugen Sie es neu.",
+  "codes.DELIVERY_METHOD_SYSTEM": "Die System-Versandart kann nicht geändert oder gelöscht werden.",
+  "codes.DELIVERY_METHOD_IN_USE": "Mit dieser Versandart wurden Bestellungen versandt; deaktivieren statt löschen.",
+  "codes.DELIVERY_METHOD_CODE_TAKEN": "Dieser Code wird bereits verwendet.",
+  "codes.TRACKING_URL_TEMPLATE_INVALID": "Die Tracking-URL-Vorlage muss eine gültige http(s)-Adresse sein.",
+  "codes.ORDER_NOT_SHIPPED": "Die Bestellung wurde noch nicht versandt.",
+  "codes.ORDER_RECEIPT_NOT_ALLOWED": "Ein Empfangsbeleg kann nur an eine versandte oder empfangene Bestellung angehängt werden.",
+  "codes.ORDER_DOCUMENT_UNAVAILABLE": "Dokumentenspeicher oder PDF-Dienst ist gerade nicht verfügbar.",
+  "codes.ORDER_RECEIPT_FILE_INVALID": "Der Empfangsbeleg muss PDF, JPEG, PNG oder WebP sein (bis 10 MB)."
 }

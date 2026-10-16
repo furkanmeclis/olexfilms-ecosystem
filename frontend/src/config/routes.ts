@@ -129,6 +129,10 @@ export const routes = {
       create: (slug: string) => `/t/${slug}/orders/new`,
       detail: (slug: string, uuid: string) => `/t/${slug}/orders/${uuid}`,
       edit: (slug: string, uuid: string) => `/t/${slug}/orders/${uuid}/edit`,
+      /** TEC-768: printable pick list and the delivery method catalog. */
+      pickList: (slug: string, uuid: string) =>
+        `/t/${slug}/orders/${uuid}/pick-list`,
+      deliveryMethods: (slug: string) => `/t/${slug}/orders/delivery-methods`,
     },
     /** TEC-191 warranty list and detail. */
     /** TEC-504: e-invoices of the brand center (Muhasebe > e-Fatura). */

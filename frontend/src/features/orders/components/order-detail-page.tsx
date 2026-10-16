@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   Building2,
+  ClipboardList,
   History,
   Package,
   Pencil,
@@ -33,8 +34,13 @@ import {
   useStoreOrder,
 } from "@/features/orders/components/order-action-dialog";
 import {
+  LinePickingActions,
+  ShippingCard,
+} from "@/features/orders/components/order-picking";
+import {
   canAssignUnits,
   canEditDraft,
+  canOpenPickList,
   lineAmount,
   lineFullyAssigned,
   orderActions,
@@ -359,7 +365,10 @@ function Items({ order, assign }: { order: Order; assign: boolean }) {
                   </ul>
                 ) : null}
                 {assign && !lineFullyAssigned(item) ? (
-                  <AssignForm order={order} item={item} />
+                  <>
+                    <LinePickingActions order={order} item={item} suggest />
+                    <AssignForm order={order} item={item} />
+                  </>
                 ) : null}
               </div>
             );
@@ -591,11 +600,12 @@ export function OrderDetailPage({
   const actions = orderActions(order);
   const assign = canAssignUnits(can, order);
   const fully = orderFullyAssigned(order);
+  const pickList = canOpenPickList(can, order);
 
   return (
     <div className="space-y-6">
       {header}
-      {actions.length > 0 || canEditDraft(can, order) ? (
+      {actions.length > 0 || canEditDraft(can, order) || pickList ? (
         <div className="flex flex-wrap gap-2" data-testid="order-actions">
           {canEditDraft(can, order) ? (
             <Button asChild variant="outline">
@@ -605,6 +615,17 @@ export function OrderDetailPage({
               >
                 <Pencil className="size-4" />
                 {t("orders.actions.edit")}
+              </Link>
+            </Button>
+          ) : null}
+          {pickList ? (
+            <Button asChild variant="outline">
+              <Link
+                href={routes.tenant.orders.pickList(slug, order.uuid)}
+                data-testid="order-pick-list"
+              >
+                <ClipboardList className="size-4" />
+                {t("orders.picking.pick_list")}
               </Link>
             </Button>
           ) : null}
@@ -636,6 +657,11 @@ export function OrderDetailPage({
         <Items order={order} assign={assign} />
         <div className="space-y-6">
           <Parties order={order} />
+          <ShippingCard
+            order={order}
+            canShip={can(permissions.orders.ship)}
+            canReceive={can(permissions.orders.receive)}
+          />
           <HistoryList order={order} />
         </div>
       </div>
