@@ -427,5 +427,16 @@
   "validation.scope": "هذا النطاق غير متاح لهذه الطريقة.",
   "validation.too_long": "{{max}} حرفًا كحد أقصى.",
   "validation.type": "هذا النوع غير مسموح هنا.",
-  "validation.warehouse": "اختر مستودعًا."
+  "validation.warehouse": "اختر مستودعًا.",
+  "entry_import.open": "إضافة رموز شريطية من Excel",
+  "entry_import.title": "إضافة رموز شريطية من Excel",
+  "entry_import.policy_title": "سياسة الرموز الموجودة",
+  "entry_import.policy.none.title": "ربط الرموز الصالحة",
+  "entry_import.policy.none.description": "ربط الرموز المطبوعة الموجودة؛ عرض التعارضات كأخطاء.",
+  "entry_import.policy.all_existing.title": "تخطي جميع الرموز الموجودة",
+  "entry_import.policy.all_existing.description": "إنشاء وحدات للرموز الجديدة فقط.",
+  "entry_import.policy.conflicts_only.title": "تخطي التعارضات",
+  "entry_import.policy.conflicts_only.description": "ربط الرموز الصالحة وتخطي التعارضات.",
+  "entry_import.confirm_sentence": "سيتم ربط {{linked}} رمزًا وإنشاء {{created}} وحدة (توضع {{placed}} في المواقع). سيتم تخطي {{skipped}} صفوف.",
+  "entry_import.confirm_action": "استيراد {{count}} صفوف مطابقة (تم تخطي {{skipped}})"
 }

@@ -427,5 +427,16 @@
   "validation.scope": "Bu əhatə üsul üçün mövcud deyil.",
   "validation.too_long": "Ən çox {{max}} simvol.",
   "validation.type": "Bu növ burada istifadə edilə bilməz.",
-  "validation.warehouse": "Anbar seçin."
+  "validation.warehouse": "Anbar seçin.",
+  "entry_import.open": "Excel-dən barkod əlavə et",
+  "entry_import.title": "Excel-dən barkod əlavə et",
+  "entry_import.policy_title": "Mövcud barkod qaydası",
+  "entry_import.policy.none.title": "Uyğun barkodları bağla",
+  "entry_import.policy.none.description": "Mövcud çap edilmiş barkodları bağla; ziddiyyətləri xəta kimi göstər.",
+  "entry_import.policy.all_existing.title": "Bütün mövcudları ötür",
+  "entry_import.policy.all_existing.description": "Yalnız yeni barkodlar üçün vahid yarat.",
+  "entry_import.policy.conflicts_only.title": "Ziddiyyətləri ötür",
+  "entry_import.policy.conflicts_only.description": "Uyğun barkodları bağla, ziddiyyətləri ötür.",
+  "entry_import.confirm_sentence": "{{linked}} barkod bağlanacaq; {{created}} vahid yaradılacaq ({{placed}} gözdə yerləşdiriləcək). {{skipped}} sətir ötürüləcək.",
+  "entry_import.confirm_action": "{{count}} uyğun sətri idxal et ({{skipped}} ötürüldü)"
 }

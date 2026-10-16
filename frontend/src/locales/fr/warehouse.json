@@ -427,5 +427,16 @@
   "validation.scope": "Ce périmètre n'est pas disponible pour cette méthode.",
   "validation.too_long": "{{max}} caractères maximum.",
   "validation.type": "Ce type n'est pas autorisé ici.",
-  "validation.warehouse": "Choisissez un entrepôt."
+  "validation.warehouse": "Choisissez un entrepôt.",
+  "entry_import.open": "Ajouter des codes-barres depuis Excel",
+  "entry_import.title": "Ajouter des codes-barres depuis Excel",
+  "entry_import.policy_title": "Règle pour les codes-barres existants",
+  "entry_import.policy.none.title": "Lier les codes utilisables",
+  "entry_import.policy.none.description": "Lier les codes imprimés existants ; afficher les conflits comme erreurs.",
+  "entry_import.policy.all_existing.title": "Ignorer tous les codes existants",
+  "entry_import.policy.all_existing.description": "Créer des unités uniquement pour les nouveaux codes.",
+  "entry_import.policy.conflicts_only.title": "Ignorer les conflits",
+  "entry_import.policy.conflicts_only.description": "Lier les codes utilisables et ignorer les conflits.",
+  "entry_import.confirm_sentence": "{{linked}} codes seront liés ; {{created}} unités seront créées ({{placed}} placées en emplacement). {{skipped}} lignes seront ignorées.",
+  "entry_import.confirm_action": "Importer {{count}} lignes correspondantes ({{skipped}} ignorées)"
 }

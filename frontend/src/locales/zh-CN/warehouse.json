@@ -427,5 +427,16 @@
   "validation.scope": "该方式不支持此范围。",
   "validation.too_long": "最多 {{max}} 个字符。",
   "validation.type": "此处不允许该类型。",
-  "validation.warehouse": "请选择仓库。"
+  "validation.warehouse": "请选择仓库。",
+  "entry_import.open": "从 Excel 添加条码",
+  "entry_import.title": "从 Excel 添加条码",
+  "entry_import.policy_title": "现有条码处理方式",
+  "entry_import.policy.none.title": "关联可用条码",
+  "entry_import.policy.none.description": "关联现有已打印条码；冲突显示为错误。",
+  "entry_import.policy.all_existing.title": "跳过所有现有条码",
+  "entry_import.policy.all_existing.description": "仅为新条码创建单元。",
+  "entry_import.policy.conflicts_only.title": "跳过冲突条码",
+  "entry_import.policy.conflicts_only.description": "关联可用条码并跳过冲突。",
+  "entry_import.confirm_sentence": "将关联 {{linked}} 个条码；创建 {{created}} 个新单元（{{placed}} 个放入库位）。跳过 {{skipped}} 行。",
+  "entry_import.confirm_action": "导入 {{count}} 个匹配行（跳过 {{skipped}} 行）"
 }

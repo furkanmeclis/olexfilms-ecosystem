@@ -427,5 +427,16 @@
   "validation.scope": "Dieser Umfang ist für die Methode nicht verfügbar.",
   "validation.too_long": "Höchstens {{max}} Zeichen.",
   "validation.type": "Dieser Typ ist hier nicht zulässig.",
-  "validation.warehouse": "Wählen Sie ein Lager."
+  "validation.warehouse": "Wählen Sie ein Lager.",
+  "entry_import.open": "Barcodes aus Excel hinzufügen",
+  "entry_import.title": "Barcodes aus Excel hinzufügen",
+  "entry_import.policy_title": "Regel für vorhandene Barcodes",
+  "entry_import.policy.none.title": "Geeignete Barcodes verknüpfen",
+  "entry_import.policy.none.description": "Vorhandene gedruckte Barcodes verknüpfen; Konflikte als Fehler anzeigen.",
+  "entry_import.policy.all_existing.title": "Alle vorhandenen überspringen",
+  "entry_import.policy.all_existing.description": "Einheiten nur für neue Barcodes erstellen.",
+  "entry_import.policy.conflicts_only.title": "Konflikte überspringen",
+  "entry_import.policy.conflicts_only.description": "Geeignete Barcodes verknüpfen und Konflikte überspringen.",
+  "entry_import.confirm_sentence": "{{linked}} Barcodes werden verknüpft; {{created}} Einheiten werden erstellt ({{placed}} in Lagerplätzen). {{skipped}} Zeilen werden übersprungen.",
+  "entry_import.confirm_action": "{{count}} passende Zeilen importieren ({{skipped}} übersprungen)"
 }

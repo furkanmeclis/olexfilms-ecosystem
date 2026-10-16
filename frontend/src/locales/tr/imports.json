@@ -189,5 +189,9 @@
   "confirm_step.sentence_end": ".",
   "resources.tenant.stock.units": "Stok birimleri",
   "confirm_step.stock_located_one": "Bunlardan {{count}} birim dosyadaki konuma yerleşecek.",
-  "confirm_step.stock_located_other": "Bunlardan {{count}} birim dosyadaki konuma yerleşecek."
+  "confirm_step.stock_located_other": "Bunlardan {{count}} birim dosyadaki konuma yerleşecek.",
+  "fields.entry_barcodes.product_name": "Ürün adı",
+  "fields.entry_barcodes.product_sku": "Ürün SKU",
+  "fields.entry_barcodes.barcode": "Barkod",
+  "fields.entry_barcodes.location_code": "Göz kodu"
 }

@@ -427,5 +427,16 @@
   "validation.scope": "Αυτό το εύρος δεν είναι διαθέσιμο για τη μέθοδο.",
   "validation.too_long": "Έως {{max}} χαρακτήρες.",
   "validation.type": "Αυτός ο τύπος δεν επιτρέπεται εδώ.",
-  "validation.warehouse": "Επιλέξτε αποθήκη."
+  "validation.warehouse": "Επιλέξτε αποθήκη.",
+  "entry_import.open": "Προσθήκη barcode από Excel",
+  "entry_import.title": "Προσθήκη barcode από Excel",
+  "entry_import.policy_title": "Πολιτική υπαρχόντων barcode",
+  "entry_import.policy.none.title": "Σύνδεση κατάλληλων barcode",
+  "entry_import.policy.none.description": "Σύνδεση εκτυπωμένων barcode· εμφάνιση συγκρούσεων ως σφάλματα.",
+  "entry_import.policy.all_existing.title": "Παράλειψη όλων των υπαρχόντων",
+  "entry_import.policy.all_existing.description": "Δημιουργία μονάδων μόνο για νέα barcode.",
+  "entry_import.policy.conflicts_only.title": "Παράλειψη συγκρούσεων",
+  "entry_import.policy.conflicts_only.description": "Σύνδεση κατάλληλων barcode και παράλειψη συγκρούσεων.",
+  "entry_import.confirm_sentence": "Θα συνδεθούν {{linked}} barcode· θα δημιουργηθούν {{created}} μονάδες ({{placed}} σε θέσεις). Θα παραλειφθούν {{skipped}} γραμμές.",
+  "entry_import.confirm_action": "Εισαγωγή {{count}} γραμμών ({{skipped}} παραλείφθηκαν)"
 }
