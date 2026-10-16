@@ -940,6 +940,21 @@ export function tenantNav(slug: string) {
             feature: "stock",
             orgTypes: ["distributor", "dealer"],
           },
+        ],
+      },
+      {
+        // TEC-755: stock forecast add-on (same gates as /v1/stock-forecasts:
+        // the stock_forecast module and stock_forecast.read). Its own group,
+        // so the center (network demand) and staff without stock.read reach
+        // it too.
+        id: "stock-forecast",
+        labelKey: "stock_forecast.nav",
+        icon: TrendingUp,
+        defaultOpen: true,
+        permission: permissions.stockForecast.read,
+        feature: "stock_forecast",
+        orgTypes: ["center", "distributor", "dealer"],
+        items: [
           {
             id: "stock-forecast",
             titleKey: "stock_forecast.nav",
@@ -947,6 +962,7 @@ export function tenantNav(slug: string) {
             icon: TrendingUp,
             permission: permissions.stockForecast.read,
             feature: "stock_forecast",
+            orgTypes: ["center", "distributor", "dealer"],
           },
         ],
       },

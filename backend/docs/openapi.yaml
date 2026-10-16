@@ -21672,6 +21672,33 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/stock-forecasts/export:
+    post:
+      tags: [Stock Forecasts]
+      operationId: exportStockForecasts
+      summary: Queue the stock forecast list export
+      description: >-
+        TEC-755. Queues an I/O engine export job (`stock_forecasts.list`) over
+        the active organization's forecast list. `query` carries the list
+        parameters of `GET /v1/stock-forecasts` (`q`, `sort`, `status`,
+        `days_left_min`, `days_left_max`); format is `csv` or `xlsx`. Poll and
+        download through `/v1/tenant/exports/{uuid}`.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ListExportRequest" }
+      responses:
+        "202":
+          description: Export job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeExportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /v1/stock-forecasts/{product_uuid}:
     get:
       tags: [Stock Forecasts]
@@ -41425,15 +41452,31 @@ components:
               stock_qty: { type: integer }
               stock_meters: { type: string }
         thresholds: { $ref: "#/components/schemas/StockForecastThresholds" }
-        parameters:
-          type: object
-          required: [min_data_days, warning_days, critical_days, cover_days, horizon_days]
-          properties:
-            min_data_days: { type: integer }
-            warning_days: { type: integer }
-            critical_days: { type: integer }
-            cover_days: { type: integer }
-            horizon_days: { type: integer }
+        parameters: { $ref: "#/components/schemas/StockForecastParameters" }
+
+    StockForecastParameters:
+      type: object
+      required: [min_data_days, warning_days, critical_days, cover_days, horizon_days]
+      properties:
+        min_data_days: { type: integer }
+        warning_days: { type: integer }
+        critical_days: { type: integer }
+        cover_days: { type: integer }
+        horizon_days: { type: integer }
+
+    StockForecastMeta:
+      type: object
+      required: [default_sort, sortable_fields, statuses, thresholds, parameters]
+      properties:
+        default_sort: { type: string }
+        sortable_fields:
+          type: array
+          items: { type: string }
+        statuses:
+          type: array
+          items: { $ref: "#/components/schemas/StockForecastStatus" }
+        thresholds: { $ref: "#/components/schemas/StockForecastThresholds" }
+        parameters: { $ref: "#/components/schemas/StockForecastParameters" }
 
     StockForecastThresholdInput:
       type: object
@@ -41638,7 +41681,7 @@ components:
       required: [success, data, meta]
       properties:
         success: { type: boolean, enum: [true] }
-        data: { type: object }
+        data: { $ref: "#/components/schemas/StockForecastMeta" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeStockForecastOrderDraft:

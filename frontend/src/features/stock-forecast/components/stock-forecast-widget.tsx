@@ -30,7 +30,7 @@ export function StockForecastWidget({ slug }: { slug: string }) {
   const visible = can(Permission.StockForecastRead) && feature.enabled;
   const query = useQuery({
     queryKey: stockForecastKeys.widget,
-    queryFn: () => stockForecastService.widget(),
+    queryFn: () => stockForecastService.criticalCount(),
     enabled: visible,
     staleTime: 60_000,
   });
@@ -64,7 +64,7 @@ export function StockForecastWidget({ slug }: { slug: string }) {
               {t("stock_forecast.widget.critical")}
             </div>
             <div className="text-3xl font-semibold tabular-nums">
-              {format.number(query.data?.critical_count ?? 0)}
+              {format.number(query.data ?? 0)}
             </div>
           </div>
         )}
