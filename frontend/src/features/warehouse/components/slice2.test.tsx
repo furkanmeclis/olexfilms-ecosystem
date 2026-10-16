@@ -560,7 +560,11 @@ describe("CountReportCard (TEC-232)", () => {
     );
     await render(
       m,
-      createElement(CountReportCard, { count: COUNT, canApprove: true }),
+      createElement(CountReportCard, {
+        slug: "acme",
+        count: COUNT,
+        canApprove: true,
+      }),
     );
     await click($("count-approve"));
     await flush();
@@ -577,6 +581,7 @@ describe("CountReportCard (TEC-232)", () => {
     await render(
       m,
       createElement(CountReportCard, {
+        slug: "acme",
         count: { ...COUNT, created_by_user_uuid: "reviewer-1" },
         canApprove: true,
       }),
@@ -595,7 +600,11 @@ describe("CountReportCard (TEC-232)", () => {
     stepUp.ensure.mockResolvedValue(false);
     await render(
       m,
-      createElement(CountReportCard, { count: COUNT, canApprove: true }),
+      createElement(CountReportCard, {
+        slug: "acme",
+        count: COUNT,
+        canApprove: true,
+      }),
     );
     await click($("count-approve"));
     await flush();
