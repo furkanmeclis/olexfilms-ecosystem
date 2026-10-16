@@ -6357,7 +6357,7 @@ export interface paths {
         };
         /**
          * List the stock entry documents of the active organization
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Newest first; entries written by an applied stock import (TEC-158) have mode `import`. TEC-375 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), status (flow rank draft, confirmed, undone, cancelled), warehouse (name; import entries last), with an id tiebreak; `status`, `mode` and `warehouse_uuid` are comma separated any-of filters; `q` matches the note and the warehouse name or code. An unknown value is 400 VALIDATION_ERROR.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Newest first; entries written by an applied stock import (TEC-158) have mode `import`. TEC-375 (docs/list-contract.md): `sort` is one of created_at (default `-created_at`), status (flow rank draft, confirmed, undone, cancelled), warehouse (name; import entries last), with an id tiebreak; `status`, `mode`, `warehouse_uuid` and `import_job_uuid` are comma separated any-of filters; `q` matches the note and the warehouse name or code. An unknown value is 400 VALIDATION_ERROR.
          */
         get: operations["listStockEntries"];
         put?: never;
@@ -21118,6 +21118,15 @@ export interface components {
             warehouse: null | components["schemas"]["StockEntryWarehouse"];
             /** Format: uuid */
             import_batch_uuid: string | null;
+            /**
+             * Format: uuid
+             * @description Import entries (TEC-759) - the stock import job that wrote the entry.
+             */
+            import_job_uuid?: string;
+            /** @description Import entries - the uploaded file name. */
+            import_source_filename?: string;
+            /** @description Import entries - status of the import batch (applied, undone, partially_undone when some rows moved after the import and were not undone). */
+            import_status?: string;
             /** Format: int64 */
             line_count: number;
             /**
@@ -39966,6 +39975,8 @@ export interface operations {
                 mode?: string;
                 /** @description Comma separated warehouse uuids (any of). */
                 warehouse_uuid?: string;
+                /** @description Comma separated import job uuids (any of): the entries written by these stock import jobs (TEC-759). */
+                import_job_uuid?: string;
                 q?: components["parameters"]["Q"];
                 /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
                 sort?: components["parameters"]["Sort"];

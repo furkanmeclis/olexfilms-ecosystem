@@ -186,5 +186,8 @@
   "fields.stock.quantity": "Ποσότητα",
   "fields.stock.meters": "Μέτρα",
   "fields.stock.location_code": "Κωδικός θέσης",
-  "confirm_step.sentence_end": "."
+  "confirm_step.sentence_end": ".",
+  "resources.tenant.stock.units": "Μονάδες αποθέματος",
+  "confirm_step.stock_located_one": "{{count}} από αυτές θα τοποθετηθεί στη θέση που ορίζει το αρχείο.",
+  "confirm_step.stock_located_other": "{{count}} από αυτές θα τοποθετηθούν στη θέση που ορίζει το αρχείο."
 }

@@ -1,7 +1,15 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, MapPin, PackagePlus, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  FileSpreadsheet,
+  MapPin,
+  PackagePlus,
+  TriangleAlert,
+  XCircle,
+} from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -30,6 +38,7 @@ import {
 import {
   canConfirm,
   entryStatusTone,
+  importLinesKept,
   linesToPlace,
   unplacedLines,
 } from "@/features/warehouse/lib/entries";
@@ -290,6 +299,11 @@ export function StockEntryDetailPage({
                   <Info label={t("warehouse.fields.note")}>{entry.note}</Info>
                 </div>
               ) : null}
+              {entry.mode === "import" ? (
+                <div className="sm:col-span-4">
+                  <ImportSource slug={slug} entry={entry} />
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
@@ -458,6 +472,53 @@ export function StockEntryDetailPage({
         </>
       )}
     </WarehouseShell>
+  );
+}
+
+/**
+ * Import entries (TEC-759): the source file, the import job and, after a
+ * partial undo, why some units stayed in stock.
+ */
+function ImportSource({ slug, entry }: { slug: string; entry: StockEntry }) {
+  const { t } = useLocale();
+  const kept = importLinesKept(entry);
+  return (
+    <div className="space-y-3" data-testid="entry-import-source">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <Info label={t("warehouse.entry.import_source")}>
+          <span className="flex items-center gap-1.5 break-all">
+            <FileSpreadsheet className="text-muted-foreground size-4 shrink-0" />
+            {entry.import_source_filename || "—"}
+          </span>
+        </Info>
+        {entry.import_job_uuid ? (
+          <Button asChild variant="outline" size="sm">
+            <Link
+              href={routes.tenant.imports.detail(slug, entry.import_job_uuid)}
+              data-testid="entry-import-job"
+            >
+              {t("warehouse.entry.import_job")}
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+      {kept !== null ? (
+        <div
+          className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-sm"
+          data-testid="entry-import-partial"
+        >
+          <TriangleAlert className="size-4 shrink-0 text-amber-600" />
+          <div className="space-y-0.5">
+            <p className="font-medium">
+              {t("warehouse.entry.import_partial_title")}
+            </p>
+            <p className="text-muted-foreground">
+              {t("warehouse.entry.import_partial", { count: kept })}
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

@@ -27,10 +27,18 @@ const EXPORT_ONLY_RESOURCES = new Set<string>([
   "tenant.fleet.statement",
 ]);
 
+/**
+ * Import jobs of resources outside `IoResource` (their own upload path,
+ * e.g. POST /v1/stock/import (TEC-759)); label at `imports.resources.*`.
+ */
+const IMPORT_ONLY_RESOURCES = new Set<string>(["tenant.stock.units"]);
+
 export function resourceLabelKey(resource: string): string | null {
   const key =
     RESOURCE_LABEL_KEYS[resource as IoResource] ??
-    (EXPORT_ONLY_RESOURCES.has(resource) ? resource : undefined);
+    (EXPORT_ONLY_RESOURCES.has(resource) || IMPORT_ONLY_RESOURCES.has(resource)
+      ? resource
+      : undefined);
   return key ? `resources.${resource}` : null;
 }
 

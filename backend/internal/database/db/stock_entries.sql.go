@@ -85,13 +85,17 @@ WHERE e.organization_id = $1
   AND (COALESCE(cardinality($4::uuid[]), 0) = 0
        OR EXISTS (SELECT 1 FROM warehouses fw
                   WHERE fw.id = e.warehouse_id AND fw.uuid = ANY ($4::uuid[])))
-  AND ($5::timestamptz IS NULL OR e.created_at >= $5::timestamptz)
-  AND ($6::timestamptz IS NULL OR e.created_at < $6::timestamptz)
-  AND ($7::text IS NULL
-       OR e.note ILIKE '%' || $7::text || '%'
+  AND (COALESCE(cardinality($5::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM stock_import_batches ib
+                  JOIN import_jobs ij ON ij.id = ib.import_job_id
+                  WHERE ib.id = e.import_batch_id AND ij.uuid = ANY ($5::uuid[])))
+  AND ($6::timestamptz IS NULL OR e.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR e.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR e.note ILIKE '%' || $8::text || '%'
        OR EXISTS (SELECT 1 FROM warehouses qw
                   WHERE qw.id = e.warehouse_id
-                    AND (qw.name ILIKE '%' || $7::text || '%' OR qw.code ILIKE '%' || $7::text || '%')))
+                    AND (qw.name ILIKE '%' || $8::text || '%' OR qw.code ILIKE '%' || $8::text || '%')))
 `
 
 type CountStockEntriesParams struct {
@@ -99,6 +103,7 @@ type CountStockEntriesParams struct {
 	Statuses       []string           `json:"statuses"`
 	Modes          []string           `json:"modes"`
 	WarehouseUuids []uuid.UUID        `json:"warehouse_uuids"`
+	ImportJobUuids []uuid.UUID        `json:"import_job_uuids"`
 	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
 	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
 	Q              pgtype.Text        `json:"q"`
@@ -110,6 +115,7 @@ func (q *Queries) CountStockEntries(ctx context.Context, arg CountStockEntriesPa
 		arg.Statuses,
 		arg.Modes,
 		arg.WarehouseUuids,
+		arg.ImportJobUuids,
 		arg.CreatedFrom,
 		arg.CreatedBefore,
 		arg.Q,
@@ -335,15 +341,32 @@ func (q *Queries) GetStockEntryByUUID(ctx context.Context, arg GetStockEntryByUU
 	return i, err
 }
 
-const getStockImportBatchUUID = `-- name: GetStockImportBatchUUID :one
-SELECT uuid FROM stock_import_batches WHERE id = $1
+const getStockEntryImportSource = `-- name: GetStockEntryImportSource :one
+SELECT b.uuid, b.status, ij.uuid AS import_job_uuid,
+       COALESCE(NULLIF(ij.source_filename, ''), b.source_filename, '')::text AS source_filename
+FROM stock_import_batches b
+LEFT JOIN import_jobs ij ON ij.id = b.import_job_id
+WHERE b.id = $1
 `
 
-func (q *Queries) GetStockImportBatchUUID(ctx context.Context, id int64) (uuid.UUID, error) {
-	row := q.db.QueryRow(ctx, getStockImportBatchUUID, id)
-	var uuid uuid.UUID
-	err := row.Scan(&uuid)
-	return uuid, err
+type GetStockEntryImportSourceRow struct {
+	Uuid           uuid.UUID   `json:"uuid"`
+	Status         string      `json:"status"`
+	ImportJobUuid  pgtype.UUID `json:"import_job_uuid"`
+	SourceFilename string      `json:"source_filename"`
+}
+
+// TEC-759: the import batch of an import entry with its job and file.
+func (q *Queries) GetStockEntryImportSource(ctx context.Context, id int64) (GetStockEntryImportSourceRow, error) {
+	row := q.db.QueryRow(ctx, getStockEntryImportSource, id)
+	var i GetStockEntryImportSourceRow
+	err := row.Scan(
+		&i.Uuid,
+		&i.Status,
+		&i.ImportJobUuid,
+		&i.SourceFilename,
+	)
+	return i, err
 }
 
 const getUnitBatchUUID = `-- name: GetUnitBatchUUID :one
@@ -407,27 +430,31 @@ WHERE e.organization_id = $1
   AND (COALESCE(cardinality($4::uuid[]), 0) = 0
        OR EXISTS (SELECT 1 FROM warehouses fw
                   WHERE fw.id = e.warehouse_id AND fw.uuid = ANY ($4::uuid[])))
-  AND ($5::timestamptz IS NULL OR e.created_at >= $5::timestamptz)
-  AND ($6::timestamptz IS NULL OR e.created_at < $6::timestamptz)
-  AND ($7::text IS NULL
-       OR e.note ILIKE '%' || $7::text || '%'
+  AND (COALESCE(cardinality($5::uuid[]), 0) = 0
+       OR EXISTS (SELECT 1 FROM stock_import_batches ib
+                  JOIN import_jobs ij ON ij.id = ib.import_job_id
+                  WHERE ib.id = e.import_batch_id AND ij.uuid = ANY ($5::uuid[])))
+  AND ($6::timestamptz IS NULL OR e.created_at >= $6::timestamptz)
+  AND ($7::timestamptz IS NULL OR e.created_at < $7::timestamptz)
+  AND ($8::text IS NULL
+       OR e.note ILIKE '%' || $8::text || '%'
        OR EXISTS (SELECT 1 FROM warehouses qw
                   WHERE qw.id = e.warehouse_id
-                    AND (qw.name ILIKE '%' || $7::text || '%' OR qw.code ILIKE '%' || $7::text || '%')))
+                    AND (qw.name ILIKE '%' || $8::text || '%' OR qw.code ILIKE '%' || $8::text || '%')))
 ORDER BY
-  CASE WHEN NOT $8::bool THEN CASE $9::text WHEN 'created_at' THEN e.created_at END END ASC,
-  CASE WHEN $8::bool THEN CASE $9::text WHEN 'created_at' THEN e.created_at END END DESC,
-  CASE WHEN NOT $8::bool THEN CASE $9::text WHEN 'status' THEN
+  CASE WHEN NOT $9::bool THEN CASE $10::text WHEN 'created_at' THEN e.created_at END END ASC,
+  CASE WHEN $9::bool THEN CASE $10::text WHEN 'created_at' THEN e.created_at END END DESC,
+  CASE WHEN NOT $9::bool THEN CASE $10::text WHEN 'status' THEN
     CASE e.status WHEN 'draft' THEN 1 WHEN 'confirmed' THEN 2 WHEN 'undone' THEN 3 ELSE 4 END END END ASC,
-  CASE WHEN $8::bool THEN CASE $9::text WHEN 'status' THEN
+  CASE WHEN $9::bool THEN CASE $10::text WHEN 'status' THEN
     CASE e.status WHEN 'draft' THEN 1 WHEN 'confirmed' THEN 2 WHEN 'undone' THEN 3 ELSE 4 END END END DESC,
-  CASE WHEN NOT $8::bool THEN CASE $9::text WHEN 'warehouse' THEN
+  CASE WHEN NOT $9::bool THEN CASE $10::text WHEN 'warehouse' THEN
     (SELECT sw.name FROM warehouses sw WHERE sw.id = e.warehouse_id) END END ASC NULLS LAST,
-  CASE WHEN $8::bool THEN CASE $9::text WHEN 'warehouse' THEN
+  CASE WHEN $9::bool THEN CASE $10::text WHEN 'warehouse' THEN
     (SELECT sw.name FROM warehouses sw WHERE sw.id = e.warehouse_id) END END DESC NULLS LAST,
-  CASE WHEN $8::bool THEN e.id END DESC,
+  CASE WHEN $9::bool THEN e.id END DESC,
   e.id ASC
-LIMIT $11 OFFSET $10
+LIMIT $12 OFFSET $11
 `
 
 type ListStockEntriesParams struct {
@@ -435,6 +462,7 @@ type ListStockEntriesParams struct {
 	Statuses       []string           `json:"statuses"`
 	Modes          []string           `json:"modes"`
 	WarehouseUuids []uuid.UUID        `json:"warehouse_uuids"`
+	ImportJobUuids []uuid.UUID        `json:"import_job_uuids"`
 	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
 	CreatedBefore  pgtype.Timestamptz `json:"created_before"`
 	Q              pgtype.Text        `json:"q"`
@@ -453,6 +481,7 @@ func (q *Queries) ListStockEntries(ctx context.Context, arg ListStockEntriesPara
 		arg.Statuses,
 		arg.Modes,
 		arg.WarehouseUuids,
+		arg.ImportJobUuids,
 		arg.CreatedFrom,
 		arg.CreatedBefore,
 		arg.Q,
