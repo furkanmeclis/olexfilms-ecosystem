@@ -252,8 +252,17 @@ export function PortalFleetHome() {
           <FleetReadOnlyNotice />
         </div>
       </div>
+      {links.isError ? (
+        <ErrorState
+          title={t("common.error_generic")}
+          onRetry={() => void links.refetch()}
+          retryLabel={t("common.retry")}
+        />
+      ) : links.isPending ? (
+        <PortalLoading label={t("common.loading")} rows={1} />
+      ) : null}
       {overview.isLoading || !data ? (
-        <PortalLoading label={t("portal.vehicles.loading")} />
+        <PortalLoading label={t("common.loading")} />
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -307,7 +316,7 @@ export function PortalFleetHome() {
                   data.dealers.map((dealer) => (
                     <div
                       key={dealer.uuid}
-                      className="flex items-center justify-between gap-3 text-sm"
+                      className="flex flex-wrap items-center justify-between gap-3 text-sm"
                     >
                       <span>{dealer.name}</span>
                       <Badge
@@ -505,7 +514,7 @@ export function PortalFleetVehicleDetail({ uuid }: { uuid: string }) {
           retryLabel={t("common.retry")}
         />
       ) : !v ? (
-        <PortalLoading label={t("portal.vehicles.loading")} />
+        <PortalLoading label={t("common.loading")} />
       ) : (
         <>
           <Card>

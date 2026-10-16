@@ -1,8 +1,7 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+import { ExternalLink, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -39,6 +38,7 @@ import { portalCertificateClient } from "@/features/warranty/services/certificat
 import { useDebounce } from "@/hooks/use-debounce";
 import {
   PortalEmpty,
+  PortalPage,
   PortalLoading,
 } from "@/features/portal/components/portal-page";
 import { useLocale } from "@/providers/locale-provider";
@@ -103,19 +103,11 @@ export function PortalWarranties() {
   const pages = pageCount(total, PORTAL_WARRANTY_PAGE_SIZE);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <ShieldCheck className="size-6" />
-          {t("warranty.portal.title")}
-        </h1>
-        <Button asChild variant="outline" size="sm">
-          <Link href={routes.portal.home}>
-            <ArrowLeft className="size-4 rtl:rotate-180" />
-            {t("warranty.portal.back")}
-          </Link>
-        </Button>
-      </div>
+    <PortalPage
+      title={t("warranty.portal.title")}
+      icon={<ShieldCheck className="size-6" />}
+      back={{ href: routes.portal.home, label: t("warranty.portal.back") }}
+    >
       <Card>
         <CardContent className="pt-6">
           <WarrantyFilterBar
@@ -228,7 +220,7 @@ export function PortalWarranties() {
         </ul>
       )}
       {pages > 1 ? (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-muted-foreground text-sm" data-testid="page-info">
             {t("warranty.list.page", { page: page + 1, pages, total })}
           </p>
@@ -254,6 +246,6 @@ export function PortalWarranties() {
           </div>
         </div>
       ) : null}
-    </div>
+    </PortalPage>
   );
 }

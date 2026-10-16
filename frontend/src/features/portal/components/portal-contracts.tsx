@@ -11,11 +11,13 @@ import {
   EntityToolbar,
   useServerListState,
 } from "@/components/entity";
+import { ErrorState } from "@/components/common/error-state";
 import { createColumn } from "@/components/tables";
 import { Button } from "@/components/ui/button";
 import { routes } from "@/config/routes";
 import {
   PortalEmpty,
+  PortalLoading,
   PortalPage,
 } from "@/features/portal/components/portal-page";
 import {
@@ -130,7 +132,15 @@ export function PortalContracts() {
       icon={<FileSignature className="size-6" />}
       testId="portal-contracts-page"
     >
-      {empty ? (
+      {list.isError ? (
+        <ErrorState
+          title={t("common.error_generic")}
+          onRetry={() => void list.refetch()}
+          retryLabel={t("common.retry")}
+        />
+      ) : list.isPending ? (
+        <PortalLoading label={t("common.loading")} />
+      ) : empty ? (
         <PortalEmpty
           icon={<FileSignature />}
           title={t("portal.contracts.empty_title")}

@@ -34,11 +34,11 @@ export function PortalPage({
       dir={dir}
       lang={locale}
       data-testid={testId}
-      className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8"
+      className="mx-auto w-full max-w-3xl min-w-0 space-y-6 px-4 py-8"
     >
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="flex min-w-0 items-center gap-2 text-xl font-semibold">
-          {icon}
+          {icon ? <span className="shrink-0">{icon}</span> : null}
           <span className="truncate">{title}</span>
         </h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -113,7 +113,7 @@ export function PortalEmpty({
         ) : null}
         <p className="font-medium">{title}</p>
         {description ? (
-          <p className="text-muted-foreground max-w-sm text-sm">
+          <p className="text-muted-foreground max-w-sm text-sm break-words">
             {description}
           </p>
         ) : null}

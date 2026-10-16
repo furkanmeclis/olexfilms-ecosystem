@@ -129,6 +129,33 @@ function page(items: PortalContract[]) {
 }
 
 describe("PortalContracts", () => {
+  it("announces loading before displaying an empty result", async () => {
+    portal.listContracts.mockReturnValueOnce(new Promise(() => {}));
+    await render(createElement(PortalContracts));
+    expect(container.querySelector('[role="status"]')?.textContent).toContain(
+      "common.loading",
+    );
+    expect(
+      container.querySelector('[data-testid="portal-contracts-empty"]'),
+    ).toBeNull();
+  });
+
+  it("retries a failed list request before showing the empty state", async () => {
+    portal.listContracts
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue(page([]));
+    await render(createElement(PortalContracts));
+    expect(container.querySelector('[role="alert"]')).not.toBeNull();
+    expect(
+      container.querySelector('[data-testid="portal-contracts-empty"]'),
+    ).toBeNull();
+    await click(container.querySelector('[role="alert"] button'));
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="portal-contracts-empty"]'),
+    ).not.toBeNull();
+  });
+
   it("shows the neutral empty state when the user has no contract", async () => {
     portal.listContracts.mockResolvedValue(page([]));
     await render(createElement(PortalContracts));

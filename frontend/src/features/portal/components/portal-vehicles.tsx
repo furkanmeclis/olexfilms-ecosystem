@@ -122,7 +122,7 @@ export function PortalVehicles() {
         </ul>
       )}
       {pages > 1 ? (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-muted-foreground text-sm" data-testid="page-info">
             {t("warranty.list.page", { page: page + 1, pages, total })}
           </p>

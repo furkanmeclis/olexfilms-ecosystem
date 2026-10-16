@@ -16,12 +16,16 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { ErrorState } from "@/components/common/error-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { AIConsentDialog } from "@/features/portal/components/ai-consent-dialog";
 import { PortalFleetHome } from "@/features/portal/components/portal-fleet";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalLoading,
+  PortalPage,
+} from "@/features/portal/components/portal-page";
 import { portalApi, portalSignOut } from "@/features/portal/lib/portal-client";
 import {
   isPortalReadOnly,
@@ -114,54 +118,73 @@ export function PortalHome() {
         </Button>
       }
     >
-      <Card>
-        <CardContent className="flex flex-wrap items-center justify-between gap-4">
-          <div className="min-w-0 space-y-1">
-            <p className="text-lg font-semibold">
-              {name
-                ? t("portal.home.welcome", { name })
-                : t("portal.home.welcome_anonymous")}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              {t("portal.home.empty")}
-            </p>
-          </div>
-          <Button asChild data-testid="portal-book-link">
-            <Link href={routes.portal.newAppointment()}>
-              <CalendarClock className="size-4" />
-              {t("portal.home.book")}
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+      {me.isError ? (
+        <ErrorState
+          title={t("common.error_generic")}
+          onRetry={() => void me.refetch()}
+          retryLabel={t("common.retry")}
+        />
+      ) : me.isPending ? (
+        <PortalLoading label={t("common.loading")} />
+      ) : (
+        <>
+          <Card>
+            <CardContent className="flex flex-wrap items-center justify-between gap-4">
+              <div className="min-w-0 space-y-1">
+                <p className="text-lg font-semibold break-words">
+                  {name
+                    ? t("portal.home.welcome", { name })
+                    : t("portal.home.welcome_anonymous")}
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  {t("portal.home.empty")}
+                </p>
+              </div>
+              <Button asChild data-testid="portal-book-link">
+                <Link href={routes.portal.newAppointment()}>
+                  <CalendarClock className="size-4" />
+                  {t("portal.home.book")}
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
 
-      <ul className="grid gap-3 sm:grid-cols-2" data-testid="portal-shortcuts">
-        {SHORTCUTS.map(({ href, icon: Icon, titleKey, hintKey, testId }) => (
-          <li key={href}>
-            <Link
-              href={href}
-              data-testid={testId}
-              className="group focus-visible:ring-ring block h-full rounded-xl outline-none focus-visible:ring-2"
-            >
-              <Card className="group-hover:border-primary/50 h-full transition-colors">
-                <CardContent className="flex items-center gap-3">
-                  <span className="bg-muted text-foreground inline-flex size-10 shrink-0 items-center justify-center rounded-lg">
-                    <Icon className="size-5" aria-hidden />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium">{t(titleKey)}</span>
-                    <span className="text-muted-foreground block text-sm">
-                      {t(hintKey)}
-                    </span>
-                  </span>
-                  <ChevronRight className="text-muted-foreground size-4 shrink-0 rtl:rotate-180" />
-                </CardContent>
-              </Card>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <AIConsentDialog />
+          <ul
+            className="grid gap-3 sm:grid-cols-2"
+            data-testid="portal-shortcuts"
+          >
+            {SHORTCUTS.map(
+              ({ href, icon: Icon, titleKey, hintKey, testId }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    data-testid={testId}
+                    className="group focus-visible:ring-ring block h-full rounded-xl outline-none focus-visible:ring-2"
+                  >
+                    <Card className="group-hover:border-primary/50 h-full transition-colors">
+                      <CardContent className="flex items-center gap-3">
+                        <span className="bg-muted text-foreground inline-flex size-10 shrink-0 items-center justify-center rounded-lg">
+                          <Icon className="size-5" aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-medium">
+                            {t(titleKey)}
+                          </span>
+                          <span className="text-muted-foreground block text-sm">
+                            {t(hintKey)}
+                          </span>
+                        </span>
+                        <ChevronRight className="text-muted-foreground size-4 shrink-0 rtl:rotate-180" />
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </li>
+              ),
+            )}
+          </ul>
+          <AIConsentDialog />
+        </>
+      )}
     </PortalPage>
   );
 }

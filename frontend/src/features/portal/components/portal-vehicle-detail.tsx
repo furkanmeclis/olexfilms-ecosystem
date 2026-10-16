@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import {
   PortalPage,
+  PortalEmpty,
   PortalLoading,
 } from "@/features/portal/components/portal-page";
 import { PortalVehicleTransferDialog } from "@/features/portal/components/portal-vehicle-transfer";
@@ -126,14 +127,11 @@ export function PortalVehicleDetail({
     return (
       <PortalPage title={t("portal.vehicles.title")} back={back}>
         {notFound ? (
-          <Card>
-            <CardContent
-              className="py-10 text-center"
-              data-testid="portal-vehicle-not-found"
-            >
-              {t("portal.vehicle.not_found")}
-            </CardContent>
-          </Card>
+          <PortalEmpty
+            icon={<Car />}
+            title={t("portal.vehicle.not_found")}
+            testId="portal-vehicle-not-found"
+          />
         ) : (
           <ErrorState
             title={t("common.error_generic")}

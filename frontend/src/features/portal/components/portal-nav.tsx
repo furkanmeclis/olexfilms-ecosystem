@@ -94,14 +94,17 @@ export function isPortalNavActive(href: string, pathname: string): boolean {
   if (href === routes.portal.vehicles) {
     // A service detail is reached from a vehicle.
     return (
-      pathname.startsWith(href) || pathname.startsWith("/portal/services/")
+      pathname === href ||
+      pathname.startsWith(`${href}/`) ||
+      pathname.startsWith("/portal/services/")
     );
   }
   if (href === routes.portal.profile) {
     // Notification preferences are part of the profile.
     return (
-      pathname.startsWith(href) ||
-      pathname.startsWith(routes.portal.preferences)
+      pathname === href ||
+      pathname.startsWith(`${href}/`) ||
+      pathname === routes.portal.preferences
     );
   }
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -141,12 +144,12 @@ export function PortalNav() {
     >
       <ul
         ref={listRef}
-        className="mx-auto flex w-full max-w-3xl gap-1 overflow-x-auto px-4 py-2"
+        className="mx-auto flex w-full max-w-3xl min-w-0 gap-1 overflow-x-auto px-4 py-2"
       >
         {items.map(({ href, key, icon: Icon }) => {
           const active = isPortalNavActive(href, pathname);
           return (
-            <li key={href}>
+            <li key={href} className="shrink-0">
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
