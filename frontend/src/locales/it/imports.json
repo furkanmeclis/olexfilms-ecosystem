@@ -190,5 +190,5 @@
   "resources.tenant.stock.units": "Unità di magazzino",
   "confirm_step.stock_located_one": "{{count}} di esse verrà collocata nell'ubicazione indicata nel file.",
   "confirm_step.stock_located_other": "{{count}} di esse verranno collocate nell'ubicazione indicata nel file.",
-"row_status.exists": "Esistente"
+  "row_status.exists": "Esistente"
 }

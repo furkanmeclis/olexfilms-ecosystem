@@ -182,5 +182,5 @@
   "confirm_step.sentence_end": "。",
   "resources.tenant.stock.units": "库存单位",
   "confirm_step.stock_located_other": "其中 {{count}} 个单位将直接放入文件中指定的库位。",
-"row_status.exists": "已存在"
+  "row_status.exists": "已存在"
 }

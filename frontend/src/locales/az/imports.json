@@ -190,5 +190,5 @@
   "resources.tenant.stock.units": "Stok vahidləri",
   "confirm_step.stock_located_one": "Onlardan {{count}} vahid fayldakı yerə yerləşdiriləcək.",
   "confirm_step.stock_located_other": "Onlardan {{count}} vahid fayldakı yerə yerləşdiriləcək.",
-"row_status.exists": "Mövcuddur"
+  "row_status.exists": "Mövcuddur"
 }

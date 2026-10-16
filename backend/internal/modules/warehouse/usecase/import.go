@@ -276,9 +276,10 @@ func (im *LocationImporter) Stage(ctx context.Context, job ioengine.ImportJob, r
 				row.status = "invalid"
 			}
 			summary.Counts[row.status]++
-			if row.status == "new" {
+			switch row.status {
+			case "new":
 				summary.Valid++
-			} else if row.status == "invalid" || row.status == "conflict" {
+			case "invalid", "conflict":
 				summary.Invalid++
 			}
 			data, _ := json.Marshal(p)

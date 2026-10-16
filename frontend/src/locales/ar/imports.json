@@ -190,5 +190,5 @@
   "resources.tenant.stock.units": "وحدات المخزون",
   "confirm_step.stock_located_one": "ستوضع وحدة واحدة منها في الموقع المحدد في الملف.",
   "confirm_step.stock_located_other": "ستوضع {{count}} وحدة منها في الموقع المحدد في الملف.",
-"row_status.exists": "موجود"
+  "row_status.exists": "موجود"
 }
