@@ -6,8 +6,12 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/middleware"
 	importhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/imports/handler"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/response"
+	"github.com/google/uuid"
 )
 
 func RegisterRoutes(
@@ -61,11 +65,41 @@ func RegisterRoutes(
 	tenantJobs := func(handler http.HandlerFunc) http.Handler {
 		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, require(rbac.PermTenantImportsRead))
 	}
+	// A record-scoped warehouse barcode job belongs to warehouse.write.
+	// Other tenant import jobs continue to require tenant.imports.read.
+	tenantRecordJob := func(handler http.HandlerFunc) http.Handler {
+		check := func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				p := authctx.MustPrincipal(r.Context())
+				org := orgctx.MustScope(r.Context())
+				id, err := uuid.Parse(r.PathValue("uuid"))
+				if err != nil {
+					response.NotFound(w, r, "Import job not found")
+					return
+				}
+				job, err := q.GetImportJobByUUID(r.Context(), id)
+				if err != nil || !job.OrganizationID.Valid || job.OrganizationID.Int64 != org.InternalID {
+					response.NotFound(w, r, "Import job not found")
+					return
+				}
+				if job.Resource == "tenant.warehouse.entry_barcodes" {
+					middleware.RequireScope(q, rbac.PermWarehouseWrite)(next).ServeHTTP(w, r)
+					return
+				}
+				if !p.HasPermission(rbac.PermTenantImportsRead) {
+					response.Forbidden(w, r, "Import job permission required")
+					return
+				}
+				next.ServeHTTP(w, r)
+			})
+		}
+		return middleware.Chain(http.HandlerFunc(handler), authn, requireOrg, check)
+	}
 	mux.Handle("GET /v1/tenant/imports", tenantJobs(h.ListTenant))
-	mux.Handle("GET /v1/tenant/imports/{uuid}", tenantJobs(h.GetTenant))
-	mux.Handle("PATCH /v1/tenant/imports/{uuid}/mapping", tenantJobs(h.UpdateMappingTenant))
-	mux.Handle("GET /v1/tenant/imports/{uuid}/error-report", tenantJobs(h.ErrorReportTenant))
-	mux.Handle("POST /v1/tenant/imports/{uuid}/preview", tenantJobs(h.PreviewTenant))
-	mux.Handle("POST /v1/tenant/imports/{uuid}/confirm", tenantJobs(h.ConfirmTenant))
-	mux.Handle("POST /v1/tenant/imports/{uuid}/rollback", tenantJobs(h.RollbackTenant))
+	mux.Handle("GET /v1/tenant/imports/{uuid}", tenantRecordJob(h.GetTenant))
+	mux.Handle("PATCH /v1/tenant/imports/{uuid}/mapping", tenantRecordJob(h.UpdateMappingTenant))
+	mux.Handle("GET /v1/tenant/imports/{uuid}/error-report", tenantRecordJob(h.ErrorReportTenant))
+	mux.Handle("POST /v1/tenant/imports/{uuid}/preview", tenantRecordJob(h.PreviewTenant))
+	mux.Handle("POST /v1/tenant/imports/{uuid}/confirm", tenantRecordJob(h.ConfirmTenant))
+	mux.Handle("POST /v1/tenant/imports/{uuid}/rollback", tenantRecordJob(h.RollbackTenant))
 }

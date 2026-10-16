@@ -68,6 +68,7 @@ export function NodeForm({
             address: "",
             type: allowedTypes[0] ?? "",
             active: true,
+            require_location_placement: false,
             ...initial,
           }}
           onSubmit={async (values) => {
@@ -112,6 +113,13 @@ export function NodeForm({
               name="address"
               label={t("warehouse.fields.address")}
               data-testid="node-address"
+            />
+          ) : null}
+          {kind === "warehouse" ? (
+            <AppSwitch
+              name="require_location_placement"
+              label={t("warehouse.form.require_location_placement")}
+              description={t("warehouse.form.require_location_placement_hint")}
             />
           ) : null}
           {mode === "edit" ? (

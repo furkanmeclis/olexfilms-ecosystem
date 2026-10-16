@@ -35,6 +35,10 @@ export type WarehouseTransferCompleteInput =
   Schemas["WarehouseTransferCompleteInput"];
 export type WarehouseMoveInput = Schemas["WarehouseMoveInput"];
 export type WarehouseMoveResult = Schemas["WarehouseMoveResult"];
+export type WarehouseOrderPlacement = Schemas["WarehouseOrderPlacement"];
+export type WarehouseOrderPlacementUnit =
+  Schemas["WarehouseOrderPlacementUnit"];
+export type WarehouseOrderPlaceInput = Schemas["WarehouseOrderPlaceInput"];
 export type StockCount = Schemas["StockCount"];
 export type StockCountStatus = Schemas["StockCountStatus"];
 export type StockCountInput = Schemas["StockCountInput"];
@@ -198,9 +202,15 @@ export const warehouseService = {
   },
 
   // --- Universal scan (TEC-203) ---------------------------------------------
-  scan(code: string) {
+  scan(
+    code: string,
+    options?: {
+      expect?: "any" | "location" | "bin" | "unit" | "product";
+      warehouse_uuid?: string;
+    },
+  ) {
     return platformRequest<WarehouseScanResult>("POST", "/v1/warehouse/scan", {
-      body: { code },
+      body: { code, ...options },
     });
   },
 
@@ -266,6 +276,23 @@ export const warehouseService = {
     return platformRequest<BarcodeBatch>("POST", "/v1/stock/barcodes", {
       body,
     });
+  },
+
+  // --- Order receipt placement (TEC-765) -----------------------------------
+
+  getOrderPlacement(orderUuid: string) {
+    return platformRequest<WarehouseOrderPlacement>(
+      "GET",
+      `/v1/warehouse/orders/${enc(orderUuid)}/unplaced`,
+    );
+  },
+
+  placeOrder(orderUuid: string, body: WarehouseOrderPlaceInput) {
+    return platformRequest<WarehouseMoveResult>(
+      "POST",
+      `/v1/warehouse/orders/${enc(orderUuid)}/place`,
+      { body },
+    );
   },
 
   // --- Bin moves and warehouse transfers (TEC-205) ---------------------------
@@ -460,6 +487,8 @@ export const warehouseKeys = {
   transfers: (params: TransferListQuery) =>
     ["warehouse", "transfers", params] as const,
   transfer: (uuid: string) => ["warehouse", "transfer", uuid] as const,
+  orderPlacement: (orderUuid: string) =>
+    ["warehouse", "order-placement", orderUuid] as const,
   counts: (params: CountListQuery) => ["warehouse", "counts", params] as const,
   count: (uuid: string) => ["warehouse", "count", uuid] as const,
   countScans: (uuid: string) => ["warehouse", "count-scans", uuid] as const,

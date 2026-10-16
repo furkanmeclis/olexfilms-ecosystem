@@ -190,5 +190,9 @@
   "resources.tenant.stock.units": "Складови единици",
   "confirm_step.stock_located_one": "{{count}} от тях ще бъде поставена на местоположението от файла.",
   "confirm_step.stock_located_other": "{{count}} от тях ще бъдат поставени на местоположението от файла.",
-  "row_status.exists": "Съществува"
+  "row_status.exists": "Съществува",
+  "fields.entry_barcodes.product_name": "Име на продукта",
+  "fields.entry_barcodes.product_sku": "SKU на продукта",
+  "fields.entry_barcodes.barcode": "Баркод",
+  "fields.entry_barcodes.location_code": "Код на клетка"
 }

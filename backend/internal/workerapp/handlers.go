@@ -188,6 +188,7 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		// TEC-158: stock import batches are applied here (import queue).
 		stockusecase.NewImporter(pool, queries, outboxStore),
 		warehouseusecase.NewLocationImporter(pool),
+		warehouseusecase.NewEntryBarcodeImporter(warehouseusecase.NewStockEntries(pool, queries, outboxStore)),
 		// TEC-188: warranty certificate PDF (panel and portal, read only).
 		warrantyusecase.NewCertificateAdapter(warrantyCert),
 		warrantyusecase.NewPortalCertificateAdapter(warrantyCert),

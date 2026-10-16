@@ -5796,7 +5796,7 @@ export interface paths {
         };
         /**
          * Reclassification requests (barcode kept, product changed)
-         * @description Needs `stock.read`; requests of the organizations inside the viewer's reach (the requesting organization is the one holding the unit), newest first. `status` filters pending, approved, rejected or cancelled requests (TEC-157).
+         * @description Needs `stock.read`; requests of the organizations inside the viewer's reach (the requesting organization is the one holding the unit). List contract (TEC-763, docs/list-contract.md): `sort` created_at (default `-created_at`), decided_at or status with an id tiebreak; `q` matches a barcode prefix, a product name or SKU or the reason; `status` and `requested_by` are comma separated; `from_product_uuid`, `to_product_uuid` and `created_from` / `created_to` narrow the list. An unknown sort field or status answers 400 (TEC-157).
          */
         get: operations["listStockReclassifications"];
         put?: never;
@@ -6595,7 +6595,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve one scanned code (location QR, unit barcode, SKU, short code)
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH. An empty code is 400 VALIDATION_ERROR.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH when no scan expectation is supplied. With `expect` or `warehouse_uuid`, a matched entity returns `status` (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`); no match returns `unknown`. An empty code is 400 VALIDATION_ERROR.
          */
         post: operations["resolveWarehouseScan"];
         delete?: never;
@@ -6637,6 +6637,46 @@ export interface paths {
         };
         /** One stock entry with its lines and label links */
         get: operations["getStockEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload barcodes for a draft stock entry
+         * @description Needs warehouse.write and a with_existing draft in the active organization. Columns are barcode (required), product_name, product_sku, and location_code (optional). At least one product identifier is required per row. Product matching uses the brand's active catalog. At most 2000 rows are accepted. existing_policy controls existing barcodes: none, all_existing, or conflicts_only. Preview, confirm and undo use /v1/tenant/imports/{uuid}. Confirm adds lines in one transaction; normal stock entry confirmation later posts ledger movements. Undo removes untouched draft lines and newly created units.
+         */
+        post: operations["importStockEntryBarcodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the entry barcode import template
+         * @description Needs warehouse.write and a with_existing draft. XLSX contains active brand SKUs and active bins of the entry's warehouse as drop-down lists.
+         */
+        get: operations["stockEntryBarcodeImportSample"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6779,6 +6819,26 @@ export interface paths {
          * @description Needs `warehouse.write`. The order must be bought by the active organization (404 otherwise) and received (409 WAREHOUSE_ORDER_NOT_RECEIVED); the order module has already moved the stock (order_out / received). Every received serial unit still unplaced in the organization gets one `placement` onto the location (`location_uuid` / `location_code`, default the order's buyer location; 400 when neither exists). `barcodes` limits the units. Fixed barcodes (`skipped: fixed`) and units already shelved or moved on (`skipped: not_on_hand`) are skipped. Key `warehouse_order:order_item_unit:<assignment id>:placement:<barcode>`.
          */
         post: operations["placeReceivedOrderUnits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/orders/{uuid}/unplaced": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Units of a received order still waiting for a shelf (TEC-765)
+         * @description Needs `warehouse.read`. The order must be bought by the active organization (404 otherwise); any status is answered, but units count as unplaced only once the order is received. `units` holds every serial unit of the order; `unplaced` marks the ones still on hand unplaced in the organization (available, owned by the organization itself) — the ones POST /v1/warehouse/orders/{uuid}/place shelves (`unplaced_count`). `placed_count` counts the received serial units already shelved or moved on. `fixed` lists the fixed barcodes of the order, which are never placed by this step.
+         */
+        get: operations["getOrderUnplacedUnits"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8914,7 +8974,7 @@ export interface paths {
          * Mobile: Resolve one scanned code (location QR, unit barcode, SKU, short code)
          * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/scan`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH. An empty code is 400 VALIDATION_ERROR.
+         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH without scan options. With `expect` or `warehouse_uuid`, the response includes a status (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`, or `unknown`). An empty code is 400 VALIDATION_ERROR.
          */
         post: operations["mobileResolveWarehouseScan"];
         delete?: never;
@@ -20665,9 +20725,19 @@ export interface components {
             organization: components["schemas"]["StockOrgRef"] | null;
             organization_masked: boolean;
             reference_type: string | null;
+            /** @description Document behind the movement (TEC-763); null when masked or the reference has no document page. */
+            document: components["schemas"]["StockMovementDocument"] | null;
+            /** @description User who wrote the movement (TEC-763); null when masked or a system write. */
+            actor: components["schemas"]["StockUserRef"] | null;
             reason: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        StockMovementDocument: {
+            /** @enum {string} */
+            type: "stock_entry" | "warehouse_transfer" | "stock_count" | "service" | "order" | "transfer_request" | "stock_reclassification";
+            /** Format: uuid */
+            uuid: string;
         };
         StockUnitHistory: {
             unit: components["schemas"]["StockUnit"];
@@ -20827,6 +20897,8 @@ export interface components {
             name: string;
             address: string | null;
             active: boolean;
+            /** @description Require placed units for order assignment and warehouse transfer lines. */
+            require_location_placement: boolean;
             sort_order: number;
             /** Format: date-time */
             created_at: string;
@@ -20838,12 +20910,15 @@ export interface components {
             /** @description Defaults to the code. */
             name?: string;
             address?: string | null;
+            /** @default false */
+            require_location_placement: boolean;
         };
         WarehousePatch: {
             code?: components["schemas"]["WarehouseCode"];
             name?: string;
             address?: string | null;
             active?: boolean;
+            require_location_placement?: boolean;
         };
         WarehouseReorderInput: {
             uuids: string[];
@@ -21223,6 +21298,16 @@ export interface components {
         WarehouseScanInput: {
             /** @example OFW:LOC:IST-R1-A-01-03 */
             code: string;
+            /**
+             * @default any
+             * @enum {string}
+             */
+            expect: "any" | "location" | "bin" | "unit" | "product";
+            /**
+             * Format: uuid
+             * @description Expected warehouse; mismatched location returns warehouse_mismatch.
+             */
+            warehouse_uuid?: string;
         };
         WarehouseScanPathNode: {
             /** @enum {string} */
@@ -21282,9 +21367,14 @@ export interface components {
         };
         WarehouseScanResult: {
             /** @enum {string} */
-            type: "location" | "unit" | "product";
+            status: "ok" | "type_mismatch" | "not_bin" | "warehouse_mismatch" | "void" | "unknown";
+            /**
+             * @description Empty for unknown.
+             * @enum {string}
+             */
+            type: "location" | "unit" | "product" | "";
             /** @enum {string} */
-            matched_by: "location_qr" | "location_code" | "unit_qr" | "barcode" | "sku" | "short_code";
+            matched_by: "location_qr" | "location_code" | "unit_qr" | "barcode" | "sku" | "short_code" | "";
             /** @description The resolved full_code, barcode or SKU. */
             code: string;
             location: null | components["schemas"]["WarehouseScanLocation"];
@@ -21469,6 +21559,37 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["WarehouseMoveResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        WarehouseOrderPlacementUnit: {
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            product: components["schemas"]["StockEntryProduct"];
+            /** @description Remaining roll meters (else the assigned meters) */
+            meters: string | null;
+            /** @description Assigned pieces */
+            quantity: number | null;
+            /** @description Still on hand unplaced in the organization */
+            unplaced: boolean;
+        };
+        WarehouseOrderPlacement: {
+            /** Format: uuid */
+            order_uuid: string;
+            order_no: string;
+            status: components["schemas"]["OrderStatus"];
+            unplaced_count: number;
+            placed_count: number;
+            units: components["schemas"]["WarehouseOrderPlacementUnit"][];
+            /** @description Fixed barcodes of the order (not placed by this step) */
+            fixed: components["schemas"]["WarehouseOrderPlacementUnit"][];
+        };
+        EnvelopeWarehouseOrderPlacement: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseOrderPlacement"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -39107,7 +39228,19 @@ export interface operations {
             query?: {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
-                status?: components["schemas"]["StockReclassificationStatus"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated statuses (pending, approved, rejected, cancelled). */
+                status?: components["schemas"]["StockReclassificationStatus"][];
+                /** @description Comma separated user uuids of the requesters. */
+                requested_by?: string[];
+                from_product_uuid?: string;
+                to_product_uuid?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
             };
             header?: never;
             path?: never;
@@ -39124,6 +39257,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeStockReclassificationPage"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["UnprocessableEntity"];
@@ -40730,6 +40864,83 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    importStockEntryBarcodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default csv
+                     * @enum {string}
+                     */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @example tr */
+                    locale?: string;
+                    /**
+                     * @default none
+                     * @enum {string}
+                     */
+                    existing_policy?: "none" | "all_existing" | "conflicts_only";
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    stockEntryBarcodeImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     addStockEntryLines: {
         parameters: {
             query?: never;
@@ -40943,6 +41154,32 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getOrderUnplacedUnits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Placement state of the order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseOrderPlacement"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listWarehouseTransfers: {

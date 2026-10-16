@@ -190,5 +190,9 @@
   "resources.tenant.stock.units": "Stok vahidləri",
   "confirm_step.stock_located_one": "Onlardan {{count}} vahid fayldakı yerə yerləşdiriləcək.",
   "confirm_step.stock_located_other": "Onlardan {{count}} vahid fayldakı yerə yerləşdiriləcək.",
-  "row_status.exists": "Mövcuddur"
+  "row_status.exists": "Mövcuddur",
+  "fields.entry_barcodes.product_name": "Məhsul adı",
+  "fields.entry_barcodes.product_sku": "Məhsul SKU",
+  "fields.entry_barcodes.barcode": "Barkod",
+  "fields.entry_barcodes.location_code": "Göz kodu"
 }

@@ -190,5 +190,9 @@
   "resources.tenant.stock.units": "Unidades de stock",
   "confirm_step.stock_located_one": "{{count}} de ellas se colocará en la ubicación indicada en el archivo.",
   "confirm_step.stock_located_other": "{{count}} de ellas se colocarán en la ubicación indicada en el archivo.",
-  "row_status.exists": "Existente"
+  "row_status.exists": "Existente",
+  "fields.entry_barcodes.product_name": "Nombre del producto",
+  "fields.entry_barcodes.product_sku": "SKU del producto",
+  "fields.entry_barcodes.barcode": "Código de barras",
+  "fields.entry_barcodes.location_code": "Código de ubicación"
 }

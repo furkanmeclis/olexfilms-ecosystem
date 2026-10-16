@@ -531,6 +531,7 @@ export class WarehouseMock {
         const l = this.locations.find((x) => x.full_code === code.slice(8));
         if (!l) return fail(404, "SCAN_LOCATION_NOT_FOUND");
         return ok({
+          status: "ok",
           type: "location",
           matched_by: "location_qr",
           code,

@@ -139,6 +139,7 @@ type ScanUnit struct {
 // ScanResult is the resolved entity: Type names which of Location, Unit
 // or Product is set (a unit result also carries its Product).
 type ScanResult struct {
+	Status    string        `json:"status"`
 	Type      string        `json:"type"`
 	MatchedBy string        `json:"matched_by"`
 	Code      string        `json:"code"`
@@ -159,8 +160,83 @@ func NewScanner(q *db.Queries, settings ScanSettings) *Scanner {
 	return &Scanner{q: q, stock: stockusecase.New(q), settings: settings}
 }
 
-// Resolve resolves one scanned string.
+// ScanOptions constrain a scan while keeping the original resolver order.
+type ScanOptions struct {
+	Expect        string
+	WarehouseUUID *uuid.UUID
+}
+
+// Resolve preserves the original unqualified scan behavior.
 func (s *Scanner) Resolve(ctx context.Context, c ScanCaller, raw string) (ScanResult, error) {
+	return s.ResolveWith(ctx, c, raw, ScanOptions{})
+}
+
+// ResolveWith returns a status and the matched entity for a constrained scan.
+func (s *Scanner) ResolveWith(ctx context.Context, c ScanCaller, raw string, opts ScanOptions) (ScanResult, error) {
+	expect := opts.Expect
+	if expect == "" {
+		expect = "any"
+	}
+	switch expect {
+	case "any", "location", "bin", "unit", "product":
+	default:
+		return ScanResult{}, invalid("expect", "must be any, location, bin, unit or product")
+	}
+	var warehouse uuid.UUID
+	if opts.WarehouseUUID != nil {
+		org, err := guard(c.Caller)
+		if err != nil {
+			return ScanResult{}, err
+		}
+		w, err := s.q.GetWarehouseByUUID(ctx, db.GetWarehouseByUUIDParams{Uuid: *opts.WarehouseUUID, OrganizationID: org})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ScanResult{}, ErrWarehouseNotFound
+		}
+		if err != nil {
+			return ScanResult{}, err
+		}
+		warehouse = w.Uuid
+	}
+	res, err := s.resolveRaw(ctx, c, raw)
+	if err != nil {
+		if (errors.Is(err, ErrScanNoMatch) || errors.Is(err, ErrScanLocationNotFound)) && (opts.Expect != "" || opts.WarehouseUUID != nil) {
+			return ScanResult{Status: "unknown", Code: strings.TrimSpace(raw)}, nil
+		}
+		return res, err
+	}
+	res.Status = scanStatus(res, expect, warehouse)
+	return res, nil
+}
+
+// scanStatus applies rejection precedence: void, warehouse, then expected type.
+func scanStatus(res ScanResult, expect string, warehouse uuid.UUID) string {
+	if res.Unit != nil && res.Unit.Status == "void" {
+		return "void"
+	}
+	if warehouse != uuid.Nil {
+		loc := res.Location
+		if res.Unit != nil {
+			loc = res.Unit.Location
+		}
+		if loc != nil && len(loc.Path) > 0 && loc.Path[0].Level == "warehouse" && loc.Path[0].UUID != warehouse {
+			return "warehouse_mismatch"
+		}
+	}
+	if expect == "bin" {
+		if res.Type != ScanTypeLocation {
+			return "type_mismatch"
+		}
+		if res.Location == nil || res.Location.Type == nil || *res.Location.Type != "bin" {
+			return "not_bin"
+		}
+	} else if expect != "any" && res.Type != expect {
+		return "type_mismatch"
+	}
+	return "ok"
+}
+
+// resolveRaw resolves one scanned string.
+func (s *Scanner) resolveRaw(ctx context.Context, c ScanCaller, raw string) (ScanResult, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return ScanResult{}, err

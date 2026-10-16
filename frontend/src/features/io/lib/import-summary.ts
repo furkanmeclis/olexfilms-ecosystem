@@ -71,6 +71,7 @@ export function importStatusCounts(
   const entries = Object.entries(summary.counts ?? {}).filter(
     ([status, count]) =>
       (count ?? 0) > 0 &&
+      status !== "placed" &&
       !["rooms", "aisles", "shelves", "bins"].includes(status),
   );
   const rank = (status: string) => {
