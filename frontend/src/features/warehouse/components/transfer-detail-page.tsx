@@ -17,6 +17,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { Info } from "@/features/warehouse/components/list-controls";
+import {
+  FixedQuantityDialog,
+  type FixedSelection,
+} from "@/features/warehouse/components/fixed-quantity-dialog";
 import { LocationPicker } from "@/features/warehouse/components/location-picker";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
 import { TransferLinesTable } from "@/features/warehouse/components/transfer-lines-table";
@@ -39,6 +43,7 @@ import {
   warehouseKeys,
   warehouseService,
   type WarehouseTransfer,
+  type WarehouseScanResult,
 } from "@/features/warehouse/services/warehouse.service";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -68,6 +73,11 @@ export function TransferDetailPage({
   const [lineError, setLineError] = useState<string | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [fixedUnit, setFixedUnit] = useState<{
+    barcode: string;
+    product: NonNullable<WarehouseScanResult["product"]>;
+    warehouseUuid: string;
+  } | null>(null);
 
   const key = warehouseKeys.transfer(uuid);
   const transferQuery = useQuery({
@@ -153,38 +163,21 @@ export function TransferDetailPage({
       setLineError(t("warehouse.entry.scan_location_here"));
       return;
     }
-    try {
-      const barcode = unitBarcode(code);
-      const scan = await warehouseService.scan(barcode);
-      if (scan.unit?.unit_kind !== "fixed") {
-        addLines.mutate({ barcodes: [barcode] });
-        return;
-      }
-      const raw = window.prompt(t("warehouse.fixed.quantity_prompt"));
-      if (raw === null) return;
-      const quantity = Number(raw);
-      if (!Number.isInteger(quantity) || quantity < 1) {
-        setLineError(t("warehouse.fixed.quantity_invalid"));
-        return;
-      }
-      const sourceCode = window.prompt(t("warehouse.fixed.source_prompt"));
-      if (sourceCode === null) return;
-      const source = await warehouseService.scan(sourceCode);
-      if (source.type !== "location" || !source.location) {
-        setLineError(t("warehouse.fixed.source_invalid"));
-        return;
-      }
-      addLines.mutate({
-        barcodes: [],
-        fixed: [
-          { barcode, quantity, source_location_uuid: source.location.uuid },
-        ],
+    const barcode = unitBarcode(code);
+    const scan = await warehouseService.scan(barcode).catch(() => null);
+    if (scan?.unit?.unit_kind === "fixed" && scan.product && transfer) {
+      setFixedUnit({
+        barcode,
+        product: scan.product,
+        warehouseUuid: transfer.from_warehouse.uuid,
       });
-    } catch (err) {
-      setLineError(
-        warehouseErrorMessage(err, t, t("warehouse.entry.add_failed")),
-      );
+      return;
     }
+    addLines.mutate({ barcodes: [barcode] });
+  };
+  const addFixed = (selection: FixedSelection) => {
+    setFixedUnit(null);
+    addLines.mutate({ barcodes: [], fixed: [selection] });
   };
   const onLocationScan = (code: string) => {
     if (scanKind(code) === "unit") {
@@ -443,6 +436,13 @@ export function TransferDetailPage({
           </Card>
         </>
       )}
+      <FixedQuantityDialog
+        key={fixedUnit?.barcode ?? "closed"}
+        unit={fixedUnit}
+        action="add"
+        onConfirm={addFixed}
+        onCancel={() => setFixedUnit(null)}
+      />
     </WarehouseShell>
   );
 }

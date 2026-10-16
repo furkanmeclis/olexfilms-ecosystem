@@ -17,6 +17,7 @@ export type WarehouseLocationType = Schemas["WarehouseLocationType"];
 export type WarehouseLocationInput = Schemas["WarehouseLocationInput"];
 export type WarehouseLocationPatch = Schemas["WarehouseLocationPatch"];
 export type WarehouseScanResult = Schemas["WarehouseScanResult"];
+export type StockProduct = Schemas["StockProduct"];
 export type StockEntry = Schemas["StockEntry"];
 export type StockEntryLine = Schemas["StockEntryLine"];
 export type StockEntryInput = Schemas["StockEntryInput"];
@@ -202,6 +203,13 @@ export const warehouseService = {
     return platformRequest<WarehouseScanResult>("POST", "/v1/warehouse/scan", {
       body: { code },
     });
+  },
+  listLocationProducts(uuid: string, productUuid: string) {
+    return platformRequest<Page<StockProduct>>(
+      "GET",
+      `/v1/stock/locations/${enc(uuid)}/products`,
+      { query: { product_uuid: productUuid, limit: 100, offset: 0 } },
+    );
   },
 
   // --- Stock entries (TEC-204) ----------------------------------------------

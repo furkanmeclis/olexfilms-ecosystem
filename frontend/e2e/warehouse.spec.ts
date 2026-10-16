@@ -242,3 +242,129 @@ test("warehouse: location → stock entry → transfer", async ({ page }) => {
 
   expect(api.unknown.filter((c) => c.includes("/warehouse"))).toEqual([]);
 });
+
+test("warehouse: fixed barcode transfer collects source bin and quantity", async ({
+  page,
+}) => {
+  const api = await mockWarehouse(page);
+  const wh = "0b9c4c1e-0000-4000-8000-000000000101";
+  const to = "0b9c4c1e-0000-4000-8000-000000000102";
+  const room = "0b9c4c1e-0000-4000-8000-000000000103";
+  const bin = "0b9c4c1e-0000-4000-8000-000000000104";
+  const transfer = "0b9c4c1e-0000-4000-8000-000000000105";
+  const product = "0b9c4c1e-0000-4000-8000-000000000106";
+  api.warehouses.push({
+    uuid: wh,
+    code: "WH1",
+    full_code: "WH1",
+    name: "WH1",
+    active: true,
+  });
+  api.warehouses.push({
+    uuid: to,
+    code: "WH2",
+    full_code: "WH2",
+    name: "WH2",
+    active: true,
+  });
+  api.rooms.push({
+    uuid: room,
+    code: "R1",
+    full_code: "WH1-R1",
+    name: "R1",
+    warehouse_uuid: wh,
+  });
+  api.locations.push({
+    uuid: bin,
+    code: "01",
+    full_code: "WH1-R1-A-S1-01",
+    name: "01",
+    warehouse_uuid: wh,
+    room_uuid: room,
+    type: "bin",
+    active: true,
+  });
+  const item = {
+    uuid: transfer,
+    transfer_no: "WT-FIXED",
+    status: "draft",
+    note: null,
+    from_warehouse: { uuid: wh, code: "WH1", name: "WH1" },
+    to_warehouse: { uuid: to, code: "WH2", name: "WH2" },
+    to_location: null,
+    lines: [] as Record<string, unknown>[],
+    created_at: "2026-10-01T09:00:00Z",
+    shipped_at: null,
+    completed_at: null,
+    cancelled_at: null,
+  };
+  api.transfers.push(item);
+  api.extra.push(async ({ method, path, body, ok }) => {
+    if (
+      method === "POST" &&
+      path === "/v1/warehouse/scan" &&
+      body.code === "FIX-01"
+    ) {
+      await ok({
+        type: "unit",
+        unit: { barcode: "FIX-01", unit_kind: "fixed" },
+        product: { uuid: product, name: "Fixed cleaner" },
+        location: null,
+      });
+      return true;
+    }
+    if (method === "GET" && path === `/v1/stock/locations/${bin}/products`) {
+      await ok({
+        items: [
+          {
+            product: { uuid: product, name: "Fixed cleaner" },
+            fixed_barcodes: [{ barcode: "FIX-01", quantity: 6 }],
+          },
+        ],
+        total: 1,
+        limit: 100,
+        offset: 0,
+      });
+      return true;
+    }
+    if (
+      method === "POST" &&
+      path === `/v1/warehouse/transfers/${transfer}/lines`
+    ) {
+      const fixed = (body.fixed as Record<string, unknown>[])?.[0];
+      item.lines.push({
+        uuid: "line-fixed",
+        unit_uuid: "unit-fixed",
+        barcode: "FIX-01",
+        quantity: fixed.quantity,
+        unit_status: "placed",
+        product: { uuid: product, name: "Fixed cleaner" },
+        source_location: { uuid: bin, code: "01", full_code: "WH1-R1-A-S1-01" },
+        target_location: null,
+        out_movement_uuid: null,
+        in_movement_uuid: null,
+        placement_movement_uuid: null,
+        restore_movement_uuid: null,
+      });
+      await ok({ ...item, line_count: item.lines.length });
+      return true;
+    }
+    return false;
+  });
+  await page.goto(`/t/${WAREHOUSE_SLUG}/warehouse/transfers/${transfer}`);
+  await page.getByTestId("transfer-barcode-input").fill("FIX-01");
+  await page.getByTestId("transfer-barcode-input").press("Enter");
+  const dialog = page.getByTestId("fixed-quantity-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Fixed cleaner");
+  await dialog.getByTestId("fixed-source").selectOption(bin);
+  await dialog.getByTestId("fixed-quantity").fill("4");
+  await dialog.getByTestId("fixed-confirm").click();
+  await expect(page.getByTestId("transfer-line")).toHaveCount(1);
+  expect(api.bodies[`POST /v1/warehouse/transfers/${transfer}/lines`]).toEqual([
+    {
+      barcodes: [],
+      fixed: [{ barcode: "FIX-01", quantity: 4, source_location_uuid: bin }],
+    },
+  ]);
+});

@@ -16,6 +16,7 @@ const api = vi.hoisted(() => ({
   cancelTransfer: vi.fn(),
   move: vi.fn(),
   scan: vi.fn(),
+  listLocationProducts: vi.fn(),
   createCount: vi.fn(),
   scanCount: vi.fn(),
   getCountReport: vi.fn(),
@@ -127,7 +128,27 @@ beforeEach(() => {
   api.listRooms.mockResolvedValue({
     items: [{ uuid: "room-1", code: "R1", name: "R1" }],
   });
-  api.listLocations.mockResolvedValue({ items: [] });
+  api.listLocations.mockResolvedValue({
+    items: [
+      {
+        uuid: "loc-src",
+        type: "bin",
+        active: true,
+        full_code: "WH1-R1-A-S1-01",
+      },
+    ],
+  });
+  api.listLocationProducts.mockResolvedValue({
+    items: [
+      {
+        product: { uuid: "p-1" },
+        fixed_barcodes: [{ barcode: "FIX-01", quantity: 6 }],
+      },
+    ],
+    total: 1,
+    limit: 100,
+    offset: 0,
+  });
   api.scan.mockImplementation(async (code: string) => ({
     type: "unit",
     unit: { barcode: code, unit_kind: "serial" },
@@ -232,29 +253,58 @@ describe("NewTransferForm (TEC-232)", () => {
 });
 
 describe("TransferDetailPage (TEC-232)", () => {
-  it("asks quantity and source location for a fixed barcode", async () => {
+  it("opens a quantity dialog for a fixed barcode and submits its source", async () => {
     api.getTransfer.mockResolvedValue(transfer());
     api.addTransferLines.mockResolvedValue(transfer());
-    api.scan.mockImplementation(async (code: string) =>
-      code === "SRC-01"
-        ? { type: "location", location: { uuid: "loc-src" } }
-        : { type: "unit", unit: { barcode: code, unit_kind: "fixed" } },
-    );
-    const prompt = vi
-      .spyOn(window, "prompt")
-      .mockReturnValueOnce("4")
-      .mockReturnValueOnce("SRC-01");
+    api.scan.mockImplementation(async (code: string) => ({
+      type: "unit",
+      unit: { barcode: code, unit_kind: "fixed" },
+      product: { uuid: "p-1", name: "Olex PPF 190" },
+    }));
     await render(
       m,
       createElement(TransferDetailPage, { slug: "acme", uuid: "tr-1" }),
     );
     await scan("transfer-barcode", "FIX-01");
+    await flush();
+    expect(
+      document.querySelector('[data-testid="fixed-quantity-dialog"]'),
+    ).not.toBeNull();
+    await click(document.querySelector('[data-testid="fixed-confirm"]'));
+    expect(api.addTransferLines).not.toHaveBeenCalled();
+    await fill(
+      document.querySelector('[data-testid="fixed-source"]'),
+      "loc-src",
+    );
+    await fill(document.querySelector('[data-testid="fixed-quantity"]'), "7");
+    expect(
+      document.querySelector('[data-testid="fixed-quantity-error"]')
+        ?.textContent,
+    ).toContain("warehouse.fixed.quantity_exceeds");
+    await click(document.querySelector('[data-testid="fixed-confirm"]'));
+    expect(api.addTransferLines).not.toHaveBeenCalled();
+    await fill(document.querySelector('[data-testid="fixed-quantity"]'), "4");
+    await click(document.querySelector('[data-testid="fixed-confirm"]'));
     expect(api.addTransferLines).toHaveBeenCalledWith(
       "tr-1",
       [],
       [{ barcode: "FIX-01", quantity: 4, source_location_uuid: "loc-src" }],
     );
-    prompt.mockRestore();
+  });
+  it("sends a serial line when advisory scan fails", async () => {
+    api.getTransfer.mockResolvedValue(transfer());
+    api.addTransferLines.mockResolvedValue(transfer());
+    api.scan.mockRejectedValue(new Error("SCAN_NO_MATCH"));
+    await render(
+      m,
+      createElement(TransferDetailPage, { slug: "acme", uuid: "tr-1" }),
+    );
+    await scan("transfer-barcode", "OLEX-00000001");
+    expect(api.addTransferLines).toHaveBeenCalledWith(
+      "tr-1",
+      ["OLEX-00000001"],
+      undefined,
+    );
   });
   it("draft: ship is blocked without lines; a unit QR adds its barcode", async () => {
     api.getTransfer.mockResolvedValue(transfer());
@@ -392,18 +442,107 @@ describe("TransferDetailPage lines table (TEC-376)", () => {
 });
 
 describe("BinMoveCard (TEC-232)", () => {
+  it("collects multiple fixed barcodes in sequence and cancel sends nothing", async () => {
+    api.scan.mockImplementation(async (code: string) =>
+      code.startsWith("OFW:LOC:")
+        ? {
+            type: "location",
+            location: { uuid: "loc-dst", path: [{ uuid: "wh-1" }] },
+          }
+        : {
+            type: "unit",
+            unit: { barcode: code, unit_kind: "fixed" },
+            product: { uuid: "p-1", name: "Olex PPF 190" },
+          },
+    );
+    api.listLocationProducts.mockResolvedValue({
+      items: [
+        {
+          product: { uuid: "p-1" },
+          fixed_barcodes: [
+            { barcode: "FIX-01", quantity: 6 },
+            { barcode: "FIX-02", quantity: 3 },
+          ],
+        },
+      ],
+      total: 1,
+      limit: 100,
+      offset: 0,
+    });
+    await render(m, createElement(BinMoveCard));
+    const area = $<HTMLTextAreaElement>("move-units");
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLTextAreaElement.prototype,
+        "value",
+      )?.set?.call(area, "FIX-01\nFIX-02");
+      area?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await scan("move-location", "OFW:LOC:DST-01");
+    await flush();
+    expect(
+      document.querySelector('[data-testid="fixed-quantity-dialog"]')
+        ?.textContent,
+    ).toContain("FIX-01");
+    await fill(
+      document.querySelector('[data-testid="fixed-source"]'),
+      "loc-src",
+    );
+    await fill(document.querySelector('[data-testid="fixed-quantity"]'), "2");
+    await click(document.querySelector('[data-testid="fixed-confirm"]'));
+    await flush();
+    expect(api.move).not.toHaveBeenCalled();
+    expect(
+      document.querySelector('[data-testid="fixed-quantity-dialog"]')
+        ?.textContent,
+    ).toContain("FIX-02");
+    const cancel = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(
+        '[data-testid="fixed-quantity-dialog"] button',
+      ),
+    ).find((button) => button.textContent === "common.cancel");
+    await click(cancel ?? null);
+    expect(api.move).not.toHaveBeenCalled();
+    api.move.mockResolvedValue({ location: { code: "B" }, units: [] });
+    await scan("move-location", "OFW:LOC:DST-01");
+    await flush();
+    for (const quantity of ["2", "1"]) {
+      await fill(
+        document.querySelector('[data-testid="fixed-source"]'),
+        "loc-src",
+      );
+      await fill(
+        document.querySelector('[data-testid="fixed-quantity"]'),
+        quantity,
+      );
+      await click(document.querySelector('[data-testid="fixed-confirm"]'));
+      await flush();
+    }
+    expect(api.move).toHaveBeenCalledTimes(1);
+    expect(api.move.mock.calls[0]?.[0]).toMatchObject({
+      barcodes: [],
+      location_code: "OFW:LOC:DST-01",
+      fixed: [
+        { barcode: "FIX-01", quantity: 2, source_location_uuid: "loc-src" },
+        { barcode: "FIX-02", quantity: 1, source_location_uuid: "loc-src" },
+      ],
+    });
+  });
   it("collects fixed quantity and source location before moving", async () => {
     api.scan.mockImplementation(async (code: string) =>
-      code === "SRC-01"
-        ? { type: "location", location: { uuid: "loc-src" } }
-        : { type: "unit", unit: { barcode: code, unit_kind: "fixed" } },
+      code.startsWith("OFW:LOC:")
+        ? {
+            type: "location",
+            location: { uuid: "loc-dst", path: [{ uuid: "wh-1" }] },
+          }
+        : {
+            type: "unit",
+            unit: { barcode: code, unit_kind: "fixed" },
+            product: { uuid: "p-1", name: "Olex PPF 190" },
+          },
     );
     api.move.mockResolvedValue({ location: { code: "B" }, units: [] });
     vi.stubGlobal("crypto", { randomUUID: () => "req-1" });
-    const prompt = vi
-      .spyOn(window, "prompt")
-      .mockReturnValueOnce("5")
-      .mockReturnValueOnce("SRC-01");
     await render(m, createElement(BinMoveCard));
     const area = $<HTMLTextAreaElement>("move-units");
     await act(async () => {
@@ -414,6 +553,13 @@ describe("BinMoveCard (TEC-232)", () => {
       area?.dispatchEvent(new Event("input", { bubbles: true }));
     });
     await scan("move-location", "OFW:LOC:DST-01");
+    await flush();
+    await fill(
+      document.querySelector('[data-testid="fixed-source"]'),
+      "loc-src",
+    );
+    await fill(document.querySelector('[data-testid="fixed-quantity"]'), "5");
+    await click(document.querySelector('[data-testid="fixed-confirm"]'));
     expect(api.move).toHaveBeenCalledWith({
       barcodes: [],
       location_code: "OFW:LOC:DST-01",
@@ -426,7 +572,6 @@ describe("BinMoveCard (TEC-232)", () => {
         },
       ],
     });
-    prompt.mockRestore();
     vi.unstubAllGlobals();
   });
   it("needs units first, then moves every listed unit to the scanned bin", async () => {

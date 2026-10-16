@@ -20,6 +20,7 @@ type ScanInputProps = {
   autoFocus?: boolean;
   /** Prefix of the test ids: `<id>-input`, `<id>-submit`. */
   id?: string;
+  expect?: "bin";
 };
 
 /**
@@ -38,10 +39,12 @@ export function ScanInput({
   disabled = false,
   autoFocus = true,
   id = "scan",
+  expect,
 }: ScanInputProps) {
   const { t } = useLocale();
   const [value, setValue] = useState("");
   const [empty, setEmpty] = useState(false);
+  const [wrongKind, setWrongKind] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -54,10 +57,17 @@ export function ScanInput({
     const code = normalizeScan(value);
     if (!code) {
       setEmpty(true);
+      setWrongKind(false);
+      ref.current?.focus();
+      return;
+    }
+    if (expect === "bin" && /^OFW:UNIT:/i.test(code)) {
+      setWrongKind(true);
       ref.current?.focus();
       return;
     }
     setEmpty(false);
+    setWrongKind(false);
     setValue("");
     void onScan(code);
     ref.current?.focus();
@@ -75,6 +85,7 @@ export function ScanInput({
           onChange={(e) => {
             setValue(e.target.value);
             if (empty) setEmpty(false);
+            if (wrongKind) setWrongKind(false);
           }}
           placeholder={placeholder ?? t("warehouse.scan.placeholder")}
           autoComplete="off"
@@ -84,7 +95,7 @@ export function ScanInput({
           enterKeyHint="go"
           dir="ltr"
           disabled={disabled}
-          aria-invalid={empty || undefined}
+          aria-invalid={empty || wrongKind || undefined}
           aria-describedby={`${id}-hint`}
           data-testid={inputId}
           className="font-mono"
@@ -106,11 +117,17 @@ export function ScanInput({
       <p
         id={`${id}-hint`}
         className={
-          empty ? "text-destructive text-xs" : "text-muted-foreground text-xs"
+          empty || wrongKind
+            ? "text-destructive text-xs"
+            : "text-muted-foreground text-xs"
         }
-        role={empty ? "alert" : undefined}
+        role={empty || wrongKind ? "alert" : undefined}
       >
-        {empty ? t("warehouse.scan.empty") : (hint ?? t("warehouse.scan.hint"))}
+        {empty
+          ? t("warehouse.scan.empty")
+          : wrongKind
+            ? t("warehouse.fixed.source_invalid")
+            : (hint ?? t("warehouse.scan.hint"))}
       </p>
     </form>
   );
