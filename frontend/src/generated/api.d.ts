@@ -6604,6 +6604,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/stock-entries/{uuid}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload barcodes for a draft stock entry
+         * @description Needs warehouse.write and a with_existing draft in the active organization. Columns are barcode (required), product_name, product_sku, and location_code (optional). At least one product identifier is required per row. Product matching uses the brand's active catalog. At most 2000 rows are accepted. existing_policy controls existing barcodes: none, all_existing, or conflicts_only. Preview, confirm and undo use /v1/tenant/imports/{uuid}. Confirm adds lines in one transaction; normal stock entry confirmation later posts ledger movements. Undo removes untouched draft lines and newly created units.
+         */
+        post: operations["importStockEntryBarcodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the entry barcode import template
+         * @description Needs warehouse.write and a with_existing draft. XLSX contains active brand SKUs and active bins of the entry's warehouse as drop-down lists.
+         */
+        get: operations["stockEntryBarcodeImportSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warehouse/stock-entries/{uuid}/lines": {
         parameters: {
             query?: never;
@@ -6738,6 +6778,26 @@ export interface paths {
          * @description Needs `warehouse.write`. The order must be bought by the active organization (404 otherwise) and received (409 WAREHOUSE_ORDER_NOT_RECEIVED); the order module has already moved the stock (order_out / received). Every received serial unit still unplaced in the organization gets one `placement` onto the location (`location_uuid` / `location_code`, default the order's buyer location; 400 when neither exists). `barcodes` limits the units. Fixed barcodes (`skipped: fixed`) and units already shelved or moved on (`skipped: not_on_hand`) are skipped. Key `warehouse_order:order_item_unit:<assignment id>:placement:<barcode>`.
          */
         post: operations["placeReceivedOrderUnits"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/orders/{uuid}/unplaced": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Units of a received order still waiting for a shelf (TEC-765)
+         * @description Needs `warehouse.read`. The order must be bought by the active organization (404 otherwise); any status is answered, but units count as unplaced only once the order is received. `units` holds every serial unit of the order; `unplaced` marks the ones still on hand unplaced in the organization (available, owned by the organization itself) — the ones POST /v1/warehouse/orders/{uuid}/place shelves (`unplaced_count`). `placed_count` counts the received serial units already shelved or moved on. `fixed` lists the fixed barcodes of the order, which are never placed by this step.
+         */
+        get: operations["getOrderUnplacedUnits"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -21626,6 +21686,37 @@ export interface components {
             /** @enum {boolean} */
             success: true;
             data: components["schemas"]["WarehouseMoveResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        WarehouseOrderPlacementUnit: {
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            /** @enum {string} */
+            unit_kind: "serial" | "fixed";
+            product: components["schemas"]["StockEntryProduct"];
+            /** @description Remaining roll meters (else the assigned meters) */
+            meters: string | null;
+            /** @description Assigned pieces */
+            quantity: number | null;
+            /** @description Still on hand unplaced in the organization */
+            unplaced: boolean;
+        };
+        WarehouseOrderPlacement: {
+            /** Format: uuid */
+            order_uuid: string;
+            order_no: string;
+            status: components["schemas"]["OrderStatus"];
+            unplaced_count: number;
+            placed_count: number;
+            units: components["schemas"]["WarehouseOrderPlacementUnit"][];
+            /** @description Fixed barcodes of the order (not placed by this step) */
+            fixed: components["schemas"]["WarehouseOrderPlacementUnit"][];
+        };
+        EnvelopeWarehouseOrderPlacement: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseOrderPlacement"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @enum {string} */
@@ -41018,6 +41109,83 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    importStockEntryBarcodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default csv
+                     * @enum {string}
+                     */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @example tr */
+                    locale?: string;
+                    /**
+                     * @default none
+                     * @enum {string}
+                     */
+                    existing_policy?: "none" | "all_existing" | "conflicts_only";
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    stockEntryBarcodeImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
     addStockEntryLines: {
         parameters: {
             query?: never;
@@ -41231,6 +41399,32 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+        };
+    };
+    getOrderUnplacedUnits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Placement state of the order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseOrderPlacement"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listWarehouseTransfers: {

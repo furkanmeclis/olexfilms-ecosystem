@@ -35,6 +35,10 @@ export type WarehouseTransferCompleteInput =
   Schemas["WarehouseTransferCompleteInput"];
 export type WarehouseMoveInput = Schemas["WarehouseMoveInput"];
 export type WarehouseMoveResult = Schemas["WarehouseMoveResult"];
+export type WarehouseOrderPlacement = Schemas["WarehouseOrderPlacement"];
+export type WarehouseOrderPlacementUnit =
+  Schemas["WarehouseOrderPlacementUnit"];
+export type WarehouseOrderPlaceInput = Schemas["WarehouseOrderPlaceInput"];
 export type StockCount = Schemas["StockCount"];
 export type StockCountStatus = Schemas["StockCountStatus"];
 export type StockCountInput = Schemas["StockCountInput"];
@@ -266,6 +270,23 @@ export const warehouseService = {
     });
   },
 
+  // --- Order receipt placement (TEC-765) -----------------------------------
+
+  getOrderPlacement(orderUuid: string) {
+    return platformRequest<WarehouseOrderPlacement>(
+      "GET",
+      `/v1/warehouse/orders/${enc(orderUuid)}/unplaced`,
+    );
+  },
+
+  placeOrder(orderUuid: string, body: WarehouseOrderPlaceInput) {
+    return platformRequest<WarehouseMoveResult>(
+      "POST",
+      `/v1/warehouse/orders/${enc(orderUuid)}/place`,
+      { body },
+    );
+  },
+
   // --- Bin moves and warehouse transfers (TEC-205) ---------------------------
   move(body: WarehouseMoveInput) {
     return platformRequest<WarehouseMoveResult>("POST", "/v1/warehouse/moves", {
@@ -458,6 +479,8 @@ export const warehouseKeys = {
   transfers: (params: TransferListQuery) =>
     ["warehouse", "transfers", params] as const,
   transfer: (uuid: string) => ["warehouse", "transfer", uuid] as const,
+  orderPlacement: (orderUuid: string) =>
+    ["warehouse", "order-placement", orderUuid] as const,
   counts: (params: CountListQuery) => ["warehouse", "counts", params] as const,
   count: (uuid: string) => ["warehouse", "count", uuid] as const,
   countScans: (uuid: string) => ["warehouse", "count-scans", uuid] as const,

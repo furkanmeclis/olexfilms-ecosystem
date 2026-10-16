@@ -105,6 +105,20 @@ func RegisterEntryRoutes(
 	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/cancel", write(h.Cancel))
 }
 
+// RegisterEntryImportRoutes mounts the record-scoped barcode import upload and template.
+func RegisterEntryImportRoutes(mux *http.ServeMux, h *whhandler.EntryImport,
+	checker middleware.FeatureChecker, tokens *jwt.Manager, loader middleware.IdentityLoader, q *db.Queries,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	module := middleware.RequireFeature(checker, features.ModuleWarehouse)
+	write := func(fn http.HandlerFunc) http.Handler {
+		return middleware.Chain(fn, authn, org, module, middleware.RequireScope(q, rbac.PermWarehouseWrite))
+	}
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/import", write(h.Upload))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/import/sample", write(h.Sample))
+}
+
 // RegisterTransferRoutes mounts the TEC-205 moves inside and between the
 // warehouses of the active organization: bin <-> bin moves, warehouse
 // transfer documents and the shelving of a received order. Reads need
@@ -128,6 +142,7 @@ func RegisterTransferRoutes(
 
 	mux.Handle("POST /v1/warehouse/moves", write(h.Move))
 	mux.Handle("POST /v1/warehouse/orders/{uuid}/place", write(h.PlaceOrder))
+	mux.Handle("GET /v1/warehouse/orders/{uuid}/unplaced", read(h.OrderUnplaced))
 	mux.Handle("GET /v1/warehouse/transfers", read(h.List))
 	mux.Handle("POST /v1/warehouse/transfers", write(h.Create))
 	mux.Handle("GET /v1/warehouse/transfers/{uuid}", read(h.Get))
