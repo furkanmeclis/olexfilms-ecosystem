@@ -747,6 +747,74 @@ func (q *Queries) ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Or
 	return items, nil
 }
 
+const listStockMovementDocuments = `-- name: ListStockMovementDocuments :many
+SELECT m.id AS movement_id, d.doc_type::text AS doc_type, d.doc_uuid::uuid AS doc_uuid
+FROM stock_movements m
+CROSS JOIN LATERAL (
+    SELECT 'stock_entry' AS doc_type, e.uuid AS doc_uuid
+    FROM stock_entry_lines l JOIN stock_entries e ON e.id = l.entry_id
+    WHERE m.reference_type = 'stock_entry_line' AND l.id = m.reference_id
+    UNION ALL
+    SELECT 'warehouse_transfer', t.uuid
+    FROM warehouse_transfer_lines l JOIN warehouse_transfers t ON t.id = l.transfer_id
+    WHERE m.reference_type = 'warehouse_transfer_line' AND l.id = m.reference_id
+    UNION ALL
+    SELECT 'stock_count', c.uuid
+    FROM stock_count_lines l JOIN stock_counts c ON c.id = l.count_id
+    WHERE m.reference_type = 'stock_count_line' AND l.id = m.reference_id
+    UNION ALL
+    SELECT 'service', s.uuid
+    FROM service_items i JOIN services s ON s.id = i.service_id
+    WHERE m.reference_type IN ('service_item', 'service_item_correction') AND i.id = m.reference_id
+    UNION ALL
+    SELECT 'order', o.uuid
+    FROM order_items i JOIN orders o ON o.id = i.order_id
+    WHERE m.reference_type = 'order_item' AND i.id = m.reference_id
+    UNION ALL
+    SELECT 'order', o.uuid
+    FROM order_item_units a JOIN order_items i ON i.id = a.order_item_id JOIN orders o ON o.id = i.order_id
+    WHERE m.reference_type = 'order_item_unit' AND a.id = m.reference_id
+    UNION ALL
+    SELECT 'transfer_request', r.uuid
+    FROM stock_transfer_request_items i JOIN stock_transfer_requests r ON r.id = i.request_id
+    WHERE m.reference_type = 'transfer_item' AND i.id = m.reference_id
+    UNION ALL
+    SELECT 'stock_reclassification', r.uuid
+    FROM stock_reclassifications r
+    WHERE m.reference_type = 'stock_reclassification' AND r.id = m.reference_id
+) d
+WHERE m.id = ANY($1::bigint[])
+`
+
+type ListStockMovementDocumentsRow struct {
+	MovementID int64     `json:"movement_id"`
+	DocType    string    `json:"doc_type"`
+	DocUuid    uuid.UUID `json:"doc_uuid"`
+}
+
+// TEC-763: the document behind each movement of a history page (entry,
+// warehouse transfer, count, service, order, dealer transfer request,
+// reclassification); line references resolve to their parent document.
+func (q *Queries) ListStockMovementDocuments(ctx context.Context, ids []int64) ([]ListStockMovementDocumentsRow, error) {
+	rows, err := q.db.Query(ctx, listStockMovementDocuments, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListStockMovementDocumentsRow{}
+	for rows.Next() {
+		var i ListStockMovementDocumentsRow
+		if err := rows.Scan(&i.MovementID, &i.DocType, &i.DocUuid); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStockMovementsByUnitPage = `-- name: ListStockMovementsByUnitPage :many
 
 SELECT id, uuid, organization_id, brand_id, unit_id, product_id, type, quantity_delta, meters_delta, from_owner_type, from_owner_id, to_owner_type, to_owner_id, from_status, to_status, reference_type, reference_id, actor_user_id, reason, metadata, idempotency_key, created_at FROM stock_movements

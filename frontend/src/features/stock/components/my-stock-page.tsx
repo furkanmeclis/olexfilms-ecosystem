@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Boxes, Printer } from "lucide-react";
+import { Boxes, History, Printer } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -29,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { ExportMenu } from "@/features/io/components/export-menu";
+import { StockProductsTable } from "@/features/stock/components/stock-products-table";
 import {
   CONSUMED_STATUS,
   showPurchasePrice,
@@ -42,6 +44,7 @@ import {
   stockProductsExportPath,
   stockService,
   stockUnitsExportPath,
+  type StockProduct,
   type StockUnitListQuery,
   type StockUnitRow,
 } from "@/features/stock/services/stock.service";
@@ -90,10 +93,13 @@ export function MyStockPage({
   initialOrganization?: string;
 }) {
   const { t, format } = useLocale();
+  const router = useRouter();
   const { can } = usePermission();
   const org = useActiveOrganization(slug);
   const canRead = can(Permission.StockRead);
   const isDistributor = org?.type === "distributor";
+  // TEC-763: the center reads its own stock here (no dealer picker).
+  const isCenter = org?.type === "center";
 
   const [tab, setTab] = useState<StockTab>("stock");
   const [dealer, setDealer] = useState<string>(initialOrganization || OWN);
@@ -322,6 +328,15 @@ export function MyStockPage({
           <EntityRowActions
             actions={[
               {
+                id: "history",
+                label: t("stock.unit.history"),
+                icon: History,
+                onSelect: () =>
+                  router.push(
+                    routes.tenant.stock.unit(slug, row.original.barcode),
+                  ),
+              },
+              {
                 id: "print_label",
                 label: t("warehouse.labels.print"),
                 icon: Printer,
@@ -334,7 +349,7 @@ export function MyStockPage({
       }) as ColumnDef<StockUnitRow, unknown>,
     );
     return cols;
-  }, [format, priceColumn, printLabels, printing, t, tab]);
+  }, [format, priceColumn, printLabels, printing, router, slug, t, tab]);
 
   // Column meta drives the params: barcode (prefix), product, status
   // (CSV), updated (updated_from/_to).
@@ -356,7 +371,7 @@ export function MyStockPage({
   const list = useQuery({
     queryKey: stockKeys.units(targetUuid, params),
     queryFn: () => stockService.listUnits(targetUuid, params),
-    enabled: canRead && targetUuid !== "",
+    enabled: canRead && targetUuid !== "" && tab !== "products",
   });
   const rows = useMemo(() => list.data?.items ?? [], [list.data]);
   const total = list.data?.total ?? 0;
@@ -402,12 +417,27 @@ export function MyStockPage({
     setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   };
 
-  const title = t("stock.page.title");
+  // TEC-763: "Units" of a product row opens the on-hand tab on it.
+  const openProductUnits = useCallback(
+    (p: StockProduct["product"]) => {
+      const option = { value: p.uuid, label: p.name, description: p.sku };
+      seenProducts.current.set(option.value, option);
+      setTab("stock");
+      setProduct(option);
+      onColumnFiltersChange([{ id: PRODUCT_FILTER, value: option.value }]);
+      setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+    },
+    [onColumnFiltersChange, setPagination],
+  );
+
+  const title = t(isCenter ? "stock.page.title_center" : "stock.page.title");
   const header = (
     <PageHeader
       title={title}
       icon={<Boxes className="size-6" />}
-      description={t("stock.page.description")}
+      description={t(
+        isCenter ? "stock.page.description_center" : "stock.page.description",
+      )}
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.tenant.home(slug) },
         { label: title },
@@ -431,70 +461,90 @@ export function MyStockPage({
   const dealerName = dealers.data?.find((d) => d.uuid === dealer)?.name ?? "";
   const filtered = columnFilters.length > 0 || Boolean(params.q);
 
+  const dealerPicker = isDistributor ? (
+    <Card>
+      <CardContent className="space-y-2 pt-6">
+        <Label htmlFor="stock-dealer">{t("stock.dealer.label")}</Label>
+        <AsyncCombobox
+          id="stock-dealer"
+          data-testid="stock-dealer"
+          className="max-w-md"
+          value={dealer}
+          options={[
+            {
+              value: OWN,
+              label: t("stock.dealer.own", { name: org?.name ?? "" }),
+            },
+            ...(dealers.data ?? []).map((d) => ({
+              value: d.uuid,
+              label: d.name,
+            })),
+          ]}
+          onValueChange={(next) => {
+            // Re-picking the current entry clears it; keep a view.
+            if (!next) return;
+            setDealer(next);
+            setProduct(null);
+            onColumnFiltersChange([]);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
+        />
+        <p className="text-muted-foreground text-xs">
+          {viewingDealer
+            ? t("stock.dealer.read_only", { name: dealerName })
+            : t("stock.dealer.hint")}
+        </p>
+      </CardContent>
+    </Card>
+  ) : null;
+  const tabs = (
+    <div
+      className="flex flex-wrap gap-2"
+      role="tablist"
+      aria-label={t("stock.tabs.label")}
+    >
+      {STOCK_TABS.map((value) => {
+        const active = tab === value;
+        return (
+          <Button
+            key={value}
+            type="button"
+            role="tab"
+            size="sm"
+            variant={active ? "default" : "outline"}
+            aria-selected={active}
+            data-testid={`stock-tab-${value}`}
+            onClick={() => pickTab(value)}
+          >
+            {t(`stock.tabs.${value}`)}
+          </Button>
+        );
+      })}
+    </div>
+  );
+
+  // TEC-763: the stock by product (its own server table).
+  if (tab === "products") {
+    return (
+      <div className="space-y-6">
+        {header}
+        {dealerPicker}
+        {tabs}
+        <StockProductsTable
+          orgUuid={targetUuid}
+          enabled={canRead}
+          onOpenUnits={openProductUnits}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {header}
 
-      {isDistributor ? (
-        <Card>
-          <CardContent className="space-y-2 pt-6">
-            <Label htmlFor="stock-dealer">{t("stock.dealer.label")}</Label>
-            <AsyncCombobox
-              id="stock-dealer"
-              data-testid="stock-dealer"
-              className="max-w-md"
-              value={dealer}
-              options={[
-                {
-                  value: OWN,
-                  label: t("stock.dealer.own", { name: org?.name ?? "" }),
-                },
-                ...(dealers.data ?? []).map((d) => ({
-                  value: d.uuid,
-                  label: d.name,
-                })),
-              ]}
-              onValueChange={(next) => {
-                // Re-picking the current entry clears it; keep a view.
-                if (!next) return;
-                setDealer(next);
-                setProduct(null);
-                onColumnFiltersChange([]);
-                setPagination((prev) => ({ ...prev, pageIndex: 0 }));
-              }}
-            />
-            <p className="text-muted-foreground text-xs">
-              {viewingDealer
-                ? t("stock.dealer.read_only", { name: dealerName })
-                : t("stock.dealer.hint")}
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <div
-        className="flex flex-wrap gap-2"
-        role="tablist"
-        aria-label={t("stock.tabs.label")}
-      >
-        {STOCK_TABS.map((value) => {
-          const active = tab === value;
-          return (
-            <Button
-              key={value}
-              type="button"
-              role="tab"
-              size="sm"
-              variant={active ? "default" : "outline"}
-              aria-selected={active}
-              data-testid={`stock-tab-${value}`}
-              onClick={() => pickTab(value)}
-            >
-              {t(`stock.tabs.${value}`)}
-            </Button>
-          );
-        })}
-      </div>
+      {dealerPicker}
+      {tabs}
 
       <EntityTable
         columns={columns}

@@ -10605,17 +10605,48 @@ paths:
       description: >-
         Needs `stock.read`; requests of the organizations inside the
         viewer's reach (the requesting organization is the one holding the
-        unit), newest first. `status` filters pending, approved, rejected or
-        cancelled requests (TEC-157).
+        unit). List contract (TEC-763, docs/list-contract.md): `sort`
+        created_at (default `-created_at`), decided_at or status with an id
+        tiebreak; `q` matches a barcode prefix, a product name or SKU or the
+        reason; `status` and `requested_by` are comma separated;
+        `from_product_uuid`, `to_product_uuid` and `created_from` /
+        `created_to` narrow the list. An unknown sort field or status
+        answers 400 (TEC-157).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
         - name: status
           in: query
           required: false
-          schema: { $ref: "#/components/schemas/StockReclassificationStatus" }
+          description: Comma separated statuses (pending, approved, rejected, cancelled).
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/StockReclassificationStatus" }
+        - name: requested_by
+          in: query
+          required: false
+          description: Comma separated user uuids of the requesters.
+          style: form
+          explode: false
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+        - name: from_product_uuid
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: to_product_uuid
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/CreatedFrom"
+        - $ref: "#/components/parameters/CreatedTo"
       responses:
         "200":
           description: Reclassification requests
@@ -10623,6 +10654,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeStockReclassificationPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -12361,6 +12394,78 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/stock-entries/{uuid}/import:
+    post:
+      tags: [Warehouse]
+      operationId: importStockEntryBarcodes
+      summary: Upload barcodes for a draft stock entry
+      description: >-
+        Needs warehouse.write and a with_existing draft in the active organization.
+        Columns are barcode (required), product_name, product_sku, and
+        location_code (optional). At least one product identifier is required
+        per row. Product matching uses the brand's active catalog. At most
+        2000 rows are accepted. existing_policy controls existing barcodes:
+        none, all_existing, or conflicts_only. Preview, confirm and undo use
+        /v1/tenant/imports/{uuid}. Confirm adds lines in one transaction;
+        normal stock entry confirmation later posts ledger movements. Undo
+        removes untouched draft lines and newly created units.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                format: { type: string, enum: [csv, tsv, xlsx, json], default: csv }
+                locale: { type: string, example: tr }
+                existing_policy: { type: string, enum: [none, all_existing, conflicts_only], default: none }
+      responses:
+        "201":
+          description: Import job created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeImportJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/warehouse/stock-entries/{uuid}/import/sample:
+    get:
+      tags: [Warehouse]
+      operationId: stockEntryBarcodeImportSample
+      summary: Download the entry barcode import template
+      description: >-
+        Needs warehouse.write and a with_existing draft. XLSX contains active
+        brand SKUs and active bins of the entry's warehouse as drop-down lists.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: format
+          in: query
+          schema: { type: string, enum: [csv, tsv, xlsx, json], default: xlsx }
+        - name: locale
+          in: query
+          schema: { type: string, example: tr }
+      responses:
+        "200":
+          description: Sample file
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /v1/warehouse/stock-entries/{uuid}/lines:
     post:
@@ -36746,7 +36851,7 @@ components:
     StockMovement:
       type: object
       required: [uuid, type, quantity_delta, meters_delta, from_status, to_status, from_owner, to_owner,
-        organization, organization_masked, reference_type, reason, created_at]
+        organization, organization_masked, reference_type, document, actor, reason, created_at]
       properties:
         uuid: { type: string, format: uuid }
         type:
@@ -36779,8 +36884,29 @@ components:
             - type: "null"
         organization_masked: { type: boolean }
         reference_type: { type: [string, "null"] }
+        document:
+          description: >-
+            Document behind the movement (TEC-763); null when masked or the
+            reference has no document page.
+          oneOf:
+            - $ref: "#/components/schemas/StockMovementDocument"
+            - type: "null"
+        actor:
+          description: User who wrote the movement (TEC-763); null when masked or a system write.
+          oneOf:
+            - $ref: "#/components/schemas/StockUserRef"
+            - type: "null"
         reason: { type: [string, "null"] }
         created_at: { type: string, format: date-time }
+
+    StockMovementDocument:
+      type: object
+      required: [type, uuid]
+      properties:
+        type:
+          type: string
+          enum: [stock_entry, warehouse_transfer, stock_count, service, order, transfer_request, stock_reclassification]
+        uuid: { type: string, format: uuid }
 
     StockUnitHistory:
       type: object

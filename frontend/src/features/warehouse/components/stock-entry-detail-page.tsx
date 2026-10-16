@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { ImportWizard } from "@/features/io/components/import-wizard";
 import { EntryLinesTable } from "@/features/warehouse/components/entry-lines-table";
 import { GenerateForm } from "@/features/warehouse/components/generate-form";
 import { LabelButton } from "@/features/warehouse/components/label-button";
@@ -43,6 +44,7 @@ import {
   unplacedLines,
 } from "@/features/warehouse/lib/entries";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
+import { entryImportConfirmCopy } from "@/features/warehouse/lib/entry-import";
 import { scanKind, unitBarcode } from "@/features/warehouse/lib/scan";
 import {
   buildLocationTree,
@@ -94,6 +96,7 @@ export function StockEntryDetailPage({
   const [locationUuid, setLocationUuid] = useState("");
   const [lineError, setLineError] = useState<string | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const key = warehouseKeys.entry(uuid);
   const entryQuery = useQuery({
@@ -268,6 +271,53 @@ export function StockEntryDetailPage({
         </p>
       ) : (
         <>
+          {editable && entry.mode === "with_existing" ? (
+            <ImportWizard
+              resource="tenant.warehouse.entry_barcodes"
+              scope="tenant"
+              paths={{
+                upload: `/v1/warehouse/stock-entries/${uuid}/import`,
+                sample: `/v1/warehouse/stock-entries/${uuid}/import/sample`,
+              }}
+              open={importOpen}
+              onOpenChange={setImportOpen}
+              onComplete={() => void qc.invalidateQueries({ queryKey: key })}
+              resultDetailHref={routes.tenant.warehouse.entry(slug, uuid)}
+              jobsHref=""
+              title={t("warehouse.entry_import.title")}
+              initialOptions={{ existing_policy: "none" }}
+              extraOptions={({ values, setValue }) => (
+                <fieldset className="space-y-2">
+                  <legend className="text-sm font-medium">
+                    {t("warehouse.entry_import.policy_title")}
+                  </legend>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {(["none", "all_existing", "conflicts_only"] as const).map(
+                      (policy) => (
+                        <button
+                          key={policy}
+                          type="button"
+                          aria-pressed={values.existing_policy === policy}
+                          onClick={() => setValue("existing_policy", policy)}
+                          className={`rounded-lg border p-3 text-start text-sm ${values.existing_policy === policy ? "border-primary bg-primary/5" : "border-border"}`}
+                        >
+                          <span className="block font-medium">
+                            {t(`warehouse.entry_import.policy.${policy}.title`)}
+                          </span>
+                          <span className="text-muted-foreground mt-1 block">
+                            {t(
+                              `warehouse.entry_import.policy.${policy}.description`,
+                            )}
+                          </span>
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </fieldset>
+              )}
+              confirmCopy={entryImportConfirmCopy}
+            />
+          ) : null}
           <Card>
             <CardContent className="grid gap-4 pt-6 sm:grid-cols-4">
               <Info label={t("warehouse.fields.warehouse")}>
@@ -328,6 +378,15 @@ export function StockEntryDetailPage({
                       busy={addLines.isPending}
                       onScan={onBarcode}
                     />
+                    {entry.mode === "with_existing" ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setImportOpen(true)}
+                      >
+                        {t("warehouse.entry_import.open")}
+                      </Button>
+                    ) : null}
                     {lineError ? (
                       <p
                         role="alert"

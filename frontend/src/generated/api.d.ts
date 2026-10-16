@@ -5796,7 +5796,7 @@ export interface paths {
         };
         /**
          * Reclassification requests (barcode kept, product changed)
-         * @description Needs `stock.read`; requests of the organizations inside the viewer's reach (the requesting organization is the one holding the unit), newest first. `status` filters pending, approved, rejected or cancelled requests (TEC-157).
+         * @description Needs `stock.read`; requests of the organizations inside the viewer's reach (the requesting organization is the one holding the unit). List contract (TEC-763, docs/list-contract.md): `sort` created_at (default `-created_at`), decided_at or status with an id tiebreak; `q` matches a barcode prefix, a product name or SKU or the reason; `status` and `requested_by` are comma separated; `from_product_uuid`, `to_product_uuid` and `created_from` / `created_to` narrow the list. An unknown sort field or status answers 400 (TEC-157).
          */
         get: operations["listStockReclassifications"];
         put?: never;
@@ -6596,6 +6596,46 @@ export interface paths {
         };
         /** One stock entry with its lines and label links */
         get: operations["getStockEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload barcodes for a draft stock entry
+         * @description Needs warehouse.write and a with_existing draft in the active organization. Columns are barcode (required), product_name, product_sku, and location_code (optional). At least one product identifier is required per row. Product matching uses the brand's active catalog. At most 2000 rows are accepted. existing_policy controls existing barcodes: none, all_existing, or conflicts_only. Preview, confirm and undo use /v1/tenant/imports/{uuid}. Confirm adds lines in one transaction; normal stock entry confirmation later posts ledger movements. Undo removes untouched draft lines and newly created units.
+         */
+        post: operations["importStockEntryBarcodes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the entry barcode import template
+         * @description Needs warehouse.write and a with_existing draft. XLSX contains active brand SKUs and active bins of the entry's warehouse as drop-down lists.
+         */
+        get: operations["stockEntryBarcodeImportSample"];
         put?: never;
         post?: never;
         delete?: never;
@@ -20644,9 +20684,19 @@ export interface components {
             organization: components["schemas"]["StockOrgRef"] | null;
             organization_masked: boolean;
             reference_type: string | null;
+            /** @description Document behind the movement (TEC-763); null when masked or the reference has no document page. */
+            document: components["schemas"]["StockMovementDocument"] | null;
+            /** @description User who wrote the movement (TEC-763); null when masked or a system write. */
+            actor: components["schemas"]["StockUserRef"] | null;
             reason: string | null;
             /** Format: date-time */
             created_at: string;
+        };
+        StockMovementDocument: {
+            /** @enum {string} */
+            type: "stock_entry" | "warehouse_transfer" | "stock_count" | "service" | "order" | "transfer_request" | "stock_reclassification";
+            /** Format: uuid */
+            uuid: string;
         };
         StockUnitHistory: {
             unit: components["schemas"]["StockUnit"];
@@ -39117,7 +39167,19 @@ export interface operations {
             query?: {
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
-                status?: components["schemas"]["StockReclassificationStatus"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Comma separated statuses (pending, approved, rejected, cancelled). */
+                status?: components["schemas"]["StockReclassificationStatus"][];
+                /** @description Comma separated user uuids of the requesters. */
+                requested_by?: string[];
+                from_product_uuid?: string;
+                to_product_uuid?: string;
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
             };
             header?: never;
             path?: never;
@@ -39134,6 +39196,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvelopeStockReclassificationPage"];
                 };
             };
+            400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["UnprocessableEntity"];
@@ -40669,6 +40732,83 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    importStockEntryBarcodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default csv
+                     * @enum {string}
+                     */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @example tr */
+                    locale?: string;
+                    /**
+                     * @default none
+                     * @enum {string}
+                     */
+                    existing_policy?: "none" | "all_existing" | "conflicts_only";
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    stockEntryBarcodeImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     addStockEntryLines: {

@@ -301,6 +301,10 @@ func (s *Service) history(ctx context.Context, v viewer, u db.Unit, st *db.UnitC
 			Holder: *orgRef(r.orgs[h.HolderOrgID]), Quantity: h.QuantityOnHand,
 		})
 	}
+	docs, actors, err := s.movementLinks(ctx, rows)
+	if err != nil {
+		return model.UnitHistory{}, err
+	}
 	for _, m := range rows {
 		o, ok := r.orgs[m.OrganizationID]
 		visible := ok && v.names(o)
@@ -313,6 +317,10 @@ func (s *Service) history(ctx context.Context, v viewer, u db.Unit, st *db.UnitC
 			mv.Organization = orgRef(o)
 			mv.ReferenceType = textPtr(m.ReferenceType)
 			mv.Reason = textPtr(m.Reason)
+			mv.Document = docs[m.ID]
+			if m.ActorUserID.Valid {
+				mv.Actor = actors[m.ActorUserID.Int64]
+			}
 		}
 		if m.FromOwnerType.Valid {
 			ow := r.owner(v, m.FromOwnerType.String, m.FromOwnerID.Int64, visible)
@@ -325,6 +333,39 @@ func (s *Service) history(ctx context.Context, v viewer, u db.Unit, st *db.UnitC
 		out.Movements.Items = append(out.Movements.Items, mv)
 	}
 	return out, nil
+}
+
+// movementLinks resolves the documents and acting users of a history page
+// (TEC-763) in two batch queries.
+func (s *Service) movementLinks(ctx context.Context, rows []db.StockMovement) (map[int64]*model.DocumentRef, map[int64]*model.UserRef, error) {
+	docs, actors := map[int64]*model.DocumentRef{}, map[int64]*model.UserRef{}
+	if len(rows) == 0 {
+		return docs, actors, nil
+	}
+	ids, users := make([]int64, 0, len(rows)), []int64{}
+	for _, m := range rows {
+		ids = append(ids, m.ID)
+		if m.ActorUserID.Valid {
+			users = append(users, m.ActorUserID.Int64)
+		}
+	}
+	found, err := s.q.ListStockMovementDocuments(ctx, ids)
+	if err != nil {
+		return nil, nil, fmt.Errorf("stock: movement documents: %w", err)
+	}
+	for _, d := range found {
+		docs[d.MovementID] = &model.DocumentRef{Type: d.DocType, UUID: d.DocUuid}
+	}
+	if len(users) > 0 {
+		named, err := s.q.ListUsersByIDs(ctx, uniq(users))
+		if err != nil {
+			return nil, nil, fmt.Errorf("stock: movement actors: %w", err)
+		}
+		for _, u := range named {
+			actors[u.ID] = &model.UserRef{UUID: u.Uuid, Name: strings.TrimSpace(u.Name + " " + u.Surname)}
+		}
+	}
+	return docs, actors, nil
 }
 
 // stockArgs are the shared filters of both product stock lists.

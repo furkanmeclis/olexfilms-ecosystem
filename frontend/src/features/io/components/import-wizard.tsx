@@ -73,6 +73,8 @@ export type ImportWizardProps = {
   onComplete?: () => void;
   /** Import job list (secondary link on the result step). */
   jobsHref?: string;
+  /** Destination of the result's detail link for a record-scoped import. */
+  resultDetailHref?: string;
   scope?: ExportJobScope;
   /**
    * Resource-specific settings on the file step (e.g. the existing barcode
@@ -140,6 +142,7 @@ export function ImportWizard({
   onOpenChange,
   onComplete,
   jobsHref,
+  resultDetailHref,
   scope = "platform",
   extraOptions,
   initialOptions,
@@ -322,11 +325,13 @@ export function ImportWizard({
   const confirmBlocked =
     plan.importable === 0 || (plan.skipped > 0 && !acknowledged);
 
-  const detailHref = job
-    ? scope === "tenant" && slug
-      ? routes.tenant.imports.detail(slug, job.uuid)
-      : routes.platform.imports.detail(job.uuid)
-    : "";
+  const detailHref =
+    resultDetailHref ??
+    (job
+      ? scope === "tenant" && slug
+        ? routes.tenant.imports.detail(slug, job.uuid)
+        : routes.platform.imports.detail(job.uuid)
+      : "");
   const listHref =
     jobsHref ??
     (scope === "tenant" && slug
