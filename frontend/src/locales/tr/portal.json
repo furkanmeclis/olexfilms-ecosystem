@@ -406,5 +406,11 @@
   "profile.links_title": "Hesap bağlantıları",
   "profile.preferences_hint": "E-posta, uygulama içi ve kampanya bildirimleri",
   "profile.contracts_hint": "İmzaladığınız sözleşmeler ve PDF'leri",
-  "profile.phone_login_hint": "Telefonunuza gelen kodla giriş yapıyorsunuz; ayrıca şifre gerekmez."
+  "profile.phone_login_hint": "Telefonunuza gelen kodla giriş yapıyorsunuz; ayrıca şifre gerekmez.",
+  "home.vehicles_hint": "Araçlarınız ve hizmet geçmişleri",
+  "home.warranties_hint": "Garanti belgeleriniz ve durumları",
+  "home.appointments_hint": "Yaklaşan ve geçmiş randevularınız",
+  "home.dealers_hint": "Size yakın yetkili bayiler",
+  "home.profile_hint": "Ad, dil ve oturum ayarlarınız",
+  "home.book": "Randevu al"
 }

@@ -406,5 +406,11 @@
   "profile.links_title": "Връзки на акаунта",
   "profile.preferences_hint": "Известия по имейл, в приложението и за кампании",
   "profile.contracts_hint": "Подписани от вас договори и техните PDF",
-  "profile.phone_login_hint": "Влизате с код, изпратен на телефона ви; не е нужна парола."
+  "profile.phone_login_hint": "Влизате с код, изпратен на телефона ви; не е нужна парола.",
+  "home.vehicles_hint": "Вашите автомобили и сервизната им история",
+  "home.warranties_hint": "Вашите гаранционни сертификати и статусът им",
+  "home.appointments_hint": "Вашите предстоящи и минали часове",
+  "home.dealers_hint": "Оторизирани дилъри близо до вас",
+  "home.profile_hint": "Вашето име, език и сесии",
+  "home.book": "Запазете час"
 }

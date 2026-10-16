@@ -10,7 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { routes } from "@/config/routes";
 import { ConnectedAppsCard } from "@/features/mcp";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalPage,
+  PortalLoading,
+} from "@/features/portal/components/portal-page";
 import {
   portalApi,
   type PortalNotificationPreferences,
@@ -73,9 +76,7 @@ export function PortalPreferences() {
           retryLabel={t("common.retry")}
         />
       ) : !prefs.data ? (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.preferences.loading")}
-        </p>
+        <PortalLoading label={t("portal.preferences.loading")} />
       ) : (
         <Card>
           <CardContent className="divide-y pt-2">

@@ -389,21 +389,48 @@ describe("AssistantChat", () => {
     expect(host.querySelector("aside")?.textContent).not.toContain("Renamed");
   });
 
-  it("recovers from a status request failure", async () => {
+  it("retries a failed portal status request instead of treating it as disabled", async () => {
     const transport = fakeTransport({
+      realm: "portal",
       status: vi
         .fn()
         .mockRejectedValueOnce(new Error("offline"))
         .mockResolvedValue(status()),
     });
-    await mount(transport);
-    expect(q("ai-input")).toBeNull();
-    const retry = Array.from(host.querySelectorAll("button")).find(
-      (b) => b.textContent === "ai.chat.retry",
-    )!;
-    await act(async () => retry.click());
+    await mount(transport, false);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      "common.error_generic",
+    );
+    expect(q("ai-unavailable")).toBeNull();
+    await act(async () => {
+      (
+        host.querySelector('[role="alert"] button') as HTMLButtonElement
+      ).click();
+    });
     await flush();
     expect(q("ai-input")).not.toBeNull();
+  });
+
+  it("shows a retry for failed conversation history while keeping the composer usable", async () => {
+    const transport = fakeTransport({
+      realm: "portal",
+      listConversations: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("offline"))
+        .mockResolvedValue([]),
+    });
+    await mount(transport, false);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+      "common.error_generic",
+    );
+    expect(q("ai-input")).not.toBeNull();
+    await act(async () => {
+      (
+        host.querySelector('[role="alert"] button') as HTMLButtonElement
+      ).click();
+    });
+    await flush();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
   });
 
   it("joins text_delta parts into one assistant message", async () => {

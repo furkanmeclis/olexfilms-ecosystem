@@ -10,8 +10,15 @@ import {
   Square,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 
+import { ErrorState } from "@/components/common/error-state";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +48,8 @@ export function AssistantChat({
   showToolChips,
   fullPageHref,
   onOpenFullPage,
+  loadingFallback,
+  emptyFallback,
 }: {
   transport: AssistantTransport;
   /** Query-cache scope (realm + organization). */
@@ -49,6 +58,8 @@ export function AssistantChat({
   showToolChips: boolean;
   fullPageHref?: string;
   onOpenFullPage?: () => void;
+  loadingFallback?: ReactNode;
+  emptyFallback?: ReactNode;
 }) {
   const { t, dir } = useLocale();
   const { can } = usePermission();
@@ -88,10 +99,24 @@ export function AssistantChat({
   const status = chat.status.data;
   if (chat.status.isLoading) {
     return (
-      <div className="text-muted-foreground flex items-center gap-2 p-6 text-sm">
-        <Loader2 className="size-4 animate-spin" />
-        {t("ai.chat.loading")}
-      </div>
+      loadingFallback ?? (
+        <div
+          role="status"
+          className="text-muted-foreground flex items-center gap-2 p-6 text-sm"
+        >
+          <Loader2 className="size-4 animate-spin" />
+          {t("ai.chat.loading")}
+        </div>
+      )
+    );
+  }
+  if (chat.status.isError) {
+    return (
+      <ErrorState
+        title={t("common.error_generic")}
+        onRetry={() => void chat.status.refetch()}
+        retryLabel={t("common.retry")}
+      />
     );
   }
   if (chat.status.isError) {
@@ -191,8 +216,8 @@ export function AssistantChat({
     <div
       dir={dir}
       className={cn(
-        "flex min-h-0 flex-1 gap-4",
-        layout === "page" ? "h-[calc(100svh-12rem)]" : "h-full",
+        "flex min-h-80 min-w-0 flex-1 gap-4",
+        layout === "page" ? "h-[calc(100svh-12rem)]" : "h-full min-h-0",
       )}
       data-testid="ai-assistant-chat"
     >
@@ -280,6 +305,14 @@ export function AssistantChat({
           </Alert>
         ) : null}
 
+        {chat.conversations.isError ? (
+          <ErrorState
+            title={t("common.error_generic")}
+            onRetry={() => void chat.conversations.refetch()}
+            retryLabel={t("common.retry")}
+            className="py-4"
+          />
+        ) : null}
         <div
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain pe-1"
           data-testid="ai-scroll"
@@ -290,10 +323,15 @@ export function AssistantChat({
           }}
         >
           {chat.loadingConversation ? (
-            <div className="text-muted-foreground flex items-center gap-2 text-sm">
-              <Loader2 className="size-4 animate-spin" />
-              {t("ai.chat.loading")}
-            </div>
+            (loadingFallback ?? (
+              <div
+                role="status"
+                className="text-muted-foreground flex items-center gap-2 text-sm"
+              >
+                <Loader2 className="size-4 animate-spin" />
+                {t("ai.chat.loading")}
+              </div>
+            ))
           ) : chat.conversationError ? (
             <Alert variant="destructive" role="alert">
               <AlertTitle>{t("ai.errors.generic")}</AlertTitle>
@@ -305,33 +343,35 @@ export function AssistantChat({
               </Button>
             </Alert>
           ) : chat.messages.length === 0 ? (
-            <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-center text-sm">
-              <Bot className="size-8" />
-              <p>{t("ai.chat.empty")}</p>
-              <div className="mt-2 flex max-w-md flex-wrap justify-center gap-2">
-                {["first", "second", "third"].map((suggestion) => {
-                  const text = t(
-                    `ai.suggestions.${transport.realm}.${suggestion}`,
-                  );
-                  return (
-                    <Button
-                      key={suggestion}
-                      type="button"
-                      variant="outline"
-                      className="h-auto text-start whitespace-normal"
-                      disabled={inputDisabled}
-                      onClick={() => {
-                        setInput(text);
-                        focusComposer();
-                      }}
-                      data-testid="ai-suggestion"
-                    >
-                      {text}
-                    </Button>
-                  );
-                })}
+            (emptyFallback ?? (
+              <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 text-center text-sm">
+                <Bot className="size-8" />
+                <p>{t("ai.chat.empty")}</p>
+                <div className="mt-2 flex max-w-md flex-wrap justify-center gap-2">
+                  {["first", "second", "third"].map((suggestion) => {
+                    const text = t(
+                      `ai.suggestions.${transport.realm}.${suggestion}`,
+                    );
+                    return (
+                      <Button
+                        key={suggestion}
+                        type="button"
+                        variant="outline"
+                        className="h-auto text-start whitespace-normal"
+                        disabled={inputDisabled}
+                        onClick={() => {
+                          setInput(text);
+                          focusComposer();
+                        }}
+                        data-testid="ai-suggestion"
+                      >
+                        {text}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ))
           ) : (
             <MessageList
               messages={chat.messages}

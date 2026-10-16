@@ -406,5 +406,11 @@
   "profile.links_title": "账户链接",
   "profile.preferences_hint": "电子邮件、应用内和活动通知",
   "profile.contracts_hint": "您签署的合同及其 PDF",
-  "profile.phone_login_hint": "您使用发送到手机的验证码登录，无需密码。"
+  "profile.phone_login_hint": "您使用发送到手机的验证码登录，无需密码。",
+  "home.vehicles_hint": "您的车辆及其服务记录",
+  "home.warranties_hint": "您的质保证书及其状态",
+  "home.appointments_hint": "您即将到来和过去的预约",
+  "home.dealers_hint": "您附近的授权经销商",
+  "home.profile_hint": "您的姓名、语言和会话",
+  "home.book": "预约"
 }
