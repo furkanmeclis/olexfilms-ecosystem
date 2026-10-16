@@ -25,14 +25,18 @@ func newEntryImportEnv(t *testing.T) *entryEnv {
 
 func importJob(t *testing.T, e *entryEnv, adapter *wh.EntryBarcodeImporter, entry uuid.UUID, policy string) ioengine.ImportJob {
 	t.Helper()
-	row, err := e.q.CreateImportJob(e.ctx, db.CreateImportJobParams{Resource: wh.EntryBarcodeImportResource, ActorID: 1, Format: "csv", Locale: "en", OrganizationID: pgtype.Int8{Int64: e.center.ID, Valid: true}})
+	actor, err := e.q.CreateUser(e.ctx, db.CreateUserParams{Email: pgtype.Text{String: "t760-" + uuid.NewString() + "@example.test", Valid: true}, PasswordHash: "x", Name: "Import", Surname: "Test", Status: "active"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := e.q.CreateImportJob(e.ctx, db.CreateImportJobParams{Resource: wh.EntryBarcodeImportResource, ActorID: actor.ID, Format: "csv", Locale: "en", OrganizationID: pgtype.Int8{Int64: e.center.ID, Valid: true}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := adapter.Bind(e.ctx, row.Uuid, entry, e.center.ID, policy); err != nil {
 		t.Fatal(err)
 	}
-	return ioengine.ImportJob{ID: row.ID, UUID: row.Uuid, OrganizationID: e.center.ID, Locale: "en", ActorID: 1}
+	return ioengine.ImportJob{ID: row.ID, UUID: row.Uuid, OrganizationID: e.center.ID, Locale: "en", ActorID: actor.ID}
 }
 func importBin(t *testing.T, e *entryEnv, w wh.Warehouse) wh.Location {
 	t.Helper()
@@ -257,14 +261,18 @@ func TestEntryBarcodeImportDistributorCannotIssue(t *testing.T) {
 		t.Fatal(err)
 	}
 	im := wh.NewEntryBarcodeImporter(e.entries)
-	row, err := e.q.CreateImportJob(e.ctx, db.CreateImportJobParams{Resource: wh.EntryBarcodeImportResource, ActorID: 1, Format: "csv", Locale: "en", OrganizationID: pgtype.Int8{Int64: e.dist.ID, Valid: true}})
+	actor, err := e.q.CreateUser(e.ctx, db.CreateUserParams{Email: pgtype.Text{String: "t760-" + uuid.NewString() + "@example.test", Valid: true}, PasswordHash: "x", Name: "Import", Surname: "Test", Status: "active"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, err := e.q.CreateImportJob(e.ctx, db.CreateImportJobParams{Resource: wh.EntryBarcodeImportResource, ActorID: actor.ID, Format: "csv", Locale: "en", OrganizationID: pgtype.Int8{Int64: e.dist.ID, Valid: true}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := im.Bind(e.ctx, row.Uuid, entry.UUID, e.dist.ID, "none"); err != nil {
 		t.Fatal(err)
 	}
-	job := ioengine.ImportJob{ID: row.ID, UUID: row.Uuid, OrganizationID: e.dist.ID, Locale: "en", ActorID: 1}
+	job := ioengine.ImportJob{ID: row.ID, UUID: row.Uuid, OrganizationID: e.dist.ID, Locale: "en", ActorID: actor.ID}
 	result, err := im.Stage(e.ctx, job, []map[string]any{{"product_sku": e.piece.Sku, "barcode": "T760-DIST-" + e.suffix}}, nil)
 	if err != nil || result.Rows[0].Status != "invalid" || result.Errors[0].Code != "ENTRY_IMPORT_CENTER_ONLY" {
 		t.Fatalf("distributor: %+v %v", result, err)
