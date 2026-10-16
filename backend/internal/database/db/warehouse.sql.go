@@ -109,22 +109,23 @@ func (q *Queries) CreateTypedLocation(ctx context.Context, arg CreateTypedLocati
 }
 
 const createWarehouse = `-- name: CreateWarehouse :one
-INSERT INTO warehouses (organization_id, code, name, address, active, sort_order)
+INSERT INTO warehouses (organization_id, code, name, address, active, require_location_placement, sort_order)
 VALUES (
     $1, $2, $3, $4,
-    $5,
+    $5, $6,
     (SELECT COALESCE(MAX(w.sort_order) + 1, 0) FROM warehouses w
      WHERE w.organization_id = $1)
 )
-RETURNING id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at
+RETURNING id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement
 `
 
 type CreateWarehouseParams struct {
-	OrganizationID int64       `json:"organization_id"`
-	Code           string      `json:"code"`
-	Name           string      `json:"name"`
-	Address        pgtype.Text `json:"address"`
-	Active         bool        `json:"active"`
+	OrganizationID           int64       `json:"organization_id"`
+	Code                     string      `json:"code"`
+	Name                     string      `json:"name"`
+	Address                  pgtype.Text `json:"address"`
+	Active                   bool        `json:"active"`
+	RequireLocationPlacement bool        `json:"require_location_placement"`
 }
 
 func (q *Queries) CreateWarehouse(ctx context.Context, arg CreateWarehouseParams) (Warehouse, error) {
@@ -134,6 +135,7 @@ func (q *Queries) CreateWarehouse(ctx context.Context, arg CreateWarehouseParams
 		arg.Name,
 		arg.Address,
 		arg.Active,
+		arg.RequireLocationPlacement,
 	)
 	var i Warehouse
 	err := row.Scan(
@@ -147,6 +149,7 @@ func (q *Queries) CreateWarehouse(ctx context.Context, arg CreateWarehouseParams
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RequireLocationPlacement,
 	)
 	return i, err
 }
@@ -332,7 +335,7 @@ func (q *Queries) GetTypedLocationByUUID(ctx context.Context, arg GetTypedLocati
 }
 
 const getWarehouseByID = `-- name: GetWarehouseByID :one
-SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at FROM warehouses
+SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement FROM warehouses
 WHERE id = $1 AND organization_id = $2
 `
 
@@ -355,12 +358,13 @@ func (q *Queries) GetWarehouseByID(ctx context.Context, arg GetWarehouseByIDPara
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RequireLocationPlacement,
 	)
 	return i, err
 }
 
 const getWarehouseByUUID = `-- name: GetWarehouseByUUID :one
-SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at FROM warehouses
+SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement FROM warehouses
 WHERE uuid = $1 AND organization_id = $2
 `
 
@@ -383,6 +387,7 @@ func (q *Queries) GetWarehouseByUUID(ctx context.Context, arg GetWarehouseByUUID
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RequireLocationPlacement,
 	)
 	return i, err
 }
@@ -572,7 +577,7 @@ func (q *Queries) ListRoomsByUUIDs(ctx context.Context, arg ListRoomsByUUIDsPara
 const listWarehouses = `-- name: ListWarehouses :many
 
 
-SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at FROM warehouses
+SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement FROM warehouses
 WHERE organization_id = $1
   AND ($2::bool IS NULL OR active = $2::bool)
 ORDER BY sort_order, id
@@ -607,6 +612,7 @@ func (q *Queries) ListWarehouses(ctx context.Context, arg ListWarehousesParams) 
 			&i.SortOrder,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RequireLocationPlacement,
 		); err != nil {
 			return nil, err
 		}
@@ -619,7 +625,7 @@ func (q *Queries) ListWarehouses(ctx context.Context, arg ListWarehousesParams) 
 }
 
 const listWarehousesByUUIDs = `-- name: ListWarehousesByUUIDs :many
-SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at FROM warehouses
+SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement FROM warehouses
 WHERE uuid = ANY($1::uuid[]) AND organization_id = $2
 `
 
@@ -648,6 +654,7 @@ func (q *Queries) ListWarehousesByUUIDs(ctx context.Context, arg ListWarehousesB
 			&i.SortOrder,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RequireLocationPlacement,
 		); err != nil {
 			return nil, err
 		}
@@ -657,6 +664,17 @@ func (q *Queries) ListWarehousesByUUIDs(ctx context.Context, arg ListWarehousesB
 		return nil, err
 	}
 	return items, nil
+}
+
+const organizationRequiresPlacement = `-- name: OrganizationRequiresPlacement :one
+SELECT EXISTS(SELECT 1 FROM warehouses WHERE organization_id = $1 AND active AND require_location_placement)
+`
+
+func (q *Queries) OrganizationRequiresPlacement(ctx context.Context, organizationID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, organizationRequiresPlacement, organizationID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const setLocationSortOrder = `-- name: SetLocationSortOrder :execrows
@@ -808,18 +826,20 @@ UPDATE warehouses
 SET code = $1,
     name = $2,
     address = $3,
-    active = $4
-WHERE id = $5 AND organization_id = $6
-RETURNING id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at
+    active = $4,
+    require_location_placement = $5
+WHERE id = $6 AND organization_id = $7
+RETURNING id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement
 `
 
 type UpdateWarehouseParams struct {
-	Code           string      `json:"code"`
-	Name           string      `json:"name"`
-	Address        pgtype.Text `json:"address"`
-	Active         bool        `json:"active"`
-	ID             int64       `json:"id"`
-	OrganizationID int64       `json:"organization_id"`
+	Code                     string      `json:"code"`
+	Name                     string      `json:"name"`
+	Address                  pgtype.Text `json:"address"`
+	Active                   bool        `json:"active"`
+	RequireLocationPlacement bool        `json:"require_location_placement"`
+	ID                       int64       `json:"id"`
+	OrganizationID           int64       `json:"organization_id"`
 }
 
 func (q *Queries) UpdateWarehouse(ctx context.Context, arg UpdateWarehouseParams) (Warehouse, error) {
@@ -828,6 +848,7 @@ func (q *Queries) UpdateWarehouse(ctx context.Context, arg UpdateWarehouseParams
 		arg.Name,
 		arg.Address,
 		arg.Active,
+		arg.RequireLocationPlacement,
 		arg.ID,
 		arg.OrganizationID,
 	)
@@ -843,6 +864,7 @@ func (q *Queries) UpdateWarehouse(ctx context.Context, arg UpdateWarehouseParams
 		&i.SortOrder,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RequireLocationPlacement,
 	)
 	return i, err
 }

@@ -3656,16 +3656,17 @@ type VehicleTransfer struct {
 }
 
 type Warehouse struct {
-	ID             int64              `json:"id"`
-	Uuid           uuid.UUID          `json:"uuid"`
-	OrganizationID int64              `json:"organization_id"`
-	Code           string             `json:"code"`
-	Name           string             `json:"name"`
-	Address        pgtype.Text        `json:"address"`
-	Active         bool               `json:"active"`
-	SortOrder      int32              `json:"sort_order"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID                       int64              `json:"id"`
+	Uuid                     uuid.UUID          `json:"uuid"`
+	OrganizationID           int64              `json:"organization_id"`
+	Code                     string             `json:"code"`
+	Name                     string             `json:"name"`
+	Address                  pgtype.Text        `json:"address"`
+	Active                   bool               `json:"active"`
+	SortOrder                int32              `json:"sort_order"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	RequireLocationPlacement bool               `json:"require_location_placement"`
 }
 
 type WarehouseLocation struct {

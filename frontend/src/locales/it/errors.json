@@ -162,5 +162,6 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Il profilo di fatturazione dell'acquirente è incompleto; compila i campi mancanti.",
   "codes.EINVOICE_INVALID_STATUS": "Lo stato della fattura elettronica non consente questa azione.",
   "codes.EINVOICE_NOT_ARCHIVED": "La fattura elettronica non è ancora archiviata.",
-  "codes.EINVOICE_PDF_NOT_READY": "Il PDF della fattura non è ancora pronto; riprova tra poco o rigeneralo."
+  "codes.EINVOICE_PDF_NOT_READY": "Il PDF della fattura non è ancora pronto; riprova tra poco o rigeneralo.",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Posiziona questa unità nel magazzino prima di assegnarla."
 }

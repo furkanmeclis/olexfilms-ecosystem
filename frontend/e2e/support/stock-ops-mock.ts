@@ -258,6 +258,7 @@ export class StockOpsMock {
     if (method === "POST" && path === "/v1/warehouse/scan") {
       const u = this.unit(ROLL_BARCODE);
       return ok({
+        status: "ok",
         type: "unit",
         matched_by: "unit_qr",
         code: ROLL_BARCODE,
