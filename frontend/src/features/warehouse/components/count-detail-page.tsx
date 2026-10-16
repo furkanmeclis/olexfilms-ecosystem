@@ -41,6 +41,7 @@ import {
   showsQuantity,
 } from "@/features/warehouse/lib/counts";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
+import { useStepUp } from "@/features/step-up-engine";
 import {
   countMetersError,
   countQuantityError,
@@ -59,6 +60,7 @@ import {
   triggerBrowserDownload,
 } from "@/lib/api/platform-form-request";
 import { useDialogs } from "@/providers/dialog-provider";
+import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 
@@ -513,6 +515,9 @@ export function CountReportCard({
   const { t } = useLocale();
   const qc = useQueryClient();
   const { confirm } = useDialogs();
+  const { ensure } = useStepUp();
+  const { user } = useAuth();
+  const isCreator = Boolean(user && count.created_by_user_uuid === user.uuid);
   const [choices, setChoices] = useState<
     Record<string, StockCountResolution | undefined>
   >({});
@@ -558,7 +563,7 @@ export function CountReportCard({
       }),
       confirmLabel: t("warehouse.count.approve"),
     });
-    if (ok) approve.mutate(resolutions);
+    if (ok && (await ensure())) approve.mutate(resolutions);
   };
 
   const onExport = async () => {
@@ -605,7 +610,10 @@ export function CountReportCard({
             <Button
               type="button"
               size="sm"
-              disabled={approve.isPending || report.isLoading}
+              disabled={approve.isPending || report.isLoading || isCreator}
+              title={
+                isCreator ? t("warehouse.count.self_approval_hint") : undefined
+              }
               onClick={() => void onApprove()}
               data-testid="count-approve"
             >
@@ -616,6 +624,14 @@ export function CountReportCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {canApprove && isCreator ? (
+          <p
+            className="text-muted-foreground text-sm"
+            data-testid="count-self-approval-hint"
+          >
+            {t("warehouse.count.self_approval_hint")}
+          </p>
+        ) : null}
         {error ? (
           <p
             role="alert"

@@ -34,7 +34,8 @@ func Translate(locale Locale, key string) string {
 }
 
 var trCatalog = map[string]string{
-	"users.uuid": "UUID", "users.email": "E-posta", "users.name": "Ad",
+	"warehouse.count.self_approval": "Sayımı oluşturan veya tüm taramaları tek başına yapan kişi onaylayamaz. Başka bir yetkili kişiden onay isteyin.",
+	"users.uuid":                    "UUID", "users.email": "E-posta", "users.name": "Ad",
 	"users.surname": "Soyad", "users.status": "Durum", "users.created_at": "Oluşturulma",
 	"users.locale": "Dil", "users.role_slugs": "Roller", "users.role": "Rol",
 	"roles.uuid": "UUID", "roles.name": "Ad", "roles.slug": "Slug",
@@ -1016,7 +1017,8 @@ var trCatalog = map[string]string{
 }
 
 var enCatalog = map[string]string{
-	"users.uuid": "UUID", "users.email": "Email", "users.name": "First name",
+	"warehouse.count.self_approval": "The count creator or sole scanner cannot approve it. Ask another authorized person.",
+	"users.uuid":                    "UUID", "users.email": "Email", "users.name": "First name",
 	"users.surname": "Last name", "users.status": "Status", "users.created_at": "Created",
 	"users.locale": "Locale", "users.role_slugs": "Roles", "users.role": "Role",
 	"roles.uuid": "UUID", "roles.name": "Name", "roles.slug": "Slug",

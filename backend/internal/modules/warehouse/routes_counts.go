@@ -13,7 +13,7 @@ import (
 
 // RegisterCountRoutes mounts the TEC-206 stock counts. Reads need
 // warehouse.read, every change warehouse.write; approving additionally
-// needs stock.adjust (checked in the use case). Scans resolve through the
+// needs stock.adjust (checked in the use case) and a recent step-up. Scans resolve through the
 // TEC-203 resolver (units follow the caller's stock.read reach).
 func RegisterCountRoutes(
 	mux *http.ServeMux,
@@ -22,6 +22,7 @@ func RegisterCountRoutes(
 	tokens *jwt.Manager,
 	loader middleware.IdentityLoader,
 	q *db.Queries,
+	stepUp middleware.StepUpChecker,
 ) {
 	authn := middleware.Authenticate(tokens, loader)
 	org := middleware.RequireOrganization(tokens, q)
@@ -43,6 +44,8 @@ func RegisterCountRoutes(
 	mux.Handle("POST /v1/warehouse/stock-counts/{uuid}/complete", write(h.Complete))
 	mux.Handle("GET /v1/warehouse/stock-counts/{uuid}/report", read(h.Report))
 	mux.Handle("GET /v1/warehouse/stock-counts/{uuid}/export", read(h.Export))
-	mux.Handle("POST /v1/warehouse/stock-counts/{uuid}/approve", write(h.Approve))
+	mux.Handle("POST /v1/warehouse/stock-counts/{uuid}/approve",
+		middleware.Chain(http.HandlerFunc(h.Approve), authn, org, module,
+			middleware.RequireScope(q, rbac.PermWarehouseWrite), middleware.RequireStepUp(stepUp)))
 	mux.Handle("POST /v1/warehouse/stock-counts/{uuid}/cancel", write(h.Cancel))
 }
