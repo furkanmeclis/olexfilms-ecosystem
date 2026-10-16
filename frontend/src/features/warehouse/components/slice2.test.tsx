@@ -15,6 +15,7 @@ const api = vi.hoisted(() => ({
   completeTransfer: vi.fn(),
   cancelTransfer: vi.fn(),
   move: vi.fn(),
+  scan: vi.fn(),
   createCount: vi.fn(),
   scanCount: vi.fn(),
   getCountReport: vi.fn(),
@@ -127,6 +128,10 @@ beforeEach(() => {
     items: [{ uuid: "room-1", code: "R1", name: "R1" }],
   });
   api.listLocations.mockResolvedValue({ items: [] });
+  api.scan.mockImplementation(async (code: string) => ({
+    type: "unit",
+    unit: { barcode: code, unit_kind: "serial" },
+  }));
   catalog.listProducts.mockResolvedValue({
     items: [{ uuid: "p-1", sku: "PPF-190", name: "Olex PPF 190" }],
   });
@@ -227,6 +232,30 @@ describe("NewTransferForm (TEC-232)", () => {
 });
 
 describe("TransferDetailPage (TEC-232)", () => {
+  it("asks quantity and source location for a fixed barcode", async () => {
+    api.getTransfer.mockResolvedValue(transfer());
+    api.addTransferLines.mockResolvedValue(transfer());
+    api.scan.mockImplementation(async (code: string) =>
+      code === "SRC-01"
+        ? { type: "location", location: { uuid: "loc-src" } }
+        : { type: "unit", unit: { barcode: code, unit_kind: "fixed" } },
+    );
+    const prompt = vi
+      .spyOn(window, "prompt")
+      .mockReturnValueOnce("4")
+      .mockReturnValueOnce("SRC-01");
+    await render(
+      m,
+      createElement(TransferDetailPage, { slug: "acme", uuid: "tr-1" }),
+    );
+    await scan("transfer-barcode", "FIX-01");
+    expect(api.addTransferLines).toHaveBeenCalledWith(
+      "tr-1",
+      [],
+      [{ barcode: "FIX-01", quantity: 4, source_location_uuid: "loc-src" }],
+    );
+    prompt.mockRestore();
+  });
   it("draft: ship is blocked without lines; a unit QR adds its barcode", async () => {
     api.getTransfer.mockResolvedValue(transfer());
     api.addTransferLines.mockResolvedValue(
@@ -248,9 +277,11 @@ describe("TransferDetailPage (TEC-232)", () => {
     expect(api.addTransferLines).not.toHaveBeenCalled();
 
     await scan("transfer-barcode", "ofw:unit:OLEX-00000001");
-    expect(api.addTransferLines).toHaveBeenCalledWith("tr-1", [
-      "OLEX-00000001",
-    ]);
+    expect(api.addTransferLines).toHaveBeenCalledWith(
+      "tr-1",
+      ["OLEX-00000001"],
+      undefined,
+    );
     await flush();
     expect(
       m.container.querySelectorAll('[data-testid="transfer-line"]'),
@@ -361,6 +392,43 @@ describe("TransferDetailPage lines table (TEC-376)", () => {
 });
 
 describe("BinMoveCard (TEC-232)", () => {
+  it("collects fixed quantity and source location before moving", async () => {
+    api.scan.mockImplementation(async (code: string) =>
+      code === "SRC-01"
+        ? { type: "location", location: { uuid: "loc-src" } }
+        : { type: "unit", unit: { barcode: code, unit_kind: "fixed" } },
+    );
+    api.move.mockResolvedValue({ location: { code: "B" }, units: [] });
+    vi.stubGlobal("crypto", { randomUUID: () => "req-1" });
+    const prompt = vi
+      .spyOn(window, "prompt")
+      .mockReturnValueOnce("5")
+      .mockReturnValueOnce("SRC-01");
+    await render(m, createElement(BinMoveCard));
+    const area = $<HTMLTextAreaElement>("move-units");
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLTextAreaElement.prototype,
+        "value",
+      )?.set?.call(area, "FIX-01");
+      area?.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await scan("move-location", "OFW:LOC:DST-01");
+    expect(api.move).toHaveBeenCalledWith({
+      barcodes: [],
+      location_code: "OFW:LOC:DST-01",
+      fixed: [
+        {
+          barcode: "FIX-01",
+          quantity: 5,
+          source_location_uuid: "loc-src",
+          request_uuid: "req-1",
+        },
+      ],
+    });
+    prompt.mockRestore();
+    vi.unstubAllGlobals();
+  });
   it("needs units first, then moves every listed unit to the scanned bin", async () => {
     api.move.mockResolvedValue({
       location: { uuid: "loc-2", code: "02", full_code: "WH1-R1-A-S1-02" },
@@ -395,6 +463,7 @@ describe("BinMoveCard (TEC-232)", () => {
     await scan("move-location", "OFW:LOC:WH1-R1-A-S1-02");
     expect(api.move).toHaveBeenCalledWith({
       barcodes: ["A1", "A2"],
+      fixed: [],
       location_code: "OFW:LOC:WH1-R1-A-S1-02",
     });
     expect($("move-result")?.textContent).toContain('"count":2');

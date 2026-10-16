@@ -158,6 +158,47 @@ export function StockEntryDetailPage({
     onError: (err) =>
       appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
   });
+  const voidSelected = useMutation({
+    mutationFn: async () => {
+      const selectedLines = (entry?.lines ?? []).filter((line) =>
+        selected.includes(line.uuid),
+      );
+      const result = await warehouseService.voidBarcodes({
+        unit_uuids: selectedLines.map((line) => line.unit_uuid),
+      });
+      for (const item of result.items) {
+        if (!item.voided) continue;
+        const line = selectedLines.find(
+          (candidate) => candidate.unit_uuid === item.unit_uuid,
+        );
+        if (line) await warehouseService.deleteLine(uuid, line.uuid);
+      }
+      return result;
+    },
+    onSuccess: (result) => {
+      setSelected([]);
+      void qc.invalidateQueries({ queryKey: key });
+      appToast.success(
+        t("warehouse.barcodes.void_result", {
+          voided: result.items.filter((item) => item.voided).length,
+          rejected: result.items.filter((item) => !item.voided).length,
+        }),
+      );
+    },
+    onError: (err) =>
+      appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
+  });
+  const askVoidSelected = async () => {
+    const ok = await confirm({
+      title: t("warehouse.barcodes.void_title"),
+      description: t("warehouse.barcodes.void_description", {
+        count: selected.length,
+      }),
+      confirmLabel: t("warehouse.barcodes.void_selected"),
+      variant: "destructive",
+    });
+    if (ok) voidSelected.mutate();
+  };
   const finish = useMutation({
     mutationFn: (action: "confirm" | "cancel") =>
       action === "confirm"
@@ -231,6 +272,16 @@ export function StockEntryDetailPage({
       actions={
         entry && editable ? (
           <div className="flex flex-wrap gap-2">
+            {selected.length > 0 ? (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={voidSelected.isPending}
+                onClick={() => void askVoidSelected()}
+              >
+                {t("warehouse.barcodes.void_selected")}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

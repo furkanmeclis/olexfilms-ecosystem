@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
 import {
@@ -519,19 +519,67 @@ export function BinMoveCard() {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<WarehouseMoveResult | null>(null);
+  const moveRequests = useRef<Record<string, string>>({});
   const barcodes = parseBarcodes(text).map(unitBarcode);
 
   const move = useMutation({
-    mutationFn: (locationCode: string) =>
-      warehouseService.move({ barcodes, location_code: locationCode }),
+    mutationFn: async (locationCode: string) => {
+      const serial: string[] = [];
+      const fixed: {
+        barcode: string;
+        quantity: number;
+        source_location_uuid: string;
+        request_uuid: string;
+      }[] = [];
+      for (const barcode of barcodes) {
+        const scan = await warehouseService.scan(barcode);
+        if (scan.unit?.unit_kind !== "fixed") {
+          serial.push(barcode);
+          continue;
+        }
+        const raw = window.prompt(t("warehouse.fixed.quantity_prompt"));
+        if (raw === null)
+          throw new Error(t("warehouse.fixed.quantity_invalid"));
+        const quantity = Number(raw);
+        if (!Number.isInteger(quantity) || quantity < 1)
+          throw new Error(t("warehouse.fixed.quantity_invalid"));
+        const sourceCode = window.prompt(t("warehouse.fixed.source_prompt"));
+        if (sourceCode === null)
+          throw new Error(t("warehouse.fixed.source_invalid"));
+        const source = await warehouseService.scan(sourceCode);
+        if (source.type !== "location" || !source.location)
+          throw new Error(t("warehouse.fixed.source_invalid"));
+        fixed.push({
+          barcode,
+          quantity,
+          source_location_uuid: source.location.uuid,
+          request_uuid: (moveRequests.current[`${barcode}:${locationCode}`] ??=
+            crypto.randomUUID()),
+        });
+      }
+      return warehouseService.move({
+        barcodes: serial,
+        fixed,
+        location_code: locationCode,
+      });
+    },
     onSuccess: (res) => {
+      moveRequests.current = {};
       setError(null);
       setResult(res);
       setText("");
       void qc.invalidateQueries({ queryKey: ["warehouse"] });
     },
     onError: (err) =>
-      setError(warehouseErrorMessage(err, t, t("warehouse.move.failed"))),
+      setError(
+        err instanceof Error &&
+          [
+            t("warehouse.fixed.quantity_invalid"),
+            t("warehouse.fixed.source_invalid"),
+          ].includes(err.message)
+          ? err.message
+          : warehouseErrorMessage(err, t, t("warehouse.move.failed")),
+      ),
   });
 
   const onLocation = (code: string) => {

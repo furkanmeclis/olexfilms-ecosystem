@@ -26,6 +26,8 @@ export type StockEntryStatus = Schemas["StockEntryStatus"];
 export type StockEntryMode = Schemas["StockEntryMode"];
 export type BarcodeBatch = Schemas["BarcodeBatch"];
 export type BarcodeBatchInput = Schemas["BarcodeBatchInput"];
+export type BarcodeVoidInput = Schemas["BarcodeVoidInput"];
+export type BarcodeVoidResult = Schemas["BarcodeVoidResult"];
 // --- TEC-232 (slice 2) ---
 export type WarehouseTransfer = Schemas["WarehouseTransfer"];
 export type WarehouseTransferLine = Schemas["WarehouseTransferLine"];
@@ -265,6 +267,13 @@ export const warehouseService = {
       body,
     });
   },
+  voidBarcodes(body: BarcodeVoidInput) {
+    return platformRequest<BarcodeVoidResult>(
+      "POST",
+      "/v1/stock/barcodes/void",
+      { body },
+    );
+  },
 
   // --- Bin moves and warehouse transfers (TEC-205) ---------------------------
   move(body: WarehouseMoveInput) {
@@ -292,11 +301,15 @@ export const warehouseService = {
       `/v1/warehouse/transfers/${enc(uuid)}`,
     );
   },
-  addTransferLines(uuid: string, barcodes: string[]) {
+  addTransferLines(
+    uuid: string,
+    barcodes: string[],
+    fixed?: Schemas["WarehouseFixedMoveInput"][],
+  ) {
     return platformRequest<WarehouseTransfer>(
       "POST",
       `/v1/warehouse/transfers/${enc(uuid)}/lines`,
-      { body: { barcodes } },
+      { body: { barcodes, fixed } },
     );
   },
   deleteTransferLine(uuid: string, lineUuid: string) {

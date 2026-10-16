@@ -83,8 +83,14 @@ export function TransferDetailPage({
   };
 
   const addLines = useMutation({
-    mutationFn: (barcodes: string[]) =>
-      warehouseService.addTransferLines(uuid, barcodes),
+    mutationFn: (body: {
+      barcodes: string[];
+      fixed?: {
+        barcode: string;
+        quantity: number;
+        source_location_uuid: string;
+      }[];
+    }) => warehouseService.addTransferLines(uuid, body.barcodes, body.fixed),
     onSuccess: (next) => {
       setLineError(null);
       apply(next);
@@ -142,12 +148,43 @@ export function TransferDetailPage({
       appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
   });
 
-  const onUnit = (code: string) => {
+  const onUnit = async (code: string) => {
     if (scanKind(code) === "location") {
       setLineError(t("warehouse.entry.scan_location_here"));
       return;
     }
-    addLines.mutate([unitBarcode(code)]);
+    try {
+      const barcode = unitBarcode(code);
+      const scan = await warehouseService.scan(barcode);
+      if (scan.unit?.unit_kind !== "fixed") {
+        addLines.mutate({ barcodes: [barcode] });
+        return;
+      }
+      const raw = window.prompt(t("warehouse.fixed.quantity_prompt"));
+      if (raw === null) return;
+      const quantity = Number(raw);
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        setLineError(t("warehouse.fixed.quantity_invalid"));
+        return;
+      }
+      const sourceCode = window.prompt(t("warehouse.fixed.source_prompt"));
+      if (sourceCode === null) return;
+      const source = await warehouseService.scan(sourceCode);
+      if (source.type !== "location" || !source.location) {
+        setLineError(t("warehouse.fixed.source_invalid"));
+        return;
+      }
+      addLines.mutate({
+        barcodes: [],
+        fixed: [
+          { barcode, quantity, source_location_uuid: source.location.uuid },
+        ],
+      });
+    } catch (err) {
+      setLineError(
+        warehouseErrorMessage(err, t, t("warehouse.entry.add_failed")),
+      );
+    }
   };
   const onLocationScan = (code: string) => {
     if (scanKind(code) === "unit") {

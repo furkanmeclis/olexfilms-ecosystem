@@ -11465,7 +11465,8 @@ paths:
         answer 403 STOCK_BARCODES_CENTER_ONLY). Allocates `quantity`
         barcodes `<PREFIX>-<8 digits>` (e.g. `OLEX-00000123`) from the
         brand's counter under its lock and creates the units in status
-        `printed` (like the stock import); they enter stock later through
+        `reserved`; printing a label PDF advances them to `printed`.
+        They enter stock later through
         the stock entry flow. Roll products need `meters` (the length of
         each roll); fixed-barcode products get fixed units. The prefix
         defaults to the brand slug (A-Z0-9, 2-8 characters). The roll split
@@ -11482,7 +11483,7 @@ paths:
               $ref: "#/components/schemas/BarcodeBatchInput"
       responses:
         "201":
-          description: Batch reserved; units created in status printed
+          description: Batch reserved; units created in status reserved
           content:
             application/json:
               schema:
@@ -11495,6 +11496,31 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/stock/barcodes/void:
+    post:
+      tags: [Stock]
+      operationId: voidReservedBarcodes
+      summary: Void reserved barcodes at the center
+      description: >-
+        Needs stock.write at the center. Each selected unit is handled independently;
+        only reserved units are voided through the stock ledger. Printed or stocked
+        units remain unchanged and receive a per-item reason.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BarcodeVoidInput" }
+      responses:
+        "200":
+          description: Per-unit void results
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeBarcodeVoidResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /v1/stock/barcodes/{uuid}:
     parameters:
@@ -11532,7 +11558,8 @@ paths:
         batch through the PDF engine (Gotenberg) with the template given by
         `template`, else the batch's template, else the organization's
         default unit template, else the built-in code128 70x37 mm sheet.
-        Counts the print (`print_count`, `last_printed_at`). 503
+        Advances reserved units to printed and counts the print
+        (`print_count`, `last_printed_at`). 503
         STOCK_LABEL_RENDERER_UNAVAILABLE when the PDF engine is down.
       security:
         - bearerAuth: []
@@ -12165,7 +12192,10 @@ paths:
         `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing
         -> void; relocate -> placement to the counted location (and a
         count_adjustment of measured roll meters); increase_unlocated ->
-        count_adjustment to the counted fixed quantity or roll meters; ignore
+        count_adjustment to the counted fixed quantity or roll meters;
+        add_to_stock -> entry of an unexpected, unowned serial unit issued by
+        this organization into its counted location (other organizations'
+        units are refused); ignore
         -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed
         since completion; 409 COUNT_INVALID_STATUS unless pending_review (a
         second approval writes nothing).
@@ -12342,7 +12372,7 @@ paths:
       summary: Open a draft stock entry at a warehouse (TEC-204)
       description: >-
         Needs `warehouse.write`. The warehouse must be an active warehouse of
-        the active organization. `with_existing` links printed barcodes,
+        the active organization. `with_existing` links printed or reserved barcodes,
         `generate_new` reserves new barcodes (TEC-202; center only, 403
         STOCK_ENTRY_CENTER_ONLY otherwise, K14).
       security:
@@ -12516,7 +12546,7 @@ paths:
       operationId: deleteStockEntryLine
       summary: Remove a line from a draft entry
       description: >-
-        Needs `warehouse.write`. A generated label stays printed and can be
+        Needs `warehouse.write`. A generated label remains reserved or printed and can be
         linked again with `with_existing`.
       security:
         - bearerAuth: []
@@ -12626,7 +12656,11 @@ paths:
       tags: [Warehouse]
       operationId: cancelStockEntry
       summary: Cancel a draft stock entry
-      description: Needs `warehouse.write`. Only a draft can be cancelled (409 STOCK_ENTRY_NOT_DRAFT).
+      description: >-
+        Needs `warehouse.write`. Only a draft can be cancelled (409
+        STOCK_ENTRY_NOT_DRAFT). A printed barcode on any line prevents
+        cancellation (409 STOCK_ENTRY_PRINTED_LABELS). Reserved labels on
+        the draft are voided in the same transaction as cancellation.
       security:
         - bearerAuth: []
       parameters:
@@ -12660,7 +12694,12 @@ paths:
         transaction. A placed unit stays in its warehouse (moving to another
         warehouse is a warehouse transfer, 400 VALIDATION_ERROR); an
         unplaced unit of the organization may go to any of its warehouses.
-        Fixed barcodes are 400. 409 WAREHOUSE_UNIT_UNAVAILABLE when the unit
+        Fixed barcodes use `fixed` entries with barcode, positive quantity and
+        source_location_uuid and a stable request_uuid; transfer_out/in moves
+        that quantity between bins and replays the same request without a
+        second deduction.
+        409 WAREHOUSE_FIXED_INSUFFICIENT when the source has too little stock.
+        409 WAREHOUSE_UNIT_UNAVAILABLE when the unit
         is not on hand in the organization, WAREHOUSE_UNIT_BUSY when it is in
         transit or on an open warehouse transfer. The idempotency key is
         `warehouse_move:stock_movement:<last movement id>:placement:<barcode>`.
@@ -12851,8 +12890,10 @@ paths:
         active brand placed in the source warehouse (409
         WAREHOUSE_UNIT_UNAVAILABLE), not in transit, not on another open
         warehouse transfer, not reserved by an order and not on an open
-        stock transfer request (409 WAREHOUSE_UNIT_BUSY). Fixed barcodes are
-        400. A transfer that is no longer a draft is 409
+        stock transfer request (409 WAREHOUSE_UNIT_BUSY). Fixed barcodes use
+        `fixed` entries with barcode, positive quantity and source_location_uuid;
+        the quantity is stored on the line and restored on cancellation.
+        A transfer that is no longer a draft is 409
         WAREHOUSE_TRANSFER_STATE.
       security:
         - bearerAuth: []
@@ -17215,7 +17256,7 @@ paths:
       description: |
         Mobile mirror (TEC-235) of `POST /v1/warehouse/stock-counts/{uuid}/approve`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
 
-        Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). The mobile API has no step-up verification contract. Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
+        Needs `warehouse.write` and `stock.adjust` (403 COUNT_ADJUST_FORBIDDEN). The creator or sole scanner cannot approve (403 STOCK_COUNT_SELF_APPROVAL). The mobile API has no step-up verification contract. Every line that is not matched needs a resolution from its `allowed_resolutions` (400 VALIDATION_ERROR otherwise). In one transaction, through the stock ledger with the idempotency keys `stock_count:stock_count_line:<line>:<type>:<barcode>`: void_missing -> void; relocate -> placement to the counted location (and a count_adjustment of measured roll meters); increase_unlocated -> count_adjustment to the counted fixed quantity or roll meters; add_to_stock -> entry of an unowned serial unit issued by this organization into the counted location; ignore -> nothing. 409 COUNT_STALE (nothing applied) when the stock changed since completion; 409 COUNT_INVALID_STATUS unless pending_review (a second approval writes nothing).
       security:
       - bearerAuth: []
       parameters:
@@ -37473,10 +37514,10 @@ components:
         result: { type: string, enum: [matched, missing, wrong_location, unlocated, unexpected, qty_variance, meter_variance] }
         resolution:
           type: [string, "null"]
-          enum: [ignore, relocate, void_missing, increase_unlocated, null]
+          enum: [ignore, relocate, void_missing, increase_unlocated, add_to_stock, null]
         allowed_resolutions:
           type: array
-          items: { type: string, enum: [ignore, relocate, void_missing, increase_unlocated] }
+          items: { type: string, enum: [ignore, relocate, void_missing, increase_unlocated, add_to_stock] }
         note: { type: [string, "null"] }
         resolved_at: { type: [string, "null"], format: date-time }
 
@@ -37502,7 +37543,7 @@ components:
             additionalProperties: false
             properties:
               line_uuid: { type: string, format: uuid }
-              resolution: { type: string, enum: [ignore, relocate, void_missing, increase_unlocated] }
+              resolution: { type: string, enum: [ignore, relocate, void_missing, increase_unlocated, add_to_stock] }
               note: { type: [string, "null"], maxLength: 500 }
 
     EnvelopeStockCount:
@@ -37832,15 +37873,26 @@ components:
     WarehouseMoveInput:
       type: object
       additionalProperties: false
-      required: [barcodes]
       properties:
         barcodes:
           type: array
-          minItems: 1
+          minItems: 0
           maxItems: 1000
           items: { type: string, minLength: 1, maxLength: 128 }
+        fixed:
+          type: array
+          items: { $ref: "#/components/schemas/WarehouseFixedMoveInput" }
         location_uuid: { type: [string, "null"], format: uuid }
         location_code: { type: string, maxLength: 200, description: "Scanned OFW:LOC:<full_code> or a bare full_code." }
+
+    WarehouseFixedMoveInput:
+      type: object
+      required: [barcode, quantity, source_location_uuid]
+      properties:
+        barcode: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        source_location_uuid: { type: string, format: uuid }
+        request_uuid: { type: string, format: uuid, description: "Required for bin moves; reuse on retry. Not needed on transfer lines." }
 
     WarehouseOrderPlaceInput:
       type: object
@@ -37860,6 +37912,7 @@ components:
       properties:
         unit_uuid: { type: string, format: uuid }
         barcode: { type: string }
+        quantity: { type: integer, minimum: 1, description: "Present for warehouse moves; fixed barcode moves report the requested quantity." }
         from_location:
           oneOf:
             - type: "null"
@@ -37901,13 +37954,15 @@ components:
     WarehouseTransferLinesInput:
       type: object
       additionalProperties: false
-      required: [barcodes]
       properties:
         barcodes:
           type: array
-          minItems: 1
+          minItems: 0
           maxItems: 1000
           items: { type: string, minLength: 1, maxLength: 128 }
+        fixed:
+          type: array
+          items: { $ref: "#/components/schemas/WarehouseFixedMoveInput" }
 
     WarehouseTransferCompleteInput:
       type: object
@@ -37924,6 +37979,8 @@ components:
         unit_uuid: { type: string, format: uuid }
         barcode: { type: string }
         unit_status: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        quantity: { type: integer, minimum: 1 }
         product: { $ref: "#/components/schemas/StockEntryProduct" }
         source_location:
           oneOf:
@@ -43278,6 +43335,40 @@ components:
         meters: { type: string, description: "Length of each roll (roll products only)", example: "15.00" }
         prefix: { type: string, pattern: "^[A-Z0-9]{2,8}$", description: "Defaults to the brand slug" }
         template_uuid: { type: string, format: uuid, description: "Unit label template printed by default" }
+
+    BarcodeVoidInput:
+      type: object
+      properties:
+        unit_uuids:
+          type: array
+          items: { type: string, format: uuid }
+        barcodes:
+          type: array
+          items: { type: string }
+        batch_uuid: { type: string, format: uuid }
+
+    BarcodeVoidResult:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [unit_uuid, barcode, voided]
+            properties:
+              unit_uuid: { type: string, format: uuid }
+              barcode: { type: string }
+              voided: { type: boolean }
+              reason: { type: string, enum: [not_found, not_reserved, state_changed] }
+
+    EnvelopeBarcodeVoidResult:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/BarcodeVoidResult" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     BarcodeBatchUnit:
       type: object
