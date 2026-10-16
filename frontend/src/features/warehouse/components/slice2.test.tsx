@@ -19,7 +19,6 @@ const api = vi.hoisted(() => ({
   listLocationProducts: vi.fn(),
   createCount: vi.fn(),
   scanCount: vi.fn(),
-  scan: vi.fn(),
   getCountReport: vi.fn(),
   approveCount: vi.fn(),
 }));
