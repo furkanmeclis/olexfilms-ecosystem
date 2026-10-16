@@ -3,6 +3,7 @@ package i18n
 // Azerbaijani (Latin) label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var azCatalog = map[string]string{
+	"warehouse.count.self_approval": "Sayımı yaradan və ya bütün skanları təkbaşına edən şəxs onu təsdiqləyə bilməz. Başqa səlahiyyətli şəxsdən təsdiq istəyin.",
 	"users.uuid":              "UUID",
 	"users.email":             "E-poçt",
 	"users.name":              "Ad",

@@ -3,6 +3,7 @@ package i18n
 // Arabic label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var arCatalog = map[string]string{
+	"warehouse.count.self_approval": "لا يمكن لمن أنشأ الجرد أو أجرى جميع عمليات المسح بمفرده الموافقة عليه. اطلب الموافقة من شخص آخر مخوّل.",
 	"users.uuid":              "المعرّف (UUID)",
 	"users.email":             "البريد الإلكتروني",
 	"users.name":              "الاسم الأول",

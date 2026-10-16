@@ -3,6 +3,7 @@ package i18n
 // ruCatalog holds the Russian labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var ruCatalog = map[string]string{
+	"warehouse.count.self_approval": "Создатель инвентаризации или единственный сотрудник, выполнивший сканирование, не может её утвердить. Обратитесь к другому уполномоченному сотруднику.",
 	"users.uuid":              "UUID",
 	"users.email":             "Эл. почта",
 	"users.name":              "Имя",

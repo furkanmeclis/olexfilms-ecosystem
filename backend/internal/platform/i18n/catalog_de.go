@@ -3,6 +3,7 @@ package i18n
 // deCatalog holds the German labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var deCatalog = map[string]string{
+	"warehouse.count.self_approval": "Die Person, die die Zählung erstellt oder allein gescannt hat, darf sie nicht genehmigen. Bitten Sie eine andere berechtigte Person.",
 	"users.uuid":              "UUID",
 	"users.email":             "E-Mail",
 	"users.name":              "Vorname",

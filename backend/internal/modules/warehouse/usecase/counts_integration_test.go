@@ -116,6 +116,52 @@ func (e *countEnv) caller(adjust bool) wh.ScanCaller {
 	}
 }
 
+func (e *countEnv) userCaller(t *testing.T) wh.ScanCaller {
+	t.Helper()
+	u, err := e.q.CreateUser(e.ctx, db.CreateUserParams{
+		Email:        pgtype.Text{String: "count-approver-" + uuid.NewString() + "@example.test", Valid: true},
+		PasswordHash: "test", Name: "Count", Surname: "Tester", Status: "active",
+	})
+	if err != nil {
+		t.Fatalf("create count user: %v", err)
+	}
+	c := e.caller(true)
+	c.Principal.UserInternal = u.ID
+	c.Principal.UserID = u.Uuid
+	return c
+}
+
+func TestStockCountApprovalFourEyes(t *testing.T) {
+	e := newCountEnv(t)
+	creator, scanner, reviewer := e.userCaller(t), e.userCaller(t), e.userCaller(t)
+	w, _, locs := e.warehouse(t, "FO", "A1")
+	cnt, err := e.counts.Create(e.ctx, creator, wh.CountInput{
+		WarehouseUUID: w.UUID.String(), Method: wh.CountMethodUnitFirst, Visibility: wh.CountVisibilityGuided,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cnt, err = e.counts.Get(e.ctx, creator, cnt.UUID); err != nil || cnt.CreatedByUserUUID == nil || *cnt.CreatedByUserUUID != creator.Principal.UserID {
+		t.Fatalf("creator in detail: %+v %v", cnt, err)
+	}
+	if _, err = e.counts.Start(e.ctx, creator, cnt.UUID); err != nil {
+		t.Fatal(err)
+	}
+	mustScan(t, e, scanner, cnt.UUID, wh.CountScanInput{Code: locs[0].qr()})
+	if _, err = e.counts.Complete(e.ctx, scanner, cnt.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.counts.Approve(e.ctx, creator, cnt.UUID, nil); !errors.Is(err, wh.ErrCountSelfApproval) {
+		t.Fatalf("creator approval: %v", err)
+	}
+	if _, err = e.counts.Approve(e.ctx, scanner, cnt.UUID, nil); !errors.Is(err, wh.ErrCountSelfApproval) {
+		t.Fatalf("sole scanner approval: %v", err)
+	}
+	if _, err = e.counts.Approve(e.ctx, reviewer, cnt.UUID, nil); err != nil {
+		t.Fatalf("independent approval: %v", err)
+	}
+}
+
 type countLoc struct {
 	view wh.Location
 	id   int64

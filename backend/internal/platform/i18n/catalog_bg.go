@@ -3,6 +3,7 @@ package i18n
 // Bulgarian label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var bgCatalog = map[string]string{
+	"warehouse.count.self_approval": "Създателят на инвентаризацията или единственият сканиращ не може да я одобри. Поискайте одобрение от друг упълномощен служител.",
 	"users.uuid":              "UUID",
 	"users.email":             "Имейл",
 	"users.name":              "Име",

@@ -3,6 +3,7 @@ package i18n
 // ukCatalog holds the Ukrainian labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var ukCatalog = map[string]string{
+	"warehouse.count.self_approval": "Автор інвентаризації або єдиний виконавець сканування не може її затвердити. Зверніться до іншого уповноваженого працівника.",
 	"users.uuid":              "UUID",
 	"users.email":             "Ел. пошта",
 	"users.name":              "Ім'я",

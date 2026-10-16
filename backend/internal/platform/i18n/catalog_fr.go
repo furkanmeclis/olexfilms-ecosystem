@@ -3,6 +3,7 @@ package i18n
 // frCatalog holds the French labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var frCatalog = map[string]string{
+	"warehouse.count.self_approval": "La personne qui a créé le comptage ou effectué seule tous les scans ne peut pas l’approuver. Demandez à une autre personne autorisée.",
 	"users.uuid":              "UUID",
 	"users.email":             "E-mail",
 	"users.name":              "Prénom",

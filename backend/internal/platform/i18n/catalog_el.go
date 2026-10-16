@@ -3,6 +3,7 @@ package i18n
 // Greek label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var elCatalog = map[string]string{
+	"warehouse.count.self_approval": "Ο δημιουργός της απογραφής ή ο μοναδικός χρήστης που σάρωσε δεν μπορεί να την εγκρίνει. Ζητήστε έγκριση από άλλο εξουσιοδοτημένο άτομο.",
 	"users.uuid":              "UUID",
 	"users.email":             "Email",
 	"users.name":              "Όνομα",

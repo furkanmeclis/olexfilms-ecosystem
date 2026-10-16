@@ -3,6 +3,7 @@ package i18n
 // itCatalog holds the Italian labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var itCatalog = map[string]string{
+	"warehouse.count.self_approval": "Chi ha creato il conteggio o eseguito da solo tutte le scansioni non può approvarlo. Chiedi a un’altra persona autorizzata.",
 	"users.uuid":              "UUID",
 	"users.email":             "E-mail",
 	"users.name":              "Nome",

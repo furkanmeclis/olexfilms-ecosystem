@@ -3,6 +3,7 @@ package i18n
 // Simplified Chinese label catalog (TEC-138). Same keys as enCatalog; a missing
 // key falls back to en (Translate).
 var zhCNCatalog = map[string]string{
+	"warehouse.count.self_approval": "创建盘点或独自完成所有扫描的人不能批准该盘点。请联系另一位有权限的人员。",
 	"users.uuid":              "UUID",
 	"users.email":             "电子邮箱",
 	"users.name":              "名",

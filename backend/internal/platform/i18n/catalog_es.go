@@ -3,6 +3,7 @@ package i18n
 // esCatalog holds the Spanish labels (TEC-138). Keys mirror enCatalog;
 // a key missing here falls back to en (Translate).
 var esCatalog = map[string]string{
+	"warehouse.count.self_approval": "Quien creó el recuento o realizó todos los escaneos por sí solo no puede aprobarlo. Solicite la aprobación de otra persona autorizada.",
 	"users.uuid":              "UUID",
 	"users.email":             "Correo electrónico",
 	"users.name":              "Nombre",
