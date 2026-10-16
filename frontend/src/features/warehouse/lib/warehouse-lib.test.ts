@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { Permission } from "@/config/permissions";
 import {
   canConfirm,
+  canImportStock,
+  importLinesKept,
   linesToPlace,
   unplacedLines,
 } from "@/features/warehouse/lib/entries";
@@ -175,6 +177,37 @@ describe("stock entry helpers (TEC-204)", () => {
     expect(canConfirm(entry([line("1", true), line("2", false)]))).toBe(false);
     expect(canConfirm(entry([line("1", true)]))).toBe(true);
     expect(canConfirm(entry([line("1", true)], "confirmed"))).toBe(false);
+  });
+
+  it("imports stock at the center with stock.import only (TEC-759)", () => {
+    const access = (isCenter: boolean, perms: string[]) => ({
+      isCenter,
+      can: (p: string) => perms.includes(p),
+    });
+    const all = [Permission.StockImport, Permission.TenantImportsRead];
+    expect(canImportStock(access(true, all), true)).toBe(true);
+    expect(canImportStock(access(false, all), true)).toBe(false);
+    expect(canImportStock(access(true, all), false)).toBe(false);
+    expect(
+      canImportStock(access(true, [Permission.TenantImportsRead]), true),
+    ).toBe(false);
+    expect(canImportStock(access(true, [Permission.StockImport]), true)).toBe(
+      false,
+    );
+  });
+
+  it("counts the units a partial import undo kept (TEC-759)", () => {
+    const lines = [
+      { uuid: "1", undone: true },
+      { uuid: "2", undone: false },
+    ] as StockEntryLine[];
+    const imported = (import_status: string) =>
+      ({ mode: "import", status: "confirmed", import_status, lines }) as StockEntry;
+    expect(importLinesKept(imported("partially_undone"))).toBe(1);
+    expect(importLinesKept(imported("applied"))).toBeNull();
+    expect(
+      importLinesKept({ ...imported("partially_undone"), mode: "generate_new" }),
+    ).toBeNull();
   });
 });
 

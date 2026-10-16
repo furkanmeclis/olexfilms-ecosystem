@@ -186,5 +186,8 @@
   "fields.stock.quantity": "Say",
   "fields.stock.meters": "Metr",
   "fields.stock.location_code": "Yer kodu",
-  "confirm_step.sentence_end": "."
+  "confirm_step.sentence_end": ".",
+  "resources.tenant.stock.units": "Stok vahidləri",
+  "confirm_step.stock_located_one": "Onlardan {{count}} vahid fayldakı yerə yerləşdiriləcək.",
+  "confirm_step.stock_located_other": "Onlardan {{count}} vahid fayldakı yerə yerləşdiriləcək."
 }

@@ -156,23 +156,6 @@ export const EXPORT_PATHS: Record<IoResource, string> = {
   "platform.organizations": "/v1/platform/organizations/export",
 };
 
-export const IMPORT_PATHS: Partial<
-  Record<IoResource, { upload: string; sample: string }>
-> = {
-  "platform.users": {
-    upload: "/v1/platform/users/import",
-    sample: "/v1/platform/users/import/sample",
-  },
-  "platform.roles": {
-    upload: "/v1/platform/roles/import",
-    sample: "/v1/platform/roles/import/sample",
-  },
-  "tenant.catalog.products": {
-    upload: "/v1/catalog/products/import",
-    sample: "/v1/catalog/products/import/sample",
-  },
-};
-
 /**
  * Import resources: the registered ones plus the record-scoped imports
  * whose upload path the caller passes to ImportWizard (`paths`).
@@ -188,6 +171,24 @@ export type ImportResource =
 export const STOCK_IMPORT_PATHS = {
   upload: "/v1/stock/import",
   sample: "/v1/stock/import/sample",
+};
+
+export const IMPORT_PATHS: Partial<
+  Record<ImportResource, { upload: string; sample: string }>
+> = {
+  "platform.users": {
+    upload: "/v1/platform/users/import",
+    sample: "/v1/platform/users/import/sample",
+  },
+  "platform.roles": {
+    upload: "/v1/platform/roles/import",
+    sample: "/v1/platform/roles/import/sample",
+  },
+  "tenant.catalog.products": {
+    upload: "/v1/catalog/products/import",
+    sample: "/v1/catalog/products/import/sample",
+  },
+  "tenant.stock.units": STOCK_IMPORT_PATHS,
 };
 
 /** One target field of an import (column step, row table). */

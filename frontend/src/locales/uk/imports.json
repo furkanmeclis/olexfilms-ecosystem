@@ -200,5 +200,10 @@
   "fields.stock.quantity": "Кількість",
   "fields.stock.meters": "Метри",
   "fields.stock.location_code": "Код комірки",
-  "confirm_step.sentence_end": "."
+  "confirm_step.sentence_end": ".",
+  "resources.tenant.stock.units": "Складські одиниці",
+  "confirm_step.stock_located_one": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
+  "confirm_step.stock_located_few": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
+  "confirm_step.stock_located_many": "{{count}} з них буде розміщено в комірці, указаній у файлі.",
+  "confirm_step.stock_located_other": "{{count}} з них буде розміщено в комірці, указаній у файлі."
 }
