@@ -162,5 +162,6 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Alıcının fatura profili eksik; eksik alanları doldurun.",
   "codes.EINVOICE_INVALID_STATUS": "e-Faturanın durumu bu işleme izin vermiyor.",
   "codes.EINVOICE_NOT_ARCHIVED": "e-Fatura henüz arşivlenmedi.",
-  "codes.EINVOICE_PDF_NOT_READY": "Fatura PDF'i henüz hazır değil; biraz sonra deneyin veya PDF'i yeniden oluşturun."
+  "codes.EINVOICE_PDF_NOT_READY": "Fatura PDF'i henüz hazır değil; biraz sonra deneyin veya PDF'i yeniden oluşturun.",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Atamadan önce bu birimi depoda bir konuma yerleştirin."
 }

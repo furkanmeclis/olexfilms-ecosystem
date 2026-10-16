@@ -435,5 +435,19 @@
   "export.locations_all": "Експортувати всі місця",
   "export.locations_room": "Експортувати місця цієї кімнати",
   "export.location_stock": "Експортувати залишки місця",
-  "export.unit_history": "Експортувати історію руху"
+  "export.unit_history": "Експортувати історію руху",
+  "errors.ORDER_LOCATION_PLACEMENT_REQUIRED": "Розмістіть одиницю перед призначенням.",
+  "errors.WAREHOUSE_LOCATION_PLACEMENT_REQUIRED": "Розмістіть одиницю перед переміщенням.",
+  "form.require_location_placement": "Обов’язкове розміщення",
+  "form.require_location_placement_hint": "Одиниці потрібно розмістити перед призначенням або переміщенням.",
+  "scan_status.not_bin": "Це місце не є коміркою; скануйте етикетку комірки.",
+  "scan_status.type.any": "код",
+  "scan_status.type.bin": "комірка",
+  "scan_status.type.location": "місце",
+  "scan_status.type.product": "товар",
+  "scan_status.type.unit": "одиниця",
+  "scan_status.type_mismatch": "Це етикетка {{actual}}; скануйте {{expected}}.",
+  "scan_status.unknown": "Відповідний код не знайдено.",
+  "scan_status.void": "Цю одиницю анульовано.",
+  "scan_status.warehouse_mismatch": "Це місце належить іншому складу: {{warehouse}}."
 }

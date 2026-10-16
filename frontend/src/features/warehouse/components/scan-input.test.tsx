@@ -6,6 +6,11 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }));
 
+const scan = vi.hoisted(() => vi.fn());
+vi.mock("@/features/warehouse/services/warehouse.service", () => ({
+  warehouseService: { scan },
+}));
+
 import { ScanInput } from "./scan-input";
 import {
   fill,
@@ -23,6 +28,7 @@ beforeEach(() => {
 afterEach(() => {
   unmount(m);
   vi.clearAllMocks();
+  scan.mockReset();
 });
 
 const input = () =>
@@ -90,5 +96,54 @@ describe("ScanInput (TEC-231)", () => {
       createElement(ScanInput, { onScan: vi.fn(), autoFocus: false }),
     );
     expect(document.activeElement).not.toBe(input());
+  });
+  it("sends expected type and warehouse and explains a mismatch", async () => {
+    scan.mockResolvedValue({
+      status: "type_mismatch",
+      type: "location",
+      location: null,
+    });
+    const onScan = vi.fn();
+    await render(
+      m,
+      createElement(ScanInput, {
+        onScan,
+        expect: "unit",
+        warehouseUuid: "wh-1",
+      }),
+    );
+    await fill(input(), "OFW:LOC:WH1-R1-A");
+    await submit(form());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(scan).toHaveBeenCalledWith("OFW:LOC:WH1-R1-A", {
+      expect: "unit",
+      warehouse_uuid: "wh-1",
+    });
+    expect(m.container.querySelector('[role="alert"]')?.textContent).toContain(
+      "warehouse.scan_status.type_mismatch",
+    );
+    expect(onScan).not.toHaveBeenCalled();
+  });
+
+  it("shows the other warehouse name", async () => {
+    scan.mockResolvedValue({
+      status: "warehouse_mismatch",
+      type: "location",
+      location: { path: [{ name: "Other depot" }] },
+    });
+    await render(
+      m,
+      createElement(ScanInput, {
+        onScan: vi.fn(),
+        expect: "bin",
+        warehouseUuid: "wh-1",
+      }),
+    );
+    await fill(input(), "OFW:LOC:OTHER");
+    await submit(form());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(m.container.querySelector('[role="alert"]')?.textContent).toContain(
+      "warehouse.scan_status.warehouse_mismatch",
+    );
   });
 });

@@ -322,6 +322,8 @@ export function StockEntryDetailPage({
                 ) : (
                   <>
                     <ScanInput
+                      expect="unit"
+                      warehouseUuid={entry.warehouse?.uuid}
                       id="entry-barcode"
                       label={t("warehouse.entry.scan_barcode")}
                       hint={t("warehouse.entry.scan_barcode_hint")}
@@ -360,6 +362,8 @@ export function StockEntryDetailPage({
               </CardHeader>
               <CardContent className="grid gap-6 lg:grid-cols-2">
                 <ScanInput
+                  expect="bin"
+                  warehouseUuid={entry.warehouse?.uuid}
                   id="entry-location"
                   autoFocus={false}
                   label={t("warehouse.entry.scan_location")}

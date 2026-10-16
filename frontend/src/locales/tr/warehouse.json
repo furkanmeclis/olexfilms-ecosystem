@@ -435,5 +435,19 @@
   "export.locations_all": "Tüm konumları dışa aktar",
   "export.locations_room": "Bu odanın konumlarını dışa aktar",
   "export.location_stock": "Konum stoğunu dışa aktar",
-  "export.unit_history": "Hareket geçmişini dışa aktar"
+  "export.unit_history": "Hareket geçmişini dışa aktar",
+  "errors.ORDER_LOCATION_PLACEMENT_REQUIRED": "Atamadan önce birimi bir konuma yerleştirin.",
+  "errors.WAREHOUSE_LOCATION_PLACEMENT_REQUIRED": "Eklemeden önce birimi kaynak depoya yerleştirin.",
+  "form.require_location_placement": "Yerleştirme zorunlu",
+  "form.require_location_placement_hint": "Açıkken sipariş ataması ve depo transferi öncesinde birim yerleştirilmelidir.",
+  "scan_status.not_bin": "Bu konum bir göz değil; göz etiketi okutun.",
+  "scan_status.type.any": "kod",
+  "scan_status.type.bin": "göz",
+  "scan_status.type.location": "konum",
+  "scan_status.type.product": "ürün",
+  "scan_status.type.unit": "birim",
+  "scan_status.type_mismatch": "Bu bir {{actual}} etiketi; {{expected}} okutun.",
+  "scan_status.unknown": "Eşleşen kod bulunamadı.",
+  "scan_status.void": "Bu birim iptal edilmiş.",
+  "scan_status.warehouse_mismatch": "Bu konum başka depoda: {{warehouse}}."
 }

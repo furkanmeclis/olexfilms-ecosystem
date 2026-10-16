@@ -435,5 +435,19 @@
   "export.locations_all": "Экспортировать все места",
   "export.locations_room": "Экспортировать места этой комнаты",
   "export.location_stock": "Экспортировать остатки места",
-  "export.unit_history": "Экспортировать историю движения"
+  "export.unit_history": "Экспортировать историю движения",
+  "errors.ORDER_LOCATION_PLACEMENT_REQUIRED": "Разместите единицу перед назначением.",
+  "errors.WAREHOUSE_LOCATION_PLACEMENT_REQUIRED": "Разместите единицу перед перемещением.",
+  "form.require_location_placement": "Обязательное размещение",
+  "form.require_location_placement_hint": "Единицы нужно разместить до назначения или перемещения.",
+  "scan_status.not_bin": "Это место не является ячейкой; отсканируйте этикетку ячейки.",
+  "scan_status.type.any": "код",
+  "scan_status.type.bin": "ячейка",
+  "scan_status.type.location": "место",
+  "scan_status.type.product": "товар",
+  "scan_status.type.unit": "единица",
+  "scan_status.type_mismatch": "Это этикетка {{actual}}; отсканируйте {{expected}}.",
+  "scan_status.unknown": "Подходящий код не найден.",
+  "scan_status.void": "Эта единица аннулирована.",
+  "scan_status.warehouse_mismatch": "Это место в другом складе: {{warehouse}}."
 }

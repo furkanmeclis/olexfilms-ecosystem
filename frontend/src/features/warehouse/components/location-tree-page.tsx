@@ -130,11 +130,13 @@ export function LocationTreePage({ slug }: { slug: string }) {
                 code: v.code,
                 name,
                 address: v.address || null,
+                require_location_placement: v.require_location_placement,
               })
             : warehouseService.updateWarehouse(p.target.uuid, {
                 code: v.code,
                 name: v.name,
                 address: v.address || null,
+                require_location_placement: v.require_location_placement,
                 active: v.active,
               });
         case "room":
@@ -309,6 +311,8 @@ export function LocationTreePage({ slug }: { slug: string }) {
       name: p.target.name,
       address: p.kind === "warehouse" ? (p.target.address ?? "") : "",
       active: p.target.active,
+      require_location_placement:
+        p.kind === "warehouse" ? p.target.require_location_placement : false,
     };
   };
 

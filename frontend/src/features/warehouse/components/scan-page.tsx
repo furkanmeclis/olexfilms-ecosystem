@@ -11,6 +11,7 @@ import {
   useWarehouseAccess,
   WarehouseShell,
 } from "@/features/warehouse/components/warehouse-shell";
+import { scanStatusMessage } from "@/features/warehouse/lib/scan-status";
 import { warehouseErrorMessage } from "@/features/warehouse/lib/errors";
 import {
   warehouseService,
@@ -39,7 +40,8 @@ export function ScanPage({ slug }: { slug: string }) {
   const [seq, setSeq] = useState(0);
 
   const scan = useMutation({
-    mutationFn: (code: string) => warehouseService.scan(code),
+    mutationFn: (code: string) =>
+      warehouseService.scan(code, { expect: "any" }),
   });
 
   const onScan = async (code: string) => {
@@ -48,7 +50,15 @@ export function ScanPage({ slug }: { slug: string }) {
     let entry: HistoryEntry;
     try {
       const result = await scan.mutateAsync(code);
-      entry = { id, code, result, error: null };
+      entry =
+        result.status === "ok"
+          ? { id, code, result, error: null }
+          : {
+              id,
+              code,
+              result: null,
+              error: scanStatusMessage(result, "any", t),
+            };
     } catch (err) {
       entry = {
         id,

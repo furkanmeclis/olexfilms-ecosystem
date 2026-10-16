@@ -196,9 +196,15 @@ export const warehouseService = {
   },
 
   // --- Universal scan (TEC-203) ---------------------------------------------
-  scan(code: string) {
+  scan(
+    code: string,
+    options?: {
+      expect?: "any" | "location" | "bin" | "unit" | "product";
+      warehouse_uuid?: string;
+    },
+  ) {
     return platformRequest<WarehouseScanResult>("POST", "/v1/warehouse/scan", {
-      body: { code },
+      body: { code, ...options },
     });
   },
 
