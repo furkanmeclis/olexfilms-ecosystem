@@ -87,5 +87,18 @@
   "nav_service_catalog": "Hizmet kataloğu",
   "nav_service_subscriptions": "Hizmet abonelikleri",
   "nav_service_subscription_cancels": "İptal talepleri",
-  "nav_review_questions": "Değerlendirme soruları"
+  "nav_review_questions": "Değerlendirme soruları",
+  "settings_description": "Organizasyon ve sistem ayarlarını buradan yönetin.",
+  "settings_menu": "Ayarlar menüsü",
+  "settings_empty": "Görüntüleyebileceğiniz bir ayar yok.",
+  "settings_group_access": "Erişim ve güvenlik",
+  "settings_group_integrations": "Entegrasyonlar",
+  "settings_group_system": "Modüller ve sistem",
+  "settings_group_catalogs": "Kataloglar",
+  "settings_group_regional": "Bölge ve fiyat",
+  "settings_group_templates": "Şablonlar",
+  "settings_group_data": "Veri ve izleme",
+  "settings_group_organization": "Organizasyon",
+  "settings_group_operations": "Operasyon",
+  "settings_group_ai": "Yapay zekâ"
 }

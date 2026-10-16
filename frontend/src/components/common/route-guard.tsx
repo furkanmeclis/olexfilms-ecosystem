@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +12,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useShellNav } from "@/components/layout/use-shell-nav";
 import { routes } from "@/config/routes";
+import { shellNavCatalogs, type ShellVariant } from "@/config/shell-nav";
+import { navRouteAccess } from "@/features/nav-engine/lib/route-access";
 import {
   defaultHomeForUser,
   isCmsUser,
@@ -99,6 +102,64 @@ export function RouteGuard({ children, mode }: RouteGuardProps) {
           isPlatformUser(user) ? routes.platform.home : routes.errors.forbidden
         }
       />
+    );
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * TEC-771: page level twin of the menu. A page owned by a nav entry (main
+ * menu or settings) that the menu hides for this user (permission, org
+ * type, member role, module) shows a 403 card instead of its content, so
+ * a typed or bookmarked URL cannot open what the menu does not offer. The
+ * API still enforces every rule; this keeps the UI honest.
+ */
+export function NavRouteGuard({
+  variant,
+  tenantSlug,
+  children,
+}: {
+  variant: ShellVariant;
+  tenantSlug?: string;
+  children: ReactNode;
+}) {
+  const pathname = usePathname();
+  const { t } = useLocale();
+  const nav = useShellNav(variant, tenantSlug);
+  const access = navRouteAccess(
+    pathname ?? "/",
+    shellNavCatalogs(nav),
+    nav.access,
+    nav.homeHref,
+  );
+
+  if (access === "pending" && !nav.featuresFailed) {
+    return (
+      <div className="text-muted-foreground flex flex-1 items-center justify-center py-16 text-sm">
+        {t("common.loading")}
+      </div>
+    );
+  }
+
+  if (access === "denied") {
+    return (
+      <div
+        className="flex flex-1 items-center justify-center py-16"
+        data-testid="nav-route-forbidden"
+      >
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>{t("errors.forbidden_title")}</CardTitle>
+            <CardDescription>{t("errors.page_forbidden_body")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href={nav.homeHref}>{t("errors.continue")}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

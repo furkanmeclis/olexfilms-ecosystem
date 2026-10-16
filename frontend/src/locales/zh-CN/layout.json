@@ -87,5 +87,18 @@
   "nav_service_catalog": "服务目录",
   "nav_service_subscriptions": "服务订阅",
   "nav_service_subscription_cancels": "取消申请",
-  "nav_review_questions": "评价问题"
+  "nav_review_questions": "评价问题",
+  "settings_description": "在此管理组织和系统设置。",
+  "settings_menu": "设置菜单",
+  "settings_empty": "没有您可以查看的设置。",
+  "settings_group_access": "访问与安全",
+  "settings_group_integrations": "集成",
+  "settings_group_system": "模块与系统",
+  "settings_group_catalogs": "目录",
+  "settings_group_regional": "区域与价格",
+  "settings_group_templates": "模板",
+  "settings_group_data": "数据与监控",
+  "settings_group_organization": "组织",
+  "settings_group_operations": "运营",
+  "settings_group_ai": "AI"
 }

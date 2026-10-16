@@ -252,7 +252,7 @@ describe("ImportWizard with the stock import preview", () => {
     expect(service.confirm).toHaveBeenCalledWith(JOB, "tenant");
     expect(byTestId("import-result")?.dataset.status).toBe("applied");
     expect(byTestId("import-result-detail")?.getAttribute("href")).toBe(
-      `/t/olex/imports/${JOB}`,
+      `/t/olex/settings/imports/${JOB}`,
     );
     expect(byTestId("result-action")?.textContent).toBe("applied");
     expect(onComplete).toHaveBeenCalled();

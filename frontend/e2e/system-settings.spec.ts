@@ -177,7 +177,7 @@ test("system settings: list, validate, save, reset, masked secret", async ({
     },
   );
 
-  await page.goto("/platform/system-settings");
+  await page.goto("/platform/settings/system");
   await expect(
     page.getByRole("heading", { name: "System settings", level: 1 }),
   ).toBeVisible();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { platformNav, tenantNav } from "@/config/nav";
+import { platformSettingsNav, tenantSettingsNav } from "@/config/settings-nav";
 import type { NavGroupDef, NavItemDef } from "@/features/nav-engine/types";
 import { wizardSteps } from "@/features/services/lib/wizard";
 
@@ -8,7 +9,8 @@ import { wizardSteps } from "@/features/services/lib/wizard";
  * TEC-509 add-on menu audit: every tenant menu entry of an F5 add-on screen
  * carries the add-on's module key in `feature`, so it is hidden while the
  * module is off (same gate as RequireFeature on the API, TEC-508). The key
- * is the tenant path segment after /t/{slug}.
+ * is the tenant path segment after /t/{slug} (or /t/{slug}/settings,
+ * TEC-771).
  */
 const F5_ADDON_SEGMENTS: Record<string, string> = {
   showcase: "dealer_showcase",
@@ -58,12 +60,14 @@ function entries(groups: NavGroupDef[]) {
 function addonOf(item: NavItemDef): string | undefined {
   const prefix = `/t/${SLUG}/`;
   if (!item.href.startsWith(prefix)) return undefined;
-  const segment = item.href.slice(prefix.length).split(/[/?#]/)[0];
+  const parts = item.href.slice(prefix.length).split(/[/?#]/);
+  const segment = parts[0] === "settings" ? parts[1] : parts[0];
   return F5_ADDON_SEGMENTS[segment];
 }
 
 describe("F5 add-on menu audit (TEC-509)", () => {
-  const tenant = entries(tenantNav(SLUG).groups);
+  const settingsGroups = tenantSettingsNav(SLUG).groups;
+  const tenant = entries([...tenantNav(SLUG).groups, ...settingsGroups]);
 
   it("every F5 add-on menu entry carries its module key", () => {
     const missing = tenant
@@ -80,7 +84,9 @@ describe("F5 add-on menu audit (TEC-509)", () => {
     const groups = tenant
       .filter(({ item }) => addonOf(item))
       .map(({ group }) => group)
-      .filter((group) => group.id !== "tenant");
+      .filter((group) => group.id !== "tenant")
+      // Settings groups mix modules; each item carries its own key.
+      .filter((group) => !settingsGroups.includes(group));
     for (const group of groups) expect(group.feature, group.id).toBeTruthy();
   });
 
@@ -94,7 +100,10 @@ describe("F5 add-on menu audit (TEC-509)", () => {
   });
 
   it("platform F5 entries are only the documented center exceptions", () => {
-    const f5Platform = entries(platformNav.groups)
+    const f5Platform = entries([
+      ...platformNav.groups,
+      ...platformSettingsNav.groups,
+    ])
       .map(({ item }) => item)
       .filter((item) =>
         /showcase|certificate|consumption|photo|fleet|forecast|performance|efficiency|invoice/.test(
