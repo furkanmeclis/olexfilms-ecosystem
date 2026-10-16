@@ -149,6 +149,33 @@ func (q *Queries) GetWarehouseLocationByCode(ctx context.Context, arg GetWarehou
 	return i, err
 }
 
+const listActiveProductSKUsByBrand = `-- name: ListActiveProductSKUsByBrand :many
+SELECT sku FROM products
+WHERE brand_id = $1 AND active
+ORDER BY sku
+`
+
+// TEC-757: SKU drop-down of the stock import template.
+func (q *Queries) ListActiveProductSKUsByBrand(ctx context.Context, brandID int64) ([]string, error) {
+	rows, err := q.db.Query(ctx, listActiveProductSKUsByBrand, brandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var sku string
+		if err := rows.Scan(&sku); err != nil {
+			return nil, err
+		}
+		items = append(items, sku)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockStockImportBatchByJob = `-- name: LockStockImportBatchByJob :one
 
 SELECT id, uuid, organization_id, brand_id, created_by_user_id, status, source_filename, target_owner_type, target_owner_id, rows_total, rows_new, rows_duplicate, rows_invalid, rows_conflict, error, applied_at, undone_at, created_at, updated_at, import_job_id FROM stock_import_batches

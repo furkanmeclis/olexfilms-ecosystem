@@ -40,7 +40,9 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -77,6 +79,8 @@ func NewImporter(pool TxBeginner, q *db.Queries, out outbox.Enqueuer) *Importer 
 var (
 	_ ioengine.ResourceAdapter = (*Importer)(nil)
 	_ ioengine.StagedImporter  = (*Importer)(nil)
+	_ ioengine.SampleLookuper  = (*Importer)(nil)
+	_ ioengine.RowReporter     = (*Importer)(nil)
 )
 
 // Resource implements ioengine.ResourceAdapter.
@@ -93,12 +97,78 @@ func (im *Importer) Export(context.Context, ioengine.ExportQuery, i18n.Locale) (
 // ImportSchema implements ioengine.ResourceAdapter.
 func (im *Importer) ImportSchema() []ioengine.ImportField {
 	return []ioengine.ImportField{
-		{Key: "barcode", LabelKey: "stock_import.barcode", Type: ioengine.ColumnTypeString, Required: true},
-		{Key: "product_sku", LabelKey: "stock_import.product_sku", Type: ioengine.ColumnTypeString, Required: true},
-		{Key: "quantity", LabelKey: "stock_import.quantity", Type: ioengine.ColumnTypeString},
-		{Key: "meters", LabelKey: "stock_import.meters", Type: ioengine.ColumnTypeString},
-		{Key: "location_code", LabelKey: "stock_import.location_code", Type: ioengine.ColumnTypeString},
+		{Key: "barcode", LabelKey: "stock_import.barcode", Type: ioengine.ColumnTypeString, Required: true,
+			Kind: ioengine.FieldCode, HintKey: "stock_import.hint.barcode"},
+		{Key: "product_sku", LabelKey: "stock_import.product_sku", Type: ioengine.ColumnTypeString, Required: true,
+			Kind: ioengine.FieldCode, HintKey: "stock_import.hint.product_sku"},
+		{Key: "quantity", LabelKey: "stock_import.quantity", Type: ioengine.ColumnTypeString,
+			Kind: ioengine.FieldInteger, HintKey: "stock_import.hint.quantity"},
+		{Key: "meters", LabelKey: "stock_import.meters", Type: ioengine.ColumnTypeString,
+			Kind: ioengine.FieldDecimal, HintKey: "stock_import.hint.meters"},
+		{Key: "location_code", LabelKey: "stock_import.location_code", Type: ioengine.ColumnTypeString,
+			Kind: ioengine.FieldCode, HintKey: "stock_import.hint.location_code"},
 	}
+}
+
+// SampleLookups implements ioengine.SampleLookuper (TEC-757): the template
+// lists the brand's active SKUs and the organization's active locations.
+func (im *Importer) SampleLookups(ctx context.Context) (map[string][]string, error) {
+	org, ok := orgctx.ScopeFrom(ctx)
+	if !ok || org.BrandID == 0 {
+		return nil, nil
+	}
+	skus, err := im.q.ListActiveProductSKUsByBrand(ctx, org.BrandID)
+	if err != nil {
+		return nil, fmt.Errorf("stock import: sku lookup: %w", err)
+	}
+	locs, err := im.q.ListWarehouseLocations(ctx, db.ListWarehouseLocationsParams{
+		OrganizationID: org.InternalID, Active: pgtype.Bool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("stock import: location lookup: %w", err)
+	}
+	codes := make([]string, 0, len(locs))
+	for _, l := range locs {
+		codes = append(codes, l.Code)
+	}
+	return map[string][]string{"product_sku": skus, "location_code": codes}, nil
+}
+
+// ImportPermission implements ioengine.ImportPermissioner: besides the
+// uploader, stock.import holders confirm and undo a stock import.
+func (im *Importer) ImportPermission() string { return rbac.PermStockImport }
+
+// ReportRows implements ioengine.RowReporter: every staged row with its
+// status and localized errors (error report).
+func (im *Importer) ReportRows(ctx context.Context, job ioengine.ImportJob) ([]ioengine.RowReport, error) {
+	batch, err := im.q.GetStockImportBatchByJob(ctx, i8(job.ID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	rows, err := im.q.ListStockImportRows(ctx, db.ListStockImportRowsParams{BatchID: batch.ID})
+	if err != nil {
+		return nil, err
+	}
+	loc := i18n.Normalize(job.Locale)
+	out := make([]ioengine.RowReport, 0, len(rows))
+	for _, r := range rows {
+		var codes []string
+		_ = json.Unmarshal(r.Errors, &codes)
+		status := reportStatus(r, codes)
+		rep := ioengine.RowReport{
+			Index: int(r.RowNumber), Status: status,
+			StatusLabel: i18n.Translate(loc, ImportStatusKey(status)),
+			Failed:      len(codes) > 0 || status == ImportRowInvalid || status == ImportRowConflict,
+		}
+		for _, code := range codes {
+			rep.Errors = append(rep.Errors, i18n.Translate(loc, ImportErrorKey(code)))
+		}
+		out = append(out, rep)
+	}
+	return out, nil
 }
 
 // SampleRows is the sample file content.

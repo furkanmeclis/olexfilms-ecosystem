@@ -448,6 +448,9 @@ func (h *Handler) ImportProducts(w http.ResponseWriter, r *http.Request) {
 	orgID := org.InternalID
 	job, err := h.imports.Upload(r.Context(), p.UserInternal, &orgID, catalogusecase.IOResource, format, locale, header.Filename, file)
 	if err != nil {
+		if response.Coded(w, r, err) {
+			return
+		}
 		writeError(w, r, err)
 		return
 	}

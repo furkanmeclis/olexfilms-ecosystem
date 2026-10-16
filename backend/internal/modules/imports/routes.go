@@ -31,6 +31,9 @@ func RegisterRoutes(
 	mux.Handle("PATCH /v1/platform/imports/{uuid}/mapping", middleware.Chain(
 		http.HandlerFunc(h.UpdateMapping), authn, require(rbac.PermPlatformImportsRead),
 	))
+	mux.Handle("GET /v1/platform/imports/{uuid}/error-report", middleware.Chain(
+		http.HandlerFunc(h.ErrorReport), authn, require(rbac.PermPlatformImportsRead),
+	))
 	mux.Handle("POST /v1/platform/imports/{uuid}/preview", middleware.Chain(
 		http.HandlerFunc(h.Preview), authn, require(rbac.PermPlatformImportsRead),
 	))
@@ -61,6 +64,7 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/tenant/imports", tenantJobs(h.ListTenant))
 	mux.Handle("GET /v1/tenant/imports/{uuid}", tenantJobs(h.GetTenant))
 	mux.Handle("PATCH /v1/tenant/imports/{uuid}/mapping", tenantJobs(h.UpdateMappingTenant))
+	mux.Handle("GET /v1/tenant/imports/{uuid}/error-report", tenantJobs(h.ErrorReportTenant))
 	mux.Handle("POST /v1/tenant/imports/{uuid}/preview", tenantJobs(h.PreviewTenant))
 	mux.Handle("POST /v1/tenant/imports/{uuid}/confirm", tenantJobs(h.ConfirmTenant))
 	mux.Handle("POST /v1/tenant/imports/{uuid}/rollback", tenantJobs(h.RollbackTenant))

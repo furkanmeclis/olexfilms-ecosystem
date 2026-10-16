@@ -90,11 +90,11 @@ func parseXLSX(r io.Reader) ([]string, []map[string]string, error) {
 		return nil, nil, fmt.Errorf("ioengine: xlsx open: %w", err)
 	}
 	defer func() { _ = f.Close() }()
-	sheets := f.GetSheetList()
-	if len(sheets) == 0 {
+	sheet := dataSheet(f)
+	if sheet == "" {
 		return nil, nil, nil
 	}
-	rows, err := f.GetRows(sheets[0])
+	rows, err := f.GetRows(sheet)
 	if err != nil || len(rows) == 0 {
 		return headersOrEmpty(rows), nil, err
 	}
@@ -119,34 +119,30 @@ func headersOrEmpty(rows [][]string) []string {
 	return rows[0]
 }
 
-// EncodeSample builds a sample file for download.
-func EncodeSample(format ImportFormat, locale string, fields []ImportField, rows []map[string]any) ([]byte, string, error) {
-	ds := Dataset{
-		Columns: fieldsToColumns(fields),
-		Rows:    rows,
+// dataSheet is the sheet holding the import rows: the one the template's
+// DataSheetName points at (TEC-757: the instructions sheet comes first),
+// otherwise the first sheet.
+func dataSheet(f *excelize.File) string {
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		return ""
 	}
-	switch format {
-	case ImportJSON:
-		b, err := json.MarshalIndent(rows, "", "  ")
-		return b, "application/json", err
-	case ImportCSV:
-		b, err := EncodeCSV(ds, locale)
-		return b, "text/csv", err
-	case ImportTSV:
-		b, err := encodeDelimited(ds, locale, '\t')
-		return b, "text/tab-separated-values", err
-	case ImportXLSX:
-		b, err := EncodeXLSX(ds, locale, nil)
-		return b, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", err
-	default:
-		return nil, "", fmt.Errorf("unsupported sample format")
+	for _, dn := range f.GetDefinedName() {
+		if dn.Name != DataSheetName {
+			continue
+		}
+		ref := strings.TrimPrefix(dn.RefersTo, "=")
+		if i := strings.LastIndex(ref, "!"); i > 0 {
+			name := ref[:i]
+			if strings.HasPrefix(name, "'") && strings.HasSuffix(name, "'") && len(name) >= 2 {
+				name = strings.ReplaceAll(name[1:len(name)-1], "''", "'")
+			}
+			for _, s := range sheets {
+				if s == name {
+					return s
+				}
+			}
+		}
 	}
-}
-
-func fieldsToColumns(fields []ImportField) []Column {
-	out := make([]Column, len(fields))
-	for i, f := range fields {
-		out[i] = Column{Key: f.Key, LabelKey: f.LabelKey, Type: f.Type, Required: f.Required}
-	}
-	return out
+	return sheets[0]
 }

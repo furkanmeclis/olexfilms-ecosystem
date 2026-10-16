@@ -23,11 +23,11 @@ var universalLabels = map[string]bool{
 
 // sameAsEN lists real cognates that are correct translations in a locale.
 var sameAsEN = map[Locale]map[string]bool{
-	LocaleFR: {"Active": true, "Notes": true},
-	LocaleES: {"No": true, "Normal": true},
+	LocaleFR: {"Active": true, "Notes": true, "Description": true, "Instructions": true, "Type": true},
+	LocaleES: {"No": true, "Normal": true, "Error": true},
 	LocaleIT: {"No": true},
 	LocaleEL: {"Email": true, "Barcode": true},
-	LocaleDE: {"Status": true, "Normal": true},
+	LocaleDE: {"Status": true, "Normal": true, "Text": true},
 	LocaleAZ: {"Status": true, "Normal": true},
 }
 

@@ -20,7 +20,7 @@ func encodeDelimited(ds Dataset, locale string, comma rune) ([]byte, error) {
 	loc := i18n.Normalize(locale)
 	header := make([]string, len(ds.Columns))
 	for i, c := range ds.Columns {
-		header[i] = i18n.Translate(loc, c.LabelKey)
+		header[i] = safeCell(i18n.Translate(loc, c.LabelKey))
 	}
 	if err := w.Write(header); err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func encodeDelimited(ds Dataset, locale string, comma rune) ([]byte, error) {
 	for _, row := range ds.Rows {
 		rec := make([]string, len(ds.Columns))
 		for i, c := range ds.Columns {
-			rec[i] = formatCell(row[c.Key], c, loc)
+			rec[i] = safeCell(formatCell(row[c.Key], c, loc))
 		}
 		if err := w.Write(rec); err != nil {
 			return nil, err

@@ -1627,6 +1627,10 @@ type Querier interface {
 	ListActiveFleetUserIDs(ctx context.Context, fleetOrgID int64) ([]int64, error)
 	ListActiveIntakePhotosForService(ctx context.Context, serviceID int64) ([]IntakePhoto, error)
 	ListActiveMobileSessionUUIDsForDevice(ctx context.Context, arg ListActiveMobileSessionUUIDsForDeviceParams) ([]uuid.UUID, error)
+	// TEC-757: category drop-down of the product import template.
+	ListActiveProductCategoryNames(ctx context.Context, brandID int64) ([]string, error)
+	// TEC-757: SKU drop-down of the stock import template.
+	ListActiveProductSKUsByBrand(ctx context.Context, brandID int64) ([]string, error)
 	ListActivePublicKeys(ctx context.Context, keys []string) ([]string, error)
 	ListActivePublicLinks(ctx context.Context) ([]StorageLink, error)
 	ListActiveRefreshTokenUUIDsByFamily(ctx context.Context, familyID pgtype.UUID) ([]uuid.UUID, error)

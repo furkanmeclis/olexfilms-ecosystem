@@ -571,6 +571,33 @@ func (q *Queries) GetProductCategoryByUUID(ctx context.Context, arg GetProductCa
 	return i, err
 }
 
+const listActiveProductCategoryNames = `-- name: ListActiveProductCategoryNames :many
+SELECT name FROM product_categories
+WHERE brand_id = $1 AND active
+ORDER BY sort, name, id
+`
+
+// TEC-757: category drop-down of the product import template.
+func (q *Queries) ListActiveProductCategoryNames(ctx context.Context, brandID int64) ([]string, error) {
+	rows, err := q.db.Query(ctx, listActiveProductCategoryNames, brandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		items = append(items, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProductCategories = `-- name: ListProductCategories :many
 SELECT id, uuid, organization_id, brand_id, name, available_parts, sort, active, created_at, updated_at FROM product_categories
 WHERE brand_id = $1
