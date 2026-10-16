@@ -102,6 +102,8 @@ export class PortalMock {
   whatsapp: FakeWhatsApp[] = [];
   calls: string[] = [];
   unknown: string[] = [];
+  /** TEC-771: names / language saved on the profile page, by user uuid. */
+  profiles: Record<string, Json> = {};
   /** TEC-327: appointments booked through the portal. */
   appointments: Json[] = [];
   /** TEC-304: executed intake contracts of the owner (PortalContract). */
@@ -332,8 +334,33 @@ export class PortalMock {
     }
     if (method === "GET" && path === "auth/me") {
       return ok({
-        user: { name: user.name, surname: user.surname, email: null },
+        user: {
+          name: user.name,
+          surname: user.surname,
+          email: null,
+          locale: null,
+          ...this.profiles[user.uuid],
+        },
         roles: ["customer"],
+      });
+    }
+    if (method === "PATCH" && path === "auth/profile") {
+      this.profiles[user.uuid] = { ...this.profiles[user.uuid], ...body };
+      return ok({ user: { uuid: user.uuid, ...this.profiles[user.uuid] } });
+    }
+    if (method === "GET" && path === "auth/sessions") {
+      return ok({
+        items: [
+          {
+            uuid: "00000000-0000-4000-8000-0000000007a1",
+            current: true,
+            user_agent: "Playwright",
+            ip_address: "127.0.0.1",
+            created_at: "2026-10-16T09:00:00Z",
+            expires_at: "2026-11-16T09:00:00Z",
+            impersonated: false,
+          },
+        ],
       });
     }
     if (method === "GET" && path === "portal/consents/pending") {

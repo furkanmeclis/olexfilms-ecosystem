@@ -296,6 +296,8 @@ export const routes = {
     /** TEC-245: signed contracts and notification preferences. */
     contracts: "/portal/contracts",
     preferences: "/portal/preferences",
+    /** TEC-771: the customer's / fleet user's profile. */
+    profile: "/portal/profile",
     /** TEC-390: AI assistant (customer realm). */
     assistant: "/portal/assistant",
     /** TEC-327: my appointments and the booking flow (optional preselection). */
