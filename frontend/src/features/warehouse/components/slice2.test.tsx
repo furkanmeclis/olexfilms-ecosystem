@@ -19,6 +19,7 @@ const api = vi.hoisted(() => ({
   listLocationProducts: vi.fn(),
   createCount: vi.fn(),
   scanCount: vi.fn(),
+  scan: vi.fn(),
   getCountReport: vi.fn(),
   approveCount: vi.fn(),
 }));
@@ -119,6 +120,25 @@ import {
 let m: Mounted;
 beforeEach(() => {
   m = mount();
+  api.scan.mockImplementation(
+    async (code: string, options?: { expect?: string }) =>
+      code.toUpperCase().startsWith("OFW:LOC:")
+        ? {
+            status: options?.expect === "unit" ? "type_mismatch" : "ok",
+            type: "location",
+            location: {
+              type: "bin",
+              path: [{ level: "warehouse", uuid: "wh-1", name: "Main" }],
+            },
+            unit: null,
+          }
+        : {
+            status: "ok",
+            type: "unit",
+            unit: { status: "placed" },
+            location: null,
+          },
+  );
   api.listWarehouses.mockResolvedValue({
     items: [
       { uuid: "wh-1", code: "WH1", name: "Main", active: true },
@@ -171,6 +191,7 @@ const text = () => m.container.textContent ?? "";
 async function scan(id: string, code: string) {
   await fill($(`${id}-input`), code);
   await submit($(`${id}-input`)?.closest("form") ?? null);
+  await flush();
 }
 
 const ROUTE = {
@@ -321,8 +342,8 @@ describe("TransferDetailPage (TEC-232)", () => {
 
     // A location QR in the unit field is refused locally.
     await scan("transfer-barcode", "OFW:LOC:WH1-R1-A-S1-01");
-    expect($("transfer-line-error")?.textContent).toBe(
-      "warehouse.entry.scan_location_here",
+    expect(m.container.querySelector('[role="alert"]')?.textContent).toContain(
+      "warehouse.scan_status.type_mismatch",
     );
     expect(api.addTransferLines).not.toHaveBeenCalled();
 

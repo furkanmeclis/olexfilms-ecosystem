@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Permission } from "@/config/permissions";
 import { LabelButton } from "@/features/warehouse/components/label-button";
+import { LocationImportButton } from "@/features/warehouse/components/location-import-button";
 import { LocationTree } from "@/features/warehouse/components/location-tree";
 import {
   NodeForm,
@@ -130,11 +131,13 @@ export function LocationTreePage({ slug }: { slug: string }) {
                 code: v.code,
                 name,
                 address: v.address || null,
+                require_location_placement: v.require_location_placement,
               })
             : warehouseService.updateWarehouse(p.target.uuid, {
                 code: v.code,
                 name: v.name,
                 address: v.address || null,
+                require_location_placement: v.require_location_placement,
                 active: v.active,
               });
         case "room":
@@ -309,6 +312,8 @@ export function LocationTreePage({ slug }: { slug: string }) {
       name: p.target.name,
       address: p.kind === "warehouse" ? (p.target.address ?? "") : "",
       active: p.target.active,
+      require_location_placement:
+        p.kind === "warehouse" ? p.target.require_location_placement : false,
     };
   };
 
@@ -373,6 +378,22 @@ export function LocationTreePage({ slug }: { slug: string }) {
               ) : null}
             </CardHeader>
             <CardContent className="space-y-1">
+              {canWrite && warehouseUuid ? (
+                <div className="pb-3">
+                  <LocationImportButton
+                    key={warehouseUuid}
+                    warehouseUuid={warehouseUuid}
+                    onComplete={() => {
+                      void qc.invalidateQueries({
+                        queryKey: warehouseKeys.rooms(warehouseUuid),
+                      });
+                      void qc.invalidateQueries({
+                        queryKey: ["warehouse", "locations"],
+                      });
+                    }}
+                  />
+                </div>
+              ) : null}
               {warehouses.isError ? (
                 <ErrorState
                   title={t("common.error_generic")}

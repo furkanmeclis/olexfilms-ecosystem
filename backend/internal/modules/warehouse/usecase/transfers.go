@@ -50,6 +50,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/labels"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
+	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -70,7 +71,8 @@ var (
 	ErrTransferUnplaced = errors.New("warehouse: every line needs a target location")
 	// ErrUnitUnavailable: the unit is not on hand in the expected place of
 	// the active organization.
-	ErrUnitUnavailable = errors.New("warehouse: unit is not available here")
+	ErrUnitUnavailable           = errors.New("warehouse: unit is not available here")
+	ErrLocationPlacementRequired = errors.New("warehouse: unit must be placed before transfer")
 	// ErrUnitBusy: the unit is in transit, on another open warehouse
 	// transfer, on an open stock transfer request or reserved by an order.
 	ErrUnitBusy = errors.New("warehouse: unit is held by another operation")
@@ -548,13 +550,30 @@ func (s *WarehouseTransfers) AddTransferItems(ctx context.Context, c EntryCaller
 		if have+int64(len(codes)+len(fixed)) > MaxTransferLines {
 			return invalid("barcodes", fmt.Sprintf("a transfer holds at most %d lines", MaxTransferLines))
 		}
+		source, err := q.GetWarehouseByID(ctx, db.GetWarehouseByIDParams{ID: t.FromWarehouseID, OrganizationID: org})
+		if err != nil {
+			return err
+		}
 		for _, code := range codes {
 			u, err := s.serialUnit(ctx, q, c, code)
 			if err != nil {
 				return err
 			}
-			if _, err := s.inSourceWarehouse(ctx, q, u, t); err != nil {
-				return err
+			if source.RequireLocationPlacement && u.Status != string(ledger.StatusPlaced) {
+				return ErrLocationPlacementRequired
+			}
+			// Selection may precede the stock entry; shipping still checks placement.
+			printedHere := u.Status == string(ledger.StatusPrinted) && u.OrganizationID == org
+			if !printedHere {
+				st, err := onHand(ctx, q, u, org)
+				if err != nil {
+					return err
+				}
+				if st.OwnerType != string(ledger.OwnerOrganization) || source.RequireLocationPlacement {
+					if _, err := s.inSourceWarehouse(ctx, q, u, t); err != nil {
+						return err
+					}
+				}
 			}
 			if err := checkFree(ctx, q, u); err != nil {
 				return err
@@ -1040,6 +1059,81 @@ func (s *WarehouseTransfers) PlaceOrder(ctx context.Context, c EntryCaller, orde
 	})
 	if err != nil {
 		return MoveResult{}, err
+	}
+	return out, nil
+}
+
+// OrderPlacementUnit is one unit of an order bought by the organization
+// with whether it still waits for a shelf (TEC-765).
+type OrderPlacementUnit struct {
+	UnitUUID uuid.UUID    `json:"unit_uuid"`
+	Barcode  string       `json:"barcode"`
+	UnitKind string       `json:"unit_kind"`
+	Product  EntryProduct `json:"product"`
+	Meters   *string      `json:"meters"`
+	Quantity *int32       `json:"quantity"`
+	Unplaced bool         `json:"unplaced"`
+}
+
+// OrderPlacement lists the units of an order for the shelving screen:
+// Units holds the serial units (Unplaced: still on hand unplaced in the
+// buyer organization, counted in UnplacedCount; else in PlacedCount once
+// received), Fixed the fixed barcodes (never placed here).
+type OrderPlacement struct {
+	OrderUUID     uuid.UUID            `json:"order_uuid"`
+	OrderNo       string               `json:"order_no"`
+	Status        string               `json:"status"`
+	UnplacedCount int                  `json:"unplaced_count"`
+	PlacedCount   int                  `json:"placed_count"`
+	Units         []OrderPlacementUnit `json:"units"`
+	Fixed         []OrderPlacementUnit `json:"fixed"`
+}
+
+// OrderUnplaced reads the placement state of an order bought by the active
+// organization (any status; only a received order can be placed).
+func (s *WarehouseTransfers) OrderUnplaced(ctx context.Context, c EntryCaller, orderID uuid.UUID) (OrderPlacement, error) {
+	org, err := guard(c.Caller)
+	if err != nil {
+		return OrderPlacement{}, err
+	}
+	o, err := s.q.GetOrderByUUID(ctx, db.GetOrderByUUIDParams{Uuid: orderID, BrandID: c.Org.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && o.BuyerOrgID != org) {
+		return OrderPlacement{}, ErrOrderNotFound
+	}
+	if err != nil {
+		return OrderPlacement{}, err
+	}
+	rows, err := s.q.ListOrderPlacementUnits(ctx, db.ListOrderPlacementUnitsParams{OrganizationID: org, OrderID: o.ID})
+	if err != nil {
+		return OrderPlacement{}, err
+	}
+	out := OrderPlacement{OrderUUID: o.Uuid, OrderNo: o.OrderNo, Status: o.Status, Units: []OrderPlacementUnit{}, Fixed: []OrderPlacementUnit{}}
+	for _, r := range rows {
+		u := OrderPlacementUnit{
+			UnitUUID: r.UnitUuid, Barcode: r.Barcode, UnitKind: r.UnitKind,
+			Product: EntryProduct{UUID: r.ProductUuid, SKU: r.ProductSku, Name: r.ProductName},
+			Meters:  stockusecase.MetersString(r.RemainingMeters),
+		}
+		if r.Quantity.Valid {
+			q := r.Quantity.Int32
+			u.Quantity = &q
+		}
+		if u.Meters == nil {
+			u.Meters = stockusecase.MetersString(r.Meters)
+		}
+		if r.UnitKind == ledger.KindFixed {
+			out.Fixed = append(out.Fixed, u)
+			continue
+		}
+		if o.Status == orderStatusReceived {
+			u.Unplaced = r.Unplaced
+			if u.Unplaced {
+				out.UnplacedCount++
+			} else {
+				out.PlacedCount++
+			}
+		}
+		out.Units = append(out.Units, u)
 	}
 	return out, nil
 }

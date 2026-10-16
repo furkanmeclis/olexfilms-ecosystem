@@ -2172,6 +2172,9 @@ type Querier interface {
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
 	ListOrderOutboundsByOrder(ctx context.Context, orderID int64) ([]OrderOutbound, error)
 	ListOrderOutboundsByState(ctx context.Context, arg ListOrderOutboundsByStateParams) ([]OrderOutbound, error)
+	// The units of an order with whether each is still on hand unplaced in the
+	// organization (available, owned by the organization itself, TEC-765).
+	ListOrderPlacementUnits(ctx context.Context, arg ListOrderPlacementUnitsParams) ([]ListOrderPlacementUnitsRow, error)
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
 	// Orders an organization sells or buys: their documents carry the
 	// organization's name and dealer code, refreshed when it changes.
@@ -3215,6 +3218,7 @@ type Querier interface {
 	NextLibraryItemVersionNo(ctx context.Context, arg NextLibraryItemVersionNoParams) (int32, error)
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
 	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
+	OrganizationRequiresPlacement(ctx context.Context, organizationID int64) (bool, error)
 	PingDB(ctx context.Context) (int32, error)
 	// Country x currency summary of one snapshot day in the caller's scope
 	// (org_ids NULL = whole brand): average / median deviation and the

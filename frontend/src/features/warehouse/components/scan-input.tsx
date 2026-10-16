@@ -7,11 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { normalizeScan } from "@/features/warehouse/lib/scan";
+import {
+  warehouseService,
+  type WarehouseScanResult,
+} from "@/features/warehouse/services/warehouse.service";
+import { scanStatusMessage } from "@/features/warehouse/lib/scan-status";
 import { useLocale } from "@/providers/locale-provider";
 
 type ScanInputProps = {
   /** Called with the normalized code; the field clears and refocuses. */
   onScan: (code: string) => unknown;
+  expect?: "any" | "location" | "bin" | "unit" | "product";
+  warehouseUuid?: string;
   label?: string;
   placeholder?: string;
   hint?: string;
@@ -20,7 +27,6 @@ type ScanInputProps = {
   autoFocus?: boolean;
   /** Prefix of the test ids: `<id>-input`, `<id>-submit`. */
   id?: string;
-  expect?: "bin";
 };
 
 /**
@@ -32,6 +38,8 @@ type ScanInputProps = {
  */
 export function ScanInput({
   onScan,
+  expect,
+  warehouseUuid,
   label,
   placeholder,
   hint,
@@ -39,36 +47,46 @@ export function ScanInput({
   disabled = false,
   autoFocus = true,
   id = "scan",
-  expect,
 }: ScanInputProps) {
   const { t } = useLocale();
   const [value, setValue] = useState("");
   const [empty, setEmpty] = useState(false);
-  const [wrongKind, setWrongKind] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (autoFocus && !disabled) ref.current?.focus();
   }, [autoFocus, disabled]);
 
-  const submit = (e?: FormEvent) => {
+  const submit = async (e?: FormEvent) => {
     e?.preventDefault();
     if (busy || disabled) return;
     const code = normalizeScan(value);
     if (!code) {
       setEmpty(true);
-      setWrongKind(false);
-      ref.current?.focus();
-      return;
-    }
-    if (expect === "bin" && /^OFW:UNIT:/i.test(code)) {
-      setWrongKind(true);
       ref.current?.focus();
       return;
     }
     setEmpty(false);
-    setWrongKind(false);
+    setScanError(null);
     setValue("");
+    if (expect || warehouseUuid) {
+      try {
+        const result: WarehouseScanResult = await warehouseService.scan(code, {
+          expect: expect ?? "any",
+          ...(warehouseUuid ? { warehouse_uuid: warehouseUuid } : {}),
+        });
+        // Block only a definite mismatch; an unknown code goes on to the
+        // screen's own endpoint, whose error is more specific.
+        if (result.status !== "ok" && result.status !== "unknown") {
+          setScanError(scanStatusMessage(result, expect ?? "any", t));
+          ref.current?.focus();
+          return;
+        }
+      } catch {
+        // The pre-check is advisory: a failed lookup must not block the scan.
+      }
+    }
     void onScan(code);
     ref.current?.focus();
   };
@@ -85,7 +103,7 @@ export function ScanInput({
           onChange={(e) => {
             setValue(e.target.value);
             if (empty) setEmpty(false);
-            if (wrongKind) setWrongKind(false);
+            if (scanError) setScanError(null);
           }}
           placeholder={placeholder ?? t("warehouse.scan.placeholder")}
           autoComplete="off"
@@ -95,7 +113,7 @@ export function ScanInput({
           enterKeyHint="go"
           dir="ltr"
           disabled={disabled}
-          aria-invalid={empty || wrongKind || undefined}
+          aria-invalid={empty || Boolean(scanError) || undefined}
           aria-describedby={`${id}-hint`}
           data-testid={inputId}
           className="font-mono"
@@ -117,17 +135,15 @@ export function ScanInput({
       <p
         id={`${id}-hint`}
         className={
-          empty || wrongKind
+          empty || scanError
             ? "text-destructive text-xs"
             : "text-muted-foreground text-xs"
         }
-        role={empty || wrongKind ? "alert" : undefined}
+        role={empty || scanError ? "alert" : undefined}
       >
         {empty
           ? t("warehouse.scan.empty")
-          : wrongKind
-            ? t("warehouse.fixed.source_invalid")
-            : (hint ?? t("warehouse.scan.hint"))}
+          : (scanError ?? hint ?? t("warehouse.scan.hint"))}
       </p>
     </form>
   );

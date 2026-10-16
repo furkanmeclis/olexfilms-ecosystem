@@ -22,11 +22,14 @@ WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id);
 SELECT * FROM warehouses
 WHERE uuid = ANY(sqlc.arg(uuids)::uuid[]) AND organization_id = sqlc.arg(organization_id);
 
+-- name: OrganizationRequiresPlacement :one
+SELECT EXISTS(SELECT 1 FROM warehouses WHERE organization_id = sqlc.arg(organization_id) AND active AND require_location_placement);
+
 -- name: CreateWarehouse :one
-INSERT INTO warehouses (organization_id, code, name, address, active, sort_order)
+INSERT INTO warehouses (organization_id, code, name, address, active, require_location_placement, sort_order)
 VALUES (
     sqlc.arg(organization_id), sqlc.arg(code), sqlc.arg(name), sqlc.narg(address),
-    sqlc.arg(active),
+    sqlc.arg(active), sqlc.arg(require_location_placement),
     (SELECT COALESCE(MAX(w.sort_order) + 1, 0) FROM warehouses w
      WHERE w.organization_id = sqlc.arg(organization_id))
 )
@@ -37,7 +40,8 @@ UPDATE warehouses
 SET code = sqlc.arg(code),
     name = sqlc.arg(name),
     address = sqlc.narg(address),
-    active = sqlc.arg(active)
+    active = sqlc.arg(active),
+    require_location_placement = sqlc.arg(require_location_placement)
 WHERE id = sqlc.arg(id) AND organization_id = sqlc.arg(organization_id)
 RETURNING *;
 

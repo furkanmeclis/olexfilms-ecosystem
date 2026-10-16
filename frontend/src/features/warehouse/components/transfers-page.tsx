@@ -638,6 +638,7 @@ export function BinMoveCard() {
           </p>
         </div>
         <ScanInput
+          expect="bin"
           id="move-location"
           autoFocus={false}
           label={t("warehouse.entry.scan_location")}

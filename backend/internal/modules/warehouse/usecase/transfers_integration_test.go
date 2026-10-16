@@ -1,8 +1,15 @@
 package usecase_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	orders "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/orders/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/sysconfig"
+	"github.com/jackc/pgx/v5/pgtype"
+	"math/big"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -520,5 +527,116 @@ func TestWarehouseTransferCancelRestore(t *testing.T) {
 	// An order that does not exist for the buyer.
 	if _, err := tr.PlaceOrder(e.ctx, c, uuid.New(), wh.MoveInput{LocationCode: src.a.FullCode}); !errors.Is(err, wh.ErrOrderNotFound) {
 		t.Fatalf("place unknown order: %v", err)
+	}
+}
+
+// A printed label is refused with the placement-specific error when the
+// source warehouse requires placement. Placed stock remains transferable.
+func TestWarehouseTransferRequiresPlacement(t *testing.T) {
+	e := newEntryEnv(t)
+	tr := wh.NewWarehouseTransfers(e.pool, e.q, outbox.NewStore(e.pool, e.q))
+	c := e.caller(e.center)
+	src, dst := e.site(t, "P"), e.site(t, "Q")
+	required := true
+	if _, err := e.tree.UpdateWarehouse(e.ctx, c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &required}); err != nil {
+		t.Fatal(err)
+	}
+	doc, err := tr.CreateTransfer(e.ctx, c, wh.TransferInput{FromWarehouseUUID: src.w.UUID.String(), ToWarehouseUUID: dst.w.UUID.String()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := e.entries.Create(e.ctx, c, wh.EntryInput{WarehouseUUID: src.w.UUID.String(), Mode: wh.EntryModeGenerateNew})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err = e.entries.AddLines(e.ctx, c, entry.UUID, wh.EntryLinesInput{ProductUUID: e.piece.Uuid.String(), Count: 1, Prefix: e.prefix("P")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tr.AddTransferLines(e.ctx, c, doc.UUID, []string{entry.Lines[0].Barcode}); !errors.Is(err, wh.ErrLocationPlacementRequired) {
+		t.Fatalf("printed unit: %v", err)
+	}
+	placed := e.stocked(t, src.w, src.a, 1, "Q")
+	if _, err := tr.AddTransferLines(e.ctx, c, doc.UUID, []string{placed[0].Barcode}); err != nil {
+		t.Fatalf("placed unit: %v", err)
+	}
+	required = false
+	if _, err := e.tree.UpdateWarehouse(e.ctx, c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &required}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tr.AddTransferLines(e.ctx, c, doc.UUID, []string{entry.Lines[0].Barcode}); err != nil {
+		t.Fatalf("printed unit with placement optional: %v", err)
+	}
+}
+
+func TestOrderAssignmentRequiresPlacement(t *testing.T) {
+	e := newEntryEnv(t)
+	c := e.caller(e.center)
+	src := e.site(t, "O")
+	required := true
+	if _, err := e.tree.UpdateWarehouse(e.ctx, c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &required}); err != nil {
+		t.Fatal(err)
+	}
+	entry, err := e.entries.Create(e.ctx, c, wh.EntryInput{WarehouseUUID: src.w.UUID.String(), Mode: wh.EntryModeGenerateNew})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err = e.entries.AddLines(e.ctx, c, entry.UUID, wh.EntryLinesInput{ProductUUID: e.piece.Uuid.String(), Count: 1, Prefix: e.prefix("O")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	order, err := e.q.CreateOrder(e.ctx, db.CreateOrderParams{SellerOrgID: e.center.ID, BuyerOrgID: e.dist.ID, BrandID: e.brand.ID, Currency: "TRY"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.pool.Exec(e.ctx, `UPDATE orders SET status='preparing' WHERE id=$1`, order.ID); err != nil {
+		t.Fatal(err)
+	}
+	one := pgtype.Numeric{Int: big.NewInt(1), Exp: 0, Valid: true}
+	item, err := e.q.CreateOrderItem(e.ctx, db.CreateOrderItemParams{OrderID: order.ID, ProductID: e.piece.ID, Quantity: pgtype.Int4{Int32: 1, Valid: true}, UnitPrice: one, PriceSource: "list", LineTotal: one})
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope, filter := e.scope(e.center)
+	caller := orders.Caller{Org: scope, Filter: filter, Principal: authctx.Principal{PermissionScopes: map[string]rbac.Scope{rbac.PermOrdersShip: rbac.ScopeManaged}}}
+	service := orders.New(e.pool, e.q, outbox.NewStore(e.pool, e.q), nil)
+	if _, err = service.AssignUnit(e.ctx, caller, order.Uuid, item.Uuid, orders.AssignInput{Barcode: entry.Lines[0].Barcode}); !errors.Is(err, orders.ErrLocationPlacementRequired) {
+		t.Fatalf("printed assignment with placement required: %v", err)
+	}
+	required = false
+	if _, err = e.tree.UpdateWarehouse(e.ctx, c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &required}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.AssignUnit(e.ctx, caller, order.Uuid, item.Uuid, orders.AssignInput{Barcode: entry.Lines[0].Barcode}); err != nil {
+		t.Fatalf("printed assignment with placement optional: %v", err)
+	}
+}
+
+type scanSettingsStub struct{}
+
+func (scanSettingsStub) Scan(context.Context) sysconfig.Scan { return sysconfig.Scan{} }
+
+func TestWarehouseScanExpectationStatuses(t *testing.T) {
+	e := newEntryEnv(t)
+	src, dst := e.site(t, "U"), e.site(t, "V")
+	scanner := wh.NewScanner(e.q, scanSettingsStub{})
+	c := wh.ScanCaller{Caller: e.caller(e.center).Caller}
+	cases := []struct {
+		name, code, expect, want string
+		warehouse                *uuid.UUID
+	}{
+		{"ok", "OFW:LOC:" + src.a.FullCode, "location", "ok", &src.w.UUID},
+		{"type mismatch", "OFW:LOC:" + src.a.FullCode, "unit", "type_mismatch", nil},
+		{"not bin", "OFW:LOC:" + src.a.FullCode, "bin", "not_bin", nil},
+		{"other warehouse", "OFW:LOC:" + src.a.FullCode, "location", "warehouse_mismatch", &dst.w.UUID},
+		{"unknown", "OFW:LOC:UNKNOWN-LOCATION", "location", "unknown", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := scanner.ResolveWith(e.ctx, c, tc.code, wh.ScanOptions{Expect: tc.expect, WarehouseUUID: tc.warehouse})
+			if err != nil || res.Status != tc.want {
+				t.Fatalf("status=%s err=%v", res.Status, err)
+			}
+		})
 	}
 }

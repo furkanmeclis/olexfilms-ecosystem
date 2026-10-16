@@ -309,6 +309,10 @@ func (h *Labels) PrintLocations(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	warehouse, ok := optionalUUID(w, r, "warehouse")
+	if !ok {
+		return
+	}
 	var ids []uuid.UUID
 	for _, raw := range r.URL.Query()["location"] {
 		id, err := uuid.Parse(strings.TrimSpace(raw))
@@ -319,7 +323,7 @@ func (h *Labels) PrintLocations(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, id)
 	}
 	pdf, err := h.printer.PrintLocations(r.Context(), reclassCaller(r), stockusecase.LocationPrintInput{
-		LocationUUIDs: ids, RoomUUID: room, TemplateUUID: tpl,
+		LocationUUIDs: ids, RoomUUID: room, WarehouseUUID: warehouse, TemplateUUID: tpl,
 	})
 	if err != nil {
 		writeLabelError(w, r, err)

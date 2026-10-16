@@ -53,6 +53,7 @@ import {
   type Order,
   type OrderItem,
 } from "@/features/orders/services/orders.service";
+import { OrderPlacementPanel } from "@/features/warehouse/components/order-placement-panel";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -513,7 +514,8 @@ function HistoryList({ order }: { order: Order }) {
  * Tenant > Orders > detail (TEC-170): lines, totals, frozen rate and the
  * status history, with the actions the caller's side may take (server
  * available_transitions): submit, approve / reject, preparing with barcode
- * assignment, ready, ship, receive and cancel.
+ * assignment, ready, ship, receive and cancel. A received order bought by
+ * a center or distributor shows the shelving panel (TEC-765).
  */
 export function OrderDetailPage({
   slug,
@@ -632,6 +634,7 @@ export function OrderDetailPage({
           {fully ? t("orders.assign.complete") : t("orders.assign.hint")}
         </p>
       ) : null}
+      <OrderPlacementPanel slug={slug} order={order} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Items order={order} assign={assign} />
         <div className="space-y-6">

@@ -21,6 +21,7 @@ const STATUS_ORDER = [
   "valid",
   "applied",
   "duplicate",
+  "exists",
   "conflict",
   "invalid",
   "undone",
@@ -33,6 +34,7 @@ const STATUS_TONES: Record<string, ImportStatusTone> = {
   valid: "success",
   applied: "success",
   duplicate: "warning",
+  exists: "warning",
   conflict: "warning",
   undo_rejected: "warning",
   invalid: "danger",
@@ -67,7 +69,10 @@ export function importStatusCounts(
     ];
   }
   const entries = Object.entries(summary.counts ?? {}).filter(
-    ([status, count]) => status !== "placed" && (count ?? 0) > 0,
+    ([status, count]) =>
+      (count ?? 0) > 0 &&
+      status !== "placed" &&
+      !["rooms", "aisles", "shelves", "bins"].includes(status),
   );
   const rank = (status: string) => {
     const i = STATUS_ORDER.indexOf(status);
