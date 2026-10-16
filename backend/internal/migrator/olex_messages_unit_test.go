@@ -19,7 +19,11 @@ func TestMapLegacyShortTarget(t *testing.T) {
 		// External and unknown targets are reported, never redirected to.
 		{"https://g.page/r/SYNTHETIC-review", "", ShortTargetUnmapped},
 		{"https://www.google.com/maps/place/x", "", ShortTargetUnmapped},
-		{"https://olexfilms.app/warranty/SRV-1", "", ShortTargetUnmapped},
+		{"https://olexfilms.app/warranty/1nrlZmcv", "/garanti/1nrlZmcv", ""},
+		{"https://olexfilms.app/warranty/DS7K2M9QX4/pdf", "/garanti/DS7K2M9QX4/pdf", ""},
+		{"https://olexfilms.app/warranty/DS7K2M9QX4?lang=en", "/garanti/DS7K2M9QX4?lang=en", ""},
+		{"https://olexfilms.app/warranty/", "", ShortTargetUnmapped},
+		{"https://olexfilms.app/warranty/x/edit", "", ShortTargetUnmapped},
 		{"https://olexfilms.app/customer/abc/update", "", ShortTargetUnmapped},
 		{"https://olexfilms.app/garanti/../admin", "", ShortTargetUnmapped},
 		{"https://olexfilms.app/", "", ShortTargetUnmapped},
