@@ -844,9 +844,9 @@ type OrderPlacementUnit struct {
 }
 
 // OrderPlacement lists the units of an order for the shelving screen:
-// Units holds the serial units still on hand unplaced in the buyer
-// organization, Fixed the fixed barcodes (never placed here), PlacedCount
-// the serial units already shelved or moved on.
+// Units holds the serial units (Unplaced: still on hand unplaced in the
+// buyer organization, counted in UnplacedCount; else in PlacedCount once
+// received), Fixed the fixed barcodes (never placed here).
 type OrderPlacement struct {
 	OrderUUID     uuid.UUID            `json:"order_uuid"`
 	OrderNo       string               `json:"order_no"`
@@ -889,17 +889,20 @@ func (s *WarehouseTransfers) OrderUnplaced(ctx context.Context, c EntryCaller, o
 		if u.Meters == nil {
 			u.Meters = stockusecase.MetersString(r.Meters)
 		}
-		switch {
-		case r.UnitKind == ledger.KindFixed:
+		if r.UnitKind == ledger.KindFixed {
 			out.Fixed = append(out.Fixed, u)
-		case r.Unplaced && o.Status == orderStatusReceived:
-			u.Unplaced = true
-			out.Units = append(out.Units, u)
-		case o.Status == orderStatusReceived:
-			out.PlacedCount++
+			continue
 		}
+		if o.Status == orderStatusReceived {
+			u.Unplaced = r.Unplaced
+			if u.Unplaced {
+				out.UnplacedCount++
+			} else {
+				out.PlacedCount++
+			}
+		}
+		out.Units = append(out.Units, u)
 	}
-	out.UnplacedCount = len(out.Units)
 	return out, nil
 }
 

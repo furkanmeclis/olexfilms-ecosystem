@@ -12636,10 +12636,12 @@ paths:
         Needs `warehouse.read`. The order must be bought by the active
         organization (404 otherwise); any status is answered, but units
         count as unplaced only once the order is received. `units` holds
-        the serial units still on hand unplaced in the organization
-        (available, owned by the organization itself) — the ones
-        POST /v1/warehouse/orders/{uuid}/place shelves. `placed_count`
-        counts the received serial units already shelved or moved on.
+        every serial unit of the order; `unplaced` marks the ones still on
+        hand unplaced in the organization (available, owned by the
+        organization itself) — the ones POST
+        /v1/warehouse/orders/{uuid}/place shelves (`unplaced_count`).
+        `placed_count` counts the received serial units already shelved or
+        moved on.
         `fixed` lists the fixed barcodes of the order, which are never
         placed by this step.
       security:
