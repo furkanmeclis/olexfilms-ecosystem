@@ -225,6 +225,9 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		pricingusecase.NewRecommendedImporter(recommendedSvc),
 		pricingusecase.NewDisciplineExportAdapter(recommendedSvc, pricingusecase.ParseDisciplineFilter),
 	)
+	// TEC-761: warehouse screen exports (read only).
+	ioReg.Register(warehouseusecase.NewExporter(pool, queries).Adapters()...)
+	ioReg.Register(stockusecase.NewStockExporter(pool, stockusecase.New(queries)).Adapters()...)
 	exportSvc := exportusecase.New(queries, store, ioReg, nil, notifSvc, activityRec, log)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
 	exportSvc.SetDocumentPDF(pdfClient)
