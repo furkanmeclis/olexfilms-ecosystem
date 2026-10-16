@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"net/url"
 	"strings"
 	"time"
 
@@ -38,6 +39,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -132,11 +134,63 @@ type RequestInput struct {
 	Reason        string
 }
 
-// ListFilter filters the request list.
+// ListFilter filters the request list (TEC-763 list contract).
 type ListFilter struct {
-	Status string
-	Limit  int32
-	Offset int32
+	Statuses      []string
+	RequestedBy   []uuid.UUID
+	FromProduct   *uuid.UUID
+	ToProduct     *uuid.UUID
+	CreatedFrom   *time.Time
+	CreatedBefore *time.Time
+	Q             string
+	Sort          apiquery.ResolvedSort
+	Limit         int32
+	Offset        int32
+}
+
+// ReclassificationSort is the sort contract of GET
+// /v1/stock/reclassifications (newest first by default).
+var ReclassificationSort = apiquery.SortSpec{
+	Columns: apiquery.SortColumns{"created_at": "created_at", "decided_at": "decided_at", "status": "status"},
+	Default: apiquery.SortField{Field: "created_at", Desc: true},
+}
+
+// ParseListFilter reads status (CSV), requested_by (CSV user uuids),
+// from_product_uuid, to_product_uuid, created_from / created_to, q, sort,
+// limit and offset. Errors are *apiquery.ValidationError.
+func ParseListFilter(values url.Values) (ListFilter, error) {
+	q := apiquery.Parse(values)
+	f := ListFilter{Q: q.Q, Limit: q.Limit, Offset: q.Offset}
+	var err error
+	if f.Statuses, err = apiquery.EnumList(values, "status",
+		model.ReclassPending, model.ReclassApproved, model.ReclassRejected, model.ReclassCancelled); err != nil {
+		return f, err
+	}
+	for _, raw := range apiquery.CSVValues(values, "requested_by") {
+		id, perr := uuid.Parse(raw)
+		if perr != nil {
+			return f, invalidParam("requested_by", "must be a list of user uuids")
+		}
+		f.RequestedBy = append(f.RequestedBy, id)
+	}
+	for key, dst := range map[string]**uuid.UUID{"from_product_uuid": &f.FromProduct, "to_product_uuid": &f.ToProduct} {
+		if raw := strings.TrimSpace(values.Get(key)); raw != "" {
+			id, perr := uuid.Parse(raw)
+			if perr != nil {
+				return f, invalidParam(key, key+" is invalid")
+			}
+			*dst = &id
+		}
+	}
+	created, err := apiquery.DateRange(values, "created")
+	if err != nil {
+		return f, err
+	}
+	f.CreatedFrom, f.CreatedBefore = created.From, created.Before
+	if f.Sort, err = apiquery.ResolveSort(q.Sort, ReclassificationSort); err != nil {
+		return f, err
+	}
+	return f, nil
 }
 
 func (s *Reclassifications) inTx(ctx context.Context, fn func(q *db.Queries, tx pgx.Tx) error) error {
@@ -435,24 +489,29 @@ func (s *Reclassifications) Get(ctx context.Context, c Caller, id uuid.UUID) (mo
 // List pages the requests inside the caller's stock.read scope, newest
 // first.
 func (s *Reclassifications) List(ctx context.Context, c Caller, f ListFilter) ([]model.Reclassification, int64, error) {
-	var status pgtype.Text
-	switch f.Status {
-	case "":
-	case model.ReclassPending, model.ReclassApproved, model.ReclassRejected, model.ReclassCancelled:
-		status = pgText(f.Status)
-	default:
-		return nil, 0, invalid("status", "status must be pending, approved, rejected or cancelled")
-	}
+	key, desc := resolvedSort(f.Sort, ReclassificationSort)
 	brand, orgs := c.Filter.BrandIDArg(), c.Filter.OrgIDsArg()
+	product := func(id *uuid.UUID) pgtype.UUID {
+		if id == nil {
+			return pgtype.UUID{}
+		}
+		return pgtype.UUID{Bytes: *id, Valid: true}
+	}
+	args := db.CountStockReclassificationsScopedParams{
+		BrandID: brand, OrgIds: orgs, Statuses: f.Statuses, RequestedBy: f.RequestedBy,
+		FromProductUuid: product(f.FromProduct), ToProductUuid: product(f.ToProduct),
+		CreatedFrom: tsArg(f.CreatedFrom), CreatedBefore: tsArg(f.CreatedBefore), Q: pgText(strings.TrimSpace(f.Q)),
+	}
 	rows, err := s.q.ListStockReclassificationsScoped(ctx, db.ListStockReclassificationsScopedParams{
-		BrandID: brand, OrgIds: orgs, Status: status, LimitCount: f.Limit, OffsetCount: f.Offset,
+		BrandID: args.BrandID, OrgIds: args.OrgIds, Statuses: args.Statuses, RequestedBy: args.RequestedBy,
+		FromProductUuid: args.FromProductUuid, ToProductUuid: args.ToProductUuid,
+		CreatedFrom: args.CreatedFrom, CreatedBefore: args.CreatedBefore, Q: args.Q,
+		SortKey: key, SortDesc: desc, LimitCount: f.Limit, OffsetCount: f.Offset,
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("stock: reclassifications: %w", err)
 	}
-	total, err := s.q.CountStockReclassificationsScoped(ctx, db.CountStockReclassificationsScopedParams{
-		BrandID: brand, OrgIds: orgs, Status: status,
-	})
+	total, err := s.q.CountStockReclassificationsScoped(ctx, args)
 	if err != nil {
 		return nil, 0, fmt.Errorf("stock: count reclassifications: %w", err)
 	}

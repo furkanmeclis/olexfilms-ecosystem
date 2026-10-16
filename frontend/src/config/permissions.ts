@@ -547,6 +547,7 @@ export const permissions = {
   stock: {
     read: Permission.StockRead,
     write: Permission.StockWrite,
+    reclassify: Permission.StockReclassify,
   },
   stockForecast: {
     read: Permission.StockForecastRead,

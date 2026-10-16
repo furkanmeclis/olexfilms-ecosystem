@@ -12,6 +12,47 @@ LIMIT sqlc.arg(limit_count) OFFSET sqlc.arg(offset_count);
 -- name: CountStockMovementsByUnit :one
 SELECT COUNT(*)::bigint FROM stock_movements WHERE unit_id = sqlc.arg(unit_id);
 
+-- name: ListStockMovementDocuments :many
+-- TEC-763: the document behind each movement of a history page (entry,
+-- warehouse transfer, count, service, order, dealer transfer request,
+-- reclassification); line references resolve to their parent document.
+SELECT m.id AS movement_id, d.doc_type::text AS doc_type, d.doc_uuid::uuid AS doc_uuid
+FROM stock_movements m
+CROSS JOIN LATERAL (
+    SELECT 'stock_entry' AS doc_type, e.uuid AS doc_uuid
+    FROM stock_entry_lines l JOIN stock_entries e ON e.id = l.entry_id
+    WHERE m.reference_type = 'stock_entry_line' AND l.id = m.reference_id
+    UNION ALL
+    SELECT 'warehouse_transfer', t.uuid
+    FROM warehouse_transfer_lines l JOIN warehouse_transfers t ON t.id = l.transfer_id
+    WHERE m.reference_type = 'warehouse_transfer_line' AND l.id = m.reference_id
+    UNION ALL
+    SELECT 'stock_count', c.uuid
+    FROM stock_count_lines l JOIN stock_counts c ON c.id = l.count_id
+    WHERE m.reference_type = 'stock_count_line' AND l.id = m.reference_id
+    UNION ALL
+    SELECT 'service', s.uuid
+    FROM service_items i JOIN services s ON s.id = i.service_id
+    WHERE m.reference_type IN ('service_item', 'service_item_correction') AND i.id = m.reference_id
+    UNION ALL
+    SELECT 'order', o.uuid
+    FROM order_items i JOIN orders o ON o.id = i.order_id
+    WHERE m.reference_type = 'order_item' AND i.id = m.reference_id
+    UNION ALL
+    SELECT 'order', o.uuid
+    FROM order_item_units a JOIN order_items i ON i.id = a.order_item_id JOIN orders o ON o.id = i.order_id
+    WHERE m.reference_type = 'order_item_unit' AND a.id = m.reference_id
+    UNION ALL
+    SELECT 'transfer_request', r.uuid
+    FROM stock_transfer_request_items i JOIN stock_transfer_requests r ON r.id = i.request_id
+    WHERE m.reference_type = 'transfer_item' AND i.id = m.reference_id
+    UNION ALL
+    SELECT 'stock_reclassification', r.uuid
+    FROM stock_reclassifications r
+    WHERE m.reference_type = 'stock_reclassification' AND r.id = m.reference_id
+) d
+WHERE m.id = ANY(sqlc.arg(ids)::bigint[]);
+
 -- name: ListWarehouseLocationsByIDs :many
 SELECT * FROM warehouse_locations WHERE id = ANY(sqlc.arg(ids)::bigint[]);
 

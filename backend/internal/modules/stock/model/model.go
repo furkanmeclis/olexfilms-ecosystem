@@ -81,8 +81,20 @@ type Movement struct {
 	Organization       *OrgRef   `json:"organization"`
 	OrganizationMasked bool      `json:"organization_masked"`
 	ReferenceType      *string   `json:"reference_type"`
-	Reason             *string   `json:"reason"`
-	CreatedAt          time.Time `json:"created_at"`
+	// Document behind the movement and the acting user (TEC-763); null
+	// on masked rows.
+	Document  *DocumentRef `json:"document"`
+	Actor     *UserRef     `json:"actor"`
+	Reason    *string      `json:"reason"`
+	CreatedAt time.Time    `json:"created_at"`
+}
+
+// DocumentRef points at the document of a movement (stock_entry,
+// warehouse_transfer, stock_count, service, order, transfer_request,
+// stock_reclassification).
+type DocumentRef struct {
+	Type string    `json:"type"`
+	UUID uuid.UUID `json:"uuid"`
 }
 
 // MovementPage is a page of the barcode history.
