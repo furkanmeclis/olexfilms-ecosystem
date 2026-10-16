@@ -170,5 +170,7 @@
   "codes.ORDER_NOT_SHIPPED": "Η παραγγελία δεν έχει αποσταλεί ακόμη.",
   "codes.ORDER_RECEIPT_NOT_ALLOWED": "Αποδεικτικό παραλαβής επισυνάπτεται μόνο σε απεσταλμένη ή παραληφθείσα παραγγελία.",
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Η αποθήκευση εγγράφων ή η υπηρεσία PDF δεν είναι διαθέσιμη.",
-  "codes.ORDER_RECEIPT_FILE_INVALID": "Το αποδεικτικό πρέπει να είναι PDF, JPEG, PNG ή WebP (έως 10 MB)."
+  "codes.ORDER_RECEIPT_FILE_INVALID": "Το αποδεικτικό πρέπει να είναι PDF, JPEG, PNG ή WebP (έως 10 MB).",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Τοποθετήστε τη μονάδα στην αποθήκη πριν από την ανάθεση.",
+  "page_forbidden_body": "Δεν έχετε δικαίωμα προβολής αυτής της σελίδας."
 }

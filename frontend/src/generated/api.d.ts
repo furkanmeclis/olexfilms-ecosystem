@@ -5978,6 +5978,47 @@ export interface paths {
         patch: operations["updateWarehouse"];
         trace?: never;
     };
+    "/v1/warehouse/warehouses/{uuid}/locations/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a warehouse location tree
+         * @description TEC-762. Requires warehouse.write and a warehouse owned by the active center or distributor. The mapped columns are room_code, room_name, aisle_code, shelf_code, bin_code, name and active (evet/hayır). Each row defines one path; missing ancestors are created. The 5000-row limit applies. Preview, confirm and undo use the tenant import job endpoints. Existing paths are skipped; existing names and active flags are not changed. Undo removes only nodes created by the job that have no dependent stock, movement or child records.
+         */
+        post: operations["importWarehouseLocations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/warehouses/{uuid}/locations/import/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        /** Download a warehouse location import template */
+        get: operations["warehouseLocationsImportSample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warehouse/warehouses/{uuid}/rooms": {
         parameters: {
             query?: never;
@@ -6324,7 +6365,7 @@ export interface paths {
         };
         /**
          * QR label sheet PDF of warehouse locations
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Prints every typed location of `room` and/or the listed `location` uuids of the active organization (at most 1000). Each label carries the QR payload `OFW:LOC:<full_code>` and the full_code text. Template: `template`, else the organization's default location template, else the built-in QR 50x50 mm sheet.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, K12). Prints every typed location of `warehouse` or `room` and/or the listed `location` uuids of the active organization (at most 1000). Each label carries the QR payload `OFW:LOC:<full_code>` and the full_code text. Template: `template`, else the organization's default location template, else the built-in QR 50x50 mm sheet.
          */
         get: operations["printLocationLabels"];
         put?: never;
@@ -6554,7 +6595,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve one scanned code (location QR, unit barcode, SKU, short code)
-         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH. An empty code is 400 VALIDATION_ERROR.
+         * @description Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH when no scan expectation is supplied. With `expect` or `warehouse_uuid`, a matched entity returns `status` (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`); no match returns `unknown`. An empty code is 400 VALIDATION_ERROR.
          */
         post: operations["resolveWarehouseScan"];
         delete?: never;
@@ -8933,7 +8974,7 @@ export interface paths {
          * Mobile: Resolve one scanned code (location QR, unit barcode, SKU, short code)
          * @description Mobile mirror (TEC-235) of `POST /v1/warehouse/scan`: same handler, permission, warehouse module gate and active organization scope (a distributor reaches its own warehouses only, never the center's: K4, K20). Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426.
          *
-         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH. An empty code is 400 VALIDATION_ERROR.
+         *     Needs `warehouse.read` with the warehouse module on (center or distributor, 403 for dealers, K12). Resolution order: `OFW:LOC:<full_code>` -> a location of the active organization (404 SCAN_LOCATION_NOT_FOUND otherwise, nothing else is tried); `OFW:UNIT:<barcode>` -> that unit; a unit barcode (generated `<PREFIX>-<8 digits>`, roll split `<barcode>-S<n>`, legacy/import barcodes; exact, then upper-cased); a bare location full_code when `scan.bare_location_code_enabled`; a product SKU of the active brand when `scan.sku_enabled`; a 1-8 digit short code (optionally `-S<n>`) expanded to `<PREFIX>-<8 digits>` when `scan.short_code_enabled` (prefix `scan.short_code_prefix`, else the brand's default prefix). Units follow the caller's `stock.read` reach like the barcode history (a distributor sees its dealers' units, TEC-216); a unit outside the reach, or any unknown code, is 404 SCAN_NO_MATCH without scan options. With `expect` or `warehouse_uuid`, the response includes a status (`ok`, `type_mismatch`, `not_bin`, `warehouse_mismatch`, `void`, or `unknown`). An empty code is 400 VALIDATION_ERROR.
          */
         post: operations["mobileResolveWarehouseScan"];
         delete?: never;
@@ -21044,6 +21085,8 @@ export interface components {
             name: string;
             address: string | null;
             active: boolean;
+            /** @description Require placed units for order assignment and warehouse transfer lines. */
+            require_location_placement: boolean;
             sort_order: number;
             /** Format: date-time */
             created_at: string;
@@ -21055,12 +21098,15 @@ export interface components {
             /** @description Defaults to the code. */
             name?: string;
             address?: string | null;
+            /** @default false */
+            require_location_placement: boolean;
         };
         WarehousePatch: {
             code?: components["schemas"]["WarehouseCode"];
             name?: string;
             address?: string | null;
             active?: boolean;
+            require_location_placement?: boolean;
         };
         WarehouseReorderInput: {
             uuids: string[];
@@ -21440,6 +21486,16 @@ export interface components {
         WarehouseScanInput: {
             /** @example OFW:LOC:IST-R1-A-01-03 */
             code: string;
+            /**
+             * @default any
+             * @enum {string}
+             */
+            expect: "any" | "location" | "bin" | "unit" | "product";
+            /**
+             * Format: uuid
+             * @description Expected warehouse; mismatched location returns warehouse_mismatch.
+             */
+            warehouse_uuid?: string;
         };
         WarehouseScanPathNode: {
             /** @enum {string} */
@@ -21499,9 +21555,14 @@ export interface components {
         };
         WarehouseScanResult: {
             /** @enum {string} */
-            type: "location" | "unit" | "product";
+            status: "ok" | "type_mismatch" | "not_bin" | "warehouse_mismatch" | "void" | "unknown";
+            /**
+             * @description Empty for unknown.
+             * @enum {string}
+             */
+            type: "location" | "unit" | "product" | "";
             /** @enum {string} */
-            matched_by: "location_qr" | "location_code" | "unit_qr" | "barcode" | "sku" | "short_code";
+            matched_by: "location_qr" | "location_code" | "unit_qr" | "barcode" | "sku" | "short_code" | "";
             /** @description The resolved full_code, barcode or SKU. */
             code: string;
             location: null | components["schemas"]["WarehouseScanLocation"];
@@ -39891,6 +39952,74 @@ export interface operations {
             422: components["responses"]["UnprocessableEntity"];
         };
     };
+    importWarehouseLocations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /**
+                     * @default xlsx
+                     * @enum {string}
+                     */
+                    format?: "csv" | "tsv" | "xlsx" | "json";
+                    /** @example tr */
+                    locale?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Import job created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeImportJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    warehouseLocationsImportSample: {
+        parameters: {
+            query?: {
+                format?: "csv" | "tsv" | "xlsx" | "json";
+                locale?: string;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sample file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     listWarehouseRooms: {
         parameters: {
             query?: never;
@@ -40560,6 +40689,7 @@ export interface operations {
     printLocationLabels: {
         parameters: {
             query?: {
+                warehouse?: string;
                 room?: string;
                 location?: string[];
                 template?: string;

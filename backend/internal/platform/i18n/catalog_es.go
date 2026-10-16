@@ -66,6 +66,8 @@ var esCatalog = map[string]string{
 	"users.status.pending":                             "Pendiente",
 	"export.document":                                  "Exportación",
 	"export.generated_at":                              "Generado",
+	"letterhead.tax_office":                            "Oficina tributaria",
+	"letterhead.tax_number":                            "NIF",
 	"export.title.platform.users":                      "Exportación de usuarios",
 	"export.title.platform.organizations":              "Exportación de organizaciones",
 	"export.title.platform.roles":                      "Exportación de roles",

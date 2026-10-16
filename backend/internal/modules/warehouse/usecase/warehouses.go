@@ -12,36 +12,39 @@ import (
 
 // Warehouse is the API view of a warehouse.
 type Warehouse struct {
-	UUID      uuid.UUID `json:"uuid"`
-	Code      string    `json:"code"`
-	Name      string    `json:"name"`
-	Address   *string   `json:"address"`
-	Active    bool      `json:"active"`
-	SortOrder int32     `json:"sort_order"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	UUID                     uuid.UUID `json:"uuid"`
+	Code                     string    `json:"code"`
+	Name                     string    `json:"name"`
+	Address                  *string   `json:"address"`
+	Active                   bool      `json:"active"`
+	RequireLocationPlacement bool      `json:"require_location_placement"`
+	SortOrder                int32     `json:"sort_order"`
+	CreatedAt                time.Time `json:"created_at"`
+	UpdatedAt                time.Time `json:"updated_at"`
 }
 
 func warehouseView(w db.Warehouse) Warehouse {
 	return Warehouse{
 		UUID: w.Uuid, Code: w.Code, Name: w.Name, Address: textPtr(w.Address),
-		Active: w.Active, SortOrder: w.SortOrder, CreatedAt: ts(w.CreatedAt), UpdatedAt: ts(w.UpdatedAt),
+		Active: w.Active, RequireLocationPlacement: w.RequireLocationPlacement, SortOrder: w.SortOrder, CreatedAt: ts(w.CreatedAt), UpdatedAt: ts(w.UpdatedAt),
 	}
 }
 
 // WarehouseInput creates a warehouse.
 type WarehouseInput struct {
-	Code    string
-	Name    string
-	Address *string
+	Code                     string
+	Name                     string
+	Address                  *string
+	RequireLocationPlacement bool
 }
 
 // WarehousePatch updates a warehouse; nil fields stay.
 type WarehousePatch struct {
-	Code    *string
-	Name    *string
-	Address *string
-	Active  *bool
+	Code                     *string
+	Name                     *string
+	Address                  *string
+	Active                   *bool
+	RequireLocationPlacement *bool
 }
 
 func addressArg(a *string) pgtype.Text {
@@ -106,7 +109,7 @@ func (s *Service) CreateWarehouse(ctx context.Context, c Caller, in WarehouseInp
 		return Warehouse{}, err
 	}
 	w, err := s.q.CreateWarehouse(ctx, db.CreateWarehouseParams{
-		OrganizationID: org, Code: code, Name: name, Address: addressArg(in.Address), Active: true,
+		OrganizationID: org, Code: code, Name: name, Address: addressArg(in.Address), Active: true, RequireLocationPlacement: in.RequireLocationPlacement,
 	})
 	if err != nil {
 		return Warehouse{}, mapDBError(err)
@@ -126,7 +129,7 @@ func (s *Service) UpdateWarehouse(ctx context.Context, c Caller, id uuid.UUID, p
 		return Warehouse{}, err
 	}
 	arg := db.UpdateWarehouseParams{
-		ID: w.ID, OrganizationID: org, Code: w.Code, Name: w.Name, Address: w.Address, Active: w.Active,
+		ID: w.ID, OrganizationID: org, Code: w.Code, Name: w.Name, Address: w.Address, Active: w.Active, RequireLocationPlacement: w.RequireLocationPlacement,
 	}
 	if p.Code != nil {
 		if arg.Code, err = normCode("code", *p.Code); err != nil {
@@ -143,6 +146,9 @@ func (s *Service) UpdateWarehouse(ctx context.Context, c Caller, id uuid.UUID, p
 	}
 	if p.Active != nil {
 		arg.Active = *p.Active
+	}
+	if p.RequireLocationPlacement != nil {
+		arg.RequireLocationPlacement = *p.RequireLocationPlacement
 	}
 	var out db.Warehouse
 	err = s.inTx(ctx, func(q *db.Queries) error {

@@ -170,5 +170,7 @@
   "codes.ORDER_NOT_SHIPPED": "订单尚未发货。",
   "codes.ORDER_RECEIPT_NOT_ALLOWED": "只能为已发货或已收货的订单上传签收单。",
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "文档存储或 PDF 服务暂不可用。",
-  "codes.ORDER_RECEIPT_FILE_INVALID": "签收单必须是 PDF、JPEG、PNG 或 WebP（最大 10 MB）。"
+  "codes.ORDER_RECEIPT_FILE_INVALID": "签收单必须是 PDF、JPEG、PNG 或 WebP（最大 10 MB）。",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "分配前请将此货品放置到仓库库位。",
+  "page_forbidden_body": "您无权查看此页面。"
 }

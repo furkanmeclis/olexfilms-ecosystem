@@ -66,6 +66,8 @@ var bgCatalog = map[string]string{
 	"users.status.pending":                             "В очакване",
 	"export.document":                                  "Експорт",
 	"export.generated_at":                              "Генерирано",
+	"letterhead.tax_office":                            "Данъчна служба",
+	"letterhead.tax_number":                            "ЕИК",
 	"export.title.platform.users":                      "Експорт на потребители",
 	"export.title.platform.organizations":              "Експорт на организации",
 	"export.title.platform.roles":                      "Експорт на роли",

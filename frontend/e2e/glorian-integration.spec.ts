@@ -179,7 +179,7 @@ test("glorian admin: masked key, test, replay, reconcile drift", async ({
     },
   );
 
-  await page.goto("/platform/integrations/glorian");
+  await page.goto("/platform/settings/integrations/glorian");
   await expect(
     page.getByRole("heading", { name: "Glorian integration", level: 1 }),
   ).toBeVisible();

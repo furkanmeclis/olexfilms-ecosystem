@@ -87,5 +87,18 @@
   "nav_service_catalog": "Xidmət kataloqu",
   "nav_service_subscriptions": "Xidmət abunəlikləri",
   "nav_service_subscription_cancels": "Ləğv sorğuları",
-  "nav_review_questions": "Qiymətləndirmə sualları"
+  "nav_review_questions": "Qiymətləndirmə sualları",
+  "settings_description": "Təşkilat və sistem ayarlarını buradan idarə edin.",
+  "settings_menu": "Ayarlar menyusu",
+  "settings_empty": "Görə biləcəyiniz ayar yoxdur.",
+  "settings_group_access": "Giriş və təhlükəsizlik",
+  "settings_group_integrations": "İnteqrasiyalar",
+  "settings_group_system": "Modullar və sistem",
+  "settings_group_catalogs": "Kataloqlar",
+  "settings_group_regional": "Region və qiymət",
+  "settings_group_templates": "Şablonlar",
+  "settings_group_data": "Məlumat və monitorinq",
+  "settings_group_organization": "Təşkilat",
+  "settings_group_operations": "Əməliyyatlar",
+  "settings_group_ai": "Süni intellekt"
 }

@@ -170,5 +170,7 @@
   "codes.ORDER_NOT_SHIPPED": "Die Bestellung wurde noch nicht versandt.",
   "codes.ORDER_RECEIPT_NOT_ALLOWED": "Ein Empfangsbeleg kann nur an eine versandte oder empfangene Bestellung angehängt werden.",
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Dokumentenspeicher oder PDF-Dienst ist gerade nicht verfügbar.",
-  "codes.ORDER_RECEIPT_FILE_INVALID": "Der Empfangsbeleg muss PDF, JPEG, PNG oder WebP sein (bis 10 MB)."
+  "codes.ORDER_RECEIPT_FILE_INVALID": "Der Empfangsbeleg muss PDF, JPEG, PNG oder WebP sein (bis 10 MB).",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Lagern Sie diese Einheit vor der Zuweisung ein.",
+  "page_forbidden_body": "Sie haben keine Berechtigung, diese Seite anzuzeigen."
 }

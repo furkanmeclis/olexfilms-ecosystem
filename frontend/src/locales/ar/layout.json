@@ -87,5 +87,18 @@
   "nav_service_catalog": "كتالوج الخدمات",
   "nav_service_subscriptions": "اشتراكات الخدمات",
   "nav_service_subscription_cancels": "طلبات الإلغاء",
-  "nav_review_questions": "أسئلة التقييم"
+  "nav_review_questions": "أسئلة التقييم",
+  "settings_description": "أدر إعدادات المؤسسة والنظام من هنا.",
+  "settings_menu": "قائمة الإعدادات",
+  "settings_empty": "لا توجد إعدادات يمكنك عرضها.",
+  "settings_group_access": "الوصول والأمان",
+  "settings_group_integrations": "التكاملات",
+  "settings_group_system": "الوحدات والنظام",
+  "settings_group_catalogs": "الكتالوجات",
+  "settings_group_regional": "المناطق والأسعار",
+  "settings_group_templates": "القوالب",
+  "settings_group_data": "البيانات والمراقبة",
+  "settings_group_organization": "المؤسسة",
+  "settings_group_operations": "العمليات",
+  "settings_group_ai": "الذكاء الاصطناعي"
 }

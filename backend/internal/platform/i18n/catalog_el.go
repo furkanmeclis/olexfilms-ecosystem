@@ -66,6 +66,8 @@ var elCatalog = map[string]string{
 	"users.status.pending":                             "Σε αναμονή",
 	"export.document":                                  "Εξαγωγή",
 	"export.generated_at":                              "Δημιουργήθηκε",
+	"letterhead.tax_office":                            "ΔΟΥ",
+	"letterhead.tax_number":                            "ΑΦΜ",
 	"export.title.platform.users":                      "Εξαγωγή χρηστών",
 	"export.title.platform.organizations":              "Εξαγωγή οργανισμών",
 	"export.title.platform.roles":                      "Εξαγωγή ρόλων",

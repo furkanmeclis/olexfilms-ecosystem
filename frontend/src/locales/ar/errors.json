@@ -170,5 +170,7 @@
   "codes.ORDER_NOT_SHIPPED": "لم يُشحن الطلب بعد.",
   "codes.ORDER_RECEIPT_NOT_ALLOWED": "لا يمكن إرفاق إيصال الاستلام إلا بطلب مشحون أو مستلم.",
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "تخزين المستندات أو خدمة PDF غير متاحة حالياً.",
-  "codes.ORDER_RECEIPT_FILE_INVALID": "يجب أن يكون إيصال الاستلام PDF أو JPEG أو PNG أو WebP (حتى 10 ميغابايت)."
+  "codes.ORDER_RECEIPT_FILE_INVALID": "يجب أن يكون إيصال الاستلام PDF أو JPEG أو PNG أو WebP (حتى 10 ميغابايت).",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "ضع هذه الوحدة في موقع بالمستودع قبل تخصيصها.",
+  "page_forbidden_body": "ليست لديك صلاحية لعرض هذه الصفحة."
 }

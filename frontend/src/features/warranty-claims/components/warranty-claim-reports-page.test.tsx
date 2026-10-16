@@ -322,7 +322,7 @@ describe("WarrantyClaimReportsPage", () => {
     );
     expect(
       $("[data-testid=claim-report-export-link]")?.getAttribute("href"),
-    ).toBe("/t/dist-x/exports");
+    ).toBe("/t/dist-x/settings/exports");
 
     await click($("[data-testid=claim-report-tab-parts]"));
     await select($("[data-testid=claim-report-export-format]"), "csv");

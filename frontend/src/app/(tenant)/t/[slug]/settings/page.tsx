@@ -1,9 +1,15 @@
 "use client";
 
-import { SettingsPage } from "@/features/io";
 import { useParams } from "next/navigation";
+
+import { SettingsIndexPage } from "@/components/layout/settings-layout";
 
 export default function Page() {
   const params = useParams<{ slug: string }>();
-  return <SettingsPage scope="tenant" slug={String(params.slug ?? "")} />;
+  return (
+    <SettingsIndexPage
+      variant="tenant"
+      tenantSlug={String(params.slug ?? "")}
+    />
+  );
 }

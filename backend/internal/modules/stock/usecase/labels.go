@@ -150,6 +150,7 @@ func (s *Labels) printable(ctx context.Context, c Caller, org int64, u db.Unit) 
 type LocationPrintInput struct {
 	LocationUUIDs []uuid.UUID
 	RoomUUID      *uuid.UUID
+	WarehouseUUID *uuid.UUID
 	TemplateUUID  *uuid.UUID
 }
 
@@ -161,6 +162,26 @@ func (s *Labels) PrintLocations(ctx context.Context, c Caller, in LocationPrintI
 		return nil, err
 	}
 	var rows []db.WarehouseLocation
+	if in.WarehouseUUID != nil {
+		warehouse, err := s.q.GetWarehouseByUUID(ctx, db.GetWarehouseByUUIDParams{Uuid: *in.WarehouseUUID, OrganizationID: org})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		if err != nil {
+			return nil, fmt.Errorf("stock: warehouse: %w", err)
+		}
+		rooms, err := s.q.ListRooms(ctx, db.ListRoomsParams{WarehouseID: warehouse.ID, OrganizationID: org})
+		if err != nil {
+			return nil, fmt.Errorf("stock: rooms: %w", err)
+		}
+		for _, room := range rooms {
+			locations, err := s.q.ListRoomLocations(ctx, db.ListRoomLocationsParams{RoomID: i8(room.ID), OrganizationID: org})
+			if err != nil {
+				return nil, fmt.Errorf("stock: locations: %w", err)
+			}
+			rows = append(rows, locations...)
+		}
+	}
 	if in.RoomUUID != nil {
 		r, err := s.q.GetRoomByUUID(ctx, db.GetRoomByUUIDParams{Uuid: *in.RoomUUID, OrganizationID: org})
 		if errors.Is(err, pgx.ErrNoRows) {

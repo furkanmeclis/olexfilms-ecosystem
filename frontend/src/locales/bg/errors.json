@@ -170,5 +170,7 @@
   "codes.ORDER_NOT_SHIPPED": "Поръчката още не е експедирана.",
   "codes.ORDER_RECEIPT_NOT_ALLOWED": "Документ за получаване може да се прикачи само към експедирана или получена поръчка.",
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Хранилището за документи или PDF услугата не е достъпна.",
-  "codes.ORDER_RECEIPT_FILE_INVALID": "Документът за получаване трябва да е PDF, JPEG, PNG или WebP (до 10 MB)."
+  "codes.ORDER_RECEIPT_FILE_INVALID": "Документът за получаване трябва да е PDF, JPEG, PNG или WebP (до 10 MB).",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Разположете единицата в склада преди назначаване.",
+  "page_forbidden_body": "Нямате право да преглеждате тази страница."
 }

@@ -170,5 +170,7 @@
   "codes.ORDER_NOT_SHIPPED": "La commande n'a pas encore été expédiée.",
   "codes.ORDER_RECEIPT_NOT_ALLOWED": "Un accusé de réception ne peut être joint qu'à une commande expédiée ou reçue.",
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Le stockage des documents ou le moteur PDF est indisponible.",
-  "codes.ORDER_RECEIPT_FILE_INVALID": "L'accusé de réception doit être un PDF, JPEG, PNG ou WebP (10 Mo max.)."
+  "codes.ORDER_RECEIPT_FILE_INVALID": "L'accusé de réception doit être un PDF, JPEG, PNG ou WebP (10 Mo max.).",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Placez cette unité dans l’entrepôt avant de l’attribuer.",
+  "page_forbidden_body": "Vous n'êtes pas autorisé à consulter cette page."
 }

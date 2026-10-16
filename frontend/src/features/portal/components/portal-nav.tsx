@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BellRing,
   Bot,
   CalendarClock,
   Car,
@@ -11,6 +10,7 @@ import {
   Landmark,
   ShieldCheck,
   Store,
+  UserRound,
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
@@ -46,11 +46,8 @@ const ITEMS = [
     key: "portal.nav.contracts",
     icon: FileSignature,
   },
-  {
-    href: routes.portal.preferences,
-    key: "portal.nav.preferences",
-    icon: BellRing,
-  },
+  // TEC-771: preferences and contracts are linked from the profile too.
+  { href: routes.portal.profile, key: "portal.nav.profile", icon: UserRound },
 ] as const;
 
 const FLEET_ITEMS = [
@@ -80,11 +77,7 @@ const FLEET_ITEMS = [
     key: "portal.fleet.nav.reports",
     icon: FileText,
   },
-  {
-    href: routes.portal.preferences,
-    key: "portal.nav.preferences",
-    icon: BellRing,
-  },
+  { href: routes.portal.profile, key: "portal.nav.profile", icon: UserRound },
 ] as const;
 
 /** TEC-390: shown only while the assistant is on for the customer. */
@@ -101,6 +94,13 @@ export function isPortalNavActive(href: string, pathname: string): boolean {
     // A service detail is reached from a vehicle.
     return (
       pathname.startsWith(href) || pathname.startsWith("/portal/services/")
+    );
+  }
+  if (href === routes.portal.profile) {
+    // Notification preferences are part of the profile.
+    return (
+      pathname.startsWith(href) ||
+      pathname.startsWith(routes.portal.preferences)
     );
   }
   return pathname === href || pathname.startsWith(`${href}/`);

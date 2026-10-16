@@ -40,6 +40,8 @@ func LetterheadFromOrganization(org db.Organization, layout db.AppSetting) Lette
 		Website:      strings.TrimSpace(org.Website),
 		FooterText:   strings.TrimSpace(org.FooterText),
 		PaperSize:    paper,
+		TaxOffice:    strings.TrimSpace(org.InvoiceTaxOffice.String),
+		TaxNumber:    strings.TrimSpace(org.InvoiceVkn.String),
 	}
 }
 

@@ -170,5 +170,7 @@
   "codes.ORDER_NOT_SHIPPED": "Sifariş hələ göndərilməyib.",
   "codes.ORDER_RECEIPT_NOT_ALLOWED": "Təhvil sənədi yalnız göndərilmiş və ya təhvil alınmış sifarişə əlavə oluna bilər.",
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Sənəd anbarı və ya PDF xidməti hazırda əlçatan deyil.",
-  "codes.ORDER_RECEIPT_FILE_INVALID": "Təhvil sənədi PDF, JPEG, PNG və ya WebP olmalıdır (10 MB-a qədər)."
+  "codes.ORDER_RECEIPT_FILE_INVALID": "Təhvil sənədi PDF, JPEG, PNG və ya WebP olmalıdır (10 MB-a qədər).",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Təyinatdan əvvəl bu vahidi anbarda yerləşdirin.",
+  "page_forbidden_body": "Bu səhifəyə baxmaq icazəniz yoxdur."
 }

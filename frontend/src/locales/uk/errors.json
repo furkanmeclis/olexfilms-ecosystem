@@ -170,5 +170,7 @@
   "codes.ORDER_NOT_SHIPPED": "Замовлення ще не відвантажено.",
   "codes.ORDER_RECEIPT_NOT_ALLOWED": "Документ про отримання можна додати лише до відвантаженого або отриманого замовлення.",
   "codes.ORDER_DOCUMENT_UNAVAILABLE": "Сховище документів або PDF-сервіс зараз недоступні.",
-  "codes.ORDER_RECEIPT_FILE_INVALID": "Документ про отримання має бути PDF, JPEG, PNG або WebP (до 10 МБ)."
+  "codes.ORDER_RECEIPT_FILE_INVALID": "Документ про отримання має бути PDF, JPEG, PNG або WebP (до 10 МБ).",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Розмістіть цю одиницю на складі перед призначенням.",
+  "page_forbidden_body": "У вас немає прав на перегляд цієї сторінки."
 }

@@ -66,6 +66,8 @@ var zhCNCatalog = map[string]string{
 	"users.status.pending":                             "待处理",
 	"export.document":                                  "导出",
 	"export.generated_at":                              "生成时间",
+	"letterhead.tax_office":                            "税务局",
+	"letterhead.tax_number":                            "税号",
 	"export.title.platform.users":                      "用户导出",
 	"export.title.platform.organizations":              "组织导出",
 	"export.title.platform.roles":                      "角色导出",

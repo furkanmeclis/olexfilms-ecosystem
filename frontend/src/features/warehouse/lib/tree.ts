@@ -97,3 +97,16 @@ export function branchUuids(roots: LocationNode[]): string[] {
   walk(roots);
   return out;
 }
+
+/** The node with `uuid` in the tree (depth first), or null. */
+export function findNode(
+  roots: LocationNode[],
+  uuid: string,
+): LocationNode | null {
+  for (const n of roots) {
+    if (n.uuid === uuid) return n;
+    const hit = findNode(n.children, uuid);
+    if (hit) return hit;
+  }
+  return null;
+}

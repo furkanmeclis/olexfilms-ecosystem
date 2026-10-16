@@ -17,6 +17,9 @@ export type WarehouseLocationType = Schemas["WarehouseLocationType"];
 export type WarehouseLocationInput = Schemas["WarehouseLocationInput"];
 export type WarehouseLocationPatch = Schemas["WarehouseLocationPatch"];
 export type WarehouseScanResult = Schemas["WarehouseScanResult"];
+export type WarehouseGenerateInput = Schemas["WarehouseGenerateInput"];
+export type WarehouseGenerateLevel = Schemas["WarehouseGenerateLevel"];
+export type WarehouseGenerateResult = Schemas["WarehouseGenerateResult"];
 export type StockEntry = Schemas["StockEntry"];
 export type StockEntryLine = Schemas["StockEntryLine"];
 export type StockEntryInput = Schemas["StockEntryInput"];
@@ -109,10 +112,12 @@ export function bffUrl(path: string): string {
 /** QR label sheet of a room's locations and/or the given locations. */
 export function locationLabelsPath(opts: {
   room?: string;
+  warehouse?: string;
   locations?: string[];
 }): string {
   const params = new URLSearchParams();
   if (opts.room) params.set("room", opts.room);
+  if (opts.warehouse) params.set("warehouse", opts.warehouse);
   for (const uuid of opts.locations ?? []) params.append("location", uuid);
   return `/v1/warehouse/labels/locations.pdf?${params.toString()}`;
 }
@@ -199,10 +204,31 @@ export const warehouseService = {
     );
   },
 
+  /** One tree level grid under a room or a location (TEC-764 wizard). */
+  generateLocations(body: WarehouseGenerateInput) {
+    return platformRequest<WarehouseGenerateResult>(
+      "POST",
+      "/v1/warehouse/locations/generate",
+      { body },
+    );
+  },
+  /** sort_order = position in `uuids` (TEC-764 drag and drop). */
+  reorder(kind: "warehouses" | "rooms" | "locations", uuids: string[]) {
+    return platformRequest<void>("POST", `/v1/warehouse/${kind}/reorder`, {
+      body: { uuids },
+    });
+  },
+
   // --- Universal scan (TEC-203) ---------------------------------------------
-  scan(code: string) {
+  scan(
+    code: string,
+    options?: {
+      expect?: "any" | "location" | "bin" | "unit" | "product";
+      warehouse_uuid?: string;
+    },
+  ) {
     return platformRequest<WarehouseScanResult>("POST", "/v1/warehouse/scan", {
-      body: { code },
+      body: { code, ...options },
     });
   },
 

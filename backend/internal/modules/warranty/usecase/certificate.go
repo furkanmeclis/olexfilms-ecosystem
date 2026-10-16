@@ -521,7 +521,7 @@ func CertificateHTML(c Certificate, loc i18n.Locale, title string) (string, erro
 	}
 	b.WriteString(`</ol><p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
 		esc(pdfrender.IssuedAt(c.GeneratedAt, pdfrender.Zone(c.Timezone))) + `</p>`)
-	b.WriteString(ioengine.LetterheadFooterHTML(&lh))
+	b.WriteString(ioengine.LetterheadFooterHTMLFor(&lh, string(loc)))
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: lh.PrimaryColor}.HTML(), nil
 }
 
