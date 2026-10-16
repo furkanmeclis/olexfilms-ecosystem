@@ -423,9 +423,9 @@ func checkSerialStock(ctx context.Context, q *db.Queries, u db.Unit, seller int6
 	st, err := q.GetUnitCurrentState(ctx, u.ID)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
-		// A newly printed label may be selected before its stock entry. Shipment
-		// still requires an available/placed ledger state.
-		if u.Status != string(ledger.StatusPrinted) || u.OrganizationID != seller {
+		// A newly generated (reserved) or printed label may be selected before
+		// its stock entry. Shipment still requires an available/placed ledger state.
+		if (u.Status != string(ledger.StatusReserved) && u.Status != string(ledger.StatusPrinted)) || u.OrganizationID != seller {
 			return ErrUnitNotAvailable
 		}
 	case err != nil:

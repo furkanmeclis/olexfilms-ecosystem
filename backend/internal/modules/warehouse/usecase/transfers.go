@@ -562,8 +562,9 @@ func (s *WarehouseTransfers) AddTransferItems(ctx context.Context, c EntryCaller
 			if source.RequireLocationPlacement && u.Status != string(ledger.StatusPlaced) {
 				return ErrLocationPlacementRequired
 			}
-			// Selection may precede the stock entry; shipping still checks placement.
-			printedHere := u.Status == string(ledger.StatusPrinted) && u.OrganizationID == org
+			// Selection may precede the stock entry (a reserved or printed label
+			// of this org); shipping still checks placement.
+			printedHere := (u.Status == string(ledger.StatusReserved) || u.Status == string(ledger.StatusPrinted)) && u.OrganizationID == org
 			if !printedHere {
 				st, err := onHand(ctx, q, u, org)
 				if err != nil {

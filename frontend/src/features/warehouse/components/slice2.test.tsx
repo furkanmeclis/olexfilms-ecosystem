@@ -134,7 +134,7 @@ beforeEach(() => {
         : {
             status: "ok",
             type: "unit",
-            unit: { status: "placed" },
+            unit: { status: "placed", barcode: code, unit_kind: "serial" },
             location: null,
           },
   );
@@ -168,10 +168,6 @@ beforeEach(() => {
     limit: 100,
     offset: 0,
   });
-  api.scan.mockImplementation(async (code: string) => ({
-    type: "unit",
-    unit: { barcode: code, unit_kind: "serial" },
-  }));
   catalog.listProducts.mockResolvedValue({
     items: [{ uuid: "p-1", sku: "PPF-190", name: "Olex PPF 190" }],
   });
@@ -277,6 +273,7 @@ describe("TransferDetailPage (TEC-232)", () => {
     api.getTransfer.mockResolvedValue(transfer());
     api.addTransferLines.mockResolvedValue(transfer());
     api.scan.mockImplementation(async (code: string) => ({
+      status: "ok",
       type: "unit",
       unit: { barcode: code, unit_kind: "fixed" },
       product: { uuid: "p-1", name: "Olex PPF 190" },
@@ -466,10 +463,12 @@ describe("BinMoveCard (TEC-232)", () => {
     api.scan.mockImplementation(async (code: string) =>
       code.startsWith("OFW:LOC:")
         ? {
+            status: "ok",
             type: "location",
             location: { uuid: "loc-dst", path: [{ uuid: "wh-1" }] },
           }
         : {
+            status: "ok",
             type: "unit",
             unit: { barcode: code, unit_kind: "fixed" },
             product: { uuid: "p-1", name: "Olex PPF 190" },
@@ -552,10 +551,12 @@ describe("BinMoveCard (TEC-232)", () => {
     api.scan.mockImplementation(async (code: string) =>
       code.startsWith("OFW:LOC:")
         ? {
+            status: "ok",
             type: "location",
             location: { uuid: "loc-dst", path: [{ uuid: "wh-1" }] },
           }
         : {
+            status: "ok",
             type: "unit",
             unit: { barcode: code, unit_kind: "fixed" },
             product: { uuid: "p-1", name: "Olex PPF 190" },
