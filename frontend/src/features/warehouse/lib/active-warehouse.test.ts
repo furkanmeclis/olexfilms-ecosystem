@@ -10,6 +10,7 @@ const wh = (uuid: string, member: boolean, isDefault = false) =>
     name: uuid,
     address: null,
     active: true,
+    require_location_placement: false,
     sort_order: 0,
     created_at: "",
     updated_at: "",

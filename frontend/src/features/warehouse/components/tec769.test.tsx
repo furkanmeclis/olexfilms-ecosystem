@@ -68,6 +68,7 @@ const w1 = {
   name: "Main",
   address: null,
   active: true,
+  require_location_placement: false,
   sort_order: 0,
   created_at: "",
   updated_at: "",
