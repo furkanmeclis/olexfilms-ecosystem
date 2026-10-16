@@ -348,20 +348,6 @@ export function LocationTreePage({ slug }: { slug: string }) {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <CardTitle>{t("warehouse.locations.warehouses")}</CardTitle>
-              {canWrite && warehouseUuid ? (
-                <LocationImportButton
-                  key={warehouseUuid}
-                  warehouseUuid={warehouseUuid}
-                  onComplete={() => {
-                    void qc.invalidateQueries({
-                      queryKey: warehouseKeys.rooms(warehouseUuid),
-                    });
-                    void qc.invalidateQueries({
-                      queryKey: ["warehouse", "locations"],
-                    });
-                  }}
-                />
-              ) : null}
               {canWrite ? (
                 <Button
                   type="button"
@@ -378,6 +364,22 @@ export function LocationTreePage({ slug }: { slug: string }) {
               ) : null}
             </CardHeader>
             <CardContent className="space-y-1">
+              {canWrite && warehouseUuid ? (
+                <div className="pb-3">
+                  <LocationImportButton
+                    key={warehouseUuid}
+                    warehouseUuid={warehouseUuid}
+                    onComplete={() => {
+                      void qc.invalidateQueries({
+                        queryKey: warehouseKeys.rooms(warehouseUuid),
+                      });
+                      void qc.invalidateQueries({
+                        queryKey: ["warehouse", "locations"],
+                      });
+                    }}
+                  />
+                </div>
+              ) : null}
               {warehouses.isError ? (
                 <ErrorState
                   title={t("common.error_generic")}
