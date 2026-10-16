@@ -49,6 +49,7 @@ import {
   branchUuids,
   buildLocationTree,
   filterLocationTree,
+  findNode,
   type LocationNode,
 } from "@/features/warehouse/lib/tree";
 import {
@@ -330,7 +331,10 @@ export function LocationTreePage({ slug }: { slug: string }) {
             aria-label={t("warehouse.bulk.open_under", { code: node.code })}
             title={t("warehouse.bulk.open_under", { code: node.code })}
             data-testid="location-bulk-under"
-            onClick={() => setBulk({ parent: node })}
+            // The full node: under a filter `node` holds only the matches.
+            onClick={() =>
+              setBulk({ parent: findNode(tree, node.uuid) ?? node })
+            }
           >
             <LayoutGrid className="size-4" />
           </Button>

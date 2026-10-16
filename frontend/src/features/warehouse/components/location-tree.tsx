@@ -153,6 +153,7 @@ function TreeRow({
               type="button"
               className="flex min-w-0 flex-1 items-center gap-2 text-start"
               onClick={() => onSelect?.(node)}
+              data-testid="location-select"
             >
               <Badge variant="secondary" className="shrink-0">
                 {t(`warehouse.type.${node.type}`)}
