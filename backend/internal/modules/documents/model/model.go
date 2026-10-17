@@ -228,6 +228,11 @@ var specs = map[string]KindSpec{
 		block("contract", "intake_photos_html", "Araç kabul fotoğrafları", "Vehicle intake photos"),
 	})},
 	KindOrderSlip: {Kind: KindOrderSlip, Variables: join(companyVars, customerVars, totalsVars, []Variable{
+		text("order", "order_status", "Durum", "Status", "Onaylandı", "Approved"),
+		text("order", "notes", "Notlar", "Notes", "Teslimat notu", "Delivery note"),
+		text("order", "seller_tax", "Satıcı vergi bilgileri", "Seller tax details", "1234567890", "1234567890"),
+		text("order", "buyer_tax", "Alıcı vergi bilgileri", "Buyer tax details", "1234567890", "1234567890"),
+		text("order", "issued_at", "Oluşturulma", "Issued at", "01.10.2026 14:30", "Oct 1, 2026 2:30 PM"),
 		text("order", "order_number", "Sipariş no", "Order number", "SIP-2026-000042", "ORD-2026-000042"),
 		text("order", "order_date", "Sipariş tarihi", "Order date", "01.10.2026", "Oct 1, 2026"),
 		text("order", "delivery_address", "Teslimat adresi", "Delivery address", "Organize Sanayi Böl. 5. Cd. No:12, Ankara", "Industrial Zone 5th St. No:12, Ankara"),

@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "تعذّر حفظ طريقة التسليم.",
   "delivery_methods.deleted": "تم حذف طريقة التسليم.",
   "delivery_methods.delete_failed": "تعذّر حذف طريقة التسليم.",
-  "delivery_methods.empty": "لا توجد طرق تسليم بعد."
+  "delivery_methods.empty": "لا توجد طرق تسليم بعد.",
+  "shipping.download_slip": "إيصال الطلب (PDF)"
 }

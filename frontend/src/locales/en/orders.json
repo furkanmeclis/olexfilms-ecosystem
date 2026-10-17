@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "The delivery method could not be saved.",
   "delivery_methods.deleted": "Delivery method deleted.",
   "delivery_methods.delete_failed": "The delivery method could not be deleted.",
-  "delivery_methods.empty": "No delivery methods yet."
+  "delivery_methods.empty": "No delivery methods yet.",
+  "shipping.download_slip": "Order Slip (PDF)"
 }

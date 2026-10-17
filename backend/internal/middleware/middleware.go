@@ -38,7 +38,7 @@ func Authenticate(tokens *jwt.Manager, loader IdentityLoader) func(http.Handler)
 			}
 
 			// Session realm (aud): portal and panel tokens never cross.
-			if !RealmAllows(claims.Realm(), r.URL.Path) {
+			if !RealmAllowsRequest(claims.Realm(), r) {
 				response.Error(w, r, http.StatusForbidden, response.CodeRealmForbidden,
 					"This session cannot access this resource")
 				return

@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "Die Versandart konnte nicht gespeichert werden.",
   "delivery_methods.deleted": "Versandart gelöscht.",
   "delivery_methods.delete_failed": "Die Versandart konnte nicht gelöscht werden.",
-  "delivery_methods.empty": "Noch keine Versandarten."
+  "delivery_methods.empty": "Noch keine Versandarten.",
+  "shipping.download_slip": "Bestellschein (PDF)"
 }

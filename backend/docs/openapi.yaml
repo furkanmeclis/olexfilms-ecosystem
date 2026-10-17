@@ -175,6 +175,19 @@ tags:
       otherwise 426 `MOBILE_API_VERSION_UNSUPPORTED`. Also the QR web sign-in
       (`/v1/auth/qr/*`).
 
+      Panel mirror: `/v1/mobile/panel/{path}` mirrors `/v1/{path}` with the
+      same method, query, body, response and organization/permission/feature/
+      step-up checks. Only `aud=mobile` tokens are accepted; panel and portal
+      tokens receive 403 `REALM_FORBIDDEN`. `X-Mobile-Api-Version` is required
+      as above. Allowed segment prefixes: services, service-pdfs,
+      warranty-certificates, customers, vehicles, warranties, warranty-claims,
+      orders, quotes, stock, stock-transfers, warehouse, measurements, reports,
+      search, notifications, appointments, catalog, vehicle-catalog,
+      plate-formats, performance, tasks, leads, pricing, certificates,
+      photo-standard, service-catalog, geo, announcements, stats and
+      tenant/organizations, tenant/modules, delivery-methods. Prefixes match whole segments and descendants;
+      all others return 404 `NOT_FOUND`. Mirror paths are not duplicated here.
+
       App version gate (TEC-236): the app sends its release in `X-App-Version`
       (e.g. `2.4.1`; without it a `OlexFilms/2.4.1` User-Agent token is read,
       tokens set by `MOBILE_APP_UA_PRODUCTS`). Below the minimum
@@ -24317,6 +24330,49 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/orders/{uuid}/order-slip.pdf:
+    get:
+      tags: [Orders]
+      operationId: downloadOrderSlip
+      summary: Download the order slip PDF (orders.read)
+      description: >-
+        Renders synchronously using the seller brand's active order_slip
+        template (including platform/language fallback), or the built-in
+        letterhead layout. Outside the orders.read scope returns 404.
+        Stored effective prices and order totals are used; per-line discount
+        and VAT are unavailable and shown as a dash in the default layout.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: lang
+          in: query
+          description: PDF language; defaults to the request language.
+          schema:
+            type: string
+            enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh_CN, az, ar]
+        - name: tz
+          in: query
+          description: IANA timezone for order and issued-at timestamps; defaults to seller timezone.
+          schema: { type: string, example: Europe/Istanbul }
+      responses:
+        "200":
+          description: Order slip PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: PDF renderer unavailable
+
   /v1/orders/{uuid}/shipping-document:
     post:
       tags: [Orders]
@@ -40485,7 +40541,7 @@ components:
       properties:
         phone: { type: string, description: E.164 phone from identify }
         code: { type: string, pattern: '^[0-9]{6}$' }
-        totp_code: { type: string, description: Authenticator or recovery code, as in password login }
+        totp_code: { type: string, description: "Authenticator or recovery code, as in password login" }
         organization_slug: { type: string, description: Staff only; ignored for customer sessions }
         locale: { type: string, description: Locale of an account created for an unknown phone (else Accept-Language) }
         device: { $ref: "#/components/schemas/MobileDevice" }
