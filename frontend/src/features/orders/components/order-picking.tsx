@@ -339,7 +339,7 @@ export function ShippingCard({
   canShip: boolean;
   canReceive: boolean;
 }) {
-  const { t } = useLocale();
+  const { t, locale, timeZone } = useLocale();
   const store = useStoreOrder();
   const fileRef = useRef<HTMLInputElement>(null);
   const seller = order.role === "seller" && canShip;
@@ -357,6 +357,20 @@ export function ShippingCard({
         blob,
         filename ??
           `${kind}-${order.order_no}.${kind === "shipping" ? "pdf" : "bin"}`,
+      );
+    },
+    onError: () => toast.error(t("orders.shipping.download_failed")),
+  });
+  const slip = useMutation({
+    mutationFn: async () => {
+      const { blob, filename } = await ordersService.downloadOrderSlip(
+        order.uuid,
+        locale,
+        timeZone,
+      );
+      triggerBrowserDownload(
+        blob,
+        filename ?? `order-slip-${order.order_no}.pdf`,
       );
     },
     onError: () => toast.error(t("orders.shipping.download_failed")),
@@ -383,7 +397,7 @@ export function ShippingCard({
         orderErrorMessage(err, t, t("orders.shipping.receipt_failed")),
       ),
   });
-  if (!SHIPPED.has(order.status) && !order.delivery_method) return null;
+  const hasShipping = SHIPPED.has(order.status) || !!order.delivery_method;
   return (
     <Card data-testid="order-shipping">
       <CardHeader>
@@ -393,37 +407,50 @@ export function ShippingCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <dl className="grid gap-3 sm:grid-cols-2">
-          <Row label={t("orders.shipping.method")}>
-            <span data-testid="shipping-method">
-              {order.delivery_method?.name ?? "—"}
-            </span>
-          </Row>
-          <Row label={t("orders.shipping.tracking_no")}>
-            {order.tracking_no ? (
-              order.tracking_url ? (
-                <a
-                  href={order.tracking_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary inline-flex items-center gap-1 underline"
-                  dir="ltr"
-                  data-testid="tracking-link"
-                >
-                  {order.tracking_no}
-                  <ExternalLink className="size-3" />
-                </a>
+        {hasShipping ? (
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <Row label={t("orders.shipping.method")}>
+              <span data-testid="shipping-method">
+                {order.delivery_method?.name ?? "—"}
+              </span>
+            </Row>
+            <Row label={t("orders.shipping.tracking_no")}>
+              {order.tracking_no ? (
+                order.tracking_url ? (
+                  <a
+                    href={order.tracking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary inline-flex items-center gap-1 underline"
+                    dir="ltr"
+                    data-testid="tracking-link"
+                  >
+                    {order.tracking_no}
+                    <ExternalLink className="size-3" />
+                  </a>
+                ) : (
+                  <span dir="ltr" data-testid="tracking-no">
+                    {order.tracking_no}
+                  </span>
+                )
               ) : (
-                <span dir="ltr" data-testid="tracking-no">
-                  {order.tracking_no}
-                </span>
-              )
-            ) : (
-              "—"
-            )}
-          </Row>
-        </dl>
+                "—"
+              )}
+            </Row>
+          </dl>
+        ) : null}
         <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            data-testid="order-slip-download"
+            disabled={slip.isPending}
+            onClick={() => slip.mutate()}
+          >
+            <Download className="size-4" />
+            {t("orders.shipping.download_slip")}
+          </Button>
           {order.has_shipping_document ? (
             <Button
               type="button"

@@ -105,6 +105,38 @@ func (e *env) viewer() model.Viewer {
 	return model.Viewer{UserID: 0, OrganizationID: e.org.ID, BrandID: e.brand.ID}
 }
 
+func TestOrderSlipTemplateHTML(t *testing.T) {
+	e := newEnv(t, nil, 0)
+	ctx := context.Background()
+	draft, err := e.svc.SaveDraft(ctx, 0, SaveInput{
+		Kind: model.KindOrderSlip, BrandSlug: "olex", Language: "az",
+		Name: "tec88-test order slip", HTML: `<h1>Brand slip {{order_number}}</h1>{{items_table}}<p>{{notes}}</p>`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.Publish(ctx, draft.UUID); err != nil {
+		t.Fatal(err)
+	}
+	out, err := e.svc.TemplateHTML(ctx, model.KindOrderSlip, e.brand.ID, "az", map[string]string{
+		"order_number": "ORD-772", "items_table": `<table><tr><td>Film</td></tr></table>`, "notes": `<script>secret</script>`,
+	}, "Order slip", "#123456")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Brand slip ORD-772", "<td>Film</td>", "&lt;script&gt;secret&lt;/script&gt;", "--primary:#123456"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("template misses %q", want)
+		}
+	}
+	// The platform English fallback must still use Arabic direction for
+	// request-localized content (such as the generated items table).
+	out, err = e.svc.TemplateHTML(ctx, model.KindOrderSlip, e.brand.ID, "ar", map[string]string{"order_number": "ORD-773"}, "Order slip", "#123456")
+	if err != nil || !strings.Contains(out, `dir="rtl"`) || !strings.Contains(out, "ORD-773") {
+		t.Fatalf("Arabic fallback: %v; %s", err, out)
+	}
+}
+
 // publishBrandTemplate publishes an Olex brand override (the platform
 // defaults stay untouched, so tests do not interfere).
 func (e *env) publishBrandTemplate(lang, html string) model.TemplateView {

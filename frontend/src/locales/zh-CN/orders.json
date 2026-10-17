@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "配送方式保存失败。",
   "delivery_methods.deleted": "配送方式已删除。",
   "delivery_methods.delete_failed": "配送方式删除失败。",
-  "delivery_methods.empty": "暂无配送方式。"
+  "delivery_methods.empty": "暂无配送方式。",
+  "shipping.download_slip": "订单凭证 (PDF)"
 }

@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "Ο τρόπος παράδοσης δεν αποθηκεύτηκε.",
   "delivery_methods.deleted": "Ο τρόπος παράδοσης διαγράφηκε.",
   "delivery_methods.delete_failed": "Ο τρόπος παράδοσης δεν διαγράφηκε.",
-  "delivery_methods.empty": "Δεν υπάρχουν ακόμη τρόποι παράδοσης."
+  "delivery_methods.empty": "Δεν υπάρχουν ακόμη τρόποι παράδοσης.",
+  "shipping.download_slip": "Δελτίο παραγγελίας (PDF)"
 }

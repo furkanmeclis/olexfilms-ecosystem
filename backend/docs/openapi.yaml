@@ -24183,6 +24183,49 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/orders/{uuid}/order-slip.pdf:
+    get:
+      tags: [Orders]
+      operationId: downloadOrderSlip
+      summary: Download the order slip PDF (orders.read)
+      description: >-
+        Renders synchronously using the seller brand's active order_slip
+        template (including platform/language fallback), or the built-in
+        letterhead layout. Outside the orders.read scope returns 404.
+        Stored effective prices and order totals are used; per-line discount
+        and VAT are unavailable and shown as a dash in the default layout.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: lang
+          in: query
+          description: PDF language; defaults to the request language.
+          schema:
+            type: string
+            enum: [tr, en, bg, de, el, uk, ru, fr, es, it, zh_CN, az, ar]
+        - name: tz
+          in: query
+          description: IANA timezone for order and issued-at timestamps; defaults to seller timezone.
+          schema: { type: string, example: Europe/Istanbul }
+      responses:
+        "200":
+          description: Order slip PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: PDF renderer unavailable
+
   /v1/orders/{uuid}/shipping-document:
     post:
       tags: [Orders]

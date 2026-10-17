@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "Начинът на доставка не можа да се запази.",
   "delivery_methods.deleted": "Начинът на доставка е изтрит.",
   "delivery_methods.delete_failed": "Начинът на доставка не можа да се изтрие.",
-  "delivery_methods.empty": "Все още няма начини на доставка."
+  "delivery_methods.empty": "Все още няма начини на доставка.",
+  "shipping.download_slip": "Разписка за поръчка (PDF)"
 }

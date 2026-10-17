@@ -12593,6 +12593,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/orders/{uuid}/order-slip.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the order slip PDF (orders.read)
+         * @description Renders synchronously using the seller brand's active order_slip template (including platform/language fallback), or the built-in letterhead layout. Outside the orders.read scope returns 404. Stored effective prices and order totals are used; per-line discount and VAT are unavailable and shown as a dash in the default layout.
+         */
+        get: operations["downloadOrderSlip"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orders/{uuid}/shipping-document": {
         parameters: {
             query?: never;
@@ -52639,6 +52659,43 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    downloadOrderSlip: {
+        parameters: {
+            query?: {
+                /** @description PDF language; defaults to the request language. */
+                lang?: "tr" | "en" | "bg" | "de" | "el" | "uk" | "ru" | "fr" | "es" | "it" | "zh_CN" | "az" | "ar";
+                /** @description IANA timezone for order and issued-at timestamps; defaults to seller timezone. */
+                tz?: string;
+            };
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Order slip PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description PDF renderer unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     regenerateOrderShippingDocument: {
