@@ -1151,10 +1151,11 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		gateSettings = nil
 	}
 	appGate := middleware.MobileAppVersion(mobileAppPolicy(gateSettings, cfg.Mobile), cfg.Mobile.AppUserAgentProducts)
+	mobileMux := middleware.MobilePanelMirror(cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)(mux)
 
 	s.http = &http.Server{
 		Addr:         cfg.HTTP.Addr,
-		Handler:      middleware.ServerErrors(log)(middleware.RequestID(errtrack.Middleware(errtrack.Recover(log)(middleware.ResolveBrand(brandResolver)(middleware.ResolveLocale(appGate(mux))))))),
+		Handler:      middleware.ServerErrors(log)(middleware.RequestID(errtrack.Middleware(errtrack.Recover(log)(middleware.ResolveBrand(brandResolver)(middleware.ResolveLocale(appGate(mobileMux))))))),
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
 		IdleTimeout:  cfg.HTTP.IdleTimeout,

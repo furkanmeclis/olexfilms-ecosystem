@@ -423,3 +423,24 @@ func TestIntegrationQRLogin(t *testing.T) {
 	}
 	_, _ = it.pool.Exec(context.Background(), "DELETE FROM qr_login_challenges WHERE code = ANY($1)", []string{s.Code, r.Code, e.Code})
 }
+
+func TestIntegrationMobilePanelMirror(t *testing.T) {
+	it := newIntegration(t)
+	center := it.brandCenter("olex")
+	org := it.org("mobile-mirror", "dealer", center)
+	user, password := it.user("mobile-mirror-owner")
+	it.member(org, user, "owner")
+	t.Cleanup(func() {
+		_, _ = it.pool.Exec(context.Background(), "DELETE FROM refresh_tokens WHERE user_id = $1", user.ID)
+	})
+	mobile := it.mobileLogin(user.Email.String, password, org.Slug, "mirror-device")
+	code, env, _ := it.doMobile("GET", "/v1/mobile/panel/services?limit=1", mobile.AccessToken, "1", nil)
+	if code != http.StatusOK {
+		t.Fatalf("mobile mirror services = %d %s", code, errCode(env))
+	}
+	panel := it.loginOrg(user, password, org)
+	code, env, _ = it.doMobile("GET", "/v1/mobile/panel/services", panel, "1", nil)
+	if code != http.StatusForbidden || errCode(env) != "REALM_FORBIDDEN" {
+		t.Fatalf("panel on mirror = %d %s", code, errCode(env))
+	}
+}

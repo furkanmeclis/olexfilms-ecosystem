@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "Çatdırılma üsulu yadda saxlanılmadı.",
   "delivery_methods.deleted": "Çatdırılma üsulu silindi.",
   "delivery_methods.delete_failed": "Çatdırılma üsulu silinmədi.",
-  "delivery_methods.empty": "Hələ çatdırılma üsulu yoxdur."
+  "delivery_methods.empty": "Hələ çatdırılma üsulu yoxdur.",
+  "shipping.download_slip": "Sifariş qəbzi (PDF)"
 }

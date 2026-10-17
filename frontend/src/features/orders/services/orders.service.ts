@@ -153,6 +153,12 @@ export const ordersService = {
       `/v1/orders/${enc(uuid)}/shipping-document`,
     );
   },
+  downloadOrderSlip(uuid: string, lang: string, tz: string) {
+    const query = new URLSearchParams({ lang, tz });
+    return platformDownloadFile(
+      `/v1/orders/${enc(uuid)}/order-slip.pdf?${query}`,
+    );
+  },
   downloadDocument(uuid: string, kind: OrderDocumentKind) {
     return platformDownloadFile(`/v1/orders/${enc(uuid)}/documents/${kind}`);
   },

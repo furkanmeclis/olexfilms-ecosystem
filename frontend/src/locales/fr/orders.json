@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "Le mode de livraison n'a pas pu être enregistré.",
   "delivery_methods.deleted": "Mode de livraison supprimé.",
   "delivery_methods.delete_failed": "Le mode de livraison n'a pas pu être supprimé.",
-  "delivery_methods.empty": "Aucun mode de livraison."
+  "delivery_methods.empty": "Aucun mode de livraison.",
+  "shipping.download_slip": "Bon de commande (PDF)"
 }
