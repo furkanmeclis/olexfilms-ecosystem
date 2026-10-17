@@ -1,5 +1,4 @@
 import { Redirect } from 'expo-router';
-import { Building2 } from '@/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
@@ -15,7 +14,7 @@ export default function Entry() {
   return (
     <View className="flex-1 justify-center bg-background">
       <EmptyState
-        icon={Building2}
+        icon="building"
         title={t('spaces:none_title')}
         body={t('spaces:none_body')}
         action={{ title: t('settings:sign_out'), onPress: () => void useSession.getState().signOut() }}

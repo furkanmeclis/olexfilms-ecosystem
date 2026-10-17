@@ -1,9 +1,9 @@
-import type { LucideIcon } from '@/ui/icons';
 import { View } from 'react-native';
 
 import { Button } from './button';
 import { Icon } from './icon';
 import { Text } from './text';
+import type { IconName } from '@/ui/icons';
 
 /** Says what will appear here and how to add the first one. */
 export function EmptyState({
@@ -12,7 +12,7 @@ export function EmptyState({
   body,
   action,
 }: {
-  icon: LucideIcon;
+  icon: IconName;
   title: string;
   body?: string;
   action?: { title: string; onPress: () => void };
@@ -20,7 +20,7 @@ export function EmptyState({
   return (
     <View className="items-center gap-3 px-8 py-12">
       <View className="size-14 items-center justify-center rounded-xl bg-secondary">
-        <Icon as={icon} tone="primary" size={26} />
+        <Icon name={icon} tone="primary" size={26} />
       </View>
       <Text variant="headline" className="text-center">
         {title}

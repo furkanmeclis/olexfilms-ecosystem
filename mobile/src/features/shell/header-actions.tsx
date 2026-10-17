@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { Search } from '@/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -48,7 +47,7 @@ export function SearchButton() {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={t('search')} hitSlop={8} onPress={() => router.push('/search')}>
       <View className="size-8 items-center justify-center">
-        <Icon as={Search} tone="primary" />
+        <Icon name="search" tone="primary" />
       </View>
     </Pressable>
   );

@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { RefreshControl, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
-import { MapPin, ScanLine, Trash, Truck } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -119,7 +118,7 @@ export function TransferScreen() {
       <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         <Card>
           <View className="flex-row items-center gap-2 pb-1">
-            <Icon as={Truck} tone="primary" size={18} />
+            <Icon name="truck" tone="primary" size={18} />
             <Text variant="headline" className="flex-1" numberOfLines={2}>
               {x.from_warehouse.name} → {x.to_warehouse.name}
             </Text>
@@ -137,7 +136,7 @@ export function TransferScreen() {
           <View className="gap-2">
             {draft ? (
               <>
-                <Button size="lg" title={t('m.scan_units')} icon={<Icon as={ScanLine} tone="primary-foreground" />} onPress={() => setScanning('add')} />
+                <Button size="lg" title={t('m.scan_units')} icon={<Icon name="scan" tone="primary-foreground" />} onPress={() => setScanning('add')} />
                 <View className="flex-row gap-2">
                   <Button
                     className="flex-1"
@@ -167,7 +166,7 @@ export function TransferScreen() {
                 <Button
                   size="lg"
                   title={t('m.scan_to_receive')}
-                  icon={<Icon as={MapPin} tone="primary-foreground" />}
+                  icon={<Icon name="location" tone="primary-foreground" />}
                   onPress={() => setScanning('receive')}
                 />
                 <View className="flex-row gap-2">
@@ -229,7 +228,7 @@ export function TransferScreen() {
                 </View>
                 {write && draft ? (
                   <IconButton
-                    icon={Trash}
+                    icon="delete"
                     tone="destructive"
                     label={t('entry.remove_line', { barcode: l.barcode })}
                     busy={busy === `del:${l.uuid}`}

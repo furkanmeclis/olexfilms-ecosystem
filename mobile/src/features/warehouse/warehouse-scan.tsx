@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Flashlight, Keyboard, X } from '@/ui/icons';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
@@ -22,6 +21,7 @@ import { BARCODE_TYPES } from './continuous-scanner';
 import { alertError, go, whError } from './format';
 import { ScanResultCard } from './scan-result-card';
 import { WarehouseChip } from './warehouse-picker';
+import type { IconName } from '@/ui/icons';
 
 const REPEAT_MS = 2500;
 
@@ -152,8 +152,8 @@ export function WarehouseScan() {
         <View className="flex-1 flex-row">
           <WarehouseChip />
         </View>
-        <OverlayButton label={t('m.torch')} active={torch} onPress={() => setTorch((v) => !v)} icon={Flashlight} />
-        <OverlayButton label={t('m.type_code')} active={typing} onPress={() => setTyping((v) => !v)} icon={Keyboard} />
+        <OverlayButton label={t('m.torch')} active={torch} onPress={() => setTorch((v) => !v)} icon="flashlight" />
+        <OverlayButton label={t('m.type_code')} active={typing} onPress={() => setTyping((v) => !v)} icon="keyboard" />
       </View>
 
       {state.kind === 'idle' && !typing ? (
@@ -225,7 +225,7 @@ export function WarehouseScan() {
                     last.current = { code: '', at: 0 };
                   }}
                   className="size-8 items-center justify-center rounded-full bg-secondary">
-                  <Icon as={X} size={16} />
+                  <Icon name="close" size={16} />
                 </Pressable>
               </View>
 
@@ -306,12 +306,12 @@ function OverlayButton({
   label,
   active,
   onPress,
-  icon: Glyph,
+  icon,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
-  icon: typeof X;
+  icon: IconName;
 }) {
   return (
     <Pressable
@@ -321,7 +321,7 @@ function OverlayButton({
       hitSlop={6}
       onPress={onPress}
       className={cn('size-10 items-center justify-center rounded-full', active ? 'bg-white' : 'bg-black/50')}>
-      {active ? <Icon as={Glyph} tone="primary" size={20} /> : <Glyph size={20} color="#ffffff" strokeWidth={2} />}
+      <Icon name={icon} tone={active ? 'primary' : 'on-media'} size={20} />
     </Pressable>
   );
 }

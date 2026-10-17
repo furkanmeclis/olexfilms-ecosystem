@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import { MapPin, ScanLine } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -88,13 +87,13 @@ export function MoveScreen() {
         </Text>
         <Card>
           <View className="flex-row items-center gap-2">
-            <Icon as={MapPin} tone="primary" size={18} />
+            <Icon name="location" tone="primary" size={18} />
             <Text variant="headline" className="flex-1">
               {target ? t('m.target_bin', { location: target.code }) : t('order_place.no_target')}
             </Text>
           </View>
         </Card>
-        <Button size="lg" title={t('m.scan_units')} icon={<Icon as={ScanLine} tone="primary-foreground" />} onPress={() => setScanning(true)} />
+        <Button size="lg" title={t('m.scan_units')} icon={<Icon name="scan" tone="primary-foreground" />} onPress={() => setScanning(true)} />
         {moved.length ? (
           <>
             <SectionHeader title={t('move.done', { count: moved.length, location: target?.code ?? '' })} />

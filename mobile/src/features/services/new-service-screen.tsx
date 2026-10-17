@@ -11,7 +11,6 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
-import { CarFront, Check, Plus, UserRound } from '@/ui/icons';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -19,6 +18,7 @@ import { Text } from '@/ui/text';
 
 import { type CustomerSummary, fullName, useDebounced, useLinks, type Vehicle, vehicleLabel } from './lib';
 import { errorText, ListSkeleton, SearchField, Section } from './ui';
+import type { IconName } from '@/ui/icons';
 
 type Step = 'customer' | 'vehicle' | 'details';
 const STEPS: Step[] = ['customer', 'vehicle', 'details'];
@@ -114,17 +114,17 @@ export function NewServiceScreen() {
         {step === 'details' && customer && vehicle ? (
           <View className="gap-4">
             <Section>
-              <Summary icon={UserRound} title={fullName(customer)} subtitle={customer.phone ?? ''} onPress={() => setStep('customer')} />
+              <Summary icon="customer" title={fullName(customer)} subtitle={customer.phone ?? ''} onPress={() => setStep('customer')} />
               <Summary
-                icon={CarFront}
+                icon="vehicle"
                 title={vehicle.plate ?? ''}
                 subtitle={vehicleLabel(vehicle.car_brand?.name, vehicle.car_model?.name, vehicle.model_year)}
                 onPress={() => setStep('vehicle')}
                 last
               />
             </Section>
-            <Input label={t('km')} keyboardType="number-pad" value={km} onChangeText={setKm} />
-            <Input label={t('notes')} value={notes} onChangeText={setNotes} multiline className="min-h-24 py-3" />
+            <Input label={t('km')} placeholder={t('placeholder_km', { ns: 'common' })} keyboardType="number-pad" value={km} onChangeText={setKm} />
+            <Input label={t('notes')} placeholder={t('placeholder_notes')} value={notes} onChangeText={setNotes} multiline className="min-h-24 py-3" />
             <View className="flex-row items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3">
               <View className="flex-1 gap-0.5">
                 <Text variant="body">{t('has_measurement')}</Text>
@@ -159,7 +159,7 @@ function Summary({
   onPress,
   last,
 }: {
-  icon: typeof UserRound;
+  icon: IconName;
   title: string;
   subtitle: string;
   onPress: () => void;
@@ -171,7 +171,7 @@ function Summary({
       accessibilityRole="button"
       onPress={onPress}
       className={cn('flex-row items-center gap-3 px-4 py-3 active:bg-muted', !last && 'border-b border-border')}>
-      <Icon as={icon} tone="primary" size={20} />
+      <Icon name={icon} tone="primary" size={20} />
       <View className="flex-1 gap-0.5">
         <Text variant="body" numberOfLines={1}>
           {title}
@@ -221,7 +221,7 @@ function PickRow({
           </Text>
         ) : null}
       </View>
-      {selected ? <Icon as={Check} tone="primary" size={18} /> : null}
+      {selected ? <Icon name="check" tone="primary" size={18} /> : null}
     </Pressable>
   );
 }
@@ -276,7 +276,7 @@ function CustomerStep({ selected, onPick }: { selected: PickedCustomer | null; o
         <Button
           title={t('customer_new')}
           variant="outline"
-          icon={<Icon as={Plus} tone="primary" size={18} />}
+          icon={<Icon name="add" tone="primary" size={18} />}
           onPress={() => setCreating(true)}
         />
       ) : null}
@@ -330,14 +330,14 @@ function NewCustomerForm({
         control={form.control}
         name="name"
         render={({ field }) => (
-          <Input label={t('first_name')} value={field.value} onChangeText={field.onChange} error={err('name')} autoCapitalize="words" />
+          <Input label={t('first_name')} placeholder={t('placeholder_first_name')} value={field.value} onChangeText={field.onChange} error={err('name')} autoCapitalize="words" />
         )}
       />
       <Controller
         control={form.control}
         name="surname"
         render={({ field }) => (
-          <Input label={t('surname')} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="words" />
+          <Input label={t('surname')} placeholder={t('placeholder_surname')} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="words" />
         )}
       />
       <Controller
@@ -346,6 +346,7 @@ function NewCustomerForm({
         render={({ field }) => (
           <Input
             label={t('phone')}
+            placeholder={t('placeholder_phone', { ns: 'common' })}
             value={field.value}
             onChangeText={field.onChange}
             error={err('phone')}
@@ -426,7 +427,7 @@ function VehicleStep({
         <Button
           title={t('vehicle_new')}
           variant={items.length ? 'outline' : 'primary'}
-          icon={<Icon as={Plus} tone={items.length ? 'primary' : 'primary-foreground'} size={18} />}
+          icon={<Icon name="add" tone={items.length ? 'primary' : 'primary-foreground'} size={18} />}
           onPress={() => setCreating(true)}
         />
       ) : null}
@@ -501,6 +502,7 @@ function NewVehicleForm({
         render={({ field }) => (
           <Input
             label={t('plate')}
+            placeholder={t('placeholder_plate', { ns: 'common' })}
             value={field.value}
             onChangeText={field.onChange}
             error={err('plate')}
@@ -520,6 +522,7 @@ function NewVehicleForm({
         render={({ field }) => (
           <Input
             label={t('model_year')}
+            placeholder={t('placeholder_year', { ns: 'common' })}
             value={field.value}
             onChangeText={field.onChange}
             error={err('year')}
@@ -534,6 +537,7 @@ function NewVehicleForm({
         render={({ field }) => (
           <Input
             label={t('vin_optional')}
+            placeholder={t('placeholder_vin', { ns: 'common' })}
             value={field.value}
             onChangeText={field.onChange}
             error={err('vin')}

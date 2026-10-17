@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
-import { Boxes, MapPin } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -47,7 +46,7 @@ export function StockProductScreen({ base }: { base: string }) {
             error={query.error}
             empty
             onRetry={() => void query.refetch()}
-            emptyIcon={Boxes}
+            emptyIcon="stock"
             emptyTitle={t('stock.list.empty_title')}
           />
         }
@@ -78,7 +77,7 @@ export function UnitRow({ unit, onPress }: { unit: StockUnitRow; onPress: () => 
       </View>
       <View className="flex-row items-center gap-2">
         <StatusPill tone={unitStatusTone(unit.status)} label={t(`stock.status.${unit.status}`)} />
-        <Icon as={MapPin} tone="muted-foreground" size={14} />
+        <Icon name="location" tone="muted-foreground" size={14} />
         <Text variant="footnote" tone="muted" numberOfLines={1} className="flex-1">
           {unit.location ? unit.location.code || unit.location.name : t('scan.unplaced')}
         </Text>

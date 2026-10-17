@@ -1,6 +1,5 @@
 import { reloadAppAsync } from 'expo';
 import { router, Stack } from 'expo-router';
-import { Check } from '@/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Alert, Platform } from 'react-native';
 
@@ -17,7 +16,7 @@ const THEMES: ThemePreference[] = ['system', 'light', 'dark'];
 const UNITS: ThicknessUnit[] = ['um', 'mil'];
 
 function Checked({ on }: { on: boolean }) {
-  return on ? <Icon as={Check} tone="primary" size={20} /> : null;
+  return on ? <Icon name="check" tone="primary" size={20} /> : null;
 }
 
 export function SettingsScreen() {
@@ -86,13 +85,13 @@ export function SettingsScreen() {
 
         <SectionHeader title={t('about')} />
         <List>
-          <ListRow title={API_URL.replace(/^https?:\/\//, '')} subtitle={t('api_server')} />
-          <ListRow title={APP_VERSION} subtitle={t('app_version')} last />
+          <ListRow icon="network" title={API_URL.replace(/^https?:\/\//, '')} subtitle={t('api_server')} />
+          <ListRow icon="info" title={APP_VERSION} subtitle={t('app_version')} last />
         </List>
 
         <List className="mt-4">
-          <ListRow title={t('switch_space')} onPress={() => router.push('/spaces')} />
-          <ListRow title={t('sign_out')} tone="danger" onPress={() => void useSession.getState().signOut()} last />
+          <ListRow icon="spaces" title={t('switch_space')} onPress={() => router.push('/spaces')} />
+          <ListRow icon="signOut" title={t('sign_out')} tone="danger" onPress={() => void useSession.getState().signOut()} last />
         </List>
 
         <Text variant="footnote" tone="muted" className="text-center">

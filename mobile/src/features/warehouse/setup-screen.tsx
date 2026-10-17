@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, Switch, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
-import { ChevronDown, ChevronUp, Plus, Warehouse as WarehouseIcon } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
@@ -69,8 +68,8 @@ export function OrderRow({
       </Pressable>
       {canEdit ? (
         <View className="flex-row pe-1">
-          <IconButton icon={ChevronUp} label={t('m.move_up')} onPress={() => onUp?.()} />
-          <IconButton icon={ChevronDown} label={t('m.move_down')} onPress={() => onDown?.()} />
+          <IconButton icon="chevronUp" label={t('m.move_up')} onPress={() => onUp?.()} />
+          <IconButton icon="chevronDown" label={t('m.move_down')} onPress={() => onDown?.()} />
         </View>
       ) : null}
     </View>
@@ -114,7 +113,7 @@ export function SetupScreen() {
                   hitSlop={8}
                   onPress={() => go('/depo/setup/warehouse/new')}
                   className="size-8 items-center justify-center">
-                  <Icon as={Plus} tone="primary" />
+                  <Icon name="add" tone="primary" />
                 </Pressable>
               )
             : undefined,
@@ -130,7 +129,7 @@ export function SetupScreen() {
           <ErrorState error={q.error} onRetry={() => void q.refetch()} />
         ) : list.length === 0 ? (
           <EmptyState
-            icon={WarehouseIcon}
+            icon="warehouse"
             title={t('locations.no_warehouses')}
             action={write ? { title: t('form.create_warehouse'), onPress: () => go('/depo/setup/warehouse/new') } : undefined}
           />
@@ -265,6 +264,7 @@ export function WarehouseEditScreen() {
       <Screen>
         <Input
           label={t('fields.code')}
+          placeholder={t('placeholder_code')}
           value={v.code}
           onChangeText={(s) => set({ code: s })}
           autoCapitalize="characters"
@@ -273,8 +273,8 @@ export function WarehouseEditScreen() {
           hint={t('form.code_hint')}
           error={tried && !codeOk ? t('validation.code') : undefined}
         />
-        <Input label={t('fields.name')} value={v.name} onChangeText={(s) => set({ name: s })} editable={write} hint={t('form.name_hint')} />
-        <Input label={t('fields.address')} value={v.address} onChangeText={(s) => set({ address: s })} editable={write} multiline className="min-h-20 py-3" />
+        <Input label={t('fields.name')} placeholder={t('placeholder_name')} value={v.name} onChangeText={(s) => set({ name: s })} editable={write} hint={t('form.name_hint')} />
+        <Input label={t('fields.address')} placeholder={t('placeholder_address')} value={v.address} onChangeText={(s) => set({ address: s })} editable={write} multiline className="min-h-20 py-3" />
         <ToggleRow
           label={t('form.require_location_placement')}
           hint={t('form.require_location_placement_hint')}

@@ -1,4 +1,4 @@
-import { ChevronForward } from '@/ui/icons';
+import type { IconName } from '@/ui/icons';
 import { Pressable, View } from 'react-native';
 
 import { cn } from './cn';
@@ -14,6 +14,8 @@ type RowProps = {
   title: string;
   subtitle?: string;
   leading?: React.ReactNode;
+  /** Concept icon shown at the leading side when no `leading` is passed. */
+  icon?: IconName;
   trailing?: React.ReactNode;
   onPress?: () => void;
   /** Last row has no separator. */
@@ -21,10 +23,10 @@ type RowProps = {
   tone?: 'default' | 'danger';
 };
 
-export function ListRow({ title, subtitle, leading, trailing, onPress, last, tone = 'default' }: RowProps) {
+export function ListRow({ title, subtitle, leading, icon, trailing, onPress, last, tone = 'default' }: RowProps) {
   const body = (
     <View className={cn('min-h-12 flex-row items-center gap-3 px-4 py-3', !last && 'border-b border-border')}>
-      {leading}
+      {leading ?? (icon ? <Icon name={icon} tone={tone === 'danger' ? 'destructive' : 'primary'} size={20} /> : null)}
       <View className="flex-1 gap-0.5">
         <Text variant="body" tone={tone === 'danger' ? 'danger' : 'default'} numberOfLines={1}>
           {title}
@@ -36,7 +38,7 @@ export function ListRow({ title, subtitle, leading, trailing, onPress, last, ton
         ) : null}
       </View>
       {trailing}
-      {onPress && !trailing ? <Icon as={ChevronForward} tone="muted-foreground" size={18} /> : null}
+      {onPress && !trailing ? <Icon name="forward" tone="muted-foreground" size={18} /> : null}
     </View>
   );
   if (!onPress) return body;

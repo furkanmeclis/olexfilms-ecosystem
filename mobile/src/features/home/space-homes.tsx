@@ -1,14 +1,3 @@
-import {
-  ArrowLeftRight,
-  CalendarDays,
-  CarFront,
-  ClipboardCheck,
-  Gauge,
-  PackageCheck,
-  PackagePlus,
-  ScanLine,
-  UserRound,
-} from '@/ui/icons';
 
 import { HomeScreen } from './home-screen';
 
@@ -16,10 +5,10 @@ export function BayiHome() {
   return (
     <HomeScreen
       actions={[
-        { key: 'vehicle_intake', icon: CarFront, href: '/bayi/services' },
-        { key: 'measure', icon: Gauge, href: '/bayi/measure' },
-        { key: 'customer', icon: UserRound, href: '/search' },
-        { key: 'appointment', icon: CalendarDays, href: '/bayi/menu' },
+        { key: 'vehicle_intake', icon: 'vehicle', href: '/bayi/services' },
+        { key: 'measure', icon: 'gauge', href: '/bayi/measure' },
+        { key: 'customer', icon: 'customer', href: '/search' },
+        { key: 'appointment', icon: 'appointment', href: '/bayi/menu' },
       ]}
     />
   );
@@ -29,10 +18,10 @@ export function DepoHome() {
   return (
     <HomeScreen
       actions={[
-        { key: 'prepare', icon: PackageCheck, href: '/depo/jobs' },
-        { key: 'stock_entry', icon: PackagePlus, href: '/depo/scan' },
-        { key: 'transfer', icon: ArrowLeftRight, href: '/depo/jobs' },
-        { key: 'count', icon: ScanLine, href: '/depo/jobs' },
+        { key: 'prepare', icon: 'packageCheck', href: '/depo/jobs' },
+        { key: 'stock_entry', icon: 'packageIn', href: '/depo/scan' },
+        { key: 'transfer', icon: 'transfer', href: '/depo/jobs' },
+        { key: 'count', icon: 'scan', href: '/depo/jobs' },
       ]}
     />
   );
@@ -42,8 +31,8 @@ export function AdminHome() {
   return (
     <HomeScreen
       actions={[
-        { key: 'customer', icon: UserRound, href: '/search' },
-        { key: 'appointment', icon: ClipboardCheck, href: '/admin/approvals' },
+        { key: 'customer', icon: 'customer', href: '/search' },
+        { key: 'appointment', icon: 'warrantyClaim', href: '/admin/approvals' },
       ]}
     />
   );

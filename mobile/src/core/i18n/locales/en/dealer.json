@@ -192,5 +192,13 @@
   "company_name": "Company name",
   "phone_locked": "The phone number is the account key and can't be changed here.",
   "vehicle_edit": "Edit vehicle",
-  "invalid.email": "Enter a valid e-mail."
+  "invalid.email": "Enter a valid e-mail.",
+  "placeholder_first_name": "John",
+  "placeholder_surname": "Smith",
+  "placeholder_company_name": "Acme Auto Ltd.",
+  "placeholder_tax_office": "Downtown",
+  "placeholder_notes": "A note about the vehicle or job",
+  "placeholder_cancel_reason": "e.g. Customer changed their mind",
+  "placeholder_quantity": "1 pc",
+  "placeholder_meters": "1.5 m"
 }

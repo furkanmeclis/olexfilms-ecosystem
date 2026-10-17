@@ -217,6 +217,8 @@ jobs:
         run: npm run typecheck
       - name: i18n
         run: npm run i18n:check
+      - name: Placeholders
+        run: npm run placeholders:check
       - name: api-generate is up to date
         run: |
           npm run api:generate

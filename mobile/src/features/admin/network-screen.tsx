@@ -6,7 +6,6 @@ import { Linking, RefreshControl, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import type { paths } from '@/core/api/schema';
-import { Building2 } from '@/ui/icons';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
@@ -75,7 +74,7 @@ export function NetworkScreen() {
             onChange={setFilter}
           />
         }
-        empty={{ icon: Building2, title: query ? t('network.no_results') : t('network.empty') }}
+        empty={{ icon: 'building', title: query ? t('network.no_results') : t('network.empty') }}
         renderItem={({ item }) => (
           <CardRow
             title={item.name}

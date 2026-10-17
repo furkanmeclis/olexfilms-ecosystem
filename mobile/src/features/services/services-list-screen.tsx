@@ -5,7 +5,6 @@ import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useCan } from '@/core/spaces';
-import { Plus, Wrench } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -94,7 +93,7 @@ export function ServicesListScreen() {
                   hitSlop={8}
                   onPress={() => router.push(links.newService)}
                   className="size-8 items-center justify-center">
-                  <Icon as={Plus} tone="primary" />
+                  <Icon name="add" tone="primary" />
                 </Pressable>
               )
             : undefined,
@@ -126,7 +125,7 @@ export function ServicesListScreen() {
             count={list.items.length}
             onRetry={() => void list.refetch()}
             empty={{
-              icon: Wrench,
+              icon: 'service',
               title: query || filter !== 'all' ? t('services_empty_filtered') : t('services_empty'),
               body: query || filter !== 'all' ? undefined : t('services_empty_body'),
               action:

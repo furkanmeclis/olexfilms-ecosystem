@@ -13,7 +13,6 @@ import type { components } from '@/core/api/schema';
 import { getTokens } from '@/core/auth/tokens';
 import { API_URL, MOBILE_API_VERSION } from '@/core/config';
 import { Button } from '@/ui/button';
-import { Camera, Check, ImagePlus, X } from '@/ui/icons';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
@@ -95,7 +94,7 @@ export function IntakePhotos({ uuid, canCapture }: { uuid: string; canCapture: b
               <Image source={apiImage(a.photo.url)} style={{ width: 52, height: 40, borderRadius: 6 }} contentFit="cover" />
             ) : (
               <View className="h-10 w-[52px] items-center justify-center rounded-md bg-secondary">
-                <Icon as={Camera} tone={a.required ? 'primary' : 'muted-foreground'} size={18} />
+                <Icon name="camera" tone={a.required ? 'primary' : 'muted-foreground'} size={18} />
               </View>
             )}
             <View className="flex-1 gap-0.5">
@@ -106,7 +105,7 @@ export function IntakePhotos({ uuid, canCapture }: { uuid: string; canCapture: b
                 {a.photo ? t('photo_taken') : a.required ? t('photo_required') : t('photo_optional')}
               </Text>
             </View>
-            {a.photo ? <Icon as={Check} tone="primary" size={18} /> : null}
+            {a.photo ? <Icon name="check" tone="primary" size={18} /> : null}
           </Pressable>
         ))}
       </Section>
@@ -183,7 +182,7 @@ function CaptureModal({
       <View className="flex-1 bg-black" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
         <View className="flex-row items-center gap-3 px-4 py-3">
           <Pressable accessibilityRole="button" accessibilityLabel={t('common:close')} hitSlop={10} onPress={onClose}>
-            <Icon as={X} tone="primary-foreground" />
+            <Icon name="close" tone="primary-foreground" />
           </Pressable>
           <View className="flex-1">
             <Text variant="headline" className="text-white">
@@ -228,7 +227,7 @@ function CaptureModal({
               <Button title={t('photo_retake')} variant="secondary" onPress={() => setShot(null)} disabled={upload.isPending} className="grow" />
               <Button
                 title={t('photo_use')}
-                icon={<Icon as={ImagePlus} tone="primary-foreground" size={18} />}
+                icon={<Icon name="addPhoto" tone="primary-foreground" size={18} />}
                 loading={upload.isPending}
                 onPress={() => upload.mutate(shot)}
                 className="grow"

@@ -10,7 +10,6 @@ import { formatDate, fullName, useLinks, type Vehicle, vehicleLabel } from '@/fe
 import { ServiceRow } from '@/features/services/services-list-screen';
 import { DetailSkeleton, ErrorState, InfoRow, ListSkeleton, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
-import { Mail, Pencil, Phone } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
@@ -69,7 +68,7 @@ export function CustomerDetailScreen() {
                     hitSlop={8}
                     onPress={() => setEditing(true)}
                     className="size-8 items-center justify-center">
-                    <Icon as={Pencil} tone="primary" size={20} />
+                    <Icon name="edit" tone="primary" size={20} />
                   </Pressable>
                 )
               : undefined,
@@ -105,7 +104,7 @@ export function CustomerDetailScreen() {
                   {c.phone ? (
                     <Button
                       title={t('call')}
-                      icon={<Icon as={Phone} tone="primary-foreground" size={16} />}
+                      icon={<Icon name="phone" tone="primary-foreground" size={16} />}
                       onPress={() => void Linking.openURL(`tel:${c.phone}`)}
                       className="grow"
                     />
@@ -114,7 +113,7 @@ export function CustomerDetailScreen() {
                     <Button
                       title={t('email')}
                       variant="secondary"
-                      icon={<Icon as={Mail} tone="primary" size={16} />}
+                      icon={<Icon name="mail" tone="primary" size={16} />}
                       onPress={() => void Linking.openURL(`mailto:${c.email}`)}
                       className="grow"
                     />

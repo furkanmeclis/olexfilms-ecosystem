@@ -16,7 +16,6 @@ import { QrImage } from '@/features/services/qr-sheet';
 import { openWarranty, shareWarranty } from '@/features/services/share';
 import { DetailSkeleton, ErrorState, InfoRow, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
-import { ExternalLink, Share2 } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -67,14 +66,14 @@ export function WarrantyDetailScreen() {
               <View className="flex-row gap-2">
                 <Button
                   title={t('warranty_open')}
-                  icon={<Icon as={ExternalLink} tone="primary-foreground" size={16} />}
+                  icon={<Icon name="externalLink" tone="primary-foreground" size={16} />}
                   onPress={() => void openWarranty(w.public_code)}
                   className="grow"
                 />
                 <Button
                   title={t('share')}
                   variant="secondary"
-                  icon={<Icon as={Share2} tone="primary" size={16} />}
+                  icon={<Icon name="share" tone="primary" size={16} />}
                   onPress={() => shareWarranty(w.public_code, t('warranty_share_message', { code: w.public_code }))}
                   className="grow"
                 />

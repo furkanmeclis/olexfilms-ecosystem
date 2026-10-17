@@ -3,7 +3,6 @@ import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Warehouse as WarehouseIcon } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
 import { Input } from '@/ui/input';
@@ -55,7 +54,7 @@ export function TransferNewScreen() {
         {isLoading ? (
           <ListSkeleton rows={3} />
         ) : warehouses.length < 2 ? (
-          <EmptyState icon={WarehouseIcon} title={t('transfers.need_two_warehouses')} />
+          <EmptyState icon="warehouse" title={t('transfers.need_two_warehouses')} />
         ) : (
           <>
             <Text variant="callout" tone="muted">
@@ -71,6 +70,7 @@ export function TransferNewScreen() {
             />
             <Input
               label={t('fields.note')}
+              placeholder={t('placeholder_note')}
               value={note}
               onChangeText={setNote}
               multiline

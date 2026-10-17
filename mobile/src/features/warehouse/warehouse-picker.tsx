@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
-import { Check, ChevronDown, Warehouse as WarehouseIcon } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
@@ -48,7 +47,7 @@ export function WarehousePickerSheet({
         </View>
         <ScrollView contentContainerClassName="px-4 pb-10">
           {list.length === 0 ? (
-            <EmptyState icon={WarehouseIcon} title={t('locations.no_warehouses')} />
+            <EmptyState icon="warehouse" title={t('locations.no_warehouses')} />
           ) : (
             <List>
               {list.map((w, i) => (
@@ -62,7 +61,7 @@ export function WarehousePickerSheet({
                     onPick(w);
                     onClose();
                   }}
-                  trailing={w.uuid === value ? <Icon as={Check} tone="primary" size={20} /> : <View />}
+                  trailing={w.uuid === value ? <Icon name="check" tone="primary" size={20} /> : <View />}
                 />
               ))}
             </List>
@@ -98,11 +97,11 @@ export function WarehouseChip() {
         hitSlop={8}
         onPress={() => setOpen(true)}
         className="flex-row items-center gap-1 rounded-full bg-secondary px-2.5 py-1 active:opacity-70">
-        <Icon as={WarehouseIcon} tone="primary" size={14} />
+        <Icon name="warehouse" tone="primary" size={14} />
         <Text variant="footnote" className="max-w-28 font-semibold" numberOfLines={1}>
           {warehouse.code}
         </Text>
-        {warehouses.length > 1 ? <Icon as={ChevronDown} tone="muted-foreground" size={14} /> : null}
+        {warehouses.length > 1 ? <Icon name="chevronDown" tone="muted-foreground" size={14} /> : null}
       </Pressable>
       <WarehousePickerSheet
         visible={open}
@@ -143,11 +142,11 @@ export function WarehouseField({
         accessibilityLabel={label}
         onPress={() => setOpen(true)}
         className={`min-h-[52px] flex-row items-center gap-3 rounded-lg border bg-card px-4 active:opacity-80 ${error ? 'border-destructive' : 'border-border'}`}>
-        <Icon as={WarehouseIcon} tone="primary" size={18} />
+        <Icon name="warehouse" tone="primary" size={18} />
         <Text variant="body" className="flex-1" numberOfLines={1} tone={current ? 'default' : 'muted'}>
           {current ? `${current.name} (${current.code})` : t('entries.pick_warehouse')}
         </Text>
-        <Icon as={ChevronDown} tone="muted-foreground" size={18} />
+        <Icon name="chevronDown" tone="muted-foreground" size={18} />
       </Pressable>
       {error ? (
         <Text variant="footnote" tone="danger">

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
 
-import { Trash } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Screen } from '@/ui/screen';
@@ -155,7 +154,7 @@ export function GenerateScreen() {
                   {t('bulk.level_title', { n: i + 1 })} · {t(`type.${lv.type}`)}
                 </Text>
                 {i === levels.length - 1 ? (
-                  <IconButton icon={Trash} tone="destructive" label={t('bulk.remove_level')} onPress={() => setLevels((ls) => ls.slice(0, -1))} />
+                  <IconButton icon="delete" tone="destructive" label={t('bulk.remove_level')} onPress={() => setLevels((ls) => ls.slice(0, -1))} />
                 ) : null}
               </View>
               {allowedChildTypes(i === 0 ? parentType : levels[i - 1].type).length > 1 ? (
@@ -174,19 +173,19 @@ export function GenerateScreen() {
                 ]}
               />
               {lv.mode === 'list' ? (
-                <Input label={t('bulk.codes')} hint={t('bulk.codes_hint')} value={lv.codes} onChangeText={(codes) => update(i, { codes })} autoCapitalize="characters" autoCorrect={false} />
+                <Input label={t('bulk.codes')} placeholder={t('placeholder_bulk_codes')} hint={t('bulk.codes_hint')} value={lv.codes} onChangeText={(codes) => update(i, { codes })} autoCapitalize="characters" autoCorrect={false} />
               ) : (
                 <>
-                  <Input label={t('bulk.prefix')} hint={t('bulk.prefix_hint')} value={lv.prefix} onChangeText={(prefix) => update(i, { prefix })} autoCapitalize="characters" autoCorrect={false} />
+                  <Input label={t('bulk.prefix')} placeholder={t('placeholder_prefix')} hint={t('bulk.prefix_hint')} value={lv.prefix} onChangeText={(prefix) => update(i, { prefix })} autoCapitalize="characters" autoCorrect={false} />
                   <View className="flex-row gap-2">
                     <View className="flex-1">
-                      <Input label={t('bulk.from')} value={lv.from} onChangeText={(from) => update(i, { from })} keyboardType="number-pad" />
+                      <Input label={t('bulk.from')} placeholder={t('placeholder_bulk_from')} value={lv.from} onChangeText={(from) => update(i, { from })} keyboardType="number-pad" />
                     </View>
                     <View className="flex-1">
-                      <Input label={t('bulk.to')} value={lv.to} onChangeText={(to) => update(i, { to })} keyboardType="number-pad" />
+                      <Input label={t('bulk.to')} placeholder={t('placeholder_bulk_to')} value={lv.to} onChangeText={(to) => update(i, { to })} keyboardType="number-pad" />
                     </View>
                     <View className="flex-1">
-                      <Input label={t('bulk.pad')} value={lv.pad} onChangeText={(pad) => update(i, { pad })} keyboardType="number-pad" />
+                      <Input label={t('bulk.pad')} placeholder={t('placeholder_bulk_pad')} value={lv.pad} onChangeText={(pad) => update(i, { pad })} keyboardType="number-pad" />
                     </View>
                   </View>
                 </>

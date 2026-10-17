@@ -10,39 +10,26 @@ import { type SpaceKind, useResolvedSpace } from '@/core/spaces';
 import { readJSON, writeJSON } from '@/core/storage';
 import { useDebounced } from '@/features/services/lib';
 import { errorText, SearchField } from '@/features/services/ui';
-import {
-  Barcode,
-  Building2,
-  CarFront,
-  Clock,
-  type LucideIcon,
-  Package,
-  Search,
-  ShieldCheck,
-  ShoppingCart,
-  Target,
-  Users,
-  Wrench,
-} from '@/ui/icons';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import type { IconName } from '@/ui/icons';
 
 type Hit = components['schemas']['SearchHit'];
 
 const RECENT_KEY = 'search.recent';
 const MAX_RECENT = 8;
 
-const ICONS: Record<string, LucideIcon> = {
-  customers: Users,
-  vehicles: CarFront,
-  services: Wrench,
-  warranties: ShieldCheck,
-  orders: ShoppingCart,
-  organizations: Building2,
-  stock_units: Barcode,
-  leads: Target,
-  products: Package,
+const RESULT_ICONS: Record<string, IconName> = {
+  customers: 'customers',
+  vehicles: 'vehicle',
+  services: 'service',
+  warranties: 'warranty',
+  orders: 'cart',
+  organizations: 'building',
+  stock_units: 'barcode',
+  leads: 'target',
+  products: 'package',
 };
 
 /** Detail route of a hit inside the space the user is in; null when the app has no screen for it. */
@@ -155,7 +142,7 @@ export function SearchScreen() {
                     accessibilityRole="button"
                     onPress={() => setQ(r)}
                     className={`min-h-11 flex-row items-center gap-3 px-4 py-2.5 active:bg-muted ${i < recent.length - 1 ? 'border-b border-border' : ''}`}>
-                    <Icon as={Clock} tone="muted-foreground" size={16} />
+                    <Icon name="clock" tone="muted-foreground" size={16} />
                     <Text variant="body" numberOfLines={1} className="flex-1">
                       {r}
                     </Text>
@@ -164,16 +151,16 @@ export function SearchScreen() {
               </View>
             </View>
           ) : (
-            <EmptyState icon={Search} title={t('hint_title')} body={t('hint_body')} />
+            <EmptyState icon="search" title={t('hint_title')} body={t('hint_body')} />
           )
         ) : res.isPending ? (
           <ActivityIndicator className="py-8" />
         ) : res.error ? (
-          <EmptyState icon={Search} title={t('common:error_generic')} body={errorText(res.error)} />
+          <EmptyState icon="search" title={t('common:error_generic')} body={errorText(res.error)} />
         ) : res.data && !res.data.enabled ? (
-          <EmptyState icon={Search} title={t('disabled')} />
+          <EmptyState icon="search" title={t('disabled')} />
         ) : groups.length === 0 ? (
-          <EmptyState icon={Search} title={t('no_results')} body={t('no_results_body')} />
+          <EmptyState icon="search" title={t('no_results')} body={t('no_results_body')} />
         ) : (
           groups.map((g) => {
             const canOpen = openable(g.spec);
@@ -190,7 +177,7 @@ export function SearchScreen() {
                       disabled={!canOpen || opening !== null}
                       onPress={() => void open(h)}
                       className={`min-h-12 flex-row items-center gap-3 px-4 py-2.5 active:bg-muted ${i < g.items.length - 1 ? 'border-b border-border' : ''}`}>
-                      <Icon as={ICONS[g.spec] ?? Search} tone={canOpen ? 'primary' : 'muted-foreground'} size={18} />
+                      <Icon name={RESULT_ICONS[g.spec] ?? 'search'} tone={canOpen ? 'primary' : 'muted-foreground'} size={18} />
                       <View className="flex-1 gap-0.5">
                         <Text variant="body" numberOfLines={1}>
                           {h.title}

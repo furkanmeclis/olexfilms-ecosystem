@@ -8,7 +8,6 @@ import { Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { Button } from '@/ui/button';
-import { Barcode, Camera, PackagePlus } from '@/ui/icons';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -87,7 +86,7 @@ export function AddItemScreen() {
                   accessibilityLabel={t('scan_barcode')}
                   onPress={() => setScanning((v) => !v)}
                   className={cn('size-11 items-center justify-center rounded-lg', scanning ? 'bg-primary' : 'bg-secondary')}>
-                  <Icon as={Camera} tone={scanning ? 'primary-foreground' : 'primary'} size={20} />
+                  <Icon name="camera" tone={scanning ? 'primary-foreground' : 'primary'} size={20} />
                 </Pressable>
               </View>
               {scanning ? (
@@ -106,7 +105,7 @@ export function AddItemScreen() {
               error={units.error}
               count={items.length}
               onRetry={() => void units.refetch()}
-              empty={{ icon: PackagePlus, title: t('stock_empty'), body: t('stock_empty_body') }}
+              empty={{ icon: 'packageIn', title: t('stock_empty'), body: t('stock_empty_body') }}
             />
           }
           renderItem={({ item: u }) => (
@@ -114,7 +113,7 @@ export function AddItemScreen() {
               accessibilityRole="button"
               onPress={() => setPicked(u)}
               className="flex-row items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 active:opacity-80">
-              <Icon as={Barcode} tone="muted-foreground" size={20} />
+              <Icon name="barcode" tone="muted-foreground" size={20} />
               <View className="flex-1 gap-0.5">
                 <Text variant="body" numberOfLines={2}>
                   {u.product.name}
@@ -222,6 +221,7 @@ function UnitForm({
       {fixed ? (
         <Input
           label={t('quantity')}
+          placeholder={t('placeholder_quantity')}
           hint={t('on_hand', { count: unit.quantity_on_hand })}
           keyboardType="number-pad"
           value={quantity}
@@ -240,6 +240,7 @@ function UnitForm({
           {kind === 'partial' ? (
             <Input
               label={t('meters')}
+              placeholder={t('placeholder_meters')}
               hint={t('meters_left', { value: unit.remaining_meters ?? '' })}
               keyboardType="decimal-pad"
               value={meters}
@@ -277,7 +278,7 @@ function UnitForm({
         </View>
       ) : null}
 
-      <Input label={t('notes')} value={notes} onChangeText={setNotes} multiline className="min-h-20 py-3" />
+      <Input label={t('notes')} placeholder={t('placeholder_notes')} value={notes} onChangeText={setNotes} multiline className="min-h-20 py-3" />
 
       {error ? (
         <Text variant="footnote" tone="danger">

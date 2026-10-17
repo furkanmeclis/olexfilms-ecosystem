@@ -13,5 +13,11 @@
   "coming_soon_title": "Bu ekran hazırlanıyor",
   "coming_soon_body": "Bu bölüm bir sonraki adımda eklenecek.",
   "search_placeholder": "Plaka, telefon, isim veya barkod",
-  "offline": "Çevrimdışı"
+  "offline": "Çevrimdışı",
+  "placeholder_email": "ornek@firma.com",
+  "placeholder_phone": "532 123 45 67",
+  "placeholder_plate": "34 ABC 123",
+  "placeholder_vin": "17 karakter şasi no",
+  "placeholder_year": "2024",
+  "placeholder_km": "45000 km"
 }

@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
-import { ArrowLeftRight, ClipboardList, Package, PackagePlus, Plus } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
+import type { IconName } from '@/ui/icons';
 import { StatusPill } from '@/ui/status-pill';
 
 import { type StockCount, type StockEntry, type Transfer, useCounts, useEntries, useTransfers } from './api';
@@ -60,7 +60,7 @@ export function JobsScreen() {
                   hitSlop={8}
                   onPress={() => go(newPath)}
                   className="size-8 items-center justify-center">
-                  <Icon as={Plus} tone="primary" />
+                  <Icon name="add" tone="primary" />
                 </Pressable>
               )
             : undefined,
@@ -138,10 +138,10 @@ function JobsList({
           : (orders.data?.pages.flatMap((p) => p.items) ?? []);
 
   const empty = {
-    transfers: { icon: ArrowLeftRight, title: t('transfers.empty_title'), body: t('transfers.empty_description'), action: t('transfers.new') },
-    counts: { icon: ClipboardList, title: t('counts.empty_title'), body: t('counts.empty_description'), action: t('counts.new') },
-    entries: { icon: PackagePlus, title: t('entries.empty_title'), body: t('entries.empty_description'), action: t('entries.new') },
-    orders: { icon: Package, title: t('orders.list.empty_title'), body: t('orders.list.empty_description'), action: '' },
+    transfers: { icon: 'transfer' as IconName, title: t('transfers.empty_title'), body: t('transfers.empty_description'), action: t('transfers.new') },
+    counts: { icon: 'order' as IconName, title: t('counts.empty_title'), body: t('counts.empty_description'), action: t('counts.new') },
+    entries: { icon: 'packageIn' as IconName, title: t('entries.empty_title'), body: t('entries.empty_description'), action: t('entries.new') },
+    orders: { icon: 'package' as IconName, title: t('orders.list.empty_title'), body: t('orders.list.empty_description'), action: '' },
   }[tab];
 
   return (

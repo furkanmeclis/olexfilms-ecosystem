@@ -71,10 +71,11 @@ export function EditCustomerSheet({ customer, onClose }: { customer: CustomerDet
           {t('customer_shared_note')}
         </Text>
       ) : null}
-      <Input label={t('first_name')} value={name} onChangeText={setName} error={errors.name} autoCapitalize="words" />
-      <Input label={t('surname')} value={surname} onChangeText={setSurname} error={errors.surname} autoCapitalize="words" />
+      <Input label={t('first_name')} placeholder={t('placeholder_first_name')} value={name} onChangeText={setName} error={errors.name} autoCapitalize="words" />
+      <Input label={t('surname')} placeholder={t('placeholder_surname')} value={surname} onChangeText={setSurname} error={errors.surname} autoCapitalize="words" />
       <Input
         label={t('email')}
+        placeholder={t('placeholder_email', { ns: 'common' })}
         value={email}
         onChangeText={setEmail}
         error={errors.email}
@@ -84,11 +85,11 @@ export function EditCustomerSheet({ customer, onClose }: { customer: CustomerDet
       />
       {customer.type === 'corporate' || customer.company_name ? (
         <>
-          <Input label={t('company_name')} value={company} onChangeText={setCompany} error={errors.company_name} />
-          <Input label={t('tax_office')} value={taxOffice} onChangeText={setTaxOffice} error={errors.tax_office} />
+          <Input label={t('company_name')} placeholder={t('placeholder_company_name')} value={company} onChangeText={setCompany} error={errors.company_name} />
+          <Input label={t('tax_office')} placeholder={t('placeholder_tax_office')} value={taxOffice} onChangeText={setTaxOffice} error={errors.tax_office} />
         </>
       ) : null}
-      <Input label={t('phone')} value={customer.phone ?? ''} editable={false} hint={t('phone_locked')} />
+      <Input label={t('phone')} placeholder={t('placeholder_phone', { ns: 'common' })} value={customer.phone ?? ''} editable={false} hint={t('phone_locked')} />
     </Sheet>
   );
 }
@@ -147,6 +148,7 @@ export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClo
     <Sheet title={t('vehicle_edit')} busy={save.isPending} onClose={onClose} onSave={submit}>
       <Input
         label={t('plate')}
+        placeholder={t('placeholder_plate', { ns: 'common' })}
         value={plate}
         onChangeText={setPlate}
         error={errors.plate}
@@ -154,9 +156,10 @@ export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClo
         autoCorrect={false}
       />
       <ModelPicker value={model} onChange={setModel} error={errors.model} />
-      <Input label={t('model_year')} value={year} onChangeText={setYear} error={errors.year} keyboardType="number-pad" maxLength={4} />
+      <Input label={t('model_year')} placeholder={t('placeholder_year', { ns: 'common' })} value={year} onChangeText={setYear} error={errors.year} keyboardType="number-pad" maxLength={4} />
       <Input
         label={t('vin_optional')}
+        placeholder={t('placeholder_vin', { ns: 'common' })}
         value={vin}
         onChangeText={setVin}
         error={errors.vin}

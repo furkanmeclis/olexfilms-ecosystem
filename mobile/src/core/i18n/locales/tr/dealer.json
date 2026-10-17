@@ -192,5 +192,13 @@
   "company_name": "Firma adı",
   "phone_locked": "Telefon numarası hesabın anahtarıdır, burada değiştirilemez.",
   "vehicle_edit": "Aracı düzenle",
-  "invalid.email": "Geçerli bir e-posta girin."
+  "invalid.email": "Geçerli bir e-posta girin.",
+  "placeholder_first_name": "Ahmet",
+  "placeholder_surname": "Yılmaz",
+  "placeholder_company_name": "Örnek Otomotiv A.Ş.",
+  "placeholder_tax_office": "Kadıköy",
+  "placeholder_notes": "Araç veya işlemle ilgili not",
+  "placeholder_cancel_reason": "Örn. müşteri vazgeçti",
+  "placeholder_quantity": "1 adet",
+  "placeholder_meters": "1,5 m"
 }

@@ -8,7 +8,6 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
-import { ExternalLink, PackagePlus, Share2, ShieldCheck, Trash } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
@@ -241,14 +240,14 @@ export function ServiceDetailScreen() {
                         hitSlop={8}
                         disabled={removeItem.isPending}
                         onPress={() => confirmRemove(it.uuid, it.product.name)}>
-                        <Icon as={Trash} tone="destructive" size={18} />
+                        <Icon name="delete" tone="destructive" size={18} />
                       </Pressable>
                     ) : null}
                   </View>
                 ))
               ) : (
                 <View className="items-center gap-2 px-4 py-5">
-                  <Icon as={PackagePlus} tone="muted-foreground" />
+                  <Icon name="packageIn" tone="muted-foreground" />
                   <Text variant="callout" tone="muted" className="text-center">
                     {t('items_empty')}
                   </Text>
@@ -269,7 +268,7 @@ export function ServiceDetailScreen() {
                       accessibilityRole="button"
                       onPress={() => router.push(links.warranty(w.uuid))}
                       className="flex-row items-center gap-3 active:opacity-70">
-                      <Icon as={ShieldCheck} tone="primary" size={20} />
+                      <Icon name="warranty" tone="primary" size={20} />
                       <View className="flex-1 gap-0.5">
                         <Text variant="body" numberOfLines={1}>
                           {w.product_name}
@@ -285,14 +284,14 @@ export function ServiceDetailScreen() {
                       <Button
                         title={t('warranty_open')}
                         variant="outline"
-                        icon={<Icon as={ExternalLink} tone="primary" size={16} />}
+                        icon={<Icon name="externalLink" tone="primary" size={16} />}
                         onPress={() => void openWarranty(w.public_code)}
                         className="grow"
                       />
                       <Button
                         title={t('share')}
                         variant="outline"
-                        icon={<Icon as={Share2} tone="primary" size={16} />}
+                        icon={<Icon name="share" tone="primary" size={16} />}
                         onPress={() => shareWarranty(w.public_code, t('warranty_share_message', { code: w.public_code }))}
                         className="grow"
                       />
@@ -344,6 +343,7 @@ export function ServiceDetailScreen() {
           </Text>
           <Input
             label={t('cancel_reason_label')}
+            placeholder={t('placeholder_cancel_reason')}
             value={reason}
             onChangeText={setReason}
             multiline

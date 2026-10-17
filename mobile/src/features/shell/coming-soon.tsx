@@ -1,5 +1,4 @@
 import { Stack } from 'expo-router';
-import { Hammer } from '@/ui/icons';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/ui/empty-state';
@@ -12,7 +11,7 @@ export function ComingSoon({ titleKey }: { titleKey: string }) {
     <>
       <Stack.Screen options={{ title: t(titleKey) }} />
       <Screen>
-        <EmptyState icon={Hammer} title={t('common:coming_soon_title')} body={t('common:coming_soon_body')} />
+        <EmptyState icon="tools" title={t('common:coming_soon_title')} body={t('common:coming_soon_body')} />
       </Screen>
     </>
   );

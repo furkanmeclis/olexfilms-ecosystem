@@ -11,10 +11,10 @@ import { ServiceRow } from '@/features/services/services-list-screen';
 import { errorText } from '@/features/services/ui';
 import { HomeHeaderLeft, SearchButton } from '@/features/shell/header-actions';
 import { Button } from '@/ui/button';
-import { Gauge, type LucideIcon, Plus, ScanLine, ShieldCheck, Users, Wrench } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
+import type { IconName } from '@/ui/icons';
 
 function greetingKey(hour: number) {
   if (hour < 12) return 'home:greeting_morning';
@@ -22,7 +22,7 @@ function greetingKey(hour: number) {
   return 'home:greeting_evening';
 }
 
-type Action = { key: string; icon: LucideIcon; href: Href; show: boolean };
+type Action = { key: string; icon: IconName; href: Href; show: boolean };
 
 /**
  * Dealer home: the last 30 days in numbers (reports overview cards), the
@@ -51,12 +51,12 @@ export function DealerHome() {
   const cards = overview.data?.series.find((s) => s.key === 'cards')?.points ?? overview.data?.series[0]?.points ?? [];
 
   const actions: Action[] = [
-    { key: 'new_service', icon: Plus, href: links.newService, show: canWrite },
-    { key: 'scan', icon: ScanLine, href: '/bayi/scan', show: true },
-    { key: 'measure', icon: Gauge, href: '/bayi/measure', show: canWrite },
-    { key: 'customers', icon: Users, href: '/bayi/menu/customers' as Href, show: canCustomers },
-    { key: 'warranties', icon: ShieldCheck, href: '/bayi/menu/warranties' as Href, show: canWarranties },
-    { key: 'services', icon: Wrench, href: '/bayi/services', show: canServices && !canWrite },
+    { key: 'new_service', icon: 'add', href: links.newService, show: canWrite },
+    { key: 'scan', icon: 'scan', href: '/bayi/scan', show: true },
+    { key: 'measure', icon: 'gauge', href: '/bayi/measure', show: canWrite },
+    { key: 'customers', icon: 'customers', href: '/bayi/menu/customers' as Href, show: canCustomers },
+    { key: 'warranties', icon: 'warranty', href: '/bayi/menu/warranties' as Href, show: canWarranties },
+    { key: 'services', icon: 'service', href: '/bayi/services', show: canServices && !canWrite },
   ];
 
   const refresh = () => {
@@ -94,7 +94,7 @@ export function DealerHome() {
                 onPress={() => router.push(a.href)}
                 className="min-h-[84px] grow basis-[30%] justify-between rounded-lg border border-border bg-card p-3 active:opacity-80">
                 <View className="size-8 items-center justify-center rounded-md bg-secondary">
-                  <Icon as={a.icon} tone="primary" size={18} />
+                  <Icon name={a.icon} tone="primary" size={18} />
                 </View>
                 <Text variant="callout" className="font-semibold" numberOfLines={1}>
                   {t(`home_action.${a.key}`)}
@@ -156,7 +156,7 @@ export function DealerHome() {
               ))
             ) : (
               <View className="items-center gap-2 rounded-lg border border-border bg-card p-5">
-                <Icon as={Wrench} tone="muted-foreground" />
+                <Icon name="service" tone="muted-foreground" />
                 <Text variant="callout" tone="muted" className="text-center">
                   {t('services_empty_body')}
                 </Text>

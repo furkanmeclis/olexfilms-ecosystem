@@ -2,7 +2,6 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
-import { Boxes } from '@/ui/icons';
 import { Text } from '@/ui/text';
 import { go } from '@/features/warehouse/format';
 import { ListStatus } from '@/features/warehouse/parts';
@@ -35,7 +34,7 @@ export function LocationStockScreen({ base }: { base: string }) {
             error={query.error}
             empty
             onRetry={() => void query.refetch()}
-            emptyIcon={Boxes}
+            emptyIcon="stock"
             emptyTitle={t('stock_panel.empty_title')}
             emptyBody={t('stock_panel.empty_description')}
           />

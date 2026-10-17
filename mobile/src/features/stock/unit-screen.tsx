@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { RefreshControl, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
-import { Barcode } from '@/ui/icons';
 import { EmptyState } from '@/ui/empty-state';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -30,7 +29,7 @@ export function UnitScreen() {
           <ListSkeleton rows={4} />
         ) : !h ? (
           isApiError(q.error) && q.error.status === 404 ? (
-            <EmptyState icon={Barcode} title={t('stock.unit.not_found')} body={t('stock.unit.not_found_hint')} />
+            <EmptyState icon="barcode" title={t('stock.unit.not_found')} body={t('stock.unit.not_found_hint')} />
           ) : (
             <ErrorState error={q.error} onRetry={() => void q.refetch()} />
           )

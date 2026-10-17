@@ -15,7 +15,6 @@ import {
   SearchField,
   Section,
 } from '@/features/services/ui';
-import { ChevronForward, Wrench } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -55,7 +54,7 @@ export function CustomerServicesScreen() {
             count={list.items.length}
             onRetry={() => void list.refetch()}
             empty={{
-              icon: Wrench,
+              icon: 'service',
               title: query ? t('services_empty_filtered') : t('services_empty'),
               body: query ? undefined : t('services_empty_body'),
             }}
@@ -197,7 +196,7 @@ export function CustomerServiceDetailScreen() {
                       </Text>
                     </View>
                     <StatusPill label={t(`warranty_status.${w.status}`)} tone={warrantyTone(w.status)} />
-                    <Icon as={ChevronForward} tone="muted-foreground" size={18} />
+                    <Icon name="forward" tone="muted-foreground" size={18} />
                   </Pressable>
                 ))}
               </Section>

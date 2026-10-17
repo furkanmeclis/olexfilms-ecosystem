@@ -3,7 +3,6 @@ import { Pressable, View } from 'react-native';
 
 import { formatDate, formatDateTime, vehicleLabel, warrantyTone, type Warranty } from '@/features/services/lib';
 import { Button } from '@/ui/button';
-import { CarFront, type LucideIcon } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -19,6 +18,7 @@ import {
   portalServiceTone,
   type PortalVehicle,
 } from './lib';
+import type { IconName } from '@/ui/icons';
 
 /** Localized service status; the backend label (or the raw code) when unknown. */
 export function useServiceStatusLabel() {
@@ -50,7 +50,7 @@ export function VehicleCard({ v, onPress }: { v: PortalVehicle; onPress: () => v
     <Card onPress={onPress}>
       <View className="flex-row items-center gap-3">
         <View className="size-10 items-center justify-center rounded-md bg-secondary">
-          <Icon as={CarFront} tone="primary" size={20} />
+          <Icon name="vehicle" tone="primary" size={20} />
         </View>
         <View className="flex-1 gap-0.5">
           <Text variant="headline" numberOfLines={1}>
@@ -197,11 +197,11 @@ export function AppointmentRow({
 }
 
 /** Small stat tile used on the home screen. */
-export function StatTile({ icon, label, value, onPress }: { icon: LucideIcon; label: string; value: string; onPress?: () => void }) {
+export function StatTile({ icon, label, value, onPress }: { icon: IconName; label: string; value: string; onPress?: () => void }) {
   const body = (
     <>
       <View className="flex-row items-center gap-2">
-        <Icon as={icon} tone="primary" size={16} />
+        <Icon name={icon} tone="primary" size={16} />
         <Text variant="footnote" tone="muted" numberOfLines={1} className="flex-1">
           {label}
         </Text>

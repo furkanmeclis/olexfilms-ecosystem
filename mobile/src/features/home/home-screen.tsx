@@ -1,6 +1,4 @@
 import { type Href, router, Stack } from 'expo-router';
-import type { LucideIcon } from '@/ui/icons';
-import { Inbox } from '@/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -12,8 +10,9 @@ import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
+import type { IconName } from '@/ui/icons';
 
-export type QuickAction = { key: string; icon: LucideIcon; href: Href };
+export type QuickAction = { key: string; icon: IconName; href: Href };
 
 function greetingKey(hour: number) {
   if (hour < 12) return 'home:greeting_morning';
@@ -50,7 +49,7 @@ export function HomeScreen({ actions }: { actions: QuickAction[] }) {
           <Text variant="caption" tone="muted" className="px-4 pt-3">
             {t('home:next_up')}
           </Text>
-          <EmptyState icon={Inbox} title={t('home:nothing_next')} />
+          <EmptyState icon="inbox" title={t('home:nothing_next')} />
         </View>
 
         <SectionHeader title={t('home:quick_actions')} />
@@ -62,7 +61,7 @@ export function HomeScreen({ actions }: { actions: QuickAction[] }) {
               onPress={() => router.push(a.href)}
               className="min-h-24 grow basis-[46%] justify-between rounded-lg border border-border bg-card p-3.5 active:opacity-80">
               <View className="size-9 items-center justify-center rounded-md bg-secondary">
-                <Icon as={a.icon} tone="primary" size={20} />
+                <Icon name={a.icon} tone="primary" size={20} />
               </View>
               <Text variant="headline">{t(`home:action.${a.key}`)}</Text>
             </Pressable>

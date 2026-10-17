@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, RefreshControl, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
-import { MapPin, Package, ScanLine, Trash, Truck } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -188,7 +187,7 @@ export function OrderScreen() {
         }>
         <Card>
           <View className="flex-row items-center gap-2 pb-1">
-            <Icon as={Package} tone="primary" size={18} />
+            <Icon name="package" tone="primary" size={18} />
             <Text variant="headline" className="flex-1" numberOfLines={2}>
               {other.name}
             </Text>
@@ -219,7 +218,7 @@ export function OrderScreen() {
             ) : null}
             {preparing ? (
               <>
-                <Button size="lg" title={t('m.scan_to_assign')} icon={<Icon as={ScanLine} tone="primary-foreground" />} onPress={() => setScanning('assign')} />
+                <Button size="lg" title={t('m.scan_to_assign')} icon={<Icon name="scan" tone="primary-foreground" />} onPress={() => setScanning('assign')} />
                 <Text variant="footnote" tone="muted">
                   {allCovered ? t('orders.assign.complete') : t('orders.assign.not_complete')}
                 </Text>
@@ -235,7 +234,7 @@ export function OrderScreen() {
               />
             ) : null}
             {can('shipped') ? (
-              <Button size="lg" title={t('orders.actions.ship.button')} icon={<Icon as={Truck} tone="primary-foreground" />} onPress={() => setShipping(true)} />
+              <Button size="lg" title={t('orders.actions.ship.button')} icon={<Icon name="truck" tone="primary-foreground" />} onPress={() => setShipping(true)} />
             ) : null}
           </View>
         ) : null}
@@ -262,7 +261,7 @@ export function OrderScreen() {
                   <Button
                     className="mt-2"
                     title={t('order_place.scan_location')}
-                    icon={<Icon as={MapPin} tone="primary-foreground" />}
+                    icon={<Icon name="location" tone="primary-foreground" />}
                     onPress={() => setScanning('place')}
                   />
                 ) : null}
@@ -357,7 +356,7 @@ export function OrderScreen() {
                     </Text>
                     {preparing && canShip && !u.shipped ? (
                       <IconButton
-                        icon={Trash}
+                        icon="delete"
                         tone="destructive"
                         label={t('orders.assign.remove')}
                         busy={busy === `del:${u.unit_uuid}`}
@@ -630,7 +629,7 @@ function ShipSheet({
                   <Text variant="body" className="flex-1">
                     {m.name}
                   </Text>
-                  {method === m.uuid ? <Icon as={Truck} tone="primary" size={18} /> : null}
+                  {method === m.uuid ? <Icon name="truck" tone="primary" size={18} /> : null}
                 </Pressable>
               ))}
             </View>

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, View } from 'react-native';
 
 import { Chips, ErrorState, ListSkeleton, useChildHref, useFormat } from '@/features/admin/kit';
-import { ChartColumn } from '@/ui/icons';
 import { EmptyState } from '@/ui/empty-state';
 import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -29,7 +28,7 @@ export function ReportsScreen() {
         ) : catalog.isError && !items.length ? (
           <ErrorState error={catalog.error} onRetry={() => void catalog.refetch()} />
         ) : !items.length ? (
-          <EmptyState icon={ChartColumn} title={t('reports.empty')} body={t('reports.empty_body')} />
+          <EmptyState icon="chart" title={t('reports.empty')} body={t('reports.empty_body')} />
         ) : (
           <List>
             {items.map((r, i) => (
@@ -83,7 +82,7 @@ export function ReportScreen() {
             catalog.isError ? (
               <ErrorState error={catalog.error} onRetry={() => void catalog.refetch()} />
             ) : (
-              <EmptyState icon={ChartColumn} title={t('reports.unavailable')} />
+              <EmptyState icon="chart" title={t('reports.unavailable')} />
             )
           ) : report.isError && !report.data ? (
             <ErrorState error={report.error} onRetry={() => void report.refetch()} />

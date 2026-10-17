@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import { ScanLine } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -182,7 +181,7 @@ export function CountNewScreen() {
             </Text>
             <Button
               variant="outline"
-              icon={<Icon as={ScanLine} tone="primary" size={18} />}
+              icon={<Icon name="scan" tone="primary" size={18} />}
               title={
                 effectiveScope === 'location'
                   ? (location?.code ?? t('entry.scan_location'))
@@ -198,7 +197,7 @@ export function CountNewScreen() {
           </View>
         ) : null}
 
-        <Input label={t('fields.note')} value={note} onChangeText={setNote} multiline maxLength={500} className="min-h-20 py-3" />
+        <Input label={t('fields.note')} placeholder={t('placeholder_note')} value={note} onChangeText={setNote} multiline maxLength={500} className="min-h-20 py-3" />
         <Button size="lg" title={t('counts.create')} loading={busy} onPress={() => void submit()} />
       </Screen>
 
