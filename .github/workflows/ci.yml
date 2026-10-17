@@ -26,8 +26,9 @@ jobs:
   # "ci-full" run everything (full=true), as does a PR touching .github/.
   #   frontend/**                 -> frontend, contracts
   #   backend/**, db/**           -> backend, contracts
+  #   mobile/**                   -> mobile
   #   docs/openapi.yaml,
-  #   backend/docs/openapi.yaml   -> backend, frontend, contracts
+  #   backend/docs/openapi.yaml   -> backend, frontend, contracts, mobile
   #   docs/**, *.md (alone)       -> nothing heavy
   #   .github/**                  -> everything (incl. image-build, dr-drill)
   #   Makefile, scripts/, other   -> backend, frontend, contracts
@@ -37,6 +38,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
       contracts: ${{ steps.filter.outputs.contracts }}
+      mobile: ${{ steps.filter.outputs.mobile }}
       full: ${{ steps.filter.outputs.full }}
     steps:
       - uses: actions/checkout@v7
@@ -50,7 +52,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           CI_FULL: ${{ contains(github.event.pull_request.labels.*.name, 'ci-full') }}
         run: |
-          backend=false; frontend=false; contracts=false; full=false
+          backend=false; frontend=false; contracts=false; mobile=false; full=false
           if [ "$EVENT" != "pull_request" ] || [ "$CI_FULL" = "true" ]; then
             full=true
           else
@@ -60,20 +62,21 @@ jobs:
               [ -z "$f" ] && continue
               case "$f" in
                 docs/openapi.yaml|backend/docs/openapi.yaml)
-                  backend=true; frontend=true; contracts=true ;;
+                  backend=true; frontend=true; contracts=true; mobile=true ;;
                 # Markdown anywhere is never built, embedded or tested.
                 *.md|docs/*) ;;
                 frontend/*) frontend=true; contracts=true ;;
+                mobile/*) mobile=true ;;
                 backend/*|db/*) backend=true; contracts=true ;;
                 .github/*) full=true ;;
                 *) backend=true; frontend=true; contracts=true ;;
               esac
             done <<< "$files"
           fi
-          if [ "$full" = "true" ]; then backend=true; frontend=true; contracts=true; fi
+          if [ "$full" = "true" ]; then backend=true; frontend=true; contracts=true; mobile=true; fi
           {
             echo "backend=$backend"; echo "frontend=$frontend"
-            echo "contracts=$contracts"; echo "full=$full"
+            echo "contracts=$contracts"; echo "mobile=$mobile"; echo "full=$full"
           } | tee -a "$GITHUB_OUTPUT"
 
   backend:
@@ -190,6 +193,35 @@ jobs:
       - name: E2E (mocked API)
         run: pnpm test:e2e
 
+  # Expo app (TEC-777): lint, typecheck, i18n parity and the committed API
+  # types generated from docs/openapi.yaml. No native build here.
+  mobile:
+    needs: [changes]
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: i18n
+        run: npm run i18n:check
+      - name: api-generate is up to date
+        run: |
+          npm run api:generate
+          git diff --exit-code -- src/core/api/schema.d.ts
+
   # Generated contracts must be committed: OpenAPI embed copy, frontend API
   # types, and i18n catalogs in parity.
   contracts:
@@ -264,7 +296,7 @@ jobs:
   ci:
     name: ci
     if: always()
-    needs: [changes, backend, frontend, contracts, image-build, dr-drill]
+    needs: [changes, backend, frontend, contracts, mobile, image-build, dr-drill]
     runs-on: ubuntu-latest
     steps:
       - name: All jobs green
