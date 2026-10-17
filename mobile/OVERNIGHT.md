@@ -34,7 +34,7 @@ Goal: a working app in Expo Go by 09:00, against the local backend.
   transitions, reports catalog with generic renderers, approvals (orders, module requests, reclassifications).
 - Measurement tab: list/detail in µm or mil, manual entry (POST /v1/mobile/measurements); SmartPTG BLE and
   plate recognition are placeholders behind flags (`features/measure/parts.ts`).
-- Customer space: screens with empty states only (customer accounts cannot sign in on mobile yet).
+- Customer space: home, vehicles, services, warranties, appointments (cancel), profile (notification toggles), fleet card; portal data via `/v1/mobile/portal/*` (PR #408). Not tested live (no readable login code locally).
 - Settings: language (13, RTL restart for ar), theme, unit, API server, app version, logout.
 - Sign-in: one box; e-mail → password (+TOTP); phone → WhatsApp code (PR #407).
 
@@ -43,12 +43,15 @@ Goal: a working app in Expo Go by 09:00, against the local backend.
 - #406 Mobil API: panel uçlarının mobil aynası (/v1/mobile/panel/*) — open, not merged. The local backend runs from this branch.
 
 - #407 Mobil API: telefonla giriş (identify + OTP doğrulama) — open, not merged, migration 000150.
-- Local backend runs from `local/mobile-api-combined` (main + #406 + #407, never pushed) in
+- #408 Mobil API: müşteri ve filo hesapları mobilde (müşteri oturumu + portal aynası) — open, stacked on #407 (base feat/mobile-api-phone-login).
+- #406 got a follow-up commit: `tenant/modules` added to the allowlist.
+- Local backend runs from `local/mobile-api-combined` (main + #406 + #407 + #408, never pushed) in
   `.claude/worktrees/mobile-api-local`; the app schema was generated from that branch's OpenAPI.
 
 ## Stubbed / gaps
 
-- Customer and fleet accounts still cannot sign in on mobile (NO_PANEL_ACCESS); portal routes are not mirrored.
+- Customer/fleet sign in by phone code only; e-mail + password mobile login still answers NO_PANEL_ACCESS for them (fleet users use passwords, TEC-637).
+- Customer: service PDF download (needs expo-file-system/sharing), new appointment booking (no portal dealer list), reviews, contracts, vehicle transfers, warranty claims.
 - Phone sign-in only for existing staff with a phone; locally the WhatsApp code is not readable (sandbox swallows it).
 - No bootstrap endpoint; homes make 2-3 calls (dealer, warehouse, customer detail).
 - Warehouse not built yet: order picking/preparation, distributor receipt placement, generate_new stock entries,
@@ -65,3 +68,10 @@ services, customers, warranties, orders, reports, tenant/organizations, measurem
 center_warehouse gets 200 on stock/warehouse and 403 on services (permissions work).
 Login answers without an active organization, so the app now opens the last used
 (or first) organization right after sign-in.
+
+### Runtime review (04:20)
+
+Fixed: request bodies were dropped by the mirror rewrite on React Native (whatwg-fetch Request has no body);
+APP_VERSION in Expo Go now comes from app.json; approvals hide sections on 404. All list/detail endpoints were
+checked with curl per role; every in-app route href resolves to a file.
+Metro bundles iOS and Android (full, non-lazy) without errors.
