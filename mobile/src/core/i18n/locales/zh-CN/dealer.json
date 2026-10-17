@@ -56,6 +56,7 @@
   "organization": "经销商",
   "items": "已施工产品",
   "items_empty": "尚未添加产品。",
+  "complete_needs_items": "至少添加一个产品才能完成服务。",
   "items_after_create": "创建后即可在服务页面添加施工产品。",
   "item_add": "添加产品",
   "item_remove": "移除",

@@ -56,6 +56,7 @@
   "organization": "Revendeur",
   "items": "Produits posés",
   "items_empty": "Aucun produit ajouté.",
+  "complete_needs_items": "Ajoutez au moins un produit pour terminer la prestation.",
   "items_after_create": "Vous ajoutez les produits posés juste après, sur l'écran de la prestation.",
   "item_add": "Ajouter un produit",
   "item_remove": "Retirer",

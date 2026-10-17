@@ -74,6 +74,10 @@ export function ServiceDetailScreen() {
         Alert.alert(t('photos_missing_title'), t('photos_missing_body'));
         return;
       }
+      if (isApiError(e, 'VALIDATION_ERROR') && e.details?.some((d) => d.field === 'items')) {
+        Alert.alert(t('action_failed'), t('complete_needs_items'));
+        return;
+      }
       Alert.alert(t('action_failed'), errorText(e));
     },
   });
@@ -86,6 +90,8 @@ export function ServiceDetailScreen() {
   });
 
   const s = svc.data;
+  // The backend refuses to complete a service without items (VALIDATION_ERROR on `items`).
+  const noItems = !s?.items?.length;
 
   const confirmTransition = (to: ServiceStatus) => {
     if (to === 'cancelled') {
@@ -155,12 +161,17 @@ export function ServiceDetailScreen() {
                       title={t(`transition.${to}`)}
                       variant={to === 'cancelled' ? 'outline' : to === 'completed' ? 'primary' : 'secondary'}
                       loading={transition.isPending && transition.variables?.status === to}
-                      disabled={transition.isPending}
+                      disabled={transition.isPending || (to === 'completed' && noItems)}
                       onPress={() => confirmTransition(to)}
                       className="grow"
                     />
                   ))}
                 </View>
+              ) : null}
+              {noItems && s.available_transitions.includes('completed') ? (
+                <Text variant="footnote" tone="muted">
+                  {t('complete_needs_items')}
+                </Text>
               ) : null}
             </View>
 

@@ -7,7 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { I18nextProvider } from 'react-i18next';
-import { I18nManager } from 'react-native';
+import { I18nManager, LogBox } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LayoutDirection } from 'uniwind';
 
@@ -18,6 +18,9 @@ import { applyThemePreference } from '@/core/preferences';
 import { persistOptions, queryClient } from '@/core/query';
 import { useNavigationTheme } from '@/features/shell/navigation-theme';
 import { fontAssets } from '@/ui/fonts';
+
+// Known React Native Animated noise (native driver events after unmount); harmless.
+LogBox.ignoreLogs(['Sending `onAnimatedValueUpdate` with no listeners registered']);
 
 // Keep the splash only until the stored session is read and the bundled
 // fonts are registered (both local, no network wait).

@@ -56,6 +56,7 @@
   "organization": "Händler",
   "items": "Verwendete Produkte",
   "items_empty": "Noch keine Produkte hinzugefügt.",
+  "complete_needs_items": "Fügen Sie mindestens ein Produkt hinzu, um den Service abzuschließen.",
   "items_after_create": "Die verwendeten Produkte fügen Sie direkt danach im Service hinzu.",
   "item_add": "Produkt hinzufügen",
   "item_remove": "Entfernen",

@@ -56,6 +56,7 @@
   "organization": "Distribuidor",
   "items": "Productos aplicados",
   "items_empty": "Aún no se añadieron productos.",
+  "complete_needs_items": "Añade al menos un producto para completar el servicio.",
   "items_after_create": "Los productos aplicados se añaden justo después, en la pantalla del servicio.",
   "item_add": "Añadir producto",
   "item_remove": "Quitar",

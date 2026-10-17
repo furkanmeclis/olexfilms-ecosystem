@@ -56,6 +56,7 @@
   "organization": "Bayi",
   "items": "Uygulanan ürünler",
   "items_empty": "Henüz ürün eklenmedi.",
+  "complete_needs_items": "Hizmeti tamamlamak için en az bir ürün ekleyin.",
   "items_after_create": "Uygulanan ürünleri hemen ardından hizmet ekranında eklersiniz.",
   "item_add": "Ürün ekle",
   "item_remove": "Kaldır",
