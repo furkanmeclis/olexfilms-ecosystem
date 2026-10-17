@@ -70,6 +70,7 @@ export function TransferNewScreen() {
             />
             <Input
               label={t('fields.note')}
+              placeholder={t('placeholder_note')}
               value={note}
               onChangeText={setNote}
               multiline

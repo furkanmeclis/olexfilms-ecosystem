@@ -173,6 +173,7 @@ export function ReserveSheet({ onClose, onSubmit }: { onClose: () => void; onSub
             <>
               <Input
                 label={roll ? t('m.roll_count') : t('m.barcode_count')}
+                placeholder={t('placeholder_count')}
                 value={count}
                 onChangeText={setCount}
                 keyboardType="number-pad"
@@ -191,6 +192,7 @@ export function ReserveSheet({ onClose, onSubmit }: { onClose: () => void; onSub
               {product.uses_fixed_barcode ? (
                 <Input
                   label={t('fixed.quantity_label')}
+                  placeholder={t('placeholder_quantity')}
                   value={fixedQty}
                   onChangeText={setFixedQty}
                   keyboardType="number-pad"
@@ -199,6 +201,7 @@ export function ReserveSheet({ onClose, onSubmit }: { onClose: () => void; onSub
               ) : null}
               <Input
                 label={t('fields.prefix')}
+                placeholder={t('placeholder_prefix')}
                 value={prefix}
                 onChangeText={setPrefix}
                 autoCapitalize="characters"

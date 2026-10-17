@@ -74,6 +74,7 @@ export function CodeNameSheet({
           ) : null}
           <Input
             label={t('fields.code')}
+            placeholder={t('placeholder_code')}
             value={code}
             onChangeText={setCode}
             autoCapitalize="characters"
@@ -82,7 +83,7 @@ export function CodeNameSheet({
             hint={t('form.code_hint')}
             error={codeError}
           />
-          <Input label={t('fields.name')} value={name} onChangeText={setName} hint={t('form.name_hint')} />
+          <Input label={t('fields.name')} placeholder={t('placeholder_name')} value={name} onChangeText={setName} hint={t('form.name_hint')} />
           {error ? (
             <Text variant="footnote" tone="danger">
               {error}

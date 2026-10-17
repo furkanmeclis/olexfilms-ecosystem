@@ -62,6 +62,7 @@ export function PhoneScreen() {
         </Text>
         <Input
           label={t('phone_code_label')}
+          placeholder={t('placeholder_code')}
           value={code}
           onChangeText={(v) => {
             const digits = v.replace(/\D/g, '').slice(0, 6);

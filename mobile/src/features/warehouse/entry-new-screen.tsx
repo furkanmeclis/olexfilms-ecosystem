@@ -86,7 +86,7 @@ export function EntryNewScreen() {
           onChange={(w) => setWh(w.uuid)}
           error={tried && !whId ? t('validation.warehouse') : undefined}
         />
-        <Input label={t('fields.note')} value={note} onChangeText={setNote} multiline maxLength={500} className="min-h-20 py-3" />
+        <Input label={t('fields.note')} placeholder={t('placeholder_note')} value={note} onChangeText={setNote} multiline maxLength={500} className="min-h-20 py-3" />
         <Button size="lg" icon={<Icon name="packageIn" tone="primary-foreground" size={18} />} title={t('entries.create')} loading={busy} onPress={() => void submit()} />
       </Screen>
     </>

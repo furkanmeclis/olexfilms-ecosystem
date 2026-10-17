@@ -28,6 +28,7 @@ export function PasswordScreen() {
         </View>
         <Input
           label={t('password_label')}
+          placeholder={t('placeholder_password')}
           value={password}
           onChangeText={(v) => usePendingLogin.getState().set({ password: v })}
           secureTextEntry

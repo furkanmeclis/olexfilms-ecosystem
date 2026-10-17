@@ -70,6 +70,7 @@
     "api:generate": "openapi-typescript ../docs/openapi.yaml -o src/core/api/schema.d.ts",
     "i18n:gen": "node scripts/gen-i18n-resources.mjs",
     "i18n:check": "node scripts/check-i18n.mjs",
+    "placeholders:check": "node scripts/check-placeholders.mjs",
     "uniwind:types": "uniwind generate-artifacts --css ./src/global.css --dts ./src/uniwind-types.d.ts",
     "doctor": "expo-doctor"
   },

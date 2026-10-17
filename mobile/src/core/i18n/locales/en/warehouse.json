@@ -537,5 +537,16 @@
   "validation.room": "Pick a room.",
   "validation.same_warehouse": "Pick a different warehouse.",
   "validation.too_long": "At most {{max}} characters.",
-  "validation.warehouse": "Pick a warehouse."
+  "validation.warehouse": "Pick a warehouse.",
+  "placeholder_note": "Short note (optional)",
+  "placeholder_code": "SHELF_A1",
+  "placeholder_name": "Main warehouse",
+  "placeholder_address": "Street, number, district, city",
+  "placeholder_bulk_codes": "A, B, C",
+  "placeholder_prefix": "S",
+  "placeholder_bulk_from": "1",
+  "placeholder_bulk_to": "10",
+  "placeholder_bulk_pad": "2",
+  "placeholder_count": "10 pcs",
+  "placeholder_quantity": "50 pcs"
 }

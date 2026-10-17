@@ -173,19 +173,19 @@ export function GenerateScreen() {
                 ]}
               />
               {lv.mode === 'list' ? (
-                <Input label={t('bulk.codes')} hint={t('bulk.codes_hint')} value={lv.codes} onChangeText={(codes) => update(i, { codes })} autoCapitalize="characters" autoCorrect={false} />
+                <Input label={t('bulk.codes')} placeholder={t('placeholder_bulk_codes')} hint={t('bulk.codes_hint')} value={lv.codes} onChangeText={(codes) => update(i, { codes })} autoCapitalize="characters" autoCorrect={false} />
               ) : (
                 <>
-                  <Input label={t('bulk.prefix')} hint={t('bulk.prefix_hint')} value={lv.prefix} onChangeText={(prefix) => update(i, { prefix })} autoCapitalize="characters" autoCorrect={false} />
+                  <Input label={t('bulk.prefix')} placeholder={t('placeholder_prefix')} hint={t('bulk.prefix_hint')} value={lv.prefix} onChangeText={(prefix) => update(i, { prefix })} autoCapitalize="characters" autoCorrect={false} />
                   <View className="flex-row gap-2">
                     <View className="flex-1">
-                      <Input label={t('bulk.from')} value={lv.from} onChangeText={(from) => update(i, { from })} keyboardType="number-pad" />
+                      <Input label={t('bulk.from')} placeholder={t('placeholder_bulk_from')} value={lv.from} onChangeText={(from) => update(i, { from })} keyboardType="number-pad" />
                     </View>
                     <View className="flex-1">
-                      <Input label={t('bulk.to')} value={lv.to} onChangeText={(to) => update(i, { to })} keyboardType="number-pad" />
+                      <Input label={t('bulk.to')} placeholder={t('placeholder_bulk_to')} value={lv.to} onChangeText={(to) => update(i, { to })} keyboardType="number-pad" />
                     </View>
                     <View className="flex-1">
-                      <Input label={t('bulk.pad')} value={lv.pad} onChangeText={(pad) => update(i, { pad })} keyboardType="number-pad" />
+                      <Input label={t('bulk.pad')} placeholder={t('placeholder_bulk_pad')} value={lv.pad} onChangeText={(pad) => update(i, { pad })} keyboardType="number-pad" />
                     </View>
                   </View>
                 </>

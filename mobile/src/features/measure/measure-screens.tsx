@@ -283,9 +283,10 @@ export function NewMeasurementScreen() {
     <>
       <Stack.Screen options={{ title: t('new'), headerLargeTitle: false }} />
       <Screen>
-        <Input label={t('plate')} value={plate} onChangeText={setPlate} autoCapitalize="characters" autoCorrect={false} />
+        <Input label={t('plate')} placeholder={t('placeholder_plate', { ns: 'common' })} value={plate} onChangeText={setPlate} autoCapitalize="characters" autoCorrect={false} />
         <Input
           label={t('vin')}
+          placeholder={t('placeholder_vin', { ns: 'common' })}
           value={vin}
           onChangeText={setVin}
           autoCapitalize="characters"

@@ -123,8 +123,8 @@ export function NewServiceScreen() {
                 last
               />
             </Section>
-            <Input label={t('km')} keyboardType="number-pad" value={km} onChangeText={setKm} />
-            <Input label={t('notes')} value={notes} onChangeText={setNotes} multiline className="min-h-24 py-3" />
+            <Input label={t('km')} placeholder={t('placeholder_km', { ns: 'common' })} keyboardType="number-pad" value={km} onChangeText={setKm} />
+            <Input label={t('notes')} placeholder={t('placeholder_notes')} value={notes} onChangeText={setNotes} multiline className="min-h-24 py-3" />
             <View className="flex-row items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3">
               <View className="flex-1 gap-0.5">
                 <Text variant="body">{t('has_measurement')}</Text>
@@ -330,14 +330,14 @@ function NewCustomerForm({
         control={form.control}
         name="name"
         render={({ field }) => (
-          <Input label={t('first_name')} value={field.value} onChangeText={field.onChange} error={err('name')} autoCapitalize="words" />
+          <Input label={t('first_name')} placeholder={t('placeholder_first_name')} value={field.value} onChangeText={field.onChange} error={err('name')} autoCapitalize="words" />
         )}
       />
       <Controller
         control={form.control}
         name="surname"
         render={({ field }) => (
-          <Input label={t('surname')} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="words" />
+          <Input label={t('surname')} placeholder={t('placeholder_surname')} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="words" />
         )}
       />
       <Controller
@@ -346,6 +346,7 @@ function NewCustomerForm({
         render={({ field }) => (
           <Input
             label={t('phone')}
+            placeholder={t('placeholder_phone', { ns: 'common' })}
             value={field.value}
             onChangeText={field.onChange}
             error={err('phone')}
@@ -501,6 +502,7 @@ function NewVehicleForm({
         render={({ field }) => (
           <Input
             label={t('plate')}
+            placeholder={t('placeholder_plate', { ns: 'common' })}
             value={field.value}
             onChangeText={field.onChange}
             error={err('plate')}
@@ -520,6 +522,7 @@ function NewVehicleForm({
         render={({ field }) => (
           <Input
             label={t('model_year')}
+            placeholder={t('placeholder_year', { ns: 'common' })}
             value={field.value}
             onChangeText={field.onChange}
             error={err('year')}
@@ -534,6 +537,7 @@ function NewVehicleForm({
         render={({ field }) => (
           <Input
             label={t('vin_optional')}
+            placeholder={t('placeholder_vin', { ns: 'common' })}
             value={field.value}
             onChangeText={field.onChange}
             error={err('vin')}

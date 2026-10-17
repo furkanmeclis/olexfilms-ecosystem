@@ -197,7 +197,7 @@ export function CountNewScreen() {
           </View>
         ) : null}
 
-        <Input label={t('fields.note')} value={note} onChangeText={setNote} multiline maxLength={500} className="min-h-20 py-3" />
+        <Input label={t('fields.note')} placeholder={t('placeholder_note')} value={note} onChangeText={setNote} multiline maxLength={500} className="min-h-20 py-3" />
         <Button size="lg" title={t('counts.create')} loading={busy} onPress={() => void submit()} />
       </Screen>
 

@@ -264,6 +264,7 @@ export function WarehouseEditScreen() {
       <Screen>
         <Input
           label={t('fields.code')}
+          placeholder={t('placeholder_code')}
           value={v.code}
           onChangeText={(s) => set({ code: s })}
           autoCapitalize="characters"
@@ -272,8 +273,8 @@ export function WarehouseEditScreen() {
           hint={t('form.code_hint')}
           error={tried && !codeOk ? t('validation.code') : undefined}
         />
-        <Input label={t('fields.name')} value={v.name} onChangeText={(s) => set({ name: s })} editable={write} hint={t('form.name_hint')} />
-        <Input label={t('fields.address')} value={v.address} onChangeText={(s) => set({ address: s })} editable={write} multiline className="min-h-20 py-3" />
+        <Input label={t('fields.name')} placeholder={t('placeholder_name')} value={v.name} onChangeText={(s) => set({ name: s })} editable={write} hint={t('form.name_hint')} />
+        <Input label={t('fields.address')} placeholder={t('placeholder_address')} value={v.address} onChangeText={(s) => set({ address: s })} editable={write} multiline className="min-h-20 py-3" />
         <ToggleRow
           label={t('form.require_location_placement')}
           hint={t('form.require_location_placement_hint')}

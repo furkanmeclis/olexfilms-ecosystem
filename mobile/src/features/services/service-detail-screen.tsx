@@ -343,6 +343,7 @@ export function ServiceDetailScreen() {
           </Text>
           <Input
             label={t('cancel_reason_label')}
+            placeholder={t('placeholder_cancel_reason')}
             value={reason}
             onChangeText={setReason}
             multiline

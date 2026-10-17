@@ -22,6 +22,7 @@ export function TotpScreen() {
       <Screen className="gap-5 pt-4">
         <Input
           label={t('totp_label')}
+          placeholder={t('placeholder_code')}
           hint={t('totp_hint')}
           value={code}
           onChangeText={(v) => {
