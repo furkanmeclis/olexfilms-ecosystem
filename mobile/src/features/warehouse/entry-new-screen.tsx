@@ -2,10 +2,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { activeMembership } from '@/core/spaces';
 import { Button } from '@/ui/button';
+import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
@@ -63,14 +65,20 @@ export function EntryNewScreen() {
                 { value: 'generate_new', label: t('entry_mode.generate_new') },
               ]}
             />
-            <Text variant="callout" tone="muted">
-              {t('entries.mode_hint_center')}
-            </Text>
+            <View className="flex-row items-center gap-2">
+              <Icon name="barcode" tone="muted-foreground" size={16} />
+              <Text variant="callout" tone="muted" className="flex-1">
+                {t('entries.mode_hint_center')}
+              </Text>
+            </View>
           </>
         ) : (
-          <Text variant="callout" tone="muted">
-            {t('entries.mode_hint_distributor')}
-          </Text>
+          <View className="flex-row items-center gap-2">
+            <Icon name="scan" tone="muted-foreground" size={16} />
+            <Text variant="callout" tone="muted" className="flex-1">
+              {t('entries.mode_hint_distributor')}
+            </Text>
+          </View>
         )}
         <WarehouseField
           label={t('fields.warehouse')}
@@ -79,7 +87,7 @@ export function EntryNewScreen() {
           error={tried && !whId ? t('validation.warehouse') : undefined}
         />
         <Input label={t('fields.note')} value={note} onChangeText={setNote} multiline maxLength={500} className="min-h-20 py-3" />
-        <Button size="lg" title={t('entries.create')} loading={busy} onPress={() => void submit()} />
+        <Button size="lg" icon={<Icon name="packageIn" tone="primary-foreground" size={18} />} title={t('entries.create')} loading={busy} onPress={() => void submit()} />
       </Screen>
     </>
   );

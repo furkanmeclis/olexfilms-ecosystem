@@ -49,6 +49,7 @@ export function SettingsScreen() {
           {LANGUAGES.map((l, i) => (
             <ListRow
               key={l.code}
+              icon="globe"
               title={l.name}
               onPress={() => void pickLanguage(l.code)}
               trailing={<Checked on={i18n.language === l.code} />}
@@ -62,6 +63,7 @@ export function SettingsScreen() {
           {THEMES.map((th, i) => (
             <ListRow
               key={th}
+              icon="theme"
               title={t(`theme.${th}`)}
               onPress={() => usePreferences.getState().setTheme(th)}
               trailing={<Checked on={theme === th} />}
@@ -75,6 +77,7 @@ export function SettingsScreen() {
           {UNITS.map((u, i) => (
             <ListRow
               key={u}
+              icon="measure"
               title={t(`unit.${u}`)}
               onPress={() => usePreferences.getState().setUnit(u)}
               trailing={<Checked on={unit === u} />}
@@ -85,13 +88,13 @@ export function SettingsScreen() {
 
         <SectionHeader title={t('about')} />
         <List>
-          <ListRow title={API_URL.replace(/^https?:\/\//, '')} subtitle={t('api_server')} />
-          <ListRow title={APP_VERSION} subtitle={t('app_version')} last />
+          <ListRow icon="network" title={API_URL.replace(/^https?:\/\//, '')} subtitle={t('api_server')} />
+          <ListRow icon="info" title={APP_VERSION} subtitle={t('app_version')} last />
         </List>
 
         <List className="mt-4">
-          <ListRow title={t('switch_space')} onPress={() => router.push('/spaces')} />
-          <ListRow title={t('sign_out')} tone="danger" onPress={() => void useSession.getState().signOut()} last />
+          <ListRow icon="spaces" title={t('switch_space')} onPress={() => router.push('/spaces')} />
+          <ListRow icon="signOut" title={t('sign_out')} tone="danger" onPress={() => void useSession.getState().signOut()} last />
         </List>
 
         <Text variant="footnote" tone="muted" className="text-center">
