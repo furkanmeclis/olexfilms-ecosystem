@@ -307,19 +307,27 @@ func (q *Queries) GetWarehouseTransferByUUID(ctx context.Context, arg GetWarehou
 }
 
 const insertWarehouseTransferLine = `-- name: InsertWarehouseTransferLine :one
-INSERT INTO warehouse_transfer_lines (transfer_id, unit_id, target_location_id)
-VALUES ($1, $2, $3)
-RETURNING id, uuid, transfer_id, unit_id, source_location_id, target_location_id, is_open, out_movement_id, in_movement_id, placement_movement_id, restore_movement_id, created_at
+INSERT INTO warehouse_transfer_lines (transfer_id, unit_id, target_location_id, source_location_id, quantity)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, uuid, transfer_id, unit_id, source_location_id, target_location_id, is_open, out_movement_id, in_movement_id, placement_movement_id, restore_movement_id, created_at, quantity
 `
 
 type InsertWarehouseTransferLineParams struct {
 	TransferID       int64       `json:"transfer_id"`
 	UnitID           int64       `json:"unit_id"`
 	TargetLocationID pgtype.Int8 `json:"target_location_id"`
+	SourceLocationID pgtype.Int8 `json:"source_location_id"`
+	Quantity         int32       `json:"quantity"`
 }
 
 func (q *Queries) InsertWarehouseTransferLine(ctx context.Context, arg InsertWarehouseTransferLineParams) (WarehouseTransferLine, error) {
-	row := q.db.QueryRow(ctx, insertWarehouseTransferLine, arg.TransferID, arg.UnitID, arg.TargetLocationID)
+	row := q.db.QueryRow(ctx, insertWarehouseTransferLine,
+		arg.TransferID,
+		arg.UnitID,
+		arg.TargetLocationID,
+		arg.SourceLocationID,
+		arg.Quantity,
+	)
 	var i WarehouseTransferLine
 	err := row.Scan(
 		&i.ID,
@@ -334,6 +342,7 @@ func (q *Queries) InsertWarehouseTransferLine(ctx context.Context, arg InsertWar
 		&i.PlacementMovementID,
 		&i.RestoreMovementID,
 		&i.CreatedAt,
+		&i.Quantity,
 	)
 	return i, err
 }
@@ -407,7 +416,7 @@ func (q *Queries) ListOrderPlacementUnits(ctx context.Context, arg ListOrderPlac
 }
 
 const listWarehouseTransferLines = `-- name: ListWarehouseTransferLines :many
-SELECT id, uuid, transfer_id, unit_id, source_location_id, target_location_id, is_open, out_movement_id, in_movement_id, placement_movement_id, restore_movement_id, created_at FROM warehouse_transfer_lines WHERE transfer_id = $1 ORDER BY id
+SELECT id, uuid, transfer_id, unit_id, source_location_id, target_location_id, is_open, out_movement_id, in_movement_id, placement_movement_id, restore_movement_id, created_at, quantity FROM warehouse_transfer_lines WHERE transfer_id = $1 ORDER BY id
 `
 
 func (q *Queries) ListWarehouseTransferLines(ctx context.Context, transferID int64) ([]WarehouseTransferLine, error) {
@@ -432,6 +441,7 @@ func (q *Queries) ListWarehouseTransferLines(ctx context.Context, transferID int
 			&i.PlacementMovementID,
 			&i.RestoreMovementID,
 			&i.CreatedAt,
+			&i.Quantity,
 		); err != nil {
 			return nil, err
 		}

@@ -17,6 +17,7 @@ export type WarehouseLocationType = Schemas["WarehouseLocationType"];
 export type WarehouseLocationInput = Schemas["WarehouseLocationInput"];
 export type WarehouseLocationPatch = Schemas["WarehouseLocationPatch"];
 export type WarehouseScanResult = Schemas["WarehouseScanResult"];
+export type StockProduct = Schemas["StockProduct"];
 export type WarehouseGenerateInput = Schemas["WarehouseGenerateInput"];
 export type WarehouseGenerateLevel = Schemas["WarehouseGenerateLevel"];
 export type WarehouseGenerateResult = Schemas["WarehouseGenerateResult"];
@@ -29,6 +30,8 @@ export type StockEntryStatus = Schemas["StockEntryStatus"];
 export type StockEntryMode = Schemas["StockEntryMode"];
 export type BarcodeBatch = Schemas["BarcodeBatch"];
 export type BarcodeBatchInput = Schemas["BarcodeBatchInput"];
+export type BarcodeVoidInput = Schemas["BarcodeVoidInput"];
+export type BarcodeVoidResult = Schemas["BarcodeVoidResult"];
 // --- TEC-232 (slice 2) ---
 export type WarehouseTransfer = Schemas["WarehouseTransfer"];
 export type WarehouseTransferLine = Schemas["WarehouseTransferLine"];
@@ -231,6 +234,13 @@ export const warehouseService = {
       body: { code, ...options },
     });
   },
+  listLocationProducts(uuid: string, productUuid: string) {
+    return platformRequest<Page<StockProduct>>(
+      "GET",
+      `/v1/stock/locations/${enc(uuid)}/products`,
+      { query: { product_uuid: productUuid, limit: 100, offset: 0 } },
+    );
+  },
 
   // --- Stock entries (TEC-204) ----------------------------------------------
   listEntries(params: StockEntryListQuery) {
@@ -295,6 +305,13 @@ export const warehouseService = {
       body,
     });
   },
+  voidBarcodes(body: BarcodeVoidInput) {
+    return platformRequest<BarcodeVoidResult>(
+      "POST",
+      "/v1/stock/barcodes/void",
+      { body },
+    );
+  },
 
   // --- Order receipt placement (TEC-765) -----------------------------------
 
@@ -339,11 +356,15 @@ export const warehouseService = {
       `/v1/warehouse/transfers/${enc(uuid)}`,
     );
   },
-  addTransferLines(uuid: string, barcodes: string[]) {
+  addTransferLines(
+    uuid: string,
+    barcodes: string[],
+    fixed?: Schemas["WarehouseFixedMoveInput"][],
+  ) {
     return platformRequest<WarehouseTransfer>(
       "POST",
       `/v1/warehouse/transfers/${enc(uuid)}/lines`,
-      { body: { barcodes } },
+      { body: { barcodes, fixed } },
     );
   },
   deleteTransferLine(uuid: string, lineUuid: string) {

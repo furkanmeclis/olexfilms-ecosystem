@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   cancelTransfer: vi.fn(),
   listEodReports: vi.fn(),
   listBatches: vi.fn(),
+  voidBarcodes: vi.fn(),
 }));
 const catalog = vi.hoisted(() => ({ listProducts: vi.fn() }));
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
@@ -123,7 +124,14 @@ import { BarcodesPage } from "./barcodes-page";
 import { CountsPage } from "./counts-page";
 import { EodReportsPage } from "./eod-reports-page";
 import { StockEntriesPage } from "./stock-entries-page";
-import { flush, mount, render, unmount, type Mounted } from "./test-helpers";
+import {
+  click,
+  flush,
+  mount,
+  render,
+  unmount,
+  type Mounted,
+} from "./test-helpers";
 import { TransfersPage } from "./transfers-page";
 
 type TableProps<T> = {
@@ -152,6 +160,7 @@ beforeEach(() => {
     Permission.WarehouseRead,
     Permission.WarehouseWrite,
     Permission.StockRead,
+    Permission.StockWrite,
   ]);
   state.orgType = "center";
   state.modules = ["warehouse", "stock"];
@@ -564,6 +573,31 @@ describe("EodReportsPage (TEC-376 DataTable)", () => {
 });
 
 describe("BarcodesPage (TEC-376 DataTable)", () => {
+  it("voids selected batches after confirmation and reports rejected units", async () => {
+    api.voidBarcodes.mockResolvedValue({
+      items: [
+        { unit_uuid: "u-1", barcode: "A1", voided: true },
+        {
+          unit_uuid: "u-2",
+          barcode: "A2",
+          voided: false,
+          reason: "not_reserved",
+        },
+      ],
+    });
+    await render(m, createElement(BarcodesPage, { slug: "acme" }));
+    await select(["batch-1"]);
+    const button = [...m.container.querySelectorAll("button")].find(
+      (node) => node.textContent === "warehouse.barcodes.void_selected",
+    );
+    await click(button ?? null);
+    await flush();
+    expect(dialogs.confirm).toHaveBeenCalled();
+    expect(api.voidBarcodes).toHaveBeenCalledWith({ batch_uuid: "batch-1" });
+    expect(toast.success).toHaveBeenCalledWith(
+      "warehouse.barcodes.void_result",
+    );
+  });
   it("maps product, printed, created and the sort; prints from the row", async () => {
     files.platformDownloadFile.mockResolvedValue({
       blob: new Blob(["%PDF"]),

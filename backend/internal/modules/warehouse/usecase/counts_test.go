@@ -16,7 +16,7 @@ func TestCountAllowedResolutions(t *testing.T) {
 		{CountScanSerial, CountResultMissing, []string{CountResolveIgnore, CountResolveVoidMissing}},
 		{CountScanSerial, CountResultWrongLocation, []string{CountResolveIgnore, CountResolveRelocate}},
 		{CountScanSerial, CountResultUnlocated, []string{CountResolveIgnore, CountResolveRelocate}},
-		{CountScanSerial, CountResultUnexpected, []string{CountResolveIgnore}},
+		{CountScanSerial, CountResultUnexpected, []string{CountResolveIgnore, CountResolveAddToStock}},
 		{CountScanSerial, CountResultMeterVariance, []string{CountResolveIgnore, CountResolveIncreaseUnlocated}},
 		{CountScanFixed, CountResultQtyVariance, []string{CountResolveIgnore, CountResolveIncreaseUnlocated}},
 		// Serial products counted by quantity cannot be corrected without

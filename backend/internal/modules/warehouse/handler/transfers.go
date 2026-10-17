@@ -56,6 +56,8 @@ func writeTransferError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeWarehouseUnitUnavailable, "The unit is not on hand in the expected warehouse")
 	case errors.Is(err, wh.ErrOrderNotReceived):
 		response.Conflict(w, r, CodeWarehouseOrderNotReceived, "The order is not received yet")
+	case errors.Is(err, ledger.ErrInsufficientStock):
+		response.Conflict(w, r, "WAREHOUSE_FIXED_INSUFFICIENT", "The source location has less fixed barcode stock than requested")
 	case errors.Is(err, wh.ErrTransferLedger):
 		msg := "The stock ledger refused the movement"
 		if errors.Is(err, ledger.ErrOwnerNotAllowed) || errors.Is(err, ledger.ErrTransitionNotAllowed) || errors.Is(err, ledger.ErrOwnerMismatch) {
@@ -68,9 +70,10 @@ func writeTransferError(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 type moveBody struct {
-	Barcodes     []string   `json:"barcodes"`
-	LocationUUID *uuid.UUID `json:"location_uuid"`
-	LocationCode string     `json:"location_code"`
+	Barcodes     []string            `json:"barcodes"`
+	Fixed        []wh.FixedMoveInput `json:"fixed"`
+	LocationUUID *uuid.UUID          `json:"location_uuid"`
+	LocationCode string              `json:"location_code"`
 }
 
 type transferBody struct {
@@ -81,7 +84,8 @@ type transferBody struct {
 }
 
 type transferLinesBody struct {
-	Barcodes []string `json:"barcodes"`
+	Barcodes []string            `json:"barcodes"`
+	Fixed    []wh.FixedMoveInput `json:"fixed"`
 }
 
 type completeBody struct {
@@ -95,7 +99,7 @@ func (h *Transfers) Move(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &b) {
 		return
 	}
-	out, err := h.svc.Move(r.Context(), entryCaller(r), wh.MoveInput{Barcodes: b.Barcodes, LocationUUID: b.LocationUUID, LocationCode: b.LocationCode})
+	out, err := h.svc.Move(r.Context(), entryCaller(r), wh.MoveInput{Barcodes: b.Barcodes, Fixed: b.Fixed, LocationUUID: b.LocationUUID, LocationCode: b.LocationCode})
 	if err != nil {
 		writeTransferError(w, r, err)
 		return
@@ -190,7 +194,7 @@ func (h *Transfers) AddLines(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &b) {
 		return
 	}
-	out, err := h.svc.AddTransferLines(r.Context(), entryCaller(r), id, b.Barcodes)
+	out, err := h.svc.AddTransferItems(r.Context(), entryCaller(r), id, b.Barcodes, b.Fixed)
 	if err != nil {
 		writeTransferError(w, r, err)
 		return

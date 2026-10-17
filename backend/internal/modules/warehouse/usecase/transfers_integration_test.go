@@ -13,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
+	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	wh "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/google/uuid"
@@ -64,6 +66,103 @@ func (e *entryEnv) locID(t *testing.T, id uuid.UUID) int64 {
 		t.Fatal(err)
 	}
 	return l.ID
+}
+
+func TestFixedBarcodeMoveTransferAndRestore(t *testing.T) {
+	e := newEntryEnv(t)
+	c := e.caller(e.center)
+	tr := wh.NewWarehouseTransfers(e.pool, e.q, outbox.NewStore(e.pool, e.q))
+	src, dst := e.site(t, "F"), e.site(t, "G")
+	batch, err := e.bc.Create(e.ctx, e.stockCaller(e.center), stockusecase.BatchInput{ProductUUID: e.fixed.Uuid.String(), Quantity: 1, Prefix: e.prefix("Q")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	code := batch.Units[0].Barcode
+	entry, err := e.entries.Create(e.ctx, c, wh.EntryInput{WarehouseUUID: src.w.UUID.String(), Mode: wh.EntryModeWithExisting})
+	if err != nil {
+		t.Fatal(err)
+	}
+	qty := int32(10)
+	if _, err = e.entries.AddLines(e.ctx, c, entry.UUID, wh.EntryLinesInput{Barcodes: []string{code}, FixedQuantity: &qty}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.entries.Place(e.ctx, c, entry.UUID, wh.PlaceInput{LocationUUID: &src.a.UUID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.entries.Confirm(e.ctx, c, entry.UUID); err != nil {
+		t.Fatal(err)
+	}
+	u, err := e.q.GetUnitByUUID(e.ctx, batch.Units[0].UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	holding := func(location int64) int32 {
+		t.Helper()
+		n, err := e.q.GetFixedHoldingQuantity(e.ctx, db.GetFixedHoldingQuantityParams{UnitID: u.ID, OwnerType: "warehouse_location", OwnerID: location})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	move := wh.FixedMoveInput{Barcode: code, Quantity: 3, SourceLocationUUID: src.a.UUID, RequestUUID: uuid.New()}
+	if _, err = tr.Move(e.ctx, c, wh.MoveInput{Fixed: []wh.FixedMoveInput{move}, LocationUUID: &src.b.UUID}); err != nil {
+		t.Fatalf("fixed move: %v", err)
+	}
+	if holding(src.aID) != 7 || holding(src.bID) != 3 {
+		t.Fatalf("move holdings: %d, %d", holding(src.aID), holding(src.bID))
+	}
+	if _, err = tr.Move(e.ctx, c, wh.MoveInput{Fixed: []wh.FixedMoveInput{move}, LocationUUID: &src.b.UUID}); err != nil {
+		t.Fatalf("fixed move retry: %v", err)
+	}
+	if holding(src.aID) != 7 || holding(src.bID) != 3 {
+		t.Fatalf("retry changed holdings: %d, %d", holding(src.aID), holding(src.bID))
+	}
+	conflict := move
+	conflict.Quantity = 4
+	if _, err = tr.Move(e.ctx, c, wh.MoveInput{Fixed: []wh.FixedMoveInput{conflict}, LocationUUID: &src.b.UUID}); !errors.Is(err, wh.ErrTransferLedger) {
+		t.Fatalf("changed retry: %v", err)
+	}
+	move.Quantity = 8
+	move.RequestUUID = uuid.New()
+	if _, err = tr.Move(e.ctx, c, wh.MoveInput{Fixed: []wh.FixedMoveInput{move}, LocationUUID: &src.b.UUID}); !errors.Is(err, ledger.ErrInsufficientStock) {
+		t.Fatalf("insufficient move: %v", err)
+	}
+	doc, err := tr.CreateTransfer(e.ctx, c, wh.TransferInput{FromWarehouseUUID: src.w.UUID.String(), ToWarehouseUUID: dst.w.UUID.String(), ToLocationUUID: &dst.a.UUID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	item := wh.FixedMoveInput{Barcode: code, Quantity: 2, SourceLocationUUID: src.b.UUID}
+	if _, err = tr.AddTransferItems(e.ctx, c, doc.UUID, nil, []wh.FixedMoveInput{item}); err != nil {
+		t.Fatalf("add fixed: %v", err)
+	}
+	if _, err = tr.Ship(e.ctx, c, doc.UUID); err != nil {
+		t.Fatalf("ship fixed: %v", err)
+	}
+	if holding(src.bID) != 1 {
+		t.Fatalf("ship holding: %d", holding(src.bID))
+	}
+	if _, err = tr.Cancel(e.ctx, c, doc.UUID); err != nil {
+		t.Fatalf("restore fixed: %v", err)
+	}
+	if holding(src.bID) != 3 {
+		t.Fatalf("restore holding: %d", holding(src.bID))
+	}
+	doc, err = tr.CreateTransfer(e.ctx, c, wh.TransferInput{FromWarehouseUUID: src.w.UUID.String(), ToWarehouseUUID: dst.w.UUID.String(), ToLocationUUID: &dst.a.UUID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tr.AddTransferItems(e.ctx, c, doc.UUID, nil, []wh.FixedMoveInput{item}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tr.Ship(e.ctx, c, doc.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = tr.Complete(e.ctx, c, doc.UUID, wh.CompleteInput{}); err != nil {
+		t.Fatalf("complete fixed: %v", err)
+	}
+	if holding(src.bID) != 1 || holding(dst.aID) != 2 {
+		t.Fatalf("complete holdings: %d, %d", holding(src.bID), holding(dst.aID))
+	}
 }
 
 // stocked enters n new serial units at the center and places them on loc.
@@ -442,6 +541,12 @@ func TestWarehouseTransferRequiresPlacement(t *testing.T) {
 	if _, err := e.tree.UpdateWarehouse(e.ctx, c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &required}); err != nil {
 		t.Fatal(err)
 	}
+	// The flag is organization-wide for order assignment; never leave it on
+	// for the shared center when the test stops early.
+	t.Cleanup(func() {
+		off := false
+		_, _ = e.tree.UpdateWarehouse(context.Background(), c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &off})
+	})
 	doc, err := tr.CreateTransfer(e.ctx, c, wh.TransferInput{FromWarehouseUUID: src.w.UUID.String(), ToWarehouseUUID: dst.w.UUID.String()})
 	if err != nil {
 		t.Fatal(err)
@@ -478,6 +583,12 @@ func TestOrderAssignmentRequiresPlacement(t *testing.T) {
 	if _, err := e.tree.UpdateWarehouse(e.ctx, c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &required}); err != nil {
 		t.Fatal(err)
 	}
+	// The flag is organization-wide for order assignment; never leave it on
+	// for the shared center when the test stops early.
+	t.Cleanup(func() {
+		off := false
+		_, _ = e.tree.UpdateWarehouse(context.Background(), c.Caller, src.w.UUID, wh.WarehousePatch{RequireLocationPlacement: &off})
+	})
 	entry, err := e.entries.Create(e.ctx, c, wh.EntryInput{WarehouseUUID: src.w.UUID.String(), Mode: wh.EntryModeGenerateNew})
 	if err != nil {
 		t.Fatal(err)

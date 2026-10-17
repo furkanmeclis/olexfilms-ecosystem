@@ -297,6 +297,10 @@ func (up *UnitProjection) replayFixed(mvs []db.StockMovement, d *deltas) error {
 		case mv.QuantityDelta < 0: // debit: from_owner
 			t, id = mv.FromOwnerType, mv.FromOwnerID
 		default:
+			if mv.Type == string(TypeVoid) && (mv.FromStatus.String == string(StatusReserved) || mv.FromStatus.String == string(StatusPrinted)) && mv.ToStatus.String == string(StatusVoid) {
+				up.Status = StatusVoid
+				continue
+			}
 			up.anomaly("movement %d (%s): fixed barcode movement without quantity", mv.ID, mv.Type)
 			continue
 		}

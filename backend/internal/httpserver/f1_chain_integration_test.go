@@ -275,8 +275,9 @@ func runF1Chain(t *testing.T) *f1Chain {
 	}
 	barcodes := make([]string, 0, generated)
 	for _, u := range batch.Units {
-		if u.Status != "printed" {
-			t.Fatalf("generated unit %s status = %s, want printed", u.Barcode, u.Status)
+		// TEC-767: a generated label stays reserved until its PDF is printed.
+		if u.Status != "reserved" {
+			t.Fatalf("generated unit %s status = %s, want reserved", u.Barcode, u.Status)
 		}
 		barcodes = append(barcodes, u.Barcode)
 	}

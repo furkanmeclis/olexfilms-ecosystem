@@ -57,6 +57,19 @@ func (s *Labels) PrintBatch(ctx context.Context, c Caller, batchID uuid.UUID, te
 	if err != nil {
 		return nil, fmt.Errorf("stock: batch units: %w", err)
 	}
+	printable := units[:0]
+	reserved := int64(0)
+	for _, u := range units {
+		if u.Status != string(ledger.StatusVoid) {
+			printable = append(printable, u)
+			if u.Status == string(ledger.StatusReserved) {
+				reserved++
+			}
+		}
+	}
+	if len(printable) == 0 {
+		return nil, ErrNotFound
+	}
 	var fallback *int64
 	if b.TemplateID.Valid {
 		fallback = &b.TemplateID.Int64
@@ -65,13 +78,20 @@ func (s *Labels) PrintBatch(ctx context.Context, c Caller, batchID uuid.UUID, te
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.unitItems(ctx, units)
+	items, err := s.unitItems(ctx, printable)
 	if err != nil {
 		return nil, err
 	}
 	pdf, err := s.render(ctx, org, tpl, items)
 	if err != nil {
 		return nil, err
+	}
+	marked, err := s.q.MarkBatchUnitsPrinted(ctx, i8(b.ID))
+	if err != nil {
+		return nil, fmt.Errorf("stock: mark labels printed: %w", err)
+	}
+	if marked != reserved {
+		return nil, ErrNotFound
 	}
 	if _, err := s.q.MarkBarcodeBatchPrinted(ctx, b.ID); err != nil {
 		return nil, fmt.Errorf("stock: batch printed: %w", err)
@@ -81,7 +101,7 @@ func (s *Labels) PrintBatch(ctx context.Context, c Caller, batchID uuid.UUID, te
 
 // PrintUnits renders the labels of the given barcodes. A unit is printable
 // when its holder is inside the caller's stock.read reach, or, before it
-// enters stock (printed, no state), when the caller is its issuer.
+// enters stock (reserved or printed, no state), when the caller is its issuer.
 func (s *Labels) PrintUnits(ctx context.Context, c Caller, barcodes []string, templateID *uuid.UUID) ([]byte, error) {
 	org, err := labelOrg(c)
 	if err != nil {
@@ -127,10 +147,32 @@ func (s *Labels) PrintUnits(ctx context.Context, c Caller, barcodes []string, te
 	if err != nil {
 		return nil, err
 	}
-	return s.render(ctx, org, tpl, items)
+	pdf, err := s.render(ctx, org, tpl, items)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, 0, len(units))
+	for _, u := range units {
+		if u.Status == string(ledger.StatusReserved) {
+			ids = append(ids, u.ID)
+		}
+	}
+	if len(ids) > 0 {
+		marked, err := s.q.MarkSelectedUnitsPrinted(ctx, ids)
+		if err != nil {
+			return nil, fmt.Errorf("stock: mark labels printed: %w", err)
+		}
+		if marked != int64(len(ids)) {
+			return nil, ErrNotFound
+		}
+	}
+	return pdf, nil
 }
 
 func (s *Labels) printable(ctx context.Context, c Caller, org int64, u db.Unit) (bool, error) {
+	if u.Status == string(ledger.StatusVoid) {
+		return false, nil
+	}
 	st, err := currentState(ctx, s.q, u.ID)
 	if err != nil {
 		return false, err
