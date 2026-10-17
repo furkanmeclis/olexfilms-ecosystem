@@ -62,6 +62,14 @@ export type StockCountResolution =
 export type EodReport = Schemas["EodReport"];
 export type EodReportGenerateInput = Schemas["EodReportGenerateInput"];
 export type ExportJob = Schemas["ExportJob"];
+// --- TEC-769 ---
+export type WarehouseMember = Schemas["WarehouseMember"];
+export type WarehouseMemberUser = Schemas["WarehouseMemberUser"];
+export type WarehouseMemberInput = Schemas["WarehouseMemberInput"];
+export type MyWarehouses = Schemas["MyWarehouses"];
+export type MyWarehouse = Schemas["MyWarehouse"];
+export type WarehouseSettings = Schemas["WarehouseSettings"];
+export type WarehouseSettingsInput = Schemas["WarehouseSettingsInput"];
 
 export type Page<T> = {
   items: T[];
@@ -99,6 +107,9 @@ export type EodListQuery = WarehouseListQuery;
 
 /** Barcode batches: product_uuid (CSV), printed, created_from/_to. */
 export type BatchListQuery = WarehouseListQuery;
+
+/** Warehouse members (TEC-769): q, sort name | email | created_at. */
+export type MemberListQuery = WarehouseListQuery;
 
 const enc = encodeURIComponent;
 
@@ -485,6 +496,52 @@ export const warehouseService = {
       `/v1/warehouse/eod-reports/${enc(uuid)}`,
     );
   },
+  // --- TEC-769: membership, warehouse context, settings ---
+  listMembers(warehouseUuid: string, params: MemberListQuery) {
+    return platformRequest<Page<WarehouseMember>>(
+      "GET",
+      `/v1/warehouse/warehouses/${enc(warehouseUuid)}/members`,
+      { query: params },
+    );
+  },
+  addMember(warehouseUuid: string, body: WarehouseMemberInput) {
+    return platformRequest<WarehouseMember>(
+      "POST",
+      `/v1/warehouse/warehouses/${enc(warehouseUuid)}/members`,
+      { body },
+    );
+  },
+  removeMember(warehouseUuid: string, userUuid: string) {
+    return platformRequest<void>(
+      "DELETE",
+      `/v1/warehouse/warehouses/${enc(warehouseUuid)}/members/${enc(userUuid)}`,
+    );
+  },
+  memberCandidates(q: string) {
+    return platformRequest<{ items: WarehouseMemberUser[] }>(
+      "GET",
+      "/v1/warehouse/member-candidates",
+      { query: q ? { q } : {} },
+    );
+  },
+  myWarehouses() {
+    return platformRequest<MyWarehouses>("GET", "/v1/warehouse/my-warehouses");
+  },
+  setDefaultWarehouse(warehouseUuid: string) {
+    return platformRequest<MyWarehouses>(
+      "PUT",
+      "/v1/warehouse/my-warehouses/default",
+      { body: { warehouse_uuid: warehouseUuid } },
+    );
+  },
+  getSettings() {
+    return platformRequest<WarehouseSettings>("GET", "/v1/warehouse/settings");
+  },
+  updateSettings(body: WarehouseSettingsInput) {
+    return platformRequest<WarehouseSettings>("PUT", "/v1/warehouse/settings", {
+      body,
+    });
+  },
 };
 
 /**
@@ -535,6 +592,13 @@ export const warehouseKeys = {
   eodReports: (params: EodListQuery) =>
     ["warehouse", "eod-reports", params] as const,
   eodReport: (uuid: string) => ["warehouse", "eod-report", uuid] as const,
+  // TEC-769
+  members: (warehouseUuid: string, params: MemberListQuery) =>
+    ["warehouse", "members", warehouseUuid, params] as const,
+  memberCandidates: (q: string) =>
+    ["warehouse", "member-candidates", q] as const,
+  mine: ["warehouse", "my-warehouses"] as const,
+  settings: ["warehouse", "settings"] as const,
 };
 
 /**

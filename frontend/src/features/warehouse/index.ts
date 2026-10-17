@@ -11,3 +11,4 @@ export { EodReportDetailPage } from "./components/eod-report-detail-page";
 export { EodReportsPage } from "./components/eod-reports-page";
 export { TransferDetailPage } from "./components/transfer-detail-page";
 export { TransfersPage } from "./components/transfers-page";
+export { WarehouseSettingsPage } from "./components/warehouse-settings-page";

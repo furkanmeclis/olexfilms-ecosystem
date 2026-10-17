@@ -128,6 +128,23 @@ func (h *Entries) Create(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, out)
 }
 
+// CreateMobile (POST /v1/mobile/warehouse/stock-entries): like Create, an
+// empty warehouse_uuid takes the caller's default warehouse (TEC-769).
+func (h *Entries) CreateMobile(w http.ResponseWriter, r *http.Request) {
+	var b entryBody
+	if !decode(w, r, &b) {
+		return
+	}
+	out, err := h.svc.Create(r.Context(), entryCaller(r), wh.EntryInput{
+		WarehouseUUID: b.WarehouseUUID, Mode: b.Mode, Note: b.Note, DefaultWarehouse: true,
+	})
+	if err != nil {
+		writeEntryError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusCreated, out)
+}
+
 // Get (GET /v1/warehouse/stock-entries/{uuid}).
 func (h *Entries) Get(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathUUID(w, r)

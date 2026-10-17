@@ -16,6 +16,8 @@ const api = vi.hoisted(() => ({
   replayOutbound: vi.fn(),
   replayOutbounds: vi.fn(),
   reconcile: vi.fn(),
+  locationMapsPage: vi.fn(),
+  mapWarehouses: vi.fn(),
 }));
 const state = vi.hoisted(() => ({ grants: new Set<string>() }));
 
@@ -26,6 +28,9 @@ vi.mock("@/providers/locale-provider", () => ({
       params ? `${key} ${JSON.stringify(params)}` : key,
   }),
   useFormatter: () => ({ dateTime: (v: string) => v }),
+}));
+vi.mock("@/providers/dialog-provider", () => ({
+  useDialogs: () => ({ confirmDelete: vi.fn() }),
 }));
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: (p: string) => state.grants.has(p) }),
@@ -154,6 +159,13 @@ beforeEach(() => {
     limit: 20,
     offset: 0,
   });
+  api.locationMapsPage.mockResolvedValue({
+    items: [],
+    total: 0,
+    limit: 20,
+    offset: 0,
+  });
+  api.mapWarehouses.mockResolvedValue([]);
   api.replayOutbound.mockResolvedValue(held);
   api.replayOutbounds.mockResolvedValue({ queued: [held], skipped: [] });
   api.save.mockResolvedValue(connection);

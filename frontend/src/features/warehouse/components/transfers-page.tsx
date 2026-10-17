@@ -39,6 +39,7 @@ import {
   enumFilterOptions,
   useWarehouseFilterOptions,
 } from "@/features/warehouse/components/table-options";
+import { useActiveWarehouse } from "@/features/warehouse/components/active-warehouse";
 import {
   useWarehouseAccess,
   WarehouseShell,
@@ -419,6 +420,9 @@ export function NewTransferForm({
   const active: Warehouse[] = (warehouses.data?.items ?? []).filter(
     (w) => w.active,
   );
+  // TEC-769: the header's active warehouse is the default source.
+  const { activeUuid } = useActiveWarehouse(slug, true);
+  const preset = active.some((w) => w.uuid === activeUuid) ? activeUuid : null;
   const options = active.map((w) => ({
     value: w.uuid,
     label: `${w.code} · ${w.name}`,
@@ -453,8 +457,9 @@ export function NewTransferForm({
         ) : null}
         <AppForm<TransferFormValues>
           schema={transferFormSchema(t) as never}
+          key={preset ?? "none"}
           defaultValues={{
-            from_warehouse_uuid: "",
+            from_warehouse_uuid: preset ?? "",
             to_warehouse_uuid: "",
             note: "",
           }}

@@ -20,6 +20,12 @@ import (
 const (
 	CodeWarehouseCodeTaken = "WAREHOUSE_CODE_TAKEN"
 	CodeWarehouseInUse     = "WAREHOUSE_IN_USE"
+	// CodeWarehouseNotMember (TEC-769): the caller is limited to its member
+	// warehouses and the write touches another one.
+	CodeWarehouseNotMember = "WAREHOUSE_NOT_MEMBER"
+	// CodeWarehouseMemberNotFound: the user is not a member of the
+	// warehouse (or of the organization).
+	CodeWarehouseMemberNotFound = "WAREHOUSE_MEMBER_NOT_FOUND"
 )
 
 // Handler serves the warehouse routes.
@@ -54,6 +60,10 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.ValidationError(w, r, []response.Detail{{Field: ve.Field, Message: ve.Message}})
 	case errors.Is(err, wh.ErrForbidden):
 		response.Forbidden(w, r, "The warehouse module is available to the center and distributors only")
+	case errors.Is(err, wh.ErrNotWarehouseMember):
+		response.Error(w, r, http.StatusForbidden, CodeWarehouseNotMember, "You are not a member of this warehouse")
+	case errors.Is(err, wh.ErrMemberNotFound):
+		response.Error(w, r, http.StatusNotFound, CodeWarehouseMemberNotFound, "The user is not a member of this warehouse or organization")
 	case errors.Is(err, wh.ErrWarehouseNotFound):
 		response.NotFound(w, r, "Warehouse not found")
 	case errors.Is(err, wh.ErrRoomNotFound):

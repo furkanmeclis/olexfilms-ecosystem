@@ -225,3 +225,32 @@ func eodAttachment(filename string) string {
 	}, filename)
 	return fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`, safe, url.PathEscape(filename))
 }
+
+type settingsBody struct {
+	EODCutoff *string `json:"eod_cutoff"`
+}
+
+// Settings (GET /v1/warehouse/settings): the TEC-769 warehouse settings.
+func (h *EOD) Settings(w http.ResponseWriter, r *http.Request) {
+	out, err := h.svc.Settings(r.Context(), caller(r))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// UpdateSettings (PUT /v1/warehouse/settings).
+func (h *EOD) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	var b settingsBody
+	if !decode(w, r, &b) {
+		return
+	}
+	c := wh.EODCaller{Caller: caller(r), Principal: authctx.MustPrincipal(r.Context())}
+	out, err := h.svc.UpdateSettings(r.Context(), c, wh.WarehouseSettingsInput{EODCutoff: b.EODCutoff})
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}

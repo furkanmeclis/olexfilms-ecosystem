@@ -7023,6 +7023,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/warehouse/warehouses/{uuid}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Members of a warehouse (TEC-769)
+         * @description Needs `warehouse.read`. A user without any membership works in every warehouse of the organization; a member of at least one warehouse writes (stock entry, transfer, count, move) only in its member warehouses. List contract: `sort` is name (default), email or created_at with an id tiebreak; `q` matches name, surname and email.
+         */
+        get: operations["listWarehouseMembers"];
+        put?: never;
+        /**
+         * Add an organization member to a warehouse (TEC-769)
+         * @description Needs `members.write` (staff administration; a warehouse-restricted user with only `warehouse.write` cannot widen its reach). Idempotent; `is_default` also moves the user's default warehouse here. 404 WAREHOUSE_MEMBER_NOT_FOUND when the user is not a member of the organization.
+         */
+        post: operations["addWarehouseMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/warehouses/{uuid}/members/{user_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a user from a warehouse (TEC-769)
+         * @description Needs `members.write`. Removing the last membership lifts the restriction. 404 WAREHOUSE_MEMBER_NOT_FOUND when the user is not a member.
+         */
+        delete: operations["removeWarehouseMember"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/member-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Organization users for the warehouse member picker (TEC-769)
+         * @description Needs `members.write`. Active users of the active organization matched on name, surname or email (`q`); at most 50.
+         */
+        get: operations["listWarehouseMemberCandidates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/my-warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's warehouse context (TEC-769)
+         * @description Needs `warehouse.read`. Every active warehouse with `member` (writable for the caller) and `is_default`; `restricted` tells whether memberships limit the caller. The panel keeps an unrestricted user's active warehouse locally.
+         */
+        get: operations["getMyWarehouses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/my-warehouses/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Move the caller default warehouse (TEC-769)
+         * @description Needs `warehouse.read`. The caller must be a member of the warehouse (403 WAREHOUSE_NOT_MEMBER).
+         */
+        put: operations["setMyDefaultWarehouse"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Warehouse settings of the active organization (TEC-769)
+         * @description Needs `warehouse.read`. `eod_cutoff` is the end-of-day close (HH:MM) in the organization time zone; null keeps the calendar day.
+         */
+        get: operations["getWarehouseSettings"];
+        /**
+         * Update the warehouse settings (TEC-769)
+         * @description Needs `warehouse.write`. With `eod_cutoff` = 18:00 the business day D covers [D-1 18:00, D 18:00) in the organization time zone and the hourly cron writes day D once 18:00 passed; null, empty or 00:00 restores the calendar day (00:00-24:00, written after midnight). A manual run without a date reports the open business day.
+         */
+        put: operations["updateWarehouseSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/warehouse/eod-reports": {
         parameters: {
             query?: never;
@@ -9407,6 +9535,210 @@ export interface paths {
          *     Needs `warehouse.write`. A draft closes without stock; an in-transit transfer posts `transfer_cancel_restore` per line in one transaction (each unit goes back to its source location and status). 409 WAREHOUSE_TRANSFER_STATE when completed or cancelled.
          */
         post: operations["mobileCancelWarehouseTransfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/my-warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: The caller's warehouse context (TEC-769)
+         * @description Mobile mirror (TEC-769) of `GET /v1/warehouse/my-warehouses`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Every active warehouse of the organization with `member` (writable) and `is_default`; `restricted` is true once the user is a member of at least one warehouse. The app sends `warehouse_uuid` per request or relies on `default_warehouse_uuid`.
+         */
+        get: operations["mobileGetMyWarehouses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/my-warehouses/default": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Mobile: Move the caller default warehouse (TEC-769)
+         * @description Mobile mirror (TEC-769) of `PUT /v1/warehouse/my-warehouses/default`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. The caller must be a member of the warehouse (403 WAREHOUSE_NOT_MEMBER); an unrestricted user keeps the preference on the device.
+         */
+        put: operations["mobileSetMyDefaultWarehouse"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: List the stock entry documents (TEC-769)
+         * @description Mobile mirror (TEC-769) of `GET /v1/warehouse/stock-entries`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`. Same list contract as the panel endpoint; reads are organization-wide.
+         */
+        get: operations["mobileListStockEntries"];
+        put?: never;
+        /**
+         * Mobile: Open a draft stock entry (TEC-769)
+         * @description Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Without `warehouse_uuid` the entry opens at the caller's default warehouse (400 VALIDATION_ERROR when there is none). `generate_new` is center only (403 STOCK_ENTRY_CENTER_ONLY, K14).
+         */
+        post: operations["mobileCreateStockEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mobile: One stock entry with its lines (TEC-769)
+         * @description Mobile mirror (TEC-769) of `GET /v1/warehouse/stock-entries/{uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.read`.
+         */
+        get: operations["mobileGetStockEntry"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Link or reserve barcodes on a draft entry (TEC-769)
+         * @description Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/lines`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write` and, for a restricted user, membership of the entry warehouse.
+         */
+        post: operations["mobileAddStockEntryLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/lines/{line_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Mobile: Remove a line from a draft entry (TEC-769)
+         * @description Mobile mirror (TEC-769) of `DELETE /v1/warehouse/stock-entries/{uuid}/lines/{line_uuid}`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`.
+         */
+        delete: operations["mobileDeleteStockEntryLine"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/place": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Place lines of a draft entry on a location (TEC-769)
+         * @description Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/place`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. `location_code` takes a scanned `OFW:LOC:<full_code>` QR.
+         */
+        post: operations["mobilePlaceStockEntryLines"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Confirm a stock entry (TEC-769)
+         * @description Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/confirm`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`. Ledger entry + placement per line in one transaction (center only, K14).
+         */
+        post: operations["mobileConfirmStockEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/stock-entries/{uuid}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Cancel a draft stock entry (TEC-769)
+         * @description Mobile mirror (TEC-769) of `POST /v1/warehouse/stock-entries/{uuid}/cancel`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write`.
+         */
+        post: operations["mobileCancelStockEntry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/warehouse/moves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mobile: Move scanned units onto a location (bin -> bin, TEC-769)
+         * @description Mobile mirror (TEC-769) of `POST /v1/warehouse/moves`: same use case, permission, warehouse module gate and active organization scope. Bearer with `aud=mobile`; a panel token answers 403 `REALM_FORBIDDEN`; a missing or unsupported `X-Mobile-Api-Version` answers 426. Needs `warehouse.write` and, for a restricted user, membership of the target warehouse. A placed unit stays in its warehouse.
+         */
+        post: operations["mobileMoveWarehouseUnits"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13569,6 +13901,94 @@ export interface paths {
          */
         post: operations["startGlorianReconcile"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/location-maps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the Glorian location map
+         * @description Glorian location map (TEC-769): a remote location name of the hub -> a local warehouse and optional bin of the connection organization. The current Inventory API contract only knows the hub locations center/dealer, so no sync path reads the map yet. Needs `integrations.glorian.view`. `sort`: remote_location_code (default), warehouse, created_at; `q` matches the remote name, warehouse name/code and bin full code.
+         */
+        get: operations["listGlorianLocationMaps"];
+        put?: never;
+        /**
+         * Add a Glorian location map row
+         * @description Glorian location map (TEC-769): a remote location name of the hub -> a local warehouse and optional bin of the connection organization. The current Inventory API contract only knows the hub locations center/dealer, so no sync path reads the map yet. Needs `integrations.glorian.manage`. 409 GLORIAN_REMOTE_LOCATION_TAKEN when the remote name is mapped; a bin must belong to the warehouse and maps once.
+         */
+        post: operations["createGlorianLocationMap"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/location-maps/warehouses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Warehouses of the Glorian connection organization (map picker)
+         * @description Needs `integrations.glorian.view`.
+         */
+        get: operations["listGlorianMapWarehouses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/location-maps/warehouses/{uuid}/locations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active locations of a warehouse (map picker)
+         * @description Needs `integrations.glorian.view`. At most 50, `q` matches the full code or the name.
+         */
+        get: operations["listGlorianMapLocations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/integrations/glorian/location-maps/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a Glorian location map row
+         * @description Needs `integrations.glorian.manage`.
+         */
+        put: operations["updateGlorianLocationMap"];
+        post?: never;
+        /**
+         * Delete a Glorian location map row
+         * @description Needs `integrations.glorian.manage`.
+         */
+        delete: operations["deleteGlorianLocationMap"];
         options?: never;
         head?: never;
         patch?: never;
@@ -21749,6 +22169,161 @@ export interface components {
                 total: number;
                 limit: number;
                 offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description TEC-769 mobile stock entry; without warehouse_uuid the caller's default warehouse is used. */
+        MobileStockEntryInput: {
+            /** Format: uuid */
+            warehouse_uuid?: string;
+            /** @enum {string} */
+            mode: "with_existing" | "generate_new";
+            note?: string | null;
+        };
+        WarehouseMemberUser: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            surname: string;
+            email: string | null;
+        };
+        WarehouseMember: {
+            /** Format: uuid */
+            uuid: string;
+            user: components["schemas"]["WarehouseMemberUser"];
+            is_default: boolean;
+            /** Format: date-time */
+            created_at: string;
+        };
+        WarehouseMemberInput: {
+            /** Format: uuid */
+            user_uuid: string;
+            is_default?: boolean;
+        };
+        MyWarehouse: components["schemas"]["Warehouse"] & {
+            /** @description The caller may write here. */
+            member: boolean;
+            is_default: boolean;
+        };
+        MyWarehouses: {
+            restricted: boolean;
+            /** Format: uuid */
+            default_warehouse_uuid: string | null;
+            items: components["schemas"]["MyWarehouse"][];
+        };
+        MyDefaultWarehouseInput: {
+            /** Format: uuid */
+            warehouse_uuid: string;
+        };
+        WarehouseSettings: {
+            eod_cutoff: string | null;
+            timezone: string;
+        };
+        WarehouseSettingsInput: {
+            /** @description HH:MM; null, empty or 00:00 clears it. */
+            eod_cutoff?: string | null;
+        };
+        GlorianMapWarehouse: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+            active: boolean;
+        };
+        GlorianMapLocation: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            full_code: string | null;
+            name?: string;
+        };
+        GlorianLocationMap: {
+            /** Format: uuid */
+            uuid: string;
+            remote_location_code: string;
+            warehouse: components["schemas"]["GlorianMapWarehouse"];
+            location: components["schemas"]["GlorianMapLocation"] | null;
+            /** Format: date-time */
+            created_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        GlorianLocationMapInput: {
+            remote_location_code: string;
+            /** Format: uuid */
+            warehouse_uuid: string;
+            /** Format: uuid */
+            location_uuid?: string | null;
+        };
+        EnvelopeWarehouseMember: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseMember"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseMemberPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarehouseMember"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseMemberUserList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarehouseMemberUser"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeMyWarehouses: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MyWarehouses"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseSettings: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseSettings"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianLocationMap: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["GlorianLocationMap"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianLocationMapPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["GlorianLocationMap"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianMapWarehouseList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["GlorianMapWarehouse"][];
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeGlorianMapLocationList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["GlorianMapLocation"][];
             };
             meta: components["schemas"]["ResponseMeta"];
         };
@@ -41975,6 +42550,226 @@ export interface operations {
             409: components["responses"]["Conflict"];
         };
     };
+    listWarehouseMembers: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Members */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseMemberPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    addWarehouseMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseMemberInput"];
+            };
+        };
+        responses: {
+            /** @description Membership */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseMember"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    removeWarehouseMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                user_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listWarehouseMemberCandidates: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseMemberUserList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getMyWarehouses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouse context */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMyWarehouses"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setMyDefaultWarehouse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MyDefaultWarehouseInput"];
+            };
+        };
+        responses: {
+            /** @description Warehouse context */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMyWarehouses"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER (TEC-769: the caller is limited to its member warehouses) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getWarehouseSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateWarehouseSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseSettingsInput"];
+            };
+        };
+        responses: {
+            /** @description Settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
     listEodReports: {
         parameters: {
             query?: {
@@ -46120,6 +46915,434 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetMyWarehouses: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouse context */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMyWarehouses"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileSetMyDefaultWarehouse: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MyDefaultWarehouseInput"];
+            };
+        };
+        responses: {
+            /** @description Warehouse context */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMyWarehouses"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER (TEC-769: the caller is limited to its member warehouses) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileListStockEntries: {
+        parameters: {
+            query?: {
+                /** @description Comma separated StockEntryStatus values (any of). */
+                status?: string;
+                /** @description Comma separated modes (with_existing, generate_new, import). */
+                mode?: string;
+                /** @description Comma separated warehouse uuids (any of); the app sends its active warehouse. */
+                warehouse_uuid?: string;
+                /** @description Comma separated import job uuids (any of). */
+                import_job_uuid?: string;
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                /** @description Created on or after (YYYY-MM-DD = UTC midnight, or RFC3339). */
+                created_from?: components["parameters"]["CreatedFrom"];
+                /** @description Created on or before; a date (YYYY-MM-DD) covers the whole day, an RFC3339 value that instant. `created_from` after `created_to` → 400. */
+                created_to?: components["parameters"]["CreatedTo"];
+                limit?: number;
+                offset?: number;
+            };
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entries (without lines) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileCreateStockEntry: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileStockEntryInput"];
+            };
+        };
+        responses: {
+            /** @description Draft entry */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER (TEC-769: the caller is limited to its member warehouses) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileGetStockEntry: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileAddStockEntryLines: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryLinesInput"];
+            };
+        };
+        responses: {
+            /** @description Entry with the new lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER (TEC-769: the caller is limited to its member warehouses) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileDeleteStockEntryLine: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+                line_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER (TEC-769: the caller is limited to its member warehouses) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobilePlaceStockEntryLines: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryPlaceInput"];
+            };
+        };
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER (TEC-769: the caller is limited to its member warehouses) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileConfirmStockEntry: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Confirmed entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER (TEC-769: the caller is limited to its member warehouses) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileCancelStockEntry: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER (TEC-769: the caller is limited to its member warehouses) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+        };
+    };
+    mobileMoveWarehouseUnits: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseMoveInput"];
+            };
+        };
+        responses: {
+            /** @description Moved units */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseMoveResult"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            /** @description Not center/distributor, missing permission, or WAREHOUSE_NOT_MEMBER (TEC-769: the caller is limited to its member warehouses) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             426: components["responses"]["MobileApiVersionUnsupported"];
@@ -53969,6 +55192,172 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    listGlorianLocationMaps: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Map rows */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianLocationMapPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createGlorianLocationMap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GlorianLocationMapInput"];
+            };
+        };
+        responses: {
+            /** @description Map row */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianLocationMap"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listGlorianMapWarehouses: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianMapWarehouseList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listGlorianMapLocations: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Locations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianMapLocationList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateGlorianLocationMap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GlorianLocationMapInput"];
+            };
+        };
+        responses: {
+            /** @description Map row */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeGlorianLocationMap"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    deleteGlorianLocationMap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listLibraryFolders: {
