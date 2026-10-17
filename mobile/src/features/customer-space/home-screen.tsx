@@ -6,6 +6,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
 import { errorText } from '@/features/services/ui';
+import { HeaderBrand } from '@/features/shell/header-actions';
 import { formatDateTime, formatNumber } from '@/features/services/lib';
 import { Button } from '@/ui/button';
 import {
@@ -131,7 +132,12 @@ export function CustomerHomeScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: name ? t(greetingKey(new Date().getHours()), { name }) : t('home') }} />
+      <Stack.Screen
+        options={{
+          title: name ? t(greetingKey(new Date().getHours()), { name }) : t('home'),
+          headerLeft: () => <HeaderBrand />,
+        }}
+      />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"

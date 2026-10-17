@@ -4,6 +4,8 @@
 /*
  * Brand tokens mirror frontend/src/styles/theme.css (same names, oklch converted
  * to hex because React Native does not parse oklch). Change both together.
+ * success / warning follow the web's status badges (components/ui/badge.tsx):
+ * Tailwind emerald / amber 600 on light, 400 on dark.
  */
 @layer theme {
   :root {
@@ -23,8 +25,10 @@
       --color-destructive: #d73337;
       --color-border: #d7e1da;
       --color-ring: #1b5a3e;
-      --color-success: #1f8a4c;
-      --color-warning: #b7791f;
+      --color-success: #009966;
+      --color-warning: #e17100;
+      /* Logo "OLEX" letters: deep green on light surfaces. */
+      --color-brand-glyph: #003d25;
     }
 
     @variant dark {
@@ -43,14 +47,18 @@
       --color-destructive: #e24947;
       --color-border: #283e32;
       --color-ring: #61c28e;
-      --color-success: #4cc27e;
-      --color-warning: #e3a847;
+      --color-success: #00d492;
+      --color-warning: #ffb900;
+      /* Logo "OLEX" letters: white on dark surfaces. */
+      --color-brand-glyph: #ffffff;
     }
   }
 }
 
 @theme {
+  /* Logo gold (crest) and deep green (stars on the crest), same in both modes. */
   --color-brand: #f2ac4a;
+  --color-brand-detail: #003d25;
   --radius-sm: 10px;
   --radius-md: 12px;
   --radius-lg: 14px;

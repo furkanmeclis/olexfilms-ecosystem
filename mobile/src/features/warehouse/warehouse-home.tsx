@@ -7,7 +7,7 @@ import { useSession } from '@/core/auth/session';
 import { useCan } from '@/core/spaces';
 import type { LucideIcon } from '@/ui/icons';
 import { ArrowLeftRight, Boxes, ChevronDown, ClipboardList, MapPin, Package, PackagePlus, ScanLine, Settings, Warehouse as WarehouseIcon } from '@/ui/icons';
-import { SearchButton, SpaceButton } from '@/features/shell/header-actions';
+import { HomeHeaderLeft, SearchButton } from '@/features/shell/header-actions';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -59,7 +59,7 @@ export function WarehouseHome() {
       <Stack.Screen
         options={{
           title: t(greetingKey(new Date().getHours()), { name: me?.user.name ?? '' }),
-          headerLeft: () => <SpaceButton />,
+          headerLeft: () => <HomeHeaderLeft />,
           headerRight: () => <SearchButton />,
         }}
       />

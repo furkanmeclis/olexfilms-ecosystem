@@ -9,7 +9,7 @@ import { activeMembership, useCan } from '@/core/spaces';
 import { formatNumber, useLinks } from '@/features/services/lib';
 import { ServiceRow } from '@/features/services/services-list-screen';
 import { errorText } from '@/features/services/ui';
-import { SearchButton, SpaceButton } from '@/features/shell/header-actions';
+import { HomeHeaderLeft, SearchButton } from '@/features/shell/header-actions';
 import { Button } from '@/ui/button';
 import { Gauge, type LucideIcon, Plus, ScanLine, ShieldCheck, Users, Wrench } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
@@ -69,7 +69,7 @@ export function DealerHome() {
       <Stack.Screen
         options={{
           title: t(greetingKey(new Date().getHours()), { name: me?.user.name ?? '' }),
-          headerLeft: () => <SpaceButton />,
+          headerLeft: () => <HomeHeaderLeft />,
           headerRight: () => <SearchButton />,
         }}
       />

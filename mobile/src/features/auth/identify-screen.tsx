@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { identify } from '@/core/auth/api';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
+import { BrandLogo } from '@/ui/brand-logo';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
@@ -45,13 +46,8 @@ export function IdentifyScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-background">
       <View className="flex-1 justify-center gap-8 px-6">
-        <View className="gap-3">
-          <View className="size-14 items-center justify-center rounded-xl bg-primary">
-            <Text variant="title" tone="onPrimary" className="font-extrabold">
-              OF
-            </Text>
-          </View>
-          <Text variant="largeTitle">{t('common:app_name')}</Text>
+        <View className="gap-4">
+          <BrandLogo variant="logo" height={56} label={t('common:app_name')} />
           <Text variant="callout" tone="muted">
             {t('identify_subtitle')}
           </Text>

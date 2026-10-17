@@ -2,6 +2,7 @@ import type { ComponentRef, Ref } from 'react';
 import { TextInput, type TextInputProps, View } from 'react-native';
 
 import { cn } from './cn';
+import { fontFamily } from './fonts';
 import { Text } from './text';
 
 type Props = TextInputProps & {
@@ -12,7 +13,8 @@ type Props = TextInputProps & {
   ref?: Ref<ComponentRef<typeof TextInput>>;
 };
 
-export function Input({ label, error, hint, className, ref, ...props }: Props) {
+export function Input({ label, error, hint, className, ref, style, ...props }: Props) {
+  const family = fontFamily('sans');
   return (
     <View className="gap-1.5">
       <Text variant="footnote" tone="muted" className="font-medium">
@@ -27,6 +29,7 @@ export function Input({ label, error, hint, className, ref, ...props }: Props) {
           error ? 'border-destructive' : 'border-border focus:border-ring',
           className,
         )}
+        style={family ? [{ fontFamily: family }, style] : style}
         {...props}
       />
       {error ? (

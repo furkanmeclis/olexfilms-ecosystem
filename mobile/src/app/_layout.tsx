@@ -1,6 +1,7 @@
 import '@/global.css';
 
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { useFonts } from 'expo-font';
 import { Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -16,25 +17,30 @@ import { i18n } from '@/core/i18n';
 import { applyThemePreference } from '@/core/preferences';
 import { persistOptions, queryClient } from '@/core/query';
 import { useNavigationTheme } from '@/features/shell/navigation-theme';
+import { fontAssets } from '@/ui/fonts';
 
-// Keep the splash only until the stored session is read (no network wait).
+// Keep the splash only until the stored session is read and the bundled
+// fonts are registered (both local, no network wait).
 void SplashScreen.preventAutoHideAsync();
 applyThemePreference();
 
 export default function RootLayout() {
   const status = useSession((s) => s.status);
   const updateRequired = useAppStatus((s) => s.updateRequired);
-  const theme = useNavigationTheme();
+  // A font that fails to load falls back to the system font, never blocks launch.
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
+  const fontsReady = fontsLoaded || !!fontError;
+  const theme = useNavigationTheme(fontsLoaded);
 
   useEffect(() => {
     void useSession.getState().hydrate();
   }, []);
 
   useEffect(() => {
-    if (status !== 'loading') void SplashScreen.hideAsync();
-  }, [status]);
+    if (status !== 'loading' && fontsReady) void SplashScreen.hideAsync();
+  }, [status, fontsReady]);
 
-  if (status === 'loading') return null;
+  if (status === 'loading' || !fontsReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

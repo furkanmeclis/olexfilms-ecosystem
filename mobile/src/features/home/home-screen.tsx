@@ -6,7 +6,7 @@ import { Pressable, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { activeMembership } from '@/core/spaces';
-import { SearchButton, SpaceButton } from '@/features/shell/header-actions';
+import { HomeHeaderLeft, SearchButton } from '@/features/shell/header-actions';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -35,7 +35,7 @@ export function HomeScreen({ actions }: { actions: QuickAction[] }) {
       <Stack.Screen
         options={{
           title: t(greetingKey(new Date().getHours()), { name: me?.user.name ?? '' }),
-          headerLeft: () => <SpaceButton />,
+          headerLeft: () => <HomeHeaderLeft />,
           headerRight: () => <SearchButton />,
         }}
       />

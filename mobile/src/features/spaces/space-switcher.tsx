@@ -8,6 +8,7 @@ import { useSession } from '@/core/auth/session';
 import { errorMessage } from '@/core/i18n';
 import { isApiError } from '@/core/api/errors';
 import { kindsOf, listSpaces, type Space, type SpaceKind, useActiveSpace, useResolvedSpace } from '@/core/spaces';
+import { BrandLogo } from '@/ui/brand-logo';
 import { cn } from '@/ui/cn';
 import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -64,7 +65,17 @@ export function SpaceSwitcher() {
 
   return (
     <>
-      <Stack.Screen options={{ title: t('title') }} />
+      <Stack.Screen
+        options={{
+          title: t('title'),
+          headerTitle: ({ children }) => (
+            <View className="flex-row items-center gap-2">
+              <BrandLogo variant="mark" height={22} />
+              <Text variant="headline">{children}</Text>
+            </View>
+          ),
+        }}
+      />
       <Screen className="pt-2">
         <List>
           {spaces.map((s, i) => (

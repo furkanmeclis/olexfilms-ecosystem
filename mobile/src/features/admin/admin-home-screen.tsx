@@ -8,7 +8,7 @@ import { useSession } from '@/core/auth/session';
 import { activeMembership, useCan } from '@/core/spaces';
 import { type Period, PERIODS, useReport } from '@/features/reports/api';
 import { StatTiles, TimeChart } from '@/features/reports/report-view';
-import { SearchButton, SpaceButton } from '@/features/shell/header-actions';
+import { HomeHeaderLeft, SearchButton } from '@/features/shell/header-actions';
 import { ChartColumn, ClipboardCheck, type LucideIcon, Network, ShoppingCart } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -61,7 +61,7 @@ export function AdminHomeScreen() {
       <Stack.Screen
         options={{
           title: t(greetingKey(new Date().getHours()), { name: me?.user.name ?? '' }),
-          headerLeft: () => <SpaceButton />,
+          headerLeft: () => <HomeHeaderLeft />,
           headerRight: () => <SearchButton />,
         }}
       />

@@ -4,8 +4,24 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
+import { BrandLogo } from '@/ui/brand-logo';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+
+/** Olexfilms crest for home headers; decorative, the title says where you are. */
+export function HeaderBrand() {
+  return <BrandLogo variant="mark" height={30} />;
+}
+
+/** Home header leading items: crest, then the avatar that opens the space switcher. */
+export function HomeHeaderLeft() {
+  return (
+    <View className="flex-row items-center gap-2.5">
+      <HeaderBrand />
+      <SpaceButton />
+    </View>
+  );
+}
 
 /** Avatar in the header: opens the space switcher. */
 export function SpaceButton() {
