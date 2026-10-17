@@ -84,8 +84,8 @@ WHERE id = sqlc.arg(id) AND status IN ('draft', 'in_transit')
 RETURNING *;
 
 -- name: InsertWarehouseTransferLine :one
-INSERT INTO warehouse_transfer_lines (transfer_id, unit_id, target_location_id)
-VALUES (sqlc.arg(transfer_id), sqlc.arg(unit_id), sqlc.narg(target_location_id))
+INSERT INTO warehouse_transfer_lines (transfer_id, unit_id, target_location_id, source_location_id, quantity)
+VALUES (sqlc.arg(transfer_id), sqlc.arg(unit_id), sqlc.narg(target_location_id), sqlc.narg(source_location_id), sqlc.arg(quantity))
 RETURNING *;
 
 -- name: ListWarehouseTransferLines :many

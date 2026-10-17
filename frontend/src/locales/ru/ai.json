@@ -1,4 +1,11 @@
 {
+  "chat.back": "Назад в чат",
+  "suggestions.panel.first": "С чем ты можешь мне помочь?",
+  "suggestions.panel.second": "Найди мои последние записи",
+  "suggestions.panel.third": "Помоги спланировать следующие шаги",
+  "suggestions.portal.first": "Покажи мои автомобили",
+  "suggestions.portal.second": "Помоги записаться на приём",
+  "suggestions.portal.third": "Найди мои гарантии",
   "nav_title": "ИИ-ассистент",
   "page.title": "ИИ-ассистент",
   "page.description": "Спрашивайте о своих записях; изменения выполняются только после вашего подтверждения.",

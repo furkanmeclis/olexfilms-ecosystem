@@ -87,5 +87,18 @@
   "nav_service_catalog": "Каталог послуг",
   "nav_service_subscriptions": "Підписки на послуги",
   "nav_service_subscription_cancels": "Запити на розірвання",
-  "nav_review_questions": "Питання оцінювання"
+  "nav_review_questions": "Питання оцінювання",
+  "settings_description": "Керуйте налаштуваннями організації та системи тут.",
+  "settings_menu": "Меню налаштувань",
+  "settings_empty": "Немає доступних вам налаштувань.",
+  "settings_group_access": "Доступ і безпека",
+  "settings_group_integrations": "Інтеграції",
+  "settings_group_system": "Модулі та система",
+  "settings_group_catalogs": "Каталоги",
+  "settings_group_regional": "Регіони та ціни",
+  "settings_group_templates": "Шаблони",
+  "settings_group_data": "Дані та моніторинг",
+  "settings_group_organization": "Організація",
+  "settings_group_operations": "Операції",
+  "settings_group_ai": "ШІ"
 }

@@ -43,7 +43,7 @@ vi.mock(
   }),
 );
 
-import { platformNav } from "@/config/nav";
+import { platformSettingsNav } from "@/config/settings-nav";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import type {
@@ -370,7 +370,7 @@ describe("GlorianIntegrationPage (TEC-274)", () => {
   });
 
   it("is linked from the nav and the settings hub behind view", () => {
-    const nav = platformNav.groups
+    const nav = platformSettingsNav.groups
       .flatMap((g) => g.items)
       .find((i) => i.id === "glorian-integration");
     expect(nav?.href).toBe(routes.platform.integrations.glorian);

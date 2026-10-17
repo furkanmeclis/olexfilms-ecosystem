@@ -24,27 +24,31 @@ export const routes = {
       preferences: (slug: string) => `/t/${slug}/profile/preferences`,
     },
     /** TEC-391: AI usage report of the organization (ai.usage.read). */
-    aiUsage: (slug: string) => `/t/${slug}/ai-usage`,
+    aiUsage: (slug: string) => `/t/${slug}/settings/ai-usage`,
     exports: {
-      root: (slug: string) => `/t/${slug}/exports`,
-      detail: (slug: string, uuid: string) => `/t/${slug}/exports/${uuid}`,
+      root: (slug: string) => `/t/${slug}/settings/exports`,
+      detail: (slug: string, uuid: string) =>
+        `/t/${slug}/settings/exports/${uuid}`,
     },
     imports: {
-      root: (slug: string) => `/t/${slug}/imports`,
-      detail: (slug: string, uuid: string) => `/t/${slug}/imports/${uuid}`,
+      root: (slug: string) => `/t/${slug}/settings/imports`,
+      detail: (slug: string, uuid: string) =>
+        `/t/${slug}/settings/imports/${uuid}`,
     },
+    /** TEC-771: settings area (sub-navigation in config/settings-nav.ts). */
     settings: {
       root: (slug: string) => `/t/${slug}/settings`,
+      exportDefaults: (slug: string) => `/t/${slug}/settings/export-defaults`,
     },
     features: {
-      root: (slug: string) => `/t/${slug}/features`,
+      root: (slug: string) => `/t/${slug}/settings/modules`,
     },
     showcase: {
-      root: (slug: string) => `/t/${slug}/showcase`,
+      root: (slug: string) => `/t/${slug}/settings/showcase`,
     },
     /** TEC-500: distributor photo standard overrides. */
     photoStandard: {
-      root: (slug: string) => `/t/${slug}/photo-standard`,
+      root: (slug: string) => `/t/${slug}/settings/photo-standard`,
     },
     /** TEC-147. Search hits link `/catalog/products/{uuid}` (TEC-145). */
     catalog: {
@@ -129,6 +133,13 @@ export const routes = {
       create: (slug: string) => `/t/${slug}/orders/new`,
       detail: (slug: string, uuid: string) => `/t/${slug}/orders/${uuid}`,
       edit: (slug: string, uuid: string) => `/t/${slug}/orders/${uuid}/edit`,
+      /**
+       * TEC-768: printable pick list and the delivery method catalog (the
+       * catalog lives in the settings area, TEC-771).
+       */
+      pickList: (slug: string, uuid: string) =>
+        `/t/${slug}/orders/${uuid}/pick-list`,
+      deliveryMethods: (slug: string) => `/t/${slug}/settings/delivery-methods`,
     },
     /** TEC-191 warranty list and detail. */
     /** TEC-504: e-invoices of the brand center (Muhasebe > e-Fatura). */
@@ -168,6 +179,8 @@ export const routes = {
       reclassifications: (slug: string) => `/t/${slug}/stock/reclassifications`,
       reclassification: (slug: string, uuid: string) =>
         `/t/${slug}/stock/reclassifications/${uuid}`,
+      /** TEC-764 stock settings: unit and location label templates. */
+      labelTemplates: (slug: string) => `/t/${slug}/stock/label-templates`,
     },
     /** TEC-486: stock forecast and order suggestions add-on. */
     stockForecast: {
@@ -216,7 +229,7 @@ export const routes = {
     measurements: {
       list: (slug: string) => `/t/${slug}/measurements`,
       detail: (slug: string, uuid: string) => `/t/${slug}/measurements/${uuid}`,
-      devices: (slug: string) => `/t/${slug}/measurements/devices`,
+      devices: (slug: string) => `/t/${slug}/settings/measurement-devices`,
     },
     /** TEC-221 center tasks: list, new, detail (edit, status, comments). */
     tasks: {
@@ -292,6 +305,8 @@ export const routes = {
     /** TEC-245: signed contracts and notification preferences. */
     contracts: "/portal/contracts",
     preferences: "/portal/preferences",
+    /** TEC-771: the customer's / fleet user's profile. */
+    profile: "/portal/profile",
     /** TEC-390: AI assistant (customer realm). */
     assistant: "/portal/assistant",
     /** TEC-327: my appointments and the booking flow (optional preselection). */
@@ -340,10 +355,10 @@ export const routes = {
     root: "/platform",
     home: "/platform",
     roles: {
-      root: "/platform/roles",
-      create: "/platform/roles/create",
-      detail: (uuid: string) => `/platform/roles/${uuid}`,
-      edit: (uuid: string) => `/platform/roles/${uuid}/edit`,
+      root: "/platform/settings/roles",
+      create: "/platform/settings/roles/create",
+      detail: (uuid: string) => `/platform/settings/roles/${uuid}`,
+      edit: (uuid: string) => `/platform/settings/roles/${uuid}/edit`,
     },
     users: {
       root: "/platform/users",
@@ -354,40 +369,43 @@ export const routes = {
     notifications: {
       root: "/platform/notifications",
       detail: (uuid: string) => `/platform/notifications/${uuid}`,
-      center: "/platform/notification-center",
+      center: "/platform/settings/notification-templates",
     },
     imports: {
-      root: "/platform/imports",
-      detail: (uuid: string) => `/platform/imports/${uuid}`,
+      root: "/platform/settings/imports",
+      detail: (uuid: string) => `/platform/settings/imports/${uuid}`,
     },
     exports: {
-      root: "/platform/exports",
-      detail: (uuid: string) => `/platform/exports/${uuid}`,
+      root: "/platform/settings/exports",
+      detail: (uuid: string) => `/platform/settings/exports/${uuid}`,
     },
+    /** TEC-771: settings area (sub-navigation in config/settings-nav.ts). */
     settings: {
       root: "/platform/settings",
+      exportDefaults: "/platform/settings/export-defaults",
     },
     access: {
-      root: "/platform/access",
+      root: "/platform/settings/access",
     },
     authSettings: {
-      root: "/platform/auth/settings",
+      root: "/platform/settings/auth",
     },
     integrations: {
-      github: "/platform/integrations/github",
-      google: "/platform/integrations/google",
-      facebook: "/platform/integrations/facebook",
-      apple: "/platform/integrations/apple",
-      whatsapp: "/platform/integrations/whatsapp",
-      glorian: "/platform/integrations/glorian",
+      github: "/platform/settings/integrations/github",
+      google: "/platform/settings/integrations/google",
+      facebook: "/platform/settings/integrations/facebook",
+      apple: "/platform/settings/integrations/apple",
+      whatsapp: "/platform/settings/integrations/whatsapp",
+      glorian: "/platform/settings/integrations/glorian",
     },
-    legalTexts: "/platform/legal-texts",
+    legalTexts: "/platform/settings/legal-texts",
     /** TEC-403: registered MCP (OAuth) clients. */
-    mcpClients: "/platform/mcp-clients",
+    mcpClients: "/platform/settings/mcp-clients",
     /** TEC-391: AI settings, organization quotas and usage (super_admin). */
     ai: {
-      root: "/platform/ai",
-      tab: (tab: string) => `/platform/ai?tab=${encodeURIComponent(tab)}`,
+      root: "/platform/settings/ai",
+      tab: (tab: string) =>
+        `/platform/settings/ai?tab=${encodeURIComponent(tab)}`,
     },
     conversations: {
       root: "/platform/conversations",
@@ -401,37 +419,37 @@ export const routes = {
       edit: (uuid: string) => `/platform/organizations/${uuid}/edit`,
     },
     documentTemplates: {
-      root: "/platform/document-templates",
-      edit: (uuid: string) => `/platform/document-templates/${uuid}`,
+      root: "/platform/settings/document-templates",
+      edit: (uuid: string) => `/platform/settings/document-templates/${uuid}`,
     },
     certificateTypes: {
-      root: "/platform/certificate-types",
+      root: "/platform/settings/certificate-types",
     },
     /** TEC-500: central intake photo angles (photo standard add-on). */
     photoAngles: {
-      root: "/platform/photo-angles",
+      root: "/platform/settings/photo-angles",
     },
     showcases: {
       root: "/platform/showcases",
     },
     /** TEC-489: expected part consumption (efficiency add-on). */
     partConsumptionExpectations: {
-      root: "/platform/part-consumption-expectations",
+      root: "/platform/settings/part-consumption-expectations",
     },
     activity: {
-      root: "/platform/activity",
+      root: "/platform/settings/activity",
     },
     logs: {
-      root: "/platform/logs",
+      root: "/platform/settings/logs",
     },
     storage: {
-      root: "/platform/storage",
+      root: "/platform/settings/storage",
     },
     modules: {
-      root: "/platform/modules",
+      root: "/platform/settings/modules",
     },
     territories: {
-      root: "/platform/territories",
+      root: "/platform/settings/territories",
     },
     plateFormats: {
       root: "/platform/settings/plate-formats",
@@ -441,24 +459,24 @@ export const routes = {
     },
     /** TEC-150: car brands / models (super_admin). */
     vehicleCatalog: {
-      root: "/platform/vehicle-catalog",
-      brand: (uuid: string) => `/platform/vehicle-catalog/${uuid}`,
+      root: "/platform/settings/vehicle-catalog",
+      brand: (uuid: string) => `/platform/settings/vehicle-catalog/${uuid}`,
     },
     serviceCatalog: {
-      root: "/platform/service-catalog",
+      root: "/platform/settings/service-catalog",
     },
     /** TEC-290: contract template editor (Lexical, 13 languages). */
     contractTemplates: {
-      root: "/platform/contract-templates",
-      edit: (uuid: string) => `/platform/contract-templates/${uuid}`,
+      root: "/platform/settings/contract-templates",
+      edit: (uuid: string) => `/platform/settings/contract-templates/${uuid}`,
     },
     /** TEC-353: admin review questions (portal review form). */
     reviewQuestions: {
-      root: "/platform/review-questions",
+      root: "/platform/settings/review-questions",
     },
     /** TEC-222: system settings hub (TEC-215 key/value store + topic links). */
     systemSettings: {
-      root: "/platform/system-settings",
+      root: "/platform/settings/system",
     },
     profile: {
       root: "/platform/profile",

@@ -155,6 +155,12 @@ func TestIntegrationWarrantyCertificate(t *testing.T) {
 		if h == "" {
 			t.Fatalf("%s certificate html missing", name)
 		}
+		// TEC-772: Olex documents open with the legacy certificate cover
+		// and summary and close with the three static pages.
+		if !strings.Contains(h, `class="ct-page ct-cover"`) || !strings.Contains(h, `class="ct-page ct-summary"`) ||
+			strings.Count(h, `class="ct-page ct-image"`) != 3 {
+			t.Errorf("%s certificate misses the certificate pages", name)
+		}
 		if n := strings.Count(h, `<img src="data:image/png;base64,`); n != len(ws) {
 			t.Fatalf("%s certificate: %d QR images, want %d", name, n, len(ws))
 		}

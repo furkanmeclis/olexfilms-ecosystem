@@ -206,6 +206,29 @@ func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID 
 		if err != nil {
 			return err
 		}
+		if split, err = s.assignLocked(ctx, q, tx, c, o, it, in); err != nil {
+			return err
+		}
+		result = o
+		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)
+	})
+	if err != nil {
+		return OrderView{}, err
+	}
+	v, err := s.view(ctx, s.q, c, result)
+	if err != nil {
+		return OrderView{}, err
+	}
+	v.Split = split
+	return v, nil
+}
+
+// assignLocked assigns one unit to a line the caller locked
+// (lockAssignable): the checks, the roll split and the reservation. A
+// retried split assignment that is already on the line is a no-op.
+func (s *Service) assignLocked(ctx context.Context, q *db.Queries, tx pgx.Tx, c Caller, o db.Order, it db.OrderItem, in AssignInput) (*SplitView, error) {
+	var split *SplitView
+	err := func() error {
 		u, err := findUnit(ctx, q, o.BrandID, in)
 		if err != nil {
 			return err
@@ -240,7 +263,6 @@ func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID 
 				}
 				split = splitView(*prev)
 				if _, err := q.GetOrderItemUnit(ctx, db.GetOrderItemUnitParams{OrderItemID: it.ID, UnitID: prev.New.ID}); err == nil {
-					result = o
 					return nil
 				} else if !errors.Is(err, pgx.ErrNoRows) {
 					return fmt.Errorf("orders: assignment: %w", err)
@@ -361,18 +383,9 @@ func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID 
 			}
 			return fmt.Errorf("orders: assign: %w", err)
 		}
-		result = o
-		return s.emit(ctx, tx, events.OrdersUpdated, o, o.Status, c)
-	})
-	if err != nil {
-		return OrderView{}, err
-	}
-	v, err := s.view(ctx, s.q, c, result)
-	if err != nil {
-		return OrderView{}, err
-	}
-	v.Split = split
-	return v, nil
+		return nil
+	}()
+	return split, err
 }
 
 // assignSplitKey is the ledger split key of a split assignment: the
@@ -423,9 +436,9 @@ func checkSerialStock(ctx context.Context, q *db.Queries, u db.Unit, seller int6
 	st, err := q.GetUnitCurrentState(ctx, u.ID)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
-		// A newly printed label may be selected before its stock entry. Shipment
-		// still requires an available/placed ledger state.
-		if u.Status != string(ledger.StatusPrinted) || u.OrganizationID != seller {
+		// A newly generated (reserved) or printed label may be selected before
+		// its stock entry. Shipment still requires an available/placed ledger state.
+		if (u.Status != string(ledger.StatusReserved) && u.Status != string(ledger.StatusPrinted)) || u.OrganizationID != seller {
 			return ErrUnitNotAvailable
 		}
 	case err != nil:

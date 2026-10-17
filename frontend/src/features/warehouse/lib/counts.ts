@@ -52,6 +52,7 @@ export const COUNT_RESOLUTIONS: StockCountResolution[] = [
   "relocate",
   "void_missing",
   "increase_unlocated",
+  "add_to_stock",
 ];
 
 /** Counted scan kinds (location scans only set the context). */

@@ -42,12 +42,23 @@ export function ConversationList({
   const { t, format } = useLocale();
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [failed, setFailed] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<AIConversation | null>(null);
 
   const save = async (uuid: string) => {
     const title = draft.trim();
-    if (title) await onRename(uuid, title).catch(() => undefined);
-    setEditing(null);
+    if (!title || saving) return;
+    setFailed(false);
+    setSaving(true);
+    try {
+      await onRename(uuid, title);
+      setEditing(null);
+    } catch {
+      setFailed(true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -70,6 +81,11 @@ export function ConversationList({
           {t("ai.history.empty")}
         </p>
       ) : null}
+      {failed ? (
+        <p role="alert" className="text-destructive text-sm">
+          {t("ai.errors.generic")}
+        </p>
+      ) : null}
       <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto">
         {items.map((c) => (
           <li key={c.uuid} className="group">
@@ -82,6 +98,7 @@ export function ConversationList({
                 }}
               >
                 <Input
+                  disabled={saving}
                   autoFocus
                   value={draft}
                   maxLength={200}
@@ -91,6 +108,7 @@ export function ConversationList({
                 />
                 <Button
                   type="submit"
+                  disabled={saving || !draft.trim()}
                   size="icon"
                   variant="ghost"
                   className="size-8"
@@ -133,8 +151,10 @@ export function ConversationList({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="size-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                  className="size-7 group-hover:opacity-100 focus-visible:opacity-100 md:opacity-0"
+                  disabled={disabled}
                   onClick={() => {
+                    setFailed(false);
                     setDraft(c.title);
                     setEditing(c.uuid);
                   }}
@@ -145,7 +165,8 @@ export function ConversationList({
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="size-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+                  className="size-7 group-hover:opacity-100 focus-visible:opacity-100 md:opacity-0"
+                  disabled={disabled}
                   onClick={() => setDeleting(c)}
                   aria-label={t("ai.history.delete")}
                 >
@@ -179,7 +200,10 @@ export function ConversationList({
               onClick={() => {
                 const target = deleting;
                 setDeleting(null);
-                if (target) void onDelete(target.uuid).catch(() => undefined);
+                if (target) {
+                  setFailed(false);
+                  void onDelete(target.uuid).catch(() => setFailed(true));
+                }
               }}
             >
               {t("ai.history.delete")}

@@ -204,6 +204,23 @@ export function canAssignUnits(can: Can, order: Order): boolean {
   );
 }
 
+/** Statuses whose pick list helps the seller (TEC-768). */
+const PICKING_STATUSES = new Set<OrderStatus>([
+  "approved",
+  "processing",
+  "preparing",
+  "ready",
+]);
+
+/** The seller opens the printable pick list (orders.ship). */
+export function canOpenPickList(can: Can, order: Order): boolean {
+  return (
+    order.role === "seller" &&
+    PICKING_STATUSES.has(order.status) &&
+    can(permissions.orders.ship)
+  );
+}
+
 /** Ordered amount of a line: pieces, or meters for roll lines. */
 export function lineAmount(item: OrderItem): number {
   if (item.meters !== null && item.meters !== undefined) {

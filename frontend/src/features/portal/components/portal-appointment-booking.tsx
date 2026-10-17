@@ -40,7 +40,10 @@ import {
   type RadiusKm,
 } from "@/features/dealers/lib/dealers";
 import { PORTAL_APPOINTMENTS_KEY } from "@/features/portal/components/portal-appointments";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalPage,
+  PortalLoading,
+} from "@/features/portal/components/portal-page";
 import {
   BOOKING_MAX_AHEAD_DAYS,
   BOOKING_WINDOW_DAYS,
@@ -458,11 +461,7 @@ function VehiclePicker({
     );
   }
   if (list.isLoading) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        {t("portal.vehicles.loading")}
-      </p>
-    );
+    return <PortalLoading label={t("portal.vehicles.loading")} rows={2} />;
   }
   if (vehicles.length === 0) {
     return (
@@ -606,9 +605,7 @@ function SlotPicker({
           retryLabel={t("common.retry")}
         />
       ) : availability.isLoading ? (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.appointments.loading_days")}
-        </p>
+        <PortalLoading label={t("portal.appointments.loading_days")} rows={1} />
       ) : (
         <ul
           className="grid grid-cols-3 gap-2 sm:grid-cols-7"

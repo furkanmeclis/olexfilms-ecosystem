@@ -5,6 +5,7 @@
  * cookie is never read or written from the portal.
  */
 import type { components } from "@/generated/api";
+import type { DeviceSession } from "@/services/auth.service";
 
 export const PORTAL_API_BASE = "/api/portal/v1";
 export const PORTAL_AUTH_BASE = "/api/portal-auth";
@@ -301,10 +302,20 @@ export const portalApi = {
   },
   me() {
     return portalRequest<{
-      user: { name?: string; surname?: string; email?: string | null };
+      user: {
+        name?: string;
+        surname?: string;
+        email?: string | null;
+        /** Own language, null when it follows the brand default. */
+        locale?: string | null;
+      };
       /** Global roles: customer and / or fleet (TEC-245 read-only check). */
       roles?: string[];
     }>("auth/me");
+  },
+  /** TEC-771: own name and language (PATCH /v1/auth/profile). */
+  updateProfile(body: { name?: string; surname?: string; locale?: string }) {
+    return portalRequest("auth/profile", { method: "PATCH", body });
   },
   pendingConsents(locale: string) {
     return portalRequest<{ items: PendingLegalText[] }>(
@@ -498,6 +509,33 @@ export const portalApi = {
     return portalRequest<PortalPage<FleetPortalReport>>(
       `portal/fleet/reports${queryString(query)}`,
     );
+  },
+};
+
+/**
+ * Device sessions and password change through the portal BFF (TEC-771);
+ * same responses as the panel's authService calls.
+ */
+export const portalAccountApi = {
+  listSessions() {
+    return portalRequest<{ items: DeviceSession[] }>("auth/sessions");
+  },
+  revokeSession(uuid: string) {
+    return portalRequest<{ status: string }>(
+      `auth/sessions/${encodeURIComponent(uuid)}`,
+      { method: "DELETE" },
+    );
+  },
+  revokeOtherSessions() {
+    return portalRequest<{ status: string }>("auth/sessions/revoke-others", {
+      method: "POST",
+    });
+  },
+  changePassword(body: { current_password: string; new_password: string }) {
+    return portalRequest<{ status: string }>("auth/password/change", {
+      method: "POST",
+      body,
+    });
   },
 };
 

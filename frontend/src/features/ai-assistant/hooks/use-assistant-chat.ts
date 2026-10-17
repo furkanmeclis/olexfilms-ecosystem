@@ -54,7 +54,17 @@ export function useAssistantChat(transport: AssistantTransport, scope: string) {
     retry: false,
   });
 
+  // Only the selected UUID lives in the shared cache; messages are reloaded
+  // from the API when moving between the widget and the full page.
+  const selected = useQuery<string | null>({
+    queryKey: [...key, "selected"],
+    queryFn: () => null,
+    initialData: null,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [conversationError, setConversationError] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [streaming, setStreaming] = useState(false);
@@ -66,10 +76,14 @@ export function useAssistantChat(transport: AssistantTransport, scope: string) {
   const abortRef = useRef<AbortController | null>(null);
   const draftRef = useRef<string>("");
   const activeRef = useRef<string | null>(null);
-  const select = useCallback((uuid: string | null) => {
-    activeRef.current = uuid;
-    setActiveId(uuid);
-  }, []);
+  const select = useCallback(
+    (uuid: string | null) => {
+      activeRef.current = uuid;
+      setActiveId(uuid);
+      qc.setQueryData([...key, "selected"], uuid);
+    },
+    [qc, key],
+  );
 
   // Status (or a 428 answer) asks for the guidelines: the dialog is open
   // until the user accepts or closes it.
@@ -312,25 +326,32 @@ export function useAssistantChat(transport: AssistantTransport, scope: string) {
     async (uuid: string | null) => {
       if (streaming) return;
       select(uuid);
+      setConversationError(false);
+      setLoadingConversation(Boolean(uuid));
+      setMessages([]);
       setLastReplay(null);
       if (!uuid) {
         setMessages([]);
         return;
       }
-      setLoadingConversation(true);
       try {
         const detail = await transport.getConversation(uuid);
         if (activeRef.current === uuid) {
           setMessages(detail.messages.map(fromServerMessage));
         }
       } catch {
-        setMessages([]);
+        if (activeRef.current === uuid) setConversationError(true);
       } finally {
-        setLoadingConversation(false);
+        if (activeRef.current === uuid) setLoadingConversation(false);
       }
     },
     [streaming, transport, select],
   );
+
+  useEffect(() => {
+    if (!status.data?.enabled || !status.data.allowed || streaming) return;
+    if (selected.data !== activeRef.current) void open(selected.data);
+  }, [selected.data, open, status.data, streaming]);
 
   const rename = useCallback(
     async (uuid: string, title: string) => {
@@ -348,6 +369,8 @@ export function useAssistantChat(transport: AssistantTransport, scope: string) {
       );
       if (activeRef.current === uuid) {
         select(null);
+        setLoadingConversation(false);
+        setConversationError(false);
         setMessages([]);
       }
     },
@@ -368,6 +391,7 @@ export function useAssistantChat(transport: AssistantTransport, scope: string) {
       activeId,
       messages,
       loadingConversation,
+      conversationError,
       streaming,
       quotaExceeded,
       consentRequired,
@@ -391,6 +415,7 @@ export function useAssistantChat(transport: AssistantTransport, scope: string) {
       activeId,
       messages,
       loadingConversation,
+      conversationError,
       streaming,
       quotaExceeded,
       consentRequired,

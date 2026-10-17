@@ -57,7 +57,13 @@ export function MessageList({
   const lastId = messages[messages.length - 1]?.id;
 
   return (
-    <ol className="space-y-4" data-testid="ai-messages">
+    <ol
+      className="space-y-4"
+      aria-live="polite"
+      aria-relevant="additions text"
+      aria-busy={streaming}
+      data-testid="ai-messages"
+    >
       {messages.map((m) => {
         const mine = m.role === "user";
         const visible = m.blocks.filter(
@@ -75,7 +81,7 @@ export function MessageList({
           >
             <div
               className={cn(
-                "max-w-[85%] min-w-0 space-y-2 rounded-2xl px-4 py-2.5",
+                "max-w-[95%] min-w-0 space-y-2 rounded-2xl px-4 py-2.5 break-words sm:max-w-[85%]",
                 mine
                   ? "bg-primary text-primary-foreground rounded-ee-sm"
                   : "bg-muted rounded-es-sm",
@@ -165,6 +171,15 @@ export function MessageList({
               {waiting ? (
                 <span className="text-muted-foreground inline-flex items-center gap-2 text-sm">
                   <Loader2 className="size-4 animate-spin" />
+                  {t("ai.chat.thinking")}
+                </span>
+              ) : null}
+              {streaming && m.id === lastId && !waiting ? (
+                <span
+                  className="text-muted-foreground inline-flex items-center gap-2 text-xs"
+                  data-testid="ai-streaming"
+                >
+                  <Loader2 className="size-3 animate-spin" aria-hidden="true" />
                   {t("ai.chat.thinking")}
                 </span>
               ) : null}

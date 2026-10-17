@@ -328,3 +328,33 @@ test("portal: WhatsApp review link with admin questions, sent anonymously", asyn
     },
   ]);
 });
+
+test("portal: profile saves the name and links the preferences", async ({
+  page,
+  context,
+}) => {
+  const api = new PortalMock();
+  const { owner } = E2E_PORTAL;
+  await routePortal(context, api, owner);
+  await signInWithOTP(page, api, owner);
+
+  // TEC-771: the menu opens the profile; preferences hang under it.
+  await page
+    .getByTestId("portal-nav")
+    .getByRole("link", { name: "My profile" })
+    .click();
+  await expect(page).toHaveURL(/\/portal\/profile$/);
+  const form = page.getByTestId("portal-profile-form");
+  await form.locator("#portal-profile-name").fill("Deniz");
+  await form.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Your details were saved.")).toBeVisible();
+  expect(api.calls).toContain(`${owner.phone} PATCH auth/profile`);
+  expect(api.profiles[owner.uuid]).toMatchObject({ name: "Deniz" });
+
+  await expect(page.getByText("Playwright")).toBeVisible();
+  await page.getByRole("link", { name: /^Notifications/ }).click();
+  await expect(page).toHaveURL(/\/portal\/preferences$/);
+  await expect(
+    page.getByTestId("portal-nav").getByRole("link", { name: "My profile" }),
+  ).toHaveAttribute("aria-current", "page");
+});

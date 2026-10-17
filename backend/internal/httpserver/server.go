@@ -596,6 +596,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Sessions: uc,
 	}, tokens, loader, deps.Queries, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
+	// TEC-768: shipping note PDF and delivery receipts of orders.
+	ordersSvc.WithDocuments(deps.Storage, pdfClient, log)
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 
 	nh := notifhandler.New(notifSvc)
@@ -915,7 +917,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-202: barcode batches (center), label templates and label PDFs.
 	stockmodule.RegisterLabelRoutes(mux, stockhandler.NewLabels(
-		stockusecase.NewBarcodes(deps.DB, deps.Queries), stockusecase.NewLabelTemplates(deps.Queries),
+		stockusecase.NewBarcodes(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)), stockusecase.NewLabelTemplates(deps.Queries),
 		stockusecase.NewLabels(deps.Queries, pdfClient)),
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-158: stock import upload (preview/confirm/undo on /v1/tenant/imports).

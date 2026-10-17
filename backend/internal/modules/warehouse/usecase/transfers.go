@@ -33,15 +33,15 @@ package usecase
 //     the buyer onto one of its locations (warehouse_order:order_item_unit:
 //     <assignment id>:placement:<barcode>); the order itself is untouched.
 //
-// Fixed barcode units move by quantity as out/in pairs and are not handled
-// here yet: they are refused (moves, transfers) or skipped (order
-// placement).
+// Fixed barcode units move by quantity as transfer_out/in pairs. Order
+// placement still skips fixed barcodes because orders handle their holdings.
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"slices"
 	"strings"
 	"time"
@@ -99,6 +99,7 @@ const (
 	transferRefType  = "warehouse_transfer_line"
 	moveSource       = "warehouse_move"
 	moveRefType      = "stock_movement"
+	fixedMoveRefType = "fixed_move_request"
 	orderPlaceSource = "warehouse_order"
 	orderPlaceRef    = "order_item_unit"
 )
@@ -142,6 +143,8 @@ type TransferLine struct {
 	UnitUUID              uuid.UUID      `json:"unit_uuid"`
 	Barcode               string         `json:"barcode"`
 	UnitStatus            string         `json:"unit_status"`
+	UnitKind              string         `json:"unit_kind"`
+	Quantity              int32          `json:"quantity"`
 	Product               EntryProduct   `json:"product"`
 	SourceLocation        *EntryLocation `json:"source_location"`
 	TargetLocation        *EntryLocation `json:"target_location"`
@@ -172,6 +175,7 @@ type WarehouseTransfer struct {
 type MovedUnit struct {
 	UnitUUID     uuid.UUID      `json:"unit_uuid"`
 	Barcode      string         `json:"barcode"`
+	Quantity     int32          `json:"quantity,omitempty"`
 	FromLocation *EntryLocation `json:"from_location"`
 	MovementUUID *uuid.UUID     `json:"movement_uuid"`
 	// Skipped names why an order unit was not placed (fixed, not_on_hand).
@@ -190,8 +194,16 @@ type MoveResult struct {
 // scanned LocationCode, OFW:LOC:<full_code> or full_code).
 type MoveInput struct {
 	Barcodes     []string
+	Fixed        []FixedMoveInput
 	LocationUUID *uuid.UUID
 	LocationCode string
+}
+
+type FixedMoveInput struct {
+	Barcode            string    `json:"barcode"`
+	Quantity           int32     `json:"quantity"`
+	SourceLocationUUID uuid.UUID `json:"source_location_uuid"`
+	RequestUUID        uuid.UUID `json:"request_uuid"`
 }
 
 // TransferInput opens a draft warehouse transfer.
@@ -216,7 +228,7 @@ func (s *WarehouseTransfers) Move(ctx context.Context, c EntryCaller, in MoveInp
 	if err != nil {
 		return MoveResult{}, err
 	}
-	codes, err := normBarcodes(in.Barcodes, true)
+	codes, err := normBarcodes(in.Barcodes, len(in.Fixed) == 0)
 	if err != nil {
 		return MoveResult{}, err
 	}
@@ -243,7 +255,7 @@ func (s *WarehouseTransfers) Move(ctx context.Context, c EntryCaller, in MoveInp
 			if err := checkNoOpenTransfer(ctx, q, u); err != nil {
 				return err
 			}
-			mu := MovedUnit{UnitUUID: u.Uuid, Barcode: u.Barcode}
+			mu := MovedUnit{UnitUUID: u.Uuid, Barcode: u.Barcode, Quantity: 1}
 			from := ledger.Owner{Type: ledger.OwnerType(st.OwnerType), ID: st.OwnerID, OrgID: org}
 			if st.OwnerType == string(ledger.OwnerWarehouseLocation) {
 				if st.OwnerID == loc.ID {
@@ -275,6 +287,51 @@ func (s *WarehouseTransfers) Move(ctx context.Context, c EntryCaller, in MoveInp
 			mu.MovementUUID = &id
 			out.Units = append(out.Units, mu)
 		}
+		for _, item := range in.Fixed {
+			if item.RequestUUID == uuid.Nil {
+				return invalid("fixed", "request_uuid is required for a fixed barcode move")
+			}
+			ref := fixedMoveReference(item.RequestUUID)
+			if previous, found, err := s.replayedFixedMove(ctx, q, item, ref, loc); err != nil {
+				return err
+			} else if found {
+				out.Units = append(out.Units, previous)
+				continue
+			}
+			u, source, err := s.fixedSource(ctx, q, c, item, loc.WarehouseID.Int64)
+			if err != nil {
+				return err
+			}
+			if source.ID == loc.ID {
+				return invalid("location_uuid", "fixed barcode is already on this location")
+			}
+			if u, err = q.LockUnit(ctx, u.ID); err != nil {
+				return err
+			}
+			h, err := q.LockFixedBarcodeHolding(ctx, db.LockFixedBarcodeHoldingParams{UnitID: u.ID, OwnerType: string(ledger.OwnerWarehouseLocation), OwnerID: source.ID})
+			if err != nil {
+				return err
+			}
+			if h.QuantityOnHand < item.Quantity {
+				return fmt.Errorf("%w: %s", ledger.ErrInsufficientStock, u.Barcode)
+			}
+			from := ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: source.ID, OrgID: org}
+			outMv, err := s.post(ctx, tx, u, ledger.Movement{Type: ledger.TypeTransferOut, UnitID: u.ID, From: &from,
+				Quantity: item.Quantity, Source: moveSource, RefType: fixedMoveRefType, RefID: ref,
+				ActorUserID: actorPtr(c), Reason: "fixed barcode warehouse move"})
+			if err != nil {
+				return err
+			}
+			inMv, err := s.post(ctx, tx, u, ledger.Movement{Type: ledger.TypeTransferIn, UnitID: u.ID, To: &target,
+				Quantity: item.Quantity, Source: moveSource, RefType: fixedMoveRefType, RefID: ref,
+				ActorUserID: actorPtr(c), Reason: "fixed barcode warehouse move", Metadata: map[string]any{"paired_movement_id": outMv.ID}})
+			if err != nil {
+				return err
+			}
+			fromView, id := locView(source), inMv.Uuid
+			out.Units = append(out.Units, MovedUnit{UnitUUID: u.Uuid, Barcode: u.Barcode, Quantity: item.Quantity,
+				FromLocation: &fromView, MovementUUID: &id})
+		}
 		return auditRow(ctx, q, c, AuditMoveDone, AuditResourceMove, loc.Uuid, map[string]any{
 			"organization_id": org, "location_id": loc.ID, "units": len(out.Units),
 		})
@@ -283,6 +340,92 @@ func (s *WarehouseTransfers) Move(ctx context.Context, c EntryCaller, in MoveInp
 		return MoveResult{}, err
 	}
 	return out, nil
+}
+
+func fixedMoveReference(id uuid.UUID) int64 {
+	h := fnv.New64a()
+	_, _ = h.Write(id[:])
+	ref := int64(h.Sum64() & 0x7fffffffffffffff)
+	if ref == 0 {
+		return 1
+	}
+	return ref
+}
+
+func (s *WarehouseTransfers) replayedFixedMove(ctx context.Context, q *db.Queries, item FixedMoveInput, ref int64, target db.WarehouseLocation) (MovedUnit, bool, error) {
+	for _, code := range []string{strings.TrimSpace(item.Barcode), strings.ToUpper(strings.TrimSpace(item.Barcode))} {
+		key, err := ledger.IdempotencyKey(moveSource, fixedMoveRefType, ref, ledger.TypeTransferIn, code)
+		if err != nil {
+			return MovedUnit{}, false, err
+		}
+		in, err := q.GetStockMovementByIdempotencyKey(ctx, key)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
+			return MovedUnit{}, false, err
+		}
+		outKey, _ := ledger.IdempotencyKey(moveSource, fixedMoveRefType, ref, ledger.TypeTransferOut, code)
+		out, err := q.GetStockMovementByIdempotencyKey(ctx, outKey)
+		if err != nil {
+			return MovedUnit{}, false, err
+		}
+		source, err := q.GetWarehouseLocationByUUID(ctx, item.SourceLocationUUID)
+		if err != nil {
+			return MovedUnit{}, false, err
+		}
+		if source.OrganizationID != target.OrganizationID || !source.WarehouseID.Valid || source.WarehouseID != target.WarehouseID ||
+			in.QuantityDelta != item.Quantity || out.QuantityDelta != -item.Quantity || in.ToOwnerID.Int64 != target.ID || out.FromOwnerID.Int64 != source.ID {
+			return MovedUnit{}, false, fmt.Errorf("%w: %w: fixed move request differs from its original", ErrTransferLedger, ledger.ErrIdempotencyConflict)
+		}
+		u, err := q.GetUnit(ctx, in.UnitID)
+		if err != nil {
+			return MovedUnit{}, false, err
+		}
+		view, id := locView(source), in.Uuid
+		return MovedUnit{UnitUUID: u.Uuid, Barcode: u.Barcode, Quantity: item.Quantity, FromLocation: &view, MovementUUID: &id}, true, nil
+	}
+	return MovedUnit{}, false, nil
+}
+
+func (s *WarehouseTransfers) fixedSource(ctx context.Context, q *db.Queries, c EntryCaller, item FixedMoveInput, warehouseID int64) (db.Unit, db.WarehouseLocation, error) {
+	if item.Quantity <= 0 || item.SourceLocationUUID == uuid.Nil {
+		return db.Unit{}, db.WarehouseLocation{}, invalid("fixed", "quantity and source_location_uuid are required")
+	}
+	loc, err := q.GetWarehouseLocationByUUID(ctx, item.SourceLocationUUID)
+	if err != nil || loc.OrganizationID != c.Org.InternalID || !loc.WarehouseID.Valid || loc.WarehouseID.Int64 != warehouseID {
+		return db.Unit{}, loc, invalid("source_location_uuid", "source location is outside the warehouse")
+	}
+	code := strings.TrimSpace(item.Barcode)
+	units, err := q.ListUnitsByBarcodes(ctx, []string{code, strings.ToUpper(code)})
+	if err != nil {
+		return db.Unit{}, loc, err
+	}
+	var match db.Unit
+	var available int32
+	for _, u := range units {
+		if u.UnitKind != ledger.KindFixed {
+			continue
+		}
+		have, err := q.GetFixedHoldingQuantity(ctx, db.GetFixedHoldingQuantityParams{UnitID: u.ID,
+			OwnerType: string(ledger.OwnerWarehouseLocation), OwnerID: loc.ID})
+		if err != nil {
+			return db.Unit{}, loc, err
+		}
+		if have > 0 {
+			if match.ID != 0 {
+				return db.Unit{}, loc, invalid("fixed", "barcode matches multiple brands at this location")
+			}
+			match, available = u, have
+		}
+	}
+	if match.ID == 0 {
+		return db.Unit{}, loc, fmt.Errorf("%w: no fixed barcode stock at the source location", ledger.ErrInsufficientStock)
+	}
+	if available < item.Quantity {
+		return match, loc, fmt.Errorf("%w: %s has %d, requested %d", ledger.ErrInsufficientStock, match.Barcode, available, item.Quantity)
+	}
+	return match, loc, nil
 }
 
 // --- warehouse transfer documents ------------------------------------------
@@ -387,14 +530,17 @@ func (s *WarehouseTransfers) GetTransfer(ctx context.Context, c EntryCaller, id 
 	return s.view(ctx, s.q, t, true)
 }
 
-// AddTransferLines adds scanned serial units placed in the source
-// warehouse to a draft.
+// AddTransferLines adds scanned serial units placed in the source warehouse.
 func (s *WarehouseTransfers) AddTransferLines(ctx context.Context, c EntryCaller, id uuid.UUID, barcodes []string) (WarehouseTransfer, error) {
+	return s.AddTransferItems(ctx, c, id, barcodes, nil)
+}
+
+func (s *WarehouseTransfers) AddTransferItems(ctx context.Context, c EntryCaller, id uuid.UUID, barcodes []string, fixed []FixedMoveInput) (WarehouseTransfer, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return WarehouseTransfer{}, err
 	}
-	codes, err := normBarcodes(barcodes, true)
+	codes, err := normBarcodes(barcodes, len(fixed) == 0)
 	if err != nil {
 		return WarehouseTransfer{}, err
 	}
@@ -407,7 +553,7 @@ func (s *WarehouseTransfers) AddTransferLines(ctx context.Context, c EntryCaller
 		if err != nil {
 			return err
 		}
-		if have+int64(len(codes)) > MaxTransferLines {
+		if have+int64(len(codes)+len(fixed)) > MaxTransferLines {
 			return invalid("barcodes", fmt.Sprintf("a transfer holds at most %d lines", MaxTransferLines))
 		}
 		source, err := q.GetWarehouseByID(ctx, db.GetWarehouseByIDParams{ID: t.FromWarehouseID, OrganizationID: org})
@@ -422,8 +568,9 @@ func (s *WarehouseTransfers) AddTransferLines(ctx context.Context, c EntryCaller
 			if source.RequireLocationPlacement && u.Status != string(ledger.StatusPlaced) {
 				return ErrLocationPlacementRequired
 			}
-			// Selection may precede the stock entry; shipping still checks placement.
-			printedHere := u.Status == string(ledger.StatusPrinted) && u.OrganizationID == org
+			// Selection may precede the stock entry (a reserved or printed label
+			// of this org); shipping still checks placement.
+			printedHere := (u.Status == string(ledger.StatusReserved) || u.Status == string(ledger.StatusPrinted)) && u.OrganizationID == org
 			if !printedHere {
 				st, err := onHand(ctx, q, u, org)
 				if err != nil {
@@ -438,13 +585,28 @@ func (s *WarehouseTransfers) AddTransferLines(ctx context.Context, c EntryCaller
 			if err := checkFree(ctx, q, u); err != nil {
 				return err
 			}
-			if _, err := q.InsertWarehouseTransferLine(ctx, db.InsertWarehouseTransferLineParams{TransferID: t.ID, UnitID: u.ID}); err != nil {
+			if _, err := q.InsertWarehouseTransferLine(ctx, db.InsertWarehouseTransferLineParams{TransferID: t.ID, UnitID: u.ID, Quantity: 1}); err != nil {
 				var pg *pgconn.PgError
 				if errors.As(err, &pg) && pg.Code == "23505" {
 					if pg.ConstraintName == "uq_warehouse_transfer_lines_transfer_unit" {
 						return invalid("barcodes", "barcode "+u.Barcode+" is already on this transfer")
 					}
 					return fmt.Errorf("%w: %s is on another open warehouse transfer", ErrUnitBusy, u.Barcode)
+				}
+				return err
+			}
+		}
+		for _, item := range fixed {
+			u, source, err := s.fixedSource(ctx, q, c, item, t.FromWarehouseID)
+			if err != nil {
+				return err
+			}
+			_, err = q.InsertWarehouseTransferLine(ctx, db.InsertWarehouseTransferLineParams{TransferID: t.ID, UnitID: u.ID,
+				SourceLocationID: pgtype.Int8{Int64: source.ID, Valid: true}, Quantity: item.Quantity})
+			if err != nil {
+				var pg *pgconn.PgError
+				if errors.As(err, &pg) && pg.Code == "23505" {
+					return fmt.Errorf("%w: fixed barcode %s is already on a transfer", ErrUnitBusy, u.Barcode)
 				}
 				return err
 			}
@@ -557,6 +719,27 @@ func (s *WarehouseTransfers) Ship(ctx context.Context, c EntryCaller, id uuid.UU
 			if err != nil {
 				return err
 			}
+			if u.UnitKind == ledger.KindFixed {
+				if !l.SourceLocationID.Valid {
+					return ErrUnitUnavailable
+				}
+				loc, err := q.GetWarehouseLocation(ctx, db.GetWarehouseLocationParams{ID: l.SourceLocationID.Int64, OrganizationID: org})
+				if err != nil || !loc.WarehouseID.Valid || loc.WarehouseID.Int64 != t.FromWarehouseID {
+					return ErrUnitUnavailable
+				}
+				from := ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: loc.ID, OrgID: org}
+				mv, err := s.post(ctx, tx, u, ledger.Movement{Type: ledger.TypeTransferOut, UnitID: u.ID, From: &from,
+					Quantity: l.Quantity, Source: transferSource, RefType: transferRefType, RefID: l.ID,
+					ActorUserID: actorPtr(c), Reason: "fixed barcode warehouse transfer", Metadata: transferMeta(t, l)})
+				if err != nil {
+					return err
+				}
+				if err := q.SetWarehouseTransferLineOut(ctx, db.SetWarehouseTransferLineOutParams{ID: l.ID,
+					MovementID: pgtype.Int8{Int64: mv.ID, Valid: true}, SourceLocationID: l.SourceLocationID}); err != nil {
+					return err
+				}
+				continue
+			}
 			st, err := s.inSourceWarehouse(ctx, q, u, t)
 			if err != nil {
 				return err
@@ -648,6 +831,20 @@ func (s *WarehouseTransfers) Complete(ctx context.Context, c EntryCaller, id uui
 				return err
 			}
 			meta := transferMeta(t, l)
+			if u.UnitKind == ledger.KindFixed {
+				loc := ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: targets[i], OrgID: org}
+				mv, err := s.post(ctx, tx, u, ledger.Movement{Type: ledger.TypeTransferIn, UnitID: u.ID, To: &loc,
+					Quantity: l.Quantity, Source: transferSource, RefType: transferRefType, RefID: l.ID,
+					ActorUserID: actorPtr(c), Reason: "fixed barcode warehouse transfer received", Metadata: meta})
+				if err != nil {
+					return err
+				}
+				if err := q.SetWarehouseTransferLineIn(ctx, db.SetWarehouseTransferLineInParams{ID: l.ID,
+					InMovementID: pgtype.Int8{Int64: mv.ID, Valid: true}, TargetLocationID: pgtype.Int8{Int64: targets[i], Valid: true}}); err != nil {
+					return err
+				}
+				continue
+			}
 			inMv, err := s.post(ctx, tx, u, ledger.Movement{
 				Type: ledger.TypeTransferIn, UnitID: u.ID, To: &self,
 				Source: transferSource, RefType: transferRefType, RefID: l.ID,
@@ -709,6 +906,24 @@ func (s *WarehouseTransfers) Cancel(ctx context.Context, c EntryCaller, id uuid.
 				u, err := q.GetUnit(ctx, l.UnitID)
 				if err != nil {
 					return err
+				}
+				if u.UnitKind == ledger.KindFixed {
+					if !l.SourceLocationID.Valid {
+						return ErrUnitUnavailable
+					}
+					from := ledger.Owner{Type: ledger.OwnerWarehouseLocation, ID: l.SourceLocationID.Int64, OrgID: org}
+					mv, err := s.post(ctx, tx, u, ledger.Movement{Type: ledger.TypeTransferCancelRestore,
+						UnitID: u.ID, To: &from, Quantity: l.Quantity, Source: transferSource, RefType: transferRefType,
+						RefID: l.ID, ActorUserID: actorPtr(c), Reason: "fixed barcode warehouse transfer cancelled", Metadata: transferMeta(t, l)})
+					if err != nil {
+						return err
+					}
+					if err := q.SetWarehouseTransferLineRestore(ctx, db.SetWarehouseTransferLineRestoreParams{ID: l.ID,
+						MovementID: pgtype.Int8{Int64: mv.ID, Valid: true}}); err != nil {
+						return err
+					}
+					restored++
+					continue
 				}
 				mv, err := s.post(ctx, tx, u, ledger.Movement{
 					Type: ledger.TypeTransferCancelRestore, UnitID: u.ID,
@@ -957,7 +1172,7 @@ func (s *WarehouseTransfers) post(ctx context.Context, tx pgx.Tx, u db.Unit, m l
 	return res.Movement, nil
 }
 
-// serialUnit resolves a scanned barcode in the active brand and locks it.
+// serialUnit resolves a scanned serial barcode in the active brand and locks it.
 func (s *WarehouseTransfers) serialUnit(ctx context.Context, q *db.Queries, c EntryCaller, code string) (db.Unit, error) {
 	u, err := q.GetUnitByBarcode(ctx, db.GetUnitByBarcodeParams{BrandID: c.Org.BrandID, Barcode: code})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -970,7 +1185,7 @@ func (s *WarehouseTransfers) serialUnit(ctx context.Context, q *db.Queries, c En
 		return u, err
 	}
 	if u.UnitKind == ledger.KindFixed {
-		return u, invalid("barcodes", "barcode "+u.Barcode+" is a fixed barcode; fixed quantities are not moved by warehouse moves or transfers")
+		return u, invalid("barcodes", "barcode "+u.Barcode+" is fixed; use fixed with quantity and source_location_uuid")
 	}
 	return q.LockUnit(ctx, u.ID)
 }
@@ -1307,6 +1522,7 @@ func (s *WarehouseTransfers) view(ctx context.Context, q *db.Queries, t db.Wareh
 		}
 		line := TransferLine{
 			UUID: l.Uuid, UnitUUID: u.Uuid, Barcode: u.Barcode, UnitStatus: u.Status,
+			UnitKind: u.UnitKind, Quantity: l.Quantity,
 			Product: EntryProduct{UUID: p.Uuid, SKU: p.Sku, Name: p.Name},
 		}
 		if line.SourceLocation, err = location(l.SourceLocationID); err != nil {

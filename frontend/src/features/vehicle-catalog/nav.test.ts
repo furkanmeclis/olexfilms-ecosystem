@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { platformNav } from "@/config/nav";
+import { platformSettingsNav } from "@/config/settings-nav";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
@@ -11,14 +11,14 @@ function visibleIds(granted: string[]) {
       (Array.isArray(p) ? p : [p]).every((x) => granted.includes(x)),
     canAny: (ps: string[]) => ps.some((x) => granted.includes(x)),
   };
-  return platformNav.groups.flatMap((group) =>
+  return platformSettingsNav.groups.flatMap((group) =>
     visibleNavItems(group, access).map((item) => item.id),
   );
 }
 
 describe("platform nav: vehicle catalog (TEC-150)", () => {
   it("links to the vehicle catalog page", () => {
-    const item = platformNav.groups
+    const item = platformSettingsNav.groups
       .flatMap((g) => g.items)
       .find((i) => i.id === "vehicle-catalog");
     expect(item?.href).toBe(routes.platform.vehicleCatalog.root);

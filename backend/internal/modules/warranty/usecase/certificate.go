@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/certtheme"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
@@ -76,6 +77,9 @@ type Certificate struct {
 	// Letterhead is the letterhead of the organization that performed the
 	// service (the dealer), not of the requester.
 	Letterhead ioengine.Letterhead
+	// Cert is the legacy certificate cover, summary and closing pages
+	// (TEC-772); nil for brands without them.
+	Cert *certtheme.Input
 }
 
 // CertificateDealer is the organization that performed the service.
@@ -323,6 +327,20 @@ func (s *CertificateService) certificate(ctx context.Context, svc db.Service, ro
 		}
 		c.Items = append(c.Items, it)
 	}
+	// The summary lists only the units this certificate covers (the holder
+	// filter of Build), never other items of the service.
+	units := make(map[string]bool, len(c.Items))
+	for _, it := range c.Items {
+		units[it.Barcode] = true
+	}
+	date := func(t time.Time) string { return FormatCertificateDate(t, zone, loc) }
+	if in, ok, err := certtheme.Load(ctx, s.q, s.store, svc,
+		certtheme.Vehicle{Make: c.Vehicle.Brand, Model: c.Vehicle.Model, Year: c.Vehicle.Year}, date,
+		func(barcode string) bool { return units[barcode] }); err != nil {
+		s.log.Warn("warranty_certificate_pages_failed", "error", err)
+	} else if ok {
+		c.Cert = &in
+	}
 	settings, err := s.q.GetAppSettings(ctx)
 	if err != nil {
 		return Certificate{}, fmt.Errorf("warranty certificate: settings: %w", err)
@@ -471,6 +489,10 @@ func CertificateHTML(c Certificate, loc i18n.Locale, title string) (string, erro
 	var b strings.Builder
 	lh := c.Letterhead
 	b.WriteString(certificateCSS)
+	if c.Cert != nil {
+		b.WriteString(certtheme.CSS())
+		b.WriteString(certtheme.OpeningPages(*c.Cert, loc))
+	}
 	b.WriteString(ioengine.LetterheadHeaderHTML(&lh))
 	b.WriteString(`<h1 class="doc-title">` + esc(title) + `</h1><table class="doc-meta">`)
 	meta := [][2]string{
@@ -521,7 +543,10 @@ func CertificateHTML(c Certificate, loc i18n.Locale, title string) (string, erro
 	}
 	b.WriteString(`</ol><p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
 		esc(pdfrender.IssuedAt(c.GeneratedAt, pdfrender.Zone(c.Timezone))) + `</p>`)
-	b.WriteString(ioengine.LetterheadFooterHTML(&lh))
+	b.WriteString(ioengine.LetterheadFooterHTMLFor(&lh, string(loc)))
+	if c.Cert != nil {
+		b.WriteString(certtheme.ClosingPages(loc))
+	}
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: lh.PrimaryColor}.HTML(), nil
 }
 

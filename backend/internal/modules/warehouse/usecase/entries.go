@@ -70,7 +70,8 @@ var (
 	// ErrEntryUnitTaken: the unit is already a line of another entry.
 	ErrEntryUnitTaken = errors.New("warehouse: unit belongs to another stock entry")
 	// ErrEntryLedger: the ledger refused a movement at confirm.
-	ErrEntryLedger = errors.New("warehouse: ledger refused the stock entry")
+	ErrEntryLedger        = errors.New("warehouse: ledger refused the stock entry")
+	ErrEntryPrintedLabels = errors.New("warehouse: printed labels prevent draft cancellation")
 )
 
 // Stock entry modes and statuses (stock_entries).
@@ -754,16 +755,42 @@ func (s *StockEntries) postLine(ctx context.Context, q *db.Queries, tx pgx.Tx, e
 	return q.SetStockEntryLineMovements(ctx, arg)
 }
 
-// Cancel closes a draft without writing stock.
+// Cancel closes a draft and voids its still reserved labels atomically.
 func (s *StockEntries) Cancel(ctx context.Context, c EntryCaller, id uuid.UUID) (StockEntry, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return StockEntry{}, err
 	}
 	var e db.StockEntry
-	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
+	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
 			return err
+		}
+		lines, err := q.ListStockEntryLines(ctx, e.ID)
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			u, err := q.LockUnit(ctx, line.UnitID)
+			if err != nil {
+				return err
+			}
+			if u.Status == string(ledger.StatusPrinted) {
+				return ErrEntryPrintedLabels
+			}
+			if u.Status == string(ledger.StatusVoid) {
+				continue
+			}
+			if u.Status != string(ledger.StatusReserved) {
+				return fmt.Errorf("%w: %s", ErrEntryUnitNotEnterable, u.Barcode)
+			}
+			if _, err := s.ledger.Post(ctx, tx, ledger.Movement{
+				Type: ledger.TypeVoid, UnitID: u.ID, Source: "stock_entry",
+				RefType: "stock_entry_line", RefID: line.ID,
+				Reason: "draft stock entry cancelled", ActorUserID: actorPtr(c),
+			}); err != nil {
+				return fmt.Errorf("%w: %v", ErrEntryLedger, err)
+			}
 		}
 		if e, err = q.CancelStockEntry(ctx, e.ID); err != nil {
 			return notFound(err, ErrEntryNotDraft)

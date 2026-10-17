@@ -21,6 +21,7 @@ const (
 	CodeStockEntryUnitNotLabel  = "STOCK_ENTRY_UNIT_NOT_PRINTED"
 	CodeStockEntryUnitTaken     = "STOCK_ENTRY_UNIT_TAKEN"
 	CodeStockEntryLedgerRefused = "STOCK_ENTRY_LEDGER_REFUSED"
+	CodeStockEntryPrintedLabels = "STOCK_ENTRY_PRINTED_LABELS"
 )
 
 // Entries serves /v1/warehouse/stock-entries.
@@ -43,6 +44,8 @@ func writeEntryError(w http.ResponseWriter, r *http.Request, err error) {
 		response.NotFound(w, r, "Stock entry line not found")
 	case errors.Is(err, wh.ErrEntryNotDraft):
 		response.Conflict(w, r, CodeStockEntryNotDraft, "The stock entry is no longer a draft (already confirmed or cancelled)")
+	case errors.Is(err, wh.ErrEntryPrintedLabels):
+		response.Conflict(w, r, CodeStockEntryPrintedLabels, "Printed barcode labels prevent cancelling this stock entry")
 	case errors.Is(err, wh.ErrEntryEmpty):
 		response.Conflict(w, r, CodeStockEntryEmpty, "The stock entry has no lines")
 	case errors.Is(err, wh.ErrEntryUnplaced):

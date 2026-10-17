@@ -398,5 +398,19 @@
   "dealer_page.form_rate_limited": "Demasiadas solicitudes. Inténtalo más tarde.",
   "dealer_page.form_failed": "No se pudo enviar la solicitud. Inténtalo de nuevo.",
   "dealer_page.form_success_title": "Solicitud recibida",
-  "dealer_page.form_success_body": "El distribuidor se pondrá en contacto contigo pronto."
+  "dealer_page.form_success_body": "El distribuidor se pondrá en contacto contigo pronto.",
+  "nav.profile": "Mi perfil",
+  "profile.title": "Mi perfil",
+  "profile.saved": "Sus datos se guardaron.",
+  "profile.failed": "No se pudieron guardar sus datos.",
+  "profile.links_title": "Enlaces de la cuenta",
+  "profile.preferences_hint": "Notificaciones por correo, en la aplicación y de campañas",
+  "profile.contracts_hint": "Contratos que firmó y sus PDF",
+  "profile.phone_login_hint": "Inicia sesión con un código enviado a su teléfono; no necesita contraseña.",
+  "home.vehicles_hint": "Sus vehículos y su historial de servicio",
+  "home.warranties_hint": "Sus certificados de garantía y su estado",
+  "home.appointments_hint": "Sus citas próximas y pasadas",
+  "home.dealers_hint": "Distribuidores autorizados cerca de usted",
+  "home.profile_hint": "Su nombre, idioma y sesiones",
+  "home.book": "Pedir cita"
 }

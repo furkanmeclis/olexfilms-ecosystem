@@ -163,5 +163,14 @@
   "codes.EINVOICE_INVALID_STATUS": "Le statut de la facture électronique ne permet pas cette action.",
   "codes.EINVOICE_NOT_ARCHIVED": "La facture électronique n'est pas encore archivée.",
   "codes.EINVOICE_PDF_NOT_READY": "Le PDF de la facture n'est pas encore prêt ; réessayez bientôt ou régénérez-le.",
-  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Placez cette unité dans l’entrepôt avant de l’attribuer."
+  "codes.DELIVERY_METHOD_SYSTEM": "Le mode de livraison système ne peut être ni modifié ni supprimé.",
+  "codes.DELIVERY_METHOD_IN_USE": "Des commandes ont été expédiées avec ce mode ; désactivez-le au lieu de le supprimer.",
+  "codes.DELIVERY_METHOD_CODE_TAKEN": "Ce code est déjà utilisé.",
+  "codes.TRACKING_URL_TEMPLATE_INVALID": "Le modèle d'URL de suivi doit être une adresse http(s) valide.",
+  "codes.ORDER_NOT_SHIPPED": "La commande n'a pas encore été expédiée.",
+  "codes.ORDER_RECEIPT_NOT_ALLOWED": "Un accusé de réception ne peut être joint qu'à une commande expédiée ou reçue.",
+  "codes.ORDER_DOCUMENT_UNAVAILABLE": "Le stockage des documents ou le moteur PDF est indisponible.",
+  "codes.ORDER_RECEIPT_FILE_INVALID": "L'accusé de réception doit être un PDF, JPEG, PNG ou WebP (10 Mo max.).",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Placez cette unité dans l’entrepôt avant de l’attribuer.",
+  "page_forbidden_body": "Vous n'êtes pas autorisé à consulter cette page."
 }

@@ -44,7 +44,7 @@ vi.mock(
   }),
 );
 
-import { platformNav } from "@/config/nav";
+import { platformSettingsNav } from "@/config/settings-nav";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
@@ -482,13 +482,13 @@ describe("platform nav: system settings (TEC-222)", () => {
         (Array.isArray(p) ? p : [p]).every((x) => granted.includes(x)),
       canAny: (ps: string[]) => ps.some((x) => granted.includes(x)),
     };
-    return platformNav.groups.flatMap((group) =>
+    return platformSettingsNav.groups.flatMap((group) =>
       visibleNavItems(group, access).map((item) => item.id),
     );
   }
 
   it("links to the hub page behind platform.settings.read", () => {
-    const item = platformNav.groups
+    const item = platformSettingsNav.groups
       .flatMap((g) => g.items)
       .find((i) => i.id === "system-settings");
     expect(item?.href).toBe(routes.platform.systemSettings.root);

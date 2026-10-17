@@ -219,8 +219,10 @@ func (h *Handler) ReplaceItems(w http.ResponseWriter, r *http.Request) {
 }
 
 type transitionBody struct {
-	Status string  `json:"status"`
-	Reason *string `json:"reason"`
+	Status             string  `json:"status"`
+	Reason             *string `json:"reason"`
+	DeliveryMethodUUID *string `json:"delivery_method_uuid"`
+	TrackingNo         *string `json:"tracking_no"`
 }
 
 // Transition (POST /v1/orders/{uuid}/transitions).
@@ -233,7 +235,9 @@ func (h *Handler) Transition(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &body) {
 		return
 	}
-	o, err := h.svc.Transition(r.Context(), caller(r), id, ord.TransitionInput{Status: body.Status, Reason: body.Reason})
+	o, err := h.svc.Transition(r.Context(), caller(r), id, ord.TransitionInput{
+		Status: body.Status, Reason: body.Reason, DeliveryMethodUUID: body.DeliveryMethodUUID, TrackingNo: body.TrackingNo,
+	})
 	if err != nil {
 		writeError(w, r, err)
 		return

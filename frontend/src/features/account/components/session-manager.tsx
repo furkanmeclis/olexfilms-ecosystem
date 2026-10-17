@@ -33,7 +33,19 @@ function sessionLabel(item: DeviceSession, fallback: string) {
   return ua && ua.length > 0 ? ua : fallback;
 }
 
-export function SessionManager() {
+export type SessionApi = Pick<
+  typeof authService,
+  "listSessions" | "revokeSession" | "revokeOtherSessions"
+>;
+
+/** Device sessions of the signed-in user; the portal passes its BFF api. */
+export function SessionManager({
+  api = authService,
+  queryKey = ["account", "sessions"],
+}: {
+  api?: SessionApi;
+  queryKey?: readonly unknown[];
+} = {}) {
   const { t, format } = useLocale();
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingOthers, setRevokingOthers] = useState(false);
@@ -41,10 +53,10 @@ export function SessionManager() {
   const [revokeOthersOpen, setRevokeOthersOpen] = useState(false);
 
   const sessionsQuery = useQuery({
-    queryKey: ["account", "sessions"],
+    queryKey,
     queryFn: async () => {
       try {
-        const list = await authService.listSessions();
+        const list = await api.listSessions();
         return list.items ?? [];
       } catch (error) {
         toast.error(
@@ -62,7 +74,7 @@ export function SessionManager() {
   const revoke = async (uuid: string) => {
     setRevokingId(uuid);
     try {
-      await authService.revokeSession(uuid);
+      await api.revokeSession(uuid);
       toast.success(t("auth.sessions.revoke_success"));
       setPending(null);
       await sessionsQuery.refetch();
@@ -80,7 +92,7 @@ export function SessionManager() {
   const revokeOthers = async () => {
     setRevokingOthers(true);
     try {
-      await authService.revokeOtherSessions();
+      await api.revokeOtherSessions();
       toast.success(t("auth.sessions.revoke_others_success"));
       setRevokeOthersOpen(false);
       await sessionsQuery.refetch();
