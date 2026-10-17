@@ -81,7 +81,7 @@ function OrderApprovals() {
               key={o.uuid}
               title={`${o.order_no} · ${o.buyer.name}`}
               subtitle={`${f.money(o.total, o.currency)} · ${f.date(o.submitted_at ?? o.created_at)}`}
-              onPress={() => router.push(`/admin/menu/orders/${o.uuid}` as Href)}
+              onPress={() => router.push(`/admin/approvals/orders/${o.uuid}` as Href)}
               last={i === items.length - 1}
             />
           ))}

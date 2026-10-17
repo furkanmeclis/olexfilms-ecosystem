@@ -208,24 +208,30 @@ export function OrderDetailScreen() {
             ) : null}
 
             <SectionHeader title={t('orders.items', { count: o.items?.length ?? 0 })} />
-            <List>
-              {(o.items ?? []).map((it, i, arr) => (
-                <View key={it.uuid} className={i < arr.length - 1 ? 'gap-0.5 border-b border-border px-4 py-3' : 'gap-0.5 px-4 py-3'}>
-                  <Text variant="body" numberOfLines={2}>
-                    {it.product.name}
-                  </Text>
-                  <View className="flex-row justify-between gap-3">
-                    <Text variant="footnote" tone="muted">
-                      {it.product.sku} ·{' '}
-                      {it.meters !== null ? t('orders.meters', { value: f.number(it.meters, 2) }) : t('orders.pieces', { count: it.quantity ?? 0 })}
+            {o.items?.length ? (
+              <List>
+                {o.items.map((it, i, arr) => (
+                  <View key={it.uuid} className={i < arr.length - 1 ? 'gap-0.5 border-b border-border px-4 py-3' : 'gap-0.5 px-4 py-3'}>
+                    <Text variant="body" numberOfLines={2}>
+                      {it.product.name}
                     </Text>
-                    <Text variant="footnote" className="font-semibold tabular-nums">
-                      {f.money(it.line_total, o.currency)}
-                    </Text>
+                    <View className="flex-row justify-between gap-3">
+                      <Text variant="footnote" tone="muted">
+                        {it.product.sku} ·{' '}
+                        {it.meters !== null ? t('orders.meters', { value: f.number(it.meters, 2) }) : t('orders.pieces', { count: it.quantity ?? 0 })}
+                      </Text>
+                      <Text variant="footnote" className="font-semibold tabular-nums">
+                        {f.money(it.line_total, o.currency)}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ))}
-            </List>
+                ))}
+              </List>
+            ) : (
+              <Text variant="callout" tone="muted" className="px-4">
+                {t('warehouse:orders.detail.items_empty')}
+              </Text>
+            )}
 
             {o.history?.length ? (
               <>
