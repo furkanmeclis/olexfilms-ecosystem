@@ -23,6 +23,7 @@ type Session = {
 };
 
 const ME_KEY = 'session.me';
+const LAST_ORG_KEY = 'session.lastOrg';
 
 /** The backend's resolved language applies until the user picks one in Settings. */
 function adoptBackendLocale(me: MobileMe) {
@@ -43,12 +44,26 @@ export const useSession = create<Session>((set, get) => ({
 
   signIn: async (result) => {
     await setTokens(fromApi(result));
-    get().setMe(result.me);
+    let me = result.me;
+    // Panel data needs an active organization: open the last used one, else the first.
+    if (!me.active_organization_uuid && me.organizations?.length) {
+      const last = readJSON<string>(LAST_ORG_KEY);
+      const org = me.organizations.find((o) => o.slug === last) ?? me.organizations[0];
+      try {
+        await setTokens(fromApi(await switchOrganization(org.slug)));
+        me = await fetchMe();
+      } catch {
+        // Stay signed in without an organization; the space switcher can retry.
+      }
+    }
+    get().setMe(me);
     set({ status: 'signedIn' });
   },
 
   setMe: (me) => {
     writeJSON(ME_KEY, me);
+    const active = me.organizations?.find((o) => o.uuid === me.active_organization_uuid);
+    if (active) writeJSON(LAST_ORG_KEY, active.slug);
     adoptBackendLocale(me);
     set({ me });
   },
