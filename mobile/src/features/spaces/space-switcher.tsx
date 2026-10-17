@@ -54,7 +54,7 @@ export function SpaceSwitcher() {
       } else {
         useActiveSpace.getState().setKind(s.kind);
       }
-      router.dismissAll();
+      if (router.canDismiss()) router.dismissAll();
       router.replace('/');
     } catch (e) {
       setError(errorMessage(isApiError(e) ? e.code : undefined));
