@@ -17,7 +17,7 @@ var MobilePanelMirrorPrefixes = []string{
 	"warehouse", "measurements", "reports", "search", "notifications", "appointments",
 	"catalog", "vehicle-catalog", "plate-formats", "performance", "tasks", "leads",
 	"pricing", "certificates", "photo-standard", "service-catalog", "geo",
-	"announcements", "stats", "tenant/organizations", "tenant/modules",
+	"announcements", "stats", "tenant/organizations", "tenant/modules", "delivery-methods",
 }
 
 type mobilePanelMirrorKey struct{}
