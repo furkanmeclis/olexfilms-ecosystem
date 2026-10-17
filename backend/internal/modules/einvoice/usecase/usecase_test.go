@@ -665,3 +665,24 @@ func contains(list []string, v string) bool {
 	}
 	return false
 }
+
+// TEC-775: between 21:00 and 24:00 UTC the day in Türkiye is already the
+// next one. An invoice archived then is dated that day and must pass the GİB
+// "IssueDate is not in the future" rule, whatever the process time zone is.
+func TestArchiveAfterMidnightInTurkiye(t *testing.T) {
+	f := newFixture(t)
+	f.withBuyerProfile(t)
+	d := f.draft(t, f.order(t, 1, "100.00"))
+	// 22:30 UTC the day before the process' next local day = 01:30 TRT.
+	local := time.Now()
+	next := time.Date(local.Year(), local.Month(), local.Day()+1, 0, 0, 0, 0, time.UTC)
+	f.svc.SetClock(func() time.Time { return next.Add(-90 * time.Minute) })
+	v, err := f.svc.Archive(f.ctx, f.c, d.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.Status != StatusArchived || v.Number == nil || v.IssueDate != next.Format(time.DateOnly) {
+		t.Fatalf("archive at 01:30 TRT = status %s number %v issue date %s messages %v, want archived on %s",
+			v.Status, v.Number, v.IssueDate, v.ValidationMessages, next.Format(time.DateOnly))
+	}
+}

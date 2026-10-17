@@ -761,7 +761,11 @@ func (s *Service) approve(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 	if o, err = q.RecalculateOrderTotals(ctx, o.ID); err != nil {
 		return o, nil, fmt.Errorf("orders: totals: %w", err)
 	}
-	snap, err := s.rates.ResolveRate(ctx, s.now(), o.Currency, TryCurrency)
+	// The rate day is the UTC day, like the ledger's fallback day
+	// (accounting.go) and the stored rate days; the process zone must not
+	// move it (TEC-775).
+	rateDay := s.now().UTC()
+	snap, err := s.rates.ResolveRate(ctx, rateDay, o.Currency, TryCurrency)
 	if errors.Is(err, fxrates.ErrRateNotFound) {
 		return o, nil, ErrRateNotFound
 	}
@@ -780,7 +784,7 @@ func (s *Service) approve(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		if _, ok := snap.Find(o.Currency, cur); ok || cur == "" || cur == o.Currency {
 			continue
 		}
-		pair, err := s.rates.ResolveRate(ctx, s.now(), o.Currency, cur)
+		pair, err := s.rates.ResolveRate(ctx, rateDay, o.Currency, cur)
 		if errors.Is(err, fxrates.ErrRateNotFound) {
 			return o, nil, ErrRateNotFound
 		}
