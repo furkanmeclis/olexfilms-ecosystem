@@ -1,0 +1,17 @@
+{
+  "app_name": "Olexfilms",
+  "loading": "Caricamento…",
+  "retry": "Riprova",
+  "cancel": "Annulla",
+  "save": "Salva",
+  "close": "Chiudi",
+  "back": "Indietro",
+  "continue": "Continua",
+  "done": "Fatto",
+  "error_generic": "Qualcosa è andato storto. Riprova.",
+  "error_network": "Nessuna connessione. Controlla internet e riprova.",
+  "coming_soon_title": "Questa schermata è in arrivo",
+  "coming_soon_body": "Questa sezione arriva nel prossimo passo.",
+  "search_placeholder": "Targa, telefono, nome o codice a barre",
+  "offline": "Offline"
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Alan değiştir",
+  "kind.bayi": "Bayi",
+  "kind.depo": "Depo",
+  "kind.admin": "Admin",
+  "kind.musteri": "Müşteri",
+  "org_type.center": "Merkez",
+  "org_type.distributor": "Distribütör",
+  "org_type.dealer": "Bayi",
+  "active": "Aktif",
+  "switching": "Geçiliyor…",
+  "none_title": "Kullanılabilir alan yok",
+  "none_body": "Hesabın henüz bir organizasyona bağlı değil. Yöneticinle iletişime geç."
+}

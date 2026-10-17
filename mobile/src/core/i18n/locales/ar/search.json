@@ -1,0 +1,21 @@
+{
+  "title": "بحث",
+  "placeholder": "اللوحة، الهاتف، الاسم، رقم الخدمة، الرمز",
+  "recent": "عمليات البحث الأخيرة",
+  "clear": "مسح",
+  "hint_title": "ابحث في كل شيء",
+  "hint_body": "اللوحات وأرقام الهواتف والأسماء وأرقام الخدمات ورموز الضمان.",
+  "no_results": "لا توجد نتائج",
+  "no_results_body": "جرّب لوحة أو رقم هاتف أو رقم خدمة.",
+  "disabled": "البحث غير متاح حاليًا.",
+  "open_failed": "تعذّر الفتح",
+  "group.customers": "العملاء",
+  "group.vehicles": "المركبات",
+  "group.services": "الخدمات",
+  "group.warranties": "الضمانات",
+  "group.orders": "الطلبات",
+  "group.organizations": "المؤسسات",
+  "group.stock_units": "وحدات المخزون",
+  "group.leads": "العملاء المحتملون",
+  "group.products": "المنتجات"
+}

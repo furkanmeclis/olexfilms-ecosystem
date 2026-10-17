@@ -1,0 +1,16 @@
+{
+  "greeting_morning": "صباح الخير، {{name}}",
+  "greeting_day": "نهارك سعيد، {{name}}",
+  "greeting_evening": "مساء الخير، {{name}}",
+  "next_up": "التالي",
+  "quick_actions": "إجراءات سريعة",
+  "action.vehicle_intake": "استلام مركبة",
+  "action.measure": "قياس",
+  "action.customer": "عميل",
+  "action.appointment": "موعد",
+  "action.stock_entry": "إدخال مخزون",
+  "action.transfer": "نقل",
+  "action.count": "جرد",
+  "action.prepare": "تجهيز طلب",
+  "nothing_next": "لا يوجد عمل معلّق. ستظهر الأعمال الجديدة هنا."
+}

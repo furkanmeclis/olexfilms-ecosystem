@@ -1,0 +1,13 @@
+{
+  "hint": "ضع الباركود أو رمز QR داخل الإطار",
+  "permission_title": "يلزم الوصول إلى الكاميرا",
+  "permission_body": "اسمح بالوصول إلى الكاميرا لقراءة الباركود ورموز QR.",
+  "permission_button": "السماح بالكاميرا",
+  "open_settings": "فتح الإعدادات",
+  "result.qr_login": "تسجيل الدخول إلى لوحة الويب",
+  "result.location": "موقع في المستودع",
+  "result.unit": "وحدة منتج",
+  "result.warranty": "الضمان",
+  "result.unknown": "رمز غير معروف",
+  "scan_again": "المسح مرة أخرى"
+}

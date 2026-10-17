@@ -1,0 +1,21 @@
+{
+  "title": "Ara",
+  "placeholder": "Plaka, telefon, ad, hizmet no, kod",
+  "recent": "Son aramalar",
+  "clear": "Temizle",
+  "hint_title": "Her şeyi arayın",
+  "hint_body": "Plaka, telefon, ad, hizmet numarası ve garanti kodu.",
+  "no_results": "Sonuç bulunamadı",
+  "no_results_body": "Plaka, telefon veya hizmet numarası deneyin.",
+  "disabled": "Arama şu anda kullanılamıyor.",
+  "open_failed": "Açılamadı",
+  "group.customers": "Müşteriler",
+  "group.vehicles": "Araçlar",
+  "group.services": "Hizmetler",
+  "group.warranties": "Garantiler",
+  "group.orders": "Siparişler",
+  "group.organizations": "Organizasyonlar",
+  "group.stock_units": "Stok birimleri",
+  "group.leads": "Potansiyel müşteriler",
+  "group.products": "Ürünler"
+}

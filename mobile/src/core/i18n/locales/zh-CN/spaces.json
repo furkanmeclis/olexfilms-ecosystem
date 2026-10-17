@@ -1,0 +1,14 @@
+{
+  "title": "切换空间",
+  "kind.bayi": "经销商",
+  "kind.depo": "仓库",
+  "kind.admin": "管理员",
+  "kind.musteri": "客户",
+  "org_type.center": "总部",
+  "org_type.distributor": "分销商",
+  "org_type.dealer": "经销商",
+  "active": "当前",
+  "switching": "正在切换…",
+  "none_title": "没有可用空间",
+  "none_body": "你的账号尚未关联任何组织。请联系管理员。"
+}

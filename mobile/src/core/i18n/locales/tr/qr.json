@@ -1,0 +1,12 @@
+{
+  "title": "Web paneline giriş",
+  "browser": "Tarayıcı",
+  "organization": "Organizasyon",
+  "expires": "Süre",
+  "warning": "Bu girişi sen başlatmadıysan reddet.",
+  "approve": "Onayla",
+  "reject": "Reddet",
+  "approved": "Giriş onaylandı",
+  "rejected": "Giriş reddedildi",
+  "expired": "Kodun süresi doldu. Web'de yeni QR kod oluştur."
+}

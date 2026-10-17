@@ -1,0 +1,17 @@
+{
+  "app_name": "Olexfilms",
+  "loading": "Chargement…",
+  "retry": "Réessayer",
+  "cancel": "Annuler",
+  "save": "Enregistrer",
+  "close": "Fermer",
+  "back": "Retour",
+  "continue": "Continuer",
+  "done": "Terminé",
+  "error_generic": "Un problème est survenu. Réessayez.",
+  "error_network": "Pas de connexion. Vérifiez votre accès internet et réessayez.",
+  "coming_soon_title": "Cet écran arrive bientôt",
+  "coming_soon_body": "Cette section sera ajoutée à la prochaine étape.",
+  "search_placeholder": "Plaque, téléphone, nom ou code-barres",
+  "offline": "Hors ligne"
+}

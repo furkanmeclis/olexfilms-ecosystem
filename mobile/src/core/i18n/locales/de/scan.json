@@ -1,0 +1,13 @@
+{
+  "hint": "Barcode oder QR-Code in den Rahmen halten",
+  "permission_title": "Kamerazugriff erforderlich",
+  "permission_body": "Erlauben Sie den Kamerazugriff, um Barcodes und QR-Codes zu lesen.",
+  "permission_button": "Kamera erlauben",
+  "open_settings": "Einstellungen öffnen",
+  "result.qr_login": "Anmeldung im Webpanel",
+  "result.location": "Lagerplatz",
+  "result.unit": "Produkteinheit",
+  "result.warranty": "Garantie",
+  "result.unknown": "Unbekannter Code",
+  "scan_again": "Erneut scannen"
+}

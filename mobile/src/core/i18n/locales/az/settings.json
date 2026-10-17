@@ -1,0 +1,22 @@
+{
+  "title": "Ayarlar",
+  "language": "Dil",
+  "theme": "Görünüş",
+  "theme.system": "Sistem",
+  "theme.light": "Açıq",
+  "theme.dark": "Tünd",
+  "unit": "Qalınlıq vahidi",
+  "unit.um": "Mikron (µm)",
+  "unit.mil": "Mil",
+  "switch_space": "Sahəni dəyiş",
+  "sign_out": "Çıxış",
+  "restart_title": "Yenidən başlatma lazımdır",
+  "restart_body": "Mətn istiqamətini dəyişmək üçün tətbiq yenidən başlayır.",
+  "restart_now": "Yenidən başlat",
+  "restart_reopen_body": "Mətn istiqamətini dəyişmək üçün tətbiqi tam bağlayıb yenidən açın.",
+  "restart_ok": "Oldu",
+  "version": "Versiya {{version}}",
+  "about": "Haqqında",
+  "api_server": "Server",
+  "app_version": "Tətbiq versiyası"
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Cambia spazio",
+  "kind.bayi": "Rivenditore",
+  "kind.depo": "Magazzino",
+  "kind.admin": "Admin",
+  "kind.musteri": "Cliente",
+  "org_type.center": "Sede",
+  "org_type.distributor": "Distributore",
+  "org_type.dealer": "Rivenditore",
+  "active": "Aperto",
+  "switching": "Cambio in corso…",
+  "none_title": "Nessuno spazio disponibile",
+  "none_body": "Il tuo account non è ancora collegato a un'organizzazione. Contatta l'amministratore."
+}

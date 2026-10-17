@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+@import 'uniwind';
+
+/*
+ * Brand tokens mirror frontend/src/styles/theme.css (same names, oklch converted
+ * to hex because React Native does not parse oklch). Change both together.
+ * success / warning follow the web's status badges (components/ui/badge.tsx):
+ * Tailwind emerald / amber 600 on light, 400 on dark.
+ */
+@layer theme {
+  :root {
+    @variant light {
+      --color-background: #f4f9f5;
+      --color-foreground: #0f2d1e;
+      --color-card: #fcfefc;
+      --color-card-foreground: #0f2d1e;
+      --color-primary: #003d25;
+      --color-primary-foreground: #f8fbf9;
+      --color-secondary: #e2f0e7;
+      --color-secondary-foreground: #193b2a;
+      --color-muted: #eaf3ed;
+      --color-muted-foreground: #55695d;
+      --color-accent: #dff3e5;
+      --color-accent-foreground: #0f3624;
+      --color-destructive: #d73337;
+      --color-border: #d7e1da;
+      --color-ring: #1b5a3e;
+      --color-success: #009966;
+      --color-warning: #e17100;
+      /* Logo "OLEX" letters: deep green on light surfaces. */
+      --color-brand-glyph: #003d25;
+    }
+
+    @variant dark {
+      --color-background: #091910;
+      --color-foreground: #e2eae4;
+      --color-card: #12251b;
+      --color-card-foreground: #e2eae4;
+      --color-primary: #61c28e;
+      --color-primary-foreground: #002112;
+      --color-secondary: #1e3328;
+      --color-secondary-foreground: #d0dbd3;
+      --color-muted: #182a20;
+      --color-muted-foreground: #8d9d92;
+      --color-accent: #20392c;
+      --color-accent-foreground: #dde8e0;
+      --color-destructive: #e24947;
+      --color-border: #283e32;
+      --color-ring: #61c28e;
+      --color-success: #00d492;
+      --color-warning: #ffb900;
+      /* Logo "OLEX" letters: white on dark surfaces. */
+      --color-brand-glyph: #ffffff;
+    }
+  }
+}
+
+@theme {
+  /* Logo gold (crest) and deep green (stars on the crest), same in both modes. */
+  --color-brand: #f2ac4a;
+  --color-brand-detail: #003d25;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-sheet: 22px;
+}

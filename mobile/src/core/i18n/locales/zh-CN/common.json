@@ -1,0 +1,17 @@
+{
+  "app_name": "Olexfilms",
+  "loading": "加载中…",
+  "retry": "重试",
+  "cancel": "取消",
+  "save": "保存",
+  "close": "关闭",
+  "back": "返回",
+  "continue": "继续",
+  "done": "完成",
+  "error_generic": "出了点问题，请重试。",
+  "error_network": "无网络连接。请检查网络后重试。",
+  "coming_soon_title": "此页面即将推出",
+  "coming_soon_body": "此部分将在下一步添加。",
+  "search_placeholder": "车牌、电话、姓名或条码",
+  "offline": "离线"
+}

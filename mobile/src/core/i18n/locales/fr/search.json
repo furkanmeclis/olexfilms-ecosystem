@@ -1,0 +1,21 @@
+{
+  "title": "Recherche",
+  "placeholder": "Plaque, téléphone, nom, n° de prestation, code",
+  "recent": "Recherches récentes",
+  "clear": "Effacer",
+  "hint_title": "Tout rechercher",
+  "hint_body": "Plaques, téléphones, noms, numéros de prestation et codes de garantie.",
+  "no_results": "Aucun résultat",
+  "no_results_body": "Essayez une plaque, un téléphone ou un n° de prestation.",
+  "disabled": "La recherche n'est pas disponible pour le moment.",
+  "open_failed": "Ouverture impossible",
+  "group.customers": "Clients",
+  "group.vehicles": "Véhicules",
+  "group.services": "Prestations",
+  "group.warranties": "Garanties",
+  "group.orders": "Commandes",
+  "group.organizations": "Organisations",
+  "group.stock_units": "Unités de stock",
+  "group.leads": "Prospects",
+  "group.products": "Produits"
+}

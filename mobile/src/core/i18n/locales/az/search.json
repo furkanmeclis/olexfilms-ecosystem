@@ -1,0 +1,21 @@
+{
+  "title": "Axtarış",
+  "placeholder": "Nömrə nişanı, telefon, ad, xidmət nömrəsi, kod",
+  "recent": "Son axtarışlar",
+  "clear": "Təmizlə",
+  "hint_title": "Hər şeyi axtarın",
+  "hint_body": "Nömrə nişanları, telefonlar, adlar, xidmət nömrələri və zəmanət kodları.",
+  "no_results": "Heç nə tapılmadı",
+  "no_results_body": "Nömrə nişanı, telefon və ya xidmət nömrəsi yoxlayın.",
+  "disabled": "Axtarış hazırda əlçatan deyil.",
+  "open_failed": "Açmaq olmadı",
+  "group.customers": "Müştərilər",
+  "group.vehicles": "Avtomobillər",
+  "group.services": "Xidmətlər",
+  "group.warranties": "Zəmanətlər",
+  "group.orders": "Sifarişlər",
+  "group.organizations": "Təşkilatlar",
+  "group.stock_units": "Stok vahidləri",
+  "group.leads": "Potensial müştərilər",
+  "group.products": "Məhsullar"
+}

@@ -1,0 +1,17 @@
+{
+  "app_name": "Olexfilms",
+  "loading": "Loading…",
+  "retry": "Try again",
+  "cancel": "Cancel",
+  "save": "Save",
+  "close": "Close",
+  "back": "Back",
+  "continue": "Continue",
+  "done": "Done",
+  "error_generic": "Something went wrong. Try again.",
+  "error_network": "No connection. Check your internet and try again.",
+  "coming_soon_title": "This screen is on its way",
+  "coming_soon_body": "This section is added in the next step.",
+  "search_placeholder": "Plate, phone, name or barcode",
+  "offline": "Offline"
+}

@@ -1,0 +1,16 @@
+{
+  "greeting_morning": "Καλημέρα, {{name}}",
+  "greeting_day": "Καλό απόγευμα, {{name}}",
+  "greeting_evening": "Καλησπέρα, {{name}}",
+  "next_up": "Επόμενο",
+  "quick_actions": "Γρήγορες ενέργειες",
+  "action.vehicle_intake": "Παραλαβή οχήματος",
+  "action.measure": "Μέτρηση",
+  "action.customer": "Πελάτης",
+  "action.appointment": "Ραντεβού",
+  "action.stock_entry": "Εισαγωγή αποθέματος",
+  "action.transfer": "Μεταφορά",
+  "action.count": "Απογραφή",
+  "action.prepare": "Προετοιμασία παραγγελίας",
+  "nothing_next": "Τίποτα σε αναμονή. Οι νέες εργασίες εμφανίζονται εδώ."
+}

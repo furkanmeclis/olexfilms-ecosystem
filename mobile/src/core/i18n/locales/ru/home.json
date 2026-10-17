@@ -1,0 +1,16 @@
+{
+  "greeting_morning": "Доброе утро, {{name}}",
+  "greeting_day": "Добрый день, {{name}}",
+  "greeting_evening": "Добрый вечер, {{name}}",
+  "next_up": "Далее",
+  "quick_actions": "Быстрые действия",
+  "action.vehicle_intake": "Приёмка авто",
+  "action.measure": "Замер",
+  "action.customer": "Клиент",
+  "action.appointment": "Запись",
+  "action.stock_entry": "Приход на склад",
+  "action.transfer": "Перемещение",
+  "action.count": "Инвентаризация",
+  "action.prepare": "Собрать заказ",
+  "nothing_next": "Ничего не ожидает. Новые задачи появятся здесь."
+}

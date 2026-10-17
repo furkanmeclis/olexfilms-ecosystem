@@ -1,0 +1,14 @@
+{
+  "title": "Switch space",
+  "kind.bayi": "Dealer",
+  "kind.depo": "Warehouse",
+  "kind.admin": "Admin",
+  "kind.musteri": "Customer",
+  "org_type.center": "Center",
+  "org_type.distributor": "Distributor",
+  "org_type.dealer": "Dealer",
+  "active": "Open",
+  "switching": "Switching…",
+  "none_title": "No space available",
+  "none_body": "Your account is not linked to an organization yet. Contact your administrator."
+}

@@ -1,0 +1,22 @@
+{
+  "title": "الإعدادات",
+  "language": "اللغة",
+  "theme": "المظهر",
+  "theme.system": "النظام",
+  "theme.light": "فاتح",
+  "theme.dark": "داكن",
+  "unit": "وحدة السماكة",
+  "unit.um": "ميكرون (µm)",
+  "unit.mil": "ميل",
+  "switch_space": "تبديل المساحة",
+  "sign_out": "تسجيل الخروج",
+  "restart_title": "يلزم إعادة التشغيل",
+  "restart_body": "سيُعاد تشغيل التطبيق لتغيير اتجاه النص.",
+  "restart_now": "إعادة التشغيل",
+  "restart_reopen_body": "أغلق التطبيق تمامًا ثم افتحه مرة أخرى لتغيير اتجاه النص.",
+  "restart_ok": "حسنًا",
+  "version": "الإصدار {{version}}",
+  "about": "حول",
+  "api_server": "الخادم",
+  "app_version": "إصدار التطبيق"
+}

@@ -1,0 +1,13 @@
+{
+  "hint": "Placez le code-barres ou le QR code dans le cadre",
+  "permission_title": "Accès à la caméra requis",
+  "permission_body": "Autorisez l'accès à la caméra pour lire les codes-barres et QR codes.",
+  "permission_button": "Autoriser la caméra",
+  "open_settings": "Ouvrir les Réglages",
+  "result.qr_login": "Connexion au panneau web",
+  "result.location": "Emplacement d'entrepôt",
+  "result.unit": "Unité de produit",
+  "result.warranty": "Garantie",
+  "result.unknown": "Code non reconnu",
+  "scan_again": "Scanner à nouveau"
+}

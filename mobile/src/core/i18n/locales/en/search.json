@@ -1,0 +1,21 @@
+{
+  "title": "Search",
+  "placeholder": "Plate, phone, name, service no, code",
+  "recent": "Recent searches",
+  "clear": "Clear",
+  "hint_title": "Search everything",
+  "hint_body": "Plates, phone numbers, names, service numbers and warranty codes.",
+  "no_results": "Nothing found",
+  "no_results_body": "Try a plate, a phone number or a service number.",
+  "disabled": "Search is not available right now.",
+  "open_failed": "Could not open",
+  "group.customers": "Customers",
+  "group.vehicles": "Vehicles",
+  "group.services": "Services",
+  "group.warranties": "Warranties",
+  "group.orders": "Orders",
+  "group.organizations": "Organizations",
+  "group.stock_units": "Stock units",
+  "group.leads": "Leads",
+  "group.products": "Products"
+}

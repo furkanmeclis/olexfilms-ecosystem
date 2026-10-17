@@ -1,0 +1,16 @@
+{
+  "greeting_morning": "Good morning, {{name}}",
+  "greeting_day": "Good afternoon, {{name}}",
+  "greeting_evening": "Good evening, {{name}}",
+  "next_up": "Next up",
+  "quick_actions": "Quick actions",
+  "action.vehicle_intake": "Vehicle intake",
+  "action.measure": "Measure",
+  "action.customer": "Customer",
+  "action.appointment": "Appointment",
+  "action.stock_entry": "Stock entry",
+  "action.transfer": "Transfer",
+  "action.count": "Count",
+  "action.prepare": "Prepare order",
+  "nothing_next": "Nothing waiting. New work shows up here."
+}

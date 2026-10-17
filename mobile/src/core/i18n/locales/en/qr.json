@@ -1,0 +1,12 @@
+{
+  "title": "Sign in to the web panel",
+  "browser": "Browser",
+  "organization": "Organization",
+  "expires": "Expires",
+  "warning": "Reject it if you did not start this sign-in.",
+  "approve": "Approve",
+  "reject": "Reject",
+  "approved": "Sign-in approved",
+  "rejected": "Sign-in rejected",
+  "expired": "This code has expired. Create a new QR code on the web."
+}

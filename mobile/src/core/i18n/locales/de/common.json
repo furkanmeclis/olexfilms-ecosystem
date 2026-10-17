@@ -1,0 +1,17 @@
+{
+  "app_name": "Olexfilms",
+  "loading": "Wird geladen…",
+  "retry": "Erneut versuchen",
+  "cancel": "Abbrechen",
+  "save": "Speichern",
+  "close": "Schließen",
+  "back": "Zurück",
+  "continue": "Weiter",
+  "done": "Fertig",
+  "error_generic": "Etwas ist schiefgelaufen. Versuchen Sie es erneut.",
+  "error_network": "Keine Verbindung. Prüfen Sie Ihr Internet und versuchen Sie es erneut.",
+  "coming_soon_title": "Dieser Bildschirm ist in Arbeit",
+  "coming_soon_body": "Dieser Bereich kommt im nächsten Schritt.",
+  "search_placeholder": "Kennzeichen, Telefon, Name oder Barcode",
+  "offline": "Offline"
+}

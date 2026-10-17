@@ -1,0 +1,13 @@
+{
+  "customers": "Клиенты",
+  "appointments": "Записи",
+  "stock": "Склад",
+  "orders": "Заказы",
+  "warranty_claims": "Гарантийные обращения",
+  "leads": "Лиды и предложения",
+  "reports": "Отчёты",
+  "accounting": "Касса и расчёты",
+  "tasks": "Задачи",
+  "announcements": "Объявления",
+  "warranties": "Гарантии"
+}

@@ -1,0 +1,12 @@
+{
+  "title": "Connexion au panneau web",
+  "browser": "Navigateur",
+  "organization": "Organisation",
+  "expires": "Expire",
+  "warning": "Refusez si vous n'avez pas lancé cette connexion.",
+  "approve": "Approuver",
+  "reject": "Refuser",
+  "approved": "Connexion approuvée",
+  "rejected": "Connexion refusée",
+  "expired": "Ce code a expiré. Créez un nouveau code QR sur le web."
+}

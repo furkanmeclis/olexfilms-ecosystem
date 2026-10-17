@@ -1,0 +1,16 @@
+{
+  "greeting_morning": "Günaydın, {{name}}",
+  "greeting_day": "İyi günler, {{name}}",
+  "greeting_evening": "İyi akşamlar, {{name}}",
+  "next_up": "Sıradaki",
+  "quick_actions": "Hızlı işlemler",
+  "action.vehicle_intake": "Araç kabul",
+  "action.measure": "Ölçüm",
+  "action.customer": "Müşteri",
+  "action.appointment": "Randevu",
+  "action.stock_entry": "Stok girişi",
+  "action.transfer": "Transfer",
+  "action.count": "Sayım",
+  "action.prepare": "Sipariş hazırla",
+  "nothing_next": "Bekleyen iş yok. Yeni işler burada görünür."
+}

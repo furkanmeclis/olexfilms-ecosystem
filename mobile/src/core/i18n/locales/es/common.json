@@ -1,0 +1,17 @@
+{
+  "app_name": "Olexfilms",
+  "loading": "Cargando…",
+  "retry": "Reintentar",
+  "cancel": "Cancelar",
+  "save": "Guardar",
+  "close": "Cerrar",
+  "back": "Atrás",
+  "continue": "Continuar",
+  "done": "Listo",
+  "error_generic": "Algo salió mal. Inténtalo de nuevo.",
+  "error_network": "Sin conexión. Revisa tu internet e inténtalo de nuevo.",
+  "coming_soon_title": "Esta pantalla está en camino",
+  "coming_soon_body": "Esta sección se añade en el siguiente paso.",
+  "search_placeholder": "Matrícula, teléfono, nombre o código de barras",
+  "offline": "Sin conexión"
+}

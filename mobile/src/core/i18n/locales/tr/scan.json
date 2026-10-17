@@ -1,0 +1,13 @@
+{
+  "hint": "Barkodu ya da QR kodu çerçeveye al",
+  "permission_title": "Kamera izni gerekli",
+  "permission_body": "Barkod ve QR kod okumak için kameraya erişim ver.",
+  "permission_button": "Kameraya izin ver",
+  "open_settings": "Ayarları aç",
+  "result.qr_login": "Web paneline giriş",
+  "result.location": "Depo konumu",
+  "result.unit": "Ürün birimi",
+  "result.warranty": "Garanti",
+  "result.unknown": "Tanınmayan kod",
+  "scan_again": "Tekrar tara"
+}
