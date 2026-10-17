@@ -98,19 +98,27 @@ export const api = createClient<paths>({ baseUrl: API_URL, fetch: authFetch });
  */
 export const PANEL_MIRROR_PREFIX = '/v1/mobile/panel/';
 
-function toMirror(request: Request): Request {
+async function toMirror(request: Request): Promise<Request> {
   const url = new URL(request.url);
   const base = new URL(API_URL);
   const basePath = base.pathname.replace(/\/$/, '');
   const rel = url.pathname.slice(basePath.length);
   if (!rel.startsWith('/v1/') || rel.startsWith('/v1/mobile/')) return request;
   url.pathname = basePath + PANEL_MIRROR_PREFIX + rel.slice('/v1/'.length);
-  return new Request(url.toString(), request);
+  // React Native's Request (whatwg-fetch) has no `body` property, so
+  // `new Request(url, request)` would drop it: copy the body explicitly.
+  // whatwg-fetch keeps the original body in `_bodyInit` (FormData stays intact).
+  let body: BodyInit | undefined;
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    const raw = (request as unknown as { _bodyInit?: BodyInit | null })._bodyInit;
+    body = (raw ?? (await request.text())) || undefined;
+  }
+  return new Request(url.toString(), { method: request.method, headers: request.headers, body, signal: request.signal });
 }
 
 api.use({
-  onRequest({ request }) {
-    const req = toMirror(request);
+  async onRequest({ request }) {
+    const req = await toMirror(request);
     for (const [k, v] of Object.entries(contractHeaders())) req.headers.set(k, v);
     return req;
   },

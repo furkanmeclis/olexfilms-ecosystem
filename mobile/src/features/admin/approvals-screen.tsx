@@ -39,7 +39,7 @@ function Section({
   children: React.ReactNode;
 }) {
   // Not this organization's queue (or the module is off): leave the section out.
-  if (query.isError && isApiError(query.error) && query.error.status === 403) return null;
+  if (query.isError && isApiError(query.error) && (query.error.status === 403 || query.error.status === 404)) return null;
   return (
     <View>
       <SectionHeader title={count ? `${title} · ${count}` : title} />
