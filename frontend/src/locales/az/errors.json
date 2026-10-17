@@ -163,6 +163,14 @@
   "codes.EINVOICE_INVALID_STATUS": "E-fakturanın statusu bu əməliyyata icazə vermir.",
   "codes.EINVOICE_NOT_ARCHIVED": "E-faktura hələ arxivləşdirilməyib.",
   "codes.EINVOICE_PDF_NOT_READY": "Fakturanın PDF faylı hələ hazır deyil; bir az sonra yenidən cəhd edin və ya yenidən yaradın.",
+  "codes.DELIVERY_METHOD_SYSTEM": "Sistem çatdırılma üsulu dəyişdirilə və silinə bilməz.",
+  "codes.DELIVERY_METHOD_IN_USE": "Bu üsulla göndərilmiş sifarişlər var; silmək əvəzinə passiv edin.",
+  "codes.DELIVERY_METHOD_CODE_TAKEN": "Bu kod artıq istifadə olunur.",
+  "codes.TRACKING_URL_TEMPLATE_INVALID": "İzləmə URL şablonu etibarlı http(s) ünvanı olmalıdır.",
+  "codes.ORDER_NOT_SHIPPED": "Sifariş hələ göndərilməyib.",
+  "codes.ORDER_RECEIPT_NOT_ALLOWED": "Təhvil sənədi yalnız göndərilmiş və ya təhvil alınmış sifarişə əlavə oluna bilər.",
+  "codes.ORDER_DOCUMENT_UNAVAILABLE": "Sənəd anbarı və ya PDF xidməti hazırda əlçatan deyil.",
+  "codes.ORDER_RECEIPT_FILE_INVALID": "Təhvil sənədi PDF, JPEG, PNG və ya WebP olmalıdır (10 MB-a qədər).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Təyinatdan əvvəl bu vahidi anbarda yerləşdirin.",
   "page_forbidden_body": "Bu səhifəyə baxmaq icazəniz yoxdur."
 }

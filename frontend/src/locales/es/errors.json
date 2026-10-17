@@ -163,6 +163,14 @@
   "codes.EINVOICE_INVALID_STATUS": "El estado de la factura electrónica no permite esta acción.",
   "codes.EINVOICE_NOT_ARCHIVED": "La factura electrónica aún no está archivada.",
   "codes.EINVOICE_PDF_NOT_READY": "El PDF de la factura aún no está listo; inténtelo en breve o vuelva a generarlo.",
+  "codes.DELIVERY_METHOD_SYSTEM": "El método de entrega del sistema no se puede cambiar ni eliminar.",
+  "codes.DELIVERY_METHOD_IN_USE": "Hay pedidos enviados con este método; desactívelo en lugar de eliminarlo.",
+  "codes.DELIVERY_METHOD_CODE_TAKEN": "Este código ya está en uso.",
+  "codes.TRACKING_URL_TEMPLATE_INVALID": "La plantilla de URL de seguimiento debe ser una dirección http(s) válida.",
+  "codes.ORDER_NOT_SHIPPED": "El pedido aún no se ha enviado.",
+  "codes.ORDER_RECEIPT_NOT_ALLOWED": "Solo se puede adjuntar un comprobante a un pedido enviado o recibido.",
+  "codes.ORDER_DOCUMENT_UNAVAILABLE": "El almacenamiento de documentos o el motor PDF no está disponible.",
+  "codes.ORDER_RECEIPT_FILE_INVALID": "El comprobante debe ser PDF, JPEG, PNG o WebP (hasta 10 MB).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Ubique esta unidad en el almacén antes de asignarla.",
   "page_forbidden_body": "No tiene permiso para ver esta página."
 }

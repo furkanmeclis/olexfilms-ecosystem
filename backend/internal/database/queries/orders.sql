@@ -106,8 +106,10 @@ WHERE id = sqlc.arg(id) AND approved_at IS NULL
 RETURNING *;
 
 -- name: SetOrderShipping :one
+-- TEC-768: the delivery method, mode and tracking number chosen at shipping.
 UPDATE orders
-SET delivery_mode = sqlc.narg(delivery_mode),
+SET delivery_method_id = sqlc.narg(delivery_method_id),
+    delivery_mode = sqlc.narg(delivery_mode),
     tracking_no = sqlc.narg(tracking_no),
     shipping_document_key = sqlc.narg(shipping_document_key)
 WHERE id = sqlc.arg(id)

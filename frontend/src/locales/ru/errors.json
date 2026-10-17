@@ -163,6 +163,14 @@
   "codes.EINVOICE_INVALID_STATUS": "Статус электронного счёта не позволяет выполнить это действие.",
   "codes.EINVOICE_NOT_ARCHIVED": "Электронный счёт ещё не заархивирован.",
   "codes.EINVOICE_PDF_NOT_READY": "PDF счёта ещё не готов; попробуйте чуть позже или сформируйте его заново.",
+  "codes.DELIVERY_METHOD_SYSTEM": "Системный способ доставки нельзя изменить или удалить.",
+  "codes.DELIVERY_METHOD_IN_USE": "Этим способом уже отгружены заказы; деактивируйте его вместо удаления.",
+  "codes.DELIVERY_METHOD_CODE_TAKEN": "Этот код уже используется.",
+  "codes.TRACKING_URL_TEMPLATE_INVALID": "Шаблон ссылки отслеживания должен быть корректным адресом http(s).",
+  "codes.ORDER_NOT_SHIPPED": "Заказ ещё не отгружен.",
+  "codes.ORDER_RECEIPT_NOT_ALLOWED": "Документ о получении можно прикрепить только к отгруженному или полученному заказу.",
+  "codes.ORDER_DOCUMENT_UNAVAILABLE": "Хранилище документов или PDF-сервис сейчас недоступны.",
+  "codes.ORDER_RECEIPT_FILE_INVALID": "Документ о получении должен быть PDF, JPEG, PNG или WebP (до 10 МБ).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Разместите эту единицу на складе перед назначением.",
   "page_forbidden_body": "У вас нет прав на просмотр этой страницы."
 }

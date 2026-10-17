@@ -163,6 +163,14 @@
   "codes.EINVOICE_INVALID_STATUS": "Lo stato della fattura elettronica non consente questa azione.",
   "codes.EINVOICE_NOT_ARCHIVED": "La fattura elettronica non è ancora archiviata.",
   "codes.EINVOICE_PDF_NOT_READY": "Il PDF della fattura non è ancora pronto; riprova tra poco o rigeneralo.",
+  "codes.DELIVERY_METHOD_SYSTEM": "Il metodo di consegna di sistema non può essere modificato o eliminato.",
+  "codes.DELIVERY_METHOD_IN_USE": "Ci sono ordini spediti con questo metodo; disattivalo invece di eliminarlo.",
+  "codes.DELIVERY_METHOD_CODE_TAKEN": "Questo codice è già in uso.",
+  "codes.TRACKING_URL_TEMPLATE_INVALID": "Il modello URL di tracciamento deve essere un indirizzo http(s) valido.",
+  "codes.ORDER_NOT_SHIPPED": "L'ordine non è ancora stato spedito.",
+  "codes.ORDER_RECEIPT_NOT_ALLOWED": "La ricevuta può essere allegata solo a un ordine spedito o ricevuto.",
+  "codes.ORDER_DOCUMENT_UNAVAILABLE": "L'archivio documenti o il motore PDF non è disponibile.",
+  "codes.ORDER_RECEIPT_FILE_INVALID": "La ricevuta deve essere PDF, JPEG, PNG o WebP (fino a 10 MB).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Posiziona questa unità nel magazzino prima di assegnarla.",
   "page_forbidden_body": "Non hai l'autorizzazione per visualizzare questa pagina."
 }

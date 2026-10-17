@@ -982,6 +982,21 @@ type DealerShowcaseService struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type DeliveryMethod struct {
+	ID                  int64              `json:"id"`
+	Uuid                uuid.UUID          `json:"uuid"`
+	OrganizationID      int64              `json:"organization_id"`
+	BrandID             int64              `json:"brand_id"`
+	Code                string             `json:"code"`
+	Name                string             `json:"name"`
+	TrackingUrlTemplate pgtype.Text        `json:"tracking_url_template"`
+	Active              bool               `json:"active"`
+	SortOrder           int32              `json:"sort_order"`
+	IsSystem            bool               `json:"is_system"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
 type DevicePushToken struct {
 	ID         int64              `json:"id"`
 	Uuid       uuid.UUID          `json:"uuid"`
@@ -2091,6 +2106,7 @@ type Order struct {
 	CancelledAt               pgtype.Timestamptz `json:"cancelled_at"`
 	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
+	DeliveryMethodID          pgtype.Int8        `json:"delivery_method_id"`
 }
 
 type OrderItem struct {

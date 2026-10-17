@@ -163,6 +163,14 @@
   "codes.EINVOICE_INVALID_STATUS": "The e-invoice status does not allow this action.",
   "codes.EINVOICE_NOT_ARCHIVED": "The e-invoice is not archived yet.",
   "codes.EINVOICE_PDF_NOT_READY": "The invoice PDF is not ready yet; try again shortly or retry the PDF.",
+  "codes.DELIVERY_METHOD_SYSTEM": "The system delivery method cannot be changed or deleted.",
+  "codes.DELIVERY_METHOD_IN_USE": "Orders were shipped with this method; deactivate it instead of deleting.",
+  "codes.DELIVERY_METHOD_CODE_TAKEN": "This code is already used.",
+  "codes.TRACKING_URL_TEMPLATE_INVALID": "The tracking URL template must be a valid http(s) address.",
+  "codes.ORDER_NOT_SHIPPED": "The order has not shipped yet.",
+  "codes.ORDER_RECEIPT_NOT_ALLOWED": "A delivery receipt can only be attached to a shipped or received order.",
+  "codes.ORDER_DOCUMENT_UNAVAILABLE": "Document storage or the PDF engine is unavailable right now.",
+  "codes.ORDER_RECEIPT_FILE_INVALID": "The delivery receipt must be a PDF, JPEG, PNG or WebP file (up to 10 MB).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Place this unit in a warehouse location before assigning it.",
   "page_forbidden_body": "You do not have permission to view this page."
 }

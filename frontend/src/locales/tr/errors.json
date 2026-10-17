@@ -163,6 +163,14 @@
   "codes.EINVOICE_INVALID_STATUS": "e-Faturanın durumu bu işleme izin vermiyor.",
   "codes.EINVOICE_NOT_ARCHIVED": "e-Fatura henüz arşivlenmedi.",
   "codes.EINVOICE_PDF_NOT_READY": "Fatura PDF'i henüz hazır değil; biraz sonra deneyin veya PDF'i yeniden oluşturun.",
+  "codes.DELIVERY_METHOD_SYSTEM": "Sistem teslimat yöntemi değiştirilemez veya silinemez.",
+  "codes.DELIVERY_METHOD_IN_USE": "Bu yöntemle sevk edilmiş siparişler var; silmek yerine pasifleştirin.",
+  "codes.DELIVERY_METHOD_CODE_TAKEN": "Bu kod zaten kullanılıyor.",
+  "codes.TRACKING_URL_TEMPLATE_INVALID": "Takip URL şablonu geçerli bir http(s) adresi olmalı.",
+  "codes.ORDER_NOT_SHIPPED": "Sipariş henüz sevk edilmedi.",
+  "codes.ORDER_RECEIPT_NOT_ALLOWED": "Teslim belgesi yalnızca sevk edilmiş veya teslim alınmış siparişe eklenebilir.",
+  "codes.ORDER_DOCUMENT_UNAVAILABLE": "Belge deposu veya PDF motoru şu an kullanılamıyor.",
+  "codes.ORDER_RECEIPT_FILE_INVALID": "Teslim belgesi PDF, JPEG, PNG veya WebP olmalı (en fazla 10 MB).",
   "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Atamadan önce bu birimi depoda bir konuma yerleştirin.",
   "page_forbidden_body": "Bu sayfayı görüntüleme yetkiniz yok."
 }

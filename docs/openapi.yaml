@@ -23377,6 +23377,423 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /v1/orders/{uuid}/items/{item_uuid}/suggestions:
+    get:
+      tags: [Orders]
+      operationId: suggestOrderUnits
+      summary: Suggest units for the rest of a preparing line (seller, orders.ship)
+      description: >-
+        TEC-768. Read only, nothing is reserved; only while the order is
+        preparing (409 ORDER_NOT_ASSIGNABLE). Candidates are the seller's
+        units of the line's product in stock (available/placed), not
+        reserved and not on an open warehouse transfer. Placed units (a
+        warehouse location owns them) come first, then the oldest entry
+        (FIFO on the unit's creation). Units the organization holds without
+        a location join only with include_unlocated=true. Pieces: one unit
+        per missing piece. Rolls: the first roll that covers the missing
+        meters (a longer roll is split on assignment); without one, whole
+        rolls in order and the last one cut to the rest. Fixed barcodes: a
+        quantity of the unreserved holding that one owner can ship.
+        `complete` is false when the suggestions do not cover `missing`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: item_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: include_unlocated
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrderSuggestions"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/orders/{uuid}/items/{item_uuid}/suggestions/apply:
+    post:
+      tags: [Orders]
+      operationId: applyOrderSuggestions
+      summary: Assign the confirmed suggestions to a line (seller, orders.ship)
+      description: >-
+        TEC-768. Every unit goes through the assignment rules of POST
+        .../units (unit_uuid with quantity or meters) in one transaction: a
+        refused unit rolls the whole request back (the error names
+        units[i]). Roll splits are returned in `splits`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: item_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderSuggestionsApplyInput"
+      responses:
+        "200":
+          description: Order with the assignments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /v1/orders/{uuid}/items/{item_uuid}/pick-locations:
+    get:
+      tags: [Orders]
+      operationId: listOrderItemPickLocations
+      summary: Where the seller keeps a line's product (seller, orders.ship)
+      description: >-
+        TEC-768. The seller's warehouse locations holding the product
+        (pieces/rolls and meters from the bin stock projection) by location
+        code, and a last row without location_uuid for the stock the
+        organization holds without a location.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: item_uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Locations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrderPickLocations"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/orders/{uuid}/pick-list:
+    get:
+      tags: [Orders]
+      operationId: getOrderPickList
+      summary: Printable pick list of an order (seller, orders.ship)
+      description: >-
+        TEC-768. Rows in location order (no location last), then product
+        and barcode: every assigned unit at its current location (fixed
+        barcodes at the location holding the most), and while the order is
+        approved, processing or preparing, the locations holding the
+        product of each line still missing units (kind=stock).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Pick list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrderPickList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/orders/{uuid}/shipping-document:
+    post:
+      tags: [Orders]
+      operationId: regenerateOrderShippingDocument
+      summary: Render the shipping note PDF again (seller, orders.ship)
+      description: >-
+        TEC-768. The shipping note (sevk irsaliyesi: seller and buyer, the
+        lines with their barcodes, delivery method and tracking number) is
+        rendered on the seller's letterhead in the request language when
+        the order ships; this renders and stores it again. 409
+        ORDER_NOT_SHIPPED before shipping, 503 ORDER_DOCUMENT_UNAVAILABLE
+        without storage or PDF engine.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Order with the document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          description: Document storage or PDF engine unavailable
+
+  /v1/orders/{uuid}/documents/{kind}:
+    get:
+      tags: [Orders]
+      operationId: downloadOrderDocument
+      summary: Download a document of an order (both sides, orders.read)
+      description: >-
+        TEC-768. kind=shipping is the shipping note PDF, kind=receipt the
+        buyer's delivery receipt (PDF or image). 404 when the order has no
+        such document.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: kind
+          in: path
+          required: true
+          schema: { type: string, enum: [shipping, receipt] }
+      responses:
+        "200":
+          description: The document
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+            image/jpeg:
+              schema: { type: string, format: binary }
+            image/png:
+              schema: { type: string, format: binary }
+            image/webp:
+              schema: { type: string, format: binary }
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/orders/{uuid}/receipt-document:
+    post:
+      tags: [Orders]
+      operationId: attachOrderReceiptDocument
+      summary: Attach the delivery receipt (buyer, orders.receive)
+      description: >-
+        TEC-768. Optional delivery receipt (teslim belgesi) while the order
+        is shipped or received (409 ORDER_RECEIPT_NOT_ALLOWED otherwise):
+        PDF, JPEG, PNG or WebP up to 10 MB (400
+        ORDER_RECEIPT_FILE_INVALID); a new upload replaces the old one.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "200":
+          description: Order with the receipt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeOrder"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/delivery-methods:
+    get:
+      tags: [Orders]
+      operationId: listDeliveryMethods
+      summary: Delivery methods of the active organization (orders.read)
+      description: >-
+        TEC-768. The organization's carrier catalog. The system method
+        warehouse_pickup (Ambar teslim, localized name) exists for every
+        organization and is created on first use. docs/list-contract.md:
+        sort name, code, sort_order, created_at (default sort_order, id
+        tiebreak); q searches name and code; active and is_system filter.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: active
+          in: query
+          schema: { type: boolean }
+        - name: is_system
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Page of delivery methods
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDeliveryMethodPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Orders]
+      operationId: createDeliveryMethod
+      summary: Add a delivery method (orders.ship)
+      description: >-
+        TEC-768. code is 1-32 of a-z, 0-9 and _ (unique per organization,
+        warehouse_pickup is reserved: 400 DELIVERY_METHOD_CODE_TAKEN);
+        tracking_url_template is an http(s) URL where {tracking_no} is
+        replaced by the tracking number (400 TRACKING_URL_TEMPLATE_INVALID).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryMethodInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDeliveryMethod"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/delivery-methods/{uuid}:
+    put:
+      tags: [Orders]
+      operationId: updateDeliveryMethod
+      summary: Edit a delivery method (orders.ship)
+      description: >-
+        TEC-768. The system method answers 409 DELIVERY_METHOD_SYSTEM.
+        Omitted active / sort_order keep their values.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryMethodInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeDeliveryMethod"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Orders]
+      operationId: deleteDeliveryMethod
+      summary: Delete a delivery method (orders.ship)
+      description: >-
+        TEC-768. The system method answers 409 DELIVERY_METHOD_SYSTEM; a
+        method an order shipped with answers 409 DELIVERY_METHOD_IN_USE
+        (deactivate it instead).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/stock-transfers:
     get:
       tags: [StockTransfers]
@@ -42010,6 +42427,13 @@ components:
         - created_at
         - updated_at
         - available_transitions
+        - received_at
+        - delivery_method
+        - delivery_mode
+        - tracking_no
+        - tracking_url
+        - has_shipping_document
+        - has_receipt_document
       properties:
         uuid: { type: string, format: uuid }
         order_no: { type: string, example: ORD-00000001 }
@@ -42053,6 +42477,23 @@ components:
           items: { $ref: "#/components/schemas/OrderHistoryEntry" }
         split:
           $ref: "#/components/schemas/OrderRollSplit"
+        splits:
+          type: array
+          description: Roll splits of an applied suggestion (TEC-768)
+          items: { $ref: "#/components/schemas/OrderRollSplit" }
+        received_at: { type: [string, "null"], format: date-time }
+        delivery_method:
+          description: Delivery method chosen at shipping (TEC-768)
+          oneOf:
+            - $ref: "#/components/schemas/OrderDeliveryMethodRef"
+            - type: "null"
+        delivery_mode: { type: [string, "null"], enum: [hand, warehouse, null] }
+        tracking_no: { type: [string, "null"] }
+        tracking_url:
+          type: [string, "null"]
+          description: The method's tracking URL template filled with tracking_no
+        has_shipping_document: { type: boolean, description: The shipping note PDF is stored }
+        has_receipt_document: { type: boolean, description: The buyer's delivery receipt is stored }
 
     OrderRollSplit:
       type: object
@@ -42070,6 +42511,191 @@ components:
         new_unit_uuid: { type: string, format: uuid }
         new_barcode: { type: string }
         replayed: { type: boolean }
+
+    OrderDeliveryMethodRef:
+      type: object
+      description: The delivery method an order shipped with (TEC-768).
+      required: [uuid, code, name, is_system]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string, description: The system method's name is localized }
+        is_system: { type: boolean }
+
+    DeliveryMethod:
+      type: object
+      required: [uuid, code, name, tracking_url_template, active, sort_order, is_system, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string, example: aras }
+        name: { type: string, example: Aras Kargo }
+        tracking_url_template:
+          type: [string, "null"]
+          example: "https://kargotakip.araskargo.com.tr/mainpage.aspx?code={tracking_no}"
+        active: { type: boolean }
+        sort_order: { type: integer, format: int32 }
+        is_system: { type: boolean, description: The read-only warehouse_pickup method }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    DeliveryMethodInput:
+      type: object
+      required: [code, name]
+      properties:
+        code: { type: string, pattern: "^[a-z0-9_]{1,32}$" }
+        name: { type: string, maxLength: 120 }
+        tracking_url_template: { type: [string, "null"], maxLength: 500 }
+        active: { type: boolean }
+        sort_order: { type: integer, format: int32, minimum: 0, maximum: 100000 }
+
+    EnvelopeDeliveryMethod:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/DeliveryMethod" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeDeliveryMethodPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/DeliveryMethod" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    OrderSuggestion:
+      type: object
+      required: [unit_uuid, barcode, unit_kind, quantity, meters, remaining_meters, located, location_uuid, location_code, entered_at]
+      properties:
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string, enum: [serial, fixed] }
+        quantity: { type: [integer, "null"], format: int64, description: Pieces (1) and fixed barcodes }
+        meters: { type: [string, "null"], description: Rolls; below remaining_meters the roll is split }
+        remaining_meters: { type: [string, "null"] }
+        located: { type: boolean, description: A warehouse location owns the unit }
+        location_uuid: { type: [string, "null"], format: uuid }
+        location_code: { type: [string, "null"], description: Full code of the location }
+        entered_at: { type: string, format: date-time }
+
+    OrderSuggestions:
+      type: object
+      required: [item_uuid, missing, covered, complete, include_unlocated, suggestions]
+      properties:
+        item_uuid: { type: string, format: uuid }
+        missing: { type: string, description: "Amount still to assign (quantity, or meters for rolls)" }
+        covered: { type: string }
+        complete: { type: boolean }
+        include_unlocated: { type: boolean }
+        suggestions:
+          type: array
+          items: { $ref: "#/components/schemas/OrderSuggestion" }
+
+    EnvelopeOrderSuggestions:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/OrderSuggestions" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    OrderSuggestionsApplyInput:
+      type: object
+      required: [units]
+      properties:
+        units:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: object
+            required: [unit_uuid]
+            properties:
+              unit_uuid: { type: string, format: uuid }
+              quantity: { type: integer, format: int64 }
+              meters: { type: string }
+
+    OrderPickLocation:
+      type: object
+      required: [location_uuid, location_code, location_name, quantity, meters]
+      properties:
+        location_uuid: { type: [string, "null"], format: uuid, description: Null for the stock without a location }
+        location_code: { type: [string, "null"] }
+        location_name: { type: [string, "null"] }
+        quantity: { type: integer, format: int64, description: Pieces or rolls }
+        meters: { type: [string, "null"], description: Roll products only }
+
+    EnvelopeOrderPickLocations:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/OrderPickLocation" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    OrderPickRow:
+      type: object
+      required: [kind, item_uuid, product, location_code, location_name, barcode, quantity, meters]
+      properties:
+        kind: { type: string, enum: [assigned, stock] }
+        item_uuid: { type: string, format: uuid }
+        product: { $ref: "#/components/schemas/OrderProductRef" }
+        location_code: { type: [string, "null"] }
+        location_name: { type: [string, "null"] }
+        barcode: { type: [string, "null"] }
+        quantity: { type: [integer, "null"], format: int64 }
+        meters: { type: [string, "null"] }
+
+    OrderPickLine:
+      type: object
+      required: [item_uuid, product, quantity, meters, assigned]
+      properties:
+        item_uuid: { type: string, format: uuid }
+        product: { $ref: "#/components/schemas/OrderProductRef" }
+        quantity: { type: [integer, "null"] }
+        meters: { type: [string, "null"] }
+        assigned: { type: string }
+
+    OrderPickList:
+      type: object
+      required: [order_uuid, order_no, status, seller, buyer, generated_at, lines, rows]
+      properties:
+        order_uuid: { type: string, format: uuid }
+        order_no: { type: string }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        seller: { $ref: "#/components/schemas/OrderOrgRef" }
+        buyer: { $ref: "#/components/schemas/OrderOrgRef" }
+        generated_at: { type: string, format: date-time }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/OrderPickLine" }
+        rows:
+          type: array
+          items: { $ref: "#/components/schemas/OrderPickRow" }
+
+    EnvelopeOrderPickList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/OrderPickList" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     OrderItemInput:
       type: object
@@ -42462,6 +43088,14 @@ components:
       properties:
         status: { $ref: "#/components/schemas/OrderStatus" }
         reason: { type: string, description: Kept in the history; the cancel reason for cancelling and cancelled }
+        delivery_method_uuid:
+          type: string
+          format: uuid
+          description: >-
+            Shipping only (TEC-768): one of the seller's active delivery
+            methods (400 otherwise); the shipping note PDF is rendered after
+            the shipment.
+        tracking_no: { type: string, maxLength: 128, description: Shipping only (TEC-768) }
 
     EnvelopeOrder:
       type: object
