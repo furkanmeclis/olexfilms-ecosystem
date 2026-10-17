@@ -1,4 +1,4 @@
-import { ChevronRight } from '@/ui/icons';
+import { ChevronForward } from '@/ui/icons';
 import { Pressable, View } from 'react-native';
 
 import { cn } from './cn';
@@ -36,7 +36,7 @@ export function ListRow({ title, subtitle, leading, trailing, onPress, last, ton
         ) : null}
       </View>
       {trailing}
-      {onPress && !trailing ? <Icon as={ChevronRight} tone="muted-foreground" size={18} /> : null}
+      {onPress && !trailing ? <Icon as={ChevronForward} tone="muted-foreground" size={18} /> : null}
     </View>
   );
   if (!onPress) return body;

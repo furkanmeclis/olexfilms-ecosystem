@@ -15,7 +15,7 @@ import {
   SearchField,
   Section,
 } from '@/features/services/ui';
-import { ChevronRight, Wrench } from '@/ui/icons';
+import { ChevronForward, Wrench } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -197,7 +197,7 @@ export function CustomerServiceDetailScreen() {
                       </Text>
                     </View>
                     <StatusPill label={t(`warranty_status.${w.status}`)} tone={warrantyTone(w.status)} />
-                    <Icon as={ChevronRight} tone="muted-foreground" size={18} />
+                    <Icon as={ChevronForward} tone="muted-foreground" size={18} />
                   </Pressable>
                 ))}
               </Section>

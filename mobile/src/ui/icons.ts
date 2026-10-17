@@ -1,3 +1,7 @@
+import ChevronLeftIcon from 'lucide-react-native/icons/chevron-left';
+import ChevronRightIcon from 'lucide-react-native/icons/chevron-right';
+import { I18nManager } from 'react-native';
+
 /**
  * Icons used by the app, imported one file each. Metro does not tree-shake, so
  * importing from the package root would ship all ~1,600 Lucide icons.
@@ -61,3 +65,6 @@ export { default as QrCode } from 'lucide-react-native/icons/qr-code';
 export { default as ChevronUp } from 'lucide-react-native/icons/chevron-up';
 export { default as Settings } from 'lucide-react-native/icons/settings';
 export { default as ListTree } from 'lucide-react-native/icons/list-tree';
+
+/** "Go deeper" chevron: points right in LTR, left in RTL (direction is fixed per launch). */
+export const ChevronForward = I18nManager.isRTL ? ChevronLeftIcon : ChevronRightIcon;
