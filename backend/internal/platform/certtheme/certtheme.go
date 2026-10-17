@@ -105,7 +105,8 @@ func CSS() string {
 </style>`
 }
 
-// OpeningPages are the cover and the summary page.
+// OpeningPages are the cover and the summary page; the car map shows only
+// when parts are given.
 func OpeningPages(in Input, loc i18n.Locale) string {
 	t := func(key string) string { return i18n.Translate(loc, key) }
 	esc := html.EscapeString
@@ -120,19 +121,18 @@ func OpeningPages(in Input, loc i18n.Locale) string {
 	b.WriteString(`<img class="ct-logo" src="` + logo + `" alt="Olex">` + car + `</section>`)
 
 	b.WriteString(`<section class="ct-page ct-summary"><img class="ct-logo" src="` + logo + `" alt="Olex">` + car)
-	b.WriteString(`<img class="ct-map" src="` + CarMapDataURI(in.Parts) + `" alt="">`)
+	if len(in.Parts) > 0 {
+		b.WriteString(`<img class="ct-map" src="` + CarMapDataURI(in.Parts) + `" alt="">`)
+	}
 	if len(in.Services) > 0 {
 		check := pdfrender.ImageDataURI("image/png", asset("check.png"))
 		b.WriteString(`<div class="ct-services"><table><thead><tr><td colspan="3"><div class="ct-head"><img class="ct-head-logo" src="` +
 			pdfrender.ImageDataURI("image/png", asset("olex-table-logo.png")) + `" alt="Olex"><span>` +
 			esc(t("certtheme.applied_services")) + `</span></div></td></tr></thead><tbody>`)
 		for _, s := range in.Services {
-			warranty := s.Warranty
-			if strings.TrimSpace(warranty) == "" {
-				warranty = "-"
-			}
+			category, warranty := orDash(s.Category), orDash(s.Warranty)
 			b.WriteString(`<tr><td><span class="ct-label">` + esc(t("certtheme.category")) + `</span><span class="ct-value">` +
-				esc(s.Category) + `</span></td><td><span class="ct-label">` + esc(t("warranty.certificate.product")))
+				esc(category) + `</span></td><td><span class="ct-label">` + esc(t("warranty.certificate.product")))
 			if s.Code != "" {
 				b.WriteString(` <span class="ct-code" dir="ltr">#` + esc(s.Code) + `</span>`)
 			}
@@ -144,6 +144,13 @@ func OpeningPages(in Input, loc i18n.Locale) string {
 	}
 	b.WriteString(`</section>`)
 	return b.String()
+}
+
+func orDash(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "-"
+	}
+	return s
 }
 
 func carHTML(v Vehicle, makeLogo string) string {

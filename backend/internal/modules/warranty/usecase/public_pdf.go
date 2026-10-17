@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/certtheme"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
@@ -42,8 +43,23 @@ func PublicCertificateHTML(w PublicWarranty, verifyURL string, zone *time.Locati
 		vin = "…" + *w.Vehicle.VINLast4
 	}
 
+	start := FormatCertificateDate(w.StartAt, zone, loc)
+	end := FormatCertificateDate(w.EndAt, zone, loc)
+	// TEC-772: an Olex warranty carries the legacy certificate pages, built
+	// from the public projection only (no car map, no unit barcode, no
+	// other items of the service).
+	cert := certtheme.ForBrand(w.Brand.Slug)
 	var b strings.Builder
 	b.WriteString(certificateCSS)
+	if cert {
+		car := certtheme.Vehicle{Make: w.Vehicle.BrandName, Model: w.Vehicle.ModelName}
+		if w.Vehicle.ModelYear != nil {
+			car.Year = strconv.Itoa(*w.Vehicle.ModelYear)
+		}
+		b.WriteString(certtheme.CSS())
+		b.WriteString(certtheme.OpeningPages(certtheme.Input{Vehicle: car,
+			Services: []certtheme.Service{{Product: w.Product.Name, Warranty: end}}}, loc))
+	}
 	b.WriteString(`<h1 class="doc-title">` + esc(title) + `</h1><table class="doc-meta">`)
 	for _, row := range [][2]string{
 		{t("warranty.certificate.dealer"), ioengine.JoinNonEmpty(" · ", w.Dealer.Name, w.Dealer.City)},
@@ -66,8 +82,8 @@ func PublicCertificateHTML(w PublicWarranty, verifyURL string, zone *time.Locati
 	for _, row := range [][2]string{
 		{t("warranty.certificate.code"), w.PublicCode},
 		{t("warranty.certificate.product"), w.Product.Name},
-		{t("warranty.certificate.start"), FormatCertificateDate(w.StartAt, zone, loc)},
-		{t("warranty.certificate.end"), FormatCertificateDate(w.EndAt, zone, loc)},
+		{t("warranty.certificate.start"), start},
+		{t("warranty.certificate.end"), end},
 	} {
 		b.WriteString(`<tr><th>` + esc(row[0]) + `</th><td>` + esc(row[1]) + `</td></tr>`)
 	}
@@ -81,6 +97,9 @@ func PublicCertificateHTML(w PublicWarranty, verifyURL string, zone *time.Locati
 	}
 	b.WriteString(`</ol><p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
 		esc(pdfrender.IssuedAt(generatedAt, zone)) + `</p>`)
+	if cert {
+		b.WriteString(certtheme.ClosingPages(loc))
+	}
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String()}.HTML(), nil
 }
 
