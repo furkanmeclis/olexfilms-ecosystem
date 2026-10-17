@@ -85,10 +85,10 @@ func TestMobileVerifyOTPCustomerSessions(t *testing.T) {
 				t.Fatalf("session meta=%+v", repo.meta)
 			}
 			if tc.missing {
-				if repo.created != 1 || len(repo.memRepo.users) != 2 {
-					t.Fatalf("account not created: created=%d users=%d", repo.created, len(repo.memRepo.users))
+				if repo.created != 1 || len(repo.users) != 2 {
+					t.Fatalf("account not created: created=%d users=%d", repo.created, len(repo.users))
 				}
-				roles := repo.memRepo.userRoles[repo.user.ID]
+				roles := repo.userRoles[repo.user.ID]
 				if len(roles) != 1 || roles[0] != rbac.RoleCustomer || repo.user.Locale != "de" {
 					t.Fatalf("new account roles=%v locale=%q", roles, repo.user.Locale)
 				}
