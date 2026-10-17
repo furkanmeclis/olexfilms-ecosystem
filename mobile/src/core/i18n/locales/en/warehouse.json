@@ -544,6 +544,7 @@
   "placeholder_address": "Street, number, district, city",
   "placeholder_bulk_codes": "A, B, C",
   "placeholder_prefix": "S",
+  "placeholder_reserve_prefix": "PRD",
   "placeholder_bulk_from": "1",
   "placeholder_bulk_to": "10",
   "placeholder_bulk_pad": "2",

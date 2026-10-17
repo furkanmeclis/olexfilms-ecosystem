@@ -201,7 +201,7 @@ export function ReserveSheet({ onClose, onSubmit }: { onClose: () => void; onSub
               ) : null}
               <Input
                 label={t('fields.prefix')}
-                placeholder={t('placeholder_prefix')}
+                placeholder={t('placeholder_reserve_prefix')}
                 value={prefix}
                 onChangeText={setPrefix}
                 autoCapitalize="characters"
