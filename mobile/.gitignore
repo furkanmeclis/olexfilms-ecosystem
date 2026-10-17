@@ -49,3 +49,4 @@ example
 # local env
 .env
 .env.local
+.demo-credentials
