@@ -47,6 +47,13 @@ export type Page<T> = {
 const enc = encodeURIComponent;
 
 export const leadsService = {
+  assignees(organizationUuid?: string) {
+    return platformRequest<{
+      items: { uuid: string; name: string; surname: string; email?: string }[];
+    }>("GET", "/v1/leads/assignees", {
+      query: { organization_uuid: organizationUuid },
+    });
+  },
   list(params: LeadListQuery) {
     return platformRequest<Page<Lead>>("GET", "/v1/leads", { query: params });
   },

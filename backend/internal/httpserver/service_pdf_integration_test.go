@@ -127,6 +127,12 @@ func TestIntegrationServicePDF(t *testing.T) {
 				t.Errorf("%s service pdf misses %q", name, want)
 			}
 		}
+		// TEC-772: Olex documents open with the legacy certificate cover
+		// and summary and close with the three static pages.
+		if !strings.Contains(h, `class="ct-page ct-cover"`) || !strings.Contains(h, `class="ct-page ct-summary"`) ||
+			strings.Count(h, `class="ct-page ct-image"`) != 3 {
+			t.Errorf("%s service pdf misses the certificate pages", name)
+		}
 		if n := strings.Count(h, `<img src="data:image/png;base64,`); n != len(ws) {
 			t.Errorf("%s service pdf: %d QR images, want %d", name, n, len(ws))
 		}

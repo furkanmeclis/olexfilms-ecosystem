@@ -133,6 +133,7 @@ type Querier interface {
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	ClearServiceIncome(ctx context.Context, arg ClearServiceIncomeParams) (Service, error)
+	ClearWarehouseMemberDefault(ctx context.Context, arg ClearWarehouseMemberDefaultParams) error
 	// A cancelled re-application service releases the claim for a new attempt.
 	ClearWarrantyClaimReapplyService(ctx context.Context, arg ClearWarrantyClaimReapplyServiceParams) (WarrantyClaim, error)
 	// Closes the source account. phone_e164/email are the values it keeps (the
@@ -195,6 +196,7 @@ type Querier interface {
 	CountCertificateTypeBindings(ctx context.Context, arg CountCertificateTypeBindingsParams) (int64, error)
 	CountCertificateTypes(ctx context.Context, arg CountCertificateTypesParams) (int64, error)
 	CountCertificates(ctx context.Context, arg CountCertificatesParams) (int64, error)
+	CountConnectionLocationMaps(ctx context.Context, arg CountConnectionLocationMapsParams) (int64, error)
 	CountConsentsOfUser(ctx context.Context, userID int64) (int64, error)
 	CountContractInstances(ctx context.Context, arg CountContractInstancesParams) (int64, error)
 	// TEC-397 (F4-02e): WhatsApp visitor flow — abuse limits, the KVKK notice
@@ -214,6 +216,7 @@ type Querier interface {
 	// The usecase compares it with showcase.max_photos under LockDealerShowcase.
 	CountDealerShowcasePhotos(ctx context.Context, showcaseID int64) (int64, error)
 	CountDealerShowcaseReviews(ctx context.Context, arg CountDealerShowcaseReviewsParams) (int64, error)
+	CountDeliveryMethodsFiltered(ctx context.Context, arg CountDeliveryMethodsFilteredParams) (int64, error)
 	CountDistributorOverrideDetails(ctx context.Context, arg CountDistributorOverrideDetailsParams) (int64, error)
 	CountDistributorPriceOverrides(ctx context.Context, arg CountDistributorPriceOverridesParams) (int64, error)
 	CountDocumentTemplates(ctx context.Context, arg CountDocumentTemplatesParams) (int64, error)
@@ -264,6 +267,7 @@ type Querier interface {
 	CountOpenTransferItemsByUnit(ctx context.Context, arg CountOpenTransferItemsByUnitParams) (int64, error)
 	// Used by other flows (stock transfer requests) to respect the lock.
 	CountOpenWarehouseTransferLinesByUnit(ctx context.Context, unitID int64) (int64, error)
+	CountOrdersByDeliveryMethod(ctx context.Context, deliveryMethodID pgtype.Int8) (int64, error)
 	CountOrdersFiltered(ctx context.Context, arg CountOrdersFilteredParams) (int64, error)
 	CountOrganizationCustomers(ctx context.Context, arg CountOrganizationCustomersParams) (int64, error)
 	CountOrganizationMembershipsByUser(ctx context.Context, userID int64) (int64, error)
@@ -334,6 +338,7 @@ type Querier interface {
 	CountUsers(ctx context.Context, arg CountUsersParams) (int64, error)
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error)
+	CountWarehouseMembers(ctx context.Context, arg CountWarehouseMembersParams) (int64, error)
 	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
@@ -387,6 +392,8 @@ type Querier interface {
 	// ---------------------------------------------------------------------------
 	// Certificate types.
 	CreateCertificateType(ctx context.Context, arg CreateCertificateTypeParams) (CertificateType, error)
+	// TEC-769: remote location name -> warehouse (+ optional bin).
+	CreateConnectionLocationMap(ctx context.Context, arg CreateConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// ---------------------------------------------------------------------------
 	// Instances.
 	CreateContractInstance(ctx context.Context, arg CreateContractInstanceParams) (ContractInstance, error)
@@ -400,6 +407,7 @@ type Querier interface {
 	// no organization restriction (all/brand), an empty array matches nothing;
 	// brand_id NULL means every brand.
 	CreateCustomerProfile(ctx context.Context, arg CreateCustomerProfileParams) (CustomerProfile, error)
+	CreateDeliveryMethod(ctx context.Context, arg CreateDeliveryMethodParams) (DeliveryMethod, error)
 	CreateDistrict(ctx context.Context, arg CreateDistrictParams) (District, error)
 	CreateDocumentTemplate(ctx context.Context, arg CreateDocumentTemplateParams) (DocumentTemplate, error)
 	// Archive -------------------------------------------------------------------
@@ -657,6 +665,7 @@ type Querier interface {
 	// Returns the storage key so the caller removes the object after commit.
 	DeleteDealerShowcasePhoto(ctx context.Context, arg DeleteDealerShowcasePhotoParams) (string, error)
 	DeleteDealerShowcaseService(ctx context.Context, arg DeleteDealerShowcaseServiceParams) (int64, error)
+	DeleteDeliveryMethod(ctx context.Context, id int64) (int64, error)
 	DeleteDistributorDealerPrice(ctx context.Context, arg DeleteDistributorDealerPriceParams) (int64, error)
 	DeleteDistributorPriceOverride(ctx context.Context, arg DeleteDistributorPriceOverrideParams) (int64, error)
 	DeleteDistrict(ctx context.Context, id int64) (int64, error)
@@ -728,6 +737,7 @@ type Querier interface {
 	DeleteUnusedProductCategory(ctx context.Context, arg DeleteUnusedProductCategoryParams) (int64, error)
 	DeleteUserTOTP(ctx context.Context, userID int64) error
 	DeleteWarehouse(ctx context.Context, arg DeleteWarehouseParams) (int64, error)
+	DeleteWarehouseMember(ctx context.Context, arg DeleteWarehouseMemberParams) (int64, error)
 	DeleteWarehouseTransferLine(ctx context.Context, arg DeleteWarehouseTransferLineParams) (int64, error)
 	DeleteWarrantyClaimPart(ctx context.Context, arg DeleteWarrantyClaimPartParams) (int64, error)
 	// Returns the storage key so the caller can remove the object.
@@ -761,6 +771,11 @@ type Querier interface {
 	EnsureFixedBarcodeHolding(ctx context.Context, arg EnsureFixedBarcodeHoldingParams) error
 	EnsureOrganizationProductStock(ctx context.Context, arg EnsureOrganizationProductStockParams) error
 	EnsureQuoteSent(ctx context.Context, arg EnsureQuoteSentParams) (Quote, error)
+	// TEC-768: delivery method catalog of a selling organization.
+	// The system method "warehouse_pickup" (Ambar teslim), one per organization.
+	// The NOT EXISTS guard skips the insert (and its sequence value) once the
+	// method exists; ON CONFLICT covers a concurrent first use.
+	EnsureSystemDeliveryMethod(ctx context.Context, arg EnsureSystemDeliveryMethodParams) error
 	ExecuteContractInstance(ctx context.Context, arg ExecuteContractInstanceParams) (ContractInstance, error)
 	// TEC-387: one pending action past its expiry becomes expired (a late
 	// confirmation); no row when it is no longer pending or not yet expired.
@@ -943,6 +958,7 @@ type Querier interface {
 	GetCertificateType(ctx context.Context, arg GetCertificateTypeParams) (CertificateType, error)
 	GetCertificateTypeByUUID(ctx context.Context, arg GetCertificateTypeByUUIDParams) (CertificateType, error)
 	GetConnectionLocationMapByRemote(ctx context.Context, arg GetConnectionLocationMapByRemoteParams) (ConnectionLocationMap, error)
+	GetConnectionLocationMapByUUID(ctx context.Context, arg GetConnectionLocationMapByUUIDParams) (ConnectionLocationMap, error)
 	GetConsentForText(ctx context.Context, arg GetConsentForTextParams) (Consent, error)
 	GetContactOptOutState(ctx context.Context, arg GetContactOptOutStateParams) (ContactOptOutState, error)
 	GetContractInstanceByID(ctx context.Context, id int64) (ContractInstance, error)
@@ -977,6 +993,8 @@ type Querier interface {
 	GetDealerShowcasePhoto(ctx context.Context, arg GetDealerShowcasePhotoParams) (DealerShowcasePhoto, error)
 	GetDefaultContractTemplate(ctx context.Context, arg GetDefaultContractTemplateParams) (ContractTemplate, error)
 	GetDefaultLabelTemplate(ctx context.Context, arg GetDefaultLabelTemplateParams) (LabelTemplate, error)
+	GetDeliveryMethodByID(ctx context.Context, id int64) (DeliveryMethod, error)
+	GetDeliveryMethodByUUID(ctx context.Context, arg GetDeliveryMethodByUUIDParams) (DeliveryMethod, error)
 	GetDistributorPriceOverride(ctx context.Context, arg GetDistributorPriceOverrideParams) (GetDistributorPriceOverrideRow, error)
 	GetDistrictByID(ctx context.Context, id int64) (District, error)
 	GetDocumentRenderByID(ctx context.Context, id int64) (DocumentRender, error)
@@ -1147,6 +1165,8 @@ type Querier interface {
 	GetOrganizationMemberByUserAndOrgUUID(ctx context.Context, arg GetOrganizationMemberByUserAndOrgUUIDParams) (GetOrganizationMemberByUserAndOrgUUIDRow, error)
 	GetOrganizationMemberByUserAndSlug(ctx context.Context, arg GetOrganizationMemberByUserAndSlugParams) (GetOrganizationMemberByUserAndSlugRow, error)
 	GetOrganizationMemberByUserUUID(ctx context.Context, arg GetOrganizationMemberByUserUUIDParams) (GetOrganizationMemberByUserUUIDRow, error)
+	// An active user that is a member of the organization (member picker).
+	GetOrganizationMemberUser(ctx context.Context, arg GetOrganizationMemberUserParams) (GetOrganizationMemberUserRow, error)
 	GetOrganizationTreeByUUID(ctx context.Context, argUuid uuid.UUID) (GetOrganizationTreeByUUIDRow, error)
 	GetPartConsumptionExpectationByUUID(ctx context.Context, arg GetPartConsumptionExpectationByUUIDParams) (PartConsumptionExpectation, error)
 	GetPendingVehicleTransfer(ctx context.Context, vehicleID int64) (VehicleTransfer, error)
@@ -1364,6 +1384,8 @@ type Querier interface {
 	// code.
 	GetWarehouseLocationByCode(ctx context.Context, arg GetWarehouseLocationByCodeParams) (WarehouseLocation, error)
 	GetWarehouseLocationByUUID(ctx context.Context, argUuid uuid.UUID) (WarehouseLocation, error)
+	GetWarehouseMember(ctx context.Context, arg GetWarehouseMemberParams) (GetWarehouseMemberRow, error)
+	GetWarehouseSettings(ctx context.Context, organizationID int64) (WarehouseSetting, error)
 	GetWarehouseTransferByUUID(ctx context.Context, arg GetWarehouseTransferByUUIDParams) (WarehouseTransfer, error)
 	GetWarranty(ctx context.Context, arg GetWarrantyParams) (Warranty, error)
 	// Public page /warranty/{public_code} (decision 1).
@@ -1554,6 +1576,7 @@ type Querier interface {
 	// Unit current state (serial units; one active owner).
 	InsertUnitCurrentState(ctx context.Context, arg InsertUnitCurrentStateParams) (UnitCurrentState, error)
 	InsertUserRole(ctx context.Context, arg InsertUserRoleParams) error
+	InsertWarehouseMember(ctx context.Context, arg InsertWarehouseMemberParams) (WarehouseMember, error)
 	InsertWarehouseTransferLine(ctx context.Context, arg InsertWarehouseTransferLineParams) (WarehouseTransferLine, error)
 	InsertWhatsAppConnectionEvent(ctx context.Context, arg InsertWhatsAppConnectionEventParams) (WhatsappConnectionEvent, error)
 	InvalidateActiveOTPs(ctx context.Context, arg InvalidateActiveOTPsParams) error
@@ -1768,7 +1791,9 @@ type Querier interface {
 	ListCertificates(ctx context.Context, arg ListCertificatesParams) ([]ListCertificatesRow, error)
 	ListCertificatesDueForExpiry(ctx context.Context, arg ListCertificatesDueForExpiryParams) ([]Certificate, error)
 	ListCertificatesDueForExpiryNotice(ctx context.Context, arg ListCertificatesDueForExpiryNoticeParams) ([]Certificate, error)
-	ListConnectionLocationMaps(ctx context.Context, connectionID int64) ([]ConnectionLocationMap, error)
+	// List contract: sort keys remote_location_code, warehouse, created_at (id
+	// tiebreak); q on the remote code, warehouse name/code and bin full code.
+	ListConnectionLocationMaps(ctx context.Context, arg ListConnectionLocationMapsParams) ([]ListConnectionLocationMapsRow, error)
 	ListContactOptOutHistory(ctx context.Context, arg ListContactOptOutHistoryParams) ([]ContactOptOut, error)
 	ListContactOptOutStates(ctx context.Context, contactE164 string) ([]ContactOptOutState, error)
 	// org_ids is the caller's scope (empty = no organization).
@@ -1855,6 +1880,8 @@ type Querier interface {
 	// The module flag and the per-organization backoff are checked by the
 	// caller.
 	ListDealerShowcasesForPlacesRefresh(ctx context.Context, freshBefore pgtype.Timestamptz) ([]ListDealerShowcasesForPlacesRefreshRow, error)
+	// Sort: docs/list-contract.md, keys from orders/usecase.DeliveryMethodSortSpec.
+	ListDeliveryMethodsFiltered(ctx context.Context, arg ListDeliveryMethodsFilteredParams) ([]DeliveryMethod, error)
 	// Center view of the distributor-specific prices with product and
 	// distributor identities. TEC-369: sort keys from
 	// usecase.DistributorPriceSort (docs/list-contract.md); default product.
@@ -1938,6 +1965,8 @@ type Querier interface {
 	// the organization owner itself), per barcode, for the listed products.
 	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
+	// Warehouse locations of the seller holding a fixed barcode, largest first.
+	ListFixedUnitLocations(ctx context.Context, arg ListFixedUnitLocationsParams) ([]ListFixedUnitLocationsRow, error)
 	// Links of a fleet with the dealer names (fleet card, portal).
 	ListFleetDealerLinks(ctx context.Context, arg ListFleetDealerLinksParams) ([]ListFleetDealerLinksRow, error)
 	// Vehicle and draft service references of a plan's appointments (plan
@@ -2167,6 +2196,8 @@ type Querier interface {
 	// The subset of contacts that are currently opted out of a scope (campaign
 	// audience and pipeline guard).
 	ListOptedOutContacts(ctx context.Context, arg ListOptedOutContactsParams) ([]string, error)
+	// Assigned (not yet shipped) serial units of an order with their location.
+	ListOrderAssignedUnitLocations(ctx context.Context, orderID int64) ([]ListOrderAssignedUnitLocationsRow, error)
 	ListOrderItemUnitsByItem(ctx context.Context, orderItemID int64) ([]OrderItemUnit, error)
 	ListOrderItemUnitsByOrder(ctx context.Context, orderID int64) ([]ListOrderItemUnitsByOrderRow, error)
 	ListOrderItems(ctx context.Context, orderID int64) ([]OrderItem, error)
@@ -2176,6 +2207,17 @@ type Querier interface {
 	// organization (available, owned by the organization itself, TEC-765).
 	ListOrderPlacementUnits(ctx context.Context, arg ListOrderPlacementUnitsParams) ([]ListOrderPlacementUnitsRow, error)
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
+	// Fixed barcodes of a product the seller holds: the quantity at warehouse
+	// locations and without one, and the largest single holding of each (one
+	// assignment ships from one owner), oldest entry first.
+	ListOrderSuggestFixedCandidates(ctx context.Context, arg ListOrderSuggestFixedCandidatesParams) ([]ListOrderSuggestFixedCandidatesRow, error)
+	// TEC-768: barcode suggestions, pick locations and the pick list of an order.
+	// Serial units (pieces, rolls) of a product the seller can assign: held in
+	// stock (available/placed), with meters left (rolls), not reserved and not on
+	// an open warehouse transfer. Placed units (a warehouse location owns them)
+	// come first, then the oldest entry (FIFO: units.created_at), id tiebreak.
+	// Units the organization holds without a location only with include_unlocated.
+	ListOrderSuggestSerialCandidates(ctx context.Context, arg ListOrderSuggestSerialCandidatesParams) ([]ListOrderSuggestSerialCandidatesRow, error)
 	// Orders an organization sells or buys: their documents carry the
 	// organization's name and dealer code, refreshed when it changes.
 	ListOrderUuidsByOrganization(ctx context.Context, organizationID int64) ([]uuid.UUID, error)
@@ -2338,6 +2380,9 @@ type Querier interface {
 	// Every category of the brand in display order (reorder input).
 	ListProductCategoryOrder(ctx context.Context, brandID int64) ([]ListProductCategoryOrderRow, error)
 	ListProductConsumptionSeries(ctx context.Context, arg ListProductConsumptionSeriesParams) ([]ListProductConsumptionSeriesRow, error)
+	// The seller's warehouse locations holding a product (bin_product_stocks:
+	// pieces/rolls and meters), by location code.
+	ListProductPickLocations(ctx context.Context, arg ListProductPickLocationsParams) ([]ListProductPickLocationsRow, error)
 	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ProductPrice, error)
 	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
 	ListProductSaleLines(ctx context.Context, arg ListProductSaleLinesParams) ([]ProductSaleLine, error)
@@ -2657,6 +2702,7 @@ type Querier interface {
 	ListUserRolesByUserID(ctx context.Context, userID int64) ([]Role, error)
 	ListUserRolesByUserUUID(ctx context.Context, argUuid uuid.UUID) ([]Role, error)
 	ListUserUUIDsForBulk(ctx context.Context, arg ListUserUUIDsForBulkParams) ([]uuid.UUID, error)
+	ListUserWarehouseMemberships(ctx context.Context, arg ListUserWarehouseMembershipsParams) ([]ListUserWarehouseMembershipsRow, error)
 	ListUsersByIDs(ctx context.Context, ids []int64) ([]ListUsersByIDsRow, error)
 	// Platform users list. Sort follows docs/list-contract.md: sort_key is the
 	// trusted key from apiquery.UsersSortSpec, one CASE pair per column type,
@@ -2687,6 +2733,9 @@ type Querier interface {
 	ListVisibleLibraryFolders(ctx context.Context, arg ListVisibleLibraryFoldersParams) ([]LibraryFolder, error)
 	ListWarehouseLocations(ctx context.Context, arg ListWarehouseLocationsParams) ([]WarehouseLocation, error)
 	ListWarehouseLocationsByIDs(ctx context.Context, ids []int64) ([]WarehouseLocation, error)
+	// List contract: sort keys name, email, created_at (id tiebreak); q on
+	// name, surname, email.
+	ListWarehouseMembers(ctx context.Context, arg ListWarehouseMembersParams) ([]ListWarehouseMembersRow, error)
 	// ---------------------------------------------------------------------------
 	// Scope.
 	// Typed locations of a warehouse, optionally one room.
@@ -2799,6 +2848,7 @@ type Querier interface {
 	// Serializes photo inserts and status moves of one showcase (the caller
 	// runs in a transaction).
 	LockDealerShowcase(ctx context.Context, id int64) (DealerShowcase, error)
+	LockDeliveryMethodByUUID(ctx context.Context, arg LockDeliveryMethodByUUIDParams) (DeliveryMethod, error)
 	LockEntryBarcodeImport(ctx context.Context, jobID int64) (EntryBarcodeImport, error)
 	// ---------------------------------------------------------------------------
 	// Fixed barcode holdings (quantity per unit and owner).
@@ -2887,6 +2937,7 @@ type Querier interface {
 	MarkAppointmentReminder24h(ctx context.Context, arg MarkAppointmentReminder24hParams) (Appointment, error)
 	MarkAppointmentReminder2h(ctx context.Context, arg MarkAppointmentReminder2hParams) (Appointment, error)
 	MarkBarcodeBatchPrinted(ctx context.Context, id int64) (BarcodeBatch, error)
+	MarkBatchUnitsPrinted(ctx context.Context, batchID pgtype.Int8) (int64, error)
 	MarkBonusAccrualPosted(ctx context.Context, arg MarkBonusAccrualPostedParams) (BonusAccrual, error)
 	MarkBulkJobCompleted(ctx context.Context, arg MarkBulkJobCompletedParams) (BulkJob, error)
 	MarkBulkJobFailed(ctx context.Context, arg MarkBulkJobFailedParams) (BulkJob, error)
@@ -2935,6 +2986,7 @@ type Querier interface {
 	MarkOutboxRetry(ctx context.Context, arg MarkOutboxRetryParams) error
 	MarkQRLoginChallengeScanned(ctx context.Context, code string) (QrLoginChallenge, error)
 	MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteReminder, error)
+	MarkSelectedUnitsPrinted(ctx context.Context, ids []int64) (int64, error)
 	// TEC-635: a finished (sent) campaign with a recipient that failed after
 	// the hand-off; finished_at stays.
 	MarkSentCampaignPartiallyFailed(ctx context.Context, id int64) (Campaign, error)
@@ -3363,6 +3415,12 @@ type Querier interface {
 	// account name or the cari counterparty name; id is the tiebreak (an empty
 	// sort_key orders by id only, as the single-entry lookup does).
 	SearchFinanceEntries(ctx context.Context, arg SearchFinanceEntriesParams) ([]SearchFinanceEntriesRow, error)
+	// Member picker: active users of the organization, matched on name,
+	// surname or email (at most row_limit).
+	SearchOrganizationMemberUsers(ctx context.Context, arg SearchOrganizationMemberUsersParams) ([]SearchOrganizationMemberUsersRow, error)
+	// TEC-769: bin picker of the Glorian location map (active locations of one
+	// warehouse, matched on the full code or the name).
+	SearchWarehouseLocationsForMap(ctx context.Context, arg SearchWarehouseLocationsForMapParams) ([]WarehouseLocation, error)
 	ServiceActivityCarBrands(ctx context.Context, arg ServiceActivityCarBrandsParams) ([]ServiceActivityCarBrandsRow, error)
 	// TEC-385 (F4-01c): the AI assistant's activity summary of one period, in
 	// the caller's services.read scope (org_ids NULL = whole brand,
@@ -3448,7 +3506,9 @@ type Querier interface {
 	SetOrderExternalReference(ctx context.Context, arg SetOrderExternalReferenceParams) (Order, error)
 	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
 	SetOrderReceiptDocument(ctx context.Context, arg SetOrderReceiptDocumentParams) (Order, error)
+	// TEC-768: the delivery method, mode and tracking number chosen at shipping.
 	SetOrderShipping(ctx context.Context, arg SetOrderShippingParams) (Order, error)
+	SetOrderShippingDocument(ctx context.Context, arg SetOrderShippingDocumentParams) (Order, error)
 	// TEC-365: platform bulk actions (status change, extend access) and their
 	// undo. Both columns are written as given; the adapter passes the current
 	// value for the one it does not change.
@@ -3525,6 +3585,7 @@ type Querier interface {
 	// customer snapshot, 000050).
 	SetVehicleOwner(ctx context.Context, arg SetVehicleOwnerParams) (Vehicle, error)
 	SetVehicleTransferVerified(ctx context.Context, arg SetVehicleTransferVerifiedParams) (VehicleTransfer, error)
+	SetWarehouseMemberDefault(ctx context.Context, arg SetWarehouseMemberDefaultParams) (int64, error)
 	SetWarehouseSortOrder(ctx context.Context, arg SetWarehouseSortOrderParams) (int64, error)
 	SetWarehouseTransferLineIn(ctx context.Context, arg SetWarehouseTransferLineInParams) error
 	SetWarehouseTransferLineOut(ctx context.Context, arg SetWarehouseTransferLineOutParams) error
@@ -3565,6 +3626,9 @@ type Querier interface {
 	SumActiveReservedQuantityByUnit(ctx context.Context, arg SumActiveReservedQuantityByUnitParams) (int64, error)
 	// Fixed barcode quantity on open requests of the giver (excluding one).
 	SumOpenTransferQuantityByUnit(ctx context.Context, arg SumOpenTransferQuantityByUnitParams) (int64, error)
+	// What the seller holds of a product without a location: serial units in
+	// stock owned by the organization and fixed quantities on the organization.
+	SumProductUnlocatedStock(ctx context.Context, arg SumProductUnlocatedStockParams) (SumProductUnlocatedStockRow, error)
 	// Period summary: per staff and type, the paid total of a period (voided
 	// payments excluded).
 	SumStaffPaymentsByPeriod(ctx context.Context, arg SumStaffPaymentsByPeriodParams) ([]SumStaffPaymentsByPeriodRow, error)
@@ -3645,6 +3709,7 @@ type Querier interface {
 	UpdateCertificateExpiry(ctx context.Context, arg UpdateCertificateExpiryParams) (Certificate, error)
 	UpdateCertificateStorageKey(ctx context.Context, arg UpdateCertificateStorageKeyParams) (Certificate, error)
 	UpdateCertificateType(ctx context.Context, arg UpdateCertificateTypeParams) (CertificateType, error)
+	UpdateConnectionLocationMap(ctx context.Context, arg UpdateConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// Re-renders an open contract (draft or pending).
 	UpdateContractInstanceContent(ctx context.Context, arg UpdateContractInstanceContentParams) (ContractInstance, error)
 	UpdateContractTemplate(ctx context.Context, arg UpdateContractTemplateParams) (ContractTemplate, error)
@@ -3653,6 +3718,7 @@ type Querier interface {
 	UpdateCustomerProfile(ctx context.Context, arg UpdateCustomerProfileParams) (CustomerProfile, error)
 	UpdateDealerShowcasePhotoCaption(ctx context.Context, arg UpdateDealerShowcasePhotoCaptionParams) (DealerShowcasePhoto, error)
 	UpdateDealerShowcaseService(ctx context.Context, arg UpdateDealerShowcaseServiceParams) (DealerShowcaseService, error)
+	UpdateDeliveryMethod(ctx context.Context, arg UpdateDeliveryMethodParams) (DeliveryMethod, error)
 	UpdateDocumentTemplateDraft(ctx context.Context, arg UpdateDocumentTemplateDraftParams) (DocumentTemplate, error)
 	UpdateFinanceAccount(ctx context.Context, arg UpdateFinanceAccountParams) (FinanceAccount, error)
 	// NULL keeps a column; the optional text columns are cleared by the
@@ -3760,7 +3826,6 @@ type Querier interface {
 	UpsertBonusSettings(ctx context.Context, arg UpsertBonusSettingsParams) (BonusSetting, error)
 	// Contents ------------------------------------------------------------------
 	UpsertCampaignContent(ctx context.Context, arg UpsertCampaignContentParams) (CampaignContent, error)
-	UpsertConnectionLocationMap(ctx context.Context, arg UpsertConnectionLocationMapParams) (ConnectionLocationMap, error)
 	// ---------------------------------------------------------------------------
 	// Signers.
 	// Fills the customer or staff slot of an open contract; a changed person
@@ -3848,6 +3913,7 @@ type Querier interface {
 	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)
 	UpsertUnitCurrentStateForRepair(ctx context.Context, arg UpsertUnitCurrentStateForRepairParams) error
 	UpsertUserTOTPSetup(ctx context.Context, arg UpsertUserTOTPSetupParams) (UserTotp, error)
+	UpsertWarehouseSettings(ctx context.Context, arg UpsertWarehouseSettingsParams) (WarehouseSetting, error)
 	// TEC-623: LID -> phone map learned from webhook events.
 	UpsertWhatsAppLID(ctx context.Context, arg UpsertWhatsAppLIDParams) error
 	// Marking the code used is the claim; an expired or used code returns no row.
@@ -3869,6 +3935,10 @@ type Querier interface {
 	// expiry stamp is cleared with the status change (the voided_at stamp and
 	// the activity log keep the history).
 	VoidWarrantyWithReason(ctx context.Context, arg VoidWarrantyWithReasonParams) (Warranty, error)
+	// TEC-769: user <-> warehouse membership and organization warehouse settings.
+	// has_any: the user has at least one membership in the organization (the
+	// restriction is on); is_member: one of them is the given warehouse.
+	WarehouseMembershipCheck(ctx context.Context, arg WarehouseMembershipCheckParams) (WarehouseMembershipCheckRow, error)
 	// Transfer aggregate report: per product, the transfers and units of the
 	// organization's warehouse transfers matching the list filters (status,
 	// from / to warehouse, created range, q) and the product filter. shipped:

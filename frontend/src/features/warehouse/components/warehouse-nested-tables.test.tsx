@@ -176,6 +176,7 @@ describe("TransferLinesTable (TEC-376)", () => {
     expect(ids()).toEqual([
       "__select",
       "barcode",
+      "quantity",
       "product",
       "source",
       "target",
@@ -228,6 +229,7 @@ describe("CountLinesTable (TEC-376)", () => {
       "resolution-relocate",
       "resolution-void_missing",
       "resolution-increase_unlocated",
+      "resolution-add_to_stock",
     ]);
     const voidMissing = table.bulkActions![2];
     expect(voidMissing.disabled?.([lines[1]])).toBe(true);

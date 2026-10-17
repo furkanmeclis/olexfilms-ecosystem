@@ -22,6 +22,35 @@ export const PRODUCT = {
   unit_type: "piece",
 };
 export const FIXED_BARCODE = "OLX-FIX-001";
+export { ITEM_UUID };
+
+/** TEC-768: the seller's delivery methods (system + one carrier). */
+export const DELIVERY_METHODS = [
+  {
+    uuid: "0b9c4c1e-0000-4000-8000-0000000000d1",
+    code: "warehouse_pickup",
+    name: "Warehouse pickup",
+    tracking_url_template: null,
+    active: true,
+    sort_order: 0,
+    is_system: true,
+    created_at: NOW,
+    updated_at: NOW,
+  },
+  {
+    uuid: "0b9c4c1e-0000-4000-8000-0000000000d2",
+    code: "aras",
+    name: "Aras Kargo",
+    tracking_url_template: "https://track.example/q?no={tracking_no}",
+    active: true,
+    sort_order: 1,
+    is_system: false,
+    created_at: NOW,
+    updated_at: NOW,
+  },
+];
+/** Body of the mocked shipping note download. */
+export const SHIPPING_NOTE_PDF = "%PDF-1.7\n% shipping note\n";
 
 const PERMISSIONS = [
   "orders.read",
@@ -128,6 +157,13 @@ export class OrderMock {
     );
     const lineTotal = (this.quantity * 80).toFixed(2);
     return {
+      received_at: null,
+      delivery_method: null,
+      delivery_mode: null,
+      tracking_no: null,
+      tracking_url: null,
+      has_shipping_document: false,
+      has_receipt_document: false,
       ...this.order,
       status_label: status[0].toUpperCase() + status.slice(1),
       role: this.side,
@@ -150,6 +186,55 @@ export class OrderMock {
       ],
       history: this.history,
     };
+  }
+
+  /** Seeds an order of `quantity` pieces in `status` (TEC-768 spec). */
+  seed(status: string, quantity: number) {
+    this.quantity = quantity;
+    this.units = [];
+    this.order = {
+      uuid: ORDER_UUID,
+      order_no: "ORD-00000007",
+      status,
+      seller: { uuid: "s", name: "Olex Merkez", type: "center" },
+      buyer: { uuid: "b", name: "Olex Distribütör", type: "distributor" },
+      currency: "EUR",
+      tax_total: "0.00",
+      rate_snapshot: null,
+      try_rate: null,
+      note: null,
+      cancel_reason: null,
+      submitted_at: NOW,
+      approved_at: NOW,
+      ready_at: null,
+      shipped_at: null,
+      cancelled_at: null,
+      created_at: NOW,
+      updated_at: NOW,
+    };
+    this.history = [
+      { from_status: null, to_status: status, reason: null, created_at: NOW },
+    ];
+  }
+
+  private ship(body: Json | undefined) {
+    if (!this.order) return;
+    const m = DELIVERY_METHODS.find(
+      (x) => x.uuid === body?.delivery_method_uuid,
+    );
+    const no = (body?.tracking_no as string | undefined) ?? null;
+    this.order.delivery_method = m
+      ? { uuid: m.uuid, code: m.code, name: m.name, is_system: m.is_system }
+      : null;
+    this.order.tracking_no = no;
+    this.order.tracking_url =
+      m?.tracking_url_template && no
+        ? m.tracking_url_template.replace(
+            "{tracking_no}",
+            encodeURIComponent(no),
+          )
+        : null;
+    this.order.has_shipping_document = true;
   }
 
   private move(to: string, reason: string | null = null) {
@@ -305,7 +390,84 @@ export class OrderMock {
         return conflict("ORDER_NOT_FULLY_ASSIGNED");
       }
       this.move(to, (body?.reason as string | undefined) ?? null);
+      if (to === "shipped") this.ship(body);
       return ok(this.view());
+    }
+    if (method === "GET" && path === "/v1/delivery-methods") {
+      return ok({
+        items: DELIVERY_METHODS,
+        total: DELIVERY_METHODS.length,
+        limit: 100,
+        offset: 0,
+      });
+    }
+    if (
+      this.order &&
+      method === "GET" &&
+      path === `${ord}/items/${ITEM_UUID}/suggestions`
+    ) {
+      const missing =
+        this.quantity -
+        this.units.reduce((n, u) => n + Number(u.quantity ?? 0), 0);
+      const unlocated = url.searchParams.get("include_unlocated") === "true";
+      return ok({
+        item_uuid: ITEM_UUID,
+        missing: String(missing),
+        covered: String(missing),
+        complete: true,
+        include_unlocated: unlocated,
+        suggestions:
+          missing > 0
+            ? [
+                {
+                  unit_uuid: "0b9c4c1e-0000-4000-8000-0000000000a9",
+                  barcode: FIXED_BARCODE,
+                  unit_kind: "fixed",
+                  quantity: missing,
+                  meters: null,
+                  remaining_meters: null,
+                  located: true,
+                  location_uuid: "0b9c4c1e-0000-4000-8000-0000000000b1",
+                  location_code: "D1-R1-A-01-01",
+                  entered_at: NOW,
+                },
+              ]
+            : [],
+      });
+    }
+    if (
+      this.order &&
+      method === "POST" &&
+      path === `${ord}/items/${ITEM_UUID}/suggestions/apply`
+    ) {
+      for (const u of (body?.units ?? []) as Json[]) {
+        this.units.push({
+          unit_uuid: u.unit_uuid,
+          barcode: FIXED_BARCODE,
+          unit_kind: "fixed",
+          quantity: Number(u.quantity ?? 1),
+          meters: null,
+          shipped: false,
+          assigned_at: new Date().toISOString(),
+        });
+      }
+      return ok(this.view());
+    }
+    if (
+      this.order &&
+      method === "GET" &&
+      path === `${ord}/documents/shipping` &&
+      this.order.has_shipping_document
+    ) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/pdf",
+        headers: {
+          "Content-Disposition":
+            'attachment; filename="shipping-note-ORD-00000007.pdf"',
+        },
+        body: SHIPPING_NOTE_PDF,
+      });
     }
     if (
       this.order &&

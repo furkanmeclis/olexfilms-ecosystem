@@ -211,6 +211,11 @@ func TestDBMeasurementPDFHTML(t *testing.T) {
 	if strings.Contains(doc.HTML, "{{") {
 		t.Error("HTML has an unfilled placeholder")
 	}
+	// TEC-772: the Olex measurement is the dark legacy document without a
+	// paper margin (and so without a Gotenberg footer).
+	if !doc.FullBleed || !strings.Contains(doc.HTML, `<div class="ct-measure">`) || !strings.Contains(doc.HTML, "@page{margin:0}") {
+		t.Error("olex measurement is not the full-bleed legacy document")
+	}
 	if doc.Vars["measured_at"] != "15.12.2023 11:39 (Europe/Istanbul)" || doc.Vars["vin"] != pdfTestVIN {
 		t.Fatalf("vars = %v %v", doc.Vars["measured_at"], doc.Vars["vin"])
 	}

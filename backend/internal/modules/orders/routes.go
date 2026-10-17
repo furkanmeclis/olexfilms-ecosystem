@@ -49,4 +49,18 @@ func RegisterRoutes(
 	ship := middleware.RequirePermission(rbac.PermOrdersShip)
 	mux.Handle("POST /v1/orders/{uuid}/items/{item_uuid}/units", route(h.AssignUnit, ship))
 	mux.Handle("DELETE /v1/orders/{uuid}/items/{item_uuid}/units/{unit_uuid}", route(h.UnassignUnit, ship))
+	// TEC-768: barcode suggestions, pick locations, pick list, shipping
+	// documents and the delivery method catalog.
+	mux.Handle("GET /v1/orders/{uuid}/items/{item_uuid}/suggestions", route(h.Suggest, ship))
+	mux.Handle("POST /v1/orders/{uuid}/items/{item_uuid}/suggestions/apply", route(h.ApplySuggestions, ship))
+	mux.Handle("GET /v1/orders/{uuid}/items/{item_uuid}/pick-locations", route(h.PickLocations, ship))
+	mux.Handle("GET /v1/orders/{uuid}/pick-list", route(h.PickList, ship))
+	mux.Handle("POST /v1/orders/{uuid}/shipping-document", route(h.RegenerateShippingDocument, ship))
+	mux.Handle("GET /v1/orders/{uuid}/documents/{kind}", route(h.Document))
+	receive := middleware.RequirePermission(rbac.PermOrdersReceive)
+	mux.Handle("POST /v1/orders/{uuid}/receipt-document", route(h.AttachReceipt, receive))
+	mux.Handle("GET /v1/delivery-methods", route(h.ListDeliveryMethods))
+	mux.Handle("POST /v1/delivery-methods", route(h.CreateDeliveryMethod, ship))
+	mux.Handle("PUT /v1/delivery-methods/{uuid}", route(h.UpdateDeliveryMethod, ship))
+	mux.Handle("DELETE /v1/delivery-methods/{uuid}", route(h.DeleteDeliveryMethod, ship))
 }

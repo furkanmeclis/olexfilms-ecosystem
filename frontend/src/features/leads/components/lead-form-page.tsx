@@ -33,6 +33,9 @@ export function LeadFormPage({ slug }: { slug: string }) {
   const orgType = useAuthStore(
     (s) => s.user?.organizations.find((o) => o.slug === slug)?.type,
   );
+  const organizationUuid = useAuthStore(
+    (s) => s.user?.organizations.find((o) => o.slug === slug)?.uuid,
+  );
   const [values, setValues] = useState<LeadFormValues>(() => emptyLeadForm());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const create = useMutation({
@@ -89,6 +92,7 @@ export function LeadFormPage({ slug }: { slug: string }) {
         <CardContent className="space-y-6 pt-6">
           <LeadFields
             targetTypes={leadTargetTypesFor(orgType)}
+            organizationUuid={organizationUuid}
             values={values}
             errors={errors}
             disabled={create.isPending}

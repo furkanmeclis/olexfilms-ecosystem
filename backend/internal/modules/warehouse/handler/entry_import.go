@@ -43,6 +43,10 @@ func (h *EntryImport) target(w http.ResponseWriter, r *http.Request) (uuid.UUID,
 		response.Conflict(w, r, CodeStockEntryNotDraft, "Only a draft entry in existing-barcode mode accepts an Excel import")
 		return id, false
 	}
+	if err := h.entries.CheckWrite(r.Context(), entryCaller(r), id); err != nil {
+		writeEntryError(w, r, err)
+		return id, false
+	}
 	return id, true
 }
 func (h *EntryImport) Upload(w http.ResponseWriter, r *http.Request) {

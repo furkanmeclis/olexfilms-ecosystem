@@ -87,5 +87,18 @@
   "nav_service_catalog": "Каталог услуг",
   "nav_service_subscriptions": "Подписки на услуги",
   "nav_service_subscription_cancels": "Запросы на расторжение",
-  "nav_review_questions": "Вопросы для отзывов"
+  "nav_review_questions": "Вопросы для отзывов",
+  "settings_description": "Управляйте настройками организации и системы здесь.",
+  "settings_menu": "Меню настроек",
+  "settings_empty": "Нет доступных вам настроек.",
+  "settings_group_access": "Доступ и безопасность",
+  "settings_group_integrations": "Интеграции",
+  "settings_group_system": "Модули и система",
+  "settings_group_catalogs": "Каталоги",
+  "settings_group_regional": "Регионы и цены",
+  "settings_group_templates": "Шаблоны",
+  "settings_group_data": "Данные и мониторинг",
+  "settings_group_organization": "Организация",
+  "settings_group_operations": "Операции",
+  "settings_group_ai": "ИИ"
 }

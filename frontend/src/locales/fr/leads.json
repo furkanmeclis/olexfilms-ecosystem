@@ -192,5 +192,8 @@
   "convert.done": "Prospect converti.",
   "convert.error": "La conversion a échoué.",
   "convert.errors.distributor_required": "Choisissez un distributeur.",
-  "convert.errors.currency_required": "Choisissez une devise."
+  "convert.errors.currency_required": "Choisissez une devise.",
+  "form.assignee": "Responsable",
+  "form.customer": "Client",
+  "form.vehicle": "Véhicule"
 }

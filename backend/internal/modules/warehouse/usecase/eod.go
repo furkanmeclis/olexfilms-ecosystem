@@ -31,6 +31,11 @@ import (
 // once (kind auto); POST /v1/warehouse/eod-reports regenerates a day on
 // demand (kind manual). The PDF is an export job rendered on worker-docs
 // from the stored summary (eod_pdf.go).
+//
+// TEC-769: with an end-of-day cutoff (warehouse_settings, e.g. 18:00) the
+// business day D covers [D-1 cutoff, D cutoff) and the cron writes it once
+// the cutoff has passed (EODPeriod, EODClosedDay); no cutoff keeps the
+// calendar day above.
 
 // Report kinds (eod_reports.kind).
 const (
@@ -217,6 +222,62 @@ func zoneOf(tz string) (*time.Location, string) {
 func EODDay(day time.Time, loc *time.Location) (time.Time, time.Time) {
 	start := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc)
 	return start, start.AddDate(0, 0, 1)
+}
+
+// EODPeriod returns the [start, end) instants of business day `day` in
+// loc. Without a cutoff it is the calendar day (EODDay). With a cutoff of
+// m minutes after midnight (TEC-769) day D covers [D-1 m, D m): the
+// movements after the close count toward the next day.
+func EODPeriod(day time.Time, loc *time.Location, cutoff *int) (time.Time, time.Time) {
+	if cutoff == nil || *cutoff <= 0 {
+		return EODDay(day, loc)
+	}
+	h, m := *cutoff/60, *cutoff%60
+	end := time.Date(day.Year(), day.Month(), day.Day(), h, m, 0, 0, loc)
+	start := time.Date(day.Year(), day.Month(), day.Day()-1, h, m, 0, 0, loc)
+	return start, end
+}
+
+// localDate is the calendar date of t in loc (midnight UTC, the date
+// layout the reports store).
+func localDate(t time.Time, loc *time.Location) time.Time {
+	l := t.In(loc)
+	return time.Date(l.Year(), l.Month(), l.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+// EODOpenDay is the business day `now` falls in: today, or tomorrow once
+// today's cutoff has passed.
+func EODOpenDay(now time.Time, loc *time.Location, cutoff *int) time.Time {
+	today := localDate(now, loc)
+	if cutoff == nil || *cutoff <= 0 {
+		return today
+	}
+	if _, end := EODPeriod(today, loc, cutoff); !now.Before(end) {
+		return today.AddDate(0, 0, 1)
+	}
+	return today
+}
+
+// EODClosedDay is the last business day closed at `now`: the day before
+// the open one.
+func EODClosedDay(now time.Time, loc *time.Location, cutoff *int) time.Time {
+	return EODOpenDay(now, loc, cutoff).AddDate(0, 0, -1)
+}
+
+// cutoff reads the organization's end-of-day cutoff (nil: calendar day).
+func (s *EOD) cutoff(ctx context.Context, orgID int64) (*int, error) {
+	row, err := s.q.GetWarehouseSettings(ctx, orgID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("warehouse eod: settings: %w", err)
+	}
+	if !row.EodCutoffMinutes.Valid || row.EodCutoffMinutes.Int16 <= 0 {
+		return nil, nil
+	}
+	m := int(row.EodCutoffMinutes.Int16)
+	return &m, nil
 }
 
 func pgDate(day time.Time) pgtype.Date {
@@ -409,11 +470,14 @@ type eodWrite struct {
 	day         time.Time
 	kind        string
 	actor       pgtype.Int8
+	// cutoff is the end-of-day close in minutes after midnight (TEC-769);
+	// nil keeps the calendar day.
+	cutoff *int
 }
 
 func (s *EOD) params(ctx context.Context, w eodWrite) (db.UpsertEODReportParams, error) {
 	loc, tz := zoneOf(w.org.Timezone)
-	start, end := EODDay(w.day, loc)
+	start, end := EODPeriod(w.day, loc, w.cutoff)
 	sum, err := s.Summarize(ctx, w.org.ID, w.warehouseID, start, end)
 	if err != nil {
 		return db.UpsertEODReportParams{}, err
@@ -444,9 +508,12 @@ func (s *EOD) Generate(ctx context.Context, c EODCaller, in EODGenerateInput) (E
 	if err != nil {
 		return EODReport{}, fmt.Errorf("warehouse eod: organization: %w", err)
 	}
+	cutoff, err := s.cutoff(ctx, orgID)
+	if err != nil {
+		return EODReport{}, err
+	}
 	loc, _ := zoneOf(org.Timezone)
-	today := s.now().In(loc)
-	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.UTC)
+	today := EODOpenDay(s.now(), loc, cutoff)
 	day, ok, err := parseDay("date", in.Date)
 	if err != nil {
 		return EODReport{}, err
@@ -462,7 +529,7 @@ func (s *EOD) Generate(ctx context.Context, c EODCaller, in EODGenerateInput) (E
 		return EODReport{}, err
 	}
 	actor := pgtype.Int8{Int64: c.Principal.UserInternal, Valid: c.Principal.UserInternal > 0}
-	p, err := s.params(ctx, eodWrite{org: org, warehouseID: whID, day: day, kind: EODKindManual, actor: actor})
+	p, err := s.params(ctx, eodWrite{org: org, warehouseID: whID, day: day, kind: EODKindManual, actor: actor, cutoff: cutoff})
 	if err != nil {
 		return EODReport{}, err
 	}
@@ -566,15 +633,21 @@ func (s *EOD) RunDaily(ctx context.Context) (int, error) {
 	return written, errors.Join(errs...)
 }
 
-// RunOrganization writes the missing auto reports of the previous local
-// day of one organization (system + every active warehouse).
+// RunOrganization writes the missing auto reports of the last closed
+// business day of one organization (system + every active warehouse):
+// the previous local day, or with an end-of-day cutoff (TEC-769) today
+// once the cutoff has passed.
 func (s *EOD) RunOrganization(ctx context.Context, orgID int64) (int, error) {
 	org, err := s.q.GetOrganizationByID(ctx, orgID)
 	if err != nil {
 		return 0, err
 	}
+	cutoff, err := s.cutoff(ctx, orgID)
+	if err != nil {
+		return 0, err
+	}
 	loc, _ := zoneOf(org.Timezone)
-	day := s.now().In(loc).AddDate(0, 0, -1)
+	day := EODClosedDay(s.now(), loc, cutoff)
 	whs, err := s.q.ListWarehouses(ctx, db.ListWarehousesParams{OrganizationID: orgID, Active: pgtype.Bool{Bool: true, Valid: true}})
 	if err != nil {
 		return 0, err
@@ -586,7 +659,7 @@ func (s *EOD) RunOrganization(ctx context.Context, orgID int64) (int, error) {
 	}
 	written := 0
 	for _, whID := range scopes {
-		ok, err := s.writeIfMissing(ctx, org, whID, day)
+		ok, err := s.writeIfMissing(ctx, org, whID, day, cutoff)
 		if err != nil {
 			return written, err
 		}
@@ -597,7 +670,7 @@ func (s *EOD) RunOrganization(ctx context.Context, orgID int64) (int, error) {
 	return written, nil
 }
 
-func (s *EOD) writeIfMissing(ctx context.Context, org db.Organization, whID int64, day time.Time) (bool, error) {
+func (s *EOD) writeIfMissing(ctx context.Context, org db.Organization, whID int64, day time.Time, cutoff *int) (bool, error) {
 	exists := db.EODReportExistsParams{OrganizationID: org.ID, ReportDate: pgDate(day)}
 	if whID > 0 {
 		exists.WarehouseID = pgtype.Int8{Int64: whID, Valid: true}
@@ -606,7 +679,7 @@ func (s *EOD) writeIfMissing(ctx context.Context, org db.Organization, whID int6
 	if err != nil || found {
 		return false, err
 	}
-	p, err := s.params(ctx, eodWrite{org: org, warehouseID: whID, day: day, kind: EODKindAuto})
+	p, err := s.params(ctx, eodWrite{org: org, warehouseID: whID, day: day, kind: EODKindAuto, cutoff: cutoff})
 	if err != nil {
 		return false, err
 	}

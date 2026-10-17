@@ -19,7 +19,10 @@ const api = vi.hoisted(() => ({
   downloadRender: vi.fn(),
   convert: vi.fn(),
 }));
-const leadsApi = vi.hoisted(() => ({ create: vi.fn() }));
+const leadsApi = vi.hoisted(() => ({
+  create: vi.fn(),
+  assignees: vi.fn().mockResolvedValue({ items: [] }),
+}));
 /** Latest props of each mocked AsyncCombobox, by data-testid. */
 const combos = vi.hoisted(
   () =>

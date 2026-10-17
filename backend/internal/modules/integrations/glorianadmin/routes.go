@@ -40,4 +40,11 @@ func Mount(mux *http.ServeMux, h *handler.Handler, authn func(http.Handler) http
 	mux.Handle("POST "+Prefix+"/outbounds/{uuid}/replay", manage(h.ReplayOutbound))
 	mux.Handle("POST "+Prefix+"/outbounds/replay", manage(h.ReplayOutbounds))
 	mux.Handle("POST "+Prefix+"/reconcile", manage(h.Reconcile))
+	// TEC-769: remote location -> local warehouse / bin map.
+	mux.Handle("GET "+Prefix+"/location-maps", view(h.ListLocationMaps))
+	mux.Handle("POST "+Prefix+"/location-maps", manage(h.CreateLocationMap))
+	mux.Handle("GET "+Prefix+"/location-maps/warehouses", view(h.MapWarehouses))
+	mux.Handle("GET "+Prefix+"/location-maps/warehouses/{uuid}/locations", view(h.MapLocations))
+	mux.Handle("PUT "+Prefix+"/location-maps/{uuid}", manage(h.UpdateLocationMap))
+	mux.Handle("DELETE "+Prefix+"/location-maps/{uuid}", manage(h.DeleteLocationMap))
 }

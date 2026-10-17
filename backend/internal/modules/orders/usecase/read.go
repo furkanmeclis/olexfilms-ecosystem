@@ -90,8 +90,17 @@ type OrderView struct {
 	ReadyAt      *time.Time      `json:"ready_at"`
 	ShippedAt    *time.Time      `json:"shipped_at"`
 	CancelledAt  *time.Time      `json:"cancelled_at"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	ReceivedAt   *time.Time      `json:"received_at"`
+	// Shipping info (TEC-768): the delivery method chosen at shipping, the
+	// tracking number and its link, and which documents are stored.
+	DeliveryMethod      *DeliveryMethodRef `json:"delivery_method"`
+	DeliveryMode        *string            `json:"delivery_mode"`
+	TrackingNo          *string            `json:"tracking_no"`
+	TrackingURL         *string            `json:"tracking_url"`
+	HasShippingDocument bool               `json:"has_shipping_document"`
+	HasReceiptDocument  bool               `json:"has_receipt_document"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
 	// AvailableTransitions are the statuses the caller may move the order to.
 	AvailableTransitions []string      `json:"available_transitions"`
 	Items                []ItemView    `json:"items,omitempty"`
@@ -99,6 +108,8 @@ type OrderView struct {
 	// Split is set on an assignment that cut the meters off a roll as a
 	// new unit (TEC-184): the new barcode to label (printing: TEC-95).
 	Split *SplitView `json:"split,omitempty"`
+	// Splits are the roll splits of an applied suggestion (TEC-768).
+	Splits []SplitView `json:"splits,omitempty"`
 }
 
 // SplitView is the roll split an assignment made.
@@ -173,8 +184,21 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, o db.Ord
 		TryRate: rateText(o.TryRate), Note: textPtr(o.Note), CancelReason: textPtr(o.CancelReason),
 		SubmittedAt: tsPtr(o.SubmittedAt), ApprovedAt: tsPtr(o.ApprovedAt),
 		ReadyAt: tsPtr(o.ReadyAt), ShippedAt: tsPtr(o.ShippedAt), CancelledAt: tsPtr(o.CancelledAt),
-		CreatedAt: o.CreatedAt.Time, UpdatedAt: o.UpdatedAt.Time,
+		ReceivedAt: tsPtr(o.ReceivedAt), DeliveryMode: textPtr(o.DeliveryMode), TrackingNo: textPtr(o.TrackingNo),
+		HasShippingDocument: o.ShippingDocumentKey.Valid && o.ShippingDocumentKey.String != "",
+		HasReceiptDocument:  o.ReceiptDocumentKey.Valid && o.ReceiptDocumentKey.String != "",
+		CreatedAt:           o.CreatedAt.Time, UpdatedAt: o.UpdatedAt.Time,
 		AvailableTransitions: availableTransitions(o.Status, party, c.can),
+	}
+	if o.DeliveryMethodID.Valid {
+		m, err := q.GetDeliveryMethodByID(ctx, o.DeliveryMethodID.Int64)
+		if err != nil {
+			return OrderView{}, fmt.Errorf("orders: delivery method: %w", err)
+		}
+		v.DeliveryMethod = &DeliveryMethodRef{UUID: m.Uuid, Code: m.Code, Name: deliveryMethodName(ctx, m), IsSystem: m.IsSystem}
+		if u := TrackingURL(m.TrackingUrlTemplate.String, o.TrackingNo.String); u != "" {
+			v.TrackingURL = &u
+		}
 	}
 	if len(o.RateSnapshot) > 0 {
 		v.RateSnapshot = json.RawMessage(o.RateSnapshot)

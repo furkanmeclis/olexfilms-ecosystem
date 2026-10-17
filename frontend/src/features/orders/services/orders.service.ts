@@ -1,5 +1,9 @@
 import type { ServerListQuery } from "@/components/entity";
 import type { components } from "@/generated/api";
+import {
+  platformDownloadFile,
+  platformFormRequest,
+} from "@/lib/api/platform-form-request";
 import { platformRequest } from "@/lib/api/platform-request";
 
 type Schemas = components["schemas"];
@@ -12,6 +16,20 @@ export type OrderItemInput = Schemas["OrderItemInput"];
 export type OrderCreateInput = Schemas["OrderCreateInput"];
 export type OrderUnitAssignInput = Schemas["OrderUnitAssignInput"];
 export type OrderRateSnapshot = Schemas["OrderRateSnapshot"];
+export type OrderSuggestions = Schemas["OrderSuggestions"];
+export type OrderSuggestion = Schemas["OrderSuggestion"];
+export type OrderPickLocation = Schemas["OrderPickLocation"];
+export type OrderPickList = Schemas["OrderPickList"];
+export type OrderPickRow = Schemas["OrderPickRow"];
+export type DeliveryMethod = Schemas["DeliveryMethod"];
+export type DeliveryMethodInput = Schemas["DeliveryMethodInput"];
+export type OrderDocumentKind = "shipping" | "receipt";
+
+/** Shipping info sent with the ship transition (TEC-768). */
+export type OrderShippingInput = {
+  delivery_method_uuid?: string;
+  tracking_no?: string;
+};
 
 /** Side of the active organization in the list: sales or purchases. */
 export type OrderSide = "seller" | "buyer";
@@ -70,11 +88,16 @@ export const ordersService = {
       body: { items },
     });
   },
-  transition(uuid: string, status: OrderStatus, reason?: string) {
+  transition(
+    uuid: string,
+    status: OrderStatus,
+    reason?: string,
+    shipping?: OrderShippingInput,
+  ) {
     return platformRequest<Order>(
       "POST",
       `/v1/orders/${enc(uuid)}/transitions`,
-      { body: reason ? { status, reason } : { status } },
+      { body: { status, ...(reason ? { reason } : {}), ...shipping } },
     );
   },
   assignUnit(uuid: string, item: string, body: OrderUnitAssignInput) {
@@ -90,6 +113,93 @@ export const ordersService = {
       `/v1/orders/${enc(uuid)}/items/${enc(item)}/units/${enc(unit)}`,
     );
   },
+  /** TEC-768: units proposed for the rest of a preparing line. */
+  suggest(uuid: string, item: string, includeUnlocated: boolean) {
+    return platformRequest<OrderSuggestions>(
+      "GET",
+      `/v1/orders/${enc(uuid)}/items/${enc(item)}/suggestions`,
+      { query: includeUnlocated ? { include_unlocated: "true" } : {} },
+    );
+  },
+  /** Assigns the confirmed suggestions in one transaction. */
+  applySuggestions(uuid: string, item: string, rows: OrderSuggestion[]) {
+    const units = rows.map((s) => ({
+      unit_uuid: s.unit_uuid,
+      ...(s.meters ? { meters: s.meters } : {}),
+      ...(s.quantity != null && !s.meters ? { quantity: s.quantity } : {}),
+    }));
+    return platformRequest<Order>(
+      "POST",
+      `/v1/orders/${enc(uuid)}/items/${enc(item)}/suggestions/apply`,
+      { body: { units } },
+    );
+  },
+  async pickLocations(uuid: string, item: string) {
+    const data = await platformRequest<{ items: OrderPickLocation[] }>(
+      "GET",
+      `/v1/orders/${enc(uuid)}/items/${enc(item)}/pick-locations`,
+    );
+    return data.items ?? [];
+  },
+  pickList(uuid: string) {
+    return platformRequest<OrderPickList>(
+      "GET",
+      `/v1/orders/${enc(uuid)}/pick-list`,
+    );
+  },
+  regenerateShippingDocument(uuid: string) {
+    return platformRequest<Order>(
+      "POST",
+      `/v1/orders/${enc(uuid)}/shipping-document`,
+    );
+  },
+  downloadDocument(uuid: string, kind: OrderDocumentKind) {
+    return platformDownloadFile(`/v1/orders/${enc(uuid)}/documents/${kind}`);
+  },
+  attachReceipt(uuid: string, file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    return platformFormRequest<Order>(
+      "POST",
+      `/v1/orders/${enc(uuid)}/receipt-document`,
+      form,
+    );
+  },
+};
+
+/** TEC-768: delivery method catalog of the active organization. */
+export const deliveryMethodsService = {
+  list(params: ServerListQuery) {
+    return platformRequest<Page<DeliveryMethod>>(
+      "GET",
+      "/v1/delivery-methods",
+      { query: params },
+    );
+  },
+  /** Active methods for the ship dialog (catalog order). */
+  async listActive(): Promise<DeliveryMethod[]> {
+    const data = await platformRequest<Page<DeliveryMethod>>(
+      "GET",
+      "/v1/delivery-methods",
+      { query: { active: "true", sort: "sort_order", limit: 100 } },
+    );
+    return data.items ?? [];
+  },
+  create(body: DeliveryMethodInput) {
+    return platformRequest<DeliveryMethod>("POST", "/v1/delivery-methods", {
+      body,
+    });
+  },
+  update(uuid: string, body: DeliveryMethodInput) {
+    return platformRequest<DeliveryMethod>(
+      "PUT",
+      `/v1/delivery-methods/${enc(uuid)}`,
+      { body },
+    );
+  },
+  remove(uuid: string) {
+    return platformRequest<void>("DELETE", `/v1/delivery-methods/${enc(uuid)}`);
+  },
 };
 
 export const orderKeys = {
@@ -99,4 +209,12 @@ export const orderKeys = {
   organizations: ["orders", "organizations"] as const,
   products: (q: string) => ["orders", "products", q] as const,
   price: (uuid: string) => ["orders", "price", uuid] as const,
+  suggestions: (uuid: string, item: string, unlocated: boolean) =>
+    ["orders", "suggestions", uuid, item, unlocated] as const,
+  pickLocations: (uuid: string, item: string) =>
+    ["orders", "pick-locations", uuid, item] as const,
+  pickList: (uuid: string) => ["orders", "pick-list", uuid] as const,
+  deliveryMethods: (params: ServerListQuery) =>
+    ["orders", "delivery-methods", params] as const,
+  activeDeliveryMethods: ["orders", "delivery-methods", "active"] as const,
 };

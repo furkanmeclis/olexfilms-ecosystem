@@ -129,6 +129,33 @@ function page(items: PortalContract[]) {
 }
 
 describe("PortalContracts", () => {
+  it("announces loading before displaying an empty result", async () => {
+    portal.listContracts.mockReturnValueOnce(new Promise(() => {}));
+    await render(createElement(PortalContracts));
+    expect(container.querySelector('[role="status"]')?.textContent).toContain(
+      "common.loading",
+    );
+    expect(
+      container.querySelector('[data-testid="portal-contracts-empty"]'),
+    ).toBeNull();
+  });
+
+  it("retries a failed list request before showing the empty state", async () => {
+    portal.listContracts
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue(page([]));
+    await render(createElement(PortalContracts));
+    expect(container.querySelector('[role="alert"]')).not.toBeNull();
+    expect(
+      container.querySelector('[data-testid="portal-contracts-empty"]'),
+    ).toBeNull();
+    await click(container.querySelector('[role="alert"] button'));
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(
+      container.querySelector('[data-testid="portal-contracts-empty"]'),
+    ).not.toBeNull();
+  });
+
   it("shows the neutral empty state when the user has no contract", async () => {
     portal.listContracts.mockResolvedValue(page([]));
     await render(createElement(PortalContracts));
@@ -274,13 +301,14 @@ describe("portal read-only and nav (TEC-245)", () => {
     expect(isPortalReadOnly(undefined)).toBe(false);
   });
 
-  it("links the contracts and preferences pages", async () => {
+  it("links the contracts and profile pages", async () => {
     await render(createElement(PortalNav));
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) =>
       a.getAttribute("href"),
     );
     expect(hrefs).toContain("/portal/contracts");
-    expect(hrefs).toContain("/portal/preferences");
+    // TEC-771: preferences are reached from the profile.
+    expect(hrefs).toContain("/portal/profile");
     expect(
       container
         .querySelector('a[href="/portal/contracts"]')

@@ -16,7 +16,8 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (key: string) => key }),
 }));
 
-import { platformNav, tenantNav } from "@/config/nav";
+import { tenantNav } from "@/config/nav";
+import { platformSettingsNav } from "@/config/settings-nav";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
 import type { NavAdornment, NavCatalog } from "@/features/nav-engine/types";
 import { PendingActionsNavAdornment } from "@/features/mcp/nav";
@@ -48,10 +49,12 @@ describe("MCP menu entries (TEC-403)", () => {
   });
 
   it("shows MCP clients in the platform panel behind mcp.clients.manage", () => {
-    expect(hrefs(platformNav, ["mcp.clients.manage"], [])).toContain(
-      "/platform/mcp-clients",
+    expect(hrefs(platformSettingsNav, ["mcp.clients.manage"], [])).toContain(
+      "/platform/settings/mcp-clients",
     );
-    expect(hrefs(platformNav, [], [])).not.toContain("/platform/mcp-clients");
+    expect(hrefs(platformSettingsNav, [], [])).not.toContain(
+      "/platform/settings/mcp-clients",
+    );
   });
 
   it("badges the pending count", async () => {

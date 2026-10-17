@@ -130,6 +130,7 @@ func RegisterLabelRoutes(
 
 	mux.Handle("GET /v1/stock/barcodes", read(h.ListBatches))
 	mux.Handle("POST /v1/stock/barcodes", write(h.CreateBatch))
+	mux.Handle("POST /v1/stock/barcodes/void", write(h.Void))
 	mux.Handle("GET /v1/stock/barcodes/{uuid}", read(h.GetBatch))
 	mux.Handle("GET /v1/stock/barcodes/{uuid}/labels.pdf", read(h.PrintBatch))
 

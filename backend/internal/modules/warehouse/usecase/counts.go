@@ -94,6 +94,7 @@ const (
 	CountResolveRelocate          = "relocate"
 	CountResolveVoidMissing       = "void_missing"
 	CountResolveIncreaseUnlocated = "increase_unlocated"
+	CountResolveAddToStock        = "add_to_stock"
 )
 
 // Ledger reference of count movements.
@@ -389,6 +390,10 @@ func allowedResolutions(kind, result string) []string {
 		if kind == CountScanFixed {
 			return []string{CountResolveIgnore, CountResolveIncreaseUnlocated}
 		}
+	case CountResultUnexpected:
+		if kind == CountScanSerial {
+			return []string{CountResolveIgnore, CountResolveAddToStock}
+		}
 	case CountResultMatched:
 		return []string{}
 	}
@@ -407,10 +412,15 @@ func (s *Counts) inTx(ctx context.Context, fn func(tx pgx.Tx, q *db.Queries) err
 	return tx.Commit(ctx)
 }
 
-func (s *Counts) lockCount(ctx context.Context, q *db.Queries, org int64, raw uuid.UUID) (db.StockCount, error) {
+// lockCount locks a count the caller may change (TEC-769 membership of
+// the counted warehouse).
+func (s *Counts) lockCount(ctx context.Context, q *db.Queries, c ScanCaller, org int64, raw uuid.UUID) (db.StockCount, error) {
 	row, err := q.LockStockCountByUUID(ctx, db.LockStockCountByUUIDParams{Uuid: raw, OrganizationID: org})
 	if err != nil {
 		return db.StockCount{}, notFound(err, ErrCountNotFound)
+	}
+	if err := requireMember(ctx, q, c.Principal, org, row.WarehouseID); err != nil {
+		return db.StockCount{}, err
 	}
 	return row, nil
 }
@@ -590,6 +600,9 @@ func (s *Counts) Create(ctx context.Context, c ScanCaller, in CountInput) (Stock
 	w, err := s.q.GetWarehouseByUUID(ctx, db.GetWarehouseByUUIDParams{Uuid: whID, OrganizationID: org})
 	if err != nil {
 		return StockCount{}, notFound(err, ErrWarehouseNotFound)
+	}
+	if err := requireMember(ctx, s.q, c.Principal, org, w.ID); err != nil {
+		return StockCount{}, err
 	}
 	arg := db.CreateStockCountParams{
 		OrganizationID: org, BrandID: c.Org.BrandID, WarehouseID: w.ID, Method: method, Visibility: visibility,
@@ -853,7 +866,7 @@ func (s *Counts) transition(ctx context.Context, c ScanCaller, id uuid.UUID, fn 
 	}
 	var out StockCount
 	err = s.inTx(ctx, func(_ pgx.Tx, q *db.Queries) error {
-		cnt, err := s.lockCount(ctx, q, org, id)
+		cnt, err := s.lockCount(ctx, q, c, org, id)
 		if err != nil {
 			return err
 		}
@@ -877,7 +890,7 @@ func (s *Counts) Scan(ctx context.Context, c ScanCaller, id uuid.UUID, in CountS
 	}
 	var out CountScanResult
 	err = s.inTx(ctx, func(_ pgx.Tx, q *db.Queries) error {
-		cnt, err := s.lockCount(ctx, q, org, id)
+		cnt, err := s.lockCount(ctx, q, c, org, id)
 		if err != nil {
 			return err
 		}
@@ -1226,7 +1239,7 @@ func (s *Counts) DeleteScan(ctx context.Context, c ScanCaller, id, scanID uuid.U
 		return err
 	}
 	return s.inTx(ctx, func(_ pgx.Tx, q *db.Queries) error {
-		cnt, err := s.lockCount(ctx, q, org, id)
+		cnt, err := s.lockCount(ctx, q, c, org, id)
 		if err != nil {
 			return err
 		}
@@ -1635,7 +1648,7 @@ func (s *Counts) Approve(ctx context.Context, c ScanCaller, id uuid.UUID, in []C
 		return CountReport{}, ErrCountAdjustForbidden
 	}
 	err = s.inTx(ctx, func(tx pgx.Tx, q *db.Queries) error {
-		cnt, err := s.lockCount(ctx, q, org, id)
+		cnt, err := s.lockCount(ctx, q, c, org, id)
 		if err != nil {
 			return err
 		}
@@ -1776,6 +1789,29 @@ func (s *Counts) apply(ctx context.Context, tx pgx.Tx, q *db.Queries, c ScanCall
 	}
 
 	switch resolution {
+	case CountResolveAddToStock:
+		if !l.CountedLocationID.Valid {
+			return invalid("resolutions", "line "+l.Uuid.String()+" has no counted location")
+		}
+		u, err := q.GetUnit(ctx, l.UnitID.Int64)
+		if err != nil {
+			return err
+		}
+		if u.OrganizationID != org {
+			return fmt.Errorf("%w: line %s belongs to another organization", ErrCountStale, l.Uuid)
+		}
+		if u.Status != string(ledger.StatusReserved) && u.Status != string(ledger.StatusPrinted) {
+			return fmt.Errorf("%w: line %s is already owned or unavailable", ErrCountStale, l.Uuid)
+		}
+		if _, err := q.FindOpenStockEntryForUnit(ctx, db.FindOpenStockEntryForUnitParams{UnitID: u.ID, IncludeConfirmed: true}); err == nil {
+			return fmt.Errorf("%w: line %s is linked to a stock entry", ErrCountStale, l.Uuid)
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		to := countOwner(org, l.CountedLocationID)
+		m := base
+		m.Type, m.To = ledger.TypeEntry, &to
+		return post(m)
 	case CountResolveVoidMissing:
 		from := countOwner(org, l.ExpectedLocationID)
 		m := base

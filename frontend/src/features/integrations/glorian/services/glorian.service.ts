@@ -21,6 +21,14 @@ export type GlorianOutboundFilter = NonNullable<
   operations["listGlorianOutbounds"]["parameters"]["query"]
 >;
 export type GlorianReplaySkip = components["schemas"]["GlorianReplaySkip"];
+export type GlorianLocationMap = components["schemas"]["GlorianLocationMap"];
+export type GlorianLocationMapInput =
+  components["schemas"]["GlorianLocationMapInput"];
+export type GlorianMapWarehouse = components["schemas"]["GlorianMapWarehouse"];
+export type GlorianMapLocation = components["schemas"]["GlorianMapLocation"];
+export type GlorianLocationMapFilter = NonNullable<
+  operations["listGlorianLocationMaps"]["parameters"]["query"]
+>;
 
 /** List envelope of the sync runs / outbounds (TEC-367). */
 export type GlorianPage<T> = {
@@ -136,5 +144,72 @@ export const glorianService = {
       await apiClient.POST("/v1/platform/integrations/glorian/reconcile"),
       SILENT,
     );
+  },
+
+  /** One page of remote location maps (q, sort, paging; TEC-769). */
+  async locationMapsPage(query: GlorianLocationMapFilter = {}) {
+    return unwrap<GlorianPage<GlorianLocationMap>>(
+      await apiClient.GET("/v1/platform/integrations/glorian/location-maps", {
+        params: { query },
+      }),
+      SILENT,
+    );
+  },
+
+  async createLocationMap(body: GlorianLocationMapInput) {
+    return unwrap<GlorianLocationMap>(
+      await apiClient.POST("/v1/platform/integrations/glorian/location-maps", {
+        body,
+      }),
+      SILENT,
+    );
+  },
+
+  async updateLocationMap(uuid: string, body: GlorianLocationMapInput) {
+    return unwrap<GlorianLocationMap>(
+      await apiClient.PUT(
+        "/v1/platform/integrations/glorian/location-maps/{uuid}",
+        { params: { path: { uuid } }, body },
+      ),
+      SILENT,
+    );
+  },
+
+  async deleteLocationMap(uuid: string) {
+    await unwrap<unknown>(
+      await apiClient.DELETE(
+        "/v1/platform/integrations/glorian/location-maps/{uuid}",
+        { params: { path: { uuid } } },
+      ),
+      SILENT,
+    );
+  },
+
+  /** Warehouses of the connection's organization (map targets). */
+  async mapWarehouses() {
+    const res = await unwrap<{ items: GlorianMapWarehouse[] }>(
+      await apiClient.GET(
+        "/v1/platform/integrations/glorian/location-maps/warehouses",
+      ),
+      SILENT,
+    );
+    return res.items;
+  },
+
+  /** Up to 50 active bins of a warehouse, searched by full code / name. */
+  async mapLocations(warehouseUuid: string, q?: string) {
+    const res = await unwrap<{ items: GlorianMapLocation[] }>(
+      await apiClient.GET(
+        "/v1/platform/integrations/glorian/location-maps/warehouses/{uuid}/locations",
+        {
+          params: {
+            path: { uuid: warehouseUuid },
+            query: q ? { q } : {},
+          },
+        },
+      ),
+      SILENT,
+    );
+    return res.items;
   },
 };

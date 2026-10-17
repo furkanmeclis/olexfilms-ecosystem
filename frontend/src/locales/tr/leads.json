@@ -192,5 +192,8 @@
   "convert.done": "Lead dönüştürüldü.",
   "convert.error": "Dönüştürme başarısız.",
   "convert.errors.distributor_required": "Distribütör seçin.",
-  "convert.errors.currency_required": "Para birimi seçin."
+  "convert.errors.currency_required": "Para birimi seçin.",
+  "form.assignee": "Sorumlu",
+  "form.customer": "Müşteri",
+  "form.vehicle": "Araç"
 }

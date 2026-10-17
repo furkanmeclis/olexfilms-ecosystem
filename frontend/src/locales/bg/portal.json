@@ -398,5 +398,19 @@
   "dealer_page.form_rate_limited": "Твърде много заявки. Опитайте по-късно.",
   "dealer_page.form_failed": "Заявката не бе изпратена. Опитайте отново.",
   "dealer_page.form_success_title": "Заявката е получена",
-  "dealer_page.form_success_body": "Дилърът ще се свърже с вас скоро."
+  "dealer_page.form_success_body": "Дилърът ще се свърже с вас скоро.",
+  "nav.profile": "Моят профил",
+  "profile.title": "Моят профил",
+  "profile.saved": "Данните ви са запазени.",
+  "profile.failed": "Данните ви не можаха да бъдат запазени.",
+  "profile.links_title": "Връзки на акаунта",
+  "profile.preferences_hint": "Известия по имейл, в приложението и за кампании",
+  "profile.contracts_hint": "Подписани от вас договори и техните PDF",
+  "profile.phone_login_hint": "Влизате с код, изпратен на телефона ви; не е нужна парола.",
+  "home.vehicles_hint": "Вашите автомобили и сервизната им история",
+  "home.warranties_hint": "Вашите гаранционни сертификати и статусът им",
+  "home.appointments_hint": "Вашите предстоящи и минали часове",
+  "home.dealers_hint": "Оторизирани дилъри близо до вас",
+  "home.profile_hint": "Вашето име, език и сесии",
+  "home.book": "Запазете час"
 }

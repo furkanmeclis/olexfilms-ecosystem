@@ -192,5 +192,8 @@
   "convert.done": "Lead converted.",
   "convert.error": "Conversion failed.",
   "convert.errors.distributor_required": "Select a distributor.",
-  "convert.errors.currency_required": "Select a currency."
+  "convert.errors.currency_required": "Select a currency.",
+  "form.assignee": "Assignee",
+  "form.customer": "Customer",
+  "form.vehicle": "Vehicle"
 }

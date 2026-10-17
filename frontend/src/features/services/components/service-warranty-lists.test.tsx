@@ -389,7 +389,7 @@ describe("ServicesListPage (TEC-378)", () => {
     const menu = captured.exports.at(-1)!;
     expect(menu.exportPath).toBe("/v1/services/export");
     expect(menu.formats).toEqual(["xlsx", "csv", "pdf"]);
-    expect(menu.jobsHref).toBe("/t/acme/exports");
+    expect(menu.jobsHref).toBe("/t/acme/settings/exports");
     expect(menu.query).toEqual({
       status: "completed",
       q: "ayşe",

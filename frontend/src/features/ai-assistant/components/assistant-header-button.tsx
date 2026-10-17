@@ -11,6 +11,7 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
@@ -51,34 +52,35 @@ function AssistantHeaderButtonFor({ slug }: { slug: string }) {
   const fullPage = routes.tenant.assistant(slug);
 
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={t("ai.nav_title")}
-        title={t("ai.nav_title")}
-        onClick={() => setOpen(true)}
-        data-testid="ai-header-button"
-      >
-        <Bot className="size-5" />
-      </Button>
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="flex w-full flex-col gap-4 sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>{t("ai.page.title")}</SheetTitle>
-            <SheetDescription>{t("ai.page.description")}</SheetDescription>
-          </SheetHeader>
-          {open ? (
-            <AssistantChat
-              transport={transport}
-              scope={`panel:${slug}`}
-              layout="sheet"
-              showToolChips
-              fullPageHref={fullPage}
-            />
-          ) : null}
-        </SheetContent>
-      </Sheet>
-    </>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={t("ai.nav_title")}
+          title={t("ai.nav_title")}
+          data-testid="ai-header-button"
+        >
+          <Bot className="size-5" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="flex h-dvh w-full flex-col gap-4 p-4 sm:max-w-lg">
+        <SheetHeader>
+          <SheetTitle>{t("ai.page.title")}</SheetTitle>
+          <SheetDescription>{t("ai.page.description")}</SheetDescription>
+        </SheetHeader>
+        {open ? (
+          <AssistantChat
+            key={slug}
+            transport={transport}
+            scope={`panel:${slug}`}
+            layout="sheet"
+            showToolChips
+            fullPageHref={fullPage}
+            onOpenFullPage={() => setOpen(false)}
+          />
+        ) : null}
+      </SheetContent>
+    </Sheet>
   );
 }

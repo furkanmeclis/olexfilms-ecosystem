@@ -70,7 +70,8 @@ var (
 	// ErrEntryUnitTaken: the unit is already a line of another entry.
 	ErrEntryUnitTaken = errors.New("warehouse: unit belongs to another stock entry")
 	// ErrEntryLedger: the ledger refused a movement at confirm.
-	ErrEntryLedger = errors.New("warehouse: ledger refused the stock entry")
+	ErrEntryLedger        = errors.New("warehouse: ledger refused the stock entry")
+	ErrEntryPrintedLabels = errors.New("warehouse: printed labels prevent draft cancellation")
 )
 
 // Stock entry modes and statuses (stock_entries).
@@ -206,6 +207,9 @@ type EntryInput struct {
 	WarehouseUUID string
 	Mode          string
 	Note          *string
+	// DefaultWarehouse: an empty WarehouseUUID takes the caller's default
+	// warehouse (mobile, TEC-769).
+	DefaultWarehouse bool
 }
 
 // EntryLinesInput adds lines to a draft. with_existing: Barcodes.
@@ -251,19 +255,38 @@ func (s *StockEntries) Create(ctx context.Context, c EntryCaller, in EntryInput)
 	if err != nil {
 		return StockEntry{}, err
 	}
-	wid, err := uuid.Parse(strings.TrimSpace(in.WarehouseUUID))
-	if err != nil {
-		return StockEntry{}, invalid("warehouse_uuid", "must be a uuid")
-	}
-	w, err := s.q.GetWarehouseByUUID(ctx, db.GetWarehouseByUUIDParams{Uuid: wid, OrganizationID: org})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return StockEntry{}, ErrWarehouseNotFound
-	}
-	if err != nil {
-		return StockEntry{}, err
+	var w db.Warehouse
+	if raw := strings.TrimSpace(in.WarehouseUUID); raw == "" && in.DefaultWarehouse {
+		// Mobile (TEC-769): no warehouse_uuid falls back to the caller's
+		// default warehouse.
+		def, err := defaultWarehouse(ctx, s.q, c.Principal, org)
+		if err != nil {
+			return StockEntry{}, err
+		}
+		if def == 0 {
+			return StockEntry{}, invalid("warehouse_uuid", "is required (no default warehouse)")
+		}
+		if w, err = s.q.GetWarehouseByID(ctx, db.GetWarehouseByIDParams{ID: def, OrganizationID: org}); err != nil {
+			return StockEntry{}, notFound(err, ErrWarehouseNotFound)
+		}
+	} else {
+		wid, err := uuid.Parse(raw)
+		if err != nil {
+			return StockEntry{}, invalid("warehouse_uuid", "must be a uuid")
+		}
+		w, err = s.q.GetWarehouseByUUID(ctx, db.GetWarehouseByUUIDParams{Uuid: wid, OrganizationID: org})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return StockEntry{}, ErrWarehouseNotFound
+		}
+		if err != nil {
+			return StockEntry{}, err
+		}
 	}
 	if !w.Active {
 		return StockEntry{}, invalid("warehouse_uuid", "warehouse is inactive")
+	}
+	if err := requireMember(ctx, s.q, c.Principal, org, w.ID); err != nil {
+		return StockEntry{}, err
 	}
 	var e db.StockEntry
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
@@ -343,7 +366,7 @@ func (s *StockEntries) AddLines(ctx context.Context, c EntryCaller, id uuid.UUID
 	}
 	var e db.StockEntry
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		if e, err = s.lockDraft(ctx, q, org, id); err != nil {
+		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
 			return err
 		}
 		have, err := q.CountStockEntryLines(ctx, e.ID)
@@ -486,7 +509,7 @@ func (s *StockEntries) DeleteLine(ctx context.Context, c EntryCaller, id, lineID
 	}
 	var e db.StockEntry
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		if e, err = s.lockDraft(ctx, q, org, id); err != nil {
+		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
 			return err
 		}
 		n, err := q.DeleteStockEntryLine(ctx, db.DeleteStockEntryLineParams{Uuid: lineID, EntryID: e.ID})
@@ -523,7 +546,7 @@ func (s *StockEntries) Place(ctx context.Context, c EntryCaller, id uuid.UUID, i
 	}
 	var e db.StockEntry
 	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		if e, err = s.lockDraft(ctx, q, org, id); err != nil {
+		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
 			return err
 		}
 		loc, err := s.entryLocation(ctx, q, e, in.LocationUUID, code)
@@ -643,7 +666,7 @@ func (s *StockEntries) Confirm(ctx context.Context, c EntryCaller, id uuid.UUID)
 	}
 	var e db.StockEntry
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
-		if e, err = s.lockDraft(ctx, q, org, id); err != nil {
+		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
 			return err
 		}
 		lines, err := q.ListStockEntryLines(ctx, e.ID)
@@ -732,16 +755,42 @@ func (s *StockEntries) postLine(ctx context.Context, q *db.Queries, tx pgx.Tx, e
 	return q.SetStockEntryLineMovements(ctx, arg)
 }
 
-// Cancel closes a draft without writing stock.
+// Cancel closes a draft and voids its still reserved labels atomically.
 func (s *StockEntries) Cancel(ctx context.Context, c EntryCaller, id uuid.UUID) (StockEntry, error) {
 	org, err := guard(c.Caller)
 	if err != nil {
 		return StockEntry{}, err
 	}
 	var e db.StockEntry
-	err = s.inTx(ctx, func(q *db.Queries, _ pgx.Tx) error {
-		if e, err = s.lockDraft(ctx, q, org, id); err != nil {
+	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
+		if e, err = s.lockWritable(ctx, q, c, org, id); err != nil {
 			return err
+		}
+		lines, err := q.ListStockEntryLines(ctx, e.ID)
+		if err != nil {
+			return err
+		}
+		for _, line := range lines {
+			u, err := q.LockUnit(ctx, line.UnitID)
+			if err != nil {
+				return err
+			}
+			if u.Status == string(ledger.StatusPrinted) {
+				return ErrEntryPrintedLabels
+			}
+			if u.Status == string(ledger.StatusVoid) {
+				continue
+			}
+			if u.Status != string(ledger.StatusReserved) {
+				return fmt.Errorf("%w: %s", ErrEntryUnitNotEnterable, u.Barcode)
+			}
+			if _, err := s.ledger.Post(ctx, tx, ledger.Movement{
+				Type: ledger.TypeVoid, UnitID: u.ID, Source: "stock_entry",
+				RefType: "stock_entry_line", RefID: line.ID,
+				Reason: "draft stock entry cancelled", ActorUserID: actorPtr(c),
+			}); err != nil {
+				return fmt.Errorf("%w: %v", ErrEntryLedger, err)
+			}
 		}
 		if e, err = q.CancelStockEntry(ctx, e.ID); err != nil {
 			return notFound(err, ErrEntryNotDraft)
@@ -755,6 +804,37 @@ func (s *StockEntries) Cancel(ctx context.Context, c EntryCaller, id uuid.UUID) 
 }
 
 // --- helpers -----------------------------------------------------------------
+
+// lockWritable locks a draft the caller may change (TEC-769 membership).
+func (s *StockEntries) lockWritable(ctx context.Context, q *db.Queries, c EntryCaller, org int64, id uuid.UUID) (db.StockEntry, error) {
+	e, err := s.lockDraft(ctx, q, org, id)
+	if err != nil {
+		return e, err
+	}
+	if e.WarehouseID.Valid {
+		if err := requireMember(ctx, q, c.Principal, org, e.WarehouseID.Int64); err != nil {
+			return e, err
+		}
+	}
+	return e, nil
+}
+
+// CheckWrite tells whether the caller may change the entry (the Excel
+// import upload checks it before accepting a file).
+func (s *StockEntries) CheckWrite(ctx context.Context, c EntryCaller, id uuid.UUID) error {
+	org, err := guard(c.Caller)
+	if err != nil {
+		return err
+	}
+	e, err := s.q.GetStockEntryByUUID(ctx, db.GetStockEntryByUUIDParams{Uuid: id, OrganizationID: org})
+	if err != nil {
+		return notFound(err, ErrEntryNotFound)
+	}
+	if !e.WarehouseID.Valid {
+		return nil
+	}
+	return requireMember(ctx, s.q, c.Principal, org, e.WarehouseID.Int64)
+}
 
 func (s *StockEntries) lockDraft(ctx context.Context, q *db.Queries, org int64, id uuid.UUID) (db.StockEntry, error) {
 	e, err := q.LockStockEntryByUUID(ctx, db.LockStockEntryByUUIDParams{Uuid: id, OrganizationID: org})

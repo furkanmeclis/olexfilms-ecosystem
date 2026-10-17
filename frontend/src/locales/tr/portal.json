@@ -398,5 +398,19 @@
   "dealer_page.form_rate_limited": "Çok fazla talep var. Daha sonra tekrar deneyin.",
   "dealer_page.form_failed": "Talep gönderilemedi. Tekrar deneyin.",
   "dealer_page.form_success_title": "Talebiniz alındı",
-  "dealer_page.form_success_body": "Bayi kısa süre içinde sizinle iletişime geçecek."
+  "dealer_page.form_success_body": "Bayi kısa süre içinde sizinle iletişime geçecek.",
+  "nav.profile": "Profilim",
+  "profile.title": "Profilim",
+  "profile.saved": "Bilgileriniz kaydedildi.",
+  "profile.failed": "Bilgileriniz kaydedilemedi.",
+  "profile.links_title": "Hesap bağlantıları",
+  "profile.preferences_hint": "E-posta, uygulama içi ve kampanya bildirimleri",
+  "profile.contracts_hint": "İmzaladığınız sözleşmeler ve PDF'leri",
+  "profile.phone_login_hint": "Telefonunuza gelen kodla giriş yapıyorsunuz; ayrıca şifre gerekmez.",
+  "home.vehicles_hint": "Araçlarınız ve hizmet geçmişleri",
+  "home.warranties_hint": "Garanti belgeleriniz ve durumları",
+  "home.appointments_hint": "Yaklaşan ve geçmiş randevularınız",
+  "home.dealers_hint": "Size yakın yetkili bayiler",
+  "home.profile_hint": "Ad, dil ve oturum ayarlarınız",
+  "home.book": "Randevu al"
 }

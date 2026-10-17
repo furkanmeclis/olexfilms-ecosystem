@@ -162,6 +162,15 @@ func TestReplayFixedHoldings(t *testing.T) {
 	}
 }
 
+func TestReplayReservedFixedVoid(t *testing.T) {
+	u := db.Unit{ID: 99, BrandID: 3, ProductID: 11, UnitKind: KindFixed, Status: string(StatusVoid)}
+	p := NewProjection()
+	up, err := p.Replay(u, rows(u, mvRow{typ: TypeVoid, org: center, fromSt: StatusReserved, toSt: StatusVoid}))
+	if err != nil || len(up.Anomalies) != 0 || up.Status != StatusVoid || len(up.Holdings) != 0 {
+		t.Fatalf("reserved fixed void replay: %+v %v", up, err)
+	}
+}
+
 func TestReplayReportsChainBreak(t *testing.T) {
 	u := db.Unit{ID: 10, BrandID: 3, ProductID: 9, UnitKind: KindSerial, Status: "printed"}
 	mvs := rows(u,

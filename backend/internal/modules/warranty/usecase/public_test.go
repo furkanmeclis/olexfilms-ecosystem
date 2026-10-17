@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -103,22 +104,40 @@ func TestValidPublicCode(t *testing.T) {
 }
 
 // TEC-248: the anonymous PDF is built from the public projection only; the
-// full plate, full VIN and holder never reach the document.
+// full plate, full VIN and holder never reach the document. TEC-772: the
+// Olex document also carries the certificate pages, whose embedded images
+// and font are static assets or the QR of the public URL; their base64 is
+// left out of the text check (it is not text and may contain any letters).
 func TestPublicCertificateHTMLHasNoPII(t *testing.T) {
 	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
-	w := BuildPublicWarranty(publicRow(now), PublicWarrantyBrand{Name: "Olex", Slug: "olex"}, now)
-	doc, err := PublicCertificateHTML(w, PublicVerifyURL("https://olexfilms.app/", w.PublicCode), time.UTC, "tr", now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, banned := range []string{"34 ABC 112", "ABC", "WVWZZZ1JZ3W386752", "06 X 99"} {
-		if strings.Contains(doc, banned) {
-			t.Errorf("document carries %q", banned)
+	dataURI := regexp.MustCompile(`data:[a-z0-9+./-]+;base64,[A-Za-z0-9+/=]+`)
+	for _, brand := range []PublicWarrantyBrand{{Name: "Olex", Slug: "olex"}, {Name: "Glorian", Slug: "glorian"}} {
+		w := BuildPublicWarranty(publicRow(now), brand, now)
+		doc, err := PublicCertificateHTML(w, PublicVerifyURL("https://olexfilms.app/", w.PublicCode), time.UTC, "tr", now)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}
-	for _, want := range []string{"34 *** 12", "6752", "Film X", "Dealer A", "https://olexfilms.app/warranty/" + w.PublicCode} {
-		if !strings.Contains(doc, want) {
-			t.Errorf("document lacks %q", want)
+		themed := strings.Contains(doc, `class="ct-page ct-cover"`)
+		if themed != (brand.Slug == "olex") {
+			t.Fatalf("%s: certificate pages = %v", brand.Slug, themed)
+		}
+		if themed {
+			doc = dataURI.ReplaceAllString(doc, "data:")
+		}
+		for _, banned := range []string{"34 ABC 112", "ABC", "WVWZZZ1JZ3W386752", "06 X 99"} {
+			if strings.Contains(doc, banned) {
+				t.Errorf("%s document carries %q", brand.Slug, banned)
+			}
+		}
+		for _, want := range []string{"34 *** 12", "6752", "Film X", "Dealer A", "https://olexfilms.app/warranty/" + w.PublicCode} {
+			if !strings.Contains(doc, want) {
+				t.Errorf("%s document lacks %q", brand.Slug, want)
+			}
+		}
+		// The certificate pages never show the unit barcode, the car map
+		// or another item: only the covered product.
+		if themed && (strings.Contains(doc, `class="ct-map"`) || strings.Contains(doc, `class="ct-code"`) || strings.Count(doc, "<tr><td><span class=\"ct-label\">") != 1) {
+			t.Errorf("olex certificate pages show more than the public projection")
 		}
 	}
 }

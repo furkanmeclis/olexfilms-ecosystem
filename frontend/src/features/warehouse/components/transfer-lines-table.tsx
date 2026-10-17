@@ -58,6 +58,11 @@ export function TransferLinesTable({
           ),
         }),
         createColumn<WarehouseTransferLine>({
+          accessorKey: "quantity",
+          labelKey: "warehouse.fields.quantity",
+          cell: ({ row }) => row.original.quantity,
+        }),
+        createColumn<WarehouseTransferLine>({
           id: "product",
           accessorFn: (l) => `${l.product.name} ${l.product.sku}`,
           labelKey: "warehouse.fields.product",

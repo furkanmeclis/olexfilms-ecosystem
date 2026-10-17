@@ -398,5 +398,19 @@
   "dealer_page.form_rate_limited": "طلبات كثيرة جدًا. حاول لاحقًا.",
   "dealer_page.form_failed": "تعذر إرسال الطلب. حاول مرة أخرى.",
   "dealer_page.form_success_title": "تم استلام الطلب",
-  "dealer_page.form_success_body": "سيتواصل معك الوكيل قريبًا."
+  "dealer_page.form_success_body": "سيتواصل معك الوكيل قريبًا.",
+  "nav.profile": "ملفي الشخصي",
+  "profile.title": "ملفي الشخصي",
+  "profile.saved": "تم حفظ بياناتك.",
+  "profile.failed": "تعذّر حفظ بياناتك.",
+  "profile.links_title": "روابط الحساب",
+  "profile.preferences_hint": "إشعارات البريد الإلكتروني وداخل التطبيق والحملات",
+  "profile.contracts_hint": "العقود التي وقّعتها وملفات PDF الخاصة بها",
+  "profile.phone_login_hint": "تسجّل الدخول برمز يُرسل إلى هاتفك؛ لا حاجة إلى كلمة مرور.",
+  "home.vehicles_hint": "مركباتك وسجل خدمتها",
+  "home.warranties_hint": "شهادات الضمان الخاصة بك وحالتها",
+  "home.appointments_hint": "مواعيدك القادمة والسابقة",
+  "home.dealers_hint": "الوكلاء المعتمدون بالقرب منك",
+  "home.profile_hint": "اسمك ولغتك وجلساتك",
+  "home.book": "احجز موعدًا"
 }

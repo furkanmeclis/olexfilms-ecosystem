@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/searchengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -116,12 +118,16 @@ type Service struct {
 	now      func() time.Time
 	// finder answers q from the orders index (TEC-210; nil: SQL only).
 	finder searchengine.ListFinder
+	// store and pdf keep the shipping documents (TEC-768; nil: unavailable).
+	store storage.Driver
+	pdf   PDFRenderer
+	log   *slog.Logger
 }
 
 // New creates the service.
 func New(pool TxBeginner, q *db.Queries, out outbox.Enqueuer, rates RateResolver) *Service {
 	return &Service{pool: pool, q: q, out: out, rates: rates, ledger: ledger.New(q, out),
-		receipts: NoopReceiptHook{}, now: time.Now}
+		receipts: NoopReceiptHook{}, now: time.Now, log: slog.Default()}
 }
 
 // WithReceiptHook sets the hook called when an order is received.
@@ -580,10 +586,13 @@ func (s *Service) ReplaceItems(ctx context.Context, c Caller, orderUUID uuid.UUI
 // --- Transitions -------------------------------------------------------------------
 
 // TransitionInput moves an order to Status; Reason is kept in the history
-// (and as the cancel reason).
+// (and as the cancel reason). DeliveryMethodUUID (one of the seller's active
+// delivery methods) and TrackingNo are read when the order ships (TEC-768).
 type TransitionInput struct {
-	Status string
-	Reason *string
+	Status             string
+	Reason             *string
+	DeliveryMethodUUID *string
+	TrackingNo         *string
 }
 
 func partyOf(c Caller, o db.Order) Party {
@@ -623,6 +632,7 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 		return OrderView{}, invalid("status", "unknown order status")
 	}
 	var result db.Order
+	shipped := false
 	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		o, err := s.lockVisible(ctx, q, c, orderUUID)
 		if err != nil {
@@ -652,9 +662,20 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
 			}
 		case StatusShipped:
+			var info shippingInput
+			if info, err = in.shipping(ctx, q, o); err != nil {
+				return err
+			}
 			if meta, err = s.ship(ctx, q, tx, c, o); err == nil {
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
 			}
+			if err == nil {
+				o, err = setShipping(ctx, q, o, info)
+			}
+			if err == nil && info.method != nil {
+				meta["delivery_method"] = info.method.Code
+			}
+			shipped = true
 		case StatusReceived:
 			if meta, err = s.receive(ctx, q, tx, c, o); err == nil {
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
@@ -695,6 +716,9 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 	})
 	if err != nil {
 		return OrderView{}, err
+	}
+	if shipped {
+		result = s.afterShip(ctx, result)
 	}
 	return s.view(ctx, s.q, c, result)
 }

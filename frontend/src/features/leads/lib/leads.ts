@@ -46,8 +46,8 @@ export const LEAD_STATUSES: LeadStatus[] = [
 
 export type LeadFormValues = {
   target_type: LeadTargetType;
-  customer_user_id: string;
-  vehicle_id: string;
+  customer_uuid: string;
+  vehicle_uuid: string;
   candidate_company_name: string;
   candidate_contact_name: string;
   candidate_phone_e164: string;
@@ -58,15 +58,15 @@ export type LeadFormValues = {
   source: LeadSource;
   temperature: LeadTemperature;
   follow_up_date: string;
-  assignee_user_id: string;
+  assignee_user_uuid: string;
   notes: string;
 };
 
 export function emptyLeadForm(): LeadFormValues {
   return {
     target_type: "customer",
-    customer_user_id: "",
-    vehicle_id: "",
+    customer_uuid: "",
+    vehicle_uuid: "",
     candidate_company_name: "",
     candidate_contact_name: "",
     candidate_phone_e164: "",
@@ -77,7 +77,7 @@ export function emptyLeadForm(): LeadFormValues {
     source: "incoming_call",
     temperature: "warm",
     follow_up_date: "",
-    assignee_user_id: "",
+    assignee_user_uuid: "",
     notes: "",
   };
 }
@@ -85,10 +85,8 @@ export function emptyLeadForm(): LeadFormValues {
 export function leadFormOf(lead: Lead): LeadFormValues {
   return {
     target_type: lead.target_type,
-    customer_user_id: lead.customer_user_id
-      ? String(lead.customer_user_id)
-      : "",
-    vehicle_id: lead.vehicle_id ? String(lead.vehicle_id) : "",
+    customer_uuid: lead.customer_uuid ?? "",
+    vehicle_uuid: lead.vehicle_uuid ?? "",
     candidate_company_name: lead.candidate_company_name ?? "",
     candidate_contact_name: lead.candidate_contact_name ?? "",
     candidate_phone_e164: lead.candidate_phone_e164 ?? "",
@@ -99,9 +97,7 @@ export function leadFormOf(lead: Lead): LeadFormValues {
     source: lead.source,
     temperature: lead.temperature,
     follow_up_date: toInputDate(lead.follow_up_date),
-    assignee_user_id: lead.assignee_user_id
-      ? String(lead.assignee_user_id)
-      : "",
+    assignee_user_uuid: lead.assignee_user_uuid ?? "",
     notes: lead.notes ?? "",
   };
 }
@@ -116,8 +112,8 @@ export function leadName(lead: Lead) {
 export function validateLeadForm(values: LeadFormValues) {
   const errors: Record<string, string> = {};
   if (values.target_type === "customer") {
-    if (!positive(values.customer_user_id)) {
-      errors.customer_user_id = "leads.form.errors.customer_required";
+    if (!values.customer_uuid) {
+      errors.customer_uuid = "leads.form.errors.customer_required";
     }
   } else {
     if (!values.candidate_company_name.trim()) {
@@ -142,9 +138,6 @@ export function validateLeadForm(values: LeadFormValues) {
     Number.isNaN(new Date(values.follow_up_date).getTime())
   ) {
     errors.follow_up_date = "leads.form.errors.follow_up_invalid";
-  }
-  if (values.assignee_user_id && !positive(values.assignee_user_id)) {
-    errors.assignee_user_id = "leads.form.errors.assignee_invalid";
   }
   return errors;
 }
@@ -180,8 +173,8 @@ export function patchBody(
 function bodyCommon(values: LeadFormValues) {
   const customer = values.target_type === "customer";
   return {
-    customer_user_id: customer ? numberOrNull(values.customer_user_id) : null,
-    vehicle_id: customer ? numberOrNull(values.vehicle_id) : null,
+    customer_uuid: customer ? clean(values.customer_uuid) : null,
+    vehicle_uuid: customer ? clean(values.vehicle_uuid) : null,
     candidate_company_name: customer
       ? null
       : clean(values.candidate_company_name),
@@ -198,7 +191,7 @@ function bodyCommon(values: LeadFormValues) {
     follow_up_date: values.follow_up_date
       ? new Date(values.follow_up_date).toISOString()
       : null,
-    assignee_user_id: numberOrNull(values.assignee_user_id),
+    assignee_user_uuid: clean(values.assignee_user_uuid),
     notes: values.notes.trim(),
   };
 }
@@ -211,10 +204,6 @@ function clean(value: string) {
 function numberOrNull(value: string) {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-function positive(value: string) {
-  return numberOrNull(value) !== null;
 }
 
 function toInputDate(value: string | undefined) {

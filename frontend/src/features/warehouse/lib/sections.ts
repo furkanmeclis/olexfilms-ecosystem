@@ -6,6 +6,7 @@ import {
   FolderTree,
   PackagePlus,
   ScanLine,
+  Settings2,
   Sunset,
 } from "lucide-react";
 
@@ -29,7 +30,7 @@ export type WarehouseSection = {
   /** Every permission is needed. */
   permissions: string[];
   orgTypes: WarehouseOrgType[];
-  slice: "TEC-231" | "TEC-232";
+  slice: "TEC-231" | "TEC-232" | "TEC-769";
 };
 
 export const WAREHOUSE_SECTIONS: WarehouseSection[] = [
@@ -96,6 +97,16 @@ export const WAREHOUSE_SECTIONS: WarehouseSection[] = [
     permissions: [Permission.WarehouseRead],
     orgTypes: ["center", "distributor"],
     slice: "TEC-232",
+  },
+  // --- TEC-769: settings (end-of-day cutoff) ---
+  {
+    id: "settings",
+    key: "warehouse.sections.settings",
+    icon: Settings2,
+    href: routes.tenant.warehouse.settings,
+    permissions: [Permission.WarehouseRead],
+    orgTypes: ["center", "distributor"],
+    slice: "TEC-769",
   },
 ];
 

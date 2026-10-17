@@ -596,6 +596,8 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		Sessions: uc,
 	}, tokens, loader, deps.Queries, featureSvc)
 	pdfClient := pdfrender.NewWithOptions(cfg.Gotenberg.URL, pdfrender.Options{MaxConnsPerHost: cfg.Queue.Concurrency})
+	// TEC-768: shipping note PDF and delivery receipts of orders.
+	ordersSvc.WithDocuments(deps.Storage, pdfClient, log)
 	realtime.RegisterRoutes(mux, realtime.NewHandler(rtIssuer, uc), tokens, loader)
 
 	nh := notifhandler.New(notifSvc)
@@ -915,7 +917,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-202: barcode batches (center), label templates and label PDFs.
 	stockmodule.RegisterLabelRoutes(mux, stockhandler.NewLabels(
-		stockusecase.NewBarcodes(deps.DB, deps.Queries), stockusecase.NewLabelTemplates(deps.Queries),
+		stockusecase.NewBarcodes(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)), stockusecase.NewLabelTemplates(deps.Queries),
 		stockusecase.NewLabels(deps.Queries, pdfClient)),
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-158: stock import upload (preview/confirm/undo on /v1/tenant/imports).
@@ -1058,6 +1060,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	// TEC-207: end-of-day reports (manual run + PDF export job on worker-docs).
 	warehousemodule.RegisterEODRoutes(mux, warehousehandler.NewEOD(eodSvc, eodPDF, exportSvc),
 		featureSvc, tokens, loader, deps.Queries)
+	// TEC-769: user <-> warehouse membership and the caller's warehouse context.
+	warehousemodule.RegisterMemberRoutes(mux, warehousehandler.NewMembers(warehouseusecase.NewMembers(deps.DB, deps.Queries)),
+		featureSvc, tokens, loader, deps.Queries)
 	// TEC-235: mobile mirrors (/v1/mobile/warehouse/*) of the scan, count and
 	// transfer routes for distributor staff; same use cases and scope.
 	warehousemodule.RegisterMobileRoutes(mux, warehousemodule.MobileHandlers{
@@ -1067,6 +1072,9 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 			outbox.NewStore(deps.DB, deps.Queries), warehouseusecase.NewScanner(deps.Queries, sysSvc))),
 		Transfers: warehousehandler.NewTransfers(warehouseusecase.NewWarehouseTransfers(deps.DB, deps.Queries,
 			outbox.NewStore(deps.DB, deps.Queries))),
+		Entries: warehousehandler.NewEntries(warehouseusecase.NewStockEntries(deps.DB, deps.Queries,
+			outbox.NewStore(deps.DB, deps.Queries))),
+		Members: warehousehandler.NewMembers(warehouseusecase.NewMembers(deps.DB, deps.Queries)),
 	}, featureSvc, tokens, loader, deps.Queries, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	settingsmodule.RegisterRoutes(mux, settingshandler.New(settingsusecase.New(deps.Queries), deps.Storage),
 		settingshandler.NewSystem(sysSvc), tokens, loader)

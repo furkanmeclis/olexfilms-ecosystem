@@ -12,6 +12,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	warrantyuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warranty/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/certtheme"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
@@ -68,6 +69,9 @@ type PDFDoc struct {
 	Timezone string
 	// Letterhead is the performing organization's letterhead.
 	Letterhead ioengine.Letterhead
+	// Cert is the legacy certificate cover, summary and closing pages
+	// (TEC-772); nil for brands without them.
+	Cert *certtheme.Input
 }
 
 // PDFDealer is the organization that performed the service.
@@ -255,6 +259,12 @@ func (p *PDFService) doc(ctx context.Context, svc db.Service, loc i18n.Locale) (
 		}
 		d.Warranties = append(d.Warranties, pw)
 	}
+	if in, ok, err := certtheme.Load(ctx, q, p.store, svc,
+		certtheme.Vehicle{Make: d.Vehicle.Brand, Model: d.Vehicle.Model, Year: d.Vehicle.Year}, date, nil); err != nil {
+		p.log.Warn("service_pdf_certificate_pages_failed", "error", err)
+	} else if ok {
+		d.Cert = &in
+	}
 	settings, err := q.GetAppSettings(ctx)
 	if err != nil {
 		return PDFDoc{}, fmt.Errorf("services pdf: settings: %w", err)
@@ -406,6 +416,10 @@ func PDFHTML(d PDFDoc, loc i18n.Locale, title string) (string, error) {
 		b.WriteString(`</table>`)
 	}
 	b.WriteString(servicePDFCSS)
+	if d.Cert != nil {
+		b.WriteString(certtheme.CSS())
+		b.WriteString(certtheme.OpeningPages(*d.Cert, loc))
+	}
 	b.WriteString(ioengine.LetterheadHeaderHTML(&lh))
 	b.WriteString(`<h1 class="doc-title">` + esc(title) + `</h1><div class="sp-grid"><section>`)
 	meta([][2]string{
@@ -494,7 +508,10 @@ func PDFHTML(d PDFDoc, loc i18n.Locale, title string) (string, error) {
 	}
 	b.WriteString(`<p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
 		esc(pdfrender.IssuedAt(d.GeneratedAt, pdfrender.Zone(d.Timezone))) + `</p>`)
-	b.WriteString(ioengine.LetterheadFooterHTML(&lh))
+	b.WriteString(ioengine.LetterheadFooterHTMLFor(&lh, string(loc)))
+	if d.Cert != nil {
+		b.WriteString(certtheme.ClosingPages(loc))
+	}
 	return pdfrender.Document{Lang: string(loc), Title: title, Body: b.String(), PrimaryColor: lh.PrimaryColor}.HTML(), nil
 }
 

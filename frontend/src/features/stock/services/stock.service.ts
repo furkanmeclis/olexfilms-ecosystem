@@ -92,6 +92,17 @@ export const stockService = {
       { query: params },
     );
   },
+  /**
+   * Product stock of one bin (TEC-764 location panel): the
+   * bin_product_stocks projection, same list contract as listProducts.
+   */
+  listLocationProducts(locationUuid: string, params: StockProductListQuery) {
+    return platformRequest<Page<StockProduct>>(
+      "GET",
+      `/v1/stock/locations/${enc(locationUuid)}/products`,
+      { query: params },
+    );
+  },
   /** Label sheet PDF of the given unit barcodes. */
   unitLabels(barcodes: readonly string[]) {
     return platformDownloadFile(unitLabelsPath(barcodes));
@@ -114,5 +125,7 @@ export const stockKeys = {
     ["stock", "units", orgUuid, params] as const,
   products: (orgUuid: string, params: StockProductListQuery) =>
     ["stock", "products", orgUuid, params] as const,
+  locationProducts: (locationUuid: string, params: StockProductListQuery) =>
+    ["stock", "location-products", locationUuid, params] as const,
   dealers: ["stock", "dealers"] as const,
 };
