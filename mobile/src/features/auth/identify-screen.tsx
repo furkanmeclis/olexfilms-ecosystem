@@ -11,6 +11,7 @@ import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
 
+import { DevDemoAccounts } from './dev-demo-accounts';
 import { parseIdentifier } from './identifier';
 import { usePendingLogin } from './pending-login';
 
@@ -69,6 +70,7 @@ export function IdentifyScreen() {
           />
           <Button title={t('common:continue')} size="lg" loading={busy} onPress={() => void next()} />
         </View>
+        <DevDemoAccounts />
       </View>
     </KeyboardAvoidingView>
   );
