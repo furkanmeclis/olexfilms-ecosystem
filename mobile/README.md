@@ -14,24 +14,24 @@ Screen plan, design system and speed budget: the "Olex Mobil Ekran Planı" page
 ```bash
 cd mobile
 cp .env.example .env.local      # EXPO_PUBLIC_API_URL=<BFF origin>/api
-pnpm install
-pnpm ios                        # development build (Expo Go is not supported)
+npm install
+npx expo start --go             # scan the QR with Expo Go (npm run ios: development build)
 ```
 
-The app needs a development build: it uses native modules (MMKV, camera,
-secure store, local authentication) that Expo Go does not ship.
+Runs in Expo Go (`npx expo start --go`) and in a development build. Later native modules (BLE, plate recognition) will need the development build;
+Expo Go only ships its bundled modules.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm lint` | `expo lint` |
-| `pnpm api:generate` | Regenerates `src/core/api/schema.d.ts` from `../docs/openapi.yaml`. Run it whenever the OpenAPI file changes, like the web's `pnpm api:generate`. |
-| `pnpm i18n:gen` | Regenerates `src/core/i18n/resources.ts` after adding a namespace JSON file |
-| `pnpm i18n:check` | tr/en must match key for key; other languages may miss keys (falls back to en); `{{params}}` must match |
-| `pnpm uniwind:types` | Regenerates `src/uniwind-types.d.ts` (Metro also does this on start) |
-| `pnpm doctor` | `expo-doctor` |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | `expo lint` |
+| `npm run api:generate` | Regenerates `src/core/api/schema.d.ts` from `../docs/openapi.yaml`. Run it whenever the OpenAPI file changes, like the web's `pnpm api:generate`. |
+| `npm run i18n:gen` | Regenerates `src/core/i18n/resources.ts` after adding a namespace JSON file |
+| `npm run i18n:check` | tr/en must match key for key; other languages may miss keys (falls back to en); `{{params}}` must match |
+| `npm run uniwind:types` | Regenerates `src/uniwind-types.d.ts` (Metro also does this on start) |
+| `npm run doctor` | `expo-doctor` |
 
 ## Structure
 
@@ -48,7 +48,7 @@ src/
     auth/                 tokens (SecureStore), session (zustand), device id
     i18n/                 13 languages, RTL, web error catalog
     spaces.ts             which spaces a session opens
-    query.ts              TanStack Query, cache persisted in MMKV
+    query.ts              TanStack Query, cache persisted in expo-sqlite kv-store
     preferences.ts        theme, thickness unit (µm / mil)
   features/               screens and hooks, shared by every space
   ui/                     design system (tokens from the web theme)
@@ -61,7 +61,7 @@ Rules:
 - Every screen opens with one request. If a screen needs three calls, the
   backend gets a summary endpoint for it.
 - Cached data renders first, the network refreshes in the background
-  (`staleTime` 30 s, cache kept 7 days in MMKV, cleared on a new app version).
+  (`staleTime` 30 s, cache kept 7 days on disk, cleared on a new app version).
 - New UI text always goes through an i18n key, at least in tr and en.
 - Icons are imported from `@/ui/icons` (one file per icon); the package root
   would ship every Lucide icon because Metro does not tree-shake.

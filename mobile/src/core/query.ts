@@ -18,7 +18,7 @@ export const queryClient = new QueryClient({
   },
 });
 
-/** Persists the query cache in MMKV so the first frame after launch has data. */
+/** Persists the query cache on disk so the first frame after launch has data. */
 export const queryPersister = createAsyncStoragePersister({ storage: queryStorage, key: 'olex.query', throttleTime: 1000 });
 
 export const persistOptions = {

@@ -76,7 +76,8 @@
         {
           "faceIDPermission": "Olex Films hızlı giriş için Face ID kullanır."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,
