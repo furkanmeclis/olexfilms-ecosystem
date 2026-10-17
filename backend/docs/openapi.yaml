@@ -175,6 +175,19 @@ tags:
       otherwise 426 `MOBILE_API_VERSION_UNSUPPORTED`. Also the QR web sign-in
       (`/v1/auth/qr/*`).
 
+      Panel mirror: `/v1/mobile/panel/{path}` mirrors `/v1/{path}` with the
+      same method, query, body, response and organization/permission/feature/
+      step-up checks. Only `aud=mobile` tokens are accepted; panel and portal
+      tokens receive 403 `REALM_FORBIDDEN`. `X-Mobile-Api-Version` is required
+      as above. Allowed segment prefixes: services, service-pdfs,
+      warranty-certificates, customers, vehicles, warranties, warranty-claims,
+      orders, quotes, stock, stock-transfers, warehouse, measurements, reports,
+      search, notifications, appointments, catalog, vehicle-catalog,
+      plate-formats, performance, tasks, leads, pricing, certificates,
+      photo-standard, service-catalog, geo, announcements, stats and
+      tenant/organizations. Prefixes match whole segments and descendants;
+      all others return 404 `NOT_FOUND`. Mirror paths are not duplicated here.
+
       App version gate (TEC-236): the app sends its release in `X-App-Version`
       (e.g. `2.4.1`; without it a `OlexFilms/2.4.1` User-Agent token is read,
       tokens set by `MOBILE_APP_UA_PRODUCTS`). Below the minimum
