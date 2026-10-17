@@ -92,3 +92,30 @@ Metro (LAN, port 8090; 8081 is taken by Docker/adminer) bundles iOS + Android (n
 3. Phone on the same Wi-Fi, Expo Go (SDK 58), scan `mobile/expo-go-qr.png` (exp://192.168.1.7:8090).
 4. Sign in with a seed-demo account (`*@demo.olexfilms.app`; password in `mobile/.demo-credentials`):
    dealer_owner (bayi), center_staff (admin), center_warehouse (admin + depo), distributor_owner (admin + depo).
+
+### Simulator test pass (2026-10-17, 08:00-10:35)
+
+How it runs now: Expo Go 58 could not be installed (App Store and simulator Expo Go are 57.0.9;
+the 58.0.4 download stalled on this network), so the app runs as a **development build**:
+`expo prebuild --platform ios --clean`, `pod install` with the cached RN tarballs
+(`RCT_TESTONLY_RNCORE_TARBALL_PATH`, `RCT_USE_LOCAL_RN_DEP`, `HERMES_ENGINE_TARBALL_PATH` pointing at
+`~/Library/Caches/ReactNative/*-debug.tar.gz`, otherwise CocoaPods re-downloads ~100 MB each time),
+then `expo run:ios --device "iPhone 18 Pro" --no-bundler --no-install` against Metro on :8081
+(`EXPO_PUBLIC_API_URL=http://127.0.0.1:8080 npx expo start --port 8081`).
+
+Simulator notes: text entry from automation does not reach the iOS 27 simulator (empty pasteboard,
+no Simulator.app in Xcode 27), hence the dev-only demo account buttons (`EXPO_PUBLIC_DEMO_PASSWORD`
+in `.env.local`). `simctl io recordVideo` cannot write to /Volumes/DockerRuns: record to /tmp and copy.
+Videos: `test-videos/` (gitignored), `-small.mp4` copies are 540 px / 24 fps.
+
+Fixed (commits d9d47d0d..604b9fa4): branding (icons, lockup, fonts, tokens), invisible large titles,
+tab tint, Turkish uppercase captions, iOS RTL (AppleLanguages), language flipping on org switch,
+66 missing keys x 11 locales, RTL chevrons, complete-without-items, measurement placeholders,
+scanner light-theme contrast, transfer receive guard, stock "warehouse" chip, empty orders,
+approvals tab jump.
+
+Open: customer space not tested (OTP is hashed, WhatsApp sandbox swallows it); warranties/QR not
+reachable with the seed (dealer has no stock to complete a service); text-entry flows (search,
+new service form, manual barcode/measurement values) untested in the simulator; backend notes:
+org stock has no warehouse filter, DEMO-ROLL-* units sit on a location outside any warehouse,
+DEMO-ORD-001/002 have 0 items, measurement POST drops `plate` when a VIN is given.
