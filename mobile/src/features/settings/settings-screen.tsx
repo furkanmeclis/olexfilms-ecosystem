@@ -49,7 +49,6 @@ export function SettingsScreen() {
           {LANGUAGES.map((l, i) => (
             <ListRow
               key={l.code}
-              icon="globe"
               title={l.name}
               onPress={() => void pickLanguage(l.code)}
               trailing={<Checked on={i18n.language === l.code} />}
@@ -63,7 +62,6 @@ export function SettingsScreen() {
           {THEMES.map((th, i) => (
             <ListRow
               key={th}
-              icon="theme"
               title={t(`theme.${th}`)}
               onPress={() => usePreferences.getState().setTheme(th)}
               trailing={<Checked on={theme === th} />}
@@ -77,7 +75,6 @@ export function SettingsScreen() {
           {UNITS.map((u, i) => (
             <ListRow
               key={u}
-              icon="measure"
               title={t(`unit.${u}`)}
               onPress={() => usePreferences.getState().setUnit(u)}
               trailing={<Checked on={unit === u} />}

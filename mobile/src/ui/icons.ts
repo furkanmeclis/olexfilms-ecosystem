@@ -31,10 +31,9 @@ import HammerIcon from 'lucide-react-native/icons/hammer';
 import InboxIcon from 'lucide-react-native/icons/inbox';
 import InfoIcon from 'lucide-react-native/icons/info';
 import KeyRoundIcon from 'lucide-react-native/icons/key-round';
-import LogOutIcon from 'lucide-react-native/icons/log-out';
-import SunMoonIcon from 'lucide-react-native/icons/sun-moon';
 import KeyboardIcon from 'lucide-react-native/icons/keyboard';
 import LayoutGridIcon from 'lucide-react-native/icons/layout-grid';
+import LogOutIcon from 'lucide-react-native/icons/log-out';
 import MailIcon from 'lucide-react-native/icons/mail';
 import MapPinIcon from 'lucide-react-native/icons/map-pin';
 import MegaphoneIcon from 'lucide-react-native/icons/megaphone';
@@ -145,8 +144,7 @@ export type IconName =
   | 'hierarchy'
   | 'devices'
   | 'edit'
-  | 'signOut'
-  | 'theme';
+  | 'signOut';
 
 /** iOS renders the SF Symbol, Android (and iOS fallback) renders the Lucide glyph. */
 export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
@@ -219,7 +217,6 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   devices: { sf: 'macbook.and.iphone', lucide: MonitorSmartphoneIcon },
   edit: { sf: 'pencil', lucide: PencilIcon },
   signOut: { sf: 'rectangle.portrait.and.arrow.right', lucide: LogOutIcon },
-  theme: { sf: 'circle.lefthalf.filled', lucide: SunMoonIcon },
 };
 
 /** Lucide glyph for a concept; `back`/`forward` mirror in RTL (direction is fixed per launch). */

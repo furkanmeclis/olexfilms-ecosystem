@@ -26,7 +26,7 @@ type RowProps = {
 export function ListRow({ title, subtitle, leading, icon, trailing, onPress, last, tone = 'default' }: RowProps) {
   const body = (
     <View className={cn('min-h-12 flex-row items-center gap-3 px-4 py-3', !last && 'border-b border-border')}>
-      {leading ?? (icon ? <Icon name={icon} tone="primary" size={20} /> : null)}
+      {leading ?? (icon ? <Icon name={icon} tone={tone === 'danger' ? 'destructive' : 'primary'} size={20} /> : null)}
       <View className="flex-1 gap-0.5">
         <Text variant="body" tone={tone === 'danger' ? 'danger' : 'default'} numberOfLines={1}>
           {title}
