@@ -1,14 +1,16 @@
 import { NativeTabs } from 'expo-router/native-tabs';
 import { useTranslation } from 'react-i18next';
+import { useTabTint } from '@/features/shell/tab-tint';
 
 /**
  * Admin space, the same tabs for the center and distributors: the center sees
  * the whole network, a distributor its own subtree (scope comes from the API).
  */
 export default function AdminTabs() {
+  const tint = useTabTint();
   const { t } = useTranslation('nav');
   return (
-    <NativeTabs>
+    <NativeTabs tintColor={tint}>
       <NativeTabs.Trigger name="(home)">
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
         <NativeTabs.Trigger.Label>{t('home')}</NativeTabs.Trigger.Label>

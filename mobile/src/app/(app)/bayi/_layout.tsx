@@ -2,16 +2,18 @@ import { NativeTabs } from 'expo-router/native-tabs';
 import { useTranslation } from 'react-i18next';
 
 import { useCan } from '@/core/spaces';
+import { useTabTint } from '@/features/shell/tab-tint';
 
 /**
  * Dealer space. Measuring sits in the tab bar for everyone who can create a
  * service (decision 2026-10-16); others get Stock in that slot instead.
  */
 export default function BayiTabs() {
+  const tint = useTabTint();
   const { t } = useTranslation('nav');
   const measures = useCan('services.write');
   return (
-    <NativeTabs>
+    <NativeTabs tintColor={tint}>
       <NativeTabs.Trigger name="(home)">
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
         <NativeTabs.Trigger.Label>{t('home')}</NativeTabs.Trigger.Label>

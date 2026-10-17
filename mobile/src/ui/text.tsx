@@ -1,4 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority';
+import { Children, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text as RNText, type TextProps } from 'react-native';
 
 import { cn } from './cn';
@@ -18,7 +20,8 @@ const text = cva('text-foreground', {
       body: 'text-[17px] leading-[22px]',
       callout: 'text-[15px] leading-[20px]',
       footnote: 'text-[13px] leading-[18px]',
-      caption: 'text-[11px] leading-[13px] uppercase tracking-wide',
+      /** Uppercased in JS (see `upper`): CSS uppercase ignores the locale (Turkish i → İ). */
+      caption: 'text-[11px] leading-[13px] tracking-wide',
       /** Live measurement value: tabular digits so the row never shifts. */
       reading: 'text-[56px] leading-[60px] font-bold tracking-tight tabular-nums',
     },
@@ -37,13 +40,20 @@ export type TextVariant = NonNullable<VariantProps<typeof text>['variant']>;
 
 const DISPLAY = new Set<TextVariant>(['largeTitle', 'title']);
 
+/** Locale-aware uppercase for string children (RN textTransform is not). */
+function upper(children: ReactNode, lang: string): ReactNode {
+  return Children.map(children, (c) => (typeof c === 'string' ? c.toLocaleUpperCase(lang) : c));
+}
+
 export function Text({
   variant,
   tone,
   className,
   style,
+  children,
   ...props
 }: TextProps & VariantProps<typeof text> & { className?: string }) {
+  const { i18n } = useTranslation();
   const font = resolveFont(
     cn(text({ variant, tone }), className),
     variant && DISPLAY.has(variant) ? 'display' : 'sans',
@@ -53,6 +63,8 @@ export function Text({
       className={font.className}
       style={font.fontFamily ? [{ fontFamily: font.fontFamily }, style] : style}
       {...props}
-    />
+    >
+      {variant === 'caption' ? upper(children, i18n.language) : children}
+    </RNText>
   );
 }

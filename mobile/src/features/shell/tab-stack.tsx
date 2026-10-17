@@ -8,7 +8,6 @@ export function TabStack() {
       screenOptions={{
         headerLargeTitle: true,
         headerTransparent: Platform.OS === 'ios',
-        headerBlurEffect: 'systemChromeMaterial',
         headerShadowVisible: false,
         headerLargeTitleShadowVisible: false,
       }}
