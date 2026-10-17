@@ -29,6 +29,14 @@ func Authenticate(tokens *jwt.Manager, loader IdentityLoader) func(http.Handler)
 				response.Unauthorized(w, r, "Invalid or expired access token")
 				return
 			}
+			// Customer mobile sessions and the portal mirror (may turn
+			// claims into a portal session for a mirrored request).
+			if !MobileCustomerRealm(&claims, r) {
+				response.Error(w, r, http.StatusForbidden, response.CodeRealmForbidden,
+					"This session cannot access this resource")
+				return
+			}
+
 			// Session realm (aud): portal and panel tokens never cross.
 			if !RealmAllowsRequest(claims.Realm(), r) {
 				response.Error(w, r, http.StatusForbidden, response.CodeRealmForbidden,

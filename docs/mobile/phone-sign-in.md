@@ -15,10 +15,10 @@ OTP rate-limit errors preserve the portal's status, Retry-After and resend_at de
 Verification accepts `phone`, `code`, `device`, optional `organization_slug` and
 `totp_code`. Use the E.164 phone returned by identify. It issues the same mobile
 JWT audience, refresh lifetime, session hydration and device-session revocation
-as email/password login. It never creates users, assigns roles or invokes the
-portal's account-creation flow. Unknown/inactive accounts receive
-`401 INVALID_OTP_CODE`; customer/fleet-only accounts receive `403 NO_PANEL_ACCESS`
-after a correct code. No legacy aliases were added. Existing error codes are reused.
+as email/password login. Inactive accounts receive `401 INVALID_OTP_CODE`.
+Customer/fleet-only accounts get a customer session and an unknown phone becomes
+a customer account through the portal's account-creation rules (K11/K26); see
+`customer-sessions.md`. No legacy aliases were added. Existing error codes are reused.
 
 The shared platform OTP service owns generation, WhatsApp/SMS delivery, message
 text/KVKK, limits, wrong-attempt counting and lockout. Mobile codes have the

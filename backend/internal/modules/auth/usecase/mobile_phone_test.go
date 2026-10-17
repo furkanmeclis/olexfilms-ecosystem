@@ -23,6 +23,7 @@ type mobilePhoneRepo struct {
 	meta              model.SessionMeta
 	endedDevice       string
 	totp              model.UserTOTP
+	allowCreate       bool
 }
 
 func (r *mobilePhoneRepo) FindUserByPhone(context.Context, string) (model.User, error) {
@@ -31,9 +32,18 @@ func (r *mobilePhoneRepo) FindUserByPhone(context.Context, string) (model.User, 
 	}
 	return r.user, nil
 }
-func (r *mobilePhoneRepo) CreatePhoneUser(context.Context, string, string, string, string) (model.User, error) {
+func (r *mobilePhoneRepo) CreatePhoneUser(ctx context.Context, e164, _, locale, role string) (model.User, error) {
 	r.created++
-	return model.User{}, errors.New("unexpected creation")
+	if !r.allowCreate {
+		return model.User{}, errors.New("unexpected creation")
+	}
+	u, err := r.CreateUser(ctx, model.User{Phone: e164, Locale: locale, Status: "active"}, false)
+	if err != nil {
+		return model.User{}, err
+	}
+	r.userRoles[u.ID] = []string{role}
+	r.user, r.missing = u, false
+	return u, nil
 }
 func (r *mobilePhoneRepo) MarkPhoneVerified(context.Context, int64) error { r.verified++; return nil }
 func (r *mobilePhoneRepo) SaveRefresh(_ context.Context, _ int64, _ string, _ time.Time, meta model.SessionMeta) (uuid.UUID, error) {
@@ -122,9 +132,6 @@ func TestMobileVerifyOTP(t *testing.T) {
 	}{
 		{"staff", rbac.RoleSuperAdmin, "active", "123456", false, nil},
 		{"wrong", rbac.RoleSuperAdmin, "active", "000000", false, otp.ErrInvalidCode},
-		{"customer", rbac.RoleCustomer, "active", "123456", false, ErrNoPanelAccess},
-		{"fleet", rbac.RoleFleet, "active", "123456", false, ErrNoPanelAccess},
-		{"unknown", "", "active", "123456", true, otp.ErrInvalidCode},
 		{"disabled", rbac.RoleSuperAdmin, "disabled", "123456", false, otp.ErrInvalidCode},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -142,7 +149,7 @@ func TestMobileVerifyOTP(t *testing.T) {
 			uc := New(repo, manager)
 			uc.SetPhoneRepository(repo)
 			svc := &mobileOTPStub{}
-			got, err := uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", tc.code, "", "", model.DeviceInfo{ID: "phone-1", Platform: "android"}, model.SessionMeta{Realm: jwt.AudiencePortal, ImpersonatorUserID: &user.ID})
+			got, err := uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", tc.code, "", "", "", model.DeviceInfo{ID: "phone-1", Platform: "android"}, model.SessionMeta{Realm: jwt.AudiencePortal, ImpersonatorUserID: &user.ID})
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("err=%v want=%v", err, tc.want)
 			}
@@ -159,13 +166,13 @@ func TestMobileVerifyOTP(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if claims.Realm() != jwt.AudienceMobile || got.RefreshToken == "" || repo.meta.Client != model.ClientMobile || repo.meta.Device.ID != "phone-1" || repo.meta.ImpersonatorUserID != nil || repo.endedDevice != "phone-1" || repo.verified != 1 {
+			if claims.Realm() != jwt.AudienceMobile || claims.SessionKind() != jwt.MobileKindStaff || claims.MobileKind != "" || got.RefreshToken == "" || repo.meta.Client != model.ClientMobile || repo.meta.Device.ID != "phone-1" || repo.meta.ImpersonatorUserID != nil || repo.endedDevice != "phone-1" || repo.verified != 1 {
 				t.Fatalf("claims=%+v meta=%+v", claims, repo.meta)
 			}
 			if time.Until(got.RefreshExpiresAt) < 29*24*time.Hour {
 				t.Fatal("wrong refresh lifetime")
 			}
-			_, err = uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", tc.code, "", "", model.DeviceInfo{ID: "phone-1", Platform: "android"}, model.SessionMeta{})
+			_, err = uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", tc.code, "", "", "", model.DeviceInfo{ID: "phone-1", Platform: "android"}, model.SessionMeta{})
 			if !errors.Is(err, otp.ErrInvalidCode) {
 				t.Fatalf("replayed code: %v", err)
 			}
@@ -199,15 +206,15 @@ func TestMobileVerifyOTPMFARetry(t *testing.T) {
 	uc.SetSecretBox(box, "Olexfilms")
 	svc := &mobileOTPStub{}
 	dev := model.DeviceInfo{ID: "phone-1", Platform: "ios"}
-	_, err = uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", "123456", "", "", dev, model.SessionMeta{})
+	_, err = uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", "123456", "", "", "", dev, model.SessionMeta{})
 	if !errors.Is(err, ErrMFARequired) || svc.consumed {
 		t.Fatalf("missing MFA: %v consumed=%v", err, svc.consumed)
 	}
-	_, err = uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", "123456", "invalid", "", dev, model.SessionMeta{})
+	_, err = uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", "123456", "invalid", "", "", dev, model.SessionMeta{})
 	if !errors.Is(err, ErrInvalidMFACode) || svc.consumed {
 		t.Fatalf("invalid MFA: %v", err)
 	}
-	got, err := uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", "123456", recovery[0], "", dev, model.SessionMeta{})
+	got, err := uc.MobileVerifyOTP(context.Background(), svc, "+905321234567", "123456", recovery[0], "", "", dev, model.SessionMeta{})
 	if err != nil || got.AccessToken == "" || !svc.consumed {
 		t.Fatalf("MFA retry: %v", err)
 	}

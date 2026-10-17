@@ -31,6 +31,9 @@ type Principal struct {
 	// Realm is the session realm of the access token (jwt aud): "panel" or
 	// "portal" (TEC-90).
 	Realm string
+	// MobileKind is the mobile session kind (jwt.MobileKindStaff /
+	// MobileKindCustomer) of a mobile token, "" on other realms.
+	MobileKind string
 }
 
 // WithPrincipal stores the principal on the context.

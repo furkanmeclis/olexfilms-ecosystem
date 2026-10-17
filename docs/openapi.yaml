@@ -216,6 +216,31 @@ tags:
       revoke, logout-all, a password change or deactivation end it at once.
       Only the legacy aliases accept it; every other route answers 401.
 
+      Customer sessions: a customer / fleet only account (refused by the panel
+      with `NO_PANEL_ACCESS`) signs in through `POST /v1/mobile/auth/otp/verify`
+      and gets a customer mobile session: JWT `aud=mobile` plus the claim
+      `mobile_kind: customer`, `session_kind: "customer"` in the sign-in
+      response and in `GET /v1/mobile/auth/me` (staff sessions: `"staff"`,
+      tokens unchanged). The kind is derived from the account whenever a
+      mobile token is issued, so refresh keeps it. A customer session may
+      call only `GET /v1/mobile/auth/me`, `POST /v1/mobile/auth/logout`,
+      `POST /v1/mobile/auth/logout-all`, `POST /v1/mobile/auth/refresh`,
+      `PUT|DELETE /v1/mobile/push-token` and the portal mirror; every other
+      `/v1/mobile/*` route (organization context, QR approve, warehouse,
+      measurements, legacy aliases, panel mirror) answers 403
+      `REALM_FORBIDDEN`.
+
+      Portal mirror: `/v1/mobile/portal/<rest>` is served as
+      `/v1/portal/<rest>` (same handlers, gates, bodies and errors as the
+      Portal routes listed under their own paths; not duplicated here), for
+      customer mobile sessions only. It requires `X-Mobile-Api-Version`
+      (426 `MOBILE_API_VERSION_UNSUPPORTED`) and passes the app version gate;
+      no or an invalid Bearer token is 401, a staff mobile, panel or portal
+      token is 403 `REALM_FORBIDDEN`. On the mirror the session acts as a
+      portal session (realm `portal`). `oauth/*` and `ai/*` are not mirrored
+      (404 `NOT_FOUND`). Example: `GET /v1/mobile/portal/vehicles` is
+      `GET /v1/portal/vehicles`.
+
   - name: AI
     description: |
       AI assistant chat (TEC-388, F4-01f). Panel routes `/v1/ai/*` (active
@@ -16284,22 +16309,33 @@ paths:
     post:
       tags: [Mobile]
       operationId: postMobileAuthOTPVerify
-      summary: Staff phone OTP sign-in (device)
+      summary: Phone OTP sign-in (device), staff and customer
       description: |
-        Verifies a mobile_login code using the shared OTP service. Never creates
-        accounts or grants roles. Unknown and inactive phones return the same
-        401 INVALID_OTP_CODE as wrong, expired or consumed codes. Five wrong
-        codes cause 429 OTP_LOCKED. Customer/fleet-only accounts get 403
-        NO_PANEL_ACCESS after a valid OTP. Portal/contract codes are not accepted.
+        Verifies a mobile_login code using the shared OTP service. Inactive
+        phones return the same 401 INVALID_OTP_CODE as wrong, expired or
+        consumed codes. Five wrong codes cause 429 OTP_LOCKED. Portal/contract
+        codes are not accepted.
+        Session kind (`session_kind` in the response and in `me`): staff
+        accounts get a staff session (`"staff"`). Customer/fleet-only accounts
+        get a customer session (`"customer"`, JWT claim
+        `mobile_kind: customer`; see the Mobile tag for the routes it may
+        call and the `/v1/mobile/portal/*` mirror). An unknown phone becomes a
+        new customer account with the portal OTP rules (K11/K26; optional
+        `locale` for the new account, else Accept-Language) and gets a
+        customer session. A staff-only account found in a sign-up race is 403
+        NO_PORTAL_ACCESS.
         Returns the same mobile token pair, hydration and device session behavior
-        as password login. Enabled TOTP and enrollment policy apply equally:
-        403 MFA_REQUIRED or MFA_NOT_ENROLLED; 401 INVALID_MFA_CODE.
+        as password login. Staff: enabled TOTP and enrollment policy apply
+        equally (403 MFA_REQUIRED or MFA_NOT_ENROLLED; 401 INVALID_MFA_CODE).
+        Customer: only an authenticator the account enrolled itself is
+        required (the staff policy does not apply, as in the portal).
         On MFA_REQUIRED, retry the SAME phone and code with totp_code before the
         original expiry. MFA errors do not consume the OTP; all retries pass the
         existing verification limiter (20 per phone+IP per 15 minutes). A successful
         factor check consumes the code atomically before token issuance; a later
         organization/session error requires a new OTP. Optional organization_slug
-        uses the same membership resolution as password login (403
+        (ignored for customer sessions) uses the same membership resolution as
+        password login (403
         NO_TENANT_MEMBERSHIP, ORGANIZATION_ACCESS_EXPIRED, FORBIDDEN or BRAND_MISMATCH).
         Other errors: 400 INVALID_PHONE or VALIDATION_ERROR; 429 RATE_LIMITED
         with resend_at details and Retry-After; 503 OTP_DELIVERY_FAILED or
@@ -40506,7 +40542,8 @@ components:
         phone: { type: string, description: E.164 phone from identify }
         code: { type: string, pattern: '^[0-9]{6}$' }
         totp_code: { type: string, description: "Authenticator or recovery code, as in password login" }
-        organization_slug: { type: string }
+        organization_slug: { type: string, description: Staff only; ignored for customer sessions }
+        locale: { type: string, description: Locale of an account created for an unknown phone (else Accept-Language) }
         device: { $ref: "#/components/schemas/MobileDevice" }
 
     MobileLoginRequest:
@@ -40541,8 +40578,12 @@ components:
       allOf:
         - $ref: "#/components/schemas/Me"
         - type: object
-          required: [session, current_warehouse]
+          required: [session_kind, session, current_warehouse]
           properties:
+            session_kind:
+              type: string
+              enum: [staff, customer]
+              description: Mobile session kind (customer = portal mirror only)
             session:
               oneOf:
                 - $ref: "#/components/schemas/MobileSession"
@@ -40555,8 +40596,12 @@ components:
       allOf:
         - $ref: "#/components/schemas/Tokens"
         - type: object
-          required: [me]
+          required: [session_kind, me]
           properties:
+            session_kind:
+              type: string
+              enum: [staff, customer]
+              description: Mobile session kind (same as me.session_kind)
             me: { $ref: "#/components/schemas/MobileMe" }
 
     MobilePushTokenRequest:

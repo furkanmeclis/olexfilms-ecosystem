@@ -674,6 +674,10 @@ func (u *AuthUseCase) issueTokensForUser(ctx context.Context, user model.User, m
 		}
 		impersonatorUUID = &impUser.UUID
 	}
+	mobileKind, err := u.mobileKindFor(ctx, user, meta)
+	if err != nil {
+		return model.Tokens{}, err
+	}
 	rawRefresh, err := newOpaqueToken()
 	if err != nil {
 		return model.Tokens{}, err
@@ -692,7 +696,7 @@ func (u *AuthUseCase) issueTokensForUser(ctx context.Context, user model.User, m
 	access, accessExp, err := u.tokens.IssueAccess(jwt.AccessInput{
 		UserID: user.UUID, Roles: roles, IsSuperAdmin: isSuperAdmin,
 		ImpersonatorID: impersonatorUUID, SessionID: sessionID, OrganizationID: organizationID,
-		Audience: jwt.NormalizeAudience(meta.Realm),
+		Audience: jwt.NormalizeAudience(meta.Realm), MobileKind: mobileKind,
 	})
 	if err != nil {
 		return model.Tokens{}, err
