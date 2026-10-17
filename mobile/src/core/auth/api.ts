@@ -1,3 +1,4 @@
+import { getLocales } from 'expo-localization';
 import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
 import { MOBILE_API_VERSION } from '@/core/config';
@@ -36,4 +37,24 @@ export function logout() {
 
 export function switchOrganization(slug: string) {
   return unwrap(api.POST('/v1/mobile/auth/organization-context', { params, body: { organization_slug: slug } }));
+}
+
+/** One box: e-mail continues with the password, a phone gets a login code. */
+export function identify(identifier: string) {
+  return unwrap(api.POST('/v1/mobile/auth/identify', { params, body: { identifier: identifier.trim(), region: getLocales()[0]?.regionCode ?? 'TR' } }));
+}
+
+/** Phone code sign-in (existing staff accounts); same result as login. */
+export async function verifyPhoneCode(input: { phone: string; code: string; totpCode?: string }) {
+  return unwrap(
+    api.POST('/v1/mobile/auth/otp/verify', {
+      params,
+      body: {
+        phone: input.phone,
+        code: input.code,
+        totp_code: input.totpCode || undefined,
+        device: await deviceInfo(),
+      },
+    }),
+  );
 }

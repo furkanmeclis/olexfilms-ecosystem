@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
+import { identify } from '@/core/auth/api';
+import { isApiError } from '@/core/api/errors';
+import { errorMessage } from '@/core/i18n';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
@@ -14,16 +17,28 @@ export function IdentifyScreen() {
   const { t } = useTranslation('auth');
   const [value, setValue] = useState(usePendingLogin.getState().email);
   const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
 
-  const next = () => {
+  const next = async () => {
     const id = parseIdentifier(value);
     if (!id) return setError(t('invalid_identifier'));
     setError(undefined);
     if (id.kind === 'email') {
-      usePendingLogin.getState().set({ email: id.email, password: '' });
+      usePendingLogin.getState().set({ mode: 'password', email: id.email, password: '' });
       router.push('/password');
-    } else {
-      router.push({ pathname: '/phone', params: { phone: id.e164 } });
+      return;
+    }
+    // A phone gets a WhatsApp code from the backend's identify step.
+    setBusy(true);
+    try {
+      const res = await identify(id.e164);
+      const phone = res.phone_e164 ?? id.e164;
+      usePendingLogin.getState().set({ mode: 'phone', phone, code: '' });
+      router.push({ pathname: '/phone', params: { phone, resendAt: res.resend_at ?? '' } });
+    } catch (e) {
+      setError(errorMessage(isApiError(e) ? e.code : undefined));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -54,9 +69,9 @@ export function IdentifyScreen() {
             textContentType="username"
             keyboardType="email-address"
             returnKeyType="next"
-            onSubmitEditing={next}
+            onSubmitEditing={() => void next()}
           />
-          <Button title={t('common:continue')} size="lg" onPress={next} />
+          <Button title={t('common:continue')} size="lg" loading={busy} onPress={() => void next()} />
         </View>
       </View>
     </KeyboardAvoidingView>
