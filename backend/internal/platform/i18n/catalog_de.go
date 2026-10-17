@@ -441,7 +441,7 @@ var deCatalog = map[string]string{
 	"orders.pdf.order_slip":                   "Bestellschein",
 	"orders.pdf.order_date":                   "Bestelldatum",
 	"orders.pdf.status":                       "Status",
-	"orders.pdf.sku_barcode":                  "SKU / Barcode",
+	"orders.pdf.sku_barcode":                  "SKU / Strichcode",
 	"orders.pdf.unit_price":                   "Einzelpreis",
 	"orders.pdf.discount":                     "Rabatt",
 	"orders.pdf.vat":                          "MwSt.",
