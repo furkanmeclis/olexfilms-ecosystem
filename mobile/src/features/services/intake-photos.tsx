@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Linking, Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api, PANEL_MIRROR_PREFIX, unwrap } from '@/core/api/client';
+import { api, PANEL_MIRROR_PREFIX, unwrap, uploadForm } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
 import { getTokens } from '@/core/auth/tokens';
@@ -148,14 +148,12 @@ function CaptureModal({
   const upload = useMutation({
     mutationFn: (uri: string) => {
       const form = new FormData();
-      // React Native's FormData takes a { uri, name, type } file part; the
-      // mirror rewrite keeps the FormData body, fetch adds the boundary.
+      // React Native's FormData takes a { uri, name, type } file part; expo/fetch
+      // cannot send those, so uploadForm goes through XMLHttpRequest.
       form.append('image', { uri, name: `${angle.angle.key}.jpg`, type: 'image/jpeg' } as unknown as Blob);
-      return unwrap(
-        api.POST('/v1/services/{uuid}/intake-photos/{angle_key}', {
-          params: { path: { uuid: serviceUuid, angle_key: angle.angle.key } },
-          body: form as never,
-        }),
+      return uploadForm(
+        `/v1/services/${encodeURIComponent(serviceUuid)}/intake-photos/${encodeURIComponent(angle.angle.key)}`,
+        form,
       );
     },
     onSuccess: () => {

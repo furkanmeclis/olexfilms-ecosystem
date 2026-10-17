@@ -14,7 +14,7 @@ export function TotpScreen() {
   const { t } = useTranslation('auth');
   const [code, setCode] = useState('');
   const login = useLogin();
-  const submit = (c = code) => c.length === 6 && login.mutate(c);
+  const submit = (c = code) => c.length === 6 && !login.isPending && login.mutate(c);
 
   return (
     <>

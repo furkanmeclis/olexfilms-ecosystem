@@ -36,7 +36,8 @@ export function PhoneScreen() {
   }, [resendAt]);
 
   const submit = (c = code) => {
-    if (c.length !== 6) return;
+    // Autofill can fire onChangeText twice; a second verify would spend the code again.
+    if (c.length !== 6 || login.isPending) return;
     usePendingLogin.getState().set({ mode: 'phone', phone, code: c });
     login.mutate(undefined);
   };

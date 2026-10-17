@@ -144,3 +144,45 @@ export async function unwrap<T>(call: Promise<Result<T>>): Promise<T> {
   if (r.error !== undefined || !r.response.ok || !r.data) throw toApiError(r.response.status, r.error);
   return r.data.data;
 }
+
+/**
+ * Multipart POST with React Native FormData file parts (`{ uri, name, type }`)
+ * to a panel path (`/v1/...`, sent through the mobile mirror). The global
+ * fetch is expo/fetch, which cannot send `uri` parts, so this uses
+ * XMLHttpRequest (React Native networking reads the file natively).
+ */
+export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
+  const t0 = getTokens();
+  if (t0 && t0.accessExpiresAt - Date.now() < REFRESH_MARGIN_MS) await refreshTokens();
+  const url = `${API_URL}${PANEL_MIRROR_PREFIX}${path.replace(/^\/v1\//, '')}`;
+  const send = () =>
+    new Promise<{ status: number; body: unknown }>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      for (const [k, v] of Object.entries(contractHeaders())) xhr.setRequestHeader(k, v);
+      const t = getTokens();
+      if (t) xhr.setRequestHeader('Authorization', `Bearer ${t.access}`);
+      xhr.onload = () => {
+        let body: unknown;
+        try {
+          body = JSON.parse(xhr.responseText);
+        } catch {
+          body = undefined;
+        }
+        resolve({ status: xhr.status, body });
+      };
+      xhr.onerror = () => reject(new ApiError(0, { code: 'NETWORK_ERROR', message: 'Network request failed' }));
+      xhr.send(form);
+    });
+  let r = await send();
+  if (r.status === 401 && getTokens() && (await refreshTokens())) r = await send();
+  if (r.status === 426) {
+    const body = r.body as { error?: { code?: string }; data?: { store_urls?: Record<string, string> } } | undefined;
+    useAppStatus.getState().setUpdateRequired({
+      code: body?.error?.code === 'UPDATE_REQUIRED' ? 'UPDATE_REQUIRED' : 'MOBILE_API_VERSION_UNSUPPORTED',
+      storeUrl: body?.data?.store_urls?.[Platform.OS] ?? null,
+    });
+  }
+  if (r.status < 200 || r.status >= 300) throw toApiError(r.status, r.body);
+  return (r.body as { data: T }).data;
+}
