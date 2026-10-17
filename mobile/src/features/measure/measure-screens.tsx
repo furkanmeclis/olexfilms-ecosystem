@@ -227,7 +227,9 @@ export function MeasurementDetailScreen() {
  * backend parser reads (place_id / part_type / value).
  */
 export function NewMeasurementScreen() {
-  const { t } = useTranslation('measure');
+  const { t, i18n } = useTranslation('measure');
+  // Example readings in the user's number format (the parser accepts both , and .).
+  const sample = (n: number[]) => n.map((x) => new Intl.NumberFormat(i18n.language).format(x)).join(' ');
   const qc = useQueryClient();
   const unit = usePreferences((s) => s.unit);
   const [plate, setPlate] = useState('');
@@ -304,7 +306,7 @@ export function NewMeasurementScreen() {
             value={values[p.key] ?? ''}
             onChangeText={(text) => setValues((v) => ({ ...v, [p.key]: text }))}
             keyboardType="numbers-and-punctuation"
-            placeholder={unit === 'mil' ? '4.5 4.8' : '115 120'}
+            placeholder={unit === 'mil' ? sample([4.5, 4.8]) : sample([115, 120])}
           />
         ))}
 
