@@ -1,0 +1,20 @@
+{
+  "soon_note": "Las cuentas de cliente llegarán pronto a la app. Hasta entonces, su distribuidor comparte sus registros con usted.",
+  "hello": "Hola, {{name}}",
+  "home": "Inicio",
+  "vehicles": "Mis vehículos",
+  "services": "Servicios",
+  "warranties": "Garantías",
+  "appointments": "Citas",
+  "profile": "Perfil",
+  "vehicles_empty": "Aún no hay vehículos",
+  "vehicles_empty_body": "Los vehículos atendidos por su distribuidor aparecen aquí.",
+  "services_empty": "Aún no hay servicios",
+  "services_empty_body": "Las aplicaciones realizadas en sus vehículos aparecen aquí.",
+  "warranties_empty": "Aún no hay garantías",
+  "warranties_empty_body": "Sus certificados de garantía aparecen aquí.",
+  "appointments_empty": "No hay citas",
+  "appointments_empty_body": "Las citas que reserve con su distribuidor aparecen aquí.",
+  "settings": "Ajustes",
+  "sign_out": "Cerrar sesión"
+}

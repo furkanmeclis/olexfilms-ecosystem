@@ -1,3 +1,1 @@
-import { comingSoon } from '@/features/shell/coming-soon';
-
-export default comingSoon('nav:appointments');
+export { CustomerAppointmentsScreen as default } from '@/features/customer-space/customer-screens';

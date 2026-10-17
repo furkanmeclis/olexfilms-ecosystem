@@ -1,0 +1,20 @@
+{
+  "soon_note": "Kundenkonten sind bald in der App verfügbar. Bis dahin teilt Ihr Händler Ihre Unterlagen mit Ihnen.",
+  "hello": "Hallo, {{name}}",
+  "home": "Start",
+  "vehicles": "Meine Fahrzeuge",
+  "services": "Services",
+  "warranties": "Garantien",
+  "appointments": "Termine",
+  "profile": "Profil",
+  "vehicles_empty": "Noch keine Fahrzeuge",
+  "vehicles_empty_body": "Fahrzeuge, die Ihr Händler bearbeitet hat, erscheinen hier.",
+  "services_empty": "Noch keine Services",
+  "services_empty_body": "An Ihren Fahrzeugen durchgeführte Anwendungen erscheinen hier.",
+  "warranties_empty": "Noch keine Garantien",
+  "warranties_empty_body": "Ihre Garantiezertifikate erscheinen hier.",
+  "appointments_empty": "Keine Termine",
+  "appointments_empty_body": "Termine, die Sie bei Ihrem Händler buchen, erscheinen hier.",
+  "settings": "Einstellungen",
+  "sign_out": "Abmelden"
+}

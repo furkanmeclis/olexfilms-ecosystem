@@ -1,0 +1,20 @@
+{
+  "soon_note": "Gli account cliente arriveranno presto nell'app. Fino ad allora il tuo rivenditore condivide con te i tuoi dati.",
+  "hello": "Ciao, {{name}}",
+  "home": "Home",
+  "vehicles": "I miei veicoli",
+  "services": "Interventi",
+  "warranties": "Garanzie",
+  "appointments": "Appuntamenti",
+  "profile": "Profilo",
+  "vehicles_empty": "Ancora nessun veicolo",
+  "vehicles_empty_body": "I veicoli trattati dal tuo rivenditore compaiono qui.",
+  "services_empty": "Ancora nessun intervento",
+  "services_empty_body": "Le applicazioni eseguite sui tuoi veicoli compaiono qui.",
+  "warranties_empty": "Ancora nessuna garanzia",
+  "warranties_empty_body": "I tuoi certificati di garanzia compaiono qui.",
+  "appointments_empty": "Nessun appuntamento",
+  "appointments_empty_body": "Gli appuntamenti prenotati con il tuo rivenditore compaiono qui.",
+  "settings": "Impostazioni",
+  "sign_out": "Esci"
+}

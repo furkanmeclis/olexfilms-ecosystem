@@ -13,5 +13,8 @@
   "restart_title": "Reinicio necesario",
   "restart_body": "La app se reinicia para cambiar la dirección del texto.",
   "restart_now": "Reiniciar",
-  "version": "Versión {{version}}"
+  "version": "Versión {{version}}",
+  "about": "Acerca de",
+  "api_server": "Servidor",
+  "app_version": "Versión de la app"
 }

@@ -1,1 +1,1 @@
-export { AdminHome as default } from '@/features/home/space-homes';
+export { AdminHomeScreen as default } from '@/features/admin/admin-home-screen';

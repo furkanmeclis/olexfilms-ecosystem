@@ -1,0 +1,20 @@
+{
+  "soon_note": "Müştəri hesabları tezliklə tətbiqdə açılacaq. Bu vaxta qədər dileriniz qeydlərinizi sizinlə paylaşır.",
+  "hello": "Salam, {{name}}",
+  "home": "Ana səhifə",
+  "vehicles": "Avtomobillərim",
+  "services": "Xidmətlər",
+  "warranties": "Zəmanətlər",
+  "appointments": "Görüşlər",
+  "profile": "Profil",
+  "vehicles_empty": "Hələ avtomobil yoxdur",
+  "vehicles_empty_body": "Dilerinizin xidmət göstərdiyi avtomobillər burada görünəcək.",
+  "services_empty": "Hələ xidmət yoxdur",
+  "services_empty_body": "Avtomobillərinizdə görülən işlər burada görünəcək.",
+  "warranties_empty": "Hələ zəmanət yoxdur",
+  "warranties_empty_body": "Zəmanət sertifikatlarınız burada görünəcək.",
+  "appointments_empty": "Görüş yoxdur",
+  "appointments_empty_body": "Dilerinizlə təyin etdiyiniz görüşlər burada görünəcək.",
+  "settings": "Ayarlar",
+  "sign_out": "Çıxış"
+}

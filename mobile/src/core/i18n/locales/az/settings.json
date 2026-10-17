@@ -13,5 +13,8 @@
   "restart_title": "Yenidən başlatma lazımdır",
   "restart_body": "Mətn istiqamətini dəyişmək üçün tətbiq yenidən başlayır.",
   "restart_now": "Yenidən başlat",
-  "version": "Versiya {{version}}"
+  "version": "Versiya {{version}}",
+  "about": "Haqqında",
+  "api_server": "Server",
+  "app_version": "Tətbiq versiyası"
 }

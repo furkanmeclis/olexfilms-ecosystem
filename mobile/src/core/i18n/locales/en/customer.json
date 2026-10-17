@@ -1,0 +1,20 @@
+{
+  "soon_note": "Customer accounts open in the app soon. Until then your dealer shares your records with you.",
+  "hello": "Hello, {{name}}",
+  "home": "Home",
+  "vehicles": "My vehicles",
+  "services": "Services",
+  "warranties": "Warranties",
+  "appointments": "Appointments",
+  "profile": "Profile",
+  "vehicles_empty": "No vehicles yet",
+  "vehicles_empty_body": "Vehicles your dealer serviced appear here.",
+  "services_empty": "No services yet",
+  "services_empty_body": "Applications done on your vehicles appear here.",
+  "warranties_empty": "No warranties yet",
+  "warranties_empty_body": "Your warranty certificates appear here.",
+  "appointments_empty": "No appointments",
+  "appointments_empty_body": "Appointments you book with your dealer appear here.",
+  "settings": "Settings",
+  "sign_out": "Sign out"
+}

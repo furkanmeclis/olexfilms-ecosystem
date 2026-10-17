@@ -1,0 +1,20 @@
+{
+  "soon_note": "客户账户即将在应用中开放。在此之前，您的经销商会与您分享您的记录。",
+  "hello": "您好，{{name}}",
+  "home": "首页",
+  "vehicles": "我的车辆",
+  "services": "服务",
+  "warranties": "质保",
+  "appointments": "预约",
+  "profile": "个人资料",
+  "vehicles_empty": "暂无车辆",
+  "vehicles_empty_body": "您的经销商服务过的车辆会显示在这里。",
+  "services_empty": "暂无服务记录",
+  "services_empty_body": "您车辆上完成的施工会显示在这里。",
+  "warranties_empty": "暂无质保",
+  "warranties_empty_body": "您的质保证书会显示在这里。",
+  "appointments_empty": "暂无预约",
+  "appointments_empty_body": "您向经销商预约的记录会显示在这里。",
+  "settings": "设置",
+  "sign_out": "退出登录"
+}

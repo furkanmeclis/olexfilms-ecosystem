@@ -1,0 +1,20 @@
+{
+  "soon_note": "Les comptes clients arrivent bientôt dans l'app. D'ici là, votre revendeur partage vos dossiers avec vous.",
+  "hello": "Bonjour, {{name}}",
+  "home": "Accueil",
+  "vehicles": "Mes véhicules",
+  "services": "Interventions",
+  "warranties": "Garanties",
+  "appointments": "Rendez-vous",
+  "profile": "Profil",
+  "vehicles_empty": "Aucun véhicule pour le moment",
+  "vehicles_empty_body": "Les véhicules pris en charge par votre revendeur apparaissent ici.",
+  "services_empty": "Aucune intervention pour le moment",
+  "services_empty_body": "Les applications réalisées sur vos véhicules apparaissent ici.",
+  "warranties_empty": "Aucune garantie pour le moment",
+  "warranties_empty_body": "Vos certificats de garantie apparaissent ici.",
+  "appointments_empty": "Aucun rendez-vous",
+  "appointments_empty_body": "Les rendez-vous pris auprès de votre revendeur apparaissent ici.",
+  "settings": "Réglages",
+  "sign_out": "Se déconnecter"
+}

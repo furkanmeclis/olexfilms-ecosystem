@@ -1,0 +1,20 @@
+{
+  "soon_note": "ستتوفر حسابات العملاء في التطبيق قريبًا. حتى ذلك الحين يشاركك وكيلك سجلاتك.",
+  "hello": "مرحبًا، {{name}}",
+  "home": "الرئيسية",
+  "vehicles": "مركباتي",
+  "services": "الخدمات",
+  "warranties": "الضمانات",
+  "appointments": "المواعيد",
+  "profile": "الملف الشخصي",
+  "vehicles_empty": "لا توجد مركبات بعد",
+  "vehicles_empty_body": "تظهر هنا المركبات التي خدمها وكيلك.",
+  "services_empty": "لا توجد خدمات بعد",
+  "services_empty_body": "تظهر هنا الأعمال المنفذة على مركباتك.",
+  "warranties_empty": "لا توجد ضمانات بعد",
+  "warranties_empty_body": "تظهر هنا شهادات الضمان الخاصة بك.",
+  "appointments_empty": "لا توجد مواعيد",
+  "appointments_empty_body": "تظهر هنا المواعيد التي تحجزها لدى وكيلك.",
+  "settings": "الإعدادات",
+  "sign_out": "تسجيل الخروج"
+}

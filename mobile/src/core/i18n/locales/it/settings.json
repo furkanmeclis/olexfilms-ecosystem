@@ -13,5 +13,8 @@
   "restart_title": "Riavvio necessario",
   "restart_body": "L'app si riavvia per cambiare la direzione del testo.",
   "restart_now": "Riavvia",
-  "version": "Versione {{version}}"
+  "version": "Versione {{version}}",
+  "about": "Informazioni",
+  "api_server": "Server",
+  "app_version": "Versione dell'app"
 }

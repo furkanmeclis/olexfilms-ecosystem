@@ -1,0 +1,20 @@
+{
+  "soon_note": "Müşteri hesapları uygulamada yakında açılacak. O zamana kadar kayıtlarınızı bayiniz sizinle paylaşır.",
+  "hello": "Merhaba, {{name}}",
+  "home": "Ana sayfa",
+  "vehicles": "Araçlarım",
+  "services": "Hizmetler",
+  "warranties": "Garantiler",
+  "appointments": "Randevular",
+  "profile": "Profil",
+  "vehicles_empty": "Henüz araç yok",
+  "vehicles_empty_body": "Bayinizin hizmet verdiği araçlar burada görünür.",
+  "services_empty": "Henüz hizmet yok",
+  "services_empty_body": "Araçlarınıza yapılan uygulamalar burada görünür.",
+  "warranties_empty": "Henüz garanti yok",
+  "warranties_empty_body": "Garanti belgeleriniz burada görünür.",
+  "appointments_empty": "Randevu yok",
+  "appointments_empty_body": "Bayinizden aldığınız randevular burada görünür.",
+  "settings": "Ayarlar",
+  "sign_out": "Çıkış yap"
+}

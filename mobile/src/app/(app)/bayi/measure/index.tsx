@@ -1,3 +1,1 @@
-import { comingSoon } from '@/features/shell/coming-soon';
-
-export default comingSoon('nav:measure');
+export { MeasureScreen as default } from '@/features/measure/measure-screens';

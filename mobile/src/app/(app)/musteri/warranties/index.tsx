@@ -1,3 +1,1 @@
-import { comingSoon } from '@/features/shell/coming-soon';
-
-export default comingSoon('nav:warranties');
+export { CustomerWarrantiesScreen as default } from '@/features/customer-space/customer-screens';

@@ -13,5 +13,8 @@
   "restart_title": "需要重启",
   "restart_body": "应用将重启以更改文字方向。",
   "restart_now": "立即重启",
-  "version": "版本 {{version}}"
+  "version": "版本 {{version}}",
+  "about": "关于",
+  "api_server": "服务器",
+  "app_version": "应用版本"
 }

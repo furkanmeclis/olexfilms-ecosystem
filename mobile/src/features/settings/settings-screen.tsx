@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
-import { APP_VERSION } from '@/core/config';
+import { API_URL, APP_VERSION } from '@/core/config';
 import { type Language, LANGUAGES, setLanguage } from '@/core/i18n';
 import { type ThemePreference, type ThicknessUnit, usePreferences } from '@/core/preferences';
 import { Icon } from '@/ui/icon';
@@ -74,6 +74,12 @@ export function SettingsScreen() {
               last={i === UNITS.length - 1}
             />
           ))}
+        </List>
+
+        <SectionHeader title={t('about')} />
+        <List>
+          <ListRow title={API_URL.replace(/^https?:\/\//, '')} subtitle={t('api_server')} />
+          <ListRow title={APP_VERSION} subtitle={t('app_version')} last />
         </List>
 
         <List className="mt-4">

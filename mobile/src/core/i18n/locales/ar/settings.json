@@ -13,5 +13,8 @@
   "restart_title": "يلزم إعادة التشغيل",
   "restart_body": "سيُعاد تشغيل التطبيق لتغيير اتجاه النص.",
   "restart_now": "إعادة التشغيل",
-  "version": "الإصدار {{version}}"
+  "version": "الإصدار {{version}}",
+  "about": "حول",
+  "api_server": "الخادم",
+  "app_version": "إصدار التطبيق"
 }
