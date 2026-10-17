@@ -88,6 +88,9 @@ Used today: `POST /v1/mobile/auth/login` (with `totp_code` on `MFA_REQUIRED`),
 
 ## Backend gaps
 
+Status 2026-10-17: open PRs #406 (panel mirror `/v1/mobile/panel/*`), #407 (phone sign-in), #408 (customer
+sessions + portal mirror `/v1/mobile/portal/*`) close gaps 1, 2 and most of 4. The list below is the original.
+
 Needed before the matching screens can work; none of these exist in the mobile
 realm yet.
 

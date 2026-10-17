@@ -35,6 +35,8 @@ Goal: a working app in Expo Go by 09:00, against the local backend.
 - Measurement tab: list/detail in µm or mil, manual entry (POST /v1/mobile/measurements); SmartPTG BLE and
   plate recognition are placeholders behind flags (`features/measure/parts.ts`).
 - Customer space: home, vehicles, services, warranties, appointments (cancel), profile (notification toggles), fleet card; portal data via `/v1/mobile/portal/*` (PR #408). Not tested live (no readable login code locally).
+- Dealer phase 2: global search, intake photos (camera + upload), customer/vehicle edit, cancel with reason, warranty QR (own encoder, react-native-svg).
+- Warehouse phase 2: order preparation (assign by scan, suggestions, pick list, ship with delivery method), receipt shelving, setup (warehouses, rooms, locations tree, bulk generate), generate_new entries, fixed-barcode moves.
 - Settings: language (13, RTL restart for ar), theme, unit, API server, app version, logout.
 - Sign-in: one box; e-mail → password (+TOTP); phone → WhatsApp code (PR #407).
 
@@ -54,8 +56,8 @@ Goal: a working app in Expo Go by 09:00, against the local backend.
 - Customer: service PDF download (needs expo-file-system/sharing), new appointment booking (no portal dealer list), reviews, contracts, vehicle transfers, warranty claims.
 - Phone sign-in only for existing staff with a phone; locally the WhatsApp code is not readable (sandbox swallows it).
 - No bootstrap endpoint; homes make 2-3 calls (dealer, warehouse, customer detail).
-- Warehouse not built yet: order picking/preparation, distributor receipt placement, generate_new stock entries,
-  label PDFs, warehouse/room/location setup (CRUD, generate, import), stock import, exports.
+- Warehouse not built yet: label/shipping-note PDFs (bearer-only downloads; need a signed URL endpoint or
+  expo-file-system + expo-sharing), Excel imports, exports, EOD reports, reclassification, roll splits, delivery-methods admin.
 - Services: intake photos, contract signing, service PDF, warranty void, customer/vehicle editing.
 - Warranty QR image (no QR lib in Expo Go; code + link shown).
 - Warehouse context (`whid`) is device-side only.
@@ -75,3 +77,18 @@ Fixed: request bodies were dropped by the mirror rewrite on React Native (whatwg
 APP_VERSION in Expo Go now comes from app.json; approvals hide sections on 404. All list/detail endpoints were
 checked with curl per role; every in-app route href resolves to a file.
 Metro bundles iOS and Android (full, non-lazy) without errors.
+
+### Second review (05:00) and wrap-up
+
+Fixed: intake photo upload (expo/fetch cannot send RN file parts → XMLHttpRequest `uploadForm`), OTP/TOTP
+double submit. Warehouse phase-2 endpoints checked live. `expo install --fix` → expo-doctor 20/20.
+Metro (LAN, port 8090; 8081 is taken by Docker/adminer) bundles iOS + Android (non-lazy) cleanly.
+
+## How to open
+
+1. Local backend must be running: infra (`make infra`) + the Go server built from
+   `.claude/worktrees/mobile-api-local` (branch `local/mobile-api-combined`) on :8080, migrations up to 000150.
+2. Metro: `cd mobile && npx expo start --go --lan --port 8090` (`.env.local`: `EXPO_PUBLIC_API_URL=http://192.168.1.7:8080`).
+3. Phone on the same Wi-Fi, Expo Go (SDK 58), scan `mobile/expo-go-qr.png` (exp://192.168.1.7:8090).
+4. Sign in with a seed-demo account (`*@demo.olexfilms.app`; password in `mobile/.demo-credentials`):
+   dealer_owner (bayi), center_staff (admin), center_warehouse (admin + depo), distributor_owner (admin + depo).
