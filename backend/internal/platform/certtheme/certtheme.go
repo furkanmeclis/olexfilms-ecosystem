@@ -105,6 +105,40 @@ func CSS() string {
 </style>`
 }
 
+// MeasurementCSS turns a whole measurement document into the dark legacy
+// measurement pages: no paper margin (the dark color reaches the edge), the
+// page padding repeated on every page, rounded dark tables and the
+// visualization cards of the hub certificate. Wrap the body in
+// <div class="ct-measure">. The page margin is gone, so the document has no
+// Gotenberg footer.
+func MeasurementCSS() string {
+	return `<style>@font-face{font-family:"Michroma";font-style:normal;font-weight:400;font-display:block;src:url(data:font/woff2;base64,` +
+		base64.StdEncoding.EncodeToString(asset("michroma-400.woff2")) + `) format("woff2")}
+@page{margin:0}
+html{background:` + pageColor + `}
+.ct-measure{padding:.65cm .75cm;box-decoration-break:clone;-webkit-box-decoration-break:clone;color:#fff;font-family:"Michroma","Noto Sans","Noto Sans Arabic","Noto Sans CJK SC",sans-serif;font-size:9px;font-weight:400}
+.ct-measure h1,.ct-measure h2,.ct-measure h3{color:#fff;font-weight:400;text-align:center;border:0;padding:0}
+.ct-measure h1.doc-title{font-size:15px}
+.ct-measure h2{font-size:14px;margin:.45cm 0 .35cm;break-after:avoid}
+.ct-measure .muted,.ct-measure .mm-empty{color:#c5d5cc}
+.ct-measure .mm-group{font-size:12px;font-weight:400;text-align:center;text-transform:uppercase;margin:.2cm 0 3px}
+.ct-measure table.doc-meta,.ct-measure table.doc-table{border-collapse:separate;border-spacing:0;border:2px solid ` + borderColor + `;border-radius:10px;overflow:hidden;margin-block-end:.2cm}
+.ct-measure table.doc-meta th,.ct-measure table.doc-meta td,.ct-measure table.doc-table th,.ct-measure table.doc-table td{color:#fff;border:0;border-block-end:1px solid ` + headColor + `;font-size:8px;padding:5px 3px}
+.ct-measure table.doc-meta th,.ct-measure table.doc-table th{background:` + headColor + `;font-weight:400}
+.ct-measure table.doc-meta td,.ct-measure table.doc-table td,.ct-measure table.doc-table tbody tr:nth-child(even) td{background:` + rowColor + `}
+.ct-measure table.doc-table th,.ct-measure table.doc-table td{text-align:center;border-inline-end:1px solid rgba(255,255,255,.2)}
+.ct-measure table.doc-table th:last-child,.ct-measure table.doc-table td:last-child{border-inline-end:0}
+.ct-measure table.doc-table tr:last-child td,.ct-measure table.doc-meta tr:last-child th,.ct-measure table.doc-meta tr:last-child td{border-block-end:0}
+.ct-measure .mm-map{gap:.28cm}
+.ct-measure .mm-card{flex:0 0 calc(33.333% - .19cm);background:` + rowColor + `;box-sizing:border-box;border:1px solid ` + borderColor + `;border-radius:8px;overflow:hidden;padding:0}
+.ct-measure .mm-card.mm-main{flex-basis:calc(33.333% - .19cm)}
+.ct-measure .mm-card-title{font-size:8px;font-weight:400;text-align:center;padding:4px 6px;background:` + headColor + `;border-block-end:1px solid ` + borderColor + `;margin:0}
+.ct-measure .mm-card img{max-height:3.2cm;object-fit:contain;padding:4px;box-sizing:border-box}
+.ct-measure .mm-legend{justify-content:center;font-size:8px}
+.ct-measure .doc-footer{color:#c5d5cc;border-block-start-color:rgba(255,255,255,.25)}
+</style>`
+}
+
 // OpeningPages are the cover and the summary page; the car map shows only
 // when parts are given.
 func OpeningPages(in Input, loc i18n.Locale) string {
