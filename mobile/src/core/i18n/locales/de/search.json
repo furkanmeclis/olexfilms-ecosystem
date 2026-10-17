@@ -1,0 +1,21 @@
+{
+  "title": "Suche",
+  "placeholder": "Kennzeichen, Telefon, Name, Service-Nr., Code",
+  "recent": "Letzte Suchen",
+  "clear": "Löschen",
+  "hint_title": "Alles durchsuchen",
+  "hint_body": "Kennzeichen, Telefonnummern, Namen, Service-Nummern und Garantiecodes.",
+  "no_results": "Nichts gefunden",
+  "no_results_body": "Versuchen Sie ein Kennzeichen, eine Telefon- oder Service-Nummer.",
+  "disabled": "Die Suche ist gerade nicht verfügbar.",
+  "open_failed": "Konnte nicht geöffnet werden",
+  "group.customers": "Kunden",
+  "group.vehicles": "Fahrzeuge",
+  "group.services": "Services",
+  "group.warranties": "Garantien",
+  "group.orders": "Bestellungen",
+  "group.organizations": "Organisationen",
+  "group.stock_units": "Lagereinheiten",
+  "group.leads": "Leads",
+  "group.products": "Produkte"
+}

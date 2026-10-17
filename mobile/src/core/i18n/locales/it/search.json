@@ -1,0 +1,21 @@
+{
+  "title": "Cerca",
+  "placeholder": "Targa, telefono, nome, n. servizio, codice",
+  "recent": "Ricerche recenti",
+  "clear": "Cancella",
+  "hint_title": "Cerca ovunque",
+  "hint_body": "Targhe, telefoni, nomi, numeri di servizio e codici garanzia.",
+  "no_results": "Nessun risultato",
+  "no_results_body": "Prova una targa, un telefono o un n. di servizio.",
+  "disabled": "La ricerca non è disponibile ora.",
+  "open_failed": "Impossibile aprire",
+  "group.customers": "Clienti",
+  "group.vehicles": "Veicoli",
+  "group.services": "Servizi",
+  "group.warranties": "Garanzie",
+  "group.orders": "Ordini",
+  "group.organizations": "Organizzazioni",
+  "group.stock_units": "Unità di magazzino",
+  "group.leads": "Lead",
+  "group.products": "Prodotti"
+}

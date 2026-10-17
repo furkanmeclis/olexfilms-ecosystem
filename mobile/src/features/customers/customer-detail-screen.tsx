@@ -1,17 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useCan } from '@/core/spaces';
-import { formatDate, fullName, useLinks, vehicleLabel } from '@/features/services/lib';
+import { formatDate, fullName, useLinks, type Vehicle, vehicleLabel } from '@/features/services/lib';
 import { ServiceRow } from '@/features/services/services-list-screen';
 import { DetailSkeleton, ErrorState, InfoRow, ListSkeleton, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
-import { Mail, Phone } from '@/ui/icons';
+import { Mail, Pencil, Phone } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+
+import { EditCustomerSheet, EditVehicleSheet } from './edit-sheets';
 
 /**
  * Contact, vehicles and recent services of one customer. Vehicles and services
@@ -23,6 +26,10 @@ export function CustomerDetailScreen() {
   const links = useLinks();
   const canVehicles = useCan('vehicles.read');
   const canServices = useCan('services.read');
+  const canEdit = useCan('customers.write');
+  const canEditVehicle = useCan('vehicles.write');
+  const [editing, setEditing] = useState(false);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
 
   const customer = useQuery({
     queryKey: ['customers', 'detail', uuid],
@@ -49,7 +56,25 @@ export function CustomerDetailScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: c ? fullName(c) : t('customer'), headerLargeTitle: false }} />
+      <Stack.Screen
+        options={{
+          title: c ? fullName(c) : t('customer'),
+          headerLargeTitle: false,
+          headerRight:
+            c && canEdit && c.editable
+              ? () => (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('customer_edit')}
+                    hitSlop={8}
+                    onPress={() => setEditing(true)}
+                    className="size-8 items-center justify-center">
+                    <Icon as={Pencil} tone="primary" size={20} />
+                  </Pressable>
+                )
+              : undefined,
+        }}
+      />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
@@ -123,6 +148,7 @@ export function CustomerDetailScreen() {
                       label={v.plate || '—'}
                       value={vehicleLabel(v.car_brand?.name, v.car_model?.name, v.model_year) || v.vin || '—'}
                       last={i === arr.length - 1}
+                      onPress={canEditVehicle ? () => setVehicle(v) : undefined}
                     />
                   ))
                 ) : (
@@ -154,6 +180,8 @@ export function CustomerDetailScreen() {
           </>
         )}
       </ScrollView>
+      {editing && c ? <EditCustomerSheet customer={c} onClose={() => setEditing(false)} /> : null}
+      {vehicle ? <EditVehicleSheet vehicle={vehicle} onClose={() => setVehicle(null)} /> : null}
     </>
   );
 }

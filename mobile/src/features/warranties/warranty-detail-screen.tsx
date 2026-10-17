@@ -12,7 +12,8 @@ import {
   vehicleLabel,
   warrantyTone,
 } from '@/features/services/lib';
-import { openWarranty, shareWarranty } from '@/features/services/service-detail-screen';
+import { QrImage } from '@/features/services/qr-sheet';
+import { openWarranty, shareWarranty } from '@/features/services/share';
 import { DetailSkeleton, ErrorState, InfoRow, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
 import { ExternalLink, Share2 } from '@/ui/icons';
@@ -55,9 +56,14 @@ export function WarrantyDetailScreen() {
                 <StatusPill label={t(`warranty_status.${w.status}`)} tone={warrantyTone(w.status)} />
               </View>
               <Text variant="callout">{w.product.name}</Text>
-              <Text variant="footnote" tone="muted" selectable numberOfLines={1}>
-                {publicWarrantyUrl(w.public_code)}
-              </Text>
+              <View className="items-center gap-2 py-2">
+                <View className="overflow-hidden rounded-lg">
+                  <QrImage value={publicWarrantyUrl(w.public_code)} size={200} />
+                </View>
+                <Text variant="footnote" tone="muted" selectable numberOfLines={1}>
+                  {publicWarrantyUrl(w.public_code)}
+                </Text>
+              </View>
               <View className="flex-row gap-2">
                 <Button
                   title={t('warranty_open')}

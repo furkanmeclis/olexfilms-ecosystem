@@ -1,0 +1,21 @@
+{
+  "title": "搜索",
+  "placeholder": "车牌、电话、姓名、服务单号、代码",
+  "recent": "最近搜索",
+  "clear": "清除",
+  "hint_title": "全局搜索",
+  "hint_body": "车牌、电话、姓名、服务单号和保修代码。",
+  "no_results": "未找到结果",
+  "no_results_body": "试试车牌、电话或服务单号。",
+  "disabled": "搜索暂不可用。",
+  "open_failed": "无法打开",
+  "group.customers": "客户",
+  "group.vehicles": "车辆",
+  "group.services": "服务",
+  "group.warranties": "保修",
+  "group.orders": "订单",
+  "group.organizations": "组织",
+  "group.stock_units": "库存单元",
+  "group.leads": "潜在客户",
+  "group.products": "产品"
+}

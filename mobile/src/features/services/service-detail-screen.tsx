@@ -1,14 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, RefreshControl, ScrollView, Share, View } from 'react-native';
+import { Alert, Linking, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
+import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
 import { ExternalLink, PackagePlus, Share2, ShieldCheck, Trash } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
+import { Input } from '@/ui/input';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
@@ -16,7 +18,6 @@ import {
   formatDate,
   formatDateTime,
   fullName,
-  publicWarrantyUrl,
   type Service,
   type ServiceStatus,
   serviceTone,
@@ -24,6 +25,10 @@ import {
   vehicleLabel,
   warrantyTone,
 } from './lib';
+import { IntakePhotos, intakeKey } from './intake-photos';
+import { WarrantyQrButton } from './qr-sheet';
+import { openWarranty, shareWarranty } from './share';
+import { Sheet } from './sheet';
 import { DetailSkeleton, ErrorState, errorText, InfoRow, Section } from './ui';
 
 export function useService(uuid: string) {
@@ -43,14 +48,7 @@ export function useServiceWrite(uuid: string) {
   };
 }
 
-export async function openWarranty(code: string) {
-  await WebBrowser.openBrowserAsync(publicWarrantyUrl(code));
-}
-
-export function shareWarranty(code: string, message: string) {
-  const url = publicWarrantyUrl(code);
-  void Share.share({ message: `${message}\n${url}`, url });
-}
+export { openWarranty, shareWarranty } from './share';
 
 export function ServiceDetailScreen() {
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
@@ -59,12 +57,25 @@ export function ServiceDetailScreen() {
   const canWrite = useCan('services.write');
   const svc = useService(uuid);
   const onWrite = useServiceWrite(uuid);
+  const qc = useQueryClient();
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [reason, setReason] = useState('');
 
   const transition = useMutation({
-    mutationFn: (status: ServiceStatus) =>
-      unwrap(api.POST('/v1/services/{uuid}/transitions', { params: { path: { uuid } }, body: { status } })),
-    onSuccess: onWrite,
-    onError: (e) => Alert.alert(t('action_failed'), errorText(e)),
+    mutationFn: ({ status, note }: { status: ServiceStatus; note?: string }) =>
+      unwrap(api.POST('/v1/services/{uuid}/transitions', { params: { path: { uuid } }, body: { status, note } })),
+    onSuccess: (s) => {
+      setCancelOpen(false);
+      onWrite(s);
+    },
+    onError: (e) => {
+      if (isApiError(e, 'PHOTO_STANDARD_INCOMPLETE')) {
+        void qc.invalidateQueries({ queryKey: intakeKey(uuid) });
+        Alert.alert(t('photos_missing_title'), t('photos_missing_body'));
+        return;
+      }
+      Alert.alert(t('action_failed'), errorText(e));
+    },
   });
 
   const removeItem = useMutation({
@@ -77,12 +88,17 @@ export function ServiceDetailScreen() {
   const s = svc.data;
 
   const confirmTransition = (to: ServiceStatus) => {
+    if (to === 'cancelled') {
+      setReason('');
+      setCancelOpen(true);
+      return;
+    }
     Alert.alert(t(`transition_confirm.${to}`), t('transition_confirm_body'), [
       { text: t('common:cancel'), style: 'cancel' },
       {
         text: t(`transition.${to}`),
-        style: to === 'cancelled' ? 'destructive' : 'default',
-        onPress: () => transition.mutate(to),
+        style: 'default',
+        onPress: () => transition.mutate({ status: to }),
       },
     ]);
   };
@@ -138,7 +154,7 @@ export function ServiceDetailScreen() {
                       key={to}
                       title={t(`transition.${to}`)}
                       variant={to === 'cancelled' ? 'outline' : to === 'completed' ? 'primary' : 'secondary'}
-                      loading={transition.isPending && transition.variables === to}
+                      loading={transition.isPending && transition.variables?.status === to}
                       disabled={transition.isPending}
                       onPress={() => confirmTransition(to)}
                       className="grow"
@@ -156,6 +172,11 @@ export function ServiceDetailScreen() {
               <InfoRow label={t('package')} value={s.package} />
               <InfoRow label={t('has_measurement')} value={s.has_measurement ? t('yes') : t('no')} last />
             </Section>
+
+            <IntakePhotos
+              uuid={s.uuid}
+              canCapture={canWrite && s.editable && s.status !== 'completed' && s.status !== 'cancelled'}
+            />
 
             <Section title={t('customer')}>
               <InfoRow
@@ -249,6 +270,7 @@ export function ServiceDetailScreen() {
                       <StatusPill label={t(`warranty_status.${w.status}`)} tone={warrantyTone(w.status)} />
                     </Pressable>
                     <View className="flex-row gap-2">
+                      <WarrantyQrButton code={w.public_code} />
                       <Button
                         title={t('warranty_open')}
                         variant="outline"
@@ -299,6 +321,27 @@ export function ServiceDetailScreen() {
           </>
         )}
       </ScrollView>
+      {cancelOpen ? (
+        <Sheet
+          title={t('transition.cancelled')}
+          saveTitle={t('cancel_confirm')}
+          busy={transition.isPending}
+          onClose={() => setCancelOpen(false)}
+          onSave={() => transition.mutate({ status: 'cancelled', note: reason.trim() || undefined })}>
+          <Text variant="callout" tone="muted">
+            {t('cancel_body')}
+          </Text>
+          <Input
+            label={t('cancel_reason_label')}
+            value={reason}
+            onChangeText={setReason}
+            multiline
+            maxLength={500}
+            className="min-h-24 py-3"
+            autoFocus
+          />
+        </Sheet>
+      ) : null}
     </>
   );
 }

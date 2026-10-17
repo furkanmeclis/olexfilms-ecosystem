@@ -1,0 +1,21 @@
+{
+  "title": "Пошук",
+  "placeholder": "Номер, телефон, ім'я, № послуги, код",
+  "recent": "Нещодавні запити",
+  "clear": "Очистити",
+  "hint_title": "Шукайте все",
+  "hint_body": "Номери, телефони, імена, номери послуг і коди гарантій.",
+  "no_results": "Нічого не знайдено",
+  "no_results_body": "Спробуйте номер авто, телефон або № послуги.",
+  "disabled": "Пошук зараз недоступний.",
+  "open_failed": "Не вдалося відкрити",
+  "group.customers": "Клієнти",
+  "group.vehicles": "Автомобілі",
+  "group.services": "Послуги",
+  "group.warranties": "Гарантії",
+  "group.orders": "Замовлення",
+  "group.organizations": "Організації",
+  "group.stock_units": "Складські одиниці",
+  "group.leads": "Ліди",
+  "group.products": "Продукти"
+}

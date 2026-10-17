@@ -1,0 +1,21 @@
+{
+  "title": "Поиск",
+  "placeholder": "Номер, телефон, имя, № услуги, код",
+  "recent": "Недавние запросы",
+  "clear": "Очистить",
+  "hint_title": "Ищите всё",
+  "hint_body": "Номера, телефоны, имена, номера услуг и коды гарантий.",
+  "no_results": "Ничего не найдено",
+  "no_results_body": "Попробуйте номер авто, телефон или № услуги.",
+  "disabled": "Поиск сейчас недоступен.",
+  "open_failed": "Не удалось открыть",
+  "group.customers": "Клиенты",
+  "group.vehicles": "Автомобили",
+  "group.services": "Услуги",
+  "group.warranties": "Гарантии",
+  "group.orders": "Заказы",
+  "group.organizations": "Организации",
+  "group.stock_units": "Складские единицы",
+  "group.leads": "Лиды",
+  "group.products": "Продукты"
+}

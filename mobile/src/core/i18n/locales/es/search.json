@@ -1,0 +1,21 @@
+{
+  "title": "Buscar",
+  "placeholder": "Matrícula, teléfono, nombre, n.º de servicio, código",
+  "recent": "Búsquedas recientes",
+  "clear": "Borrar",
+  "hint_title": "Buscar en todo",
+  "hint_body": "Matrículas, teléfonos, nombres, números de servicio y códigos de garantía.",
+  "no_results": "Sin resultados",
+  "no_results_body": "Pruebe una matrícula, un teléfono o un n.º de servicio.",
+  "disabled": "La búsqueda no está disponible ahora.",
+  "open_failed": "No se pudo abrir",
+  "group.customers": "Clientes",
+  "group.vehicles": "Vehículos",
+  "group.services": "Servicios",
+  "group.warranties": "Garantías",
+  "group.orders": "Pedidos",
+  "group.organizations": "Organizaciones",
+  "group.stock_units": "Unidades de stock",
+  "group.leads": "Prospectos",
+  "group.products": "Productos"
+}

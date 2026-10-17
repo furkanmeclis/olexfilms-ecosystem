@@ -434,7 +434,7 @@ function VehicleStep({
   );
 }
 
-const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
+export const VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
 const vehicleSchema = z.object({
   plate: z.string().trim().min(2).max(20),
   model: z.object({ uuid: z.string(), name: z.string(), brand: z.string() }).nullable().refine((m) => m !== null),
@@ -554,10 +554,10 @@ function NewVehicleForm({
   );
 }
 
-type ModelValue = { uuid: string; name: string; brand: string } | null;
+export type ModelValue = { uuid: string; name: string; brand: string } | null;
 
 /** Car model from the vehicle catalog; "brand model" search (a model implies its brand). */
-function ModelPicker({ value, onChange, error }: { value: ModelValue; onChange: (v: ModelValue) => void; error?: string }) {
+export function ModelPicker({ value, onChange, error }: { value: ModelValue; onChange: (v: ModelValue) => void; error?: string }) {
   const { t } = useTranslation('dealer');
   const [q, setQ] = useState('');
   const query = useDebounced(q.trim());
