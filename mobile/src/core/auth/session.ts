@@ -44,7 +44,8 @@ export const useSession = create<Session>((set, get) => ({
 
   signIn: async (result) => {
     await setTokens(fromApi(result));
-    let me = result.me;
+    const kind = (result as { session_kind?: 'staff' | 'customer' }).session_kind;
+    let me: MobileMe = { ...result.me, session_kind: kind };
     // Panel data needs an active organization: open the last used one, else the first.
     if (!me.active_organization_uuid && me.organizations?.length) {
       const last = readJSON<string>(LAST_ORG_KEY);

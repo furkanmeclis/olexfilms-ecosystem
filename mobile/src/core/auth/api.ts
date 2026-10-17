@@ -6,7 +6,7 @@ import { MOBILE_API_VERSION } from '@/core/config';
 import { deviceInfo } from './device';
 
 /** The session the app works with (`Me`); the mobile extras (device session) are not used yet. */
-export type MobileMe = components['schemas']['Me'];
+export type MobileMe = components['schemas']['Me'] & { session_kind?: 'staff' | 'customer' };
 /** What the login call returns (tokens + session), as the client types it. */
 export type MobileLoginResult = Awaited<ReturnType<typeof login>>;
 

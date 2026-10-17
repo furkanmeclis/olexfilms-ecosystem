@@ -97,6 +97,8 @@ export const api = createClient<paths>({ baseUrl: API_URL, fetch: authFetch });
  * token only. Screens call the typed panel path; this rewrites it.
  */
 export const PANEL_MIRROR_PREFIX = '/v1/mobile/panel/';
+/** Customer sessions reach the portal routes (`/v1/portal/*`) through `/v1/mobile/portal/*`. */
+export const PORTAL_MIRROR_PREFIX = '/v1/mobile/portal/';
 
 async function toMirror(request: Request): Promise<Request> {
   const url = new URL(request.url);
@@ -104,7 +106,9 @@ async function toMirror(request: Request): Promise<Request> {
   const basePath = base.pathname.replace(/\/$/, '');
   const rel = url.pathname.slice(basePath.length);
   if (!rel.startsWith('/v1/') || rel.startsWith('/v1/mobile/')) return request;
-  url.pathname = basePath + PANEL_MIRROR_PREFIX + rel.slice('/v1/'.length);
+  url.pathname = rel.startsWith('/v1/portal/')
+    ? basePath + PORTAL_MIRROR_PREFIX + rel.slice('/v1/portal/'.length)
+    : basePath + PANEL_MIRROR_PREFIX + rel.slice('/v1/'.length);
   // React Native's Request (whatwg-fetch) has no `body` property, so
   // `new Request(url, request)` would drop it: copy the body explicitly.
   // whatwg-fetch keeps the original body in `_bodyInit` (FormData stays intact).

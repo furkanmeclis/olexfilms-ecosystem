@@ -28,6 +28,8 @@ export function activeMembership(me: MobileMe | null): Membership | undefined {
 
 /** Spaces of the active organization, from its permissions. */
 export function kindsOf(me: MobileMe | null): SpaceKind[] {
+  // Customer and fleet accounts have their own session kind and no organization.
+  if (me?.session_kind === 'customer') return ['musteri'];
   const org = activeMembership(me);
   if (!me || !org?.type) return [];
   if (org.type === 'dealer') return ['bayi'];
