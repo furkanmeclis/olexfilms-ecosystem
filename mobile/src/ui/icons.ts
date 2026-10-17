@@ -64,7 +64,6 @@ import XIcon from 'lucide-react-native/icons/x';
 import ChevronLeftIcon from 'lucide-react-native/icons/chevron-left';
 import ChevronRightIcon from 'lucide-react-native/icons/chevron-right';
 import type { SFSymbol } from 'expo-symbols';
-import { createElement, type ReactElement } from 'react';
 import { I18nManager } from 'react-native';
 
 /**
@@ -73,8 +72,6 @@ import { I18nManager } from 'react-native';
  * Add an icon here, then import it from '@/ui/icons'.
  */
 import type { LucideIcon } from 'lucide-react-native';
-
-export type { LucideIcon };
 
 /** Semantic icon concepts. Screens ask for a concept; the registry picks the glyph per platform. */
 export type IconName =
@@ -224,9 +221,4 @@ export function lucideFor(name: IconName): LucideIcon {
   if (I18nManager.isRTL && name === 'back') return ChevronRightIcon;
   if (I18nManager.isRTL && name === 'forward') return ChevronLeftIcon;
   return ICONS[name].lucide;
-}
-
-/** Lucide glyph element for a concept (for call sites that need raw color/stroke control). */
-export function lucideGlyph(name: IconName, props: { size: number; color?: string; strokeWidth?: number }): ReactElement {
-  return createElement(lucideFor(name), props);
 }

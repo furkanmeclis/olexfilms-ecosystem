@@ -21,7 +21,7 @@ import { BARCODE_TYPES } from './continuous-scanner';
 import { alertError, go, whError } from './format';
 import { ScanResultCard } from './scan-result-card';
 import { WarehouseChip } from './warehouse-picker';
-import { type IconName, lucideGlyph } from '@/ui/icons';
+import type { IconName } from '@/ui/icons';
 
 const REPEAT_MS = 2500;
 
@@ -321,7 +321,7 @@ function OverlayButton({
       hitSlop={6}
       onPress={onPress}
       className={cn('size-10 items-center justify-center rounded-full', active ? 'bg-white' : 'bg-black/50')}>
-      {active ? <Icon name={icon} tone="primary" size={20} /> : lucideGlyph(icon, { size: 20, color: '#ffffff', strokeWidth: 2 })}
+      <Icon name={icon} tone={active ? 'primary' : 'on-media'} size={20} />
     </Pressable>
   );
 }

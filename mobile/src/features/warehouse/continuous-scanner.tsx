@@ -10,7 +10,7 @@ import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
-import { type IconName, lucideGlyph } from '@/ui/icons';
+import type { IconName } from '@/ui/icons';
 
 export const BARCODE_TYPES = ['qr', 'datamatrix', 'code128', 'code39', 'ean13', 'ean8', 'upc_a', 'upc_e', 'itf14'] as const;
 
@@ -235,12 +235,7 @@ function RoundButton({
       hitSlop={6}
       onPress={onPress}
       className={cn('size-10 items-center justify-center rounded-full', active ? 'bg-white' : 'bg-black/50')}>
-      {active ? (
-        <Icon name={icon} tone="primary" size={20} />
-      ) : (
-        // Over the camera picture the glyph is always white, like the frame.
-        lucideGlyph(icon, { size: 20, color: '#ffffff', strokeWidth: 2 })
-      )}
+      <Icon name={icon} tone={active ? 'primary' : 'on-media'} size={20} />
     </Pressable>
   );
 }
