@@ -266,6 +266,7 @@
   "m.prefix_hint": "İsteğe bağlı; boşsa markanın varsayılan öneki.",
   "m.product_stock": "Ürün stoku",
   "m.products_count": "Ürün: {{count}}",
+  "m.all_warehouses": "Organizasyonun tüm depoları",
   "m.received": "Teslim alındı",
   "m.roll_count": "Rulo sayısı",
   "m.rolls": "Rulo: {{count}}",

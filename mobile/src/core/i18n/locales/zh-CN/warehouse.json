@@ -266,6 +266,7 @@
   "m.prefix_hint": "可选；留空则使用品牌默认前缀。",
   "m.product_stock": "产品库存",
   "m.products_count": "产品：{{count}}",
+  "m.all_warehouses": "本组织的所有仓库",
   "m.received": "已收货",
   "m.roll_count": "卷数",
   "m.rolls": "卷数：{{count}}",

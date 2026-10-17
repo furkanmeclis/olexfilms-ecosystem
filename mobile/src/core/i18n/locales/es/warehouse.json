@@ -266,6 +266,7 @@
   "m.prefix_hint": "Opcional; vacío = prefijo predeterminado de la marca.",
   "m.product_stock": "Stock del producto",
   "m.products_count": "Productos: {{count}}",
+  "m.all_warehouses": "Todos los almacenes de la organización",
   "m.received": "Recibido",
   "m.roll_count": "Número de rollos",
   "m.rolls": "Rollos: {{count}}",

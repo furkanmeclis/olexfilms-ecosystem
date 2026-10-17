@@ -266,6 +266,7 @@
   "m.prefix_hint": "Facoltativo; vuoto = prefisso predefinito del marchio.",
   "m.product_stock": "Giacenza del prodotto",
   "m.products_count": "Prodotti: {{count}}",
+  "m.all_warehouses": "Tutti i magazzini dell'organizzazione",
   "m.received": "Ricevuto",
   "m.roll_count": "Numero di rotoli",
   "m.rolls": "Rotoli: {{count}}",

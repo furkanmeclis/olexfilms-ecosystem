@@ -266,6 +266,7 @@
   "m.prefix_hint": "اختياري؛ عند تركه فارغًا تُستخدم البادئة الافتراضية للعلامة.",
   "m.product_stock": "مخزون المنتج",
   "m.products_count": "المنتجات: {{count}}",
+  "m.all_warehouses": "جميع مستودعات المؤسسة",
   "m.received": "تم الاستلام",
   "m.roll_count": "عدد اللفات",
   "m.rolls": "اللفات: {{count}}",

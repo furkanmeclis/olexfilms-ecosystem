@@ -266,6 +266,7 @@
   "m.prefix_hint": "İstəyə bağlı; boşdursa brendin standart prefiksi.",
   "m.product_stock": "Məhsul stoku",
   "m.products_count": "Məhsul: {{count}}",
+  "m.all_warehouses": "Təşkilatın bütün anbarları",
   "m.received": "Qəbul edildi",
   "m.roll_count": "Rulon sayı",
   "m.rolls": "Rulon: {{count}}",

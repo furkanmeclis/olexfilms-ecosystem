@@ -8,7 +8,6 @@ import { Boxes } from '@/ui/icons';
 import { Text } from '@/ui/text';
 import { formatNumber, go } from '@/features/warehouse/format';
 import { Chips, ListStatus } from '@/features/warehouse/parts';
-import { WarehouseChip } from '@/features/warehouse/warehouse-picker';
 
 import { type StockProduct, useOrgProducts } from './api';
 
@@ -45,7 +44,6 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
       <Stack.Screen
         options={{
           title: t('nav:stock'),
-          headerRight: space === 'depo' ? () => <WarehouseChip /> : undefined,
           headerSearchBarOptions: {
             placeholder: t('stock.filters.search_placeholder'),
             hideWhenScrolling: false,
@@ -77,6 +75,8 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
             />
             {total !== undefined ? (
               <Text variant="footnote" tone="muted">
+                {/* The stock API has no warehouse filter: say so instead of showing the warehouse chip. */}
+                {space === 'depo' ? `${t('m.all_warehouses')} · ` : ''}
                 {t('m.products_count', { count: total })}
               </Text>
             ) : null}

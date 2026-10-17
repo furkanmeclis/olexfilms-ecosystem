@@ -39,6 +39,8 @@ export function TransferScreen() {
   const x = q.data;
   const lines = x?.lines ?? [];
   const unplaced = lines.filter((l) => !l.target_location);
+  // Receiving needs a target for every line: per line, the transfer's own target, or a scanned bin.
+  const receiveBlocked = unplaced.length > 0 && !x?.to_location && !target;
 
   const store = (next: Transfer) => qc.setQueryData(wk.transfer(uuid), next);
 
@@ -174,13 +176,12 @@ export function TransferScreen() {
                     variant="secondary"
                     title={t('transfer.complete')}
                     loading={busy === 'complete'}
+                    // The backend refuses to complete while a line has no target location.
+                    disabled={receiveBlocked}
                     onPress={() =>
                       confirmAction({
                         title: t('transfer.complete_title'),
-                        body:
-                          unplaced.length && !x.to_location
-                            ? `${t('transfer.complete_description')}\n\n${t('transfer.complete_blocked')}`
-                            : t('transfer.complete_description'),
+                        body: t('transfer.complete_description'),
                         action: t('transfer.complete'),
                         onConfirm: () =>
                           void run('complete', () =>
@@ -193,6 +194,7 @@ export function TransferScreen() {
                 </View>
                 {unplaced.length ? (
                   <Text variant="footnote" tone="muted">
+                    {receiveBlocked ? `${t('transfer.complete_blocked')} ` : ''}
                     {t('transfer.target_hint', { warehouse: x.to_warehouse.name, count: unplaced.length })}
                   </Text>
                 ) : null}

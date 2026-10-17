@@ -266,6 +266,7 @@
   "m.prefix_hint": "Facultatif ; vide = préfixe par défaut de la marque.",
   "m.product_stock": "Stock du produit",
   "m.products_count": "Produits : {{count}}",
+  "m.all_warehouses": "Tous les entrepôts de l'organisation",
   "m.received": "Reçu",
   "m.roll_count": "Nombre de rouleaux",
   "m.rolls": "Rouleaux : {{count}}",

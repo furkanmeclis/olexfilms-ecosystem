@@ -266,6 +266,7 @@
   "m.prefix_hint": "Optional; leer = Standardpräfix der Marke.",
   "m.product_stock": "Produktbestand",
   "m.products_count": "Produkte: {{count}}",
+  "m.all_warehouses": "Alle Lager der Organisation",
   "m.received": "Empfangen",
   "m.roll_count": "Anzahl Rollen",
   "m.rolls": "Rollen: {{count}}",

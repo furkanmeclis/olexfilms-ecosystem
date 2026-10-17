@@ -266,6 +266,7 @@
   "m.prefix_hint": "Optional; the brand's default prefix when empty.",
   "m.product_stock": "Product stock",
   "m.products_count": "Products: {{count}}",
+  "m.all_warehouses": "All warehouses of the organization",
   "m.received": "Received",
   "m.roll_count": "Number of rolls",
   "m.rolls": "Rolls: {{count}}",

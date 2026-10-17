@@ -266,6 +266,7 @@
   "m.prefix_hint": "Необов'язково; якщо порожньо — типовий префікс бренду.",
   "m.product_stock": "Залишок товару",
   "m.products_count": "Товарів: {{count}}",
+  "m.all_warehouses": "Усі склади організації",
   "m.received": "Отримано",
   "m.roll_count": "Кількість рулонів",
   "m.rolls": "Рулонів: {{count}}",
