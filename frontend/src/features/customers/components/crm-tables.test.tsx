@@ -557,8 +557,8 @@ describe("LeadsListPage (TEC-372)", () => {
     }[];
     expect(actions.map((a) => a.id)).toEqual(["assign", "set_status"]);
     expect(actions[0]?.params?.[0]).toMatchObject({
-      key: "assignee_user_id",
-      kind: "number",
+      key: "assignee_user_uuid",
+      kind: "uuid",
     });
     expect(actions[1]?.params).toEqual([
       expect.objectContaining({
