@@ -91,10 +91,28 @@ async function authFetch(request: Request): Promise<Response> {
 
 export const api = createClient<paths>({ baseUrl: API_URL, fetch: authFetch });
 
+/**
+ * Panel routes (`/v1/services`, `/v1/customers`, ...) are reached through the
+ * mobile mirror `/v1/mobile/panel/*`: same handlers and permissions, mobile
+ * token only. Screens call the typed panel path; this rewrites it.
+ */
+export const PANEL_MIRROR_PREFIX = '/v1/mobile/panel/';
+
+function toMirror(request: Request): Request {
+  const url = new URL(request.url);
+  const base = new URL(API_URL);
+  const basePath = base.pathname.replace(/\/$/, '');
+  const rel = url.pathname.slice(basePath.length);
+  if (!rel.startsWith('/v1/') || rel.startsWith('/v1/mobile/')) return request;
+  url.pathname = basePath + PANEL_MIRROR_PREFIX + rel.slice('/v1/'.length);
+  return new Request(url.toString(), request);
+}
+
 api.use({
   onRequest({ request }) {
-    for (const [k, v] of Object.entries(contractHeaders())) request.headers.set(k, v);
-    return request;
+    const req = toMirror(request);
+    for (const [k, v] of Object.entries(contractHeaders())) req.headers.set(k, v);
+    return req;
   },
 });
 
