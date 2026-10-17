@@ -1,4 +1,4 @@
-# Olex Films mobile
+# Olexfilms mobile
 
 One app for every role: customer, dealer, warehouse and admins (center and
 distributors). Expo SDK 58, React Native 0.88, expo-router, Uniwind

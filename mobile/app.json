@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Olex Films",
+    "name": "Olexfilms",
     "slug": "olexfilms",
     "version": "2.0.0",
     "orientation": "portrait",
@@ -67,14 +67,14 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Olex Films barkod, QR kod ve plaka okumak için kamerayı kullanır.",
+          "cameraPermission": "Olexfilms barkod, QR kod ve plaka okumak için kamerayı kullanır.",
           "recordAudioAndroid": false
         }
       ],
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Olex Films hızlı giriş için Face ID kullanır."
+          "faceIDPermission": "Olexfilms hızlı giriş için Face ID kullanır."
         }
       ],
       "expo-sqlite"
