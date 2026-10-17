@@ -388,3 +388,35 @@ func TestRenderHTMLBrokenStylesheet(t *testing.T) {
 		t.Fatal("embedded general.xslt is missing")
 	}
 }
+
+// TEC-775: the GİB "IssueDate not in the future" rule is judged by today
+// in Türkiye, whatever the process time zone is.
+func TestValidateFutureIssueDateUsesTurkiyeToday(t *testing.T) {
+	// The XPath engine's current-date() is the process' local day; an
+	// IssueDate one day later is always "future" for it.
+	local := time.Now()
+	tomorrow := time.Date(local.Year(), local.Month(), local.Day()+1, 0, 0, 0, 0, time.UTC)
+	doc := sampleOrder()
+	// 12:00 TRT on that day, so IssueDate is tomorrow's date.
+	doc.IssueAt = tomorrow.Add(9 * time.Hour)
+	_, xml := build(t, doc)
+
+	// 22:30 UTC the day before = 01:30 TRT on IssueDate: valid in Türkiye.
+	v, err := ValidateAt(context.Background(), xml, ProfileEArchive, tomorrow.Add(-90*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.Status != StatusValid || !v.Archivable() {
+		t.Fatalf("issue date = today in Türkiye: %+v", v)
+	}
+
+	// 20:30 UTC the day before = 23:30 TRT: IssueDate is still the future.
+	v, err = ValidateAt(context.Background(), xml, ProfileEArchive, tomorrow.Add(-210*time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.Status != StatusRuleWarnings || len(v.Messages) == 0 ||
+		!strings.Contains(strings.Join(v.Messages, "\n"), futureIssueDateRule) {
+		t.Fatalf("future issue date: %+v", v)
+	}
+}

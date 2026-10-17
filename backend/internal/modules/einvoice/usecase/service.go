@@ -224,7 +224,12 @@ func New(tx TxBeginner, q *db.Queries, store storage.Driver, out outbox.Enqueuer
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Service{tx: tx, q: q, store: store, out: out, validate: ubl.Validate, now: time.Now, log: log}
+	s := &Service{tx: tx, q: q, store: store, out: out, now: time.Now, log: log}
+	// The IssueDate rule is judged on the same clock that dates the invoice.
+	s.validate = func(ctx context.Context, xml []byte, profile string) (ubl.Validation, error) {
+		return ubl.ValidateAt(ctx, xml, profile, s.now())
+	}
+	return s
 }
 
 // WithPDF sets the PDF renderer and the docs queue. With a nil queue the
