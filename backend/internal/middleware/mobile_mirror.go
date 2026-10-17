@@ -10,14 +10,14 @@ import (
 
 // MobilePanelMirrorPrefixes is the allowlist of panel path segments exposed to
 // mobile sessions. Each entry matches itself and descendants at a slash boundary;
-// tenant/organizations is the only two-segment prefix. All other prefixes are denied.
+// tenant/organizations and tenant/modules are the two-segment prefixes. All other prefixes are denied.
 var MobilePanelMirrorPrefixes = []string{
 	"services", "service-pdfs", "warranty-certificates", "customers", "vehicles",
 	"warranties", "warranty-claims", "orders", "quotes", "stock", "stock-transfers",
 	"warehouse", "measurements", "reports", "search", "notifications", "appointments",
 	"catalog", "vehicle-catalog", "plate-formats", "performance", "tasks", "leads",
 	"pricing", "certificates", "photo-standard", "service-catalog", "geo",
-	"announcements", "stats", "tenant/organizations",
+	"announcements", "stats", "tenant/organizations", "tenant/modules",
 }
 
 type mobilePanelMirrorKey struct{}

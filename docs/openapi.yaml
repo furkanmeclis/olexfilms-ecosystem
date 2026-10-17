@@ -185,7 +185,7 @@ tags:
       search, notifications, appointments, catalog, vehicle-catalog,
       plate-formats, performance, tasks, leads, pricing, certificates,
       photo-standard, service-catalog, geo, announcements, stats and
-      tenant/organizations. Prefixes match whole segments and descendants;
+      tenant/organizations, tenant/modules. Prefixes match whole segments and descendants;
       all others return 404 `NOT_FOUND`. Mirror paths are not duplicated here.
 
       App version gate (TEC-236): the app sends its release in `X-App-Version`
