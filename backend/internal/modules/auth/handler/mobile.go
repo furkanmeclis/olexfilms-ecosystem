@@ -45,13 +45,17 @@ func NewMobile(uc *usecase.AuthUseCase, push PushTokenService, limiter *ratelimi
 // app needs no second round trip after sign-in.
 type mobileLoginResponse struct {
 	model.Tokens
-	Me mobileMe `json:"me"`
+	// SessionKind is the mobile session kind: "staff" or "customer"
+	// (customer / fleet only accounts, portal mirror only).
+	SessionKind string   `json:"session_kind"`
+	Me          mobileMe `json:"me"`
 }
 
 // mobileMe is /v1/auth/me plus the mobile session (device) and the warehouse
 // context reserved for F1 (always null for now).
 type mobileMe struct {
 	model.Me
+	SessionKind      string             `json:"session_kind"`
 	Session          *mobileSessionView `json:"session"`
 	CurrentWarehouse *struct{}          `json:"current_warehouse"`
 }
@@ -67,7 +71,7 @@ func (h *MobileHandler) buildMe(ctx context.Context, p authctx.Principal) (mobil
 	if err != nil {
 		return mobileMe{}, err
 	}
-	out := mobileMe{Me: me}
+	out := mobileMe{Me: me, SessionKind: p.MobileKind}
 	if s, err := h.uc.MobileSession(ctx, p.UserInternal, p.SessionID); err == nil && s.Device != nil {
 		out.Session = &mobileSessionView{UUID: s.UUID.String(), Device: *s.Device, ExpiresAt: s.ExpiresAt}
 	}
@@ -112,7 +116,7 @@ func (h *MobileHandler) writeLoginResponse(w http.ResponseWriter, r *http.Reques
 		writeMobileError(w, r, err)
 		return
 	}
-	response.JSON(w, r, http.StatusOK, mobileLoginResponse{Tokens: tokens, Me: me})
+	response.JSON(w, r, http.StatusOK, mobileLoginResponse{Tokens: tokens, SessionKind: me.SessionKind, Me: me})
 }
 
 // Refresh is POST /v1/mobile/auth/refresh.

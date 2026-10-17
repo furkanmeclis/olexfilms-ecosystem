@@ -8625,21 +8625,32 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Staff phone OTP sign-in (device)
-         * @description Verifies a mobile_login code using the shared OTP service. Never creates
-         *     accounts or grants roles. Unknown and inactive phones return the same
-         *     401 INVALID_OTP_CODE as wrong, expired or consumed codes. Five wrong
-         *     codes cause 429 OTP_LOCKED. Customer/fleet-only accounts get 403
-         *     NO_PANEL_ACCESS after a valid OTP. Portal/contract codes are not accepted.
+         * Phone OTP sign-in (device), staff and customer
+         * @description Verifies a mobile_login code using the shared OTP service. Inactive
+         *     phones return the same 401 INVALID_OTP_CODE as wrong, expired or
+         *     consumed codes. Five wrong codes cause 429 OTP_LOCKED. Portal/contract
+         *     codes are not accepted.
+         *     Session kind (`session_kind` in the response and in `me`): staff
+         *     accounts get a staff session (`"staff"`). Customer/fleet-only accounts
+         *     get a customer session (`"customer"`, JWT claim
+         *     `mobile_kind: customer`; see the Mobile tag for the routes it may
+         *     call and the `/v1/mobile/portal/*` mirror). An unknown phone becomes a
+         *     new customer account with the portal OTP rules (K11/K26; optional
+         *     `locale` for the new account, else Accept-Language) and gets a
+         *     customer session. A staff-only account found in a sign-up race is 403
+         *     NO_PORTAL_ACCESS.
          *     Returns the same mobile token pair, hydration and device session behavior
-         *     as password login. Enabled TOTP and enrollment policy apply equally:
-         *     403 MFA_REQUIRED or MFA_NOT_ENROLLED; 401 INVALID_MFA_CODE.
+         *     as password login. Staff: enabled TOTP and enrollment policy apply
+         *     equally (403 MFA_REQUIRED or MFA_NOT_ENROLLED; 401 INVALID_MFA_CODE).
+         *     Customer: only an authenticator the account enrolled itself is
+         *     required (the staff policy does not apply, as in the portal).
          *     On MFA_REQUIRED, retry the SAME phone and code with totp_code before the
          *     original expiry. MFA errors do not consume the OTP; all retries pass the
          *     existing verification limiter (20 per phone+IP per 15 minutes). A successful
          *     factor check consumes the code atomically before token issuance; a later
          *     organization/session error requires a new OTP. Optional organization_slug
-         *     uses the same membership resolution as password login (403
+         *     (ignored for customer sessions) uses the same membership resolution as
+         *     password login (403
          *     NO_TENANT_MEMBERSHIP, ORGANIZATION_ACCESS_EXPIRED, FORBIDDEN or BRAND_MISMATCH).
          *     Other errors: 400 INVALID_PHONE or VALIDATION_ERROR; 429 RATE_LIMITED
          *     with resend_at details and Retry-After; 503 OTP_DELIVERY_FAILED or
@@ -23045,7 +23056,10 @@ export interface components {
             code: string;
             /** @description Authenticator or recovery code, as in password login */
             totp_code?: string;
+            /** @description Staff only; ignored for customer sessions */
             organization_slug?: string;
+            /** @description Locale of an account created for an unknown phone (else Accept-Language) */
+            locale?: string;
             device: components["schemas"]["MobileDevice"];
         };
         MobileLoginRequest: {
@@ -23069,11 +23083,21 @@ export interface components {
             expires_at: string;
         };
         MobileMe: components["schemas"]["Me"] & {
+            /**
+             * @description Mobile session kind (customer = portal mirror only)
+             * @enum {string}
+             */
+            session_kind: "staff" | "customer";
             session: components["schemas"]["MobileSession"] | null;
             /** @description Warehouse context, reserved for F1 (always null) */
             current_warehouse: null;
         };
         MobileLoginResult: components["schemas"]["Tokens"] & {
+            /**
+             * @description Mobile session kind (same as me.session_kind)
+             * @enum {string}
+             */
+            session_kind: "staff" | "customer";
             me: components["schemas"]["MobileMe"];
         };
         MobilePushTokenRequest: {

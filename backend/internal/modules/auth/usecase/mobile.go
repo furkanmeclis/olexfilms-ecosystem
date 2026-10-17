@@ -121,6 +121,7 @@ func (u *AuthUseCase) PrincipalFromAccess(ctx context.Context, access string) (a
 	return authctx.Principal{
 		UserID: user.UUID, UserInternal: user.ID, Email: user.Email,
 		SessionID: claims.SessionUUID(), OrganizationUUID: orgUUID, Realm: claims.Realm(),
+		MobileKind: claims.SessionKind(),
 	}, nil
 }
 
@@ -281,7 +282,7 @@ func (u *AuthUseCase) IssueLegacyMobileAccess(ctx context.Context, access string
 	if err != nil {
 		return "", err
 	}
-	if claims.Realm() != jwt.AudienceMobile || claims.ImpersonatorID != nil {
+	if claims.Realm() != jwt.AudienceMobile || claims.ImpersonatorID != nil || claims.SessionKind() != jwt.MobileKindStaff {
 		return "", ErrNotMobileSession
 	}
 	userUUID, err := claims.UserUUID()

@@ -67,9 +67,13 @@ func (u *AuthUseCase) MobileIdentify(ctx context.Context, svc MobileOTP, identif
 	return MobileIdentifyResult{Kind: kind, Next: "otp", PhoneE164: normalized, ResendAt: &res.ResendAt, ExpiresAt: &res.ExpiresAt}, nil
 }
 
-// MobileVerifyOTP never creates accounts or grants roles. The verified OTP is
-// retained on MFA_REQUIRED; successful MFA consumes it before tokens are issued.
-func (u *AuthUseCase) MobileVerifyOTP(ctx context.Context, svc MobileOTP, phoneNumber, code, totpCode, organizationSlug string, device model.DeviceInfo, meta model.SessionMeta) (model.Tokens, error) {
+// MobileVerifyOTP signs the owner of a verified phone in to the mobile app.
+// Staff accounts get a staff session (staff MFA rules apply). A customer /
+// fleet only account gets a customer session (mobile_kind=customer). An
+// unknown number becomes a customer account through the portal OTP rules
+// (resolvePhoneCustomer: K11, K26). The verified OTP is retained on
+// MFA_REQUIRED; successful MFA consumes it before tokens are issued.
+func (u *AuthUseCase) MobileVerifyOTP(ctx context.Context, svc MobileOTP, phoneNumber, code, totpCode, organizationSlug, locale string, device model.DeviceInfo, meta model.SessionMeta) (model.Tokens, error) {
 	dev, err := NormalizeDevice(device)
 	if err != nil {
 		return model.Tokens{}, err
@@ -77,12 +81,18 @@ func (u *AuthUseCase) MobileVerifyOTP(ctx context.Context, svc MobileOTP, phoneN
 	if svc == nil || u.phoneRepo == nil {
 		return model.Tokens{}, otp.ErrDeliveryFailed
 	}
-	var user model.User
+	var (
+		user        model.User
+		kind        string
+		unknownE164 string
+	)
 	_, err = svc.VerifyMobile(ctx, otp.VerifyInput{Phone: phoneNumber, Code: code, IP: meta.IP}, func(v otp.Verified) error {
 		var err error
 		user, err = u.phoneRepo.FindUserByPhone(ctx, v.Phone)
 		if errors.Is(err, repository.ErrNotFound) {
-			return otp.ErrInvalidCode
+			// No account and so no second factor: the OTP is the sign-in.
+			unknownE164 = v.Phone
+			return nil
 		}
 		if err != nil {
 			return err
@@ -90,13 +100,28 @@ func (u *AuthUseCase) MobileVerifyOTP(ctx context.Context, svc MobileOTP, phoneN
 		if user.Status != "active" {
 			return otp.ErrInvalidCode
 		}
-		if err := u.checkRealmAccess(ctx, user, jwt.AudienceMobile); err != nil {
+		if kind, err = u.mobileSessionKind(ctx, user); err != nil {
 			return err
+		}
+		if kind == jwt.MobileKindCustomer {
+			return u.checkCustomerMobileMFA(ctx, user.ID, totpCode)
 		}
 		return u.checkLoginMFA(ctx, user.ID, totpCode)
 	})
 	if err != nil {
 		return model.Tokens{}, err
+	}
+	if unknownE164 != "" {
+		if user, _, err = u.resolvePhoneCustomer(ctx, unknownE164, locale); err != nil {
+			return model.Tokens{}, err
+		}
+		if kind, err = u.mobileSessionKind(ctx, user); err != nil {
+			return model.Tokens{}, err
+		}
+	}
+	if kind == jwt.MobileKindCustomer {
+		// Customer sessions have no organization context.
+		organizationSlug = ""
 	}
 	var orgUUID *uuid.UUID
 	if strings.TrimSpace(organizationSlug) != "" {
