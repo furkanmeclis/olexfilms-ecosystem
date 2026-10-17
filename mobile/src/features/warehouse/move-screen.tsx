@@ -15,7 +15,9 @@ import { moveUnits, resolveScan } from './api';
 import { useCurrentWarehouse } from './context';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
 import { whError } from './format';
-import { Card } from './parts';
+import { Card, Segmented } from './parts';
+import { QtyStepper } from './qty-stepper';
+import { createRetryKey } from './uuid';
 
 type Moved = { barcode: string; name: string; to: string };
 
@@ -29,7 +31,12 @@ export function MoveScreen() {
   const { warehouse } = useCurrentWarehouse();
   const [scanning, setScanning] = useState(false);
   const [target, setTarget] = useState<{ uuid: string; code: string } | null>(null);
+  const [source, setSource] = useState<{ uuid: string; code: string } | null>(null);
+  const [locMode, setLocMode] = useState<'target' | 'source'>('target');
+  const [qty, setQty] = useState(1);
   const [moved, setMoved] = useState<Moved[]>([]);
+  // A fixed-barcode move carries request_uuid; a retry of the same move reuses it.
+  const [retry] = useState(createRetryKey);
 
   const onCode = async (code: string): Promise<ScanOutcome> => {
     try {
@@ -38,13 +45,31 @@ export function MoveScreen() {
         return { ok: false, title: t(`scan_status.${r.status}`, { warehouse: r.location?.path[0]?.name ?? '', actual: '', expected: '' }) };
       }
       if (r.type === 'location' && r.location) {
-        setTarget({ uuid: r.location.uuid, code: r.location.full_code });
-        return { ok: true, title: t('m.target_set', { location: r.location.full_code }) };
+        const loc = { uuid: r.location.uuid, code: r.location.full_code };
+        if (locMode === 'source') {
+          setSource(loc);
+          setLocMode('target');
+          return { ok: true, title: t('m.source_set', { location: loc.code }) };
+        }
+        setTarget(loc);
+        return { ok: true, title: t('m.target_set', { location: loc.code }) };
       }
       if (r.type !== 'unit' || !r.unit) return { ok: false, title: t('m.scan_unit_not_product') };
       if (!target) return { ok: false, title: t('order_place.scan_location_first') };
-      if (r.unit.unit_kind === 'fixed') return { ok: false, title: t('m.move_fixed_web') };
-      const res = await moveUnits({ barcodes: [r.unit.barcode], location_uuid: target.uuid });
+      let res;
+      if (r.unit.unit_kind === 'fixed') {
+        const src = source ?? (r.unit.location ? { uuid: r.unit.location.uuid, code: r.unit.location.full_code } : null);
+        if (!src) return { ok: false, title: t('fixed.source_scan') };
+        const sig = `${r.unit.barcode}:${src.uuid}:${target.uuid}:${qty}`;
+        res = await moveUnits({
+          location_uuid: target.uuid,
+          fixed: [{ barcode: r.unit.barcode, quantity: qty, source_location_uuid: src.uuid, request_uuid: retry.for(sig) }],
+        });
+        retry.done();
+        setQty(1);
+      } else {
+        res = await moveUnits({ barcodes: [r.unit.barcode], location_uuid: target.uuid });
+      }
       const to = res.location.full_code ?? res.location.code;
       setMoved((m) => [{ barcode: r.unit!.barcode, name: r.product?.name ?? '', to }, ...m].slice(0, 50));
       void qc.invalidateQueries({ queryKey: ['stock'] });
@@ -95,9 +120,22 @@ export function MoveScreen() {
         hint={t('m.move_hint')}
         onCode={onCode}
         footer={
-          <Text variant="footnote" className="px-1 text-white/90">
-            {target ? t('m.target_bin', { location: target.code }) : t('order_place.scan_location_hint')}
-          </Text>
+          <>
+            <View className="gap-2 rounded-lg bg-card p-2">
+              <Text variant="footnote" tone="muted" className="ps-1 font-medium">
+                {t('m.location_scan_sets')}
+              </Text>
+              <Segmented
+                value={locMode}
+                onChange={setLocMode}
+                options={[
+                  { value: 'target', label: target ? t('m.target_bin', { location: target.code }) : t('transfer.target') },
+                  { value: 'source', label: source ? t('m.source_set', { location: source.code }) : t('fixed.source_label') },
+                ]}
+              />
+            </View>
+            <QtyStepper label={t('m.fixed_qty')} value={qty} onChange={setQty} />
+          </>
         }
       />
     </>

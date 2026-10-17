@@ -17,6 +17,7 @@ import { entryApi, resolveScan, type StockEntry, useEntry, wk } from './api';
 import { ContinuousScanner, type ScanOutcome } from './continuous-scanner';
 import { confirmAction, entryTone, formatDate, formatNumber, isCode, whError } from './format';
 import { Card, ErrorState, Field, IconButton, ListSkeleton } from './parts';
+import { ReserveSheet } from './reserve-sheet';
 import { useDocAction } from './use-action';
 
 /**
@@ -33,6 +34,7 @@ export function EntryScreen() {
   const { busy, run } = useDocAction<StockEntry>(wk.entry(uuid));
   const [scanning, setScanning] = useState(false);
   const [bin, setBin] = useState<{ uuid: string; code: string } | null>(null);
+  const [reserving, setReserving] = useState(false);
 
   const x = q.data;
   const lines = (x?.lines ?? []).filter((l) => !l.undone);
@@ -56,9 +58,17 @@ export function EntryScreen() {
       }
       if (r?.status === 'ok' && r.type === 'product') return { ok: false, title: t('m.scan_unit_not_product') };
       const barcode = r?.unit?.barcode ?? code;
-      let next = await entryApi.addLines(uuid, { barcodes: [barcode] });
-      if (bin) next = await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid });
-      store(next);
+      const onEntry = lines.some((l) => l.barcode === barcode);
+      if (onEntry) {
+        // Already a line (reserved or scanned before): only its shelf changes.
+        if (!bin) return { ok: false, title: t('order_place.scan_location_first') };
+        store(await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid }));
+      } else {
+        if (x.mode === 'generate_new') return { ok: false, title: t('m.not_on_entry', { barcode }) };
+        let next = await entryApi.addLines(uuid, { barcodes: [barcode] });
+        if (bin) next = await entryApi.place(uuid, { barcodes: [barcode], location_uuid: bin.uuid });
+        store(next);
+      }
       return { ok: true, title: r?.product?.name ?? barcode, detail: bin ? `→ ${bin.code}` : t('entry.unplaced') };
     } catch (e) {
       return { ok: false, title: whError(e) };
@@ -98,7 +108,15 @@ export function EntryScreen() {
 
         {write && draft ? (
           <View className="gap-2">
-            <Button size="lg" title={t('m.scan_labels')} icon={<Icon as={ScanLine} tone="primary-foreground" />} onPress={() => setScanning(true)} />
+            {x.mode === 'generate_new' ? (
+              <Button size="lg" variant="secondary" title={t('entry.generate')} onPress={() => setReserving(true)} />
+            ) : null}
+            <Button
+              size="lg"
+              title={x.mode === 'generate_new' ? t('m.scan_to_place') : t('m.scan_labels')}
+              icon={<Icon as={ScanLine} tone="primary-foreground" />}
+              onPress={() => setScanning(true)}
+            />
             <View className="flex-row gap-2">
               <Button
                 className="flex-1"
@@ -175,6 +193,12 @@ export function EntryScreen() {
         )}
       </Screen>
 
+      {reserving ? (
+        <ReserveSheet
+          onClose={() => setReserving(false)}
+          onSubmit={async (v) => store(await entryApi.addLines(uuid, v))}
+        />
+      ) : null}
       <ContinuousScanner
         visible={scanning}
         onClose={() => setScanning(false)}

@@ -4,24 +4,29 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
-import { ArrowLeftRight, ClipboardList, PackagePlus, Plus } from '@/ui/icons';
+import { ArrowLeftRight, ClipboardList, Package, PackagePlus, Plus } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 
 import { type StockCount, type StockEntry, type Transfer, useCounts, useEntries, useTransfers } from './api';
 import { countTone, entryTone, formatDate, go, transferTone } from './format';
+import { orderTone } from './order-screen';
+import { type Order, type OrderScope, useOrders } from './orders-api';
 import { Chips, DocCard, ListStatus, Segmented } from './parts';
 
-export type JobsTab = 'transfers' | 'counts' | 'entries';
+export type JobsTab = 'transfers' | 'counts' | 'entries' | 'orders';
 type Scope = 'open' | 'done' | 'all';
 
-const STATUS: Record<JobsTab, Record<Scope, string>> = {
+const STATUS: Record<Exclude<JobsTab, 'orders'>, Record<Scope, string>> = {
   transfers: { open: 'draft,in_transit', done: 'completed,cancelled', all: '' },
   counts: { open: 'draft,in_progress,pending_review', done: 'approved,cancelled', all: '' },
   entries: { open: 'draft', done: 'confirmed,cancelled,undone', all: '' },
 };
 
-/** Warehouse jobs: transfers, stock counts and stock entries, open ones first. */
+/** Order scope per chip: open = to prepare (seller), closed = to receive and shelve (buyer). */
+const ORDER_SCOPE: Record<Scope, OrderScope> = { open: 'prepare', done: 'receive', all: 'all' };
+
+/** Warehouse jobs: transfers, stock counts, stock entries and orders, open ones first. */
 export function JobsScreen() {
   const { t } = useTranslation('warehouse');
   const params = useLocalSearchParams<{ tab?: JobsTab }>();
@@ -34,15 +39,20 @@ export function JobsScreen() {
   }
   const [scope, setScope] = useState<Scope>('open');
   const write = useCan('warehouse.write');
+  const orders = useCan('orders.read');
 
-  const newPath = { transfers: '/depo/jobs/transfer/new', counts: '/depo/jobs/count/new', entries: '/depo/jobs/entry/new' }[tab];
+  const newPath =
+    tab === 'orders'
+      ? null
+      : { transfers: '/depo/jobs/transfer/new', counts: '/depo/jobs/count/new', entries: '/depo/jobs/entry/new' }[tab];
 
   return (
     <>
       <Stack.Screen
         options={{
           title: t('nav:jobs'),
-          headerRight: write
+          headerRight:
+            write && newPath
             ? () => (
                 <Pressable
                   accessibilityRole="button"
@@ -58,30 +68,40 @@ export function JobsScreen() {
       />
       <JobsList
         tab={tab}
-        status={STATUS[tab][scope]}
+        status={tab === 'orders' ? '' : STATUS[tab][scope]}
+        orderScope={ORDER_SCOPE[scope]}
         header={
           <View className="gap-3 pb-2">
             <Segmented
               value={tab}
               onChange={setTab}
               options={[
-                { value: 'transfers', label: t('nav_transfers') },
-                { value: 'counts', label: t('nav_counts') },
-                { value: 'entries', label: t('nav_entries') },
+                { value: 'transfers', label: t('m.tab_transfers') },
+                { value: 'counts', label: t('m.tab_counts') },
+                { value: 'entries', label: t('m.tab_entries') },
+                ...(orders ? [{ value: 'orders' as const, label: t('orders.nav') }] : []),
               ]}
             />
             <Chips
               value={scope}
               onChange={setScope}
-              options={[
-                { value: 'open', label: t('m.open') },
-                { value: 'done', label: t('m.closed') },
-                { value: 'all', label: t('m.all') },
-              ]}
+              options={
+                tab === 'orders'
+                  ? [
+                      { value: 'open', label: t('m.to_prepare') },
+                      { value: 'done', label: t('m.to_receive') },
+                      { value: 'all', label: t('m.all') },
+                    ]
+                  : [
+                      { value: 'open', label: t('m.open') },
+                      { value: 'done', label: t('m.closed') },
+                      { value: 'all', label: t('m.all') },
+                    ]
+              }
             />
           </View>
         }
-        onCreate={write ? () => go(newPath) : undefined}
+        onCreate={write && newPath ? () => go(newPath) : undefined}
       />
     </>
   );
@@ -90,11 +110,13 @@ export function JobsScreen() {
 function JobsList({
   tab,
   status,
+  orderScope,
   header,
   onCreate,
 }: {
   tab: JobsTab;
   status: string;
+  orderScope: OrderScope;
   header: React.ReactElement;
   onCreate?: () => void;
 }) {
@@ -103,19 +125,23 @@ function JobsList({
   const transfers = useTransfers(status, tab === 'transfers');
   const counts = useCounts(status, tab === 'counts');
   const entries = useEntries(status, tab === 'entries');
-  const q = tab === 'transfers' ? transfers : tab === 'counts' ? counts : entries;
+  const orders = useOrders(orderScope, tab === 'orders');
+  const q = tab === 'transfers' ? transfers : tab === 'counts' ? counts : tab === 'entries' ? entries : orders;
 
-  const items: (Transfer | StockCount | StockEntry)[] =
+  const items: (Transfer | StockCount | StockEntry | Order)[] =
     tab === 'transfers'
       ? (transfers.data?.pages.flatMap((p) => p.items) ?? [])
       : tab === 'counts'
         ? (counts.data?.pages.flatMap((p) => p.items) ?? [])
-        : (entries.data?.pages.flatMap((p) => p.items) ?? []);
+        : tab === 'entries'
+          ? (entries.data?.pages.flatMap((p) => p.items) ?? [])
+          : (orders.data?.pages.flatMap((p) => p.items) ?? []);
 
   const empty = {
     transfers: { icon: ArrowLeftRight, title: t('transfers.empty_title'), body: t('transfers.empty_description'), action: t('transfers.new') },
     counts: { icon: ClipboardList, title: t('counts.empty_title'), body: t('counts.empty_description'), action: t('counts.new') },
     entries: { icon: PackagePlus, title: t('entries.empty_title'), body: t('entries.empty_description'), action: t('entries.new') },
+    orders: { icon: Package, title: t('orders.list.empty_title'), body: t('orders.list.empty_description'), action: '' },
   }[tab];
 
   return (
@@ -146,8 +172,10 @@ function JobsList({
           <TransferCard transfer={item as Transfer} />
         ) : tab === 'counts' ? (
           <CountCard count={item as StockCount} />
-        ) : (
+        ) : tab === 'entries' ? (
           <EntryCard entry={item as StockEntry} />
+        ) : (
+          <OrderCard order={item as Order} />
         )
       }
     />
@@ -193,6 +221,20 @@ export function EntryCard({ entry: x }: { entry: StockEntry }) {
       meta={[t('m.lines_count', { count: x.line_count }), formatDate(x.created_at), x.note].filter(Boolean).join(' · ')}
       status={<StatusPill tone={entryTone(x.status)} label={t(`entry_status.${x.status}`)} />}
       onPress={() => go(`/depo/jobs/entry/${x.uuid}`)}
+    />
+  );
+}
+
+export function OrderCard({ order: x }: { order: Order }) {
+  const { t } = useTranslation('warehouse');
+  const other = x.role === 'buyer' ? x.seller : x.buyer;
+  return (
+    <DocCard
+      title={x.order_no}
+      subtitle={`${t(`orders.role.${x.role}`)} · ${other.name}`}
+      meta={[formatDate(x.created_at), x.delivery_method?.name, x.note].filter(Boolean).join(' · ')}
+      status={<StatusPill tone={orderTone(x.status)} label={t(`orders.status.${x.status}`)} />}
+      onPress={() => go(`/depo/jobs/order/${x.uuid}`)}
     />
   );
 }

@@ -6,7 +6,7 @@ import { Pressable, RefreshControl, View } from 'react-native';
 import { useSession } from '@/core/auth/session';
 import { useCan } from '@/core/spaces';
 import type { LucideIcon } from '@/ui/icons';
-import { ArrowLeftRight, Boxes, ChevronDown, ClipboardList, MapPin, PackagePlus, ScanLine, Warehouse as WarehouseIcon } from '@/ui/icons';
+import { ArrowLeftRight, Boxes, ChevronDown, ClipboardList, MapPin, Package, PackagePlus, ScanLine, Settings, Warehouse as WarehouseIcon } from '@/ui/icons';
 import { SearchButton, SpaceButton } from '@/features/shell/header-actions';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
@@ -32,6 +32,7 @@ export function WarehouseHome() {
   const { t } = useTranslation('warehouse');
   const me = useSession((s) => s.me);
   const write = useCan('warehouse.write');
+  const orders = useCan('orders.read');
   const { warehouse, warehouses, isLoading, isError, refetch, select } = useCurrentWarehouse();
   const summary = useWarehouseSummary(true);
   const [picking, setPicking] = useState(false);
@@ -48,6 +49,8 @@ export function WarehouseHome() {
     { key: 'transfer', label: t('transfers.new'), icon: ArrowLeftRight, path: '/depo/jobs/transfer/new', show: write },
     { key: 'count', label: t('counts.new'), icon: ClipboardList, path: '/depo/jobs/count/new', show: write },
     { key: 'move', label: t('move.title'), icon: MapPin, path: '/depo/jobs/move', show: write },
+    { key: 'orders', label: t('orders.nav'), icon: Package, path: '/depo/jobs?tab=orders', show: orders },
+    { key: 'setup', label: t('m.setup'), icon: Settings, path: '/depo/setup', show: write },
     { key: 'stock', label: t('nav:stock'), icon: Boxes, path: '/depo/stock', show: true },
   ];
 
@@ -75,11 +78,15 @@ export function WarehouseHome() {
         ) : isError && !warehouse ? (
           <ErrorState error={null} onRetry={refetch} />
         ) : !warehouse ? (
-          <EmptyState icon={WarehouseIcon} title={t('locations.no_warehouses')} body={t('entries.no_active_warehouse')} />
+          <EmptyState
+            icon={WarehouseIcon}
+            title={t('locations.no_warehouses')}
+            body={t('entries.no_active_warehouse')}
+            action={write ? { title: t('m.setup'), onPress: () => go('/depo/setup') } : undefined}
+          />
         ) : (
           <Pressable
             accessibilityRole="button"
-            disabled={warehouses.length < 2}
             onPress={() => setPicking(true)}
             className="flex-row items-center gap-3 rounded-lg border border-border bg-card p-4 active:opacity-80">
             <View className="size-11 items-center justify-center rounded-md bg-secondary">
@@ -141,7 +148,7 @@ export function WarehouseHome() {
             ))}
         </View>
       </Screen>
-      <WarehousePickerSheet visible={picking} onClose={() => setPicking(false)} value={warehouse?.uuid} onPick={(w) => select(w.uuid)} />
+      <WarehousePickerSheet withSetup visible={picking} onClose={() => setPicking(false)} value={warehouse?.uuid} onPick={(w) => select(w.uuid)} />
     </>
   );
 }

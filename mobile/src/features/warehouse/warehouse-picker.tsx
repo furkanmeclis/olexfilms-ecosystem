@@ -10,8 +10,11 @@ import { Icon } from '@/ui/icon';
 import { List, ListRow } from '@/ui/list';
 import { Text } from '@/ui/text';
 
+import { useCan } from '@/core/spaces';
+
 import type { Warehouse } from './api';
 import { useCurrentWarehouse } from './context';
+import { go } from './format';
 
 /** Sheet listing the active warehouses; picking one remembers it on this device. */
 export function WarehousePickerSheet({
@@ -21,8 +24,11 @@ export function WarehousePickerSheet({
   onPick,
   title,
   exclude,
+  withSetup,
 }: {
   visible: boolean;
+  /** Show the "Warehouse setup" link (header chip and home only, never inside a form). */
+  withSetup?: boolean;
   onClose: () => void;
   value?: string;
   onPick: (w: Warehouse) => void;
@@ -31,6 +37,7 @@ export function WarehousePickerSheet({
 }) {
   const { t } = useTranslation('warehouse');
   const { warehouses } = useCurrentWarehouse();
+  const manage = useCan('warehouse.write') && !!withSetup;
   const list = warehouses.filter((w) => w.uuid !== exclude);
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -60,6 +67,17 @@ export function WarehousePickerSheet({
               ))}
             </List>
           )}
+          {manage ? (
+            <Button
+              className="mt-4"
+              variant="outline"
+              title={t('m.setup')}
+              onPress={() => {
+                onClose();
+                go('/depo/setup');
+              }}
+            />
+          ) : null}
         </ScrollView>
       </View>
     </Modal>
@@ -78,7 +96,6 @@ export function WarehouseChip() {
         accessibilityRole="button"
         accessibilityLabel={t('m.current_warehouse', { name: warehouse.name })}
         hitSlop={8}
-        disabled={warehouses.length < 2}
         onPress={() => setOpen(true)}
         className="flex-row items-center gap-1 rounded-full bg-secondary px-2.5 py-1 active:opacity-70">
         <Icon as={WarehouseIcon} tone="primary" size={14} />
@@ -87,7 +104,13 @@ export function WarehouseChip() {
         </Text>
         {warehouses.length > 1 ? <Icon as={ChevronDown} tone="muted-foreground" size={14} /> : null}
       </Pressable>
-      <WarehousePickerSheet visible={open} onClose={() => setOpen(false)} value={warehouse.uuid} onPick={(w) => select(w.uuid)} />
+      <WarehousePickerSheet
+        visible={open}
+        withSetup
+        onClose={() => setOpen(false)}
+        value={warehouse.uuid}
+        onPick={(w) => select(w.uuid)}
+      />
     </>
   );
 }
