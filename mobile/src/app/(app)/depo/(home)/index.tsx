@@ -1,1 +1,1 @@
-export { DepoHome as default } from '@/features/home/space-homes';
+export { WarehouseHome as default } from '@/features/warehouse/warehouse-home';

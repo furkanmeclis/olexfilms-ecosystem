@@ -11,12 +11,18 @@ import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
 import { Text } from '@/ui/text';
 
+import { WarehouseScan } from '@/features/warehouse/warehouse-scan';
+
 import { classifyCode, type ScannedCode } from './scan-codes';
 
 const BARCODE_TYPES = ['qr', 'datamatrix', 'code128', 'code39', 'ean13', 'ean8'] as const;
 
-/** One camera for every code. The camera only runs while this tab is on screen. */
-export function ScanScreen() {
+/**
+ * One camera for every code. The camera only runs while this tab is on screen.
+ * In the warehouse space every code is resolved by the warehouse scan endpoint
+ * and opens its result card with next actions.
+ */
+export function ScanScreen({ space }: { space?: 'depo' } = {}) {
   const { t } = useTranslation('scan');
   const insets = useSafeAreaInsets();
   const focused = useIsFocused();
@@ -42,6 +48,8 @@ export function ScanScreen() {
       </View>
     );
   }
+
+  if (space === 'depo') return <WarehouseScan />;
 
   const onScanned = ({ data }: { data: string }) => {
     if (busy.current) return;

@@ -1,3 +1,5 @@
-import { comingSoon } from '@/features/shell/coming-soon';
+import { StockScreen } from '@/features/stock/stock-screen';
 
-export default comingSoon('nav:stock');
+export default function Stock() {
+  return <StockScreen base="/depo/stock" space="depo" />;
+}

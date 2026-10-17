@@ -1,3 +1,1 @@
-import { comingSoon } from '@/features/shell/coming-soon';
-
-export default comingSoon('nav:jobs');
+export { JobsScreen as default } from '@/features/warehouse/jobs-screen';
