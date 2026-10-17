@@ -81,5 +81,5 @@
   "queue.empty_title": "Vitrin yok",
   "queue.empty_description": "Bu filtrelere uyan vitrin bulunmuyor.",
   "dealer_selector.label": "Στοχευμένος αντιπρόσωπος",
-  "dealer_selector.placeholder": "UUID οργανισμού αντιπροσώπου"
+  "dealer_selector.placeholder": "Επιλέξτε αντιπρόσωπο"
 }

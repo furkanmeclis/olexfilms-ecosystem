@@ -362,32 +362,8 @@ func (u *AuthUseCase) passwordLogin(ctx context.Context, email, rawPassword, tot
 		return model.Tokens{}, ErrUserDisabled
 	}
 
-	hasTOTP, err := u.UserHasEnabledTOTP(ctx, user.ID)
-	if err != nil {
+	if err := u.checkLoginMFA(ctx, user.ID, totpCode); err != nil {
 		return model.Tokens{}, err
-	}
-	requirePolicy := false
-	if u.accessPolicy != nil {
-		requirePolicy, err = u.accessPolicy.PasswordLoginTOTPRequired(ctx)
-		if err != nil {
-			return model.Tokens{}, err
-		}
-	}
-	if requirePolicy && !hasTOTP {
-		return model.Tokens{}, ErrMFANotEnrolled
-	}
-	if hasTOTP {
-		code := strings.TrimSpace(totpCode)
-		if code == "" {
-			return model.Tokens{}, ErrMFARequired
-		}
-		valid, _, err := u.verifyUserTOTPCode(ctx, user.ID, code, true)
-		if err != nil {
-			return model.Tokens{}, err
-		}
-		if !valid {
-			return model.Tokens{}, ErrInvalidMFACode
-		}
 	}
 
 	// Realm rule after the credential check, so roles cannot be probed.
@@ -787,4 +763,37 @@ func uniqueStrings(in []string) []string {
 		out = append(out, s)
 	}
 	return out
+}
+
+// checkLoginMFA applies the same enrollment policy and second factor to staff sign-ins.
+func (u *AuthUseCase) checkLoginMFA(ctx context.Context, userID int64, totpCode string) error {
+	hasTOTP, err := u.UserHasEnabledTOTP(ctx, userID)
+	if err != nil {
+		return err
+	}
+	requirePolicy := false
+	if u.accessPolicy != nil {
+		requirePolicy, err = u.accessPolicy.PasswordLoginTOTPRequired(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	if requirePolicy && !hasTOTP {
+		return ErrMFANotEnrolled
+	}
+	if hasTOTP {
+		code := strings.TrimSpace(totpCode)
+		if code == "" {
+			return ErrMFARequired
+		}
+		valid, _, err := u.verifyUserTOTPCode(ctx, userID, code, true)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			return ErrInvalidMFACode
+		}
+	}
+
+	return nil
 }

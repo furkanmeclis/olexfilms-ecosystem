@@ -25,6 +25,17 @@ const someUUID = "0b8c7c1e-5a52-4d8e-9c0a-6f1f0f7b2a11"
 var mobileWarehouseRoutes = []struct{ method, path string }{
 	{"GET", "/v1/mobile/warehouse/warehouses"},
 	{"POST", "/v1/mobile/warehouse/scan"},
+	{"GET", "/v1/mobile/warehouse/my-warehouses"},
+	{"PUT", "/v1/mobile/warehouse/my-warehouses/default"},
+	{"GET", "/v1/mobile/warehouse/stock-entries"},
+	{"POST", "/v1/mobile/warehouse/stock-entries"},
+	{"GET", "/v1/mobile/warehouse/stock-entries/" + someUUID},
+	{"POST", "/v1/mobile/warehouse/stock-entries/" + someUUID + "/lines"},
+	{"DELETE", "/v1/mobile/warehouse/stock-entries/" + someUUID + "/lines/" + someUUID},
+	{"POST", "/v1/mobile/warehouse/stock-entries/" + someUUID + "/place"},
+	{"POST", "/v1/mobile/warehouse/stock-entries/" + someUUID + "/confirm"},
+	{"POST", "/v1/mobile/warehouse/stock-entries/" + someUUID + "/cancel"},
+	{"POST", "/v1/mobile/warehouse/moves"},
 	{"GET", "/v1/mobile/warehouse/stock-counts"},
 	{"POST", "/v1/mobile/warehouse/stock-counts"},
 	{"GET", "/v1/mobile/warehouse/stock-counts/" + someUUID},
@@ -61,6 +72,7 @@ func TestMobileWarehouseRoutesGate(t *testing.T) {
 	RegisterMobileRoutes(mux, MobileHandlers{
 		Tree: &whhandler.Handler{}, Scan: &whhandler.ScanHandler{},
 		Counts: &whhandler.Counts{}, Transfers: &whhandler.Transfers{},
+		Entries: &whhandler.Entries{}, Members: &whhandler.Members{},
 	}, nil, tokens, noLoader{}, nil, 1, 1)
 
 	oid := uuid.New()

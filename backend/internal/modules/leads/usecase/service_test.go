@@ -356,6 +356,10 @@ func TestConvertCustomerUsesExistingPhoneAndCreatesDraft(t *testing.T) {
 	c := f.caller(f.dealer, rbac.ScopeManaged)
 	existing := f.userWithPhone("lead-customer", "+905551234567")
 	vehicle := f.vehicle(existing, f.dealer)
+	// A selectable vehicle's owner must already be visible in the lead scope.
+	if _, err := f.tx.Exec(f.ctx, `INSERT INTO customer_organizations (organization_id,brand_id,user_id) VALUES ($1,$2,$3)`, f.dealer.ID, f.brand, existing.ID); err != nil {
+		t.Fatal(err)
+	}
 	lead, err := f.svc.Create(f.ctx, c, CreateInput{
 		TargetType: "customer", Source: "walk_in", Temperature: "warm",
 		CandidateContactName: strp("Different Name"), CandidatePhoneE164: strp("+905551234567"),
@@ -907,6 +911,10 @@ func TestConvertCustomerFailureRollsBack(t *testing.T) {
 	c := f.caller(f.dealer, rbac.ScopeManaged)
 	other := f.userWithPhone("lead-vehicle-owner", uniquePhone("552"))
 	vehicle := f.vehicle(other, f.dealer)
+	// A selectable vehicle's owner must already be visible in the lead scope.
+	if _, err := f.tx.Exec(f.ctx, `INSERT INTO customer_organizations (organization_id,brand_id,user_id) VALUES ($1,$2,$3)`, f.dealer.ID, f.brand, other.ID); err != nil {
+		t.Fatal(err)
+	}
 	ph := uniquePhone("553")
 	lead, err := f.svc.Create(f.ctx, c, CreateInput{
 		TargetType: "customer", Source: "walk_in", Temperature: "warm",

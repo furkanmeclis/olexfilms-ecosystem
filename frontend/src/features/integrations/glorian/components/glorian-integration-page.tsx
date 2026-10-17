@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { permissions } from "@/config/permissions";
 import { GlorianConnectionForm } from "@/features/integrations/glorian/components/glorian-connection-form";
+import { GlorianLocationMaps } from "@/features/integrations/glorian/components/glorian-location-maps";
 import { GlorianOutbounds } from "@/features/integrations/glorian/components/glorian-outbounds";
 import { GlorianReconcile } from "@/features/integrations/glorian/components/glorian-reconcile";
 import { GlorianSyncRuns } from "@/features/integrations/glorian/components/glorian-sync-runs";
@@ -140,6 +141,12 @@ function GlorianSections({ canManage }: { canManage: boolean }) {
             description={t("integrations.glorian.outbounds.description")}
           >
             <GlorianOutbounds canManage={canManage} />
+          </Section>
+          <Section
+            title={t("integrations.glorian.location_maps.title")}
+            description={t("integrations.glorian.location_maps.description")}
+          >
+            <GlorianLocationMaps canManage={canManage} />
           </Section>
           <Section
             title={t("integrations.glorian.reconcile.title")}

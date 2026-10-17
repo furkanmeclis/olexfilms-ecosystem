@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/jwt"
@@ -46,4 +47,13 @@ func RealmAllows(realm, path string) bool {
 	default:
 		return !portalRoute && !mobileRoute
 	}
+}
+
+// RealmAllowsRequest keeps the normal path rules unless the mirror has marked
+// the request. Rewritten panel paths accept only a mobile session.
+func RealmAllowsRequest(realm string, r *http.Request) bool {
+	if IsMobilePanelMirror(r.Context()) {
+		return jwt.NormalizeAudience(realm) == jwt.AudienceMobile
+	}
+	return RealmAllows(realm, r.URL.Path)
 }

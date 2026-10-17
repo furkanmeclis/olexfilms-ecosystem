@@ -140,7 +140,9 @@ type Lead struct {
 	OrganizationUUID     uuid.UUID  `json:"organization_uuid"`
 	TargetType           string     `json:"target_type"`
 	CustomerUserID       *int64     `json:"customer_user_id,omitempty"`
+	CustomerUUID         *uuid.UUID `json:"customer_uuid,omitempty"`
 	VehicleID            *int64     `json:"vehicle_id,omitempty"`
+	VehicleUUID          *uuid.UUID `json:"vehicle_uuid,omitempty"`
 	CandidateCompanyName *string    `json:"candidate_company_name,omitempty"`
 	CandidateContactName *string    `json:"candidate_contact_name,omitempty"`
 	CandidatePhoneE164   *string    `json:"candidate_phone_e164,omitempty"`
@@ -154,6 +156,7 @@ type Lead struct {
 	LostReason           *string    `json:"lost_reason,omitempty"`
 	FollowUpDate         *time.Time `json:"follow_up_date,omitempty"`
 	AssigneeUserID       *int64     `json:"assignee_user_id,omitempty"`
+	AssigneeUserUUID     *uuid.UUID `json:"assignee_user_uuid,omitempty"`
 	Notes                string     `json:"notes"`
 	WonRefType           *string    `json:"won_ref_type,omitempty"`
 	WonRefID             *int64     `json:"won_ref_id,omitempty"`
@@ -189,7 +192,9 @@ type ListFilter struct {
 type leadInput struct {
 	TargetType           string
 	CustomerUserID       *int64
+	CustomerUUID         *uuid.UUID
 	VehicleID            *int64
+	VehicleUUID          *uuid.UUID
 	CandidateCompanyName *string
 	CandidateContactName *string
 	CandidatePhoneE164   *string
@@ -201,6 +206,7 @@ type leadInput struct {
 	Temperature          string
 	FollowUpDate         *time.Time
 	AssigneeUserID       *int64
+	AssigneeUserUUID     *uuid.UUID
 	Notes                *string
 }
 
@@ -210,7 +216,9 @@ type CreateInput = leadInput
 type PatchInput struct {
 	TargetType           *string
 	CustomerUserID       Field[int64]
+	CustomerUUID         Field[uuid.UUID]
 	VehicleID            Field[int64]
+	VehicleUUID          Field[uuid.UUID]
 	CandidateCompanyName Field[string]
 	CandidateContactName Field[string]
 	CandidatePhoneE164   Field[string]
@@ -222,6 +230,7 @@ type PatchInput struct {
 	Temperature          *string
 	FollowUpDate         Field[time.Time]
 	AssigneeUserID       Field[int64]
+	AssigneeUserUUID     Field[uuid.UUID]
 	Notes                *string
 }
 
@@ -365,7 +374,7 @@ func (s *Service) toLead(ctx context.Context, row db.Lead) (Lead, error) {
 	if err != nil {
 		return Lead{}, err
 	}
-	return leadOf(row, id), nil
+	return s.leadReferences(ctx, leadOf(row, id))
 }
 
 func (s *Service) params(c Caller, f ListFilter) (db.ListLeadsInScopeParams, error) {
@@ -548,6 +557,9 @@ func (s *Service) validateInput(in leadInput, create bool) (db.CreateLeadParams,
 
 // Create opens a new lead in the active organization.
 func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Lead, error) {
+	if err := s.resolveReferences(ctx, c, c.Org.InternalID, &in); err != nil {
+		return Lead{}, err
+	}
 	p, err := s.validateInput(in, true)
 	if err != nil {
 		return Lead{}, err
@@ -673,6 +685,9 @@ func (s *Service) Patch(ctx context.Context, c Caller, id uuid.UUID, in PatchInp
 	if err != nil {
 		return Lead{}, err
 	}
+	if err := s.resolvePatchReferences(ctx, c, cur.OrganizationID, &in); err != nil {
+		return Lead{}, err
+	}
 	next, fields := applyPatch(cur, in)
 	if len(fields) == 0 {
 		return s.toLead(ctx, cur)
@@ -789,8 +804,16 @@ func (s *Service) AddNote(ctx context.Context, c Caller, id uuid.UUID, body stri
 }
 
 // Assign changes assignee and appends a timeline event.
-func (s *Service) Assign(ctx context.Context, c Caller, id uuid.UUID, assignee *int64) (Lead, error) {
+func (s *Service) Assign(ctx context.Context, c Caller, id uuid.UUID, assignee *int64, assigneeUUID ...*uuid.UUID) (Lead, error) {
 	cur, err := s.getRow(ctx, c, id)
+	if err != nil {
+		return Lead{}, err
+	}
+	var uid *uuid.UUID
+	if len(assigneeUUID) > 0 {
+		uid = assigneeUUID[0]
+	}
+	assignee, err = s.resolveAssignee(ctx, cur.OrganizationID, assignee, uid)
 	if err != nil {
 		return Lead{}, err
 	}

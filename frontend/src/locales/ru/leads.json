@@ -192,5 +192,8 @@
   "convert.done": "Лид конвертирован.",
   "convert.error": "Не удалось конвертировать.",
   "convert.errors.distributor_required": "Выберите дистрибьютора.",
-  "convert.errors.currency_required": "Выберите валюту."
+  "convert.errors.currency_required": "Выберите валюту.",
+  "form.assignee": "Ответственный",
+  "form.customer": "Клиент",
+  "form.vehicle": "Автомобиль"
 }

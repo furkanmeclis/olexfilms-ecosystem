@@ -44,6 +44,7 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/orders/export", route(h.RequestListExport))
 	mux.Handle("POST /v1/orders", route(h.Create, write))
 	mux.Handle("GET /v1/orders/{uuid}", route(h.Get))
+	mux.Handle("GET /v1/orders/{uuid}/order-slip.pdf", route(h.OrderSlip))
 	mux.Handle("PUT /v1/orders/{uuid}/items", route(h.ReplaceItems, write))
 	mux.Handle("POST /v1/orders/{uuid}/transitions", route(h.Transition, act))
 	ship := middleware.RequirePermission(rbac.PermOrdersShip)

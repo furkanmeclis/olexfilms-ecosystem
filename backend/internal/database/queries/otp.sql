@@ -101,3 +101,10 @@ WHERE id = sqlc.arg(id)
 
 -- name: GetOTPByUUID :one
 SELECT * FROM otp_codes WHERE uuid = $1;
+
+-- name: ConsumeValidPhoneOTP :execrows
+UPDATE otp_codes
+SET consumed_at = sqlc.arg(now)
+WHERE id = sqlc.arg(id)
+  AND consumed_at IS NULL
+  AND expires_at > sqlc.arg(now);

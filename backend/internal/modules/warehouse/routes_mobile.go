@@ -17,11 +17,14 @@ type MobileHandlers struct {
 	Scan      *whhandler.ScanHandler
 	Counts    *whhandler.Counts
 	Transfers *whhandler.Transfers
+	Entries   *whhandler.Entries
+	Members   *whhandler.Members
 }
 
 // RegisterMobileRoutes mounts the TEC-235 mobile warehouse routes under
 // /v1/mobile/warehouse/*: the warehouse lookup, the TEC-203 scan resolver,
-// the TEC-206 stock counts and the TEC-205 warehouse transfers. A mobile
+// the TEC-206 stock counts, the TEC-205 warehouse transfers and bin moves,
+// the TEC-204 stock entries and the TEC-769 warehouse context. A mobile
 // token (aud=mobile) is accepted on /v1/mobile/* only (RealmAllows), so these
 // are thin mirrors of the panel routes: the same handlers and use cases, the
 // same permissions, warehouse module gate and active organization scope (a
@@ -49,6 +52,21 @@ func RegisterMobileRoutes(
 	const p = "/v1/mobile/warehouse"
 	mux.Handle("GET "+p+"/warehouses", read(h.Tree.ListWarehouses))
 	mux.Handle("POST "+p+"/scan", read(h.Scan.Scan))
+	// TEC-769: the caller's warehouses (member / default flags); the app
+	// sends warehouse_uuid per request or relies on the member default.
+	mux.Handle("GET "+p+"/my-warehouses", read(h.Members.Mine))
+	mux.Handle("PUT "+p+"/my-warehouses/default", read(h.Members.SetDefault))
+
+	mux.Handle("GET "+p+"/stock-entries", read(h.Entries.List))
+	mux.Handle("POST "+p+"/stock-entries", write(h.Entries.CreateMobile))
+	mux.Handle("GET "+p+"/stock-entries/{uuid}", read(h.Entries.Get))
+	mux.Handle("POST "+p+"/stock-entries/{uuid}/lines", write(h.Entries.AddLines))
+	mux.Handle("DELETE "+p+"/stock-entries/{uuid}/lines/{line_uuid}", write(h.Entries.DeleteLine))
+	mux.Handle("POST "+p+"/stock-entries/{uuid}/place", write(h.Entries.Place))
+	mux.Handle("POST "+p+"/stock-entries/{uuid}/confirm", write(h.Entries.Confirm))
+	mux.Handle("POST "+p+"/stock-entries/{uuid}/cancel", write(h.Entries.Cancel))
+
+	mux.Handle("POST "+p+"/moves", write(h.Transfers.Move))
 
 	mux.Handle("GET "+p+"/stock-counts", read(h.Counts.List))
 	mux.Handle("POST "+p+"/stock-counts", write(h.Counts.Create))

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { LeadReferencePicker } from "./lead-reference-picker";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import {
@@ -45,6 +46,7 @@ import {
   type Lead,
   type LeadListQuery,
 } from "@/features/leads/services/leads.service";
+import { useAuthStore } from "@/lib/auth/session-store";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -58,7 +60,7 @@ type FollowUp = "" | "overdue" | "today";
 const FOLLOW_UPS: FollowUp[] = ["", "overdue", "today"];
 
 /**
- * `POST /v1/leads/bulk` (TEC-371): assign (internal user id) and
+ * `POST /v1/leads/bulk` (TEC-371): assign (user UUID) and
  * set_status (pipeline rules per item; lost needs a reason). Both are
  * undoable; ids or "select all matching" with the list filters.
  */
@@ -70,8 +72,8 @@ export const LEAD_BULK_ACTIONS: BulkActionDef[] = [
     reversible: true,
     params: [
       {
-        key: "assignee_user_id",
-        kind: "number",
+        key: "assignee_user_uuid",
+        kind: "uuid",
         required: true,
         label_key: "bulk.params.assignee",
       },
@@ -131,6 +133,9 @@ export function LeadsListPage({ slug }: { slug: string }) {
   const { can } = usePermission();
   const router = useRouter();
   const qc = useQueryClient();
+  const organizationUuid = useAuthStore(
+    (s) => s.user?.organizations.find((o) => o.slug === slug)?.uuid,
+  );
   const canRead = can(permissions.leads.read);
   const canWrite = can(permissions.leads.write);
   const [followUp, setFollowUp] = useState<FollowUp>("");
@@ -459,6 +464,17 @@ export function LeadsListPage({ slug }: { slug: string }) {
               <BulkActionMenu
                 resource="leads"
                 actions={LEAD_BULK_ACTIONS}
+                renderParam={(param, value, onValueChange) =>
+                  param.key === "assignee_user_uuid" ? (
+                    <LeadReferencePicker
+                      kind="assignee"
+                      organizationUuid={organizationUuid}
+                      value={value}
+                      onValueChange={onValueChange}
+                      id="lead-bulk-assignee"
+                    />
+                  ) : undefined
+                }
                 scope={bulkSelection.scope}
                 selectedCount={bulkSelection.selectedCount}
                 onComplete={() => {

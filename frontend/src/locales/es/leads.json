@@ -192,5 +192,8 @@
   "convert.done": "Cliente potencial convertido.",
   "convert.error": "La conversión falló.",
   "convert.errors.distributor_required": "Seleccione un distribuidor.",
-  "convert.errors.currency_required": "Seleccione una moneda."
+  "convert.errors.currency_required": "Seleccione una moneda.",
+  "form.assignee": "Responsable",
+  "form.customer": "Cliente",
+  "form.vehicle": "Vehículo"
 }

@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "Не удалось сохранить способ доставки.",
   "delivery_methods.deleted": "Способ доставки удалён.",
   "delivery_methods.delete_failed": "Не удалось удалить способ доставки.",
-  "delivery_methods.empty": "Способов доставки пока нет."
+  "delivery_methods.empty": "Способов доставки пока нет.",
+  "shipping.download_slip": "Бланк заказа (PDF)"
 }

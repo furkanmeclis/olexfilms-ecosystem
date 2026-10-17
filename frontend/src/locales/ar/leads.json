@@ -192,5 +192,8 @@
   "convert.done": "تم تحويل العميل المحتمل.",
   "convert.error": "فشل التحويل.",
   "convert.errors.distributor_required": "اختر موزّعًا.",
-  "convert.errors.currency_required": "اختر عملة."
+  "convert.errors.currency_required": "اختر عملة.",
+  "form.assignee": "المسؤول",
+  "form.customer": "العميل",
+  "form.vehicle": "المركبة"
 }

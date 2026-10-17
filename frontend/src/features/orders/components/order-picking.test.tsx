@@ -18,6 +18,7 @@ const api = vi.hoisted(() => ({
   pickList: vi.fn(),
   regenerateShippingDocument: vi.fn(),
   downloadDocument: vi.fn(),
+  downloadOrderSlip: vi.fn(),
   attachReceipt: vi.fn(),
 }));
 const methods = vi.hoisted(() => ({
@@ -51,6 +52,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => nav }));
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({
+    locale: "tr",
+    timeZone: "Europe/Istanbul",
     t: (key: string, params?: Record<string, string | number>) =>
       params ? `${key} ${JSON.stringify(params)}` : key,
     format: {
@@ -380,6 +383,21 @@ describe("TEC-768: shipping", () => {
       "[data-testid=action-confirm]",
     ) as HTMLButtonElement;
     expect(confirm.disabled).toBe(true);
+  });
+
+  it("downloads the order slip in the selected language and timezone before shipping", async () => {
+    api.get.mockResolvedValue(order({ status: "draft", role: "buyer" }));
+    api.downloadOrderSlip.mockResolvedValue({
+      blob: new Blob(["pdf"]),
+      filename: "order-slip-ORD-1.pdf",
+    });
+    await render(createElement(OrderDetailPage, { slug: "acme", uuid: "o1" }));
+    await click($("[data-testid=order-slip-download]"));
+    expect(api.downloadOrderSlip).toHaveBeenCalledWith(
+      "o1",
+      "tr",
+      "Europe/Istanbul",
+    );
   });
 
   it("shows the tracking link and downloads the shipping note", async () => {

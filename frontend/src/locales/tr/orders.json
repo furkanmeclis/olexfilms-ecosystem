@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "Teslimat yöntemi kaydedilemedi.",
   "delivery_methods.deleted": "Teslimat yöntemi silindi.",
   "delivery_methods.delete_failed": "Teslimat yöntemi silinemedi.",
-  "delivery_methods.empty": "Henüz teslimat yöntemi yok."
+  "delivery_methods.empty": "Henüz teslimat yöntemi yok.",
+  "shipping.download_slip": "Sipariş fişi (PDF)"
 }

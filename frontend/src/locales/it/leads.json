@@ -192,5 +192,8 @@
   "convert.done": "Contatto convertito.",
   "convert.error": "Conversione non riuscita.",
   "convert.errors.distributor_required": "Seleziona un distributore.",
-  "convert.errors.currency_required": "Seleziona una valuta."
+  "convert.errors.currency_required": "Seleziona una valuta.",
+  "form.assignee": "Responsabile",
+  "form.customer": "Cliente",
+  "form.vehicle": "Veicolo"
 }

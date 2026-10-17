@@ -448,3 +448,14 @@ func renderView(row db.DocumentRender) model.RenderView {
 	}
 	return v
 }
+
+// TemplateHTML renders an active brand/platform template with the shared safe
+// renderer. Callers must authorize and scope the source before supplying vars.
+// ErrNotFound means no active template exists and permits a built-in fallback.
+func (s *Service) TemplateHTML(ctx context.Context, kind string, brandID int64, locale string, vars map[string]string, title, color string) (string, error) {
+	tpl, err := s.resolveTemplate(ctx, kind, brandID, model.NormalizeLanguage(locale))
+	if err != nil {
+		return "", fmt.Errorf("documents: resolve template: %w", err)
+	}
+	return BuildHTML(kind, tpl.Html, locale, vars, title, color, s.fonts), nil
+}
