@@ -1,1 +1,12 @@
-{}
+{
+  "title": "Im Webpanel anmelden",
+  "browser": "Browser",
+  "organization": "Organisation",
+  "expires": "Läuft ab",
+  "warning": "Lehnen Sie ab, wenn Sie diese Anmeldung nicht gestartet haben.",
+  "approve": "Bestätigen",
+  "reject": "Ablehnen",
+  "approved": "Anmeldung bestätigt",
+  "rejected": "Anmeldung abgelehnt",
+  "expired": "Dieser Code ist abgelaufen. Erstellen Sie im Web einen neuen QR-Code."
+}

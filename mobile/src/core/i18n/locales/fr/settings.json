@@ -13,6 +13,8 @@
   "restart_title": "Redémarrage nécessaire",
   "restart_body": "L'application redémarre pour changer le sens d'écriture.",
   "restart_now": "Redémarrer",
+  "restart_reopen_body": "Fermez complètement l'application puis rouvrez-la pour changer le sens d'écriture.",
+  "restart_ok": "OK",
   "version": "Version {{version}}",
   "about": "À propos",
   "api_server": "Serveur",

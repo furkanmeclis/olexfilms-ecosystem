@@ -13,6 +13,8 @@
   "restart_title": "Neustart erforderlich",
   "restart_body": "Die App startet neu, um die Schreibrichtung zu ändern.",
   "restart_now": "Neu starten",
+  "restart_reopen_body": "Schließen Sie die App vollständig und öffnen Sie sie erneut, um die Schreibrichtung zu ändern.",
+  "restart_ok": "OK",
   "version": "Version {{version}}",
   "about": "Über",
   "api_server": "Server",

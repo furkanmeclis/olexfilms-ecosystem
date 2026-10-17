@@ -1,1 +1,12 @@
-{}
+{
+  "title": "Iniciar sesión en el panel web",
+  "browser": "Navegador",
+  "organization": "Organización",
+  "expires": "Caduca",
+  "warning": "Recházalo si no iniciaste tú este acceso.",
+  "approve": "Aprobar",
+  "reject": "Rechazar",
+  "approved": "Acceso aprobado",
+  "rejected": "Acceso rechazado",
+  "expired": "Este código ha caducado. Crea un nuevo código QR en la web."
+}

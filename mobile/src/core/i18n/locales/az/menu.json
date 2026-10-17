@@ -1,3 +1,13 @@
 {
+  "customers": "Müştərilər",
+  "appointments": "Görüşlər",
+  "stock": "Anbar",
+  "orders": "Sifarişlər",
+  "warranty_claims": "Zəmanət müraciətləri",
+  "leads": "Lidlər və təkliflər",
+  "reports": "Hesabatlar",
+  "accounting": "Kassa və hesablar",
+  "tasks": "Tapşırıqlar",
+  "announcements": "Elanlar",
   "warranties": "Zəmanətlər"
 }

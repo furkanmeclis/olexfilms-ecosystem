@@ -1,1 +1,12 @@
-{}
+{
+  "title": "Accesso al pannello web",
+  "browser": "Browser",
+  "organization": "Organizzazione",
+  "expires": "Scade",
+  "warning": "Rifiuta se non hai avviato tu questo accesso.",
+  "approve": "Approva",
+  "reject": "Rifiuta",
+  "approved": "Accesso approvato",
+  "rejected": "Accesso rifiutato",
+  "expired": "Questo codice è scaduto. Crea un nuovo codice QR sul web."
+}

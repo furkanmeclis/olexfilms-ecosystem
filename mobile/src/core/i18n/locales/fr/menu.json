@@ -1,3 +1,13 @@
 {
+  "customers": "Clients",
+  "appointments": "Rendez-vous",
+  "stock": "Stock",
+  "orders": "Commandes",
+  "warranty_claims": "Réclamations garantie",
+  "leads": "Prospects et devis",
+  "reports": "Rapports",
+  "accounting": "Caisse et comptes",
+  "tasks": "Tâches",
+  "announcements": "Annonces",
   "warranties": "Garanties"
 }

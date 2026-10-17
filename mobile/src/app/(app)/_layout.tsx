@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/core/auth/session';
 import { kindsOf } from '@/core/spaces';
+import { LARGE_TITLES } from '@/features/shell/large-titles';
 
 /**
  * Signed-in shell. The cached session renders first; /me refreshes it in the
@@ -42,7 +43,7 @@ export default function AppLayout() {
         options={{ headerShown: true, presentation: 'formSheet', sheetAllowedDetents: [0.55, 1], sheetGrabberVisible: true }}
       />
       <Stack.Screen name="search" options={{ headerShown: true, presentation: 'modal' }} />
-      <Stack.Screen name="settings" options={{ headerShown: true, headerLargeTitle: true }} />
+      <Stack.Screen name="settings" options={{ headerShown: true, headerLargeTitle: LARGE_TITLES }} />
       <Stack.Screen name="soon/[key]" options={{ headerShown: true }} />
       <Stack.Screen
         name="qr-login/[code]"

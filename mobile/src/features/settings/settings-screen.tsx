@@ -2,7 +2,7 @@ import { reloadAppAsync } from 'expo';
 import { router, Stack } from 'expo-router';
 import { Check } from '@/ui/icons';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { API_URL, APP_VERSION } from '@/core/config';
@@ -28,8 +28,16 @@ export function SettingsScreen() {
   const pickLanguage = async (lang: Language) => {
     const needsRestart = await setLanguage(lang);
     if (!needsRestart) return;
-    Alert.alert(t('restart_title'), t('restart_body'), [
-      { text: t('restart_now'), onPress: () => void reloadAppAsync() },
+    // `t` still holds the previous language from this render; ask in the new one.
+    const tl = (key: string) => i18n.t(`settings:${key}`, { lng: lang });
+    // iOS reads the app language at process start; a JS reload is not enough
+    // and an app cannot relaunch itself there.
+    if (Platform.OS === 'ios') {
+      Alert.alert(tl('restart_title'), tl('restart_reopen_body'), [{ text: tl('restart_ok') }]);
+      return;
+    }
+    Alert.alert(tl('restart_title'), tl('restart_body'), [
+      { text: tl('restart_now'), onPress: () => void reloadAppAsync() },
     ]);
   };
 

@@ -1,3 +1,13 @@
 {
+  "customers": "العملاء",
+  "appointments": "المواعيد",
+  "stock": "المخزون",
+  "orders": "الطلبات",
+  "warranty_claims": "مطالبات الضمان",
+  "leads": "العملاء المحتملون والعروض",
+  "reports": "التقارير",
+  "accounting": "الصندوق والحسابات",
+  "tasks": "المهام",
+  "announcements": "الإعلانات",
   "warranties": "الضمانات"
 }

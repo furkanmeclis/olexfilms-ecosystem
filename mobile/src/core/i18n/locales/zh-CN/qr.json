@@ -1,1 +1,12 @@
-{}
+{
+  "title": "登录网页后台",
+  "browser": "浏览器",
+  "organization": "组织",
+  "expires": "有效期至",
+  "warning": "如果不是你本人发起的登录，请拒绝。",
+  "approve": "批准",
+  "reject": "拒绝",
+  "approved": "已批准登录",
+  "rejected": "已拒绝登录",
+  "expired": "此二维码已过期。请在网页端重新生成二维码。"
+}

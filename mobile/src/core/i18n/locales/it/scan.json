@@ -1,1 +1,13 @@
-{}
+{
+  "hint": "Inquadra il codice a barre o il codice QR",
+  "permission_title": "Serve l'accesso alla fotocamera",
+  "permission_body": "Consenti l'accesso alla fotocamera per leggere codici a barre e QR.",
+  "permission_button": "Consenti fotocamera",
+  "open_settings": "Apri Impostazioni",
+  "result.qr_login": "Accesso al pannello web",
+  "result.location": "Ubicazione di magazzino",
+  "result.unit": "Unità di prodotto",
+  "result.warranty": "Garanzia",
+  "result.unknown": "Codice non riconosciuto",
+  "scan_again": "Scansiona di nuovo"
+}

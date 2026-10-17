@@ -1,3 +1,13 @@
 {
+  "customers": "Clienti",
+  "appointments": "Appuntamenti",
+  "stock": "Magazzino",
+  "orders": "Ordini",
+  "warranty_claims": "Richieste di garanzia",
+  "leads": "Lead e preventivi",
+  "reports": "Report",
+  "accounting": "Cassa e conti",
+  "tasks": "Attività",
+  "announcements": "Comunicazioni",
   "warranties": "Garanzie"
 }

@@ -1,1 +1,13 @@
-{}
+{
+  "hint": "将条形码或二维码对准框内",
+  "permission_title": "需要相机权限",
+  "permission_body": "请允许访问相机以扫描条形码和二维码。",
+  "permission_button": "允许使用相机",
+  "open_settings": "打开设置",
+  "result.qr_login": "网页后台登录",
+  "result.location": "仓库库位",
+  "result.unit": "产品单元",
+  "result.warranty": "质保",
+  "result.unknown": "无法识别的代码",
+  "scan_again": "重新扫描"
+}

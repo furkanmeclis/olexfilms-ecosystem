@@ -1,1 +1,16 @@
-{}
+{
+  "greeting_morning": "Bonjour, {{name}}",
+  "greeting_day": "Bon après-midi, {{name}}",
+  "greeting_evening": "Bonsoir, {{name}}",
+  "next_up": "À suivre",
+  "quick_actions": "Actions rapides",
+  "action.vehicle_intake": "Réception véhicule",
+  "action.measure": "Mesure",
+  "action.customer": "Client",
+  "action.appointment": "Rendez-vous",
+  "action.stock_entry": "Entrée de stock",
+  "action.transfer": "Transfert",
+  "action.count": "Inventaire",
+  "action.prepare": "Préparer la commande",
+  "nothing_next": "Rien en attente. Les nouvelles tâches apparaissent ici."
+}

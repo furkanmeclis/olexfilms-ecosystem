@@ -1,3 +1,13 @@
 {
+  "customers": "客户",
+  "appointments": "预约",
+  "stock": "库存",
+  "orders": "订单",
+  "warranty_claims": "质保申请",
+  "leads": "线索与报价",
+  "reports": "报表",
+  "accounting": "收支与往来账",
+  "tasks": "任务",
+  "announcements": "公告",
   "warranties": "质保"
 }

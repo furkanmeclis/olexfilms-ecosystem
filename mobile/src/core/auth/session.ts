@@ -25,10 +25,16 @@ type Session = {
 const ME_KEY = 'session.me';
 const LAST_ORG_KEY = 'session.lastOrg';
 
-/** The backend's resolved language applies until the user picks one in Settings. */
+/**
+ * The user's own language (set on the web) applies until they pick one in
+ * Settings. The organization default (`effective_locale` when user.locale is
+ * null) is ignored: switching organizations must not flip the UI language,
+ * and the device language is the better guess for this person.
+ */
 function adoptBackendLocale(me: MobileMe) {
-  if (!hasLanguagePreference() && isLanguage(me.effective_locale)) {
-    void setLanguage(me.effective_locale, { persist: false });
+  const own = me.user.locale;
+  if (!hasLanguagePreference() && isLanguage(own)) {
+    void setLanguage(own, { persist: false });
   }
 }
 

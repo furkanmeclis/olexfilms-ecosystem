@@ -1,1 +1,16 @@
-{}
+{
+  "greeting_morning": "Добро утро, {{name}}",
+  "greeting_day": "Добър ден, {{name}}",
+  "greeting_evening": "Добър вечер, {{name}}",
+  "next_up": "Следва",
+  "quick_actions": "Бързи действия",
+  "action.vehicle_intake": "Приемане на автомобил",
+  "action.measure": "Измерване",
+  "action.customer": "Клиент",
+  "action.appointment": "Час",
+  "action.stock_entry": "Заприхождаване",
+  "action.transfer": "Трансфер",
+  "action.count": "Инвентаризация",
+  "action.prepare": "Подготви поръчка",
+  "nothing_next": "Няма чакащи задачи. Новите задачи ще се появят тук."
+}

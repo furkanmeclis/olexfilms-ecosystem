@@ -1,1 +1,16 @@
-{}
+{
+  "greeting_morning": "早上好，{{name}}",
+  "greeting_day": "下午好，{{name}}",
+  "greeting_evening": "晚上好，{{name}}",
+  "next_up": "接下来",
+  "quick_actions": "快捷操作",
+  "action.vehicle_intake": "车辆接收",
+  "action.measure": "测量",
+  "action.customer": "客户",
+  "action.appointment": "预约",
+  "action.stock_entry": "入库",
+  "action.transfer": "调拨",
+  "action.count": "盘点",
+  "action.prepare": "备货",
+  "nothing_next": "暂无待办。新的工作会显示在这里。"
+}

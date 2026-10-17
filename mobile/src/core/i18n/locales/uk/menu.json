@@ -1,3 +1,13 @@
 {
+  "customers": "Клієнти",
+  "appointments": "Записи",
+  "stock": "Склад",
+  "orders": "Замовлення",
+  "warranty_claims": "Гарантійні звернення",
+  "leads": "Ліди та пропозиції",
+  "reports": "Звіти",
+  "accounting": "Каса та розрахунки",
+  "tasks": "Завдання",
+  "announcements": "Оголошення",
   "warranties": "Гарантії"
 }

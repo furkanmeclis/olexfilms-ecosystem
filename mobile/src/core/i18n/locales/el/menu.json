@@ -1,3 +1,13 @@
 {
+  "customers": "Πελάτες",
+  "appointments": "Ραντεβού",
+  "stock": "Απόθεμα",
+  "orders": "Παραγγελίες",
+  "warranty_claims": "Αιτήματα εγγύησης",
+  "leads": "Leads και προσφορές",
+  "reports": "Αναφορές",
+  "accounting": "Ταμείο και λογαριασμοί",
+  "tasks": "Εργασίες",
+  "announcements": "Ανακοινώσεις",
   "warranties": "Εγγυήσεις"
 }

@@ -1,3 +1,13 @@
 {
+  "customers": "Клиенти",
+  "appointments": "Часове",
+  "stock": "Склад",
+  "orders": "Поръчки",
+  "warranty_claims": "Гаранционни претенции",
+  "leads": "Лийдове и оферти",
+  "reports": "Отчети",
+  "accounting": "Каса и сметки",
+  "tasks": "Задачи",
+  "announcements": "Съобщения",
   "warranties": "Гаранции"
 }

@@ -13,6 +13,8 @@
   "restart_title": "Yeniden başlatma gerekli",
   "restart_body": "Yazı yönünün değişmesi için uygulama yeniden başlar.",
   "restart_now": "Yeniden başlat",
+  "restart_reopen_body": "Yazı yönünün değişmesi için uygulamayı tamamen kapatıp yeniden açın.",
+  "restart_ok": "Tamam",
   "version": "Sürüm {{version}}",
   "about": "Hakkında",
   "api_server": "Sunucu",

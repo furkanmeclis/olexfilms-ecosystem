@@ -1,1 +1,12 @@
-{}
+{
+  "title": "Veb panelə giriş",
+  "browser": "Brauzer",
+  "organization": "Təşkilat",
+  "expires": "Bitmə vaxtı",
+  "warning": "Bu girişi siz başlatmamısınızsa, rədd edin.",
+  "approve": "Təsdiqlə",
+  "reject": "Rədd et",
+  "approved": "Giriş təsdiqləndi",
+  "rejected": "Giriş rədd edildi",
+  "expired": "Kodun müddəti bitib. Vebdə yeni QR kod yaradın."
+}

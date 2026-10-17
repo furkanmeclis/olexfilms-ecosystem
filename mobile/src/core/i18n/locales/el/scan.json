@@ -1,1 +1,13 @@
-{}
+{
+  "hint": "Τοποθετήστε το barcode ή τον κωδικό QR στο πλαίσιο",
+  "permission_title": "Απαιτείται πρόσβαση στην κάμερα",
+  "permission_body": "Επιτρέψτε την πρόσβαση στην κάμερα για ανάγνωση barcode και κωδικών QR.",
+  "permission_button": "Να επιτρέπεται η κάμερα",
+  "open_settings": "Άνοιγμα Ρυθμίσεων",
+  "result.qr_login": "Σύνδεση στο web panel",
+  "result.location": "Θέση αποθήκης",
+  "result.unit": "Μονάδα προϊόντος",
+  "result.warranty": "Εγγύηση",
+  "result.unknown": "Μη αναγνωρισμένος κωδικός",
+  "scan_again": "Σάρωση ξανά"
+}

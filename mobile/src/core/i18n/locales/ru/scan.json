@@ -1,1 +1,13 @@
-{}
+{
+  "hint": "Наведите рамку на штрихкод или QR-код",
+  "permission_title": "Нужен доступ к камере",
+  "permission_body": "Разрешите доступ к камере, чтобы считывать штрихкоды и QR-коды.",
+  "permission_button": "Разрешить камеру",
+  "open_settings": "Открыть настройки",
+  "result.qr_login": "Вход в веб-панель",
+  "result.location": "Место на складе",
+  "result.unit": "Единица товара",
+  "result.warranty": "Гарантия",
+  "result.unknown": "Код не распознан",
+  "scan_again": "Сканировать снова"
+}

@@ -13,6 +13,8 @@
   "restart_title": "Restart needed",
   "restart_body": "The app restarts to change the text direction.",
   "restart_now": "Restart",
+  "restart_reopen_body": "Close the app completely and open it again to change the text direction.",
+  "restart_ok": "OK",
   "version": "Version {{version}}",
   "about": "About",
   "api_server": "Server",

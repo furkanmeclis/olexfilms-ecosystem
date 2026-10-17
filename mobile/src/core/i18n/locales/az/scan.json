@@ -1,1 +1,13 @@
-{}
+{
+  "hint": "Barkodu və ya QR kodu çərçivəyə salın",
+  "permission_title": "Kamera icazəsi lazımdır",
+  "permission_body": "Barkod və QR kodları oxumaq üçün kameraya giriş icazəsi verin.",
+  "permission_button": "Kameraya icazə ver",
+  "open_settings": "Ayarları aç",
+  "result.qr_login": "Veb panelə giriş",
+  "result.location": "Anbar yeri",
+  "result.unit": "Məhsul vahidi",
+  "result.warranty": "Zəmanət",
+  "result.unknown": "Tanınmayan kod",
+  "scan_again": "Yenidən skan et"
+}

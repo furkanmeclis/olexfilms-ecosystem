@@ -1,7 +1,7 @@
 import { getLocales } from 'expo-localization';
 import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import { I18nManager } from 'react-native';
+import { I18nManager, Platform, Settings } from 'react-native';
 
 import { storage } from '@/core/storage';
 
@@ -64,6 +64,18 @@ i18n.use(initReactI18next).init({
   initAsync: false,
 });
 
+/** iOS: keep the app language in step with a saved choice (applies from the next launch). */
+function appleLanguage(lang: Language) {
+  return lang === 'zh-CN' ? 'zh-Hans' : lang;
+}
+if (Platform.OS === 'ios') {
+  const saved = storage.getString(PREF_KEY);
+  const current = (Settings.get('AppleLanguages') as string[] | undefined)?.[0];
+  if (isLanguage(saved) && current !== appleLanguage(saved)) {
+    Settings.set({ AppleLanguages: [appleLanguage(saved)] });
+  }
+}
+
 /** Whether the user ever picked a language (then the backend's locale is ignored). */
 export function hasLanguagePreference() {
   return isLanguage(storage.getString(PREF_KEY));
@@ -77,10 +89,17 @@ export async function setLanguage(lang: Language, { persist = true } = {}): Prom
   if (persist) storage.set(PREF_KEY, lang);
   await i18n.changeLanguage(lang);
   const rtl = isRTL(lang);
-  if (rtl === I18nManager.isRTL) return false;
-  I18nManager.allowRTL(rtl);
-  I18nManager.forceRTL(rtl);
-  return true;
+  if (Platform.OS === 'ios') {
+    // expo-localization calls forceRTL(false) on every launch, so forceRTL never
+    // sticks on iOS. The app's own language (AppleLanguages, like iOS per-app
+    // language) does: with allowRTL on, React Native and UIKit (headers, tab
+    // bar) lay out right-to-left from the next launch.
+    if (persist) Settings.set({ AppleLanguages: [appleLanguage(lang)] });
+  } else {
+    I18nManager.allowRTL(rtl);
+    I18nManager.forceRTL(rtl);
+  }
+  return rtl !== I18nManager.isRTL;
 }
 
 /** Translates a backend error code with the web's errors catalog. */

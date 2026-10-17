@@ -1,3 +1,13 @@
 {
+  "customers": "Clientes",
+  "appointments": "Citas",
+  "stock": "Stock",
+  "orders": "Pedidos",
+  "warranty_claims": "Reclamaciones de garantía",
+  "leads": "Leads y presupuestos",
+  "reports": "Informes",
+  "accounting": "Caja y cuentas",
+  "tasks": "Tareas",
+  "announcements": "Anuncios",
   "warranties": "Garantías"
 }
