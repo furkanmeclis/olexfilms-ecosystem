@@ -32,6 +32,12 @@ func RegisterMobileRoutes(
 	mux.Handle("POST /v1/mobile/auth/logout-all", private(h.LogoutAll))
 	mux.Handle("POST /v1/mobile/auth/organization-context", private(h.SwitchOrganization))
 
+	// Customer mobile sessions reach the portal through this mirror:
+	// /v1/mobile/portal/<rest> is served by this mux as /v1/portal/<rest>.
+	// It is a mux route, so the app version gate (which wraps the mux) runs
+	// on the original mobile path first.
+	mux.Handle(middleware.MobilePortalMirrorPrefix, middleware.MobilePortalMirror(tokens, minVersion, maxVersion)(mux))
+
 	mux.Handle("PUT /v1/mobile/push-token", private(h.PutPushToken))
 	mux.Handle("DELETE /v1/mobile/push-token", private(h.DeletePushToken))
 

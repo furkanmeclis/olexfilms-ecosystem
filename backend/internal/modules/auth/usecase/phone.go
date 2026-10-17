@@ -38,36 +38,9 @@ func (u *AuthUseCase) LoginWithVerifiedPhone(ctx context.Context, e164, locale s
 	if e164 == "" {
 		return model.Tokens{}, false, ErrInvalidRequest
 	}
-	created := false
-	user, err := u.phoneRepo.FindUserByPhone(ctx, e164)
-	if errors.Is(err, repository.ErrNotFound) {
-		hash, herr := unusablePasswordHash()
-		if herr != nil {
-			return model.Tokens{}, false, herr
-		}
-		user, err = u.phoneRepo.CreatePhoneUser(ctx, e164, hash, supportedLocale(locale), rbac.RoleCustomer)
-		if err != nil {
-			// A concurrent verify may have created it first.
-			if existing, ferr := u.phoneRepo.FindUserByPhone(ctx, e164); ferr == nil {
-				user = existing
-			} else {
-				return model.Tokens{}, false, err
-			}
-		} else {
-			created = true
-			u.indexUserSearch(ctx, user.UUID.String())
-		}
-	} else if err != nil {
+	user, created, err := u.resolvePhoneCustomer(ctx, e164, locale)
+	if err != nil {
 		return model.Tokens{}, false, err
-	}
-	if user.Status != "active" {
-		return model.Tokens{}, false, ErrUserDisabled
-	}
-	// Portal realm: customer / fleet accounts only (staff use the panel).
-	if !created {
-		if err := u.ensurePortalCustomer(ctx, user); err != nil {
-			return model.Tokens{}, false, err
-		}
 	}
 	if err := u.phoneRepo.MarkPhoneVerified(ctx, user.ID); err != nil {
 		return model.Tokens{}, false, err
@@ -81,6 +54,45 @@ func (u *AuthUseCase) LoginWithVerifiedPhone(ctx context.Context, e164, locale s
 		return model.Tokens{}, false, err
 	}
 	return tokens, created, nil
+}
+
+// resolvePhoneCustomer finds or creates the customer account of a verified
+// phone for the portal and the customer mobile sign-in (K11, K26): an unknown
+// number becomes a new customer account (created), a role-less account is
+// claimed as a customer, a staff-only account is refused (NO_PORTAL_ACCESS).
+func (u *AuthUseCase) resolvePhoneCustomer(ctx context.Context, e164, locale string) (model.User, bool, error) {
+	created := false
+	user, err := u.phoneRepo.FindUserByPhone(ctx, e164)
+	if errors.Is(err, repository.ErrNotFound) {
+		hash, herr := unusablePasswordHash()
+		if herr != nil {
+			return model.User{}, false, herr
+		}
+		user, err = u.phoneRepo.CreatePhoneUser(ctx, e164, hash, supportedLocale(locale), rbac.RoleCustomer)
+		if err != nil {
+			// A concurrent verify may have created it first.
+			if existing, ferr := u.phoneRepo.FindUserByPhone(ctx, e164); ferr == nil {
+				user = existing
+			} else {
+				return model.User{}, false, err
+			}
+		} else {
+			created = true
+			u.indexUserSearch(ctx, user.UUID.String())
+		}
+	} else if err != nil {
+		return model.User{}, false, err
+	}
+	if user.Status != "active" {
+		return model.User{}, false, ErrUserDisabled
+	}
+	// Portal realm: customer / fleet accounts only (staff use the panel).
+	if !created {
+		if err := u.ensurePortalCustomer(ctx, user); err != nil {
+			return model.User{}, false, err
+		}
+	}
+	return user, created, nil
 }
 
 // ensurePortalCustomer applies the portal realm rule to the owner of a

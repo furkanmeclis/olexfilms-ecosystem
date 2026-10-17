@@ -66,5 +66,6 @@ func (l Loader) LoadPrincipal(r *http.Request, claims jwt.Claims) (authctx.Princ
 		SessionID:          claims.SessionUUID(),
 		OrganizationUUID:   orgUUID,
 		Realm:              claims.Realm(),
+		MobileKind:         claims.SessionKind(),
 	}, nil
 }

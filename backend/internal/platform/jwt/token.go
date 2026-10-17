@@ -31,6 +31,15 @@ func NormalizeAudience(aud string) string {
 	return AudiencePanel
 }
 
+// Mobile session kinds (aud=mobile). A staff session reaches the staff mobile
+// API; a customer session (a customer / fleet only account) reaches its own
+// account routes and the portal mirror only (middleware.MobileCustomerRealm).
+// Only customer sessions carry the claim, so staff tokens are unchanged.
+const (
+	MobileKindStaff    = "staff"
+	MobileKindCustomer = "customer"
+)
+
 // Claims are verified identity data carried by an access token.
 type Claims struct {
 	Roles          []string `json:"roles"`
@@ -43,6 +52,9 @@ type Claims struct {
 	// expires. Only a manager from AcceptLegacy parses it; every other
 	// route rejects it as an invalid token.
 	Legacy bool `json:"legacy,omitempty"`
+	// MobileKind is "customer" on a customer mobile session and empty
+	// otherwise (SessionKind).
+	MobileKind string `json:"mobile_kind,omitempty"`
 	jwtlib.RegisteredClaims
 }
 
@@ -56,6 +68,9 @@ type AccessInput struct {
 	OrganizationID *uuid.UUID
 	// Audience is the session realm (AudiencePanel when empty).
 	Audience string
+	// MobileKind is MobileKindCustomer for a customer mobile session; it is
+	// ignored on any other audience.
+	MobileKind string
 }
 
 // Manager issues and validates access JWTs. Refresh tokens are opaque (not JWT).
@@ -128,6 +143,7 @@ func (m *Manager) IssueLegacyAccess(in AccessInput, expiresAt time.Time) (string
 	}
 	in.Audience = AudienceMobile
 	in.ImpersonatorID = nil
+	in.MobileKind = ""
 	return m.issue(in, now, expiresAt.UTC(), true)
 }
 
@@ -153,7 +169,12 @@ func (m *Manager) issue(in AccessInput, now, expiresAt time.Time, legacy bool) (
 		s := in.OrganizationID.String()
 		oid = &s
 	}
+	var mobileKind string
+	if NormalizeAudience(in.Audience) == AudienceMobile && in.MobileKind == MobileKindCustomer {
+		mobileKind = MobileKindCustomer
+	}
 	claims := Claims{
+		MobileKind:     mobileKind,
 		Roles:          roles,
 		IsSuperAdmin:   in.IsSuperAdmin,
 		ImpersonatorID: imp,
@@ -191,6 +212,9 @@ func (m *Manager) ParseAccess(token string) (Claims, error) {
 	if claims.Legacy && (!m.acceptLegacy || claims.Realm() != AudienceMobile || claims.SessionUUID() == uuid.Nil) {
 		return Claims{}, ErrInvalidToken
 	}
+	if claims.MobileKind != "" && (claims.MobileKind != MobileKindCustomer || claims.Realm() != AudienceMobile || claims.Legacy) {
+		return Claims{}, ErrInvalidToken
+	}
 	if _, err := uuid.Parse(claims.Subject); err != nil {
 		return Claims{}, ErrInvalidToken
 	}
@@ -209,6 +233,18 @@ func (c Claims) Realm() string {
 		}
 	}
 	return AudiencePanel
+}
+
+// SessionKind is the mobile session kind of a mobile token: customer when
+// the token carries the customer claim, else staff. "" for other realms.
+func (c Claims) SessionKind() string {
+	if c.Realm() != AudienceMobile {
+		return ""
+	}
+	if c.MobileKind == MobileKindCustomer {
+		return MobileKindCustomer
+	}
+	return MobileKindStaff
 }
 
 func (c Claims) UserUUID() (uuid.UUID, error) {

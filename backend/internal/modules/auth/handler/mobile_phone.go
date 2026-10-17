@@ -48,12 +48,13 @@ func (h *MobileHandler) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 		Device           model.DeviceInfo `json:"device"`
 		OrganizationSlug string           `json:"organization_slug"`
 		TOTPCode         string           `json:"totp_code"`
+		Locale           string           `json:"locale"`
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, otpRequestBodyLimit)
 	if err := decodeJSON(w, r, &in); err != nil {
 		return
 	}
-	tokens, err := h.uc.MobileVerifyOTP(r.Context(), h.otp, in.Phone, in.Code, in.TOTPCode, in.OrganizationSlug, in.Device, sessionMeta(r))
+	tokens, err := h.uc.MobileVerifyOTP(r.Context(), h.otp, in.Phone, in.Code, in.TOTPCode, in.OrganizationSlug, requestLocale(r, in.Locale), in.Device, sessionMeta(r))
 	if err != nil {
 		writeMobilePhoneError(w, r, err)
 		return
