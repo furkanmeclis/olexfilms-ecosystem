@@ -273,7 +273,7 @@ test("import wizard: preview errors, confirm counts, result and undo", async ({
   await expect(result).toContainText("Imported rows: 4, skipped rows: 2.");
   await expect(wizard.getByTestId("import-result-detail")).toHaveAttribute(
     "href",
-    `/t/${SLUG}/imports/${JOB}`,
+    `/t/${SLUG}/settings/imports/${JOB}`,
   );
   await wizard.getByTestId("import-undo").click();
   await expect(result).toHaveAttribute("data-status", "rolled_back");

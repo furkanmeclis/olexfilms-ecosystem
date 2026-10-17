@@ -398,5 +398,19 @@
   "dealer_page.form_rate_limited": "Troppe richieste. Riprova più tardi.",
   "dealer_page.form_failed": "La richiesta non è stata inviata. Riprova.",
   "dealer_page.form_success_title": "Richiesta ricevuta",
-  "dealer_page.form_success_body": "Il rivenditore ti contatterà a breve."
+  "dealer_page.form_success_body": "Il rivenditore ti contatterà a breve.",
+  "nav.profile": "Il mio profilo",
+  "profile.title": "Il mio profilo",
+  "profile.saved": "I tuoi dati sono stati salvati.",
+  "profile.failed": "Impossibile salvare i tuoi dati.",
+  "profile.links_title": "Collegamenti dell'account",
+  "profile.preferences_hint": "Notifiche via e-mail, in app e delle campagne",
+  "profile.contracts_hint": "Contratti che hai firmato e i relativi PDF",
+  "profile.phone_login_hint": "Accedi con un codice inviato al tuo telefono; non serve una password.",
+  "home.vehicles_hint": "I tuoi veicoli e la loro cronologia di assistenza",
+  "home.warranties_hint": "I tuoi certificati di garanzia e il loro stato",
+  "home.appointments_hint": "I tuoi appuntamenti futuri e passati",
+  "home.dealers_hint": "Rivenditori autorizzati vicino a te",
+  "home.profile_hint": "Il tuo nome, la lingua e le sessioni",
+  "home.book": "Prenota un appuntamento"
 }

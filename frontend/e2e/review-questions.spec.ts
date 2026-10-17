@@ -124,7 +124,7 @@ test("review questions: list, create with language tabs", async ({ page }) => {
     },
   );
 
-  await page.goto("/platform/review-questions");
+  await page.goto("/platform/settings/review-questions");
   await expect(
     page.getByRole("heading", { name: "Review questions", level: 1 }),
   ).toBeVisible();

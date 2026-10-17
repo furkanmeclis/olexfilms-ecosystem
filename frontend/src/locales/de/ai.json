@@ -1,4 +1,11 @@
 {
+  "chat.back": "Zurück zum Chat",
+  "suggestions.panel.first": "Wobei kannst du mir helfen?",
+  "suggestions.panel.second": "Finde meine letzten Einträge",
+  "suggestions.panel.third": "Hilf mir, meine nächsten Schritte zu planen",
+  "suggestions.portal.first": "Zeige meine Fahrzeuge",
+  "suggestions.portal.second": "Hilf mir, einen Termin zu buchen",
+  "suggestions.portal.third": "Finde meine Garantien",
   "nav_title": "KI-Assistent",
   "page.title": "KI-Assistent",
   "page.description": "Fragen Sie zu Ihren Datensätzen; Änderungen werden erst nach Ihrer Bestätigung ausgeführt.",

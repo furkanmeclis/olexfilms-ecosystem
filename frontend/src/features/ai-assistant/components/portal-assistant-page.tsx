@@ -2,7 +2,11 @@
 
 import { Bot } from "lucide-react";
 
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalEmpty,
+  PortalLoading,
+  PortalPage,
+} from "@/features/portal/components/portal-page";
 import { useLocale } from "@/providers/locale-provider";
 
 import {
@@ -28,6 +32,10 @@ export function PortalAssistantPage() {
         scope={PORTAL_ASSISTANT_SCOPE}
         layout="page"
         showToolChips={false}
+        loadingFallback={<PortalLoading label={t("ai.chat.loading")} />}
+        emptyFallback={
+          <PortalEmpty icon={<Bot />} title={t("ai.chat.empty")} />
+        }
       />
     </PortalPage>
   );

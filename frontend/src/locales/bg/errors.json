@@ -162,5 +162,7 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "Профилът за фактуриране на купувача е непълен; попълнете липсващите полета.",
   "codes.EINVOICE_INVALID_STATUS": "Статусът на е-фактурата не позволява това действие.",
   "codes.EINVOICE_NOT_ARCHIVED": "Е-фактурата все още не е архивирана.",
-  "codes.EINVOICE_PDF_NOT_READY": "PDF файлът на фактурата още не е готов; опитайте след малко или генерирайте отново."
+  "codes.EINVOICE_PDF_NOT_READY": "PDF файлът на фактурата още не е готов; опитайте след малко или генерирайте отново.",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Разположете единицата в склада преди назначаване.",
+  "page_forbidden_body": "Нямате право да преглеждате тази страница."
 }

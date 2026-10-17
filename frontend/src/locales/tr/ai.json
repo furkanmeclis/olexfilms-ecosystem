@@ -1,4 +1,11 @@
 {
+  "chat.back": "Sohbete dön",
+  "suggestions.panel.first": "Bana hangi konularda yardımcı olabilirsin?",
+  "suggestions.panel.second": "Son kayıtlarımı bul",
+  "suggestions.panel.third": "Sonraki adımlarımı planlamama yardım et",
+  "suggestions.portal.first": "Araçlarımı göster",
+  "suggestions.portal.second": "Randevu almama yardım et",
+  "suggestions.portal.third": "Garantilerimi bul",
   "nav_title": "AI asistan",
   "page.title": "AI asistan",
   "page.description": "Kayıtlarınız hakkında sorun; değişiklikler yalnızca siz onayladıktan sonra yapılır.",

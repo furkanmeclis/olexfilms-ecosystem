@@ -370,11 +370,21 @@ func TestLabelPrinting(t *testing.T) {
 	if strings.Count(html, `<div class="label">`) != 2 || !strings.Contains(html, bin.FullCode.String) || !strings.Contains(html, `<img class="qr"`) {
 		t.Fatalf("location sheet html = %.300s", html)
 	}
+	pdf, err = e.lb.PrintLocations(e.ctx, dc, stockusecase.LocationPrintInput{WarehouseUUID: &wh.Uuid})
+	if err != nil || len(pdf) == 0 {
+		t.Fatalf("print warehouse: %v", err)
+	}
+	if html = e.pdf.html[len(e.pdf.html)-1]; strings.Count(html, `<div class="label">`) != 2 {
+		t.Fatalf("warehouse label count: %d", strings.Count(html, `<div class="label">`))
+	}
 	if !strings.HasPrefix(labels.Payload(labels.KindLocation, bin.FullCode.String), "OFW:LOC:"+wh.Code+"-R1-A-01") {
 		t.Fatalf("location payload for %s", bin.FullCode.String)
 	}
 	if _, err := e.lb.PrintLocations(e.ctx, c, stockusecase.LocationPrintInput{LocationUUIDs: []uuid.UUID{bin.Uuid}}); !errors.Is(err, stockusecase.ErrNotFound) {
 		t.Fatalf("center prints distributor location: %v", err)
+	}
+	if _, err := e.lb.PrintLocations(e.ctx, c, stockusecase.LocationPrintInput{WarehouseUUID: &wh.Uuid}); !errors.Is(err, stockusecase.ErrNotFound) {
+		t.Fatalf("center prints distributor warehouse: %v", err)
 	}
 
 	// Renderer failure.

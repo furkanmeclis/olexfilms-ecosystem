@@ -338,6 +338,74 @@ func (q *Queries) InsertWarehouseTransferLine(ctx context.Context, arg InsertWar
 	return i, err
 }
 
+const listOrderPlacementUnits = `-- name: ListOrderPlacementUnits :many
+SELECT u.uuid AS unit_uuid, u.barcode, u.unit_kind, u.remaining_meters,
+       oiu.quantity, oiu.meters,
+       p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name, p.unit_type AS product_unit_type,
+       COALESCE(s.holder_org_id = $1::bigint
+                AND s.status = 'available' AND s.owner_type = 'organization', FALSE)::boolean AS unplaced
+FROM order_item_units oiu
+JOIN order_items i ON i.id = oiu.order_item_id
+JOIN units u ON u.id = oiu.unit_id
+JOIN products p ON p.id = u.product_id
+LEFT JOIN unit_current_state s ON s.unit_id = u.id
+WHERE i.order_id = $2
+ORDER BY oiu.order_item_id, oiu.id
+`
+
+type ListOrderPlacementUnitsParams struct {
+	OrganizationID int64 `json:"organization_id"`
+	OrderID        int64 `json:"order_id"`
+}
+
+type ListOrderPlacementUnitsRow struct {
+	UnitUuid        uuid.UUID      `json:"unit_uuid"`
+	Barcode         string         `json:"barcode"`
+	UnitKind        string         `json:"unit_kind"`
+	RemainingMeters pgtype.Numeric `json:"remaining_meters"`
+	Quantity        pgtype.Int4    `json:"quantity"`
+	Meters          pgtype.Numeric `json:"meters"`
+	ProductUuid     uuid.UUID      `json:"product_uuid"`
+	ProductSku      string         `json:"product_sku"`
+	ProductName     string         `json:"product_name"`
+	ProductUnitType string         `json:"product_unit_type"`
+	Unplaced        bool           `json:"unplaced"`
+}
+
+// The units of an order with whether each is still on hand unplaced in the
+// organization (available, owned by the organization itself, TEC-765).
+func (q *Queries) ListOrderPlacementUnits(ctx context.Context, arg ListOrderPlacementUnitsParams) ([]ListOrderPlacementUnitsRow, error) {
+	rows, err := q.db.Query(ctx, listOrderPlacementUnits, arg.OrganizationID, arg.OrderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListOrderPlacementUnitsRow{}
+	for rows.Next() {
+		var i ListOrderPlacementUnitsRow
+		if err := rows.Scan(
+			&i.UnitUuid,
+			&i.Barcode,
+			&i.UnitKind,
+			&i.RemainingMeters,
+			&i.Quantity,
+			&i.Meters,
+			&i.ProductUuid,
+			&i.ProductSku,
+			&i.ProductName,
+			&i.ProductUnitType,
+			&i.Unplaced,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listWarehouseTransferLines = `-- name: ListWarehouseTransferLines :many
 SELECT id, uuid, transfer_id, unit_id, source_location_id, target_location_id, is_open, out_movement_id, in_movement_id, placement_movement_id, restore_movement_id, created_at FROM warehouse_transfer_lines WHERE transfer_id = $1 ORDER BY id
 `

@@ -1,22 +1,23 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, ShieldCheck } from "lucide-react";
+import { BellRing } from "lucide-react";
 import { toast } from "sonner";
 
 import { ErrorState } from "@/components/common/error-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { TotpManager } from "@/features/account/components/totp-manager";
+import { routes } from "@/config/routes";
 import { ConnectedAppsCard } from "@/features/mcp";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalPage,
+  PortalLoading,
+} from "@/features/portal/components/portal-page";
 import {
   portalApi,
-  portalTotpApi,
   type PortalNotificationPreferences,
 } from "@/features/portal/lib/portal-client";
-import { usePortalReadOnly } from "@/features/portal/lib/use-portal-read-only";
 import { useLocale } from "@/providers/locale-provider";
 
 export const PORTAL_PREFERENCES_KEY = [
@@ -36,12 +37,11 @@ const TOGGLES: readonly { field: Toggle; key: string }[] = [
  * Portal > Notification preferences (TEC-245): the F0-10 preferences of
  * the signed-in user (GET / PUT /v1/portal/notification-preferences). Each
  * switch saves at once; the whole object is sent back so the per-event
- * rules stay as they are. Fleet accounts may change their own settings.
+ * rules stay as they are. Fleet accounts may change their own settings;
+ * their 2FA moved to the profile (TEC-771).
  */
 export function PortalPreferences() {
   const { t } = useLocale();
-  // TEC-637: fleet accounts sign in with e-mail + password and may add 2FA.
-  const fleet = usePortalReadOnly();
   const qc = useQueryClient();
   const prefs = useQuery({
     queryKey: PORTAL_PREFERENCES_KEY,
@@ -67,6 +67,7 @@ export function PortalPreferences() {
       title={t("portal.preferences.title")}
       icon={<BellRing className="size-6" />}
       testId="portal-preferences-page"
+      back={{ href: routes.portal.profile, label: t("portal.nav.profile") }}
     >
       {prefs.isError ? (
         <ErrorState
@@ -75,9 +76,7 @@ export function PortalPreferences() {
           retryLabel={t("common.retry")}
         />
       ) : !prefs.data ? (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.preferences.loading")}
-        </p>
+        <PortalLoading label={t("portal.preferences.loading")} />
       ) : (
         <Card>
           <CardContent className="divide-y pt-2">
@@ -113,23 +112,6 @@ export function PortalPreferences() {
           </CardContent>
         </Card>
       )}
-      {fleet ? (
-        <Card className="mt-6" data-testid="portal-totp-card">
-          <CardContent className="space-y-3 pt-6">
-            <div className="flex items-center gap-2 font-medium">
-              <ShieldCheck
-                className="text-muted-foreground size-5"
-                aria-hidden
-              />
-              {t("auth.totp.title")}
-            </div>
-            <p className="text-muted-foreground text-sm">
-              {t("auth.totp.description")}
-            </p>
-            <TotpManager api={portalTotpApi} queryKey={["portal", "totp"]} />
-          </CardContent>
-        </Card>
-      ) : null}
       <div className="mt-6">
         <ConnectedAppsCard realm="portal" />
       </div>

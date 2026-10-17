@@ -1,4 +1,11 @@
 {
+  "chat.back": "Назад до чату",
+  "suggestions.panel.first": "З чим ти можеш мені допомогти?",
+  "suggestions.panel.second": "Знайди мої останні записи",
+  "suggestions.panel.third": "Допоможи спланувати наступні кроки",
+  "suggestions.portal.first": "Покажи мої автомобілі",
+  "suggestions.portal.second": "Допоможи записатися на прийом",
+  "suggestions.portal.third": "Знайди мої гарантії",
   "nav_title": "ШІ-асистент",
   "page.title": "ШІ-асистент",
   "page.description": "Запитуйте про свої записи; зміни виконуються лише після вашого підтвердження.",

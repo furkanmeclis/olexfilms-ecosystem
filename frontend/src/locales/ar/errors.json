@@ -162,5 +162,7 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "ملف الفوترة الخاص بالمشتري غير مكتمل؛ أكمل الحقول الناقصة.",
   "codes.EINVOICE_INVALID_STATUS": "حالة الفاتورة الإلكترونية لا تسمح بهذا الإجراء.",
   "codes.EINVOICE_NOT_ARCHIVED": "لم تتم أرشفة الفاتورة الإلكترونية بعد.",
-  "codes.EINVOICE_PDF_NOT_READY": "ملف PDF للفاتورة غير جاهز بعد؛ حاول بعد قليل أو أعد إنشاءه."
+  "codes.EINVOICE_PDF_NOT_READY": "ملف PDF للفاتورة غير جاهز بعد؛ حاول بعد قليل أو أعد إنشاءه.",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "ضع هذه الوحدة في موقع بالمستودع قبل تخصيصها.",
+  "page_forbidden_body": "ليست لديك صلاحية لعرض هذه الصفحة."
 }

@@ -166,6 +166,7 @@ export type ImportResource =
   | "platform.part_consumption_expectations"
   | "tenant.pricing.recommended"
   | "tenant.stock.units"
+  | "tenant.warehouse.locations"
   | "tenant.warehouse.entry_barcodes";
 
 /** Stock import upload / sample (TEC-158; center only, tenant jobs). */
@@ -202,6 +203,19 @@ export type ImportSchemaField = {
 export const IMPORT_SCHEMA: Partial<
   Record<ImportResource, ImportSchemaField[]>
 > = {
+  "tenant.warehouse.locations": [
+    {
+      key: "room_code",
+      labelKey: "warehouse.import.room_code",
+      required: true,
+    },
+    { key: "room_name", labelKey: "warehouse.import.room_name" },
+    { key: "aisle_code", labelKey: "warehouse.import.aisle_code" },
+    { key: "shelf_code", labelKey: "warehouse.import.shelf_code" },
+    { key: "bin_code", labelKey: "warehouse.import.bin_code" },
+    { key: "name", labelKey: "warehouse.import.name" },
+    { key: "active", labelKey: "warehouse.import.active" },
+  ],
   "platform.users": [
     { key: "email", labelKey: "users.fields.email", required: true },
     { key: "name", labelKey: "users.fields.name", required: true },

@@ -1,4 +1,11 @@
 {
+  "chat.back": "返回聊天",
+  "suggestions.panel.first": "你能帮我做些什么？",
+  "suggestions.panel.second": "查找我最近的记录",
+  "suggestions.panel.third": "帮我规划下一步",
+  "suggestions.portal.first": "显示我的车辆",
+  "suggestions.portal.second": "帮我预约",
+  "suggestions.portal.third": "查找我的保修",
   "nav_title": "AI 助手",
   "page.title": "AI 助手",
   "page.description": "询问与您记录相关的问题；更改仅在您确认后执行。",

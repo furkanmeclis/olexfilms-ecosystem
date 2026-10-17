@@ -1,4 +1,11 @@
 {
+  "chat.back": "Back to chat",
+  "suggestions.panel.first": "What can you help me with?",
+  "suggestions.panel.second": "Find my recent records",
+  "suggestions.panel.third": "Help me plan my next steps",
+  "suggestions.portal.first": "Show my vehicles",
+  "suggestions.portal.second": "Help me book an appointment",
+  "suggestions.portal.third": "Find my warranties",
   "nav_title": "AI assistant",
   "page.title": "AI assistant",
   "page.description": "Ask about your records; changes run only after you confirm them.",

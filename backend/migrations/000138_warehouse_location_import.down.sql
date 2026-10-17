@@ -1,0 +1,2 @@
+DROP TABLE warehouse_location_import_nodes;
+DROP TABLE warehouse_location_import_rows;

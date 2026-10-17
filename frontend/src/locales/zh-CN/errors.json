@@ -162,5 +162,7 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "买方开票资料不完整，请补全缺失的字段。",
   "codes.EINVOICE_INVALID_STATUS": "电子发票当前状态不允许此操作。",
   "codes.EINVOICE_NOT_ARCHIVED": "电子发票尚未归档。",
-  "codes.EINVOICE_PDF_NOT_READY": "发票 PDF 尚未生成，请稍后再试或重新生成。"
+  "codes.EINVOICE_PDF_NOT_READY": "发票 PDF 尚未生成，请稍后再试或重新生成。",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "分配前请将此货品放置到仓库库位。",
+  "page_forbidden_body": "您无权查看此页面。"
 }

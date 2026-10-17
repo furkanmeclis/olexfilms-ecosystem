@@ -93,7 +93,7 @@ test("Özellikler: level groups, prices and the request flow", async ({
 }) => {
   const api = await mockApi(page);
   setup(api);
-  await page.goto(`/t/${SLUG}/features`);
+  await page.goto(`/t/${SLUG}/settings/modules`);
 
   const addon = page.getByTestId("module-level-addon");
   await expect(page.getByTestId("module-level-core")).toContainText("Core");

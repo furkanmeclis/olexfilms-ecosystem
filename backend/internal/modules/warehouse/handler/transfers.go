@@ -15,17 +15,18 @@ import (
 
 // Error codes of the move and warehouse transfer endpoints (TEC-205).
 const (
-	CodeWarehouseTransferState    = "WAREHOUSE_TRANSFER_STATE"
-	CodeWarehouseTransferEmpty    = "WAREHOUSE_TRANSFER_EMPTY"
-	CodeWarehouseTransferUnplaced = "WAREHOUSE_TRANSFER_UNPLACED"
-	CodeWarehouseUnitUnavailable  = "WAREHOUSE_UNIT_UNAVAILABLE"
-	CodeWarehouseUnitBusy         = "WAREHOUSE_UNIT_BUSY"
-	CodeWarehouseLedgerRefused    = "WAREHOUSE_LEDGER_REFUSED"
-	CodeWarehouseOrderNotReceived = "WAREHOUSE_ORDER_NOT_RECEIVED"
+	CodeWarehouseTransferState             = "WAREHOUSE_TRANSFER_STATE"
+	CodeWarehouseTransferEmpty             = "WAREHOUSE_TRANSFER_EMPTY"
+	CodeWarehouseTransferUnplaced          = "WAREHOUSE_TRANSFER_UNPLACED"
+	CodeWarehouseUnitUnavailable           = "WAREHOUSE_UNIT_UNAVAILABLE"
+	CodeWarehouseLocationPlacementRequired = "WAREHOUSE_LOCATION_PLACEMENT_REQUIRED"
+	CodeWarehouseUnitBusy                  = "WAREHOUSE_UNIT_BUSY"
+	CodeWarehouseLedgerRefused             = "WAREHOUSE_LEDGER_REFUSED"
+	CodeWarehouseOrderNotReceived          = "WAREHOUSE_ORDER_NOT_RECEIVED"
 )
 
 // Transfers serves /v1/warehouse/moves, /v1/warehouse/transfers and
-// /v1/warehouse/orders/{uuid}/place.
+// /v1/warehouse/orders/{uuid}/place|unplaced.
 type Transfers struct {
 	svc *wh.WarehouseTransfers
 }
@@ -49,6 +50,8 @@ func writeTransferError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Conflict(w, r, CodeWarehouseTransferUnplaced, "Every line needs a target location in the target warehouse")
 	case errors.Is(err, wh.ErrUnitBusy):
 		response.Conflict(w, r, CodeWarehouseUnitBusy, "The unit is in transit or held by another transfer, request or order")
+	case errors.Is(err, wh.ErrLocationPlacementRequired):
+		response.Conflict(w, r, CodeWarehouseLocationPlacementRequired, "Place the unit in the source warehouse before adding it")
 	case errors.Is(err, wh.ErrUnitUnavailable):
 		response.Conflict(w, r, CodeWarehouseUnitUnavailable, "The unit is not on hand in the expected warehouse")
 	case errors.Is(err, wh.ErrOrderNotReceived):
@@ -111,6 +114,20 @@ func (h *Transfers) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out, err := h.svc.PlaceOrder(r.Context(), entryCaller(r), id, wh.MoveInput{Barcodes: b.Barcodes, LocationUUID: b.LocationUUID, LocationCode: b.LocationCode})
+	if err != nil {
+		writeTransferError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
+// OrderUnplaced (GET /v1/warehouse/orders/{uuid}/unplaced).
+func (h *Transfers) OrderUnplaced(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.OrderUnplaced(r.Context(), entryCaller(r), id)
 	if err != nil {
 		writeTransferError(w, r, err)
 		return
