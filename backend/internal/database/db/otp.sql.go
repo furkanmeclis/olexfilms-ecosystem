@@ -41,6 +41,27 @@ func (q *Queries) ConsumeOTPAt(ctx context.Context, arg ConsumeOTPAtParams) erro
 	return err
 }
 
+const consumeValidPhoneOTP = `-- name: ConsumeValidPhoneOTP :execrows
+UPDATE otp_codes
+SET consumed_at = $1
+WHERE id = $2
+  AND consumed_at IS NULL
+  AND expires_at > $1
+`
+
+type ConsumeValidPhoneOTPParams struct {
+	Now pgtype.Timestamptz `json:"now"`
+	ID  int64              `json:"id"`
+}
+
+func (q *Queries) ConsumeValidPhoneOTP(ctx context.Context, arg ConsumeValidPhoneOTPParams) (int64, error) {
+	result, err := q.db.Exec(ctx, consumeValidPhoneOTP, arg.Now, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const countPhoneOTPsSince = `-- name: CountPhoneOTPsSince :one
 SELECT COUNT(*)::bigint
 FROM otp_codes

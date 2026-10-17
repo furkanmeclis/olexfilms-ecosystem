@@ -443,6 +443,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		uc.SetQRLogin(deps.Queries, qrPublisher, rtIssuer, cfg.Mobile.QRLoginTTL)
 	}
 	mobileH := authhandler.NewMobile(uc, notifSvc, ratelimit.New(deps.Redis, cfg.App.Env))
+	mobileH.SetOTP(otpSvc)
 	authmodule.RegisterMobileRoutes(mux, mobileH,
 		tokens, loader, cfg.Mobile.MinAPIVersion, cfg.Mobile.MaxAPIVersion)
 	// TEC-233: minimal measurement storage (K28), 202 {uuid, status}.

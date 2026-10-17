@@ -192,7 +192,14 @@ func (s *PGStore) IncrementAttempts(ctx context.Context, id int64) (int32, int32
 
 // Consume implements Store.
 func (s *PGStore) Consume(ctx context.Context, id int64, now time.Time) error {
-	return s.q.ConsumeOTPAt(ctx, db.ConsumeOTPAtParams{Now: ts(now), ID: id})
+	count, err := s.q.ConsumeValidPhoneOTP(ctx, db.ConsumeValidPhoneOTPParams{Now: ts(now), ID: id})
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return ErrInvalidCode
+	}
+	return nil
 }
 
 // LatestNotice implements Store.

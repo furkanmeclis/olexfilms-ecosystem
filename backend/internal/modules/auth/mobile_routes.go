@@ -24,6 +24,8 @@ func RegisterMobileRoutes(
 	private := func(fn http.HandlerFunc) http.Handler { return middleware.Chain(fn, version, authn) }
 
 	mux.Handle("POST /v1/mobile/auth/login", public(h.Login))
+	mux.Handle("POST /v1/mobile/auth/identify", public(h.Identify))
+	mux.Handle("POST /v1/mobile/auth/otp/verify", public(h.VerifyOTP))
 	mux.Handle("POST /v1/mobile/auth/refresh", public(h.Refresh))
 	mux.Handle("GET /v1/mobile/auth/me", private(h.Me))
 	mux.Handle("POST /v1/mobile/auth/logout", private(h.Logout))

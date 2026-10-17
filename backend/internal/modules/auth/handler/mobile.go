@@ -30,6 +30,7 @@ type PushTokenService interface {
 // MobileHandler serves /v1/mobile/* (Bearer, aud=mobile) and the web side of
 // the QR sign-in (/v1/auth/qr/*), TEC-91.
 type MobileHandler struct {
+	otp     usecase.MobileOTP
 	uc      *usecase.AuthUseCase
 	push    PushTokenService
 	limiter *ratelimit.Limiter
@@ -97,6 +98,10 @@ func (h *MobileHandler) Login(w http.ResponseWriter, r *http.Request) {
 		writeMobileError(w, r, err)
 		return
 	}
+	h.writeLoginResponse(w, r, tokens)
+}
+
+func (h *MobileHandler) writeLoginResponse(w http.ResponseWriter, r *http.Request, tokens model.Tokens) {
 	p, err := h.uc.PrincipalFromAccess(r.Context(), tokens.AccessToken)
 	if err != nil {
 		writeMobileError(w, r, err)

@@ -8588,6 +8588,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/mobile/auth/identify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Choose password or phone OTP sign-in
+         * @description Email returns next=password without an account lookup. Phone is normalized
+         *     to E.164 (region defaults to TR) and sends the existing login message with
+         *     purpose mobile_login. The response is identical for registered and unknown
+         *     phones. Codes expire after 5 minutes; resend cooldown is 60 seconds.
+         *     Login IP/identifier limits and the shared OTP phone/IP limits apply.
+         *     Errors include 400 INVALID_PHONE or VALIDATION_ERROR; 429 RATE_LIMITED
+         *     (OTP limits include resend_at in error.details and Retry-After);
+         *     503 OTP_DELIVERY_FAILED or RATE_LIMITER_UNAVAILABLE.
+         */
+        post: operations["postMobileAuthIdentify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mobile/auth/otp/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Staff phone OTP sign-in (device)
+         * @description Verifies a mobile_login code using the shared OTP service. Never creates
+         *     accounts or grants roles. Unknown and inactive phones return the same
+         *     401 INVALID_OTP_CODE as wrong, expired or consumed codes. Five wrong
+         *     codes cause 429 OTP_LOCKED. Customer/fleet-only accounts get 403
+         *     NO_PANEL_ACCESS after a valid OTP. Portal/contract codes are not accepted.
+         *     Returns the same mobile token pair, hydration and device session behavior
+         *     as password login. Enabled TOTP and enrollment policy apply equally:
+         *     403 MFA_REQUIRED or MFA_NOT_ENROLLED; 401 INVALID_MFA_CODE.
+         *     On MFA_REQUIRED, retry the SAME phone and code with totp_code before the
+         *     original expiry. MFA errors do not consume the OTP; all retries pass the
+         *     existing verification limiter (20 per phone+IP per 15 minutes). A successful
+         *     factor check consumes the code atomically before token issuance; a later
+         *     organization/session error requires a new OTP. Optional organization_slug
+         *     uses the same membership resolution as password login (403
+         *     NO_TENANT_MEMBERSHIP, ORGANIZATION_ACCESS_EXPIRED, FORBIDDEN or BRAND_MISMATCH).
+         *     Other errors: 400 INVALID_PHONE or VALIDATION_ERROR; 429 RATE_LIMITED
+         *     with resend_at details and Retry-After; 503 OTP_DELIVERY_FAILED or
+         *     RATE_LIMITER_UNAVAILABLE. No cookies or legacy aliases.
+         */
+        post: operations["postMobileAuthOTPVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mobile/auth/login": {
         parameters: {
             query?: never;
@@ -22927,6 +22991,42 @@ export interface components {
             platform: "ios" | "android";
             /** @example 2.0.0 */
             app_version?: string;
+        };
+        MobileIdentifyRequest: {
+            /** @description Email or phone number */
+            identifier: string;
+            /**
+             * @description ISO 3166-1 alpha-2 default phone region
+             * @default TR
+             */
+            region: string;
+        };
+        MobileIdentifyResult: {
+            /** @enum {string} */
+            kind: "email" | "phone";
+            /** @enum {string} */
+            next: "password" | "otp";
+            /** @description Present for phone identifiers */
+            phone_e164?: string;
+            /** Format: date-time */
+            resend_at?: string;
+            /** Format: date-time */
+            expires_at?: string;
+        };
+        EnvelopeMobileIdentify: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["MobileIdentifyResult"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        MobileOTPVerifyRequest: {
+            /** @description E.164 phone from identify */
+            phone: string;
+            code: string;
+            /** @description Authenticator or recovery code */
+            totp_code?: string;
+            organization_slug?: string;
+            device: components["schemas"]["MobileDevice"];
         };
         MobileLoginRequest: {
             /** Format: email */
@@ -45373,6 +45473,88 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
+        };
+    };
+    postMobileAuthIdentify: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileIdentifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Next sign-in step */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMobileIdentify"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+            /** @description OTP_DELIVERY_FAILED or RATE_LIMITER_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    postMobileAuthOTPVerify: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Mobile API contract major version (e.g. `1`); the response names the newest supported one. */
+                "X-Mobile-Api-Version": components["parameters"]["MobileApiVersion"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MobileOTPVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Signed in */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeMobileLogin"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            426: components["responses"]["MobileApiVersionUnsupported"];
+            429: components["responses"]["TooManyRequests"];
+            500: components["responses"]["InternalError"];
+            /** @description OTP_DELIVERY_FAILED or RATE_LIMITER_UNAVAILABLE */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     postMobileAuthLogin: {
