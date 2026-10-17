@@ -1,1 +1,1 @@
-export { BayiHome as default } from '@/features/home/space-homes';
+export { DealerHome as default } from '@/features/dealer-home/dealer-home';

@@ -1,3 +1,1 @@
-import { comingSoon } from '@/features/shell/coming-soon';
-
-export default comingSoon('nav:services');
+export { ServicesListScreen as default } from '@/features/services/services-list-screen';
