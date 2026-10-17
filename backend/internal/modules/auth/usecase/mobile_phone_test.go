@@ -37,11 +37,11 @@ func (r *mobilePhoneRepo) CreatePhoneUser(ctx context.Context, e164, _, locale, 
 	if !r.allowCreate {
 		return model.User{}, errors.New("unexpected creation")
 	}
-	u, err := r.memRepo.CreateUser(ctx, model.User{Phone: e164, Locale: locale, Status: "active"}, false)
+	u, err := r.CreateUser(ctx, model.User{Phone: e164, Locale: locale, Status: "active"}, false)
 	if err != nil {
 		return model.User{}, err
 	}
-	r.memRepo.userRoles[u.ID] = []string{role}
+	r.userRoles[u.ID] = []string{role}
 	r.user, r.missing = u, false
 	return u, nil
 }
