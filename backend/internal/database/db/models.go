@@ -3656,16 +3656,17 @@ type VehicleTransfer struct {
 }
 
 type Warehouse struct {
-	ID             int64              `json:"id"`
-	Uuid           uuid.UUID          `json:"uuid"`
-	OrganizationID int64              `json:"organization_id"`
-	Code           string             `json:"code"`
-	Name           string             `json:"name"`
-	Address        pgtype.Text        `json:"address"`
-	Active         bool               `json:"active"`
-	SortOrder      int32              `json:"sort_order"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID                       int64              `json:"id"`
+	Uuid                     uuid.UUID          `json:"uuid"`
+	OrganizationID           int64              `json:"organization_id"`
+	Code                     string             `json:"code"`
+	Name                     string             `json:"name"`
+	Address                  pgtype.Text        `json:"address"`
+	Active                   bool               `json:"active"`
+	SortOrder                int32              `json:"sort_order"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	RequireLocationPlacement bool               `json:"require_location_placement"`
 }
 
 type WarehouseLocation struct {
@@ -3683,6 +3684,23 @@ type WarehouseLocation struct {
 	Type           pgtype.Text        `json:"type"`
 	FullCode       pgtype.Text        `json:"full_code"`
 	SortOrder      int32              `json:"sort_order"`
+}
+
+type WarehouseLocationImportNode struct {
+	JobID  int64  `json:"job_id"`
+	Kind   string `json:"kind"`
+	NodeID int64  `json:"node_id"`
+	Depth  int32  `json:"depth"`
+	Undone bool   `json:"undone"`
+}
+
+type WarehouseLocationImportRow struct {
+	JobID     int64       `json:"job_id"`
+	RowNumber int32       `json:"row_number"`
+	Path      []byte      `json:"path"`
+	Status    string      `json:"status"`
+	ErrorCode pgtype.Text `json:"error_code"`
+	Target    pgtype.Text `json:"target"`
 }
 
 type WarehouseTransfer struct {
@@ -3720,6 +3738,7 @@ type WarehouseTransferLine struct {
 	PlacementMovementID pgtype.Int8        `json:"placement_movement_id"`
 	RestoreMovementID   pgtype.Int8        `json:"restore_movement_id"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	Quantity            int32              `json:"quantity"`
 }
 
 type Warranty struct {

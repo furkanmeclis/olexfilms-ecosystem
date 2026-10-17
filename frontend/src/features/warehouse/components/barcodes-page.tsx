@@ -14,6 +14,7 @@ import {
 } from "@/components/entity";
 import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Permission } from "@/config/permissions";
 import { catalogService } from "@/features/catalog/services/catalog.service";
 import { GenerateForm } from "@/features/warehouse/components/generate-form";
@@ -40,13 +41,14 @@ import {
 } from "@/lib/api/platform-form-request";
 import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
+import { useDialogs } from "@/providers/dialog-provider";
 
 export const BATCH_PAGE_SIZE = 20;
 export const BATCHES_PERSIST_KEY = "tenant-warehouse-barcodes-v1";
 
 /**
  * Warehouse > Barcodes (TEC-202, center only, K14): reserve N barcodes of
- * a product (units in status printed, they enter stock through a stock
+ * a product (units in status reserved until printed, then enter stock through a stock
  * entry) and print the batch label sheet. The batches are a server
  * DataTable (TEC-376): sort (created, quantity, printed count), search
  * (prefix, range, product, any unit barcode), product / printed / created
@@ -58,6 +60,7 @@ export function BarcodesPage({ slug }: { slug: string }) {
   const access = { ...base, allowed: base.allowed && base.isCenter };
   const canWrite = access.can(Permission.StockWrite);
   const qc = useQueryClient();
+  const { confirm } = useDialogs();
   const [last, setLast] = useState<BarcodeBatch | null>(null);
 
   // Product filter options: the first 100 catalog products (API limit).
@@ -193,6 +196,36 @@ export function BarcodesPage({ slug }: { slug: string }) {
   const query: BatchListQuery = listState.params;
   // TEC-761: the export keeps the list filters, q, sort and the selection.
   const selection = useExportSelection();
+  const voidSelected = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const results = await Promise.all(
+        ids.map((batch_uuid) => warehouseService.voidBarcodes({ batch_uuid })),
+      );
+      return results.flatMap((result) => result.items);
+    },
+    onSuccess: (items) => {
+      appToast.success(
+        t("warehouse.barcodes.void_result", {
+          voided: items.filter((item) => item.voided).length,
+          rejected: items.filter((item) => !item.voided).length,
+        }),
+      );
+      selection.onRowSelectionChange({});
+      void qc.invalidateQueries({ queryKey: ["warehouse", "batches"] });
+    },
+    onError: () => appToast.error(t("warehouse.form.error")),
+  });
+  const askVoid = async () => {
+    const ok = await confirm({
+      title: t("warehouse.barcodes.void_title"),
+      description: t("warehouse.barcodes.void_description", {
+        count: selection.selected.length,
+      }),
+      confirmLabel: t("warehouse.barcodes.void_selected"),
+      variant: "destructive",
+    });
+    if (ok) voidSelected.mutate(selection.selected);
+  };
   const exportQuery = listExportQuery(
     listState.filterParams,
     listState.params,
@@ -294,6 +327,16 @@ export function BarcodesPage({ slug }: { slug: string }) {
             )}
             toolbarExtra={
               <>
+                {canWrite && selection.selected.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={voidSelected.isPending}
+                    onClick={() => void askVoid()}
+                  >
+                    {t("warehouse.barcodes.void_selected")}
+                  </Button>
+                ) : null}
                 <WarehouseExportMenu
                   slug={slug}
                   exportPath={warehouseExportPaths.batches}

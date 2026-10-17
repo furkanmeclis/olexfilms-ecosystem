@@ -112,6 +112,77 @@ func (e *entryEnv) stockCaller(o db.Organization) stockusecase.Caller {
 	return stockusecase.Caller{Org: s, Filter: f}
 }
 
+func TestReservedBarcodeVoidAndEntryCancellation(t *testing.T) {
+	e := newEntryEnv(t)
+	c := e.caller(e.center)
+	w, _ := e.location(t, e.center, "V")
+	batch, err := e.bc.Create(e.ctx, e.stockCaller(e.center), stockusecase.BatchInput{
+		ProductUUID: e.piece.Uuid.String(), Quantity: 3, Prefix: e.prefix("V"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	printed := batch.Units[0]
+	reserved := batch.Units[1]
+	if _, err := e.pool.Exec(e.ctx, `UPDATE units SET status='printed' WHERE uuid=$1`, printed.UUID); err != nil {
+		t.Fatal(err)
+	}
+	result, err := e.bc.Void(e.ctx, e.stockCaller(e.center), stockusecase.VoidInput{UnitUUIDs: []uuid.UUID{printed.UUID, reserved.UUID}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Items) != 2 || result.Items[0].Voided || result.Items[0].Reason != "not_reserved" || !result.Items[1].Voided {
+		t.Fatalf("void result: %+v", result)
+	}
+	u, err := e.q.GetUnitByUUID(e.ctx, reserved.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Status != "void" || len(e.movements(t, u.ID)) != 1 {
+		t.Fatalf("voided unit: %s, movements: %+v", u.Status, e.movements(t, u.ID))
+	}
+	entry, err := e.entries.Create(e.ctx, c, wh.EntryInput{WarehouseUUID: w.UUID.String(), Mode: wh.EntryModeWithExisting})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.entries.AddLines(e.ctx, c, entry.UUID, wh.EntryLinesInput{Barcodes: []string{printed.Barcode}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.entries.Cancel(e.ctx, c, entry.UUID); !errors.Is(err, wh.ErrEntryPrintedLabels) {
+		t.Fatalf("printed entry cancellation: %v", err)
+	}
+	if _, err := e.q.GetUnitByUUID(e.ctx, printed.UUID); err != nil {
+		t.Fatal(err)
+	}
+	entryReserved := batch.Units[2]
+	second, err := e.entries.Create(e.ctx, c, wh.EntryInput{WarehouseUUID: w.UUID.String(), Mode: wh.EntryModeWithExisting})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.entries.AddLines(e.ctx, c, second.UUID, wh.EntryLinesInput{Barcodes: []string{entryReserved.Barcode}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.entries.Cancel(e.ctx, c, second.UUID); err != nil {
+		t.Fatalf("reserved entry cancellation: %v", err)
+	}
+	u, err = e.q.GetUnitByUUID(e.ctx, entryReserved.UUID)
+	if err != nil || u.Status != "void" || len(e.movements(t, u.ID)) != 1 {
+		t.Fatalf("reserved entry void: %s %v", u.Status, err)
+	}
+	fixedBatch, err := e.bc.Create(e.ctx, e.stockCaller(e.center), stockusecase.BatchInput{ProductUUID: e.fixed.Uuid.String(), Quantity: 1, Prefix: e.prefix("Z")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixedResult, err := e.bc.Void(e.ctx, e.stockCaller(e.center), stockusecase.VoidInput{BatchUUID: &fixedBatch.UUID})
+	if err != nil || len(fixedResult.Items) != 1 || !fixedResult.Items[0].Voided {
+		t.Fatalf("fixed reserved void: %+v %v", fixedResult, err)
+	}
+	fixedUnit, err := e.q.GetUnitByUUID(e.ctx, fixedBatch.Units[0].UUID)
+	if err != nil || fixedUnit.Status != "void" || len(e.movements(t, fixedUnit.ID)) != 1 {
+		t.Fatalf("fixed status: %s %v", fixedUnit.Status, err)
+	}
+}
+
 // prefix returns a unique barcode prefix (A-Z0-9, 2-8 characters).
 func (e *entryEnv) prefix(letter string) string { return letter + e.suffix[len(e.suffix)-7:] }
 
@@ -178,7 +249,7 @@ func TestStockEntryGenerateNewConfirm(t *testing.T) {
 		t.Fatalf("lines = %+v", entry)
 	}
 	for _, l := range entry.Lines {
-		if l.UnitStatus != "printed" || l.Location != nil || l.LabelURL == "" || l.Quantity != 1 {
+		if l.UnitStatus != "reserved" || l.Location != nil || l.LabelURL == "" || l.Quantity != 1 {
 			t.Fatalf("line = %+v", l)
 		}
 	}
@@ -396,7 +467,7 @@ func TestStockEntryOutsideCenterRefused(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if unit.Status != "printed" || len(e.movements(t, unit.ID)) != 0 {
+	if unit.Status != "reserved" || len(e.movements(t, unit.ID)) != 0 {
 		t.Fatalf("unit after refused confirm = %s", unit.Status)
 	}
 	still, err := e.entries.Get(e.ctx, dc, entry.UUID)

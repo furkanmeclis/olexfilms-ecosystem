@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { StatusChip } from "@/components/common/status-chip";
 import {
@@ -31,6 +31,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
+import {
+  FixedQuantityDialog,
+  type FixedSelection,
+} from "@/features/warehouse/components/fixed-quantity-dialog";
 import {
   enumFilterOptions,
   useWarehouseFilterOptions,
@@ -57,6 +61,8 @@ import {
   type Warehouse,
   type WarehouseMoveResult,
   type WarehouseTransfer,
+  type WarehouseScanResult,
+  type WarehouseMoveInput,
   warehouseExportPaths,
 } from "@/features/warehouse/services/warehouse.service";
 import {
@@ -519,12 +525,23 @@ export function BinMoveCard() {
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<WarehouseMoveResult | null>(null);
+  const moveRequests = useRef<Record<string, string>>({});
+  const [pendingMove, setPendingMove] = useState<{
+    locationCode: string;
+    serial: string[];
+    fixed: FixedSelection[];
+    remaining: {
+      barcode: string;
+      product: NonNullable<WarehouseScanResult["product"]>;
+      warehouseUuid: string;
+    }[];
+  } | null>(null);
   const barcodes = parseBarcodes(text).map(unitBarcode);
 
   const move = useMutation({
-    mutationFn: (locationCode: string) =>
-      warehouseService.move({ barcodes, location_code: locationCode }),
+    mutationFn: (body: WarehouseMoveInput) => warehouseService.move(body),
     onSuccess: (res) => {
+      moveRequests.current = {};
       setError(null);
       setResult(res);
       setText("");
@@ -534,7 +551,7 @@ export function BinMoveCard() {
       setError(warehouseErrorMessage(err, t, t("warehouse.move.failed"))),
   });
 
-  const onLocation = (code: string) => {
+  const onLocation = async (code: string) => {
     if (scanKind(code) === "unit") {
       setText((prev) => (prev ? `${prev}\n${code}` : code));
       return;
@@ -543,11 +560,61 @@ export function BinMoveCard() {
       setError(t("warehouse.move.no_units"));
       return;
     }
-    move.mutate(code);
+    setError(null);
+    const target = await warehouseService.scan(code).catch(() => null);
+    const warehouseUuid = target?.location?.path[0]?.uuid;
+    const serial: string[] = [];
+    const fixed: NonNullable<typeof pendingMove>["remaining"] = [];
+    for (const barcode of barcodes) {
+      const scan = await warehouseService.scan(barcode).catch(() => null);
+      if (scan?.unit?.unit_kind === "fixed" && scan.product && warehouseUuid) {
+        fixed.push({ barcode, product: scan.product, warehouseUuid });
+        continue;
+      }
+      serial.push(barcode);
+    }
+    if (fixed.length > 0) {
+      setPendingMove({
+        locationCode: code,
+        serial,
+        fixed: [],
+        remaining: fixed,
+      });
+    } else {
+      move.mutate({ barcodes: serial, fixed: [], location_code: code });
+    }
+  };
+
+  const confirmFixed = (selection: FixedSelection) => {
+    if (!pendingMove) return;
+    const fixed = [...pendingMove.fixed, selection];
+    const remaining = pendingMove.remaining.slice(1);
+    if (remaining.length > 0) {
+      setPendingMove({ ...pendingMove, fixed, remaining });
+      return;
+    }
+    move.mutate({
+      barcodes: pendingMove.serial,
+      location_code: pendingMove.locationCode,
+      fixed: fixed.map((row) => ({
+        ...row,
+        request_uuid: (moveRequests.current[
+          `${row.barcode}:${pendingMove.locationCode}`
+        ] ??= crypto.randomUUID()),
+      })),
+    });
+    setPendingMove(null);
   };
 
   return (
     <Card data-testid="bin-move">
+      <FixedQuantityDialog
+        key={pendingMove?.remaining[0]?.barcode ?? "closed"}
+        unit={pendingMove?.remaining[0] ?? null}
+        action="move"
+        onConfirm={confirmFixed}
+        onCancel={() => setPendingMove(null)}
+      />
       <CardHeader>
         <CardTitle>{t("warehouse.move.title")}</CardTitle>
         <p className="text-muted-foreground text-sm">
@@ -571,6 +638,7 @@ export function BinMoveCard() {
           </p>
         </div>
         <ScanInput
+          expect="bin"
           id="move-location"
           autoFocus={false}
           label={t("warehouse.entry.scan_location")}

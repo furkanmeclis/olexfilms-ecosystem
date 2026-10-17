@@ -162,5 +162,7 @@
   "codes.EINVOICE_BUYER_PROFILE_INCOMPLETE": "The buyer's invoice profile is incomplete; fill in the missing fields.",
   "codes.EINVOICE_INVALID_STATUS": "The e-invoice status does not allow this action.",
   "codes.EINVOICE_NOT_ARCHIVED": "The e-invoice is not archived yet.",
-  "codes.EINVOICE_PDF_NOT_READY": "The invoice PDF is not ready yet; try again shortly or retry the PDF."
+  "codes.EINVOICE_PDF_NOT_READY": "The invoice PDF is not ready yet; try again shortly or retry the PDF.",
+  "codes.ORDER_LOCATION_PLACEMENT_REQUIRED": "Place this unit in a warehouse location before assigning it.",
+  "page_forbidden_body": "You do not have permission to view this page."
 }

@@ -275,8 +275,9 @@ func runF1Chain(t *testing.T) *f1Chain {
 	}
 	barcodes := make([]string, 0, generated)
 	for _, u := range batch.Units {
-		if u.Status != "printed" {
-			t.Fatalf("generated unit %s status = %s, want printed", u.Barcode, u.Status)
+		// TEC-767: a generated label stays reserved until its PDF is printed.
+		if u.Status != "reserved" {
+			t.Fatalf("generated unit %s status = %s, want reserved", u.Barcode, u.Status)
 		}
 		barcodes = append(barcodes, u.Barcode)
 	}
@@ -404,6 +405,27 @@ func runF1Chain(t *testing.T) *f1Chain {
 		t.Fatalf("receive A = %d %s", code, ec)
 	}
 	owned("A received", "available", "organization", dist.ID, dist.ID, "entry,placement,order_out,received")
+	// TEC-765: the distributor's shelving screen lists both received rolls
+	// as unplaced (read only; the chain moves them on unshelved).
+	var unplaced struct {
+		Status        string `json:"status"`
+		UnplacedCount int    `json:"unplaced_count"`
+		PlacedCount   int    `json:"placed_count"`
+		Units         []struct {
+			Barcode  string  `json:"barcode"`
+			Meters   *string `json:"meters"`
+			Unplaced bool    `json:"unplaced"`
+			Product  struct {
+				UUID string `json:"uuid"`
+			} `json:"product"`
+		} `json:"units"`
+	}
+	it.whDo(distTok, "GET", "/v1/warehouse/orders/"+a.UUID+"/unplaced", nil, http.StatusOK, &unplaced)
+	if unplaced.Status != "received" || unplaced.UnplacedCount != 2 || unplaced.PlacedCount != 0 || len(unplaced.Units) != 2 ||
+		unplaced.Units[0].Product.UUID != item.UUID || !unplaced.Units[0].Unplaced || unplaced.Units[0].Meters == nil {
+		t.Fatalf("A unplaced = %+v", unplaced)
+	}
+	it.whDo(staffTok, "GET", "/v1/warehouse/orders/"+a.UUID+"/unplaced", nil, http.StatusNotFound, nil)
 	if v := it.orderCall("GET", "/v1/orders/"+a.UUID, distTok, nil, http.StatusOK); v.Status != "received" ||
 		string(v.RateSnapshot) != string(a.RateSnapshot) {
 		t.Fatalf("A after receipt = %s %s", v.Status, v.RateSnapshot)

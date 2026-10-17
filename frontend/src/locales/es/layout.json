@@ -87,5 +87,18 @@
   "nav_service_catalog": "Catálogo de servicios",
   "nav_service_subscriptions": "Suscripciones de servicios",
   "nav_service_subscription_cancels": "Solicitudes de cancelación",
-  "nav_review_questions": "Preguntas de valoración"
+  "nav_review_questions": "Preguntas de valoración",
+  "settings_description": "Gestione aquí los ajustes de la organización y del sistema.",
+  "settings_menu": "Menú de ajustes",
+  "settings_empty": "No hay ajustes que pueda ver.",
+  "settings_group_access": "Acceso y seguridad",
+  "settings_group_integrations": "Integraciones",
+  "settings_group_system": "Módulos y sistema",
+  "settings_group_catalogs": "Catálogos",
+  "settings_group_regional": "Regiones y precios",
+  "settings_group_templates": "Plantillas",
+  "settings_group_data": "Datos y supervisión",
+  "settings_group_organization": "Organización",
+  "settings_group_operations": "Operaciones",
+  "settings_group_ai": "IA"
 }

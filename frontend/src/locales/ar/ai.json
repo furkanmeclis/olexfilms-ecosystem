@@ -1,4 +1,11 @@
 {
+  "chat.back": "العودة إلى المحادثة",
+  "suggestions.panel.first": "بماذا يمكنك مساعدتي؟",
+  "suggestions.panel.second": "ابحث عن سجلاتي الأخيرة",
+  "suggestions.panel.third": "ساعدني في التخطيط لخطواتي التالية",
+  "suggestions.portal.first": "اعرض مركباتي",
+  "suggestions.portal.second": "ساعدني في حجز موعد",
+  "suggestions.portal.third": "ابحث عن ضماناتي",
   "nav_title": "مساعد الذكاء الاصطناعي",
   "page.title": "مساعد الذكاء الاصطناعي",
   "page.description": "اسأل عن سجلاتك؛ لا تُنفَّذ التغييرات إلا بعد تأكيدك.",

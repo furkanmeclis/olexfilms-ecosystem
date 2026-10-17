@@ -19,7 +19,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { PortalCarParts } from "@/features/portal/components/portal-car-parts";
-import { PortalPage } from "@/features/portal/components/portal-page";
+import {
+  PortalPage,
+  PortalEmpty,
+  PortalLoading,
+} from "@/features/portal/components/portal-page";
 import { PortalServiceReview } from "@/features/portal/components/portal-service-review";
 import {
   PortalApiError,
@@ -350,14 +354,11 @@ export function PortalServiceDetail({
     >
       {detail.isError ? (
         notFound ? (
-          <Card>
-            <CardContent
-              className="py-10 text-center"
-              data-testid="portal-service-not-found"
-            >
-              {t("portal.service.not_found")}
-            </CardContent>
-          </Card>
+          <PortalEmpty
+            icon={<Wrench />}
+            title={t("portal.service.not_found")}
+            testId="portal-service-not-found"
+          />
         ) : (
           <ErrorState
             title={t("common.error_generic")}
@@ -372,9 +373,7 @@ export function PortalServiceDetail({
           reviewFromLink={reviewFromLink}
         />
       ) : (
-        <p className="text-muted-foreground text-sm">
-          {t("portal.vehicles.loading")}
-        </p>
+        <PortalLoading label={t("common.loading")} />
       )}
     </PortalPage>
   );

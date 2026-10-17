@@ -3,10 +3,8 @@ package usecase
 // Barcode batches (TEC-202): the center reserves N barcodes for a product
 // (K14). The barcodes are allocated from the brand's counter under its row
 // lock as <PREFIX>-<8 digits> (the roll split, TEC-184, derives
-// <barcode>-S<n>, so the formats never collide) and the units are created
-// in status printed, like the import path (TEC-158); they enter stock later
-// through ledger.Post (entry, TEC-95d). Nothing is written to the ledger
-// here: a label without stock is not a movement.
+// <barcode>-S<n>, so the formats never collide). Units stay reserved until
+// a label PDF is produced; they enter stock later through ledger.Post.
 
 import (
 	"context"
@@ -21,6 +19,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/labels"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
 	"github.com/google/uuid"
@@ -50,13 +49,135 @@ var prefixPattern = regexp.MustCompile(`^[A-Z0-9]{2,8}$`)
 
 // Barcodes implements the batch use case.
 type Barcodes struct {
-	pool TxBeginner
-	q    *db.Queries
+	pool   TxBeginner
+	q      *db.Queries
+	ledger *ledger.Ledger
 }
 
 // NewBarcodes builds the use case.
-func NewBarcodes(pool TxBeginner, q *db.Queries) *Barcodes {
-	return &Barcodes{pool: pool, q: q}
+func NewBarcodes(pool TxBeginner, q *db.Queries, out ...outbox.Enqueuer) *Barcodes {
+	var events outbox.Enqueuer
+	if len(out) > 0 {
+		events = out[0]
+	}
+	return &Barcodes{pool: pool, q: q, ledger: ledger.New(q, events)}
+}
+
+// VoidInput selects units by UUID, barcode, or one batch UUID.
+type VoidInput struct {
+	UnitUUIDs []uuid.UUID `json:"unit_uuids"`
+	Barcodes  []string    `json:"barcodes"`
+	BatchUUID *uuid.UUID  `json:"batch_uuid"`
+}
+
+type VoidItem struct {
+	UnitUUID uuid.UUID `json:"unit_uuid"`
+	Barcode  string    `json:"barcode"`
+	Voided   bool      `json:"voided"`
+	Reason   string    `json:"reason,omitempty"`
+}
+
+type VoidResult struct {
+	Items []VoidItem `json:"items"`
+}
+
+// Void cancels only reserved labels. Each unit is independently transactional
+// so one rejected barcode does not undo successful items.
+func (s *Barcodes) Void(ctx context.Context, c Caller, in VoidInput) (VoidResult, error) {
+	org, err := centerOrg(c)
+	if err != nil {
+		return VoidResult{}, err
+	}
+	if len(in.UnitUUIDs)+len(in.Barcodes) == 0 && in.BatchUUID == nil {
+		return VoidResult{}, &ValidationError{Field: "barcodes", Message: "select at least one unit or batch"}
+	}
+	units := make([]db.Unit, 0)
+	for _, id := range in.UnitUUIDs {
+		u, err := s.q.GetUnitByUUID(ctx, id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			units = append(units, db.Unit{Uuid: id})
+			continue
+		}
+		if err != nil {
+			return VoidResult{}, err
+		}
+		units = append(units, u)
+	}
+	for _, code := range in.Barcodes {
+		code = strings.TrimSpace(code)
+		if code == "" {
+			continue
+		}
+		u, err := s.q.GetUnitByBarcode(ctx, db.GetUnitByBarcodeParams{Barcode: code, BrandID: c.Org.BrandID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			units = append(units, db.Unit{Barcode: code})
+			continue
+		}
+		if err != nil {
+			return VoidResult{}, err
+		}
+		units = append(units, u)
+	}
+	if in.BatchUUID != nil {
+		b, err := s.q.GetBarcodeBatchByUUID(ctx, db.GetBarcodeBatchByUUIDParams{Uuid: *in.BatchUUID, OrganizationID: org})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return VoidResult{}, ErrNotFound
+		}
+		if err != nil {
+			return VoidResult{}, err
+		}
+		batchUnits, err := s.q.ListUnitsByBatch(ctx, i8(b.ID))
+		if err != nil {
+			return VoidResult{}, err
+		}
+		units = append(units, batchUnits...)
+	}
+	result := VoidResult{Items: make([]VoidItem, 0, len(units))}
+	seen := make(map[int64]bool)
+	for _, u := range units {
+		if u.ID != 0 && seen[u.ID] {
+			continue
+		}
+		seen[u.ID] = true
+		item := VoidItem{UnitUUID: u.Uuid, Barcode: u.Barcode}
+		switch {
+		case u.ID == 0 || u.OrganizationID != org:
+			item.Reason = "not_found"
+		case u.Status != string(ledger.StatusReserved):
+			item.Reason = "not_reserved"
+		default:
+			tx, err := s.pool.Begin(ctx)
+			if err != nil {
+				return VoidResult{}, err
+			}
+			locked, err := s.q.WithTx(tx).LockUnit(ctx, u.ID)
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return VoidResult{}, err
+			}
+			if locked.Status != string(ledger.StatusReserved) {
+				_ = tx.Rollback(ctx)
+				item.Reason = "not_reserved"
+				break
+			}
+			_, err = s.ledger.Post(ctx, tx, ledger.Movement{Type: ledger.TypeVoid, UnitID: u.ID,
+				Source: "barcode_void", RefType: "unit", RefID: u.ID, Reason: "reserved barcode cancelled", ActorUserID: c.actorPtr()})
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				if errors.Is(err, ledger.ErrTransitionNotAllowed) || errors.Is(err, ledger.ErrConcurrentUpdate) {
+					item.Reason = "state_changed"
+					break
+				}
+				return VoidResult{}, err
+			}
+			if err := tx.Commit(ctx); err != nil {
+				return VoidResult{}, err
+			}
+			item.Voided = true
+		}
+		result.Items = append(result.Items, item)
+	}
+	return result, nil
 }
 
 // BatchInput reserves Quantity barcodes for the product.
@@ -106,8 +227,7 @@ func DefaultPrefix(brandSlug string) string {
 	return b.String()
 }
 
-// Create reserves the batch: the units exist in status printed when it
-// returns.
+// Create reserves the batch: the units exist in status reserved when it returns.
 func (s *Barcodes) Create(ctx context.Context, c Caller, in BatchInput) (model.BarcodeBatch, error) {
 	prep, err := s.prepare(ctx, s.q, c, in)
 	if err != nil {
@@ -215,7 +335,7 @@ func (s *Barcodes) prepare(ctx context.Context, q *db.Queries, c Caller, in Batc
 	return batchPrep{org: org, quantity: in.Quantity, prefix: prefix, product: p, meters: meters, template: template, kind: kind}, nil
 }
 
-// reserve allocates the barcodes and creates the printed units in q.
+// reserve allocates the barcodes and creates reserved units in q.
 func (s *Barcodes) reserve(ctx context.Context, q *db.Queries, c Caller, b batchPrep) (db.BarcodeBatch, []db.Unit, error) {
 	counter, err := q.LockBarcodeCounter(ctx, db.LockBarcodeCounterParams{BrandID: c.Org.BrandID, Prefix: b.prefix})
 	if err != nil {
@@ -237,7 +357,7 @@ func (s *Barcodes) reserve(ctx context.Context, q *db.Queries, c Caller, b batch
 	for _, seq := range seqs {
 		u, err := q.CreateBatchUnit(ctx, db.CreateBatchUnitParams{
 			OrganizationID: b.org, BrandID: c.Org.BrandID, ProductID: b.product.ID, Barcode: Barcode(b.prefix, seq),
-			UnitKind: b.kind, Status: string(ledger.StatusPrinted),
+			UnitKind: b.kind, Status: string(ledger.StatusReserved),
 			InitialMeters: b.meters, RemainingMeters: b.meters, BatchID: i8(batch.ID),
 		})
 		if err != nil {

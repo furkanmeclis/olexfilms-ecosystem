@@ -1,4 +1,11 @@
 {
+  "chat.back": "Torna alla chat",
+  "suggestions.panel.first": "In cosa puoi aiutarmi?",
+  "suggestions.panel.second": "Trova i miei dati recenti",
+  "suggestions.panel.third": "Aiutami a pianificare i prossimi passi",
+  "suggestions.portal.first": "Mostra i miei veicoli",
+  "suggestions.portal.second": "Aiutami a prenotare un appuntamento",
+  "suggestions.portal.third": "Trova le mie garanzie",
   "nav_title": "Assistente IA",
   "page.title": "Assistente IA",
   "page.description": "Chiedi informazioni sui tuoi record; le modifiche vengono eseguite solo dopo la tua conferma.",

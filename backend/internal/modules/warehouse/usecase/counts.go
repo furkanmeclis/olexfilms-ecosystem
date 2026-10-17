@@ -94,6 +94,7 @@ const (
 	CountResolveRelocate          = "relocate"
 	CountResolveVoidMissing       = "void_missing"
 	CountResolveIncreaseUnlocated = "increase_unlocated"
+	CountResolveAddToStock        = "add_to_stock"
 )
 
 // Ledger reference of count movements.
@@ -388,6 +389,10 @@ func allowedResolutions(kind, result string) []string {
 	case CountResultQtyVariance:
 		if kind == CountScanFixed {
 			return []string{CountResolveIgnore, CountResolveIncreaseUnlocated}
+		}
+	case CountResultUnexpected:
+		if kind == CountScanSerial {
+			return []string{CountResolveIgnore, CountResolveAddToStock}
 		}
 	case CountResultMatched:
 		return []string{}
@@ -1776,6 +1781,29 @@ func (s *Counts) apply(ctx context.Context, tx pgx.Tx, q *db.Queries, c ScanCall
 	}
 
 	switch resolution {
+	case CountResolveAddToStock:
+		if !l.CountedLocationID.Valid {
+			return invalid("resolutions", "line "+l.Uuid.String()+" has no counted location")
+		}
+		u, err := q.GetUnit(ctx, l.UnitID.Int64)
+		if err != nil {
+			return err
+		}
+		if u.OrganizationID != org {
+			return fmt.Errorf("%w: line %s belongs to another organization", ErrCountStale, l.Uuid)
+		}
+		if u.Status != string(ledger.StatusReserved) && u.Status != string(ledger.StatusPrinted) {
+			return fmt.Errorf("%w: line %s is already owned or unavailable", ErrCountStale, l.Uuid)
+		}
+		if _, err := q.FindOpenStockEntryForUnit(ctx, db.FindOpenStockEntryForUnitParams{UnitID: u.ID, IncludeConfirmed: true}); err == nil {
+			return fmt.Errorf("%w: line %s is linked to a stock entry", ErrCountStale, l.Uuid)
+		} else if !errors.Is(err, pgx.ErrNoRows) {
+			return err
+		}
+		to := countOwner(org, l.CountedLocationID)
+		m := base
+		m.Type, m.To = ledger.TypeEntry, &to
+		return post(m)
 	case CountResolveVoidMissing:
 		from := countOwner(org, l.ExpectedLocationID)
 		m := base

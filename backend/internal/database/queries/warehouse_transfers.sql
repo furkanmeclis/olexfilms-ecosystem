@@ -84,8 +84,8 @@ WHERE id = sqlc.arg(id) AND status IN ('draft', 'in_transit')
 RETURNING *;
 
 -- name: InsertWarehouseTransferLine :one
-INSERT INTO warehouse_transfer_lines (transfer_id, unit_id, target_location_id)
-VALUES (sqlc.arg(transfer_id), sqlc.arg(unit_id), sqlc.narg(target_location_id))
+INSERT INTO warehouse_transfer_lines (transfer_id, unit_id, target_location_id, source_location_id, quantity)
+VALUES (sqlc.arg(transfer_id), sqlc.arg(unit_id), sqlc.narg(target_location_id), sqlc.narg(source_location_id), sqlc.arg(quantity))
 RETURNING *;
 
 -- name: ListWarehouseTransferLines :many
@@ -134,3 +134,19 @@ LIMIT 1;
 -- name: CountOpenWarehouseTransferLinesByUnit :one
 -- Used by other flows (stock transfer requests) to respect the lock.
 SELECT count(*) FROM warehouse_transfer_lines WHERE unit_id = sqlc.arg(unit_id) AND is_open;
+
+-- name: ListOrderPlacementUnits :many
+-- The units of an order with whether each is still on hand unplaced in the
+-- organization (available, owned by the organization itself, TEC-765).
+SELECT u.uuid AS unit_uuid, u.barcode, u.unit_kind, u.remaining_meters,
+       oiu.quantity, oiu.meters,
+       p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name, p.unit_type AS product_unit_type,
+       COALESCE(s.holder_org_id = sqlc.arg(organization_id)::bigint
+                AND s.status = 'available' AND s.owner_type = 'organization', FALSE)::boolean AS unplaced
+FROM order_item_units oiu
+JOIN order_items i ON i.id = oiu.order_item_id
+JOIN units u ON u.id = oiu.unit_id
+JOIN products p ON p.id = u.product_id
+LEFT JOIN unit_current_state s ON s.unit_id = u.id
+WHERE i.order_id = sqlc.arg(order_id)
+ORDER BY oiu.order_item_id, oiu.id;

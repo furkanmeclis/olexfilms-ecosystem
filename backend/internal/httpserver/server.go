@@ -706,6 +706,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		customersusecase.NewListExportAdapter(customersSvc),
 		// TEC-158: staged stock import (writes through ledger.Post).
 		stockusecase.NewImporter(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)),
+		warehouseusecase.NewLocationImporter(deps.DB),
 		warehouseusecase.NewEntryBarcodeImporter(warehouseusecase.NewStockEntries(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries))),
 		// TEC-188: warranty certificate PDF (panel and portal).
 		warrantyusecase.NewCertificateAdapter(warrantyCert),
@@ -914,11 +915,14 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-202: barcode batches (center), label templates and label PDFs.
 	stockmodule.RegisterLabelRoutes(mux, stockhandler.NewLabels(
-		stockusecase.NewBarcodes(deps.DB, deps.Queries), stockusecase.NewLabelTemplates(deps.Queries),
+		stockusecase.NewBarcodes(deps.DB, deps.Queries, outbox.NewStore(deps.DB, deps.Queries)), stockusecase.NewLabelTemplates(deps.Queries),
 		stockusecase.NewLabels(deps.Queries, pdfClient)),
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-158: stock import upload (preview/confirm/undo on /v1/tenant/imports).
 	stockmodule.RegisterImportRoutes(mux, stockhandler.NewImport(importSvc), featureSvc, tokens, loader, deps.Queries)
+	warehousemodule.RegisterImportRoutes(mux,
+		warehousehandler.NewLocationImport(importSvc, warehouseusecase.New(deps.DB, deps.Queries)),
+		featureSvc, tokens, loader, deps.Queries)
 	// TEC-156: super_admin projection drift check (dry run).
 	stockmodule.RegisterPlatformRoutes(mux, stockhandler.NewRebuild(stockrebuild.New(deps.DB, deps.Queries), deps.Queries), tokens, loader)
 	// TEC-201: warehouse tree (warehouses, rooms, aisle/shelf/bin locations).

@@ -119,7 +119,7 @@ func (e *labelEnv) caller(o db.Organization) stockusecase.Caller {
 	}
 }
 
-// The center reserves 5 roll barcodes: the units exist in status printed
+// The center reserves 5 roll barcodes: the units exist in status reserved
 // with the batch link and the roll length; the barcodes are consecutive and
 // never shaped like a split barcode. A second batch continues the counter.
 // A custom prefix is honoured. The distributor is refused (K14) and so is a
@@ -139,14 +139,14 @@ func TestBarcodeBatchReserve(t *testing.T) {
 		t.Fatalf("batch view = %+v", b)
 	}
 	for i, u := range b.Units {
-		if u.Status != "printed" || u.Barcode != fmt.Sprintf("%s-%08d", prefix, i+1) || strings.Contains(u.Barcode, "-S") {
+		if u.Status != "reserved" || u.Barcode != fmt.Sprintf("%s-%08d", prefix, i+1) || strings.Contains(u.Barcode, "-S") {
 			t.Fatalf("unit %d = %+v", i, u)
 		}
 		row, err := e.q.GetUnitByUUID(e.ctx, u.UUID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if row.Status != "printed" || !row.BatchID.Valid || row.OrganizationID != e.center.ID || row.BrandID != e.brand.ID ||
+		if row.Status != "reserved" || !row.BatchID.Valid || row.OrganizationID != e.center.ID || row.BrandID != e.brand.ID ||
 			row.ProductID != e.roll.ID || row.UnitKind != "serial" || row.Source != "generated" {
 			t.Fatalf("unit row = %+v", row)
 		}
@@ -312,6 +312,23 @@ func TestLabelPrinting(t *testing.T) {
 	if got, _ := e.bc.Get(e.ctx, c, b.UUID); got.PrintCount != 1 || got.LastPrintedAt == nil {
 		t.Fatalf("print count = %+v", got)
 	}
+	for _, unit := range b.Units {
+		row, err := e.q.GetUnitByUUID(e.ctx, unit.UUID)
+		if err != nil || row.Status != "printed" {
+			t.Fatalf("printed unit: %s %v", row.Status, err)
+		}
+	}
+	individual, err := e.bc.Create(e.ctx, c, stockusecase.BatchInput{ProductUUID: e.roll.Uuid.String(), Quantity: 1, Meters: "2.00", Prefix: "I" + e.suffix[len(e.suffix)-7:]})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.lb.PrintUnits(e.ctx, c, []string{individual.Units[0].Barcode}, nil); err != nil {
+		t.Fatalf("print reserved unit: %v", err)
+	}
+	printed, err := e.q.GetUnitByUUID(e.ctx, individual.Units[0].UUID)
+	if err != nil || printed.Status != "printed" {
+		t.Fatalf("individual print status: %s %v", printed.Status, err)
+	}
 	if _, err := e.lb.PrintBatch(e.ctx, e.caller(e.dist), b.UUID, nil); !errors.Is(err, stockusecase.ErrBarcodesCenterOnly) {
 		t.Fatalf("distributor prints batch: %v", err)
 	}
@@ -370,11 +387,21 @@ func TestLabelPrinting(t *testing.T) {
 	if strings.Count(html, `<div class="label">`) != 2 || !strings.Contains(html, bin.FullCode.String) || !strings.Contains(html, `<img class="qr"`) {
 		t.Fatalf("location sheet html = %.300s", html)
 	}
+	pdf, err = e.lb.PrintLocations(e.ctx, dc, stockusecase.LocationPrintInput{WarehouseUUID: &wh.Uuid})
+	if err != nil || len(pdf) == 0 {
+		t.Fatalf("print warehouse: %v", err)
+	}
+	if html = e.pdf.html[len(e.pdf.html)-1]; strings.Count(html, `<div class="label">`) != 2 {
+		t.Fatalf("warehouse label count: %d", strings.Count(html, `<div class="label">`))
+	}
 	if !strings.HasPrefix(labels.Payload(labels.KindLocation, bin.FullCode.String), "OFW:LOC:"+wh.Code+"-R1-A-01") {
 		t.Fatalf("location payload for %s", bin.FullCode.String)
 	}
 	if _, err := e.lb.PrintLocations(e.ctx, c, stockusecase.LocationPrintInput{LocationUUIDs: []uuid.UUID{bin.Uuid}}); !errors.Is(err, stockusecase.ErrNotFound) {
 		t.Fatalf("center prints distributor location: %v", err)
+	}
+	if _, err := e.lb.PrintLocations(e.ctx, c, stockusecase.LocationPrintInput{WarehouseUUID: &wh.Uuid}); !errors.Is(err, stockusecase.ErrNotFound) {
+		t.Fatalf("center prints distributor warehouse: %v", err)
 	}
 
 	// Renderer failure.

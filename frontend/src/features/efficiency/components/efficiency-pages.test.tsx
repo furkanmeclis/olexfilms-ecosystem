@@ -135,7 +135,8 @@ vi.mock("@/components/entity", async (orig) => ({
   },
 }));
 
-import { tenantNav, platformNav } from "@/config/nav";
+import { tenantNav } from "@/config/nav";
+import { platformSettingsNav } from "@/config/settings-nav";
 import { Permission } from "@/config/permissions";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
 import { EfficiencyPage } from "./efficiency-page";
@@ -435,9 +436,13 @@ describe("efficiency navigation", () => {
 
   it("lists expected consumption on the platform with the manage permission", () => {
     expect(
-      visible(platformNav, [Permission.EfficiencyExpectationsManage], []),
+      visible(
+        platformSettingsNav,
+        [Permission.EfficiencyExpectationsManage],
+        [],
+      ),
     ).toContain("part-consumption-expectations");
-    expect(visible(platformNav, [], [])).not.toContain(
+    expect(visible(platformSettingsNav, [], [])).not.toContain(
       "part-consumption-expectations",
     );
   });

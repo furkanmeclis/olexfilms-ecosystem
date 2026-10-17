@@ -24,6 +24,30 @@ vi.mock("@/providers/locale-provider", () => ({
   useLocale: () => ({ t: (k: string) => k, locale: "tr", dir: "ltr" }),
 }));
 
+vi.mock("./assistant-chat", () => ({
+  AssistantChat: ({
+    scope,
+    fullPageHref,
+    onOpenFullPage,
+  }: {
+    scope: string;
+    fullPageHref: string;
+    onOpenFullPage: () => void;
+  }) =>
+    createElement(
+      "a",
+      {
+        href: fullPageHref,
+        onClick: (e: Event) => {
+          e.preventDefault();
+          onOpenFullPage();
+        },
+        "data-testid": "widget-chat",
+      },
+      scope,
+    ),
+}));
+
 import { tenantNav } from "@/config/nav";
 import { visibleNavItems } from "@/features/nav-engine/lib/access";
 
@@ -92,6 +116,25 @@ describe("AssistantHeaderButton", () => {
 
   it("is shown for a tenant route with the module on and ai.use", async () => {
     expect(await render()).not.toBeNull();
+  });
+
+  it("opens a sheet without leaving the current page and links the same tenant's full page", async () => {
+    const button = (await render()) as HTMLButtonElement;
+    await act(async () => button.click());
+    const dialog = document.querySelector('[role="dialog"]');
+    expect(dialog).not.toBeNull();
+    expect(state.pathname).toBe("/t/acme/tasks");
+    const link = dialog!.querySelector(
+      '[data-testid="widget-chat"]',
+    ) as HTMLAnchorElement;
+    expect(link.textContent).toBe("panel:acme");
+    expect(link.getAttribute("href")).toBe("/t/acme/assistant");
+    await act(async () => link.click());
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(document.activeElement).toBe(button);
   });
 
   it("is absent when the organization's module is off", async () => {

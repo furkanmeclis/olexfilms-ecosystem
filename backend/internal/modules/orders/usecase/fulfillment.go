@@ -54,7 +54,8 @@ var (
 	// ErrUnitReserved: a serial unit is reserved by another order line.
 	ErrUnitReserved = errors.New("orders: unit is reserved by another order")
 	// ErrUnitNotAvailable: the seller does not hold the unit in stock.
-	ErrUnitNotAvailable = errors.New("orders: unit is not in the seller's stock")
+	ErrUnitNotAvailable          = errors.New("orders: unit is not in the seller's stock")
+	ErrLocationPlacementRequired = errors.New("orders: unit must be placed before assignment")
 	// ErrInsufficientStock: a fixed barcode quantity above what the seller
 	// holds minus its active reservations.
 	ErrInsufficientStock = errors.New("orders: not enough stock for this barcode")
@@ -269,6 +270,13 @@ func (s *Service) AssignUnit(ctx context.Context, c Caller, orderUUID, itemUUID 
 			qty = pgtype.Int4{Int32: int32(*in.Quantity), Valid: true}
 			amount = new(big.Rat).SetInt64(*in.Quantity)
 		} else {
+			required, err := q.OrganizationRequiresPlacement(ctx, o.SellerOrgID)
+			if err != nil {
+				return err
+			}
+			if required && u.Status != string(ledger.StatusPlaced) {
+				return ErrLocationPlacementRequired
+			}
 			if err := checkSerialStock(ctx, q, u, o.SellerOrgID); err != nil {
 				return err
 			}
@@ -413,14 +421,16 @@ func splitErr(barcode string, err error) error {
 // line reserves it.
 func checkSerialStock(ctx context.Context, q *db.Queries, u db.Unit, seller int64) error {
 	st, err := q.GetUnitCurrentState(ctx, u.ID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrUnitNotAvailable
-	}
-	if err != nil {
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		// A newly generated (reserved) or printed label may be selected before
+		// its stock entry. Shipment still requires an available/placed ledger state.
+		if (u.Status != string(ledger.StatusReserved) && u.Status != string(ledger.StatusPrinted)) || u.OrganizationID != seller {
+			return ErrUnitNotAvailable
+		}
+	case err != nil:
 		return fmt.Errorf("orders: unit state: %w", err)
-	}
-	if st.HolderOrgID != seller ||
-		(st.Status != string(ledger.StatusAvailable) && st.Status != string(ledger.StatusPlaced)) {
+	case st.HolderOrgID != seller || (st.Status != string(ledger.StatusAvailable) && st.Status != string(ledger.StatusPlaced)):
 		return ErrUnitNotAvailable
 	}
 	active, err := q.LockActiveReservationsByUnit(ctx, u.ID)
@@ -449,10 +459,13 @@ func (s *Service) checkFixedStock(ctx context.Context, q *db.Queries, u db.Unit,
 	if err != nil {
 		return fmt.Errorf("orders: holdings: %w", err)
 	}
-	var onHand int64
+	var onHand, placed int64
 	for _, h := range holdings {
 		if h.HolderOrgID == seller {
 			onHand += int64(h.QuantityOnHand)
+			if h.OwnerType == string(ledger.OwnerWarehouseLocation) {
+				placed += int64(h.QuantityOnHand)
+			}
 		}
 	}
 	reserved, err := q.SumActiveReservedQuantityByUnit(ctx, db.SumActiveReservedQuantityByUnitParams{
@@ -463,6 +476,13 @@ func (s *Service) checkFixedStock(ctx context.Context, q *db.Queries, u db.Unit,
 	}
 	if reserved+qty > onHand {
 		return ErrInsufficientStock
+	}
+	required, err := q.OrganizationRequiresPlacement(ctx, seller)
+	if err != nil {
+		return err
+	}
+	if required && reserved+qty > placed {
+		return ErrLocationPlacementRequired
 	}
 	return nil
 }

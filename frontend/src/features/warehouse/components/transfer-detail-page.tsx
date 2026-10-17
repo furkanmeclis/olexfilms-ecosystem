@@ -17,6 +17,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { Info } from "@/features/warehouse/components/list-controls";
+import {
+  FixedQuantityDialog,
+  type FixedSelection,
+} from "@/features/warehouse/components/fixed-quantity-dialog";
 import { LocationPicker } from "@/features/warehouse/components/location-picker";
 import { ScanInput } from "@/features/warehouse/components/scan-input";
 import { TransferLinesTable } from "@/features/warehouse/components/transfer-lines-table";
@@ -39,6 +43,7 @@ import {
   warehouseKeys,
   warehouseService,
   type WarehouseTransfer,
+  type WarehouseScanResult,
 } from "@/features/warehouse/services/warehouse.service";
 import { useDialogs } from "@/providers/dialog-provider";
 import { useLocale } from "@/providers/locale-provider";
@@ -68,6 +73,11 @@ export function TransferDetailPage({
   const [lineError, setLineError] = useState<string | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [fixedUnit, setFixedUnit] = useState<{
+    barcode: string;
+    product: NonNullable<WarehouseScanResult["product"]>;
+    warehouseUuid: string;
+  } | null>(null);
 
   const key = warehouseKeys.transfer(uuid);
   const transferQuery = useQuery({
@@ -83,8 +93,14 @@ export function TransferDetailPage({
   };
 
   const addLines = useMutation({
-    mutationFn: (barcodes: string[]) =>
-      warehouseService.addTransferLines(uuid, barcodes),
+    mutationFn: (body: {
+      barcodes: string[];
+      fixed?: {
+        barcode: string;
+        quantity: number;
+        source_location_uuid: string;
+      }[];
+    }) => warehouseService.addTransferLines(uuid, body.barcodes, body.fixed),
     onSuccess: (next) => {
       setLineError(null);
       apply(next);
@@ -142,12 +158,26 @@ export function TransferDetailPage({
       appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),
   });
 
-  const onUnit = (code: string) => {
+  const onUnit = async (code: string) => {
     if (scanKind(code) === "location") {
       setLineError(t("warehouse.entry.scan_location_here"));
       return;
     }
-    addLines.mutate([unitBarcode(code)]);
+    const barcode = unitBarcode(code);
+    const scan = await warehouseService.scan(barcode).catch(() => null);
+    if (scan?.unit?.unit_kind === "fixed" && scan.product && transfer) {
+      setFixedUnit({
+        barcode,
+        product: scan.product,
+        warehouseUuid: transfer.from_warehouse.uuid,
+      });
+      return;
+    }
+    addLines.mutate({ barcodes: [barcode] });
+  };
+  const addFixed = (selection: FixedSelection) => {
+    setFixedUnit(null);
+    addLines.mutate({ barcodes: [], fixed: [selection] });
   };
   const onLocationScan = (code: string) => {
     if (scanKind(code) === "unit") {
@@ -301,6 +331,8 @@ export function TransferDetailPage({
               </CardHeader>
               <CardContent className="space-y-3">
                 <ScanInput
+                  expect="unit"
+                  warehouseUuid={transfer.from_warehouse.uuid}
                   id="transfer-barcode"
                   label={t("warehouse.entry.scan_barcode")}
                   hint={t("warehouse.transfer.scan_unit_hint")}
@@ -340,6 +372,8 @@ export function TransferDetailPage({
               </CardHeader>
               <CardContent className="grid gap-6 lg:grid-cols-2">
                 <ScanInput
+                  expect="bin"
+                  warehouseUuid={transfer.to_warehouse.uuid}
                   id="transfer-location"
                   autoFocus={transfer.status === "in_transit"}
                   label={t("warehouse.entry.scan_location")}
@@ -406,6 +440,13 @@ export function TransferDetailPage({
           </Card>
         </>
       )}
+      <FixedQuantityDialog
+        key={fixedUnit?.barcode ?? "closed"}
+        unit={fixedUnit}
+        action="add"
+        onConfirm={addFixed}
+        onCancel={() => setFixedUnit(null)}
+      />
     </WarehouseShell>
   );
 }

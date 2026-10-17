@@ -398,5 +398,19 @@
   "dealer_page.form_rate_limited": "Çox sorğu var. Sonra yenidən cəhd edin.",
   "dealer_page.form_failed": "Sorğu göndərilmədi. Yenidən cəhd edin.",
   "dealer_page.form_success_title": "Sorğu alındı",
-  "dealer_page.form_success_body": "Diler tezliklə sizinlə əlaqə saxlayacaq."
+  "dealer_page.form_success_body": "Diler tezliklə sizinlə əlaqə saxlayacaq.",
+  "nav.profile": "Profilim",
+  "profile.title": "Profilim",
+  "profile.saved": "Məlumatlarınız yadda saxlanıldı.",
+  "profile.failed": "Məlumatlarınızı yadda saxlamaq mümkün olmadı.",
+  "profile.links_title": "Hesab keçidləri",
+  "profile.preferences_hint": "E-poçt, tətbiqdaxili və kampaniya bildirişləri",
+  "profile.contracts_hint": "İmzaladığınız müqavilələr və onların PDF-ləri",
+  "profile.phone_login_hint": "Telefonunuza göndərilən kodla daxil olursunuz; şifrə lazım deyil.",
+  "home.vehicles_hint": "Avtomobilləriniz və servis tarixçəsi",
+  "home.warranties_hint": "Zəmanət sertifikatlarınız və statusları",
+  "home.appointments_hint": "Gələcək və keçmiş görüşləriniz",
+  "home.dealers_hint": "Yaxınlığınızdakı səlahiyyətli dilerlər",
+  "home.profile_hint": "Adınız, diliniz və sessiyalarınız",
+  "home.book": "Görüş təyin edin"
 }

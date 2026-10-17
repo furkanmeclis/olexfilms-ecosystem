@@ -123,6 +123,20 @@ func (h *Labels) CreateBatch(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusCreated, out)
 }
 
+// Void serves POST /v1/stock/barcodes/void.
+func (h *Labels) Void(w http.ResponseWriter, r *http.Request) {
+	var body stockusecase.VoidInput
+	if !decodeOptional(w, r, &body) {
+		return
+	}
+	out, err := h.batches.Void(r.Context(), reclassCaller(r), body)
+	if err != nil {
+		writeLabelError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
 // ListBatches serves GET /v1/stock/barcodes
 // (?product_uuid&printed&created_from&created_to&q&sort&limit&offset).
 func (h *Labels) ListBatches(w http.ResponseWriter, r *http.Request) {
@@ -295,6 +309,10 @@ func (h *Labels) PrintLocations(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	warehouse, ok := optionalUUID(w, r, "warehouse")
+	if !ok {
+		return
+	}
 	var ids []uuid.UUID
 	for _, raw := range r.URL.Query()["location"] {
 		id, err := uuid.Parse(strings.TrimSpace(raw))
@@ -305,7 +323,7 @@ func (h *Labels) PrintLocations(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, id)
 	}
 	pdf, err := h.printer.PrintLocations(r.Context(), reclassCaller(r), stockusecase.LocationPrintInput{
-		LocationUUIDs: ids, RoomUUID: room, TemplateUUID: tpl,
+		LocationUUIDs: ids, RoomUUID: room, WarehouseUUID: warehouse, TemplateUUID: tpl,
 	})
 	if err != nil {
 		writeLabelError(w, r, err)
