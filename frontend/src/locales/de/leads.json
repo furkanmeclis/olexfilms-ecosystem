@@ -192,5 +192,8 @@
   "convert.done": "Lead umgewandelt.",
   "convert.error": "Umwandlung fehlgeschlagen.",
   "convert.errors.distributor_required": "Wählen Sie einen Distributor.",
-  "convert.errors.currency_required": "Wählen Sie eine Währung."
+  "convert.errors.currency_required": "Wählen Sie eine Währung.",
+  "form.assignee": "Zuständige Person",
+  "form.customer": "Kunde",
+  "form.vehicle": "Fahrzeug"
 }

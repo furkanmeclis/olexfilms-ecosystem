@@ -192,5 +192,8 @@
   "convert.done": "Ο υποψήφιος πελάτης μετατράπηκε.",
   "convert.error": "Η μετατροπή απέτυχε.",
   "convert.errors.distributor_required": "Επιλέξτε διανομέα.",
-  "convert.errors.currency_required": "Επιλέξτε νόμισμα."
+  "convert.errors.currency_required": "Επιλέξτε νόμισμα.",
+  "form.assignee": "Υπεύθυνος",
+  "form.customer": "Πελάτης",
+  "form.vehicle": "Όχημα"
 }

@@ -51,6 +51,14 @@ export const showcaseKeys = {
 };
 
 export const showcaseService = {
+  /** Dealer targets inside the active organization's organizations.read scope. */
+  dealerOptions(q: string) {
+    return platformRequest<{ items: { uuid: string; name: string }[] }>(
+      "GET",
+      "/v1/tenant/organizations",
+      { query: { type: "dealer", q, limit: 20, offset: 0 } },
+    );
+  },
   get(target?: ShowcaseTarget) {
     return platformRequest<Showcase>("GET", "/v1/showcase", {
       query: targetQuery(target),

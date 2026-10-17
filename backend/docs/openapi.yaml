@@ -24122,6 +24122,51 @@ paths:
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /v1/leads/assignees:
+    get:
+      tags: [Leads]
+      operationId: listLeadAssignees
+      summary: List organization members eligible for lead assignment
+      description: Requires leads.write; organization must be in the caller's scope. Defaults to the active organization.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: organization_uuid
+          schema: { type: string, format: uuid }
+        - in: query
+          name: q
+          schema: { type: string }
+      responses:
+        "200":
+          description: Organization members
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: object
+                    required: [items]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          required: [uuid, name, surname]
+                          properties:
+                            uuid: { type: string, format: uuid }
+                            name: { type: string }
+                            surname: { type: string }
+                            email: { type: string, format: email }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /v1/leads/bulk:
     post:
       tags: [Leads]
@@ -24129,8 +24174,9 @@ paths:
       summary: Run a logged, undoable bulk action on leads (TEC-371)
       description: >-
         leads.write; the run stays inside the caller's leads.write scope.
-        Actions: `assign` with `target.params.assignee_user_id` (a member of
-        the lead's or the active organization; others fail per item);
+        Actions: `assign` with `target.params.assignee_user_uuid` or legacy
+        `target.params.assignee_user_id` (UUID takes precedence; a member of
+        the lead's organization; others fail per item);
         `set_status` with `target.params.status` (new, contacted, quoted,
         won, lost) and `target.params.lost_reason` (required for lost); the
         pipeline rules of POST /v1/leads/{uuid}/status apply per item.
@@ -43286,7 +43332,9 @@ components:
         organization_uuid: { type: string, format: uuid }
         target_type: { $ref: "#/components/schemas/LeadTargetType" }
         customer_user_id: { type: integer, format: int64 }
+        customer_uuid: { type: string, format: uuid }
         vehicle_id: { type: integer, format: int64 }
+        vehicle_uuid: { type: string, format: uuid }
         candidate_company_name: { type: string }
         candidate_contact_name: { type: string }
         candidate_phone_e164: { type: string }
@@ -43300,6 +43348,7 @@ components:
         lost_reason: { type: string }
         follow_up_date: { type: string, format: date-time }
         assignee_user_id: { type: integer, format: int64 }
+        assignee_user_uuid: { type: string, format: uuid }
         notes: { type: string }
         won_ref_type: { type: string, enum: [service, appointment, organization] }
         won_ref_id: { type: integer, format: int64 }
@@ -43314,7 +43363,9 @@ components:
       properties:
         target_type: { $ref: "#/components/schemas/LeadTargetType" }
         customer_user_id: { type: [integer, "null"], format: int64 }
+        customer_uuid: { type: [string, "null"], format: uuid, description: "Takes precedence over customer_user_id; validated in the same scope." }
         vehicle_id: { type: [integer, "null"], format: int64 }
+        vehicle_uuid: { type: [string, "null"], format: uuid, description: "Takes precedence over vehicle_id; validated in the same scope." }
         candidate_company_name: { type: [string, "null"], maxLength: 200 }
         candidate_contact_name: { type: [string, "null"], maxLength: 200 }
         candidate_phone_e164: { type: [string, "null"], pattern: "^\\+[1-9][0-9]{7,14}$" }
@@ -43326,6 +43377,7 @@ components:
         temperature: { $ref: "#/components/schemas/LeadTemperature" }
         follow_up_date: { type: [string, "null"], format: date-time }
         assignee_user_id: { type: [integer, "null"], format: int64 }
+        assignee_user_uuid: { type: [string, "null"], format: uuid, description: "Takes precedence over assignee_user_id; validated in the same scope." }
         notes: { type: string, maxLength: 20000 }
 
     LeadPatchInput:
@@ -43334,7 +43386,9 @@ components:
       properties:
         target_type: { $ref: "#/components/schemas/LeadTargetType" }
         customer_user_id: { type: [integer, "null"], format: int64 }
+        customer_uuid: { type: [string, "null"], format: uuid, description: "Takes precedence over customer_user_id; validated in the same scope." }
         vehicle_id: { type: [integer, "null"], format: int64 }
+        vehicle_uuid: { type: [string, "null"], format: uuid, description: "Takes precedence over vehicle_id; validated in the same scope." }
         candidate_company_name: { type: [string, "null"], maxLength: 200 }
         candidate_contact_name: { type: [string, "null"], maxLength: 200 }
         candidate_phone_e164: { type: [string, "null"], pattern: "^\\+[1-9][0-9]{7,14}$" }
@@ -43346,6 +43400,7 @@ components:
         temperature: { $ref: "#/components/schemas/LeadTemperature" }
         follow_up_date: { type: [string, "null"], format: date-time }
         assignee_user_id: { type: [integer, "null"], format: int64 }
+        assignee_user_uuid: { type: [string, "null"], format: uuid, description: "Takes precedence over assignee_user_id; validated in the same scope." }
         notes: { type: string, maxLength: 20000 }
 
     LeadStatusInput:
@@ -43408,6 +43463,7 @@ components:
       additionalProperties: false
       properties:
         assignee_user_id: { type: [integer, "null"], format: int64 }
+        assignee_user_uuid: { type: [string, "null"], format: uuid, description: "Takes precedence over assignee_user_id; validated in the same scope." }
 
     LeadTaskInput:
       type: object

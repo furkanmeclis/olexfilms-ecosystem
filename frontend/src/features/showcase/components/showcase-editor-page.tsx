@@ -13,11 +13,15 @@ import {
   Trash2,
 } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { ErrorState } from "@/components/common/error-state";
 import { Loading } from "@/components/common/loading";
 import { EntityPage } from "@/components/entity";
+import {
+  AsyncCombobox,
+  type ComboboxOption,
+} from "@/components/ui/async-combobox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -853,6 +857,18 @@ export function ShowcaseEditorPage({ orgUuid }: { orgUuid?: string }) {
     orgUuid ?? activeOrg?.uuid ?? "",
   );
   const targetOrg = orgUuid ?? (selectedOrg || activeOrg?.uuid);
+  const [dealerOptions, setDealerOptions] = useState<ComboboxOption[]>([]);
+  const loadDealers = useCallback(async (q: string) => {
+    const page = await showcaseService.dealerOptions(q);
+    const options = page.items.map((org) => ({
+      value: org.uuid,
+      label: org.name,
+    }));
+    setDealerOptions((prev) => [
+      ...new Map([...prev, ...options].map((o) => [o.value, o])).values(),
+    ]);
+    return options;
+  }, []);
   return (
     <FeatureGuard slug={slug} feature="dealer_showcase">
       {activeOrg?.type === "distributor" && !orgUuid ? (
@@ -861,10 +877,17 @@ export function ShowcaseEditorPage({ orgUuid }: { orgUuid?: string }) {
             <Label htmlFor="showcase-target-org">
               {t("showcase.dealer_selector.label")}
             </Label>
-            <Input
+            <AsyncCombobox
               id="showcase-target-org"
               value={selectedOrg}
-              onChange={(event) => setSelectedOrg(event.target.value)}
+              onValueChange={setSelectedOrg}
+              loadOptions={loadDealers}
+              options={dealerOptions}
+              initialOptions={
+                activeOrg
+                  ? [{ value: activeOrg.uuid, label: activeOrg.name }]
+                  : []
+              }
               placeholder={t("showcase.dealer_selector.placeholder")}
             />
           </CardContent>

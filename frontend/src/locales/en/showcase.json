@@ -81,5 +81,5 @@
   "queue.empty_title": "No showcases",
   "queue.empty_description": "There are no showcases matching these filters.",
   "dealer_selector.label": "Target dealer",
-  "dealer_selector.placeholder": "Dealer organization UUID"
+  "dealer_selector.placeholder": "Select a dealer"
 }

@@ -192,5 +192,8 @@
   "convert.done": "Потенциалният клиент е преобразуван.",
   "convert.error": "Преобразуването е неуспешно.",
   "convert.errors.distributor_required": "Изберете дистрибутор.",
-  "convert.errors.currency_required": "Изберете валута."
+  "convert.errors.currency_required": "Изберете валута.",
+  "form.assignee": "Отговорник",
+  "form.customer": "Клиент",
+  "form.vehicle": "Автомобил"
 }

@@ -16,6 +16,8 @@ import {
   LEAD_TEMPERATURES,
   type LeadFormValues,
 } from "@/features/leads/lib/leads";
+import { LeadReferencePicker } from "./lead-reference-picker";
+import { LeadAddressFields } from "./lead-address-fields";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
@@ -24,12 +26,14 @@ export const leadInputClass =
 
 export function LeadFields({
   values,
+  organizationUuid,
   errors,
   disabled,
   targetTypes = LEAD_TARGET_TYPES,
   onChange,
 }: {
   values: LeadFormValues;
+  organizationUuid?: string;
   errors?: Record<string, string>;
   disabled?: boolean;
   /** Offered target types; the current value always stays selectable. */
@@ -41,8 +45,8 @@ export function LeadFields({
   const setTarget = (target_type: LeadFormValues["target_type"]) => {
     onChange({
       target_type,
-      customer_user_id: "",
-      vehicle_id: "",
+      customer_uuid: "",
+      vehicle_uuid: "",
       candidate_company_name: "",
       candidate_contact_name: "",
       country_id: "",
@@ -175,7 +179,14 @@ export function LeadFields({
           </p>
         ) : null}
       </div>
-      {field("assignee_user_id", t("leads.form.assignee_user_id"), "number")}
+      <LeadReferencePicker
+        kind="assignee"
+        value={values.assignee_user_uuid}
+        organizationUuid={organizationUuid}
+        disabled={disabled}
+        error={errors?.assignee_user_uuid}
+        onValueChange={(assignee_user_uuid) => onChange({ assignee_user_uuid })}
+      />
 
       {candidate ? (
         <>
@@ -188,18 +199,33 @@ export function LeadFields({
           {field("candidate_email", t("leads.form.email"), "email", {
             dir: "ltr",
           })}
-          {field("country_id", t("leads.form.country_id"), "number")}
-          {field("province_id", t("leads.form.province_id"), "number")}
-          {field("district_id", t("leads.form.district_id"), "number")}
+          <LeadAddressFields
+            values={values}
+            onChange={onChange}
+            errors={errors}
+            disabled={disabled}
+          />
         </>
       ) : (
         <>
-          {field(
-            "customer_user_id",
-            t("leads.form.customer_user_id"),
-            "number",
-          )}
-          {field("vehicle_id", t("leads.form.vehicle_id"), "number")}
+          <LeadReferencePicker
+            kind="customer"
+            value={values.customer_uuid}
+            disabled={disabled}
+            error={errors?.customer_uuid}
+            onValueChange={(customer_uuid) =>
+              onChange({ customer_uuid, vehicle_uuid: "" })
+            }
+          />
+          <LeadReferencePicker
+            key={values.customer_uuid}
+            kind="vehicle"
+            value={values.vehicle_uuid}
+            customerUuid={values.customer_uuid}
+            disabled={disabled}
+            error={errors?.vehicle_uuid}
+            onValueChange={(vehicle_uuid) => onChange({ vehicle_uuid })}
+          />
           {field("candidate_phone_e164", t("leads.form.phone"), "tel", {
             dir: "ltr",
             placeholder: "+905551234567",

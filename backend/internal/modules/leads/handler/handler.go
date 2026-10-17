@@ -338,25 +338,38 @@ func toField[T any](f field[T]) usecase.Field[T] {
 }
 
 type leadBody struct {
-	TargetType           string     `json:"target_type"`
-	CustomerUserID       *int64     `json:"customer_user_id"`
-	VehicleID            *int64     `json:"vehicle_id"`
-	CandidateCompanyName *string    `json:"candidate_company_name"`
-	CandidateContactName *string    `json:"candidate_contact_name"`
-	CandidatePhoneE164   *string    `json:"candidate_phone_e164"`
-	CandidateEmail       *string    `json:"candidate_email"`
-	CountryID            *int64     `json:"country_id"`
-	ProvinceID           *int64     `json:"province_id"`
-	DistrictID           *int64     `json:"district_id"`
-	Source               string     `json:"source"`
-	Temperature          string     `json:"temperature"`
-	FollowUpDate         *time.Time `json:"follow_up_date"`
-	AssigneeUserID       *int64     `json:"assignee_user_id"`
-	Notes                *string    `json:"notes"`
+	TargetType           string           `json:"target_type"`
+	CustomerUserID       *int64           `json:"customer_user_id"`
+	CustomerUUID         field[uuid.UUID] `json:"customer_uuid"`
+	VehicleID            *int64           `json:"vehicle_id"`
+	VehicleUUID          field[uuid.UUID] `json:"vehicle_uuid"`
+	CandidateCompanyName *string          `json:"candidate_company_name"`
+	CandidateContactName *string          `json:"candidate_contact_name"`
+	CandidatePhoneE164   *string          `json:"candidate_phone_e164"`
+	CandidateEmail       *string          `json:"candidate_email"`
+	CountryID            *int64           `json:"country_id"`
+	ProvinceID           *int64           `json:"province_id"`
+	DistrictID           *int64           `json:"district_id"`
+	Source               string           `json:"source"`
+	Temperature          string           `json:"temperature"`
+	FollowUpDate         *time.Time       `json:"follow_up_date"`
+	AssigneeUserID       *int64           `json:"assignee_user_id"`
+	AssigneeUserUUID     field[uuid.UUID] `json:"assignee_user_uuid"`
+	Notes                *string          `json:"notes"`
 }
 
 func (b leadBody) input() usecase.CreateInput {
+	if b.AssigneeUserUUID.Set {
+		b.AssigneeUserID = nil
+	}
+	if b.CustomerUUID.Set {
+		b.CustomerUserID = nil
+	}
+	if b.VehicleUUID.Set {
+		b.VehicleID = nil
+	}
 	return usecase.CreateInput{
+		CustomerUUID: b.CustomerUUID.Value, VehicleUUID: b.VehicleUUID.Value, AssigneeUserUUID: b.AssigneeUserUUID.Value,
 		TargetType: b.TargetType, CustomerUserID: b.CustomerUserID, VehicleID: b.VehicleID,
 		CandidateCompanyName: b.CandidateCompanyName, CandidateContactName: b.CandidateContactName,
 		CandidatePhoneE164: b.CandidatePhoneE164, CandidateEmail: b.CandidateEmail,
@@ -424,7 +437,9 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 type patchBody struct {
 	TargetType           *string          `json:"target_type"`
 	CustomerUserID       field[int64]     `json:"customer_user_id"`
+	CustomerUUID         field[uuid.UUID] `json:"customer_uuid"`
 	VehicleID            field[int64]     `json:"vehicle_id"`
+	VehicleUUID          field[uuid.UUID] `json:"vehicle_uuid"`
 	CandidateCompanyName field[string]    `json:"candidate_company_name"`
 	CandidateContactName field[string]    `json:"candidate_contact_name"`
 	CandidatePhoneE164   field[string]    `json:"candidate_phone_e164"`
@@ -436,6 +451,7 @@ type patchBody struct {
 	Temperature          *string          `json:"temperature"`
 	FollowUpDate         field[time.Time] `json:"follow_up_date"`
 	AssigneeUserID       field[int64]     `json:"assignee_user_id"`
+	AssigneeUserUUID     field[uuid.UUID] `json:"assignee_user_uuid"`
 	Notes                *string          `json:"notes"`
 }
 
@@ -450,6 +466,7 @@ func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	lead, err := h.svc.Patch(r.Context(), caller(r), id, usecase.PatchInput{
+		CustomerUUID: toField(body.CustomerUUID), VehicleUUID: toField(body.VehicleUUID), AssigneeUserUUID: toField(body.AssigneeUserUUID),
 		TargetType: body.TargetType, CustomerUserID: toField(body.CustomerUserID), VehicleID: toField(body.VehicleID),
 		CandidateCompanyName: toField(body.CandidateCompanyName), CandidateContactName: toField(body.CandidateContactName),
 		CandidatePhoneE164: toField(body.CandidatePhoneE164), CandidateEmail: toField(body.CandidateEmail),
@@ -540,7 +557,8 @@ func (h *Handler) AddNote(w http.ResponseWriter, r *http.Request) {
 }
 
 type assignBody struct {
-	AssigneeUserID *int64 `json:"assignee_user_id"`
+	AssigneeUserID   *int64           `json:"assignee_user_id"`
+	AssigneeUserUUID field[uuid.UUID] `json:"assignee_user_uuid"`
 }
 
 // Assign (POST /v1/leads/{uuid}/assign).
@@ -553,7 +571,10 @@ func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &body) {
 		return
 	}
-	lead, err := h.svc.Assign(r.Context(), caller(r), id, body.AssigneeUserID)
+	if body.AssigneeUserUUID.Set {
+		body.AssigneeUserID = nil
+	}
+	lead, err := h.svc.Assign(r.Context(), caller(r), id, body.AssigneeUserID, body.AssigneeUserUUID.Value)
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -602,4 +623,23 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusCreated, task)
+}
+
+// Assignees returns members of a lead organization within the caller's scope.
+func (h *Handler) Assignees(w http.ResponseWriter, r *http.Request) {
+	var org *uuid.UUID
+	if raw := r.URL.Query().Get("organization_uuid"); raw != "" {
+		value, err := uuid.Parse(raw)
+		if err != nil {
+			writeError(w, r, &usecase.ValidationError{Field: "organization_uuid", Message: "must be a UUID"})
+			return
+		}
+		org = &value
+	}
+	items, err := h.svc.Assignees(r.Context(), caller(r), org, r.URL.Query().Get("q"))
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, map[string]any{"items": items})
 }

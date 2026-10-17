@@ -81,5 +81,5 @@
   "queue.empty_title": "Aucune vitrine",
   "queue.empty_description": "Aucune vitrine ne correspond à ces filtres.",
   "dealer_selector.label": "Distributeur cible",
-  "dealer_selector.placeholder": "UUID de l’organisation distributrice"
+  "dealer_selector.placeholder": "Sélectionner un revendeur"
 }

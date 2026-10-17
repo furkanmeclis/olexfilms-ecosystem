@@ -8,6 +8,8 @@ import type { Showcase } from "@/features/showcase/services/showcase.service";
 
 const mocks = vi.hoisted(() => ({
   features: vi.fn(),
+  dealerOptions: vi.fn(),
+  orgType: "dealer",
   get: vi.fn(),
   reviewList: vi.fn(),
   platformGet: vi.fn(),
@@ -36,7 +38,8 @@ vi.mock("@/hooks/use-active-organization", () => ({
   useActiveOrganization: () => ({
     uuid: "org-1",
     slug: "dealer-a",
-    type: "dealer",
+    type: mocks.orgType,
+    name: "Distributor A",
   }),
 }));
 vi.mock("@/features/modules/services/modules.service", () => ({
@@ -80,6 +83,7 @@ vi.mock("@/features/showcase/services/showcase.service", async (orig) => {
     ...actual,
     showcaseService: {
       get: mocks.get,
+      dealerOptions: mocks.dealerOptions,
       save: vi.fn(),
       submit: vi.fn(),
       setGoogleRating: vi.fn(),
@@ -102,6 +106,9 @@ vi.mock("@/features/showcase/services/showcase.service", async (orig) => {
     },
   };
 });
+
+import { installRadixPolyfills, openPicker } from "@/test/form-controls";
+installRadixPolyfills();
 
 import { PlatformShowcasesPage } from "./platform-showcases-page";
 import { ShowcaseEditorPage } from "./showcase-editor-page";
@@ -172,6 +179,10 @@ beforeEach(() => {
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
+  mocks.orgType = "dealer";
+  mocks.dealerOptions.mockResolvedValue({
+    items: [{ uuid: "dealer-b", name: "Bayi B" }],
+  });
   mocks.features.mockResolvedValue({ enabled: ["dealer_showcase"], items: [] });
   mocks.get.mockResolvedValue(sampleShowcase());
   mocks.reviewList.mockResolvedValue({
@@ -293,4 +304,40 @@ describe("Platform showcase queue", () => {
     );
     expect(mocks.review).not.toHaveBeenCalled();
   });
+});
+
+it("searches scoped dealers by name and loads the selected UUID", async () => {
+  mocks.orgType = "distributor";
+  await render(<ShowcaseEditorPage />);
+  const trigger = container.querySelector("#showcase-target-org")!;
+  expect(trigger.getAttribute("role")).toBe("combobox");
+  expect(container.querySelector("input#showcase-target-org")).toBeNull();
+  await openPicker(trigger);
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  });
+  const search = document.querySelector<HTMLInputElement>("[cmdk-input]")!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      "value",
+    )!.set!.call(search, "Bayi");
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  });
+  expect(mocks.dealerOptions).toHaveBeenLastCalledWith("Bayi");
+  const option = [...document.querySelectorAll('[role="option"]')].find((el) =>
+    el.textContent?.includes("Bayi B"),
+  )!;
+  await act(async () => {
+    (option as HTMLElement).click();
+  });
+  for (let i = 0; i < 4; i++)
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  expect(trigger.textContent).toContain("Bayi B");
+  expect(mocks.get).toHaveBeenLastCalledWith({ org: "dealer-b" });
 });

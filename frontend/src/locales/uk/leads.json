@@ -192,5 +192,8 @@
   "convert.done": "Лід конвертовано.",
   "convert.error": "Не вдалося конвертувати.",
   "convert.errors.distributor_required": "Оберіть дистриб'ютора.",
-  "convert.errors.currency_required": "Оберіть валюту."
+  "convert.errors.currency_required": "Оберіть валюту.",
+  "form.assignee": "Відповідальний",
+  "form.customer": "Клієнт",
+  "form.vehicle": "Автомобіль"
 }

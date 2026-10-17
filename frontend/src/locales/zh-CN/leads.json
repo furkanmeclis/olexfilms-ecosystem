@@ -192,5 +192,8 @@
   "convert.done": "线索已转化。",
   "convert.error": "转化失败。",
   "convert.errors.distributor_required": "请选择分销商。",
-  "convert.errors.currency_required": "请选择币种。"
+  "convert.errors.currency_required": "请选择币种。",
+  "form.assignee": "负责人",
+  "form.customer": "客户",
+  "form.vehicle": "车辆"
 }
