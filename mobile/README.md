@@ -15,11 +15,21 @@ Screen plan, design system and speed budget: the "Olex Mobil Ekran Planı" page
 cd mobile
 cp .env.example .env.local      # EXPO_PUBLIC_API_URL=<BFF origin>/api
 npm install
-npx expo start --go             # scan the QR with Expo Go (npm run ios: development build)
+npx expo prebuild --platform ios --clean   # ios/ and android/ are generated (CNG), never committed
+npx expo run:ios                # development build on a simulator or device
 ```
 
-Runs in Expo Go (`npx expo start --go`) and in a development build. Later native modules (BLE, plate recognition) will need the development build;
-Expo Go only ships its bundled modules.
+Expo Go from the App Store only supports SDK 57, so this SDK 58 app needs a
+development build. `pod install` downloads ~100 MB of React Native/Hermes
+tarballs each time; point CocoaPods at the cached copies to skip that:
+
+```bash
+export RCT_USE_LOCAL_RN_DEP=1
+export RCT_TESTONLY_RNCORE_TARBALL_PATH=~/Library/Caches/ReactNative/<react-native-core>-debug.tar.gz
+export HERMES_ENGINE_TARBALL_PATH=~/Library/Caches/ReactNative/<hermes>-debug.tar.gz
+```
+
+Later native modules (BLE, plate recognition) also need the development build.
 
 ## Commands
 
