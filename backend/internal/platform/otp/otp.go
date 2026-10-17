@@ -31,6 +31,7 @@ import (
 // Purposes (otp_codes.type).
 const (
 	PurposeCustomerLogin = "customer_login"
+	PurposeMobileLogin   = "mobile_login"
 	PurposeContractSign  = "contract_sign"
 )
 
@@ -174,7 +175,7 @@ type Verified struct {
 }
 
 func validPurpose(p string) bool {
-	return p == PurposeCustomerLogin || p == PurposeContractSign
+	return p == PurposeCustomerLogin || p == PurposeContractSign || p == PurposeMobileLogin
 }
 
 // NormalizeLocale maps a locale to one with a KVKK notice (tr, en), tr default.
@@ -266,6 +267,18 @@ func (s *Service) Request(ctx context.Context, in RequestInput) (RequestResult, 
 
 // Verify checks and consumes a code. Five wrong attempts kill the code.
 func (s *Service) Verify(ctx context.Context, in VerifyInput) (Verified, error) {
+	return s.verify(ctx, in, nil)
+}
+
+// VerifyMobile checks a mobile login code, then runs the additional factor
+// check before consumption. A failed check leaves the code valid until expiry;
+// every retry still passes the shared verification rate limiter.
+func (s *Service) VerifyMobile(ctx context.Context, in VerifyInput, check func(Verified) error) (Verified, error) {
+	in.Purpose = PurposeMobileLogin
+	return s.verify(ctx, in, check)
+}
+
+func (s *Service) verify(ctx context.Context, in VerifyInput, check func(Verified) error) (Verified, error) {
 	purpose := strings.TrimSpace(in.Purpose)
 	if purpose == "" {
 		purpose = PurposeCustomerLogin
@@ -304,10 +317,16 @@ func (s *Service) Verify(ctx context.Context, in VerifyInput) (Verified, error) 
 		}
 		return Verified{}, ErrInvalidCode
 	}
-	if err := s.store.Consume(ctx, row.ID, now); err != nil {
+	v := Verified{ID: row.UUID, Phone: num.E164, UserID: row.UserID}
+	if check != nil {
+		if err := check(v); err != nil {
+			return Verified{}, err
+		}
+	}
+	if err := s.store.Consume(ctx, row.ID, s.now().UTC()); err != nil {
 		return Verified{}, err
 	}
-	return Verified{ID: row.UUID, Phone: num.E164, UserID: row.UserID}, nil
+	return v, nil
 }
 
 func (s *Service) allow(ctx context.Context, action, subject string, limit int, window time.Duration, reason string, now time.Time) error {
