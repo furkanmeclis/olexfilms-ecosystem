@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScopedTheme } from 'uniwind';
 
 import { Camera, Check, CircleAlert, Flashlight, Keyboard, X } from '@/ui/icons';
 import { cn } from '@/ui/cn';
@@ -95,9 +96,11 @@ export function ContinuousScanner({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={close}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-black">
+      {/* Always dark, like a camera: the overlay (and callers' footers) use white text. */}
+      <ScopedTheme theme="dark">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-black">
         {!permission ? null : !permission.granted ? (
-          <View className="flex-1 justify-center bg-background">
+          <View className="flex-1 justify-center bg-black">
             <EmptyState
               icon={Camera}
               title={t('scan:permission_title')}
@@ -136,7 +139,7 @@ export function ContinuousScanner({
           <RoundButton label={t('m.type_code')} onPress={() => setTyping((v) => !v)} icon={Keyboard} active={typing} />
         </View>
 
-        {!typing ? (
+        {!typing && permission?.granted ? (
           <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
             <View className="h-44 w-72 rounded-2xl border-[3px] border-white/90" />
           </View>
@@ -207,7 +210,8 @@ export function ContinuousScanner({
           ))}
           {footer}
         </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </ScopedTheme>
     </Modal>
   );
 }
