@@ -5,7 +5,6 @@ import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView,
 
 import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
-import { Check, Search } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -40,7 +39,7 @@ function ProductPicker({ value, onPick }: { value?: string; onPick: (p: Product)
   return (
     <View className="gap-2">
       <View className="min-h-11 flex-row items-center gap-2 rounded-lg border border-border bg-card px-3">
-        <Icon as={Search} tone="muted-foreground" size={18} />
+        <Icon name="search" tone="muted-foreground" size={18} />
         <TextInput
           value={input}
           onChangeText={setInput}
@@ -76,7 +75,7 @@ function ProductPicker({ value, onPick }: { value?: string; onPick: (p: Product)
                   {item.sku} · {t(`unit_type.${item.unit_type}`)}
                 </Text>
               </View>
-              {item.uuid === value ? <Icon as={Check} tone="primary" size={18} /> : null}
+              {item.uuid === value ? <Icon name="check" tone="primary" size={18} /> : null}
             </Pressable>
           )}
         />

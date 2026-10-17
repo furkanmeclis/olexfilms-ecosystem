@@ -23,7 +23,6 @@ import {
   useFormat,
   usePagedQuery,
 } from '@/features/admin/kit';
-import { Bluetooth, Camera, Gauge, Plus } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -33,17 +32,18 @@ import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
 import { PARTS, parseValues, PLATE_RECOGNITION_ENABLED, SMARTPTG_BLE_ENABLED } from './parts';
+import type { IconName } from '@/ui/icons';
 
 type Measurement =
   paths['/v1/measurements']['get']['responses'][200]['content']['application/json']['data']['items'][number];
 
 /** Placeholder card for a capability that needs the development build. */
-function SoonCard({ icon, title, body }: { icon: typeof Gauge; title: string; body: string }) {
+function SoonCard({ icon, title, body }: { icon: IconName; title: string; body: string }) {
   const { t } = useTranslation('measure');
   return (
     <View className="mx-4 flex-row items-center gap-3 rounded-lg border border-dashed border-border bg-card px-4 py-3 opacity-80">
       <View className="size-9 items-center justify-center rounded-md bg-secondary">
-        <Icon as={icon} tone="muted-foreground" size={20} />
+        <Icon name={icon} tone="muted-foreground" size={20} />
       </View>
       <View className="flex-1 gap-0.5">
         <Text variant="callout" className="font-semibold">
@@ -66,7 +66,7 @@ function NewButton() {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={t('new')} hitSlop={8} onPress={() => router.push(href('new'))}>
       <View className="size-8 items-center justify-center">
-        <Icon as={Plus} tone="primary" />
+        <Icon name="add" tone="primary" />
       </View>
     </Pressable>
   );
@@ -88,11 +88,11 @@ export function MeasureScreen() {
 
   const header = (
     <View className="gap-2.5 pb-2 pt-2">
-      {!SMARTPTG_BLE_ENABLED ? <SoonCard icon={Bluetooth} title={t('ble_title')} body={t('ble_body')} /> : null}
-      {!PLATE_RECOGNITION_ENABLED ? <SoonCard icon={Camera} title={t('plate_title')} body={t('plate_body')} /> : null}
+      {!SMARTPTG_BLE_ENABLED ? <SoonCard icon="bluetooth" title={t('ble_title')} body={t('ble_body')} /> : null}
+      {!PLATE_RECOGNITION_ENABLED ? <SoonCard icon="camera" title={t('plate_title')} body={t('plate_body')} /> : null}
       {canWrite ? (
         <View className="px-4">
-          <Button title={t('manual_entry')} icon={<Icon as={Plus} tone="primary-foreground" size={18} />} onPress={() => router.push(href('new'))} />
+          <Button title={t('manual_entry')} icon={<Icon name="add" tone="primary-foreground" size={18} />} onPress={() => router.push(href('new'))} />
         </View>
       ) : null}
       {canRead ? <SectionHeader title={t('recent')} /> : null}
@@ -107,7 +107,7 @@ export function MeasureScreen() {
           query={list}
           keyOf={(m) => m.uuid}
           header={header}
-          empty={{ icon: Gauge, title: t('empty'), body: canWrite ? t('empty_body') : undefined }}
+          empty={{ icon: 'gauge', title: t('empty'), body: canWrite ? t('empty_body') : undefined }}
           renderItem={({ item }) => (
             <CardRow
               title={item.plate || item.vin || t('no_vehicle')}

@@ -1,6 +1,5 @@
 import { reloadAppAsync } from 'expo';
 import { router, Stack } from 'expo-router';
-import { Check } from '@/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Alert, Platform } from 'react-native';
 
@@ -17,7 +16,7 @@ const THEMES: ThemePreference[] = ['system', 'light', 'dark'];
 const UNITS: ThicknessUnit[] = ['um', 'mil'];
 
 function Checked({ on }: { on: boolean }) {
-  return on ? <Icon as={Check} tone="primary" size={20} /> : null;
+  return on ? <Icon name="check" tone="primary" size={20} /> : null;
 }
 
 export function SettingsScreen() {

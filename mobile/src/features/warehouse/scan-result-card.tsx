@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import { Boxes, MapPin, Package } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -37,7 +36,7 @@ export function ScanResultCard({ result }: { result: ScanResult }) {
     );
   }
 
-  const icon = result.type === 'location' ? MapPin : result.type === 'unit' ? Boxes : Package;
+  const icon = result.type === 'location' ? 'location' : result.type === 'unit' ? 'stock' : 'package';
   const heading =
     result.type === 'location' && location
       ? location.name || location.full_code
@@ -49,7 +48,7 @@ export function ScanResultCard({ result }: { result: ScanResult }) {
     <View className="gap-2">
       <View className="flex-row items-center gap-3">
         <View className="size-10 items-center justify-center rounded-md bg-secondary">
-          <Icon as={icon} tone="primary" size={20} />
+          <Icon name={icon} tone="primary" size={20} />
         </View>
         <View className="flex-1 gap-0.5">
           <Text variant="caption" tone="muted">

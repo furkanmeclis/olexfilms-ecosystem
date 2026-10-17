@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { Alert, type AlertButton, RefreshControl, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
-import { ListTree, Plus } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -180,14 +179,14 @@ export function RoomScreen() {
             <Button
               className="flex-1"
               variant="secondary"
-              icon={<Icon as={Plus} tone="primary" size={18} />}
+              icon={<Icon name="add" tone="primary" size={18} />}
               title={t('locations.new_root')}
               onPress={() => setSheet({ kind: 'new', parent: null, types: allowedChildTypes(null) })}
             />
             <Button
               className="flex-1"
               variant="secondary"
-              icon={<Icon as={ListTree} tone="primary" size={18} />}
+              icon={<Icon name="hierarchy" tone="primary" size={18} />}
               title={t('bulk.open')}
               onPress={() => go(`/depo/setup/generate?room=${uuid}`)}
             />

@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
-import { ScanLine } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -182,7 +181,7 @@ export function CountNewScreen() {
             </Text>
             <Button
               variant="outline"
-              icon={<Icon as={ScanLine} tone="primary" size={18} />}
+              icon={<Icon name="scan" tone="primary" size={18} />}
               title={
                 effectiveScope === 'location'
                   ? (location?.code ?? t('entry.scan_location'))

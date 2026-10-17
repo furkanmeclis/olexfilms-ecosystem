@@ -3,12 +3,12 @@ import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from 'react
 
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
-import { CircleAlert, type LucideIcon, Search, X } from '@/ui/icons';
 import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
+import type { IconName } from '@/ui/icons';
 
 /** Localized message of a failed query or mutation. */
 export function errorText(e: unknown) {
@@ -19,7 +19,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => 
   const { t } = useTranslation('common');
   return (
     <EmptyState
-      icon={CircleAlert}
+      icon="error"
       title={t('error_generic')}
       body={errorText(error)}
       action={{ title: t('retry'), onPress: onRetry }}
@@ -50,7 +50,7 @@ export function ListBody({
   error: unknown;
   count: number;
   onRetry: () => void;
-  empty: { icon: LucideIcon; title: string; body?: string; action?: { title: string; onPress: () => void } };
+  empty: { icon: IconName; title: string; body?: string; action?: { title: string; onPress: () => void } };
 }) {
   if (count > 0) return null;
   if (isPending) return <ListSkeleton />;
@@ -76,7 +76,7 @@ export function SearchField({
   const { t } = useTranslation('common');
   return (
     <View className="min-h-11 flex-row items-center gap-2 rounded-lg bg-secondary px-3">
-      <Icon as={Search} tone="muted-foreground" size={18} />
+      <Icon name="search" tone="muted-foreground" size={18} />
       <TextInput
         value={value}
         onChangeText={onChange}
@@ -90,7 +90,7 @@ export function SearchField({
       />
       {value ? (
         <Pressable accessibilityRole="button" accessibilityLabel={t('close')} hitSlop={8} onPress={() => onChange('')}>
-          <Icon as={X} tone="muted-foreground" size={18} />
+          <Icon name="close" tone="muted-foreground" size={18} />
         </Pressable>
       ) : null}
     </View>

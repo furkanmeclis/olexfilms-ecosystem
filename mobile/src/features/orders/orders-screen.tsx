@@ -21,7 +21,6 @@ import {
   useFormat,
   usePagedQuery,
 } from '@/features/admin/kit';
-import { ShoppingCart } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -95,7 +94,7 @@ export function OrdersScreen() {
             onChange={setFilter}
           />
         }
-        empty={{ icon: ShoppingCart, title: query ? t('orders.no_results') : t('orders.empty') }}
+        empty={{ icon: 'cart', title: query ? t('orders.no_results') : t('orders.empty') }}
         renderItem={({ item }) => {
           const other = item.role === 'buyer' ? item.seller : item.buyer;
           return (

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
-import { Boxes } from '@/ui/icons';
 import { Text } from '@/ui/text';
 import { formatNumber, go } from '@/features/warehouse/format';
 import { Chips, ListStatus } from '@/features/warehouse/parts';
@@ -88,7 +87,7 @@ export function StockScreen({ base, space }: { base: string; space: 'depo' | 'ba
             error={query.error}
             empty
             onRetry={() => void query.refetch()}
-            emptyIcon={Boxes}
+            emptyIcon="stock"
             emptyTitle={q ? t('stock.list.empty_filtered') : t('stock.products.empty_title')}
             emptyBody={q ? undefined : t('stock.products.empty_description')}
           />

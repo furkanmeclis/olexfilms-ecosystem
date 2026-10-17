@@ -16,7 +16,6 @@ import {
   warrantyTone,
 } from '@/features/services/lib';
 import { Chips, ListBody, ListFooter, SearchField } from '@/features/services/ui';
-import { ShieldCheck } from '@/ui/icons';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
@@ -108,7 +107,7 @@ export function WarrantiesListScreen() {
             count={list.items.length}
             onRetry={() => void list.refetch()}
             empty={{
-              icon: ShieldCheck,
+              icon: 'warranty',
               title: query || filter !== 'all' ? t('warranties_empty_filtered') : t('warranties_empty'),
               body: query || filter !== 'all' ? undefined : t('warranties_empty_body'),
             }}

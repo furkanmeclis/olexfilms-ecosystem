@@ -9,7 +9,6 @@ import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
 import { formatDateTime } from '@/features/services/lib';
 import { Chips, ListBody, ListFooter } from '@/features/services/ui';
-import { CalendarDays } from '@/ui/icons';
 import { Text } from '@/ui/text';
 
 import { openDealerFinder, PAGE_SIZE, type PortalAppointment, useFleetRoles, usePortalPages } from './lib';
@@ -87,7 +86,7 @@ export function CustomerAppointmentsScreen() {
             count={list.items.length}
             onRetry={() => void list.refetch()}
             empty={{
-              icon: CalendarDays,
+              icon: 'appointment',
               title: period === 'upcoming' ? t('appointments_empty') : t('appointments_past_empty'),
               body: period === 'upcoming' ? t('appointments_empty_body') : undefined,
               action:

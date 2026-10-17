@@ -4,7 +4,6 @@ import { Modal, Pressable, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { Button } from '@/ui/button';
-import { QrCode, Share2, X } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
@@ -38,7 +37,7 @@ export function WarrantyQrButton({ code, variant = 'outline' }: { code: string; 
       <Button
         title={t('qr')}
         variant={variant}
-        icon={<Icon as={QrCode} tone="primary" size={16} />}
+        icon={<Icon name="qr" tone="primary" size={16} />}
         onPress={() => setOpen(true)}
         className="grow"
       />
@@ -47,7 +46,7 @@ export function WarrantyQrButton({ code, variant = 'outline' }: { code: string; 
           <View className="w-full flex-row items-center justify-between">
             <Text variant="headline">{t('warranty')}</Text>
             <Pressable accessibilityRole="button" accessibilityLabel={t('common:close')} hitSlop={10} onPress={() => setOpen(false)}>
-              <Icon as={X} />
+              <Icon name="close" />
             </Pressable>
           </View>
           <View className="overflow-hidden rounded-xl">
@@ -65,7 +64,7 @@ export function WarrantyQrButton({ code, variant = 'outline' }: { code: string; 
           <Button
             title={t('share')}
             variant="secondary"
-            icon={<Icon as={Share2} tone="primary" size={16} />}
+            icon={<Icon name="share" tone="primary" size={16} />}
             onPress={() => shareWarranty(code, t('warranty_share_message', { code }))}
             className="self-stretch"
           />

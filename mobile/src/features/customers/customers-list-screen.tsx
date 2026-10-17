@@ -6,7 +6,6 @@ import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { fullName, PAGE_SIZE, useDebounced, useLinks, usePagedList } from '@/features/services/lib';
 import { ListBody, ListFooter, SearchField } from '@/features/services/ui';
-import { Users } from '@/ui/icons';
 import { Text } from '@/ui/text';
 
 /** Customers of the scope: search by name, phone or e-mail, infinite scroll. */
@@ -47,7 +46,7 @@ export function CustomersListScreen() {
             error={list.error}
             count={list.items.length}
             onRetry={() => void list.refetch()}
-            empty={{ icon: Users, title: query ? t('customers_empty_filtered') : t('customers_empty') }}
+            empty={{ icon: 'customers', title: query ? t('customers_empty_filtered') : t('customers_empty') }}
           />
         }
         renderItem={({ item: c }) => (

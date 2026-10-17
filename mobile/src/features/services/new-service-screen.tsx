@@ -11,7 +11,6 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
 import { Button } from '@/ui/button';
-import { CarFront, Check, Plus, UserRound } from '@/ui/icons';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -19,6 +18,7 @@ import { Text } from '@/ui/text';
 
 import { type CustomerSummary, fullName, useDebounced, useLinks, type Vehicle, vehicleLabel } from './lib';
 import { errorText, ListSkeleton, SearchField, Section } from './ui';
+import type { IconName } from '@/ui/icons';
 
 type Step = 'customer' | 'vehicle' | 'details';
 const STEPS: Step[] = ['customer', 'vehicle', 'details'];
@@ -114,9 +114,9 @@ export function NewServiceScreen() {
         {step === 'details' && customer && vehicle ? (
           <View className="gap-4">
             <Section>
-              <Summary icon={UserRound} title={fullName(customer)} subtitle={customer.phone ?? ''} onPress={() => setStep('customer')} />
+              <Summary icon="customer" title={fullName(customer)} subtitle={customer.phone ?? ''} onPress={() => setStep('customer')} />
               <Summary
-                icon={CarFront}
+                icon="vehicle"
                 title={vehicle.plate ?? ''}
                 subtitle={vehicleLabel(vehicle.car_brand?.name, vehicle.car_model?.name, vehicle.model_year)}
                 onPress={() => setStep('vehicle')}
@@ -159,7 +159,7 @@ function Summary({
   onPress,
   last,
 }: {
-  icon: typeof UserRound;
+  icon: IconName;
   title: string;
   subtitle: string;
   onPress: () => void;
@@ -171,7 +171,7 @@ function Summary({
       accessibilityRole="button"
       onPress={onPress}
       className={cn('flex-row items-center gap-3 px-4 py-3 active:bg-muted', !last && 'border-b border-border')}>
-      <Icon as={icon} tone="primary" size={20} />
+      <Icon name={icon} tone="primary" size={20} />
       <View className="flex-1 gap-0.5">
         <Text variant="body" numberOfLines={1}>
           {title}
@@ -221,7 +221,7 @@ function PickRow({
           </Text>
         ) : null}
       </View>
-      {selected ? <Icon as={Check} tone="primary" size={18} /> : null}
+      {selected ? <Icon name="check" tone="primary" size={18} /> : null}
     </Pressable>
   );
 }
@@ -276,7 +276,7 @@ function CustomerStep({ selected, onPick }: { selected: PickedCustomer | null; o
         <Button
           title={t('customer_new')}
           variant="outline"
-          icon={<Icon as={Plus} tone="primary" size={18} />}
+          icon={<Icon name="add" tone="primary" size={18} />}
           onPress={() => setCreating(true)}
         />
       ) : null}
@@ -426,7 +426,7 @@ function VehicleStep({
         <Button
           title={t('vehicle_new')}
           variant={items.length ? 'outline' : 'primary'}
-          icon={<Icon as={Plus} tone={items.length ? 'primary' : 'primary-foreground'} size={18} />}
+          icon={<Icon name="add" tone={items.length ? 'primary' : 'primary-foreground'} size={18} />}
           onPress={() => setCreating(true)}
         />
       ) : null}

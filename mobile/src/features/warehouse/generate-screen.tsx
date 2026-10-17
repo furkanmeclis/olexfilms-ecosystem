@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
 
-import { Trash } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Screen } from '@/ui/screen';
@@ -155,7 +154,7 @@ export function GenerateScreen() {
                   {t('bulk.level_title', { n: i + 1 })} · {t(`type.${lv.type}`)}
                 </Text>
                 {i === levels.length - 1 ? (
-                  <IconButton icon={Trash} tone="destructive" label={t('bulk.remove_level')} onPress={() => setLevels((ls) => ls.slice(0, -1))} />
+                  <IconButton icon="delete" tone="destructive" label={t('bulk.remove_level')} onPress={() => setLevels((ls) => ls.slice(0, -1))} />
                 ) : null}
               </View>
               {allowedChildTypes(i === 0 ? parentType : levels[i - 1].type).length > 1 ? (

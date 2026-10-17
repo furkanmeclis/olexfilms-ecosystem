@@ -2,8 +2,6 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
-import type { LucideIcon } from '@/ui/icons';
-import { CircleAlert } from '@/ui/icons';
 import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
@@ -11,6 +9,7 @@ import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 
 import { whError } from './format';
+import type { IconName } from '@/ui/icons';
 
 /** iOS-style segmented control (text + selected fill, never color alone). */
 export function Segmented<T extends string>({
@@ -93,7 +92,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => 
   const { t } = useTranslation();
   return (
     <EmptyState
-      icon={CircleAlert}
+      icon="error"
       title={t('common:error_generic')}
       body={whError(error)}
       action={{ title: t('common:retry'), onPress: onRetry }}
@@ -116,7 +115,7 @@ export function ListStatus({
   error: unknown;
   empty: boolean;
   onRetry: () => void;
-  emptyIcon: LucideIcon;
+  emptyIcon: IconName;
   emptyTitle: string;
   emptyBody?: string;
   emptyAction?: { title: string; onPress: () => void };
@@ -193,7 +192,7 @@ export function IconButton({
   busy,
   tone = 'muted-foreground',
 }: {
-  icon: LucideIcon;
+  icon: IconName;
   label: string;
   onPress: () => void;
   busy?: boolean;
@@ -207,7 +206,7 @@ export function IconButton({
       disabled={busy}
       onPress={onPress}
       className="size-9 items-center justify-center rounded-md active:bg-muted">
-      {busy ? <ActivityIndicator size="small" /> : <Icon as={icon} tone={tone} size={18} />}
+      {busy ? <ActivityIndicator size="small" /> : <Icon name={icon} tone={tone} size={18} />}
     </Pressable>
   );
 }

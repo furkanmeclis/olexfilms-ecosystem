@@ -1,7 +1,6 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { router, useIsFocused } from 'expo-router';
-import { Camera } from '@/ui/icons';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, View } from 'react-native';
@@ -36,7 +35,7 @@ export function ScanScreen({ space }: { space?: 'depo' } = {}) {
     return (
       <View className="flex-1 justify-center bg-background">
         <EmptyState
-          icon={Camera}
+          icon="camera"
           title={t('permission_title')}
           body={t('permission_body')}
           action={

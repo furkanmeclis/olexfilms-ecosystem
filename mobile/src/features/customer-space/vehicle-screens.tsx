@@ -6,7 +6,6 @@ import { FlatList, RefreshControl, ScrollView, View } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { formatDate, formatNumber, vehicleLabel } from '@/features/services/lib';
 import { DetailSkeleton, ErrorState, InfoRow, ListBody, ListFooter, Section } from '@/features/services/ui';
-import { CarFront, ShieldCheck, Wrench } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
@@ -35,7 +34,7 @@ export function CustomerVehiclesScreen() {
             error={list.error}
             count={list.items.length}
             onRetry={() => void list.refetch()}
-            empty={{ icon: CarFront, title: t('vehicles_empty'), body: t('vehicles_empty_body') }}
+            empty={{ icon: 'vehicle', title: t('vehicles_empty'), body: t('vehicles_empty_body') }}
           />
         }
         renderItem={({ item }) => <VehicleCard v={item} onPress={() => router.push(links.vehicle(item.uuid))} />}
@@ -85,7 +84,7 @@ export function CustomerVehicleDetailScreen() {
           <>
             <View className="flex-row items-center gap-3 rounded-lg border border-border bg-card p-4">
               <View className="size-12 items-center justify-center rounded-md bg-secondary">
-                <Icon as={CarFront} tone="primary" size={24} />
+                <Icon name="vehicle" tone="primary" size={24} />
               </View>
               <View className="flex-1 gap-0.5">
                 <Text variant="title" selectable numberOfLines={1}>
@@ -121,7 +120,7 @@ export function CustomerVehicleDetailScreen() {
                 ))
               ) : (
                 <View className="flex-row items-center gap-3 rounded-lg border border-border bg-card p-4">
-                  <Icon as={ShieldCheck} tone="muted-foreground" size={18} />
+                  <Icon name="warranty" tone="muted-foreground" size={18} />
                   <Text variant="callout" tone="muted" className="flex-1">
                     {t('no_active_warranties')}
                   </Text>
@@ -139,7 +138,7 @@ export function CustomerVehicleDetailScreen() {
                 ))
               ) : (
                 <View className="flex-row items-center gap-3 rounded-lg border border-border bg-card p-4">
-                  <Icon as={Wrench} tone="muted-foreground" size={18} />
+                  <Icon name="service" tone="muted-foreground" size={18} />
                   <Text variant="callout" tone="muted" className="flex-1">
                     {t('services_empty_body')}
                   </Text>

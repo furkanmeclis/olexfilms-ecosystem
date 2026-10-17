@@ -8,7 +8,6 @@ import { Alert, FlatList, Pressable, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { Button } from '@/ui/button';
-import { Barcode, Camera, PackagePlus } from '@/ui/icons';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -87,7 +86,7 @@ export function AddItemScreen() {
                   accessibilityLabel={t('scan_barcode')}
                   onPress={() => setScanning((v) => !v)}
                   className={cn('size-11 items-center justify-center rounded-lg', scanning ? 'bg-primary' : 'bg-secondary')}>
-                  <Icon as={Camera} tone={scanning ? 'primary-foreground' : 'primary'} size={20} />
+                  <Icon name="camera" tone={scanning ? 'primary-foreground' : 'primary'} size={20} />
                 </Pressable>
               </View>
               {scanning ? (
@@ -106,7 +105,7 @@ export function AddItemScreen() {
               error={units.error}
               count={items.length}
               onRetry={() => void units.refetch()}
-              empty={{ icon: PackagePlus, title: t('stock_empty'), body: t('stock_empty_body') }}
+              empty={{ icon: 'packageIn', title: t('stock_empty'), body: t('stock_empty_body') }}
             />
           }
           renderItem={({ item: u }) => (
@@ -114,7 +113,7 @@ export function AddItemScreen() {
               accessibilityRole="button"
               onPress={() => setPicked(u)}
               className="flex-row items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 active:opacity-80">
-              <Icon as={Barcode} tone="muted-foreground" size={20} />
+              <Icon name="barcode" tone="muted-foreground" size={20} />
               <View className="flex-1 gap-0.5">
                 <Text variant="body" numberOfLines={2}>
                   {u.product.name}

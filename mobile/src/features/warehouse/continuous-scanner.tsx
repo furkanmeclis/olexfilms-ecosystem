@@ -6,11 +6,11 @@ import { ActivityIndicator, KeyboardAvoidingView, Linking, Modal, Platform, Pres
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScopedTheme } from 'uniwind';
 
-import { Camera, Check, CircleAlert, Flashlight, Keyboard, X } from '@/ui/icons';
 import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { type IconName, lucideGlyph } from '@/ui/icons';
 
 export const BARCODE_TYPES = ['qr', 'datamatrix', 'code128', 'code39', 'ean13', 'ean8', 'upc_a', 'upc_e', 'itf14'] as const;
 
@@ -102,7 +102,7 @@ export function ContinuousScanner({
         {!permission ? null : !permission.granted ? (
           <View className="flex-1 justify-center bg-black">
             <EmptyState
-              icon={Camera}
+              icon="camera"
               title={t('scan:permission_title')}
               body={t('scan:permission_body')}
               action={
@@ -124,7 +124,7 @@ export function ContinuousScanner({
 
         {/* Top bar */}
         <View className="absolute inset-x-0 top-0 flex-row items-center gap-3 px-4" style={{ paddingTop: insets.top + 8 }}>
-          <RoundButton label={t('common:close')} onPress={close} icon={X} />
+          <RoundButton label={t('common:close')} onPress={close} icon="close" />
           <View className="flex-1">
             <Text variant="headline" className="text-white" numberOfLines={1}>
               {title}
@@ -135,8 +135,8 @@ export function ContinuousScanner({
               </Text>
             ) : null}
           </View>
-          <RoundButton label={t('m.torch')} onPress={() => setTorch((v) => !v)} icon={Flashlight} active={torch} />
-          <RoundButton label={t('m.type_code')} onPress={() => setTyping((v) => !v)} icon={Keyboard} active={typing} />
+          <RoundButton label={t('m.torch')} onPress={() => setTorch((v) => !v)} icon="flashlight" active={torch} />
+          <RoundButton label={t('m.type_code')} onPress={() => setTyping((v) => !v)} icon="keyboard" active={typing} />
         </View>
 
         {!typing && permission?.granted ? (
@@ -193,7 +193,7 @@ export function ContinuousScanner({
               key={f.id}
               className={cn('flex-row items-start gap-3 rounded-lg bg-card p-3', i > 0 && 'opacity-70')}>
               <View className={cn('mt-0.5 size-6 items-center justify-center rounded-full', f.ok ? 'bg-success/20' : 'bg-destructive/20')}>
-                <Icon as={f.ok ? Check : CircleAlert} tone={f.ok ? 'primary' : 'destructive'} size={14} />
+                <Icon name={f.ok ? 'check' : 'error'} tone={f.ok ? 'primary' : 'destructive'} size={14} />
               </View>
               <View className="flex-1 gap-0.5">
                 <Text variant="callout" className="font-semibold" numberOfLines={2}>
@@ -224,10 +224,9 @@ function RoundButton({
 }: {
   label: string;
   onPress: () => void;
-  icon: typeof X;
+  icon: IconName;
   active?: boolean;
 }) {
-  const Glyph = icon;
   return (
     <Pressable
       accessibilityRole="button"
@@ -237,10 +236,10 @@ function RoundButton({
       onPress={onPress}
       className={cn('size-10 items-center justify-center rounded-full', active ? 'bg-white' : 'bg-black/50')}>
       {active ? (
-        <Icon as={icon} tone="primary" size={20} />
+        <Icon name={icon} tone="primary" size={20} />
       ) : (
         // Over the camera picture the glyph is always white, like the frame.
-        <Glyph size={20} color="#ffffff" strokeWidth={2} />
+        lucideGlyph(icon, { size: 20, color: '#ffffff', strokeWidth: 2 })
       )}
     </Pressable>
   );

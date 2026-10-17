@@ -1,9 +1,16 @@
+import ArrowLeftRightIcon from 'lucide-react-native/icons/arrow-left-right';
+import ChevronUpIcon from 'lucide-react-native/icons/chevron-up';
+import CircleAlertIcon from 'lucide-react-native/icons/circle-alert';
+import ImagePlusIcon from 'lucide-react-native/icons/image-plus';
+import ListTreeIcon from 'lucide-react-native/icons/list-tree';
+import MonitorSmartphoneIcon from 'lucide-react-native/icons/monitor-smartphone';
+import PencilIcon from 'lucide-react-native/icons/pencil';
 import BanIcon from 'lucide-react-native/icons/ban';
 import BanknoteIcon from 'lucide-react-native/icons/banknote';
 import BarcodeIcon from 'lucide-react-native/icons/barcode';
 import BluetoothIcon from 'lucide-react-native/icons/bluetooth';
 import BoxesIcon from 'lucide-react-native/icons/boxes';
-import Building2Icon from 'lucide-react-native/icons/building';
+import BuildingIcon from 'lucide-react-native/icons/building';
 import CalendarDaysIcon from 'lucide-react-native/icons/calendar-days';
 import CameraIcon from 'lucide-react-native/icons/camera';
 import CarFrontIcon from 'lucide-react-native/icons/car-front';
@@ -56,8 +63,8 @@ import WrenchIcon from 'lucide-react-native/icons/wrench';
 import XIcon from 'lucide-react-native/icons/x';
 import ChevronLeftIcon from 'lucide-react-native/icons/chevron-left';
 import ChevronRightIcon from 'lucide-react-native/icons/chevron-right';
-import type { LucideIcon } from 'lucide-react-native';
 import type { SFSymbol } from 'expo-symbols';
+import { createElement, type ReactElement } from 'react';
 import { I18nManager } from 'react-native';
 
 /**
@@ -65,67 +72,9 @@ import { I18nManager } from 'react-native';
  * importing from the package root would ship all ~1,600 Lucide icons.
  * Add an icon here, then import it from '@/ui/icons'.
  */
-export type { LucideIcon } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 
-export { default as ArrowLeftRight } from 'lucide-react-native/icons/arrow-left-right';
-export { default as Building2 } from 'lucide-react-native/icons/building';
-export { default as CalendarDays } from 'lucide-react-native/icons/calendar-days';
-export { default as Camera } from 'lucide-react-native/icons/camera';
-export { default as CarFront } from 'lucide-react-native/icons/car-front';
-export { default as Check } from 'lucide-react-native/icons/check';
-export { default as ChevronRight } from 'lucide-react-native/icons/chevron-right';
-export { default as ClipboardCheck } from 'lucide-react-native/icons/clipboard-check';
-export { default as Download } from 'lucide-react-native/icons/download';
-export { default as Gauge } from 'lucide-react-native/icons/gauge';
-export { default as Hammer } from 'lucide-react-native/icons/hammer';
-export { default as Inbox } from 'lucide-react-native/icons/inbox';
-export { default as MonitorSmartphone } from 'lucide-react-native/icons/monitor-smartphone';
-export { default as PackageCheck } from 'lucide-react-native/icons/package-check';
-export { default as PackagePlus } from 'lucide-react-native/icons/package-plus';
-export { default as ScanLine } from 'lucide-react-native/icons/scan-line';
-export { default as Search } from 'lucide-react-native/icons/search';
-export { default as Smartphone } from 'lucide-react-native/icons/smartphone';
-export { default as UserRound } from 'lucide-react-native/icons/user-round';
-export { default as Wrench } from 'lucide-react-native/icons/wrench';
-export { default as Plus } from 'lucide-react-native/icons/plus';
-export { default as Phone } from 'lucide-react-native/icons/phone';
-export { default as ShieldCheck } from 'lucide-react-native/icons/shield-check';
-export { default as Share2 } from 'lucide-react-native/icons/share-2';
-export { default as ExternalLink } from 'lucide-react-native/icons/external-link';
-export { default as Trash } from 'lucide-react-native/icons/trash';
-export { default as X } from 'lucide-react-native/icons/x';
-export { default as CircleAlert } from 'lucide-react-native/icons/circle-alert';
-export { default as Users } from 'lucide-react-native/icons/users';
-export { default as Mail } from 'lucide-react-native/icons/mail';
-export { default as Barcode } from 'lucide-react-native/icons/barcode';
-export { default as Warehouse } from 'lucide-react-native/icons/warehouse';
-export { default as Truck } from 'lucide-react-native/icons/truck';
-export { default as MapPin } from 'lucide-react-native/icons/map-pin';
-export { default as Package } from 'lucide-react-native/icons/package';
-export { default as Boxes } from 'lucide-react-native/icons/boxes';
-export { default as ClipboardList } from 'lucide-react-native/icons/clipboard-list';
-export { default as ChevronDown } from 'lucide-react-native/icons/chevron-down';
-export { default as Keyboard } from 'lucide-react-native/icons/keyboard';
-export { default as Flashlight } from 'lucide-react-native/icons/flashlight';
-export { default as Ban } from 'lucide-react-native/icons/ban';
-export { default as CloudOff } from 'lucide-react-native/icons/cloud-off';
-export { default as ChartColumn } from 'lucide-react-native/icons/chart-column';
-export { default as Network } from 'lucide-react-native/icons/network';
-export { default as ShoppingCart } from 'lucide-react-native/icons/shopping-cart';
-export { default as Bluetooth } from 'lucide-react-native/icons/bluetooth';
-export { default as Info } from 'lucide-react-native/icons/info';
-export { default as Clock } from 'lucide-react-native/icons/clock';
-export { default as Target } from 'lucide-react-native/icons/target';
-export { default as Pencil } from 'lucide-react-native/icons/pencil';
-export { default as ImagePlus } from 'lucide-react-native/icons/image-plus';
-export { default as RotateCcw } from 'lucide-react-native/icons/rotate-ccw';
-export { default as QrCode } from 'lucide-react-native/icons/qr-code';
-export { default as ChevronUp } from 'lucide-react-native/icons/chevron-up';
-export { default as Settings } from 'lucide-react-native/icons/settings';
-export { default as ListTree } from 'lucide-react-native/icons/list-tree';
-
-/** "Go deeper" chevron: points right in LTR, left in RTL (direction is fixed per launch). */
-export const ChevronForward = I18nManager.isRTL ? ChevronLeftIcon : ChevronRightIcon;
+export type { LucideIcon };
 
 /** Semantic icon concepts. Screens ask for a concept; the registry picks the glyph per platform. */
 export type IconName =
@@ -189,7 +138,14 @@ export type IconName =
   | 'clock'
   | 'target'
   | 'inbox'
-  | 'globe';
+  | 'globe'
+  | 'transfer'
+  | 'chevronUp'
+  | 'error'
+  | 'addPhoto'
+  | 'hierarchy'
+  | 'devices'
+  | 'edit';
 
 /** iOS renders the SF Symbol, Android (and iOS fallback) renders the Lucide glyph. */
 export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
@@ -215,7 +171,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   vehicle: { sf: 'car', lucide: CarFrontIcon },
   service: { sf: 'wrench.and.screwdriver', lucide: WrenchIcon },
   warranty: { sf: 'checkmark.shield', lucide: ShieldCheckIcon },
-  warrantyClaim: { sf: 'clipboard', lucide: ClipboardCheckIcon },
+  warrantyClaim: { sf: 'checklist.checked', lucide: ClipboardCheckIcon },
   appointment: { sf: 'calendar.badge.clock', lucide: CalendarDaysIcon },
   calendar: { sf: 'calendar', lucide: CalendarDaysIcon },
   order: { sf: 'list.clipboard', lucide: ClipboardListIcon },
@@ -223,7 +179,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   stock: { sf: 'shippingbox', lucide: BoxesIcon },
   package: { sf: 'shippingbox', lucide: PackageIcon },
   packageIn: { sf: 'shippingbox.and.arrow.backward', lucide: PackagePlusIcon },
-  packageCheck: { sf: 'checkmark.circle', lucide: PackageCheckIcon },
+  packageCheck: { sf: 'shippingbox.circle', lucide: PackageCheckIcon },
   warehouse: { sf: 'building.2', lucide: WarehouseIcon },
   truck: { sf: 'truck.box', lucide: TruckIcon },
   location: { sf: 'mappin.and.ellipse', lucide: MapPinIcon },
@@ -236,7 +192,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   measure: { sf: 'ruler', lucide: RulerIcon },
   gauge: { sf: 'gauge.with.dots.needle.67percent', lucide: GaugeIcon },
   tools: { sf: 'hammer', lucide: HammerIcon },
-  building: { sf: 'building.columns', lucide: Building2Icon },
+  building: { sf: 'building.columns', lucide: BuildingIcon },
   network: { sf: 'network', lucide: NetworkIcon },
   spaces: { sf: 'square.grid.2x2', lucide: LayoutGridIcon },
   settings: { sf: 'gearshape', lucide: SettingsIcon },
@@ -254,6 +210,13 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   target: { sf: 'scope', lucide: TargetIcon },
   inbox: { sf: 'tray', lucide: InboxIcon },
   globe: { sf: 'globe', lucide: GlobeIcon },
+  transfer: { sf: 'arrow.left.arrow.right', lucide: ArrowLeftRightIcon },
+  chevronUp: { sf: 'chevron.up', lucide: ChevronUpIcon },
+  error: { sf: 'exclamationmark.circle', lucide: CircleAlertIcon },
+  addPhoto: { sf: 'photo.badge.plus', lucide: ImagePlusIcon },
+  hierarchy: { sf: 'list.bullet.indent', lucide: ListTreeIcon },
+  devices: { sf: 'macbook.and.iphone', lucide: MonitorSmartphoneIcon },
+  edit: { sf: 'pencil', lucide: PencilIcon },
 };
 
 /** Lucide glyph for a concept; `back`/`forward` mirror in RTL (direction is fixed per launch). */
@@ -261,4 +224,9 @@ export function lucideFor(name: IconName): LucideIcon {
   if (I18nManager.isRTL && name === 'back') return ChevronRightIcon;
   if (I18nManager.isRTL && name === 'forward') return ChevronLeftIcon;
   return ICONS[name].lucide;
+}
+
+/** Lucide glyph element for a concept (for call sites that need raw color/stroke control). */
+export function lucideGlyph(name: IconName, props: { size: number; color?: string; strokeWidth?: number }): ReactElement {
+  return createElement(lucideFor(name), props);
 }

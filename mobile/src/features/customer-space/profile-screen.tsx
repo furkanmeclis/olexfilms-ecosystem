@@ -8,7 +8,6 @@ import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
 import { errorMessage } from '@/core/i18n';
 import { errorText } from '@/features/services/ui';
-import { UserRound } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -101,7 +100,7 @@ export function CustomerProfileScreen() {
         }>
         <View className="items-center gap-2 py-4">
           <View className="size-16 items-center justify-center rounded-full bg-secondary">
-            <Icon as={UserRound} tone="primary" size={30} />
+            <Icon name="customer" tone="primary" size={30} />
           </View>
           <Text variant="headline">{name || t('profile')}</Text>
           {user?.email ? (

@@ -15,7 +15,6 @@ import {
 } from '@/features/services/lib';
 import { Chips, DetailSkeleton, ErrorState, InfoRow, ListBody, ListFooter, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
-import { ExternalLink, Share2, ShieldCheck } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -70,7 +69,7 @@ export function CustomerWarrantiesScreen() {
             count={list.items.length}
             onRetry={() => void list.refetch()}
             empty={{
-              icon: ShieldCheck,
+              icon: 'warranty',
               title: filter === 'all' ? t('warranties_empty') : t('warranties_empty_filtered'),
               body: filter === 'all' ? t('warranties_empty_body') : undefined,
             }}
@@ -138,14 +137,14 @@ export function CustomerWarrantyDetailScreen() {
               <View className="flex-row gap-2">
                 <Button
                   title={t('warranty_open')}
-                  icon={<Icon as={ExternalLink} tone="primary-foreground" size={16} />}
+                  icon={<Icon name="externalLink" tone="primary-foreground" size={16} />}
                   onPress={() => void openPublicWarranty(w.public_code)}
                   className="grow"
                 />
                 <Button
                   title={t('share')}
                   variant="secondary"
-                  icon={<Icon as={Share2} tone="primary" size={16} />}
+                  icon={<Icon name="share" tone="primary" size={16} />}
                   onPress={() => sharePublicWarranty(w.public_code, t('warranty_share_message', { code: w.public_code }))}
                   className="grow"
                 />

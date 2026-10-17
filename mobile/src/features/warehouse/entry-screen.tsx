@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { RefreshControl, View } from 'react-native';
 
 import { useCan } from '@/core/spaces';
-import { PackagePlus, ScanLine, Trash } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -92,7 +91,7 @@ export function EntryScreen() {
       <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} />}>
         <Card>
           <View className="flex-row items-center gap-2 pb-1">
-            <Icon as={PackagePlus} tone="primary" size={18} />
+            <Icon name="packageIn" tone="primary" size={18} />
             <Text variant="headline" className="flex-1" numberOfLines={2}>
               {x.warehouse?.name ?? t('entries.no_warehouse')}
             </Text>
@@ -114,7 +113,7 @@ export function EntryScreen() {
             <Button
               size="lg"
               title={x.mode === 'generate_new' ? t('m.scan_to_place') : t('m.scan_labels')}
-              icon={<Icon as={ScanLine} tone="primary-foreground" />}
+              icon={<Icon name="scan" tone="primary-foreground" />}
               onPress={() => setScanning(true)}
             />
             <View className="flex-row gap-2">
@@ -180,7 +179,7 @@ export function EntryScreen() {
                 </View>
                 {write && draft ? (
                   <IconButton
-                    icon={Trash}
+                    icon="delete"
                     tone="destructive"
                     label={t('entry.remove_line', { barcode: l.barcode })}
                     busy={busy === `del:${l.uuid}`}

@@ -9,7 +9,6 @@ import { activeMembership, useCan } from '@/core/spaces';
 import { type Period, PERIODS, useReport } from '@/features/reports/api';
 import { StatTiles, TimeChart } from '@/features/reports/report-view';
 import { HomeHeaderLeft, SearchButton } from '@/features/shell/header-actions';
-import { ChartColumn, ClipboardCheck, type LucideIcon, Network, ShoppingCart } from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -17,6 +16,7 @@ import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 
 import { Chips, ErrorState } from './kit';
+import type { IconName } from '@/ui/icons';
 
 function greetingKey(hour: number) {
   if (hour < 12) return 'home:greeting_morning';
@@ -24,13 +24,13 @@ function greetingKey(hour: number) {
   return 'home:greeting_evening';
 }
 
-type Action = { key: string; icon: LucideIcon; href: Href; permission?: string };
+type Action = { key: string; icon: IconName; href: Href; permission?: string };
 
 const ACTIONS: Action[] = [
-  { key: 'network', icon: Network, href: '/admin/network', permission: 'organizations.read' },
-  { key: 'approvals', icon: ClipboardCheck, href: '/admin/approvals' },
-  { key: 'orders', icon: ShoppingCart, href: '/admin/menu/orders' as Href, permission: 'orders.read' },
-  { key: 'reports', icon: ChartColumn, href: '/admin/menu/reports' as Href },
+  { key: 'network', icon: 'network', href: '/admin/network', permission: 'organizations.read' },
+  { key: 'approvals', icon: 'warrantyClaim', href: '/admin/approvals' },
+  { key: 'orders', icon: 'cart', href: '/admin/menu/orders' as Href, permission: 'orders.read' },
+  { key: 'reports', icon: 'chart', href: '/admin/menu/reports' as Href },
 ];
 
 /**
@@ -110,7 +110,7 @@ export function AdminHomeScreen() {
               onPress={() => router.push(a.href)}
               className="min-h-24 grow basis-[46%] justify-between rounded-lg border border-border bg-card p-3.5 active:opacity-80">
               <View className="size-9 items-center justify-center rounded-md bg-secondary">
-                <Icon as={a.icon} tone="primary" size={20} />
+                <Icon name={a.icon} tone="primary" size={20} />
               </View>
               <Text variant="headline">{t(`home.action.${a.key}`)}</Text>
             </Pressable>

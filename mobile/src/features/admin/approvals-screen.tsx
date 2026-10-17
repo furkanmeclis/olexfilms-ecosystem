@@ -7,7 +7,6 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
 import { useCan } from '@/core/spaces';
-import { ClipboardCheck } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { EmptyState } from '@/ui/empty-state';
 import { List, ListRow, SectionHeader } from '@/ui/list';
@@ -230,7 +229,7 @@ export function ApprovalsScreen() {
             {reclass ? <ReclassApprovals /> : null}
           </>
         ) : (
-          <EmptyState icon={ClipboardCheck} title={t('approvals.no_access')} body={t('approvals.no_access_body')} />
+          <EmptyState icon="warrantyClaim" title={t('approvals.no_access')} body={t('approvals.no_access_body')} />
         )}
       </Screen>
     </>

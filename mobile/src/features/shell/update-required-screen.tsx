@@ -1,4 +1,3 @@
-import { Download } from '@/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { Linking, View } from 'react-native';
 
@@ -12,7 +11,7 @@ export function UpdateRequiredScreen() {
   return (
     <View className="flex-1 justify-center bg-background">
       <EmptyState
-        icon={Download}
+        icon="download"
         title={t('title')}
         body={t('body')}
         action={storeUrl ? { title: t('button'), onPress: () => void Linking.openURL(storeUrl) } : undefined}

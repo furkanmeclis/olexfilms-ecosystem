@@ -6,7 +6,6 @@ import { Alert, RefreshControl, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { useCan } from '@/core/spaces';
-import { ClipboardList, ScanLine, Trash } from '@/ui/icons';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -144,7 +143,7 @@ export function CountScreen() {
       <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={refreshAll} />}>
         <Card>
           <View className="flex-row items-center gap-2 pb-1">
-            <Icon as={ClipboardList} tone="primary" size={18} />
+            <Icon name="order" tone="primary" size={18} />
             <Text variant="headline" className="flex-1" numberOfLines={2}>
               {c.warehouse.name}
             </Text>
@@ -204,7 +203,7 @@ export function CountScreen() {
             ) : null}
             {counting ? (
               <>
-                <Button size="lg" title={t('count.scan_title')} icon={<Icon as={ScanLine} tone="primary-foreground" />} onPress={() => setScanning(true)} />
+                <Button size="lg" title={t('count.scan_title')} icon={<Icon name="scan" tone="primary-foreground" />} onPress={() => setScanning(true)} />
                 <Button
                   variant="secondary"
                   title={t('count.complete')}
@@ -327,7 +326,7 @@ export function CountScreen() {
                     </View>
                     {write && counting ? (
                       <IconButton
-                        icon={Trash}
+                        icon="delete"
                         tone="destructive"
                         label={t('count.remove_scan', { code: s.raw_code })}
                         busy={busy === `del:${s.uuid}`}

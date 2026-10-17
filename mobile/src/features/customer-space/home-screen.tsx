@@ -9,16 +9,6 @@ import { errorText } from '@/features/services/ui';
 import { HeaderBrand } from '@/features/shell/header-actions';
 import { formatDateTime, formatNumber } from '@/features/services/lib';
 import { Button } from '@/ui/button';
-import {
-  Building2,
-  CalendarDays,
-  CarFront,
-  type LucideIcon,
-  MapPin,
-  ShieldCheck,
-  Truck,
-  Wrench,
-} from '@/ui/icons';
 import { Icon } from '@/ui/icon';
 import { Skeleton } from '@/ui/skeleton';
 import { StatusPill } from '@/ui/status-pill';
@@ -26,6 +16,7 @@ import { Text } from '@/ui/text';
 
 import { appointmentTone, isHidden, openDealerFinder, retryPortal, useCustomerLinks, useFleetRoles } from './lib';
 import { PortalServiceRow, StatTile, VehicleCard } from './parts';
+import type { IconName } from '@/ui/icons';
 
 const HOME_VEHICLES = 20;
 
@@ -65,10 +56,10 @@ function InlineError({ error, onRetry }: { error: unknown; onRetry: () => void }
   );
 }
 
-function InlineEmpty({ icon, text }: { icon: LucideIcon; text: string }) {
+function InlineEmpty({ icon, text }: { icon: IconName; text: string }) {
   return (
     <View className="items-center gap-2 rounded-lg border border-border bg-card p-5">
-      <Icon as={icon} tone="muted-foreground" />
+      <Icon name={icon} tone="muted-foreground" />
       <Text variant="callout" tone="muted" className="text-center">
         {text}
       </Text>
@@ -123,11 +114,11 @@ export function CustomerHomeScreen() {
   const appt = next.data?.items?.[0];
   const ov = fleetQ.data;
 
-  const actions: { key: string; icon: LucideIcon; onPress: () => void }[] = [
-    { key: 'appointments', icon: CalendarDays, onPress: () => router.push('/musteri/appointments') },
-    { key: 'warranties', icon: ShieldCheck, onPress: () => router.push('/musteri/warranties') },
-    { key: 'services', icon: Wrench, onPress: () => router.push('/musteri/services' as Href) },
-    { key: 'find_dealer', icon: MapPin, onPress: () => void openDealerFinder() },
+  const actions: { key: string; icon: IconName; onPress: () => void }[] = [
+    { key: 'appointments', icon: 'appointment', onPress: () => router.push('/musteri/appointments') },
+    { key: 'warranties', icon: 'warranty', onPress: () => router.push('/musteri/warranties') },
+    { key: 'services', icon: 'service', onPress: () => router.push('/musteri/services' as Href) },
+    { key: 'find_dealer', icon: 'location', onPress: () => void openDealerFinder() },
   ];
 
   return (
@@ -156,7 +147,7 @@ export function CustomerHomeScreen() {
               onPress={a.onPress}
               className="min-h-[76px] grow basis-[46%] justify-between rounded-lg border border-border bg-card p-3 active:opacity-80">
               <View className="size-8 items-center justify-center rounded-md bg-secondary">
-                <Icon as={a.icon} tone="primary" size={18} />
+                <Icon name={a.icon} tone="primary" size={18} />
               </View>
               <Text variant="callout" className="font-semibold" numberOfLines={1}>
                 {t(`action.${a.key}`)}
@@ -169,15 +160,15 @@ export function CustomerHomeScreen() {
           <View className="gap-1.5">
             <SectionTitle title={t('fleet_title', { name: ov.fleet?.name ?? '' })} />
             <View className="flex-row flex-wrap gap-2.5">
-              <StatTile icon={Truck} label={t('fleet_vehicles')} value={formatNumber(ov.vehicle_count ?? 0, i18n.language)} />
-              <StatTile icon={Wrench} label={t('fleet_services')} value={formatNumber(ov.service_count ?? 0, i18n.language)} />
+              <StatTile icon="truck" label={t('fleet_vehicles')} value={formatNumber(ov.vehicle_count ?? 0, i18n.language)} />
+              <StatTile icon="service" label={t('fleet_services')} value={formatNumber(ov.service_count ?? 0, i18n.language)} />
               <StatTile
-                icon={ShieldCheck}
+                icon="warranty"
                 label={t('active_warranties')}
                 value={formatNumber(ov.active_warranty_count ?? 0, i18n.language)}
               />
               <StatTile
-                icon={Building2}
+                icon="building"
                 label={t('fleet_dealers')}
                 value={formatNumber(ov.dealers?.filter((d) => d.link_status === 'active').length ?? 0, i18n.language)}
               />
@@ -198,13 +189,13 @@ export function CustomerHomeScreen() {
         ) : vehicles.data ? (
           <View className="flex-row flex-wrap gap-2.5">
             <StatTile
-              icon={CarFront}
+              icon="vehicle"
               label={t('vehicles')}
               value={formatNumber(vTotal, i18n.language)}
               onPress={() => router.push('/musteri/vehicles' as Href)}
             />
             <StatTile
-              icon={ShieldCheck}
+              icon="warranty"
               label={t('active_warranties')}
               value={formatNumber(activeWarranties, i18n.language)}
               onPress={() => router.push('/musteri/warranties')}
@@ -225,7 +216,7 @@ export function CustomerHomeScreen() {
                 onPress={() => router.push('/musteri/appointments')}
                 className="flex-row items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 active:opacity-80">
                 <View className="size-10 items-center justify-center rounded-md bg-secondary">
-                  <Icon as={CalendarDays} tone="primary" size={20} />
+                  <Icon name="appointment" tone="primary" size={20} />
                 </View>
                 <View className="flex-1 gap-0.5">
                   <Text variant="headline" numberOfLines={1}>
@@ -238,7 +229,7 @@ export function CustomerHomeScreen() {
                 <StatusPill label={t(`appointment_status.${appt.status}`)} tone={appointmentTone(appt.status)} />
               </Pressable>
             ) : (
-              <InlineEmpty icon={CalendarDays} text={t('next_appointment_none')} />
+              <InlineEmpty icon="appointment" text={t('next_appointment_none')} />
             )}
           </View>
         ) : null}
@@ -258,7 +249,7 @@ export function CustomerHomeScreen() {
                 <VehicleCard key={v.uuid} v={v} onPress={() => router.push(links.vehicle(v.uuid))} />
               ))
             ) : (
-              <InlineEmpty icon={CarFront} text={t('vehicles_empty_body')} />
+              <InlineEmpty icon="vehicle" text={t('vehicles_empty_body')} />
             )}
           </View>
         ) : null}
@@ -275,7 +266,7 @@ export function CustomerHomeScreen() {
                 <PortalServiceRow key={s.uuid} s={s} onPress={() => router.push(links.service(s.uuid))} />
               ))
             ) : (
-              <InlineEmpty icon={Wrench} text={t('services_empty_body')} />
+              <InlineEmpty icon="service" text={t('services_empty_body')} />
             )}
           </View>
         ) : null}

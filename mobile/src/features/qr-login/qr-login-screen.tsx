@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MonitorSmartphone } from '@/ui/icons';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
@@ -69,7 +68,7 @@ export function QrLoginScreen() {
           </List>
         ) : (
           <EmptyState
-            icon={MonitorSmartphone}
+            icon="devices"
             title={expired ? t('expired') : errorMessage(isApiError(failure) ? failure.code : undefined)}
           />
         )}

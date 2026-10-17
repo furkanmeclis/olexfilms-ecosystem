@@ -6,11 +6,11 @@ import { FlatList, type ListRenderItem, Pressable, RefreshControl, ScrollView, V
 
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
-import { CloudOff, Inbox, type LucideIcon } from '@/ui/icons';
 import { cn } from '@/ui/cn';
 import { EmptyState } from '@/ui/empty-state';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
+import type { IconName } from '@/ui/icons';
 
 /** Page shape of the list contract (docs/list-contract.md). */
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
@@ -85,7 +85,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
     : errorMessage(isApiError(error) ? error.code : undefined, t('common:error_generic'));
   return (
     <EmptyState
-      icon={CloudOff}
+      icon="offline"
       title={msg}
       action={onRetry ? { title: t('common:retry'), onPress: onRetry } : undefined}
     />
@@ -160,7 +160,7 @@ type PagedListProps<T> = {
   query: ReturnType<typeof usePagedQuery<T>>;
   renderItem: ListRenderItem<T>;
   keyOf: (item: T) => string;
-  empty: { icon?: LucideIcon; title: string; body?: string };
+  empty: { icon?: IconName; title: string; body?: string };
   header?: React.ReactElement;
 };
 
@@ -173,7 +173,7 @@ export function PagedList<T>({ query, renderItem, keyOf, empty, header }: PagedL
   let body: React.ReactElement | null = null;
   if (query.isPending) body = <ListSkeleton />;
   else if (query.isError && !items.length) body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
-  else if (!items.length) body = <EmptyState icon={empty.icon ?? Inbox} title={empty.title} body={empty.body} />;
+  else if (!items.length) body = <EmptyState icon={empty.icon ?? 'inbox'} title={empty.title} body={empty.body} />;
 
   return (
     <FlatList
