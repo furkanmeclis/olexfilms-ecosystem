@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "Impossibile salvare il metodo di consegna.",
   "delivery_methods.deleted": "Metodo di consegna eliminato.",
   "delivery_methods.delete_failed": "Impossibile eliminare il metodo di consegna.",
-  "delivery_methods.empty": "Ancora nessun metodo di consegna."
+  "delivery_methods.empty": "Ancora nessun metodo di consegna.",
+  "shipping.download_slip": "Buono d’ordine (PDF)"
 }

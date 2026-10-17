@@ -367,10 +367,13 @@ type ShippingParty struct {
 
 // ShippingLine is one line of the shipping note.
 type ShippingLine struct {
-	SKU      string
-	Name     string
-	Amount   string
-	Barcodes []string
+	// Stored amounts are also used by the order slip; the shipping note omits them.
+	UnitPrice string
+	LineTotal string
+	SKU       string
+	Name      string
+	Amount    string
+	Barcodes  []string
 }
 
 // ShippingDoc is the data of one shipping note.
@@ -476,7 +479,7 @@ func (s *Service) shippingDoc(ctx context.Context, o db.Order) (ShippingDoc, err
 		if it.Meters.Valid {
 			amount = numericText(it.Meters, 2) + " m"
 		}
-		d.Lines = append(d.Lines, ShippingLine{SKU: p.Sku, Name: p.Name, Amount: amount, Barcodes: byItem[it.ID]})
+		d.Lines = append(d.Lines, ShippingLine{SKU: p.Sku, Name: p.Name, Amount: amount, Barcodes: byItem[it.ID], UnitPrice: numericText(it.UnitPrice, 2), LineTotal: numericText(it.LineTotal, 2)})
 	}
 	return d, nil
 }

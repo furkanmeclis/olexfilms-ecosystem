@@ -228,5 +228,6 @@
   "delivery_methods.save_failed": "No se pudo guardar el método de entrega.",
   "delivery_methods.deleted": "Método de entrega eliminado.",
   "delivery_methods.delete_failed": "No se pudo eliminar el método de entrega.",
-  "delivery_methods.empty": "Aún no hay métodos de entrega."
+  "delivery_methods.empty": "Aún no hay métodos de entrega.",
+  "shipping.download_slip": "Comprobante de pedido (PDF)"
 }
