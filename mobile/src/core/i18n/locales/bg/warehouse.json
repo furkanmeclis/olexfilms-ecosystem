@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Одобрена",
   "orders.detail.created_at": "Създадена",
   "orders.detail.items": "Редове ({{count}})",
+  "orders.detail.items_empty": "Тази поръчка няма артикули.",
   "orders.detail.role": "Вашата страна",
   "orders.detail.shipped_at": "Експедирана",
   "orders.detail.title": "Поръчка",

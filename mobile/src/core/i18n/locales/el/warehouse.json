@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Έγκριση",
   "orders.detail.created_at": "Δημιουργία",
   "orders.detail.items": "Γραμμές ({{count}})",
+  "orders.detail.items_empty": "Αυτή η παραγγελία δεν έχει είδη.",
   "orders.detail.role": "Η πλευρά σας",
   "orders.detail.shipped_at": "Αποστολή",
   "orders.detail.title": "Παραγγελία",

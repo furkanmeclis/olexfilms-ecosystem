@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Genehmigt",
   "orders.detail.created_at": "Erstellt",
   "orders.detail.items": "Positionen ({{count}})",
+  "orders.detail.items_empty": "Diese Bestellung hat keine Positionen.",
   "orders.detail.role": "Ihre Seite",
   "orders.detail.shipped_at": "Versendet",
   "orders.detail.title": "Bestellung",

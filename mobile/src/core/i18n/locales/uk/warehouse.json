@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Схвалено",
   "orders.detail.created_at": "Створено",
   "orders.detail.items": "Позиції ({{count}})",
+  "orders.detail.items_empty": "У цьому замовленні немає позицій.",
   "orders.detail.role": "Ваша сторона",
   "orders.detail.shipped_at": "Відвантажено",
   "orders.detail.title": "Замовлення",

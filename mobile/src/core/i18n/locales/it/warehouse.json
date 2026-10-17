@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Approvato",
   "orders.detail.created_at": "Creato",
   "orders.detail.items": "Righe ({{count}})",
+  "orders.detail.items_empty": "Questo ordine non ha articoli.",
   "orders.detail.role": "Il vostro ruolo",
   "orders.detail.shipped_at": "Spedito",
   "orders.detail.title": "Ordine",

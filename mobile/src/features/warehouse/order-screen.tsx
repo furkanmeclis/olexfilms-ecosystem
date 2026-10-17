@@ -208,7 +208,14 @@ export function OrderScreen() {
         {seller && canShip ? (
           <View className="gap-2">
             {can('preparing') ? (
-              <Button size="lg" title={t('orders.actions.start_preparing.button')} loading={busy === 'start_preparing'} onPress={() => transition('preparing', 'start_preparing')} />
+              <Button
+                size="lg"
+                title={t('orders.actions.start_preparing.button')}
+                loading={busy === 'start_preparing'}
+                // Nothing to pick on an order without items.
+                disabled={items.length === 0}
+                onPress={() => transition('preparing', 'start_preparing')}
+              />
             ) : null}
             {preparing ? (
               <>
@@ -315,6 +322,10 @@ export function OrderScreen() {
               ))}
             </View>
           )
+        ) : items.length === 0 ? (
+          <Text variant="callout" tone="muted" className="px-4">
+            {t('orders.detail.items_empty')}
+          </Text>
         ) : (
           <View className="gap-2">
             {items.map((i) => (

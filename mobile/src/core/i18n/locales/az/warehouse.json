@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Təsdiqlənib",
   "orders.detail.created_at": "Yaradılıb",
   "orders.detail.items": "Sətirlər ({{count}})",
+  "orders.detail.items_empty": "Bu sifarişdə məhsul yoxdur.",
   "orders.detail.role": "Sizin tərəf",
   "orders.detail.shipped_at": "Göndərilib",
   "orders.detail.title": "Sifariş",

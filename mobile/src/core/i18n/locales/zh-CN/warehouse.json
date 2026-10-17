@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "批准时间",
   "orders.detail.created_at": "创建时间",
   "orders.detail.items": "明细（{{count}}）",
+  "orders.detail.items_empty": "此订单没有商品。",
   "orders.detail.role": "您的身份",
   "orders.detail.shipped_at": "发货时间",
   "orders.detail.title": "订单",

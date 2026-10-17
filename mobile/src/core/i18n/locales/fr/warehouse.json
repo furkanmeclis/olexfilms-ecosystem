@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Approuvée le",
   "orders.detail.created_at": "Créée le",
   "orders.detail.items": "Lignes ({{count}})",
+  "orders.detail.items_empty": "Cette commande n'a aucun article.",
   "orders.detail.role": "Votre rôle",
   "orders.detail.shipped_at": "Expédiée le",
   "orders.detail.title": "Commande",

@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Approved",
   "orders.detail.created_at": "Created",
   "orders.detail.items": "Lines ({{count}})",
+  "orders.detail.items_empty": "This order has no items.",
   "orders.detail.role": "Your side",
   "orders.detail.shipped_at": "Shipped",
   "orders.detail.title": "Order",

@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Одобрен",
   "orders.detail.created_at": "Создан",
   "orders.detail.items": "Позиции ({{count}})",
+  "orders.detail.items_empty": "В этом заказе нет позиций.",
   "orders.detail.role": "Ваша сторона",
   "orders.detail.shipped_at": "Отгружен",
   "orders.detail.title": "Заказ",

@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "Aprobado",
   "orders.detail.created_at": "Creado",
   "orders.detail.items": "Líneas ({{count}})",
+  "orders.detail.items_empty": "Este pedido no tiene artículos.",
   "orders.detail.role": "Su parte",
   "orders.detail.shipped_at": "Despachado",
   "orders.detail.title": "Pedido",

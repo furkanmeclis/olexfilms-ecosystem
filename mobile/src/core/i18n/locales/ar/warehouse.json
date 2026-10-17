@@ -375,6 +375,7 @@
   "orders.detail.approved_at": "تاريخ الاعتماد",
   "orders.detail.created_at": "تاريخ الإنشاء",
   "orders.detail.items": "البنود ({{count}})",
+  "orders.detail.items_empty": "لا يحتوي هذا الطلب على أصناف.",
   "orders.detail.role": "طرفك",
   "orders.detail.shipped_at": "تاريخ الشحن",
   "orders.detail.title": "طلب",
