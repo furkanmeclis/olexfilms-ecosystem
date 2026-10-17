@@ -40505,7 +40505,7 @@ components:
       properties:
         phone: { type: string, description: E.164 phone from identify }
         code: { type: string, pattern: '^[0-9]{6}$' }
-        totp_code: { type: string, description: Authenticator or recovery code, as in password login }
+        totp_code: { type: string, description: "Authenticator or recovery code, as in password login" }
         organization_slug: { type: string }
         device: { $ref: "#/components/schemas/MobileDevice" }
 

@@ -23043,7 +23043,7 @@ export interface components {
             /** @description E.164 phone from identify */
             phone: string;
             code: string;
-            /** @description Authenticator or recovery code */
+            /** @description Authenticator or recovery code, as in password login */
             totp_code?: string;
             organization_slug?: string;
             device: components["schemas"]["MobileDevice"];
