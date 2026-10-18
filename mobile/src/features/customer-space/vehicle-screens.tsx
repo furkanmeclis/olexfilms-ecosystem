@@ -7,10 +7,12 @@ import { api, unwrap } from '@/core/api/client';
 import { formatDate, formatNumber, vehicleLabel } from '@/features/services/lib';
 import { DetailSkeleton, ErrorState, InfoRow, ListBody, ListFooter, Section } from '@/features/services/ui';
 import { Icon } from '@/ui/icon';
+import { List, ListRow } from '@/ui/list';
 import { Text } from '@/ui/text';
 
-import { PAGE_SIZE, retryPortal, useCustomerLinks, usePortalPages } from './lib';
+import { PAGE_SIZE, retryPortal, useCustomerLinks, useFleetRoles, usePortalPages } from './lib';
 import { ActiveWarrantyRow, PortalServiceRow, VehicleCard } from './parts';
+import { useTransferLink } from './transfer-screens';
 
 /** The customer's vehicles (GET /v1/portal/vehicles), infinite scroll. */
 export function CustomerVehiclesScreen() {
@@ -56,6 +58,8 @@ export function CustomerVehicleDetailScreen() {
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
   const { t, i18n } = useTranslation('customer');
   const links = useCustomerLinks();
+  const transferLink = useTransferLink();
+  const { readOnly } = useFleetRoles();
   const q = useQuery({
     queryKey: ['portal', 'vehicles', 'detail', uuid],
     retry: retryPortal,
@@ -109,6 +113,18 @@ export function CustomerVehicleDetailScreen() {
                 last
               />
             </Section>
+
+            {readOnly ? null : (
+              <List>
+                <ListRow
+                  icon="transfer"
+                  title={t('transfer_button')}
+                  subtitle={t('transfer_button_hint')}
+                  onPress={() => router.push(transferLink(v.uuid))}
+                  last
+                />
+              </List>
+            )}
 
             <View className="gap-2">
               <Text variant="caption" tone="muted" className="px-1">
