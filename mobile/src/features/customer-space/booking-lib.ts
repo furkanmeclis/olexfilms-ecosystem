@@ -7,12 +7,6 @@
 export const BOOKING_WINDOW_DAYS = 14;
 /** How far ahead the day picker can go (the API range limit is 62). */
 export const BOOKING_MAX_AHEAD_DAYS = 56;
-/** Search radii of the dealer list (km); the widest covers the country. */
-export const RADIUS_OPTIONS = [25, 50, 100, 250, 500, 1000] as const;
-export type RadiusKm = (typeof RADIUS_OPTIONS)[number];
-/** No device position (expo-location is not installed): centre of the country. */
-export const FALLBACK_CENTER = { lat: 39.0, lng: 35.0 } as const;
-export const FALLBACK_RADIUS_KM: RadiusKm = 1000;
 
 export function isoDate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -54,15 +48,22 @@ export function formatDayLabel(date: string, locale: string, options: Intl.DateT
   return new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(dayInstant(date));
 }
 
-export type DealerLike = { name: string; city: string; district: string };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Client-side text filter over the nearby list (the API only searches by position). */
-export function filterDealers<T extends DealerLike>(dealers: T[], query: string): T[] {
-  const q = query.trim().toLocaleLowerCase();
-  if (!q) return dealers;
-  return dealers.filter((d) => [d.name, d.city, d.district].some((s) => s.toLocaleLowerCase().includes(q)));
+/** Route params arrive as free text: only a UUID is accepted. */
+export function uuidParam(v: string | string[] | undefined): string | null {
+  return typeof v === 'string' && UUID_RE.test(v) ? v : null;
 }
 
-export function formatDistanceKm(km: number, locale: string): string {
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: km < 10 ? 1 : 0 }).format(km)} km`;
+/** Today's calendar date (YYYY-MM-DD) in a zone; the device zone without one or on a bad zone. */
+export function isoDateInZone(now: Date, timeZone?: string): string {
+  if (timeZone) {
+    try {
+      const p = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(p)) return p;
+    } catch {
+      // fall through to the device zone
+    }
+  }
+  return isoDate(now);
 }

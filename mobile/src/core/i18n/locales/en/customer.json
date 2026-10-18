@@ -243,5 +243,8 @@
   "booking_done_body": "It now appears in your appointments.",
   "booking_failed": "Could not book",
   "booking_error_capacity": "That time was just taken. Pick another one.",
-  "booking_error_day_closed": "The dealer is closed that day. Pick another day."
+  "booking_error_day_closed": "The dealer is closed that day. Pick another day.",
+  "booking_dealer_unavailable": "This dealer does not take online appointments right now.",
+  "booking_other_dealer": "Pick another dealer",
+  "booking_error_read_only": "This account can only view appointments."
 }

@@ -243,5 +243,8 @@
   "booking_done_body": "Randevularınızda görünür.",
   "booking_failed": "Randevu alınamadı",
   "booking_error_capacity": "Bu saat az önce doldu. Başka bir saat seçin.",
-  "booking_error_day_closed": "Bayi o gün kapalı. Başka bir gün seçin."
+  "booking_error_day_closed": "Bayi o gün kapalı. Başka bir gün seçin.",
+  "booking_dealer_unavailable": "Bu bayi şu an online randevu almıyor.",
+  "booking_other_dealer": "Başka bayi seç",
+  "booking_error_read_only": "Bu hesap yalnızca randevuları görüntüleyebilir."
 }

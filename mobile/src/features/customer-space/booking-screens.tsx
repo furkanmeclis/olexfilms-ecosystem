@@ -26,19 +26,25 @@ import {
   formatDayLabel,
   formatSlotTime,
   isoDate,
+  isoDateInZone,
+  uuidParam,
   type DayState,
 } from './booking-lib';
-import { type PortalVehicle, retryPortal, useFleetRoles } from './lib';
+import { type PortalServiceItem, type PortalVehicle, retryPortal, useFleetRoles } from './lib';
 
 type Slot = components['schemas']['AppointmentSlot'];
 type Dealer = { uuid: string; name: string };
 
 const VEHICLE_PICKER_LIMIT = 100;
+/** Dealers come from the customer's services: scan at most this many, page by page. */
+const DEALER_SCAN_LIMIT = 1000;
+const DEALER_SCAN_PAGE = 100;
 
 /** Message of a failed booking: the capacity / closed-day cases get their own text. */
 function bookingError(e: unknown, t: (k: string) => string) {
   if (isApiError(e, 'APPOINTMENT_CAPACITY_FULL')) return t('booking_error_capacity');
   if (isApiError(e, 'APPOINTMENT_DAY_CLOSED')) return t('booking_error_day_closed');
+  if (isApiError(e, 'PORTAL_READ_ONLY')) return t('booking_error_read_only');
   return errorMessage(isApiError(e) ? e.code : undefined);
 }
 
@@ -54,10 +60,11 @@ export function CustomerBookingScreen() {
   const { readOnly } = useFleetRoles();
   const params = useLocalSearchParams<{ dealer?: string; dealer_name?: string; vehicle?: string }>();
 
+  const presetDealer = uuidParam(params.dealer);
   const [dealer, setDealer] = useState<Dealer | null>(
-    params.dealer ? { uuid: params.dealer, name: params.dealer_name ?? '' } : null,
+    presetDealer ? { uuid: presetDealer, name: typeof params.dealer_name === 'string' ? params.dealer_name : '' } : null,
   );
-  const [vehicle, setVehicle] = useState<string | null>(params.vehicle ?? null);
+  const [vehicle, setVehicle] = useState<string | null>(uuidParam(params.vehicle));
   const [day, setDay] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [zone, setZone] = useState<string | undefined>();
@@ -149,6 +156,7 @@ export function CustomerBookingScreen() {
                   setSlot(null);
                 }}
                 onSlot={setSlot}
+                onChangeDealer={() => chooseDealer(null)}
               />
             ) : (
               <Text variant="callout" tone="muted" className="px-4 py-4">
@@ -172,7 +180,10 @@ export function CustomerBookingScreen() {
             size="lg"
             title={create.isPending ? t('booking_booking') : t('booking_confirm')}
             disabled={!ready || create.isPending}
-            onPress={() => create.mutate()}
+            onPress={() => {
+              if (create.isPending) return;
+              create.mutate();
+            }}
           />
         </ScrollView>
       )}
@@ -274,12 +285,22 @@ function DealerPicker({ onPick }: { onPick: (d: Dealer) => void }) {
   const q = useQuery({
     queryKey: ['portal', 'appointments', 'dealers'],
     retry: retryPortal,
-    queryFn: () => unwrap(api.GET('/v1/portal/services', { params: { query: { limit: 100, offset: 0 } } })),
+    queryFn: async () => {
+      const items: PortalServiceItem[] = [];
+      for (let offset = 0; offset < DEALER_SCAN_LIMIT; offset += DEALER_SCAN_PAGE) {
+        const page = await unwrap(
+          api.GET('/v1/portal/services', { params: { query: { limit: DEALER_SCAN_PAGE, offset } } }),
+        );
+        items.push(...page.items);
+        if (page.items.length < DEALER_SCAN_PAGE || items.length >= page.total) break;
+      }
+      return items;
+    },
   });
   const dealers = useMemo(() => {
     const seen = new Map<string, Dealer>();
-    for (const s of q.data?.items ?? []) {
-      if (s.organization?.uuid && !seen.has(s.organization.uuid)) {
+    for (const s of q.data ?? []) {
+      if (s.organization?.type === 'dealer' && s.organization.uuid && !seen.has(s.organization.uuid)) {
         seen.set(s.organization.uuid, { uuid: s.organization.uuid, name: s.organization.name });
       }
     }
@@ -326,6 +347,7 @@ function SlotPicker({
   onZone,
   onDay,
   onSlot,
+  onChangeDealer,
 }: {
   dealerUuid: string;
   day: string | null;
@@ -334,11 +356,15 @@ function SlotPicker({
   onZone: (z: string | undefined) => void;
   onDay: (d: string | null) => void;
   onSlot: (s: Slot) => void;
+  onChangeDealer: () => void;
 }) {
   const { t, i18n } = useTranslation('customer');
-  const [first] = useState(() => isoDate(new Date()));
+  // Today starts on the device date; once the dealer's zone is known it is the dealer's date.
+  const [deviceToday] = useState(() => isoDate(new Date()));
+  const first = zone ? isoDateInZone(new Date(), zone) : deviceToday;
   const last = addDaysIso(first, BOOKING_MAX_AHEAD_DAYS);
-  const [from, setFrom] = useState(first);
+  const [fromRaw, setFrom] = useState(deviceToday);
+  const from = fromRaw < first ? first : fromRaw;
   const to = addDaysIso(from, BOOKING_WINDOW_DAYS - 1);
   const lang = i18n.language;
 
@@ -402,6 +428,13 @@ function SlotPicker({
 
       {q.isPending ? (
         <ActivityIndicator />
+      ) : isApiError(q.error) && q.error.status === 404 ? (
+        <View className="items-center gap-3 py-2">
+          <Text variant="callout" tone="muted" className="text-center">
+            {t('booking_dealer_unavailable')}
+          </Text>
+          <Button variant="outline" title={t('booking_other_dealer')} onPress={onChangeDealer} />
+        </View>
       ) : q.error ? (
         <ErrorState error={q.error} onRetry={() => void q.refetch()} />
       ) : (

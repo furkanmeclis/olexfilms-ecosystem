@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { addDaysIso, dayState, filterDealers, formatSlotTime } from './booking-lib.ts';
+import { addDaysIso, dayState, formatSlotTime, isoDateInZone, uuidParam } from './booking-lib.ts';
 
 describe('addDaysIso', () => {
   it('crosses month and year ends', () => {
@@ -29,15 +29,22 @@ describe('formatSlotTime', () => {
   });
 });
 
-describe('filterDealers', () => {
-  const d = [
-    { name: 'Alfa Oto', city: 'Ankara', district: 'Çankaya' },
-    { name: 'Beta', city: 'İzmir', district: 'Bornova' },
-  ];
-  it('matches name, city and district', () => {
-    assert.equal(filterDealers(d, 'ankara').length, 1);
-    assert.equal(filterDealers(d, 'bornova')[0].name, 'Beta');
-    assert.equal(filterDealers(d, '  ').length, 2);
-    assert.equal(filterDealers(d, 'zzz').length, 0);
+describe('uuidParam', () => {
+  it('accepts only UUIDs', () => {
+    assert.equal(uuidParam('0b9f6c1e-2f4a-4c1d-9a55-3a1f0e7d2b10'), '0b9f6c1e-2f4a-4c1d-9a55-3a1f0e7d2b10');
+    assert.equal(uuidParam('nope'), null);
+    assert.equal(uuidParam(['0b9f6c1e-2f4a-4c1d-9a55-3a1f0e7d2b10']), null);
+    assert.equal(uuidParam(undefined), null);
+  });
+});
+
+describe('isoDateInZone', () => {
+  it('derives the date in the dealer zone', () => {
+    const now = new Date('2026-10-20T22:30:00Z');
+    assert.equal(isoDateInZone(now, 'Europe/Istanbul'), '2026-10-21');
+    assert.equal(isoDateInZone(now, 'UTC'), '2026-10-20');
+  });
+  it('falls back on a bad zone', () => {
+    assert.match(isoDateInZone(new Date(), 'Nope/Zone'), /^\d{4}-\d{2}-\d{2}$/);
   });
 });
