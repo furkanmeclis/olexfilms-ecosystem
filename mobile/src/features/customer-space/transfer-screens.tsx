@@ -2,11 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, router, Stack, useLocalSearchParams, useSegments } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { CountryCode } from 'libphonenumber-js/min';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
+import { CountryPicker } from '@/features/auth/country-picker';
+import { DEFAULT_COUNTRY, examplePhone, parsePhone, detectCountry } from '@/features/auth/phone-country';
 import { formatDateTime } from '@/features/services/lib';
 import { DetailSkeleton, ErrorState, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
@@ -19,8 +22,6 @@ import { retryPortal, useFleetRoles } from './lib';
 import {
   canVerify,
   cleanCode,
-  isTransferPhone,
-  normalizePhone,
   pendingTransfer,
   transferErrorKey,
   verifyBody,
@@ -55,19 +56,34 @@ function useTransferError() {
   };
 }
 
-function PhoneStep({ vehicleUuid, onError }: { vehicleUuid: string; onError: (e: unknown) => void }) {
+function PhoneStep({
+  vehicleUuid,
+  onError,
+  onClear,
+}: {
+  vehicleUuid: string;
+  onError: (e: unknown) => void;
+  onClear: () => void;
+}) {
   const { t } = useTranslation('customer');
   const qc = useQueryClient();
   const [phone, setPhone] = useState('');
+  const [country, setCountry] = useState<CountryCode>(DEFAULT_COUNTRY);
+  const [touched, setTouched] = useState(false);
+  const e164 = parsePhone(phone, country);
   const start = useMutation({
     mutationFn: () =>
       unwrap(
         api.POST('/v1/portal/vehicles/{uuid}/transfers', {
           params: { path: { uuid: vehicleUuid } },
-          body: { phone: normalizePhone(phone) },
+          body: { phone: e164 ?? '' },
         }),
       ),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: transfersKey(vehicleUuid) }),
+    onMutate: onClear,
+    onSuccess: () => {
+      onClear();
+      void qc.invalidateQueries({ queryKey: transfersKey(vehicleUuid) });
+    },
     onError,
   });
   return (
@@ -78,18 +94,25 @@ function PhoneStep({ vehicleUuid, onError }: { vehicleUuid: string; onError: (e:
       <Input
         label={t('transfer_phone')}
         icon="phone"
-        placeholder="+905551234567"
+        placeholder={examplePhone(country) ?? '+905551234567'}
         hint={t('transfer_phone_hint')}
+        error={touched && phone.trim() && !e164 ? t('transfer_error.phone') : undefined}
         keyboardType="phone-pad"
         autoComplete="off"
+        leading={<CountryPicker value={country} onChange={setCountry} />}
         value={phone}
-        onChangeText={setPhone}
+        onChangeText={(v) => {
+          setPhone(v);
+          setTouched(true);
+          const c = detectCountry(v);
+          if (c) setCountry(c);
+        }}
       />
       <Button
         title={t('transfer_start')}
         size="lg"
         loading={start.isPending}
-        disabled={!isTransferPhone(phone)}
+        disabled={!e164}
         onPress={() => start.mutate()}
       />
     </View>
@@ -100,11 +123,13 @@ function CodeStep({
   transfer,
   vehicleUuid,
   onError,
+  onClear,
   onDone,
 }: {
   transfer: Transfer;
   vehicleUuid: string;
   onError: (e: unknown) => void;
+  onClear: () => void;
   onDone: (t: Transfer) => void;
 }) {
   const { t, i18n } = useTranslation('customer');
@@ -114,6 +139,10 @@ function CodeStep({
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const refresh = () => void qc.invalidateQueries({ queryKey: transfersKey(vehicleUuid) });
+  const refreshOwned = () => {
+    void qc.invalidateQueries({ queryKey: ['portal', 'vehicles'] });
+    void qc.invalidateQueries({ queryKey: ['portal', 'warranties'] });
+  };
 
   const verify = useMutation({
     mutationFn: () =>
@@ -123,11 +152,15 @@ function CodeStep({
           body: verifyBody(transfer, { fromCode, toCode, name, surname }),
         }),
       ),
+    onMutate: onClear,
     onSuccess: (res) => {
+      onClear();
       setFromCode('');
       setToCode('');
-      if (res.status === 'completed') onDone(res);
-      else refresh();
+      if (res.status === 'completed') {
+        refreshOwned();
+        onDone(res);
+      } else refresh();
     },
     // A wrong code changes the attempt counter (or cancels the transfer).
     onError: (e) => {
@@ -138,7 +171,12 @@ function CodeStep({
   const cancel = useMutation({
     mutationFn: () =>
       unwrap(api.POST('/v1/portal/vehicle-transfers/{uuid}/cancel', { params: { path: { uuid: transfer.uuid } } })),
-    onSuccess: refresh,
+    onMutate: onClear,
+    onSuccess: () => {
+      onClear();
+      refresh();
+      refreshOwned();
+    },
     onError: (e) => {
       onError(e);
       refresh();
@@ -226,10 +264,10 @@ function CodeStep({
         title={t('transfer_verify')}
         size="lg"
         loading={verify.isPending}
-        disabled={!canVerify(transfer, { fromCode, toCode, name })}
+        disabled={cancel.isPending || !canVerify(transfer, { fromCode, toCode, name })}
         onPress={() => verify.mutate()}
       />
-      <Button title={t('transfer_cancel')} variant="outline" loading={cancel.isPending} onPress={confirmCancel} />
+      <Button title={t('transfer_cancel')} variant="outline" loading={cancel.isPending} disabled={verify.isPending} onPress={confirmCancel} />
     </View>
   );
 }
@@ -273,11 +311,14 @@ export function CustomerVehicleTransferScreen() {
   const pending = pendingTransfer(items);
   const history = items.filter((x) => x.status !== 'pending');
   const fail = (e: unknown) => setError(toMessage(e));
+  const clear = () => setError(null);
 
   const finish = () => {
     void qc.invalidateQueries({ queryKey: ['portal', 'vehicles'] });
     void qc.invalidateQueries({ queryKey: ['portal', 'warranties'] });
-    router.replace('/musteri/vehicles' as Href);
+    // The vehicle is no longer the user's: pop the transfer and the detail screen.
+    if (router.canDismiss()) router.dismiss(2);
+    else router.replace('/musteri/vehicles' as Href);
   };
 
   let body: React.ReactNode;
@@ -305,9 +346,12 @@ export function CustomerVehicleTransferScreen() {
   } else if (q.error) {
     body = <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
   } else if (pending) {
-    body = <CodeStep key={pending.uuid} transfer={pending} vehicleUuid={uuid} onError={fail} onDone={setDone} />;
+    body = <CodeStep key={pending.uuid} transfer={pending} vehicleUuid={uuid} onError={fail} onClear={clear} onDone={(res) => {
+          setError(null);
+          setDone(res);
+        }} />;
   } else {
-    body = <PhoneStep vehicleUuid={uuid} onError={fail} />;
+    body = <PhoneStep vehicleUuid={uuid} onError={fail} onClear={clear} />;
   }
 
   return (
