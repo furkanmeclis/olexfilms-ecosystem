@@ -19,6 +19,8 @@ const ITEMS: Item[] = [
   { key: 'appointments', icon: 'appointment', permission: 'appointments.read', spaces: ['bayi'], built: ['bayi'] },
   { key: 'stock', icon: 'stock', permission: 'stock.read', spaces: ['bayi'] },
   { key: 'orders', icon: 'order', permission: 'orders.read', spaces: ['bayi', 'depo', 'admin'], built: ['bayi', 'depo', 'admin'] },
+  { key: 'catalog', icon: 'package', permission: 'catalog.read', spaces: ['bayi'], built: ['bayi'] },
+  { key: 'transfers', icon: 'transfer', permission: 'transfers.request', spaces: ['bayi'], built: ['bayi'] },
   { key: 'warranty_claims', icon: 'warrantyClaim', permission: 'warranty_claims.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'leads', icon: 'lead', permission: 'leads.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'reports', icon: 'report', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, RefreshControl, View } from 'react-native';
@@ -21,6 +21,7 @@ import {
   useFormat,
   usePagedQuery,
 } from '@/features/admin/kit';
+import { CartButton, useCanOrder } from '@/features/catalog/catalog-screen';
 import { Button } from '@/ui/button';
 import { List, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -57,6 +58,10 @@ export function OrdersScreen() {
   const { t } = useTranslation('admin');
   const f = useFormat();
   const href = useChildHref();
+  // Dealers order from the catalog: the cart opens the new-order screen.
+  const pathname = usePathname();
+  const canOrder = useCanOrder();
+  const cart = canOrder && pathname.startsWith('/bayi');
   const [filter, setFilter] = useState<Filter>('all');
   const [q, setQ] = useState('');
   const query = useDebounced(q.trim());
@@ -76,6 +81,7 @@ export function OrdersScreen() {
       <Stack.Screen
         options={{
           title: t('orders.title'),
+          headerRight: cart ? () => <CartButton /> : undefined,
           headerSearchBarOptions: {
             placeholder: t('orders.search'),
             hideWhenScrolling: false,

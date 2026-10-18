@@ -9,5 +9,7 @@
   "accounting": "Cash and accounts",
   "tasks": "Tasks",
   "announcements": "Announcements",
-  "warranties": "Warranties"
+  "warranties": "Warranties",
+  "catalog": "Catalog",
+  "transfers": "Transfers"
 }
