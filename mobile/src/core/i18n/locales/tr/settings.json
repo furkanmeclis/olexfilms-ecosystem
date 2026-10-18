@@ -18,5 +18,6 @@
   "version": "Sürüm {{version}}",
   "about": "Hakkında",
   "api_server": "Sunucu",
-  "app_version": "Uygulama sürümü"
+  "app_version": "Uygulama sürümü",
+  "watch_intro": "Tanıtımı izle"
 }

@@ -1,5 +1,6 @@
 import ArrowLeftRightIcon from 'lucide-react-native/icons/arrow-left-right';
 import ChevronUpIcon from 'lucide-react-native/icons/chevron-up';
+import CirclePlayIcon from 'lucide-react-native/icons/circle-play';
 import CircleAlertIcon from 'lucide-react-native/icons/circle-alert';
 import ImagePlusIcon from 'lucide-react-native/icons/image-plus';
 import ListTreeIcon from 'lucide-react-native/icons/list-tree';
@@ -147,6 +148,7 @@ export type IconName =
   | 'hierarchy'
   | 'devices'
   | 'edit'
+  | 'intro'
   | 'signOut';
 
 /** iOS renders the SF Symbol, Android (and iOS fallback) renders the Lucide glyph. */
@@ -220,6 +222,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   hierarchy: { sf: 'list.bullet.indent', lucide: ListTreeIcon },
   devices: { sf: 'macbook.and.iphone', lucide: MonitorSmartphoneIcon },
   edit: { sf: 'pencil', lucide: PencilIcon },
+  intro: { sf: 'play.circle', lucide: CirclePlayIcon },
   signOut: { sf: 'rectangle.portrait.and.arrow.right', lucide: LogOutIcon },
 };
 
