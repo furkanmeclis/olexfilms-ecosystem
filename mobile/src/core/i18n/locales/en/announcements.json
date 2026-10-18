@@ -1,0 +1,10 @@
+{
+  "title": "Announcements",
+  "empty": "No announcements yet",
+  "empty_unread": "You have read everything",
+  "filter.all": "All",
+  "filter.unread": "Unread",
+  "filter.unread_count": "Unread ({{count}})",
+  "pinned": "Pinned",
+  "expires": "Valid until {{date}}"
+}

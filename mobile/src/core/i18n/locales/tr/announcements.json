@@ -1,0 +1,10 @@
+{
+  "title": "Duyurular",
+  "empty": "Henüz duyuru yok",
+  "empty_unread": "Hepsini okudun",
+  "filter.all": "Tümü",
+  "filter.unread": "Okunmamış",
+  "filter.unread_count": "Okunmamış ({{count}})",
+  "pinned": "Sabitlenmiş",
+  "expires": "{{date}} tarihine kadar geçerli"
+}
