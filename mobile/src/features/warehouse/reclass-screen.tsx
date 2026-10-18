@@ -188,7 +188,12 @@ export function ReclassDetailScreen() {
 
             {pending && decide && !own ? (
               <View className="gap-2.5">
-                <Button title={t('reclass.approve')} size="lg" loading={busy === 'approve'} disabled={!!busy} onPress={() => ask('approve')} />
+                <Card>
+                  <Text variant="headline">{t('reclass.approve_on_web_title')}</Text>
+                  <Text variant="footnote" tone="muted">
+                    {t('reclass.approve_on_web_body')}
+                  </Text>
+                </Card>
                 <Button
                   title={t('reclass.reject')}
                   variant="outline"

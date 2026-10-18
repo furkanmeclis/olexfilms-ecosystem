@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, RefreshControl, View } from 'react-native';
 
@@ -182,15 +182,21 @@ export function EodDetailScreen() {
   const [sharing, setSharing] = useState(false);
   const r = q.data;
 
+  const abort = useRef<AbortController | null>(null);
+  useEffect(() => () => abort.current?.abort(), []);
+
   const share = async () => {
     if (!r) return;
+    abort.current?.abort();
+    const ctrl = new AbortController();
+    abort.current = ctrl;
     setSharing(true);
     try {
-      await shareEodPdf(r);
+      await shareEodPdf(r, ctrl.signal);
     } catch (e) {
-      alertError(e);
+      if (!ctrl.signal.aborted) alertError(e);
     } finally {
-      setSharing(false);
+      if (!ctrl.signal.aborted) setSharing(false);
     }
   };
 

@@ -48,11 +48,27 @@ export function generateEodReport(warehouseUuid?: string) {
 const POLL_MS = 1500;
 const POLL_LIMIT = 40;
 
+/** Resolves after `ms`, or rejects with an AbortError as soon as the signal aborts. */
+function sleep(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) return reject(new DOMException('Aborted', 'AbortError'));
+    const id = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      clearTimeout(id);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 /**
  * Queues the PDF of a report, waits for the export job (worker-docs), then
  * downloads it and opens the share sheet.
  */
-export async function shareEodPdf(report: EodReport) {
+export async function shareEodPdf(report: EodReport, signal?: AbortSignal) {
   let job = await unwrap(
     api.POST('/v1/warehouse/eod-reports/{uuid}/pdf', {
       params: { path: { uuid: report.uuid } },
@@ -60,14 +76,15 @@ export async function shareEodPdf(report: EodReport) {
     }),
   );
   for (let i = 0; i < POLL_LIMIT && (job.status === 'queued' || job.status === 'processing'); i++) {
-    await new Promise((r) => setTimeout(r, POLL_MS));
+    await sleep(POLL_MS, signal);
     job = await unwrap(api.GET('/v1/warehouse/eod-report-pdfs/{uuid}', { params: { path: { uuid: job.uuid } } }));
   }
+  signal?.throwIfAborted();
   if (job.status !== 'completed') {
     throw new ApiError(0, { code: job.status === 'failed' ? 'EXPORT_FAILED' : 'EXPORT_TIMEOUT', message: job.error ?? job.status });
   }
   const name = report.warehouse ? `${report.report_date}-${report.warehouse.code}` : report.report_date;
-  await sharePanelPdf(`/v1/warehouse/eod-report-pdfs/${job.uuid}/download`, {}, `eod-${name}`);
+  await sharePanelPdf(`/v1/warehouse/eod-report-pdfs/${job.uuid}/download`, {}, `eod-${name}`, signal);
 }
 
 export function useWarehouseSettings() {

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
+import { useCan } from '@/core/spaces';
 import type { components } from '@/core/api/schema';
 import { CardRow, PagedList, PAGE_SIZE, useFormat, usePagedQuery } from '@/features/admin/kit';
 import { Button } from '@/ui/button';
@@ -138,7 +139,7 @@ function UnitLabels() {
         autoCorrect={false}
         returnKeyType="done"
         onSubmitEditing={() => {
-          if (manual.trim()) add(manual.trim());
+          if (manual.trim()) add(manual.trim().toUpperCase());
           setManual('');
         }}
       />
@@ -181,7 +182,7 @@ function UnitLabels() {
   );
 }
 
-function BatchLabels({ header }: { header: React.ReactElement }) {
+function BatchLabels({ header }: { header: React.ReactElement | undefined }) {
   const { t } = useTranslation('warehouse');
   const f = useFormat();
   const pdf = usePdfShare();
@@ -229,14 +230,18 @@ function BatchLabels({ header }: { header: React.ReactElement }) {
  */
 export function LabelsScreen() {
   const { t } = useTranslation('warehouse');
-  const [mode, setMode] = useState<Mode>('locations');
+  const canLocations = useCan('warehouse.read');
+  const canStock = useCan('stock.read');
+  const modes = (['locations', 'units', 'batches'] as Mode[]).filter((m) => (m === 'locations' ? canLocations : canStock));
+  const [picked, setMode] = useState<Mode | null>(null);
+  const mode: Mode = picked && modes.includes(picked) ? picked : (modes[0] ?? 'locations');
 
-  const switcher = (
+  const switcher = modes.length < 2 ? undefined : (
     <View className={mode === 'batches' ? 'mx-4 mb-1' : undefined}>
       <Segmented
         value={mode}
         onChange={setMode}
-        options={(['locations', 'units', 'batches'] as Mode[]).map((m) => ({ value: m, label: t(`labels.mode.${m}`) }))}
+        options={modes.map((m) => ({ value: m, label: t(`labels.mode.${m}`) }))}
       />
     </View>
   );
@@ -247,6 +252,10 @@ export function LabelsScreen() {
       {!canSharePdf ? (
         <Screen>
           <EmptyState icon="info" title={t('labels.ios_only_title')} body={t('labels.ios_only_body')} />
+        </Screen>
+      ) : modes.length === 0 ? (
+        <Screen>
+          <EmptyState icon="info" title={t('labels.no_access_title')} body={t('labels.no_access_body')} />
         </Screen>
       ) : mode === 'batches' ? (
         <BatchLabels header={switcher} />
