@@ -1,25 +1,25 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, RefreshControl, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
 import { formatDateTime } from '@/features/services/lib';
 import { Chips, ListBody, ListFooter } from '@/features/services/ui';
+import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
-import { openDealerFinder, PAGE_SIZE, type PortalAppointment, useFleetRoles, usePortalPages } from './lib';
+import { PAGE_SIZE, type PortalAppointment, useFleetRoles, usePortalPages } from './lib';
 import { AppointmentRow } from './parts';
 
 type Period = 'upcoming' | 'past';
 
 /**
- * The customer's appointments (GET /v1/portal/appointments) with cancel.
- * Booking is not in the app: the dealer picker of the web uses the public
- * nearby-dealers search, which the mobile portal mirror does not serve.
+ * The customer's appointments (GET /v1/portal/appointments) with cancel and
+ * a "new appointment" entry (booking-screens). A fleet session cannot book.
  */
 export function CustomerAppointmentsScreen() {
   const { t, i18n } = useTranslation('customer');
@@ -62,7 +62,22 @@ export function CustomerAppointmentsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: t('appointments') }} />
+      <Stack.Screen
+        options={{
+          title: t('appointments'),
+          headerRight: readOnly
+            ? undefined
+            : () => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('booking_new')}
+                  hitSlop={8}
+                  onPress={() => router.push('/musteri/appointments/new')}>
+                  <Icon name="add" tone="primary" size={22} />
+                </Pressable>
+              ),
+        }}
+      />
       <FlatList
         data={list.items}
         keyExtractor={(a) => a.uuid}
@@ -90,7 +105,9 @@ export function CustomerAppointmentsScreen() {
               title: period === 'upcoming' ? t('appointments_empty') : t('appointments_past_empty'),
               body: period === 'upcoming' ? t('appointments_empty_body') : undefined,
               action:
-                period === 'upcoming' ? { title: t('action.find_dealer'), onPress: () => void openDealerFinder() } : undefined,
+                period === 'upcoming' && !readOnly
+                  ? { title: t('booking_new'), onPress: () => router.push('/musteri/appointments/new') }
+                  : undefined,
             }}
           />
         }
