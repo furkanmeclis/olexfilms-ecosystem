@@ -13,7 +13,7 @@ import { Text } from '@/ui/text';
 import { whError } from './format';
 import { ListSkeleton } from './parts';
 
-type Product = components['schemas']['CatalogProduct'];
+export type Product = components['schemas']['CatalogProduct'];
 
 /** Active catalog products by name or SKU (GET /v1/catalog/products). */
 function useProductSearch(q: string) {
@@ -27,7 +27,7 @@ function useProductSearch(q: string) {
 }
 
 /** Search-and-pick list of catalog products. */
-function ProductPicker({ value, onPick }: { value?: string; onPick: (p: Product) => void }) {
+export function ProductPicker({ value, onPick }: { value?: string; onPick: (p: Product) => void }) {
   const { t } = useTranslation('warehouse');
   const [input, setInput] = useState('');
   const [q, setQ] = useState('');

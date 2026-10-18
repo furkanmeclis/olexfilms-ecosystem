@@ -32,6 +32,8 @@ export function WarehouseHome() {
   const me = useSession((s) => s.me);
   const write = useCan('warehouse.write');
   const orders = useCan('orders.read');
+  const read = useCan('warehouse.read');
+  const stockRead = useCan('stock.read');
   const { warehouse, warehouses, isLoading, isError, refetch, select } = useCurrentWarehouse();
   const summary = useWarehouseSummary(true);
   const [picking, setPicking] = useState(false);
@@ -51,6 +53,9 @@ export function WarehouseHome() {
     { key: 'orders', label: t('orders.nav'), icon: 'package', path: '/depo/jobs?tab=orders', show: orders },
     { key: 'setup', label: t('m.setup'), icon: 'settings', path: '/depo/setup', show: write },
     { key: 'stock', label: t('nav:stock'), icon: 'stock', path: '/depo/stock', show: true },
+    { key: 'eod', label: t('eod.title'), icon: 'report', path: '/depo/eod', show: read },
+    { key: 'reclass', label: t('reclass.title'), icon: 'barcode', path: '/depo/reclass', show: stockRead },
+    { key: 'labels', label: t('labels.title'), icon: 'qr', path: '/depo/labels', show: read || stockRead },
   ];
 
   return (
