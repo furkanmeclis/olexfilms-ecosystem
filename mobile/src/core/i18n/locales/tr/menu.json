@@ -10,14 +10,11 @@
   "tasks": "Görevler",
   "announcements": "Duyurular",
   "warranties": "Garantiler",
-<<<<<<< HEAD
   "catalog": "Katalog",
-  "transfers": "Transferler"
-=======
+  "transfers": "Transferler",
   "certificates": "Sertifikalar",
   "pricing": "Fiyatlandırma",
   "occupancy": "Randevu doluluğu",
   "performance": "Performans",
   "measurements": "Ölçümler"
->>>>>>> f1487dd4 (TEC-848: Mobil admin yönetişim ekranları (sertifika, fiyatlandırma, doluluk, performans, ölçümler))
 }
