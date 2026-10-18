@@ -77,6 +77,7 @@
   "change": "Change",
   "parts_pick": "Faulty parts",
   "parts_none": "No parts found on this warranty.",
+  "item_missing": "The service item of this warranty could not be found.",
   "loading": "Loading...",
   "claim_exists": "An open claim already exists on this warranty.",
   "new_hint": "Add photos and submit the claim for review on the next screen."

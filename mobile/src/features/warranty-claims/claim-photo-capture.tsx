@@ -55,10 +55,16 @@ export function ClaimPhotoCapture({ claimUuid, onClose }: { claimUuid: string; o
   };
 
   return (
-    <Modal visible animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+    <Modal
+      visible
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={() => {
+        if (!upload.isPending) onClose();
+      }}>
       <View className="flex-1 bg-black" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
         <View className="flex-row items-center gap-3 px-4 py-3">
-          <Pressable accessibilityRole="button" accessibilityLabel={t('common:close')} hitSlop={10} onPress={onClose}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common:close')} hitSlop={10} disabled={upload.isPending} onPress={onClose}>
             <Icon name="close" tone="primary-foreground" />
           </Pressable>
           <Text variant="headline" className="flex-1 text-white">

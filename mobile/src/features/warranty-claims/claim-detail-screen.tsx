@@ -18,7 +18,7 @@ import { Text } from '@/ui/text';
 
 import { ClaimPhotoCapture, claimKey } from './claim-photo-capture';
 import { useClaimGrants } from './hooks';
-import { canAddClaimPhoto, canSubmitClaim, type ClaimStatus, claimActions, claimTone } from './lib';
+import { canAddClaimPhoto, type ClaimStatus, claimActions, claimTone } from './lib';
 
 type Sheets = 'reject' | 'reopen' | null;
 
@@ -71,8 +71,8 @@ export function ClaimDetailScreen() {
 
   const actions = c ? claimActions(c.status, grants, orgType) : null;
   const photoCount = c?.photos?.length ?? 0;
-  const partKeys = (c?.parts ?? []).map((p) => p.part_key);
-  const submitReady = canSubmitClaim({ parts: partKeys, description: c?.description ?? '', photos: photoCount });
+  // Same rule as the web: the backend only requires a photo (CLAIM_PHOTO_REQUIRED).
+  const submitReady = photoCount > 0;
   const busy = transition.isPending || reopen.isPending;
 
   return (

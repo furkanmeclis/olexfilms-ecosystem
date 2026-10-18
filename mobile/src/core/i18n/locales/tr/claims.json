@@ -77,6 +77,7 @@
   "change": "Değiştir",
   "parts_pick": "Arızalı parçalar",
   "parts_none": "Bu garantide parça bulunamadı.",
+  "item_missing": "Bu garantinin hizmet kalemi bulunamadı.",
   "loading": "Yükleniyor...",
   "claim_exists": "Bu garanti için zaten açık bir talep var.",
   "new_hint": "Fotoğrafları ekleyip talebi bir sonraki ekranda incelemeye gönderin."

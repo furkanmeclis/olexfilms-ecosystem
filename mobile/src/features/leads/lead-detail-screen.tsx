@@ -185,7 +185,7 @@ export function LeadDetailScreen() {
                 value={lead.candidate_email ?? customer.data?.email}
                 onPress={
                   (lead.candidate_email ?? customer.data?.email)
-                    ? () => void Linking.openURL(`mailto:${lead.candidate_email ?? customer.data?.email}`)
+                    ? () => void Linking.openURL(`mailto:${encodeURIComponent(lead.candidate_email ?? customer.data?.email ?? '')}`)
                     : undefined
                 }
                 last
@@ -309,6 +309,7 @@ export function LeadDetailScreen() {
                   key={a.uuid || 'none'}
                   accessibilityRole="button"
                   accessibilityState={{ selected: on }}
+                  disabled={assign.isPending}
                   onPress={() => assign.mutate(a.uuid || null)}
                   className={`min-h-11 flex-row items-center gap-3 px-4 py-2.5 active:bg-muted ${i < all.length - 1 ? 'border-b border-border' : ''}`}>
                   <Text variant="body" className="flex-1">

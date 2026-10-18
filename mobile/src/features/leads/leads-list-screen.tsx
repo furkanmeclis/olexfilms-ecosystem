@@ -115,7 +115,7 @@ export function LeadsListScreen() {
             className="gap-1 rounded-lg border border-border bg-card px-4 py-3 active:opacity-80">
             <View className="flex-row items-center justify-between gap-3">
               <Text variant="headline" numberOfLines={1} className="flex-1">
-                {leadName(l) || t(`target.${l.target_type}`)}
+                {leadName(l) || l.candidate_phone_e164 || l.candidate_email || t(`target.${l.target_type}`)}
               </Text>
               <StatusPill label={t(`status.${l.status}`)} tone={leadStatusTone(l.status)} />
             </View>
@@ -127,7 +127,8 @@ export function LeadsListScreen() {
             </View>
             <Text variant="footnote" tone={isOverdue(l.follow_up_date, l.status) ? 'danger' : 'muted'} numberOfLines={1}>
               {[
-                l.candidate_phone_e164,
+                leadName(l) ? l.candidate_phone_e164 : null,
+                leadName(l) || l.candidate_phone_e164 ? l.candidate_email : null,
                 l.follow_up_date ? t('follow_up_on', { date: formatDate(l.follow_up_date, i18n.language) }) : null,
               ]
                 .filter(Boolean)

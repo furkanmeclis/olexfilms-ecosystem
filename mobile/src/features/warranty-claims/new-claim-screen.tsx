@@ -179,9 +179,20 @@ export function NewClaimScreen() {
             <Text variant="callout" tone="muted" className="px-4 py-3">
               {t('loading')}
             </Text>
+          ) : service.isError ? (
+            <View className="gap-2 px-4 py-3">
+              <Text variant="callout" tone="danger">
+                {errorText(service.error)}
+              </Text>
+              <Button title={t('common:retry')} variant="secondary" onPress={() => void service.refetch()} />
+            </View>
+          ) : !itemUuid ? (
+            <Text variant="callout" tone="muted" className="px-4 py-3">
+              {t('item_missing')}
+            </Text>
           ) : available.length === 0 ? (
             <Text variant="callout" tone="muted" className="px-4 py-3">
-              {service.isError ? errorText(service.error) : t('parts_none')}
+              {t('parts_none')}
             </Text>
           ) : (
             available.map((key, i) => {
