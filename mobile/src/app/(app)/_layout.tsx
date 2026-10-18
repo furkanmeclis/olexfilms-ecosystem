@@ -43,6 +43,7 @@ export default function AppLayout() {
         options={{ headerShown: true, presentation: 'formSheet', sheetAllowedDetents: [0.55, 1], sheetGrabberVisible: true }}
       />
       <Stack.Screen name="search" options={{ headerShown: true, presentation: 'modal' }} />
+      <Stack.Screen name="intro" options={{ presentation: 'modal' }} />
       <Stack.Screen name="settings" options={{ headerShown: true, headerLargeTitle: LARGE_TITLES }} />
       <Stack.Screen name="soon/[key]" options={{ headerShown: true }} />
       <Stack.Screen

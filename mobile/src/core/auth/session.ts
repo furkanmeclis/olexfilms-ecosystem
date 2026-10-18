@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { setSessionExpiredHandler } from '@/core/api/client';
 import { hasLanguagePreference, isLanguage, setLanguage } from '@/core/i18n';
+import { useOnboarding } from '@/core/onboarding';
 import { queryClient } from '@/core/query';
 import { readJSON, storage, writeJSON } from '@/core/storage';
 
@@ -45,7 +46,10 @@ export const useSession = create<Session>((set, get) => ({
   hydrate: async () => {
     const tokens = await loadTokens();
     const me = tokens ? readJSON<MobileMe>(ME_KEY) : null;
-    set({ status: tokens && me ? 'signedIn' : 'signedOut', me });
+    const signedIn = Boolean(tokens && me);
+    // Already signed in when the onboarding shipped: never show it after sign-out.
+    if (signedIn) useOnboarding.getState().markSeen();
+    set({ status: signedIn ? 'signedIn' : 'signedOut', me });
   },
 
   signIn: async (result) => {
@@ -64,6 +68,8 @@ export const useSession = create<Session>((set, get) => ({
       }
     }
     get().setMe(me);
+    // Every sign-in method ends here; a signed-in device (staff too) skips the intro for good.
+    useOnboarding.getState().markSeen();
     set({ status: 'signedIn' });
   },
 

@@ -18,5 +18,6 @@
   "version": "Έκδοση {{version}}",
   "about": "Σχετικά",
   "api_server": "Διακομιστής",
-  "app_version": "Έκδοση εφαρμογής"
+  "app_version": "Έκδοση εφαρμογής",
+  "watch_intro": "Δείτε την παρουσίαση"
 }

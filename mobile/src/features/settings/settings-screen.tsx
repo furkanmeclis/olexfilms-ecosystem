@@ -90,6 +90,7 @@ export function SettingsScreen() {
         </List>
 
         <List className="mt-4">
+          <ListRow icon="intro" title={t('watch_intro')} onPress={() => router.push('/intro')} />
           <ListRow icon="spaces" title={t('switch_space')} onPress={() => router.push('/spaces')} />
           <ListRow icon="signOut" title={t('sign_out')} tone="danger" onPress={() => void useSession.getState().signOut()} last />
         </List>

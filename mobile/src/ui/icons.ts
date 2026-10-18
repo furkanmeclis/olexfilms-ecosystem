@@ -1,5 +1,6 @@
 import ArrowLeftRightIcon from 'lucide-react-native/icons/arrow-left-right';
 import ChevronUpIcon from 'lucide-react-native/icons/chevron-up';
+import CirclePlayIcon from 'lucide-react-native/icons/circle-play';
 import CircleAlertIcon from 'lucide-react-native/icons/circle-alert';
 import ImagePlusIcon from 'lucide-react-native/icons/image-plus';
 import ListTreeIcon from 'lucide-react-native/icons/list-tree';
@@ -26,6 +27,7 @@ import ExternalLinkIcon from 'lucide-react-native/icons/external-link';
 import FileTextIcon from 'lucide-react-native/icons/file-text';
 import FlashlightIcon from 'lucide-react-native/icons/flashlight';
 import GaugeIcon from 'lucide-react-native/icons/gauge';
+import HashIcon from 'lucide-react-native/icons/hash';
 import GlobeIcon from 'lucide-react-native/icons/globe';
 import HammerIcon from 'lucide-react-native/icons/hammer';
 import InboxIcon from 'lucide-react-native/icons/inbox';
@@ -49,6 +51,7 @@ import ScanLineIcon from 'lucide-react-native/icons/scan-line';
 import SearchIcon from 'lucide-react-native/icons/search';
 import SettingsIcon from 'lucide-react-native/icons/settings';
 import Share2Icon from 'lucide-react-native/icons/share-2';
+import ShieldIcon from 'lucide-react-native/icons/shield';
 import ShieldCheckIcon from 'lucide-react-native/icons/shield-check';
 import ShoppingCartIcon from 'lucide-react-native/icons/shopping-cart';
 import SmartphoneIcon from 'lucide-react-native/icons/smartphone';
@@ -126,6 +129,7 @@ export type IconName =
   | 'phone'
   | 'mail'
   | 'password'
+  | 'code'
   | 'shield'
   | 'device'
   | 'bluetooth'
@@ -144,6 +148,7 @@ export type IconName =
   | 'hierarchy'
   | 'devices'
   | 'edit'
+  | 'intro'
   | 'signOut';
 
 /** iOS renders the SF Symbol, Android (and iOS fallback) renders the Lucide glyph. */
@@ -198,7 +203,8 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   phone: { sf: 'phone', lucide: PhoneIcon },
   mail: { sf: 'envelope', lucide: MailIcon },
   password: { sf: 'lock', lucide: KeyRoundIcon },
-  shield: { sf: 'lock.shield', lucide: ShieldCheckIcon },
+  code: { sf: 'number', lucide: HashIcon },
+  shield: { sf: 'shield', lucide: ShieldIcon },
   device: { sf: 'iphone', lucide: SmartphoneIcon },
   bluetooth: { sf: 'dot.radiowaves.left.and.right', lucide: BluetoothIcon },
   offline: { sf: 'icloud.slash', lucide: CloudOffIcon },
@@ -216,6 +222,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   hierarchy: { sf: 'list.bullet.indent', lucide: ListTreeIcon },
   devices: { sf: 'macbook.and.iphone', lucide: MonitorSmartphoneIcon },
   edit: { sf: 'pencil', lucide: PencilIcon },
+  intro: { sf: 'play.circle', lucide: CirclePlayIcon },
   signOut: { sf: 'rectangle.portrait.and.arrow.right', lucide: LogOutIcon },
 };
 

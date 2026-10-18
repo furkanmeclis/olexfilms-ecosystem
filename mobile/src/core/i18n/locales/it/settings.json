@@ -18,5 +18,6 @@
   "version": "Versione {{version}}",
   "about": "Informazioni",
   "api_server": "Server",
-  "app_version": "Versione dell'app"
+  "app_version": "Versione dell'app",
+  "watch_intro": "Rivedi la presentazione"
 }
