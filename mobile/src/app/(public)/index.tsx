@@ -1,8 +1,8 @@
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
 
+import { useOnboarding } from '@/core/onboarding';
 import { OnboardingScreen } from '@/features/onboarding/onboarding-screen';
-import { useOnboarding } from '@/features/onboarding/onboarding-state';
 
 /** First run shows the customer onboarding; afterwards (and after sign-out) the phone sign-in. */
 export default function PublicIndex() {

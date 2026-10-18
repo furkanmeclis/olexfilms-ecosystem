@@ -60,6 +60,18 @@ describe('listCountries', () => {
   it('has no duplicate codes', () => {
     assert.equal(new Set(list.map((c) => c.code)).size, list.length);
   });
+
+  it('never shows a raw region code as a name', () => {
+    for (const locale of ['tr', 'en', 'ar', 'az', 'bg', 'de', 'el', 'es', 'fr', 'it', 'ru', 'uk', 'zh_CN']) {
+      const raw = listCountries(locale).filter((c) => c.name === c.code);
+      assert.deepEqual(raw, [], locale);
+    }
+  });
+
+  it('leaves out regions without a name in any language (AC, TA)', () => {
+    assert.equal(list.find((c) => c.code === 'AC'), undefined);
+    assert.equal(list.find((c) => c.code === 'TA'), undefined);
+  });
 });
 
 describe('filterCountries', () => {

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -19,12 +19,12 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { useOnboarding } from '@/core/onboarding';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
 import { OnboardingPage, type OnboardingPageContent } from './onboarding-page';
-import { useOnboarding } from './onboarding-state';
 
 const EASE = Easing.out(Easing.cubic);
 const DOT = 8;
@@ -94,10 +94,14 @@ export function OnboardingScreen({ mode }: { mode: Mode }) {
   const onLast = page === last;
 
   return (
-    // Replay is a page sheet that already sits below the status bar: no top inset there.
+    // Replay on iOS is a page sheet that already sits below the status bar: no top inset
+    // there. Android modals are full-screen edge-to-edge, so they keep the inset.
     <View
       className="flex-1 bg-background"
-      style={{ paddingTop: mode === 'replay' ? 8 : insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
+      style={{
+        paddingTop: mode === 'replay' && Platform.OS === 'ios' ? 8 : insets.top,
+        paddingBottom: Math.max(insets.bottom, 16),
+      }}>
       <View className="h-11 flex-row items-center justify-end px-4">
         {mode === 'replay' ? (
           <Pressable

@@ -35,7 +35,7 @@ export function SignInScreen({ mode }: { mode: SignInMode }) {
   return (
     <AuthLayout
       brand
-      title={t(phone ? 'sign_in_phone_title' : 'sign_in_email_title')}
+      title={t(phone ? 'phone_title' : 'sign_in_email_title')}
       subtitle={t(phone ? 'sign_in_phone_subtitle' : 'sign_in_email_subtitle')}>
       {/* Keyed by mode: switching resets the field, its error and the busy state. */}
       {phone ? <PhoneForm key="phone" /> : <EmailForm key="email" />}
@@ -43,7 +43,7 @@ export function SignInScreen({ mode }: { mode: SignInMode }) {
       <View className="items-center">
         <Button
           variant="ghost"
-          title={t(phone ? 'sign_in_with_email' : 'sign_in_with_phone')}
+          title={t(phone ? 'sign_in_email_title' : 'phone_title')}
           icon={<Icon name={phone ? 'mail' : 'phone'} tone="primary" size={17} />}
           onPress={() => router.setParams({ mode: other })}
         />
@@ -68,6 +68,12 @@ function PhoneForm() {
     // A pasted "+44 …" number moves the picker to its own country.
     const detected = detectCountry(v);
     if (detected && detected !== country) setCountry(detected);
+  };
+
+  // A new country makes an "invalid number" message about the old one stale.
+  const onCountry = (code: CountryCode) => {
+    setCountry(code);
+    setError(undefined);
   };
 
   const next = async () => {
@@ -95,7 +101,7 @@ function PhoneForm() {
         icon="phone"
         label={t('phone_label')}
         placeholder={placeholder}
-        leading={<CountryPicker value={country} onChange={setCountry} />}
+        leading={<CountryPicker value={country} onChange={onCountry} />}
         value={value}
         onChangeText={onChange}
         error={error}

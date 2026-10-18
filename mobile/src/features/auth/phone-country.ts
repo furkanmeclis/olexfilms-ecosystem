@@ -79,9 +79,13 @@ export function listCountries(locale: string): Country[] {
   const first: Country[] = [];
   const rest: Country[] = [];
   for (const code of getCountries()) {
+    // A few dialing regions (AC Ascension, TA Tristan da Cunha…) have no name in
+    // some locales: fall back to English, and leave out a region with no name at all.
+    const name = countries.getName(code, lang) ?? countries.getName(code, 'en');
+    if (!name) continue;
     const country: Country = {
       code,
-      name: countries.getName(code, lang) ?? code,
+      name,
       dial: `+${getCountryCallingCode(code)}`,
       flag: flagOf(code),
     };
