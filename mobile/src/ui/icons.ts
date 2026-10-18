@@ -6,6 +6,7 @@ import ImagePlusIcon from 'lucide-react-native/icons/image-plus';
 import ListTreeIcon from 'lucide-react-native/icons/list-tree';
 import MonitorSmartphoneIcon from 'lucide-react-native/icons/monitor-smartphone';
 import PencilIcon from 'lucide-react-native/icons/pencil';
+import BellIcon from 'lucide-react-native/icons/bell';
 import BanIcon from 'lucide-react-native/icons/ban';
 import BanknoteIcon from 'lucide-react-native/icons/banknote';
 import BarcodeIcon from 'lucide-react-native/icons/barcode';
@@ -140,6 +141,7 @@ export type IconName =
   | 'clock'
   | 'target'
   | 'inbox'
+  | 'bell'
   | 'globe'
   | 'transfer'
   | 'chevronUp'
@@ -214,6 +216,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   clock: { sf: 'clock', lucide: ClockIcon },
   target: { sf: 'scope', lucide: TargetIcon },
   inbox: { sf: 'tray', lucide: InboxIcon },
+  bell: { sf: 'bell', lucide: BellIcon },
   globe: { sf: 'globe', lucide: GlobeIcon },
   transfer: { sf: 'arrow.left.arrow.right', lucide: ArrowLeftRightIcon },
   chevronUp: { sf: 'chevron.up', lucide: ChevronUpIcon },

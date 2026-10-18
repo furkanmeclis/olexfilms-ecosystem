@@ -44,6 +44,7 @@ export default function AppLayout() {
       />
       <Stack.Screen name="search" options={{ headerShown: true, presentation: 'modal' }} />
       <Stack.Screen name="intro" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="notifications" options={{ headerShown: true, headerLargeTitle: LARGE_TITLES }} />
       <Stack.Screen name="settings" options={{ headerShown: true, headerLargeTitle: LARGE_TITLES }} />
       <Stack.Screen name="soon/[key]" options={{ headerShown: true }} />
       <Stack.Screen

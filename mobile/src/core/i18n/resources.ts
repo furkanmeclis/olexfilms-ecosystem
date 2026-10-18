@@ -2,6 +2,7 @@
 
 import tr_common from './locales/tr/common.json';
 import tr_admin from './locales/tr/admin.json';
+import tr_appointments from './locales/tr/appointments.json';
 import tr_auth from './locales/tr/auth.json';
 import tr_customer from './locales/tr/customer.json';
 import tr_dealer from './locales/tr/dealer.json';
@@ -9,6 +10,7 @@ import tr_home from './locales/tr/home.json';
 import tr_measure from './locales/tr/measure.json';
 import tr_menu from './locales/tr/menu.json';
 import tr_nav from './locales/tr/nav.json';
+import tr_notifications from './locales/tr/notifications.json';
 import tr_onboarding from './locales/tr/onboarding.json';
 import tr_qr from './locales/tr/qr.json';
 import tr_scan from './locales/tr/scan.json';
@@ -20,6 +22,7 @@ import tr_warehouse from './locales/tr/warehouse.json';
 import tr_errors from '../../../../frontend/src/locales/tr/errors.json';
 import en_common from './locales/en/common.json';
 import en_admin from './locales/en/admin.json';
+import en_appointments from './locales/en/appointments.json';
 import en_auth from './locales/en/auth.json';
 import en_customer from './locales/en/customer.json';
 import en_dealer from './locales/en/dealer.json';
@@ -27,6 +30,7 @@ import en_home from './locales/en/home.json';
 import en_measure from './locales/en/measure.json';
 import en_menu from './locales/en/menu.json';
 import en_nav from './locales/en/nav.json';
+import en_notifications from './locales/en/notifications.json';
 import en_onboarding from './locales/en/onboarding.json';
 import en_qr from './locales/en/qr.json';
 import en_scan from './locales/en/scan.json';
@@ -38,6 +42,7 @@ import en_warehouse from './locales/en/warehouse.json';
 import en_errors from '../../../../frontend/src/locales/en/errors.json';
 import bg_common from './locales/bg/common.json';
 import bg_admin from './locales/bg/admin.json';
+import bg_appointments from './locales/bg/appointments.json';
 import bg_auth from './locales/bg/auth.json';
 import bg_customer from './locales/bg/customer.json';
 import bg_dealer from './locales/bg/dealer.json';
@@ -45,6 +50,7 @@ import bg_home from './locales/bg/home.json';
 import bg_measure from './locales/bg/measure.json';
 import bg_menu from './locales/bg/menu.json';
 import bg_nav from './locales/bg/nav.json';
+import bg_notifications from './locales/bg/notifications.json';
 import bg_onboarding from './locales/bg/onboarding.json';
 import bg_qr from './locales/bg/qr.json';
 import bg_scan from './locales/bg/scan.json';
@@ -56,6 +62,7 @@ import bg_warehouse from './locales/bg/warehouse.json';
 import bg_errors from '../../../../frontend/src/locales/bg/errors.json';
 import de_common from './locales/de/common.json';
 import de_admin from './locales/de/admin.json';
+import de_appointments from './locales/de/appointments.json';
 import de_auth from './locales/de/auth.json';
 import de_customer from './locales/de/customer.json';
 import de_dealer from './locales/de/dealer.json';
@@ -63,6 +70,7 @@ import de_home from './locales/de/home.json';
 import de_measure from './locales/de/measure.json';
 import de_menu from './locales/de/menu.json';
 import de_nav from './locales/de/nav.json';
+import de_notifications from './locales/de/notifications.json';
 import de_onboarding from './locales/de/onboarding.json';
 import de_qr from './locales/de/qr.json';
 import de_scan from './locales/de/scan.json';
@@ -74,6 +82,7 @@ import de_warehouse from './locales/de/warehouse.json';
 import de_errors from '../../../../frontend/src/locales/de/errors.json';
 import el_common from './locales/el/common.json';
 import el_admin from './locales/el/admin.json';
+import el_appointments from './locales/el/appointments.json';
 import el_auth from './locales/el/auth.json';
 import el_customer from './locales/el/customer.json';
 import el_dealer from './locales/el/dealer.json';
@@ -81,6 +90,7 @@ import el_home from './locales/el/home.json';
 import el_measure from './locales/el/measure.json';
 import el_menu from './locales/el/menu.json';
 import el_nav from './locales/el/nav.json';
+import el_notifications from './locales/el/notifications.json';
 import el_onboarding from './locales/el/onboarding.json';
 import el_qr from './locales/el/qr.json';
 import el_scan from './locales/el/scan.json';
@@ -92,6 +102,7 @@ import el_warehouse from './locales/el/warehouse.json';
 import el_errors from '../../../../frontend/src/locales/el/errors.json';
 import uk_common from './locales/uk/common.json';
 import uk_admin from './locales/uk/admin.json';
+import uk_appointments from './locales/uk/appointments.json';
 import uk_auth from './locales/uk/auth.json';
 import uk_customer from './locales/uk/customer.json';
 import uk_dealer from './locales/uk/dealer.json';
@@ -99,6 +110,7 @@ import uk_home from './locales/uk/home.json';
 import uk_measure from './locales/uk/measure.json';
 import uk_menu from './locales/uk/menu.json';
 import uk_nav from './locales/uk/nav.json';
+import uk_notifications from './locales/uk/notifications.json';
 import uk_onboarding from './locales/uk/onboarding.json';
 import uk_qr from './locales/uk/qr.json';
 import uk_scan from './locales/uk/scan.json';
@@ -110,6 +122,7 @@ import uk_warehouse from './locales/uk/warehouse.json';
 import uk_errors from '../../../../frontend/src/locales/uk/errors.json';
 import ru_common from './locales/ru/common.json';
 import ru_admin from './locales/ru/admin.json';
+import ru_appointments from './locales/ru/appointments.json';
 import ru_auth from './locales/ru/auth.json';
 import ru_customer from './locales/ru/customer.json';
 import ru_dealer from './locales/ru/dealer.json';
@@ -117,6 +130,7 @@ import ru_home from './locales/ru/home.json';
 import ru_measure from './locales/ru/measure.json';
 import ru_menu from './locales/ru/menu.json';
 import ru_nav from './locales/ru/nav.json';
+import ru_notifications from './locales/ru/notifications.json';
 import ru_onboarding from './locales/ru/onboarding.json';
 import ru_qr from './locales/ru/qr.json';
 import ru_scan from './locales/ru/scan.json';
@@ -128,6 +142,7 @@ import ru_warehouse from './locales/ru/warehouse.json';
 import ru_errors from '../../../../frontend/src/locales/ru/errors.json';
 import fr_common from './locales/fr/common.json';
 import fr_admin from './locales/fr/admin.json';
+import fr_appointments from './locales/fr/appointments.json';
 import fr_auth from './locales/fr/auth.json';
 import fr_customer from './locales/fr/customer.json';
 import fr_dealer from './locales/fr/dealer.json';
@@ -135,6 +150,7 @@ import fr_home from './locales/fr/home.json';
 import fr_measure from './locales/fr/measure.json';
 import fr_menu from './locales/fr/menu.json';
 import fr_nav from './locales/fr/nav.json';
+import fr_notifications from './locales/fr/notifications.json';
 import fr_onboarding from './locales/fr/onboarding.json';
 import fr_qr from './locales/fr/qr.json';
 import fr_scan from './locales/fr/scan.json';
@@ -146,6 +162,7 @@ import fr_warehouse from './locales/fr/warehouse.json';
 import fr_errors from '../../../../frontend/src/locales/fr/errors.json';
 import es_common from './locales/es/common.json';
 import es_admin from './locales/es/admin.json';
+import es_appointments from './locales/es/appointments.json';
 import es_auth from './locales/es/auth.json';
 import es_customer from './locales/es/customer.json';
 import es_dealer from './locales/es/dealer.json';
@@ -153,6 +170,7 @@ import es_home from './locales/es/home.json';
 import es_measure from './locales/es/measure.json';
 import es_menu from './locales/es/menu.json';
 import es_nav from './locales/es/nav.json';
+import es_notifications from './locales/es/notifications.json';
 import es_onboarding from './locales/es/onboarding.json';
 import es_qr from './locales/es/qr.json';
 import es_scan from './locales/es/scan.json';
@@ -164,6 +182,7 @@ import es_warehouse from './locales/es/warehouse.json';
 import es_errors from '../../../../frontend/src/locales/es/errors.json';
 import it_common from './locales/it/common.json';
 import it_admin from './locales/it/admin.json';
+import it_appointments from './locales/it/appointments.json';
 import it_auth from './locales/it/auth.json';
 import it_customer from './locales/it/customer.json';
 import it_dealer from './locales/it/dealer.json';
@@ -171,6 +190,7 @@ import it_home from './locales/it/home.json';
 import it_measure from './locales/it/measure.json';
 import it_menu from './locales/it/menu.json';
 import it_nav from './locales/it/nav.json';
+import it_notifications from './locales/it/notifications.json';
 import it_onboarding from './locales/it/onboarding.json';
 import it_qr from './locales/it/qr.json';
 import it_scan from './locales/it/scan.json';
@@ -182,6 +202,7 @@ import it_warehouse from './locales/it/warehouse.json';
 import it_errors from '../../../../frontend/src/locales/it/errors.json';
 import zhCN_common from './locales/zh-CN/common.json';
 import zhCN_admin from './locales/zh-CN/admin.json';
+import zhCN_appointments from './locales/zh-CN/appointments.json';
 import zhCN_auth from './locales/zh-CN/auth.json';
 import zhCN_customer from './locales/zh-CN/customer.json';
 import zhCN_dealer from './locales/zh-CN/dealer.json';
@@ -189,6 +210,7 @@ import zhCN_home from './locales/zh-CN/home.json';
 import zhCN_measure from './locales/zh-CN/measure.json';
 import zhCN_menu from './locales/zh-CN/menu.json';
 import zhCN_nav from './locales/zh-CN/nav.json';
+import zhCN_notifications from './locales/zh-CN/notifications.json';
 import zhCN_onboarding from './locales/zh-CN/onboarding.json';
 import zhCN_qr from './locales/zh-CN/qr.json';
 import zhCN_scan from './locales/zh-CN/scan.json';
@@ -200,6 +222,7 @@ import zhCN_warehouse from './locales/zh-CN/warehouse.json';
 import zhCN_errors from '../../../../frontend/src/locales/zh-CN/errors.json';
 import az_common from './locales/az/common.json';
 import az_admin from './locales/az/admin.json';
+import az_appointments from './locales/az/appointments.json';
 import az_auth from './locales/az/auth.json';
 import az_customer from './locales/az/customer.json';
 import az_dealer from './locales/az/dealer.json';
@@ -207,6 +230,7 @@ import az_home from './locales/az/home.json';
 import az_measure from './locales/az/measure.json';
 import az_menu from './locales/az/menu.json';
 import az_nav from './locales/az/nav.json';
+import az_notifications from './locales/az/notifications.json';
 import az_onboarding from './locales/az/onboarding.json';
 import az_qr from './locales/az/qr.json';
 import az_scan from './locales/az/scan.json';
@@ -218,6 +242,7 @@ import az_warehouse from './locales/az/warehouse.json';
 import az_errors from '../../../../frontend/src/locales/az/errors.json';
 import ar_common from './locales/ar/common.json';
 import ar_admin from './locales/ar/admin.json';
+import ar_appointments from './locales/ar/appointments.json';
 import ar_auth from './locales/ar/auth.json';
 import ar_customer from './locales/ar/customer.json';
 import ar_dealer from './locales/ar/dealer.json';
@@ -225,6 +250,7 @@ import ar_home from './locales/ar/home.json';
 import ar_measure from './locales/ar/measure.json';
 import ar_menu from './locales/ar/menu.json';
 import ar_nav from './locales/ar/nav.json';
+import ar_notifications from './locales/ar/notifications.json';
 import ar_onboarding from './locales/ar/onboarding.json';
 import ar_qr from './locales/ar/qr.json';
 import ar_scan from './locales/ar/scan.json';
@@ -235,20 +261,20 @@ import ar_update from './locales/ar/update.json';
 import ar_warehouse from './locales/ar/warehouse.json';
 import ar_errors from '../../../../frontend/src/locales/ar/errors.json';
 
-export const NAMESPACES = ['common', 'admin', 'auth', 'customer', 'dealer', 'home', 'measure', 'menu', 'nav', 'onboarding', 'qr', 'scan', 'search', 'settings', 'spaces', 'update', 'warehouse', 'errors'] as const;
+export const NAMESPACES = ['common', 'admin', 'appointments', 'auth', 'customer', 'dealer', 'home', 'measure', 'menu', 'nav', 'notifications', 'onboarding', 'qr', 'scan', 'search', 'settings', 'spaces', 'update', 'warehouse', 'errors'] as const;
 
 export const resources = {
-  tr: { common: tr_common, admin: tr_admin, auth: tr_auth, customer: tr_customer, dealer: tr_dealer, home: tr_home, measure: tr_measure, menu: tr_menu, nav: tr_nav, onboarding: tr_onboarding, qr: tr_qr, scan: tr_scan, search: tr_search, settings: tr_settings, spaces: tr_spaces, update: tr_update, warehouse: tr_warehouse, errors: tr_errors },
-  en: { common: en_common, admin: en_admin, auth: en_auth, customer: en_customer, dealer: en_dealer, home: en_home, measure: en_measure, menu: en_menu, nav: en_nav, onboarding: en_onboarding, qr: en_qr, scan: en_scan, search: en_search, settings: en_settings, spaces: en_spaces, update: en_update, warehouse: en_warehouse, errors: en_errors },
-  bg: { common: bg_common, admin: bg_admin, auth: bg_auth, customer: bg_customer, dealer: bg_dealer, home: bg_home, measure: bg_measure, menu: bg_menu, nav: bg_nav, onboarding: bg_onboarding, qr: bg_qr, scan: bg_scan, search: bg_search, settings: bg_settings, spaces: bg_spaces, update: bg_update, warehouse: bg_warehouse, errors: bg_errors },
-  de: { common: de_common, admin: de_admin, auth: de_auth, customer: de_customer, dealer: de_dealer, home: de_home, measure: de_measure, menu: de_menu, nav: de_nav, onboarding: de_onboarding, qr: de_qr, scan: de_scan, search: de_search, settings: de_settings, spaces: de_spaces, update: de_update, warehouse: de_warehouse, errors: de_errors },
-  el: { common: el_common, admin: el_admin, auth: el_auth, customer: el_customer, dealer: el_dealer, home: el_home, measure: el_measure, menu: el_menu, nav: el_nav, onboarding: el_onboarding, qr: el_qr, scan: el_scan, search: el_search, settings: el_settings, spaces: el_spaces, update: el_update, warehouse: el_warehouse, errors: el_errors },
-  uk: { common: uk_common, admin: uk_admin, auth: uk_auth, customer: uk_customer, dealer: uk_dealer, home: uk_home, measure: uk_measure, menu: uk_menu, nav: uk_nav, onboarding: uk_onboarding, qr: uk_qr, scan: uk_scan, search: uk_search, settings: uk_settings, spaces: uk_spaces, update: uk_update, warehouse: uk_warehouse, errors: uk_errors },
-  ru: { common: ru_common, admin: ru_admin, auth: ru_auth, customer: ru_customer, dealer: ru_dealer, home: ru_home, measure: ru_measure, menu: ru_menu, nav: ru_nav, onboarding: ru_onboarding, qr: ru_qr, scan: ru_scan, search: ru_search, settings: ru_settings, spaces: ru_spaces, update: ru_update, warehouse: ru_warehouse, errors: ru_errors },
-  fr: { common: fr_common, admin: fr_admin, auth: fr_auth, customer: fr_customer, dealer: fr_dealer, home: fr_home, measure: fr_measure, menu: fr_menu, nav: fr_nav, onboarding: fr_onboarding, qr: fr_qr, scan: fr_scan, search: fr_search, settings: fr_settings, spaces: fr_spaces, update: fr_update, warehouse: fr_warehouse, errors: fr_errors },
-  es: { common: es_common, admin: es_admin, auth: es_auth, customer: es_customer, dealer: es_dealer, home: es_home, measure: es_measure, menu: es_menu, nav: es_nav, onboarding: es_onboarding, qr: es_qr, scan: es_scan, search: es_search, settings: es_settings, spaces: es_spaces, update: es_update, warehouse: es_warehouse, errors: es_errors },
-  it: { common: it_common, admin: it_admin, auth: it_auth, customer: it_customer, dealer: it_dealer, home: it_home, measure: it_measure, menu: it_menu, nav: it_nav, onboarding: it_onboarding, qr: it_qr, scan: it_scan, search: it_search, settings: it_settings, spaces: it_spaces, update: it_update, warehouse: it_warehouse, errors: it_errors },
-  'zh-CN': { common: zhCN_common, admin: zhCN_admin, auth: zhCN_auth, customer: zhCN_customer, dealer: zhCN_dealer, home: zhCN_home, measure: zhCN_measure, menu: zhCN_menu, nav: zhCN_nav, onboarding: zhCN_onboarding, qr: zhCN_qr, scan: zhCN_scan, search: zhCN_search, settings: zhCN_settings, spaces: zhCN_spaces, update: zhCN_update, warehouse: zhCN_warehouse, errors: zhCN_errors },
-  az: { common: az_common, admin: az_admin, auth: az_auth, customer: az_customer, dealer: az_dealer, home: az_home, measure: az_measure, menu: az_menu, nav: az_nav, onboarding: az_onboarding, qr: az_qr, scan: az_scan, search: az_search, settings: az_settings, spaces: az_spaces, update: az_update, warehouse: az_warehouse, errors: az_errors },
-  ar: { common: ar_common, admin: ar_admin, auth: ar_auth, customer: ar_customer, dealer: ar_dealer, home: ar_home, measure: ar_measure, menu: ar_menu, nav: ar_nav, onboarding: ar_onboarding, qr: ar_qr, scan: ar_scan, search: ar_search, settings: ar_settings, spaces: ar_spaces, update: ar_update, warehouse: ar_warehouse, errors: ar_errors },
+  tr: { common: tr_common, admin: tr_admin, appointments: tr_appointments, auth: tr_auth, customer: tr_customer, dealer: tr_dealer, home: tr_home, measure: tr_measure, menu: tr_menu, nav: tr_nav, notifications: tr_notifications, onboarding: tr_onboarding, qr: tr_qr, scan: tr_scan, search: tr_search, settings: tr_settings, spaces: tr_spaces, update: tr_update, warehouse: tr_warehouse, errors: tr_errors },
+  en: { common: en_common, admin: en_admin, appointments: en_appointments, auth: en_auth, customer: en_customer, dealer: en_dealer, home: en_home, measure: en_measure, menu: en_menu, nav: en_nav, notifications: en_notifications, onboarding: en_onboarding, qr: en_qr, scan: en_scan, search: en_search, settings: en_settings, spaces: en_spaces, update: en_update, warehouse: en_warehouse, errors: en_errors },
+  bg: { common: bg_common, admin: bg_admin, appointments: bg_appointments, auth: bg_auth, customer: bg_customer, dealer: bg_dealer, home: bg_home, measure: bg_measure, menu: bg_menu, nav: bg_nav, notifications: bg_notifications, onboarding: bg_onboarding, qr: bg_qr, scan: bg_scan, search: bg_search, settings: bg_settings, spaces: bg_spaces, update: bg_update, warehouse: bg_warehouse, errors: bg_errors },
+  de: { common: de_common, admin: de_admin, appointments: de_appointments, auth: de_auth, customer: de_customer, dealer: de_dealer, home: de_home, measure: de_measure, menu: de_menu, nav: de_nav, notifications: de_notifications, onboarding: de_onboarding, qr: de_qr, scan: de_scan, search: de_search, settings: de_settings, spaces: de_spaces, update: de_update, warehouse: de_warehouse, errors: de_errors },
+  el: { common: el_common, admin: el_admin, appointments: el_appointments, auth: el_auth, customer: el_customer, dealer: el_dealer, home: el_home, measure: el_measure, menu: el_menu, nav: el_nav, notifications: el_notifications, onboarding: el_onboarding, qr: el_qr, scan: el_scan, search: el_search, settings: el_settings, spaces: el_spaces, update: el_update, warehouse: el_warehouse, errors: el_errors },
+  uk: { common: uk_common, admin: uk_admin, appointments: uk_appointments, auth: uk_auth, customer: uk_customer, dealer: uk_dealer, home: uk_home, measure: uk_measure, menu: uk_menu, nav: uk_nav, notifications: uk_notifications, onboarding: uk_onboarding, qr: uk_qr, scan: uk_scan, search: uk_search, settings: uk_settings, spaces: uk_spaces, update: uk_update, warehouse: uk_warehouse, errors: uk_errors },
+  ru: { common: ru_common, admin: ru_admin, appointments: ru_appointments, auth: ru_auth, customer: ru_customer, dealer: ru_dealer, home: ru_home, measure: ru_measure, menu: ru_menu, nav: ru_nav, notifications: ru_notifications, onboarding: ru_onboarding, qr: ru_qr, scan: ru_scan, search: ru_search, settings: ru_settings, spaces: ru_spaces, update: ru_update, warehouse: ru_warehouse, errors: ru_errors },
+  fr: { common: fr_common, admin: fr_admin, appointments: fr_appointments, auth: fr_auth, customer: fr_customer, dealer: fr_dealer, home: fr_home, measure: fr_measure, menu: fr_menu, nav: fr_nav, notifications: fr_notifications, onboarding: fr_onboarding, qr: fr_qr, scan: fr_scan, search: fr_search, settings: fr_settings, spaces: fr_spaces, update: fr_update, warehouse: fr_warehouse, errors: fr_errors },
+  es: { common: es_common, admin: es_admin, appointments: es_appointments, auth: es_auth, customer: es_customer, dealer: es_dealer, home: es_home, measure: es_measure, menu: es_menu, nav: es_nav, notifications: es_notifications, onboarding: es_onboarding, qr: es_qr, scan: es_scan, search: es_search, settings: es_settings, spaces: es_spaces, update: es_update, warehouse: es_warehouse, errors: es_errors },
+  it: { common: it_common, admin: it_admin, appointments: it_appointments, auth: it_auth, customer: it_customer, dealer: it_dealer, home: it_home, measure: it_measure, menu: it_menu, nav: it_nav, notifications: it_notifications, onboarding: it_onboarding, qr: it_qr, scan: it_scan, search: it_search, settings: it_settings, spaces: it_spaces, update: it_update, warehouse: it_warehouse, errors: it_errors },
+  'zh-CN': { common: zhCN_common, admin: zhCN_admin, appointments: zhCN_appointments, auth: zhCN_auth, customer: zhCN_customer, dealer: zhCN_dealer, home: zhCN_home, measure: zhCN_measure, menu: zhCN_menu, nav: zhCN_nav, notifications: zhCN_notifications, onboarding: zhCN_onboarding, qr: zhCN_qr, scan: zhCN_scan, search: zhCN_search, settings: zhCN_settings, spaces: zhCN_spaces, update: zhCN_update, warehouse: zhCN_warehouse, errors: zhCN_errors },
+  az: { common: az_common, admin: az_admin, appointments: az_appointments, auth: az_auth, customer: az_customer, dealer: az_dealer, home: az_home, measure: az_measure, menu: az_menu, nav: az_nav, notifications: az_notifications, onboarding: az_onboarding, qr: az_qr, scan: az_scan, search: az_search, settings: az_settings, spaces: az_spaces, update: az_update, warehouse: az_warehouse, errors: az_errors },
+  ar: { common: ar_common, admin: ar_admin, appointments: ar_appointments, auth: ar_auth, customer: ar_customer, dealer: ar_dealer, home: ar_home, measure: ar_measure, menu: ar_menu, nav: ar_nav, notifications: ar_notifications, onboarding: ar_onboarding, qr: ar_qr, scan: ar_scan, search: ar_search, settings: ar_settings, spaces: ar_spaces, update: ar_update, warehouse: ar_warehouse, errors: ar_errors },
 };

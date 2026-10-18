@@ -9,7 +9,7 @@ import { activeMembership, useCan } from '@/core/spaces';
 import { formatNumber, useLinks } from '@/features/services/lib';
 import { ServiceRow } from '@/features/services/services-list-screen';
 import { errorText } from '@/features/services/ui';
-import { HomeHeaderLeft, SearchButton } from '@/features/shell/header-actions';
+import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Skeleton } from '@/ui/skeleton';
@@ -70,7 +70,7 @@ export function DealerHome() {
         options={{
           title: t(greetingKey(new Date().getHours()), { name: me?.user.name ?? '' }),
           headerLeft: () => <HomeHeaderLeft />,
-          headerRight: () => <SearchButton />,
+          headerRight: () => <HomeHeaderRight />,
         }}
       />
       <ScrollView
