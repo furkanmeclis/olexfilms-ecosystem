@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { File, Paths } from 'expo-file-system';
+import { useEffect, useRef } from 'react';
 import { Alert, Platform, Share } from 'react-native';
 
 import { api, refreshTokens, unwrap } from '@/core/api/client';
@@ -7,7 +8,7 @@ import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
 import { getTokens } from '@/core/auth/tokens';
 import { API_URL, APP_VERSION, MOBILE_API_VERSION } from '@/core/config';
-import { errorMessage } from '@/core/i18n';
+import { errorMessage, i18n } from '@/core/i18n';
 
 export type ExportJob = components['schemas']['ExportJob'];
 
@@ -15,71 +16,135 @@ const POLL_MS = 1500;
 const POLL_MAX = 40;
 const PORTAL_BASE = `${API_URL}/v1/mobile/portal`;
 
-/** Plain file name: no path separators, never empty. */
-function safeName(name: string | undefined, fallback: string) {
-  const clean = (name ?? '').replace(/[\\/:*?"<>|]+/g, '_').trim();
+class Cancelled extends Error {}
+
+/** Plain file name: no path separators or dot-only parts, never empty. */
+export function safeName(name: string | undefined, fallback: string) {
+  const clean = (name ?? '')
+    .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_')
+    .replace(/\.{2,}/g, '_')
+    .replace(/^[.\s]+|[.\s]+$/g, '')
+    .trim();
   return clean || fallback;
 }
 
-/** Waits for an export job (queued / processing) to complete; throws on failure or timeout. */
-async function waitForJob(job: ExportJob): Promise<ExportJob> {
+const sleep = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(new Cancelled());
+    const id = setTimeout(resolve, ms);
+    signal.addEventListener('abort', () => {
+      clearTimeout(id);
+      reject(new Cancelled());
+    });
+  });
+
+/** Waits for an export job (queued / processing) to complete; throws on failure, timeout or cancel. */
+async function waitForJob(job: ExportJob, signal: AbortSignal): Promise<ExportJob> {
   let current = job;
   for (let i = 0; i < POLL_MAX; i++) {
     if (current.status === 'completed') return current;
     if (current.status === 'failed' || current.status === 'expired') throw new Error('EXPORT_FAILED');
-    await new Promise((r) => setTimeout(r, POLL_MS));
+    await sleep(POLL_MS, signal);
     current = await unwrap(api.GET('/v1/portal/exports/{uuid}', { params: { path: { uuid: job.uuid } } }));
   }
   throw new Error('EXPORT_TIMEOUT');
 }
 
+/** iOS: share sheet. Android: system viewer through the file preview (React Native's Share ignores files there). */
+async function openFile(file: File) {
+  if (Platform.OS === 'ios') {
+    await Share.share({ url: file.uri });
+    return;
+  }
+  if (await File.canPreview(file)) await File.preview(file);
+  else throw new Error('NO_PREVIEW');
+}
+
 /**
- * Downloads a portal file with the bearer token into the cache and opens the
- * system share sheet (iOS: Save to Files, AirDrop, print). `path` is relative
+ * Downloads a portal file with the bearer token into the cache, opens it and
+ * deletes it afterwards (exports can hold personal data). `path` is relative
  * to `/v1/mobile/portal`.
  */
-async function downloadAndShare(path: string, filename: string) {
+async function downloadAndOpen(path: string, filename: string, signal?: AbortSignal) {
   const t0 = getTokens();
   if (t0 && t0.accessExpiresAt - Date.now() < 30_000) await refreshTokens();
   const t = getTokens();
-  const file = new File(Paths.cache, filename);
-  const downloaded = await File.downloadFileAsync(`${PORTAL_BASE}${path}`, file, {
-    idempotent: true,
-    headers: {
-      ...(t ? { Authorization: `Bearer ${t.access}` } : {}),
-      'X-Mobile-Api-Version': MOBILE_API_VERSION,
-      'X-App-Version': APP_VERSION,
-    },
-  });
-  // React Native's share sheet takes a file URL on iOS; Android has no file
-  // sharing without a native module (see the PR notes).
-  if (Platform.OS === 'ios') await Share.share({ url: downloaded.uri });
-  else await Share.share({ message: filename, url: downloaded.uri });
+  const target = new File(Paths.cache, filename);
+  let downloaded: File | undefined;
+  try {
+    try {
+      downloaded = await File.downloadFileAsync(`${PORTAL_BASE}${path}`, target, {
+        idempotent: true,
+        headers: {
+          ...(t ? { Authorization: `Bearer ${t.access}` } : {}),
+          'X-Mobile-Api-Version': MOBILE_API_VERSION,
+          'X-App-Version': APP_VERSION,
+        },
+      });
+    } catch {
+      throw new Error('DOWNLOAD_FAILED');
+    }
+    if (signal?.aborted) throw new Cancelled();
+    await openFile(downloaded);
+  } finally {
+    try {
+      (downloaded ?? target).delete();
+    } catch {
+      // Nothing to clean up (never created) or already gone.
+    }
+  }
 }
 
-/** Runs an export request (job), waits for it and shares the file. */
-async function exportAndShare(start: () => Promise<ExportJob>, fallbackName: string) {
-  const job = await waitForJob(await start());
-  await downloadAndShare(`/exports/${encodeURIComponent(job.uuid)}/download`, safeName(job.filename, fallbackName));
+/** Runs an export request (job), waits for it and opens the file. */
+async function exportAndOpen(start: () => Promise<ExportJob>, fallbackName: string, signal: AbortSignal) {
+  const job = await waitForJob(await start(), signal);
+  if (signal.aborted) throw new Cancelled();
+  await downloadAndOpen(`/exports/${encodeURIComponent(job.uuid)}/download`, safeName(job.filename, fallbackName), signal);
 }
 
 export function fileErrorMessage(e: unknown) {
+  if (e instanceof Error) {
+    if (e.message === 'EXPORT_FAILED') return i18n.t('customer:export_failed');
+    if (e.message === 'EXPORT_TIMEOUT') return i18n.t('customer:export_timeout');
+    if (e.message === 'DOWNLOAD_FAILED') return i18n.t('customer:download_failed');
+    if (e.message === 'NO_PREVIEW') return i18n.t('customer:no_viewer');
+  }
   return errorMessage(isApiError(e) ? e.code : undefined);
 }
 
-/** Mutation hook: runs `start` (queues a job), downloads the result and shares it; alerts on failure. */
+/** Aborts running polls when the screen goes away: no share sheet after leaving. */
+function useAbortOnUnmount() {
+  const ref = useRef<AbortController>(new AbortController());
+  useEffect(() => {
+    const c = new AbortController();
+    ref.current = c;
+    return () => c.abort();
+  }, []);
+  return ref;
+}
+
+const onFileError = (e: unknown) => {
+  if (e instanceof Cancelled) return;
+  Alert.alert(fileErrorMessage(e));
+};
+
+/** Mutation hook: runs `start` (queues a job), downloads the result and opens it; alerts on failure. */
 export function useExportDownload() {
+  const abort = useAbortOnUnmount();
   return useMutation({
-    mutationFn: (v: { start: () => Promise<ExportJob>; fallbackName: string; tag?: string }) => exportAndShare(v.start, v.fallbackName),
-    onError: (e) => Alert.alert(fileErrorMessage(e)),
+    mutationFn: (v: { start: () => Promise<ExportJob>; fallbackName: string; tag?: string }) =>
+      exportAndOpen(v.start, v.fallbackName, abort.current.signal),
+    onError: onFileError,
   });
 }
 
-/** Mutation hook: downloads a direct PDF (portal contract) and shares it. */
+/** Mutation hook: downloads a direct PDF (portal contract) and opens it. */
 export function useDirectDownload() {
+  const abort = useAbortOnUnmount();
   return useMutation({
-    mutationFn: (v: { path: string; filename: string }) => downloadAndShare(v.path, v.filename),
-    onError: (e) => Alert.alert(fileErrorMessage(e)),
+    mutationFn: (v: { path: string; filename: string }) =>
+      downloadAndOpen(v.path, safeName(v.filename, 'document.pdf'), abort.current.signal),
+    onError: onFileError,
   });
 }
 

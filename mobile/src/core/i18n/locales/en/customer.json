@@ -144,5 +144,9 @@
   "data_export": "Download my data",
   "data_export_hint": "A copy of the data in your account",
   "data_export_pdf": "PDF",
-  "data_export_json": "JSON"
+  "data_export_json": "JSON",
+  "export_failed": "The file could not be prepared. Please try again.",
+  "export_timeout": "Preparing the file took too long. Try again shortly.",
+  "download_failed": "The file could not be downloaded. Check your connection and try again.",
+  "no_viewer": "No app on this device can open the file."
 }

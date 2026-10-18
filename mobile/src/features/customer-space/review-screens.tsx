@@ -260,6 +260,7 @@ export function CustomerServiceReviewScreen() {
       <Stack.Screen options={{ title: t('review'), headerLargeTitle: false }} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         className="flex-1 bg-background"

@@ -144,5 +144,9 @@
   "data_export": "Verilerimi indir",
   "data_export_hint": "Hesabınızdaki verilerin bir kopyası",
   "data_export_pdf": "PDF",
-  "data_export_json": "JSON"
+  "data_export_json": "JSON",
+  "export_failed": "Dosya hazırlanamadı. Lütfen tekrar deneyin.",
+  "export_timeout": "Dosya hazırlanması beklenenden uzun sürdü. Biraz sonra tekrar deneyin.",
+  "download_failed": "Dosya indirilemedi. Bağlantınızı kontrol edip tekrar deneyin.",
+  "no_viewer": "Bu cihazda dosyayı açacak bir uygulama bulunamadı."
 }

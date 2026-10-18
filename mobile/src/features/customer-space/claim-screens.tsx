@@ -52,7 +52,7 @@ export function CustomerClaimsScreen() {
           <Pressable
             accessibilityRole="button"
             disabled={!item.warranty_uuid}
-            onPress={() => item.warranty_uuid && router.push(`/musteri/warranties/${encodeURIComponent(item.warranty_uuid)}`)}
+            onPress={() => item.warranty_uuid && router.push(`/musteri/profile/warranty/${encodeURIComponent(item.warranty_uuid)}`)}
             className="flex-row items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 active:opacity-80">
             <View className="size-10 items-center justify-center rounded-md bg-secondary">
               <Icon name="warrantyClaim" tone="primary" size={20} />
