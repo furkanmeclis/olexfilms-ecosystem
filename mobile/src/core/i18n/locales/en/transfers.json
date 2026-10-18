@@ -61,5 +61,8 @@
   "note_placeholder": "Note for the receiver (optional)",
   "send": "Send request",
   "validation.target": "Pick where the units go.",
-  "validation.units": "Add at least one unit."
+  "validation.units": "Add at least one unit.",
+  "reason": "Reason",
+  "reason_placeholder": "Why? (optional)",
+  "validation.quantity": "Enter a whole number, or leave empty to move the whole unit."
 }

@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Platform, Pressable, RefreshControl, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { errorMessage, i18n } from '@/core/i18n';
@@ -60,6 +60,60 @@ function alertError(e: unknown) {
 
 function counterparty(tr: Transfer) {
   return tr.role === 'sender' ? tr.receiver : tr.sender;
+}
+
+/** Fixed-barcode quantity: empty moves the whole unit, else a whole number 1..9,999,999 (web validQuantity). */
+export function validQuantity(raw: string): boolean {
+  const v = raw.trim();
+  return v === '' || /^[1-9][0-9]{0,6}$/.test(v);
+}
+
+/** Sheet for a rejection or cancellation with an optional reason (iOS and Android alike). */
+function ReasonSheet({
+  status,
+  onClose,
+  onConfirm,
+}: {
+  status: TransferStatus;
+  onClose: () => void;
+  onConfirm: (reason?: string) => void;
+}) {
+  const { t } = useTranslation('transfers');
+  const [reason, setReason] = useState('');
+  return (
+    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-background">
+        <View className="flex-row items-center justify-between px-4 pb-2 pt-5">
+          <Text variant="title" className="flex-1" numberOfLines={2}>
+            {t(`confirm.${status}`)}
+          </Text>
+          <Button title={t('common:cancel')} variant="ghost" onPress={onClose} />
+        </View>
+        <ScrollView contentContainerClassName="gap-4 px-4 pb-10" keyboardShouldPersistTaps="handled">
+          <Input
+            label={t('reason')}
+            icon="edit"
+            value={reason}
+            onChangeText={setReason}
+            placeholder={t('reason_placeholder')}
+            hint={t('reason_hint')}
+            multiline
+            maxLength={500}
+            autoFocus
+          />
+          <Button
+            title={t(`action.${status}`)}
+            variant="destructive"
+            size="lg"
+            onPress={() => {
+              onClose();
+              onConfirm(reason.trim() || undefined);
+            }}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
 }
 
 /** Dealer transfers (TEC-197/223): requests to sibling dealers and returns to the parent. */
@@ -154,19 +208,12 @@ export function TransferDetailScreen() {
     }
   };
 
+  const [reasonFor, setReasonFor] = useState<TransferStatus | null>(null);
   const ask = (status: TransferStatus) => {
-    const destructive = NEEDS_REASON.includes(status);
-    // iOS asks for the optional reason in the same dialog; Android has no text prompt.
-    if (destructive && Platform.OS === 'ios') {
-      Alert.prompt(t(`confirm.${status}`), t('reason_hint'), [
-        { text: t('common:cancel'), style: 'cancel' },
-        { text: t(`action.${status}`), style: 'destructive', onPress: (r?: string) => void run(status, r?.trim() || undefined) },
-      ]);
-      return;
-    }
+    if (NEEDS_REASON.includes(status)) return setReasonFor(status);
     Alert.alert(t(`confirm.${status}`), tr?.transfer_no, [
       { text: t('common:cancel'), style: 'cancel' },
-      { text: t(`action.${status}`), style: destructive ? 'destructive' : 'default', onPress: () => void run(status) },
+      { text: t(`action.${status}`), onPress: () => void run(status) },
     ]);
   };
 
@@ -253,6 +300,9 @@ export function TransferDetailScreen() {
           </>
         )}
       </Screen>
+      {reasonFor ? (
+        <ReasonSheet status={reasonFor} onClose={() => setReasonFor(null)} onConfirm={(r) => void run(reasonFor, r)} />
+      ) : null}
     </>
   );
 }
@@ -296,14 +346,16 @@ export function TransferNewScreen() {
 
   const submit = async () => {
     setTouched(true);
-    if (!chosen || !lines.length) return;
+    if (!chosen || !lines.length || lines.some((l) => !validQuantity(l.quantity))) return;
     setBusy(true);
     try {
       const out = await createTransfer({
         kind,
         to_org_uuid: chosen,
         ...(note.trim() ? { note: note.trim() } : {}),
-        items: lines.map((l) => (/^\d+$/.test(l.quantity) && Number(l.quantity) > 0 ? { barcode: l.barcode, quantity: Number(l.quantity) } : { barcode: l.barcode })),
+        items: lines.map((l) =>
+          l.quantity.trim() ? { barcode: l.barcode, quantity: Number(l.quantity.trim()) } : { barcode: l.barcode },
+        ),
       });
       qc.setQueryData(transferKeys.one(out.uuid), out);
       void qc.invalidateQueries({ queryKey: ['transfers', 'list'] });
@@ -371,31 +423,41 @@ export function TransferNewScreen() {
         />
         {lines.length ? (
           <View className="gap-2">
-            {lines.map((l) => (
-              <View key={l.barcode} className="flex-row items-center gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5">
-                <Icon name="barcode" tone="primary" size={18} />
-                <Text variant="callout" className="flex-1 font-mono" numberOfLines={1}>
-                  {l.barcode}
-                </Text>
-                <TextInput
-                  value={l.quantity}
-                  onChangeText={(v) => setLines((ls) => ls.map((x) => (x.barcode === l.barcode ? { ...x, quantity: v } : x)))}
-                  accessibilityLabel={t('quantity')}
-                  placeholder={t('quantity_placeholder')}
-                  placeholderTextColorClassName="accent-muted-foreground"
-                  keyboardType="number-pad"
-                  className="min-h-9 w-20 rounded-md border border-border bg-background px-2 text-right text-[15px] text-foreground tabular-nums"
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('remove')}
-                  hitSlop={8}
-                  onPress={() => removeLine(l.barcode)}
-                  className="size-8 items-center justify-center rounded-md active:bg-muted">
-                  <Icon name="close" tone="muted-foreground" size={16} />
-                </Pressable>
-              </View>
-            ))}
+            {lines.map((l) => {
+              const qtyError = !validQuantity(l.quantity);
+              return (
+                <View key={l.barcode} className="gap-1.5 rounded-lg border border-border bg-card px-3.5 py-2.5">
+                  <View className="flex-row items-center gap-3">
+                    <Icon name="barcode" tone="primary" size={18} />
+                    <Text variant="callout" className="flex-1 font-mono" numberOfLines={1}>
+                      {l.barcode}
+                    </Text>
+                    <TextInput
+                      value={l.quantity}
+                      onChangeText={(v) => setLines((ls) => ls.map((x) => (x.barcode === l.barcode ? { ...x, quantity: v } : x)))}
+                      accessibilityLabel={t('quantity')}
+                      placeholder={t('quantity_placeholder')}
+                      placeholderTextColorClassName="accent-muted-foreground"
+                      keyboardType="number-pad"
+                      className={`min-h-9 w-20 rounded-md border bg-background px-2 text-right text-[15px] text-foreground tabular-nums ${qtyError ? 'border-destructive' : 'border-border'}`}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t('remove')}
+                      hitSlop={8}
+                      onPress={() => removeLine(l.barcode)}
+                      className="size-8 items-center justify-center rounded-md active:bg-muted">
+                      <Icon name="close" tone="muted-foreground" size={16} />
+                    </Pressable>
+                  </View>
+                  {qtyError ? (
+                    <Text variant="footnote" tone="danger">
+                      {t('validation.quantity')}
+                    </Text>
+                  ) : null}
+                </View>
+              );
+            })}
             <Text variant="footnote" tone="muted">
               {t('quantity_hint')}
             </Text>

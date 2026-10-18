@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, TextInput, View } from 'react-native';
 
@@ -34,28 +34,46 @@ export function OrderNewScreen() {
   const [busy, setBusy] = useState<'draft' | 'submit' | null>(null);
   const errors = useMemo(() => validateCart(lines), [lines]);
 
+  // Refs, not state: a quick double tap must not reach the API twice, and a
+  // draft created before a failed submit is retried, never created again.
+  const inFlight = useRef(false);
+  const created = useRef<string | null>(null);
+
   const save = async (submit: boolean) => {
     setTouched(true);
-    if (!cartIsValid(errors)) return;
+    if (inFlight.current || !cartIsValid(errors)) return;
+    inFlight.current = true;
     setBusy(submit ? 'submit' : 'draft');
     try {
-      let order = await unwrap(
-        api.POST('/v1/orders', { body: { items: toItemInputs(lines), ...(note.trim() ? { note: note.trim() } : {}) } }),
-      );
-      if (submit) {
+      let uuid = created.current;
+      let order = null;
+      if (!uuid) {
         order = await unwrap(
-          api.POST('/v1/orders/{uuid}/transitions', { params: { path: { uuid: order.uuid } }, body: { status: 'submitted' } }),
+          api.POST('/v1/orders', { body: { items: toItemInputs(lines), ...(note.trim() ? { note: note.trim() } : {}) } }),
+        );
+        uuid = order.uuid;
+        created.current = uuid;
+      } else {
+        // Retry after a failed submit: the draft takes the cart as it is now.
+        order = await unwrap(
+          api.PUT('/v1/orders/{uuid}/items', { params: { path: { uuid } }, body: { items: toItemInputs(lines) } }),
         );
       }
-      qc.setQueryData(['orders', 'detail', order.uuid], order);
+      if (submit) {
+        order = await unwrap(api.POST('/v1/orders/{uuid}/transitions', { params: { path: { uuid } }, body: { status: 'submitted' } }));
+      }
+      if (order) qc.setQueryData(['orders', 'detail', uuid], order);
       void qc.invalidateQueries({ queryKey: ['orders', 'list'] });
       clear();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace(`/bayi/menu/orders/${order.uuid}` as never);
+      router.replace(`/bayi/menu/orders/${uuid}` as never);
     } catch (e) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('save_failed'), errorMessage(isApiError(e) ? e.code : undefined));
+      // The draft exists: say so, so a retry (send or open) is understood.
+      const msg = errorMessage(isApiError(e) ? e.code : undefined);
+      Alert.alert(t('save_failed'), created.current ? `${msg}\n\n${t('draft_kept')}` : msg);
     } finally {
+      inFlight.current = false;
       setBusy(null);
     }
   };

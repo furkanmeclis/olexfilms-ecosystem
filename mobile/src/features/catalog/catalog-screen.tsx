@@ -14,6 +14,7 @@ import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
 
+import { plainText } from './plain-text';
 import { type Category, firstImage, type Product, productImageUrl, useCategories, useProduct, useProducts } from './api';
 
 const BASE = '/bayi/menu/catalog';
@@ -239,7 +240,7 @@ export function ProductDetailScreen() {
               <>
                 <SectionHeader title={t('description')} />
                 <Text variant="callout" selectable className="px-1">
-                  {p.description_md.replace(/[#*_`>]/g, '').trim()}
+                  {plainText(p.description_md)}
                 </Text>
               </>
             ) : null}

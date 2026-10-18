@@ -20,5 +20,6 @@
   "clear_title": "Sepet boşaltılsın mı?",
   "errors.quantity_invalid": "1 ile 1.000.000 arasında tam sayı gir.",
   "errors.meters_invalid": "0'dan büyük, en fazla iki ondalıklı metre gir.",
-  "errors.too_many": "Bir siparişte en fazla 200 ürün olabilir."
+  "errors.too_many": "Bir siparişte en fazla 200 ürün olabilir.",
+  "draft_kept": "Taslak kaydedildi; yeniden gönderince yalnızca gönderim tekrar denenir."
 }

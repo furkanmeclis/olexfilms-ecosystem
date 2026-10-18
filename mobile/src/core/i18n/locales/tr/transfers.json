@@ -61,5 +61,8 @@
   "note_placeholder": "Alan için not (isteğe bağlı)",
   "send": "Talebi gönder",
   "validation.target": "Birimlerin gideceği yeri seç.",
-  "validation.units": "En az bir birim ekle."
+  "validation.units": "En az bir birim ekle.",
+  "reason": "Gerekçe",
+  "reason_placeholder": "Neden? (isteğe bağlı)",
+  "validation.quantity": "Tam sayı gir ya da birimin tamamı için boş bırak."
 }

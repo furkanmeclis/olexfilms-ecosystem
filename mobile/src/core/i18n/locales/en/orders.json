@@ -20,5 +20,6 @@
   "clear_title": "Empty the cart?",
   "errors.quantity_invalid": "Enter a whole number between 1 and 1,000,000.",
   "errors.meters_invalid": "Enter meters above 0, at most two decimals.",
-  "errors.too_many": "An order can have at most 200 products."
+  "errors.too_many": "An order can have at most 200 products.",
+  "draft_kept": "The draft was saved; sending again only retries the submission."
 }
