@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { Button } from '@/ui/button';
+import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
 import { OnboardingPage, type OnboardingPageContent } from './onboarding-page';
@@ -93,9 +94,21 @@ export function OnboardingScreen({ mode }: { mode: Mode }) {
   const onLast = page === last;
 
   return (
-    <View className="flex-1 bg-background" style={{ paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
+    // Replay is a page sheet that already sits below the status bar: no top inset there.
+    <View
+      className="flex-1 bg-background"
+      style={{ paddingTop: mode === 'replay' ? 8 : insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
       <View className="h-11 flex-row items-center justify-end px-4">
-        {mode === 'first-run' && (
+        {mode === 'replay' ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common:close')}
+            hitSlop={12}
+            onPress={() => router.back()}
+            className="size-11 items-center justify-center active:opacity-60">
+            <Icon name="close" tone="muted-foreground" size={20} />
+          </Pressable>
+        ) : (
           <Pressable
             accessibilityRole="button"
             hitSlop={12}
