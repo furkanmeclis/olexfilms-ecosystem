@@ -49,6 +49,7 @@ export function TaskDetailScreen() {
     onSuccess: (data) => {
       qc.setQueryData(['tasks', 'detail', uuid], data);
       void qc.invalidateQueries({ queryKey: ['tasks', 'list'] });
+      void qc.invalidateQueries({ queryKey: ['tasks', 'comments', uuid] });
     },
     onError: (e) => Alert.alert(errorMessage(isApiError(e) ? e.code : undefined)),
   });
@@ -135,6 +136,7 @@ export function TaskDetailScreen() {
                   options={TASK_PRIORITIES.map((p) => ({ key: p, label: t(`priority.${p}`) }))}
                   value={task.priority}
                   onChange={(p) => {
+                    if (update.isPending) return;
                     if (p !== task.priority) update.mutate({ priority: p });
                   }}
                 />
@@ -144,6 +146,7 @@ export function TaskDetailScreen() {
                   options={assigneeOptions}
                   value={task.assignee?.uuid ?? ''}
                   onChange={(k) => {
+                    if (update.isPending) return;
                     if (k !== (task.assignee?.uuid ?? '')) update.mutate({ assignee_user_uuid: k || null });
                   }}
                 />

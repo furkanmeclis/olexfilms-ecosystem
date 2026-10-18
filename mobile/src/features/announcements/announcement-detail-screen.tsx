@@ -2,14 +2,36 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, View } from 'react-native';
+import { Linking, RefreshControl, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { ErrorState, ListSkeleton, useFormat } from '@/features/admin/kit';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
 
-import { toBlocks } from './lib';
+import { toBlocks, type Part } from './lib';
+
+function Inline({ parts }: { parts: Part[] }) {
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.url ? (
+          <Text
+            key={i}
+            variant="body"
+            tone="primary"
+            accessibilityRole="link"
+            className="underline"
+            onPress={() => void Linking.openURL(p.url!).catch(() => undefined)}>
+            {p.text}
+          </Text>
+        ) : (
+          p.text
+        ),
+      )}
+    </>
+  );
+}
 
 /** Opening an announcement marks it read on the server (idempotent receipt). */
 export function AnnouncementDetailScreen() {
@@ -57,18 +79,18 @@ export function AnnouncementDetailScreen() {
               {blocks.map((b, i) =>
                 b.kind === 'heading' ? (
                   <Text key={i} variant="headline" selectable>
-                    {b.text}
+                    <Inline parts={b.parts} />
                   </Text>
                 ) : b.kind === 'bullet' ? (
                   <View key={i} className="flex-row gap-2 pl-1">
-                    <Text variant="body">•</Text>
+                    <Text variant="body">{b.marker ?? '•'}</Text>
                     <Text variant="body" selectable className="flex-1">
-                      {b.text}
+                      <Inline parts={b.parts} />
                     </Text>
                   </View>
                 ) : (
                   <Text key={i} variant="body" selectable>
-                    {b.text}
+                    <Inline parts={b.parts} />
                   </Text>
                 ),
               )}
