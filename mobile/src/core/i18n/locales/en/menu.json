@@ -11,5 +11,10 @@
   "announcements": "Announcements",
   "warranties": "Warranties",
   "catalog": "Catalog",
-  "transfers": "Transfers"
+  "transfers": "Transfers",
+  "certificates": "Certificates",
+  "pricing": "Pricing",
+  "occupancy": "Appointment occupancy",
+  "performance": "Performance",
+  "measurements": "Measurements"
 }
