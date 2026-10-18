@@ -39,6 +39,17 @@ describe('listCountries', () => {
     assert.equal(de.flag, '🇩🇪');
   });
 
+  it('uses English names for en and for unknown locales', () => {
+    assert.equal(listCountries('en').find((c) => c.code === 'DE')!.name, 'Germany');
+    assert.equal(listCountries('xx').find((c) => c.code === 'DE')!.name, 'Germany');
+  });
+
+  it('maps zh_CN to zh', () => {
+    const zh = listCountries('zh_CN');
+    assert.ok(zh.length > 200);
+    assert.notEqual(zh.find((c) => c.code === 'DE')!.name, 'Germany');
+  });
+
   it('has no duplicate codes', () => {
     assert.equal(new Set(list.map((c) => c.code)).size, list.length);
   });
