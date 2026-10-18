@@ -91,9 +91,12 @@ export function listCountries(locale: string): Country[] {
   return [...first, ...rest];
 }
 
+/** Combining diacritical marks (U+0300–U+036F); a plain range, since Hermes may lack `\p{…}` escapes. */
+const MARKS = /[\u0300-\u036f]/g;
+
 /** Case- and accent-insensitive key, so "turkiye" finds "Türkiye" and "İ" finds "i". */
 function fold(v: string): string {
-  return v.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+  return v.normalize('NFD').replace(MARKS, '').toLowerCase();
 }
 
 /** Search by name, ISO code (`gb`) or calling code (`44`, `+44`). */

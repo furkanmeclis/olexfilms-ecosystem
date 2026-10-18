@@ -1,20 +1,18 @@
 import { router } from 'expo-router';
 import type { CountryCode } from 'libphonenumber-js/min';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { identify } from '@/core/auth/api';
 import { errorMessage } from '@/core/i18n';
-import { BrandLogo } from '@/ui/brand-logo';
 import { Button } from '@/ui/button';
 import { GlassCard } from '@/ui/glass-card';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
-import { Text } from '@/ui/text';
 
+import { AuthLayout } from './auth-layout';
 import { CountryPicker } from './country-picker';
 import { DevDemoAccounts } from './dev-demo-accounts';
 import { usePendingLogin } from './pending-login';
@@ -31,41 +29,28 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export function SignInScreen({ mode }: { mode: SignInMode }) {
   const { t } = useTranslation('auth');
-  const insets = useSafeAreaInsets();
   const phone = mode === 'phone';
   const other: SignInMode = phone ? 'email' : 'phone';
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 bg-background">
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerClassName="grow justify-center gap-8 px-6"
-        contentContainerStyle={{ paddingTop: insets.top + 24, paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
-        <View className="gap-5">
-          <BrandLogo variant="logo" height={48} label={t('common:app_name')} />
-          <View className="gap-2">
-            <Text variant="largeTitle">{t(phone ? 'sign_in_phone_title' : 'sign_in_email_title')}</Text>
-            <Text variant="callout" tone="muted">
-              {t(phone ? 'sign_in_phone_subtitle' : 'sign_in_email_subtitle')}
-            </Text>
-          </View>
-        </View>
+    <AuthLayout
+      brand
+      title={t(phone ? 'sign_in_phone_title' : 'sign_in_email_title')}
+      subtitle={t(phone ? 'sign_in_phone_subtitle' : 'sign_in_email_subtitle')}>
+      {/* Keyed by mode: switching resets the field, its error and the busy state. */}
+      {phone ? <PhoneForm key="phone" /> : <EmailForm key="email" />}
 
-        {/* Keyed by mode: switching resets the field, its error and the busy state. */}
-        {phone ? <PhoneForm key="phone" /> : <EmailForm key="email" />}
+      <View className="items-center">
+        <Button
+          variant="ghost"
+          title={t(phone ? 'sign_in_with_email' : 'sign_in_with_phone')}
+          icon={<Icon name={phone ? 'mail' : 'phone'} tone="primary" size={17} />}
+          onPress={() => router.setParams({ mode: other })}
+        />
+      </View>
 
-        <View className="items-center">
-          <Button
-            variant="ghost"
-            title={t(phone ? 'sign_in_with_email' : 'sign_in_with_phone')}
-            icon={<Icon name={phone ? 'mail' : 'phone'} tone="primary" size={17} />}
-            onPress={() => router.setParams({ mode: other })}
-          />
-        </View>
-
-        {phone ? null : <DevDemoAccounts />}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {phone ? null : <DevDemoAccounts />}
+    </AuthLayout>
   );
 }
 
@@ -75,6 +60,7 @@ function PhoneForm() {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const placeholder = useMemo(() => examplePhone(country) ?? t('placeholder_phone'), [country, t]);
 
   const onChange = (v: string) => {
     setValue(v);
@@ -108,12 +94,14 @@ function PhoneForm() {
       <Input
         icon="phone"
         label={t('phone_label')}
-        placeholder={examplePhone(country) ?? t('placeholder_phone')}
+        placeholder={placeholder}
         leading={<CountryPicker value={country} onChange={setCountry} />}
         value={value}
         onChangeText={onChange}
         error={error}
         className="bg-background"
+        // Digits and "+" never mirror; 'left' is the start edge (RN swaps it in RTL).
+        style={{ writingDirection: 'ltr', textAlign: 'left' }}
         keyboardType="phone-pad"
         textContentType="telephoneNumber"
         autoComplete="tel"

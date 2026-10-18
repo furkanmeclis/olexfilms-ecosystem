@@ -75,6 +75,7 @@ describe('filterCountries', () => {
     assert.ok(codes('ALMAN').includes('DE'));
     assert.ok(codes('birlesik').includes('GB'));
     assert.ok(codes('isvec').includes('SE'));
+    assert.ok(codes('İSVEÇ').includes('SE'));
   });
 
   it('matches the ISO code', () => {

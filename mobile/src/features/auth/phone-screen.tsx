@@ -7,10 +7,10 @@ import { isApiError } from '@/core/api/errors';
 import { identify } from '@/core/auth/api';
 import { errorMessage } from '@/core/i18n';
 import { Button } from '@/ui/button';
+import { GlassCard } from '@/ui/glass-card';
 import { Input } from '@/ui/input';
-import { Screen } from '@/ui/screen';
-import { Text } from '@/ui/text';
 
+import { AuthLayout } from './auth-layout';
 import { usePendingLogin } from './pending-login';
 import { useLogin } from './use-login';
 
@@ -55,29 +55,29 @@ export function PhoneScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: t('phone_title') }} />
-      <Screen className="gap-5 pt-4">
-        <Text variant="callout" tone="muted">
-          {t('phone_code_sent', { phone })}
-        </Text>
-        <Input
-          icon="code"
-          label={t('phone_code_label')}
-          placeholder={t('placeholder_code')}
-          value={code}
-          onChangeText={(v) => {
-            const digits = v.replace(/\D/g, '').slice(0, 6);
-            setCode(digits);
-            if (digits.length === 6) submit(digits);
-          }}
-          keyboardType="number-pad"
-          textContentType="oneTimeCode"
-          autoComplete="one-time-code"
-          autoFocus
-          className="text-center text-[24px] tracking-[8px]"
-          error={login.error && !isApiError(login.error, 'MFA_REQUIRED') ? errorMessage(isApiError(login.error) ? login.error.code : undefined) : resendError}
-        />
-        <Button title={t('sign_in')} size="lg" loading={login.isPending} disabled={code.length !== 6} onPress={() => submit()} />
+      {/* The large title below replaces the header title; the header keeps the back button. */}
+      <Stack.Screen options={{ title: t('phone_title'), headerTitle: '' }} />
+      <AuthLayout title={t('phone_title')} subtitle={t('phone_code_sent', { phone })}>
+        <GlassCard className="gap-5">
+          <Input
+            icon="code"
+            label={t('phone_code_label')}
+            placeholder={t('placeholder_code')}
+            value={code}
+            onChangeText={(v) => {
+              const digits = v.replace(/\D/g, '').slice(0, 6);
+              setCode(digits);
+              if (digits.length === 6) submit(digits);
+            }}
+            keyboardType="number-pad"
+            textContentType="oneTimeCode"
+            autoComplete="one-time-code"
+            autoFocus
+            className="bg-background text-center text-[24px] tracking-[8px]"
+            error={login.error && !isApiError(login.error, 'MFA_REQUIRED') ? errorMessage(isApiError(login.error) ? login.error.code : undefined) : resendError}
+          />
+          <Button title={t('sign_in')} size="lg" loading={login.isPending} disabled={code.length !== 6} onPress={() => submit()} />
+        </GlassCard>
         <View className="items-center">
           <Button
             variant="ghost"
@@ -86,7 +86,7 @@ export function PhoneScreen() {
             onPress={() => void resend()}
           />
         </View>
-      </Screen>
+      </AuthLayout>
     </>
   );
 }
