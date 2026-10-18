@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, View } from 'react-native';
 
@@ -27,6 +27,17 @@ import {
   personName,
   warningTone,
 } from './lib';
+
+/**
+ * The service-warning routes (`/v1/certificate-warnings*`) are not in the mobile
+ * panel mirror allowlist yet (they answer 404), so the Approvals tab stays off.
+ * Turn this on once the backend allowlist has `certificate-warnings`
+ * (waiting for the product owner's approval).
+ */
+const MIRROR_READY = false;
+
+/** A filtered view with fewer rows than this keeps loading the next page. */
+const MIN_FILTERED = 10;
 
 type Tab = 'queue' | 'approvals';
 type Filter = 'pending' | 'all';
@@ -176,7 +187,7 @@ export function CertificatesScreen() {
   const f = useFormat();
   const canRead = useCan('certificates.read');
   const canVerify = useCan('certificates.verify');
-  const canApprove = useCan('certificates.approve_service');
+  const canApprove = useCan('certificates.approve_service') && MIRROR_READY;
   const [tab, setTab] = useState<Tab>('queue');
   const [filter, setFilter] = useState<Filter>('pending');
   const [sheet, setSheet] = useState<Sheeted | null>(null);
@@ -186,6 +197,17 @@ export function CertificatesScreen() {
 
   const certs = usePagedQuery<Certificate>(['certificates', 'list'], listCertificates, showQueue && active === 'queue');
   const warns = usePagedQuery<CertificateWarning>(['certificates', 'warnings'], listWarnings, canApprove && active === 'approvals');
+
+  const queueItems = filter === 'pending' ? certs.items.filter(isPendingCertificate) : certs.items;
+  const warnItems = filter === 'pending' ? warns.items.filter(isPendingWarning) : warns.items;
+
+  // The API cannot filter by status: keep loading pages while the pending view is thin.
+  const cur = active === 'queue' ? certs : warns;
+  const curCount = active === 'queue' ? queueItems.length : warnItems.length;
+  const loadMore = filter === 'pending' && cur.hasNextPage && !cur.isFetchingNextPage && !cur.isError && curCount < MIN_FILTERED;
+  useEffect(() => {
+    if (loadMore) void cur.fetchNextPage();
+  }, [loadMore, cur]);
 
   const done = () => {
     setSheet(null);
@@ -241,9 +263,6 @@ export function CertificatesScreen() {
       </>
     );
   }
-
-  const queueItems = filter === 'pending' ? certs.items.filter(isPendingCertificate) : certs.items;
-  const warnItems = filter === 'pending' ? warns.items.filter(isPendingWarning) : warns.items;
 
   return (
     <>

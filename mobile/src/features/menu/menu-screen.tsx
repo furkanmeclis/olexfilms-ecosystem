@@ -27,7 +27,7 @@ const ITEMS: Item[] = [
   { key: 'accounting', icon: 'accounting', permission: 'accounting.read', spaces: ['bayi', 'admin'] },
   { key: 'tasks', icon: 'task', permission: 'tasks.read', spaces: ['admin'], built: ['admin'] },
   { key: 'certificates', icon: 'shield', permission: 'certificates.read', spaces: ['admin'], built: ['admin'] },
-  { key: 'pricing', icon: 'accounting', permission: 'pricing.recommended.read', spaces: ['admin'], built: ['admin'] },
+  { key: 'pricing', icon: 'accounting', permission: 'pricing.discipline.read', spaces: ['admin'], built: ['admin'] },
   { key: 'occupancy', icon: 'calendar', permission: 'appointments.read', spaces: ['admin'], built: ['admin'] },
   { key: 'performance', icon: 'chart', permission: 'performance.read', spaces: ['admin'], built: ['admin'] },
   { key: 'measurements', icon: 'measure', permission: 'measurements.read', spaces: ['admin'], built: ['admin'] },
