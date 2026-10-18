@@ -72,7 +72,8 @@
     "i18n:check": "node scripts/check-i18n.mjs",
     "placeholders:check": "node scripts/check-placeholders.mjs",
     "uniwind:types": "uniwind generate-artifacts --css ./src/global.css --dts ./src/uniwind-types.d.ts",
-    "doctor": "expo-doctor"
+    "doctor": "expo-doctor",
+    "test": "node --test \"src/**/*.test.ts\""
   },
   "private": true,
   "overrides": {
