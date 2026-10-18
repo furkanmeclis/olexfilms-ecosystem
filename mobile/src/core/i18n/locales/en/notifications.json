@@ -12,5 +12,6 @@
   "empty": "No notifications",
   "empty_unread": "Nothing unread",
   "empty_body": "New events for your work show up here.",
-  "error_generic": "Could not complete the action. Try again."
+  "error_generic": "Could not complete the action. Try again.",
+  "no_permission": "You cannot view notifications."
 }

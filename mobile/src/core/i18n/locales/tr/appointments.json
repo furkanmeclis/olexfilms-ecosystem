@@ -73,5 +73,7 @@
   "error_day_closed": "Atölye bu gün kapalı.",
   "error_invalid_transition": "Bu randevu artık böyle değiştirilemez.",
   "error_intake_started": "Bu randevu için kabul zaten başlatıldı.",
-  "error_generic": "İşlem tamamlanamadı. Tekrar deneyin."
+  "error_generic": "İşlem tamamlanamadı. Tekrar deneyin.",
+  "no_permission": "Randevu oluşturma yetkiniz yok.",
+  "not_found": "Randevu bulunamadı."
 }

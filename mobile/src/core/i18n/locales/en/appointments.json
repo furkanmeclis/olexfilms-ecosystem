@@ -73,5 +73,7 @@
   "error_day_closed": "The workshop is closed on that day.",
   "error_invalid_transition": "This appointment can no longer change like that.",
   "error_intake_started": "Intake was already started for this appointment.",
-  "error_generic": "Could not complete the action. Try again."
+  "error_generic": "Could not complete the action. Try again.",
+  "no_permission": "You cannot book appointments.",
+  "not_found": "Appointment not found."
 }

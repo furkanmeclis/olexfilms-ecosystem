@@ -1,6 +1,8 @@
+import { useQuery } from '@tanstack/react-query';
+
 import { api, unwrap } from '@/core/api/client';
 
-import type { Appointment } from './lib';
+import { addDays, type Appointment, ymd } from './lib';
 
 const PAGE = 100;
 const MAX_PAGES = 5;
@@ -22,14 +24,26 @@ export async function loadRange(from: Date, to: Date) {
 
 const DAY_MS = 86_400_000;
 
-/**
- * One booking by uuid. The API has no single-get, so the cached week lists are
- * searched first, then a wide window around today (deep links from a push).
- */
-export async function findAppointment(uuid: string, cached: Appointment[]) {
-  const hit = cached.find((a) => a.uuid === uuid);
-  if (hit) return hit;
+/** One booking by uuid. The API has no single-get, so a wide window around today is read from the network. */
+export async function findAppointment(uuid: string) {
   const now = Date.now();
   const all = await loadRange(new Date(now - 90 * DAY_MS), new Date(now + 365 * DAY_MS));
   return all.find((a) => a.uuid === uuid) ?? null;
+}
+
+export const AVAILABILITY_DAYS = 14;
+
+/** Free times of the next two weeks; each day also carries the organization's time zone. */
+export function useAvailability() {
+  const from = ymd(new Date());
+  const to = ymd(addDays(new Date(), AVAILABILITY_DAYS - 1));
+  return useQuery({
+    queryKey: ['appointments', 'availability', from],
+    queryFn: () => unwrap(api.GET('/v1/appointments/availability', { params: { query: { from, to } } })),
+  });
+}
+
+/** Time zone of the organization (from the availability days), if known. */
+export function useOrgTimeZone() {
+  return useAvailability().data?.find((d) => d.timezone)?.timezone;
 }

@@ -49,19 +49,21 @@ export function AppointmentDetailScreen() {
 
   const q = useQuery({
     queryKey: ['appointments', 'detail', uuid],
-    queryFn: () => {
-      const cached = qc
-        .getQueriesData<Appointment[]>({ queryKey: ['appointments', 'list'] })
-        .flatMap(([, rows]) => rows ?? []);
-      return findAppointment(uuid!, cached);
-    },
+    queryFn: () => findAppointment(uuid!),
     enabled: !!uuid,
   });
   const a = q.data;
 
-  const saved = (next: Appointment) => {
+  const saved = async (next: Appointment) => {
+    // A refetch still in flight holds the old booking: stop it before writing the new one.
+    await qc.cancelQueries({ queryKey: ['appointments', 'detail', uuid] });
     qc.setQueryData(['appointments', 'detail', uuid], next);
     void qc.invalidateQueries({ queryKey: ['appointments', 'list'] });
+    void qc.invalidateQueries({ queryKey: ['appointments', 'availability'] });
+  };
+  const closeCancel = () => {
+    setCancelling(false);
+    setReason('');
   };
 
   const move = useMutation({
@@ -73,8 +75,8 @@ export function AppointmentDetailScreen() {
         }),
       ),
     onSuccess: (next) => {
-      setCancelling(false);
-      saved(next);
+      closeCancel();
+      void saved(next);
     },
     onError: (e) => Alert.alert(bookingError(e)),
   });
@@ -82,7 +84,7 @@ export function AppointmentDetailScreen() {
   const intake = useMutation({
     mutationFn: () => unwrap(api.POST('/v1/appointments/{uuid}/start-intake', { params: { path: { uuid: uuid! } } })),
     onSuccess: (next) => {
-      saved(next);
+      void saved(next);
       if (next.service_uuid) router.push(`/bayi/services/${next.service_uuid}` as never);
     },
     onError: (e) => Alert.alert(bookingError(e)),
@@ -185,7 +187,7 @@ export function AppointmentDetailScreen() {
                         loading={move.isPending}
                         onPress={() => move.mutate({ status: 'cancelled', reason: reason.trim() })}
                       />
-                      <Button variant="ghost" title={t('cancel_keep')} onPress={() => setCancelling(false)} />
+                      <Button variant="ghost" title={t('cancel_keep')} onPress={closeCancel} />
                     </View>
                   ) : (
                     <Button

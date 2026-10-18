@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, View } from 'react-native';
 
+import { useCan } from '@/core/spaces';
+import { ErrorState, ListSkeleton } from '@/features/admin/kit';
+import { EmptyState } from '@/ui/empty-state';
+
 import { api, unwrap } from '@/core/api/client';
 import { CustomerStep, type PickedCustomer, VehicleStep } from '@/features/services/new-service-screen';
 import { fullName, type Vehicle, vehicleLabel } from '@/features/services/lib';
@@ -16,23 +20,11 @@ import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
 
 import { useBookingError } from './appointment-detail-screen';
-import { useClock } from './appointments-screen';
-import { findAppointment } from './data';
-import { addDays, type Appointment, type AvailabilityDay, canReschedule, parseDay, ymd } from './lib';
+import { findAppointment, useAvailability } from './data';
+import { type AvailabilityDay, canReschedule, parseDay, ymd } from './lib';
 
 type Step = 'customer' | 'vehicle' | 'time';
 const STEPS: Step[] = ['customer', 'vehicle', 'time'];
-const HORIZON_DAYS = 14;
-
-/** Free times of the next two weeks, from GET /v1/appointments/availability. */
-function useAvailability() {
-  const from = ymd(new Date());
-  const to = ymd(addDays(new Date(), HORIZON_DAYS - 1));
-  return useQuery({
-    queryKey: ['appointments', 'availability', from],
-    queryFn: () => unwrap(api.GET('/v1/appointments/availability', { params: { query: { from, to } } })),
-  });
-}
 
 /**
  * New booking (customer, vehicle, time) or, with `uuid`, moving an existing
@@ -43,6 +35,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
   const { t } = useTranslation('appointments');
   const qc = useQueryClient();
   const bookingError = useBookingError();
+  const canWrite = useCan('appointments.write');
   const { uuid } = useLocalSearchParams<{ uuid?: string }>();
   const [step, setStep] = useState<Step>('customer');
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
@@ -53,12 +46,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
 
   const existing = useQuery({
     queryKey: ['appointments', 'detail', uuid],
-    queryFn: () => {
-      const cached = qc
-        .getQueriesData<Appointment[]>({ queryKey: ['appointments', 'list'] })
-        .flatMap(([, rows]) => rows ?? []);
-      return findAppointment(uuid!, cached);
-    },
+    queryFn: () => findAppointment(uuid!),
     enabled: edit && !!uuid,
   });
   const current = edit ? existing.data : null;
@@ -70,7 +58,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
         note: (note ?? current?.note ?? '').trim(),
         source: current?.source ?? ('panel' as const),
         ...(current
-          ? { customer_uuid: current.customer_uuid, vehicle_uuid: current.vehicle_uuid ?? null }
+          ? { estimated_minutes: current.estimated_minutes, customer_uuid: current.customer_uuid, vehicle_uuid: current.vehicle_uuid ?? null }
           : { customer_uuid: customer!.uuid, vehicle_uuid: vehicle?.uuid ?? null }),
       };
       return current
@@ -86,6 +74,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
     onError: (e) => Alert.alert(bookingError(e)),
   });
 
+  const loadingExisting = edit && existing.isPending
   const timeStep = edit || step === 'time';
   const canSave = !!slot && (edit ? !!current && canReschedule(current) : !!customer && (!!vehicle || noVehicle));
 
@@ -93,6 +82,16 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
     <>
       <Stack.Screen options={{ title: t(edit ? 'action.reschedule' : 'new') }} />
       <Screen>
+        {!canWrite ? (
+          <EmptyState icon="blocked" title={t('no_permission')} />
+        ) : loadingExisting ? (
+          <ListSkeleton rows={3} inset={false} />
+        ) : edit && existing.isError ? (
+          <ErrorState error={existing.error} onRetry={() => void existing.refetch()} />
+        ) : edit && !current ? (
+          <EmptyState icon="appointment" title={t('not_found')} />
+        ) : (
+          <>
         {!edit ? (
           <View className="flex-row gap-2">
             {STEPS.map((s, i) => {
@@ -181,6 +180,8 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
             />
           </View>
         ) : null}
+          </>
+        )}
       </Screen>
     </>
   );
@@ -211,7 +212,6 @@ function Summary({ icon, title, subtitle, onPress }: { icon: IconName; title: st
 /** Day strip plus the free times of the chosen day. */
 function SlotPicker({ value, onChange }: { value: string | null; onChange: (start: string | null) => void }) {
   const { t, i18n } = useTranslation('appointments');
-  const clock = useClock();
   const q = useAvailability();
   const [day, setDay] = useState(() => ymd(new Date()));
   const days: AvailabilityDay[] = q.data ?? [];
@@ -286,7 +286,7 @@ function SlotPicker({ value, onChange }: { value: string | null; onChange: (star
                     on ? 'border-primary bg-primary' : 'border-border bg-card active:bg-muted',
                   )}>
                   <Text variant="callout" tone={on ? 'onPrimary' : 'default'} className="font-semibold">
-                    {clock.time(s.start)}
+                    {new Intl.DateTimeFormat(i18n.language, { timeStyle: 'short', timeZone: chosen.timezone }).format(new Date(s.start))}
                   </Text>
                 </Pressable>
               );

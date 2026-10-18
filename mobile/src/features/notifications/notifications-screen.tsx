@@ -7,8 +7,9 @@ import { Alert, Pressable, View } from 'react-native';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
-import { useResolvedSpace } from '@/core/spaces';
+import { useCan, useResolvedSpace } from '@/core/spaces';
 import { Chips, PagedList, PAGE_SIZE, useFormat, usePagedQuery } from '@/features/admin/kit';
+import { EmptyState } from '@/ui/empty-state';
 import { Text } from '@/ui/text';
 
 import { type AppNotification, notificationRoute } from './lib';
@@ -21,6 +22,7 @@ export function NotificationsScreen() {
   const f = useFormat();
   const qc = useQueryClient();
   const space = useResolvedSpace();
+  const canRead = useCan('notifications.read');
   const [filter, setFilter] = useState<Filter>('all');
 
   const list = usePagedQuery<AppNotification>(['notifications', 'list', filter], (offset) =>
@@ -29,6 +31,7 @@ export function NotificationsScreen() {
         params: { query: { unread: filter === 'unread' ? true : undefined, limit: PAGE_SIZE, offset } },
       }),
     ),
+    canRead,
   );
 
   const refresh = () => {
@@ -47,13 +50,22 @@ export function NotificationsScreen() {
     onError,
   });
 
-  const hasUnread = list.items.some((n) => !n.read_at) || filter === 'unread';
+  const hasUnread = list.items.some((n) => !n.read_at);
 
   const open = (n: AppNotification) => {
     if (!n.read_at) read.mutate(n.uuid);
     const href = notificationRoute(n, space);
     if (href) router.push(href as never);
   };
+
+  if (!canRead) {
+    return (
+      <>
+        <Stack.Screen options={{ title: t('title') }} />
+        <EmptyState icon="blocked" title={t('no_permission')} />
+      </>
+    );
+  }
 
   return (
     <>

@@ -8,7 +8,7 @@ export function BayiHome() {
         { key: 'vehicle_intake', icon: 'vehicle', href: '/bayi/services' },
         { key: 'measure', icon: 'gauge', href: '/bayi/measure' },
         { key: 'customer', icon: 'customer', href: '/search' },
-        { key: 'appointment', icon: 'appointment', href: '/bayi/menu' },
+        { key: 'appointment', icon: 'appointment', href: '/bayi/menu/appointments' },
       ]}
     />
   );

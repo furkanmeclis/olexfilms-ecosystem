@@ -14,17 +14,19 @@ import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
-import { loadRange } from './data';
+import { loadRange, useOrgTimeZone } from './data';
 import { type Appointment, addDays, startOfWeek, statusTone, ymd } from './lib';
 
+/** Formatters in the organization's time zone (device zone until it is known). */
 export function useClock() {
   const { i18n } = useTranslation();
+  const tz = useOrgTimeZone();
   return {
-    time: (iso: string) => new Intl.DateTimeFormat(i18n.language, { timeStyle: 'short' }).format(new Date(iso)),
+    time: (iso: string) => new Intl.DateTimeFormat(i18n.language, { timeStyle: 'short', timeZone: tz }).format(new Date(iso)),
     day: (d: Date) => new Intl.DateTimeFormat(i18n.language, { weekday: 'long', day: 'numeric', month: 'long' }).format(d),
     short: (d: Date) => new Intl.DateTimeFormat(i18n.language, { day: 'numeric', month: 'short' }).format(d),
     dateTime: (iso: string) =>
-      new Intl.DateTimeFormat(i18n.language, { dateStyle: 'full', timeStyle: 'short' }).format(new Date(iso)),
+      new Intl.DateTimeFormat(i18n.language, { dateStyle: 'full', timeStyle: 'short', timeZone: tz }).format(new Date(iso)),
   };
 }
 
