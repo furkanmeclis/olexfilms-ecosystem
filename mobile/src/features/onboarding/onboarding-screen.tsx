@@ -95,15 +95,17 @@ export function OnboardingScreen({ mode }: { mode: Mode }) {
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 16) }}>
       <View className="h-11 flex-row items-center justify-end px-4">
-        <Pressable
-          accessibilityRole="button"
-          hitSlop={12}
-          onPress={() => (mode === 'first-run' ? signIn('phone') : router.back())}
-          className="min-h-11 justify-center px-2 active:opacity-60">
-          <Text variant="callout" tone="muted" className="font-semibold">
-            {t('skip')}
-          </Text>
-        </Pressable>
+        {mode === 'first-run' && (
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={12}
+            onPress={() => signIn('phone')}
+            className="min-h-11 justify-center px-2 active:opacity-60">
+            <Text variant="callout" tone="muted" className="font-semibold">
+              {t('skip')}
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       <Animated.View style={pagerStyle} className="flex-1">
@@ -134,7 +136,7 @@ export function OnboardingScreen({ mode }: { mode: Mode }) {
 
       <View className="flex-row items-center justify-center gap-2 py-6" style={{ direction: 'ltr' }}>
         {pages.map((p, i) => (
-          <Dot key={p.icon} index={i} current={current} />
+          <Dot key={p.icon} index={i} current={current} reduceMotion={reduceMotion} />
         ))}
       </View>
 
@@ -157,12 +159,13 @@ export function OnboardingScreen({ mode }: { mode: Mode }) {
   );
 }
 
-/** Page indicator: the active dot widens. Width only, so it is fine under Reduce Motion. */
-function Dot({ index, current }: { index: number; current: SharedValue<number> }) {
+/** Page indicator: the active dot widens; under Reduce Motion it snaps and only the opacity fades. */
+function Dot({ index, current, reduceMotion }: { index: number; current: SharedValue<number>; reduceMotion: boolean }) {
   const style = useAnimatedStyle(() => {
     const active = current.value === index;
+    const width = active ? DOT_ACTIVE : DOT;
     return {
-      width: withTiming(active ? DOT_ACTIVE : DOT, { duration: 300, easing: EASE }),
+      width: reduceMotion ? width : withTiming(width, { duration: 300, easing: EASE }),
       opacity: withTiming(active ? 1 : 0.3, { duration: 300, easing: EASE }),
     };
   });

@@ -1,6 +1,6 @@
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
 import type { ReactNode } from 'react';
-import { I18nManager, Platform, View } from 'react-native';
+import { I18nManager, Platform, ScrollView, View } from 'react-native';
 import Animated, { Extrapolation, interpolate, type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { useUniwind } from 'uniwind';
 
@@ -78,10 +78,13 @@ export function OnboardingPage({ icon, badge, title, body, index, width, progres
   }));
 
   return (
-    <View
+    // Scrolls vertically only when large Dynamic Type overflows a small screen; centred otherwise.
+    <ScrollView
       // The pager is pinned LTR (see onboarding-screen); the content follows the language.
       style={{ width, direction: I18nManager.isRTL ? 'rtl' : 'ltr' }}
-      className="flex-1 items-center justify-center gap-12 px-8"
+      contentContainerClassName="grow items-center justify-center gap-12 px-8 py-6"
+      showsVerticalScrollIndicator={false}
+      alwaysBounceVertical={false}
       accessible
       accessibilityLabel={`${title}. ${body}`}>
       <Animated.View style={visualStyle} importantForAccessibility="no-hide-descendants">
@@ -108,6 +111,6 @@ export function OnboardingPage({ icon, badge, title, body, index, width, progres
           {body}
         </Text>
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }

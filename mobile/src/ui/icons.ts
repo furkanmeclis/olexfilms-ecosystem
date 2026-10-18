@@ -49,6 +49,7 @@ import ScanLineIcon from 'lucide-react-native/icons/scan-line';
 import SearchIcon from 'lucide-react-native/icons/search';
 import SettingsIcon from 'lucide-react-native/icons/settings';
 import Share2Icon from 'lucide-react-native/icons/share-2';
+import ShieldIcon from 'lucide-react-native/icons/shield';
 import ShieldCheckIcon from 'lucide-react-native/icons/shield-check';
 import ShoppingCartIcon from 'lucide-react-native/icons/shopping-cart';
 import SmartphoneIcon from 'lucide-react-native/icons/smartphone';
@@ -198,7 +199,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   phone: { sf: 'phone', lucide: PhoneIcon },
   mail: { sf: 'envelope', lucide: MailIcon },
   password: { sf: 'lock', lucide: KeyRoundIcon },
-  shield: { sf: 'lock.shield', lucide: ShieldCheckIcon },
+  shield: { sf: 'shield', lucide: ShieldIcon },
   device: { sf: 'iphone', lucide: SmartphoneIcon },
   bluetooth: { sf: 'dot.radiowaves.left.and.right', lucide: BluetoothIcon },
   offline: { sf: 'icloud.slash', lucide: CloudOffIcon },
