@@ -23,7 +23,7 @@ import type { IconName } from '@/ui/icons';
 type Step = 'customer' | 'vehicle' | 'details';
 const STEPS: Step[] = ['customer', 'vehicle', 'details'];
 
-type PickedCustomer = { uuid: string; name: string; surname?: string | null; phone?: string | null };
+export type PickedCustomer = { uuid: string; name: string; surname?: string | null; phone?: string | null };
 
 /**
  * New draft service in three short steps: customer, vehicle, details. Items
@@ -228,7 +228,7 @@ function PickRow({
 
 // ---------------------------------------------------------------- customer
 
-function CustomerStep({ selected, onPick }: { selected: PickedCustomer | null; onPick: (c: PickedCustomer) => void }) {
+export function CustomerStep({ selected, onPick }: { selected: PickedCustomer | null; onPick: (c: PickedCustomer) => void }) {
   const { t } = useTranslation('dealer');
   const canCreate = useCan('customers.write');
   const [q, setQ] = useState('');
@@ -368,7 +368,7 @@ function NewCustomerForm({
 
 // ----------------------------------------------------------------- vehicle
 
-function VehicleStep({
+export function VehicleStep({
   customer,
   selected,
   onPick,

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
+import { NotificationBell } from '@/features/notifications/bell';
 import { BrandLogo } from '@/ui/brand-logo';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
@@ -50,5 +51,15 @@ export function SearchButton() {
         <Icon name="search" tone="primary" />
       </View>
     </Pressable>
+  );
+}
+
+/** Home header trailing items: the notifications bell, then search. */
+export function HomeHeaderRight() {
+  return (
+    <View className="flex-row items-center gap-2">
+      <NotificationBell />
+      <SearchButton />
+    </View>
   );
 }

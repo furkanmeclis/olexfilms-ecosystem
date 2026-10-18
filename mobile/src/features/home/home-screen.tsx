@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { activeMembership } from '@/core/spaces';
-import { HomeHeaderLeft, SearchButton } from '@/features/shell/header-actions';
+import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions';
 import { EmptyState } from '@/ui/empty-state';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
@@ -35,7 +35,7 @@ export function HomeScreen({ actions }: { actions: QuickAction[] }) {
         options={{
           title: t(greetingKey(new Date().getHours()), { name: me?.user.name ?? '' }),
           headerLeft: () => <HomeHeaderLeft />,
-          headerRight: () => <SearchButton />,
+          headerRight: () => <HomeHeaderRight />,
         }}
       />
       <Screen>

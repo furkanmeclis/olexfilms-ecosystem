@@ -1,0 +1,17 @@
+{
+  "title": "Bildirimler",
+  "bell": "Bildirimler",
+  "bell_unread_one": "Bildirimler, {{count}} okunmamış",
+  "bell_unread_other": "Bildirimler, {{count}} okunmamış",
+  "filter": {
+    "all": "Tümü",
+    "unread": "Okunmamış"
+  },
+  "mark_all": "Tümünü okundu yap",
+  "mark_read": "Okundu yap",
+  "empty": "Bildirim yok",
+  "empty_unread": "Okunmamış bildirim yok",
+  "empty_body": "İşinizle ilgili yeni olaylar burada görünür.",
+  "error_generic": "İşlem tamamlanamadı. Tekrar deneyin.",
+  "no_permission": "Bildirimleri görme yetkiniz yok."
+}

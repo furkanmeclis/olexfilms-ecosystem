@@ -8,7 +8,7 @@ import { useSession } from '@/core/auth/session';
 import { activeMembership, useCan } from '@/core/spaces';
 import { type Period, PERIODS, useReport } from '@/features/reports/api';
 import { StatTiles, TimeChart } from '@/features/reports/report-view';
-import { HomeHeaderLeft, SearchButton } from '@/features/shell/header-actions';
+import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions';
 import { Icon } from '@/ui/icon';
 import { SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -62,7 +62,7 @@ export function AdminHomeScreen() {
         options={{
           title: t(greetingKey(new Date().getHours()), { name: me?.user.name ?? '' }),
           headerLeft: () => <HomeHeaderLeft />,
-          headerRight: () => <SearchButton />,
+          headerRight: () => <HomeHeaderRight />,
         }}
       />
       <Screen refreshControl={<RefreshControl refreshing={overview.isRefetching} onRefresh={refresh} />}>

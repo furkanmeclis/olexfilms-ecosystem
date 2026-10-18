@@ -1,0 +1,17 @@
+{
+  "title": "Notifications",
+  "bell": "Notifications",
+  "bell_unread_one": "Notifications, {{count}} unread",
+  "bell_unread_other": "Notifications, {{count}} unread",
+  "filter": {
+    "all": "All",
+    "unread": "Unread"
+  },
+  "mark_all": "Mark all read",
+  "mark_read": "Mark read",
+  "empty": "No notifications",
+  "empty_unread": "Nothing unread",
+  "empty_body": "New events for your work show up here.",
+  "error_generic": "Could not complete the action. Try again.",
+  "no_permission": "You cannot view notifications."
+}
