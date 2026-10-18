@@ -6,6 +6,7 @@ export default function PublicLayout() {
   return (
     <Stack screenOptions={{ headerBackTitle: t('common:back'), headerShadowVisible: false }}>
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="sign-in" options={{ headerShown: false }} />
     </Stack>
   );
 }

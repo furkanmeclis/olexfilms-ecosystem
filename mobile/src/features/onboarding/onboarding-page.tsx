@@ -1,9 +1,10 @@
-import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { GlassView } from 'expo-glass-effect';
 import type { ReactNode } from 'react';
-import { I18nManager, Platform, ScrollView, View } from 'react-native';
+import { I18nManager, ScrollView, View } from 'react-native';
 import Animated, { Extrapolation, interpolate, type SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { useUniwind } from 'uniwind';
 
+import { glassAvailable } from '@/ui/glass-card';
 import { Icon } from '@/ui/icon';
 import type { IconName } from '@/ui/icons';
 import { Text } from '@/ui/text';
@@ -12,13 +13,6 @@ import { Text } from '@/ui/text';
 const PARALLAX = 24;
 /** The badge "settles" onto the surface by this much as its page arrives. */
 const SETTLE = 10;
-
-let glass: boolean | undefined;
-/** Liquid Glass only where the API exists (some iOS 26 betas crash without the runtime check). */
-function glassAvailable() {
-  glass ??= Platform.OS === 'ios' && isGlassEffectAPIAvailable() && isLiquidGlassAvailable();
-  return glass;
-}
 
 function Surface({ size, children }: { size: number; children: ReactNode }) {
   const { theme } = useUniwind();

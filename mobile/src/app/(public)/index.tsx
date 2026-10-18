@@ -1,1 +1,6 @@
-export { IdentifyScreen as default } from '@/features/auth/identify-screen';
+import { Redirect } from 'expo-router';
+
+// Temporary: Görev 9 puts the onboarding gate here.
+export default function PublicIndex() {
+  return <Redirect href={{ pathname: '/sign-in', params: { mode: 'phone' } }} />;
+}

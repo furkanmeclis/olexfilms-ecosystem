@@ -15,9 +15,11 @@ import zh from 'i18n-iso-countries/langs/zh.json' with { type: 'json' };
 import {
   getCountries,
   getCountryCallingCode,
+  getExampleNumber,
   parsePhoneNumberFromString,
   type CountryCode,
 } from 'libphonenumber-js/min';
+import examples from 'libphonenumber-js/mobile/examples';
 
 // Hermes has no Intl.DisplayNames, so region names come from a pure-JS package
 // with only the app's locales registered.
@@ -51,6 +53,21 @@ export function parsePhone(raw: string, country: CountryCode): string | null {
   return parsed?.isValid() ? parsed.number : null;
 }
 
+/**
+ * Country of a number typed in international form (`+44 7400 …`), so the
+ * picker can follow a pasted number. Undefined until the number is complete.
+ */
+export function detectCountry(raw: string): CountryCode | undefined {
+  if (!raw.trim().startsWith('+')) return undefined;
+  const parsed = parsePhoneNumberFromString(raw);
+  return parsed?.isValid() ? parsed.country : undefined;
+}
+
+/** A sample mobile number in national format, for the field placeholder. */
+export function examplePhone(country: CountryCode): string | undefined {
+  return getExampleNumber(country, examples)?.formatNational();
+}
+
 function flagOf(code: string): string {
   return String.fromCodePoint(
     ...[...code.toUpperCase()].map((char) => 0x1f1e6 + char.charCodeAt(0) - 65),
@@ -72,4 +89,21 @@ export function listCountries(locale: string): Country[] {
   }
   rest.sort((a, b) => a.name.localeCompare(b.name, lang));
   return [...first, ...rest];
+}
+
+/** Case- and accent-insensitive key, so "turkiye" finds "Türkiye" and "İ" finds "i". */
+function fold(v: string): string {
+  return v.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/** Search by name, ISO code (`gb`) or calling code (`44`, `+44`). */
+export function filterCountries(list: Country[], query: string): Country[] {
+  const q = fold(query.trim());
+  if (!q) return list;
+  const digits = q.replace(/\D/g, '');
+  const dialOnly = /^\+?\d+$/.test(q);
+  return list.filter((c) => {
+    if (dialOnly) return c.dial.slice(1).startsWith(digits);
+    return fold(c.name).includes(q) || c.code.toLowerCase() === q;
+  });
 }

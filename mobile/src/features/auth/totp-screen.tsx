@@ -21,6 +21,7 @@ export function TotpScreen() {
       <Stack.Screen options={{ title: t('totp_title') }} />
       <Screen className="gap-5 pt-4">
         <Input
+          icon="shield"
           label={t('totp_label')}
           placeholder={t('placeholder_code')}
           hint={t('totp_hint')}

@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { isApiError } from '@/core/api/errors';
 import { errorMessage } from '@/core/i18n';
 import { Button } from '@/ui/button';
+import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { Screen } from '@/ui/screen';
 import { Text } from '@/ui/text';
@@ -23,10 +24,14 @@ export function PasswordScreen() {
     <>
       <Stack.Screen options={{ title: t('password_title') }} />
       <Screen className="gap-5 pt-4">
-        <View className="rounded-lg bg-secondary px-4 py-3">
-          <Text variant="callout">{email}</Text>
+        <View className="flex-row items-center gap-3 rounded-lg bg-secondary px-4 py-3">
+          <Icon name="mail" tone="muted-foreground" size={17} />
+          <Text variant="callout" className="flex-1" numberOfLines={1}>
+            {email}
+          </Text>
         </View>
         <Input
+          icon="password"
           label={t('password_label')}
           placeholder={t('placeholder_password')}
           value={password}

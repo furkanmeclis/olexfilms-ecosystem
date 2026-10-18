@@ -61,6 +61,7 @@ export function PhoneScreen() {
           {t('phone_code_sent', { phone })}
         </Text>
         <Input
+          icon="code"
           label={t('phone_code_label')}
           placeholder={t('placeholder_code')}
           value={code}

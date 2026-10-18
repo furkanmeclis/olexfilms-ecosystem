@@ -26,6 +26,7 @@ import ExternalLinkIcon from 'lucide-react-native/icons/external-link';
 import FileTextIcon from 'lucide-react-native/icons/file-text';
 import FlashlightIcon from 'lucide-react-native/icons/flashlight';
 import GaugeIcon from 'lucide-react-native/icons/gauge';
+import HashIcon from 'lucide-react-native/icons/hash';
 import GlobeIcon from 'lucide-react-native/icons/globe';
 import HammerIcon from 'lucide-react-native/icons/hammer';
 import InboxIcon from 'lucide-react-native/icons/inbox';
@@ -127,6 +128,7 @@ export type IconName =
   | 'phone'
   | 'mail'
   | 'password'
+  | 'code'
   | 'shield'
   | 'device'
   | 'bluetooth'
@@ -199,6 +201,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   phone: { sf: 'phone', lucide: PhoneIcon },
   mail: { sf: 'envelope', lucide: MailIcon },
   password: { sf: 'lock', lucide: KeyRoundIcon },
+  code: { sf: 'number', lucide: HashIcon },
   shield: { sf: 'shield', lucide: ShieldIcon },
   device: { sf: 'iphone', lucide: SmartphoneIcon },
   bluetooth: { sf: 'dot.radiowaves.left.and.right', lucide: BluetoothIcon },
