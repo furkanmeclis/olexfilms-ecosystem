@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Alert, RefreshControl, Switch, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, Switch, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -14,6 +14,7 @@ import { Screen } from '@/ui/screen';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 
+import { portalFiles, useExportDownload } from './files';
 import { isHidden, type NotificationPreferences, retryPortal } from './lib';
 
 type Flag = 'push_enabled' | 'email_enabled' | 'inapp_enabled';
@@ -85,6 +86,17 @@ export function CustomerProfileScreen() {
   const user = useSession((s) => s.me?.user);
   const name = [user?.name, user?.surname].filter(Boolean).join(' ');
 
+  const dataExport = useExportDownload();
+  const exporting = dataExport.isPending;
+  const startExport = (format: 'json' | 'pdf') =>
+    dataExport.mutate({ start: portalFiles.dataExport(format), fallbackName: `my-data.${format}` });
+  const chooseExport = () =>
+    Alert.alert(t('data_export'), t('data_export_hint'), [
+      { text: t('data_export_pdf'), onPress: () => startExport('pdf') },
+      { text: t('data_export_json'), onPress: () => startExport('json') },
+      { text: t('common:cancel'), style: 'cancel' },
+    ]);
+
   const confirmSignOut = () =>
     Alert.alert(t('sign_out_confirm'), undefined, [
       { text: t('common:cancel'), style: 'cancel' },
@@ -109,6 +121,20 @@ export function CustomerProfileScreen() {
             </Text>
           ) : null}
         </View>
+
+        <SectionHeader title={t('documents')} />
+        <List>
+          <ListRow title={t('contracts')} icon="report" onPress={() => router.push('/musteri/profile/contracts')} />
+          <ListRow title={t('claims')} icon="warrantyClaim" onPress={() => router.push('/musteri/profile/claims')} />
+          <ListRow
+            title={t('data_export')}
+            subtitle={t('data_export_hint')}
+            icon="download"
+            trailing={exporting ? <ActivityIndicator /> : undefined}
+            onPress={exporting ? undefined : chooseExport}
+            last
+          />
+        </List>
 
         <NotificationPrefs />
 
