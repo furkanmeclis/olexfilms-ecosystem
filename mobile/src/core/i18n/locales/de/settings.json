@@ -18,5 +18,6 @@
   "version": "Version {{version}}",
   "about": "Über",
   "api_server": "Server",
-  "app_version": "App-Version"
+  "app_version": "App-Version",
+  "watch_intro": "Einführung ansehen"
 }

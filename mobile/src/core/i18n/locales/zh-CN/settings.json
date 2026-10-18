@@ -18,5 +18,6 @@
   "version": "版本 {{version}}",
   "about": "关于",
   "api_server": "服务器",
-  "app_version": "应用版本"
+  "app_version": "应用版本",
+  "watch_intro": "观看介绍"
 }

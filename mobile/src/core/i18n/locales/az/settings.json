@@ -18,5 +18,6 @@
   "version": "Versiya {{version}}",
   "about": "Haqqında",
   "api_server": "Server",
-  "app_version": "Tətbiq versiyası"
+  "app_version": "Tətbiq versiyası",
+  "watch_intro": "Təqdimata baxın"
 }

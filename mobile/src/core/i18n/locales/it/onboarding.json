@@ -1,1 +1,13 @@
-{}
+{
+  "skip": "Salta",
+  "next": "Avanti",
+  "done": "Fatto",
+  "cta_phone": "Continua con il mio numero di telefono",
+  "cta_staff": "Accesso personale",
+  "p1_title": "Una protezione invisibile",
+  "p1_body": "La pellicola di protezione della vernice (PPF) e la pellicola per vetri proteggono la superficie della tua auto con uno strato trasparente.",
+  "p2_title": "Solo presso i rivenditori autorizzati",
+  "p2_body": "La pellicola viene applicata solo dai rivenditori autorizzati Olexfilms. Ogni lavoro inizia con una misurazione ed è realizzato su misura per la tua auto.",
+  "p3_title": "La tua garanzia, sul tuo telefono",
+  "p3_body": "La tua garanzia digitale è un registro legato alla tua auto, alle parti trattate e alla sua durata. Si verifica tramite QR, passa al nuovo proprietario quando vendi l'auto e resta sul tuo telefono anche se perdi la tessera cartacea."
+}

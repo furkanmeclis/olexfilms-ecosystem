@@ -18,5 +18,6 @@
   "version": "الإصدار {{version}}",
   "about": "حول",
   "api_server": "الخادم",
-  "app_version": "إصدار التطبيق"
+  "app_version": "إصدار التطبيق",
+  "watch_intro": "مشاهدة التعريف"
 }
