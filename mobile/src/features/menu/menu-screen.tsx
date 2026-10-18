@@ -23,8 +23,8 @@ const ITEMS: Item[] = [
   { key: 'leads', icon: 'lead', permission: 'leads.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'reports', icon: 'report', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'accounting', icon: 'accounting', permission: 'accounting.read', spaces: ['bayi', 'admin'] },
-  { key: 'tasks', icon: 'task', permission: 'tasks.read', spaces: ['admin'] },
-  { key: 'announcements', icon: 'announcement', permission: 'announcements.read', spaces: ['bayi', 'depo', 'admin'] },
+  { key: 'tasks', icon: 'task', permission: 'tasks.read', spaces: ['admin'], built: ['admin'] },
+  { key: 'announcements', icon: 'announcement', permission: 'announcements.read', spaces: ['bayi', 'depo', 'admin'], built: ['bayi', 'depo', 'admin'] },
 ];
 
 export function MenuScreen({ space }: { space: SpaceKind }) {
