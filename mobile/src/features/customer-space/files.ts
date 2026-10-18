@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { File, Paths } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import { useEffect, useRef } from 'react';
 import { Alert, Platform, Share } from 'react-native';
 
@@ -60,16 +60,29 @@ async function openFile(file: File) {
   else throw new Error('NO_PREVIEW');
 }
 
+/** Own download folder in the cache; wiped before every download (exports can hold personal data). */
+function freshDownloadDir() {
+  const dir = new Directory(Paths.cache, 'exports');
+  try {
+    if (dir.exists) dir.delete();
+  } catch {
+    // Best effort: a file still held by a viewer is removed on a later run.
+  }
+  dir.create({ intermediates: true, idempotent: true });
+  return dir;
+}
+
 /**
- * Downloads a portal file with the bearer token into the cache, opens it and
- * deletes it afterwards (exports can hold personal data). `path` is relative
- * to `/v1/mobile/portal`.
+ * Downloads a portal file with the bearer token into the app's cache folder
+ * and opens it. iOS deletes it once the share sheet closes; on Android the
+ * viewer may read it after `File.preview` returns, so old files are cleared
+ * before the next download instead. `path` is relative to `/v1/mobile/portal`.
  */
 async function downloadAndOpen(path: string, filename: string, signal?: AbortSignal) {
   const t0 = getTokens();
   if (t0 && t0.accessExpiresAt - Date.now() < 30_000) await refreshTokens();
   const t = getTokens();
-  const target = new File(Paths.cache, filename);
+  const target = new File(freshDownloadDir(), filename);
   let downloaded: File | undefined;
   try {
     try {
@@ -87,10 +100,12 @@ async function downloadAndOpen(path: string, filename: string, signal?: AbortSig
     if (signal?.aborted) throw new Cancelled();
     await openFile(downloaded);
   } finally {
-    try {
-      (downloaded ?? target).delete();
-    } catch {
-      // Nothing to clean up (never created) or already gone.
+    if (Platform.OS === 'ios') {
+      try {
+        (downloaded ?? target).delete();
+      } catch {
+        // Nothing to clean up (never created) or already gone.
+      }
     }
   }
 }
