@@ -44,6 +44,15 @@ export function addDays(d: Date, n: number) {
   return out;
 }
 
+/** Today's calendar day (YYYY-MM-DD) in a time zone; the device zone when none is given. */
+export function todayIn(timeZone?: string) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  } catch {
+    return ymd(new Date());
+  }
+}
+
 /** Monday of the week holding `d`, at local midnight. */
 export function startOfWeek(d: Date) {
   const out = new Date(d.getFullYear(), d.getMonth(), d.getDate());

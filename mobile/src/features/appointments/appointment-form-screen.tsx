@@ -21,7 +21,7 @@ import type { IconName } from '@/ui/icons';
 
 import { useBookingError } from './appointment-detail-screen';
 import { findAppointment, useAvailability } from './data';
-import { type AvailabilityDay, canReschedule, parseDay, ymd } from './lib';
+import { type AvailabilityDay, canReschedule, parseDay, todayIn } from './lib';
 
 type Step = 'customer' | 'vehicle' | 'time';
 const STEPS: Step[] = ['customer', 'vehicle', 'time'];
@@ -36,7 +36,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
   const qc = useQueryClient();
   const bookingError = useBookingError();
   const canWrite = useCan('appointments.write');
-  const { uuid } = useLocalSearchParams<{ uuid?: string }>();
+  const { uuid, at } = useLocalSearchParams<{ uuid?: string; at?: string }>();
   const [step, setStep] = useState<Step>('customer');
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -46,7 +46,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
 
   const existing = useQuery({
     queryKey: ['appointments', 'detail', uuid],
-    queryFn: () => findAppointment(uuid!),
+    queryFn: () => findAppointment(uuid!, at),
     enabled: edit && !!uuid,
   });
   const current = edit ? existing.data : null;
@@ -65,7 +65,8 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
         ? unwrap(api.PATCH('/v1/appointments/{uuid}', { params: { path: { uuid: current.uuid } }, body }))
         : unwrap(api.POST('/v1/appointments', { body }));
     },
-    onSuccess: (saved) => {
+    onSuccess: async (saved) => {
+      await qc.cancelQueries({ queryKey: ['appointments', 'detail', saved.uuid] });
       qc.setQueryData(['appointments', 'detail', saved.uuid], saved);
       void qc.invalidateQueries({ queryKey: ['appointments', 'list'] });
       void qc.invalidateQueries({ queryKey: ['appointments', 'availability'] });
@@ -74,7 +75,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
     onError: (e) => Alert.alert(bookingError(e)),
   });
 
-  const loadingExisting = edit && existing.isPending
+  const loadingExisting = edit && !!uuid && existing.isPending
   const timeStep = edit || step === 'time';
   const canSave = !!slot && (edit ? !!current && canReschedule(current) : !!customer && (!!vehicle || noVehicle));
 
@@ -86,7 +87,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
           <EmptyState icon="blocked" title={t('no_permission')} />
         ) : loadingExisting ? (
           <ListSkeleton rows={3} inset={false} />
-        ) : edit && existing.isError ? (
+        ) : edit && !!uuid && existing.isError ? (
           <ErrorState error={existing.error} onRetry={() => void existing.refetch()} />
         ) : edit && !current ? (
           <EmptyState icon="appointment" title={t('not_found')} />
@@ -213,8 +214,12 @@ function Summary({ icon, title, subtitle, onPress }: { icon: IconName; title: st
 function SlotPicker({ value, onChange }: { value: string | null; onChange: (start: string | null) => void }) {
   const { t, i18n } = useTranslation('appointments');
   const q = useAvailability();
-  const [day, setDay] = useState(() => ymd(new Date()));
-  const days: AvailabilityDay[] = q.data ?? [];
+  const zone = q.data?.find((d) => d.timezone)?.timezone;
+  const today = todayIn(zone);
+  const [picked, setDay] = useState<string | null>(null);
+  const day = picked ?? today;
+  // Days before the organization's today (the request has a day of slack) are not offered.
+  const days: AvailabilityDay[] = (q.data ?? []).filter((d) => d.date >= today);
   const chosen = days.find((d) => d.date === day);
 
   return (
