@@ -15,10 +15,12 @@ import {
   SearchField,
   Section,
 } from '@/features/services/ui';
+import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
+import { portalFiles, useExportDownload } from './files';
 import { PAGE_SIZE, portalServiceTone, retryPortal, useCustomerLinks, usePortalPages, whatsappUrl } from './lib';
 import { PortalServiceRow, useServiceStatusLabel } from './parts';
 
@@ -76,8 +78,8 @@ export function CustomerServicesScreen() {
 
 /**
  * One service: status, vehicle, dealer, applied products and the warranties
- * it issued. The service PDF is not offered: its download needs the bearer
- * token, and Expo Go has no file module to save it (see the report).
+ * it issued. The service PDF and warranty certificate are downloaded with the
+ * bearer token and shared; a completed service links to its review.
  */
 export function CustomerServiceDetailScreen() {
   const { uuid } = useLocalSearchParams<{ uuid: string }>();
@@ -90,6 +92,8 @@ export function CustomerServiceDetailScreen() {
     queryFn: () => unwrap(api.GET('/v1/portal/services/{uuid}', { params: { path: { uuid } } })),
   });
   const s = q.data;
+  const fileJob = useExportDownload();
+  const fileBusy = fileJob.isPending ? fileJob.variables?.tag : undefined;
   const dealer = s?.dealer;
   const products = s?.products ?? [];
   const warranties = s?.warranties ?? [];
@@ -125,6 +129,41 @@ export function CustomerServiceDetailScreen() {
                   .filter(Boolean)
                   .join(' · ')}
               </Text>
+            </View>
+
+            <View className="gap-2">
+              <Button
+                title={t('service_pdf')}
+                variant="secondary"
+                loading={fileBusy === 'pdf'}
+                disabled={fileJob.isPending}
+                icon={<Icon name="download" tone="primary" size={18} />}
+                onPress={() => fileJob.mutate({ start: portalFiles.servicePdf(s.uuid), fallbackName: `${s.service_no}.pdf`, tag: 'pdf' })}
+              />
+              {warranties.some((w) => w.status === 'active') ? (
+                <Button
+                  title={t('warranty_certificate')}
+                  variant="secondary"
+                  loading={fileBusy === 'cert'}
+                  disabled={fileJob.isPending}
+                  icon={<Icon name="warranty" tone="primary" size={18} />}
+                  onPress={() =>
+                    fileJob.mutate({
+                      start: portalFiles.warrantyCertificate(s.uuid),
+                      fallbackName: `${s.service_no}-warranty.pdf`,
+                      tag: 'cert',
+                    })
+                  }
+                />
+              ) : null}
+              {s.status === 'completed' ? (
+                <Button
+                  title={t('review_service')}
+                  variant="outline"
+                  icon={<Icon name="star" tone="primary" size={18} />}
+                  onPress={() => router.push(links.review(s.uuid))}
+                />
+              ) : null}
             </View>
 
             <Section title={t('vehicle')}>

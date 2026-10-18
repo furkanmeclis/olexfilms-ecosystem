@@ -134,5 +134,10 @@ export function useCustomerLinks() {
     vehicle: (id: string) => to('vehicle', id),
     service: (id: string) => to('service', id),
     warranty: (id: string) => to('warranty', id),
+    /** Review form of a service (`service/review/[uuid]` in the home and warranties stacks). */
+    review: (id: string) => {
+      const uid = encodeURIComponent(id);
+      return (tab === 'warranties' ? `/musteri/warranties/service/review/${uid}` : `/musteri/service/review/${uid}`) as Href;
+    },
   };
 }
