@@ -43,6 +43,33 @@ Later native modules (BLE, plate recognition) also need the development build.
 | `npm run uniwind:types` | Regenerates `src/uniwind-types.d.ts` (Metro also does this on start) |
 | `npm run doctor` | `expo-doctor` |
 
+## OTA updates
+
+JS-only changes ship over the air with `expo-updates` + EAS Update (config in
+`app.json` `updates`/`runtimeVersion`, build profiles in `eas.json`). Nothing runs in dev
+builds or Expo Go; release builds check on launch and on each foreground (at most every 15 min),
+download in the background and show a "new version ready" bar (restart or later; otherwise the
+update applies on the next cold start). Settings > About shows channel, runtime and update id.
+
+- **Runtime version** uses the `fingerprint` policy: a hash of everything native (dependencies,
+  config plugins, `app.json` native fields). An update only reaches builds with the same
+  fingerprint, so a native change can never land on an incompatible binary. It suits CNG
+  (`ios/`/`android/` are generated, not committed) because the hash covers the config instead of files.
+- **Channel ↔ build profile:** `development` → `development`, `preview` → `preview`,
+  `production` → `production`. A build only receives updates published to its own channel.
+- **Publish** (JS/asset change only):
+  `npx eas-cli@latest update --channel preview -m "what changed"`, then `--channel production` once verified.
+  Run it from `mobile/` after `eas login`.
+- **Needs a new build** (not OTA): any native dependency added/upgraded, a config plugin or
+  native `app.json` field change, an Expo SDK upgrade. The fingerprint changes, so the old
+  builds simply get no update; run `eas build --profile <profile>` and publish updates on top of it.
+  Check before publishing: `npx @expo/fingerprint@latest fingerprint:generate`.
+- **Rollback:** `npx eas-cli@latest update:republish --channel production --group <previous-group-id>`
+  (list groups with `eas update:list`), or `eas update:rollback-to-embedded` to fall back to the
+  JS bundled in the binary.
+- The backend's 426 "update required" gate is separate: it forces a store update for old
+  *binaries*; OTA never replaces it.
+
 ## Structure
 
 ```

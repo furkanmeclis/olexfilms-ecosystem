@@ -16,6 +16,8 @@ import { useSession } from '@/core/auth/session';
 import { i18n } from '@/core/i18n';
 import { applyThemePreference } from '@/core/preferences';
 import { persistOptions, queryClient } from '@/core/query';
+import { startUpdateChecks } from '@/core/updates';
+import { UpdateBanner } from '@/features/shell/update-banner';
 import { useNavigationTheme } from '@/features/shell/navigation-theme';
 import { fontAssets } from '@/ui/fonts';
 
@@ -38,6 +40,9 @@ export default function RootLayout() {
   useEffect(() => {
     void useSession.getState().hydrate();
   }, []);
+
+  // OTA: check on launch and each foreground (throttled); no-op in dev builds and Expo Go.
+  useEffect(() => startUpdateChecks(), []);
 
   useEffect(() => {
     if (status !== 'loading' && fontsReady) void SplashScreen.hideAsync();
@@ -63,6 +68,7 @@ export default function RootLayout() {
                   <Stack.Screen name="(public)" />
                 </Stack.Protected>
               </Stack>
+              {!updateRequired && <UpdateBanner />}
             </ThemeProvider>
           </LayoutDirection>
         </PersistQueryClientProvider>

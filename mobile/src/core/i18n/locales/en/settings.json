@@ -19,5 +19,10 @@
   "about": "About",
   "api_server": "Server",
   "app_version": "App version",
-  "watch_intro": "Watch the intro"
+  "watch_intro": "Watch the intro",
+  "ota_channel": "Update channel",
+  "ota_runtime": "Runtime version",
+  "ota_update_id": "Update ID",
+  "ota_embedded": "Bundled with the app",
+  "ota_off": "Off (development)"
 }
