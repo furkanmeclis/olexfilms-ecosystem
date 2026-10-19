@@ -31,7 +31,13 @@ import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
-import { PARTS, parseValues, PLATE_RECOGNITION_ENABLED, SMARTPTG_BLE_ENABLED } from './parts';
+import { GaugePanel } from '@/features/ble-gauge/gauge-panel';
+import { isGaugeAvailable } from '@/features/ble-gauge/manager';
+import { appendValue, formatInputValue, substrateOf } from '@/features/ble-gauge/readings';
+import { useGauge } from '@/features/ble-gauge/store';
+import { useGaugeSession } from '@/features/ble-gauge/use-gauge-session';
+
+import { PARTS, parseValues, PLATE_RECOGNITION_ENABLED } from './parts';
 import type { IconName } from '@/ui/icons';
 
 type Measurement =
@@ -88,7 +94,7 @@ export function MeasureScreen() {
 
   const header = (
     <View className="gap-2.5 pb-2 pt-2">
-      {!SMARTPTG_BLE_ENABLED ? <SoonCard icon="bluetooth" title={t('ble_title')} body={t('ble_body')} /> : null}
+      {!isGaugeAvailable() ? <SoonCard icon="bluetooth" title={t('ble_title')} body={t('ble_body')} /> : null}
       {!PLATE_RECOGNITION_ENABLED ? <SoonCard icon="camera" title={t('plate_title')} body={t('plate_body')} /> : null}
       {canWrite ? (
         <View className="px-4">
@@ -238,6 +244,23 @@ export function NewMeasurementScreen() {
   // One key per form: a retried tap never stores the measurement twice.
   const [clientId] = useState(newClientId);
 
+  // SmartPTG: a steady reading is appended to the selected part, like typing it.
+  const gaugeOn = isGaugeAvailable();
+  const gaugeConnected = useGauge((s) => s.status === 'connected');
+  const [activePart, setActivePart] = useState<string | null>(null);
+  const [substrates, setSubstrates] = useState<Record<string, 'Fe' | 'Al'>>({});
+  const [gaugeDevice, setGaugeDevice] = useState<{ serial: string; model?: string } | null>(null);
+  const decimal = new Intl.NumberFormat(i18n.language).format(1.5).replace(/\d/g, '') || '.';
+  useGaugeSession((c) => {
+    const part = activePart ?? PARTS[0]!.key;
+    if (!activePart) setActivePart(part);
+    setValues((v) => ({ ...v, [part]: appendValue(v[part] ?? '', formatInputValue(c.um, unit, decimal)) }));
+    const substrate = substrateOf(c.material);
+    if (substrate) setSubstrates((m) => ({ ...m, [part]: substrate }));
+    const g = useGauge.getState();
+    if (g.serial != null) setGaugeDevice({ serial: String(g.serial), model: g.model ?? undefined });
+  });
+
   const parts = PARTS.map((p) => ({ ...p, values: parseValues(values[p.key] ?? '').map((v) => toMicrons(v, unit)) })).filter(
     (p) => p.values.length > 0,
   );
@@ -256,13 +279,21 @@ export function NewMeasurementScreen() {
             vin: vinClean || undefined,
             measured_at: now,
             unit: 'um',
+            device: gaugeDevice ?? undefined,
             parts: parts.map((p) => ({ part: p.key, place: p.place, values: p.values })),
             raw: {
-              source: 'manual',
+              source: gaugeDevice ? 'smartptg' : 'manual',
               app_version: APP_VERSION,
               date: now,
               measurements: parts.flatMap((p) =>
-                p.values.map((value, position) => ({ place_id: p.place, part_type: p.key, value, position, timestamp: now })),
+                p.values.map((value, position) => ({
+                  place_id: p.place,
+                  part_type: p.key,
+                  value,
+                  position,
+                  timestamp: now,
+                  substrate_type: substrates[p.key],
+                })),
               ),
             },
           },
@@ -296,6 +327,10 @@ export function NewMeasurementScreen() {
           hint={t('vin_hint')}
         />
 
+        {gaugeOn ? (
+          <GaugePanel targetLabel={activePart ? t(`parts.${activePart}`) : gaugeConnected ? t(`parts.${PARTS[0]!.key}`) : null} />
+        ) : null}
+
         <SectionHeader title={t('values_in', { unit: unitLabel })} />
         <Text variant="footnote" tone="muted" className="-mt-2">
           {t('values_hint')}
@@ -306,6 +341,9 @@ export function NewMeasurementScreen() {
             label={t(`parts.${p.key}`)}
             value={values[p.key] ?? ''}
             onChangeText={(text) => setValues((v) => ({ ...v, [p.key]: text }))}
+            onFocus={() => setActivePart(p.key)}
+            // With the gauge connected a tap only selects the part; the probe types.
+            showSoftInputOnFocus={!gaugeConnected}
             keyboardType="numbers-and-punctuation"
             placeholder={unit === 'mil' ? sample([4.5, 4.8]) : sample([115, 120])}
           />

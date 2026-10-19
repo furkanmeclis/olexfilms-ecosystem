@@ -81,8 +81,20 @@
           "faceIDPermission": "Olexfilms hızlı giriş için Face ID kullanır."
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "@sfourdrinier/react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "neverForLocation": true,
+          "bluetoothAlwaysPermission": "Olexfilms boya kalınlığı ölçüm cihazına (SmartPTG) bağlanmak için Bluetooth kullanır."
+        }
+      ]
     ],
+    "locales": {
+      "tr": "./native-locales/tr.json",
+      "en": "./native-locales/en.json"
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

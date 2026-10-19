@@ -1,0 +1,5 @@
+{
+  "ios": {
+    "NSBluetoothAlwaysUsageDescription": "Olexfilms uses Bluetooth to connect to the paint thickness gauge (SmartPTG)."
+  }
+}
