@@ -91,10 +91,6 @@
         }
       ]
     ],
-    "locales": {
-      "tr": "./native-locales/tr.json",
-      "en": "./native-locales/en.json"
-    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

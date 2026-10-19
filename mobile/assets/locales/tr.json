@@ -1,6 +1,7 @@
 {
   "ios": {
     "NSCameraUsageDescription": "Olexfilms barkod, QR kod ve plaka okumak için kamerayı kullanır. Plaka tanıma cihazda yapılır; görüntü dışarı gönderilmez.",
-    "NSFaceIDUsageDescription": "Olexfilms hızlı giriş için Face ID kullanır."
+    "NSFaceIDUsageDescription": "Olexfilms hızlı giriş için Face ID kullanır.",
+    "NSBluetoothAlwaysUsageDescription": "Olexfilms boya kalınlığı ölçüm cihazına (SmartPTG) bağlanmak için Bluetooth kullanır."
   }
 }
