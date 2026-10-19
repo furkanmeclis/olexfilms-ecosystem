@@ -7,7 +7,7 @@ import { Button } from '@/ui/button';
 import { Text } from '@/ui/text';
 
 /**
- * Non-blocking "new version ready" bar. An OTA update is already downloaded when this shows;
+ * Non-blocking "new version ready" strip under the status bar (never covers the tab bar). An OTA update is already downloaded when this shows;
  * ignoring it just applies the update on the next cold start.
  */
 export function UpdateBanner() {
@@ -17,8 +17,8 @@ export function UpdateBanner() {
   if (!visible) return null;
   return (
     <View
-      className="absolute inset-x-3 flex-row items-center gap-2 rounded-xl border border-border bg-card px-4 py-2"
-      style={{ bottom: insets.bottom + 8, borderCurve: 'continuous' }}>
+      className="absolute inset-x-3 flex-row items-center gap-2 rounded-xl border border-border bg-card px-4 py-1"
+      style={{ top: insets.top + 4, borderCurve: 'continuous' }}>
       <Text variant="callout" className="flex-1 font-semibold">
         {t('ota_ready')}
       </Text>

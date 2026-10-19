@@ -41,12 +41,14 @@ async function checkAndFetch() {
   lastCheckedAt = Date.now();
   try {
     const check = await Updates.checkForUpdateAsync();
-    if (!check.isAvailable) return;
+    if (!check.isAvailable && !check.isRollBackToEmbedded) return;
     const fetched = await Updates.fetchUpdateAsync();
     // A fetched update also loads on the next cold start; the banner only speeds that up.
-    if (fetched.isNew) useUpdateStore.setState({ ready: true, dismissed: false });
+    // A rollback-to-embedded directive counts as ready too (README rollback flow).
+    if (fetched.isNew || fetched.isRollBackToEmbedded) useUpdateStore.setState({ ready: true, dismissed: false });
   } catch {
-    // Offline or server trouble: try again on a later foreground, never surface an error.
+    // Offline or server trouble: allow an immediate retry on the next foreground, never surface an error.
+    lastCheckedAt = null;
   } finally {
     busy = false;
   }

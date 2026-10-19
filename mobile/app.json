@@ -90,7 +90,7 @@
     "updates": {
       "url": "https://u.expo.dev/c0be0362-2a3c-4f0d-abed-43c53ee780d7",
       "enabled": true,
-      "checkAutomatically": "ON_LOAD",
+      "checkAutomatically": "NEVER",
       "fallbackToCacheTimeout": 0
     },
     "extra": {

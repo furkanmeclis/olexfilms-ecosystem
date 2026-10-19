@@ -55,6 +55,10 @@ update applies on the next cold start). Settings > About shows channel, runtime 
   config plugins, `app.json` native fields). An update only reaches builds with the same
   fingerprint, so a native change can never land on an incompatible binary. It suits CNG
   (`ios/`/`android/` are generated, not committed) because the hash covers the config instead of files.
+- The native launch check is off (`checkAutomatically: NEVER`); only `core/updates.ts` checks, so the banner is reliable.
+- `.fingerprintignore` skips JS/TS and tests under `modules/**` so they don't change the runtime; native
+  folders stay hashed. Run `eas update` only from a clean checkout (no local edits or untracked native
+  files), or the fingerprint may differ from the build's.
 - **Channel ↔ build profile:** `development` → `development`, `preview` → `preview`,
   `production` → `production`. A build only receives updates published to its own channel.
 - **Publish** (JS/asset change only):
