@@ -1,5 +1,8 @@
 {
   "title": "Güncelleme gerekli",
   "body": "Bu sürüm artık desteklenmiyor. Devam etmek için uygulamayı güncelle.",
-  "button": "Mağazada aç"
+  "button": "Mağazada aç",
+  "ota_ready": "Yeni sürüm hazır",
+  "ota_restart": "Yeniden başlat",
+  "ota_later": "Sonra"
 }

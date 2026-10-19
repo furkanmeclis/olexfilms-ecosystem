@@ -19,5 +19,10 @@
   "about": "Hakkında",
   "api_server": "Sunucu",
   "app_version": "Uygulama sürümü",
-  "watch_intro": "Tanıtımı izle"
+  "watch_intro": "Tanıtımı izle",
+  "ota_channel": "Güncelleme kanalı",
+  "ota_runtime": "Çalışma sürümü",
+  "ota_update_id": "Güncelleme kimliği",
+  "ota_embedded": "Uygulamayla gelen",
+  "ota_off": "Kapalı (geliştirme)"
 }

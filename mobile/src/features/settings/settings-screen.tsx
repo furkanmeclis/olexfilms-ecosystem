@@ -7,6 +7,7 @@ import { useSession } from '@/core/auth/session';
 import { API_URL, APP_VERSION } from '@/core/config';
 import { type Language, LANGUAGES, setLanguage } from '@/core/i18n';
 import { type ThemePreference, type ThicknessUnit, usePreferences } from '@/core/preferences';
+import { getUpdateInfo } from '@/core/updates';
 import { Icon } from '@/ui/icon';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -23,6 +24,7 @@ export function SettingsScreen() {
   const { t, i18n } = useTranslation('settings');
   const theme = usePreferences((s) => s.theme);
   const unit = usePreferences((s) => s.unit);
+  const ota = getUpdateInfo();
 
   const pickLanguage = async (lang: Language) => {
     const needsRestart = await setLanguage(lang);
@@ -86,7 +88,21 @@ export function SettingsScreen() {
         <SectionHeader title={t('about')} />
         <List>
           <ListRow icon="network" title={API_URL.replace(/^https?:\/\//, '')} subtitle={t('api_server')} />
-          <ListRow icon="info" title={APP_VERSION} subtitle={t('app_version')} last />
+          <ListRow icon="info" title={APP_VERSION} subtitle={t('app_version')} />
+          {ota.enabled ? (
+            <>
+              <ListRow icon="download" title={ota.channel ?? '-'} subtitle={t('ota_channel')} />
+              <ListRow icon="info" title={ota.runtimeVersion ?? '-'} subtitle={t('ota_runtime')} />
+              <ListRow
+                icon="info"
+                title={ota.embedded ? t('ota_embedded') : (ota.updateId ?? '-')}
+                subtitle={t('ota_update_id')}
+                last
+              />
+            </>
+          ) : (
+            <ListRow icon="download" title={t('ota_off')} subtitle={t('ota_channel')} last />
+          )}
         </List>
 
         <List className="mt-4">
