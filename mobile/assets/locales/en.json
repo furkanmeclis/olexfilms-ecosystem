@@ -1,6 +1,7 @@
 {
   "ios": {
     "NSCameraUsageDescription": "Olexfilms uses the camera to read barcodes, QR codes and licence plates. Plates are recognized on this device; images are not sent anywhere.",
-    "NSFaceIDUsageDescription": "Olexfilms uses Face ID for quick sign-in."
+    "NSFaceIDUsageDescription": "Olexfilms uses Face ID for quick sign-in.",
+    "NSBluetoothAlwaysUsageDescription": "Olexfilms uses Bluetooth to connect to the paint thickness gauge (SmartPTG)."
   }
 }

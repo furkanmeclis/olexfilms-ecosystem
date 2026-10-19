@@ -1,8 +1,8 @@
 /**
- * Feature flags of the measuring tab. SmartPTG (BLE) and plate recognition need
- * native modules that Expo Go does not ship; they arrive with the development build.
+ * Feature flags of the measuring tab. Plate recognition needs native modules
+ * that Expo Go does not ship; they arrive with the development build.
+ * SmartPTG (BLE) is detected at runtime: features/ble-gauge isGaugeAvailable().
  */
-export const SMARTPTG_BLE_ENABLED = false;
 export const PLATE_RECOGNITION_ENABLED = false;
 
 export type Place = 'left' | 'right' | 'top' | 'back';

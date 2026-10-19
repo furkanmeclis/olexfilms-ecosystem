@@ -5,10 +5,12 @@
   "dependencies": {
     "@expo/ui": "~58.0.20",
     "@hookform/resolvers": "^5.9.1",
+    "@sfourdrinier/react-native-ble-plx": "^3.9.3",
     "@shopify/flash-list": "2.3.2",
     "@tanstack/query-async-storage-persister": "^5.104.3",
     "@tanstack/react-query": "^5.104.3",
     "@tanstack/react-query-persist-client": "^5.104.3",
+    "aes-js": "^3.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "expo": "~58.0.14",
@@ -59,6 +61,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/aes-js": "^3.1.4",
     "@types/react": "~19.3.0",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~58.0.4",
