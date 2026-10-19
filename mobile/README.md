@@ -109,6 +109,13 @@ Rules:
 - Colors only through theme classes (`bg-card`, `text-muted-foreground`, ...).
   Tokens in `src/global.css` mirror `frontend/src/styles/theme.css`.
 - Logical spacing (`ms-`, `pe-`, `start-`) for RTL.
+- Native permission texts (iOS `NS*UsageDescription`) are translated only in
+  `assets/locales/{tr,en}.json` (app.json `locales`). Every key goes into both
+  files: a key missing from `en.json` shows the plugin's Turkish base text to
+  English users (en.lproj is the fallback for every other language).
+- Optional native capabilities live in local Expo modules under `modules/`
+  (e.g. `plate-ocr`) and are loaded with `requireOptionalNativeModule`, so
+  builds without them (Expo Go, web) hide the feature instead of crashing.
 
 ## Backend contract
 

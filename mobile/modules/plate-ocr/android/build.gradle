@@ -1,0 +1,23 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.olexfilms.plateocr'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.plateocr"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+}
+
+dependencies {
+  // Unbundled ML Kit: the text model lives in Google Play services and is
+  // downloaded on demand (ModuleInstallClient), so the APK grows by ~260 KB
+  // instead of ~4 MB per ABI for the bundled model.
+  implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
+  implementation 'com.google.android.gms:play-services-base:18.5.0'
+}

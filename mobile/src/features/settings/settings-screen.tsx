@@ -8,6 +8,7 @@ import { API_URL, APP_VERSION } from '@/core/config';
 import { type Language, LANGUAGES, setLanguage } from '@/core/i18n';
 import { type ThemePreference, type ThicknessUnit, usePreferences } from '@/core/preferences';
 import { getUpdateInfo } from '@/core/updates';
+import { PlateRecognitionSettings } from '@/features/plate-scan/plate-settings';
 import { Icon } from '@/ui/icon';
 import { List, ListRow, SectionHeader } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -84,6 +85,8 @@ export function SettingsScreen() {
             />
           ))}
         </List>
+
+        <PlateRecognitionSettings />
 
         <SectionHeader title={t('about')} />
         <List>

@@ -16,10 +16,12 @@ type Props = TextInputProps & {
   icon?: IconName;
   /** Control rendered in the same row before the text box (e.g. a country picker). */
   leading?: ReactNode;
+  /** Control rendered in the same row after the text box (e.g. a scan button). */
+  trailing?: ReactNode;
   ref?: Ref<ComponentRef<typeof TextInput>>;
 };
 
-export function Input({ label, error, hint, className, icon, leading, ref, style, ...props }: Props) {
+export function Input({ label, error, hint, className, icon, leading, trailing, ref, style, ...props }: Props) {
   const family = fontFamily('sans');
   const field = (
     <TextInput
@@ -29,7 +31,7 @@ export function Input({ label, error, hint, className, icon, leading, ref, style
       className={cn(
         'min-h-[52px] rounded-lg border bg-card px-4 text-[17px] text-foreground',
         error ? 'border-destructive' : 'border-border focus:border-ring',
-        leading && 'flex-1',
+        (leading || trailing) && 'flex-1',
         className,
       )}
       style={family ? [{ fontFamily: family }, style] : style}
@@ -44,10 +46,11 @@ export function Input({ label, error, hint, className, icon, leading, ref, style
           {label}
         </Text>
       </View>
-      {leading ? (
+      {leading || trailing ? (
         <View className="flex-row gap-2">
           {leading}
           {field}
+          {trailing}
         </View>
       ) : (
         field

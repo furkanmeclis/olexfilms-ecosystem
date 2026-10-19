@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "NSCameraUsageDescription": "Olexfilms barkod, QR kod ve plaka okumak için kamerayı kullanır. Plaka tanıma cihazda yapılır; görüntü dışarı gönderilmez.",
+    "NSFaceIDUsageDescription": "Olexfilms hızlı giriş için Face ID kullanır."
+  }
+}

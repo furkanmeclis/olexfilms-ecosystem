@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
+import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
@@ -508,6 +509,7 @@ function NewVehicleForm({
             error={err('plate')}
             autoCapitalize="characters"
             autoCorrect={false}
+            trailing={<PlateScanButton onResult={field.onChange} />}
           />
         )}
       />

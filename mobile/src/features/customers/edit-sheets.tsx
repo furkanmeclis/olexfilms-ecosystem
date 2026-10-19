@@ -8,6 +8,7 @@ import { isApiError } from '@/core/api/errors';
 import type { CustomerDetail, Vehicle } from '@/features/services/lib';
 import { ModelPicker, type ModelValue, VIN_RE } from '@/features/services/new-service-screen';
 import { Sheet } from '@/features/services/sheet';
+import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
 import { errorText } from '@/features/services/ui';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
@@ -154,6 +155,7 @@ export function EditVehicleSheet({ vehicle, onClose }: { vehicle: Vehicle; onClo
         error={errors.plate}
         autoCapitalize="characters"
         autoCorrect={false}
+        trailing={<PlateScanButton onResult={setPlate} />}
       />
       <ModelPicker value={model} onChange={setModel} error={errors.model} />
       <Input label={t('model_year')} placeholder={t('placeholder_year', { ns: 'common' })} value={year} onChangeText={setYear} error={errors.year} keyboardType="number-pad" maxLength={4} />
