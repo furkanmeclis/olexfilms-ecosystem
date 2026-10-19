@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["PlateOcrModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.plateocr.PlateOcrModule"]
+  }
+}

@@ -24,6 +24,10 @@
       },
       "predictiveBackGestureEnabled": false
     },
+    "locales": {
+      "tr": "./assets/locales/tr.json",
+      "en": "./assets/locales/en.json"
+    },
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png"
