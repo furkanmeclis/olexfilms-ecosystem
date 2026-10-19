@@ -28,8 +28,8 @@ export interface PlateRecognizer {
   prepare(onProgress?: (progress: number) => void): Promise<void>;
   /** Frees the downloaded model again (no-op where the OS owns it). */
   remove(): Promise<void>;
-  /** Text lines of a photo file (`file://…`). */
-  recognize(uri: string): Promise<OcrResult>;
+  /** Text lines of a photo file (`file://…`). `roi` (normalized, top-left origin) limits recognition where the engine supports it (iOS); boxes stay in full-image coordinates. */
+  recognize(uri: string, roi?: NormRect | null): Promise<OcrResult>;
 }
 
 type NativeLine = { text: string; confidence?: number | null; alternatives?: string[] | null; box?: NormRect | null };
@@ -38,7 +38,7 @@ declare class PlateOcrNative extends NativeModule<{ onPrepareProgress: (e: { pro
   getStatus(): Promise<RecognizerStatus>;
   prepare(): Promise<RecognizerStatus>;
   release(): Promise<boolean>;
-  recognize(uri: string): Promise<{ width: number; height: number; lines: NativeLine[] }>;
+  recognize(uri: string, roi: NormRect | null): Promise<{ width: number; height: number; lines: NativeLine[] }>;
 }
 
 const native = requireOptionalNativeModule<PlateOcrNative>('PlateOcr');
@@ -67,9 +67,9 @@ const nativeRecognizer: PlateRecognizer = {
   async remove() {
     if (native) await native.release();
   },
-  async recognize(uri) {
+  async recognize(uri, roi) {
     if (!native) throw new Error('PlateOcr native module is not in this build');
-    const r = await native.recognize(uri);
+    const r = await native.recognize(uri, roi ?? null);
     return {
       width: r.width,
       height: r.height,

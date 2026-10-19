@@ -48,6 +48,14 @@ class PlateOcrModule : Module() {
 
     AsyncFunction("prepare") { promise: Promise ->
       val installer = ModuleInstall.getClient(context)
+      // The listener and the request task can both report the end (e.g. a
+      // failed install); the promise must settle exactly once.
+      var settled = false
+      fun settle(block: () -> Unit) {
+        if (settled) return
+        settled = true
+        block()
+      }
       val listener = object : InstallStatusListener {
         override fun onInstallStatusUpdated(update: ModuleInstallStatusUpdate) {
           update.progressInfo?.let {
@@ -59,11 +67,11 @@ class PlateOcrModule : Module() {
           when (update.installState) {
             STATE_COMPLETED -> {
               installer.unregisterListener(this)
-              promise.resolve("ready")
+              settle { promise.resolve("ready") }
             }
             STATE_FAILED, STATE_CANCELED -> {
               installer.unregisterListener(this)
-              promise.reject("ERR_PLATE_OCR_INSTALL", "Text recognition model could not be installed (${update.errorCode})", null)
+              settle { promise.reject("ERR_PLATE_OCR_INSTALL", "Text recognition model could not be installed (${update.errorCode})", null) }
             }
             else -> Unit
           }
@@ -75,12 +83,12 @@ class PlateOcrModule : Module() {
         .addOnSuccessListener {
           if (it.areModulesAlreadyInstalled()) {
             installer.unregisterListener(listener)
-            promise.resolve("ready")
+            settle { promise.resolve("ready") }
           }
         }
-        .addOnFailureListener {
+        .addOnFailureListener { e ->
           installer.unregisterListener(listener)
-          promise.reject("ERR_PLATE_OCR_INSTALL", it.message ?: "Text recognition model could not be installed", it)
+          settle { promise.reject("ERR_PLATE_OCR_INSTALL", e.message ?: "Text recognition model could not be installed", e) }
         }
     }
 
@@ -95,7 +103,9 @@ class PlateOcrModule : Module() {
         }
     }
 
-    AsyncFunction("recognize") { uri: String, promise: Promise ->
+    // `roi` is used on iOS only; here the guide frame is applied in JS when
+    // scoring lines, so the whole photo is read.
+    AsyncFunction("recognize") { uri: String, _: Map<String, Double>?, promise: Promise ->
       val image = try {
         InputImage.fromFilePath(context, Uri.parse(uri))
       } catch (e: Exception) {

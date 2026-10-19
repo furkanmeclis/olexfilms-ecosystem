@@ -8,8 +8,10 @@ import {
   isStrictTrPlate,
   isValidTrPlate,
   normalizePlateInput,
+  padRect,
   PlateConsensus,
   type PlateCandidate,
+  pickPictureSize,
   previewRectToImage,
   repairTrPlate,
 } from './lib.ts';
@@ -143,6 +145,13 @@ describe('consensus across frames', () => {
     assert.equal(k.add([c('34 ABC 123', 0.85)])?.plate, '34 ABC 123');
   });
 
+  it('needs every agreeing frame to be confident', () => {
+    const k = new PlateConsensus();
+    assert.equal(k.add([c('34 ABC 123', 0.95)]), null);
+    assert.equal(k.add([c('34 ABC 123', 0.5)]), null);
+    assert.equal(k.add([c('34 ABC 123', 0.8)])?.plate, '34 ABC 123');
+  });
+
   it('never accepts low confidence or foreign readings', () => {
     const k = new PlateConsensus();
     k.add([c('34 ABC 123', 0.4)]);
@@ -153,7 +162,28 @@ describe('consensus across frames', () => {
   });
 });
 
+describe('picture size for OCR frames', () => {
+  it('takes the largest size with a 1280–1920 px long side', () => {
+    assert.equal(pickPictureSize(['4032x3024', '1920x1080', '1280x720', '640x480']), '1920x1080');
+    assert.equal(pickPictureSize(['1600x1200', '1280x960', '4000x3000']), '1600x1200');
+  });
+
+  it('falls back to the smallest larger size, or none for presets', () => {
+    assert.equal(pickPictureSize(['4032x3024', '3264x2448', '640x480']), '3264x2448');
+    assert.equal(pickPictureSize(['Photo', 'High', 'Medium']), undefined);
+    assert.equal(pickPictureSize([]), undefined);
+  });
+});
+
 describe('preview to image mapping', () => {
+  it('pads a rect and clamps it to the image', () => {
+    const r = padRect({ x: 0.05, y: 0.4, width: 0.9, height: 0.1 }, 0.1, 0.5);
+    assert.equal(r.x, 0);
+    assert.ok(Math.abs(r.y - 0.35) < 1e-9);
+    assert.ok(Math.abs(r.x + r.width - 1) < 1e-9);
+    assert.ok(Math.abs(r.height - 0.2) < 1e-9);
+  });
+
   it('maps the guide through a cover crop', () => {
     // 4:3 landscape photo shown in a 300×600 portrait view: crops the sides.
     const r = previewRectToImage({ width: 300, height: 600 }, { width: 3000, height: 4000 }, { x: 0, y: 250, width: 300, height: 100 });

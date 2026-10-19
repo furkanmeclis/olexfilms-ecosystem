@@ -316,7 +316,8 @@ function looseCandidate(lines: OcrLine[], roi: NormRect | null): PlateCandidate 
  * frame never fills the field on its own.
  */
 export class PlateConsensus {
-  private readonly tally = new Map<string, { candidate: PlateCandidate; hits: number }>();
+  /** `hits` counts frames seen; `strong` only those at or above `minConfidence`. */
+  private readonly tally = new Map<string, { candidate: PlateCandidate; hits: number; strong: number }>();
   private readonly hits: number;
   private readonly minConfidence: number;
 
@@ -325,15 +326,20 @@ export class PlateConsensus {
     this.minConfidence = minConfidence;
   }
 
-  /** Adds one frame's candidates; returns the accepted plate, if any. */
+  /**
+   * Adds one frame's candidates; returns the accepted plate, if any. Every
+   * agreeing frame must itself reach `minConfidence`: one strong frame plus
+   * weak repeats is not enough.
+   */
   add(candidates: PlateCandidate[]): PlateCandidate | null {
     const top = candidates[0];
     if (!top) return null;
     const entry = this.tally.get(top.compact);
     const candidate = entry && entry.candidate.confidence > top.confidence ? entry.candidate : top;
     const hits = (entry?.hits ?? 0) + 1;
-    this.tally.set(top.compact, { candidate, hits });
-    return top.tr && hits >= this.hits && candidate.confidence >= this.minConfidence ? candidate : null;
+    const strong = (entry?.strong ?? 0) + (top.confidence >= this.minConfidence ? 1 : 0);
+    this.tally.set(top.compact, { candidate, hits, strong });
+    return top.tr && strong >= this.hits ? candidate : null;
   }
 
   /** All readings so far, best first (for the result sheet). */
@@ -347,6 +353,34 @@ export class PlateConsensus {
   reset() {
     this.tally.clear();
   }
+}
+
+/** Grows a normalized rect by a share of its size on each side, clamped to the image. */
+export function padRect(r: NormRect, padX: number, padY: number): NormRect {
+  const x = clamp(r.x - r.width * padX);
+  const y = clamp(r.y - r.height * padY);
+  const right = clamp(r.x + r.width * (1 + padX));
+  const bottom = clamp(r.y + r.height * (1 + padY));
+  return { x, y, width: right - x, height: bottom - y };
+}
+
+/**
+ * Picks a camera picture size for OCR frames: the largest `WxH` whose long
+ * side is 1280–1920 px, else the smallest above that range. Full-resolution
+ * frames (12 MP+) every half second heat the phone and can run Android out
+ * of memory; a plate across ~80% of a 1920 px frame is plenty for OCR.
+ * Undefined when the camera only offers named presets.
+ */
+export function pickPictureSize(sizes: string[], min = 1280, max = 1920): string | undefined {
+  const parsed = sizes
+    .map((s) => {
+      const m = s.match(/^(\d+)x(\d+)$/);
+      return m ? { s, long: Math.max(Number(m[1]), Number(m[2])) } : null;
+    })
+    .filter((p): p is { s: string; long: number } => p !== null);
+  const inRange = parsed.filter((p) => p.long >= min && p.long <= max).sort((a, b) => b.long - a.long);
+  if (inRange[0]) return inRange[0].s;
+  return parsed.filter((p) => p.long > max).sort((a, b) => a.long - b.long)[0]?.s;
 }
 
 /**

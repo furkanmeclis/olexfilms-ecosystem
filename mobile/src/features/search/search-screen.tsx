@@ -8,6 +8,7 @@ import { api, unwrap } from '@/core/api/client';
 import type { components } from '@/core/api/schema';
 import { type SpaceKind, useResolvedSpace } from '@/core/spaces';
 import { readJSON, writeJSON } from '@/core/storage';
+import { compactPlate } from '@/features/plate-scan/lib';
 import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
 import { useDebounced } from '@/features/services/lib';
 import { errorText, SearchField } from '@/features/services/ui';
@@ -119,7 +120,7 @@ export function SearchScreen() {
           <View className="flex-1">
             <SearchField value={q} onChange={setQ} placeholder={t('placeholder')} autoFocus />
           </View>
-          <PlateScanButton compact onResult={setQ} />
+          <PlateScanButton compact onResult={(plate) => setQ(compactPlate(plate))} />
         </View>
 
         {!active ? (

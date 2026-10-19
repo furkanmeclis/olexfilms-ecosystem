@@ -13,14 +13,23 @@ import { Input } from '@/ui/input';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
-import { extractPlateCandidates, isValidTrPlate, normalizePlateInput, type PlateCandidate, PlateConsensus, previewRectToImage } from './lib';
+import {
+  extractPlateCandidates,
+  isValidTrPlate,
+  normalizePlateInput,
+  padRect,
+  type PlateCandidate,
+  PlateConsensus,
+  pickPictureSize,
+  previewRectToImage,
+} from './lib';
 import { getPlateRecognizer } from './recognizer';
 
 /** Guide frame: TR plate is 520 × 110 mm. */
 const GUIDE_ASPECT = 520 / 110;
 const GUIDE_WIDTH = 0.84;
-/** Pause between automatic frames. */
-const FRAME_GAP_MS = 250;
+/** Pause between automatic frames (with ~1920 px frames: cool phone, no OOM). */
+const FRAME_GAP_MS = 500;
 
 type Size = { width: number; height: number };
 
@@ -70,7 +79,10 @@ function Scanner({ onClose, onResult }: { onClose: () => void; onResult: (plate:
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [result, setResult] = useState<{ candidates: PlateCandidate[]; value: string } | null>(null);
+  const [pictureSize, setPictureSize] = useState<string | undefined>(undefined);
   const capturing = useRef(false);
+  /** Set synchronously by `show`: the loop and the shutter can both finish a frame. */
+  const shown = useRef(false);
 
   /** One frame: photo → OCR → candidates. Null when the camera is busy. */
   const readFrame = async (): Promise<PlateCandidate[] | null> => {
@@ -80,11 +92,10 @@ function Scanner({ onClose, onResult }: { onClose: () => void; onResult: (plate:
     try {
       const photo = await camera.current.takePictureAsync({ quality: 0.6, shutterSound: false });
       uri = photo.uri;
-      const ocr = await getPlateRecognizer().recognize(photo.uri);
-      const roi = previewRectToImage(view, { width: ocr.width || photo.width, height: ocr.height || photo.height }, guideRect(view));
       // A little slack around the guide: users rarely centre the plate exactly.
-      const padded = { x: roi.x - roi.width * 0.08, y: roi.y - roi.height * 0.6, width: roi.width * 1.16, height: roi.height * 2.2 };
-      return extractPlateCandidates(ocr.lines, { roi: padded });
+      const roi = padRect(previewRectToImage(view, { width: photo.width, height: photo.height }, guideRect(view)), 0.08, 0.6);
+      const ocr = await getPlateRecognizer().recognize(photo.uri, roi);
+      return extractPlateCandidates(ocr.lines, { roi });
     } finally {
       if (uri) discard(uri);
       capturing.current = false;
@@ -92,6 +103,8 @@ function Scanner({ onClose, onResult }: { onClose: () => void; onResult: (plate:
   };
 
   const show = (candidates: PlateCandidate[]) => {
+    if (shown.current) return;
+    shown.current = true;
     const top = candidates[0];
     setResult({ candidates, value: top ? top.plate : '' });
     if (top) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -132,6 +145,8 @@ function Scanner({ onClose, onResult }: { onClose: () => void; onResult: (plate:
     try {
       // Wait for an in-flight automatic frame instead of failing the tap.
       for (let i = 0; i < 20 && capturing.current; i++) await new Promise((r) => setTimeout(r, 100));
+      // That frame may already have produced the result.
+      if (shown.current) return;
       const frame = (await readFrame()) ?? [];
       const merged = new Map<string, PlateCandidate>();
       for (const c of [...frame, ...consensus.current.ranked()]) if (!merged.has(c.compact)) merged.set(c.compact, c);
@@ -143,8 +158,22 @@ function Scanner({ onClose, onResult }: { onClose: () => void; onResult: (plate:
     }
   };
 
+  const onCameraReady = async () => {
+    // Small frames for OCR; full 12 MP+ photos every half second are wasteful.
+    if (pictureSize === undefined) {
+      try {
+        const sizes = (await camera.current?.getAvailablePictureSizesAsync()) ?? [];
+        setPictureSize(pickPictureSize(sizes));
+      } catch {
+        // Keep the default size.
+      }
+    }
+    setReady(true);
+  };
+
   const rescan = () => {
     consensus.current.reset();
+    shown.current = false;
     setResult(null);
   };
 
@@ -188,8 +217,10 @@ function Scanner({ onClose, onResult }: { onClose: () => void; onResult: (plate:
           style={{ flex: 1 }}
           facing="back"
           enableTorch={torch}
+          active={!result}
           animateShutter={false}
-          onCameraReady={() => setReady(true)}
+          pictureSize={pictureSize}
+          onCameraReady={() => void onCameraReady()}
         />
         {guide ? (
           <View pointerEvents="none" className="absolute inset-0">

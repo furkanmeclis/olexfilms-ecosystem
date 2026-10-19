@@ -12,7 +12,9 @@ enum PlateTextRecognizer {
 
   /// Returns `{ width, height, lines: [{ text, confidence, alternatives, box }] }`.
   /// Boxes are normalized (0–1) with a top-left origin in the upright image.
-  static func recognize(uri: String) throws -> [String: Any] {
+  /// `roi` (same coordinates) limits recognition to the guide frame: less
+  /// work per frame and no stray text from the rest of the car.
+  static func recognize(uri: String, roi: [String: Double]?) throws -> [String: Any] {
     let path = URL(string: uri)?.isFileURL == true ? (URL(string: uri)?.path ?? uri) : uri
     guard let image = UIImage(contentsOfFile: path), let cgImage = image.cgImage else {
       throw Failure.unreadableImage
@@ -24,6 +26,15 @@ enum PlateTextRecognizer {
     request.usesLanguageCorrection = false
     request.recognitionLanguages = ["en-US"]
 
+    // Vision's region is normalized with a bottom-left origin; observation
+    // boxes come back relative to that region and are mapped back below.
+    var region = CGRect(x: 0, y: 0, width: 1, height: 1)
+    if let roi, let x = roi["x"], let y = roi["y"], let w = roi["width"], let h = roi["height"], w > 0, h > 0 {
+      let r = CGRect(x: x, y: 1 - y - h, width: w, height: h).intersection(region)
+      if !r.isNull, r.width > 0, r.height > 0 { region = r }
+    }
+    request.regionOfInterest = region
+
     let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation(of: image), options: [:])
     try handler.perform([request])
 
@@ -31,7 +42,13 @@ enum PlateTextRecognizer {
     for observation in request.results ?? [] {
       let candidates = observation.topCandidates(3)
       guard let top = candidates.first else { continue }
-      let box = observation.boundingBox
+      let local = observation.boundingBox
+      let box = CGRect(
+        x: region.minX + local.minX * region.width,
+        y: region.minY + local.minY * region.height,
+        width: local.width * region.width,
+        height: local.height * region.height
+      )
       lines.append([
         "text": top.string,
         "confidence": Double(top.confidence),

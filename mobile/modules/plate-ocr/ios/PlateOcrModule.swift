@@ -26,9 +26,9 @@ public class PlateOcrModule: Module {
       true
     }
 
-    AsyncFunction("recognize") { (uri: String) throws -> [String: Any] in
+    AsyncFunction("recognize") { (uri: String, roi: [String: Double]?) throws -> [String: Any] in
       do {
-        return try PlateTextRecognizer.recognize(uri: uri)
+        return try PlateTextRecognizer.recognize(uri: uri, roi: roi)
       } catch PlateTextRecognizer.Failure.unreadableImage {
         throw PlateImageException()
       }
