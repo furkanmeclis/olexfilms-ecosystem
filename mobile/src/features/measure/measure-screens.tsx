@@ -264,6 +264,8 @@ export function NewMeasurementScreen() {
   const parts = PARTS.map((p) => ({ ...p, values: parseValues(values[p.key] ?? '').map((v) => toMicrons(v, unit)) })).filter(
     (p) => p.values.length > 0,
   );
+  // Device data only when a part still holds values read from the gauge (gauge commits always carry Fe/Al).
+  const fromGauge = gaugeDevice != null && parts.some((p) => substrates[p.key]);
   const vinClean = vin.trim().toUpperCase();
   const vinError = vinClean && !/^[A-Z0-9]{11,17}$/.test(vinClean) ? t('vin_invalid') : undefined;
 
@@ -279,10 +281,10 @@ export function NewMeasurementScreen() {
             vin: vinClean || undefined,
             measured_at: now,
             unit: 'um',
-            device: gaugeDevice ?? undefined,
+            device: fromGauge && gaugeDevice ? gaugeDevice : undefined,
             parts: parts.map((p) => ({ part: p.key, place: p.place, values: p.values })),
             raw: {
-              source: gaugeDevice ? 'smartptg' : 'manual',
+              source: fromGauge ? 'smartptg' : 'manual',
               app_version: APP_VERSION,
               date: now,
               measurements: parts.flatMap((p) =>

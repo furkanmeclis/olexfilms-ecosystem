@@ -72,5 +72,8 @@
   "ble.error.service": "Bu cihaz desteklenen bir ölçüm cihazı değil.",
   "ble.error.timeout": "Cihaz zamanında yanıt vermedi.",
   "ble.error.curve": "Cihazın kalibrasyon eğrisi indirilemedi; ölçüm için bir kez gerekli (internet bağlantısı).",
-  "ble.error.generic": "Bluetooth hatası. Tekrar deneyin."
+  "ble.error.generic": "Bluetooth hatası. Tekrar deneyin.",
+  "ble.status.error": "Hata",
+  "ble.error.stream": "Cihazdan ölçüm gelmiyor. Yeniden bağlanın.",
+  "ble.error.not_ready": "Bluetooth henüz hazır değil. İzin sorusunu yanıtlayıp tekrar deneyin."
 }

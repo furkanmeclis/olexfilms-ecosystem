@@ -4,7 +4,7 @@ import { AppState } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 
-import { isGaugeAvailable, reconnectLast, shutdown, subscribeCommits } from './manager';
+import { isGaugeAvailable, isPermissionPromptOpen, reconnectLast, shutdown, subscribeCommits } from './manager';
 import type { Commit } from './readings';
 import { useGauge } from './store';
 
@@ -33,6 +33,8 @@ export function useGaugeSession(onCommit: (c: Commit) => void) {
     });
     let resume = false;
     const app = AppState.addEventListener('change', (next) => {
+      // Android's permission dialog backgrounds the app; that is not leaving it.
+      if (isPermissionPromptOpen()) return;
       if (next === 'background') {
         const { status } = useGauge.getState();
         resume = status === 'connected' || status === 'connecting';

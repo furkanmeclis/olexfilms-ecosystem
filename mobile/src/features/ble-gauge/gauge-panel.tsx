@@ -19,6 +19,7 @@ const STATUS_TONE: Record<GaugeStatus, StatusTone> = {
   scanning: 'progress',
   connecting: 'progress',
   connected: 'done',
+  error: 'problem',
 };
 
 /** Connection status chip of the gauge. */
@@ -38,7 +39,7 @@ export function GaugePanel({ targetLabel }: { targetLabel: string | null }) {
   const g = useGauge();
   const userKey = useGaugeUserKey();
   const [picking, setPicking] = useState(false);
-  const last = g.status === 'idle' ? lastGauge(userKey) : null;
+  const last = g.status === 'idle' || g.status === 'error' ? lastGauge(userKey) : null;
   const connected = g.status === 'connected';
 
   return (

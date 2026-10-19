@@ -72,5 +72,8 @@
   "ble.error.service": "This device is not a supported gauge.",
   "ble.error.timeout": "The gauge did not answer in time.",
   "ble.error.curve": "The gauge's calibration curve could not be downloaded; readings need it once (internet required).",
-  "ble.error.generic": "Bluetooth error. Try again."
+  "ble.error.generic": "Bluetooth error. Try again.",
+  "ble.status.error": "Error",
+  "ble.error.stream": "Readings from the gauge stopped. Connect again.",
+  "ble.error.not_ready": "Bluetooth is not ready yet. Answer the permission prompt and try again."
 }

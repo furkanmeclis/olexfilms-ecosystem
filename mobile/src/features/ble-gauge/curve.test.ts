@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { createCipheriv } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
+import { BUNDLED_CURVES } from './bundled-curves.ts';
 import {
   decryptCurveFile,
   deviceModelName,
@@ -40,6 +42,14 @@ describe('curve file', () => {
     const c = createCipheriv('aes-128-cbc', Buffer.from('436a1246dbe284b7', 'latin1'), Buffer.from(iv, 'latin1'));
     const file = `${iv}:${Buffer.concat([c.update(CSV_32475, 'latin1'), c.final()]).toString('base64')}`;
     assert.equal(decryptCurveFile(file), CSV_32475);
+  });
+
+  it('decrypts the real factory file of SN 32475 (smartptg.pl, 2026-10)', () => {
+    const raw = readFileSync(new URL('./fixtures/32475.dat', import.meta.url), 'latin1');
+    const real = parseCurve(decryptCurveFile(raw), 32475);
+    assert.deepEqual(real.fe, curve.fe);
+    assert.deepEqual(real.al, curve.al);
+    assert.deepEqual(real, BUNDLED_CURVES[32475]);
   });
 
   it('round-trips with the helper', () => {

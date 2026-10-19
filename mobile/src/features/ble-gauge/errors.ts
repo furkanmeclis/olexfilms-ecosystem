@@ -14,6 +14,8 @@ export type GaugeErrorKey =
   | 'ble.error.service'
   | 'ble.error.timeout'
   | 'ble.error.curve'
+  | 'ble.error.stream'
+  | 'ble.error.not_ready'
   | 'ble.error.generic';
 
 const BY_CODE: Record<number, GaugeErrorKey> = {
@@ -42,6 +44,8 @@ const BY_NAME: Record<string, GaugeErrorKey> = {
   not_found: 'ble.error.not_found',
   timeout: 'ble.error.timeout',
   curve: 'ble.error.curve',
+  service: 'ble.error.service',
+  not_ready: 'ble.error.not_ready',
 };
 
 /** Any thrown value → message key. */

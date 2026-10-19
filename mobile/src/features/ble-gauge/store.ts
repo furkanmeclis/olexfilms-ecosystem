@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import type { GaugeReading } from './curve';
 import type { GaugeErrorKey } from './errors';
 
-export type GaugeStatus = 'idle' | 'scanning' | 'connecting' | 'connected';
+export type GaugeStatus = 'idle' | 'scanning' | 'connecting' | 'connected' | 'error';
 
 export type ScannedGauge = { id: string; name: string; rssi: number | null };
 

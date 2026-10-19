@@ -12,10 +12,12 @@ import { PermissionsAndroid, Platform, TurboModuleRegistry } from 'react-native'
 
 import { readJSON, writeJSON } from '@/core/storage';
 
-import { curveUrl, decryptCurveFile, deviceModelName, frameToReading, type GaugeCurve, parseCurve } from './curve';
+import { BUNDLED_CURVES } from './bundled-curves';
+import { decryptCurveFile, deviceModelName, frameToReading, type GaugeCurve, parseCurve } from './curve';
 import { adapterErrorKey, gaugeErrorKey } from './errors';
 import { base64ToBinary, createLineSplitter, decodeFrame, GAUGE_BLE, isGaugePeripheral } from './protocol';
 import { type Commit, initialSampler, type SamplerState, samplerProgress, stepSampler } from './readings';
+import { createGeneration, createSerialConfirm, curveUrls, poweredOnTimeoutError, poweredOnWaitMs } from './session';
 import { type GaugeState, initialGaugeState, upsertDevice, useGauge } from './store';
 
 let available: boolean | null = null;
@@ -49,6 +51,13 @@ const set = useGauge.setState;
 
 /* ---------------------------------------------------------------- permissions */
 
+let permissionPrompt = false;
+
+/** True while an Android permission dialog is open (it sends the app to `background`). */
+export function isPermissionPromptOpen(): boolean {
+  return permissionPrompt;
+}
+
 /** Android runtime permissions; iOS asks on its own when the manager starts. */
 async function ensurePermissions(): Promise<void> {
   if (Platform.OS !== 'android') return;
@@ -57,31 +66,56 @@ async function ensurePermissions(): Promise<void> {
     sdk >= 31
       ? [PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN, PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT]
       : [PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
-  const result = await PermissionsAndroid.requestMultiple(wanted);
+  if ((await Promise.all(wanted.map((p) => PermissionsAndroid.check(p)))).every(Boolean)) return;
+  permissionPrompt = true;
+  let result: Awaited<ReturnType<typeof PermissionsAndroid.requestMultiple>>;
+  try {
+    result = await PermissionsAndroid.requestMultiple(wanted);
+  } finally {
+    // The AppState events of the dialog arrive right after it closes.
+    setTimeout(() => {
+      permissionPrompt = false;
+    }, 1000);
+  }
   if (!wanted.every((p) => result[p] === PermissionsAndroid.RESULTS.GRANTED)) throw new Error('unauthorized');
 }
 
-/** Waits for the adapter to report PoweredOn (it starts as Unknown). */
-function waitPoweredOn(ble: BleManager, timeoutMs = 6000): Promise<void> {
+/**
+ * Waits for the adapter to report PoweredOn. It starts as Unknown, and on iOS
+ * stays Unknown while the first Bluetooth permission prompt is open, so the
+ * wait is long in that state and short once the adapter has answered.
+ */
+function waitPoweredOn(ble: BleManager): Promise<void> {
   return new Promise((resolve, reject) => {
     let sub: Subscription | null = null;
-    const timer = setTimeout(() => {
+    let last: string | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const done = () => {
+      if (timer) clearTimeout(timer);
       sub?.remove();
-      reject(new Error('powered_off'));
-    }, timeoutMs);
+    };
+    const arm = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        done();
+        reject(new Error(poweredOnTimeoutError(last)));
+      }, poweredOnWaitMs(last));
+    };
+    arm();
     sub = ble.onStateChange((state) => {
+      last = state;
       if (state === 'PoweredOn') {
-        clearTimeout(timer);
-        sub?.remove();
+        done();
         resolve();
         return;
       }
       const key = adapterErrorKey(state);
       if (key) {
-        clearTimeout(timer);
-        sub?.remove();
+        done();
         reject(new Error(key.replace('ble.error.', '')));
+        return;
       }
+      arm(); // Unknown / Resetting: keep waiting.
     }, true);
   });
 }
@@ -154,21 +188,61 @@ async function loadCurve(serial: number) {
   }
   curveLoading = serial;
   set({ curve: 'loading' });
-  const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), 12_000);
   try {
-    const res = await fetch(curveUrl(serial), { signal: abort.signal });
-    if (!res.ok) throw new Error('curve');
-    const parsed = parseCurve(decryptCurveFile(await res.text()), serial);
+    const parsed = await downloadCurve(serial).catch((e: unknown) => {
+      const bundled = BUNDLED_CURVES[serial];
+      if (bundled) return bundled;
+      throw e;
+    });
     writeJSON(curveKey(serial), parsed);
     curve = parsed;
     set({ curve: 'ready', model: deviceModelName(parsed.deviceType) });
   } catch {
     set({ curve: 'error', error: 'ble.error.curve' });
   } finally {
-    clearTimeout(timer);
     curveLoading = null;
   }
+}
+
+class HttpError extends Error {}
+
+async function fetchText(url: string): Promise<string> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 12_000);
+  try {
+    const res = await fetch(url, { signal: abort.signal });
+    if (!res.ok) throw new HttpError(`curve_http_${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Tries each HTTPS source in turn (mysdprog.pl, then smartptg.pl). A network
+ * failure is retried once; an HTTP error or a bad file moves to the next source.
+ */
+async function downloadCurve(serial: number): Promise<GaugeCurve> {
+  let lastError: unknown = new Error('curve');
+  for (const url of curveUrls(serial)) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      let text: string;
+      try {
+        text = await fetchText(url);
+      } catch (e) {
+        lastError = e;
+        if (e instanceof HttpError) break;
+        continue; // network error: retry once
+      }
+      try {
+        return parseCurve(decryptCurveFile(text), serial);
+      } catch (e) {
+        lastError = e;
+        break;
+      }
+    }
+  }
+  throw lastError;
 }
 
 /** Retries a failed curve download (the gauge stays connected). */
@@ -195,14 +269,16 @@ export function subscribeCommits(listener: CommitListener): () => void {
 }
 
 const splitter = createLineSplitter();
+const serialConfirm = createSerialConfirm(2);
 
 function onLine(line: string) {
   const frame = decodeFrame(line);
   if (!frame) return;
-  const s = useGauge.getState();
-  if (s.serial !== frame.serial) {
-    set({ serial: frame.serial });
-    void loadCurve(frame.serial);
+  // A serial counts (and may start a curve download) only after two frames agree.
+  const serial = serialConfirm.push(frame.serial);
+  if (serial != null && useGauge.getState().serial !== serial) {
+    set({ serial });
+    void loadCurve(serial);
   }
   const reading = frameToReading(frame, curve, null, Date.now());
   const step = stepSampler(sampler, reading);
@@ -216,6 +292,10 @@ function onLine(line: string) {
 let device: Device | null = null;
 let subs: Subscription[] = [];
 let userDisconnect = false;
+/** Connect attempts; disconnect() bumps it so late connectToDevice results are dropped. */
+const generation = createGeneration();
+/** Peripheral of the connect attempt in flight, cancelled by disconnect(). */
+let pendingId: string | null = null;
 
 const lastKey = (userKey: string) => `ble.gauge.last.${userKey}`;
 
@@ -227,32 +307,63 @@ function teardown() {
   for (const s of subs) s.remove();
   subs = [];
   splitter.reset();
+  serialConfirm.reset();
   sampler = initialSampler;
   device = null;
 }
 
+function cancelPeripheral(id: string) {
+  if (manager) void manager.cancelDeviceConnection(id).catch(() => undefined);
+}
+
+/** Ends the session in the error state (kept until the user retries or dismisses it). */
+function fail(error: GaugeState['error']) {
+  const id = device?.id;
+  teardown();
+  set({ ...initialGaugeState, devices: useGauge.getState().devices, status: 'error', error });
+  if (id) cancelPeripheral(id);
+}
+
 export async function connect(id: string, userKey?: string | null): Promise<void> {
   stopScan();
-  if (device) await disconnect();
+  if (device || pendingId) await disconnect();
+  const ticket = generation.next();
+  const stale = () => !generation.isCurrent(ticket);
   userDisconnect = false;
+  pendingId = id;
   set({ status: 'connecting', error: null });
   try {
     const ble = await ready();
+    if (stale()) return;
     const d = await ble.connectToDevice(id, { timeout: 12_000 });
+    if (stale()) {
+      // The screen closed or the app left while connecting: do not keep the link.
+      cancelPeripheral(id);
+      return;
+    }
     await d.discoverAllServicesAndCharacteristics();
+    const chars = await d.characteristicsForService(GAUGE_BLE.serviceUUID).catch(() => []);
+    if (stale()) {
+      cancelPeripheral(id);
+      return;
+    }
+    if (!chars.some((c) => c.uuid.toLowerCase() === GAUGE_BLE.rxCharacteristicUUID)) throw new Error('service');
+    pendingId = null;
     device = d;
     const name = d.name ?? d.localName ?? 'SmartPTG';
     subs.push(
       ble.onDeviceDisconnected(d.id, () => {
-        const unexpected = !userDisconnect;
+        if (userDisconnect) return;
         teardown();
-        set({ ...initialGaugeState, devices: useGauge.getState().devices, error: unexpected ? 'ble.error.disconnected' : null });
+        set({ ...initialGaugeState, devices: useGauge.getState().devices, status: 'error', error: 'ble.error.disconnected' });
       }),
     );
     subs.push(
       d.monitorCharacteristicForService(GAUGE_BLE.serviceUUID, GAUGE_BLE.rxCharacteristicUUID, (error, ch) => {
         if (error) {
-          // A drop also ends the monitor; onDeviceDisconnected reports it.
+          if (stale() || userDisconnect || device !== d) return;
+          const key = gaugeErrorKey(error);
+          fail(key === 'ble.error.generic' ? 'ble.error.stream' : key);
           return;
         }
         if (ch?.value) for (const line of splitter.push(base64ToBinary(ch.value))) onLine(line);
@@ -261,16 +372,19 @@ export async function connect(id: string, userKey?: string | null): Promise<void
     if (userKey) writeJSON(lastKey(userKey), { id: d.id, name });
     set({ status: 'connected', device: { id: d.id, name } });
   } catch (e) {
+    if (stale()) return;
+    pendingId = null;
     teardown();
-    set({ status: 'idle', device: null, error: gaugeErrorKey(e) });
-    if (manager) void manager.cancelDeviceConnection(id).catch(() => undefined);
+    set({ status: 'error', device: null, error: gaugeErrorKey(e) });
+    cancelPeripheral(id);
   }
 }
 
 /** Reconnects to the user's last gauge: directly, then via a short scan for the same id. */
 export async function reconnectLast(userKey: string | null | undefined): Promise<void> {
   const last = lastGauge(userKey);
-  if (!last || useGauge.getState().status !== 'idle') return;
+  const status = useGauge.getState().status;
+  if (!last || (status !== 'idle' && status !== 'error')) return;
   await connect(last.id, userKey);
   if (useGauge.getState().status === 'connected') return;
 
@@ -295,14 +409,17 @@ export async function reconnectLast(userKey: string | null | undefined): Promise
 
 export async function disconnect(): Promise<void> {
   userDisconnect = true;
-  const id = device?.id ?? useGauge.getState().device?.id;
+  generation.bump();
+  const ids = new Set([device?.id ?? useGauge.getState().device?.id, pendingId].filter((x): x is string => !!x));
+  pendingId = null;
   teardown();
   set({ ...initialGaugeState, devices: useGauge.getState().devices });
-  if (id && manager) await manager.cancelDeviceConnection(id).catch(() => undefined);
+  const ble = manager;
+  if (ble) await Promise.all([...ids].map((id) => ble.cancelDeviceConnection(id).catch(() => undefined)));
 }
 
 export function clearError() {
-  set({ error: null });
+  set((s) => ({ error: null, status: s.status === 'error' ? 'idle' : s.status }));
 }
 
 /** Stops everything (screen left or app sent to the background). */

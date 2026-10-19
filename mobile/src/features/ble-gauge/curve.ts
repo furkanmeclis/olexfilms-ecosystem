@@ -17,9 +17,6 @@ const aesjs: AesJs = (aesNamespace as unknown as { default?: AesJs }).default ??
 /** NexPTG `guarana` resource; the first 16 bytes are the AES key. */
 const CURVE_KEY = '436a1246dbe284b75dc8f4729a962647';
 
-/** HTTPS mirror of the factory curves (the http:// smartptg.pl one needs an ATS exception). */
-export const curveUrl = (serial: number) => `https://mysdprog.pl/char/${serial}.dat`;
-
 export type CurvePoint = { thickness: number; frequency: number };
 
 export type GaugeCurve = {

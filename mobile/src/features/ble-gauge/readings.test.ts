@@ -87,6 +87,8 @@ describe('errors', () => {
     assert.equal(gaugeErrorKey({ errorCode: 102 }), 'ble.error.powered_off');
     assert.equal(gaugeErrorKey({ errorCode: 601 }), 'ble.error.location_off');
     assert.equal(gaugeErrorKey(new Error('curve')), 'ble.error.curve');
+    assert.equal(gaugeErrorKey(new Error('service')), 'ble.error.service');
+    assert.equal(gaugeErrorKey(new Error('not_ready')), 'ble.error.not_ready');
     assert.equal(gaugeErrorKey('weird'), 'ble.error.generic');
   });
 
