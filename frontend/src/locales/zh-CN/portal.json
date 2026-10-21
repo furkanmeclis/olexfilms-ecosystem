@@ -412,5 +412,12 @@
   "home.appointments_hint": "您即将到来和过去的预约",
   "home.dealers_hint": "您附近的授权经销商",
   "home.profile_hint": "您的姓名、语言和会话",
-  "home.book": "预约"
+  "home.book": "预约",
+  "nav.title": "客户门户",
+  "nav.toggle": "显示/隐藏菜单",
+  "nav.group.general": "概览",
+  "nav.group.vehicles": "车辆与服务",
+  "nav.group.account": "账户",
+  "fleet.nav.group.fleet": "车队",
+  "fleet.nav.group.account": "账户与报表"
 }

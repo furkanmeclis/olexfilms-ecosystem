@@ -412,5 +412,12 @@
   "home.appointments_hint": "مواعيدك القادمة والسابقة",
   "home.dealers_hint": "الوكلاء المعتمدون بالقرب منك",
   "home.profile_hint": "اسمك ولغتك وجلساتك",
-  "home.book": "احجز موعدًا"
+  "home.book": "احجز موعدًا",
+  "nav.title": "بوابة العملاء",
+  "nav.toggle": "إظهار/إخفاء القائمة",
+  "nav.group.general": "نظرة عامة",
+  "nav.group.vehicles": "المركبات والخدمات",
+  "nav.group.account": "الحساب",
+  "fleet.nav.group.fleet": "الأسطول",
+  "fleet.nav.group.account": "الحساب والتقارير"
 }

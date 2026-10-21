@@ -412,5 +412,12 @@
   "home.appointments_hint": "Yaklaşan ve geçmiş randevularınız",
   "home.dealers_hint": "Size yakın yetkili bayiler",
   "home.profile_hint": "Ad, dil ve oturum ayarlarınız",
-  "home.book": "Randevu al"
+  "home.book": "Randevu al",
+  "nav.title": "Müşteri portalı",
+  "nav.toggle": "Menüyü aç/kapat",
+  "nav.group.general": "Genel",
+  "nav.group.vehicles": "Araçlar ve hizmetler",
+  "nav.group.account": "Hesap",
+  "fleet.nav.group.fleet": "Filo",
+  "fleet.nav.group.account": "Hesap ve raporlar"
 }

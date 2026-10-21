@@ -412,5 +412,12 @@
   "home.appointments_hint": "Ваши предстоящие и прошедшие записи",
   "home.dealers_hint": "Авторизованные дилеры рядом с вами",
   "home.profile_hint": "Ваше имя, язык и сеансы",
-  "home.book": "Записаться"
+  "home.book": "Записаться",
+  "nav.title": "Клиентский портал",
+  "nav.toggle": "Показать/скрыть меню",
+  "nav.group.general": "Общее",
+  "nav.group.vehicles": "Автомобили и услуги",
+  "nav.group.account": "Учётная запись",
+  "fleet.nav.group.fleet": "Автопарк",
+  "fleet.nav.group.account": "Счёт и отчёты"
 }

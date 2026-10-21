@@ -56,6 +56,7 @@ import type {
 import { isPortalReadOnly } from "@/features/portal/lib/portal-vehicles";
 
 import { PortalContracts } from "./portal-contracts";
+import { withSidebar } from "@/test/sidebar";
 import { PortalNav } from "./portal-nav";
 import { PortalPreferences } from "./portal-preferences";
 
@@ -302,7 +303,7 @@ describe("portal read-only and nav (TEC-245)", () => {
   });
 
   it("links the contracts and profile pages", async () => {
-    await render(createElement(PortalNav));
+    await render(withSidebar(createElement(PortalNav)));
     const hrefs = Array.from(container.querySelectorAll("a")).map((a) =>
       a.getAttribute("href"),
     );

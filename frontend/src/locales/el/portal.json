@@ -412,5 +412,12 @@
   "home.appointments_hint": "Τα επερχόμενα και προηγούμενα ραντεβού σας",
   "home.dealers_hint": "Εξουσιοδοτημένοι αντιπρόσωποι κοντά σας",
   "home.profile_hint": "Το όνομα, η γλώσσα και οι συνεδρίες σας",
-  "home.book": "Κλείστε ραντεβού"
+  "home.book": "Κλείστε ραντεβού",
+  "nav.title": "Πύλη πελατών",
+  "nav.toggle": "Εμφάνιση/απόκρυψη μενού",
+  "nav.group.general": "Επισκόπηση",
+  "nav.group.vehicles": "Οχήματα και υπηρεσίες",
+  "nav.group.account": "Λογαριασμός",
+  "fleet.nav.group.fleet": "Στόλος",
+  "fleet.nav.group.account": "Λογαριασμός και αναφορές"
 }

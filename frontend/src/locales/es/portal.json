@@ -412,5 +412,12 @@
   "home.appointments_hint": "Sus citas próximas y pasadas",
   "home.dealers_hint": "Distribuidores autorizados cerca de usted",
   "home.profile_hint": "Su nombre, idioma y sesiones",
-  "home.book": "Pedir cita"
+  "home.book": "Pedir cita",
+  "nav.title": "Portal del cliente",
+  "nav.toggle": "Mostrar/ocultar menú",
+  "nav.group.general": "General",
+  "nav.group.vehicles": "Vehículos y servicios",
+  "nav.group.account": "Cuenta",
+  "fleet.nav.group.fleet": "Flota",
+  "fleet.nav.group.account": "Cuenta e informes"
 }
