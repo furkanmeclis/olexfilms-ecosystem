@@ -192,5 +192,8 @@
   "company_name": "Razón social",
   "phone_locked": "El teléfono es la clave de la cuenta y no se puede cambiar aquí.",
   "vehicle_edit": "Editar vehículo",
-  "invalid.email": "Introduzca un correo válido."
+  "invalid.email": "Introduzca un correo válido.",
+  "invalid.company_name": "Introduce el nombre de la empresa.",
+  "invalid.tax_office": "Revisa la oficina tributaria.",
+  "invalid.tax_no": "El número fiscal debe tener 5-20 letras o dígitos."
 }

@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { z } from 'zod';
@@ -11,6 +11,7 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
 import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
+import { Segmented } from '@/features/warehouse/parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
@@ -285,12 +286,33 @@ export function CustomerStep({ selected, onPick }: { selected: PickedCustomer | 
   );
 }
 
-const customerSchema = z.object({
-  name: z.string().trim().min(1),
-  surname: z.string().trim().optional(),
-  phone: z.string().trim().min(7),
-});
+const CUSTOMER_TYPES = ['individual', 'corporate'] as const;
+const customerSchema = z
+  .object({
+    type: z.enum(CUSTOMER_TYPES),
+    name: z.string().trim().min(1),
+    surname: z.string().trim().optional(),
+    phone: z.string().trim().min(7),
+    company_name: z.string().trim().max(200).optional(),
+    tax_office: z.string().trim().max(150).optional(),
+    tax_no: z
+      .string()
+      .optional()
+      .refine((v) => !v || /^[0-9A-Z]{5,20}$/.test(normalizeIdentity(v))),
+  })
+  .superRefine((v, ctx) => {
+    if (v.type === 'corporate' && !v.company_name) {
+      ctx.addIssue({ code: 'custom', path: ['company_name'], message: 'required' });
+    }
+  });
 type CustomerForm = z.infer<typeof customerSchema>;
+const INLINE_FIELDS = ['name', 'surname', 'phone', 'company_name', 'tax_office', 'tax_no'] as const;
+type InlineField = (typeof INLINE_FIELDS)[number];
+
+/** Tax number like normalizeIdentityNumber on the server. */
+function normalizeIdentity(raw: string): string {
+  return raw.toLocaleUpperCase('en-US').replace(/[\s\-./]/g, '');
+}
 
 function NewCustomerForm({
   initial,
@@ -306,11 +328,35 @@ function NewCustomerForm({
   const looksLikePhone = /^[+\d\s()-]{7,}$/.test(initial);
   const form = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema),
-    defaultValues: { name: looksLikePhone ? '' : initial, surname: '', phone: looksLikePhone ? initial : '' },
+    defaultValues: {
+      type: 'individual',
+      name: looksLikePhone ? '' : initial,
+      surname: '',
+      phone: looksLikePhone ? initial : '',
+      company_name: '',
+      tax_office: '',
+      tax_no: '',
+    },
   });
+  const type = useWatch({ control: form.control, name: 'type' });
   const create = useMutation({
-    mutationFn: (v: CustomerForm) =>
-      unwrap(api.POST('/v1/customers', { body: { name: v.name, surname: v.surname || undefined, phone: v.phone } })),
+    mutationFn: (v: CustomerForm) => {
+      const corporate = v.type === 'corporate';
+      const taxNo = v.tax_no ? normalizeIdentity(v.tax_no) : '';
+      return unwrap(
+        api.POST('/v1/customers', {
+          body: {
+            type: v.type,
+            name: v.name,
+            surname: v.surname || undefined,
+            phone: v.phone,
+            ...(corporate && v.company_name ? { company_name: v.company_name } : {}),
+            ...(corporate && v.tax_office ? { tax_office: v.tax_office } : {}),
+            ...(corporate && taxNo ? { tax_no: taxNo } : {}),
+          },
+        }),
+      );
+    },
     onSuccess: (c) => {
       void qc.invalidateQueries({ queryKey: ['customers'] });
       onCreated(c);
@@ -318,7 +364,7 @@ function NewCustomerForm({
     onError: (e) => {
       if (!isApiError(e)) return;
       for (const [field, message] of Object.entries(e.fieldErrors())) {
-        if (field === 'name' || field === 'surname' || field === 'phone') form.setError(field, { message });
+        if (INLINE_FIELDS.includes(field as InlineField)) form.setError(field as InlineField, { message });
       }
     },
   });
@@ -327,6 +373,55 @@ function NewCustomerForm({
   return (
     <View className="gap-3">
       <Text variant="headline">{t('customer_new')}</Text>
+      <Segmented
+        value={type}
+        options={CUSTOMER_TYPES.map((v) => ({ value: v, label: t(`customer_type.${v}`) }))}
+        onChange={(v) => form.setValue('type', v)}
+      />
+      {type === 'corporate' ? (
+        <>
+          <Controller
+            control={form.control}
+            name="company_name"
+            render={({ field }) => (
+              <Input
+                label={t('company_name')}
+                placeholder={t('placeholder_company_name')}
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={err('company_name')}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="tax_office"
+            render={({ field }) => (
+              <Input
+                label={t('tax_office')}
+                placeholder={t('placeholder_tax_office')}
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={err('tax_office')}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="tax_no"
+            render={({ field }) => (
+              <Input
+                label={t('tax_no')}
+                placeholder="1234567890"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={err('tax_no')}
+                autoCapitalize="characters"
+              />
+            )}
+          />
+        </>
+      ) : null}
       <Controller
         control={form.control}
         name="name"

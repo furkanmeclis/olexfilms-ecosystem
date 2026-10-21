@@ -192,5 +192,8 @@
   "company_name": "公司名称",
   "phone_locked": "电话号码是账户标识，此处不可更改。",
   "vehicle_edit": "编辑车辆",
-  "invalid.email": "请输入有效的电子邮件。"
+  "invalid.email": "请输入有效的电子邮件。",
+  "invalid.company_name": "请输入公司名称。",
+  "invalid.tax_office": "请检查税务局。",
+  "invalid.tax_no": "税号须为 5-20 位字母或数字。"
 }

@@ -311,19 +311,89 @@ describe("Step 1: customer and vehicle", () => {
     );
     await click($("[data-testid=new-customer-toggle]"));
     await click($("[data-testid=new-customer-submit]"));
-    expect(container.textContent).toContain("services.customer.phone_required");
+    expect(container.textContent).toContain(
+      "customers.validation.phone_required",
+    );
+    expect(container.textContent).toContain(
+      "customers.validation.name_required",
+    );
     expect(api.createCustomer).not.toHaveBeenCalled();
 
-    await type($("#new-customer-phone"), "0555 123 45 67");
+    // Individual by default; field order is name, surname, phone (TEC-867).
+    expect(
+      $("[data-testid=new-customer-type-individual]")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+    expect($("#new-customer-company_name")).toBeNull();
+    const ids = [
+      ...container.querySelectorAll("[data-testid=new-customer-form] input"),
+    ].map((el) => el.id);
+    expect(ids).toEqual([
+      "new-customer-name",
+      "new-customer-surname",
+      "new-customer-phone",
+    ]);
+
     await type($("#new-customer-name"), "Ayşe");
+    await type($("#new-customer-phone"), "0555 123 45 67");
     await click($("[data-testid=new-customer-submit]"));
     expect(api.createCustomer).toHaveBeenCalledWith({
       phone: "0555 123 45 67",
       name: "Ayşe",
+      type: "individual",
     });
     expect($("[data-testid=picked-customer]")).not.toBeNull();
     expect(api.listVehicles).toHaveBeenCalledWith("c9");
     expect(container.textContent).toContain("services.vehicle.none");
+  });
+
+  it("creates a corporate customer with the company fields", async () => {
+    api.createCustomer.mockResolvedValue({
+      ...customer,
+      uuid: "c10",
+      existing_user: false,
+    });
+    api.listVehicles.mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 50,
+      offset: 0,
+    });
+    await render(
+      createElement(CustomerVehicleStep, {
+        access: fullAccess,
+        onDone: vi.fn(),
+      }),
+    );
+    await click($("[data-testid=new-customer-toggle]"));
+    await click($("[data-testid=new-customer-type-corporate]"));
+    expect(
+      $("[data-testid=new-customer-type-corporate]")?.getAttribute(
+        "aria-pressed",
+      ),
+    ).toBe("true");
+    await type($("#new-customer-name"), "Ali");
+    await type($("#new-customer-phone"), "+90 555 765 43 21");
+    await click($("[data-testid=new-customer-submit]"));
+    expect(container.textContent).toContain(
+      "customers.validation.company_required",
+    );
+    expect(api.createCustomer).not.toHaveBeenCalled();
+
+    await type($("#new-customer-company_name"), "Olex Ltd");
+    await type($("#new-customer-tax_office"), "Kadıköy");
+    await type($("#new-customer-tax_no"), "123 456 7890");
+    await click($("[data-testid=new-customer-submit]"));
+    expect(api.createCustomer).toHaveBeenCalledWith({
+      phone: "+90 555 765 43 21",
+      name: "Ali",
+      type: "corporate",
+      company_name: "Olex Ltd",
+      tax_office: "Kadıköy",
+      tax_no: "1234567890",
+    });
+    expect($("[data-testid=picked-customer]")).not.toBeNull();
   });
 
   it("hides the create buttons without the write grants", async () => {

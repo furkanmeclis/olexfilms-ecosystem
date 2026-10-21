@@ -192,5 +192,8 @@
   "company_name": "Firmenname",
   "phone_locked": "Die Telefonnummer ist der Kontoschlüssel und kann hier nicht geändert werden.",
   "vehicle_edit": "Fahrzeug bearbeiten",
-  "invalid.email": "Gültige E-Mail eingeben."
+  "invalid.email": "Gültige E-Mail eingeben.",
+  "invalid.company_name": "Firmennamen eingeben.",
+  "invalid.tax_office": "Finanzamt prüfen.",
+  "invalid.tax_no": "Steuernummer muss 5-20 Buchstaben oder Ziffern haben."
 }
