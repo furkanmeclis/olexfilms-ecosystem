@@ -18,14 +18,22 @@ import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
 
-import { type CustomerSummary, fullName, useDebounced, useLinks, type Vehicle, vehicleLabel } from './lib';
+import { customerSubtitle, customerTitle } from './customer-name';
+import { type CustomerSummary, useDebounced, useLinks, type Vehicle, vehicleLabel } from './lib';
 import { errorText, ListSkeleton, SearchField, Section } from './ui';
 import type { IconName } from '@/ui/icons';
 
 type Step = 'customer' | 'vehicle' | 'details';
 const STEPS: Step[] = ['customer', 'vehicle', 'details'];
 
-export type PickedCustomer = { uuid: string; name: string; surname?: string | null; phone?: string | null };
+export type PickedCustomer = {
+  uuid: string;
+  name: string;
+  surname?: string | null;
+  phone?: string | null;
+  type?: string | null;
+  company_name?: string | null;
+};
 
 /**
  * New draft service in three short steps: customer, vehicle, details. Items
@@ -116,7 +124,12 @@ export function NewServiceScreen() {
         {step === 'details' && customer && vehicle ? (
           <View className="gap-4">
             <Section>
-              <Summary icon="customer" title={fullName(customer)} subtitle={customer.phone ?? ''} onPress={() => setStep('customer')} />
+              <Summary
+                icon="customer"
+                title={customerTitle(customer)}
+                subtitle={customerSubtitle(customer)}
+                onPress={() => setStep('customer')}
+              />
               <Summary
                 icon="vehicle"
                 title={vehicle.plate ?? ''}
@@ -261,8 +274,8 @@ export function CustomerStep({ selected, onPick }: { selected: PickedCustomer | 
           {items.map((c, i) => (
             <PickRow
               key={c.uuid}
-              title={fullName(c) || c.company_name || '—'}
-              subtitle={[c.phone, c.company_name].filter(Boolean).join(' · ')}
+              title={customerTitle(c)}
+              subtitle={customerSubtitle(c)}
               selected={c.uuid === selected?.uuid}
               onPress={() => onPick(c)}
               last={i === items.length - 1}
@@ -426,14 +439,18 @@ function NewCustomerForm({
         control={form.control}
         name="name"
         render={({ field }) => (
-          <Input label={t('first_name')} placeholder={t('placeholder_first_name')} value={field.value} onChangeText={field.onChange} error={err('name')} autoCapitalize="words" />
+          <Input
+            label={t(type === 'corporate' ? 'contact_first_name' : 'first_name')}
+            placeholder={t('placeholder_first_name')} value={field.value} onChangeText={field.onChange} error={err('name')} autoCapitalize="words" />
         )}
       />
       <Controller
         control={form.control}
         name="surname"
         render={({ field }) => (
-          <Input label={t('surname')} placeholder={t('placeholder_surname')} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="words" />
+          <Input
+            label={t(type === 'corporate' ? 'contact_surname' : 'surname')}
+            placeholder={t('placeholder_surname')} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="words" />
         )}
       />
       <Controller
@@ -488,7 +505,7 @@ export function VehicleStep({
   return (
     <View className="gap-3">
       <Text variant="footnote" tone="muted">
-        {t('vehicles_of', { name: fullName(customer) })}
+        {t('vehicles_of', { name: customerTitle(customer) })}
       </Text>
       {list.isPending ? (
         <ListSkeleton rows={2} />

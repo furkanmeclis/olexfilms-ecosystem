@@ -32,6 +32,8 @@
   "customer.name": "名字",
   "customer.name_required": "名字为必填项。",
   "customer.surname": "姓氏",
+  "customer.contact_name": "联系人名字",
+  "customer.contact_surname": "联系人姓氏",
   "customer.create": "保存客户",
   "customer.created": "客户已创建。",
   "customer.linked_existing": "该电话已属于某个客户；该客户已关联到您的组织。",

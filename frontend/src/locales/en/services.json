@@ -32,6 +32,8 @@
   "customer.name": "Name",
   "customer.name_required": "Name is required.",
   "customer.surname": "Surname",
+  "customer.contact_name": "Contact first name",
+  "customer.contact_surname": "Contact surname",
   "customer.create": "Save customer",
   "customer.created": "Customer created.",
   "customer.linked_existing": "This phone already belongs to a customer; the customer was linked to your organization.",

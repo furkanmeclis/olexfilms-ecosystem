@@ -43,6 +43,8 @@ type CustomerRef struct {
 	Surname    string    `json:"surname"`
 	Phone      *string   `json:"phone"`
 	Anonymized bool      `json:"anonymized"`
+	// CompanyName is set for a corporate customer (TEC-867).
+	CompanyName *string `json:"company_name"`
 }
 
 // ProductRef names an item's product.
@@ -201,17 +203,28 @@ func textPtr(t pgtype.Text) *string {
 	return &v
 }
 
+// customerRef is the service's customer: masked when anonymized, with the
+// company name of a corporate customer (TEC-867; the query joins the profile
+// only for type corporate).
+func customerRef(refs db.GetServiceRefsRow, loc i18n.Locale) CustomerRef {
+	if refs.CustomerStatus == "anonymized" {
+		return CustomerRef{UUID: refs.CustomerUuid, Name: i18n.Translate(loc, AnonymizedNameKey), Anonymized: true}
+	}
+	ref := CustomerRef{UUID: refs.CustomerUuid, Name: refs.CustomerName, Surname: refs.CustomerSurname,
+		Phone: textPtr(refs.CustomerPhone)}
+	if company := textPtr(refs.CustomerCompanyName); company != nil && *company != "" {
+		ref.CompanyName = company
+	}
+	return ref
+}
+
 func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.Service, gate *contractGate) (ServiceView, error) {
 	refs, err := q.GetServiceRefs(ctx, svc.ID)
 	if err != nil {
 		return ServiceView{}, fmt.Errorf("services: refs: %w", err)
 	}
 	loc := i18n.FromContext(ctx).Locale
-	cust := CustomerRef{UUID: refs.CustomerUuid, Name: refs.CustomerName, Surname: refs.CustomerSurname,
-		Phone: textPtr(refs.CustomerPhone)}
-	if refs.CustomerStatus == "anonymized" {
-		cust = CustomerRef{UUID: refs.CustomerUuid, Name: i18n.Translate(loc, AnonymizedNameKey), Anonymized: true}
-	}
+	cust := customerRef(refs, loc)
 	canWrite := c.allows(rbac.PermServicesWrite, svc) && formEditable(c, svc)
 	if gate == nil {
 		gate = s.newContractGate()

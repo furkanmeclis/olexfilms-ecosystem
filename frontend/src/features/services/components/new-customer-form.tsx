@@ -34,7 +34,8 @@ type InlineField = Exclude<CustomerFormField, "email" | "national_id" | "type">;
  * Inline customer create of the service wizard (POST /v1/customers, TEC-160,
  * TEC-867): individual / corporate choice, then name, surname and phone
  * (any format, E.164 on the server, K29); a corporate customer also gets the
- * company fields of the full customer form. Validation and the request body
+ * company fields of the full customer form, and name / surname are labelled
+ * as the contact person. Validation and the request body
  * are shared with that form (features/customers/lib/form). An existing phone
  * links that user instead (one phone = one user, K11).
  */
@@ -49,6 +50,7 @@ export function NewCustomerForm({
   const [values, setValues] = useState<CustomerFormValues>(EMPTY_CUSTOMER_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const corporate = values.type === "corporate";
   const set = <K extends keyof CustomerFormValues>(
     key: K,
     value: CustomerFormValues[K],
@@ -152,7 +154,7 @@ export function NewCustomerForm({
           </Button>
         ))}
       </div>
-      {values.type === "corporate" ? (
+      {corporate ? (
         <div className="grid gap-4 sm:grid-cols-3">
           {field("company_name", t("customers.fields.company_name"), {
             required: true,
@@ -168,13 +170,19 @@ export function NewCustomerForm({
         </div>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-3">
-        {field("name", t("services.customer.name"), {
-          required: true,
-          maxLength: NAME_MAX,
-        })}
-        {field("surname", t("services.customer.surname"), {
-          maxLength: NAME_MAX,
-        })}
+        {field(
+          "name",
+          t(`services.customer.${corporate ? "contact_name" : "name"}`),
+          {
+            required: true,
+            maxLength: NAME_MAX,
+          },
+        )}
+        {field(
+          "surname",
+          t(`services.customer.${corporate ? "contact_surname" : "surname"}`),
+          { maxLength: NAME_MAX },
+        )}
         {field("phone", t("services.customer.phone"), {
           required: true,
           type: "tel",

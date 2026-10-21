@@ -32,6 +32,8 @@
   "customer.name": "Ad",
   "customer.name_required": "Ad zorunludur.",
   "customer.surname": "Soyad",
+  "customer.contact_name": "Yetkili adı",
+  "customer.contact_surname": "Yetkili soyadı",
   "customer.create": "Müşteriyi kaydet",
   "customer.created": "Müşteri oluşturuldu.",
   "customer.linked_existing": "Bu telefon zaten bir müşteriye ait; müşteri kuruluşunuza bağlandı.",

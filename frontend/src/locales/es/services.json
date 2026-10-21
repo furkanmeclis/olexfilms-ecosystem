@@ -32,6 +32,8 @@
   "customer.name": "Nombre",
   "customer.name_required": "El nombre es obligatorio.",
   "customer.surname": "Apellido",
+  "customer.contact_name": "Nombre del contacto",
+  "customer.contact_surname": "Apellido del contacto",
   "customer.create": "Guardar cliente",
   "customer.created": "Cliente creado.",
   "customer.linked_existing": "Este teléfono ya pertenece a un cliente; el cliente se vinculó a su organización.",

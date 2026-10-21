@@ -50,6 +50,8 @@
   "name": "姓名",
   "first_name": "名",
   "surname": "姓",
+  "contact_first_name": "联系人名字",
+  "contact_surname": "联系人姓氏",
   "phone": "电话",
   "phone_hint": "非本地号码请加国家代码",
   "email": "电子邮件",

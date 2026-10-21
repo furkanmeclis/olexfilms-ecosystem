@@ -50,6 +50,8 @@
   "name": "Nombre",
   "first_name": "Nombre",
   "surname": "Apellidos",
+  "contact_first_name": "Nombre del contacto",
+  "contact_surname": "Apellido del contacto",
   "phone": "Teléfono",
   "phone_hint": "Con prefijo de país si no es local",
   "email": "Correo electrónico",

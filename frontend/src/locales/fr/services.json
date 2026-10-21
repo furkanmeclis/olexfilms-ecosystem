@@ -32,6 +32,8 @@
   "customer.name": "Prénom",
   "customer.name_required": "Le prénom est obligatoire.",
   "customer.surname": "Nom",
+  "customer.contact_name": "Prénom du contact",
+  "customer.contact_surname": "Nom du contact",
   "customer.create": "Enregistrer le client",
   "customer.created": "Client créé.",
   "customer.linked_existing": "Ce téléphone appartient déjà à un client ; le client a été rattaché à votre organisation.",

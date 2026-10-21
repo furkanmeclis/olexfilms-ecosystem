@@ -229,3 +229,27 @@ func TestNormalizeMetersAndParts(t *testing.T) {
 		t.Fatal("empty part accepted")
 	}
 }
+
+func TestCustomerRefCompanyName(t *testing.T) {
+	text := func(s string) pgtype.Text { return pgtype.Text{String: s, Valid: true} }
+	row := db.GetServiceRefsRow{CustomerName: "Ali", CustomerSurname: "Kaya", CustomerStatus: "active",
+		CustomerPhone: text("+905551234567")}
+
+	if ref := customerRef(row, "tr"); ref.CompanyName != nil {
+		t.Fatalf("individual customer: company = %q, want nil", *ref.CompanyName)
+	}
+	row.CustomerCompanyName = text("  ")
+	if ref := customerRef(row, "tr"); ref.CompanyName != nil {
+		t.Fatalf("blank company: company = %q, want nil", *ref.CompanyName)
+	}
+	row.CustomerCompanyName = text(" Olex Ltd ")
+	ref := customerRef(row, "tr")
+	if ref.CompanyName == nil || *ref.CompanyName != "Olex Ltd" || ref.Name != "Ali" || ref.Surname != "Kaya" {
+		t.Fatalf("corporate customer: %+v", ref)
+	}
+	row.CustomerStatus = "anonymized"
+	ref = customerRef(row, "tr")
+	if !ref.Anonymized || ref.CompanyName != nil || ref.Phone != nil || ref.Surname != "" {
+		t.Fatalf("anonymized customer leaks fields: %+v", ref)
+	}
+}

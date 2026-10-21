@@ -24650,6 +24650,8 @@ export interface components {
             surname: string;
             phone: string | null;
             anonymized: boolean;
+            /** @description Company of a corporate customer; null for individual or anonymized customers. */
+            company_name: string | null;
         };
         ServiceItem: {
             /** Format: uuid */

@@ -50,6 +50,8 @@
   "name": "Ad soyad",
   "first_name": "Ad",
   "surname": "Soyad",
+  "contact_first_name": "Yetkili adı",
+  "contact_surname": "Yetkili soyadı",
   "phone": "Telefon",
   "phone_hint": "Yurt dışı numaralarda ülke koduyla",
   "email": "E-posta",

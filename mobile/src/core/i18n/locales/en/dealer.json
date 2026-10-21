@@ -50,6 +50,8 @@
   "name": "Name",
   "first_name": "First name",
   "surname": "Last name",
+  "contact_first_name": "Contact first name",
+  "contact_surname": "Contact surname",
   "phone": "Phone",
   "phone_hint": "With country code if not local",
   "email": "E-mail",

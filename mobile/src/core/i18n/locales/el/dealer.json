@@ -50,6 +50,8 @@
   "name": "Όνομα",
   "first_name": "Όνομα",
   "surname": "Επώνυμο",
+  "contact_first_name": "Όνομα υπευθύνου",
+  "contact_surname": "Επώνυμο υπευθύνου",
   "phone": "Τηλέφωνο",
   "phone_hint": "Με κωδικό χώρας αν δεν είναι τοπικό",
   "email": "E-mail",

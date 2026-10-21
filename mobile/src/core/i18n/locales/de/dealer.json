@@ -50,6 +50,8 @@
   "name": "Name",
   "first_name": "Vorname",
   "surname": "Nachname",
+  "contact_first_name": "Vorname Ansprechpartner",
+  "contact_surname": "Nachname Ansprechpartner",
   "phone": "Telefon",
   "phone_hint": "Mit Ländervorwahl, wenn nicht inländisch",
   "email": "E-Mail",

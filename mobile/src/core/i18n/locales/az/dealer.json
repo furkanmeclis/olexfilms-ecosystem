@@ -50,6 +50,8 @@
   "name": "Ad",
   "first_name": "Ad",
   "surname": "Soyad",
+  "contact_first_name": "Səlahiyyətli şəxsin adı",
+  "contact_surname": "Səlahiyyətli şəxsin soyadı",
   "phone": "Telefon",
   "phone_hint": "Yerli deyilsə ölkə kodu ilə",
   "email": "E-poçt",
