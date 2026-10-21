@@ -19942,8 +19942,9 @@ paths:
         - name: counterparty_kind
           in: query
           description: >-
-            CSV of center, distributor, dealer (counterparty organization
-            type) and customer (a customer cari). Unknown value → 400.
+            CSV of center, distributor, dealer, fleet (counterparty
+            organization type) and customer (a customer cari). Unknown
+            value → 400.
           schema: { type: string }
         - name: balance_min
           in: query
@@ -41646,7 +41647,7 @@ components:
         type: { type: string, enum: [organization, user] }
         uuid: { type: [string, "null"], format: uuid }
         name: { type: string }
-        org_type: { type: string, enum: [center, distributor, dealer] }
+        org_type: { type: string, enum: [center, distributor, dealer, fleet] }
 
     CariAccount:
       type: object
