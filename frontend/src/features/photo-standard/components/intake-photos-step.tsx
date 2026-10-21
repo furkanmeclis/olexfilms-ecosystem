@@ -30,6 +30,7 @@ import {
 } from "@/features/photo-standard/services/photo-standard.service";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { WizardActions } from "@/features/services/components/wizard-bar";
 import { useLocale } from "@/providers/locale-provider";
 
 const T = "photo_standard.intake";
@@ -299,7 +300,7 @@ export function IntakePhotosStep({
           <AlertDescription>{t(`${T}.complete`)}</AlertDescription>
         </Alert>
       )}
-      <div className="flex flex-wrap justify-between gap-2">
+      <WizardActions>
         <Button type="button" variant="outline" onClick={onBack}>
           {t("services.wizard.back")}
         </Button>
@@ -313,7 +314,7 @@ export function IntakePhotosStep({
         >
           {t("services.wizard.next")}
         </Button>
-      </div>
+      </WizardActions>
     </div>
   );
 }

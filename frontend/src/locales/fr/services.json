@@ -20,6 +20,8 @@
   "wizard.save_failed": "Enregistrement impossible. Veuillez réessayer.",
   "wizard.draft_created": "Brouillon de prestation {{no}} créé.",
   "wizard.locked_hint": "Le brouillon est ouvert : le client et le véhicule ne peuvent plus être modifiés. Pour un autre véhicule, créez une nouvelle prestation.",
+  "wizard.bar.label": "Étapes de la prestation",
+  "wizard.bar.progress": "Étape {{current}} / {{total}}",
   "customer.title": "Client",
   "customer.new": "Nouveau client",
   "customer.search_placeholder": "Rechercher par nom ou téléphone",

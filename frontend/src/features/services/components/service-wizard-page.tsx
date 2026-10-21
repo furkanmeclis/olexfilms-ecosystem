@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Wrench } from "lucide-react";
+import { Wrench } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -22,6 +22,10 @@ import {
 } from "@/features/photo-standard/services/photo-standard.service";
 import { PartsStep } from "@/features/services/components/parts-step";
 import { StockStep } from "@/features/services/components/stock-step";
+import {
+  WizardActionsProvider,
+  WizardBottomBar,
+} from "@/features/services/components/wizard-bar";
 import { serviceMeasurementKeys } from "@/features/measurements/services/service-measurements.service";
 import { useFeature } from "@/features/modules/hooks/use-features";
 import { resolveServiceWizardAccess } from "@/features/services/lib/access";
@@ -43,92 +47,8 @@ import {
   serviceWizardService,
   type Service,
 } from "@/features/services/services/service-wizard.service";
-import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
-
-function Stepper({
-  steps,
-  current,
-  hasService,
-  contractLocked,
-  photosLocked,
-  onSelect,
-}: {
-  steps: readonly WizardStep[];
-  current: WizardStep;
-  hasService: boolean;
-  contractLocked: boolean;
-  photosLocked: boolean;
-  onSelect: (step: WizardStep) => void;
-}) {
-  const { t } = useLocale();
-  const currentIndex = steps.indexOf(current);
-  return (
-    <ol
-      className={cn(
-        "grid gap-2",
-        steps.length > 5
-          ? "sm:grid-cols-3 lg:grid-cols-6"
-          : steps.length > 4
-            ? "sm:grid-cols-5"
-            : "sm:grid-cols-4",
-      )}
-      data-testid="wizard-stepper"
-    >
-      {steps.map((step, i) => {
-        const active = step === current;
-        const done = hasService && i < currentIndex;
-        const open = canOpenStep(
-          step,
-          hasService,
-          contractLocked,
-          steps,
-          photosLocked,
-        );
-        // TEC-500: a step closed by missing intake photos says why.
-        const photoBlocked =
-          hasService &&
-          !open &&
-          !canOpenStep(step, hasService, false, steps, photosLocked);
-        return (
-          <li key={step}>
-            <button
-              type="button"
-              disabled={!open}
-              title={
-                photoBlocked
-                  ? t("photo_standard.intake.next_blocked")
-                  : undefined
-              }
-              data-blocked={photoBlocked ? "photos" : undefined}
-              aria-current={active ? "step" : undefined}
-              data-step={step}
-              onClick={() => onSelect(step)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-lg border p-3 text-start text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                active ? "border-primary bg-primary/5" : "hover:bg-accent",
-              )}
-            >
-              <span
-                className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                  active && "border-primary bg-primary text-primary-foreground",
-                  done && "border-primary text-primary",
-                )}
-              >
-                {done ? <Check className="size-4" /> : i + 1}
-              </span>
-              <span className="font-medium">
-                {t(`services.wizard.steps.${step}`)}
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
 
 /**
  * Service wizard (TEC-181, TEC-182): `uuid` undefined starts a new draft at
@@ -161,6 +81,8 @@ export function ServiceWizardPage({
     uuid ? "photos" : "customer_vehicle",
   );
   const [flagged, setFlagged] = useState<string[]>([]);
+  // TEC-865: the bottom bar's action slot the steps portal their buttons to.
+  const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null);
   // null = not touched yet: the stored draft selection, else the parts the
   // items already carry.
   const [parts, setParts] = useState<string[] | null>(() =>
@@ -380,17 +302,20 @@ export function ServiceWizardPage({
   return (
     <div className="space-y-6">
       {header}
-      <Stepper
+      <WizardActionsProvider value={actionsSlot}>
+        <Card>
+          <CardContent className="pt-6">{body}</CardContent>
+        </Card>
+      </WizardActionsProvider>
+      <WizardBottomBar
         steps={steps}
         current={hasService ? shown : "customer_vehicle"}
         hasService={hasService}
         contractLocked={contractLocked}
         photosLocked={photosLocked}
         onSelect={setStep}
+        actionsRef={setActionsSlot}
       />
-      <Card>
-        <CardContent className="pt-6">{body}</CardContent>
-      </Card>
     </div>
   );
 }

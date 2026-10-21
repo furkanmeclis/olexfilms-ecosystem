@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NewCustomerForm } from "@/features/services/components/new-customer-form";
 import { NewVehicleForm } from "@/features/services/components/new-vehicle-form";
+import { WizardActions } from "@/features/services/components/wizard-bar";
 import type { ServiceWizardAccess } from "@/features/services/lib/access";
 import { parseKm } from "@/features/services/lib/wizard";
 import {
@@ -224,7 +225,7 @@ export function CustomerVehicleStep({
           />
         </section>
         {kmField}
-        <div className="flex justify-end">
+        <WizardActions>
           <Button
             type="button"
             data-testid="step1-continue"
@@ -233,7 +234,7 @@ export function CustomerVehicleStep({
           >
             {t("services.wizard.save_continue")}
           </Button>
-        </div>
+        </WizardActions>
       </div>
     );
   }
@@ -457,7 +458,7 @@ export function CustomerVehicleStep({
 
       {customer && vehicle ? kmField : null}
 
-      <div className="flex justify-end">
+      <WizardActions>
         <Button
           type="button"
           data-testid="step1-continue"
@@ -466,7 +467,7 @@ export function CustomerVehicleStep({
         >
           {t("services.wizard.create_draft")}
         </Button>
-      </div>
+      </WizardActions>
     </div>
   );
 }

@@ -20,6 +20,8 @@
   "wizard.save_failed": "Speichern fehlgeschlagen. Bitte erneut versuchen.",
   "wizard.draft_created": "Serviceentwurf {{no}} angelegt.",
   "wizard.locked_hint": "Der Entwurf ist angelegt: Kunde und Fahrzeug lassen sich nicht mehr ändern. Für ein anderes Fahrzeug legen Sie einen neuen Service an.",
+  "wizard.bar.label": "Serviceschritte",
+  "wizard.bar.progress": "Schritt {{current}} / {{total}}",
   "customer.title": "Kunde",
   "customer.new": "Neuer Kunde",
   "customer.search_placeholder": "Nach Name oder Telefon suchen",

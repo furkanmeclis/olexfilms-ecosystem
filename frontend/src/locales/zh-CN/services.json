@@ -20,6 +20,8 @@
   "wizard.save_failed": "保存失败，请重试。",
   "wizard.draft_created": "已创建草稿服务 {{no}}。",
   "wizard.locked_hint": "草稿已创建：客户和车辆不能再更改。如需其他车辆，请新建服务。",
+  "wizard.bar.label": "服务步骤",
+  "wizard.bar.progress": "第 {{current}} 步 / 共 {{total}} 步",
   "customer.title": "客户",
   "customer.new": "新建客户",
   "customer.search_placeholder": "按姓名或电话搜索",

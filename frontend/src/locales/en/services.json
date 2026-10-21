@@ -20,6 +20,8 @@
   "wizard.save_failed": "Could not save. Please try again.",
   "wizard.draft_created": "Draft service {{no}} created.",
   "wizard.locked_hint": "The draft is open: its customer and vehicle can no longer be changed. Start a new service for another vehicle.",
+  "wizard.bar.label": "Service steps",
+  "wizard.bar.progress": "Step {{current}} / {{total}}",
   "customer.title": "Customer",
   "customer.new": "New customer",
   "customer.search_placeholder": "Search by name or phone",

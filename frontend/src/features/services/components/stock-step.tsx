@@ -35,6 +35,7 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { missingAnglesFromError } from "@/features/photo-standard/lib/photo-standard";
 import { isApiError } from "@/lib/api";
+import { WizardActions } from "@/features/services/components/wizard-bar";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -645,7 +646,7 @@ export function StockStep({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap justify-between gap-2">
+      <WizardActions>
         <Button type="button" variant="outline" onClick={onBack}>
           {t("services.wizard.back")}
         </Button>
@@ -660,7 +661,7 @@ export function StockStep({
             {t("services.complete.button")}
           </Button>
         ) : null}
-      </div>
+      </WizardActions>
     </div>
   );
 }

@@ -20,6 +20,8 @@
   "wizard.save_failed": "No se pudo guardar. Inténtelo de nuevo.",
   "wizard.draft_created": "Borrador de servicio {{no}} creado.",
   "wizard.locked_hint": "El borrador está abierto: el cliente y el vehículo ya no se pueden cambiar. Para otro vehículo, inicie un nuevo servicio.",
+  "wizard.bar.label": "Pasos del servicio",
+  "wizard.bar.progress": "Paso {{current}} / {{total}}",
   "customer.title": "Cliente",
   "customer.new": "Nuevo cliente",
   "customer.search_placeholder": "Buscar por nombre o teléfono",

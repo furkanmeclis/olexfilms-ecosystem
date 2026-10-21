@@ -20,6 +20,8 @@
   "wizard.save_failed": "Не удалось сохранить. Попробуйте ещё раз.",
   "wizard.draft_created": "Создан черновик услуги {{no}}.",
   "wizard.locked_hint": "Черновик открыт: клиента и автомобиль больше нельзя изменить. Для другого автомобиля начните новую услугу.",
+  "wizard.bar.label": "Шаги услуги",
+  "wizard.bar.progress": "Шаг {{current}} / {{total}}",
   "customer.title": "Клиент",
   "customer.new": "Новый клиент",
   "customer.search_placeholder": "Поиск по имени или телефону",
