@@ -33,5 +33,17 @@
   "top_vehicles.empty": "لا توجد خدمات مكتملة في هذه الفترة.",
   "top_vehicles.error": "تعذر تحميل الإحصائيات.",
   "top_vehicles.rank": "الترتيب",
-  "top_vehicles.name": "المركبة"
+  "top_vehicles.name": "المركبة",
+  "overview.title": "التحليلات",
+  "overview.description": "المركبات الأكثر خدمةً والمنتجات الأكثر استخدامًا من خدماتك المكتملة.",
+  "overview.period_label": "الفترة",
+  "overview.top_vehicles": "المركبات الأكثر خدمةً",
+  "overview.top_products": "المنتجات الأكثر استخدامًا",
+  "overview.count": "الخدمات",
+  "overview.empty": "لا توجد خدمات مكتملة في هذه الفترة.",
+  "overview.recent_title": "أحدث المركبات المخدومة",
+  "overview.recent_empty": "لا توجد خدمات مكتملة بعد.",
+  "overview.view_all": "جميع الخدمات",
+  "overview.error": "تعذّر تحميل التحليلات.",
+  "overview.no_plate": "بدون لوحة"
 }

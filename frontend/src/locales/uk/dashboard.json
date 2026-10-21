@@ -33,5 +33,17 @@
   "top_vehicles.empty": "За цей період немає завершених послуг.",
   "top_vehicles.error": "Не вдалося завантажити статистику.",
   "top_vehicles.rank": "Місце",
-  "top_vehicles.name": "Автомобіль"
+  "top_vehicles.name": "Автомобіль",
+  "overview.title": "Аналітика",
+  "overview.description": "Найчастіше обслуговувані автомобілі та найуживаніші продукти за вашими завершеними послугами.",
+  "overview.period_label": "Період",
+  "overview.top_vehicles": "Найчастіше обслуговувані автомобілі",
+  "overview.top_products": "Найуживаніші продукти",
+  "overview.count": "Послуги",
+  "overview.empty": "У цьому періоді немає завершених послуг.",
+  "overview.recent_title": "Нещодавно обслуговані автомобілі",
+  "overview.recent_empty": "Ще немає завершених послуг.",
+  "overview.view_all": "Усі послуги",
+  "overview.error": "Не вдалося завантажити аналітику.",
+  "overview.no_plate": "Без номера"
 }

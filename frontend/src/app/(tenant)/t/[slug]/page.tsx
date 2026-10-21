@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { PageHeader } from "@/components/layout";
 import { RecentAnnouncementsWidget } from "@/features/announcements";
 import { NetworkOccupancyWidget } from "@/features/appointments";
+import { HomeOverviewWidget } from "@/features/services";
 import { StockSummaryWidget } from "@/features/stock";
 import { StockForecastWidget } from "@/features/stock-forecast";
 import { TopVehicleModelsWidget } from "@/features/vehicle-catalog";
@@ -20,6 +21,7 @@ export default function TenantHomePage() {
         description={t("dashboard.tenant.welcome_description")}
       />
       <div className="grid gap-6 xl:grid-cols-2">
+        <HomeOverviewWidget slug={params.slug} />
         <RecentAnnouncementsWidget slug={params.slug} />
         <TopVehicleModelsWidget slug={params.slug} />
         <StockSummaryWidget slug={params.slug} />

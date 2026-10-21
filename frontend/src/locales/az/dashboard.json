@@ -33,5 +33,17 @@
   "top_vehicles.empty": "Bu dövrdə tamamlanmış xidmət yoxdur.",
   "top_vehicles.error": "Statistika yüklənə bilmədi.",
   "top_vehicles.rank": "Sıra",
-  "top_vehicles.name": "Avtomobil"
+  "top_vehicles.name": "Avtomobil",
+  "overview.title": "Analiz",
+  "overview.description": "Tamamlanmış xidmətlərinizə görə ən çox xidmət göstərilən avtomobillər və ən çox istifadə olunan məhsullar.",
+  "overview.period_label": "Dövr",
+  "overview.top_vehicles": "Ən çox xidmət göstərilən avtomobillər",
+  "overview.top_products": "Ən çox istifadə olunan məhsullar",
+  "overview.count": "Xidmət",
+  "overview.empty": "Bu dövrdə tamamlanmış xidmət yoxdur.",
+  "overview.recent_title": "Son xidmət göstərilən avtomobillər",
+  "overview.recent_empty": "Hələ tamamlanmış xidmət yoxdur.",
+  "overview.view_all": "Bütün xidmətlər",
+  "overview.error": "Analiz yüklənmədi.",
+  "overview.no_plate": "Nömrəsiz"
 }

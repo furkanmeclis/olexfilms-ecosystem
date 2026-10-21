@@ -33,5 +33,17 @@
   "top_vehicles.empty": "Δεν υπάρχουν ολοκληρωμένες υπηρεσίες σε αυτή την περίοδο.",
   "top_vehicles.error": "Δεν ήταν δυνατή η φόρτωση των στατιστικών.",
   "top_vehicles.rank": "Θέση",
-  "top_vehicles.name": "Όχημα"
+  "top_vehicles.name": "Όχημα",
+  "overview.title": "Ανάλυση",
+  "overview.description": "Τα οχήματα με τις περισσότερες υπηρεσίες και τα πιο χρησιμοποιημένα προϊόντα από τις ολοκληρωμένες υπηρεσίες σας.",
+  "overview.period_label": "Περίοδος",
+  "overview.top_vehicles": "Οχήματα με τις περισσότερες υπηρεσίες",
+  "overview.top_products": "Πιο χρησιμοποιημένα προϊόντα",
+  "overview.count": "Υπηρεσίες",
+  "overview.empty": "Δεν υπάρχουν ολοκληρωμένες υπηρεσίες σε αυτή την περίοδο.",
+  "overview.recent_title": "Πρόσφατα οχήματα",
+  "overview.recent_empty": "Δεν υπάρχουν ακόμη ολοκληρωμένες υπηρεσίες.",
+  "overview.view_all": "Όλες οι υπηρεσίες",
+  "overview.error": "Δεν ήταν δυνατή η φόρτωση της ανάλυσης.",
+  "overview.no_plate": "Χωρίς πινακίδα"
 }

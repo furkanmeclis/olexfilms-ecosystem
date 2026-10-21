@@ -33,5 +33,17 @@
   "top_vehicles.empty": "Bu dönemde tamamlanan hizmet yok.",
   "top_vehicles.error": "İstatistikler yüklenemedi.",
   "top_vehicles.rank": "Sıra",
-  "top_vehicles.name": "Araç"
+  "top_vehicles.name": "Araç",
+  "overview.title": "Analiz",
+  "overview.description": "Tamamlanan hizmetlerinize göre en çok kaplanan araçlar ve en çok kullanılan ürünler.",
+  "overview.period_label": "Dönem",
+  "overview.top_vehicles": "En çok kaplanan araçlar",
+  "overview.top_products": "En çok kullanılan ürünler",
+  "overview.count": "Hizmet",
+  "overview.empty": "Bu dönemde tamamlanan hizmet yok.",
+  "overview.recent_title": "Son kaplanan araçlar",
+  "overview.recent_empty": "Henüz tamamlanan hizmet yok.",
+  "overview.view_all": "Tüm hizmetler",
+  "overview.error": "Analiz yüklenemedi.",
+  "overview.no_plate": "Plakasız"
 }

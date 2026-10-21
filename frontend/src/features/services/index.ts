@@ -3,3 +3,7 @@ export { ServiceWizardPage } from "./components/service-wizard-page";
 export { ServicesListPage } from "./components/services-list-page";
 export { resolveServiceWizardAccess } from "./lib/access";
 export { normalizeVin, validateVin } from "./lib/vin";
+export {
+  HomeOverviewCard,
+  HomeOverviewWidget,
+} from "./components/home-overview";

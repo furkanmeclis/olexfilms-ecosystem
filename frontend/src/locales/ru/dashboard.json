@@ -33,5 +33,17 @@
   "top_vehicles.empty": "За этот период нет завершённых услуг.",
   "top_vehicles.error": "Не удалось загрузить статистику.",
   "top_vehicles.rank": "Место",
-  "top_vehicles.name": "Автомобиль"
+  "top_vehicles.name": "Автомобиль",
+  "overview.title": "Аналитика",
+  "overview.description": "Чаще всего обслуживаемые автомобили и самые используемые продукты по вашим завершённым услугам.",
+  "overview.period_label": "Период",
+  "overview.top_vehicles": "Чаще всего обслуживаемые автомобили",
+  "overview.top_products": "Самые используемые продукты",
+  "overview.count": "Услуги",
+  "overview.empty": "В этом периоде нет завершённых услуг.",
+  "overview.recent_title": "Недавно обслуженные автомобили",
+  "overview.recent_empty": "Пока нет завершённых услуг.",
+  "overview.view_all": "Все услуги",
+  "overview.error": "Не удалось загрузить аналитику.",
+  "overview.no_plate": "Без номера"
 }

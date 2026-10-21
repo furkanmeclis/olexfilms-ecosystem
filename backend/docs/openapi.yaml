@@ -22902,6 +22902,40 @@ paths:
           $ref: "#/components/responses/Conflict"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
+  /v1/stats/overview:
+    get:
+      tags: [Services]
+      operationId: getHomeOverview
+      summary: Home overview of the active organization (dealer home analytics)
+      description: >-
+        TEC-868. Most serviced car models (top 5), most used products
+        (top 5) of the completed services in the period and the 10 latest
+        completed services. Only the active organization's own services
+        count, inside the domain brand (K20), whatever wider reach the
+        services.read grant has; own / assigned grants see the services they
+        created. recent_services ignores the period.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          description: Defaults to 90d here.
+          schema: { $ref: "#/components/schemas/StatsPeriod" }
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeHomeOverview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /v1/stats/top-vehicle-models:
     get:
       tags: [Services]
@@ -43592,6 +43626,91 @@ components:
           type: array
           maxItems: 10
           items: { $ref: "#/components/schemas/TopVehicle" }
+
+    OverviewCarBrand:
+      type: object
+      required: [uuid, name, has_logo, logo_url]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        has_logo: { type: boolean }
+        logo_url:
+          type: string
+          description: /brand-logos/{uuid} with a ?v= cache-buster when a logo exists.
+
+    OverviewVehicle:
+      type: object
+      required: [service_count, car_brand, car_model]
+      properties:
+        service_count: { type: integer, format: int64 }
+        car_brand: { $ref: "#/components/schemas/OverviewCarBrand" }
+        car_model: { $ref: "#/components/schemas/VehicleCatalogRef" }
+
+    OverviewProduct:
+      type: object
+      required: [uuid, sku, name, unit_type, service_count, quantity, meters]
+      properties:
+        uuid: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        unit_type: { type: string }
+        service_count:
+          type: integer
+          format: int64
+          description: Completed services the product was used in.
+        quantity: { type: integer, format: int64 }
+        meters:
+          type: string
+          description: Total meters, decimal string (14,2).
+
+    OverviewRecentService:
+      type: object
+      required: [uuid, service_no, plate, plate_country, model_year, package, products, completed_at, vehicle_uuid, car_brand, car_model]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        plate: { type: [string, "null"] }
+        plate_country: { type: [string, "null"] }
+        model_year: { type: [integer, "null"] }
+        package: { type: [string, "null"] }
+        products:
+          type: array
+          description: Distinct product names of the service, sorted.
+          items: { type: string }
+        completed_at: { type: string, format: date-time }
+        vehicle_uuid: { type: string, format: uuid }
+        car_brand: { $ref: "#/components/schemas/OverviewCarBrand" }
+        car_model: { $ref: "#/components/schemas/VehicleCatalogRef" }
+
+    HomeOverview:
+      type: object
+      required: [period, since, top_vehicles, top_products, recent_services]
+      properties:
+        period: { $ref: "#/components/schemas/StatsPeriod" }
+        since:
+          type: [string, "null"]
+          format: date-time
+          description: Lower completed_at bound of the top lists; null for all.
+        top_vehicles:
+          type: array
+          maxItems: 5
+          items: { $ref: "#/components/schemas/OverviewVehicle" }
+        top_products:
+          type: array
+          maxItems: 5
+          items: { $ref: "#/components/schemas/OverviewProduct" }
+        recent_services:
+          type: array
+          maxItems: 10
+          items: { $ref: "#/components/schemas/OverviewRecentService" }
+
+    EnvelopeHomeOverview:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/HomeOverview" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeTopVehicles:
       type: object

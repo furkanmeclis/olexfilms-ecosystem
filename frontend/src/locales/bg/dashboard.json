@@ -33,5 +33,17 @@
   "top_vehicles.empty": "Няма завършени услуги за този период.",
   "top_vehicles.error": "Статистиката не можа да се зареди.",
   "top_vehicles.rank": "Място",
-  "top_vehicles.name": "Автомобил"
+  "top_vehicles.name": "Автомобил",
+  "overview.title": "Анализ",
+  "overview.description": "Най-често обслужвани автомобили и най-използвани продукти от завършените ви услуги.",
+  "overview.period_label": "Период",
+  "overview.top_vehicles": "Най-често обслужвани автомобили",
+  "overview.top_products": "Най-използвани продукти",
+  "overview.count": "Услуги",
+  "overview.empty": "Няма завършени услуги в този период.",
+  "overview.recent_title": "Последно обслужени автомобили",
+  "overview.recent_empty": "Все още няма завършени услуги.",
+  "overview.view_all": "Всички услуги",
+  "overview.error": "Анализът не можа да се зареди.",
+  "overview.no_plate": "Без номер"
 }

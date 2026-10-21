@@ -12,6 +12,239 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const overviewRecentCompletedServices = `-- name: OverviewRecentCompletedServices :many
+SELECT s.uuid, s.service_no, s.plate, s.plate_country, s.model_year, s.package,
+       s.completed_at::timestamptz AS completed_at,
+       v.uuid AS vehicle_uuid,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cb.logo_object_key AS car_brand_logo_key,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       ARRAY(
+           SELECT DISTINCT p.name
+           FROM service_items si
+           JOIN products p ON p.id = si.product_id
+           WHERE si.service_id = s.id
+           ORDER BY p.name
+       )::text[] AS product_names
+FROM services s
+JOIN vehicles v ON v.id = s.vehicle_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.brand_id = $1
+  AND s.organization_id = $2
+  AND ($3::bigint IS NULL OR s.created_by_user_id = $3)
+  AND s.completed_at IS NOT NULL
+ORDER BY s.completed_at DESC, s.id DESC
+LIMIT $4
+`
+
+type OverviewRecentCompletedServicesParams struct {
+	BrandID         int64       `json:"brand_id"`
+	OrgID           int64       `json:"org_id"`
+	CreatedByUserID pgtype.Int8 `json:"created_by_user_id"`
+	RowLimit        int32       `json:"row_limit"`
+}
+
+type OverviewRecentCompletedServicesRow struct {
+	Uuid            uuid.UUID          `json:"uuid"`
+	ServiceNo       string             `json:"service_no"`
+	Plate           pgtype.Text        `json:"plate"`
+	PlateCountry    pgtype.Text        `json:"plate_country"`
+	ModelYear       pgtype.Int2        `json:"model_year"`
+	Package         pgtype.Text        `json:"package"`
+	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
+	VehicleUuid     uuid.UUID          `json:"vehicle_uuid"`
+	CarBrandUuid    uuid.UUID          `json:"car_brand_uuid"`
+	CarBrandName    string             `json:"car_brand_name"`
+	CarBrandLogoKey pgtype.Text        `json:"car_brand_logo_key"`
+	CarModelUuid    uuid.UUID          `json:"car_model_uuid"`
+	CarModelName    string             `json:"car_model_name"`
+	ProductNames    []string           `json:"product_names"`
+}
+
+func (q *Queries) OverviewRecentCompletedServices(ctx context.Context, arg OverviewRecentCompletedServicesParams) ([]OverviewRecentCompletedServicesRow, error) {
+	rows, err := q.db.Query(ctx, overviewRecentCompletedServices,
+		arg.BrandID,
+		arg.OrgID,
+		arg.CreatedByUserID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []OverviewRecentCompletedServicesRow{}
+	for rows.Next() {
+		var i OverviewRecentCompletedServicesRow
+		if err := rows.Scan(
+			&i.Uuid,
+			&i.ServiceNo,
+			&i.Plate,
+			&i.PlateCountry,
+			&i.ModelYear,
+			&i.Package,
+			&i.CompletedAt,
+			&i.VehicleUuid,
+			&i.CarBrandUuid,
+			&i.CarBrandName,
+			&i.CarBrandLogoKey,
+			&i.CarModelUuid,
+			&i.CarModelName,
+			&i.ProductNames,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const overviewTopCarModels = `-- name: OverviewTopCarModels :many
+
+SELECT cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cb.logo_object_key AS car_brand_logo_key,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       COUNT(*)::bigint AS service_count
+FROM services s
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.brand_id = $1
+  AND s.organization_id = $2
+  AND ($3::bigint IS NULL OR s.created_by_user_id = $3)
+  AND s.completed_at IS NOT NULL
+  AND ($4::timestamptz IS NULL OR s.completed_at >= $4::timestamptz)
+GROUP BY cb.id, cb.uuid, cb.name, cb.logo_object_key, cm.id, cm.uuid, cm.name
+ORDER BY service_count DESC, lower(cb.name), lower(cm.name), cm.id
+LIMIT $5
+`
+
+type OverviewTopCarModelsParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrgID           int64              `json:"org_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	PeriodFrom      pgtype.Timestamptz `json:"period_from"`
+	RowLimit        int32              `json:"row_limit"`
+}
+
+type OverviewTopCarModelsRow struct {
+	CarBrandUuid    uuid.UUID   `json:"car_brand_uuid"`
+	CarBrandName    string      `json:"car_brand_name"`
+	CarBrandLogoKey pgtype.Text `json:"car_brand_logo_key"`
+	CarModelUuid    uuid.UUID   `json:"car_model_uuid"`
+	CarModelName    string      `json:"car_model_name"`
+	ServiceCount    int64       `json:"service_count"`
+}
+
+// TEC-868: home overview of one organization (dealer home "Analiz"). Only
+// the services of org_id (the active organization), inside the domain brand
+// (K20); created_by_user_id narrows own / assigned grants. Completed
+// services only; period_from NULL means all time.
+func (q *Queries) OverviewTopCarModels(ctx context.Context, arg OverviewTopCarModelsParams) ([]OverviewTopCarModelsRow, error) {
+	rows, err := q.db.Query(ctx, overviewTopCarModels,
+		arg.BrandID,
+		arg.OrgID,
+		arg.CreatedByUserID,
+		arg.PeriodFrom,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []OverviewTopCarModelsRow{}
+	for rows.Next() {
+		var i OverviewTopCarModelsRow
+		if err := rows.Scan(
+			&i.CarBrandUuid,
+			&i.CarBrandName,
+			&i.CarBrandLogoKey,
+			&i.CarModelUuid,
+			&i.CarModelName,
+			&i.ServiceCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const overviewTopProducts = `-- name: OverviewTopProducts :many
+SELECT p.uuid AS product_uuid, p.sku, p.name AS product_name, p.unit_type,
+       COUNT(DISTINCT si.service_id)::bigint AS service_count,
+       COALESCE(SUM(si.quantity), 0)::bigint AS quantity,
+       COALESCE(SUM(si.meters), 0)::numeric(14,2)::text AS meters
+FROM service_items si
+JOIN services s ON s.id = si.service_id
+JOIN products p ON p.id = si.product_id
+WHERE s.brand_id = $1
+  AND s.organization_id = $2
+  AND ($3::bigint IS NULL OR s.created_by_user_id = $3)
+  AND s.completed_at IS NOT NULL
+  AND ($4::timestamptz IS NULL OR s.completed_at >= $4::timestamptz)
+GROUP BY p.id, p.uuid, p.sku, p.name, p.unit_type
+ORDER BY service_count DESC, lower(p.name), p.id
+LIMIT $5
+`
+
+type OverviewTopProductsParams struct {
+	BrandID         int64              `json:"brand_id"`
+	OrgID           int64              `json:"org_id"`
+	CreatedByUserID pgtype.Int8        `json:"created_by_user_id"`
+	PeriodFrom      pgtype.Timestamptz `json:"period_from"`
+	RowLimit        int32              `json:"row_limit"`
+}
+
+type OverviewTopProductsRow struct {
+	ProductUuid  uuid.UUID `json:"product_uuid"`
+	Sku          string    `json:"sku"`
+	ProductName  string    `json:"product_name"`
+	UnitType     string    `json:"unit_type"`
+	ServiceCount int64     `json:"service_count"`
+	Quantity     int64     `json:"quantity"`
+	Meters       string    `json:"meters"`
+}
+
+func (q *Queries) OverviewTopProducts(ctx context.Context, arg OverviewTopProductsParams) ([]OverviewTopProductsRow, error) {
+	rows, err := q.db.Query(ctx, overviewTopProducts,
+		arg.BrandID,
+		arg.OrgID,
+		arg.CreatedByUserID,
+		arg.PeriodFrom,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []OverviewTopProductsRow{}
+	for rows.Next() {
+		var i OverviewTopProductsRow
+		if err := rows.Scan(
+			&i.ProductUuid,
+			&i.Sku,
+			&i.ProductName,
+			&i.UnitType,
+			&i.ServiceCount,
+			&i.Quantity,
+			&i.Meters,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const serviceActivityCarBrands = `-- name: ServiceActivityCarBrands :many
 SELECT cb.uuid AS car_brand_uuid, cb.name AS car_brand_name, COUNT(*)::bigint AS service_count
 FROM services s

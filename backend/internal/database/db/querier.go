@@ -3270,6 +3270,13 @@ type Querier interface {
 	NextQuoteNo(ctx context.Context, organizationID int64) (int32, error)
 	OrganizationLineage(ctx context.Context, id int64) ([]int64, error)
 	OrganizationRequiresPlacement(ctx context.Context, organizationID int64) (bool, error)
+	OverviewRecentCompletedServices(ctx context.Context, arg OverviewRecentCompletedServicesParams) ([]OverviewRecentCompletedServicesRow, error)
+	// TEC-868: home overview of one organization (dealer home "Analiz"). Only
+	// the services of org_id (the active organization), inside the domain brand
+	// (K20); created_by_user_id narrows own / assigned grants. Completed
+	// services only; period_from NULL means all time.
+	OverviewTopCarModels(ctx context.Context, arg OverviewTopCarModelsParams) ([]OverviewTopCarModelsRow, error)
+	OverviewTopProducts(ctx context.Context, arg OverviewTopProductsParams) ([]OverviewTopProductsRow, error)
 	PingDB(ctx context.Context) (int32, error)
 	// Country x currency summary of one snapshot day in the caller's scope
 	// (org_ids NULL = whole brand): average / median deviation and the

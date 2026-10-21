@@ -86,6 +86,9 @@ func RegisterRoutes(
 	// dashboard). Same gates as the reads; the use case additionally needs
 	// a brand-wide grant (center) or scope all (super_admin), else 403.
 	mux.Handle("GET /v1/stats/top-vehicle-models", route(h.TopVehicleModels))
+	// TEC-868: home overview of the active organization (dealer home
+	// "Analiz"); same gates as the reads, own services only.
+	mux.Handle("GET /v1/stats/overview", route(h.HomeOverview))
 }
 
 // RegisterPDFRoutes mounts the service PDF (TEC-196): POST

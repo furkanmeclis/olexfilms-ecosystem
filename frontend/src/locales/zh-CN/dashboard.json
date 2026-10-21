@@ -33,5 +33,17 @@
   "top_vehicles.empty": "此时间段内没有已完成的服务。",
   "top_vehicles.error": "无法加载统计数据。",
   "top_vehicles.rank": "排名",
-  "top_vehicles.name": "车辆"
+  "top_vehicles.name": "车辆",
+  "overview.title": "分析",
+  "overview.description": "根据已完成的服务统计的服务最多的车辆和使用最多的产品。",
+  "overview.period_label": "时间段",
+  "overview.top_vehicles": "服务最多的车辆",
+  "overview.top_products": "使用最多的产品",
+  "overview.count": "服务",
+  "overview.empty": "该时间段内没有已完成的服务。",
+  "overview.recent_title": "最近服务的车辆",
+  "overview.recent_empty": "暂无已完成的服务。",
+  "overview.view_all": "全部服务",
+  "overview.error": "无法加载分析。",
+  "overview.no_plate": "无车牌"
 }
