@@ -31,7 +31,7 @@
   "specs_tenant_sales": "销售",
   "specs_tenant_suppliers": "供应商",
   "specs_tenant_purchases": "采购",
-  "specs_tenant_catalog_products": "产品与库存",
+  "specs_tenant_catalog_products": "产品",
   "specs_tenant_catalog_services": "服务",
   "specs_vehicle_model_years": "车型",
   "prefix_customers": "客户",

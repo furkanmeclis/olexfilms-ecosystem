@@ -31,7 +31,7 @@
   "specs_tenant_sales": "Ventas",
   "specs_tenant_suppliers": "Proveedores",
   "specs_tenant_purchases": "Compras",
-  "specs_tenant_catalog_products": "Productos y stock",
+  "specs_tenant_catalog_products": "Productos",
   "specs_tenant_catalog_services": "Servicios",
   "specs_vehicle_model_years": "Modelos de vehículos",
   "prefix_customers": "cliente",
