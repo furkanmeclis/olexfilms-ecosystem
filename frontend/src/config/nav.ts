@@ -55,7 +55,7 @@ import { pendingActionsNavItem } from "@/features/mcp/nav";
 import { dealerSalesNavGroup } from "@/features/dealer-sales/nav";
 import { leadsNavItem } from "@/features/leads/nav";
 import { staffReportsNavGroup } from "@/features/staff-reports/nav";
-import { defineNav } from "@/features/nav-engine";
+import { defineNav, type NavGroupDef } from "@/features/nav-engine";
 import { usersNavItem } from "@/features/users/nav";
 
 export const platformNav = defineNav({
@@ -174,54 +174,7 @@ export function tenantNav(slug: string) {
           pendingActionsNavItem(slug),
         ],
       },
-      {
-        // TEC-147: every level reads the brand catalog (catalog.read); write
-        // controls inside the pages are center only (K4).
-        id: "catalog",
-        labelKey: "layout.section_catalog",
-        icon: Package,
-        defaultOpen: true,
-        permission: permissions.catalog.read,
-        feature: "catalog",
-        items: [
-          {
-            id: "catalog-products",
-            titleKey: "layout.nav_catalog_products",
-            href: routes.tenant.catalog.products(slug),
-            icon: Package,
-            permission: permissions.catalog.read,
-            feature: "catalog",
-          },
-          {
-            id: "catalog-categories",
-            titleKey: "layout.nav_catalog_categories",
-            href: routes.tenant.catalog.categories(slug),
-            icon: FolderTree,
-            permission: permissions.catalog.read,
-            feature: "catalog",
-          },
-          {
-            // TEC-507: recommended retail prices (center publishes).
-            id: "catalog-recommended-prices",
-            titleKey: "catalog.recommended.nav",
-            href: routes.tenant.catalog.recommendedPrices(slug),
-            icon: Tags,
-            permission: permissions.pricing.recommendedRead,
-            feature: "catalog",
-            orgTypes: ["center"],
-          },
-          {
-            // TEC-507: price discipline (center: brand, distributor: subtree).
-            id: "catalog-price-discipline",
-            titleKey: "catalog.discipline.nav",
-            href: routes.tenant.catalog.priceDiscipline(slug),
-            icon: Scale,
-            permission: permissions.pricing.disciplineRead,
-            feature: "catalog",
-            orgTypes: ["center", "distributor"],
-          },
-        ],
-      },
+      ...catalogNavGroups(slug),
       {
         // TEC-311: subscriptions (service_subscriptions.read) and the center
         // cancellation queue (cancel_approve) live next to the catalog.
@@ -925,4 +878,64 @@ export function tenantNav(slug: string) {
       },
     ],
   });
+}
+
+/**
+ * TEC-862: the dealer panel shows the catalog without "stock" in its labels
+ * (dealers do not manage stock here); center and distributor keep theirs.
+ */
+function catalogNavGroups(slug: string): NavGroupDef[] {
+  return [false, true].map((dealer): NavGroupDef => ({
+    // TEC-147: every level reads the brand catalog (catalog.read); write
+    // controls inside the pages are center only (K4).
+    id: dealer ? "catalog-dealer" : "catalog",
+    labelKey: dealer
+      ? "layout.section_catalog_dealer"
+      : "layout.section_catalog",
+    icon: Package,
+    defaultOpen: true,
+    permission: permissions.catalog.read,
+    feature: "catalog",
+    orgTypes: dealer ? ["dealer"] : ["center", "distributor"],
+    items: [
+      {
+        id: "catalog-products",
+        titleKey: dealer
+          ? "layout.nav_catalog_products_dealer"
+          : "layout.nav_catalog_products",
+        href: routes.tenant.catalog.products(slug),
+        icon: Package,
+        permission: permissions.catalog.read,
+        feature: "catalog",
+      },
+      {
+        id: "catalog-categories",
+        titleKey: "layout.nav_catalog_categories",
+        href: routes.tenant.catalog.categories(slug),
+        icon: FolderTree,
+        permission: permissions.catalog.read,
+        feature: "catalog",
+      },
+      {
+        // TEC-507: recommended retail prices (center publishes).
+        id: "catalog-recommended-prices",
+        titleKey: "catalog.recommended.nav",
+        href: routes.tenant.catalog.recommendedPrices(slug),
+        icon: Tags,
+        permission: permissions.pricing.recommendedRead,
+        feature: "catalog",
+        orgTypes: ["center"],
+      },
+      {
+        // TEC-507: price discipline (center: brand, distributor: subtree).
+        id: "catalog-price-discipline",
+        titleKey: "catalog.discipline.nav",
+        href: routes.tenant.catalog.priceDiscipline(slug),
+        icon: Scale,
+        permission: permissions.pricing.disciplineRead,
+        feature: "catalog",
+        orgTypes: ["center", "distributor"],
+      },
+    ],
+  }));
 }
