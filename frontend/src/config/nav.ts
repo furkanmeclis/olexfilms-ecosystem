@@ -342,6 +342,9 @@ export function tenantNav(slug: string) {
             icon: ShieldCheck,
             permission: permissions.warranties.read,
             feature: "services",
+            // TEC-866: dealers see warranties inside the service detail; the
+            // list stays out of their menu (the page itself stays open).
+            menuHiddenOrgTypes: ["dealer"],
           },
           {
             // TEC-339: warranty claims (dealer, distributor, center).

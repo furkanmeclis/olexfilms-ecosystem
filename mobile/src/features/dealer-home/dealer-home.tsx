@@ -36,7 +36,6 @@ export function DealerHome() {
   const canWrite = useCan('services.write');
   const canServices = useCan('services.read');
   const canCustomers = useCan('customers.read');
-  const canWarranties = useCan('warranties.read');
 
   const overview = useQuery({
     queryKey: ['dealer-home', 'overview', i18n.language],
@@ -55,7 +54,7 @@ export function DealerHome() {
     { key: 'scan', icon: 'scan', href: '/bayi/scan', show: true },
     { key: 'measure', icon: 'gauge', href: '/bayi/measure', show: canWrite },
     { key: 'customers', icon: 'customers', href: '/bayi/menu/customers' as Href, show: canCustomers },
-    { key: 'warranties', icon: 'warranty', href: '/bayi/menu/warranties' as Href, show: canWarranties },
+    // TEC-866: no warranty list shortcut for dealers; warranties open from the service detail.
     { key: 'services', icon: 'service', href: '/bayi/services', show: canServices && !canWrite },
   ];
 

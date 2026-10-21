@@ -15,7 +15,7 @@ type Item = { key: string; icon: IconName; permission?: string; spaces: SpaceKin
  */
 const ITEMS: Item[] = [
   { key: 'customers', icon: 'customers', permission: 'customers.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
-  { key: 'warranties', icon: 'warranty', permission: 'warranties.read', spaces: ['bayi'], built: ['bayi'] },
+  // TEC-866: no warranty list row for dealers (bayi); warranties open from the service detail.
   { key: 'appointments', icon: 'appointment', permission: 'appointments.read', spaces: ['bayi'], built: ['bayi'] },
   { key: 'stock', icon: 'stock', permission: 'stock.read', spaces: ['bayi'] },
   { key: 'orders', icon: 'order', permission: 'orders.read', spaces: ['bayi', 'depo', 'admin'], built: ['bayi', 'depo', 'admin'] },

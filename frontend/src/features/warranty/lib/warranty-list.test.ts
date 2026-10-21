@@ -132,12 +132,12 @@ describe("buildWarrantyListQuery", () => {
 });
 
 describe("tenant nav: warranties (TEC-191)", () => {
-  function visibleIds(granted: string[]) {
+  function visibleIds(granted: string[], type = "center") {
     const access = {
       can: (p: string | string[]) =>
         (Array.isArray(p) ? p : [p]).every((x) => granted.includes(x)),
       canAny: (ps: string[]) => ps.some((x) => granted.includes(x)),
-      org: { type: "dealer", role: "owner", features: ["services"] },
+      org: { type, role: "owner", features: ["services"] },
     };
     return tenantNav("acme").groups.flatMap((group) =>
       visibleNavItems(group, access).map((item) => item.id),
@@ -153,6 +153,10 @@ describe("tenant nav: warranties (TEC-191)", () => {
       "warranties-list",
     );
     expect(visibleIds([Permission.ServicesRead])).not.toContain(
+      "warranties-list",
+    );
+    // TEC-866: dealers do not get the list in their menu.
+    expect(visibleIds([Permission.WarrantiesRead], "dealer")).not.toContain(
       "warranties-list",
     );
   });
