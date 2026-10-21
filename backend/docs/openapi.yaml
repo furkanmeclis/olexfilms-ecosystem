@@ -38629,6 +38629,13 @@ components:
             name: { type: string }
             unit_type: { $ref: "#/components/schemas/CatalogUnitType" }
             uses_fixed_barcode: { type: boolean }
+        category:
+          type: object
+          description: Category of the unit's product (TEC-870).
+          required: [uuid, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
         location:
           description: Bin of a serial unit; null for organization-level stock and fixed barcodes.
           oneOf:

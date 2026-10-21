@@ -21594,6 +21594,12 @@ export interface components {
                 unit_type: components["schemas"]["CatalogUnitType"];
                 uses_fixed_barcode: boolean;
             };
+            /** @description Category of the unit's product (TEC-870). */
+            category?: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
             /** @description Bin of a serial unit; null for organization-level stock and fixed barcodes. */
             location: components["schemas"]["StockLocationRef"] | null;
             /** @description Null when the viewer may not read it or no price is set. */

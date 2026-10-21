@@ -122,18 +122,7 @@ func (s *Service) OrganizationUnits(ctx context.Context, v UnitViewer, orgUUID u
 	}
 	out := make([]model.StockUnitRow, 0, len(rows))
 	for _, r := range rows {
-		row := model.StockUnitRow{
-			UUID: r.Uuid, Barcode: r.Barcode, UnitKind: r.UnitKind, Status: r.Status, Quantity: r.Quantity,
-			InitialMeters: numericPtr(r.InitialMeters), RemainingMeters: numericPtr(r.RemainingMeters),
-			Product: model.ProductRef{
-				UUID: r.ProductUuid, SKU: r.Sku, Name: r.ProductName,
-				UnitType: r.UnitType, UsesFixedBarcode: r.UsesFixedBarcode,
-			},
-			UpdatedAt: r.UpdatedAt.Time,
-		}
-		if r.LocationUuid.Valid {
-			row.Location = &model.LocationRef{UUID: uuid.UUID(r.LocationUuid.Bytes), Code: r.LocationCode.String, Name: r.LocationName.String}
-		}
+		row := unitRow(r)
 		if p, ok := prices[r.ProductID]; ok {
 			price := p
 			row.PurchasePrice = &price
@@ -141,6 +130,24 @@ func (s *Service) OrganizationUnits(ctx context.Context, v UnitViewer, orgUUID u
 		out = append(out, row)
 	}
 	return out, total, nil
+}
+
+// unitRow maps one organization stock row (purchase price aside).
+func unitRow(r db.ListOrganizationStockUnitRowsRow) model.StockUnitRow {
+	row := model.StockUnitRow{
+		UUID: r.Uuid, Barcode: r.Barcode, UnitKind: r.UnitKind, Status: r.Status, Quantity: r.Quantity,
+		InitialMeters: numericPtr(r.InitialMeters), RemainingMeters: numericPtr(r.RemainingMeters),
+		Product: model.ProductRef{
+			UUID: r.ProductUuid, SKU: r.Sku, Name: r.ProductName,
+			UnitType: r.UnitType, UsesFixedBarcode: r.UsesFixedBarcode,
+		},
+		Category:  model.CategoryRef{UUID: r.CategoryUuid, Name: r.CategoryName},
+		UpdatedAt: r.UpdatedAt.Time,
+	}
+	if r.LocationUuid.Valid {
+		row.Location = &model.LocationRef{UUID: uuid.UUID(r.LocationUuid.Bytes), Code: r.LocationCode.String, Name: r.LocationName.String}
+	}
+	return row
 }
 
 func textArg(s string) pgtype.Text {

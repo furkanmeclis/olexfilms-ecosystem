@@ -189,17 +189,19 @@ type UnitPurchasePrice struct {
 // hand) held by an organization. PurchasePrice is null when the viewer
 // may not read it (pricing.purchase.read) or no price is set.
 type StockUnitRow struct {
-	UUID            uuid.UUID          `json:"uuid"`
-	Barcode         string             `json:"barcode"`
-	UnitKind        string             `json:"unit_kind"`
-	Status          string             `json:"status"`
-	Quantity        int32              `json:"quantity"`
-	InitialMeters   *string            `json:"initial_meters"`
-	RemainingMeters *string            `json:"remaining_meters"`
-	Product         ProductRef         `json:"product"`
-	Location        *LocationRef       `json:"location"`
-	PurchasePrice   *UnitPurchasePrice `json:"purchase_price"`
-	UpdatedAt       time.Time          `json:"updated_at"`
+	UUID            uuid.UUID  `json:"uuid"`
+	Barcode         string     `json:"barcode"`
+	UnitKind        string     `json:"unit_kind"`
+	Status          string     `json:"status"`
+	Quantity        int32      `json:"quantity"`
+	InitialMeters   *string    `json:"initial_meters"`
+	RemainingMeters *string    `json:"remaining_meters"`
+	Product         ProductRef `json:"product"`
+	// Category of the product (TEC-870: the transfer form's stock picker).
+	Category      CategoryRef        `json:"category"`
+	Location      *LocationRef       `json:"location"`
+	PurchasePrice *UnitPurchasePrice `json:"purchase_price"`
+	UpdatedAt     time.Time          `json:"updated_at"`
 }
 
 // StockFilter filters the product stock lists.

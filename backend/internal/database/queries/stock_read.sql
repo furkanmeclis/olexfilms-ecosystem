@@ -222,10 +222,12 @@ SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.status,
        held.quantity, held.updated_at,
        p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
        p.unit_type, p.uses_fixed_barcode,
+       c.uuid AS category_uuid, c.name AS category_name,
        l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name
 FROM held
 JOIN units u ON u.id = held.unit_id
 JOIN products p ON p.id = u.product_id
+JOIN product_categories c ON c.id = p.category_id
 LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
 WHERE (sqlc.narg(brand_id)::bigint IS NULL OR u.brand_id = sqlc.narg(brand_id)::bigint)
   AND (sqlc.narg(product_id)::bigint IS NULL OR u.product_id = sqlc.narg(product_id)::bigint)
