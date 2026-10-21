@@ -68,7 +68,12 @@ describe("campaign approval queue access (TEC-871)", () => {
     expect(navRouteAccess(path, catalogs, dealer, home)).toBe("denied");
     expect(navRouteAccess(path, catalogs, center, home)).toBe("allowed");
     expect(
-      navRouteAccess(routes.tenant.campaigns.list(SLUG), catalogs, dealer, home),
+      navRouteAccess(
+        routes.tenant.campaigns.list(SLUG),
+        catalogs,
+        dealer,
+        home,
+      ),
     ).toBe("allowed");
   });
 });
