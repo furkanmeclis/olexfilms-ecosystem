@@ -29,6 +29,9 @@ func TestParseAccountingListFilters(t *testing.T) {
 	if err != nil || len(c.Kinds) != 2 || *c.BalanceMax != 0 || c.Sort.Key != "name" || c.Sort.Desc {
 		t.Fatalf("cari filter = %+v, %v", c, err)
 	}
+	if c, err := ParseCariFilter(url.Values{"counterparty_kind": {"fleet"}}); err != nil || len(c.Kinds) != 1 || c.Kinds[0] != OrgFleet {
+		t.Fatalf("fleet cari filter = %+v, %v", c, err)
+	}
 	a, err := ParseAccountFilter(url.Values{"type": {"cash"}, "active": {"true"}})
 	if err != nil || a.Types[0] != "cash" || !*a.Active || a.Sort.Key != "type" {
 		t.Fatalf("account filter = %+v, %v", a, err)

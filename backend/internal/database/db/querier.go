@@ -1767,7 +1767,7 @@ type Querier interface {
 	ListCariAccounts(ctx context.Context, arg ListCariAccountsParams) ([]CariAccount, error)
 	// TEC-379 (DT-BE-8): list contract (docs/list-contract.md). name is the
 	// counterparty name (the old order); last_entry_at keeps caris without an
-	// entry last; id is the tiebreak. kinds: center, distributor, dealer (the
+	// entry last; id is the tiebreak. kinds: center, distributor, dealer, fleet (the
 	// counterparty organization type) or customer (a user counterparty).
 	ListCariAccountsWithBalance(ctx context.Context, arg ListCariAccountsWithBalanceParams) ([]ListCariAccountsWithBalanceRow, error)
 	// ListCariAgingLines is every cari row of the book written before
