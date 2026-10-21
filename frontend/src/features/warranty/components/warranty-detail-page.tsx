@@ -37,6 +37,7 @@ import {
   warrantyKeys,
   warrantyService,
 } from "@/features/warranty/services/warranty.service";
+import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -162,6 +163,7 @@ export function WarrantyDetailPage({
   });
 
   const listTitle = t("warranty.list.title");
+  const listOpen = useActiveOrganization(slug)?.type !== "dealer";
   const w = detail.data;
   const header = (
     <PageHeader
@@ -170,7 +172,10 @@ export function WarrantyDetailPage({
       description={w ? w.product.name : undefined}
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.tenant.home(slug) },
-        { label: listTitle, href: routes.tenant.warranties.list(slug) },
+        // TEC-866: the warranty list is closed to dealers, so no crumb to it.
+        ...(listOpen
+          ? [{ label: listTitle, href: routes.tenant.warranties.list(slug) }]
+          : []),
         { label: w ? w.public_code : t("warranty.detail.title") },
       ]}
       actions={

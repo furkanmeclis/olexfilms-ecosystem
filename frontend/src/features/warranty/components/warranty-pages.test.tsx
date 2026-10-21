@@ -13,7 +13,10 @@ const portal = vi.hoisted(() => ({
   listWarranties: vi.fn(),
   listWarrantyClaims: vi.fn(),
 }));
-const state = vi.hoisted(() => ({ grants: new Set<string>() }));
+const state = vi.hoisted(() => ({
+  grants: new Set<string>(),
+  orgType: "center" as string,
+}));
 
 vi.mock("next/link", () => ({
   default: ({
@@ -43,6 +46,9 @@ vi.mock("@/providers/locale-provider", () => ({
 }));
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: (p: string) => state.grants.has(p) }),
+}));
+vi.mock("@/hooks/use-active-organization", () => ({
+  useActiveOrganization: () => ({ type: state.orgType }),
 }));
 vi.mock("@/hooks/use-debounce", () => ({
   useDebounce: <T,>(value: T) => value,
@@ -93,6 +99,7 @@ afterEach(() => {
   container.remove();
   vi.clearAllMocks();
   state.grants = new Set();
+  state.orgType = "center";
 });
 
 async function flush() {
@@ -255,6 +262,29 @@ describe("WarrantyDetailPage", () => {
       container.querySelector("[data-testid=void-info]")?.textContent,
     ).toContain("Hatalı kayıt");
   });
+
+  it.each([
+    ["center", true],
+    ["distributor", true],
+    ["dealer", false],
+  ])(
+    "links the breadcrumb to the list for %s: %s (TEC-866)",
+    async (type, linked) => {
+      state.orgType = type;
+      state.grants = new Set([Permission.WarrantiesRead]);
+      api.get.mockResolvedValue(warranty());
+      await render(
+        createElement(WarrantyDetailPage, { slug: "acme", uuid: "w-1" }),
+      );
+      expect(container.textContent).toContain("Film PPF");
+      expect(
+        container.querySelector('a[href="/t/acme/warranties"]') !== null,
+      ).toBe(linked);
+      expect(container.textContent?.includes("warranty.list.title")).toBe(
+        linked,
+      );
+    },
+  );
 
   it("validates the reason length", () => {
     expect(validVoidReason("  ab ")).toBe(false);

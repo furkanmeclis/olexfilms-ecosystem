@@ -79,11 +79,10 @@ export type NavItemDef = {
   /** Shown only when the active organization has one of these types. */
   orgTypes?: NavOrgType[];
   /**
-   * Left out of the menu and command palette for these organization types,
-   * but the page stays open (the route guard ignores it): its pages are
-   * still reached from links elsewhere (TEC-866).
+   * The route guard ties only this exact href to the entry; deeper pages
+   * (details reached from links elsewhere) are not gated by it (TEC-866).
    */
-  menuHiddenOrgTypes?: NavOrgType[];
+  exactRoute?: boolean;
   /** Shown only for these member roles in the active organization. */
   orgRoles?: string[];
   /** Module key (backend catalog); hidden while the module is off. */

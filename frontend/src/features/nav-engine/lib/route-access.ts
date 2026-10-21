@@ -40,7 +40,9 @@ export function matchNavEntries(
         const target = normalizePath(item.href);
         const matches =
           current === target ||
-          (target !== home && current.startsWith(`${target}/`));
+          (target !== home &&
+            !item.exactRoute &&
+            current.startsWith(`${target}/`));
         if (!matches) continue;
         if (target.length > bestLen) {
           best = [{ group, item }];
@@ -71,11 +73,9 @@ export function navRouteAccess(
   const matches = matchNavEntries(pathname, catalogs, homeHref);
   if (!matches.length) return "allowed";
 
-  // TEC-866: menuHiddenOrgTypes only trims the menu; the page stays open.
   const ignoreFeature = <T extends { feature?: string }>(entry: T) => ({
     ...entry,
     feature: undefined,
-    menuHiddenOrgTypes: undefined,
   });
   const visible = ({ group, item }: NavRouteMatch) =>
     isNavEntryVisible(ignoreFeature(group), access) &&
