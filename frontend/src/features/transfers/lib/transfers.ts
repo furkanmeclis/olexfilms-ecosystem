@@ -5,6 +5,7 @@ import type {
   StockTransferStatus,
   TransferDirection,
 } from "@/features/transfers/services/transfers.service";
+import type { StockUnitRow } from "@/features/stock/services/stock.service";
 import { isApiError } from "@/lib/api";
 
 type T = (key: string, params?: Record<string, string | number>) => string;
@@ -68,12 +69,88 @@ export function transitionButtons(t: StockTransfer): StockTransferStatus[] {
   return TRANSFER_STATUSES.filter((s) => allowed.has(s));
 }
 
-/** One scanned unit of the request form. */
+/** One scanned or picked unit of the request form. */
 export type TransferLine = {
   barcode: string;
   /** Fixed barcodes only; empty moves the whole unit. */
   quantity: string;
+  /**
+   * Set for a unit picked from the stock list (TEC-870): true for a fixed
+   * barcode (a quantity of 1..max is required), false for a serial piece
+   * or roll (it moves whole, no quantity). Unset for a scanned barcode.
+   */
+  fixed?: boolean;
+  /** Quantity on hand of a picked fixed barcode. */
+  max?: number;
+  /** Product name of a picked unit. */
+  label?: string;
+  /** Remaining meters of a picked roll. */
+  meters?: string | null;
 };
+
+/** The stock row fields a picked line is built from. */
+export type PickableUnit = Pick<
+  StockUnitRow,
+  "barcode" | "unit_kind" | "quantity" | "remaining_meters"
+> & { product: Pick<StockUnitRow["product"], "name"> };
+
+/**
+ * Line of a unit picked from the stock list (TEC-870): a fixed barcode
+ * starts at quantity 1 and is capped at its quantity on hand; a serial
+ * piece or roll moves whole.
+ */
+export function lineFromUnit(u: PickableUnit): TransferLine {
+  const fixed = u.unit_kind === "fixed";
+  return {
+    barcode: u.barcode,
+    quantity: fixed ? "1" : "",
+    fixed,
+    ...(fixed ? { max: u.quantity } : { meters: u.remaining_meters }),
+    label: u.product.name,
+  };
+}
+
+/**
+ * Picks or unpicks a stock unit: a barcode already on the list (picked or
+ * scanned) is removed, any other is added.
+ */
+export function toggleUnitLine(
+  lines: TransferLine[],
+  u: PickableUnit,
+): TransferLine[] {
+  const barcode = normalizeBarcode(u.barcode);
+  if (barcode === "") return lines;
+  if (lines.some((l) => l.barcode === barcode)) {
+    return lines.filter((l) => l.barcode !== barcode);
+  }
+  return [...lines, lineFromUnit({ ...u, barcode })];
+}
+
+/**
+ * Quantity check of one line: a picked serial unit takes no quantity, a
+ * picked fixed barcode needs 1..max, a scanned line keeps validQuantity.
+ */
+export function lineQuantityValid(l: TransferLine): boolean {
+  if (l.fixed === false) return l.quantity.trim() === "";
+  if (l.fixed === true) {
+    const v = l.quantity.trim();
+    if (v === "" || !validQuantity(v)) return false;
+    return l.max === undefined || Number(v) <= l.max;
+  }
+  return validQuantity(l.quantity);
+}
+
+/** True when a picked fixed barcode asks for more than it holds. */
+export function lineExceedsMax(l: TransferLine): boolean {
+  const v = l.quantity.trim();
+  return (
+    l.fixed === true &&
+    l.max !== undefined &&
+    validQuantity(v) &&
+    v !== "" &&
+    Number(v) > l.max
+  );
+}
 
 /** Trimmed barcode, or "" for blank input. */
 export function normalizeBarcode(raw: string): string {
@@ -107,7 +184,7 @@ export function buildCreateBody(
   kind: StockTransferKind = "sibling",
 ): StockTransferCreateInput | null {
   if (toOrgUuid === "" || lines.length === 0) return null;
-  if (!lines.every((l) => validQuantity(l.quantity))) return null;
+  if (!lines.every(lineQuantityValid)) return null;
   const body: StockTransferCreateInput = {
     ...(kind === "return" ? { kind } : {}),
     to_org_uuid: toOrgUuid,

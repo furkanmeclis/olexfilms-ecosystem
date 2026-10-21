@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   addLine,
   buildCreateBody,
+  lineExceedsMax,
   lineIndexOfField,
+  lineQuantityValid,
+  toggleUnitLine,
   transferErrorMessage,
   transferStatusTone,
   transitionAsksReason,
@@ -20,6 +23,68 @@ const t = (key: string) =>
       "transfers.errors.TRANSFER_UNIT_RESERVED": "reserved",
     }) as Record<string, string>
   )[key] ?? key;
+
+describe("picked stock units (TEC-870)", () => {
+  const serial = {
+    barcode: "R-1",
+    unit_kind: "serial" as const,
+    quantity: 1,
+    remaining_meters: "12.50",
+    product: { name: "Roll film" },
+  };
+  const fixed = {
+    barcode: "F-1",
+    unit_kind: "fixed" as const,
+    quantity: 5,
+    remaining_meters: null,
+    product: { name: "Clip" },
+  };
+
+  it("adds a serial unit whole and a fixed barcode at 1 capped by its stock", () => {
+    const lines = toggleUnitLine(toggleUnitLine([], serial), fixed);
+    expect(lines).toEqual([
+      {
+        barcode: "R-1",
+        quantity: "",
+        fixed: false,
+        meters: "12.50",
+        label: "Roll film",
+      },
+      { barcode: "F-1", quantity: "1", fixed: true, max: 5, label: "Clip" },
+    ]);
+    expect(buildCreateBody("org", lines, "")).toEqual({
+      to_org_uuid: "org",
+      items: [{ barcode: "R-1" }, { barcode: "F-1", quantity: 1 }],
+    });
+  });
+
+  it("toggles a barcode off, also a scanned one, never twice", () => {
+    let lines = toggleUnitLine([], fixed);
+    lines = toggleUnitLine(lines, fixed);
+    expect(lines).toEqual([]);
+    lines = addLine([], "F-1");
+    expect(toggleUnitLine(lines, fixed)).toEqual([]);
+    lines = addLine(toggleUnitLine([], fixed), " F-1 ");
+    expect(lines).toHaveLength(1);
+  });
+
+  it("validates picked quantities", () => {
+    const f = { barcode: "F", quantity: "5", fixed: true, max: 5 };
+    expect(lineQuantityValid(f)).toBe(true);
+    expect(lineQuantityValid({ ...f, quantity: "6" })).toBe(false);
+    expect(lineExceedsMax({ ...f, quantity: "6" })).toBe(true);
+    expect(lineQuantityValid({ ...f, quantity: "" })).toBe(false);
+    expect(lineExceedsMax({ ...f, quantity: "" })).toBe(false);
+    expect(lineQuantityValid({ ...f, quantity: "0" })).toBe(false);
+    expect(
+      lineQuantityValid({ barcode: "S", quantity: "", fixed: false }),
+    ).toBe(true);
+    expect(
+      lineQuantityValid({ barcode: "S", quantity: "2", fixed: false }),
+    ).toBe(false);
+    expect(buildCreateBody("org", [{ ...f, quantity: "6" }], "")).toBeNull();
+  });
+});
 
 describe("transfer lines (TEC-197)", () => {
   it("adds trimmed barcodes once", () => {
