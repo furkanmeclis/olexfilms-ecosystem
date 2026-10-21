@@ -49,25 +49,62 @@ export function partGroup(part: string): PartGroup | null {
   return null;
 }
 
-/** Legacy quick picks; each one changes only its own group. */
+const bodyExcept = (...skip: string[]) =>
+  BODY_PARTS.filter((p) => !skip.includes(p));
+const windowsExcept = (...skip: string[]) =>
+  WINDOW_PARTS.filter((p) => !skip.includes(p));
+
+/**
+ * One-click selections (TEC-864; the first three follow the legacy quick
+ * picks). Each one replaces only its own group; parts a category does not
+ * offer are skipped. The mapping is product-owned: change it here.
+ */
 export const PART_PRESETS = [
+  { id: "hood_only", group: "body", parts: ["body_kaput"] },
   {
     id: "front_three",
     group: "body",
-    parts: ["body_sag_on_camurluk", "body_kaput", "body_sol_on_camurluk"],
+    parts: ["body_kaput", "body_sol_on_camurluk", "body_sag_on_camurluk"],
   },
   {
     id: "front_four",
     group: "body",
     parts: [
-      "body_sag_on_camurluk",
       "body_kaput",
       "body_on_tampon",
       "body_sol_on_camurluk",
+      "body_sag_on_camurluk",
     ],
   },
-  { id: "hood_only", group: "body", parts: ["body_kaput"] },
+  { id: "full_body", group: "body", parts: [...BODY_PARTS] },
+  {
+    id: "full_body_no_bumpers",
+    group: "body",
+    parts: bodyExcept("body_on_tampon", "body_arka_tampon"),
+  },
+  {
+    id: "full_body_no_roof",
+    group: "body",
+    parts: bodyExcept("body_tavan"),
+  },
+  { id: "windshield", group: "window", parts: ["window_on_cam"] },
+  { id: "sunroof", group: "window", parts: ["window_sunroof"] },
+  {
+    id: "front_two_windows",
+    group: "window",
+    parts: ["window_sol_on_kapi", "window_sag_on_kapi"],
+  },
   { id: "all_windows", group: "window", parts: [...WINDOW_PARTS] },
+  {
+    id: "all_windows_no_windshield",
+    group: "window",
+    parts: windowsExcept("window_on_cam"),
+  },
+  {
+    id: "all_windows_no_roof",
+    group: "window",
+    parts: windowsExcept("window_sunroof"),
+  },
 ] as const satisfies readonly {
   id: string;
   group: PartGroup;
@@ -129,6 +166,47 @@ export function applyPreset(
   const others = selected.filter((p) => partGroup(p) !== preset.group);
   if (isPresetActive(selected, preset, available)) return others;
   return [...others, ...presetParts(preset, available)];
+}
+
+/**
+ * The presets worth showing for the pickable parts: those with at least one
+ * available part, minus later ones that resolve to the same parts as an
+ * earlier one of their group (e.g. "all windows" and "all windows except
+ * the roof" when the category has no sunroof).
+ */
+export function visiblePresets(available: readonly string[]): PartPreset[] {
+  const seen = new Set<string>();
+  const out: PartPreset[] = [];
+  for (const preset of PART_PRESETS) {
+    const parts = presetParts(preset, available);
+    if (parts.length === 0) continue;
+    const key = preset.group + ":" + [...parts].sort().join(",");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(preset);
+  }
+  return out;
+}
+
+/**
+ * Whether the selection is fully described by the given presets: every
+ * group is empty or equals one of its presets, and nothing outside the
+ * body / window groups is selected. Used to keep the detailed picker
+ * closed when a quick pick explains the selection.
+ */
+export function selectionMatchesPresets(
+  selected: readonly string[],
+  presets: readonly PartPreset[],
+  available: readonly string[],
+): boolean {
+  if (selected.some((p) => partGroup(p) === null)) return false;
+  return (Object.keys(PART_GROUPS) as PartGroup[]).every((group) => {
+    if (!selected.some((p) => partGroup(p) === group)) return true;
+    return presets.some(
+      (preset) =>
+        preset.group === group && isPresetActive(selected, preset, available),
+    );
+  });
 }
 
 /** Parts of a new item: the selection limited to its category's parts. */
