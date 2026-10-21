@@ -82,6 +82,7 @@ test("F3 gate: VIN vehicle → parts → before measurement → required contrac
 
   // Parts.
   await expect(page.getByTestId("parts-step")).toBeVisible();
+  await page.getByTestId("parts-detailed-toggle").click();
   await page.locator('path[data-part="body_kaput"]').click();
   await page.locator('path[data-part="body_on_tampon"]').click();
   await expect(page.getByTestId("parts-count")).toContainText("2");

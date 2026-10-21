@@ -47,8 +47,10 @@ test("wizard: customer/vehicle → parts → VIN → stock → complete → deta
     has_measurement: false,
   });
 
-  // Step 2: parts on the SVG drawing.
+  // Step 2: parts on the SVG drawing, inside "detailed selection"
+  // (collapsed by default, TEC-864).
   await expect(page.getByTestId("parts-step")).toBeVisible();
+  await page.getByTestId("parts-detailed-toggle").click();
   await page.locator('path[data-part="body_kaput"]').click();
   await expect(page.getByTestId("parts-count")).toContainText("1");
   await page.getByTestId("parts-next").click();
