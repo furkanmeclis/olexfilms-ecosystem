@@ -99,7 +99,7 @@ export function CampaignApprovalsPage({ slug }: { slug: string }) {
     <EntityPage
       title={t("campaigns.approvals.title")}
       description={t("campaigns.approvals.description")}
-      permission={permissions.campaigns.read}
+      permission={permissions.campaigns.approve}
       forbiddenFallback={<ErrorState title={t("common.error_forbidden")} />}
       breadcrumbs={[
         { label: t("layout.breadcrumb_home"), href: routes.tenant.home(slug) },

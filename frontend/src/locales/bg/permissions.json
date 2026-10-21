@@ -94,6 +94,7 @@
   "labels.warehouse.write": "Управление на склада",
   "labels.campaigns.read": "Преглед на кампании",
   "labels.campaigns.write": "Управление на кампании",
+  "labels.campaigns.approve": "Одобряване на кампании",
   "labels.photo_standard.manage": "Управление на фото стандарта",
   "labels.photo_standard.override": "Промяна на фото стандарта",
   "labels.fleets.read": "Преглед на автопаркове",

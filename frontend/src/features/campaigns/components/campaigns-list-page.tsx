@@ -122,7 +122,7 @@ export function CampaignsListPage({ slug }: { slug: string }) {
           <EntityCreateButton
             onClick={() => router.push(routes.tenant.campaigns.approvals(slug))}
             label={t("campaigns.actions.approvals")}
-            permission={permissions.campaigns.read}
+            permission={permissions.campaigns.approve}
           />
         </div>
       }

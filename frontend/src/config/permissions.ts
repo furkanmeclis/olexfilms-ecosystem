@@ -97,6 +97,8 @@ export const Permission = {
   WarehouseWrite: "warehouse.write",
   CampaignsRead: "campaigns.read",
   CampaignsWrite: "campaigns.write",
+  /** TEC-404/TEC-871: campaign approval queue (center / upper org). */
+  CampaignsApprove: "campaigns.approve",
   LeadsRead: "leads.read",
   LeadsWrite: "leads.write",
   LeadsConvertOrg: "leads.convert_org",
@@ -486,6 +488,7 @@ export const permissions = {
   campaigns: {
     read: Permission.CampaignsRead,
     write: Permission.CampaignsWrite,
+    approve: Permission.CampaignsApprove,
   },
   leads: {
     read: Permission.LeadsRead,

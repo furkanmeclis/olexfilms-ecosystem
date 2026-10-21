@@ -94,6 +94,7 @@
   "labels.warehouse.write": "Lager verwalten",
   "labels.campaigns.read": "Kampagnen ansehen",
   "labels.campaigns.write": "Kampagnen verwalten",
+  "labels.campaigns.approve": "Kampagnen freigeben",
   "labels.photo_standard.manage": "Fotostandard verwalten",
   "labels.photo_standard.override": "Fotostandard überschreiben",
   "labels.fleets.read": "Flotten anzeigen",

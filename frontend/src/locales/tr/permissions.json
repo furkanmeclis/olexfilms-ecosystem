@@ -94,6 +94,7 @@
   "labels.warehouse.write": "Depoyu yönet",
   "labels.campaigns.read": "Kampanyaları görüntüle",
   "labels.campaigns.write": "Kampanyaları yönet",
+  "labels.campaigns.approve": "Kampanyaları onayla",
   "labels.photo_standard.manage": "Fotoğraf standardını yönet",
   "labels.photo_standard.override": "Fotoğraf standardını geçersiz kıl",
   "labels.fleets.read": "Filoları görüntüle",
