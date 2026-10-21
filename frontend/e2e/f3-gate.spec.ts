@@ -114,13 +114,15 @@ test("F3 gate: VIN vehicle → parts → before measurement → required contrac
 
   // 3. Contract: required, so "Next" and the stock step stay closed.
   const step = page.getByTestId("contract-step");
+  // TEC-865: the step's actions sit in the floating wizard bar.
+  const next = page.getByTestId("wizard-actions").getByTestId("contract-next");
   await expect(step).toBeVisible();
   expect(api.bodies[`POST ${svc}/measurements`]?.[0]).toEqual({
     measurement_uuid: MEASUREMENTS.before,
     phase: "before",
   });
   await expect(step.getByTestId("contract-required")).toBeVisible();
-  await expect(step.getByTestId("contract-next")).toBeDisabled();
+  await expect(next).toBeDisabled();
   await expect(
     page.getByTestId("wizard-stepper").locator('button[data-step="stock"]'),
   ).toBeDisabled();
@@ -132,7 +134,7 @@ test("F3 gate: VIN vehicle → parts → before measurement → required contrac
   await expect(step.getByTestId("contract-status")).toHaveText(
     "Awaiting signatures",
   );
-  await expect(step.getByTestId("contract-next")).toBeDisabled();
+  await expect(next).toBeDisabled();
 
   // Customer: KVKK notice, WhatsApp OTP, the code and a canvas signature.
   const customerSlot = step.getByTestId("customer-sign");
@@ -155,7 +157,7 @@ test("F3 gate: VIN vehicle → parts → before measurement → required contrac
   expect(customerSign.code).toBe(CONTRACT_OTP);
   // Raw base64 PNG, no data URL prefix.
   expect(customerSign.signature_png).toMatch(/^iVBORw0KGgo/);
-  await expect(step.getByTestId("contract-next")).toBeDisabled();
+  await expect(next).toBeDisabled();
 
   // Staff signature executes the contract and opens "Next".
   const staffSlot = step.getByTestId("staff-sign");
@@ -164,8 +166,8 @@ test("F3 gate: VIN vehicle → parts → before measurement → required contrac
   await expect(step.getByTestId("staff-signed")).toBeVisible();
   await expect(step.getByTestId("contract-status")).toHaveText("Signed");
   await expect(step.getByTestId("contract-executed")).toBeVisible();
-  await expect(step.getByTestId("contract-next")).toBeEnabled();
-  await step.getByTestId("contract-next").click();
+  await expect(next).toBeEnabled();
+  await next.click();
 
   // 4. Stock: 6 m from the roll on the two parts, then complete.
   await expect(page.getByTestId("stock-step")).toBeVisible();
