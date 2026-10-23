@@ -37,7 +37,7 @@ WHERE a.uuid = sqlc.arg(uuid) AND a.organization_id = sqlc.arg(organization_id);
 
 -- TEC-379 (DT-BE-8): list contract (docs/list-contract.md). name is the
 -- counterparty name (the old order); last_entry_at keeps caris without an
--- entry last; id is the tiebreak. kinds: center, distributor, dealer (the
+-- entry last; id is the tiebreak. kinds: center, distributor, dealer, fleet (the
 -- counterparty organization type) or customer (a user counterparty).
 -- name: ListCariAccountsWithBalance :many
 SELECT c.*, b.balance, b.entry_count, b.last_entry_at,

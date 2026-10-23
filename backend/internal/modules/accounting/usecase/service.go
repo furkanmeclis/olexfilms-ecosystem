@@ -67,6 +67,7 @@ const (
 	OrgCenter      = "center"
 	OrgDistributor = "distributor"
 	OrgDealer      = "dealer"
+	OrgFleet       = "fleet"
 )
 
 // SourceManual is the source_type of entries written through this API.

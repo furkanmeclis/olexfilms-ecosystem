@@ -60,7 +60,9 @@ var DisputeSort = apiquery.SortSpec{
 var (
 	AccountTypes = []string{AccountCash, AccountBank}
 	// CariKinds: the counterparty organization type, or customer (a user).
-	CariKinds        = []string{OrgCenter, OrgDistributor, OrgDealer, CariKindCustomer}
+	// A dealer serves fleet organizations (TEC-869), so fleet is a kind too;
+	// the frontend CARI_COUNTERPARTY_KINDS mirrors this list.
+	CariKinds        = []string{OrgCenter, OrgDistributor, OrgDealer, OrgFleet, CariKindCustomer}
 	EntryDirections  = []string{accounting.DirectionIncome, accounting.DirectionExpense, accounting.DirectionCharge, accounting.DirectionCollection, accounting.DirectionPayment, accounting.DirectionOpening}
 	DisputeStatuses  = []string{DisputeOpen, DisputeResolvedReversal, DisputeResolvedRevision, DisputeRejected}
 	sourceTypeFormat = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)

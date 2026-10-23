@@ -41,6 +41,7 @@ import {
 import { fieldErrors } from "@/features/accounting/lib/form";
 import {
   accountingService,
+  ENTRY_SOURCE_TYPES,
   type AccountingDispute,
   type AccountingDisputeResolveInput,
 } from "@/features/accounting/services/accounting.service";
@@ -310,9 +311,9 @@ export function DisputeDetailPage({
                   {categories.get(d.entry.category) ?? d.entry.category}
                 </Row>
                 <Row label={t("accounting.fields.source")}>
-                  {(
-                    ["manual", "order", "service", "transfer"] as string[]
-                  ).includes(d.source_type)
+                  {(ENTRY_SOURCE_TYPES as readonly string[]).includes(
+                    d.source_type,
+                  )
                     ? t(`accounting.sources.${d.source_type}`)
                     : d.source_type}
                 </Row>

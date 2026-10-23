@@ -66,12 +66,27 @@ export const MANUAL_DIRECTIONS: ManualDirection[] = [
 /** Settlement directions (POST /v1/accounting/collections | payments). */
 export type SettlementKind = "collection" | "payment";
 
-/** Ledger source types the backend writes (accounting.source.* labels). */
+/**
+ * Ledger source types the backend writes (finance_entries.source_type,
+ * accounting.sources.* labels). TEC-869 adds the posting sources.
+ */
 export const ENTRY_SOURCE_TYPES = [
   "manual",
   "order",
   "service",
   "transfer",
+  "opening_balance",
+  "account_opening",
+  "staff_payment",
+  "stock_transfer",
+  "stock_return",
+  "cari_transfer",
+  "service_subscription_period",
+  "service_subscription_cancel",
+  "warranty_claim",
+  "product_sale",
+  "purchase_external",
+  "service_income",
 ] as const;
 
 export type AccountingPage<T> = {
@@ -87,7 +102,7 @@ type ListQuery = Record<string, string | number | boolean | undefined>;
 /**
  * GET /v1/accounting/cari (TEC-379): sort name (default), balance,
  * entry_count, last_entry_at, created_at; q; active; CSV
- * counterparty_kind (center, distributor, dealer, customer);
+ * counterparty_kind (center, distributor, dealer, fleet, customer);
  * balance_min / balance_max.
  */
 export type ListCariParams = ListQuery & {
@@ -110,11 +125,16 @@ export type ListEntriesParams = ListQuery & {
   account_uuid?: string;
 };
 
-/** Cari counterparty kinds of the `counterparty_kind` filter. */
+/**
+ * Cari counterparty kinds of the `counterparty_kind` filter: the
+ * counterparty organization type (backend CariKinds) or customer (a user
+ * cari). Every kind needs an accounting.counterparty_types.* label.
+ */
 export const CARI_COUNTERPARTY_KINDS = [
   "center",
   "distributor",
   "dealer",
+  "fleet",
   "customer",
 ] as const;
 

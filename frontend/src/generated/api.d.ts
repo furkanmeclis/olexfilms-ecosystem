@@ -23895,7 +23895,7 @@ export interface components {
             uuid: string | null;
             name: string;
             /** @enum {string} */
-            org_type?: "center" | "distributor" | "dealer";
+            org_type?: "center" | "distributor" | "dealer" | "fleet";
         };
         CariAccount: {
             /** Format: uuid */
@@ -48968,7 +48968,7 @@ export interface operations {
                 /** @description Book to read: the active organization (default) or an organization below it inside the accounting.read scope. */
                 organization_uuid?: components["parameters"]["AccountingOrganizationUUID"];
                 active?: boolean;
-                /** @description CSV of center, distributor, dealer (counterparty organization type) and customer (a customer cari). Unknown value → 400. */
+                /** @description CSV of center, distributor, dealer, fleet (counterparty organization type) and customer (a customer cari). Unknown value → 400. */
                 counterparty_kind?: string;
                 /** @description Balance at least (book currency, signed). */
                 balance_min?: number;
