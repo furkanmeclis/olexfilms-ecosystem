@@ -1402,6 +1402,22 @@ type FleetUser struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type GaugeCalibration struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	Serial         int32              `json:"serial"`
+	FeOffsetHz     pgtype.Int4        `json:"fe_offset_hz"`
+	AlOffsetHz     pgtype.Int4        `json:"al_offset_hz"`
+	TargetUm       int16              `json:"target_um"`
+	Samples        []byte             `json:"samples"`
+	ClientID       pgtype.UUID        `json:"client_id"`
+	CalibratedAt   pgtype.Timestamptz `json:"calibrated_at"`
+	CreatedBy      int64              `json:"created_by"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type GithubAppSetting struct {
 	ID              int16              `json:"id"`
 	Enabled         bool               `json:"enabled"`

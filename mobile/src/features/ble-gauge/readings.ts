@@ -2,7 +2,7 @@
  * Gauge readings (pure, alias-free): the "probe down → steady
  * → commit → probe up" sampler, and unit conversion for the form fields.
  */
-import type { GaugeReading } from './curve.ts';
+import type { GaugeReading, Material } from './curve.ts';
 
 export type { GaugeReading };
 
@@ -39,12 +39,27 @@ export const SAMPLER = {
 export type SamplerState = {
   phase: 'idle' | 'sampling' | 'committed';
   samples: number[];
-  material: GaugeReading['material'] | null;
+  /** Probe frequencies of the samples (Hz), kept with the measurement (§9.2). */
+  frequencies: number[];
+  material: Material | null;
 };
 
-export const initialSampler: SamplerState = { phase: 'idle', samples: [], material: null };
+export const initialSampler: SamplerState = { phase: 'idle', samples: [], frequencies: [], material: null };
 
-export type Commit = { um: number; material: GaugeReading['material']; count: number };
+export type Commit = {
+  um: number;
+  material: Material;
+  count: number;
+  /** Mean raw probe frequency (Hz) of the committed samples. */
+  frequency: number;
+  /** Probe channel the value was computed on (the substrate's own channel). */
+  channel: Material;
+  /** steady: the sampler; button: the gauge's "save" button (frame type 3 / 4). */
+  trigger: 'steady' | 'button';
+};
+
+/** What the sampler needs of a reading. */
+export type SamplerInput = Pick<GaugeReading, 'um' | 'material' | 'held' | 'button' | 'frequency'>;
 
 function mean(v: number[]) {
   return v.reduce((s, x) => s + x, 0) / v.length;
@@ -60,26 +75,43 @@ function std(v: number[]) {
  * One step of the sampler. A commit happens once per contact: after it the
  * sampler waits for the probe to lift (a reading without microns) before it
  * collects again, so holding the probe still never fills a part twice.
+ *
+ * - A frame of the other channel (`held`, §4.2) is skipped: it neither adds
+ *   a sample nor resets the contact.
+ * - Only a reading without microns (probe in the air / off-scale) ends the
+ *   contact. 0 µm (bare metal) is a value.
+ * - The gauge's button commits the contact at once (mean so far).
  */
 export function stepSampler(
   state: SamplerState,
-  reading: Pick<GaugeReading, 'um' | 'material'>,
+  reading: SamplerInput,
   opts: { window: number; minSamples: number; maxStdUm: number } = SAMPLER,
 ): { state: SamplerState; commit: Commit | null } {
-  if (reading.um == null || reading.um <= 0) {
+  if (reading.held) return { state, commit: null };
+  if (reading.um == null || reading.material == null) {
     return { state: initialSampler, commit: null };
   }
   if (state.phase === 'committed') return { state, commit: null };
 
-  const sameMaterial = state.material === null || state.material === reading.material;
-  const samples = [...(sameMaterial ? state.samples : []), reading.um].slice(-opts.window);
-  if (samples.length >= opts.minSamples && std(samples) <= opts.maxStdUm) {
+  const material = reading.material;
+  const same = state.material === null || state.material === material;
+  const samples = [...(same ? state.samples : []), reading.um].slice(-opts.window);
+  const frequencies = [...(same ? state.frequencies : []), reading.frequency].slice(-opts.window);
+  const steady = samples.length >= opts.minSamples && std(samples) <= opts.maxStdUm;
+  if (steady || reading.button) {
     return {
-      state: { phase: 'committed', samples, material: reading.material },
-      commit: { um: Math.round(mean(samples)), material: reading.material, count: samples.length },
+      state: { phase: 'committed', samples, frequencies, material },
+      commit: {
+        um: Math.round(mean(samples)),
+        material,
+        count: samples.length,
+        frequency: Math.round(mean(frequencies)),
+        channel: material,
+        trigger: steady ? 'steady' : 'button',
+      },
     };
   }
-  return { state: { phase: 'sampling', samples, material: reading.material }, commit: null };
+  return { state: { phase: 'sampling', samples, frequencies, material }, commit: null };
 }
 
 /** 0…1 progress of the current contact, for the live indicator. */
@@ -89,6 +121,6 @@ export function samplerProgress(state: SamplerState, minSamples: number = SAMPLE
 }
 
 /** BLE material → backend substrate_type of a flat reading. */
-export function substrateOf(material: GaugeReading['material'] | null | undefined): 'Fe' | 'Al' | undefined {
+export function substrateOf(material: Material | null | undefined): 'Fe' | 'Al' | undefined {
   return material === 'fe' ? 'Fe' : material === 'al' ? 'Al' : undefined;
 }
