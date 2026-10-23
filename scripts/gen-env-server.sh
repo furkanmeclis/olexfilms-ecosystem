@@ -9,7 +9,7 @@
 #       [--rotate] [--rotate-encryption-key]
 #
 # Re-running keeps every value already in the output file (secrets, SMTP,
-# anything entered by hand); only the prefix- and
+# migrator DSNs, anything entered by hand); only the prefix- and
 # domain-derived keys are rewritten, so a re-run changes only the date line.
 # --rotate regenerates the secrets (DB_PASSWORD and S3 keys too: update the
 # running Postgres role / SeaweedFS identity yourself). It never touches
@@ -245,7 +245,7 @@ set_kv NEXT_PUBLIC_SENTRY_RELEASE "$(keep NEXT_PUBLIC_SENTRY_RELEASE "")"
 set_kv VAPID_PUBLIC_KEY "$VAPID_PUB"
 set_kv VAPID_PRIVATE_KEY "$VAPID_PRIV"
 set_kv VAPID_SUBJECT "mailto:$MAIL_FROM"
-# Everything else (hand-edited values)
+# Everything else (migrator DSNs, hand-edited values)
 # keeps its value from the existing output file; see the awk merge below.
 
 TMP_OUT="$(mktemp)"
@@ -302,6 +302,7 @@ if [ "$ROTATE_ENC" = 1 ]; then
   echo "  ! --rotate-encryption-key: data encrypted with the old APP_ENCRYPTION_KEY is unreadable now"
 fi
 [ -n "$(grep -E '^SMTP_HOST=.' "$OUT" || true)" ] || echo "  ! SMTP_HOST empty: e-mail notifications will not be sent"
+echo "  migrator legacy DSNs (LEGACY_*_DSN) stay empty unless set by hand."
 [ -n "$(grep -E '^ANTHROPIC_API_KEY=.' "$OUT" || true)" ] || echo "  ! ANTHROPIC_API_KEY empty: AI assistant disabled (503 AI_UNAVAILABLE)"
 [ -n "$(grep -E '^GOOGLE_PLACES_API_KEY=.' "$OUT" || true)" ] || echo "  ! GOOGLE_PLACES_API_KEY empty: showcase Google rating is entered by hand"
 echo
