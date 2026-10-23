@@ -358,6 +358,32 @@ services:
     networks:
       - app
 
+  # Legacy import (design §7, K26/K27): profile "migrator", never started by
+  # prod-up. Run: docker compose --env-file .env.server -f compose.prod.yml
+  #   --profile migrator run --rm migrator   (or: ... migrator report via MIGRATOR_ARGS)
+  # Legacy DSNs are read-only sources (AGENTS §4), set by hand on the server.
+  migrator:
+    <<: *backend-image
+    profiles: ["migrator"]
+    container_name: ${NAME_PREFIX:-app}-migrator
+    environment:
+      <<: *backend-environment
+      APP_ROLE: migrator
+      AUTO_MIGRATE: "false"
+      MIGRATOR_PROFILE: ${MIGRATOR_PROFILE:-olex}
+      MIGRATOR_ARGS: ${MIGRATOR_ARGS:-}
+      LEGACY_HUB_DSN: ${LEGACY_HUB_DSN:-}
+      LEGACY_WH_DSN: ${LEGACY_WH_DSN:-}
+      LEGACY_HUB_STORAGE_DIR: ${LEGACY_HUB_STORAGE_DIR:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - app
+
   backend:
     <<: *backend-image
     container_name: ${NAME_PREFIX:-app}-backend

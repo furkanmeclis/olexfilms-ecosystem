@@ -1,7 +1,5 @@
 # Migrator cutover runbook'u: tam aktarım, arama indeksleri ve preflight
 
-> **Tarihçe (TEC-282):** Final cutover tamamlandı; `migrator` servisi compose'dan ve `LEGACY_*` / `MIGRATOR_*` değişkenleri env'den kaldırıldı (K27). Bu runbook kesimin nasıl yapıldığının kaydıdır. Aşağıdaki `--profile migrator` komutları artık çalışmaz; bakım araçları için `docs/deploy.md` §3'e bakın.
-
 Kapsam: design §7 kapatma sırasının (1) ve (2). adımları: migrator'ın ilk tam aktarımı (ve demo /
 prova için her `--mode=full` çalıştırma), ardından delta ile kapanış ve go/no-go kontrolü
 (`cutover-preflight`). Her adımda **Komut** ve **Doğrulama** vardır; bir adımın doğrulaması
