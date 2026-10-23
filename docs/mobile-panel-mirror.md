@@ -25,7 +25,11 @@ Mobil uygulama, izin verilen panel uçlarını `/v1/mobile/panel/{path}` üzerin
 `warehouse`, `measurements`, `reports`, `search`, `notifications`, `appointments`,
 `catalog`, `vehicle-catalog`, `plate-formats`, `performance`, `tasks`, `leads`,
 `pricing`, `certificates`, `photo-standard`, `service-catalog`, `geo`,
-`announcements`, `stats` `delivery-methods` ve iki segmentli `tenant/organizations`, `tenant/modules`.
+`announcements`, `stats` `delivery-methods`, `certificate-warnings`, bayi satış
+uçları `dealer-prices`, `product-sales`, `purchases`, `suppliers` (TEC-958;
+accounting + dealer_accounting modülü ve sırasıyla `dealer_pricing.write`,
+`product_sales.write`, `purchases.write`, `suppliers.manage`) ve iki segmentli
+`tenant/organizations`, `tenant/modules`, `tenant/pricing`.
 
 Önek ve alt yolları tam segment sınırında eşleşir (`ordersx` eşleşmez).
 Diğer tüm önekler 404 `NOT_FOUND` döndürür; `auth`, `platform`, `portal`,

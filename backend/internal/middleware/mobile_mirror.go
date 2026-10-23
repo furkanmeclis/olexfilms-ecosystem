@@ -20,6 +20,8 @@ var MobilePanelMirrorPrefixes = []string{
 	"pricing", "certificates", "photo-standard", "service-catalog", "geo",
 	"announcements", "stats", "tenant/organizations", "tenant/modules", "tenant/pricing", "delivery-methods",
 	"certificate-warnings",
+	// TEC-958: dealer quick sale, sale prices and purchases (dealer_accounting module).
+	"dealer-prices", "product-sales", "purchases", "suppliers",
 }
 
 type mobilePanelMirrorKey struct{}
