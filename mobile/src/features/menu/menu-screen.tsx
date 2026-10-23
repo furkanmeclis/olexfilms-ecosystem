@@ -32,6 +32,10 @@ const ITEMS: Item[] = [
   { key: 'performance', icon: 'chart', permission: 'performance.read', spaces: ['admin'], built: ['admin'] },
   { key: 'measurements', icon: 'measure', permission: 'measurements.read', spaces: ['admin'], built: ['admin'] },
   { key: 'announcements', icon: 'announcement', permission: 'announcements.read', spaces: ['bayi', 'depo', 'admin'], built: ['bayi', 'depo', 'admin'] },
+  // TEC-960: campaigns (approval queue inside), the panel AI assistant and the AI action approval queue.
+  { key: 'campaigns', icon: 'campaign', permission: 'campaigns.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
+  { key: 'assistant', icon: 'assistant', permission: 'ai.use', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
+  { key: 'ai_actions', icon: 'check', permission: 'ai.actions.confirm', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
 ];
 
 export function MenuScreen({ space }: { space: SpaceKind }) {

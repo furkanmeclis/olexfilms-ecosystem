@@ -9,5 +9,8 @@
   "accounting": "Kasse und Konten",
   "tasks": "Aufgaben",
   "announcements": "Mitteilungen",
-  "warranties": "Garantien"
+  "warranties": "Garantien",
+  "campaigns": "Kampagnen",
+  "assistant": "KI-Assistent",
+  "ai_actions": "Ausstehende KI-Aktionen"
 }

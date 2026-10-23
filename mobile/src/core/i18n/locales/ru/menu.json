@@ -9,5 +9,8 @@
   "accounting": "Касса и расчёты",
   "tasks": "Задачи",
   "announcements": "Объявления",
-  "warranties": "Гарантии"
+  "warranties": "Гарантии",
+  "campaigns": "Кампании",
+  "assistant": "ИИ-ассистент",
+  "ai_actions": "Ожидающие ИИ-действия"
 }

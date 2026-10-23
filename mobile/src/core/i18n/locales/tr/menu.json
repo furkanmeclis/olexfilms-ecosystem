@@ -16,5 +16,8 @@
   "pricing": "Fiyatlandırma",
   "occupancy": "Randevu doluluğu",
   "performance": "Performans",
-  "measurements": "Ölçümler"
+  "measurements": "Ölçümler",
+  "campaigns": "Kampanyalar",
+  "assistant": "AI asistan",
+  "ai_actions": "Onay bekleyen AI işlemleri"
 }

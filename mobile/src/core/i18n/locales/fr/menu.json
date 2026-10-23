@@ -9,5 +9,8 @@
   "accounting": "Caisse et comptes",
   "tasks": "Tâches",
   "announcements": "Annonces",
-  "warranties": "Garanties"
+  "warranties": "Garanties",
+  "campaigns": "Campagnes",
+  "assistant": "Assistant IA",
+  "ai_actions": "Actions IA en attente"
 }

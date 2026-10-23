@@ -68,6 +68,10 @@ import StarIcon from 'lucide-react-native/icons/star';
 import WrenchIcon from 'lucide-react-native/icons/wrench';
 import XIcon from 'lucide-react-native/icons/x';
 import ChevronLeftIcon from 'lucide-react-native/icons/chevron-left';
+import SendIcon from 'lucide-react-native/icons/send';
+import SparklesIcon from 'lucide-react-native/icons/sparkles';
+import CircleArrowUpIcon from 'lucide-react-native/icons/circle-arrow-up';
+import CircleStopIcon from 'lucide-react-native/icons/circle-stop';
 import ChevronRightIcon from 'lucide-react-native/icons/chevron-right';
 import type { SFSymbol } from 'expo-symbols';
 import { I18nManager } from 'react-native';
@@ -153,7 +157,11 @@ export type IconName =
   | 'edit'
   | 'intro'
   | 'signOut'
-  | 'star';
+  | 'star'
+  | 'campaign'
+  | 'assistant'
+  | 'send'
+  | 'stop';
 
 /** iOS renders the SF Symbol, Android (and iOS fallback) renders the Lucide glyph. */
 export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
@@ -230,6 +238,10 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   intro: { sf: 'play.circle', lucide: CirclePlayIcon },
   signOut: { sf: 'rectangle.portrait.and.arrow.right', lucide: LogOutIcon },
   star: { sf: 'star.fill', lucide: StarIcon },
+  campaign: { sf: 'paperplane', lucide: SendIcon },
+  assistant: { sf: 'sparkles', lucide: SparklesIcon },
+  send: { sf: 'arrow.up.circle.fill', lucide: CircleArrowUpIcon },
+  stop: { sf: 'stop.circle.fill', lucide: CircleStopIcon },
 };
 
 /** Lucide glyph for a concept; `back`/`forward` mirror in RTL (direction is fixed per launch). */
