@@ -11,6 +11,9 @@ import (
 // MobilePanelMirrorPrefixes is the allowlist of panel path segments exposed to
 // mobile sessions. Each entry matches itself and descendants at a slash boundary;
 // tenant/organizations, tenant/modules and tenant/pricing are the two-segment prefixes.
+// TEC-960 opens the campaign API, the user's own consents (AI guidelines) and only
+// the assistant chat (ai/status, ai/conversations, ai/actions) and the approval
+// queue (ai/pending-actions) of /v1/ai: ai/usage and the rest of ai stay closed.
 // All other prefixes are denied.
 var MobilePanelMirrorPrefixes = []string{
 	"services", "service-pdfs", "warranty-certificates", "customers", "vehicles",
@@ -20,6 +23,7 @@ var MobilePanelMirrorPrefixes = []string{
 	"pricing", "certificates", "photo-standard", "service-catalog", "geo",
 	"announcements", "stats", "tenant/organizations", "tenant/modules", "tenant/pricing", "delivery-methods",
 	"certificate-warnings",
+	"campaigns", "consents", "ai/status", "ai/conversations", "ai/actions", "ai/pending-actions",
 }
 
 type mobilePanelMirrorKey struct{}

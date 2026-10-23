@@ -27,6 +27,11 @@ Mobil uygulama, izin verilen panel uçlarını `/v1/mobile/panel/{path}` üzerin
 `pricing`, `certificates`, `photo-standard`, `service-catalog`, `geo`,
 `announcements`, `stats` `delivery-methods` ve iki segmentli `tenant/organizations`, `tenant/modules`.
 
+TEC-960: `campaigns`, `consents` ve `/v1/ai` altından yalnızca `ai/status`,
+`ai/conversations`, `ai/actions` (asistan sohbeti, SSE) ile `ai/pending-actions`
+(onay kuyruğu). `ai/usage` ve diğer `ai/*` yolları kapalıdır; portal aynası
+(`/v1/mobile/portal/*`) `ai`'yı reddetmeye devam eder.
+
 Önek ve alt yolları tam segment sınırında eşleşir (`ordersx` eşleşmez).
 Diğer tüm önekler 404 `NOT_FOUND` döndürür; `auth`, `platform`, `portal`,
 `public`, `mobile`, `oauth`, `realtime`, `ai`, `accounting` ve `impersonation`
