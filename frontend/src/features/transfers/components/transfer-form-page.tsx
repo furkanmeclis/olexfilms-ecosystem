@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeftRight, ScanBarcode, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { ErrorState } from "@/components/common/error-state";
@@ -22,12 +22,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { TransferStockPicker } from "@/features/transfers/components/transfer-stock-picker";
 import {
   addLine,
   buildCreateBody,
+  lineExceedsMax,
   lineIndexOfField,
+  lineQuantityValid,
+  toggleUnitLine,
   transferErrorMessage,
-  validQuantity,
   type TransferLine,
 } from "@/features/transfers/lib/transfers";
 import {
@@ -35,6 +38,7 @@ import {
   transfersService,
   type StockTransferKind,
 } from "@/features/transfers/services/transfers.service";
+import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -43,7 +47,9 @@ import { usePermission } from "@/providers/permission-provider";
  * Tenant > Transfers > new (TEC-197): pick a sibling (same parent, K13),
  * scan or type the barcodes of the units to hand over (a fixed barcode
  * takes a quantity), add a note and send the request. The server checks
- * every unit against the active organization's stock. With kind="return"
+ * every unit against the active organization's stock. TEC-870: with
+ * stock.read the units on hand are listed with their barcodes and can be
+ * ticked in instead of scanned (TransferStockPicker). With kind="return"
  * (TEC-223) the units go back to the direct parent, the only target.
  */
 export function TransferFormPage({
@@ -59,6 +65,10 @@ export function TransferFormPage({
   const router = useRouter();
   const qc = useQueryClient();
   const canCreate = can(Permission.TransfersRequest);
+  // TEC-870: the units on hand are listed for picking when the viewer may
+  // read its own stock; scanning stays available either way.
+  const org = useActiveOrganization(slug);
+  const canPick = can(Permission.StockRead) && !!org?.uuid;
   const [target, setTarget] = useState("");
   const [scan, setScan] = useState("");
   const [lines, setLines] = useState<TransferLine[]>([]);
@@ -77,6 +87,7 @@ export function TransferFormPage({
   // A return has one possible target: the parent the server lists.
   const chosen = isReturn ? (targets.data?.items[0]?.uuid ?? "") : target;
   const body = buildCreateBody(chosen, lines, note, kind);
+  const picked = useMemo(() => new Set(lines.map((l) => l.barcode)), [lines]);
   const mutation = useMutation({
     mutationFn: () => {
       if (!body) throw new Error("incomplete");
@@ -132,6 +143,11 @@ export function TransferFormPage({
   }
 
   const siblings = targets.data?.items ?? [];
+
+  const onPick = (row: Parameters<typeof toggleUnitLine>[1]) => {
+    setLines((ls) => toggleUnitLine(ls, row));
+    setLineError(null);
+  };
 
   const onScan = (e: FormEvent) => {
     e.preventDefault();
@@ -203,6 +219,14 @@ export function TransferFormPage({
         </CardContent>
       </Card>
 
+      {canPick ? (
+        <TransferStockPicker
+          orgUuid={org?.uuid ?? ""}
+          picked={picked}
+          onToggle={onPick}
+        />
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>{t("transfers.form.units")}</CardTitle>
@@ -254,27 +278,52 @@ export function TransferFormPage({
                   className="flex flex-wrap items-center gap-2 p-2"
                   data-testid="transfer-line"
                 >
-                  <span className="flex-1 font-mono text-sm" dir="ltr">
-                    {l.barcode}
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-mono text-sm" dir="ltr">
+                      {l.barcode}
+                    </span>
+                    {l.label ? (
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {l.label}
+                      </span>
+                    ) : null}
                   </span>
-                  <Label className="sr-only" htmlFor={`qty-${i}`}>
-                    {t("transfers.form.quantity")}
-                  </Label>
-                  <Input
-                    id={`qty-${i}`}
-                    className="w-32"
-                    inputMode="numeric"
-                    value={l.quantity}
-                    aria-invalid={!validQuantity(l.quantity)}
-                    placeholder={t("transfers.form.quantity_placeholder")}
-                    onChange={(e) =>
-                      setLines((ls) =>
-                        ls.map((x, j) =>
-                          j === i ? { ...x, quantity: e.target.value } : x,
-                        ),
-                      )
-                    }
-                  />
+                  {l.fixed === false ? (
+                    <span
+                      className="text-muted-foreground w-32 text-sm"
+                      data-testid="transfer-line-whole"
+                    >
+                      {l.meters
+                        ? t("transfers.picker.meters", { meters: l.meters })
+                        : t("transfers.form.whole_unit")}
+                    </span>
+                  ) : (
+                    <>
+                      <Label className="sr-only" htmlFor={`qty-${i}`}>
+                        {t("transfers.form.quantity")}
+                      </Label>
+                      <Input
+                        id={`qty-${i}`}
+                        className="w-32"
+                        inputMode="numeric"
+                        value={l.quantity}
+                        aria-invalid={!lineQuantityValid(l)}
+                        placeholder={t("transfers.form.quantity_placeholder")}
+                        onChange={(e) =>
+                          setLines((ls) =>
+                            ls.map((x, j) =>
+                              j === i ? { ...x, quantity: e.target.value } : x,
+                            ),
+                          )
+                        }
+                      />
+                      {l.max !== undefined ? (
+                        <span className="text-muted-foreground text-xs">
+                          {t("transfers.form.max", { max: l.max })}
+                        </span>
+                      ) : null}
+                    </>
+                  )}
                   <Button
                     type="button"
                     variant="ghost"
@@ -287,6 +336,14 @@ export function TransferFormPage({
                   >
                     <Trash2 className="size-4" />
                   </Button>
+                  {lineExceedsMax(l) ? (
+                    <p
+                      className="text-destructive w-full text-xs"
+                      data-testid="transfer-line-over"
+                    >
+                      {t("transfers.form.quantity_over", { max: l.max ?? 0 })}
+                    </p>
+                  ) : null}
                   {lineError?.index === i ? (
                     <p
                       className="text-destructive w-full text-xs"

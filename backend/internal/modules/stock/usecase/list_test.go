@@ -5,7 +5,9 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
+	"github.com/google/uuid"
 )
 
 // TEC-373: unit list parameters; LIKE wildcards in a barcode prefix are
@@ -32,5 +34,20 @@ func TestParseUnitFilter(t *testing.T) {
 	}
 	if got := likePrefix(`A_1%\`); got != `A\_1\%\\` {
 		t.Fatalf("likePrefix = %q", got)
+	}
+}
+
+// TEC-870: a stock unit row carries its product's category; a fixed
+// barcode has no bin.
+func TestUnitRowCategory(t *testing.T) {
+	cat, prod := uuid.New(), uuid.New()
+	r := unitRow(db.ListOrganizationStockUnitRowsRow{
+		Uuid: uuid.New(), Barcode: "FX-1", UnitKind: "fixed", Status: "available", Quantity: 7,
+		ProductUuid: prod, Sku: "S1", ProductName: "Film", UnitType: "piece", UsesFixedBarcode: true,
+		CategoryUuid: cat, CategoryName: "PPF",
+	})
+	if r.Category.UUID != cat || r.Category.Name != "PPF" || r.Product.UUID != prod || r.Quantity != 7 ||
+		r.Location != nil || r.RemainingMeters != nil {
+		t.Fatalf("row = %+v", r)
 	}
 }

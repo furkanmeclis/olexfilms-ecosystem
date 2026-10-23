@@ -529,10 +529,12 @@ SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.status,
        held.quantity, held.updated_at,
        p.id AS product_id, p.uuid AS product_uuid, p.sku, p.name AS product_name,
        p.unit_type, p.uses_fixed_barcode,
+       c.uuid AS category_uuid, c.name AS category_name,
        l.uuid AS location_uuid, l.code AS location_code, l.name AS location_name
 FROM held
 JOIN units u ON u.id = held.unit_id
 JOIN products p ON p.id = u.product_id
+JOIN product_categories c ON c.id = p.category_id
 LEFT JOIN warehouse_locations l ON held.owner_type = 'warehouse_location' AND l.id = held.owner_id
 WHERE ($1::bigint IS NULL OR u.brand_id = $1::bigint)
   AND ($2::bigint IS NULL OR u.product_id = $2::bigint)
@@ -606,6 +608,8 @@ type ListOrganizationStockUnitRowsRow struct {
 	ProductName      string             `json:"product_name"`
 	UnitType         string             `json:"unit_type"`
 	UsesFixedBarcode bool               `json:"uses_fixed_barcode"`
+	CategoryUuid     uuid.UUID          `json:"category_uuid"`
+	CategoryName     string             `json:"category_name"`
 	LocationUuid     pgtype.UUID        `json:"location_uuid"`
 	LocationCode     pgtype.Text        `json:"location_code"`
 	LocationName     pgtype.Text        `json:"location_name"`
@@ -663,6 +667,8 @@ func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrg
 			&i.ProductName,
 			&i.UnitType,
 			&i.UsesFixedBarcode,
+			&i.CategoryUuid,
+			&i.CategoryName,
 			&i.LocationUuid,
 			&i.LocationCode,
 			&i.LocationName,

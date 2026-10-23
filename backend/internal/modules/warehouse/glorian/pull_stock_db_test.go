@@ -282,7 +282,8 @@ func TestGlorianUnitsVisibleToCenterWarehouseOnly(t *testing.T) {
 		t.Fatalf("center warehouse scanner = %+v, %v", ru.Unit, err)
 	}
 	rows, total, err := svc.OrganizationUnits(f.ctx, w, f.glorian.Uuid, unitFilter)
-	if err != nil || total != 1 || len(rows) != 1 || rows[0].UUID != s.inStock.Uuid {
+	// TEC-870: the row names its product's category.
+	if err != nil || total != 1 || len(rows) != 1 || rows[0].UUID != s.inStock.Uuid || rows[0].Category.Name == "" {
 		t.Fatalf("center warehouse list of glorian center = %d/%d, %v; want the unit", len(rows), total, err)
 	}
 }
