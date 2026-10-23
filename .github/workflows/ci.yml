@@ -154,7 +154,7 @@ jobs:
   frontend:
     needs: [changes]
     if: needs.changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright chromium henüz ubuntu-26.04 desteklemiyor
     defaults:
       run:
         working-directory: frontend
