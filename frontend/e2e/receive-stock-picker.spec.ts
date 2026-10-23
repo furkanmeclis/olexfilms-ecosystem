@@ -252,7 +252,8 @@ async function mockDealerFlow(page: Page): Promise<DealerFlow> {
 async function openStockStep(page: Page) {
   await page.goto(`/t/${ORDER_SLUG}/services/${SERVICE_UUID}/wizard`);
   await expect(page.getByTestId("parts-step")).toBeVisible();
-  await page.locator('path[data-part="body_kaput"]').click();
+  // TEC-864: one-click "Hood" preset (the drawing is collapsed).
+  await page.locator('[data-preset="hood_only"]').click();
   await page.getByTestId("parts-next").click();
   await expect(page.getByTestId("measurement-step")).toBeVisible();
   await page.getByTestId("measurement-no").click();

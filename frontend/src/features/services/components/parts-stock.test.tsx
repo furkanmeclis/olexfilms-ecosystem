@@ -291,6 +291,62 @@ describe("Step 2: SVG part picker", () => {
     expect(onChange).toHaveBeenLastCalledWith(["window_on_cam", "body_kaput"]);
   });
 
+  it("offers group presets and keeps the detailed picker collapsed (TEC-864)", async () => {
+    const onChange = vi.fn();
+    const available = [
+      "body_kaput",
+      "body_on_tampon",
+      "body_sol_on_camurluk",
+      "body_sag_on_camurluk",
+    ];
+    await render(
+      createElement(CarPartPicker, {
+        available,
+        selected: ["body_kaput"],
+        onChange,
+      }),
+    );
+    // Only body presets: the category has no windows.
+    expect($('[data-preset-group="window"]')).toBeNull();
+    expect($('[data-preset="windshield"]')).toBeNull();
+    // Hood preset is active, so the detailed section starts closed.
+    expect($('[data-preset="hood_only"]')?.getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    const detailed = $('[data-testid="parts-detailed"]');
+    expect(detailed?.getAttribute("data-state")).toBe("closed");
+    expect($('[data-testid="parts-detailed-toggle"]')?.textContent).toContain(
+      "services.parts.detailed",
+    );
+
+    await click($('[data-preset="front_four"]'));
+    expect(onChange).toHaveBeenLastCalledWith([
+      "body_kaput",
+      "body_on_tampon",
+      "body_sol_on_camurluk",
+      "body_sag_on_camurluk",
+    ]);
+
+    await click($('[data-testid="parts-detailed-toggle"]'));
+    expect(
+      $('[data-testid="parts-detailed"]')?.getAttribute("data-state"),
+    ).toBe("open");
+  });
+
+  it("opens the detailed picker for a hand-picked selection", async () => {
+    await render(
+      createElement(CarPartPicker, {
+        available: ["body_kaput", "body_tavan", "window_on_cam"],
+        selected: ["body_tavan"],
+        onChange: vi.fn(),
+      }),
+    );
+    expect(
+      $('[data-testid="parts-detailed"]')?.getAttribute("data-state"),
+    ).toBe("open");
+    expect($('[data-preset-group="window"]')).not.toBeNull();
+  });
+
   it("takes the options from the category available_parts", async () => {
     catalog.listCategories.mockResolvedValue({
       items: [
