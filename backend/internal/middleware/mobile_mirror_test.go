@@ -50,9 +50,32 @@ func TestMobilePanelMirrorRewrite(t *testing.T) {
 	})).ServeHTTP(httptest.NewRecorder(), req)
 }
 
+func TestMobilePanelMirrorTEC933Allowed(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"certificate-warnings",
+		"certificate-warnings/" + id + "/approve",
+		"tenant/pricing/recommended/current",
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+}
+
 func TestMobilePanelMirrorDenied(t *testing.T) {
 	paths := []string{"", "auth", "platform", "portal", "public", "mobile", "oauth", "realtime", "ai",
-		"accounting", "impersonation", "unknown", "ordersx", "tenant", "tenant/settings", "tenant/organizationsx"}
+		"accounting", "impersonation", "unknown", "ordersx", "tenant", "tenant/settings", "tenant/organizationsx",
+		"tenant/pricing-x", "tenant/other", "certificate-warningsx"}
 	for _, path := range paths {
 		for _, suffix := range []string{"", "/child"} {
 			req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+suffix, nil)
