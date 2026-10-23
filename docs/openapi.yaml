@@ -16906,25 +16906,30 @@ paths:
         TEC-934. The vendor's per-serial factory curve `{serial}.dat`, served
         as is (still encrypted, `IV:Base64(AES-128-CBC(csv))`; the app
         decrypts). The backend fetches it server side from the configured
-        vendor sources (`SMARTPTG_CURVE_SOURCES`, plain http first) and keeps
-        it in the object store (`smartptg/curves/{serial}.dat`), so a vendor
-        outage does not break gauges. Misses are remembered for
-        `SMARTPTG_CURVE_NOT_FOUND_TTL` (1 h). The curve is vendor data, not
+        vendor sources (`SMARTPTG_CURVE_SOURCES`, plain http first; redirects
+        only to the same scheme and host) and keeps it in the object store
+        (`smartptg/curves/{serial}.dat` + `.meta.json`), so a vendor outage
+        does not break gauges. A stored copy is re-checked against the vendor
+        after `SMARTPTG_CURVE_REVALIDATE_AFTER` (24 h; the factory may update
+        a curve and the http source could be tampered with); a different valid
+        file replaces it, an outage keeps the stored copy. Misses are
+        remembered for `SMARTPTG_CURVE_NOT_FOUND_TTL` (1 h), outages for
+        `SMARTPTG_CURVE_ERROR_TTL` (1 min). The curve is vendor data, not
         tenant data. The app reaches it through the mobile mirror
         (`/v1/mobile/panel/measurements/...`). Requires `measurements.read` or
         `measurements.write`; no module flag (a gauge keeps working, K28).
-        Immutable per serial: `Cache-Control: private, max-age=31536000,
-        immutable` with an ETag (`If-None-Match` answers 304). Room for
-        later variants (e.g. `?model=` or a JSON decoding) without changing
-        this shape.
+        At most 60 requests per user per 10 minutes (429). `Cache-Control:
+        private, max-age=86400` with an ETag (hex SHA-256 of the raw file;
+        `If-None-Match` answers 304). Room for later variants (e.g. `?model=`
+        or a JSON decoding) without changing this shape.
       security:
         - bearerAuth: []
       parameters:
         - name: serial
           in: path
           required: true
-          description: Gauge serial, 1–9 digits (leading zeros ignored).
-          schema: { type: string, pattern: "^[0-9]{1,9}$" }
+          description: Gauge serial, 1–9 digits, not zero (leading zeros ignored).
+          schema: { type: string, maxLength: 9, pattern: "^0*[1-9][0-9]{0,8}$" }
         - name: If-None-Match
           in: header
           required: false
@@ -16935,7 +16940,7 @@ paths:
           headers:
             Cache-Control:
               schema: { type: string }
-              description: private, max-age=31536000, immutable
+              description: private, max-age=86400
             ETag:
               schema: { type: string }
           content:
@@ -16953,6 +16958,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
         "503":
           description: >-
             No stored copy and every vendor source failed (code

@@ -6,11 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,6 +33,15 @@ import (
 // factory file whatever organization measures with it, so it is stored under
 // a global object key (no organization_id / brand_id, no table) and only the
 // route is permission-gated.
+//
+// The primary source is plain http, so a stored copy could have been forged
+// in transit, and the factory may update a curve (the official app
+// re-downloads it on every connection). A stored copy is therefore
+// re-validated against the vendor after RevalidateAfter (default 24 h); a
+// different valid file replaces it (and is logged); a vendor outage keeps
+// serving the stored copy. A sidecar `{serial}.meta.json` records when it was fetched and
+// when to check next. Manual purge: delete smartptg/curves/{serial}.dat and
+// its .meta.json.
 //
 // The bytes are served as is (encrypted `IV:Base64(AES-128-CBC(csv))`); the
 // client keeps the decryption so the protocol findings can extend it.
@@ -56,11 +67,21 @@ const (
 	// CurveMaxBytes caps an upstream file (a real one is ~0.5 KB).
 	CurveMaxBytes = 64 << 10
 	curveMinBytes = 16 + 1 + 24 // IV, colon, base64 of at least one block
+	// curveMaxMisses caps the in-memory negative cache.
+	curveMaxMisses      = 10_000
+	curveMaxRedirects   = 5
+	curveMetaMaxBytes   = 4 << 10
+	curveDefaultRecheck = 24 * time.Hour
 )
 
 // SmartPTGCurveObjectKey is the object store key of a serial's curve.
 func SmartPTGCurveObjectKey(serial string) string {
 	return "smartptg/curves/" + serial + ".dat"
+}
+
+// SmartPTGCurveMetaKey is the sidecar of a stored curve (fetch / check times).
+func SmartPTGCurveMetaKey(serial string) string {
+	return "smartptg/curves/" + serial + ".meta.json"
 }
 
 // CurveStore is the persistent cache (object store); nil = no persistence.
@@ -76,18 +97,27 @@ type CurveFetcher interface {
 
 // CurveConfig tunes the proxy. Zero values take the defaults.
 type CurveConfig struct {
-	Sources     []string      // ordered URL templates with one %s
-	Timeout     time.Duration // per source request
-	NotFoundTTL time.Duration // remember a miss this long
-	ErrorTTL    time.Duration // remember an upstream outage this long
+	Sources         []string      // ordered URL templates with one %s
+	Timeout         time.Duration // per source request
+	NotFoundTTL     time.Duration // remember a miss this long
+	ErrorTTL        time.Duration // remember an upstream outage this long
+	RevalidateAfter time.Duration // re-check a stored copy against the vendor after this
 }
 
 // Curve is a served curve file.
 type Curve struct {
 	Serial string
 	Data   []byte
-	// ETag is the quoted SHA-256 of Data.
+	// ETag is the quoted hex SHA-256 of the raw file.
 	ETag string
+}
+
+// curveMeta is the sidecar of a stored curve.
+type curveMeta struct {
+	FetchedAt   time.Time `json:"fetched_at"`
+	NextCheckAt time.Time `json:"next_check_at"`
+	Source      string    `json:"source,omitempty"`
+	SHA256      string    `json:"sha256,omitempty"`
 }
 
 // Curves serves factory curves: object store first, then the vendor
@@ -115,10 +145,9 @@ type curveCall struct {
 	err   error
 }
 
-// NewCurves builds the proxy. fetcher nil = an http.Client (no redirects to
-// other hosts are followed beyond the default policy; the timeout is per
-// request via the context).
+// NewCurves builds the proxy. fetcher nil = NewCurveHTTPClient().
 func NewCurves(store CurveStore, fetcher CurveFetcher, cfg CurveConfig, log *slog.Logger) *Curves {
+	log = orDiscard(log)
 	sources := make([]string, 0, len(cfg.Sources))
 	for _, s := range cfg.Sources {
 		// One %s and an http(s) URL; anything else is a misconfiguration.
@@ -126,7 +155,6 @@ func NewCurves(store CurveStore, fetcher CurveFetcher, cfg CurveConfig, log *slo
 			(strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")) {
 			sources = append(sources, s)
 		} else {
-			log = cmpLog(log)
 			log.Warn("smartptg_curve_source_ignored", "source", s)
 		}
 	}
@@ -143,18 +171,45 @@ func NewCurves(store CurveStore, fetcher CurveFetcher, cfg CurveConfig, log *slo
 	if cfg.ErrorTTL <= 0 {
 		cfg.ErrorTTL = time.Minute
 	}
-	if fetcher == nil {
-		fetcher = &http.Client{}
+	if cfg.RevalidateAfter <= 0 {
+		cfg.RevalidateAfter = curveDefaultRecheck
 	}
-	log = cmpLog(log)
+	if fetcher == nil {
+		fetcher = NewCurveHTTPClient()
+	}
 	return &Curves{
 		store: store, fetcher: fetcher, cfg: cfg, log: log, now: time.Now,
 		misses: map[string]curveMiss{}, inflight: map[string]*curveCall{},
 	}
 }
 
-// NormalizeCurveSerial validates a path serial (1–9 digits) and returns its
-// canonical form (no leading zeros).
+// NewCurveHTTPClient follows a redirect only to the same scheme and host as
+// the original request (at most 5); any other redirect is not followed and
+// its 3xx answer counts as "this source has no file".
+func NewCurveHTTPClient() *http.Client {
+	return &http.Client{CheckRedirect: sameOriginRedirect}
+}
+
+func sameOriginRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) == 0 {
+		return nil
+	}
+	if len(via) > curveMaxRedirects {
+		return http.ErrUseLastResponse
+	}
+	first := via[0].URL
+	if !sameOrigin(first, req.URL) {
+		return http.ErrUseLastResponse
+	}
+	return nil
+}
+
+func sameOrigin(a, b *url.URL) bool {
+	return strings.EqualFold(a.Scheme, b.Scheme) && strings.EqualFold(a.Host, b.Host)
+}
+
+// NormalizeCurveSerial validates a path serial (1–9 digits, not all zeros)
+// and returns its canonical form (no leading zeros).
 func NormalizeCurveSerial(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" || len(raw) > 9 {
@@ -178,11 +233,9 @@ func (c *Curves) Get(ctx context.Context, rawSerial string) (Curve, error) {
 	if err != nil {
 		return Curve{}, err
 	}
-	if data, ok := c.cached(ctx, serial); ok {
-		return newCurve(serial, data), nil
-	}
 
 	c.mu.Lock()
+	// The negative cache comes first: a remembered miss costs no store read.
 	if m, ok := c.misses[serial]; ok {
 		if c.now().Before(m.until) {
 			c.mu.Unlock()
@@ -205,38 +258,141 @@ func (c *Curves) Get(ctx context.Context, rawSerial string) (Curve, error) {
 
 	// Detached from the request: a cancelled caller must not poison the
 	// shared result of the others waiting on it.
-	call.curve, call.err = c.fetch(context.WithoutCancel(ctx), serial)
+	call.curve, call.err = c.load(context.WithoutCancel(ctx), serial)
 
 	c.mu.Lock()
 	delete(c.inflight, serial)
 	switch {
 	case errors.Is(call.err, ErrCurveNotFound):
-		c.misses[serial] = curveMiss{err: call.err, until: c.now().Add(c.cfg.NotFoundTTL)}
+		c.remember(serial, call.err, c.cfg.NotFoundTTL)
 	case call.err != nil:
-		c.misses[serial] = curveMiss{err: call.err, until: c.now().Add(c.cfg.ErrorTTL)}
+		c.remember(serial, call.err, c.cfg.ErrorTTL)
 	}
 	c.mu.Unlock()
 	close(call.done)
 	return call.curve, call.err
 }
 
-func (c *Curves) cached(ctx context.Context, serial string) ([]byte, bool) {
-	if c.store == nil {
-		return nil, false
+// remember stores a miss; c.mu is held. At the cap, expired entries go
+// first, then the one expiring soonest.
+func (c *Curves) remember(serial string, err error, ttl time.Duration) {
+	now := c.now()
+	if _, exists := c.misses[serial]; !exists && len(c.misses) >= curveMaxMisses {
+		for k, m := range c.misses {
+			if !now.Before(m.until) {
+				delete(c.misses, k)
+			}
+		}
+		for len(c.misses) >= curveMaxMisses {
+			var oldest string
+			var oldestUntil time.Time
+			for k, m := range c.misses {
+				if oldest == "" || m.until.Before(oldestUntil) {
+					oldest, oldestUntil = k, m.until
+				}
+			}
+			delete(c.misses, oldest)
+		}
 	}
-	rc, _, err := c.store.Download(ctx, SmartPTGCurveObjectKey(serial))
-	if err != nil {
-		return nil, false
-	}
-	defer func() { _ = rc.Close() }()
-	data, err := io.ReadAll(io.LimitReader(rc, CurveMaxBytes+1))
-	if err != nil || ValidCurveFile(data) != nil {
-		return nil, false
-	}
-	return data, true
+	c.misses[serial] = curveMiss{err: err, until: now.Add(ttl)}
 }
 
-func (c *Curves) fetch(ctx context.Context, serial string) (Curve, error) {
+// load serves the stored copy (re-validating it when due) or fetches it.
+func (c *Curves) load(ctx context.Context, serial string) (Curve, error) {
+	stored, meta, ok := c.cached(ctx, serial)
+	if ok && c.now().Before(meta.NextCheckAt) {
+		return newCurve(serial, stored), nil
+	}
+	fresh, source, err := c.fetch(ctx, serial)
+	if !ok {
+		if err != nil {
+			return Curve{}, err
+		}
+		c.save(ctx, serial, fresh, source, true)
+		return newCurve(serial, fresh), nil
+	}
+	// Re-validation of a stored copy: the vendor is down or lost the file,
+	// keep serving ours and look again later.
+	if err != nil {
+		c.log.Info("smartptg_curve_revalidate_failed", "serial", serial, "error", err)
+		c.saveMeta(ctx, serial, curveMeta{
+			FetchedAt: meta.FetchedAt, Source: meta.Source, SHA256: meta.SHA256,
+			NextCheckAt: c.now().Add(c.cfg.NotFoundTTL),
+		})
+		return newCurve(serial, stored), nil
+	}
+	if !bytes.Equal(fresh, stored) {
+		c.log.Warn("smartptg_curve_changed", "serial", serial, "source", source,
+			"old_sha256", sha256Hex(stored), "new_sha256", sha256Hex(fresh))
+		c.save(ctx, serial, fresh, source, true)
+		return newCurve(serial, fresh), nil
+	}
+	c.save(ctx, serial, fresh, source, false)
+	return newCurve(serial, stored), nil
+}
+
+func (c *Curves) cached(ctx context.Context, serial string) ([]byte, curveMeta, bool) {
+	if c.store == nil {
+		return nil, curveMeta{}, false
+	}
+	data, err := c.read(ctx, SmartPTGCurveObjectKey(serial), CurveMaxBytes)
+	if err != nil || ValidCurveFile(data) != nil {
+		return nil, curveMeta{}, false
+	}
+	// A missing or broken sidecar (zero NextCheckAt) re-validates now.
+	var meta curveMeta
+	if raw, err := c.read(ctx, SmartPTGCurveMetaKey(serial), curveMetaMaxBytes); err == nil {
+		_ = json.Unmarshal(raw, &meta)
+	}
+	return data, meta, true
+}
+
+func (c *Curves) read(ctx context.Context, key string, max int64) ([]byte, error) {
+	rc, _, err := c.store.Download(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rc.Close() }()
+	return io.ReadAll(io.LimitReader(rc, max+1))
+}
+
+// save writes the curve (when writeData) and its sidecar. Store errors are
+// logged only: the curve is still served and the next request retries.
+func (c *Curves) save(ctx context.Context, serial string, data []byte, source string, writeData bool) {
+	if c.store == nil {
+		return
+	}
+	if writeData {
+		if err := c.store.Upload(ctx, storage.File{
+			Body: bytes.NewReader(data), Size: int64(len(data)),
+			ContentType: "application/octet-stream", Filename: serial + ".dat",
+		}, SmartPTGCurveObjectKey(serial)); err != nil {
+			c.log.Warn("smartptg_curve_store_failed", "serial", serial, "error", err)
+			return
+		}
+	}
+	now := c.now()
+	c.saveMeta(ctx, serial, curveMeta{
+		FetchedAt: now, NextCheckAt: now.Add(c.cfg.RevalidateAfter), Source: source, SHA256: sha256Hex(data),
+	})
+}
+
+func (c *Curves) saveMeta(ctx context.Context, serial string, meta curveMeta) {
+	if c.store == nil {
+		return
+	}
+	raw, _ := json.Marshal(meta)
+	if err := c.store.Upload(ctx, storage.File{
+		Body: bytes.NewReader(raw), Size: int64(len(raw)),
+		ContentType: "application/json", Filename: serial + ".meta.json",
+	}, SmartPTGCurveMetaKey(serial)); err != nil {
+		c.log.Warn("smartptg_curve_meta_store_failed", "serial", serial, "error", err)
+	}
+}
+
+// fetch tries the sources in order; it returns the file and the template
+// that served it.
+func (c *Curves) fetch(ctx context.Context, serial string) ([]byte, string, error) {
 	unavailable := false
 	for _, tmpl := range c.cfg.Sources {
 		data, status, err := c.fetchOne(ctx, fmt.Sprintf(tmpl, serial))
@@ -259,21 +415,12 @@ func (c *Curves) fetch(ctx context.Context, serial string) (Curve, error) {
 			c.log.Info("smartptg_curve_source_invalid", "serial", serial, "source", tmpl, "error", verr)
 			continue
 		}
-		if c.store != nil {
-			if err := c.store.Upload(ctx, storage.File{
-				Body: bytes.NewReader(data), Size: int64(len(data)),
-				ContentType: "application/octet-stream", Filename: serial + ".dat",
-			}, SmartPTGCurveObjectKey(serial)); err != nil {
-				// Still serve it; the next request fetches again.
-				c.log.Warn("smartptg_curve_store_failed", "serial", serial, "error", err)
-			}
-		}
-		return newCurve(serial, data), nil
+		return data, tmpl, nil
 	}
 	if unavailable {
-		return Curve{}, ErrCurveUpstreamUnavailable
+		return nil, "", ErrCurveUpstreamUnavailable
 	}
-	return Curve{}, ErrCurveNotFound
+	return nil, "", ErrCurveNotFound
 }
 
 func (c *Curves) fetchOne(ctx context.Context, url string) ([]byte, int, error) {
@@ -330,14 +477,18 @@ func ValidCurveFile(data []byte) error {
 	return nil
 }
 
-func cmpLog(log *slog.Logger) *slog.Logger {
+func orDiscard(log *slog.Logger) *slog.Logger {
 	if log == nil {
 		return slog.New(slog.DiscardHandler)
 	}
 	return log
 }
 
-func newCurve(serial string, data []byte) Curve {
+func sha256Hex(data []byte) string {
 	sum := sha256.Sum256(data)
-	return Curve{Serial: serial, Data: data, ETag: `"` + hex.EncodeToString(sum[:16]) + `"`}
+	return hex.EncodeToString(sum[:])
+}
+
+func newCurve(serial string, data []byte) Curve {
+	return Curve{Serial: serial, Data: data, ETag: `"` + sha256Hex(data) + `"`}
 }

@@ -8971,7 +8971,7 @@ export interface paths {
         };
         /**
          * Get the factory curve file of a SmartPTG / NexPTG gauge
-         * @description TEC-934. The vendor's per-serial factory curve `{serial}.dat`, served as is (still encrypted, `IV:Base64(AES-128-CBC(csv))`; the app decrypts). The backend fetches it server side from the configured vendor sources (`SMARTPTG_CURVE_SOURCES`, plain http first) and keeps it in the object store (`smartptg/curves/{serial}.dat`), so a vendor outage does not break gauges. Misses are remembered for `SMARTPTG_CURVE_NOT_FOUND_TTL` (1 h). The curve is vendor data, not tenant data. The app reaches it through the mobile mirror (`/v1/mobile/panel/measurements/...`). Requires `measurements.read` or `measurements.write`; no module flag (a gauge keeps working, K28). Immutable per serial: `Cache-Control: private, max-age=31536000, immutable` with an ETag (`If-None-Match` answers 304). Room for later variants (e.g. `?model=` or a JSON decoding) without changing this shape.
+         * @description TEC-934. The vendor's per-serial factory curve `{serial}.dat`, served as is (still encrypted, `IV:Base64(AES-128-CBC(csv))`; the app decrypts). The backend fetches it server side from the configured vendor sources (`SMARTPTG_CURVE_SOURCES`, plain http first; redirects only to the same scheme and host) and keeps it in the object store (`smartptg/curves/{serial}.dat` + `.meta.json`), so a vendor outage does not break gauges. A stored copy is re-checked against the vendor after `SMARTPTG_CURVE_REVALIDATE_AFTER` (24 h; the factory may update a curve and the http source could be tampered with); a different valid file replaces it, an outage keeps the stored copy. Misses are remembered for `SMARTPTG_CURVE_NOT_FOUND_TTL` (1 h), outages for `SMARTPTG_CURVE_ERROR_TTL` (1 min). The curve is vendor data, not tenant data. The app reaches it through the mobile mirror (`/v1/mobile/panel/measurements/...`). Requires `measurements.read` or `measurements.write`; no module flag (a gauge keeps working, K28). At most 60 requests per user per 10 minutes (429). `Cache-Control: private, max-age=86400` with an ETag (hex SHA-256 of the raw file; `If-None-Match` answers 304). Room for later variants (e.g. `?model=` or a JSON decoding) without changing this shape.
          */
         get: operations["getSmartPTGCurve"];
         put?: never;
@@ -46194,7 +46194,7 @@ export interface operations {
                 "If-None-Match"?: string;
             };
             path: {
-                /** @description Gauge serial, 1–9 digits (leading zeros ignored). */
+                /** @description Gauge serial, 1–9 digits, not zero (leading zeros ignored). */
                 serial: string;
             };
             cookie?: never;
@@ -46204,7 +46204,7 @@ export interface operations {
             /** @description Raw (encrypted) curve file */
             200: {
                 headers: {
-                    /** @description private, max-age=31536000, immutable */
+                    /** @description private, max-age=86400 */
                     "Cache-Control"?: string;
                     ETag?: string;
                     [name: string]: unknown;
@@ -46224,6 +46224,7 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
             /** @description No stored copy and every vendor source failed (code CURVE_SOURCE_UNAVAILABLE, `Retry-After: 60`). */
             503: {
                 headers: {

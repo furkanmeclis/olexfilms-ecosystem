@@ -111,11 +111,14 @@ type ShortURLsConfig struct {
 // SmartPTGConfig is the factory curve proxy of SmartPTG / NexPTG gauges
 // (TEC-934). CurveSources are ordered URL templates with one %s (the
 // serial); empty = the built-in vendor list. Misses are remembered
-// CurveNotFoundTTL so the vendor is not hammered.
+// CurveNotFoundTTL (outages CurveErrorTTL) so the vendor is not hammered;
+// a stored copy is re-checked against the vendor after CurveRevalidateAfter.
 type SmartPTGConfig struct {
-	CurveSources     []string
-	CurveTimeout     time.Duration
-	CurveNotFoundTTL time.Duration
+	CurveSources         []string
+	CurveTimeout         time.Duration
+	CurveNotFoundTTL     time.Duration
+	CurveErrorTTL        time.Duration
+	CurveRevalidateAfter time.Duration
 }
 
 // GlorianConfig is the outbound Inventory API connection to the Glorian hub
@@ -521,6 +524,9 @@ func Load() (Config, error) {
 			CurveSources:     splitCSV(getEnv("SMARTPTG_CURVE_SOURCES", "")),
 			CurveTimeout:     getDuration("SMARTPTG_CURVE_TIMEOUT", 8*time.Second),
 			CurveNotFoundTTL: getDuration("SMARTPTG_CURVE_NOT_FOUND_TTL", time.Hour),
+			CurveErrorTTL:    getDuration("SMARTPTG_CURVE_ERROR_TTL", time.Minute),
+			// The primary source is plain http: re-check a stored copy.
+			CurveRevalidateAfter: getDuration("SMARTPTG_CURVE_REVALIDATE_AFTER", 24*time.Hour),
 		},
 		Glorian: GlorianConfig{
 			Enabled:        getBool("GLORIAN_INVENTORY_ENABLED", false),

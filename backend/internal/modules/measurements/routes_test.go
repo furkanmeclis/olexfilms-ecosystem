@@ -125,7 +125,7 @@ func TestCurveRouteNeedsToken(t *testing.T) {
 	}
 	mux := http.NewServeMux()
 	RegisterPanelRoutes(mux, handler.New(nil), tokens, noLoader{}, nil, nil)
-	RegisterCurveRoutes(mux, handler.NewCurves(nil), tokens, noLoader{}, nil)
+	RegisterCurveRoutes(mux, handler.NewCurves(nil, nil), tokens, noLoader{}, nil)
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest("GET", "/v1/measurements/devices/smartptg/curves/32475", nil))
 	if rec.Code != http.StatusUnauthorized {
