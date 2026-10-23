@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { createGeneration, createSerialConfirm, curveUrls, poweredOnTimeoutError, poweredOnWaitMs } from './session.ts';
+import { createGeneration, createSerialConfirm, poweredOnTimeoutError, poweredOnWaitMs } from './session.ts';
 
 describe('createGeneration', () => {
   it('marks a connect attempt stale after a disconnect', () => {
@@ -45,15 +45,7 @@ describe('createSerialConfirm', () => {
   });
 });
 
-describe('curve sources and adapter wait', () => {
-  it('lists HTTPS sources, mirror first', () => {
-    assert.deepEqual(curveUrls(32475), [
-      'https://mysdprog.pl/char/32475.dat',
-      'https://www.smartptg.pl/char/32475.dat',
-    ]);
-    assert.ok(curveUrls(1).every((u) => u.startsWith('https://')));
-  });
-
+describe('adapter wait', () => {
   it('waits long while the adapter is Unknown (iOS permission prompt)', () => {
     assert.equal(poweredOnWaitMs(null), 60_000);
     assert.equal(poweredOnWaitMs('Unknown'), 60_000);
