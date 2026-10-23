@@ -50,6 +50,8 @@
   "name": "Όνομα",
   "first_name": "Όνομα",
   "surname": "Επώνυμο",
+  "contact_first_name": "Όνομα υπευθύνου",
+  "contact_surname": "Επώνυμο υπευθύνου",
   "phone": "Τηλέφωνο",
   "phone_hint": "Με κωδικό χώρας αν δεν είναι τοπικό",
   "email": "E-mail",
@@ -192,5 +194,8 @@
   "company_name": "Επωνυμία",
   "phone_locked": "Το τηλέφωνο είναι το κλειδί του λογαριασμού και δεν αλλάζει εδώ.",
   "vehicle_edit": "Επεξεργασία οχήματος",
-  "invalid.email": "Εισαγάγετε έγκυρο e-mail."
+  "invalid.email": "Εισαγάγετε έγκυρο e-mail.",
+  "invalid.company_name": "Εισαγάγετε την επωνυμία της εταιρείας.",
+  "invalid.tax_office": "Ελέγξτε τη ΔΟΥ.",
+  "invalid.tax_no": "Ο ΑΦΜ πρέπει να έχει 5-20 γράμματα ή ψηφία."
 }

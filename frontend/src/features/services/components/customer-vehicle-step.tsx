@@ -30,6 +30,8 @@ export type PickedCustomer = {
   name: string;
   surname: string;
   phone: string | null;
+  /** Set for a corporate customer: shown as the title (TEC-867). */
+  company_name?: string | null;
 };
 
 export type CustomerVehicleStepProps = {
@@ -40,8 +42,43 @@ export type CustomerVehicleStepProps = {
   onDone: (service: Service) => void;
 };
 
-const customerLabel = (c: { name: string; surname: string }) =>
+type NamedCustomer = {
+  name: string;
+  surname: string;
+  type?: string;
+  company_name?: string | null;
+};
+
+const personName = (c: NamedCustomer) =>
   [c.name, c.surname].filter(Boolean).join(" ");
+
+/** Company of a corporate customer (search rows carry the type too). */
+const companyOf = (c: NamedCustomer) =>
+  (c.type === undefined || c.type === "corporate") && c.company_name?.trim()
+    ? c.company_name.trim()
+    : null;
+
+/**
+ * Customer title: the company name for a corporate customer with the
+ * contact person below it in small text, otherwise name and surname.
+ */
+function CustomerName({ customer }: { customer: NamedCustomer }) {
+  const company = companyOf(customer);
+  if (!company) {
+    return <span className="font-medium">{personName(customer)}</span>;
+  }
+  const person = personName(customer);
+  return (
+    <span className="inline-flex flex-col">
+      <span className="font-medium" data-testid="customer-company">
+        {company}
+      </span>
+      {person ? (
+        <span className="text-muted-foreground text-xs">{person}</span>
+      ) : null}
+    </span>
+  );
+}
 
 /** A service needs the car brand and model on the vehicle (TEC-179). */
 export const vehicleUsable = (v: Vehicle) =>
@@ -204,7 +241,7 @@ export function CustomerVehicleStep({
             {t("services.customer.title")}
           </h3>
           <p data-testid="locked-customer">
-            {customerLabel(service.customer)}
+            <CustomerName customer={service.customer} />
             {service.customer.phone ? (
               <span className="text-muted-foreground ms-2 text-sm" dir="ltr">
                 {service.customer.phone}
@@ -265,7 +302,7 @@ export function CustomerVehicleStep({
         {customer ? (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
             <p data-testid="picked-customer">
-              <span className="font-medium">{customerLabel(customer)}</span>
+              <CustomerName customer={customer} />
               {customer.phone ? (
                 <span className="text-muted-foreground ms-2 text-sm" dir="ltr">
                   {customer.phone}
@@ -297,6 +334,7 @@ export function CustomerVehicleStep({
                 name: c.name,
                 surname: c.surname,
                 phone: c.phone,
+                company_name: c.type === "corporate" ? c.company_name : null,
               });
             }}
           />
@@ -343,10 +381,12 @@ export function CustomerVehicleStep({
                           name: c.name,
                           surname: c.surname,
                           phone: c.phone,
+                          company_name:
+                            c.type === "corporate" ? c.company_name : null,
                         })
                       }
                     >
-                      <span className="font-medium">{customerLabel(c)}</span>
+                      <CustomerName customer={c} />
                       {c.phone ? (
                         <span
                           className="text-muted-foreground text-sm"

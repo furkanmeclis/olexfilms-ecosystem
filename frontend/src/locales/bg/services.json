@@ -32,6 +32,8 @@
   "customer.name": "Име",
   "customer.name_required": "Името е задължително.",
   "customer.surname": "Фамилия",
+  "customer.contact_name": "Име на лицето за контакт",
+  "customer.contact_surname": "Фамилия на лицето за контакт",
   "customer.create": "Запази клиента",
   "customer.created": "Клиентът е създаден.",
   "customer.linked_existing": "Този телефон вече принадлежи на клиент; клиентът е свързан с вашата организация.",

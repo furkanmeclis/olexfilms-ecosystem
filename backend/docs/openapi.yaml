@@ -42610,13 +42610,16 @@ components:
 
     ServiceCustomerRef:
       type: object
-      required: [uuid, name, surname, phone, anonymized]
+      required: [uuid, name, surname, phone, anonymized, company_name]
       properties:
         uuid: { type: string, format: uuid }
         name: { type: string, description: The anonymized label when anonymized (K19) }
         surname: { type: string }
         phone: { type: [string, "null"] }
         anonymized: { type: boolean }
+        company_name:
+          type: [string, "null"]
+          description: Company of a corporate customer; null for individual or anonymized customers.
 
     ServiceItem:
       type: object

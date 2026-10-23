@@ -32,6 +32,8 @@
   "customer.name": "Ім'я",
   "customer.name_required": "Ім'я обов'язкове.",
   "customer.surname": "Прізвище",
+  "customer.contact_name": "Ім'я контактної особи",
+  "customer.contact_surname": "Прізвище контактної особи",
   "customer.create": "Зберегти клієнта",
   "customer.created": "Клієнта створено.",
   "customer.linked_existing": "Цей телефон уже належить клієнту; клієнта прив'язано до вашої організації.",

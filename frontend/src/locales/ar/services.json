@@ -32,6 +32,8 @@
   "customer.name": "الاسم",
   "customer.name_required": "الاسم مطلوب.",
   "customer.surname": "اسم العائلة",
+  "customer.contact_name": "الاسم الأول لجهة الاتصال",
+  "customer.contact_surname": "اسم عائلة جهة الاتصال",
   "customer.create": "حفظ العميل",
   "customer.created": "تم إنشاء العميل.",
   "customer.linked_existing": "هذا الهاتف مسجّل لعميل بالفعل؛ تم ربط العميل بمؤسستك.",

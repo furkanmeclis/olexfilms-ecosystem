@@ -248,12 +248,14 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 SELECT o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
        u.uuid AS customer_uuid, u.name AS customer_name, u.surname AS customer_surname,
        u.phone_e164 AS customer_phone, u.status AS customer_status,
+       cp.company_name AS customer_company_name,
        v.uuid AS vehicle_uuid,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        cm.uuid AS car_model_uuid, cm.name AS car_model_name
 FROM services s
 JOIN organizations o ON o.id = s.organization_id
 JOIN users u ON u.id = s.customer_user_id
+LEFT JOIN customer_profiles cp ON cp.user_id = u.id AND cp.type = 'corporate'
 JOIN vehicles v ON v.id = s.vehicle_id
 JOIN car_brands cb ON cb.id = s.car_brand_id
 JOIN car_models cm ON cm.id = s.car_model_id

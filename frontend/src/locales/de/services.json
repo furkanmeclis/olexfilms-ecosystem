@@ -32,6 +32,8 @@
   "customer.name": "Vorname",
   "customer.name_required": "Vorname ist erforderlich.",
   "customer.surname": "Nachname",
+  "customer.contact_name": "Vorname Ansprechpartner",
+  "customer.contact_surname": "Nachname Ansprechpartner",
   "customer.create": "Kunde speichern",
   "customer.created": "Kunde angelegt.",
   "customer.linked_existing": "Diese Telefonnummer gehört bereits einem Kunden; der Kunde wurde mit Ihrer Organisation verknüpft.",

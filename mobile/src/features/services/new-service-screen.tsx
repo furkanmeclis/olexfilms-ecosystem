@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { z } from 'zod';
@@ -11,20 +11,29 @@ import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
 import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
+import { Segmented } from '@/features/warehouse/parts';
 import { Button } from '@/ui/button';
 import { cn } from '@/ui/cn';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
 import { Text } from '@/ui/text';
 
-import { type CustomerSummary, fullName, useDebounced, useLinks, type Vehicle, vehicleLabel } from './lib';
+import { customerSubtitle, customerTitle } from './customer-name';
+import { type CustomerSummary, useDebounced, useLinks, type Vehicle, vehicleLabel } from './lib';
 import { errorText, ListSkeleton, SearchField, Section } from './ui';
 import type { IconName } from '@/ui/icons';
 
 type Step = 'customer' | 'vehicle' | 'details';
 const STEPS: Step[] = ['customer', 'vehicle', 'details'];
 
-export type PickedCustomer = { uuid: string; name: string; surname?: string | null; phone?: string | null };
+export type PickedCustomer = {
+  uuid: string;
+  name: string;
+  surname?: string | null;
+  phone?: string | null;
+  type?: string | null;
+  company_name?: string | null;
+};
 
 /**
  * New draft service in three short steps: customer, vehicle, details. Items
@@ -115,7 +124,12 @@ export function NewServiceScreen() {
         {step === 'details' && customer && vehicle ? (
           <View className="gap-4">
             <Section>
-              <Summary icon="customer" title={fullName(customer)} subtitle={customer.phone ?? ''} onPress={() => setStep('customer')} />
+              <Summary
+                icon="customer"
+                title={customerTitle(customer)}
+                subtitle={customerSubtitle(customer)}
+                onPress={() => setStep('customer')}
+              />
               <Summary
                 icon="vehicle"
                 title={vehicle.plate ?? ''}
@@ -260,8 +274,8 @@ export function CustomerStep({ selected, onPick }: { selected: PickedCustomer | 
           {items.map((c, i) => (
             <PickRow
               key={c.uuid}
-              title={fullName(c) || c.company_name || '—'}
-              subtitle={[c.phone, c.company_name].filter(Boolean).join(' · ')}
+              title={customerTitle(c)}
+              subtitle={customerSubtitle(c)}
               selected={c.uuid === selected?.uuid}
               onPress={() => onPick(c)}
               last={i === items.length - 1}
@@ -285,12 +299,33 @@ export function CustomerStep({ selected, onPick }: { selected: PickedCustomer | 
   );
 }
 
-const customerSchema = z.object({
-  name: z.string().trim().min(1),
-  surname: z.string().trim().optional(),
-  phone: z.string().trim().min(7),
-});
+const CUSTOMER_TYPES = ['individual', 'corporate'] as const;
+const customerSchema = z
+  .object({
+    type: z.enum(CUSTOMER_TYPES),
+    name: z.string().trim().min(1),
+    surname: z.string().trim().optional(),
+    phone: z.string().trim().min(7),
+    company_name: z.string().trim().max(200).optional(),
+    tax_office: z.string().trim().max(150).optional(),
+    tax_no: z
+      .string()
+      .optional()
+      .refine((v) => !v || /^[0-9A-Z]{5,20}$/.test(normalizeIdentity(v))),
+  })
+  .superRefine((v, ctx) => {
+    if (v.type === 'corporate' && !v.company_name) {
+      ctx.addIssue({ code: 'custom', path: ['company_name'], message: 'required' });
+    }
+  });
 type CustomerForm = z.infer<typeof customerSchema>;
+const INLINE_FIELDS = ['name', 'surname', 'phone', 'company_name', 'tax_office', 'tax_no'] as const;
+type InlineField = (typeof INLINE_FIELDS)[number];
+
+/** Tax number like normalizeIdentityNumber on the server. */
+function normalizeIdentity(raw: string): string {
+  return raw.toLocaleUpperCase('en-US').replace(/[\s\-./]/g, '');
+}
 
 function NewCustomerForm({
   initial,
@@ -306,11 +341,35 @@ function NewCustomerForm({
   const looksLikePhone = /^[+\d\s()-]{7,}$/.test(initial);
   const form = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema),
-    defaultValues: { name: looksLikePhone ? '' : initial, surname: '', phone: looksLikePhone ? initial : '' },
+    defaultValues: {
+      type: 'individual',
+      name: looksLikePhone ? '' : initial,
+      surname: '',
+      phone: looksLikePhone ? initial : '',
+      company_name: '',
+      tax_office: '',
+      tax_no: '',
+    },
   });
+  const type = useWatch({ control: form.control, name: 'type' });
   const create = useMutation({
-    mutationFn: (v: CustomerForm) =>
-      unwrap(api.POST('/v1/customers', { body: { name: v.name, surname: v.surname || undefined, phone: v.phone } })),
+    mutationFn: (v: CustomerForm) => {
+      const corporate = v.type === 'corporate';
+      const taxNo = v.tax_no ? normalizeIdentity(v.tax_no) : '';
+      return unwrap(
+        api.POST('/v1/customers', {
+          body: {
+            type: v.type,
+            name: v.name,
+            surname: v.surname || undefined,
+            phone: v.phone,
+            ...(corporate && v.company_name ? { company_name: v.company_name } : {}),
+            ...(corporate && v.tax_office ? { tax_office: v.tax_office } : {}),
+            ...(corporate && taxNo ? { tax_no: taxNo } : {}),
+          },
+        }),
+      );
+    },
     onSuccess: (c) => {
       void qc.invalidateQueries({ queryKey: ['customers'] });
       onCreated(c);
@@ -318,7 +377,7 @@ function NewCustomerForm({
     onError: (e) => {
       if (!isApiError(e)) return;
       for (const [field, message] of Object.entries(e.fieldErrors())) {
-        if (field === 'name' || field === 'surname' || field === 'phone') form.setError(field, { message });
+        if (INLINE_FIELDS.includes(field as InlineField)) form.setError(field as InlineField, { message });
       }
     },
   });
@@ -327,18 +386,71 @@ function NewCustomerForm({
   return (
     <View className="gap-3">
       <Text variant="headline">{t('customer_new')}</Text>
+      <Segmented
+        value={type}
+        options={CUSTOMER_TYPES.map((v) => ({ value: v, label: t(`customer_type.${v}`) }))}
+        onChange={(v) => form.setValue('type', v)}
+      />
+      {type === 'corporate' ? (
+        <>
+          <Controller
+            control={form.control}
+            name="company_name"
+            render={({ field }) => (
+              <Input
+                label={t('company_name')}
+                placeholder={t('placeholder_company_name')}
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={err('company_name')}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="tax_office"
+            render={({ field }) => (
+              <Input
+                label={t('tax_office')}
+                placeholder={t('placeholder_tax_office')}
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={err('tax_office')}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="tax_no"
+            render={({ field }) => (
+              <Input
+                label={t('tax_no')}
+                placeholder="1234567890"
+                value={field.value ?? ''}
+                onChangeText={field.onChange}
+                error={err('tax_no')}
+                autoCapitalize="characters"
+              />
+            )}
+          />
+        </>
+      ) : null}
       <Controller
         control={form.control}
         name="name"
         render={({ field }) => (
-          <Input label={t('first_name')} placeholder={t('placeholder_first_name')} value={field.value} onChangeText={field.onChange} error={err('name')} autoCapitalize="words" />
+          <Input
+            label={t(type === 'corporate' ? 'contact_first_name' : 'first_name')}
+            placeholder={t('placeholder_first_name')} value={field.value} onChangeText={field.onChange} error={err('name')} autoCapitalize="words" />
         )}
       />
       <Controller
         control={form.control}
         name="surname"
         render={({ field }) => (
-          <Input label={t('surname')} placeholder={t('placeholder_surname')} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="words" />
+          <Input
+            label={t(type === 'corporate' ? 'contact_surname' : 'surname')}
+            placeholder={t('placeholder_surname')} value={field.value ?? ''} onChangeText={field.onChange} autoCapitalize="words" />
         )}
       />
       <Controller
@@ -393,7 +505,7 @@ export function VehicleStep({
   return (
     <View className="gap-3">
       <Text variant="footnote" tone="muted">
-        {t('vehicles_of', { name: fullName(customer) })}
+        {t('vehicles_of', { name: customerTitle(customer) })}
       </Text>
       {list.isPending ? (
         <ListSkeleton rows={2} />

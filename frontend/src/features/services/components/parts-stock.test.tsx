@@ -159,6 +159,7 @@ const service = (over: Partial<Service> = {}): Service => ({
     surname: "Yılmaz",
     phone: "+905551234567",
     anonymized: false,
+    company_name: null,
   },
   vehicle_uuid: "v1",
   car_brand: { uuid: "b1", name: "BMW" },

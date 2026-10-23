@@ -50,6 +50,8 @@
   "name": "Ad",
   "first_name": "Ad",
   "surname": "Soyad",
+  "contact_first_name": "Səlahiyyətli şəxsin adı",
+  "contact_surname": "Səlahiyyətli şəxsin soyadı",
   "phone": "Telefon",
   "phone_hint": "Yerli deyilsə ölkə kodu ilə",
   "email": "E-poçt",
@@ -192,5 +194,8 @@
   "company_name": "Şirkət adı",
   "phone_locked": "Telefon nömrəsi hesabın açarıdır, burada dəyişdirilə bilməz.",
   "vehicle_edit": "Avtomobili redaktə et",
-  "invalid.email": "Düzgün e-poçt daxil edin."
+  "invalid.email": "Düzgün e-poçt daxil edin.",
+  "invalid.company_name": "Şirkət adını daxil edin.",
+  "invalid.tax_office": "Vergi idarəsini yoxlayın.",
+  "invalid.tax_no": "Vergi nömrəsi 5-20 hərf və ya rəqəm olmalıdır."
 }

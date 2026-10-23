@@ -9,8 +9,9 @@ import { ErrorState, ListSkeleton } from '@/features/admin/kit';
 import { EmptyState } from '@/ui/empty-state';
 
 import { api, unwrap } from '@/core/api/client';
+import { customerSubtitle, customerTitle } from '@/features/services/customer-name';
 import { CustomerStep, type PickedCustomer, VehicleStep } from '@/features/services/new-service-screen';
-import { fullName, type Vehicle, vehicleLabel } from '@/features/services/lib';
+import { type Vehicle, vehicleLabel } from '@/features/services/lib';
 import { cn } from '@/ui/cn';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
@@ -153,7 +154,12 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
               <Summary icon="customer" title={current.customer_name ?? '–'} subtitle={[current.vehicle_plate, current.vehicle_label].filter(Boolean).join(' · ')} />
             ) : customer ? (
               <View className="gap-2">
-                <Summary icon="customer" title={fullName(customer)} subtitle={customer.phone ?? ''} onPress={() => setStep('customer')} />
+                <Summary
+                  icon="customer"
+                  title={customerTitle(customer)}
+                  subtitle={customerSubtitle(customer)}
+                  onPress={() => setStep('customer')}
+                />
                 <Summary
                   icon="vehicle"
                   title={vehicle?.plate ?? t('no_vehicle')}

@@ -50,6 +50,8 @@
   "name": "Nom",
   "first_name": "Prénom",
   "surname": "Nom",
+  "contact_first_name": "Prénom du contact",
+  "contact_surname": "Nom du contact",
   "phone": "Téléphone",
   "phone_hint": "Avec l'indicatif pays si étranger",
   "email": "E-mail",
@@ -192,5 +194,8 @@
   "company_name": "Raison sociale",
   "phone_locked": "Le numéro de téléphone est la clé du compte et ne peut pas être modifié ici.",
   "vehicle_edit": "Modifier le véhicule",
-  "invalid.email": "Saisissez un e-mail valide."
+  "invalid.email": "Saisissez un e-mail valide.",
+  "invalid.company_name": "Saisissez le nom de l'entreprise.",
+  "invalid.tax_office": "Vérifiez le centre des impôts.",
+  "invalid.tax_no": "Le numéro fiscal doit comporter 5 à 20 lettres ou chiffres."
 }
