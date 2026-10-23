@@ -20,6 +20,7 @@ import {
   serviceWizardKeys,
   type Service,
 } from "@/features/services/services/service-wizard.service";
+import { WizardActions } from "@/features/services/components/wizard-bar";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 
@@ -147,14 +148,14 @@ export function PartsStep({
         </AlertDescription>
       </Alert>
 
-      <div className="flex flex-wrap justify-between gap-2">
+      <WizardActions>
         <Button type="button" variant="outline" onClick={onBack}>
           {t("services.wizard.back")}
         </Button>
         <Button type="button" data-testid="parts-next" onClick={onNext}>
           {t("services.wizard.next")}
         </Button>
-      </div>
+      </WizardActions>
     </div>
   );
 }

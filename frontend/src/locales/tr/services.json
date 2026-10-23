@@ -20,6 +20,8 @@
   "wizard.save_failed": "Kaydedilemedi. Lütfen tekrar deneyin.",
   "wizard.draft_created": "{{no}} numaralı taslak hizmet oluşturuldu.",
   "wizard.locked_hint": "Taslak açıldı: müşteri ve araç artık değiştirilemez. Başka bir araç için yeni hizmet başlatın.",
+  "wizard.bar.label": "Hizmet adımları",
+  "wizard.bar.progress": "Adım {{current}} / {{total}}",
   "customer.title": "Müşteri",
   "customer.new": "Yeni müşteri",
   "customer.search_placeholder": "Ad veya telefonla ara",

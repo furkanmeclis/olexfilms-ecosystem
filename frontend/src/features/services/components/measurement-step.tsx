@@ -27,6 +27,7 @@ import {
   type Service,
 } from "@/features/services/services/service-wizard.service";
 import { isApiError } from "@/lib/api";
+import { WizardActions } from "@/features/services/components/wizard-bar";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -264,7 +265,7 @@ export function MeasurementStep({
         </section>
       ) : null}
 
-      <div className="flex flex-wrap justify-between gap-2">
+      <WizardActions>
         <Button type="button" variant="outline" onClick={onBack}>
           {t("services.wizard.back")}
         </Button>
@@ -276,7 +277,7 @@ export function MeasurementStep({
         >
           {t("services.wizard.save_continue")}
         </Button>
-      </div>
+      </WizardActions>
     </div>
   );
 }

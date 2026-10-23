@@ -54,6 +54,7 @@ import {
   serviceWizardKeys,
   type Service,
 } from "@/features/services/services/service-wizard.service";
+import { WizardActions } from "@/features/services/components/wizard-bar";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -670,7 +671,7 @@ export function ContractStep({
         </Alert>
       ) : null}
       {body}
-      <div className="flex flex-wrap justify-between gap-2">
+      <WizardActions>
         <Button type="button" variant="outline" onClick={onBack}>
           {t("services.wizard.back")}
         </Button>
@@ -684,7 +685,7 @@ export function ContractStep({
             ? t("services.wizard.next")
             : t(`${T}.skip`)}
         </Button>
-      </div>
+      </WizardActions>
     </div>
   );
 }

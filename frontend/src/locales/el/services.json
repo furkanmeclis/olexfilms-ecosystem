@@ -20,6 +20,8 @@
   "wizard.save_failed": "Η αποθήκευση απέτυχε. Δοκιμάστε ξανά.",
   "wizard.draft_created": "Δημιουργήθηκε πρόχειρη υπηρεσία {{no}}.",
   "wizard.locked_hint": "Το πρόχειρο άνοιξε: ο πελάτης και το όχημα δεν αλλάζουν πλέον. Για άλλο όχημα ξεκινήστε νέα υπηρεσία.",
+  "wizard.bar.label": "Βήματα υπηρεσίας",
+  "wizard.bar.progress": "Βήμα {{current}} / {{total}}",
   "customer.title": "Πελάτης",
   "customer.new": "Νέος πελάτης",
   "customer.search_placeholder": "Αναζήτηση με όνομα ή τηλέφωνο",

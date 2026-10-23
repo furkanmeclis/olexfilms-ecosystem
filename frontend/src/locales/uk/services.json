@@ -20,6 +20,8 @@
   "wizard.save_failed": "Не вдалося зберегти. Спробуйте ще раз.",
   "wizard.draft_created": "Створено чернетку послуги {{no}}.",
   "wizard.locked_hint": "Чернетку відкрито: клієнта й автомобіль більше не можна змінити. Для іншого автомобіля розпочніть нову послугу.",
+  "wizard.bar.label": "Кроки послуги",
+  "wizard.bar.progress": "Крок {{current}} / {{total}}",
   "customer.title": "Клієнт",
   "customer.new": "Новий клієнт",
   "customer.search_placeholder": "Пошук за ім'ям або телефоном",

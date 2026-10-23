@@ -20,6 +20,8 @@
   "wizard.save_failed": "تعذّر الحفظ. يرجى المحاولة مرة أخرى.",
   "wizard.draft_created": "تم إنشاء مسودة الخدمة {{no}}.",
   "wizard.locked_hint": "تم فتح المسودة: لم يعد بالإمكان تغيير العميل والمركبة. ابدأ خدمة جديدة لمركبة أخرى.",
+  "wizard.bar.label": "خطوات الخدمة",
+  "wizard.bar.progress": "الخطوة {{current}} / {{total}}",
   "customer.title": "العميل",
   "customer.new": "عميل جديد",
   "customer.search_placeholder": "ابحث بالاسم أو الهاتف",

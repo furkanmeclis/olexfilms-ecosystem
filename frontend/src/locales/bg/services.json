@@ -20,6 +20,8 @@
   "wizard.save_failed": "Неуспешно запазване. Опитайте отново.",
   "wizard.draft_created": "Създадена е чернова на услуга {{no}}.",
   "wizard.locked_hint": "Черновата е отворена: клиентът и автомобилът вече не могат да се променят. За друг автомобил започнете нова услуга.",
+  "wizard.bar.label": "Стъпки на услугата",
+  "wizard.bar.progress": "Стъпка {{current}} / {{total}}",
   "customer.title": "Клиент",
   "customer.new": "Нов клиент",
   "customer.search_placeholder": "Търсене по име или телефон",

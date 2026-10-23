@@ -20,6 +20,8 @@
   "wizard.save_failed": "Salvataggio non riuscito. Riprova.",
   "wizard.draft_created": "Bozza di servizio {{no}} creata.",
   "wizard.locked_hint": "La bozza è aperta: cliente e veicolo non si possono più cambiare. Per un altro veicolo avvia un nuovo servizio.",
+  "wizard.bar.label": "Passaggi del servizio",
+  "wizard.bar.progress": "Passaggio {{current}} / {{total}}",
   "customer.title": "Cliente",
   "customer.new": "Nuovo cliente",
   "customer.search_placeholder": "Cerca per nome o telefono",

@@ -20,6 +20,8 @@
   "wizard.save_failed": "Yadda saxlamaq alınmadı. Yenidən cəhd edin.",
   "wizard.draft_created": "{{no}} nömrəli qaralama xidmət yaradıldı.",
   "wizard.locked_hint": "Qaralama açıldı: müştəri və avtomobil artıq dəyişdirilə bilməz. Başqa avtomobil üçün yeni xidmət başladın.",
+  "wizard.bar.label": "Xidmət addımları",
+  "wizard.bar.progress": "Addım {{current}} / {{total}}",
   "customer.title": "Müştəri",
   "customer.new": "Yeni müştəri",
   "customer.search_placeholder": "Ad və ya telefonla axtar",
