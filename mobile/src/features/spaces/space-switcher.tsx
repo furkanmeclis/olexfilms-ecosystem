@@ -54,8 +54,9 @@ export function SpaceSwitcher() {
       } else {
         useActiveSpace.getState().setKind(s.kind);
       }
-      if (router.canDismiss()) router.dismissAll();
-      router.replace('/');
+      // One POP_TO action: an organization switch can drop the current space's
+      // stack (Stack.Protected) before a queued POP_TO_TOP runs, leaving it unhandled.
+      router.dismissTo('/');
     } catch (e) {
       setError(errorMessage(isApiError(e) ? e.code : undefined));
     } finally {
