@@ -193,6 +193,7 @@
   "customer_shared_note": "Paylaşılan müşteri: yalnızca boş alanlar doldurulabilir.",
   "company_name": "Firma adı",
   "phone_locked": "Telefon numarası hesabın anahtarıdır, burada değiştirilemez.",
+  "phone_none": "Kayıtlı telefon yok",
   "vehicle_edit": "Aracı düzenle",
   "invalid.email": "Geçerli bir e-posta girin.",
   "invalid.company_name": "Firma adını girin.",
