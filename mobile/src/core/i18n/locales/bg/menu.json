@@ -6,8 +6,10 @@
   "warranty_claims": "Гаранционни претенции",
   "leads": "Лийдове и оферти",
   "reports": "Отчети",
-  "accounting": "Каса и сметки",
+  "accounting": "Текущи сметки",
   "tasks": "Задачи",
   "announcements": "Съобщения",
-  "warranties": "Гаранции"
+  "warranties": "Гаранции",
+  "disputes": "Възражения",
+  "einvoices": "Електронни фактури"
 }

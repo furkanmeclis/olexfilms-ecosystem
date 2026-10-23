@@ -6,8 +6,10 @@
   "warranty_claims": "Zəmanət müraciətləri",
   "leads": "Lidlər və təkliflər",
   "reports": "Hesabatlar",
-  "accounting": "Kassa və hesablar",
+  "accounting": "Cari hesablar",
   "tasks": "Tapşırıqlar",
   "announcements": "Elanlar",
-  "warranties": "Zəmanətlər"
+  "warranties": "Zəmanətlər",
+  "disputes": "Etirazlar",
+  "einvoices": "e-Fakturalar"
 }

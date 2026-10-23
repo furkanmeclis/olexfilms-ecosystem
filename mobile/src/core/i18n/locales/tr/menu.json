@@ -6,7 +6,7 @@
   "warranty_claims": "Garanti talepleri",
   "leads": "Lead ve teklif",
   "reports": "Raporlar",
-  "accounting": "Kasa ve cari",
+  "accounting": "Cari hesaplar",
   "tasks": "Görevler",
   "announcements": "Duyurular",
   "warranties": "Garantiler",
@@ -16,5 +16,7 @@
   "pricing": "Fiyatlandırma",
   "occupancy": "Randevu doluluğu",
   "performance": "Performans",
-  "measurements": "Ölçümler"
+  "measurements": "Ölçümler",
+  "disputes": "İtirazlar",
+  "einvoices": "e-Fatura"
 }

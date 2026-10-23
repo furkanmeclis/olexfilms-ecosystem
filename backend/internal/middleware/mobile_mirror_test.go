@@ -103,9 +103,13 @@ func TestMobilePanelMirrorTEC961StepUp(t *testing.T) {
 }
 
 func TestMobilePanelMirrorDenied(t *testing.T) {
-	paths := []string{"", "auth", "platform", "portal", "public", "mobile", "oauth", "realtime", "ai",
-		"accounting", "impersonation", "unknown", "ordersx", "tenant", "tenant/settings", "tenant/organizationsx",
-		"tenant/pricing-x", "tenant/other", "certificate-warningsx"}
+	paths := []string{
+		"", "auth", "platform", "portal", "public", "mobile", "oauth", "realtime", "ai", "accounting",
+		"impersonation", "unknown", "ordersx", "tenant", "tenant/settings", "tenant/organizationsx",
+		"tenant/pricing-x", "tenant/other", "certificate-warningsx", "accounting/accounts",
+		"accounting/reports", "accounting/exports", "accounting/collections", "accounting/payments",
+		"accounting/opening-balances", "accounting/carix", "accounting/disputesx", "accounting/entriesx",
+		"accounting/categoriesx", "einvoicesx", "einvoice", "staff-profiles", "staff-payments"}
 	for _, path := range paths {
 		for _, suffix := range []string{"", "/child"} {
 			req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+suffix, nil)
@@ -218,5 +222,33 @@ func TestMobilePanelMirrorTEC939Calibrations(t *testing.T) {
 	})).ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("sibling = %d", rec.Code)
+	}
+}
+
+func TestMobilePanelMirrorTEC957Allowed(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"accounting/cari",
+		"accounting/cari/" + id,
+		"accounting/entries",
+		"accounting/categories",
+		"accounting/disputes",
+		"accounting/disputes/" + id,
+		"accounting/disputes/" + id + "/resolve",
+		"einvoices",
+		"einvoices/" + id,
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
 	}
 }
