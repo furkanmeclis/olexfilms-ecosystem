@@ -8982,6 +8982,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/measurements/devices/smartptg/calibrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a SmartPTG / NexPTG zero (foil) calibration
+         * @description TEC-939. Appends one zero calibration of a gauge serial to the active organization's ledger (`gauge_calibrations`, append-only). The app runs the calibration (docs/smartptg/REVERSE_ENGINEERING.md §6.1): a 90 µm (curve comment has cal1/cal2/cal3) or 150 µm foil on the steel (Fe) and the aluminium (Al) plate, 10 steady frames, offset = curve frequency of the foil point − measured frequency. At least one of `fe_offset_hz` / `al_offset_hz` (Economic gauges have no Al channel). A repeated `client_id` of the organization stores nothing and answers 200 with the first row. Requires `measurements.write`; no module flag (K28). The app reaches it through the mobile mirror (`/v1/mobile/panel/measurements/...`).
+         */
+        post: operations["createSmartPTGCalibration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/measurements/devices/smartptg/calibrations/{serial}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the current calibration of a SmartPTG / NexPTG gauge
+         * @description TEC-939. The latest calibration (by `calibrated_at`) of the serial in the active organization; 404 when the organization never calibrated it. Requires `measurements.read` or `measurements.write`; no module flag (K28). `Cache-Control: no-store`.
+         */
+        get: operations["getSmartPTGCalibration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/measurements/{uuid}": {
         parameters: {
             query?: never;
@@ -23457,6 +23497,56 @@ export interface components {
             /** @description Device report as received (NexPTG JSON), stored unchanged */
             raw: {
                 [key: string]: unknown;
+            };
+        };
+        /** @description Measured frequencies (Hz) of the steady frames, per channel (audit). */
+        GaugeCalibrationSamples: {
+            fe?: number[];
+            al?: number[];
+        };
+        GaugeCalibrationInput: {
+            serial: number;
+            /** @description Hz added to every Fe channel frequency; null = not calibrated */
+            fe_offset_hz?: number | null;
+            /** @description Hz added to every Al channel frequency; null = not calibrated (Economic) */
+            al_offset_hz?: number | null;
+            /**
+             * @description Foil thickness (90 when the curve comment has cal1/cal2/cal3)
+             * @enum {integer}
+             */
+            target_um: 90 | 150;
+            samples?: components["schemas"]["GaugeCalibrationSamples"];
+            /**
+             * Format: uuid
+             * @description Idempotency key of the app
+             */
+            client_id?: string;
+            /**
+             * Format: date-time
+             * @description When the phone finished the calibration (default now; at most 5 min ahead)
+             */
+            calibrated_at?: string;
+        };
+        GaugeCalibration: {
+            /** Format: uuid */
+            uuid: string;
+            serial: number;
+            fe_offset_hz: number | null;
+            al_offset_hz: number | null;
+            /** @enum {integer} */
+            target_um: 90 | 150;
+            samples: {
+                fe: number[];
+                al: number[];
+            };
+            /** Format: date-time */
+            calibrated_at: string;
+            /** Format: date-time */
+            created_at: string;
+            created_by: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
             };
         };
         MobileMeasurementAccepted: {
@@ -46234,6 +46324,84 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    createSmartPTGCalibration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GaugeCalibrationInput"];
+            };
+        };
+        responses: {
+            /** @description The client_id was already recorded; the first row */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["GaugeCalibration"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            /** @description Recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["GaugeCalibration"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getSmartPTGCalibration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Gauge serial, 1–9 digits, not zero (leading zeros ignored). */
+                serial: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current calibration */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {boolean} */
+                        success: true;
+                        data: components["schemas"]["GaugeCalibration"];
+                        meta: components["schemas"]["ResponseMeta"];
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getMeasurement: {

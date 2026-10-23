@@ -121,3 +121,28 @@ func RegisterCurveRoutes(
 	mux.Handle("GET /v1/measurements/devices/smartptg/curves/{serial}",
 		middleware.Chain(http.HandlerFunc(h.Get), authn, org, perm))
 }
+
+// RegisterCalibrationRoutes mounts the SmartPTG zero calibrations
+// (TEC-939), reached by the app through the mobile mirror
+// (/v1/mobile/panel/measurements/...; the "measurements" prefix is already
+// mirrored). Recording needs measurements.write (whoever measures
+// calibrates, like the upload); reading the current one needs
+// measurements.read or measurements.write (like the curve). No module flag,
+// like the upload and the curve (K28). Rows are bounded by the active
+// organization.
+func RegisterCalibrationRoutes(
+	mux *http.ServeMux,
+	h *handler.Calibrations,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	write := middleware.RequireScope(q, rbac.PermMeasurementsWrite)
+	read := middleware.RequireAnyPermission(rbac.PermMeasurementsRead, rbac.PermMeasurementsWrite)
+	mux.Handle("POST /v1/measurements/devices/smartptg/calibrations",
+		middleware.Chain(http.HandlerFunc(h.Create), authn, org, write))
+	mux.Handle("GET /v1/measurements/devices/smartptg/calibrations/{serial}",
+		middleware.Chain(http.HandlerFunc(h.Latest), authn, org, read))
+}
