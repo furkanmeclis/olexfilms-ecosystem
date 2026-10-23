@@ -438,6 +438,24 @@ func TestIntegrationMobilePanelMirror(t *testing.T) {
 	if code != http.StatusOK {
 		t.Fatalf("mobile mirror services = %d %s", code, errCode(env))
 	}
+	// TEC-960: the assistant status and the campaign API reach their own
+	// handlers with their gates unchanged (campaigns: module off here);
+	// ai/usage stays closed on the mirror.
+	for _, tc := range []struct {
+		path string
+		code int
+		err  string
+	}{
+		{"/v1/mobile/panel/ai/status", http.StatusOK, ""},
+		{"/v1/mobile/panel/campaigns", http.StatusForbidden, "FEATURE_DISABLED"},
+		{"/v1/mobile/panel/ai/usage", http.StatusNotFound, "NOT_FOUND"},
+		{"/v1/mobile/panel/ai/usage/summary", http.StatusNotFound, "NOT_FOUND"},
+	} {
+		code, env, _ = it.doMobile("GET", tc.path, mobile.AccessToken, "1", nil)
+		if code != tc.code || (tc.err != "" && errCode(env) != tc.err) {
+			t.Fatalf("%s = %d %s", tc.path, code, errCode(env))
+		}
+	}
 	panel := it.loginOrg(user, password, org)
 	code, env, _ = it.doMobile("GET", "/v1/mobile/panel/services", panel, "1", nil)
 	if code != http.StatusForbidden || errCode(env) != "REALM_FORBIDDEN" {
