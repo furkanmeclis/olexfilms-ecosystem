@@ -100,3 +100,24 @@ func RegisterPDFRoutes(
 	read := middleware.RequireScope(q, rbac.PermMeasurementsRead)
 	mux.Handle("GET /v1/measurements/{uuid}/pdf", middleware.Chain(http.HandlerFunc(h.Get), authn, org, module, read))
 }
+
+// RegisterCurveRoutes mounts the SmartPTG factory curve proxy (TEC-934):
+// GET /v1/measurements/devices/smartptg/curves/{serial}, reached by the app
+// through the mobile mirror (/v1/mobile/panel/measurements/...). Any of
+// measurements.read / measurements.write: whoever may measure needs the
+// curve. No module flag, like the upload (K28): a gauge has to keep
+// working whatever the measurements module flag says. The curve is vendor
+// data, so no organization scope is applied to the result.
+func RegisterCurveRoutes(
+	mux *http.ServeMux,
+	h *handler.Curves,
+	tokens *jwt.Manager,
+	loader middleware.IdentityLoader,
+	q *db.Queries,
+) {
+	authn := middleware.Authenticate(tokens, loader)
+	org := middleware.RequireOrganization(tokens, q)
+	perm := middleware.RequireAnyPermission(rbac.PermMeasurementsRead, rbac.PermMeasurementsWrite)
+	mux.Handle("GET /v1/measurements/devices/smartptg/curves/{serial}",
+		middleware.Chain(http.HandlerFunc(h.Get), authn, org, perm))
+}

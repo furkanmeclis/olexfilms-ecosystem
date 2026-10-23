@@ -10,14 +10,15 @@
 import type { BleManager, Device, Subscription } from '@sfourdrinier/react-native-ble-plx';
 import { PermissionsAndroid, Platform, TurboModuleRegistry } from 'react-native';
 
+import { api } from '@/core/api/client';
 import { readJSON, writeJSON } from '@/core/storage';
 
 import { BUNDLED_CURVES } from './bundled-curves';
-import { decryptCurveFile, deviceModelName, frameToReading, type GaugeCurve, parseCurve } from './curve';
+import { deviceModelName, frameToReading, type GaugeCurve, resolveCurve } from './curve';
 import { adapterErrorKey, gaugeErrorKey } from './errors';
 import { base64ToBinary, createLineSplitter, decodeFrame, GAUGE_BLE, isGaugePeripheral } from './protocol';
 import { type Commit, initialSampler, type SamplerState, samplerProgress, stepSampler } from './readings';
-import { createGeneration, createSerialConfirm, curveUrls, poweredOnTimeoutError, poweredOnWaitMs } from './session';
+import { createGeneration, createSerialConfirm, poweredOnTimeoutError, poweredOnWaitMs } from './session';
 import { type GaugeState, initialGaugeState, upsertDevice, useGauge } from './store';
 
 let available: boolean | null = null;
@@ -189,11 +190,7 @@ async function loadCurve(serial: number) {
   curveLoading = serial;
   set({ curve: 'loading' });
   try {
-    const parsed = await downloadCurve(serial).catch((e: unknown) => {
-      const bundled = BUNDLED_CURVES[serial];
-      if (bundled) return bundled;
-      throw e;
-    });
+    const { curve: parsed } = await resolveCurve(serial, fetchBackendCurve, BUNDLED_CURVES);
     writeJSON(curveKey(serial), parsed);
     curve = parsed;
     set({ curve: 'ready', model: deviceModelName(parsed.deviceType) });
@@ -204,45 +201,25 @@ async function loadCurve(serial: number) {
   }
 }
 
-class HttpError extends Error {}
-
-async function fetchText(url: string): Promise<string> {
+/**
+ * Raw `.dat` of a serial from our backend (TEC-934), through the mobile
+ * mirror with the session's bearer. Null on 404; throws on anything else.
+ */
+async function fetchBackendCurve(serial: number): Promise<string | null> {
   const abort = new AbortController();
-  const timer = setTimeout(() => abort.abort(), 12_000);
+  const timer = setTimeout(() => abort.abort(), 15_000);
   try {
-    const res = await fetch(url, { signal: abort.signal });
-    if (!res.ok) throw new HttpError(`curve_http_${res.status}`);
-    return await res.text();
+    const { data, response } = await api.GET('/v1/measurements/devices/smartptg/curves/{serial}', {
+      params: { path: { serial: String(serial) } },
+      parseAs: 'text',
+      signal: abort.signal,
+    });
+    if (response.status === 404) return null;
+    if (!response.ok || typeof data !== 'string') throw new Error(`curve_http_${response.status}`);
+    return data;
   } finally {
     clearTimeout(timer);
   }
-}
-
-/**
- * Tries each HTTPS source in turn (mysdprog.pl, then smartptg.pl). A network
- * failure is retried once; an HTTP error or a bad file moves to the next source.
- */
-async function downloadCurve(serial: number): Promise<GaugeCurve> {
-  let lastError: unknown = new Error('curve');
-  for (const url of curveUrls(serial)) {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      let text: string;
-      try {
-        text = await fetchText(url);
-      } catch (e) {
-        lastError = e;
-        if (e instanceof HttpError) break;
-        continue; // network error: retry once
-      }
-      try {
-        return parseCurve(decryptCurveFile(text), serial);
-      } catch (e) {
-        lastError = e;
-        break;
-      }
-    }
-  }
-  throw lastError;
 }
 
 /** Retries a failed curve download (the gauge stays connected). */

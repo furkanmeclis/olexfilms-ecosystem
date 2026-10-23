@@ -41,11 +41,6 @@ export function createSerialConfirm(required = 2) {
   };
 }
 
-/** HTTPS sources of the factory curve, in order (the NexPTG app's primary and mirror). */
-export function curveUrls(serial: number): string[] {
-  return [`https://mysdprog.pl/char/${serial}.dat`, `https://www.smartptg.pl/char/${serial}.dat`];
-}
-
 /**
  * How long to wait for PoweredOn given the adapter state seen so far: while it
  * is Unknown the iOS permission prompt may be on screen, so wait for the user.

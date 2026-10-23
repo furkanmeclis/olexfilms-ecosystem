@@ -180,3 +180,51 @@ export function frameToReading(
   };
 }
 
+/**
+ * Where a gauge's factory curve comes from (pure, alias-free; TEC-934).
+ *
+ * 1. Our backend, `GET /v1/measurements/devices/smartptg/curves/{serial}`
+ *    (through the mobile mirror): it fetches the vendor file server side and
+ *    keeps it, so a vendor outage or its broken HTTPS does not matter.
+ * 2. The curves bundled with the app (SN 32475).
+ *
+ * The vendor URLs are no longer fetched from the phone: over HTTPS both fail
+ * (mysdprog.pl 404, smartptg.pl certificate mismatch) and plain http is
+ * blocked by ATS / cleartext policy, so they only cost a timeout.
+ */
+
+/** Raw `.dat` text of a serial, or null when the backend has no curve for it (404). */
+export type CurveFetcher = (serial: number) => Promise<string | null>;
+
+export type CurveResult = { curve: GaugeCurve; source: 'backend' | 'bundled' };
+
+/**
+ * Backend first (a network error is retried once), then the bundled curve.
+ * Throws the last error when neither has the serial.
+ */
+export async function resolveCurve(
+  serial: number,
+  fetchCurve: CurveFetcher,
+  bundled: Record<number, GaugeCurve>,
+): Promise<CurveResult> {
+  let lastError: unknown = new Error('curve_not_found');
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let text: string | null;
+    try {
+      text = await fetchCurve(serial);
+    } catch (e) {
+      lastError = e;
+      continue; // network / 5xx: retry once
+    }
+    if (text == null) break; // 404: no source has it
+    try {
+      return { curve: parseCurve(decryptCurveFile(text), serial), source: 'backend' };
+    } catch (e) {
+      lastError = e; // corrupt or another serial's file
+      break;
+    }
+  }
+  const local = bundled[serial];
+  if (local) return { curve: local, source: 'bundled' };
+  throw lastError;
+}

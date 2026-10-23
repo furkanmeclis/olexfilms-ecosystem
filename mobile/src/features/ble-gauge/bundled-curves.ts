@@ -1,7 +1,7 @@
 /**
- * Factory curves shipped with the app (pure, alias-free), used when no HTTPS
- * source serves the serial's `.dat` (October 2026: mysdprog.pl answers 404 and
- * smartptg.pl has no valid certificate; only http://www.smartptg.pl works).
+ * Factory curves shipped with the app (pure, alias-free), used when our
+ * backend (TEC-934, which fetches the vendor file server side) has no curve
+ * for the serial or cannot be reached (see resolveCurve in curve.ts).
  * SN 32475 (SmartPTG Professional) is the curve the old app bundled; its
  * values equal the decrypted factory file (see curve.test.ts).
  */
