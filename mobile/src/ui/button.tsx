@@ -1,8 +1,11 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import * as Haptics from 'expo-haptics';
+import type { ReactElement } from 'react';
 import { ActivityIndicator, Pressable, type PressableProps } from 'react-native';
 
 import { cn } from './cn';
+import { Icon, type IconTone } from './icon';
+import type { IconName } from './icons';
 import { Text } from './text';
 
 const button = cva('flex-row items-center justify-center gap-2 rounded-md active:opacity-80', {
@@ -37,8 +40,25 @@ const label = cva('font-semibold', {
   defaultVariants: { variant: 'primary', size: 'md' },
 });
 
+const ICON_TONE: Record<NonNullable<VariantProps<typeof button>['variant']>, IconTone> = {
+  primary: 'primary-foreground',
+  secondary: 'secondary-foreground',
+  outline: 'primary',
+  ghost: 'primary',
+  destructive: 'primary-foreground',
+};
+
 type Props = Omit<PressableProps, 'children'> &
-  VariantProps<typeof button> & { title: string; loading?: boolean; className?: string; icon?: React.ReactNode };
+  VariantProps<typeof button> & {
+    title: string;
+    loading?: boolean;
+    className?: string;
+    /**
+     * An icon name from `icons.ts` (drawn in the label color) or a ready element.
+     * A bare string that is not an icon name is a type error: RN cannot draw text outside <Text>.
+     */
+    icon?: IconName | ReactElement;
+  };
 
 export function Button({ title, variant, size, loading, disabled, className, icon, onPress, ...props }: Props) {
   const off = disabled || loading;
@@ -58,6 +78,8 @@ export function Button({ title, variant, size, loading, disabled, className, ico
             variant === 'primary' || variant === 'destructive' || !variant ? 'accent-primary-foreground' : 'accent-primary'
           }
         />
+      ) : typeof icon === 'string' ? (
+        <Icon name={icon} tone={ICON_TONE[variant ?? 'primary']} size={size === 'lg' ? 18 : 17} />
       ) : (
         icon
       )}

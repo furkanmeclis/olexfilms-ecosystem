@@ -39,6 +39,7 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/appointments/occupancy", route(h.Occupancy))
 	mux.Handle("GET /v1/appointments", route(h.List))
 	mux.Handle("POST /v1/appointments", route(h.Create, write))
+	mux.Handle("GET /v1/appointments/{uuid}", route(h.Get))
 	mux.Handle("PATCH /v1/appointments/{uuid}", route(h.Patch, write))
 	mux.Handle("POST /v1/appointments/{uuid}/status", route(h.SetStatus, write))
 	mux.Handle("POST /v1/appointments/{uuid}/start-intake", route(h.StartIntake, write))

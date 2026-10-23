@@ -159,8 +159,13 @@ export type IconName =
   | 'subscription'
   | 'staff';
 
-/** iOS renders the SF Symbol, Android (and iOS fallback) renders the Lucide glyph. */
-export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
+/**
+ * iOS renders the SF Symbol, Android renders the Lucide glyph. The app runs
+ * from iOS 16.4 (Expo modules' deployment target); a symbol newer than SF
+ * Symbols 4.2 sets `minIOS` and older iOS draws the Lucide glyph instead (an
+ * unknown symbol name would otherwise draw nothing). icons.test.ts checks it.
+ */
+export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon; minIOS?: number }> = {
   back: { sf: 'chevron.backward', lucide: ChevronLeftIcon },
   forward: { sf: 'chevron.forward', lucide: ChevronRightIcon },
   chevronDown: { sf: 'chevron.down', lucide: ChevronDownIcon },
@@ -193,7 +198,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   packageIn: { sf: 'shippingbox.and.arrow.backward', lucide: PackagePlusIcon },
   packageCheck: { sf: 'shippingbox.circle', lucide: PackageCheckIcon },
   warehouse: { sf: 'building.2', lucide: WarehouseIcon },
-  truck: { sf: 'truck.box', lucide: TruckIcon },
+  truck: { sf: 'truck.box', lucide: TruckIcon, minIOS: 17 },
   location: { sf: 'mappin.and.ellipse', lucide: MapPinIcon },
   report: { sf: 'doc.text', lucide: FileTextIcon },
   chart: { sf: 'chart.bar.xaxis', lucide: ChartColumnIcon },
@@ -202,7 +207,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   announcement: { sf: 'megaphone', lucide: MegaphoneIcon },
   lead: { sf: 'person.crop.circle.badge.plus', lucide: UserRoundPlusIcon },
   measure: { sf: 'ruler', lucide: RulerIcon },
-  gauge: { sf: 'gauge.with.dots.needle.67percent', lucide: GaugeIcon },
+  gauge: { sf: 'gauge.with.dots.needle.67percent', lucide: GaugeIcon, minIOS: 17 },
   tools: { sf: 'hammer', lucide: HammerIcon },
   building: { sf: 'building.columns', lucide: BuildingIcon },
   network: { sf: 'network', lucide: NetworkIcon },
@@ -227,7 +232,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   transfer: { sf: 'arrow.left.arrow.right', lucide: ArrowLeftRightIcon },
   chevronUp: { sf: 'chevron.up', lucide: ChevronUpIcon },
   error: { sf: 'exclamationmark.circle', lucide: CircleAlertIcon },
-  addPhoto: { sf: 'photo.badge.plus', lucide: ImagePlusIcon },
+  addPhoto: { sf: 'photo.badge.plus', lucide: ImagePlusIcon, minIOS: 17 },
   hierarchy: { sf: 'list.bullet.indent', lucide: ListTreeIcon },
   devices: { sf: 'macbook.and.iphone', lucide: MonitorSmartphoneIcon },
   edit: { sf: 'pencil', lucide: PencilIcon },

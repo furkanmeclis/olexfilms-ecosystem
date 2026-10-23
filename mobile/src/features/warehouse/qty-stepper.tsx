@@ -31,6 +31,8 @@ export function QtyStepper({
       <TextInput
         accessibilityLabel={label}
         value={String(value)}
+        placeholder={String(min)}
+        placeholderTextColorClassName="accent-muted-foreground"
         onChangeText={(s) => set(Number(s.replace(/\D/g, '')))}
         keyboardType="number-pad"
         selectTextOnFocus

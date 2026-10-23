@@ -137,12 +137,13 @@ function JobsList({
           ? (entries.data?.pages.flatMap((p) => p.items) ?? [])
           : (orders.data?.pages.flatMap((p) => p.items) ?? []);
 
-  const empty = {
-    transfers: { icon: 'transfer' as IconName, title: t('transfers.empty_title'), body: t('transfers.empty_description'), action: t('transfers.new') },
-    counts: { icon: 'order' as IconName, title: t('counts.empty_title'), body: t('counts.empty_description'), action: t('counts.new') },
-    entries: { icon: 'packageIn' as IconName, title: t('entries.empty_title'), body: t('entries.empty_description'), action: t('entries.new') },
-    orders: { icon: 'package' as IconName, title: t('orders.list.empty_title'), body: t('orders.list.empty_description'), action: '' },
-  }[tab];
+  const empties: Record<JobsTab, { icon: IconName; title: string; body: string; action: string }> = {
+    transfers: { icon: 'transfer', title: t('transfers.empty_title'), body: t('transfers.empty_description'), action: t('transfers.new') },
+    counts: { icon: 'task', title: t('counts.empty_title'), body: t('counts.empty_description'), action: t('counts.new') },
+    entries: { icon: 'packageIn', title: t('entries.empty_title'), body: t('entries.empty_description'), action: t('entries.new') },
+    orders: { icon: 'package', title: t('orders.list.empty_title'), body: t('orders.list.empty_description'), action: '' },
+  };
+  const empty = empties[tab];
 
   return (
     <FlatList

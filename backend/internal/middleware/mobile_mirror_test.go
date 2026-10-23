@@ -72,30 +72,16 @@ func TestMobilePanelMirrorTEC933Allowed(t *testing.T) {
 	}
 }
 
-func TestMobilePanelMirrorTEC959Allowed(t *testing.T) {
-	id := uuid.NewString()
-	for _, path := range []string{
-		"fleets",
-		"fleets/" + id,
-		"fleets/" + id + "/users",
-		"fleets/" + id + "/users/" + id + "/disable",
-		"fleets/" + id + "/vehicles/" + id,
-		"fleets/" + id + "/statement",
-		"fleets/" + id + "/reports",
-		"service-subscriptions",
-		"service-subscriptions/" + id,
-		"service-subscriptions/" + id + "/cancel-request",
-		"service-subscriptions/cancel-requests/" + id + "/approve",
-		"staff-profiles",
-		"staff-profiles/" + id,
-		"staff-profiles/" + id + "/payments",
-	} {
-		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+// TEC-961: the mobile step-up verifications are mirrored; the status, the
+// passkey routes and every other auth route are not.
+func TestMobilePanelMirrorTEC961StepUp(t *testing.T) {
+	for _, path := range []string{"auth/step-up/password", "auth/step-up/totp"} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/mobile/panel/"+path, nil)
 		req.Header.Set(MobileAPIVersionHeader, "1")
 		called := false
 		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			called = true
-			if r.URL.Path != "/v1/"+path {
+			if r.URL.Path != "/v1/"+path || !IsMobilePanelMirror(r.Context()) {
 				t.Errorf("rewrite = %s", r.URL.Path)
 			}
 		})).ServeHTTP(httptest.NewRecorder(), req)
@@ -103,30 +89,23 @@ func TestMobilePanelMirrorTEC959Allowed(t *testing.T) {
 			t.Errorf("%s was not allowed", path)
 		}
 	}
-}
-
-// TEC-959 siblings: only the exact segments open; the staff payment book,
-// the fleet portal and look-alike segments stay closed.
-func TestMobilePanelMirrorTEC959SiblingsDenied(t *testing.T) {
-	for _, path := range []string{"fleet", "fleetsx", "fleets-export", "service-subscription", "service-subscriptionsx",
-		"service-catalogx", "staff", "staff-profilesx", "staff-payments", "staff-payments/payroll"} {
-		for _, suffix := range []string{"", "/child"} {
-			req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+suffix, nil)
-			req.Header.Set(MobileAPIVersionHeader, "1")
-			rec := httptest.NewRecorder()
-			MobilePanelMirror(1, 1)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-				t.Fatalf("%s reached next", path+suffix)
-			})).ServeHTTP(rec, req)
-			if rec.Code != http.StatusNotFound {
-				t.Errorf("%s = %d", path+suffix, rec.Code)
-			}
+	for _, path := range []string{"auth/step-up", "auth/step-up/passkey/options", "auth/step-up/passkey/verify",
+		"auth/step-up/passwordx", "auth/step-up/other", "auth/me", "auth/sessions", "auth/login", "auth/impersonate"} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/mobile/panel/"+path, nil)
+		rec := httptest.NewRecorder()
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			t.Fatalf("%s reached next", path)
+		})).ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("%s = %d", path, rec.Code)
 		}
 	}
 }
 
 func TestMobilePanelMirrorDenied(t *testing.T) {
-	paths := []string{"", "auth", "platform", "portal", "public", "mobile", "oauth", "realtime", "ai",
-		"accounting", "impersonation", "unknown", "ordersx", "tenant", "tenant/settings", "tenant/organizationsx",
+	paths := []string{
+		"", "auth", "platform", "portal", "public", "mobile", "oauth", "realtime", "ai", "accounting",
+		"impersonation", "unknown", "ordersx", "tenant", "tenant/settings", "tenant/organizationsx",
 		"tenant/pricing-x", "tenant/other", "certificate-warningsx"}
 	for _, path := range paths {
 		for _, suffix := range []string{"", "/child"} {
@@ -212,6 +191,58 @@ func TestMobilePanelMirrorAuthenticate(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 		if rec.Code != tc.status || (tc.status == http.StatusForbidden && !strings.Contains(rec.Body.String(), `"code":"REALM_FORBIDDEN"`)) {
 			t.Errorf("%s %s = %d %s", tc.realm, tc.path, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+func TestMobilePanelMirrorTEC959Allowed(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"fleets",
+		"fleets/" + id,
+		"fleets/" + id + "/users",
+		"fleets/" + id + "/users/" + id + "/disable",
+		"fleets/" + id + "/vehicles/" + id,
+		"fleets/" + id + "/statement",
+		"fleets/" + id + "/reports",
+		"service-subscriptions",
+		"service-subscriptions/" + id,
+		"service-subscriptions/" + id + "/cancel-request",
+		"service-subscriptions/cancel-requests/" + id + "/approve",
+		"staff-profiles",
+		"staff-profiles/" + id,
+		"staff-profiles/" + id + "/payments",
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+}
+
+// TEC-959 siblings: only the exact segments open; the staff payment book,
+// the fleet portal and look-alike segments stay closed.
+func TestMobilePanelMirrorTEC959SiblingsDenied(t *testing.T) {
+	for _, path := range []string{"fleet", "fleetsx", "fleets-export", "service-subscription", "service-subscriptionsx",
+		"service-catalogx", "staff", "staff-profilesx", "staff-payments", "staff-payments/payroll"} {
+		for _, suffix := range []string{"", "/child"} {
+			req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+suffix, nil)
+			req.Header.Set(MobileAPIVersionHeader, "1")
+			rec := httptest.NewRecorder()
+			MobilePanelMirror(1, 1)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+				t.Fatalf("%s reached next", path+suffix)
+			})).ServeHTTP(rec, req)
+			if rec.Code != http.StatusNotFound {
+				t.Errorf("%s = %d", path+suffix, rec.Code)
+			}
 		}
 	}
 }
