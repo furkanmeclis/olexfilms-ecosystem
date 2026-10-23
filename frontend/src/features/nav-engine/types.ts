@@ -78,6 +78,11 @@ export type NavItemDef = {
   anyPermission?: string[];
   /** Shown only when the active organization has one of these types. */
   orgTypes?: NavOrgType[];
+  /**
+   * The route guard ties only this exact href to the entry; deeper pages
+   * (details reached from links elsewhere) are not gated by it (TEC-866).
+   */
+  exactRoute?: boolean;
   /** Shown only for these member roles in the active organization. */
   orgRoles?: string[];
   /** Module key (backend catalog); hidden while the module is off. */

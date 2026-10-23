@@ -295,6 +295,11 @@ export function tenantNav(slug: string) {
             icon: ShieldCheck,
             permission: permissions.warranties.read,
             feature: "services",
+            // TEC-866: the list is closed to dealers (menu and route); they
+            // see warranties in the service detail, and the detail pages
+            // (/warranties/<uuid>) stay open to them.
+            orgTypes: ["center", "distributor"],
+            exactRoute: true,
           },
           {
             // TEC-339: warranty claims (dealer, distributor, center).

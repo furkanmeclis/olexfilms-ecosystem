@@ -140,6 +140,35 @@ describe("navRouteAccess (TEC-771)", () => {
     ).toBe("denied");
   });
 
+  it("gates only the exact href of an exactRoute entry (TEC-866)", () => {
+    const exact: NavCatalog = {
+      id: "x",
+      groups: [
+        {
+          id: "main",
+          labelKey: "g",
+          items: [
+            {
+              id: "list",
+              titleKey: "l",
+              href: "/t/a/warranties",
+              icon: Icon,
+              orgTypes: ["center"],
+              exactRoute: true,
+            },
+          ],
+        },
+      ],
+    };
+    const dealer = access([]);
+    expect(navRouteAccess("/t/a/warranties", [exact], dealer, "/t/a")).toBe(
+      "denied",
+    );
+    expect(navRouteAccess("/t/a/warranties/w1", [exact], dealer, "/t/a")).toBe(
+      "allowed",
+    );
+  });
+
   it("leaves module gates to the page's own off screen", () => {
     const off = { type: "dealer", role: "owner", features: [] };
     expect(

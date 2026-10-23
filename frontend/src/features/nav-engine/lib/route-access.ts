@@ -40,7 +40,9 @@ export function matchNavEntries(
         const target = normalizePath(item.href);
         const matches =
           current === target ||
-          (target !== home && current.startsWith(`${target}/`));
+          (target !== home &&
+            !item.exactRoute &&
+            current.startsWith(`${target}/`));
         if (!matches) continue;
         if (target.length > bestLen) {
           best = [{ group, item }];
