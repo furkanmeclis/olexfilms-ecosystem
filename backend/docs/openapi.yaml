@@ -185,8 +185,12 @@ tags:
       search, notifications, appointments, catalog, vehicle-catalog,
       plate-formats, performance, tasks, leads, pricing, certificates,
       photo-standard, service-catalog, geo, announcements, stats and
-      tenant/organizations, tenant/modules, delivery-methods. Prefixes match whole segments and descendants;
-      all others return 404 `NOT_FOUND`. Mirror paths are not duplicated here.
+      tenant/organizations, tenant/modules, tenant/pricing, delivery-methods,
+      certificate-warnings and auth/step-up/password, auth/step-up/totp
+      (TEC-961: a mobile session earns the same per-user step-up grant; the
+      step-up status and passkey routes are not mirrored). Prefixes match whole
+      segments and descendants; all others return 404 `NOT_FOUND`. Mirror
+      paths are not duplicated here.
 
       App version gate (TEC-236): the app sends its release in `X-App-Version`
       (e.g. `2.4.1`; without it a `OlexFilms/2.4.1` User-Agent token is read,
@@ -26018,6 +26022,26 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /v1/appointments/{uuid}:
+    get:
+      tags: [Appointments]
+      operationId: getAppointment
+      summary: Get one appointment
+      description: >-
+        TEC-961: one appointment inside the same reach as GET /v1/appointments
+        (appointments.read scope, active brand, appointments module on). An
+        appointment of another brand or outside the read scope is 404.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Appointment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointment" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Appointments]
       operationId: patchAppointment

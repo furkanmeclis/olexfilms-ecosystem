@@ -11,6 +11,8 @@ import { ApiError, toApiError } from './errors';
 import type { paths } from './schema';
 
 const AUTH_PATHS = ['/v1/mobile/auth/login', '/v1/mobile/auth/refresh'];
+/** A 401 here means a wrong password or code, not an expired token: never refresh and resend it. */
+const NO_RETRY_PATHS = ['/auth/step-up/'];
 /** Refresh this long before the access token expires, so requests never race it. */
 const REFRESH_MARGIN_MS = 30_000;
 
@@ -83,7 +85,8 @@ async function authFetch(request: Request): Promise<Response> {
   if (t && t.accessExpiresAt - Date.now() < REFRESH_MARGIN_MS) await refreshTokens();
 
   let res = await fetch(withAuth(request));
-  if (res.status === 401 && getTokens() && !AUTH_PATHS.some((p) => request.url.includes(p))) {
+  const noRetry = [...AUTH_PATHS, ...NO_RETRY_PATHS].some((p) => request.url.includes(p));
+  if (res.status === 401 && getTokens() && !noRetry) {
     if (await refreshTokens()) res = await fetch(withAuth(retry));
   }
   await handle426(res);

@@ -105,7 +105,7 @@ export function AddItemScreen() {
               error={units.error}
               count={items.length}
               onRetry={() => void units.refetch()}
-              empty={{ icon: 'packageIn', title: t('stock_empty'), body: t('stock_empty_body') }}
+              empty={{ icon: 'stock', title: t('stock_empty'), body: t('stock_empty_body') }}
             />
           }
           renderItem={({ item: u }) => (

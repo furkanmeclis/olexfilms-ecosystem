@@ -59,6 +59,8 @@
   /* Logo gold (crest) and deep green (stars on the crest), same in both modes. */
   --color-brand: #f2ac4a;
   --color-brand-detail: #003d25;
+  /* Icons and spinners over the camera picture, which is never themed. */
+  --color-on-media: #ffffff;
   --radius-sm: 10px;
   --radius-md: 12px;
   --radius-lg: 14px;

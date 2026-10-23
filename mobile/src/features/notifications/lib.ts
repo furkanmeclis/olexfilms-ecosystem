@@ -51,9 +51,5 @@ const ROUTES: Record<SpaceKind, Partial<Record<Kind, (uuid: string) => string>>>
 export function notificationRoute(n: Pick<AppNotification, 'action_url' | 'payload'>, space: SpaceKind | null): string | null {
   const target = notificationTarget(n);
   if (!target || !space) return null;
-  const route = ROUTES[space][target.kind]?.(target.uuid) ?? null;
-  if (!route || target.kind !== 'appointments') return route;
-  // Appointments have no single-get: the start time lets the screen find the booking fast.
-  const at = n.payload?.starts_at ?? n.payload?.scheduled_at;
-  return typeof at === 'string' ? `${route}?at=${encodeURIComponent(at)}` : route;
+  return ROUTES[space][target.kind]?.(target.uuid) ?? null;
 }
