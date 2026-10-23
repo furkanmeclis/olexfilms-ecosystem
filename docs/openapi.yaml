@@ -185,8 +185,12 @@ tags:
       search, notifications, appointments, catalog, vehicle-catalog,
       plate-formats, performance, tasks, leads, pricing, certificates,
       photo-standard, service-catalog, geo, announcements, stats and
-      tenant/organizations, tenant/modules, delivery-methods. Prefixes match whole segments and descendants;
-      all others return 404 `NOT_FOUND`. Mirror paths are not duplicated here.
+      tenant/organizations, tenant/modules, tenant/pricing, delivery-methods,
+      certificate-warnings and auth/step-up/password, auth/step-up/totp
+      (TEC-961: a mobile session earns the same per-user step-up grant; the
+      step-up status and passkey routes are not mirrored). Prefixes match whole
+      segments and descendants; all others return 404 `NOT_FOUND`. Mirror
+      paths are not duplicated here.
 
       App version gate (TEC-236): the app sends its release in `X-App-Version`
       (e.g. `2.4.1`; without it a `OlexFilms/2.4.1` User-Agent token is read,
