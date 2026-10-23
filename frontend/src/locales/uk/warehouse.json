@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "Штрихкоди",
   "barcodes.void_description": "Буде перевірено {{count}} вибраних партій або одиниць. Надруковані та складські штрихкоди не зміняться.",
+  "barcodes.void_held_in_order": "{{n}} штрихкодів призначено замовленню й не анульовано: {{barcodes}}. Спершу вилучіть їх із замовлення.",
+  "barcodes.void_held_in_transfer": "{{n}} штрихкодів перебувають у відкритому переміщенні й не анульовані: {{barcodes}}. Спершу вилучіть їх із переміщення.",
   "barcodes.void_result": "{{voided}} скасовано, {{rejected}} відхилено.",
   "barcodes.void_selected": "Скасувати вибрані",
   "barcodes.void_title": "Скасувати вибрані зарезервовані штрихкоди?",

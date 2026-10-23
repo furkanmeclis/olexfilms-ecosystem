@@ -55,6 +55,7 @@ import {
   warehouseService,
   type StockEntry,
 } from "@/features/warehouse/services/warehouse.service";
+import { voidHeldWarnings } from "@/features/warehouse/lib/void-result";
 import { useLocale } from "@/providers/locale-provider";
 import { useDialogs } from "@/providers/dialog-provider";
 import { appToast } from "@/providers/toast-provider";
@@ -184,6 +185,8 @@ export function StockEntryDetailPage({
           rejected: result.items.filter((item) => !item.voided).length,
         }),
       );
+      for (const message of voidHeldWarnings(result.items, t))
+        appToast.warning(message);
     },
     onError: (err) =>
       appToast.error(warehouseErrorMessage(err, t, t("warehouse.form.error"))),

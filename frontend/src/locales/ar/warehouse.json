@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "الباركود",
   "barcodes.void_description": "سيتم فحص {{count}} دفعات أو وحدات محددة. لن تتغير الرموز المطبوعة أو الموجودة في المخزون.",
+  "barcodes.void_held_in_order": "{{n}} من الباركودات مخصّصة لطلب ولم تُلغَ: {{barcodes}}. أزلها من الطلب أولاً.",
+  "barcodes.void_held_in_transfer": "{{n}} من الباركودات موجودة في تحويل مفتوح ولم تُلغَ: {{barcodes}}. أزلها من التحويل أولاً.",
   "barcodes.void_result": "أُلغي {{voided}} ورُفض {{rejected}}.",
   "barcodes.void_selected": "إلغاء المحدد",
   "barcodes.void_title": "هل تريد إلغاء الرموز المحجوزة المحددة؟",

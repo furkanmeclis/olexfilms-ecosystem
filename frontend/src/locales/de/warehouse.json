@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "Barcodes",
   "barcodes.void_description": "{{count}} ausgewählte Chargen oder Einheiten werden geprüft. Gedruckte und eingelagerte Barcodes bleiben unverändert.",
+  "barcodes.void_held_in_order": "{{n}} Barcodes sind einem Auftrag zugeordnet und wurden nicht storniert: {{barcodes}}. Entfernen Sie sie zuerst aus dem Auftrag.",
+  "barcodes.void_held_in_transfer": "{{n}} Barcodes befinden sich in einem offenen Transfer und wurden nicht storniert: {{barcodes}}. Entfernen Sie sie zuerst aus dem Transfer.",
   "barcodes.void_result": "{{voided}} storniert, {{rejected}} abgelehnt.",
   "barcodes.void_selected": "Auswahl stornieren",
   "barcodes.void_title": "Ausgewählte reservierte Barcodes stornieren?",

@@ -14,6 +14,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
+	stockmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	wh "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/outbox"
@@ -650,5 +651,68 @@ func TestWarehouseScanExpectationStatuses(t *testing.T) {
 				t.Fatalf("status=%s err=%v", res.Status, err)
 			}
 		})
+	}
+}
+
+// TEC-774: a reserved label already on an open warehouse transfer or assigned
+// to an order line is not voided; a free reserved label still is.
+func TestReservedBarcodeVoidRespectsTransferAndOrder(t *testing.T) {
+	e := newEntryEnv(t)
+	tr := wh.NewWarehouseTransfers(e.pool, e.q, outbox.NewStore(e.pool, e.q))
+	c := e.caller(e.center)
+	src, dst := e.site(t, "H"), e.site(t, "J")
+	batch, err := e.bc.Create(e.ctx, e.stockCaller(e.center), stockusecase.BatchInput{
+		ProductUUID: e.piece.Uuid.String(), Quantity: 3, Prefix: e.prefix("H"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	inTransfer, inOrder, free := batch.Units[0], batch.Units[1], batch.Units[2]
+	doc, err := tr.CreateTransfer(e.ctx, c, wh.TransferInput{FromWarehouseUUID: src.w.UUID.String(), ToWarehouseUUID: dst.w.UUID.String()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tr.AddTransferLines(e.ctx, c, doc.UUID, []string{inTransfer.Barcode}); err != nil {
+		t.Fatalf("reserved unit on transfer: %v", err)
+	}
+	order, err := e.q.CreateOrder(e.ctx, db.CreateOrderParams{SellerOrgID: e.center.ID, BuyerOrgID: e.dist.ID, BrandID: e.brand.ID, Currency: "TRY"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.pool.Exec(e.ctx, `UPDATE orders SET status='preparing' WHERE id=$1`, order.ID); err != nil {
+		t.Fatal(err)
+	}
+	one := pgtype.Numeric{Int: big.NewInt(1), Exp: 0, Valid: true}
+	item, err := e.q.CreateOrderItem(e.ctx, db.CreateOrderItemParams{OrderID: order.ID, ProductID: e.piece.ID, Quantity: pgtype.Int4{Int32: 1, Valid: true}, UnitPrice: one, PriceSource: "list", LineTotal: one})
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope, filter := e.scope(e.center)
+	caller := orders.Caller{Org: scope, Filter: filter, Principal: authctx.Principal{PermissionScopes: map[string]rbac.Scope{rbac.PermOrdersShip: rbac.ScopeManaged}}}
+	service := orders.New(e.pool, e.q, outbox.NewStore(e.pool, e.q), nil)
+	if _, err = service.AssignUnit(e.ctx, caller, order.Uuid, item.Uuid, orders.AssignInput{Barcode: inOrder.Barcode}); err != nil {
+		t.Fatalf("reserved unit on order: %v", err)
+	}
+	result, err := e.bc.Void(e.ctx, e.stockCaller(e.center), stockusecase.VoidInput{UnitUUIDs: []uuid.UUID{inTransfer.UUID, inOrder.UUID, free.UUID}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []struct {
+		voided bool
+		reason string
+	}{{false, "in_transfer"}, {false, "in_order"}, {true, ""}}
+	if len(result.Items) != len(want) {
+		t.Fatalf("void result: %+v", result)
+	}
+	for i, w := range want {
+		if result.Items[i].Voided != w.voided || result.Items[i].Reason != w.reason {
+			t.Fatalf("item %d: %+v, want voided=%v reason=%q", i, result.Items[i], w.voided, w.reason)
+		}
+	}
+	for _, u := range []stockmodel.BarcodeBatchUnit{inTransfer, inOrder} {
+		got, err := e.q.GetUnitByUUID(e.ctx, u.UUID)
+		if err != nil || got.Status != string(ledger.StatusReserved) {
+			t.Fatalf("held unit %s: %s %v", u.Barcode, got.Status, err)
+		}
 	}
 }

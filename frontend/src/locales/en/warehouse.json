@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "Barcodes",
   "barcodes.void_description": "{{count}} selected batches or units will be checked. Printed and stocked barcodes remain unchanged.",
+  "barcodes.void_held_in_order": "{{n}} barcodes are assigned to an order and were not voided: {{barcodes}}. Remove them from the order first.",
+  "barcodes.void_held_in_transfer": "{{n}} barcodes are on an open transfer and were not voided: {{barcodes}}. Remove them from the transfer first.",
   "barcodes.void_result": "{{voided}} voided, {{rejected}} rejected.",
   "barcodes.void_selected": "Void selected",
   "barcodes.void_title": "Void selected reserved barcodes?",

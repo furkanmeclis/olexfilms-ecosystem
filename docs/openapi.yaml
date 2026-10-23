@@ -45861,7 +45861,7 @@ components:
               unit_uuid: { type: string, format: uuid }
               barcode: { type: string }
               voided: { type: boolean }
-              reason: { type: string, enum: [not_found, not_reserved, state_changed] }
+              reason: { type: string, enum: [not_found, not_reserved, state_changed, in_transfer, in_order] }
 
     EnvelopeBarcodeVoidResult:
       type: object

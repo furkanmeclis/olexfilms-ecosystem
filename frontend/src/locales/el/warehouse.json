@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "Barcode",
   "barcodes.void_description": "Θα ελεγχθούν {{count}} επιλεγμένες παρτίδες ή μονάδες. Τα εκτυπωμένα barcode και όσα είναι σε απόθεμα δεν αλλάζουν.",
+  "barcodes.void_held_in_order": "{{n}} γραμμωτοί κώδικες έχουν αντιστοιχιστεί σε παραγγελία και δεν ακυρώθηκαν: {{barcodes}}. Αφαιρέστε τους πρώτα από την παραγγελία.",
+  "barcodes.void_held_in_transfer": "{{n}} γραμμωτοί κώδικες βρίσκονται σε ανοιχτή μεταφορά και δεν ακυρώθηκαν: {{barcodes}}. Αφαιρέστε τους πρώτα από τη μεταφορά.",
   "barcodes.void_result": "{{voided}} ακυρώθηκαν, {{rejected}} απορρίφθηκαν.",
   "barcodes.void_selected": "Ακύρωση επιλεγμένων",
   "barcodes.void_title": "Ακύρωση επιλεγμένων δεσμευμένων barcode;",
