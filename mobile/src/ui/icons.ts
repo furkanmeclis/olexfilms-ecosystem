@@ -29,6 +29,7 @@ import FileTextIcon from 'lucide-react-native/icons/file-text';
 import FlashlightIcon from 'lucide-react-native/icons/flashlight';
 import GaugeIcon from 'lucide-react-native/icons/gauge';
 import HashIcon from 'lucide-react-native/icons/hash';
+import IdCardIcon from 'lucide-react-native/icons/id-card';
 import GlobeIcon from 'lucide-react-native/icons/globe';
 import HammerIcon from 'lucide-react-native/icons/hammer';
 import InboxIcon from 'lucide-react-native/icons/inbox';
@@ -47,6 +48,7 @@ import PackagePlusIcon from 'lucide-react-native/icons/package-plus';
 import PhoneIcon from 'lucide-react-native/icons/phone';
 import PlusIcon from 'lucide-react-native/icons/plus';
 import QrCodeIcon from 'lucide-react-native/icons/qr-code';
+import RepeatIcon from 'lucide-react-native/icons/repeat';
 import RulerIcon from 'lucide-react-native/icons/ruler';
 import ScanLineIcon from 'lucide-react-native/icons/scan-line';
 import SearchIcon from 'lucide-react-native/icons/search';
@@ -153,7 +155,9 @@ export type IconName =
   | 'edit'
   | 'intro'
   | 'signOut'
-  | 'star';
+  | 'star'
+  | 'subscription'
+  | 'staff';
 
 /** iOS renders the SF Symbol, Android (and iOS fallback) renders the Lucide glyph. */
 export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
@@ -230,6 +234,8 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon }> = {
   intro: { sf: 'play.circle', lucide: CirclePlayIcon },
   signOut: { sf: 'rectangle.portrait.and.arrow.right', lucide: LogOutIcon },
   star: { sf: 'star.fill', lucide: StarIcon },
+  subscription: { sf: 'arrow.triangle.2.circlepath', lucide: RepeatIcon },
+  staff: { sf: 'person.text.rectangle', lucide: IdCardIcon },
 };
 
 /** Lucide glyph for a concept; `back`/`forward` mirror in RTL (direction is fixed per launch). */

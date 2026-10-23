@@ -24,6 +24,16 @@ const ITEMS: Item[] = [
   { key: 'warranty_claims', icon: 'warrantyClaim', permission: 'warranty_claims.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'leads', icon: 'lead', permission: 'leads.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'reports', icon: 'report', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
+  // TEC-959: dealer fleet management, service subscriptions and staff cards (web: fleets, service-subscriptions, staff).
+  { key: 'fleets', icon: 'truck', permission: 'fleets.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
+  {
+    key: 'service_subscriptions',
+    icon: 'subscription',
+    permission: 'service_subscriptions.read',
+    spaces: ['bayi', 'admin'],
+    built: ['bayi', 'admin'],
+  },
+  { key: 'staff', icon: 'staff', permission: 'staff.manage', spaces: ['bayi'], built: ['bayi'] },
   { key: 'accounting', icon: 'accounting', permission: 'accounting.read', spaces: ['bayi', 'admin'] },
   { key: 'tasks', icon: 'task', permission: 'tasks.read', spaces: ['admin'], built: ['admin'] },
   { key: 'certificates', icon: 'shield', permission: 'certificates.read', spaces: ['admin'], built: ['admin'] },
