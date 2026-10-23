@@ -1,3 +1,4 @@
+import { fetch as expoFetch } from 'expo/fetch';
 import createClient from 'openapi-fetch';
 import { Platform } from 'react-native';
 
@@ -185,4 +186,38 @@ export async function uploadForm<T>(path: string, form: FormData): Promise<T> {
   }
   if (r.status < 200 || r.status >= 300) throw toApiError(r.status, r.body);
   return (r.body as { data: T }).data;
+}
+
+/**
+ * POST to a panel path (`/v1/...`, through the mobile mirror) that answers
+ * with `text/event-stream` (the AI assistant, TEC-960). Uses `expo/fetch`
+ * explicitly: its `Response.body` is a ReadableStream that delivers chunks as
+ * they arrive on Hermes / the New Architecture (React Native's XHR-based
+ * fetch buffers the whole body). Same auth, refresh and 426 handling as
+ * `api`; the caller reads `body` (or `text()` when there is no stream).
+ */
+export async function panelStream(path: string, body: unknown, signal: AbortSignal) {
+  const t0 = getTokens();
+  if (t0 && t0.accessExpiresAt - Date.now() < REFRESH_MARGIN_MS) await refreshTokens();
+  const url = `${API_URL}${PANEL_MIRROR_PREFIX}${path.replace(/^\/v1\//, '')}`;
+  const send = () => {
+    const headers: Record<string, string> = {
+      ...contractHeaders(),
+      Accept: 'text/event-stream',
+      'Content-Type': 'application/json',
+    };
+    const t = getTokens();
+    if (t) headers.Authorization = `Bearer ${t.access}`;
+    return expoFetch(url, { method: 'POST', headers, body: JSON.stringify(body ?? {}), signal });
+  };
+  let res = await send();
+  if (res.status === 401 && getTokens() && (await refreshTokens())) res = await send();
+  if (res.status === 426) {
+    const payload = await res.json().catch(() => undefined);
+    useAppStatus.getState().setUpdateRequired({
+      code: payload?.error?.code === 'UPDATE_REQUIRED' ? 'UPDATE_REQUIRED' : 'MOBILE_API_VERSION_UNSUPPORTED',
+      storeUrl: payload?.data?.store_urls?.[Platform.OS] ?? null,
+    });
+  }
+  return res;
 }
