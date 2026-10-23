@@ -299,6 +299,21 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, q.Limit, q.Offset))
 }
 
+// Get returns one appointment (TEC-961) inside the same reach as List:
+// appointments.read scope and the active brand; anything else is 404.
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.svc.Get(r.Context(), caller(r), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}
+
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var body usecase.CreateInput
 	if !decode(w, r, &body) {

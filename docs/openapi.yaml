@@ -26018,6 +26018,26 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /v1/appointments/{uuid}:
+    get:
+      tags: [Appointments]
+      operationId: getAppointment
+      summary: Get one appointment
+      description: >-
+        TEC-961: one appointment inside the same reach as GET /v1/appointments
+        (appointments.read scope, active brand, appointments module on). An
+        appointment of another brand or outside the read scope is 404.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: uuid, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Appointment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeAppointment" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Appointments]
       operationId: patchAppointment
