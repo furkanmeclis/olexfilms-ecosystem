@@ -16897,6 +16897,71 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/measurements/devices/smartptg/curves/{serial}:
+    get:
+      tags: [Measurements]
+      operationId: getSmartPTGCurve
+      summary: Get the factory curve file of a SmartPTG / NexPTG gauge
+      description: >-
+        TEC-934. The vendor's per-serial factory curve `{serial}.dat`, served
+        as is (still encrypted, `IV:Base64(AES-128-CBC(csv))`; the app
+        decrypts). The backend fetches it server side from the configured
+        vendor sources (`SMARTPTG_CURVE_SOURCES`, plain http first) and keeps
+        it in the object store (`smartptg/curves/{serial}.dat`), so a vendor
+        outage does not break gauges. Misses are remembered for
+        `SMARTPTG_CURVE_NOT_FOUND_TTL` (1 h). The curve is vendor data, not
+        tenant data. The app reaches it through the mobile mirror
+        (`/v1/mobile/panel/measurements/...`). Requires `measurements.read` or
+        `measurements.write`; no module flag (a gauge keeps working, K28).
+        Immutable per serial: `Cache-Control: private, max-age=31536000,
+        immutable` with an ETag (`If-None-Match` answers 304). Room for
+        later variants (e.g. `?model=` or a JSON decoding) without changing
+        this shape.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: serial
+          in: path
+          required: true
+          description: Gauge serial, 1–9 digits (leading zeros ignored).
+          schema: { type: string, pattern: "^[0-9]{1,9}$" }
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Raw (encrypted) curve file
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: private, max-age=31536000, immutable
+            ETag:
+              schema: { type: string }
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "304":
+          description: Not modified (ETag matches)
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          description: >-
+            No stored copy and every vendor source failed (code
+            CURVE_SOURCE_UNAVAILABLE, `Retry-After: 60`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /v1/measurements/{uuid}:
     get:
       tags: [Measurements]

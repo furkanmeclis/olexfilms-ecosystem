@@ -42,6 +42,7 @@ type Config struct {
 	Leads      LeadsConfig
 	AI         AIConfig
 	Places     PlacesConfig
+	SmartPTG   SmartPTGConfig
 }
 
 // PlacesConfig is the Google Places API (New) key of the dealer showcase
@@ -105,6 +106,16 @@ type LeadsConfig struct {
 type ShortURLsConfig struct {
 	PublicRateLimit  int
 	PublicRateWindow time.Duration
+}
+
+// SmartPTGConfig is the factory curve proxy of SmartPTG / NexPTG gauges
+// (TEC-934). CurveSources are ordered URL templates with one %s (the
+// serial); empty = the built-in vendor list. Misses are remembered
+// CurveNotFoundTTL so the vendor is not hammered.
+type SmartPTGConfig struct {
+	CurveSources     []string
+	CurveTimeout     time.Duration
+	CurveNotFoundTTL time.Duration
 }
 
 // GlorianConfig is the outbound Inventory API connection to the Glorian hub
@@ -505,6 +516,11 @@ func Load() (Config, error) {
 			AppStoreURLAndroid:   getEnv("MOBILE_APP_STORE_URL_ANDROID", ""),
 			AppVersionRequired:   getBool("MOBILE_APP_VERSION_REQUIRED", false),
 			AppUserAgentProducts: splitCSV(getEnv("MOBILE_APP_UA_PRODUCTS", "OlexFilms")),
+		},
+		SmartPTG: SmartPTGConfig{
+			CurveSources:     splitCSV(getEnv("SMARTPTG_CURVE_SOURCES", "")),
+			CurveTimeout:     getDuration("SMARTPTG_CURVE_TIMEOUT", 8*time.Second),
+			CurveNotFoundTTL: getDuration("SMARTPTG_CURVE_NOT_FOUND_TTL", time.Hour),
 		},
 		Glorian: GlorianConfig{
 			Enabled:        getBool("GLORIAN_INVENTORY_ENABLED", false),

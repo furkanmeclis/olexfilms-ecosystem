@@ -895,6 +895,18 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		measurementPDFQueue, pdfrender.ParseFontMode(cfg.Gotenberg.Fonts), log)
 	_ = docSvc.RegisterLoader(docmodel.KindMeasurement, measurementPDF.DocumentLoader())
 	measurementsmodule.RegisterPDFRoutes(mux, measurementshandler.NewPDF(measurementPDF), tokens, loader, deps.Queries, featureSvc)
+	// TEC-934: SmartPTG factory curves fetched from the vendor server side,
+	// kept in the object store (smartptg/curves/{serial}.dat).
+	var curveStore measurementsusecase.CurveStore
+	if deps.Storage != nil {
+		curveStore = deps.Storage
+	}
+	smartptgCurves := measurementsusecase.NewCurves(curveStore, nil, measurementsusecase.CurveConfig{
+		Sources:     cfg.SmartPTG.CurveSources,
+		Timeout:     cfg.SmartPTG.CurveTimeout,
+		NotFoundTTL: cfg.SmartPTG.CurveNotFoundTTL,
+	}, log)
+	measurementsmodule.RegisterCurveRoutes(mux, measurementshandler.NewCurves(smartptgCurves), tokens, loader, deps.Queries)
 	// TEC-503 (F5-08c): e-invoice drafts, preview, numbering, archive (XML
 	// + PDF on the docs queue), void mark and settings.
 	einvoicemodule.RegisterRoutes(mux, einvoicehandler.New(einvoiceSvc, deps.Queries), tokens, loader, deps.Queries,

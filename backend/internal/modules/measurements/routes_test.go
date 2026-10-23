@@ -115,3 +115,20 @@ func TestMeasurementPDFRouteRefusesPortal(t *testing.T) {
 		t.Fatalf("without token = %d, want 401", rec.Code)
 	}
 }
+
+// TEC-934: the curve proxy needs a token; the path does not collide with
+// GET /v1/measurements/{uuid}.
+func TestCurveRouteNeedsToken(t *testing.T) {
+	tokens, err := jwt.NewManager("test-secret-test-secret-test-secret", time.Minute, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	RegisterPanelRoutes(mux, handler.New(nil), tokens, noLoader{}, nil, nil)
+	RegisterCurveRoutes(mux, handler.NewCurves(nil), tokens, noLoader{}, nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, httptest.NewRequest("GET", "/v1/measurements/devices/smartptg/curves/32475", nil))
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("without token = %d, want 401", rec.Code)
+	}
+}

@@ -110,6 +110,8 @@ x-backend-environment: &backend-environment
   MOBILE_APP_STORE_URL_ANDROID: ${MOBILE_APP_STORE_URL_ANDROID:-}
   MOBILE_APP_VERSION_REQUIRED: ${MOBILE_APP_VERSION_REQUIRED:-false}
   MOBILE_APP_UA_PRODUCTS: ${MOBILE_APP_UA_PRODUCTS:-OlexFilms}
+  # SmartPTG factory curve proxy (TEC-934): empty = built-in vendor list.
+  SMARTPTG_CURVE_SOURCES: ${SMARTPTG_CURVE_SOURCES:-}
   # AI assistant (F4): provider + keys only from env; no credentials = AI
   # disabled. AI_PROVIDER anthropic | openai (OpenAI-compatible, TEC-636).
   AI_PROVIDER: ${AI_PROVIDER:-anthropic}
