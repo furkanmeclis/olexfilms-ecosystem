@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Playwright chromium henüz ubuntu-26.04 desteklemiyor
     defaults:
       run:
         working-directory: frontend
