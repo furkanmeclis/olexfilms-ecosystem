@@ -32,6 +32,8 @@ Kaynak: `docs/superpowers/specs/2026-10-17-mobile-premium-ui-design.md` (spec) v
 - `check-placeholders.mjs` yalnızca literal `<Input`'u tarar; `TextInput`/sarmalayıcılar, `placeholder=""`, `{...rest}` ve yorum içi tırnak durumları kapsam dışı.
 - Şifre placeholder'ı ("Şifreni gir") talimat gibi; düzenleme sayfasındaki salt-okunur telefon alanının placeholder'ı hiç görünmez.
 
+**Durum (TEC-961):** RTL chevron maddesi dışındakiler kapatıldı. on-media rengi `--color-on-media` token'ında; dağıtım hedefi iOS 16.4 (Expo modül podspec'leri) ve SF Symbols 5 isteyen `truck.box`, `gauge.with.dots.needle.67percent`, `photo.badge.plus` için `minIOS: 17` ile Lucide yedeği çizilir (expo-symbols iOS'ta bilinmeyen sembolde `fallback` çizmez, boş kalır; `src/ui/icons.test.ts` denetler). Listedeki diğer semboller iOS 16.1 ve öncesi. Sayım ikonu `task`, stok boş durumu `stock`; ipucu ikonları üst hizalı; placeholder kontrolü `TextInput`, boş placeholder, yorum ve spread'i kapsar. RTL chevron aynalaması yine cihazda (Arapça) doğrulanmalı.
+
 ## Cihazda çalıştırma notları
 
 - iPhone UDID `00008140-000C28DA1AF1801C`, imza Team `N5T7KH96U3`; `ios/` gitignore'da, prebuild sonrası `DEVELOPMENT_TEAM` eklenir.

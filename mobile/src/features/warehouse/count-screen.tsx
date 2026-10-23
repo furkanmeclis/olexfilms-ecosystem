@@ -143,7 +143,7 @@ export function CountScreen() {
       <Screen refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={refreshAll} />}>
         <Card>
           <View className="flex-row items-center gap-2 pb-1">
-            <Icon name="order" tone="primary" size={18} />
+            <Icon name="task" tone="primary" size={18} />
             <Text variant="headline" className="flex-1" numberOfLines={2}>
               {c.warehouse.name}
             </Text>

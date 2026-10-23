@@ -90,7 +90,8 @@ export function EditCustomerSheet({ customer, onClose }: { customer: CustomerDet
           <Input label={t('tax_office')} placeholder={t('placeholder_tax_office')} value={taxOffice} onChangeText={setTaxOffice} error={errors.tax_office} />
         </>
       ) : null}
-      <Input label={t('phone')} placeholder={t('placeholder_phone', { ns: 'common' })} value={customer.phone ?? ''} editable={false} hint={t('phone_locked')} />
+      {/* Read-only: the placeholder only shows when the customer has no phone, so it says that instead of an example number. */}
+      <Input label={t('phone')} placeholder={t('phone_none')} value={customer.phone ?? ''} editable={false} hint={t('phone_locked')} />
     </Sheet>
   );
 }
