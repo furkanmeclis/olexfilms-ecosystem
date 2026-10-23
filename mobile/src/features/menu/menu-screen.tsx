@@ -7,7 +7,7 @@ import type { IconName } from '@/ui/icons';
 import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 
-type Item = { key: string; icon: IconName; permission?: string; spaces: SpaceKind[]; built?: SpaceKind[] };
+type Item = { key: string; icon: IconName; permission?: string | string[]; spaces: SpaceKind[]; built?: SpaceKind[] };
 
 /**
  * Menu rows appear only with the permission (and so the module) behind them:
@@ -27,7 +27,7 @@ const ITEMS: Item[] = [
   { key: 'accounting', icon: 'accounting', permission: 'accounting.read', spaces: ['bayi', 'admin'] },
   { key: 'tasks', icon: 'task', permission: 'tasks.read', spaces: ['admin'], built: ['admin'] },
   { key: 'certificates', icon: 'shield', permission: 'certificates.read', spaces: ['admin'], built: ['admin'] },
-  { key: 'pricing', icon: 'accounting', permission: 'pricing.discipline.read', spaces: ['admin'], built: ['admin'] },
+  { key: 'pricing', icon: 'accounting', permission: ['pricing.recommended.read', 'pricing.discipline.read'], spaces: ['admin'], built: ['admin'] },
   { key: 'occupancy', icon: 'calendar', permission: 'appointments.read', spaces: ['admin'], built: ['admin'] },
   { key: 'performance', icon: 'chart', permission: 'performance.read', spaces: ['admin'], built: ['admin'] },
   { key: 'measurements', icon: 'measure', permission: 'measurements.read', spaces: ['admin'], built: ['admin'] },
@@ -37,7 +37,8 @@ const ITEMS: Item[] = [
 export function MenuScreen({ space }: { space: SpaceKind }) {
   const { t } = useTranslation();
   const me = useSession((s) => s.me);
-  const can = (p?: string) => !p || !!me?.user.is_super_admin || !!me?.permissions.includes(p);
+  const can = (p?: string | string[]) =>
+    !p || !!me?.user.is_super_admin || [p].flat().some((k) => !!me?.permissions.includes(k));
   const items = ITEMS.filter((i) => i.spaces.includes(space) && can(i.permission));
 
   return (

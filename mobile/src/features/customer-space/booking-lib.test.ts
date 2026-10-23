@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { addDaysIso, dayState, formatSlotTime, isoDateInZone, uuidParam } from './booking-lib.ts';
+import {
+  addDaysIso,
+  dayState,
+  dealerPlace,
+  dedupeDealers,
+  filterPastDealers,
+  filterPublicDealers,
+  formatSlotTime,
+  isoDateInZone,
+  parseRetryAfter,
+  uuidParam,
+} from './booking-lib.ts';
 
 describe('addDaysIso', () => {
   it('crosses month and year ends', () => {
@@ -46,5 +57,49 @@ describe('isoDateInZone', () => {
   });
   it('falls back on a bad zone', () => {
     assert.match(isoDateInZone(new Date(), 'Nope/Zone'), /^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('public dealer search', () => {
+  const rows = [
+    { uuid: 'a', name: 'Işık Oto', city: 'İstanbul', district: 'Şişli', accepts_appointments: true },
+    { uuid: 'b', name: 'Kapalı Bayi', city: 'İstanbul', district: 'Kadıköy', accepts_appointments: false },
+    { uuid: 'c', name: 'Ege Film', city: 'İzmir', district: 'Bornova', accepts_appointments: true },
+  ];
+
+  it('keeps only dealers that accept appointments', () => {
+    assert.deepEqual(filterPublicDealers(rows, '').map((d) => d.uuid), ['a', 'c']);
+  });
+
+  it('matches name, city and district, Turkish-aware', () => {
+    assert.deepEqual(filterPublicDealers(rows, 'istanbul').map((d) => d.uuid), ['a']);
+    assert.deepEqual(filterPublicDealers(rows, 'SİŞLİ').map((d) => d.uuid), ['a']);
+    assert.deepEqual(filterPublicDealers(rows, 'isik').map((d) => d.uuid), ['a']);
+    assert.deepEqual(filterPublicDealers(rows, 'bornova').map((d) => d.uuid), ['c']);
+    assert.deepEqual(filterPublicDealers(rows, 'yok'), []);
+  });
+
+  it('shows district and city', () => {
+    assert.equal(filterPublicDealers(rows, 'ege')[0].place, 'Bornova, İzmir');
+    assert.equal(dealerPlace({ city: 'Ankara', district: '' }), 'Ankara');
+  });
+
+  it('dedupes against past dealers', () => {
+    const past = [{ uuid: 'a', name: 'Işık Oto' }];
+    assert.deepEqual(dedupeDealers(past, filterPublicDealers(rows, '')).map((d) => d.uuid), ['c']);
+  });
+
+  it('filters past dealers by text', () => {
+    const past = [{ uuid: 'a', name: 'Işık Oto' }, { uuid: 'x', name: 'Zeta' }];
+    assert.deepEqual(filterPastDealers(past, 'ışık').map((d) => d.uuid), ['a']);
+    assert.equal(filterPastDealers(past, '').length, 2);
+  });
+});
+
+describe('parseRetryAfter', () => {
+  it('reads seconds only', () => {
+    assert.equal(parseRetryAfter('7'), 7);
+    assert.equal(parseRetryAfter(null), null);
+    assert.equal(parseRetryAfter('Wed, 21 Oct 2026 07:28:00 GMT'), null);
   });
 });

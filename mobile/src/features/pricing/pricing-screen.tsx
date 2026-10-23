@@ -23,14 +23,6 @@ type Item<P extends keyof paths> = paths[P] extends {
 type Recommended = Item<'/v1/tenant/pricing/recommended/current'>;
 type Discipline = Item<'/v1/pricing/discipline'>;
 
-/**
- * `/v1/tenant/pricing/recommended/current` is not in the mobile panel mirror
- * allowlist yet (it answers 404), so the recommended prices tab stays off.
- * Turn this on once the backend allowlist has `tenant/pricing`
- * (waiting for the product owner's approval).
- */
-const MIRROR_READY = false;
-
 type Tab = 'recommended' | 'discipline';
 type Over = 'all' | 'over';
 
@@ -182,7 +174,7 @@ function DisciplineList({ header }: { header: React.ReactElement }) {
  */
 export function PricingScreen() {
   const { t } = useTranslation('governance');
-  const canRecommended = useCan('pricing.recommended.read') && MIRROR_READY;
+  const canRecommended = useCan('pricing.recommended.read');
   const canDiscipline = useCan('pricing.discipline.read');
   const [tab, setTab] = useState<Tab>('recommended');
   const tabs = [

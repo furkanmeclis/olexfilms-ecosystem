@@ -7,7 +7,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-nat
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import type { components } from '@/core/api/schema';
-import { errorMessage } from '@/core/i18n';
+import { errorMessage, i18n } from '@/core/i18n';
 import { vehicleLabel } from '@/features/services/lib';
 import { ErrorState, Section } from '@/features/services/ui';
 import { Button } from '@/ui/button';
@@ -22,7 +22,11 @@ import {
   addDaysIso,
   BOOKING_MAX_AHEAD_DAYS,
   BOOKING_WINDOW_DAYS,
+  type BookingDealer,
   dayState,
+  dedupeDealers,
+  filterPastDealers,
+  filterPublicDealers,
   formatDayLabel,
   formatSlotTime,
   isoDate,
@@ -30,6 +34,7 @@ import {
   uuidParam,
   type DayState,
 } from './booking-lib';
+import { fetchPublicDealers } from './public-dealers';
 import { type PortalServiceItem, type PortalVehicle, retryPortal, useFleetRoles } from './lib';
 
 type Slot = components['schemas']['AppointmentSlot'];
@@ -276,12 +281,14 @@ function VehiclePicker({ value, onChange }: { value: string | null; onChange: (u
 }
 
 /**
- * Dealers the customer already has services with (the mobile portal mirror
- * has no public dealer search yet: it needs the product owner's approval).
- * A dealer that does not take portal bookings answers 404 in the time step.
+ * Pick a dealer: the ones the customer already has services with, then every
+ * dealer of the brand that takes bookings (public list, filtered on the device
+ * by name, city or district). A dealer without portal bookings answers 404 in
+ * the time step.
  */
 function DealerPicker({ onPick }: { onPick: (d: Dealer) => void }) {
   const { t } = useTranslation('customer');
+  const [text, setText] = useState('');
   const q = useQuery({
     queryKey: ['portal', 'appointments', 'dealers'],
     retry: retryPortal,
@@ -297,8 +304,14 @@ function DealerPicker({ onPick }: { onPick: (d: Dealer) => void }) {
       return items;
     },
   });
-  const dealers = useMemo(() => {
-    const seen = new Map<string, Dealer>();
+  const pub = useQuery({
+    queryKey: ['public', 'dealers', 'nearby', i18n.language],
+    queryFn: ({ signal }) => fetchPublicDealers(signal),
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+  const past = useMemo(() => {
+    const seen = new Map<string, BookingDealer>();
     for (const s of q.data ?? []) {
       if (s.organization?.type === 'dealer' && s.organization.uuid && !seen.has(s.organization.uuid)) {
         seen.set(s.organization.uuid, { uuid: s.organization.uuid, name: s.organization.name });
@@ -306,34 +319,64 @@ function DealerPicker({ onPick }: { onPick: (d: Dealer) => void }) {
     }
     return [...seen.values()];
   }, [q.data]);
+  const pastShown = useMemo(() => filterPastDealers(past, text), [past, text]);
+  const allShown = useMemo(
+    () => dedupeDealers(past, filterPublicDealers(pub.data ?? [], text)),
+    [past, pub.data, text],
+  );
 
-  if (q.isPending) return <RowsSkeleton />;
-  if (q.error) return <ErrorState error={q.error} onRetry={() => void q.refetch()} />;
-  if (dealers.length === 0) {
-    return (
-      <Text variant="callout" tone="muted" className="px-4 py-4">
-        {t('booking_no_dealers')}
-      </Text>
-    );
-  }
+  const row = (d: BookingDealer, last: boolean) => (
+    <Pressable
+      key={d.uuid}
+      accessibilityRole="button"
+      onPress={() => onPick({ uuid: d.uuid, name: d.name })}
+      className={cn('min-h-14 flex-row items-center gap-3 px-4 py-3 active:opacity-80', !last && 'border-b border-border')}>
+      <Icon name="location" tone="muted-foreground" size={20} />
+      <View className="flex-1">
+        <Text variant="headline" numberOfLines={1}>
+          {d.name}
+        </Text>
+        {d.place ? (
+          <Text variant="footnote" tone="muted" numberOfLines={1}>
+            {d.place}
+          </Text>
+        ) : null}
+      </View>
+      <Icon name="forward" tone="muted-foreground" size={16} />
+    </Pressable>
+  );
+
   return (
     <>
-      {dealers.map((d, i) => (
-        <Pressable
-          key={d.uuid}
-          accessibilityRole="button"
-          onPress={() => onPick(d)}
-          className={cn(
-            'min-h-14 flex-row items-center gap-3 px-4 py-3 active:opacity-80',
-            i < dealers.length - 1 && 'border-b border-border',
-          )}>
-          <Icon name="location" tone="muted-foreground" size={20} />
-          <Text variant="headline" className="flex-1" numberOfLines={1}>
-            {d.name}
+      <View className="px-4 pb-2 pt-3">
+        <Input label={t('booking_dealer_search_label')} value={text} onChangeText={setText} placeholder={t('booking_dealer_search_placeholder')} autoCapitalize="none" />
+      </View>
+      {q.isPending ? (
+        <RowsSkeleton />
+      ) : q.error ? (
+        <ErrorState error={q.error} onRetry={() => void q.refetch()} />
+      ) : pastShown.length > 0 ? (
+        <>
+          <Text variant="footnote" tone="muted" className="px-4 pb-1 pt-2">
+            {t('booking_dealers_past')}
           </Text>
-          <Icon name="forward" tone="muted-foreground" size={16} />
-        </Pressable>
-      ))}
+          {pastShown.map((d, i) => row(d, i === pastShown.length - 1))}
+        </>
+      ) : null}
+      <Text variant="footnote" tone="muted" className="px-4 pb-1 pt-3">
+        {t('booking_dealers_all')}
+      </Text>
+      {pub.isPending ? (
+        <RowsSkeleton />
+      ) : pub.error ? (
+        <ErrorState error={pub.error} onRetry={() => void pub.refetch()} />
+      ) : allShown.length > 0 ? (
+        allShown.map((d, i) => row(d, i === allShown.length - 1))
+      ) : (
+        <Text variant="callout" tone="muted" className="px-4 py-4">
+          {text ? t('booking_no_dealers_match') : t('booking_no_dealers')}
+        </Text>
+      )}
     </>
   );
 }
