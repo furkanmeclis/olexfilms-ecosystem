@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { api, unwrap } from '@/core/api/client';
+import { isApiError } from '@/core/api/errors';
 
 import { addDays, type Appointment, ymd } from './lib';
 
@@ -22,20 +23,14 @@ export async function loadRange(from: Date, to: Date) {
   return items.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
 }
 
-const DAY_MS = 86_400_000;
-
-/** One booking by uuid. The API has no single-get, so a wide window around today is read from the network. */
-export async function findAppointment(uuid: string, at?: string) {
-  // The hint (start time of the booking) narrows the search to a few days.
-  const hint = at ? new Date(at).getTime() : NaN;
-  if (!Number.isNaN(hint)) {
-    const near = await loadRange(new Date(hint - 3 * DAY_MS), new Date(hint + 3 * DAY_MS));
-    const hit = near.find((a) => a.uuid === uuid);
-    if (hit) return hit;
+/** One booking by uuid (GET /v1/appointments/{uuid}); null when it is gone or out of reach (404). */
+export async function getAppointment(uuid: string): Promise<Appointment | null> {
+  try {
+    return await unwrap(api.GET('/v1/appointments/{uuid}', { params: { path: { uuid } } }));
+  } catch (e) {
+    if (isApiError(e) && e.status === 404) return null;
+    throw e;
   }
-  const now = Date.now();
-  const all = await loadRange(new Date(now - 90 * DAY_MS), new Date(now + 365 * DAY_MS));
-  return all.find((a) => a.uuid === uuid) ?? null;
 }
 
 export const AVAILABILITY_DAYS = 14;

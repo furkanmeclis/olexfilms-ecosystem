@@ -10,8 +10,11 @@ import (
 
 // MobilePanelMirrorPrefixes is the allowlist of panel path segments exposed to
 // mobile sessions. Each entry matches itself and descendants at a slash boundary;
-// tenant/organizations, tenant/modules, tenant/pricing and the accounting/* entries
-// are the two-segment prefixes. All other prefixes are denied.
+// tenant/organizations, tenant/modules and tenant/pricing are the two-segment prefixes.
+// auth/step-up/password and auth/step-up/totp (TEC-961) let a mobile session earn
+// the same per-user step-up grant the web dialog earns (same verification, rate
+// limit and audit); the step-up status and passkey routes stay web only.
+// All other prefixes are denied.
 var MobilePanelMirrorPrefixes = []string{
 	"services", "service-pdfs", "warranty-certificates", "customers", "vehicles",
 	"warranties", "warranty-claims", "orders", "quotes", "stock", "stock-transfers",
@@ -19,7 +22,7 @@ var MobilePanelMirrorPrefixes = []string{
 	"catalog", "vehicle-catalog", "plate-formats", "performance", "tasks", "leads",
 	"pricing", "certificates", "photo-standard", "service-catalog", "geo",
 	"announcements", "stats", "tenant/organizations", "tenant/modules", "tenant/pricing", "delivery-methods",
-	"certificate-warnings",
+	"certificate-warnings", "auth/step-up/password", "auth/step-up/totp",
 	// TEC-957: mobile accounting reads cari accounts, their entries, the category
 	// labels and disputes (open/resolve); the brand center reads e-invoices. The
 	// rest of /v1/accounting (accounts, reports, exports, collections, payments,

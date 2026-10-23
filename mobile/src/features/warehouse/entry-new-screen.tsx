@@ -65,16 +65,22 @@ export function EntryNewScreen() {
                 { value: 'generate_new', label: t('entry_mode.generate_new') },
               ]}
             />
-            <View className="flex-row items-center gap-2">
-              <Icon name="barcode" tone="muted-foreground" size={16} />
+            <View className="flex-row items-start gap-2">
+              {/* Decorative; top-aligned with the first line when the hint wraps. */}
+              <View className="pt-[3px]" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <Icon name="barcode" tone="muted-foreground" size={16} />
+              </View>
               <Text variant="callout" tone="muted" className="flex-1">
                 {t('entries.mode_hint_center')}
               </Text>
             </View>
           </>
         ) : (
-          <View className="flex-row items-center gap-2">
-            <Icon name="scan" tone="muted-foreground" size={16} />
+          <View className="flex-row items-start gap-2">
+            {/* Decorative; top-aligned with the first line when the hint wraps. */}
+            <View className="pt-[3px]" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <Icon name="scan" tone="muted-foreground" size={16} />
+            </View>
             <Text variant="callout" tone="muted" className="flex-1">
               {t('entries.mode_hint_distributor')}
             </Text>

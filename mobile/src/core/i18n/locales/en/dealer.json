@@ -193,6 +193,7 @@
   "customer_shared_note": "Shared customer: only empty fields can be filled.",
   "company_name": "Company name",
   "phone_locked": "The phone number is the account key and can't be changed here.",
+  "phone_none": "No phone number on file",
   "vehicle_edit": "Edit vehicle",
   "invalid.email": "Enter a valid e-mail.",
   "invalid.company_name": "Enter the company name.",
