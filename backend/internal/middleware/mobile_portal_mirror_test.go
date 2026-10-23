@@ -113,6 +113,11 @@ func TestMobilePortalMirrorRefusals(t *testing.T) {
 		{"portal token", http.MethodGet, "/v1/mobile/portal/vehicles/x", f.token(t, jwt.AudiencePortal, jwt.MobileKindCustomer), true, http.StatusForbidden},
 		{"panel token", http.MethodGet, "/v1/mobile/portal/vehicles/x", f.token(t, jwt.AudiencePanel, ""), true, http.StatusForbidden},
 		{"ai denied", http.MethodGet, "/v1/mobile/portal/ai/status", customer, true, http.StatusNotFound},
+		// TEC-960 opens panel ai/* children on the panel mirror; the portal mirror keeps refusing ai.
+		{"ai conversations denied", http.MethodPost, "/v1/mobile/portal/ai/conversations", customer, true, http.StatusNotFound},
+		{"ai messages denied", http.MethodPost, "/v1/mobile/portal/ai/conversations/x/messages", customer, true, http.StatusNotFound},
+		{"ai actions denied", http.MethodPost, "/v1/mobile/portal/ai/actions/x/confirm", customer, true, http.StatusNotFound},
+		{"ai pending denied", http.MethodGet, "/v1/mobile/portal/ai/pending-actions", customer, true, http.StatusNotFound},
 		{"oauth denied", http.MethodGet, "/v1/mobile/portal/oauth/authorize", customer, true, http.StatusNotFound},
 		{"dot segment", http.MethodGet, "/v1/mobile/portal/vehicles/%2E%2E/x", customer, true, http.StatusNotFound},
 		{"bare prefix", http.MethodGet, "/v1/mobile/portal/", customer, true, http.StatusNotFound},

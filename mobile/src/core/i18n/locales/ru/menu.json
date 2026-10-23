@@ -10,6 +10,9 @@
   "tasks": "Задачи",
   "announcements": "Объявления",
   "warranties": "Гарантии",
+  "campaigns": "Кампании",
+  "assistant": "ИИ-ассистент",
+  "ai_actions": "Ожидающие ИИ-действия",
   "disputes": "Претензии",
   "einvoices": "Электронные счета"
 }

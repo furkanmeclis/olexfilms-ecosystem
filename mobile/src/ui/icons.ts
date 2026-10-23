@@ -71,6 +71,10 @@ import MinusIcon from 'lucide-react-native/icons/minus';
 import WrenchIcon from 'lucide-react-native/icons/wrench';
 import XIcon from 'lucide-react-native/icons/x';
 import ChevronLeftIcon from 'lucide-react-native/icons/chevron-left';
+import SendIcon from 'lucide-react-native/icons/send';
+import SparklesIcon from 'lucide-react-native/icons/sparkles';
+import CircleArrowUpIcon from 'lucide-react-native/icons/circle-arrow-up';
+import CircleStopIcon from 'lucide-react-native/icons/circle-stop';
 import ChevronRightIcon from 'lucide-react-native/icons/chevron-right';
 import type { SFSymbol } from 'expo-symbols';
 import { I18nManager } from 'react-native';
@@ -157,6 +161,10 @@ export type IconName =
   | 'intro'
   | 'signOut'
   | 'star'
+  | 'campaign'
+  | 'assistant'
+  | 'send'
+  | 'stop'
   | 'subscription'
   | 'staff'
   | 'remove';
@@ -241,6 +249,10 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon; minIOS?
   intro: { sf: 'play.circle', lucide: CirclePlayIcon },
   signOut: { sf: 'rectangle.portrait.and.arrow.right', lucide: LogOutIcon },
   star: { sf: 'star.fill', lucide: StarIcon },
+  campaign: { sf: 'paperplane', lucide: SendIcon },
+  assistant: { sf: 'sparkles', lucide: SparklesIcon },
+  send: { sf: 'arrow.up.circle.fill', lucide: CircleArrowUpIcon },
+  stop: { sf: 'stop.circle.fill', lucide: CircleStopIcon },
   subscription: { sf: 'arrow.triangle.2.circlepath', lucide: RepeatIcon },
   staff: { sf: 'person.text.rectangle', lucide: IdCardIcon },
   remove: { sf: 'minus', lucide: MinusIcon },

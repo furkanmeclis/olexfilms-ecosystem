@@ -33,6 +33,7 @@ var MobilePanelMirrorPrefixes = []string{
 	"dealer-prices", "product-sales", "purchases", "suppliers",
 	// TEC-959: dealer fleet management, service subscriptions and staff cards.
 	"fleets", "service-subscriptions", "staff-profiles",
+	"campaigns", "consents", "ai/status", "ai/conversations", "ai/actions", "ai/pending-actions",
 }
 
 type mobilePanelMirrorKey struct{}

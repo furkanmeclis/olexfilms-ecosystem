@@ -111,7 +111,9 @@ func TestMobilePanelMirrorDenied(t *testing.T) {
 		"accounting/opening-balances", "accounting/carix", "accounting/disputesx", "accounting/entriesx",
 		"accounting/categoriesx", "einvoicesx", "einvoice", "staff-payments", "dealer-pricesx",
 		"dealer-price", "dealer-sales", "product-salesx", "product", "purchasesx", "purchase",
-		"suppliersx", "supplier", "dealer-accounting"}
+		"suppliersx", "supplier", "dealer-accounting", "ai/usage", "ai/usage/summary", "ai/statusx",
+		"ai/conversationsx", "ai/actionsx", "ai/pending-actionsx", "ai/other", "platform/ai/settings",
+		"campaignsx", "consentsx"}
 	for _, path := range paths {
 		for _, suffix := range []string{"", "/child"} {
 			req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+suffix, nil)
@@ -329,6 +331,38 @@ func TestMobilePanelMirrorTEC959SiblingsDenied(t *testing.T) {
 			if rec.Code != http.StatusNotFound {
 				t.Errorf("%s = %d", path+suffix, rec.Code)
 			}
+		}
+	}
+}
+
+func TestMobilePanelMirrorTEC960Allowed(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"campaigns",
+		"campaigns/approvals",
+		"campaigns/" + id,
+		"campaigns/" + id + "/approve",
+		"campaigns/" + id + "/request-changes",
+		"consents",
+		"consents/pending",
+		"ai/status",
+		"ai/conversations",
+		"ai/conversations/" + id + "/messages",
+		"ai/actions/" + id + "/confirm",
+		"ai/pending-actions",
+		"ai/pending-actions/" + id + "/cancel",
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
 		}
 	}
 }

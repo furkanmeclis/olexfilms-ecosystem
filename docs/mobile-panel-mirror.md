@@ -32,6 +32,11 @@ accounting + dealer_accounting modülü ve sırasıyla `dealer_pricing.write`,
 `tenant/organizations`, `tenant/modules`, `tenant/pricing`, `accounting/cari`,
 `accounting/entries`, `accounting/categories`, `accounting/disputes` (TEC-957).
 
+TEC-960: `campaigns`, `consents` ve `/v1/ai` altından yalnızca `ai/status`,
+`ai/conversations`, `ai/actions` (asistan sohbeti, SSE) ile `ai/pending-actions`
+(onay kuyruğu). `ai/usage` ve diğer `ai/*` yolları kapalıdır; portal aynası
+(`/v1/mobile/portal/*`) `ai`'yı reddetmeye devam eder.
+
 Önek ve alt yolları tam segment sınırında eşleşir (`ordersx` eşleşmez).
 Diğer tüm önekler 404 `NOT_FOUND` döndürür; `auth`, `platform`, `portal`,
 `public`, `mobile`, `oauth`, `realtime`, `ai`, `impersonation` ve yukarıdakiler dışındaki
