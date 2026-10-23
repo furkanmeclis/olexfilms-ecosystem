@@ -412,5 +412,12 @@
   "home.appointments_hint": "Gələcək və keçmiş görüşləriniz",
   "home.dealers_hint": "Yaxınlığınızdakı səlahiyyətli dilerlər",
   "home.profile_hint": "Adınız, diliniz və sessiyalarınız",
-  "home.book": "Görüş təyin edin"
+  "home.book": "Görüş təyin edin",
+  "nav.title": "Müştəri portalı",
+  "nav.toggle": "Menyunu aç/bağla",
+  "nav.group.general": "Ümumi",
+  "nav.group.vehicles": "Avtomobillər və xidmətlər",
+  "nav.group.account": "Hesab",
+  "fleet.nav.group.fleet": "Avtopark",
+  "fleet.nav.group.account": "Hesab və hesabatlar"
 }

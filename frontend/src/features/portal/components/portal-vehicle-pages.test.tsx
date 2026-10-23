@@ -69,6 +69,7 @@ import {
   whatsappUrl,
 } from "@/features/portal/lib/portal-vehicles";
 
+import { withSidebar } from "@/test/sidebar";
 import { isPortalNavActive, PortalNav } from "./portal-nav";
 import { PortalServiceView } from "./portal-service-detail";
 import {
@@ -245,14 +246,14 @@ describe("portal vehicle helpers", () => {
 describe("PortalNav", () => {
   it("does not show the fleet menu to a customer session", async () => {
     portal.me.mockResolvedValue({ user: {}, roles: ["customer"] });
-    await render(createElement(PortalNav));
+    await render(withSidebar(createElement(PortalNav)));
     expect(container.textContent).not.toContain("portal.fleet.nav.vehicles");
     expect(container.textContent).not.toContain("portal.fleet.nav.account");
     expect(container.textContent).toContain("portal.nav.vehicles");
   });
 
   it("links home, vehicles, warranties and dealers and marks the current page", async () => {
-    await render(createElement(PortalNav));
+    await render(withSidebar(createElement(PortalNav)));
     const links = Array.from(container.querySelectorAll("nav a"));
     expect(links.map((a) => a.getAttribute("href"))).toEqual([
       "/portal",
@@ -272,7 +273,7 @@ describe("PortalNav", () => {
 
   it("switches to fleet-only sections for a fleet session", async () => {
     portal.me.mockResolvedValue({ user: {}, roles: ["fleet"] });
-    await render(createElement(PortalNav));
+    await render(withSidebar(createElement(PortalNav)));
     const links = Array.from(container.querySelectorAll("nav a"));
     expect(links.map((a) => a.getAttribute("href"))).toEqual([
       "/portal",
@@ -285,6 +286,15 @@ describe("PortalNav", () => {
     ]);
     expect(container.textContent).not.toContain("portal.nav.dealers");
     expect(container.textContent).not.toContain("portal.nav.contracts");
+    // TEC-868: grouped sections with their labels.
+    const groups = Array.from(container.querySelectorAll("[data-group]"));
+    expect(groups.map((g) => g.getAttribute("data-group"))).toEqual([
+      "general",
+      "fleet",
+      "account",
+    ]);
+    expect(container.textContent).toContain("portal.fleet.nav.group.fleet");
+    expect(container.textContent).toContain("portal.fleet.nav.group.account");
   });
 });
 

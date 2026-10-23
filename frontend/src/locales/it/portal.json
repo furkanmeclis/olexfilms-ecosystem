@@ -412,5 +412,12 @@
   "home.appointments_hint": "I tuoi appuntamenti futuri e passati",
   "home.dealers_hint": "Rivenditori autorizzati vicino a te",
   "home.profile_hint": "Il tuo nome, la lingua e le sessioni",
-  "home.book": "Prenota un appuntamento"
+  "home.book": "Prenota un appuntamento",
+  "nav.title": "Portale clienti",
+  "nav.toggle": "Mostra/nascondi menu",
+  "nav.group.general": "Panoramica",
+  "nav.group.vehicles": "Veicoli e servizi",
+  "nav.group.account": "Account",
+  "fleet.nav.group.fleet": "Flotta",
+  "fleet.nav.group.account": "Conto e report"
 }

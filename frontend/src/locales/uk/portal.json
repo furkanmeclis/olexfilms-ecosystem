@@ -412,5 +412,12 @@
   "home.appointments_hint": "Ваші майбутні та минулі записи",
   "home.dealers_hint": "Авторизовані дилери поруч із вами",
   "home.profile_hint": "Ваше ім'я, мова та сеанси",
-  "home.book": "Записатися"
+  "home.book": "Записатися",
+  "nav.title": "Клієнтський портал",
+  "nav.toggle": "Показати/сховати меню",
+  "nav.group.general": "Загальне",
+  "nav.group.vehicles": "Автомобілі та послуги",
+  "nav.group.account": "Обліковий запис",
+  "fleet.nav.group.fleet": "Автопарк",
+  "fleet.nav.group.account": "Рахунок і звіти"
 }

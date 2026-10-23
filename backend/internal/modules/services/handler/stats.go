@@ -19,3 +19,15 @@ func (h *Handler) TopVehicleModels(w http.ResponseWriter, r *http.Request) {
 	}
 	response.JSON(w, r, http.StatusOK, out)
 }
+
+// HomeOverview (GET /v1/stats/overview?period=30d|90d|12m|all, TEC-868): the
+// active organization's most serviced car models, most used products and
+// latest completed services (dealer home "Analiz").
+func (h *Handler) HomeOverview(w http.ResponseWriter, r *http.Request) {
+	out, err := h.svc.HomeOverview(r.Context(), caller(r), r.URL.Query().Get("period"), time.Now().UTC())
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, out)
+}

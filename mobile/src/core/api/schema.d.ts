@@ -11922,6 +11922,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stats/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Home overview of the active organization (dealer home analytics)
+         * @description TEC-868. Most serviced car models (top 5), most used products (top 5) of the completed services in the period and the 10 latest completed services. Only the active organization's own services count, inside the domain brand (K20), whatever wider reach the services.read grant has; own / assigned grants see the services they created. recent_services ignores the period.
+         */
+        get: operations["getHomeOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/stats/top-vehicle-models": {
         parameters: {
             query?: never;
@@ -25425,6 +25445,70 @@ export interface components {
              */
             since: string | null;
             items: components["schemas"]["TopVehicle"][];
+        };
+        OverviewCarBrand: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            has_logo: boolean;
+            /** @description /brand-logos/{uuid} with a ?v= cache-buster when a logo exists. */
+            logo_url: string;
+        };
+        OverviewVehicle: {
+            /** Format: int64 */
+            service_count: number;
+            car_brand: components["schemas"]["OverviewCarBrand"];
+            car_model: components["schemas"]["VehicleCatalogRef"];
+        };
+        OverviewProduct: {
+            /** Format: uuid */
+            uuid: string;
+            sku: string;
+            name: string;
+            unit_type: string;
+            /**
+             * Format: int64
+             * @description Completed services the product was used in.
+             */
+            service_count: number;
+            /** Format: int64 */
+            quantity: number;
+            /** @description Total meters, decimal string (14,2). */
+            meters: string;
+        };
+        OverviewRecentService: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            plate: string | null;
+            plate_country: string | null;
+            model_year: number | null;
+            package: string | null;
+            /** @description Distinct product names of the service, sorted. */
+            products: string[];
+            /** Format: date-time */
+            completed_at: string;
+            /** Format: uuid */
+            vehicle_uuid: string;
+            car_brand: components["schemas"]["OverviewCarBrand"];
+            car_model: components["schemas"]["VehicleCatalogRef"];
+        };
+        HomeOverview: {
+            period: components["schemas"]["StatsPeriod"];
+            /**
+             * Format: date-time
+             * @description Lower completed_at bound of the top lists; null for all.
+             */
+            since: string | null;
+            top_vehicles: components["schemas"]["OverviewVehicle"][];
+            top_products: components["schemas"]["OverviewProduct"][];
+            recent_services: components["schemas"]["OverviewRecentService"][];
+        };
+        EnvelopeHomeOverview: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["HomeOverview"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeTopVehicles: {
             /** @enum {boolean} */
@@ -51519,6 +51603,33 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["UnprocessableEntity"];
+        };
+    };
+    getHomeOverview: {
+        parameters: {
+            query?: {
+                /** @description Defaults to 90d here. */
+                period?: components["schemas"]["StatsPeriod"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Overview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeHomeOverview"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     getTopVehicleModels: {

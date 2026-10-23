@@ -33,5 +33,17 @@
   "top_vehicles.empty": "Aucune prestation terminée sur cette période.",
   "top_vehicles.error": "Impossible de charger les statistiques.",
   "top_vehicles.rank": "Rang",
-  "top_vehicles.name": "Véhicule"
+  "top_vehicles.name": "Véhicule",
+  "overview.title": "Analyse",
+  "overview.description": "Véhicules les plus traités et produits les plus utilisés d’après vos services terminés.",
+  "overview.period_label": "Période",
+  "overview.top_vehicles": "Véhicules les plus traités",
+  "overview.top_products": "Produits les plus utilisés",
+  "overview.count": "Services",
+  "overview.empty": "Aucun service terminé sur cette période.",
+  "overview.recent_title": "Derniers véhicules traités",
+  "overview.recent_empty": "Aucun service terminé pour le moment.",
+  "overview.view_all": "Tous les services",
+  "overview.error": "Impossible de charger l’analyse.",
+  "overview.no_plate": "Sans immatriculation"
 }

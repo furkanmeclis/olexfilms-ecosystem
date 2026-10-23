@@ -92,3 +92,67 @@ WHERE s.brand_id = sqlc.arg(brand_id)
 GROUP BY p.id, p.uuid, p.sku, p.name, p.unit_type
 ORDER BY service_count DESC, lower(p.name), p.id
 LIMIT sqlc.arg(row_limit);
+
+-- TEC-868: home overview of one organization (dealer home "Analiz"). Only
+-- the services of org_id (the active organization), inside the domain brand
+-- (K20); created_by_user_id narrows own / assigned grants. Completed
+-- services only; period_from NULL means all time.
+
+-- name: OverviewTopCarModels :many
+SELECT cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cb.logo_object_key AS car_brand_logo_key,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       COUNT(*)::bigint AS service_count
+FROM services s
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.brand_id = sqlc.arg(brand_id)
+  AND s.organization_id = sqlc.arg(org_id)
+  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR s.created_by_user_id = sqlc.narg(created_by_user_id))
+  AND s.completed_at IS NOT NULL
+  AND (sqlc.narg(period_from)::timestamptz IS NULL OR s.completed_at >= sqlc.narg(period_from)::timestamptz)
+GROUP BY cb.id, cb.uuid, cb.name, cb.logo_object_key, cm.id, cm.uuid, cm.name
+ORDER BY service_count DESC, lower(cb.name), lower(cm.name), cm.id
+LIMIT sqlc.arg(row_limit);
+
+-- name: OverviewTopProducts :many
+SELECT p.uuid AS product_uuid, p.sku, p.name AS product_name, p.unit_type,
+       COUNT(DISTINCT si.service_id)::bigint AS service_count,
+       COALESCE(SUM(si.quantity), 0)::bigint AS quantity,
+       COALESCE(SUM(si.meters), 0)::numeric(14,2)::text AS meters
+FROM service_items si
+JOIN services s ON s.id = si.service_id
+JOIN products p ON p.id = si.product_id
+WHERE s.brand_id = sqlc.arg(brand_id)
+  AND s.organization_id = sqlc.arg(org_id)
+  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR s.created_by_user_id = sqlc.narg(created_by_user_id))
+  AND s.completed_at IS NOT NULL
+  AND (sqlc.narg(period_from)::timestamptz IS NULL OR s.completed_at >= sqlc.narg(period_from)::timestamptz)
+GROUP BY p.id, p.uuid, p.sku, p.name, p.unit_type
+ORDER BY service_count DESC, lower(p.name), p.id
+LIMIT sqlc.arg(row_limit);
+
+-- name: OverviewRecentCompletedServices :many
+SELECT s.uuid, s.service_no, s.plate, s.plate_country, s.model_year, s.package,
+       s.completed_at::timestamptz AS completed_at,
+       v.uuid AS vehicle_uuid,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       cb.logo_object_key AS car_brand_logo_key,
+       cm.uuid AS car_model_uuid, cm.name AS car_model_name,
+       ARRAY(
+           SELECT DISTINCT p.name
+           FROM service_items si
+           JOIN products p ON p.id = si.product_id
+           WHERE si.service_id = s.id
+           ORDER BY p.name
+       )::text[] AS product_names
+FROM services s
+JOIN vehicles v ON v.id = s.vehicle_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+WHERE s.brand_id = sqlc.arg(brand_id)
+  AND s.organization_id = sqlc.arg(org_id)
+  AND (sqlc.narg(created_by_user_id)::bigint IS NULL OR s.created_by_user_id = sqlc.narg(created_by_user_id))
+  AND s.completed_at IS NOT NULL
+ORDER BY s.completed_at DESC, s.id DESC
+LIMIT sqlc.arg(row_limit);

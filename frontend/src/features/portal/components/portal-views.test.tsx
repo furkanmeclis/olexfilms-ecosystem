@@ -45,6 +45,7 @@ vi.mock("@/features/ai-assistant/hooks/use-portal-assistant-visible", () => ({
 }));
 
 import { PortalHome } from "./portal-home";
+import { withSidebar } from "@/test/sidebar";
 import { PortalNav } from "./portal-nav";
 import { PortalLoading } from "./portal-page";
 
@@ -61,7 +62,11 @@ async function flush() {
 async function mount(component: typeof PortalHome | typeof PortalNav) {
   await act(async () => {
     root.render(
-      createElement(QueryClientProvider, { client }, createElement(component)),
+      createElement(
+        QueryClientProvider,
+        { client },
+        withSidebar(createElement(component)),
+      ),
     );
   });
   await flush();

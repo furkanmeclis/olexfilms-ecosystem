@@ -33,5 +33,17 @@
   "top_vehicles.empty": "Keine abgeschlossenen Services in diesem Zeitraum.",
   "top_vehicles.error": "Statistiken konnten nicht geladen werden.",
   "top_vehicles.rank": "Rang",
-  "top_vehicles.name": "Fahrzeug"
+  "top_vehicles.name": "Fahrzeug",
+  "overview.title": "Analyse",
+  "overview.description": "Am häufigsten bearbeitete Fahrzeuge und meistgenutzte Produkte aus Ihren abgeschlossenen Services.",
+  "overview.period_label": "Zeitraum",
+  "overview.top_vehicles": "Am häufigsten bearbeitete Fahrzeuge",
+  "overview.top_products": "Meistgenutzte Produkte",
+  "overview.count": "Services",
+  "overview.empty": "Keine abgeschlossenen Services in diesem Zeitraum.",
+  "overview.recent_title": "Zuletzt bearbeitete Fahrzeuge",
+  "overview.recent_empty": "Noch keine abgeschlossenen Services.",
+  "overview.view_all": "Alle Services",
+  "overview.error": "Analyse konnte nicht geladen werden.",
+  "overview.no_plate": "Ohne Kennzeichen"
 }

@@ -253,3 +253,148 @@ func (s *Service) ActivitySummary(ctx context.Context, c Caller, from, to time.T
 	}
 	return out, nil
 }
+
+// TEC-868: home overview of the active organization (dealer home "Analiz"):
+// most serviced car models, most used products and the latest completed
+// services. Only the active organization's own services count, inside the
+// domain brand (K20), whatever wider reach the grant has; own / assigned
+// grants see the services they created.
+
+// OverviewTopLimit caps the two ranked lists; OverviewRecentLimit the
+// latest completed services.
+const (
+	OverviewTopLimit    = 5
+	OverviewRecentLimit = 10
+)
+
+// OverviewVehicle is one row of the most serviced car models.
+type OverviewVehicle struct {
+	ServiceCount int64         `json:"service_count"`
+	CarBrand     StatsCarBrand `json:"car_brand"`
+	CarModel     StatsCarModel `json:"car_model"`
+}
+
+// OverviewRecentService is one latest completed service.
+type OverviewRecentService struct {
+	UUID         uuid.UUID     `json:"uuid"`
+	ServiceNo    string        `json:"service_no"`
+	Plate        *string       `json:"plate"`
+	PlateCountry *string       `json:"plate_country"`
+	ModelYear    *int16        `json:"model_year"`
+	Package      *string       `json:"package"`
+	Products     []string      `json:"products"`
+	CompletedAt  time.Time     `json:"completed_at"`
+	VehicleUUID  uuid.UUID     `json:"vehicle_uuid"`
+	CarBrand     StatsCarBrand `json:"car_brand"`
+	CarModel     StatsCarModel `json:"car_model"`
+}
+
+// Overview is the response of GET /v1/stats/overview.
+type Overview struct {
+	Period         string                  `json:"period"`
+	Since          *time.Time              `json:"since"`
+	TopVehicles    []OverviewVehicle       `json:"top_vehicles"`
+	TopProducts    []ActivityProduct       `json:"top_products"`
+	RecentServices []OverviewRecentService `json:"recent_services"`
+}
+
+// overviewOrg returns the organization whose services the overview reads:
+// the active organization, when the services.read grant reaches it.
+func overviewOrg(c Caller) (int64, error) {
+	if c.Org.InternalID == 0 || c.Org.BrandID == 0 || !c.Principal.HasPermission(rbac.PermServicesRead) {
+		return 0, ErrForbidden
+	}
+	if !c.Filter.AllowsOrg(c.Org.InternalID, c.Org.BrandID) {
+		return 0, ErrForbidden
+	}
+	return c.Org.InternalID, nil
+}
+
+// HomeOverview builds the overview of period (default 90d) for the active
+// organization of c.
+func (s *Service) HomeOverview(ctx context.Context, c Caller, period string, now time.Time) (Overview, error) {
+	period = strings.TrimSpace(period)
+	if period == "" {
+		period = StatsPeriod90d
+	}
+	since, err := StatsSince(period, now)
+	if err != nil {
+		return Overview{}, err
+	}
+	orgID, err := overviewOrg(c)
+	if err != nil {
+		return Overview{}, err
+	}
+	var createdBy pgtype.Int8
+	if c.Filter.UserOnly() {
+		createdBy = pgtype.Int8{Int64: c.Filter.UserID, Valid: true}
+	}
+	sinceArg := pgtype.Timestamptz{}
+	if since != nil {
+		sinceArg = pgtype.Timestamptz{Time: *since, Valid: true}
+	}
+	brand := func(id uuid.UUID, name string, key pgtype.Text) StatsCarBrand {
+		k := ""
+		if key.Valid {
+			k = key.String
+		}
+		return StatsCarBrand{UUID: id, Name: name, HasLogo: k != "", LogoURL: vcuc.BrandLogoURL(id, k)}
+	}
+
+	vehicles, err := s.q.OverviewTopCarModels(ctx, db.OverviewTopCarModelsParams{
+		BrandID: c.Org.BrandID, OrgID: orgID, CreatedByUserID: createdBy, PeriodFrom: sinceArg, RowLimit: OverviewTopLimit,
+	})
+	if err != nil {
+		return Overview{}, fmt.Errorf("services: overview car models: %w", err)
+	}
+	products, err := s.q.OverviewTopProducts(ctx, db.OverviewTopProductsParams{
+		BrandID: c.Org.BrandID, OrgID: orgID, CreatedByUserID: createdBy, PeriodFrom: sinceArg, RowLimit: OverviewTopLimit,
+	})
+	if err != nil {
+		return Overview{}, fmt.Errorf("services: overview products: %w", err)
+	}
+	recent, err := s.q.OverviewRecentCompletedServices(ctx, db.OverviewRecentCompletedServicesParams{
+		BrandID: c.Org.BrandID, OrgID: orgID, CreatedByUserID: createdBy, RowLimit: OverviewRecentLimit,
+	})
+	if err != nil {
+		return Overview{}, fmt.Errorf("services: overview recent: %w", err)
+	}
+
+	out := Overview{
+		Period: period, Since: since,
+		TopVehicles:    make([]OverviewVehicle, 0, len(vehicles)),
+		TopProducts:    make([]ActivityProduct, 0, len(products)),
+		RecentServices: make([]OverviewRecentService, 0, len(recent)),
+	}
+	for _, v := range vehicles {
+		out.TopVehicles = append(out.TopVehicles, OverviewVehicle{
+			ServiceCount: v.ServiceCount,
+			CarBrand:     brand(v.CarBrandUuid, v.CarBrandName, v.CarBrandLogoKey),
+			CarModel:     StatsCarModel{UUID: v.CarModelUuid, Name: v.CarModelName},
+		})
+	}
+	for _, p := range products {
+		out.TopProducts = append(out.TopProducts, ActivityProduct{
+			UUID: p.ProductUuid, SKU: p.Sku, Name: p.ProductName, UnitType: p.UnitType,
+			ServiceCount: p.ServiceCount, Quantity: p.Quantity, Meters: p.Meters,
+		})
+	}
+	for _, r := range recent {
+		row := OverviewRecentService{
+			UUID: r.Uuid, ServiceNo: r.ServiceNo,
+			Plate: textPtr(r.Plate), PlateCountry: textPtr(r.PlateCountry), Package: textPtr(r.Package),
+			Products: r.ProductNames, CompletedAt: r.CompletedAt.Time, VehicleUUID: r.VehicleUuid,
+			CarBrand: brand(r.CarBrandUuid, r.CarBrandName, r.CarBrandLogoKey),
+			CarModel: StatsCarModel{UUID: r.CarModelUuid, Name: r.CarModelName},
+		}
+		if row.Products == nil {
+			row.Products = []string{}
+		}
+		if r.ModelYear.Valid {
+			y := r.ModelYear.Int16
+			row.ModelYear = &y
+		}
+		out.RecentServices = append(out.RecentServices, row)
+	}
+	return out, nil
+}

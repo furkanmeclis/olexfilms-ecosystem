@@ -412,5 +412,12 @@
   "home.appointments_hint": "Your upcoming and past appointments",
   "home.dealers_hint": "Authorized dealers near you",
   "home.profile_hint": "Your name, language and sessions",
-  "home.book": "Book an appointment"
+  "home.book": "Book an appointment",
+  "nav.title": "Customer portal",
+  "nav.toggle": "Toggle menu",
+  "nav.group.general": "Overview",
+  "nav.group.vehicles": "Vehicles and services",
+  "nav.group.account": "Account",
+  "fleet.nav.group.fleet": "Fleet",
+  "fleet.nav.group.account": "Account and reports"
 }

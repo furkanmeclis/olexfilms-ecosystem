@@ -12,12 +12,22 @@ import {
   Store,
   UserRound,
   Wrench,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { routes } from "@/config/routes";
 import { usePortalAssistantVisible } from "@/features/ai-assistant/hooks/use-portal-assistant-visible";
 import { portalApi } from "@/features/portal/lib/portal-client";
@@ -25,68 +35,118 @@ import {
   isPortalReadOnly,
   PORTAL_ME_KEY,
 } from "@/features/portal/lib/portal-vehicles";
-import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
 
-const ITEMS = [
-  { href: routes.portal.home, key: "portal.nav.home", icon: House },
-  { href: routes.portal.vehicles, key: "portal.nav.vehicles", icon: Car },
-  {
-    href: routes.portal.warranties,
-    key: "portal.nav.warranties",
-    icon: ShieldCheck,
-  },
-  {
-    href: routes.portal.appointments,
-    key: "portal.nav.appointments",
-    icon: CalendarClock,
-  },
-  { href: routes.portal.dealers, key: "portal.nav.dealers", icon: Store },
-  {
-    href: routes.portal.contracts,
-    key: "portal.nav.contracts",
-    icon: FileSignature,
-  },
-  // TEC-771: preferences and contracts are linked from the profile too.
-  { href: routes.portal.profile, key: "portal.nav.profile", icon: UserRound },
-] as const;
+type NavItem = { href: string; key: string; icon: LucideIcon };
+type NavGroup = { key: string; labelKey: string; items: readonly NavItem[] };
 
-const FLEET_ITEMS = [
-  { href: routes.portal.home, key: "portal.nav.home", icon: House },
+/**
+ * TEC-868: the customer menu in sections (overview, vehicles and services,
+ * account). The link order stays the one of TEC-241 / TEC-245 / TEC-327.
+ */
+const GROUPS: readonly NavGroup[] = [
   {
-    href: routes.portal.fleet.vehicles,
-    key: "portal.fleet.nav.vehicles",
-    icon: Car,
+    key: "general",
+    labelKey: "portal.nav.group.general",
+    items: [{ href: routes.portal.home, key: "portal.nav.home", icon: House }],
   },
   {
-    href: routes.portal.fleet.services,
-    key: "portal.fleet.nav.services",
-    icon: Wrench,
+    key: "vehicles",
+    labelKey: "portal.nav.group.vehicles",
+    items: [
+      { href: routes.portal.vehicles, key: "portal.nav.vehicles", icon: Car },
+      {
+        href: routes.portal.warranties,
+        key: "portal.nav.warranties",
+        icon: ShieldCheck,
+      },
+      {
+        href: routes.portal.appointments,
+        key: "portal.nav.appointments",
+        icon: CalendarClock,
+      },
+      { href: routes.portal.dealers, key: "portal.nav.dealers", icon: Store },
+    ],
   },
   {
-    href: routes.portal.fleet.warranties,
-    key: "portal.fleet.nav.warranties",
-    icon: ShieldCheck,
+    key: "account",
+    labelKey: "portal.nav.group.account",
+    items: [
+      {
+        href: routes.portal.contracts,
+        key: "portal.nav.contracts",
+        icon: FileSignature,
+      },
+      // TEC-771: preferences and contracts are linked from the profile too.
+      {
+        href: routes.portal.profile,
+        key: "portal.nav.profile",
+        icon: UserRound,
+      },
+    ],
+  },
+];
+
+/**
+ * TEC-868: the fleet menu in sections (overview, fleet, account and
+ * reports); routes and order unchanged.
+ */
+const FLEET_GROUPS: readonly NavGroup[] = [
+  {
+    key: "general",
+    labelKey: "portal.nav.group.general",
+    items: [{ href: routes.portal.home, key: "portal.nav.home", icon: House }],
   },
   {
-    href: routes.portal.fleet.account,
-    key: "portal.fleet.nav.account",
-    icon: Landmark,
+    key: "fleet",
+    labelKey: "portal.fleet.nav.group.fleet",
+    items: [
+      {
+        href: routes.portal.fleet.vehicles,
+        key: "portal.fleet.nav.vehicles",
+        icon: Car,
+      },
+      {
+        href: routes.portal.fleet.services,
+        key: "portal.fleet.nav.services",
+        icon: Wrench,
+      },
+      {
+        href: routes.portal.fleet.warranties,
+        key: "portal.fleet.nav.warranties",
+        icon: ShieldCheck,
+      },
+    ],
   },
   {
-    href: routes.portal.fleet.reports,
-    key: "portal.fleet.nav.reports",
-    icon: FileText,
+    key: "account",
+    labelKey: "portal.fleet.nav.group.account",
+    items: [
+      {
+        href: routes.portal.fleet.account,
+        key: "portal.fleet.nav.account",
+        icon: Landmark,
+      },
+      {
+        href: routes.portal.fleet.reports,
+        key: "portal.fleet.nav.reports",
+        icon: FileText,
+      },
+      {
+        href: routes.portal.profile,
+        key: "portal.nav.profile",
+        icon: UserRound,
+      },
+    ],
   },
-  { href: routes.portal.profile, key: "portal.nav.profile", icon: UserRound },
-] as const;
+];
 
 /** TEC-390: shown only while the assistant is on for the customer. */
-const ASSISTANT_ITEM = {
+const ASSISTANT_ITEM: NavItem = {
   href: routes.portal.assistant,
   key: "ai.nav_title",
   icon: Bot,
-} as const;
+};
 
 /** Whether a nav item is the current section (home matches only itself). */
 export function isPortalNavActive(href: string, pathname: string): boolean {
@@ -110,14 +170,31 @@ export function isPortalNavActive(href: string, pathname: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/** The menu groups of the session (fleet-only or customer). */
+export function portalNavGroups(
+  fleet: boolean,
+  assistant: boolean,
+): readonly NavGroup[] {
+  if (fleet) return FLEET_GROUPS;
+  if (!assistant) return GROUPS;
+  return GROUPS.map((group) =>
+    group.key === "account"
+      ? { ...group, items: [...group.items, ASSISTANT_ITEM] }
+      : group,
+  );
+}
+
 /**
- * Portal top navigation (TEC-241): home, my vehicles, my warranties; TEC-245
- * adds my contracts and notification preferences, TEC-327 my appointments.
+ * Portal navigation (TEC-241, TEC-245, TEC-327), shown in the portal
+ * sidebar (TEC-868): grouped sections with icons and the current page
+ * marked; collapses to icons on desktop and lives in a drawer on a phone.
+ * Must render inside the portal SidebarProvider.
  */
 export function PortalNav() {
   const { t } = useLocale();
   const pathname = usePathname() ?? "";
   const assistant = usePortalAssistantVisible();
+  const { isMobile, setOpenMobile } = useSidebar();
   const me = useQuery({
     queryKey: PORTAL_ME_KEY,
     queryFn: () => portalApi.me(),
@@ -125,48 +202,55 @@ export function PortalNav() {
     retry: false,
   });
   const fleet = isPortalReadOnly(me.data?.roles);
-  const baseItems = fleet ? FLEET_ITEMS : ITEMS;
-  const items =
-    !fleet && assistant ? [...baseItems, ASSISTANT_ITEM] : baseItems;
-  // TEC-771: on a phone the menu scrolls sideways; keep the current
-  // section in view after a navigation.
-  const listRef = useRef<HTMLUListElement>(null);
+  const groups = portalNavGroups(fleet, assistant);
+  const count = groups.reduce((n, g) => n + g.items.length, 0);
+  // Keep the current section in view in a long (or scrolled) menu.
+  const navRef = useRef<HTMLElement>(null);
   useEffect(() => {
-    listRef.current
+    navRef.current
       ?.querySelector<HTMLElement>('[aria-current="page"]')
       ?.scrollIntoView?.({ block: "nearest", inline: "center" });
-  }, [pathname, items.length]);
+  }, [pathname, count]);
   return (
     <nav
+      ref={navRef}
       aria-label={t("portal.nav.label")}
-      className="bg-background/95 sticky top-0 z-10 border-b backdrop-blur"
       data-testid="portal-nav"
+      className="flex min-h-0 flex-col"
     >
-      <ul
-        ref={listRef}
-        className="mx-auto flex w-full max-w-3xl min-w-0 gap-1 overflow-x-auto px-4 py-2"
-      >
-        {items.map(({ href, key, icon: Icon }) => {
-          const active = isPortalNavActive(href, pathname);
-          return (
-            <li key={href} className="shrink-0">
-              <Link
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors",
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                <Icon className="size-4" />
-                {t(key)}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      {groups.map((group) => (
+        <SidebarGroup key={group.key} data-group={group.key}>
+          <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {group.items.map(({ href, key, icon: Icon }) => {
+                const active = isPortalNavActive(href, pathname);
+                const label = t(key);
+                return (
+                  <SidebarMenuItem key={href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={label}
+                    >
+                      <Link
+                        href={href}
+                        aria-current={active ? "page" : undefined}
+                        onClick={() => {
+                          if (isMobile) setOpenMobile(false);
+                        }}
+                      >
+                        <Icon />
+                        <span>{label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      ))}
     </nav>
   );
 }

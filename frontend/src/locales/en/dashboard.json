@@ -33,5 +33,17 @@
   "top_vehicles.empty": "No completed services in this period.",
   "top_vehicles.error": "Statistics could not be loaded.",
   "top_vehicles.rank": "Rank",
-  "top_vehicles.name": "Vehicle"
+  "top_vehicles.name": "Vehicle",
+  "overview.title": "Analytics",
+  "overview.description": "Most serviced vehicles and most used products from your completed services.",
+  "overview.period_label": "Period",
+  "overview.top_vehicles": "Most serviced vehicles",
+  "overview.top_products": "Most used products",
+  "overview.count": "Services",
+  "overview.empty": "No completed services in this period.",
+  "overview.recent_title": "Recently serviced vehicles",
+  "overview.recent_empty": "No completed services yet.",
+  "overview.view_all": "All services",
+  "overview.error": "Analytics could not be loaded.",
+  "overview.no_plate": "No plate"
 }

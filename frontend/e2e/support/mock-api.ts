@@ -440,6 +440,16 @@ export class MockApi {
         items: [],
       });
     }
+    // TEC-868: dealer home analytics.
+    if (method === "GET" && path === "/v1/stats/overview") {
+      return ok({
+        period: url.searchParams.get("period") ?? "90d",
+        since: null,
+        top_vehicles: [],
+        top_products: [],
+        recent_services: [],
+      });
+    }
     if (method === "GET" && path === "/v1/search/specs") {
       return ok({ items: [], enabled: false });
     }

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { portalSession } from "@/auth-portal";
 import { routes } from "@/config/routes";
-import { PortalNav } from "@/features/portal/components/portal-nav";
+import { PortalShell } from "@/features/portal/components/portal-shell";
 
 /** Portal pages need a portal session (the panel session does not count). */
 export default async function PortalAppLayout({
@@ -14,10 +14,5 @@ export default async function PortalAppLayout({
       `${routes.portal.login}?next=${encodeURIComponent(routes.portal.home)}`,
     );
   }
-  return (
-    <>
-      <PortalNav />
-      {children}
-    </>
-  );
+  return <PortalShell>{children}</PortalShell>;
 }
