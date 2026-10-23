@@ -29,6 +29,7 @@ import FileTextIcon from 'lucide-react-native/icons/file-text';
 import FlashlightIcon from 'lucide-react-native/icons/flashlight';
 import GaugeIcon from 'lucide-react-native/icons/gauge';
 import HashIcon from 'lucide-react-native/icons/hash';
+import IdCardIcon from 'lucide-react-native/icons/id-card';
 import GlobeIcon from 'lucide-react-native/icons/globe';
 import HammerIcon from 'lucide-react-native/icons/hammer';
 import InboxIcon from 'lucide-react-native/icons/inbox';
@@ -47,6 +48,7 @@ import PackagePlusIcon from 'lucide-react-native/icons/package-plus';
 import PhoneIcon from 'lucide-react-native/icons/phone';
 import PlusIcon from 'lucide-react-native/icons/plus';
 import QrCodeIcon from 'lucide-react-native/icons/qr-code';
+import RepeatIcon from 'lucide-react-native/icons/repeat';
 import RulerIcon from 'lucide-react-native/icons/ruler';
 import ScanLineIcon from 'lucide-react-native/icons/scan-line';
 import SearchIcon from 'lucide-react-native/icons/search';
@@ -65,6 +67,7 @@ import UserRoundPlusIcon from 'lucide-react-native/icons/user-round-plus';
 import UsersIcon from 'lucide-react-native/icons/users';
 import WarehouseIcon from 'lucide-react-native/icons/warehouse';
 import StarIcon from 'lucide-react-native/icons/star';
+import MinusIcon from 'lucide-react-native/icons/minus';
 import WrenchIcon from 'lucide-react-native/icons/wrench';
 import XIcon from 'lucide-react-native/icons/x';
 import ChevronLeftIcon from 'lucide-react-native/icons/chevron-left';
@@ -161,7 +164,10 @@ export type IconName =
   | 'campaign'
   | 'assistant'
   | 'send'
-  | 'stop';
+  | 'stop'
+  | 'subscription'
+  | 'staff'
+  | 'remove';
 
 /**
  * iOS renders the SF Symbol, Android renders the Lucide glyph. The app runs
@@ -247,6 +253,9 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon; minIOS?
   assistant: { sf: 'sparkles', lucide: SparklesIcon },
   send: { sf: 'arrow.up.circle.fill', lucide: CircleArrowUpIcon },
   stop: { sf: 'stop.circle.fill', lucide: CircleStopIcon },
+  subscription: { sf: 'arrow.triangle.2.circlepath', lucide: RepeatIcon },
+  staff: { sf: 'person.text.rectangle', lucide: IdCardIcon },
+  remove: { sf: 'minus', lucide: MinusIcon },
 };
 
 /** Lucide glyph for a concept; `back`/`forward` mirror in RTL (direction is fixed per launch). */

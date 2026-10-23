@@ -6,11 +6,13 @@
   "warranty_claims": "Гарантийные обращения",
   "leads": "Лиды и предложения",
   "reports": "Отчёты",
-  "accounting": "Касса и расчёты",
+  "accounting": "Расчёты с контрагентами",
   "tasks": "Задачи",
   "announcements": "Объявления",
   "warranties": "Гарантии",
   "campaigns": "Кампании",
   "assistant": "ИИ-ассистент",
-  "ai_actions": "Ожидающие ИИ-действия"
+  "ai_actions": "Ожидающие ИИ-действия",
+  "disputes": "Претензии",
+  "einvoices": "Электронные счета"
 }

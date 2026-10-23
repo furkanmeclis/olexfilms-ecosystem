@@ -6,7 +6,7 @@
   "warranty_claims": "Garanti talepleri",
   "leads": "Lead ve teklif",
   "reports": "Raporlar",
-  "accounting": "Kasa ve cari",
+  "accounting": "Cari hesaplar",
   "tasks": "Görevler",
   "announcements": "Duyurular",
   "warranties": "Garantiler",
@@ -19,5 +19,13 @@
   "measurements": "Ölçümler",
   "campaigns": "Kampanyalar",
   "assistant": "AI asistan",
-  "ai_actions": "Onay bekleyen AI işlemleri"
+  "ai_actions": "Onay bekleyen AI işlemleri",
+  "fleets": "Filolar",
+  "service_subscriptions": "Servis abonelikleri",
+  "staff": "Personel",
+  "quick_sale": "Hızlı satış",
+  "sale_prices": "Satış fiyatlarım",
+  "purchases": "Alımlar",
+  "disputes": "İtirazlar",
+  "einvoices": "e-Fatura"
 }

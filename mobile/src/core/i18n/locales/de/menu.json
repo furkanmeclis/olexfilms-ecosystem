@@ -6,11 +6,13 @@
   "warranty_claims": "Garantiefälle",
   "leads": "Leads und Angebote",
   "reports": "Berichte",
-  "accounting": "Kasse und Konten",
+  "accounting": "Kontokorrente",
   "tasks": "Aufgaben",
   "announcements": "Mitteilungen",
   "warranties": "Garantien",
   "campaigns": "Kampagnen",
   "assistant": "KI-Assistent",
-  "ai_actions": "Ausstehende KI-Aktionen"
+  "ai_actions": "Ausstehende KI-Aktionen",
+  "disputes": "Einsprüche",
+  "einvoices": "E-Rechnungen"
 }

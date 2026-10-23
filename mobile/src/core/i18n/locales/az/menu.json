@@ -6,11 +6,13 @@
   "warranty_claims": "Zəmanət müraciətləri",
   "leads": "Lidlər və təkliflər",
   "reports": "Hesabatlar",
-  "accounting": "Kassa və hesablar",
+  "accounting": "Cari hesablar",
   "tasks": "Tapşırıqlar",
   "announcements": "Elanlar",
   "warranties": "Zəmanətlər",
   "campaigns": "Kampaniyalar",
   "assistant": "AI köməkçi",
-  "ai_actions": "Təsdiq gözləyən AI əməliyyatları"
+  "ai_actions": "Təsdiq gözləyən AI əməliyyatları",
+  "disputes": "Etirazlar",
+  "einvoices": "e-Fakturalar"
 }

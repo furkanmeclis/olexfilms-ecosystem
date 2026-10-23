@@ -106,9 +106,14 @@ func TestMobilePanelMirrorDenied(t *testing.T) {
 	paths := []string{
 		"", "auth", "platform", "portal", "public", "mobile", "oauth", "realtime", "ai", "accounting",
 		"impersonation", "unknown", "ordersx", "tenant", "tenant/settings", "tenant/organizationsx",
-		"tenant/pricing-x", "tenant/other", "certificate-warningsx", "ai/usage", "ai/usage/summary",
-		"ai/statusx", "ai/conversationsx", "ai/actionsx", "ai/pending-actionsx", "ai/other",
-		"platform/ai/settings", "campaignsx", "consentsx"}
+		"tenant/pricing-x", "tenant/other", "certificate-warningsx", "accounting/accounts",
+		"accounting/reports", "accounting/exports", "accounting/collections", "accounting/payments",
+		"accounting/opening-balances", "accounting/carix", "accounting/disputesx", "accounting/entriesx",
+		"accounting/categoriesx", "einvoicesx", "einvoice", "staff-payments", "dealer-pricesx",
+		"dealer-price", "dealer-sales", "product-salesx", "product", "purchasesx", "purchase",
+		"suppliersx", "supplier", "dealer-accounting", "ai/usage", "ai/usage/summary", "ai/statusx",
+		"ai/conversationsx", "ai/actionsx", "ai/pending-actionsx", "ai/other", "platform/ai/settings",
+		"campaignsx", "consentsx"}
 	for _, path := range paths {
 		for _, suffix := range []string{"", "/child"} {
 			req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+suffix, nil)
@@ -193,6 +198,139 @@ func TestMobilePanelMirrorAuthenticate(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 		if rec.Code != tc.status || (tc.status == http.StatusForbidden && !strings.Contains(rec.Body.String(), `"code":"REALM_FORBIDDEN"`)) {
 			t.Errorf("%s %s = %d %s", tc.realm, tc.path, rec.Code, rec.Body.String())
+		}
+	}
+}
+
+// TEC-939: the SmartPTG calibration routes ride on the existing
+// "measurements" prefix (no new mirror entry); a sibling segment is denied.
+func TestMobilePanelMirrorTEC939Calibrations(t *testing.T) {
+	for _, c := range []struct{ method, path string }{
+		{http.MethodPost, "measurements/devices/smartptg/calibrations"},
+		{http.MethodGet, "measurements/devices/smartptg/calibrations/32475"},
+	} {
+		req := httptest.NewRequest(c.method, "/v1/mobile/panel/"+c.path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = r.URL.Path == "/v1/"+c.path && r.Method == c.method
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s %s was not mirrored", c.method, c.path)
+		}
+	}
+	req := httptest.NewRequest(http.MethodPost, "/v1/mobile/panel/measurementsx/devices/smartptg/calibrations", nil)
+	rec := httptest.NewRecorder()
+	MobilePanelMirror(1, 1)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		t.Fatal("sibling prefix reached next")
+	})).ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("sibling = %d", rec.Code)
+	}
+}
+
+func TestMobilePanelMirrorTEC957Allowed(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"accounting/cari",
+		"accounting/cari/" + id,
+		"accounting/entries",
+		"accounting/categories",
+		"accounting/disputes",
+		"accounting/disputes/" + id,
+		"accounting/disputes/" + id + "/resolve",
+		"einvoices",
+		"einvoices/" + id,
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+}
+
+func TestMobilePanelMirrorTEC958Allowed(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"dealer-prices",
+		"dealer-prices/catalog",
+		"product-sales",
+		"product-sales/lookup",
+		"product-sales/" + id + "/void",
+		"purchases",
+		"suppliers",
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+}
+
+func TestMobilePanelMirrorTEC959Allowed(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"fleets",
+		"fleets/" + id,
+		"fleets/" + id + "/users",
+		"fleets/" + id + "/users/" + id + "/disable",
+		"fleets/" + id + "/vehicles/" + id,
+		"fleets/" + id + "/statement",
+		"fleets/" + id + "/reports",
+		"service-subscriptions",
+		"service-subscriptions/" + id,
+		"service-subscriptions/" + id + "/cancel-request",
+		"service-subscriptions/cancel-requests/" + id + "/approve",
+		"staff-profiles",
+		"staff-profiles/" + id,
+		"staff-profiles/" + id + "/payments",
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+}
+
+// TEC-959 siblings: only the exact segments open; the staff payment book,
+// the fleet portal and look-alike segments stay closed.
+func TestMobilePanelMirrorTEC959SiblingsDenied(t *testing.T) {
+	for _, path := range []string{"fleet", "fleetsx", "fleets-export", "service-subscription", "service-subscriptionsx",
+		"service-catalogx", "staff", "staff-profilesx", "staff-payments", "staff-payments/payroll"} {
+		for _, suffix := range []string{"", "/child"} {
+			req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+suffix, nil)
+			req.Header.Set(MobileAPIVersionHeader, "1")
+			rec := httptest.NewRecorder()
+			MobilePanelMirror(1, 1)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+				t.Fatalf("%s reached next", path+suffix)
+			})).ServeHTTP(rec, req)
+			if rec.Code != http.StatusNotFound {
+				t.Errorf("%s = %d", path+suffix, rec.Code)
+			}
 		}
 	}
 }

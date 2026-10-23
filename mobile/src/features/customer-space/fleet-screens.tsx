@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type Href, router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Alert, FlatList, RefreshControl, ScrollView, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -30,8 +30,27 @@ import { StatTile, useServiceStatusLabel } from './parts';
 
 const linksKey = ['portal', 'fleet', 'links'] as const;
 
-function Row({ title, subtitle, meta, pill }: { title: string; subtitle?: string; meta?: string; pill?: React.ReactNode }) {
-  return (
+/**
+ * Card row of the fleet lists. Shared by the customer fleet portal and the
+ * dealer fleet management screens (TEC-959); `onPress` makes it a link and
+ * `children` holds row actions.
+ */
+export function FleetRow({
+  title,
+  subtitle,
+  meta,
+  pill,
+  onPress,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  meta?: string;
+  pill?: React.ReactNode;
+  onPress?: () => void;
+  children?: React.ReactNode;
+}) {
+  const body = (
     <View className="gap-1 rounded-lg border border-border bg-card px-4 py-3">
       <View className="flex-row items-center justify-between gap-3">
         <Text variant="headline" numberOfLines={1} className="flex-1">
@@ -49,34 +68,86 @@ function Row({ title, subtitle, meta, pill }: { title: string; subtitle?: string
           {meta}
         </Text>
       ) : null}
+      {children}
     </View>
+  );
+  if (!onPress) return body;
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} className="active:opacity-80">
+      {body}
+    </Pressable>
   );
 }
 
-/** Shared paged list of the fleet screens (infinite scroll, pull to refresh, empty / error / loading). */
-function FleetList<T extends { uuid: string }>({
+type VehicleLike = Pick<FleetVehicle, 'plate' | 'car_brand' | 'car_model' | 'model_year' | 'active_warranty_count'>;
+
+/** Fleet vehicle row: plate (or model) title, model subtitle, active warranty pill. */
+export function FleetVehicleRow({ vehicle: v, meta, children }: { vehicle: VehicleLike; meta?: string; children?: React.ReactNode }) {
+  const { t } = useTranslation('customer');
+  const model = vehicleLabel(v.car_brand?.name, v.car_model?.name, v.model_year);
+  return (
+    <FleetRow
+      title={v.plate || model || t('vehicle')}
+      subtitle={v.plate ? model : undefined}
+      meta={meta}
+      pill={
+        v.active_warranty_count > 0 ? (
+          <StatusPill label={t('active_warranties_short', { count: v.active_warranty_count })} tone="done" />
+        ) : undefined
+      }>
+      {children}
+    </FleetRow>
+  );
+}
+
+/** Fleet report row: kind, period and creation date (plus an optional state pill). */
+export function FleetReportRow({ report: r, pill }: { report: Pick<FleetReport, 'period_kind' | 'period_start' | 'period_end' | 'created_at'>; pill?: React.ReactNode }) {
+  const { t, i18n } = useTranslation('customer');
+  return (
+    <FleetRow
+      title={t(`fleet_report_kind.${r.period_kind}`)}
+      subtitle={reportPeriod(r.period_start, r.period_end)}
+      meta={t('fleet_report_created', { date: formatDate(r.created_at, i18n.language) })}
+      pill={pill}
+    />
+  );
+}
+
+/**
+ * Shared paged list of the fleet screens (infinite scroll, pull to refresh,
+ * empty / error / loading). The portal and the dealer panel pass their own
+ * endpoint in `fetchPage`; `header` and `headerRight` add filters and actions.
+ */
+export function FleetList<T extends { uuid: string }>({
   title,
   queryKey,
   fetchPage,
   renderItem,
   empty,
+  header,
+  headerRight,
 }: {
   title: string;
   queryKey: readonly unknown[];
   fetchPage: (offset: number) => Promise<{ items: T[]; total: number }>;
   renderItem: (item: T) => React.ReactElement;
-  empty: { icon: IconName; title: string; body: string };
+  empty: { icon: IconName; title: string; body?: string };
+  header?: React.ReactElement;
+  headerRight?: () => React.ReactNode;
 }) {
   const list = usePortalPages(queryKey, fetchPage);
   return (
     <>
-      <Stack.Screen options={{ title }} />
+      <Stack.Screen options={{ title, headerRight }} />
       <FlatList
         data={list.items}
         keyExtractor={(i) => i.uuid}
         contentInsetAdjustmentBehavior="automatic"
         className="flex-1 bg-background"
         contentContainerClassName="gap-2.5 px-4 pb-10 pt-2"
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        ListHeaderComponent={header}
         ListEmptyComponent={
           <ListBody
             isPending={list.isPending}
@@ -109,20 +180,14 @@ export function FleetVehiclesScreen() {
       fetchPage={(offset) => unwrap(api.GET('/v1/portal/fleet/vehicles', { params: { query: { limit: PAGE_SIZE, offset } } }))}
       empty={{ icon: 'truck', title: t('fleet_vehicles_empty'), body: t('fleet_vehicles_empty_body') }}
       renderItem={(v) => (
-        <Row
-          title={v.plate || vehicleLabel(v.car_brand?.name, v.car_model?.name, v.model_year) || t('vehicle')}
-          subtitle={v.plate ? vehicleLabel(v.car_brand?.name, v.car_model?.name, v.model_year) : undefined}
+        <FleetVehicleRow
+          vehicle={v}
           meta={[
             t('service_count', { count: v.service_count }),
             v.warranty_until ? t('until', { date: formatDate(v.warranty_until, i18n.language) }) : null,
           ]
             .filter(Boolean)
             .join(' · ')}
-          pill={
-            v.active_warranty_count > 0 ? (
-              <StatusPill label={t('active_warranties_short', { count: v.active_warranty_count })} tone="done" />
-            ) : undefined
-          }
         />
       )}
     />
@@ -139,7 +204,7 @@ export function FleetServicesScreen() {
       fetchPage={(offset) => unwrap(api.GET('/v1/portal/fleet/services', { params: { query: { limit: PAGE_SIZE, offset } } }))}
       empty={{ icon: 'service', title: t('services_empty'), body: t('services_empty_body') }}
       renderItem={(s) => (
-        <Row
+        <FleetRow
           title={s.plate || s.service_no}
           subtitle={[vehicleLabel(s.car_brand_name, s.car_model_name), s.package].filter(Boolean).join(' · ')}
           meta={[s.service_no, s.dealer?.name, formatDate(s.completed_at ?? s.created_at, i18n.language)]
@@ -163,7 +228,7 @@ export function FleetWarrantiesScreen() {
       }
       empty={{ icon: 'warranty', title: t('warranties_empty'), body: t('warranties_empty_body') }}
       renderItem={(w) => (
-        <Row
+        <FleetRow
           title={w.product_name || w.public_code}
           subtitle={w.plate ?? undefined}
           meta={[
@@ -183,20 +248,14 @@ export function FleetWarrantiesScreen() {
 
 /** Generated fleet reports (read only: kind, period, creation date). */
 export function FleetReportsScreen() {
-  const { t, i18n } = useTranslation('customer');
+  const { t } = useTranslation('customer');
   return (
     <FleetList<FleetReport>
       title={t('fleet_reports')}
       queryKey={['portal', 'fleet', 'reports']}
       fetchPage={(offset) => unwrap(api.GET('/v1/portal/fleet/reports', { params: { query: { limit: PAGE_SIZE, offset } } }))}
       empty={{ icon: 'report', title: t('fleet_reports_empty'), body: t('fleet_reports_empty_body') }}
-      renderItem={(r) => (
-        <Row
-          title={t(`fleet_report_kind.${r.period_kind}`)}
-          subtitle={reportPeriod(r.period_start, r.period_end)}
-          meta={t('fleet_report_created', { date: formatDate(r.created_at, i18n.language) })}
-        />
-      )}
+      renderItem={(r) => <FleetReportRow report={r} />}
     />
   );
 }

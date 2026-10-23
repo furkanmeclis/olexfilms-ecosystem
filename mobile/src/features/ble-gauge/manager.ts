@@ -3,23 +3,53 @@
  *
  * - Created lazily on first use; when the native module is missing (Expo Go,
  *   web, an old dev build) `isGaugeAvailable()` is false and nothing loads.
- * - Scans, connects, subscribes to RX notifications, decodes frames and turns
- *   them into readings with the serial's factory curve (cached on the phone).
- * - Remembers the last gauge per user for one-tap reconnect.
+ * - Scans, connects, writes `!3` (both channels) and subscribes to RX
+ *   notifications, decodes frames and turns them into readings with the
+ *   serial's factory curve and its calibration offsets (measure.ts).
+ * - Keeps the curve on the phone and revalidates it with the backend ETag on
+ *   every connect while online.
+ * - Runs the Fe / Al zero calibration (calibration.ts) and keeps its result
+ *   per serial on the phone and in the organization's backend ledger.
+ * - Remembers the last gauge per user ("default device") for one-tap reconnect.
  */
 import type { BleManager, Device, Subscription } from '@sfourdrinier/react-native-ble-plx';
 import { PermissionsAndroid, Platform, TurboModuleRegistry } from 'react-native';
 
-import { api } from '@/core/api/client';
-import { readJSON, writeJSON } from '@/core/storage';
+import { api, unwrap } from '@/core/api/client';
+import { isApiError } from '@/core/api/errors';
+import { readJSON, storage, writeJSON } from '@/core/storage';
 
 import { BUNDLED_CURVES } from './bundled-curves';
-import { deviceModelName, frameToReading, type GaugeCurve, resolveCurve } from './curve';
+import {
+  CALIBRATION,
+  calibrationProgress,
+  calibrationTargetUm,
+  type CalibrationStep,
+  fromBackendCalibration,
+  newerCalibration,
+  offsetsOf,
+  startCalibrationStep as newCalibrationStep,
+  stepCalibration,
+  type StoredCalibration,
+  toBackendCalibration,
+  uuidV4,
+} from './calibration';
+import { type CurveResponse, deviceModelName, type GaugeCurve, type Material, resolveCurve, type StoredCurve } from './curve';
 import { adapterErrorKey, gaugeErrorKey } from './errors';
-import { base64ToBinary, createLineSplitter, decodeFrame, GAUGE_BLE, isGaugePeripheral } from './protocol';
+import { initialMeasure, type MeasureState, stepMeasure } from './measure';
+import {
+  base64ToBinary,
+  batteryPercent,
+  createLineSplitter,
+  decodeFrame,
+  GAUGE_BLE,
+  GAUGE_MODE,
+  isGaugePeripheral,
+  modeCommand,
+} from './protocol';
 import { type Commit, initialSampler, type SamplerState, samplerProgress, stepSampler } from './readings';
 import { createGeneration, createSerialConfirm, poweredOnTimeoutError, poweredOnWaitMs } from './session';
-import { type GaugeState, initialGaugeState, upsertDevice, useGauge } from './store';
+import { type GaugeState, idleCalibration, initialGaugeState, upsertDevice, useGauge } from './store';
 
 let available: boolean | null = null;
 
@@ -169,33 +199,69 @@ export async function startScan(): Promise<void> {
   }
 }
 
+/* ---------------------------------------------------------------- network */
+
+/** False only when the phone is known to be offline (then the stored copies are used without a request). */
+async function isOnline(): Promise<boolean> {
+  try {
+    // Required lazily: a build without the module still measures with the stored copies.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Network = require('expo-network') as typeof import('expo-network');
+    const state = await Network.getNetworkStateAsync();
+    return state.isConnected !== false && state.isInternetReachable !== false;
+  } catch {
+    return true;
+  }
+}
+
 /* ---------------------------------------------------------------------- curve */
 
-const curveKey = (serial: number) => `ble.gauge.curve.${serial}`;
+/** v2: the curve with its backend ETag and the TEC-939 fields (lang, zn, calVersion). */
+const curveKey = (serial: number) => `ble.gauge.curve.v2.${serial}`;
 let curve: GaugeCurve | null = null;
 let curveLoading: number | null = null;
 
+function applyCurve(c: GaugeCurve) {
+  curve = c;
+  set({
+    curve: 'ready',
+    model: deviceModelName(c.deviceType),
+    deviceType: c.deviceType,
+    calibrationTargetUm: calibrationTargetUm(c),
+  });
+  rememberGauge({ serial: c.serial, model: deviceModelName(c.deviceType) });
+}
+
+/** `"abc…"` / `W/"abc…"` → abc…: the backend ETag is the hex SHA-256 of the raw file. */
+function etagHash(etag: string | null): string | null {
+  return etag ? etag.replace(/^W\//u, '').replace(/"/gu, '') : null;
+}
+
+/**
+ * The stored copy is used at once; online, the backend is asked with its
+ * ETag (304 keeps it, a changed factory file replaces it). Without a stored
+ * copy the gauge waits for the backend, then the bundled curve.
+ */
 async function loadCurve(serial: number) {
   if (curveLoading === serial) return;
-  if (curve?.serial === serial) {
-    set({ curve: 'ready', model: deviceModelName(curve.deviceType) });
-    return;
-  }
-  const cached = readJSON<GaugeCurve>(curveKey(serial));
-  if (cached?.serial === serial) {
-    curve = cached;
-    set({ curve: 'ready', model: deviceModelName(cached.deviceType) });
-    return;
-  }
+  storage.remove(`ble.gauge.curve.${serial}`); // v1 copy (no ETag, no calX): replaced by v2
+  const stored = readJSON<StoredCurve>(curveKey(serial));
+  const cached = stored?.curve.serial === serial ? stored : null;
+  if (cached) {
+    applyCurve(cached.curve);
+    set({ curveSha256: etagHash(cached.etag) });
+  } else set({ curve: 'loading' });
   curveLoading = serial;
-  set({ curve: 'loading' });
   try {
-    const { curve: parsed } = await resolveCurve(serial, fetchBackendCurve, BUNDLED_CURVES);
-    writeJSON(curveKey(serial), parsed);
-    curve = parsed;
-    set({ curve: 'ready', model: deviceModelName(parsed.deviceType) });
+    const result = await resolveCurve(serial, fetchBackendCurve, BUNDLED_CURVES, cached, await isOnline());
+    if (useGauge.getState().serial !== serial) return; // another gauge meanwhile
+    if (result.source === 'backend' || (result.source === 'bundled' && !cached)) {
+      writeJSON(curveKey(serial), { curve: result.curve, etag: result.etag } satisfies StoredCurve);
+    }
+    applyCurve(result.curve);
+    set({ curveSha256: etagHash(result.etag) });
   } catch {
-    set({ curve: 'error', error: 'ble.error.curve' });
+    if (!cached) set({ curve: 'error', error: 'ble.error.curve' });
   } finally {
     curveLoading = null;
   }
@@ -203,20 +269,22 @@ async function loadCurve(serial: number) {
 
 /**
  * Raw `.dat` of a serial from our backend (TEC-934), through the mobile
- * mirror with the session's bearer. Null on 404; throws on anything else.
+ * mirror with the session's bearer, conditional on the stored ETag.
+ * Throws on a network error or 5xx.
  */
-async function fetchBackendCurve(serial: number): Promise<string | null> {
+async function fetchBackendCurve(serial: number, etag: string | null): Promise<CurveResponse> {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), 15_000);
   try {
     const { data, response } = await api.GET('/v1/measurements/devices/smartptg/curves/{serial}', {
-      params: { path: { serial: String(serial) } },
+      params: { path: { serial: String(serial) }, header: etag ? { 'If-None-Match': etag } : undefined },
       parseAs: 'text',
       signal: abort.signal,
     });
-    if (response.status === 404) return null;
+    if (response.status === 304) return { status: 'not_modified' };
+    if (response.status === 404) return { status: 'not_found' };
     if (!response.ok || typeof data !== 'string') throw new Error(`curve_http_${response.status}`);
-    return data;
+    return { status: 'ok', text: data, etag: response.headers.get('ETag') };
   } finally {
     clearTimeout(timer);
   }
@@ -231,11 +299,185 @@ export function retryCurve() {
   }
 }
 
+/* ---------------------------------------------------------------- calibration */
+
+const calKey = (serial: number) => `ble.gauge.cal.${serial}`;
+
+/** The calibration kept on this phone for a serial (offline fallback of the device screen). */
+export function localCalibration(serial: number | null | undefined): StoredCalibration | null {
+  return serial != null ? readJSON<StoredCalibration>(calKey(serial)) : null;
+}
+
+function keepCalibration(c: StoredCalibration) {
+  writeJSON(calKey(c.serial), c);
+  if (useGauge.getState().serial === c.serial) set({ calibration: c });
+}
+
+async function uploadCalibration(c: StoredCalibration): Promise<StoredCalibration> {
+  const saved = await unwrap(api.POST('/v1/measurements/devices/smartptg/calibrations', { body: toBackendCalibration(c) }));
+  return { ...c, synced: true, by: saved.created_by.name || c.by };
+}
+
+/** The organization's current calibration of a serial; null when it has none. Throws offline. */
+export async function fetchBackendCalibration(serial: number): Promise<StoredCalibration | null> {
+  try {
+    const data = await unwrap(
+      api.GET('/v1/measurements/devices/smartptg/calibrations/{serial}', { params: { path: { serial: String(serial) } } }),
+    );
+    return fromBackendCalibration(data);
+  } catch (e) {
+    if (isApiError(e) && e.status === 404) return null;
+    throw e;
+  }
+}
+
+/**
+ * Offsets of a serial: the phone's copy at once; online, a pending upload is
+ * sent and the organization's latest calibration replaces an older local one.
+ */
+async function loadCalibration(serial: number) {
+  let local = localCalibration(serial);
+  set({ calibration: local });
+  if (!(await isOnline())) return;
+  if (local && !local.synced) {
+    try {
+      local = await uploadCalibration(local);
+      keepCalibration(local);
+    } catch {
+      // Stays pending; retried on the next connect.
+    }
+  }
+  try {
+    const remote = await fetchBackendCalibration(serial);
+    const best = newerCalibration(local, remote);
+    if (best && best !== local) keepCalibration(best);
+  } catch {
+    // Offline or no permission: the local copy stays.
+  }
+}
+
+let calStep: CalibrationStep | null = null;
+/** Id of the running step, so a late timer of an earlier step does nothing. */
+let calStepId = 0;
+let calTimer: ReturnType<typeof setTimeout> | null = null;
+
+function stopCalibrationTimer() {
+  if (calTimer) clearTimeout(calTimer);
+  calTimer = null;
+}
+
+/**
+ * Starts the Fe or the Al step of the zero calibration: the foil lies on the
+ * steel / aluminium plate and the probe sits on it. The gauge is switched to
+ * that channel (`!1` / `!2`, §6.1); 10 steady frames finish the step, 10 bad
+ * ones or 5 s fail it.
+ */
+export function startCalibrationStep(material: Material) {
+  const g = useGauge.getState();
+  if (g.status !== 'connected' || !curve || g.serial !== curve.serial) {
+    set({ calibrationRun: { ...g.calibrationRun, phase: 'error', material, error: 'not_ready' } });
+    return;
+  }
+  stopCalibrationTimer();
+  void writeMode(material === 'fe' ? GAUGE_MODE.fe : GAUGE_MODE.al);
+  calStep = newCalibrationStep(curve, material, Date.now());
+  const id = (calStepId += 1);
+  set({ calibrationRun: { ...g.calibrationRun, phase: 'measuring', material, progress: 0, error: null } });
+  calTimer = setTimeout(() => {
+    if (calStep && calStepId === id) failCalibration('timeout');
+  }, CALIBRATION.timeoutMs + 250);
+}
+
+function failCalibration(reason: 'unstable' | 'timeout') {
+  calStep = null;
+  stopCalibrationTimer();
+  void writeMode(GAUGE_MODE.both);
+  set((s) => ({ calibrationRun: { ...s.calibrationRun, phase: 'error', error: reason, progress: 0 } }));
+}
+
+/** Frames go here while a calibration step runs; normal sampling pauses. */
+function onCalibrationFrame(frame: NonNullable<ReturnType<typeof decodeFrame>>) {
+  if (!calStep || !curve) return;
+  const out = stepCalibration(calStep, frame, curve, Date.now());
+  if (out.kind === 'progress') {
+    calStep = out.step;
+    const progress = calibrationProgress(out.step);
+    if (progress !== useGauge.getState().calibrationRun.progress) {
+      set((s) => ({ calibrationRun: { ...s.calibrationRun, progress } }));
+    }
+    return;
+  }
+  if (out.kind === 'error') {
+    failCalibration(out.reason);
+    return;
+  }
+  const material = calStep.material;
+  calStep = null;
+  stopCalibrationTimer();
+  void writeMode(GAUGE_MODE.both);
+  set((s) => ({
+    calibrationRun: {
+      ...s.calibrationRun,
+      phase: 'idle',
+      progress: 1,
+      error: null,
+      results: { ...s.calibrationRun.results, [material]: { offset: out.offset, samples: out.samples } },
+    },
+  }));
+}
+
+/** Stores the run's offsets (phone first, then the backend) and resets the wizard. */
+export function finishCalibration(): StoredCalibration | null {
+  const g = useGauge.getState();
+  const { fe, al } = g.calibrationRun.results;
+  if (g.serial == null || (!fe && !al) || !curve) return null;
+  const c: StoredCalibration = {
+    serial: g.serial,
+    fe: fe?.offset ?? null,
+    al: al?.offset ?? null,
+    targetUm: calibrationTargetUm(curve),
+    calibratedAt: new Date().toISOString(),
+    samples: { fe: fe?.samples ?? [], al: al?.samples ?? [] },
+    clientId: uuidV4(),
+    synced: false,
+    by: null,
+  };
+  keepCalibration(c);
+  set({ calibrationRun: idleCalibration });
+  void uploadCalibration(c)
+    .then(keepCalibration)
+    .catch(() => undefined); // pending: sent on the next connect
+  return c;
+}
+
+/** Leaves the wizard without storing anything. */
+export function cancelCalibration() {
+  const running = calStep != null;
+  calStep = null;
+  stopCalibrationTimer();
+  if (running) void writeMode(GAUGE_MODE.both);
+  set({ calibrationRun: idleCalibration });
+}
+
 /* ------------------------------------------------------------ reading stream */
 
 type CommitListener = (c: Commit) => void;
 const commitListeners = new Set<CommitListener>();
+/** Screens over the measuring form (device, calibration) hold commits back. */
+let commitPauses = 0;
+
+/** Holds steady readings back while the returned release is not called. */
+export function pauseCommits(): () => void {
+  commitPauses += 1;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    commitPauses -= 1;
+  };
+}
 let sampler: SamplerState = initialSampler;
+let measure: MeasureState = initialMeasure;
 
 /** Steady readings, one per probe contact (see readings.ts stepSampler). */
 export function subscribeCommits(listener: CommitListener): () => void {
@@ -247,46 +489,105 @@ export function subscribeCommits(listener: CommitListener): () => void {
 
 const splitter = createLineSplitter();
 const serialConfirm = createSerialConfirm(2);
+let lastFrameAt = 0;
 
 function onLine(line: string) {
   const frame = decodeFrame(line);
   if (!frame) return;
+  lastFrameAt = Date.now();
   // A serial counts (and may start a curve download) only after two frames agree.
   const serial = serialConfirm.push(frame.serial);
   if (serial != null && useGauge.getState().serial !== serial) {
     set({ serial });
+    rememberGauge({ serial });
     void loadCurve(serial);
+    void loadCalibration(serial);
   }
-  const reading = frameToReading(frame, curve, null, Date.now());
-  const step = stepSampler(sampler, reading);
-  sampler = step.state;
-  set({ reading, battery: frame.batteryVoltage, progress: samplerProgress(sampler) });
-  if (step.commit) for (const l of commitListeners) l(step.commit);
+  const battery = {
+    battery: frame.batteryVoltage,
+    batteryPercent: batteryPercent(frame.batteryVoltage),
+    noData: false,
+  };
+  if (calStep) {
+    onCalibrationFrame(frame);
+    set(battery);
+    return;
+  }
+  const cal = useGauge.getState().calibration;
+  const offsets = cal && curve && cal.serial === curve.serial ? offsetsOf(cal) : null;
+  const step = stepMeasure(measure, frame, curve, offsets, lastFrameAt);
+  measure = step.state;
+  if (!step.reading) return;
+  const sampled = stepSampler(sampler, step.reading);
+  sampler = sampled.state;
+  set({ reading: step.reading, progress: samplerProgress(sampler), ...battery });
+  if (sampled.commit && commitPauses === 0) for (const l of commitListeners) l(sampled.commit);
 }
 
 /* ----------------------------------------------------------------- connection */
 
 let device: Device | null = null;
+let hasTx = false;
 let subs: Subscription[] = [];
 let userDisconnect = false;
+let watchdog: ReturnType<typeof setInterval> | null = null;
 /** Connect attempts; disconnect() bumps it so late connectToDevice results are dropped. */
 const generation = createGeneration();
 /** Peripheral of the connect attempt in flight, cancelled by disconnect(). */
 let pendingId: string | null = null;
 
-const lastKey = (userKey: string) => `ble.gauge.last.${userKey}`;
+/** `!<mode>\r\n` to TX; failures are ignored (the gauge streams both channels without it). */
+async function writeMode(mode: number): Promise<void> {
+  const d = device;
+  if (!d || !hasTx) return;
+  try {
+    await d.writeCharacteristicWithResponseForService(GAUGE_BLE.serviceUUID, GAUGE_BLE.txCharacteristicUUID, modeCommand(mode));
+    // The NexPTG app waits 5 ms after every write.
+    await new Promise((r) => setTimeout(r, 5));
+  } catch {
+    // ignore
+  }
+}
 
-export function lastGauge(userKey: string | null | undefined): { id: string; name: string } | null {
-  return userKey ? readJSON<{ id: string; name: string }>(lastKey(userKey)) : null;
+/** The user's default gauge: the last one connected, with its serial and model once known. */
+export type SavedGauge = { id: string; name: string; serial?: number; model?: string };
+
+const lastKey = (userKey: string) => `ble.gauge.last.${userKey}`;
+let currentUserKey: string | null = null;
+
+export function lastGauge(userKey: string | null | undefined): SavedGauge | null {
+  return userKey ? readJSON<SavedGauge>(lastKey(userKey)) : null;
+}
+
+/** Adds the serial / model of the connected gauge to the saved default gauge. */
+function rememberGauge(patch: Pick<SavedGauge, 'serial' | 'model'>) {
+  const key = currentUserKey;
+  const d = useGauge.getState().device;
+  const saved = key ? lastGauge(key) : null;
+  if (key && saved && d && saved.id === d.id) writeJSON(lastKey(key), { ...saved, ...patch });
+}
+
+/** "Delete device": forgets the default gauge (disconnecting it); its calibration stays. */
+export async function forgetGauge(userKey: string | null | undefined): Promise<void> {
+  if (!userKey) return;
+  const saved = lastGauge(userKey);
+  if (saved && useGauge.getState().device?.id === saved.id) await disconnect();
+  storage.remove(lastKey(userKey));
 }
 
 function teardown() {
   for (const s of subs) s.remove();
   subs = [];
+  if (watchdog) clearInterval(watchdog);
+  watchdog = null;
   splitter.reset();
   serialConfirm.reset();
   sampler = initialSampler;
+  measure = initialMeasure;
+  calStep = null;
+  stopCalibrationTimer();
   device = null;
+  hasTx = false;
 }
 
 function cancelPeripheral(id: string) {
@@ -327,6 +628,14 @@ export async function connect(id: string, userKey?: string | null): Promise<void
     if (!chars.some((c) => c.uuid.toLowerCase() === GAUGE_BLE.rxCharacteristicUUID)) throw new Error('service');
     pendingId = null;
     device = d;
+    currentUserKey = userKey ?? null;
+    // Like the NexPTG app: `!3` (both channels) on TX before the notifications are on (§2.1).
+    hasTx = chars.some((c) => c.uuid.toLowerCase() === GAUGE_BLE.txCharacteristicUUID);
+    await writeMode(GAUGE_MODE.both);
+    if (stale()) {
+      cancelPeripheral(id);
+      return;
+    }
     const name = d.name ?? d.localName ?? 'SmartPTG';
     subs.push(
       ble.onDeviceDisconnected(d.id, () => {
@@ -346,7 +655,15 @@ export async function connect(id: string, userKey?: string | null): Promise<void
         if (ch?.value) for (const line of splitter.push(base64ToBinary(ch.value))) onLine(line);
       }),
     );
-    if (userKey) writeJSON(lastKey(userKey), { id: d.id, name });
+    if (userKey) {
+      const saved = lastGauge(userKey);
+      writeJSON(lastKey(userKey), saved?.id === d.id ? { ...saved, name } : { id: d.id, name });
+    }
+    lastFrameAt = Date.now();
+    watchdog = setInterval(() => {
+      const stale = Date.now() - lastFrameAt > GAUGE_BLE.noDataTimeoutMs;
+      if (stale !== useGauge.getState().noData) set({ noData: stale });
+    }, 1_000);
     set({ status: 'connected', device: { id: d.id, name } });
   } catch (e) {
     if (stale()) return;

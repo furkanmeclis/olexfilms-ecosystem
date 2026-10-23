@@ -1,3 +1,4 @@
+import { router, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Modal, Pressable, ScrollView, View } from 'react-native';
@@ -10,6 +11,7 @@ import { List, ListRow } from '@/ui/list';
 import { StatusPill, type StatusTone } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
+import { SAPL_COLORS, saplLevel } from './interpretation';
 import { clearError, connect, disconnect, lastGauge, reconnectLast, retryCurve, startScan, stopScan } from './manager';
 import { type GaugeStatus, useGauge } from './store';
 import { useGaugeUserKey } from './use-gauge-session';
@@ -29,15 +31,59 @@ export function GaugeStatusChip() {
   return <StatusPill label={t(`ble.status.${status}`)} tone={STATUS_TONE[status]} />;
 }
 
+/** Route of a gauge screen (`device`, `calibrate`) in the current measuring stack. */
+export function useGaugeHref() {
+  const path = usePathname().replace(/\/$/, '');
+  const base = path.match(/^(.*\/measure)(?:\/|$)/u)?.[1] ?? path;
+  return (screen: 'device' | 'calibrate') => `${base}/${screen}` as never;
+}
+
+/** Model · SN · battery line of a connected gauge. */
+export function useGaugeSummary(): string | null {
+  const { t } = useTranslation('measure');
+  const g = useGauge();
+  const parts = [
+    g.model,
+    g.serial != null ? t('ble.serial', { serial: g.serial }) : null,
+    g.batteryPercent != null ? t('ble.battery', { percent: g.batteryPercent }) : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : null;
+}
+
+/** Live value with its substrate and SAPL interpretation (general mode, outside). */
+export function GaugeLiveValue() {
+  const { t, i18n } = useTranslation('measure');
+  const unit = usePreferences((s) => s.unit);
+  const reading = useGauge((s) => s.reading);
+  const um = reading?.um ?? null;
+  const level = um != null ? saplLevel(um) : null;
+  return (
+    <View className="gap-1">
+      <Text variant="reading" accessibilityLiveRegion="polite">
+        {um != null ? formatThickness(um, unit, i18n.language) : '—'}
+      </Text>
+      {um != null && reading?.material ? (
+        <View className="flex-row items-center gap-2">
+          <View className="size-2.5 rounded-full" style={{ backgroundColor: SAPL_COLORS[level!] }} />
+          <Text variant="footnote" tone="muted" numberOfLines={1}>
+            {`${t(`ble.material.${reading.material}`)} · ${t(`ble.sapl.${level}`)}`}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 /**
  * Gauge card of the measuring form: connection state, the live value and the
  * part the next steady reading goes to. Render only when isGaugeAvailable().
  */
 export function GaugePanel({ targetLabel }: { targetLabel: string | null }) {
-  const { t, i18n } = useTranslation('measure');
-  const unit = usePreferences((s) => s.unit);
+  const { t } = useTranslation('measure');
   const g = useGauge();
   const userKey = useGaugeUserKey();
+  const href = useGaugeHref();
+  const summary = useGaugeSummary();
   const [picking, setPicking] = useState(false);
   const last = g.status === 'idle' || g.status === 'error' ? lastGauge(userKey) : null;
   const connected = g.status === 'connected';
@@ -53,11 +99,7 @@ export function GaugePanel({ targetLabel }: { targetLabel: string | null }) {
             {g.device?.name ?? t('ble.title')}
           </Text>
           <Text variant="footnote" tone="muted" numberOfLines={1}>
-            {connected
-              ? [g.model, g.serial != null ? t('ble.serial', { serial: g.serial }) : null, g.battery != null ? `${g.battery.toFixed(1)} V` : null]
-                  .filter(Boolean)
-                  .join(' · ') || t('ble.waiting')
-              : t('ble.hint')}
+            {connected ? summary || t('ble.waiting') : t('ble.hint')}
           </Text>
         </View>
         <GaugeStatusChip />
@@ -65,9 +107,7 @@ export function GaugePanel({ targetLabel }: { targetLabel: string | null }) {
 
       {connected ? (
         <View className="gap-1">
-          <Text variant="reading" accessibilityLiveRegion="polite">
-            {g.reading?.um != null ? formatThickness(g.reading.um, unit, i18n.language) : '—'}
-          </Text>
+          <GaugeLiveValue />
           <View className="h-1 overflow-hidden rounded-full bg-secondary">
             <View className="h-1 rounded-full bg-primary" style={{ width: `${Math.round(g.progress * 100)}%` }} />
           </View>
@@ -78,6 +118,15 @@ export function GaugePanel({ targetLabel }: { targetLabel: string | null }) {
                 ? t('ble.target', { part: targetLabel })
                 : t('ble.pick_part')}
           </Text>
+          {g.noData ? (
+            <Text variant="footnote" tone="danger">
+              {t('ble.no_data')}
+            </Text>
+          ) : g.curve === 'ready' && !g.calibration ? (
+            <Text variant="footnote" tone="muted">
+              {t('ble.not_calibrated_hint')}
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -96,7 +145,10 @@ export function GaugePanel({ targetLabel }: { targetLabel: string | null }) {
 
       <View className="flex-row gap-2">
         {connected ? (
-          <Button className="flex-1" title={t('ble.disconnect')} variant="outline" onPress={() => void disconnect()} />
+          <>
+            <Button className="flex-1" title={t('ble.device_open')} variant="outline" onPress={() => router.push(href('device'))} />
+            <Button className="flex-1" title={t('ble.disconnect')} variant="ghost" onPress={() => void disconnect()} />
+          </>
         ) : (
           <>
             <Button
@@ -124,7 +176,7 @@ function signal(rssi: number | null) {
 }
 
 /** Scans on open and lists nearby gauges; tapping one connects and closes. */
-function DevicePickerSheet({ onClose }: { onClose: () => void }) {
+export function DevicePickerSheet({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('measure');
   const userKey = useGaugeUserKey();
   const devices = useGauge((s) => s.devices);

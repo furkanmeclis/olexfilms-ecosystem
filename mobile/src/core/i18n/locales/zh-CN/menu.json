@@ -6,11 +6,13 @@
   "warranty_claims": "质保申请",
   "leads": "线索与报价",
   "reports": "报表",
-  "accounting": "收支与往来账",
+  "accounting": "往来账户",
   "tasks": "任务",
   "announcements": "公告",
   "warranties": "质保",
   "campaigns": "营销活动",
   "assistant": "AI 助手",
-  "ai_actions": "待审批的 AI 操作"
+  "ai_actions": "待审批的 AI 操作",
+  "disputes": "异议",
+  "einvoices": "电子发票"
 }
