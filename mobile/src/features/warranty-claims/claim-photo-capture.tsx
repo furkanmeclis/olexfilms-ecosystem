@@ -109,7 +109,7 @@ export function ClaimPhotoCapture({ claimUuid, onClose }: { claimUuid: string; o
               disabled={!ready || taking}
               onPress={() => void take()}
               className="size-[72px] items-center justify-center rounded-full border-4 border-white active:opacity-70">
-              {taking ? <ActivityIndicator color="#fff" /> : <View className="size-14 rounded-full bg-white" />}
+              {taking ? <ActivityIndicator colorClassName="accent-on-media" /> : <View className="size-14 rounded-full bg-white" />}
             </Pressable>
           ) : null}
         </View>

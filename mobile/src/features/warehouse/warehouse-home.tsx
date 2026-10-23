@@ -40,7 +40,7 @@ export function WarehouseHome() {
 
   const counters: { key: string; label: string; value: number | null | undefined; icon: IconName; tab: string }[] = [
     { key: 'transfers', label: t('m.open_transfers'), value: summary.data?.transfers, icon: 'transfer', tab: 'transfers' },
-    { key: 'counts', label: t('m.open_counts'), value: summary.data?.counts, icon: 'order', tab: 'counts' },
+    { key: 'counts', label: t('m.open_counts'), value: summary.data?.counts, icon: 'task', tab: 'counts' },
     { key: 'entries', label: t('m.open_entries'), value: summary.data?.entries, icon: 'packageIn', tab: 'entries' },
   ];
 
@@ -48,7 +48,7 @@ export function WarehouseHome() {
     { key: 'scan', label: t('nav_scan'), icon: 'scan', path: '/depo/scan', show: true },
     { key: 'entry', label: t('entries.new'), icon: 'packageIn', path: '/depo/jobs/entry/new', show: write },
     { key: 'transfer', label: t('transfers.new'), icon: 'transfer', path: '/depo/jobs/transfer/new', show: write },
-    { key: 'count', label: t('counts.new'), icon: 'order', path: '/depo/jobs/count/new', show: write },
+    { key: 'count', label: t('counts.new'), icon: 'task', path: '/depo/jobs/count/new', show: write },
     { key: 'move', label: t('move.title'), icon: 'location', path: '/depo/jobs/move', show: write },
     { key: 'orders', label: t('orders.nav'), icon: 'package', path: '/depo/jobs?tab=orders', show: orders },
     { key: 'setup', label: t('m.setup'), icon: 'settings', path: '/depo/setup', show: write },

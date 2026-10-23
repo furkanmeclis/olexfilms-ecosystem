@@ -142,7 +142,7 @@ function AppointmentCard({ a }: { a: Appointment }) {
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => router.push(`/bayi/menu/appointments/${a.uuid}?at=${encodeURIComponent(a.starts_at)}` as never)}
+      onPress={() => router.push(`/bayi/menu/appointments/${a.uuid}` as never)}
       className="flex-row items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 active:opacity-70">
       <View className="w-14">
         <Text variant="headline">{clock.time(a.starts_at)}</Text>
