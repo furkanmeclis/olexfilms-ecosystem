@@ -2,12 +2,21 @@ import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/core/auth/session';
-import type { SpaceKind } from '@/core/spaces';
+import { activeMembership, type SpaceKind } from '@/core/spaces';
 import type { IconName } from '@/ui/icons';
 import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 
-type Item = { key: string; icon: IconName; permission?: string | string[]; spaces: SpaceKind[]; built?: SpaceKind[] };
+type OrgType = 'center' | 'distributor' | 'dealer';
+type Item = {
+  key: string;
+  icon: IconName;
+  permission?: string | string[];
+  spaces: SpaceKind[];
+  built?: SpaceKind[];
+  /** Organization types the backend serves the screen to (e.g. e-invoices: the brand center only). */
+  orgTypes?: OrgType[];
+};
 
 /**
  * Menu rows appear only with the permission (and so the module) behind them:
@@ -24,7 +33,10 @@ const ITEMS: Item[] = [
   { key: 'warranty_claims', icon: 'warrantyClaim', permission: 'warranty_claims.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'leads', icon: 'lead', permission: 'leads.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   { key: 'reports', icon: 'report', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
-  { key: 'accounting', icon: 'accounting', permission: 'accounting.read', spaces: ['bayi', 'admin'] },
+  // TEC-957: cari accounts and disputes (both sides read with accounting.read); e-invoices in the center.
+  { key: 'accounting', icon: 'accounting', permission: 'accounting.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
+  { key: 'disputes', icon: 'alert', permission: 'accounting.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
+  { key: 'einvoices', icon: 'report', permission: 'einvoice.read', spaces: ['admin'], built: ['admin'], orgTypes: ['center'] },
   { key: 'tasks', icon: 'task', permission: 'tasks.read', spaces: ['admin'], built: ['admin'] },
   { key: 'certificates', icon: 'shield', permission: 'certificates.read', spaces: ['admin'], built: ['admin'] },
   { key: 'pricing', icon: 'accounting', permission: ['pricing.recommended.read', 'pricing.discipline.read'], spaces: ['admin'], built: ['admin'] },
@@ -39,7 +51,10 @@ export function MenuScreen({ space }: { space: SpaceKind }) {
   const me = useSession((s) => s.me);
   const can = (p?: string | string[]) =>
     !p || !!me?.user.is_super_admin || [p].flat().some((k) => !!me?.permissions.includes(k));
-  const items = ITEMS.filter((i) => i.spaces.includes(space) && can(i.permission));
+  const orgType = activeMembership(me)?.type;
+  const items = ITEMS.filter(
+    (i) => i.spaces.includes(space) && can(i.permission) && (!i.orgTypes || (!!orgType && i.orgTypes.includes(orgType))),
+  );
 
   return (
     <>
