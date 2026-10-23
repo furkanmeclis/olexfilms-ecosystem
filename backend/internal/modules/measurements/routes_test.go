@@ -132,3 +132,26 @@ func TestCurveRouteNeedsToken(t *testing.T) {
 		t.Fatalf("without token = %d, want 401", rec.Code)
 	}
 }
+
+// TEC-939: both calibration routes need a token and do not collide with
+// GET /v1/measurements/{uuid} or the curve route.
+func TestCalibrationRoutesNeedToken(t *testing.T) {
+	tokens, err := jwt.NewManager("test-secret-test-secret-test-secret", time.Minute, time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	RegisterPanelRoutes(mux, handler.New(nil), tokens, noLoader{}, nil, nil)
+	RegisterCurveRoutes(mux, handler.NewCurves(nil, nil), tokens, noLoader{}, nil)
+	RegisterCalibrationRoutes(mux, handler.NewCalibrations(nil), tokens, noLoader{}, nil)
+	for _, c := range []struct{ method, path string }{
+		{"GET", "/v1/measurements/devices/smartptg/calibrations/32475"},
+		{"POST", "/v1/measurements/devices/smartptg/calibrations"},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(c.method, c.path, strings.NewReader(`{}`)))
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("%s %s without token = %d, want 401", c.method, c.path, rec.Code)
+		}
+	}
+}

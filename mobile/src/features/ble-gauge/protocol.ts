@@ -3,12 +3,16 @@
  *
  * The gauge speaks a Nordic UART style service: the app subscribes to RX
  * notifications and receives ASCII lines like `eVo1AFBAADA54F0BE8\r\n`.
- * A line carries the probe frequency (Hz), the frame type (1 = Fe, 2 = Al),
- * the battery voltage and the device serial; microns are NOT in the frame,
- * they come from the serial's characteristic curve (see curve.ts).
+ * A line carries the probe frequency (Hz), the frame type, the battery
+ * voltage and the device serial; microns are NOT in the frame, they come
+ * from the serial's characteristic curve (see curve.ts).
  *
- * Source: the NexPTG app (pl.nexptg 2.3.0) reverse engineering in the old
- * Olexfilms app (docs/smartptg/BLE_ANALYSIS.md, libauth.so FrameDecoder port).
+ * The frame type is the probe CHANNEL, not the substrate (REVERSE_ENGINEERING
+ * §3.3): 1 = Fe channel, 2 = Al channel, 3 / 4 = the same channels while the
+ * gauge's button ("save") is pressed. The substrate is decided from the
+ * frequency against the curve's K / L thresholds (measure.ts).
+ *
+ * Source: docs/smartptg/REVERSE_ENGINEERING.md (pl.nexptg 2.3.0).
  */
 
 export const GAUGE_BLE = {
@@ -20,14 +24,23 @@ export const GAUGE_BLE = {
   /** Advertised names the NexPTG app accepts (lower-case, spaces removed). */
   nameHints: ['smartptg', 'nexptg'],
   scanTimeoutMs: 15_000,
+  /** The NexPTG app drops the link after 10 s without a frame ("AUTO DISCONNECT"). */
+  noDataTimeoutMs: 10_000,
 } as const;
 
-export type FrameMaterial = 'fe' | 'al' | 'unknown';
+/** Probe channel of a frame: the Fe or the Al (NFe) oscillator of the probe. */
+export type Channel = 'fe' | 'al';
+
+/** `!<mode>`: 1 = Fe channel only, 2 = Al channel only, 3 = both alternating (default). */
+export const GAUGE_MODE = { fe: 1, al: 2, both: 3 } as const;
 
 export type GaugeFrame = {
-  /** Frame type digit: 1 = Fe, 2 = Al. */
+  /** Frame type digit: 1 / 3 = Fe channel, 2 / 4 = Al channel (3 / 4: button pressed). */
   type: number;
-  material: FrameMaterial;
+  /** Null for a type the app does not know (the frame is ignored). */
+  channel: Channel | null;
+  /** The gauge's button was pressed (types 3 and 4): the "save" event. */
+  button: boolean;
   /** Probe oscillator frequency in Hz. */
   frequency: number;
   serial: number;
@@ -35,6 +48,35 @@ export type GaugeFrame = {
 };
 
 const HEX = /^[0-9a-f]{14}$/i;
+
+/** Frame type → channel (NexPTGConfig.FRAME_FE / FRAME_AL, + 2 with the button). */
+export function channelOfType(type: number): Channel | null {
+  if (type === 1 || type === 3) return 'fe';
+  if (type === 2 || type === 4) return 'al';
+  return null;
+}
+
+/**
+ * Battery voltage → percent, FrameDecoder.a of the NexPTG app (§3.4):
+ * ≥ 2.80 V 100 %, then 90/80/…/30/20/15 % steps down to 1.80 V, else 10 %.
+ */
+export function batteryPercent(voltage: number): number {
+  const cv = Math.round(voltage * 100);
+  if (cv >= 280) return 100;
+  const steps: [number, number][] = [
+    [260, 90],
+    [250, 80],
+    [240, 70],
+    [230, 60],
+    [220, 50],
+    [210, 40],
+    [200, 30],
+    [190, 20],
+    [180, 15],
+  ];
+  for (const [above, pct] of steps) if (cv > above) return pct;
+  return 10;
+}
 
 function nibble(c: string): number {
   return parseInt(c, 16);
@@ -67,7 +109,8 @@ export function decodeFrame(raw: string): GaugeFrame | null {
 
   return {
     type: typeChar,
-    material: typeChar === 1 ? 'fe' : typeChar === 2 ? 'al' : 'unknown',
+    channel: channelOfType(typeChar),
+    button: typeChar === 3 || typeChar === 4,
     frequency: (a[1]! << 8) + a[2]!,
     serial: (a[3]! << 16) + (a[4]! << 8) + a[5]!,
     batteryVoltage: a[0]! / 10,
