@@ -94,6 +94,7 @@
   "labels.warehouse.write": "إدارة المستودع",
   "labels.campaigns.read": "عرض الحملات",
   "labels.campaigns.write": "إدارة الحملات",
+  "labels.campaigns.approve": "اعتماد الحملات",
   "labels.photo_standard.manage": "إدارة معيار الصور",
   "labels.photo_standard.override": "تعديل معيار الصور",
   "labels.fleets.read": "عرض الأساطيل",

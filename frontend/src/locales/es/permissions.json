@@ -94,6 +94,7 @@
   "labels.warehouse.write": "Gestionar almacén",
   "labels.campaigns.read": "Ver campañas",
   "labels.campaigns.write": "Gestionar campañas",
+  "labels.campaigns.approve": "Aprobar campañas",
   "labels.photo_standard.manage": "Gestionar estándar de fotos",
   "labels.photo_standard.override": "Sobrescribir estándar de fotos",
   "labels.fleets.read": "Ver flotas",

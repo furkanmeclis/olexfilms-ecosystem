@@ -738,7 +738,9 @@ export function tenantNav(slug: string) {
             titleKey: "campaigns.nav_approvals",
             href: routes.tenant.campaigns.approvals(slug),
             icon: ListChecks,
-            permission: permissions.campaigns.read,
+            // TEC-871: the queue API needs campaigns.approve (center /
+            // upper org); dealers only create and submit campaigns.
+            permission: permissions.campaigns.approve,
             feature: "campaigns",
           },
         ],

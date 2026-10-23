@@ -94,6 +94,7 @@
   "labels.warehouse.write": "Anbarı idarə etmək",
   "labels.campaigns.read": "Kampaniyalara baxmaq",
   "labels.campaigns.write": "Kampaniyaları idarə etmək",
+  "labels.campaigns.approve": "Kampaniyaları təsdiqlə",
   "labels.photo_standard.manage": "Foto standartını idarə et",
   "labels.photo_standard.override": "Foto standartını dəyişdir",
   "labels.fleets.read": "Avtoparkları görmək",

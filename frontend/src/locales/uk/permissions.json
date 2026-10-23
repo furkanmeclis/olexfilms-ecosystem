@@ -94,6 +94,7 @@
   "labels.warehouse.write": "Керування складом",
   "labels.campaigns.read": "Перегляд кампаній",
   "labels.campaigns.write": "Керування кампаніями",
+  "labels.campaigns.approve": "Затвердження кампаній",
   "labels.photo_standard.manage": "Керувати фотостандартом",
   "labels.photo_standard.override": "Перевизначати фотостандарт",
   "labels.fleets.read": "Перегляд автопарків",

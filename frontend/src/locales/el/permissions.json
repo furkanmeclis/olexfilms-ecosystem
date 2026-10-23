@@ -94,6 +94,7 @@
   "labels.warehouse.write": "Διαχείριση αποθήκης",
   "labels.campaigns.read": "Προβολή καμπανιών",
   "labels.campaigns.write": "Διαχείριση καμπανιών",
+  "labels.campaigns.approve": "Έγκριση καμπανιών",
   "labels.photo_standard.manage": "Διαχείριση προτύπου φωτογραφιών",
   "labels.photo_standard.override": "Παράκαμψη προτύπου φωτογραφιών",
   "labels.fleets.read": "Προβολή στόλων",
