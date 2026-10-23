@@ -23,6 +23,14 @@ var MobilePanelMirrorPrefixes = []string{
 	"pricing", "certificates", "photo-standard", "service-catalog", "geo",
 	"announcements", "stats", "tenant/organizations", "tenant/modules", "tenant/pricing", "delivery-methods",
 	"certificate-warnings", "auth/step-up/password", "auth/step-up/totp",
+	// TEC-957: mobile accounting reads cari accounts, their entries, the category
+	// labels and disputes (open/resolve); the brand center reads e-invoices. The
+	// rest of /v1/accounting (accounts, reports, exports, collections, payments,
+	// opening balances) stays off the mirror.
+	"accounting/cari", "accounting/entries", "accounting/categories", "accounting/disputes",
+	"einvoices",
+	// TEC-958: dealer quick sale, sale prices and purchases (dealer_accounting module).
+	"dealer-prices", "product-sales", "purchases", "suppliers",
 	// TEC-959: dealer fleet management, service subscriptions and staff cards.
 	"fleets", "service-subscriptions", "staff-profiles",
 }

@@ -6,7 +6,7 @@
   "warranty_claims": "Warranty claims",
   "leads": "Leads and quotes",
   "reports": "Reports",
-  "accounting": "Cash and accounts",
+  "accounting": "Cari accounts",
   "tasks": "Tasks",
   "announcements": "Announcements",
   "warranties": "Warranties",
@@ -19,5 +19,10 @@
   "measurements": "Measurements",
   "fleets": "Fleets",
   "service_subscriptions": "Service subscriptions",
-  "staff": "Staff"
+  "staff": "Staff",
+  "quick_sale": "Quick sale",
+  "sale_prices": "My sale prices",
+  "purchases": "Purchases",
+  "disputes": "Disputes",
+  "einvoices": "e-Invoices"
 }

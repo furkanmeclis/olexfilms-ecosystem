@@ -6,8 +6,10 @@
   "warranty_claims": "مطالبات الضمان",
   "leads": "العملاء المحتملون والعروض",
   "reports": "التقارير",
-  "accounting": "الصندوق والحسابات",
+  "accounting": "الحسابات الجارية",
   "tasks": "المهام",
   "announcements": "الإعلانات",
-  "warranties": "الضمانات"
+  "warranties": "الضمانات",
+  "disputes": "الاعتراضات",
+  "einvoices": "الفواتير الإلكترونية"
 }

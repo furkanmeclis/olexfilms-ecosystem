@@ -66,6 +66,19 @@ function SoonCard({ icon, title, body }: { icon: IconName; title: string; body: 
   );
 }
 
+/** Header shortcut to the gauge screen (SmartPTG builds only). */
+function GaugeButton() {
+  const { t } = useTranslation('measure');
+  const href = useChildHref();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={t('ble.device_title')} hitSlop={8} onPress={() => router.push(href('device'))}>
+      <View className="size-8 items-center justify-center">
+        <Icon name="gauge" tone="primary" />
+      </View>
+    </Pressable>
+  );
+}
+
 function NewButton() {
   const { t } = useTranslation('measure');
   const href = useChildHref();
@@ -107,7 +120,20 @@ export function MeasureScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: t('title'), headerRight: canWrite ? () => <NewButton /> : undefined }} />
+      <Stack.Screen
+        options={{
+          title: t('title'),
+          headerRight:
+            canWrite || isGaugeAvailable()
+              ? () => (
+                  <View className="flex-row items-center gap-3">
+                    {isGaugeAvailable() ? <GaugeButton /> : null}
+                    {canWrite ? <NewButton /> : null}
+                  </View>
+                )
+              : undefined,
+        }}
+      />
       {canRead ? (
         <PagedList
           query={list}
@@ -136,6 +162,33 @@ export function MeasureScreen() {
 }
 
 type Reading = { part: string; values: number[] };
+
+type GaugeRead = {
+  part_type: string;
+  value_um: number;
+  frequency_hz: number;
+  channel: 'fe' | 'al';
+  material: 'fe' | 'al';
+  trigger: 'steady' | 'button';
+  fe_offset_hz: number | null;
+  al_offset_hz: number | null;
+  at: string;
+};
+
+/** Gauge block of the raw upload: curve hash, calibration and the raw readings (REVERSE_ENGINEERING §9.2). */
+function gaugeRaw(reads: GaugeRead[]) {
+  const g = useGauge.getState();
+  return {
+    serial: g.serial,
+    model: g.model,
+    device_type: g.deviceType,
+    curve_sha256: g.curveSha256,
+    calibration: g.calibration
+      ? { fe_offset_hz: g.calibration.fe, al_offset_hz: g.calibration.al, target_um: g.calibration.targetUm, calibrated_at: g.calibration.calibratedAt }
+      : null,
+    readings: reads,
+  };
+}
 
 function newClientId() {
   return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -250,6 +303,8 @@ export function NewMeasurementScreen() {
   const [activePart, setActivePart] = useState<string | null>(null);
   const [substrates, setSubstrates] = useState<Record<string, 'Fe' | 'Al'>>({});
   const [gaugeDevice, setGaugeDevice] = useState<{ serial: string; model?: string } | null>(null);
+  // Raw probe data of every gauge reading (TEC-939): frequency and channel let a corrected curve recompute it later.
+  const [gaugeReads, setGaugeReads] = useState<GaugeRead[]>([]);
   const decimal = new Intl.NumberFormat(i18n.language).format(1.5).replace(/\d/g, '') || '.';
   useGaugeSession((c) => {
     const part = activePart ?? PARTS[0]!.key;
@@ -259,6 +314,20 @@ export function NewMeasurementScreen() {
     if (substrate) setSubstrates((m) => ({ ...m, [part]: substrate }));
     const g = useGauge.getState();
     if (g.serial != null) setGaugeDevice({ serial: String(g.serial), model: g.model ?? undefined });
+    setGaugeReads((list) => [
+      ...list,
+      {
+        part_type: part,
+        value_um: c.um,
+        frequency_hz: c.frequency,
+        channel: c.channel,
+        material: c.material,
+        trigger: c.trigger,
+        fe_offset_hz: g.calibration?.fe ?? null,
+        al_offset_hz: g.calibration?.al ?? null,
+        at: new Date().toISOString(),
+      },
+    ]);
   });
 
   const parts = PARTS.map((p) => ({ ...p, values: parseValues(values[p.key] ?? '').map((v) => toMicrons(v, unit)) })).filter(
@@ -285,6 +354,7 @@ export function NewMeasurementScreen() {
             parts: parts.map((p) => ({ part: p.key, place: p.place, values: p.values })),
             raw: {
               source: fromGauge ? 'smartptg' : 'manual',
+              gauge: fromGauge ? gaugeRaw(gaugeReads) : undefined,
               app_version: APP_VERSION,
               date: now,
               measurements: parts.flatMap((p) =>
