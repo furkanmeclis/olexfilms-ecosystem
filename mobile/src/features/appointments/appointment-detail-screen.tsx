@@ -17,7 +17,7 @@ import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
 import { useClock } from './appointments-screen';
-import { findAppointment } from './data';
+import { getAppointment } from './data';
 import {
   type Appointment,
   type AppointmentStatus,
@@ -43,13 +43,13 @@ export function AppointmentDetailScreen() {
   const qc = useQueryClient();
   const bookingError = useBookingError();
   const canWrite = useCan('appointments.write');
-  const { uuid, at } = useLocalSearchParams<{ uuid: string; at?: string }>();
+  const { uuid } = useLocalSearchParams<{ uuid: string }>();
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
 
   const q = useQuery({
     queryKey: ['appointments', 'detail', uuid],
-    queryFn: () => findAppointment(uuid!, at),
+    queryFn: () => getAppointment(uuid!),
     enabled: !!uuid,
   });
   const a = q.data;
@@ -167,7 +167,7 @@ export function AppointmentDetailScreen() {
                     title={t('action.reschedule')}
                     variant="outline"
                     disabled={busy}
-                    onPress={() => router.push(`/bayi/menu/appointments/${a.uuid}/edit?at=${encodeURIComponent(a.starts_at)}` as never)}
+                    onPress={() => router.push(`/bayi/menu/appointments/${a.uuid}/edit` as never)}
                   />
                 ) : null}
                 {actions.includes('cancelled') ? (

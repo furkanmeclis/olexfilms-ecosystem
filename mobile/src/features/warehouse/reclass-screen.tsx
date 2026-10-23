@@ -31,6 +31,7 @@ import {
   useReclassifications,
 } from './reclass-api';
 import { type Product, ProductPicker } from './reserve-sheet';
+import { StepUpCard } from './step-up-card';
 
 /** Reclassification requests: the barcode stays, the unit moves to another product once a center approves. */
 export function ReclassListScreen() {
@@ -108,20 +109,24 @@ export function ReclassDetailScreen() {
   const decide = useCan('stock.reclassify');
   const q = useReclassification(uuid);
   const [busy, setBusy] = useState<ReclassDecision | null>(null);
+  const [stepUp, setStepUp] = useState(false);
   const r = q.data;
 
   const run = async (decision: ReclassDecision, note?: string) => {
     setBusy(decision);
     try {
       const out = await decideReclassification(uuid, decision, note);
+      setStepUp(false);
       qc.setQueryData(reclassKeys.one(uuid), out);
       void qc.invalidateQueries({ queryKey: ['warehouse', 'reclass', 'list'] });
       void qc.invalidateQueries({ queryKey: ['stock'] });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
-      // Approval is a sensitive step that needs a fresh step-up, which only the web panel offers.
-      if (isCode(e, 'STEP_UP_REQUIRED')) Alert.alert(t('reclass.step_up_title'), t('reclass.step_up_body'));
-      else alertError(e);
+      // Approval is a sensitive step: without a recent step-up the card below asks for the password or a code.
+      if (isCode(e, 'STEP_UP_REQUIRED')) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setStepUp(true);
+      } else alertError(e);
     } finally {
       setBusy(null);
     }
@@ -188,12 +193,20 @@ export function ReclassDetailScreen() {
 
             {pending && decide && !own ? (
               <View className="gap-2.5">
-                <Card>
-                  <Text variant="headline">{t('reclass.approve_on_web_title')}</Text>
-                  <Text variant="footnote" tone="muted">
-                    {t('reclass.approve_on_web_body')}
-                  </Text>
-                </Card>
+                {stepUp ? (
+                  <StepUpCard
+                    action={t('reclass.step_up_approve')}
+                    onVerified={() => run('approve')}
+                    onCancel={() => setStepUp(false)}
+                  />
+                ) : (
+                  <Button
+                    title={t('reclass.approve')}
+                    loading={busy === 'approve'}
+                    disabled={!!busy}
+                    onPress={() => ask('approve')}
+                  />
+                )}
                 <Button
                   title={t('reclass.reject')}
                   variant="outline"

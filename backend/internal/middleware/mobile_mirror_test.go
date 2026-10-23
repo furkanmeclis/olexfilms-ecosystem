@@ -72,6 +72,36 @@ func TestMobilePanelMirrorTEC933Allowed(t *testing.T) {
 	}
 }
 
+// TEC-961: the mobile step-up verifications are mirrored; the status, the
+// passkey routes and every other auth route are not.
+func TestMobilePanelMirrorTEC961StepUp(t *testing.T) {
+	for _, path := range []string{"auth/step-up/password", "auth/step-up/totp"} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path || !IsMobilePanelMirror(r.Context()) {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+	for _, path := range []string{"auth/step-up", "auth/step-up/passkey/options", "auth/step-up/passkey/verify",
+		"auth/step-up/passwordx", "auth/step-up/other", "auth/me", "auth/sessions", "auth/login", "auth/impersonate"} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/mobile/panel/"+path, nil)
+		rec := httptest.NewRecorder()
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			t.Fatalf("%s reached next", path)
+		})).ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("%s = %d", path, rec.Code)
+		}
+	}
+}
+
 func TestMobilePanelMirrorDenied(t *testing.T) {
 	paths := []string{"", "auth", "platform", "portal", "public", "mobile", "oauth", "realtime", "ai",
 		"accounting", "impersonation", "unknown", "ordersx", "tenant", "tenant/settings", "tenant/organizationsx",

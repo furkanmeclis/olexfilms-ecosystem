@@ -21,7 +21,7 @@ import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
 
 import { useBookingError } from './appointment-detail-screen';
-import { findAppointment, useAvailability } from './data';
+import { getAppointment, useAvailability } from './data';
 import { type AvailabilityDay, canReschedule, parseDay, todayIn } from './lib';
 
 type Step = 'customer' | 'vehicle' | 'time';
@@ -37,7 +37,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
   const qc = useQueryClient();
   const bookingError = useBookingError();
   const canWrite = useCan('appointments.write');
-  const { uuid, at } = useLocalSearchParams<{ uuid?: string; at?: string }>();
+  const { uuid } = useLocalSearchParams<{ uuid?: string }>();
   const [step, setStep] = useState<Step>('customer');
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -47,7 +47,7 @@ export function AppointmentFormScreen({ edit = false }: { edit?: boolean }) {
 
   const existing = useQuery({
     queryKey: ['appointments', 'detail', uuid],
-    queryFn: () => findAppointment(uuid!, at),
+    queryFn: () => getAppointment(uuid!),
     enabled: edit && !!uuid,
   });
   const current = edit ? existing.data : null;

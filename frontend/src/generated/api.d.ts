@@ -13563,7 +13563,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get one appointment
+         * @description TEC-961: one appointment inside the same reach as GET /v1/appointments (appointments.read scope, active brand, appointments module on). An appointment of another brand or outside the read scope is 404.
+         */
+        get: operations["getAppointment"];
         put?: never;
         post?: never;
         delete?: never;
@@ -54783,6 +54787,31 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getAppointment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Appointment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeAppointment"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     patchAppointment: {
