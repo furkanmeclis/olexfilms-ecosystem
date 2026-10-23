@@ -31,6 +31,8 @@ var MobilePanelMirrorPrefixes = []string{
 	"einvoices",
 	// TEC-958: dealer quick sale, sale prices and purchases (dealer_accounting module).
 	"dealer-prices", "product-sales", "purchases", "suppliers",
+	// TEC-959: dealer fleet management, service subscriptions and staff cards.
+	"fleets", "service-subscriptions", "staff-profiles",
 }
 
 type mobilePanelMirrorKey struct{}
