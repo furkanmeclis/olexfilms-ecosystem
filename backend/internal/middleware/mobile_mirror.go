@@ -29,6 +29,8 @@ var MobilePanelMirrorPrefixes = []string{
 	// opening balances) stays off the mirror.
 	"accounting/cari", "accounting/entries", "accounting/categories", "accounting/disputes",
 	"einvoices",
+	// TEC-958: dealer quick sale, sale prices and purchases (dealer_accounting module).
+	"dealer-prices", "product-sales", "purchases", "suppliers",
 }
 
 type mobilePanelMirrorKey struct{}

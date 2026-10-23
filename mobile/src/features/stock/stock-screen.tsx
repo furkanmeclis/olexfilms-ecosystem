@@ -20,9 +20,10 @@ export function stockAmount(p: StockProduct) {
 
 /**
  * Stock of the active organization by product, with search. Shared by the
- * warehouse and the dealer space (`base` is the tab's route prefix).
+ * warehouse, the dealer space and the admin menu (center stock, TEC-958);
+ * `base` is the route prefix of the stack.
  */
-export function StockScreen({ base, space }: { base: string; space: 'depo' | 'bayi' }) {
+export function StockScreen({ base, space }: { base: string; space: 'depo' | 'bayi' | 'admin' }) {
   const { t } = useTranslation('warehouse');
   const org = useSession((s) => s.me?.active_organization_uuid ?? '');
   const [input, setInput] = useState('');

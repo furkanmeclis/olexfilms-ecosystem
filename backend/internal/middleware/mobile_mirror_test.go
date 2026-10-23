@@ -109,7 +109,9 @@ func TestMobilePanelMirrorDenied(t *testing.T) {
 		"tenant/pricing-x", "tenant/other", "certificate-warningsx", "accounting/accounts",
 		"accounting/reports", "accounting/exports", "accounting/collections", "accounting/payments",
 		"accounting/opening-balances", "accounting/carix", "accounting/disputesx", "accounting/entriesx",
-		"accounting/categoriesx", "einvoicesx", "einvoice", "staff-profiles", "staff-payments"}
+		"accounting/categoriesx", "einvoicesx", "einvoice", "staff-profiles", "staff-payments",
+		"dealer-pricesx", "dealer-price", "dealer-sales", "product-salesx", "product", "purchasesx",
+		"purchase", "suppliersx", "supplier", "dealer-accounting"}
 	for _, path := range paths {
 		for _, suffix := range []string{"", "/child"} {
 			req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path+suffix, nil)
@@ -237,6 +239,32 @@ func TestMobilePanelMirrorTEC957Allowed(t *testing.T) {
 		"accounting/disputes/" + id + "/resolve",
 		"einvoices",
 		"einvoices/" + id,
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = true
+			if r.URL.Path != "/v1/"+path {
+				t.Errorf("rewrite = %s", r.URL.Path)
+			}
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s was not allowed", path)
+		}
+	}
+}
+
+func TestMobilePanelMirrorTEC958Allowed(t *testing.T) {
+	id := uuid.NewString()
+	for _, path := range []string{
+		"dealer-prices",
+		"dealer-prices/catalog",
+		"product-sales",
+		"product-sales/lookup",
+		"product-sales/" + id + "/void",
+		"purchases",
+		"suppliers",
 	} {
 		req := httptest.NewRequest(http.MethodGet, "/v1/mobile/panel/"+path, nil)
 		req.Header.Set(MobileAPIVersionHeader, "1")

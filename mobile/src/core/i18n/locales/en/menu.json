@@ -17,6 +17,9 @@
   "occupancy": "Appointment occupancy",
   "performance": "Performance",
   "measurements": "Measurements",
+  "quick_sale": "Quick sale",
+  "sale_prices": "My sale prices",
+  "purchases": "Purchases",
   "disputes": "Disputes",
   "einvoices": "e-Invoices"
 }

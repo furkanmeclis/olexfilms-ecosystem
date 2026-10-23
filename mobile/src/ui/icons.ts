@@ -65,6 +65,7 @@ import UserRoundPlusIcon from 'lucide-react-native/icons/user-round-plus';
 import UsersIcon from 'lucide-react-native/icons/users';
 import WarehouseIcon from 'lucide-react-native/icons/warehouse';
 import StarIcon from 'lucide-react-native/icons/star';
+import MinusIcon from 'lucide-react-native/icons/minus';
 import WrenchIcon from 'lucide-react-native/icons/wrench';
 import XIcon from 'lucide-react-native/icons/x';
 import ChevronLeftIcon from 'lucide-react-native/icons/chevron-left';
@@ -153,7 +154,8 @@ export type IconName =
   | 'edit'
   | 'intro'
   | 'signOut'
-  | 'star';
+  | 'star'
+  | 'remove';
 
 /**
  * iOS renders the SF Symbol, Android renders the Lucide glyph. The app runs
@@ -235,6 +237,7 @@ export const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideIcon; minIOS?
   intro: { sf: 'play.circle', lucide: CirclePlayIcon },
   signOut: { sf: 'rectangle.portrait.and.arrow.right', lucide: LogOutIcon },
   star: { sf: 'star.fill', lucide: StarIcon },
+  remove: { sf: 'minus', lucide: MinusIcon },
 };
 
 /** Lucide glyph for a concept; `back`/`forward` mirror in RTL (direction is fixed per launch). */

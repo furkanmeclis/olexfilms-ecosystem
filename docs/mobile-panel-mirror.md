@@ -25,7 +25,10 @@ Mobil uygulama, izin verilen panel uçlarını `/v1/mobile/panel/{path}` üzerin
 `warehouse`, `measurements`, `reports`, `search`, `notifications`, `appointments`,
 `catalog`, `vehicle-catalog`, `plate-formats`, `performance`, `tasks`, `leads`,
 `pricing`, `certificates`, `photo-standard`, `service-catalog`, `geo`,
-`announcements`, `stats`, `delivery-methods`, `certificate-warnings`, `einvoices` ve iki segmentli
+`announcements`, `stats`, `delivery-methods`, `certificate-warnings`, `einvoices`, bayi satış
+uçları `dealer-prices`, `product-sales`, `purchases`, `suppliers` (TEC-958;
+accounting + dealer_accounting modülü ve sırasıyla `dealer_pricing.write`,
+`product_sales.write`, `purchases.write`, `suppliers.manage`) ve iki segmentli
 `tenant/organizations`, `tenant/modules`, `tenant/pricing`, `accounting/cari`,
 `accounting/entries`, `accounting/categories`, `accounting/disputes` (TEC-957).
 
