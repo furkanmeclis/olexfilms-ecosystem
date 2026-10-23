@@ -256,7 +256,7 @@ function Scanner({ onClose, onResult }: { onClose: () => void; onResult: (plate:
             onPress={() => void shutter()}
             className="size-[72px] items-center justify-center rounded-full border-4 border-white/90 active:opacity-70"
           >
-            {busy ? <ActivityIndicator color="#fff" /> : <View className="size-14 rounded-full bg-white" />}
+            {busy ? <ActivityIndicator colorClassName="accent-on-media" /> : <View className="size-14 rounded-full bg-white" />}
           </Pressable>
           <Pressable accessibilityRole="button" hitSlop={8} onPress={onClose}>
             <Text variant="callout" className="text-white/90">
