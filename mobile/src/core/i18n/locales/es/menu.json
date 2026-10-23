@@ -6,8 +6,10 @@
   "warranty_claims": "Reclamaciones de garantía",
   "leads": "Leads y presupuestos",
   "reports": "Informes",
-  "accounting": "Caja y cuentas",
+  "accounting": "Cuentas corrientes",
   "tasks": "Tareas",
   "announcements": "Anuncios",
-  "warranties": "Garantías"
+  "warranties": "Garantías",
+  "disputes": "Reclamaciones",
+  "einvoices": "Facturas electrónicas"
 }

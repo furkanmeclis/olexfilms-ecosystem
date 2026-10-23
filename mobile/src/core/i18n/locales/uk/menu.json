@@ -6,8 +6,10 @@
   "warranty_claims": "Гарантійні звернення",
   "leads": "Ліди та пропозиції",
   "reports": "Звіти",
-  "accounting": "Каса та розрахунки",
+  "accounting": "Розрахунки з контрагентами",
   "tasks": "Завдання",
   "announcements": "Оголошення",
-  "warranties": "Гарантії"
+  "warranties": "Гарантії",
+  "disputes": "Претензії",
+  "einvoices": "Електронні рахунки"
 }

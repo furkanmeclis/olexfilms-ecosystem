@@ -6,8 +6,10 @@
   "warranty_claims": "质保申请",
   "leads": "线索与报价",
   "reports": "报表",
-  "accounting": "收支与往来账",
+  "accounting": "往来账户",
   "tasks": "任务",
   "announcements": "公告",
-  "warranties": "质保"
+  "warranties": "质保",
+  "disputes": "异议",
+  "einvoices": "电子发票"
 }
