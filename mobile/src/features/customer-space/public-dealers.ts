@@ -7,6 +7,9 @@ import { parseRetryAfter, PUBLIC_DEALER_CENTER, PUBLIC_DEALER_RADIUS_KM } from '
 
 export type NearbyDealer = components['schemas']['NearbyDealer'];
 
+/** Backend cap of the public list: NearbyMaxResults in backend/internal/modules/organizations/usecase/dealers.go. */
+export const NEARBY_MAX_RESULTS = 50;
+
 /** A 429 waits at most this long before the single retry. */
 const MAX_RETRY_WAIT_S = 5;
 

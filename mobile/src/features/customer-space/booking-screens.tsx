@@ -25,6 +25,8 @@ import {
   type BookingDealer,
   dayState,
   dedupeDealers,
+  enrichPastDealers,
+  publicListCapped,
   filterPastDealers,
   filterPublicDealers,
   formatDayLabel,
@@ -34,7 +36,7 @@ import {
   uuidParam,
   type DayState,
 } from './booking-lib';
-import { fetchPublicDealers } from './public-dealers';
+import { fetchPublicDealers, NEARBY_MAX_RESULTS } from './public-dealers';
 import { type PortalServiceItem, type PortalVehicle, retryPortal, useFleetRoles } from './lib';
 
 type Slot = components['schemas']['AppointmentSlot'];
@@ -319,7 +321,11 @@ function DealerPicker({ onPick }: { onPick: (d: Dealer) => void }) {
     }
     return [...seen.values()];
   }, [q.data]);
-  const pastShown = useMemo(() => filterPastDealers(past, text), [past, text]);
+  const pastShown = useMemo(
+    () => filterPastDealers(enrichPastDealers(past, filterPublicDealers(pub.data ?? [], '')), text),
+    [past, pub.data, text],
+  );
+  const capped = publicListCapped(pub.data?.length ?? 0, NEARBY_MAX_RESULTS);
   const allShown = useMemo(
     () => dedupeDealers(past, filterPublicDealers(pub.data ?? [], text)),
     [past, pub.data, text],
@@ -377,6 +383,11 @@ function DealerPicker({ onPick }: { onPick: (d: Dealer) => void }) {
           {text ? t('booking_no_dealers_match') : t('booking_no_dealers')}
         </Text>
       )}
+      {capped ? (
+        <Text variant="footnote" tone="muted" className="px-4 pb-3 pt-2">
+          {t('booking_dealers_capped', { count: NEARBY_MAX_RESULTS })}
+        </Text>
+      ) : null}
     </>
   );
 }

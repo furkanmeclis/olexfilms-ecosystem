@@ -6,6 +6,8 @@ import {
   dayState,
   dealerPlace,
   dedupeDealers,
+  enrichPastDealers,
+  publicListCapped,
   filterPastDealers,
   filterPublicDealers,
   formatSlotTime,
@@ -101,5 +103,19 @@ describe('parseRetryAfter', () => {
     assert.equal(parseRetryAfter('7'), 7);
     assert.equal(parseRetryAfter(null), null);
     assert.equal(parseRetryAfter('Wed, 21 Oct 2026 07:28:00 GMT'), null);
+  });
+});
+
+describe('enrichPastDealers / publicListCapped', () => {
+  it('copies the place from the public row', () => {
+    const pub = [{ uuid: 'a', name: 'Işık Oto', place: 'Şişli, İstanbul' }];
+    const out = enrichPastDealers([{ uuid: 'a', name: 'Işık Oto' }, { uuid: 'z', name: 'Z' }], pub);
+    assert.equal(out[0].place, 'Şişli, İstanbul');
+    assert.equal(out[1].place, undefined);
+  });
+
+  it('detects a full public list', () => {
+    assert.equal(publicListCapped(50, 50), true);
+    assert.equal(publicListCapped(49, 50), false);
   });
 });

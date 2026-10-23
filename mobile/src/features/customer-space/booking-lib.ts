@@ -123,7 +123,7 @@ export function filterPastDealers(items: readonly BookingDealer[], query: string
   return items.filter((d) => foldSearch(`${d.name} ${d.place ?? ''}`).includes(q));
 }
 
-/** Public list minus dealers already shown as past dealers (the past entry wins, enriched with the place). */
+/** Public list minus the dealers already shown as past dealers. */
 export function dedupeDealers(past: readonly BookingDealer[], all: readonly BookingDealer[]): BookingDealer[] {
   const seen = new Set(past.map((d) => d.uuid));
   return all.filter((d) => !seen.has(d.uuid));
@@ -134,4 +134,15 @@ export function parseRetryAfter(value: string | null | undefined): number | null
   if (!value) return null;
   const n = Number(value.trim());
   return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/** Past dealers get their place (district, city) from the matching public row, when it is in the list. */
+export function enrichPastDealers(past: readonly BookingDealer[], publicRows: readonly BookingDealer[]): BookingDealer[] {
+  const places = new Map(publicRows.map((d) => [d.uuid, d.place]));
+  return past.map((d) => ({ ...d, place: d.place ?? places.get(d.uuid) }));
+}
+
+/** True when the public list came back full: bookable dealers may be missing from it. */
+export function publicListCapped(count: number, cap: number): boolean {
+  return count >= cap;
 }
