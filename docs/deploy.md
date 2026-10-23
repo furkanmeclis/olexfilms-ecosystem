@@ -1,6 +1,6 @@
 # Prod deploy (Dokploy + Traefik)
 
-Prod tek bir Docker host'ta `compose.prod.yml` ile çalışır (tasarım §6, 13 container). Dokploy repo'yu `v0.N` tag'inden çeker, `.env.server` ile `docker compose up -d --build` çalıştırır. Bu ajanlar prod sunucuya bağlanmaz (AGENTS §4).
+Prod tek bir Docker host'ta `compose.prod.yml` ile çalışır (tasarım §6, 12 container; migrator final cutover sonrası kaldırıldı). Dokploy repo'yu `v0.N` tag'inden çeker, `.env.server` ile `docker compose up -d --build` çalıştırır. Bu ajanlar prod sunucuya bağlanmaz (AGENTS §4).
 
 ## 1. Env üretimi
 
@@ -46,7 +46,6 @@ Backend dışa açık değildir. Tarayıcı Go'ya doğrudan gitmez; frontend `AP
 | 10 | worker-core | `WORKER_QUEUES=critical,default,low`, `SCHEDULER_ENABLED=true` | app |
 | 11 | worker-docs | `WORKER_QUEUES=docs` (PDF/export), scheduler kapalı | app |
 | 12 | frontend | Next.js, `/health` | app + dokploy-network |
-| 13 | migrator | `APP_ROLE=migrator`, `profiles: [migrator]`; tek seferlik aktarım ve cutover araçları (`cutover-preflight`, `search-reindex`, `inventory-reconcile`) | app |
 
 Başlangıç sırası `depends_on` ile şöyledir: altyapı servisleri healthy olur, sonra migrate başarıyla tamamlanır, sonra backend healthy olur, ardından worker'lar başlar, en son frontend. Frontend worker'ları yalnızca `service_started` olarak bekler. Böylece sağlıksız bir worker siteyi düşürmez.
 
@@ -54,8 +53,8 @@ Başlangıç sırası `depends_on` ile şöyledir: altyapı servisleri healthy o
 - Kuyruk grupları: `critical` = notifications, `default` = default/imports/bulk/search, `low` = maintenance, `docs` = exports. Birden fazla `SCHEDULER_ENABLED` worker çalışırsa Redis `SET NX PX` lease'i tek bir scheduler lideri seçer.
 - Worker healthcheck'i `/tmp/worker.health` dosyasının tazeliğine bakar. Worker bu dosyayı her başarılı Redis ping'inde (15 sn'de bir) yeniler.
 - `stop_grace_period`: backend 30 sn, worker'lar 35 sn.
-- Migrator'ı çalıştırmak için: `docker compose --env-file .env.server -f compose.prod.yml --profile migrator run --rm migrator`.
-- İlk tam aktarımdan ve her `migrator run --mode=full` çalıştırmasından sonra tüm arama indeksleri yeniden kurulur; backend açılışta yalnız boş indeksleri doldurduğu için bu adım atlanırsa dolu sayılan indeksler (ör. super admin'li `users`) eksik kalır: `docker compose --env-file .env.server -f compose.prod.yml --profile migrator run --rm --entrypoint /app/search-reindex migrator`. Sonra `--entrypoint /app/cutover-preflight` ile preflight çalıştırılır; `search_index_counts` satırı `PASS` olmalı (`WARN` cutover'ı durdurmaz). Sıra ve ayrıntı: [`docs/runbooks/migrator-cutover.md`](runbooks/migrator-cutover.md).
+- Migrator container'ı final cutover'dan sonra kaldırıldı (K27, TEC-282). `cmd/migrator` kodu ve `APP_ROLE=migrator` girişi depoda duruyor ama compose'da servis, env'de `LEGACY_*` / `MIGRATOR_*` değişkeni yok. Eski aktarım ve kesim sırası tarihçe olarak [`docs/runbooks/migrator-cutover.md`](runbooks/migrator-cutover.md) içinde.
+- Bakım araçları (`search-reindex`, `inventory-reconcile`, `cutover-preflight`) backend imajında; tek seferlik container ile çalıştırılır: `docker compose --env-file .env.server -f compose.prod.yml run --rm --no-deps --entrypoint /app/search-reindex backend`.
 
 ## 4. Yedek ve geri yükleme
 

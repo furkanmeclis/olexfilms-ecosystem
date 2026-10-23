@@ -222,7 +222,7 @@ Taban kod otopoly-go'nun altyapı katmanıdır (organization = bayi/distribütö
 | 10 | worker-core | critical/default/low kuyrukları, scheduler lideri | — | hayır |
 | 11 | worker-docs | `docs` kuyruğu: tüm PDF ve export; import girmez | — | hayır |
 | 12 | frontend | Next.js panel, portal, public, BFF | 3000 | `olexfilms.app` |
-| 13 | migrator | Eski DB'lerden aktarım; profil ile, varsayılan durur | — | hayır |
+| 13 | ~~migrator~~ | Eski DB'lerden aktarım; final cutover sonrası kaldırıldı (K27, TEC-282) | — | hayır |
 
 Dış ağa yalnızca frontend ve centrifugo bağlı. Lokal compose aynı liste + mailhog + adminer. Eski hub, depo ve AI katmanının 20'nin üzerindeki container'ı kapanır.
 
