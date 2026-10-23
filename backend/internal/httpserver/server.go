@@ -911,6 +911,10 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	measurementsmodule.RegisterCurveRoutes(mux,
 		measurementshandler.NewCurves(smartptgCurves, ratelimit.New(deps.Redis, cfg.App.Env)),
 		tokens, loader, deps.Queries)
+	// TEC-939: SmartPTG zero calibrations (append-only, per organization).
+	measurementsmodule.RegisterCalibrationRoutes(mux,
+		measurementshandler.NewCalibrations(measurementsusecase.NewCalibrations(deps.Queries)),
+		tokens, loader, deps.Queries)
 	// TEC-503 (F5-08c): e-invoice drafts, preview, numbering, archive (XML
 	// + PDF on the docs queue), void mark and settings.
 	einvoicemodule.RegisterRoutes(mux, einvoicehandler.New(einvoiceSvc, deps.Queries), tokens, loader, deps.Queries,

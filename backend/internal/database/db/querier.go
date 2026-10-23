@@ -816,6 +816,7 @@ type Querier interface {
 	// Exact VKN/TCKN match within the brand (a second dealer finds the fleet
 	// and requests a link instead of opening a duplicate).
 	FindFleetByTaxNumber(ctx context.Context, arg FindFleetByTaxNumberParams) (FindFleetByTaxNumberRow, error)
+	FindGaugeCalibrationByClientID(ctx context.Context, arg FindGaugeCalibrationByClientIDParams) (int64, error)
 	// The first upload of a repeated idempotency key or client_measurement_id.
 	FindMeasurementResultByKeys(ctx context.Context, arg FindMeasurementResultByKeysParams) (MeasurementResult, error)
 	FindOpenCustomerLeadForAppointment(ctx context.Context, arg FindOpenCustomerLeadForAppointmentParams) (Lead, error)
@@ -1041,6 +1042,7 @@ type Querier interface {
 	GetFleetUserByUserID(ctx context.Context, userID int64) (GetFleetUserByUserIDRow, error)
 	// A vehicle of the fleet, locked (PATCH, removal).
 	GetFleetVehicleForUpdate(ctx context.Context, arg GetFleetVehicleForUpdateParams) (Vehicle, error)
+	GetGaugeCalibration(ctx context.Context, arg GetGaugeCalibrationParams) (GetGaugeCalibrationRow, error)
 	GetGitHubAppSettings(ctx context.Context) (GithubAppSetting, error)
 	GetGlorianOutboundByUUID(ctx context.Context, arg GetGlorianOutboundByUUIDParams) (GetGlorianOutboundByUUIDRow, error)
 	// TEC-271 (F2-02f): Glorian order outbound. An order of the glorian brand
@@ -1071,6 +1073,8 @@ type Querier interface {
 	GetLabelTemplateByUUID(ctx context.Context, arg GetLabelTemplateByUUIDParams) (LabelTemplate, error)
 	GetLatestConsent(ctx context.Context, arg GetLatestConsentParams) (Consent, error)
 	GetLatestContractSignature(ctx context.Context, signerID int64) (ContractSignature, error)
+	// The current calibration of a serial: the latest one of the organization.
+	GetLatestGaugeCalibration(ctx context.Context, arg GetLatestGaugeCalibrationParams) (GetLatestGaugeCalibrationRow, error)
 	GetLatestKVKKNotice(ctx context.Context, locale string) (KvkkNotice, error)
 	// Portal legal texts and consents (TEC-90).
 	GetLatestLegalText(ctx context.Context, arg GetLatestLegalTextParams) (LegalText, error)
@@ -1497,6 +1501,11 @@ type Querier interface {
 	// (negated amounts, same targets and source). A second reversal of the same
 	// entry conflicts with uq_finance_entries_reversal_of and returns no row.
 	InsertFinanceReversal(ctx context.Context, arg InsertFinanceReversalParams) (FinanceEntry, error)
+	// TEC-939: SmartPTG zero calibrations (append-only ledger). Every query is
+	// bounded by the active organization.
+	// InsertGaugeCalibration skips the insert when the client_id was already
+	// used in the organization (no row then: read it with FindGaugeCalibrationByClientID).
+	InsertGaugeCalibration(ctx context.Context, arg InsertGaugeCalibrationParams) (int64, error)
 	InsertImportChange(ctx context.Context, arg InsertImportChangeParams) (ImportChange, error)
 	InsertIntegrationExternalParty(ctx context.Context, arg InsertIntegrationExternalPartyParams) (IntegrationExternalParty, error)
 	InsertKVKKNotice(ctx context.Context, arg InsertKVKKNoticeParams) (KvkkNotice, error)

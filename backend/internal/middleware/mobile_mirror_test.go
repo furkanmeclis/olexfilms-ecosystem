@@ -198,6 +198,33 @@ func TestMobilePanelMirrorAuthenticate(t *testing.T) {
 	}
 }
 
+// TEC-939: the SmartPTG calibration routes ride on the existing
+// "measurements" prefix (no new mirror entry); a sibling segment is denied.
+func TestMobilePanelMirrorTEC939Calibrations(t *testing.T) {
+	for _, c := range []struct{ method, path string }{
+		{http.MethodPost, "measurements/devices/smartptg/calibrations"},
+		{http.MethodGet, "measurements/devices/smartptg/calibrations/32475"},
+	} {
+		req := httptest.NewRequest(c.method, "/v1/mobile/panel/"+c.path, nil)
+		req.Header.Set(MobileAPIVersionHeader, "1")
+		called := false
+		MobilePanelMirror(1, 1)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			called = r.URL.Path == "/v1/"+c.path && r.Method == c.method
+		})).ServeHTTP(httptest.NewRecorder(), req)
+		if !called {
+			t.Errorf("%s %s was not mirrored", c.method, c.path)
+		}
+	}
+	req := httptest.NewRequest(http.MethodPost, "/v1/mobile/panel/measurementsx/devices/smartptg/calibrations", nil)
+	rec := httptest.NewRecorder()
+	MobilePanelMirror(1, 1)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		t.Fatal("sibling prefix reached next")
+	})).ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("sibling = %d", rec.Code)
+	}
+}
+
 func TestMobilePanelMirrorTEC957Allowed(t *testing.T) {
 	id := uuid.NewString()
 	for _, path := range []string{

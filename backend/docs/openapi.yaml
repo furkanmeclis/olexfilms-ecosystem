@@ -16973,6 +16973,100 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /v1/measurements/devices/smartptg/calibrations:
+    post:
+      tags: [Measurements]
+      operationId: createSmartPTGCalibration
+      summary: Record a SmartPTG / NexPTG zero (foil) calibration
+      description: >-
+        TEC-939. Appends one zero calibration of a gauge serial to the active
+        organization's ledger (`gauge_calibrations`, append-only). The app
+        runs the calibration (docs/smartptg/REVERSE_ENGINEERING.md §6.1): a
+        90 µm (curve comment has cal1/cal2/cal3) or 150 µm foil on the steel
+        (Fe) and the aluminium (Al) plate, 10 steady frames, offset = curve
+        frequency of the foil point − measured frequency. At least one of
+        `fe_offset_hz` / `al_offset_hz` (Economic gauges have no Al channel).
+        A repeated `client_id` of the organization stores nothing and answers
+        200 with the first row. Requires `measurements.write`; no module flag
+        (K28). The app reaches it through the mobile mirror
+        (`/v1/mobile/panel/measurements/...`).
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GaugeCalibrationInput"
+      responses:
+        "201":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: "#/components/schemas/GaugeCalibration" }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "200":
+          description: The client_id was already recorded; the first row
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: "#/components/schemas/GaugeCalibration" }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/measurements/devices/smartptg/calibrations/{serial}:
+    get:
+      tags: [Measurements]
+      operationId: getSmartPTGCalibration
+      summary: Get the current calibration of a SmartPTG / NexPTG gauge
+      description: >-
+        TEC-939. The latest calibration (by `calibrated_at`) of the serial in
+        the active organization; 404 when the organization never calibrated
+        it. Requires `measurements.read` or `measurements.write`; no module
+        flag (K28). `Cache-Control: no-store`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: serial
+          in: path
+          required: true
+          description: Gauge serial, 1–9 digits, not zero (leading zeros ignored).
+          schema: { type: string, maxLength: 9, pattern: "^0*[1-9][0-9]{0,8}$" }
+      responses:
+        "200":
+          description: Current calibration
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: "#/components/schemas/GaugeCalibration" }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/measurements/{uuid}:
     get:
       tags: [Measurements]
@@ -41158,6 +41252,72 @@ components:
           type: object
           additionalProperties: true
           description: Device report as received (NexPTG JSON), stored unchanged
+
+    GaugeCalibrationSamples:
+      type: object
+      description: Measured frequencies (Hz) of the steady frames, per channel (audit).
+      properties:
+        fe:
+          type: array
+          maxItems: 64
+          items: { type: integer, minimum: 1, maximum: 65535 }
+        al:
+          type: array
+          maxItems: 64
+          items: { type: integer, minimum: 1, maximum: 65535 }
+
+    GaugeCalibrationInput:
+      type: object
+      required: [serial, target_um]
+      properties:
+        serial: { type: integer, minimum: 1, maximum: 999999999 }
+        fe_offset_hz:
+          type: [integer, "null"]
+          minimum: -20000
+          maximum: 20000
+          description: Hz added to every Fe channel frequency; null = not calibrated
+        al_offset_hz:
+          type: [integer, "null"]
+          minimum: -20000
+          maximum: 20000
+          description: Hz added to every Al channel frequency; null = not calibrated (Economic)
+        target_um:
+          type: integer
+          enum: [90, 150]
+          description: Foil thickness (90 when the curve comment has cal1/cal2/cal3)
+        samples: { $ref: "#/components/schemas/GaugeCalibrationSamples" }
+        client_id:
+          type: string
+          format: uuid
+          description: Idempotency key of the app
+        calibrated_at:
+          type: string
+          format: date-time
+          description: When the phone finished the calibration (default now; at most 5 min ahead)
+
+    GaugeCalibration:
+      type: object
+      required: [uuid, serial, fe_offset_hz, al_offset_hz, target_um, samples, calibrated_at, created_at, created_by]
+      properties:
+        uuid: { type: string, format: uuid }
+        serial: { type: integer }
+        fe_offset_hz: { type: [integer, "null"] }
+        al_offset_hz: { type: [integer, "null"] }
+        target_um: { type: integer, enum: [90, 150] }
+        samples:
+          type: object
+          required: [fe, al]
+          properties:
+            fe: { type: array, items: { type: integer } }
+            al: { type: array, items: { type: integer } }
+        calibrated_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        created_by:
+          type: object
+          required: [uuid, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
 
     MobileMeasurementAccepted:
       type: object

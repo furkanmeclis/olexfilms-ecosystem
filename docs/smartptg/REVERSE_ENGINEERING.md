@@ -333,6 +333,8 @@ Simülasyon: 18.07 kaydının 923 çerçevesi mobil kodun kendisi (`decodeFrame`
 | 14 | 10 s veri gelmeyince bağlantı kesme yok | `manager.ts` | `AUTO DISCONNECT` | İsteğe bağlı; en azından "veri yok" durumu |
 | 15 | Ham frekans ve kanal ölçümle saklanmıyor | `Commit` tipi | — | §9.2 son paragraf |
 
+**TEC-939 durumu (mobil + backend):** 1–7, 9, 11, 12, 15 uygulandı (`measure.ts` kanal/malzeme kuralı, `calibration.ts` sihirbaz kuralları, `curve.ts` cihaz kuralları ve başlık alanları, `protocol.ts` pil tablosu, `gauge_calibrations` defteri). 13: SAPL genel mod / dış yüzey canlı etiket ve renk (`interpretation.ts`; bireysel mod yalnız saf fonksiyonda). 14: 10 sn veri yoksa "veri yok" uyarısı (otomatik kesme yok). 8 (Zn) ve ölçüm sırasında Al kilidi (`!2`) yapılmadı: doğruluğu [B]/[Ç], numune ve kayıtla doğrulanmalı. 10 TEC-934'te çözüldü.
+
 Doğru olanlar: UUID'ler, ad filtresi (`isGaugePeripheral` ayrıca NUS servis UUID'sini kabul ediyor, zararsız), decode, AES çözme, temel interpolasyon, iki çerçeve onaylı SN (`createSerialConfirm`), µm/mil dönüşümü (resmi uygulama mil'i 2 ondalık gösteriyor, mobil 1).
 
 ## 11. Eski rapordan düzeltmeler
