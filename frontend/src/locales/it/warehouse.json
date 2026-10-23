@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "Codici a barre",
   "barcodes.void_description": "Saranno controllati {{count}} lotti o unità selezionati. I codici stampati e a magazzino resteranno invariati.",
+  "barcodes.void_held_in_order": "{{n}} codici a barre sono assegnati a un ordine e non sono stati annullati: {{barcodes}}. Rimuoverli prima dall'ordine.",
+  "barcodes.void_held_in_transfer": "{{n}} codici a barre sono in un trasferimento aperto e non sono stati annullati: {{barcodes}}. Rimuoverli prima dal trasferimento.",
   "barcodes.void_result": "{{voided}} annullati, {{rejected}} rifiutati.",
   "barcodes.void_selected": "Annulla selezionati",
   "barcodes.void_title": "Annullare i codici a barre riservati selezionati?",

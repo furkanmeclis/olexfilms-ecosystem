@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}} aralığı",
   "barcodes.title": "Barkodlar",
   "barcodes.void_description": "Seçili {{count}} parti veya birim kontrol edilecek. Basılmış ve stoktaki barkodlar değişmez.",
+  "barcodes.void_held_in_order": "{{n}} barkod bir siparişe atandığı için iptal edilmedi: {{barcodes}}. Önce siparişten çıkarın.",
+  "barcodes.void_held_in_transfer": "{{n}} barkod açık bir transferde olduğu için iptal edilmedi: {{barcodes}}. Önce transferden çıkarın.",
   "barcodes.void_result": "{{voided}} iptal edildi, {{rejected}} reddedildi.",
   "barcodes.void_selected": "Seçilenleri iptal et",
   "barcodes.void_title": "Seçili rezerv barkodlar iptal edilsin mi?",

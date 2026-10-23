@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "条码",
   "barcodes.void_description": "将检查 {{count}} 个所选批次或单件。已打印和已入库的条码不会改变。",
+  "barcodes.void_held_in_order": "{{n}} 个条码已分配给订单，未作废：{{barcodes}}。请先从订单中移除。",
+  "barcodes.void_held_in_transfer": "{{n}} 个条码在未完成的调拨中，未作废：{{barcodes}}。请先从调拨中移除。",
   "barcodes.void_result": "已作废 {{voided}} 个，已拒绝 {{rejected}} 个。",
   "barcodes.void_selected": "作废所选项",
   "barcodes.void_title": "作废所选预留条码？",

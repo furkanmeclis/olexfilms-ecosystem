@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "Barkodlar",
   "barcodes.void_description": "Seçilmiş {{count}} partiya və ya vahid yoxlanacaq. Çap edilmiş və stokdakı barkodlar dəyişməyəcək.",
+  "barcodes.void_held_in_order": "{{n}} barkod sifarişə təyin edildiyi üçün ləğv edilmədi: {{barcodes}}. Əvvəlcə sifarişdən çıxarın.",
+  "barcodes.void_held_in_transfer": "{{n}} barkod açıq transferdə olduğu üçün ləğv edilmədi: {{barcodes}}. Əvvəlcə transferdən çıxarın.",
   "barcodes.void_result": "{{voided}} ləğv edildi, {{rejected}} rədd edildi.",
   "barcodes.void_selected": "Seçilənləri ləğv et",
   "barcodes.void_title": "Seçilmiş rezerv barkodlar ləğv edilsin?",

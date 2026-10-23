@@ -27212,7 +27212,7 @@ export interface components {
                 barcode: string;
                 voided: boolean;
                 /** @enum {string} */
-                reason?: "not_found" | "not_reserved" | "state_changed";
+                reason?: "not_found" | "not_reserved" | "state_changed" | "in_transfer" | "in_order";
             }[];
         };
         EnvelopeBarcodeVoidResult: {

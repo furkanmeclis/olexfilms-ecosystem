@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "Codes-barres",
   "barcodes.void_description": "{{count}} lots ou unités sélectionnés seront vérifiés. Les codes imprimés et en stock resteront inchangés.",
+  "barcodes.void_held_in_order": "{{n}} codes-barres sont affectés à une commande et n'ont pas été annulés : {{barcodes}}. Retirez-les d'abord de la commande.",
+  "barcodes.void_held_in_transfer": "{{n}} codes-barres sont sur un transfert ouvert et n'ont pas été annulés : {{barcodes}}. Retirez-les d'abord du transfert.",
   "barcodes.void_result": "{{voided}} annulés, {{rejected}} refusés.",
   "barcodes.void_selected": "Annuler la sélection",
   "barcodes.void_title": "Annuler les codes-barres réservés sélectionnés ?",

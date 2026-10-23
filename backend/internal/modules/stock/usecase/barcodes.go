@@ -160,6 +160,19 @@ func (s *Barcodes) Void(ctx context.Context, c Caller, in VoidInput) (VoidResult
 				item.Reason = "not_reserved"
 				break
 			}
+			// TEC-774: a reserved label may already sit on an open transfer or
+			// an order line (selection precedes the stock entry); voiding it
+			// would only surface at shipment.
+			held, err := voidHeldBy(ctx, s.q.WithTx(tx), u.ID)
+			if err != nil {
+				_ = tx.Rollback(ctx)
+				return VoidResult{}, err
+			}
+			if held != "" {
+				_ = tx.Rollback(ctx)
+				item.Reason = held
+				break
+			}
 			_, err = s.ledger.Post(ctx, tx, ledger.Movement{Type: ledger.TypeVoid, UnitID: u.ID,
 				Source: "barcode_void", RefType: "unit", RefID: u.ID, Reason: "reserved barcode cancelled", ActorUserID: c.actorPtr()})
 			if err != nil {
@@ -178,6 +191,31 @@ func (s *Barcodes) Void(ctx context.Context, c Caller, in VoidInput) (VoidResult
 		result.Items = append(result.Items, item)
 	}
 	return result, nil
+}
+
+// voidHeldBy reports why a locked reserved unit cannot be voided: "in_transfer"
+// when an open warehouse transfer line or transfer request holds it,
+// "in_order" when an order line actively reserves it, "" when it is free.
+func voidHeldBy(ctx context.Context, q *db.Queries, unitID int64) (string, error) {
+	lines, err := q.CountOpenWarehouseTransferLinesByUnit(ctx, unitID)
+	if err != nil {
+		return "", err
+	}
+	requests, err := q.CountOpenTransferItemsByUnit(ctx, db.CountOpenTransferItemsByUnitParams{UnitID: unitID})
+	if err != nil {
+		return "", err
+	}
+	if lines+requests > 0 {
+		return "in_transfer", nil
+	}
+	reservations, err := q.LockActiveReservationsByUnit(ctx, unitID)
+	if err != nil {
+		return "", err
+	}
+	if len(reservations) > 0 {
+		return "in_order", nil
+	}
+	return "", nil
 }
 
 // BatchInput reserves Quantity barcodes for the product.

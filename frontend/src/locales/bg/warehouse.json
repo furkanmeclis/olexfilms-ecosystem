@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "Баркодове",
   "barcodes.void_description": "Ще бъдат проверени {{count}} избрани партиди или единици. Отпечатаните и наличните баркодове остават непроменени.",
+  "barcodes.void_held_in_order": "{{n}} баркода са зачислени към поръчка и не бяха анулирани: {{barcodes}}. Първо ги премахнете от поръчката.",
+  "barcodes.void_held_in_transfer": "{{n}} баркода са в отворен трансфер и не бяха анулирани: {{barcodes}}. Първо ги премахнете от трансфера.",
   "barcodes.void_result": "{{voided}} анулирани, {{rejected}} отхвърлени.",
   "barcodes.void_selected": "Анулирай избраните",
   "barcodes.void_title": "Да се анулират ли избраните резервирани баркодове?",

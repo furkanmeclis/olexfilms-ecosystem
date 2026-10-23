@@ -11,6 +11,8 @@
   "barcodes.range": "{{first}} – {{last}}",
   "barcodes.title": "Штрихкоды",
   "barcodes.void_description": "Будут проверены {{count}} выбранных партий или единиц. Напечатанные и складские штрихкоды не изменятся.",
+  "barcodes.void_held_in_order": "{{n}} штрихкодов назначены заказу и не аннулированы: {{barcodes}}. Сначала удалите их из заказа.",
+  "barcodes.void_held_in_transfer": "{{n}} штрихкодов находятся в открытом перемещении и не аннулированы: {{barcodes}}. Сначала удалите их из перемещения.",
   "barcodes.void_result": "{{voided}} аннулировано, {{rejected}} отклонено.",
   "barcodes.void_selected": "Аннулировать выбранные",
   "barcodes.void_title": "Аннулировать выбранные зарезервированные штрихкоды?",
