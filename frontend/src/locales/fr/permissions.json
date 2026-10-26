@@ -217,5 +217,6 @@
   "labels.showcase.read": "Voir la vitrine",
   "labels.showcase.write": "Modifier la vitrine",
   "labels.platform.showcase.review": "Valider les vitrines des revendeurs",
-  "groups.dealer_showcase": "Vitrine du revendeur"
+  "groups.dealer_showcase": "Vitrine du revendeur",
+  "labels.stock.bulk": "Opérations groupées sur codes-barres"
 }

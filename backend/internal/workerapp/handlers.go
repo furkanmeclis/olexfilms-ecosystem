@@ -56,6 +56,7 @@ import (
 	shorturlsmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/shorturls"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
+	stockbulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockbulk/usecase"
 	stockforecastusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast/usecase"
 	tasksusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/tasks/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/warehouse/glorian"
@@ -344,6 +345,8 @@ func Register(w *queue.Worker, d Deps) (*Handlers, error) {
 		WithDocsRender(docSvc.ProcessRender).
 		// TEC-288: executed contract PDF (docs queue).
 		WithContractPDF(contractsSvc.GenerateExecutedPDF).
+		// TEC-1008: bulk barcode jobs (the worker never enqueues new ones).
+		WithStockBulk(stockbulkusecase.New(pool, queries, outboxStore, nil).Process).
 		// TEC-298: measurement PDF (docs queue).
 		WithMeasurementPDF(measurementPDF.GeneratePDF).
 		// TEC-503: e-invoice PDF (docs queue).

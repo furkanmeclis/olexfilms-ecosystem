@@ -113,6 +113,8 @@ type Store interface {
 	AppendProductImage(ctx context.Context, arg db.AppendProductImageParams) (db.Product, error)
 	ReplaceProductImages(ctx context.Context, arg db.ReplaceProductImagesParams) (db.Product, error)
 	GetActiveProductUUIDByImageKey(ctx context.Context, key string) (uuid.UUID, error)
+	// TEC-1008: roll defaults.
+	UpdateProductRollSettings(ctx context.Context, arg db.UpdateProductRollSettingsParams) (db.Product, error)
 }
 
 // Indexer receives search index mutations (searchengine.Indexer).
@@ -746,8 +748,49 @@ func productView(r db.Product, cat db.ProductCategory) model.Product {
 		WarrantyDurationMonths: int4Ptr(r.WarrantyDurationMonths), MicronThickness: numericPtr(r.MicronThickness),
 		Images: decodeImages(r.Images), UnitType: r.UnitType, UsesFixedBarcode: r.UsesFixedBarcode,
 		Active: r.Active, ExternalID: ext, LockedFields: locked,
+		Roll: model.RollSettings{
+			DefaultMeters: numericPtr(r.DefaultRollMeters), WidthCm: numericPtr(r.RollWidthCm),
+			MinCutMeters: numericPtr(r.MinCutMeters), WastePct: numericPtr(r.WastePct),
+		},
 		CreatedAt: r.CreatedAt.Time, UpdatedAt: r.UpdatedAt.Time,
 	}
+}
+
+// UpdateRollSettings replaces the roll defaults of a product (center only,
+// TEC-1008). Nil clears a value.
+func (s *Service) UpdateRollSettings(ctx context.Context, org orgctx.Scope, id uuid.UUID, in model.RollSettings) (model.Product, error) {
+	if err := requireCenter(org); err != nil {
+		return model.Product{}, err
+	}
+	verr := &ValidationError{}
+	positive := func(field string, v *float64, max float64) {
+		if v != nil && (*v <= 0 || *v > max) {
+			verr.add(field, "out_of_range", fmt.Sprintf("%s must be greater than 0 and at most %g", field, max))
+		}
+	}
+	positive("default_meters", in.DefaultMeters, 100000)
+	positive("width_cm", in.WidthCm, 10000)
+	positive("min_cut_meters", in.MinCutMeters, 100000)
+	if in.WastePct != nil && (*in.WastePct < 0 || *in.WastePct >= 100) {
+		verr.add("waste_pct", "out_of_range", "waste_pct must be between 0 and 100")
+	}
+	if in.DefaultMeters != nil && in.MinCutMeters != nil && *in.MinCutMeters > *in.DefaultMeters {
+		verr.add("min_cut_meters", "out_of_range", "the minimum cut is longer than the roll")
+	}
+	if err := verr.orNil(); err != nil {
+		return model.Product{}, err
+	}
+	row, err := s.store.UpdateProductRollSettings(ctx, db.UpdateProductRollSettingsParams{
+		Uuid: id, BrandID: org.BrandID, DefaultRollMeters: numericArg(in.DefaultMeters),
+		RollWidthCm: numericArg(in.WidthCm), MinCutMeters: numericArg(in.MinCutMeters), WastePct: numericArg(in.WastePct),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return model.Product{}, ErrNotFound
+	}
+	if err != nil {
+		return model.Product{}, mapDBError(err)
+	}
+	return s.productView(ctx, row)
 }
 
 func decodeParts(raw []byte) []string {

@@ -204,6 +204,7 @@ const (
 	StockReturn                = "stock.return"
 	StockSale                  = "stock.sale"
 	StockReclassification      = "stock.reclassification"
+	StockMeasureConversion     = "stock.measure_conversion" // TEC-1008
 	StockCountAdjustment       = "stock.count_adjustment"
 	StockVoid                  = "stock.void"
 	StockExternalOutbound      = "stock.external_outbound"
@@ -603,6 +604,7 @@ func catalogConstants() []string {
 		StockReturn,
 		StockSale,
 		StockReclassification,
+		StockMeasureConversion,
 		StockCountAdjustment,
 		StockVoid,
 		StockExternalOutbound,

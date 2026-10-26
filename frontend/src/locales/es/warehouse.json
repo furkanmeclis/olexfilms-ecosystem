@@ -650,5 +650,6 @@
   "units.columns.updated_at": "Último cambio",
   "units.columns.created_at": "Creado",
   "units.state.in": "En el almacén",
-  "units.state.left": "Salió"
+  "units.state.left": "Salió",
+  "nav_bulk": "Operaciones masivas"
 }

@@ -217,5 +217,6 @@
   "labels.showcase.read": "Visualizza vetrina",
   "labels.showcase.write": "Modifica vetrina",
   "labels.platform.showcase.review": "Approva le vetrine dei rivenditori",
-  "groups.dealer_showcase": "Vetrina del rivenditore"
+  "groups.dealer_showcase": "Vetrina del rivenditore",
+  "labels.stock.bulk": "Operazioni massive sui codici"
 }

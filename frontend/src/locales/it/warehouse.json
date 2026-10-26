@@ -650,5 +650,6 @@
   "units.columns.updated_at": "Ultima modifica",
   "units.columns.created_at": "Creato",
   "units.state.in": "In magazzino",
-  "units.state.left": "Uscito"
+  "units.state.left": "Uscito",
+  "nav_bulk": "Operazioni massive"
 }

@@ -212,5 +212,6 @@
   "actions.einvoice.xslt_reset": "e-Invoice stylesheet reset to default",
   "actions.einvoice.buyer_profile_updated": "Buyer invoice profile updated",
   "resources.einvoices": "e-Invoices",
-  "actions.services.created_on_behalf": "Service opened for a dealer"
+  "actions.services.created_on_behalf": "Service opened for a dealer",
+  "actions.catalog.product.roll_updated": "Product roll settings updated"
 }

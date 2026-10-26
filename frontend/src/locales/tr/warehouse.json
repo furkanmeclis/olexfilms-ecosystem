@@ -650,5 +650,6 @@
   "units.columns.updated_at": "Son hareket",
   "units.columns.created_at": "Oluşturma",
   "units.state.in": "Depoda",
-  "units.state.left": "Depodan çıktı"
+  "units.state.left": "Depodan çıktı",
+  "nav_bulk": "Toplu barkod işlemleri"
 }

@@ -297,5 +297,15 @@
   "discipline.fields.avg_sale_price": "Gerçekleşen ortalama (30 gün)",
   "discipline.fields.sales_quantity": "Satış adedi (30 gün)",
   "discipline.org_types.dealer": "Bayi",
-  "discipline.org_types.distributor": "Distribütör"
+  "discipline.org_types.distributor": "Distribütör",
+  "roll.title": "Rulo ayarları",
+  "roll.hint": "Adet sayılan kutular toplu işlemle bu varsayılan uzunlukta ruloya çevrilir; bir üründe adet ve rulo birlikte bulunabilir.",
+  "roll.default_meters": "Varsayılan uzunluk (m)",
+  "roll.width_cm": "En (cm)",
+  "roll.min_cut_meters": "Minimum kesim (m)",
+  "roll.waste_pct": "Fire payı (%)",
+  "roll.save": "Kaydet",
+  "roll.saved": "Rulo ayarları kaydedildi.",
+  "roll.failed": "Kaydedilemedi.",
+  "roll.invalid": "Sayısal bir değer girin."
 }

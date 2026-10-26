@@ -319,3 +319,11 @@ RETURNING *;
 SELECT name FROM product_categories
 WHERE brand_id = sqlc.arg(brand_id) AND active
 ORDER BY sort, name, id;
+
+-- name: UpdateProductRollSettings :one
+-- TEC-1008: default roll length, width, minimum cut and waste of a product.
+UPDATE products
+SET default_roll_meters = sqlc.narg(default_roll_meters), roll_width_cm = sqlc.narg(roll_width_cm),
+    min_cut_meters = sqlc.narg(min_cut_meters), waste_pct = sqlc.narg(waste_pct)
+WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id)
+RETURNING *;

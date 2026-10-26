@@ -9752,6 +9752,188 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /v1/catalog/products/{uuid}/roll:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    put:
+      tags: [Catalog]
+      operationId: putCatalogProductRoll
+      summary: Set a product's roll defaults (TEC-1008, center)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CatalogRollSettings" }
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeCatalogProduct" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/platform/stock-bulk:
+    get:
+      tags: [Stock]
+      operationId: listStockBulkJobs
+      summary: Bulk barcode job history (TEC-1008, super_admin)
+      description: Sort keys created_at, eligible (default -created_at); status and action CSV filters.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Sort"
+        - { name: status, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Jobs
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockBulkJobPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Stock]
+      operationId: previewStockBulkJob
+      summary: Preview a bulk barcode job
+      description: >-
+        Resolves the selection (at most 5000 units) and classifies every
+        unit as eligible or excluded with its reason; nothing changes in
+        stock. Units at another organization, used in a service, consumed,
+        in transit, reserved by an order or not in stock are excluded.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, selection]
+              properties:
+                action: { $ref: "#/components/schemas/StockBulkAction" }
+                params: { $ref: "#/components/schemas/StockBulkParams" }
+                selection: { $ref: "#/components/schemas/StockBulkSelection" }
+      responses:
+        "201":
+          description: Preview job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockBulkJob" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/platform/stock-bulk/{uuid}:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Stock]
+      operationId: getStockBulkJob
+      summary: A bulk job with its breakdown
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Job
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockBulkJob" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Stock]
+      operationId: discardStockBulkJob
+      summary: Discard a preview
+      security:
+        - bearerAuth: []
+      responses:
+        "204": { description: Discarded }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /v1/platform/stock-bulk/{uuid}/items:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Stock]
+      operationId: listStockBulkJobItems
+      summary: Units of a bulk job
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - { name: status, in: query, schema: { type: string }, description: CSV of item statuses }
+      responses:
+        "200":
+          description: Items
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockBulkItemPage" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/platform/stock-bulk/{uuid}/run:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Stock]
+      operationId: runStockBulkJob
+      summary: Run a previewed job in the background (step-up)
+      description: One job runs per organization (409 STOCK_BULK_BUSY). Every change is a ledger movement.
+      security:
+        - bearerAuth: []
+      responses:
+        "202":
+          description: Queued (or done when no queue is configured)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockBulkJob" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
+  /v1/platform/stock-bulk/{uuid}/undo:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    post:
+      tags: [Stock]
+      operationId: undoStockBulkJob
+      summary: Undo a completed job (step-up)
+      description: >-
+        Reverts every unit that has not moved since (others are reported as
+        revert_skipped); a void cannot be undone (422 STOCK_BULK_NOT_REVERSIBLE).
+      security:
+        - bearerAuth: []
+      responses:
+        "202":
+          description: Undoing (or undone)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EnvelopeStockBulkJob" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/BadRequest" }
+
   /v1/catalog/products/{uuid}:
     parameters:
       - $ref: "#/components/parameters/ResourceUUID"
@@ -38559,6 +38741,156 @@ components:
             at `/product-images/{key}`.
         sort: { type: integer }
 
+    CatalogRollSettings:
+      type: object
+      description: |
+        TEC-1008 roll defaults. Any product may hold rolls: a box counted as
+        a piece is converted to a roll of default_meters (bulk operations);
+        a unit is a roll when it carries meters.
+      required: [default_meters, width_cm, min_cut_meters, waste_pct]
+      properties:
+        default_meters: { type: [number, "null"], exclusiveMinimum: 0, maximum: 100000 }
+        width_cm: { type: [number, "null"], exclusiveMinimum: 0, maximum: 10000 }
+        min_cut_meters: { type: [number, "null"], exclusiveMinimum: 0, maximum: 100000 }
+        waste_pct: { type: [number, "null"], minimum: 0, exclusiveMaximum: 100 }
+
+    StockBulkJob:
+      type: object
+      description: TEC-1008 bulk barcode job (super_admin).
+      required: [uuid, action, reversible, params, selection, status, total, eligible, excluded, succeeded, failed,
+        reverted, error, created_by, created_at, started_at, finished_at, undone_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        action: { $ref: "#/components/schemas/StockBulkAction" }
+        reversible: { type: boolean, description: false for void }
+        params: { $ref: "#/components/schemas/StockBulkParams" }
+        selection:
+          type: object
+          description: The selection filters plus barcode_count and missing (listed barcodes that are not units).
+          additionalProperties: true
+        status: { type: string, enum: [preview, queued, running, completed, failed, undoing, undone, discarded] }
+        total: { type: integer }
+        eligible: { type: integer }
+        excluded: { type: integer }
+        succeeded: { type: integer }
+        failed: { type: integer }
+        reverted: { type: integer }
+        error: { type: [string, "null"] }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+        started_at: { type: [string, "null"], format: date-time }
+        finished_at: { type: [string, "null"], format: date-time }
+        undone_at: { type: [string, "null"], format: date-time }
+        breakdown:
+          type: array
+          items:
+            type: object
+            required: [status, reason, count]
+            properties:
+              status: { type: string }
+              reason: { type: string, description: "Exclusion / skip reason ('' when none)." }
+              count: { type: integer }
+        sample_eligible:
+          type: array
+          items: { $ref: "#/components/schemas/StockBulkItem" }
+        sample_excluded:
+          type: array
+          items: { $ref: "#/components/schemas/StockBulkItem" }
+
+    StockBulkAction:
+      type: string
+      enum: [convert_to_roll, change_product, move_location, void, set_lot, set_note]
+
+    StockBulkParams:
+      type: object
+      properties:
+        meters: { type: string, description: convert_to_roll default roll length (else the product default). }
+        product_uuid: { type: string, format: uuid, description: change_product target. }
+        location_uuid: { type: string, format: uuid, description: move_location target bin. }
+        lot: { type: [string, "null"], maxLength: 64 }
+        note: { type: [string, "null"], maxLength: 2000 }
+        reason: { type: string }
+
+    StockBulkSelection:
+      type: object
+      properties:
+        product_uuids: { type: array, items: { type: string, format: uuid } }
+        warehouse_uuid: { type: string, format: uuid }
+        location_uuids: { type: array, items: { type: string, format: uuid } }
+        statuses:
+          type: array
+          items: { type: string, enum: [reserved, printed, available, placed, in_transit, used, void] }
+        created_from: { type: string, format: date-time }
+        created_to: { type: string, format: date-time }
+        lot: { type: string }
+        entry_uuid: { type: string, format: uuid, description: A stock entry (container delivery). }
+        barcodes:
+          type: array
+          maxItems: 5000
+          items: { type: string }
+          description: 'Lines "BARCODE" or "BARCODE;12.5" (tab / space also split): the number overrides the roll length.'
+
+    StockBulkItem:
+      type: object
+      required: [unit_uuid, barcode, product, unit_status, status, reason, meters, unit_meters, lot, note, error, updated_at]
+      properties:
+        unit_uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        product:
+          type: object
+          required: [uuid, sku, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+        unit_status: { type: string }
+        status: { type: string, enum: [eligible, excluded, applied, failed, reverted, revert_skipped] }
+        reason:
+          type: [string, "null"]
+          description: >-
+            at_other_organization, used_in_service, consumed, in_transit,
+            reserved_by_order, not_in_stock, fixed_barcode, already_roll,
+            no_meters, same_product, unit_type_mismatch, already_there,
+            changed_since, previously_unplaced, roll_cut
+        meters: { type: [string, "null"] }
+        unit_meters: { type: [string, "null"] }
+        lot: { type: [string, "null"] }
+        note: { type: [string, "null"] }
+        error: { type: [string, "null"] }
+        updated_at: { type: string, format: date-time }
+
+    EnvelopeStockBulkJob:
+      type: object
+      required: [data]
+      properties:
+        data: { $ref: "#/components/schemas/StockBulkJob" }
+
+    EnvelopeStockBulkJobPage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/StockBulkJob" } }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+
+    EnvelopeStockBulkItemPage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items: { type: array, items: { $ref: "#/components/schemas/StockBulkItem" } }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+
     CatalogProduct:
       type: object
       required:
@@ -38575,9 +38907,11 @@ components:
         - active
         - external_id
         - locked_fields
+        - roll
         - created_at
         - updated_at
       properties:
+        roll: { $ref: "#/components/schemas/CatalogRollSettings" }
         uuid: { type: string, format: uuid }
         category:
           type: object

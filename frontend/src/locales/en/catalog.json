@@ -297,5 +297,15 @@
   "discipline.fields.avg_sale_price": "Realized average (30 days)",
   "discipline.fields.sales_quantity": "Quantity sold (30 days)",
   "discipline.org_types.dealer": "Dealer",
-  "discipline.org_types.distributor": "Distributor"
+  "discipline.org_types.distributor": "Distributor",
+  "roll.title": "Roll settings",
+  "roll.hint": "Boxes counted as pieces are converted in bulk to rolls of this default length; a product may hold pieces and rolls together.",
+  "roll.default_meters": "Default length (m)",
+  "roll.width_cm": "Width (cm)",
+  "roll.min_cut_meters": "Minimum cut (m)",
+  "roll.waste_pct": "Waste allowance (%)",
+  "roll.save": "Save",
+  "roll.saved": "Roll settings saved.",
+  "roll.failed": "Could not save.",
+  "roll.invalid": "Enter a number."
 }

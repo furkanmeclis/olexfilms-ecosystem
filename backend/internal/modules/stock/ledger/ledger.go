@@ -583,6 +583,7 @@ var eventNames = map[MovementType]string{
 	TypeReturn:                events.StockReturn,
 	TypeSale:                  events.StockSale,
 	TypeReclassification:      events.StockReclassification,
+	TypeMeasureConversion:     events.StockMeasureConversion,
 	TypeCountAdjustment:       events.StockCountAdjustment,
 	TypeVoid:                  events.StockVoid,
 	TypeExternalOutbound:      events.StockExternalOutbound,

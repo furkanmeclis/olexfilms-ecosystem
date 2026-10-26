@@ -60,6 +60,10 @@ type Reclassification struct {
 	ActorUserID *int64
 	Reason      string
 	Metadata    map[string]any
+	// Source and RefType override the idempotency key and reference of a
+	// reclassification that is not a request (TEC-1008 bulk jobs: RequestID
+	// is then the job item); empty: a stock_reclassifications request.
+	Source, RefType string
 }
 
 // CheckReclassification validates a reclassification of unit (current
@@ -125,6 +129,9 @@ func (l *Ledger) Reclassify(ctx context.Context, tx pgx.Tx, r Reclassification) 
 	m := Movement{
 		Type: TypeReclassification, UnitID: unit.ID, Source: ReclassificationSource,
 		RefType: ReclassificationRefType, RefID: r.RequestID, ActorUserID: r.ActorUserID, Reason: r.Reason,
+	}
+	if r.Source != "" && r.RefType != "" {
+		m.Source, m.RefType = r.Source, r.RefType
 	}
 	key, err := IdempotencyKey(m.Source, m.RefType, m.RefID, m.Type, unit.Barcode)
 	if err != nil {

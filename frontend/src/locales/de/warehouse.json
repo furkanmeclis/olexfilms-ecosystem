@@ -650,5 +650,6 @@
   "units.columns.updated_at": "Letzte Änderung",
   "units.columns.created_at": "Erstellt",
   "units.state.in": "Im Lager",
-  "units.state.left": "Abgegangen"
+  "units.state.left": "Abgegangen",
+  "nav_bulk": "Barcode-Massenvorgänge"
 }

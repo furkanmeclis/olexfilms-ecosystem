@@ -144,6 +144,9 @@ WITH svc AS (
 ), consumed AS (
     SELECT si.service_id, SUM(
         CASE
+          -- TEC-1008: a box bought as a piece and converted to a roll.
+          WHEN si.meters IS NOT NULL AND bought.meters IS NULL AND u.initial_meters > 0
+            THEN si.meters * bought.unit_price / u.initial_meters
           WHEN si.meters IS NOT NULL THEN si.meters * bought.unit_price
           WHEN si.quantity IS NOT NULL THEN si.quantity * bought.unit_price
           WHEN bought.meters IS NOT NULL THEN bought.meters * bought.unit_price
@@ -152,6 +155,7 @@ WITH svc AS (
         END) AS cost
     FROM svc
     JOIN service_items si ON si.service_id = svc.id
+    JOIN units u ON u.id = si.unit_id
     LEFT JOIN LATERAL (
         SELECT oi.unit_price, oiu.quantity, oiu.meters
         FROM order_item_units oiu

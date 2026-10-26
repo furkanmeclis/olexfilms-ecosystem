@@ -256,7 +256,7 @@ VALUES (
     $8, $9,
     $10, $11, $12
 )
-RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id
+RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note
 `
 
 type CreateUnitParams struct {
@@ -310,6 +310,8 @@ func (q *Queries) CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }
@@ -686,7 +688,7 @@ func (q *Queries) GetStockReclassification(ctx context.Context, arg GetStockRecl
 }
 
 const getUnit = `-- name: GetUnit :one
-SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id FROM units WHERE id = $1
+SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note FROM units WHERE id = $1
 `
 
 func (q *Queries) GetUnit(ctx context.Context, id int64) (Unit, error) {
@@ -710,12 +712,14 @@ func (q *Queries) GetUnit(ctx context.Context, id int64) (Unit, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }
 
 const getUnitByBarcode = `-- name: GetUnitByBarcode :one
-SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id FROM units
+SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note FROM units
 WHERE brand_id = $1 AND barcode = $2
 `
 
@@ -745,12 +749,14 @@ func (q *Queries) GetUnitByBarcode(ctx context.Context, arg GetUnitByBarcodePara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }
 
 const getUnitByUUID = `-- name: GetUnitByUUID :one
-SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id FROM units WHERE uuid = $1
+SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note FROM units WHERE uuid = $1
 `
 
 func (q *Queries) GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, error) {
@@ -774,6 +780,8 @@ func (q *Queries) GetUnitByUUID(ctx context.Context, argUuid uuid.UUID) (Unit, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }
@@ -1746,7 +1754,7 @@ func (q *Queries) ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUni
 }
 
 const listUnitsByBarcode = `-- name: ListUnitsByBarcode :many
-SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id FROM units WHERE barcode = $1 ORDER BY brand_id, id
+SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note FROM units WHERE barcode = $1 ORDER BY brand_id, id
 `
 
 // Brand-independent barcode lookup for the warehouse scanner (K20): the
@@ -1778,6 +1786,8 @@ func (q *Queries) ListUnitsByBarcode(ctx context.Context, barcode string) ([]Uni
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.BatchID,
+			&i.Lot,
+			&i.Note,
 		); err != nil {
 			return nil, err
 		}
@@ -2036,7 +2046,7 @@ func (q *Queries) LockStockReclassification(ctx context.Context, arg LockStockRe
 }
 
 const lockUnit = `-- name: LockUnit :one
-SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id FROM units WHERE id = $1 FOR UPDATE
+SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note FROM units WHERE id = $1 FOR UPDATE
 `
 
 // Locks the unit row for meters/status/product changes in ledger.Post.
@@ -2061,6 +2071,8 @@ func (q *Queries) LockUnit(ctx context.Context, id int64) (Unit, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }
@@ -2090,6 +2102,23 @@ func (q *Queries) LockUnitCurrentState(ctx context.Context, unitID int64) (UnitC
 		&i.OwnerServiceID,
 	)
 	return i, err
+}
+
+const setUnitMeasure = `-- name: SetUnitMeasure :exec
+UPDATE units SET initial_meters = $1::numeric, remaining_meters = $1::numeric
+WHERE id = $2
+`
+
+type SetUnitMeasureParams struct {
+	Meters pgtype.Numeric `json:"meters"`
+	ID     int64          `json:"id"`
+}
+
+// TEC-1008: a piece unit becomes a roll (meters) or a never-cut roll a
+// piece (NULL); only ledger.ConvertMeasure calls it.
+func (q *Queries) SetUnitMeasure(ctx context.Context, arg SetUnitMeasureParams) error {
+	_, err := q.db.Exec(ctx, setUnitMeasure, arg.Meters, arg.ID)
+	return err
 }
 
 const updateStockImportBatchStatus = `-- name: UpdateStockImportBatchStatus :one
@@ -2263,7 +2292,7 @@ SET connection_id = $1,
     external_id = $2,
     external_status = $3
 WHERE id = $4
-RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id
+RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note
 `
 
 type UpdateUnitExternalParams struct {
@@ -2299,6 +2328,8 @@ func (q *Queries) UpdateUnitExternal(ctx context.Context, arg UpdateUnitExternal
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }
@@ -2306,7 +2337,7 @@ func (q *Queries) UpdateUnitExternal(ctx context.Context, arg UpdateUnitExternal
 const updateUnitProduct = `-- name: UpdateUnitProduct :one
 UPDATE units SET product_id = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id
+RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note
 `
 
 type UpdateUnitProductParams struct {
@@ -2336,6 +2367,8 @@ func (q *Queries) UpdateUnitProduct(ctx context.Context, arg UpdateUnitProductPa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }
@@ -2343,7 +2376,7 @@ func (q *Queries) UpdateUnitProduct(ctx context.Context, arg UpdateUnitProductPa
 const updateUnitRemainingMeters = `-- name: UpdateUnitRemainingMeters :one
 UPDATE units SET remaining_meters = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id
+RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note
 `
 
 type UpdateUnitRemainingMetersParams struct {
@@ -2373,6 +2406,8 @@ func (q *Queries) UpdateUnitRemainingMeters(ctx context.Context, arg UpdateUnitR
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }
@@ -2380,7 +2415,7 @@ func (q *Queries) UpdateUnitRemainingMeters(ctx context.Context, arg UpdateUnitR
 const updateUnitStatus = `-- name: UpdateUnitStatus :one
 UPDATE units SET status = $1
 WHERE id = $2
-RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id
+RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note
 `
 
 type UpdateUnitStatusParams struct {
@@ -2409,6 +2444,8 @@ func (q *Queries) UpdateUnitStatus(ctx context.Context, arg UpdateUnitStatusPara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }

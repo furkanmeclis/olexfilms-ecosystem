@@ -217,5 +217,6 @@
   "labels.showcase.read": "Schaufenster anzeigen",
   "labels.showcase.write": "Schaufenster bearbeiten",
   "labels.platform.showcase.review": "Händler-Schaufenster prüfen",
-  "groups.dealer_showcase": "Händler-Schaufenster"
+  "groups.dealer_showcase": "Händler-Schaufenster",
+  "labels.stock.bulk": "Barcode-Massenvorgänge"
 }

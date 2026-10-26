@@ -297,5 +297,15 @@
   "discipline.fields.avg_sale_price": "Moyenne réalisée (30 jours)",
   "discipline.fields.sales_quantity": "Quantité vendue (30 jours)",
   "discipline.org_types.dealer": "Revendeur",
-  "discipline.org_types.distributor": "Distributeur"
+  "discipline.org_types.distributor": "Distributeur",
+  "roll.title": "Réglages du rouleau",
+  "roll.hint": "Les cartons comptés en pièces deviennent des rouleaux de cette longueur ; un produit peut avoir les deux.",
+  "roll.default_meters": "Longueur par défaut (m)",
+  "roll.width_cm": "Largeur (cm)",
+  "roll.min_cut_meters": "Coupe minimale (m)",
+  "roll.waste_pct": "Chute (%)",
+  "roll.save": "Enregistrer",
+  "roll.saved": "Enregistré.",
+  "roll.failed": "Échec de l'enregistrement.",
+  "roll.invalid": "Saisissez un nombre."
 }

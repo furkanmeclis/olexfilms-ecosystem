@@ -7,6 +7,7 @@ import {
   ClipboardList,
   Bot,
   Boxes,
+  Layers,
   FileText,
   FileSpreadsheet,
   Flame,
@@ -853,6 +854,16 @@ export function tenantNav(slug: string) {
             permission: [permissions.warehouse.read, permissions.stock.read],
             feature: "warehouse",
             orgTypes: ["center", "distributor"],
+          },
+          {
+            // TEC-1008: bulk barcode operations (super_admin: stock.bulk).
+            id: "warehouse-bulk",
+            titleKey: "warehouse.nav_bulk",
+            href: routes.tenant.warehouse.bulk(slug),
+            icon: Layers,
+            permission: permissions.stock.bulk,
+            feature: "warehouse",
+            orgTypes: ["center"],
           },
           {
             id: "warehouse-barcodes",

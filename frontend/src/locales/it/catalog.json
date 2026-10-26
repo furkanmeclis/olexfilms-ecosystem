@@ -297,5 +297,15 @@
   "discipline.fields.avg_sale_price": "Media effettiva (30 giorni)",
   "discipline.fields.sales_quantity": "Quantità venduta (30 giorni)",
   "discipline.org_types.dealer": "Rivenditore",
-  "discipline.org_types.distributor": "Distributore"
+  "discipline.org_types.distributor": "Distributore",
+  "roll.title": "Impostazioni rotolo",
+  "roll.hint": "Le scatole a pezzi diventano rotoli di questa lunghezza; un prodotto può avere entrambi.",
+  "roll.default_meters": "Lunghezza predefinita (m)",
+  "roll.width_cm": "Larghezza (cm)",
+  "roll.min_cut_meters": "Taglio minimo (m)",
+  "roll.waste_pct": "Sfrido (%)",
+  "roll.save": "Salva",
+  "roll.saved": "Salvato.",
+  "roll.failed": "Salvataggio non riuscito.",
+  "roll.invalid": "Inserisci un numero."
 }

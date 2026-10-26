@@ -650,5 +650,6 @@
   "units.columns.updated_at": "Dernier changement",
   "units.columns.created_at": "Créé",
   "units.state.in": "En entrepôt",
-  "units.state.left": "Sorti"
+  "units.state.left": "Sorti",
+  "nav_bulk": "Opérations groupées"
 }

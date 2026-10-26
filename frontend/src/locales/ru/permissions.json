@@ -217,5 +217,6 @@
   "labels.showcase.read": "Просмотр витрины",
   "labels.showcase.write": "Редактирование витрины",
   "labels.platform.showcase.review": "Проверка витрин дилеров",
-  "groups.dealer_showcase": "Витрина дилера"
+  "groups.dealer_showcase": "Витрина дилера",
+  "labels.stock.bulk": "Массовые операции со штрихкодами"
 }

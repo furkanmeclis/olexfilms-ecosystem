@@ -297,5 +297,15 @@
   "discipline.fields.avg_sale_price": "Фактична середня (30 днів)",
   "discipline.fields.sales_quantity": "Продано (30 днів)",
   "discipline.org_types.dealer": "Дилер",
-  "discipline.org_types.distributor": "Дистриб’ютор"
+  "discipline.org_types.distributor": "Дистриб’ютор",
+  "roll.title": "Налаштування рулону",
+  "roll.hint": "Коробки, облікові поштучно, переводяться в рулони цієї довжини; товар може мати і штуки, і рулони.",
+  "roll.default_meters": "Довжина за замовчуванням (м)",
+  "roll.width_cm": "Ширина (см)",
+  "roll.min_cut_meters": "Мін. відріз (м)",
+  "roll.waste_pct": "Відходи (%)",
+  "roll.save": "Зберегти",
+  "roll.saved": "Збережено.",
+  "roll.failed": "Не вдалося зберегти.",
+  "roll.invalid": "Введіть число."
 }

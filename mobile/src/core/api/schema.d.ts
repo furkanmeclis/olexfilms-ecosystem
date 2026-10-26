@@ -5301,6 +5301,137 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/catalog/products/{uuid}/roll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Set a product's roll defaults (TEC-1008, center) */
+        put: operations["putCatalogProductRoll"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/stock-bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bulk barcode job history (TEC-1008, super_admin)
+         * @description Sort keys created_at, eligible (default -created_at); status and action CSV filters.
+         */
+        get: operations["listStockBulkJobs"];
+        put?: never;
+        /**
+         * Preview a bulk barcode job
+         * @description Resolves the selection (at most 5000 units) and classifies every unit as eligible or excluded with its reason; nothing changes in stock. Units at another organization, used in a service, consumed, in transit, reserved by an order or not in stock are excluded.
+         */
+        post: operations["previewStockBulkJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/stock-bulk/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /** A bulk job with its breakdown */
+        get: operations["getStockBulkJob"];
+        put?: never;
+        post?: never;
+        /** Discard a preview */
+        delete: operations["discardStockBulkJob"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/stock-bulk/{uuid}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /** Units of a bulk job */
+        get: operations["listStockBulkJobItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/stock-bulk/{uuid}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run a previewed job in the background (step-up)
+         * @description One job runs per organization (409 STOCK_BULK_BUSY). Every change is a ledger movement.
+         */
+        post: operations["runStockBulkJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/stock-bulk/{uuid}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a completed job (step-up)
+         * @description Reverts every unit that has not moved since (others are reported as revert_skipped); a void cannot be undone (422 STOCK_BULK_NOT_REVERSIBLE).
+         */
+        post: operations["undoStockBulkJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/catalog/products/{uuid}": {
         parameters: {
             query?: never;
@@ -21465,7 +21596,140 @@ export interface components {
             key: string;
             sort: number;
         };
+        /**
+         * @description TEC-1008 roll defaults. Any product may hold rolls: a box counted as
+         *     a piece is converted to a roll of default_meters (bulk operations);
+         *     a unit is a roll when it carries meters.
+         */
+        CatalogRollSettings: {
+            default_meters: number | null;
+            width_cm: number | null;
+            min_cut_meters: number | null;
+            waste_pct: number | null;
+        };
+        /** @description TEC-1008 bulk barcode job (super_admin). */
+        StockBulkJob: {
+            /** Format: uuid */
+            uuid: string;
+            action: components["schemas"]["StockBulkAction"];
+            /** @description false for void */
+            reversible: boolean;
+            params: components["schemas"]["StockBulkParams"];
+            /** @description The selection filters plus barcode_count and missing (listed barcodes that are not units). */
+            selection: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            status: "preview" | "queued" | "running" | "completed" | "failed" | "undoing" | "undone" | "discarded";
+            total: number;
+            eligible: number;
+            excluded: number;
+            succeeded: number;
+            failed: number;
+            reverted: number;
+            error: string | null;
+            created_by: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            started_at: string | null;
+            /** Format: date-time */
+            finished_at: string | null;
+            /** Format: date-time */
+            undone_at: string | null;
+            breakdown?: {
+                status: string;
+                /** @description Exclusion / skip reason ('' when none). */
+                reason: string;
+                count: number;
+            }[];
+            sample_eligible?: components["schemas"]["StockBulkItem"][];
+            sample_excluded?: components["schemas"]["StockBulkItem"][];
+        };
+        /** @enum {string} */
+        StockBulkAction: "convert_to_roll" | "change_product" | "move_location" | "void" | "set_lot" | "set_note";
+        StockBulkParams: {
+            /** @description convert_to_roll default roll length (else the product default). */
+            meters?: string;
+            /**
+             * Format: uuid
+             * @description change_product target.
+             */
+            product_uuid?: string;
+            /**
+             * Format: uuid
+             * @description move_location target bin.
+             */
+            location_uuid?: string;
+            lot?: string | null;
+            note?: string | null;
+            reason?: string;
+        };
+        StockBulkSelection: {
+            product_uuids?: string[];
+            /** Format: uuid */
+            warehouse_uuid?: string;
+            location_uuids?: string[];
+            statuses?: ("reserved" | "printed" | "available" | "placed" | "in_transit" | "used" | "void")[];
+            /** Format: date-time */
+            created_from?: string;
+            /** Format: date-time */
+            created_to?: string;
+            lot?: string;
+            /**
+             * Format: uuid
+             * @description A stock entry (container delivery).
+             */
+            entry_uuid?: string;
+            /** @description Lines "BARCODE" or "BARCODE;12.5" (tab / space also split): the number overrides the roll length. */
+            barcodes?: string[];
+        };
+        StockBulkItem: {
+            /** Format: uuid */
+            unit_uuid: string;
+            barcode: string;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+            };
+            unit_status: string;
+            /** @enum {string} */
+            status: "eligible" | "excluded" | "applied" | "failed" | "reverted" | "revert_skipped";
+            /** @description at_other_organization, used_in_service, consumed, in_transit, reserved_by_order, not_in_stock, fixed_barcode, already_roll, no_meters, same_product, unit_type_mismatch, already_there, changed_since, previously_unplaced, roll_cut */
+            reason: string | null;
+            meters: string | null;
+            unit_meters: string | null;
+            lot: string | null;
+            note: string | null;
+            error: string | null;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeStockBulkJob: {
+            data: components["schemas"]["StockBulkJob"];
+        };
+        EnvelopeStockBulkJobPage: {
+            data: {
+                items: components["schemas"]["StockBulkJob"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+        };
+        EnvelopeStockBulkItemPage: {
+            data: {
+                items: components["schemas"]["StockBulkItem"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+        };
         CatalogProduct: {
+            roll: components["schemas"]["CatalogRollSettings"];
             /** Format: uuid */
             uuid: string;
             category: {
@@ -40127,6 +40391,238 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    putCatalogProductRoll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogRollSettings"];
+            };
+        };
+        responses: {
+            /** @description Updated product */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeCatalogProduct"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStockBulkJobs: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                status?: string;
+                action?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Jobs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockBulkJobPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    previewStockBulkJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    action: components["schemas"]["StockBulkAction"];
+                    params?: components["schemas"]["StockBulkParams"];
+                    selection: components["schemas"]["StockBulkSelection"];
+                };
+            };
+        };
+        responses: {
+            /** @description Preview job */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockBulkJob"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["BadRequest"];
+        };
+    };
+    getStockBulkJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockBulkJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    discardStockBulkJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Discarded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    listStockBulkJobItems: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                /** @description CSV of item statuses */
+                status?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Items */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockBulkItemPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    runStockBulkJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued (or done when no queue is configured) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockBulkJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["BadRequest"];
+        };
+    };
+    undoStockBulkJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Undoing (or undone) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockBulkJob"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["BadRequest"];
         };
     };
     getCatalogProduct: {

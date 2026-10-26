@@ -212,5 +212,6 @@
   "actions.einvoice.xslt_reset": "Modèle XSLT de facture électronique réinitialisé",
   "actions.einvoice.buyer_profile_updated": "Profil de facturation de l'acheteur mis à jour",
   "resources.einvoices": "Factures électroniques",
-  "actions.services.created_on_behalf": "Service ouvert pour un revendeur"
+  "actions.services.created_on_behalf": "Service ouvert pour un revendeur",
+  "actions.catalog.product.roll_updated": "Réglages du rouleau mis à jour"
 }

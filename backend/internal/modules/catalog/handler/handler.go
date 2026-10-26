@@ -323,6 +323,26 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, item)
 }
 
+// UpdateRollSettings serves PUT /v1/catalog/products/{uuid}/roll (TEC-1008).
+func (h *Handler) UpdateRollSettings(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathUUID(w, r)
+	if !ok {
+		return
+	}
+	var in model.RollSettings
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&in); err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "invalid JSON body")
+		return
+	}
+	item, err := h.svc.UpdateRollSettings(r.Context(), orgctx.MustScope(r.Context()), id, in)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	h.record(r, "catalog.product.roll_updated", &item.UUID, map[string]any{"sku": item.SKU})
+	response.JSON(w, r, http.StatusOK, item)
+}
+
 // DeleteProduct serves DELETE /v1/catalog/products/{uuid}.
 func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathUUID(w, r)

@@ -95,6 +95,7 @@ type Worker struct {
 	glorianReplayOne GlorianOutboundReplayOneFunc
 	// TEC-288: executed contract PDF (docs queue).
 	contractPDF ContractPDFFunc
+	stockBulk   StockBulkFunc // TEC-1008
 	// TEC-298: measurement PDF (docs queue).
 	measurementPDF MeasurementPDFFunc
 	// TEC-381: planned staff payments booked on their paid_on.
@@ -222,6 +223,7 @@ func (w *Worker) bindings() []binding {
 		{TaskSearchReindex, w.handleSearchReindex, w.processSearchReindex != nil},
 		{TaskDocsRender, w.handleDocsRender, w.processDocsRender != nil},
 		{TaskContractPDF, w.handleContractPDF, w.contractPDF != nil},
+		{TaskStockBulk, w.handleStockBulk, w.stockBulk != nil},
 		{TaskRatesFetch, w.handleRatesFetch, w.fetchRates != nil},
 		{TaskNotificationPurge, w.handleNotificationPurge, w.purgeNotifications != nil},
 		{TaskWhatsAppStatusPoll, w.handleWhatsAppPoll, w.pollWhatsApp != nil},

@@ -297,5 +297,15 @@
   "discipline.fields.avg_sale_price": "Realisierter Durchschnitt (30 Tage)",
   "discipline.fields.sales_quantity": "Verkaufte Menge (30 Tage)",
   "discipline.org_types.dealer": "Händler",
-  "discipline.org_types.distributor": "Distributor"
+  "discipline.org_types.distributor": "Distributor",
+  "roll.title": "Rolleneinstellungen",
+  "roll.hint": "Als Stück gezählte Kartons werden per Massenvorgang zu Rollen dieser Länge; ein Produkt kann Stücke und Rollen haben.",
+  "roll.default_meters": "Standardlänge (m)",
+  "roll.width_cm": "Breite (cm)",
+  "roll.min_cut_meters": "Mindestschnitt (m)",
+  "roll.waste_pct": "Verschnitt (%)",
+  "roll.save": "Speichern",
+  "roll.saved": "Gespeichert.",
+  "roll.failed": "Speichern fehlgeschlagen.",
+  "roll.invalid": "Zahl eingeben."
 }
