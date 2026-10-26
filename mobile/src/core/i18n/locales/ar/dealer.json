@@ -197,5 +197,12 @@
   "invalid.email": "أدخل بريدًا إلكترونيًا صالحًا.",
   "invalid.company_name": "أدخل اسم الشركة.",
   "invalid.tax_office": "تحقق من مكتب الضرائب.",
-  "invalid.tax_no": "يجب أن يتكون الرقم الضريبي من 5-20 حرفًا أو رقمًا."
+  "invalid.tax_no": "يجب أن يتكون الرقم الضريبي من 5-20 حرفًا أو رقمًا.",
+  "service_no_placeholder": "الرقم أو رمز QR الموجود على بطاقة الضمان",
+  "service_no_auto": "اتركه فارغًا لإنشاء رقم تلقائيًا.",
+  "service_no_invalid": "من 4 إلى 32 حرفًا: أحرف أو أرقام أو '-' أو '_'.",
+  "service_no_taken": "هذا الرقم مستخدم في خدمة أخرى.",
+  "service_no_available": "الرقم متاح.",
+  "service_no_scan": "مسح رمز QR",
+  "service_no_label": "رقم الخدمة"
 }

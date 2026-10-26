@@ -197,5 +197,12 @@
   "invalid.email": "Введіть коректний e-mail.",
   "invalid.company_name": "Введіть назву компанії.",
   "invalid.tax_office": "Перевірте податкову інспекцію.",
-  "invalid.tax_no": "Податковий номер: 5-20 літер або цифр."
+  "invalid.tax_no": "Податковий номер: 5-20 літер або цифр.",
+  "service_no_placeholder": "Номер або QR-код із гарантійної картки",
+  "service_no_auto": "Залиште порожнім для автоматичного номера.",
+  "service_no_invalid": "4-32 символи: літери, цифри, '-' або '_'.",
+  "service_no_taken": "Цей номер використовується іншою послугою.",
+  "service_no_available": "Номер вільний.",
+  "service_no_scan": "Сканувати QR-код",
+  "service_no_label": "Номер послуги"
 }

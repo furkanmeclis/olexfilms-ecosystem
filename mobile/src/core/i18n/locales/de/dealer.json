@@ -197,5 +197,12 @@
   "invalid.email": "Gültige E-Mail eingeben.",
   "invalid.company_name": "Firmennamen eingeben.",
   "invalid.tax_office": "Finanzamt prüfen.",
-  "invalid.tax_no": "Steuernummer muss 5-20 Buchstaben oder Ziffern haben."
+  "invalid.tax_no": "Steuernummer muss 5-20 Buchstaben oder Ziffern haben.",
+  "service_no_placeholder": "Nummer oder QR-Code der Garantiekarte",
+  "service_no_auto": "Leer lassen für eine automatische Nummer.",
+  "service_no_invalid": "4-32 Zeichen: Buchstaben, Ziffern, '-' oder '_'.",
+  "service_no_taken": "Diese Nummer wird von einem anderen Service verwendet.",
+  "service_no_available": "Die Nummer ist verfügbar.",
+  "service_no_scan": "QR-Code scannen",
+  "service_no_label": "Servicenummer"
 }

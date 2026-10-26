@@ -197,5 +197,12 @@
   "invalid.email": "Введите корректный e-mail.",
   "invalid.company_name": "Введите название компании.",
   "invalid.tax_office": "Проверьте налоговую инспекцию.",
-  "invalid.tax_no": "Налоговый номер: 5-20 букв или цифр."
+  "invalid.tax_no": "Налоговый номер: 5-20 букв или цифр.",
+  "service_no_placeholder": "Номер или QR-код с гарантийной карты",
+  "service_no_auto": "Оставьте пустым для автоматического номера.",
+  "service_no_invalid": "4-32 символа: буквы, цифры, '-' или '_'.",
+  "service_no_taken": "Этот номер используется другой услугой.",
+  "service_no_available": "Номер свободен.",
+  "service_no_scan": "Сканировать QR-код",
+  "service_no_label": "Номер услуги"
 }

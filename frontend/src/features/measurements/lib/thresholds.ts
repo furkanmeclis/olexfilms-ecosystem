@@ -57,6 +57,9 @@ export type MapReading = {
   part_type: string;
   position: number | null;
   interpretation: number | null;
+  /** Decimal µm text; the point list shows it (TEC-1010). */
+  value_um?: string | null;
+  is_inside?: boolean;
 };
 
 /**

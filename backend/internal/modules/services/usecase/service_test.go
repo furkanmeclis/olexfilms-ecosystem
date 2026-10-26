@@ -4,6 +4,7 @@ import (
 	"errors"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
@@ -251,5 +252,24 @@ func TestCustomerRefCompanyName(t *testing.T) {
 	ref = customerRef(row, "tr")
 	if !ref.Anonymized || ref.CompanyName != nil || ref.Phone != nil || ref.Surname != "" {
 		t.Fatalf("anonymized customer leaks fields: %+v", ref)
+	}
+}
+
+func TestNormalizeServiceNo(t *testing.T) {
+	for in, want := range map[string]string{
+		"  DS12AB34CD ": "DS12AB34CD", "1EVMEEI9": "1EVMEEI9", "2025D2333D014-CC-210": "2025D2333D014-CC-210",
+		"card_1": "card_1",
+	} {
+		if got, err := NormalizeServiceNo(in); err != nil || got != want {
+			t.Errorf("NormalizeServiceNo(%q) = %q, %v", in, got, err)
+		}
+	}
+	for _, in := range []string{"", "abc", "2025 3207", "1EVMEEİ9", "https://olexfilms.app/warranty/X1", strings.Repeat("A", 33)} {
+		if _, err := NormalizeServiceNo(in); err == nil {
+			t.Errorf("NormalizeServiceNo(%q) accepted", in)
+		}
+	}
+	if !serviceNoLocked(StatusCompleted) || !serviceNoLocked(StatusCancelled) || serviceNoLocked(StatusDraft) {
+		t.Error("serviceNoLocked")
 	}
 }

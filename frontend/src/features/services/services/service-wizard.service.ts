@@ -17,6 +17,7 @@ export const SERVICE_INCOME_METHODS: ServiceIncomePaymentMethod[] = [
 ];
 export type ServiceCreateInput = Schemas["ServiceCreateInput"];
 export type ServiceUpdateInput = Schemas["ServiceUpdateInput"];
+export type ServiceNoAvailability = Schemas["ServiceNoAvailability"];
 export type CustomerSummary = Schemas["CustomerSummary"];
 export type CustomerWrite = Schemas["CustomerWrite"];
 export type CustomerCreateInput = Schemas["CustomerCreateInput"];
@@ -74,6 +75,19 @@ export const serviceWizardService = {
   },
   createService(body: ServiceCreateInput) {
     return platformRequest<Service>("POST", "/v1/services", { body });
+  },
+  /** TEC-1004: whether a hand-entered number is free (own number: yes). */
+  serviceNoAvailability(serviceNo: string, serviceUuid?: string) {
+    return platformRequest<ServiceNoAvailability>(
+      "GET",
+      "/v1/services/service-no-availability",
+      {
+        query: {
+          service_no: serviceNo,
+          ...(serviceUuid ? { service_uuid: serviceUuid } : {}),
+        },
+      },
+    );
   },
   updateService(uuid: string, body: ServiceUpdateInput) {
     return platformRequest<Service>("PATCH", `/v1/services/${enc(uuid)}`, {
@@ -160,4 +174,6 @@ export const serviceWizardKeys = {
   stock: (uuid: string, params: StockUnitQuery) =>
     ["service-wizard", "stock", uuid, params] as const,
   categories: ["service-wizard", "categories"] as const,
+  serviceNo: (no: string, serviceUuid?: string) =>
+    ["service-wizard", "service-no", no, serviceUuid ?? ""] as const,
 };
