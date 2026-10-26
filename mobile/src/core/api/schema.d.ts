@@ -25120,7 +25120,7 @@ export interface components {
             service_no: string;
             /** @description The number has the allowed shape */
             valid: boolean;
-            /** @description Valid and not held by another service */
+            /** @description Valid and not held by another service, warranty code or alias */
             available: boolean;
         };
         EnvelopeServiceNoAvailability: {
