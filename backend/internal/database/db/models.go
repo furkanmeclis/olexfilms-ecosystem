@@ -728,6 +728,7 @@ type ContractInstance struct {
 	CreatedByUserID   pgtype.Int8        `json:"created_by_user_id"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	NumberedByOrg     pgtype.Int8        `json:"numbered_by_org"`
 }
 
 type ContractMedium struct {
@@ -2658,6 +2659,7 @@ type Quote struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+	NumberedByOrg   pgtype.Int8        `json:"numbered_by_org"`
 }
 
 type QuoteDelivery struct {
@@ -3973,6 +3975,7 @@ type WarrantyClaim struct {
 	ClosedAt         pgtype.Timestamptz `json:"closed_at"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	NumberedByOrg    pgtype.Int8        `json:"numbered_by_org"`
 }
 
 type WarrantyClaimEvent struct {

@@ -83,6 +83,20 @@ var dealerOnly = map[string]bool{
 	"performance_targets":         true,
 }
 
+// numbered tables number their documents per organization (1, 2, ...).
+// Their source rows keep the number and record its issuer in
+// numbered_by_org, so they do not collide with the target's numbers
+// (migration 000156).
+var numbered = []string{"contract_instances", "quotes", "warranty_claims"}
+
+// duplicates are tables whose rows describe one real thing by a key (a
+// device serial). When the target already holds the same key, children of
+// the source row are pointed at the target's row; the source row stays
+// with the source, unused.
+var duplicates = map[string]string{
+	"measurement_devices": "serial",
+}
+
 // colSpec is a column to move. TypeCol is set for a polymorphic owner
 // column: the id is an organization only when TypeCol is one of
 // orgOwnerTypes.
@@ -171,7 +185,13 @@ type Report struct {
 	// KeptTables stayed with the source because the target cannot own
 	// them (dealerOnly, merges into a center).
 	KeptTables []string `json:"kept_tables,omitempty"`
-	Warnings   []string `json:"warnings,omitempty"`
+	// Numbered counts the source documents that keep their number under
+	// the source as issuer (table -> rows).
+	Numbered map[string]int64 `json:"numbered,omitempty"`
+	// Repointed counts children moved to the target's duplicate row
+	// ("measurement_results.device_id" -> rows).
+	Repointed map[string]int64 `json:"repointed,omitempty"`
+	Warnings  []string         `json:"warnings,omitempty"`
 }
 
 // Moved is the number of moved rows.
@@ -275,7 +295,16 @@ func Merge(ctx context.Context, tx pgx.Tx, opts Options) (Report, error) {
 		return rep, err
 	}
 
-	// 2. Every organization column.
+	// 2. Documents keep their numbers; children of duplicates follow the
+	//    target's row.
+	if rep.Numbered, err = keepNumbers(ctx, tx, rep.RunID, src.ID); err != nil {
+		return rep, err
+	}
+	if rep.Repointed, err = repointDuplicates(ctx, tx, rep.RunID, src.ID, tgt.ID); err != nil {
+		return rep, err
+	}
+
+	// 3. Every organization column.
 	keep := map[string]bool{}
 	for _, k := range opts.Keep {
 		keep[k.String()] = true
@@ -345,13 +374,13 @@ func Merge(ctx context.Context, tx pgx.Tx, opts Options) (Report, error) {
 		}
 	}
 
-	// 3. Territories of the source are released: an area without a
+	// 4. Territories of the source are released: an area without a
 	//    distributor belongs to the brand center (K5, TEC-1003).
 	if rep.Territories, err = deleteRows(ctx, tx, rep.RunID, "territories", "organization_id = $1", src.ID); err != nil {
 		return rep, err
 	}
 
-	// 4. Source memberships (their roles first, so undo restores both).
+	// 5. Source memberships (their roles first, so undo restores both).
 	if _, err := deleteRows(ctx, tx, rep.RunID, "organization_member_roles",
 		"member_id IN (SELECT id FROM organization_members WHERE organization_id = $1)", src.ID); err != nil {
 		return rep, err
@@ -360,7 +389,7 @@ func Merge(ctx context.Context, tx pgx.Tx, opts Options) (Report, error) {
 		return rep, err
 	}
 
-	// 5. The source is soft deleted and points at the target.
+	// 6. The source is soft deleted and points at the target.
 	if _, err := tx.Exec(ctx, `UPDATE organizations SET merged_into_id = $2, deleted_at = NOW() WHERE id = $1`, src.ID, tgt.ID); err != nil {
 		return rep, fmt.Errorf("orgmerge: mark source: %w", err)
 	}
@@ -374,7 +403,7 @@ func Merge(ctx context.Context, tx pgx.Tx, opts Options) (Report, error) {
 		}
 	}
 
-	// 6. Checks.
+	// 7. Checks.
 	if rep.BalancesAfter, err = balances(ctx, tx, ids); err != nil {
 		return rep, err
 	}
@@ -393,6 +422,15 @@ func Merge(ctx context.Context, tx pgx.Tx, opts Options) (Report, error) {
 		rep.Warnings = append(rep.Warnings, fmt.Sprintf("%d cari account(s) of the target now name the target itself as counterparty", selfCari))
 	}
 	if _, err := tx.Exec(ctx, `SET CONSTRAINTS ALL IMMEDIATE`); err != nil {
+		var kept []string
+		for _, t := range rep.Tables {
+			if t.Kept > 0 {
+				kept = append(kept, fmt.Sprintf("%s (%d)", t.Column, t.Kept))
+			}
+		}
+		if len(kept) > 0 {
+			return rep, fmt.Errorf("orgmerge: foreign keys after the move (rows kept on the source: %s): %w", strings.Join(kept, ", "), err)
+		}
 		return rep, fmt.Errorf("orgmerge: foreign keys after the move: %w", err)
 	}
 	if err := ledgerBypass(ctx, tx, false); err != nil {
@@ -537,6 +575,14 @@ func Undo(ctx context.Context, tx pgx.Tx, runUUID string) (UndoReport, error) {
 		}
 		out.Reverted += tag.RowsAffected()
 	}
+
+	// Documents drop the issuer (after they are back at the source: the
+	// number is unique per issuer); repointed children get their old row.
+	n, err := undoNumbersAndRepoints(ctx, tx, out.RunID)
+	if err != nil {
+		return out, err
+	}
+	out.Reverted += n
 
 	// Rows added at the target after the merge under a parent the undo moved
 	// back (a migrator rerun adds measurement values to a merged result)
@@ -960,6 +1006,162 @@ func ledgerBypass(ctx context.Context, tx pgx.Tx, on bool) error {
 }
 
 // deleteRows deletes the rows matching where ($1 = arg) and records them.
+// keepNumbers records the source as the issuer of its documents' numbers.
+func keepNumbers(ctx context.Context, tx pgx.Tx, runID, source int64) (map[string]int64, error) {
+	out := map[string]int64{}
+	for _, t := range numbered {
+		var exists bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM information_schema.columns
+			WHERE table_schema = 'public' AND table_name = $1 AND column_name = 'numbered_by_org')`, t).Scan(&exists); err != nil {
+			return nil, fmt.Errorf("orgmerge: numbered %s: %w", t, err)
+		}
+		if !exists {
+			continue
+		}
+		pk, err := primaryKey(ctx, tx, t)
+		if err != nil {
+			return nil, err
+		}
+		tag, err := tx.Exec(ctx, fmt.Sprintf(`WITH upd AS (
+				UPDATE %[1]s t SET numbered_by_org = t.organization_id
+				WHERE t.organization_id = $1 AND t.numbered_by_org IS NULL
+				RETURNING %[2]s AS pk)
+			INSERT INTO org_merge_changes (run_id, kind, table_name, column_name, pk)
+			SELECT $2, 'number', %[3]s, 'numbered_by_org', upd.pk FROM upd`,
+			ident(t), pkJSON(pk, "t"), literal(t)), source, runID)
+		if err != nil {
+			return nil, fmt.Errorf("orgmerge: number %s: %w", t, err)
+		}
+		if n := tag.RowsAffected(); n > 0 {
+			out[t] = n
+		}
+	}
+	return out, nil
+}
+
+// repointDuplicates points the source children of a duplicate row (same
+// key at the target) at the target's row. Children are found through the
+// composite foreign keys (id, organization_id[, ...]) to the table.
+func repointDuplicates(ctx context.Context, tx pgx.Tx, runID, source, target int64) (map[string]int64, error) {
+	out := map[string]int64{}
+	tables := make([]string, 0, len(duplicates))
+	for t := range duplicates {
+		tables = append(tables, t)
+	}
+	sort.Strings(tables)
+	for _, table := range tables {
+		key := duplicates[table]
+		var exists bool
+		if err := tx.QueryRow(ctx, `SELECT to_regclass(format('public.%I', $1::text)) IS NOT NULL`, table).Scan(&exists); err != nil {
+			return nil, fmt.Errorf("orgmerge: table %s: %w", table, err)
+		}
+		if !exists {
+			continue
+		}
+		// Child id / organization columns of each composite foreign key.
+		rows, err := tx.Query(ctx, `SELECT k.conrelid::regclass::text,
+				(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = k.conrelid
+				   AND a.attnum = k.conkey[array_position(k.confkey, pid.attnum)]),
+				(SELECT a.attname::text FROM pg_attribute a WHERE a.attrelid = k.conrelid
+				   AND a.attnum = k.conkey[array_position(k.confkey, porg.attnum)])
+			FROM pg_constraint k
+			JOIN pg_attribute pid ON pid.attrelid = k.confrelid AND pid.attname = 'id'
+			JOIN pg_attribute porg ON porg.attrelid = k.confrelid AND porg.attname = 'organization_id'
+			WHERE k.contype = 'f' AND k.confrelid = format('public.%I', $1::text)::regclass
+			  AND pid.attnum = ANY (k.confkey) AND porg.attnum = ANY (k.confkey)
+			ORDER BY 1, 2`, table)
+		if err != nil {
+			return nil, fmt.Errorf("orgmerge: children of %s: %w", table, err)
+		}
+		type child struct{ table, idCol, orgCol string }
+		var children []child
+		for rows.Next() {
+			var c child
+			if err := rows.Scan(&c.table, &c.idCol, &c.orgCol); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			children = append(children, c)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+		for _, c := range children {
+			pk, err := primaryKey(ctx, tx, c.table)
+			if err != nil {
+				return nil, err
+			}
+			tag, err := tx.Exec(ctx, fmt.Sprintf(`WITH dup AS (
+					SELECT s.id AS from_id, t.id AS to_id FROM %[1]s s
+					JOIN %[1]s t ON t.organization_id = $2 AND t.%[2]s = s.%[2]s
+					WHERE s.organization_id = $1),
+				upd AS (
+					UPDATE %[3]s c SET %[4]s = dup.to_id FROM dup
+					WHERE c.%[4]s = dup.from_id AND c.%[5]s = $1
+					RETURNING %[6]s AS pk, dup.from_id, dup.to_id)
+				INSERT INTO org_merge_changes (run_id, kind, table_name, column_name, pk, row_data)
+				SELECT $3, 'repoint', %[7]s, %[8]s, upd.pk, jsonb_build_object('from', upd.from_id, 'to', upd.to_id) FROM upd`,
+				ident(table), ident(key), ident(c.table), ident(c.idCol), ident(c.orgCol),
+				pkJSON(pk, "c"), literal(c.table), literal(c.idCol)), source, target, runID)
+			if err != nil {
+				return nil, fmt.Errorf("orgmerge: repoint %s.%s: %w", c.table, c.idCol, err)
+			}
+			if n := tag.RowsAffected(); n > 0 {
+				out[c.table+"."+c.idCol] = n
+			}
+		}
+	}
+	return out, nil
+}
+
+// undoNumbersAndRepoints clears the issuers keepNumbers set and points
+// repointed children back at their source row.
+func undoNumbersAndRepoints(ctx context.Context, tx pgx.Tx, runID int64) (int64, error) {
+	rows, err := tx.Query(ctx, `SELECT DISTINCT kind, table_name, column_name FROM org_merge_changes
+		WHERE run_id = $1 AND kind IN ('number', 'repoint') ORDER BY 1, 2, 3`, runID)
+	if err != nil {
+		return 0, fmt.Errorf("orgmerge: changes: %w", err)
+	}
+	type change struct{ kind, table, col string }
+	var all []change
+	for rows.Next() {
+		var c change
+		if err := rows.Scan(&c.kind, &c.table, &c.col); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		all = append(all, c)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	var total int64
+	for _, c := range all {
+		pk, err := primaryKey(ctx, tx, c.table)
+		if err != nil {
+			return 0, err
+		}
+		match := make([]string, len(pk))
+		for i, k := range pk {
+			match[i] = fmt.Sprintf("t.%s::text = c.pk->>%s", ident(k), literal(k))
+		}
+		set := fmt.Sprintf("%s = NULL", ident(c.col))
+		if c.kind == "repoint" {
+			set = fmt.Sprintf("%s = (c.row_data->>'from')::bigint", ident(c.col))
+		}
+		tag, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE %s t SET %s FROM org_merge_changes c
+			WHERE c.run_id = $1 AND c.kind = $2 AND c.table_name = $3 AND c.column_name = $4 AND %s`,
+			ident(c.table), set, strings.Join(match, " AND ")), runID, c.kind, c.table, c.col)
+		if err != nil {
+			return 0, fmt.Errorf("orgmerge: undo %s %s: %w", c.kind, c.table, err)
+		}
+		total += tag.RowsAffected()
+	}
+	return total, nil
+}
+
 func deleteRows(ctx context.Context, tx pgx.Tx, runID int64, table, where string, arg any) (int64, error) {
 	pk, err := primaryKey(ctx, tx, table)
 	if err != nil {

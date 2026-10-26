@@ -66,7 +66,7 @@ VALUES (
     $12, $13, $14,
     $15
 )
-RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org
 `
 
 type CreateContractInstanceParams struct {
@@ -134,6 +134,7 @@ func (q *Queries) CreateContractInstance(ctx context.Context, arg CreateContract
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -285,7 +286,7 @@ SET status = 'executed',
     content_sha256 = $2::text,
     executed_at = NOW()
 WHERE id = $3 AND status IN ('draft', 'pending')
-RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org
 `
 
 type ExecuteContractInstanceParams struct {
@@ -323,12 +324,13 @@ func (q *Queries) ExecuteContractInstance(ctx context.Context, arg ExecuteContra
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getContractInstanceByID = `-- name: GetContractInstanceByID :one
-SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at FROM contract_instances WHERE id = $1
+SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org FROM contract_instances WHERE id = $1
 `
 
 func (q *Queries) GetContractInstanceByID(ctx context.Context, id int64) (ContractInstance, error) {
@@ -360,12 +362,13 @@ func (q *Queries) GetContractInstanceByID(ctx context.Context, id int64) (Contra
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getContractInstanceByUUID = `-- name: GetContractInstanceByUUID :one
-SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at FROM contract_instances WHERE uuid = $1
+SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org FROM contract_instances WHERE uuid = $1
 `
 
 func (q *Queries) GetContractInstanceByUUID(ctx context.Context, argUuid uuid.UUID) (ContractInstance, error) {
@@ -397,12 +400,13 @@ func (q *Queries) GetContractInstanceByUUID(ctx context.Context, argUuid uuid.UU
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getContractInstanceByUUIDScoped = `-- name: GetContractInstanceByUUIDScoped :one
-SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at FROM contract_instances
+SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org FROM contract_instances
 WHERE uuid = $1
   AND (
     $2::bigint IS NULL
@@ -449,12 +453,13 @@ func (q *Queries) GetContractInstanceByUUIDScoped(ctx context.Context, arg GetCo
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getContractInstanceForUpdate = `-- name: GetContractInstanceForUpdate :one
-SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at FROM contract_instances WHERE id = $1 FOR UPDATE
+SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org FROM contract_instances WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetContractInstanceForUpdate(ctx context.Context, id int64) (ContractInstance, error) {
@@ -486,6 +491,7 @@ func (q *Queries) GetContractInstanceForUpdate(ctx context.Context, id int64) (C
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -700,7 +706,7 @@ func (q *Queries) GetLatestContractSignature(ctx context.Context, signerID int64
 }
 
 const getPortalContractPDF = `-- name: GetPortalContractPDF :one
-SELECT ci.id, ci.uuid, ci.organization_id, ci.brand_id, ci.contract_no, ci.subject_type, ci.subject_id, ci.subject_service_id, ci.template_id, ci.kind, ci.locale, ci.template_version, ci.otp_required, ci.signature_required, ci.status, ci.rendered_html, ci.content_sha256, ci.pdf_key, ci.executed_at, ci.voided_at, ci.void_reason, ci.voided_by_user_id, ci.created_by_user_id, ci.created_at, ci.updated_at
+SELECT ci.id, ci.uuid, ci.organization_id, ci.brand_id, ci.contract_no, ci.subject_type, ci.subject_id, ci.subject_service_id, ci.template_id, ci.kind, ci.locale, ci.template_version, ci.otp_required, ci.signature_required, ci.status, ci.rendered_html, ci.content_sha256, ci.pdf_key, ci.executed_at, ci.voided_at, ci.void_reason, ci.voided_by_user_id, ci.created_by_user_id, ci.created_at, ci.updated_at, ci.numbered_by_org
 FROM contract_instances ci
 JOIN services s ON s.id = ci.subject_service_id
 JOIN brands b ON b.id = ci.brand_id
@@ -751,6 +757,7 @@ func (q *Queries) GetPortalContractPDF(ctx context.Context, arg GetPortalContrac
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -1180,7 +1187,7 @@ func (q *Queries) InsertContractSignature(ctx context.Context, arg InsertContrac
 }
 
 const listContractInstances = `-- name: ListContractInstances :many
-SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at FROM contract_instances
+SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org FROM contract_instances
 WHERE organization_id = ANY($1::bigint[])
   AND ($2::text IS NULL OR status = $2::text)
   AND ($3::text IS NULL OR kind = $3::text)
@@ -1238,6 +1245,7 @@ func (q *Queries) ListContractInstances(ctx context.Context, arg ListContractIns
 			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.NumberedByOrg,
 		); err != nil {
 			return nil, err
 		}
@@ -1250,7 +1258,7 @@ func (q *Queries) ListContractInstances(ctx context.Context, arg ListContractIns
 }
 
 const listContractInstancesBySubject = `-- name: ListContractInstancesBySubject :many
-SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at FROM contract_instances
+SELECT id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org FROM contract_instances
 WHERE subject_type = $1 AND subject_id = $2
 ORDER BY created_at DESC, id DESC
 `
@@ -1295,6 +1303,7 @@ func (q *Queries) ListContractInstancesBySubject(ctx context.Context, arg ListCo
 			&i.CreatedByUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.NumberedByOrg,
 		); err != nil {
 			return nil, err
 		}
@@ -1663,7 +1672,7 @@ const setContractInstancePDFKey = `-- name: SetContractInstancePDFKey :one
 UPDATE contract_instances
 SET pdf_key = $1::text
 WHERE id = $2 AND status = 'executed' AND pdf_key IS NULL
-RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org
 `
 
 type SetContractInstancePDFKeyParams struct {
@@ -1700,6 +1709,7 @@ func (q *Queries) SetContractInstancePDFKey(ctx context.Context, arg SetContract
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -1708,7 +1718,7 @@ const setContractInstanceStatus = `-- name: SetContractInstanceStatus :one
 UPDATE contract_instances
 SET status = $1
 WHERE id = $2 AND status IN ('draft', 'pending')
-RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org
 `
 
 type SetContractInstanceStatusParams struct {
@@ -1746,6 +1756,7 @@ func (q *Queries) SetContractInstanceStatus(ctx context.Context, arg SetContract
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -1850,7 +1861,7 @@ SET locale = $1,
     rendered_html = $3,
     content_sha256 = $4
 WHERE id = $5 AND status IN ('draft', 'pending')
-RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org
 `
 
 type UpdateContractInstanceContentParams struct {
@@ -1897,6 +1908,7 @@ func (q *Queries) UpdateContractInstanceContent(ctx context.Context, arg UpdateC
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -2089,7 +2101,7 @@ SET status = 'voided',
     void_reason = $1::text,
     voided_by_user_id = $2
 WHERE id = $3 AND status <> 'voided'
-RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, contract_no, subject_type, subject_id, subject_service_id, template_id, kind, locale, template_version, otp_required, signature_required, status, rendered_html, content_sha256, pdf_key, executed_at, voided_at, void_reason, voided_by_user_id, created_by_user_id, created_at, updated_at, numbered_by_org
 `
 
 type VoidContractInstanceParams struct {
@@ -2127,6 +2139,7 @@ func (q *Queries) VoidContractInstance(ctx context.Context, arg VoidContractInst
 		&i.CreatedByUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }

@@ -244,7 +244,7 @@ ORDER BY created_at, id;
 -- name: NextQuoteNo :one
 SELECT COALESCE(MAX(quote_no), 0)::bigint + 1 AS quote_no
 FROM quotes
-WHERE organization_id = sqlc.arg(organization_id);
+WHERE organization_id = sqlc.arg(organization_id) AND numbered_by_org IS NULL;
 
 -- name: CreateQuote :one
 INSERT INTO quotes (

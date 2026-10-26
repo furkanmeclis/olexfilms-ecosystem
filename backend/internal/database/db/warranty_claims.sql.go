@@ -172,7 +172,7 @@ WHERE id = $2
   AND brand_id = $3
   AND reapply_service_id = $4
   AND status = 'reapplied'
-RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org
 `
 
 type ClearWarrantyClaimReapplyServiceParams struct {
@@ -217,6 +217,7 @@ func (q *Queries) ClearWarrantyClaimReapplyService(ctx context.Context, arg Clea
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -311,12 +312,12 @@ INSERT INTO warranty_claims (
 ) VALUES (
     $1, $2,
     (SELECT COALESCE(MAX(c.claim_no), 0)::bigint + 1 FROM warranty_claims c
-     WHERE c.organization_id = $1),
+     WHERE c.organization_id = $1 AND c.numbered_by_org IS NULL),
     $3, $4, $5,
     $6, $7, $8,
     $9, $10, $10
 )
-RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org
 `
 
 type CreateWarrantyClaimParams struct {
@@ -379,6 +380,7 @@ func (q *Queries) CreateWarrantyClaim(ctx context.Context, arg CreateWarrantyCla
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -421,7 +423,7 @@ func (q *Queries) DeleteWarrantyClaimPhoto(ctx context.Context, arg DeleteWarran
 }
 
 const getLiveWarrantyClaimByWarranty = `-- name: GetLiveWarrantyClaimByWarranty :one
-SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org FROM warranty_claims
 WHERE warranty_id = $1
   AND status NOT IN ('rejected', 'closed')
 `
@@ -456,12 +458,13 @@ func (q *Queries) GetLiveWarrantyClaimByWarranty(ctx context.Context, warrantyID
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getWarrantyClaimByID = `-- name: GetWarrantyClaimByID :one
-SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org FROM warranty_claims
 WHERE id = $1 AND brand_id = $2
 `
 
@@ -499,12 +502,13 @@ func (q *Queries) GetWarrantyClaimByID(ctx context.Context, arg GetWarrantyClaim
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getWarrantyClaimByIDForUpdate = `-- name: GetWarrantyClaimByIDForUpdate :one
-SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org FROM warranty_claims
 WHERE id = $1 AND brand_id = $2
 FOR UPDATE
 `
@@ -543,12 +547,13 @@ func (q *Queries) GetWarrantyClaimByIDForUpdate(ctx context.Context, arg GetWarr
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getWarrantyClaimByUUID = `-- name: GetWarrantyClaimByUUID :one
-SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org FROM warranty_claims
 WHERE uuid = $1
   AND brand_id = $2
   AND ($3::bigint[] IS NULL OR organization_id = ANY($3::bigint[]))
@@ -589,12 +594,13 @@ func (q *Queries) GetWarrantyClaimByUUID(ctx context.Context, arg GetWarrantyCla
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getWarrantyClaimByUUIDAnyBrand = `-- name: GetWarrantyClaimByUUIDAnyBrand :one
-SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org FROM warranty_claims
 WHERE uuid = $1
 `
 
@@ -628,12 +634,13 @@ func (q *Queries) GetWarrantyClaimByUUIDAnyBrand(ctx context.Context, argUuid uu
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getWarrantyClaimByUUIDForUpdate = `-- name: GetWarrantyClaimByUUIDForUpdate :one
-SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org FROM warranty_claims
 WHERE uuid = $1
   AND brand_id = $2
   AND ($3::bigint[] IS NULL OR organization_id = ANY($3::bigint[]))
@@ -675,6 +682,7 @@ func (q *Queries) GetWarrantyClaimByUUIDForUpdate(ctx context.Context, arg GetWa
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -873,7 +881,7 @@ SET reapply_service_id = $1,
 WHERE id = $3
   AND brand_id = $4
   AND status = 'approved'
-RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org
 `
 
 type LinkWarrantyClaimReapplyServiceParams struct {
@@ -919,6 +927,7 @@ func (q *Queries) LinkWarrantyClaimReapplyService(ctx context.Context, arg LinkW
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -1213,7 +1222,7 @@ func (q *Queries) ListWarrantyClaimReapplyItems(ctx context.Context, claimID int
 }
 
 const listWarrantyClaimsByWarranty = `-- name: ListWarrantyClaimsByWarranty :many
-SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org FROM warranty_claims
 WHERE warranty_id = $1 AND brand_id = $2
 ORDER BY created_at DESC, id DESC
 `
@@ -1258,6 +1267,7 @@ func (q *Queries) ListWarrantyClaimsByWarranty(ctx context.Context, arg ListWarr
 			&i.ClosedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.NumberedByOrg,
 		); err != nil {
 			return nil, err
 		}
@@ -1270,7 +1280,7 @@ func (q *Queries) ListWarrantyClaimsByWarranty(ctx context.Context, arg ListWarr
 }
 
 const listWarrantyClaimsInScope = `-- name: ListWarrantyClaimsInScope :many
-SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at FROM warranty_claims
+SELECT id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org FROM warranty_claims
 WHERE warranty_claims.brand_id = $1
   AND ($2::bigint[] IS NULL OR warranty_claims.organization_id = ANY($2::bigint[]))
   AND ($3::varchar[] IS NULL OR warranty_claims.status = ANY($3::varchar[]))
@@ -1388,6 +1398,7 @@ func (q *Queries) ListWarrantyClaimsInScope(ctx context.Context, arg ListWarrant
 			&i.ClosedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.NumberedByOrg,
 		); err != nil {
 			return nil, err
 		}
@@ -1479,7 +1490,7 @@ SET reapply_service_id = NULL,
 WHERE id = $2
   AND brand_id = $3
   AND status = 'closed'
-RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org
 `
 
 type ReopenWarrantyClaimParams struct {
@@ -1521,6 +1532,7 @@ func (q *Queries) ReopenWarrantyClaim(ctx context.Context, arg ReopenWarrantyCla
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -1557,7 +1569,7 @@ SET ai_damage_type = $1,
     ai_confidence  = $3,
     ai_triaged_at  = NOW()
 WHERE id = $4 AND brand_id = $5
-RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org
 `
 
 type SetWarrantyClaimAITriageParams struct {
@@ -1603,6 +1615,7 @@ func (q *Queries) SetWarrantyClaimAITriage(ctx context.Context, arg SetWarrantyC
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -1612,7 +1625,7 @@ UPDATE warranty_claims
 SET coverage_check     = $1,
     updated_by_user_id = $2::bigint
 WHERE id = $3 AND brand_id = $4
-RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org
 `
 
 type SetWarrantyClaimCoverageCheckParams struct {
@@ -1656,6 +1669,7 @@ func (q *Queries) SetWarrantyClaimCoverageCheck(ctx context.Context, arg SetWarr
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -1674,7 +1688,7 @@ SET status             = $1::varchar,
 WHERE id = $4
   AND brand_id = $5
   AND status = $6::varchar
-RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, claim_no, warranty_id, service_id, vehicle_id, customer_user_id, description, status, rejection_reason, coverage_check, ai_damage_type, ai_summary, ai_confidence, ai_triaged_at, reapply_service_id, decided_by_user_id, decided_at, created_by_user_id, updated_by_user_id, closed_at, created_at, updated_at, numbered_by_org
 `
 
 type SetWarrantyClaimStatusParams struct {
@@ -1726,6 +1740,7 @@ func (q *Queries) SetWarrantyClaimStatus(ctx context.Context, arg SetWarrantyCla
 		&i.ClosedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }

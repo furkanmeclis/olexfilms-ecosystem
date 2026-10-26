@@ -14,7 +14,7 @@ INSERT INTO warranty_claims (
 ) VALUES (
     sqlc.arg(organization_id), sqlc.arg(brand_id),
     (SELECT COALESCE(MAX(c.claim_no), 0)::bigint + 1 FROM warranty_claims c
-     WHERE c.organization_id = sqlc.arg(organization_id)),
+     WHERE c.organization_id = sqlc.arg(organization_id) AND c.numbered_by_org IS NULL),
     sqlc.arg(warranty_id), sqlc.arg(service_id), sqlc.arg(vehicle_id),
     sqlc.arg(customer_user_id), sqlc.arg(description), sqlc.arg(status),
     sqlc.arg(coverage_check), sqlc.narg(created_by_user_id), sqlc.narg(created_by_user_id)

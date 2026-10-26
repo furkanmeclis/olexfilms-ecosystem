@@ -366,7 +366,7 @@ INSERT INTO quotes (
     $8, $9, $10,
     $11, $12
 )
-RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at
+RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org
 `
 
 type CreateQuoteParams struct {
@@ -423,6 +423,7 @@ func (q *Queries) CreateQuote(ctx context.Context, arg CreateQuoteParams) (Quote
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -628,7 +629,7 @@ WHERE id = $1
   AND organization_id = $2
   AND status IN ('draft', 'sent')
   AND deleted_at IS NULL
-RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at
+RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org
 `
 
 type EnsureQuoteSentParams struct {
@@ -662,6 +663,7 @@ func (q *Queries) EnsureQuoteSent(ctx context.Context, arg EnsureQuoteSentParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -674,7 +676,7 @@ WHERE status IN ('draft', 'sent')
   AND valid_until IS NOT NULL
   AND valid_until < $1::date
   AND deleted_at IS NULL
-RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at
+RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org
 `
 
 func (q *Queries) ExpireDueQuotes(ctx context.Context, today pgtype.Date) ([]Quote, error) {
@@ -709,6 +711,7 @@ func (q *Queries) ExpireDueQuotes(ctx context.Context, today pgtype.Date) ([]Quo
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.NumberedByOrg,
 		); err != nil {
 			return nil, err
 		}
@@ -953,7 +956,7 @@ func (q *Queries) GetOpenWebsiteLeadByPhone(ctx context.Context, arg GetOpenWebs
 }
 
 const getQuoteByPublicToken = `-- name: GetQuoteByPublicToken :one
-SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at FROM quotes
+SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org FROM quotes
 WHERE public_token = $1 AND deleted_at IS NULL
 `
 
@@ -983,12 +986,13 @@ func (q *Queries) GetQuoteByPublicToken(ctx context.Context, publicToken uuid.UU
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
 
 const getQuoteByUUID = `-- name: GetQuoteByUUID :one
-SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at FROM quotes
+SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org FROM quotes
 WHERE uuid = $1 AND brand_id = $2 AND deleted_at IS NULL
 `
 
@@ -1023,6 +1027,7 @@ func (q *Queries) GetQuoteByUUID(ctx context.Context, arg GetQuoteByUUIDParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -1598,7 +1603,7 @@ func (q *Queries) ListQuoteLines(ctx context.Context, quoteID int64) ([]QuoteLin
 }
 
 const listQuotesByLead = `-- name: ListQuotesByLead :many
-SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at FROM quotes
+SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org FROM quotes
 WHERE lead_id = $1 AND organization_id = $2 AND deleted_at IS NULL
 ORDER BY created_at DESC, id DESC
 `
@@ -1640,6 +1645,7 @@ func (q *Queries) ListQuotesByLead(ctx context.Context, arg ListQuotesByLeadPara
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.NumberedByOrg,
 		); err != nil {
 			return nil, err
 		}
@@ -1652,7 +1658,7 @@ func (q *Queries) ListQuotesByLead(ctx context.Context, arg ListQuotesByLeadPara
 }
 
 const listQuotesByOrganizations = `-- name: ListQuotesByOrganizations :many
-SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at FROM quotes
+SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org FROM quotes
 WHERE organization_id = ANY($1::bigint[])
   AND brand_id = $2
   AND deleted_at IS NULL
@@ -1707,6 +1713,7 @@ func (q *Queries) ListQuotesByOrganizations(ctx context.Context, arg ListQuotesB
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.NumberedByOrg,
 		); err != nil {
 			return nil, err
 		}
@@ -1719,7 +1726,7 @@ func (q *Queries) ListQuotesByOrganizations(ctx context.Context, arg ListQuotesB
 }
 
 const lockQuoteByID = `-- name: LockQuoteByID :one
-SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at FROM quotes
+SELECT id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org FROM quotes
 WHERE id = $1 AND deleted_at IS NULL
 FOR UPDATE
 `
@@ -1750,6 +1757,7 @@ func (q *Queries) LockQuoteByID(ctx context.Context, id int64) (Quote, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -1789,7 +1797,7 @@ func (q *Queries) MarkQuoteReminderSent(ctx context.Context, id int64) (QuoteRem
 const nextQuoteNo = `-- name: NextQuoteNo :one
 SELECT COALESCE(MAX(quote_no), 0)::bigint + 1 AS quote_no
 FROM quotes
-WHERE organization_id = $1
+WHERE organization_id = $1 AND numbered_by_org IS NULL
 `
 
 func (q *Queries) NextQuoteNo(ctx context.Context, organizationID int64) (int32, error) {
@@ -1916,7 +1924,7 @@ SET status = $1,
     rejected_at = CASE WHEN $1::varchar = 'rejected' THEN COALESCE(rejected_at, NOW()) ELSE rejected_at END,
     expired_at = CASE WHEN $1::varchar = 'expired' THEN COALESCE(expired_at, NOW()) ELSE expired_at END
 WHERE id = $2 AND organization_id = $3
-RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at
+RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org
 `
 
 type SetQuoteStatusParams struct {
@@ -1951,6 +1959,7 @@ func (q *Queries) SetQuoteStatus(ctx context.Context, arg SetQuoteStatusParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
@@ -2144,7 +2153,7 @@ SET currency = $1,
     grand_total = $5,
     valid_until = $6
 WHERE id = $7 AND organization_id = $8 AND status = 'draft'
-RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at
+RETURNING id, uuid, organization_id, brand_id, lead_id, quote_no, currency, subtotal, discount_total, tax_total, grand_total, valid_until, status, public_token, created_by_user_id, sent_at, accepted_at, rejected_at, expired_at, created_at, updated_at, deleted_at, numbered_by_org
 `
 
 type UpdateQuoteTotalsParams struct {
@@ -2193,6 +2202,7 @@ func (q *Queries) UpdateQuoteTotals(ctx context.Context, arg UpdateQuoteTotalsPa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.NumberedByOrg,
 	)
 	return i, err
 }
