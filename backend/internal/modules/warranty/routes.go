@@ -24,6 +24,9 @@ func RegisterPublicRoutes(mux *http.ServeMux, q *db.Queries, limiter *ratelimit.
 	h := handler.NewPublic(usecase.NewPublicLookup(q), limiter, limit, window).WithPDF(renderer, frontendURL, pdfLimit)
 	mux.HandleFunc("GET /v1/public/warranties/{public_code}", h.Get)
 	mux.HandleFunc("GET /v1/public/warranties/{public_code}/pdf", h.PDF)
+	// TEC-1005: one page and one PDF per service (/warranty/{service_no}).
+	mux.HandleFunc("GET /v1/public/service-warranties/{code}", h.Service)
+	mux.HandleFunc("GET /v1/public/service-warranties/{code}/pdf", h.ServicePDF)
 }
 
 // RegisterCertificateRoutes mounts the warranty certificate PDF (TEC-188).

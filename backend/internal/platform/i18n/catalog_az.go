@@ -843,6 +843,10 @@ var azCatalog = map[string]string{
 	"warranty.certificate.terms_title":         "Zəmanət şərtləri",
 	"warranty.certificate.terms":               "Zəmanət bu sertifikatda göstərilən məhsulların səlahiyyətli diler tərəfindən tətbiqindən yaranan material və işçilik qüsurlarını əhatə edir.\nHər zəmanət yanında göstərilən başlanğıc və bitmə tarixləri arasında etibarlıdır.\nQəza, toqquşma, daş və zərbə zədələri, düzgün olmayan baxım və ya kimyəvi maddələrin istifadəsi, icazəsiz müdaxilə və adi köhnəlmə zəmanətə daxil deyil.\nZəmanət müraciətində bu sertifikat və zəmanət kodu təqdim edilməlidir; zəmanətin etibarlılığı QR kodu oxudularaq yoxlanıla bilər.\nAvtomobil sahibini dəyişdikdə aktiv zəmanətlər yeni sahibə ötürülə bilər.",
 	"warranty.certificate.generated_at":        "Verilib",
+	"warranty.certificate.status":              "Status",
+	"warranty.certificate.status.active":       "Aktiv",
+	"warranty.certificate.status.expired":      "Müddəti bitib",
+	"warranty.certificate.status.void":         "Etibarsız",
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Xidmət hesabatı",
 	"resources.tenant.services.pdf":         "Xidmət hesabatı",

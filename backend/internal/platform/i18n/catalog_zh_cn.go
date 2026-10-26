@@ -843,6 +843,10 @@ var zhCNCatalog = map[string]string{
 	"warranty.certificate.terms_title":         "质保条款",
 	"warranty.certificate.terms":               "本质保涵盖由授权经销商施工本证书所列产品所产生的材料和工艺缺陷。\n每项质保在其旁边标注的开始和结束日期之间有效。\n事故、碰撞、石击和撞击损伤、不当保养或使用化学品、未经授权的处理以及正常磨损不在质保范围内。\n申请质保时须出示本证书及质保代码；扫描二维码即可验证质保有效性。\n车辆易主时，有效质保可转让给新车主。",
 	"warranty.certificate.generated_at":        "签发",
+	"warranty.certificate.status":              "状态",
+	"warranty.certificate.status.active":       "有效",
+	"warranty.certificate.status.expired":      "已过期",
+	"warranty.certificate.status.void":         "已作废",
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "服务报告",
 	"resources.tenant.services.pdf":         "服务报告",

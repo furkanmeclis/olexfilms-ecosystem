@@ -1650,6 +1650,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/service-warranties/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public warranty page of a service (every warranty of it)
+         * @description TEC-1005. No authentication. The page /warranty/{service_no} (the
+         *     legacy hub's page and the QR of the printed warranty cards) shows
+         *     one service with all of its warranties. code is the service number,
+         *     else a warranty public code of the service (per-warranty links
+         *     before TEC-1005), else a legacy alias; service_no in the answer is
+         *     the canonical page address. Only a service with a warranty in the
+         *     domain brand is found. No personal data: masked plate, last four
+         *     VIN characters, no holder. Same per-IP limit and 404 rules as
+         *     GET /v1/public/warranties/{public_code}.
+         */
+        get: operations["getPublicServiceWarranties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/service-warranties/{code}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anonymous warranty PDF of a service
+         * @description TEC-1005. One document with every warranty of the service (status
+         *     per warranty), offered while one of them is active (else 404), with
+         *     a QR code to /warranty/{service_no}. Built from the public
+         *     projection only. PDF rate limit bucket and lang / tz as
+         *     GET /v1/public/warranties/{public_code}/pdf.
+         */
+        get: operations["getPublicServiceWarrantiesPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/warranties/{public_code}/pdf": {
         parameters: {
             query?: never;
@@ -19157,6 +19209,44 @@ export interface components {
             data: components["schemas"]["PublicBrand"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description Public warranty page of a service (TEC-1005); never carries personal data. */
+        PublicService: {
+            /** @description Canonical page address /warranty/{service_no} */
+            service_no: string;
+            package: string | null;
+            /**
+             * Format: date-time
+             * @description Completion time, else creation
+             */
+            service_date: string;
+            brand: components["schemas"]["PublicWarranty"]["brand"];
+            dealer: components["schemas"]["PublicWarranty"]["dealer"];
+            vehicle: components["schemas"]["PublicWarranty"]["vehicle"];
+            warranties: components["schemas"]["PublicServiceWarranty"][];
+        };
+        PublicServiceWarranty: {
+            public_code: string;
+            /** @enum {string} */
+            status: "active" | "expired" | "void";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            days_remaining: number;
+            product: {
+                name: string;
+            };
+            /** @description Product category name (empty when none) */
+            category: string;
+            /** @description Applied part keys (services.parts.<key>) */
+            parts: string[];
+        };
+        EnvelopePublicService: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicService"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopePublicWarranty: {
             /** @enum {boolean} */
             success: true;
@@ -33424,6 +33514,86 @@ export interface operations {
                 };
             };
             500: components["responses"]["InternalError"];
+        };
+    };
+    getPublicServiceWarranties: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The service page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicService"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPublicServiceWarrantiesPdf: {
+        parameters: {
+            query?: {
+                lang?: string;
+                tz?: string;
+            };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The PDF (attachment) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description PDF rendering is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getPublicWarrantyPdf: {

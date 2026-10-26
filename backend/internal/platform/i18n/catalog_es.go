@@ -843,6 +843,10 @@ var esCatalog = map[string]string{
 	"warranty.certificate.terms_title":         "Condiciones de la garantía",
 	"warranty.certificate.terms":               "La garantía cubre los defectos de material y mano de obra derivados de la aplicación de los productos de este certificado por un distribuidor autorizado.\nCada garantía es válida entre las fechas de inicio y fin indicadas junto a ella.\nQuedan excluidos accidentes, colisiones, daños por piedras e impactos, cuidado inadecuado o uso de productos químicos, intervenciones no autorizadas y el desgaste normal.\nEn cualquier reclamación deben presentarse este certificado y el código de garantía; la validez puede comprobarse escaneando el código QR.\nSi el vehículo cambia de propietario, las garantías activas pueden transferirse al nuevo propietario.",
 	"warranty.certificate.generated_at":        "Emitido",
+	"warranty.certificate.status":              "Estado",
+	"warranty.certificate.status.active":       "Activa",
+	"warranty.certificate.status.expired":      "Vencida",
+	"warranty.certificate.status.void":         "Anulada",
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Informe de servicio",
 	"resources.tenant.services.pdf":         "Informe de servicio",
