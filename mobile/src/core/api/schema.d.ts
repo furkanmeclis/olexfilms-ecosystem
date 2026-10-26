@@ -5785,6 +5785,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/stock/warehouses/{uuid}/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Units that originate from a warehouse, in it or gone (TEC-1006)
+         * @description Needs `stock.read` and the warehouse module; the warehouse belongs to the active organization (404 otherwise). Every brand (K20). A unit originates from the warehouse of the first location it was placed in, else from its issuer's primary warehouse. Departed units are not warehouse stock. Sort keys: barcode, product, source, created_at, updated_at (default -updated_at). `q` matches a barcode or order / service number prefix or a product name.
+         */
+        get: operations["listStockWarehouseUnits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/stock/rebuild-check": {
         parameters: {
             query?: never;
@@ -21620,6 +21643,114 @@ export interface components {
             /** Format: uuid */
             uuid: string;
         };
+        /**
+         * @description TEC-1006. Warehouse-layer trace of a unit: the warehouse it comes
+         *     from (first location it was placed in, else the issuer's primary
+         *     warehouse — "AFM Florya Merkez" for legacy hub units), the orders
+         *     that carried it and the services that used it (outside the viewer's
+         *     scope left out). source: order = went out with an order, stock =
+         *     never left its issuer, unknown = at / used by another organization
+         *     without an order ("kaynak bilinmiyor").
+         */
+        StockUnitTrace: {
+            /** @enum {string} */
+            source: "order" | "stock" | "unknown";
+            origin_warehouse: null | components["schemas"]["StockWarehouseRef"];
+            orders: components["schemas"]["StockTraceOrder"][];
+            services: components["schemas"]["StockTraceService"][];
+        };
+        StockWarehouseRef: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+        };
+        StockTraceOrder: {
+            /** Format: uuid */
+            uuid: string;
+            order_no: string;
+            status: string;
+            external_reference: string | null;
+            buyer: components["schemas"]["StockTraceOrg"];
+            seller: components["schemas"]["StockTraceOrg"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            submitted_at: string | null;
+            /** Format: date-time */
+            shipped_at: string | null;
+            /** Format: date-time */
+            received_at: string | null;
+        };
+        StockTraceOrg: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            type: string;
+        };
+        StockTraceService: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            status: string;
+            /** Format: date-time */
+            completed_at: string | null;
+            organization: components["schemas"]["StockTraceOrg"];
+            customer: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+        };
+        /** @description TEC-1006. A unit that originates from the warehouse, in it (in_warehouse) or gone. */
+        StockWarehouseUnit: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            unit_kind: string;
+            status: string;
+            initial_meters: string | null;
+            remaining_meters: string | null;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+            };
+            /** @enum {string} */
+            source: "order" | "stock" | "unknown";
+            in_warehouse: boolean;
+            owner_type: string | null;
+            location_code: string | null;
+            holder: null | components["schemas"]["StockTraceOrg"];
+            order: null | {
+                /** Format: uuid */
+                uuid: string;
+                order_no: string;
+                buyer_name: string;
+            };
+            service: null | {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+                /** Format: date-time */
+                completed_at: string | null;
+                customer_name: string;
+            };
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeStockWarehouseUnitPage: {
+            data: {
+                items: components["schemas"]["StockWarehouseUnit"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+        };
         StockUnitHistory: {
             unit: components["schemas"]["StockUnit"];
             /** @description Single active owner of a serial unit; null for fixed barcodes and labels not in stock yet. */
@@ -21632,6 +21763,7 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            trace: null | components["schemas"]["StockUnitTrace"];
         };
         StockProduct: {
             product: {
@@ -21786,6 +21918,8 @@ export interface components {
             active: boolean;
             /** @description Require placed units for order assignment and warehouse transfer lines. */
             require_location_placement: boolean;
+            /** @description TEC-1006. The organization's primary warehouse (Olex center - AFM Florya Merkez); legacy units without a location originate from it. */
+            is_primary?: boolean;
             sort_order: number;
             /** Format: date-time */
             created_at: string;
@@ -22251,6 +22385,8 @@ export interface components {
             quantity_on_hand: number | null;
             holder: null | components["schemas"]["WarehouseScanHolder"];
             location: null | components["schemas"]["WarehouseScanLocation"];
+            /** @description TEC-1006 order / service / customer trace. */
+            trace?: null | components["schemas"]["StockUnitTrace"];
         };
         WarehouseScanResult: {
             /** @enum {string} */
@@ -40701,6 +40837,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeStockProductPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStockWarehouseUnits: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                state?: "in" | "left";
+                /** @description CSV of order, stock, unknown. */
+                source?: string;
+                product_uuid?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouse units */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockWarehouseUnitPage"];
                 };
             };
             400: components["responses"]["BadRequest"];

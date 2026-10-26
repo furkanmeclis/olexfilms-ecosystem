@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "Изображение слишком большое; используйте файл меньше примерно 150 КБ.",
   "label_templates.errors.generic": "Не удалось сохранить шаблон.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Шаблон с таким названием уже существует.",
-  "label_templates.errors.VALIDATION_ERROR": "Некоторые поля заполнены неверно; проверьте форму."
+  "label_templates.errors.VALIDATION_ERROR": "Некоторые поля заполнены неверно; проверьте форму.",
+  "trace.title": "След штрихкода",
+  "trace.origin": "Склад происхождения",
+  "trace.orders": "Заказы",
+  "trace.services": "Услуги",
+  "trace.no_order": "Не отправлялся с заказом.",
+  "trace.no_order_unknown": "Заказ не найден; источник неизвестен (старый импорт).",
+  "trace.no_service": "Не использовался в услуге.",
+  "trace.source.order": "По заказу",
+  "trace.source.stock": "На складе",
+  "trace.source.unknown": "Источник неизвестен"
 }

@@ -633,5 +633,22 @@
   "stock_panel.products": "Produits",
   "stock_panel.units": "Unités",
   "stock_panel.empty_title": "Ce casier est vide",
-  "stock_panel.empty_description": "Aucun stock n'est enregistré dans ce casier."
+  "stock_panel.empty_description": "Aucun stock n'est enregistré dans ce casier.",
+  "nav_units": "Unités d'entrepôt",
+  "units.title": "Unités d'entrepôt",
+  "units.description": "Tous les codes-barres issus de l'entrepôt : présents et sortis (commande, service, autre). Les unités sorties ne comptent pas dans le stock.",
+  "units.forbidden": "Vous ne pouvez pas voir les unités d'entrepôt.",
+  "units.warehouse": "Entrepôt",
+  "units.primary": "principal",
+  "units.empty": "Aucune unité de cet entrepôt.",
+  "units.columns.barcode": "Code-barres",
+  "units.columns.product": "Produit",
+  "units.columns.state": "État",
+  "units.columns.source": "Origine",
+  "units.columns.order": "Commande",
+  "units.columns.service": "Service / client",
+  "units.columns.updated_at": "Dernier changement",
+  "units.columns.created_at": "Créé",
+  "units.state.in": "En entrepôt",
+  "units.state.left": "Sorti"
 }

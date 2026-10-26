@@ -12,6 +12,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const migratorClearOtherPrimaryWarehouses = `-- name: MigratorClearOtherPrimaryWarehouses :execrows
+UPDATE warehouses SET is_primary = FALSE
+WHERE organization_id = $1 AND is_primary AND code <> $2
+`
+
+type MigratorClearOtherPrimaryWarehousesParams struct {
+	OrganizationID int64  `json:"organization_id"`
+	Code           string `json:"code"`
+}
+
+// TEC-1006: one primary warehouse per organization.
+func (q *Queries) MigratorClearOtherPrimaryWarehouses(ctx context.Context, arg MigratorClearOtherPrimaryWarehousesParams) (int64, error) {
+	result, err := q.db.Exec(ctx, migratorClearOtherPrimaryWarehouses, arg.OrganizationID, arg.Code)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const migratorCountLocationUnits = `-- name: MigratorCountLocationUnits :one
 SELECT (
     (SELECT COUNT(*) FROM unit_current_state s JOIN units u ON u.id = s.unit_id
@@ -427,6 +446,56 @@ func (q *Queries) MigratorRoomFullCodePrefix(ctx context.Context, arg MigratorRo
 	return prefix, err
 }
 
+const migratorSetPrimaryWarehouse = `-- name: MigratorSetPrimaryWarehouse :execrows
+UPDATE warehouses SET is_primary = TRUE, name = $1
+WHERE organization_id = $2 AND code = $3
+  AND (NOT is_primary OR name <> $1)
+`
+
+type MigratorSetPrimaryWarehouseParams struct {
+	Name           string `json:"name"`
+	OrganizationID int64  `json:"organization_id"`
+	Code           string `json:"code"`
+}
+
+func (q *Queries) MigratorSetPrimaryWarehouse(ctx context.Context, arg MigratorSetPrimaryWarehouseParams) (int64, error) {
+	result, err := q.db.Exec(ctx, migratorSetPrimaryWarehouse, arg.Name, arg.OrganizationID, arg.Code)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const migratorUnitBarcodesIn = `-- name: MigratorUnitBarcodesIn :many
+SELECT barcode FROM units
+WHERE brand_id = $1 AND barcode = ANY ($2::text[])
+`
+
+type MigratorUnitBarcodesInParams struct {
+	BrandID  int64    `json:"brand_id"`
+	Barcodes []string `json:"barcodes"`
+}
+
+func (q *Queries) MigratorUnitBarcodesIn(ctx context.Context, arg MigratorUnitBarcodesInParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, migratorUnitBarcodesIn, arg.BrandID, arg.Barcodes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var barcode string
+		if err := rows.Scan(&barcode); err != nil {
+			return nil, err
+		}
+		items = append(items, barcode)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const migratorUnitByUUID = `-- name: MigratorUnitByUUID :one
 SELECT id, product_id, unit_kind, status FROM units
 WHERE uuid = $1 AND brand_id = $2
@@ -480,6 +549,96 @@ func (q *Queries) MigratorUnitHasMovements(ctx context.Context, unitID int64) (b
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const migratorUnitOwnershipCounts = `-- name: MigratorUnitOwnershipCounts :many
+SELECT COALESCE(st.owner_type, fh.owner_type, '')::text AS owner_type, u.status, count(DISTINCT u.id) AS units
+FROM units u
+LEFT JOIN unit_current_state st ON st.unit_id = u.id
+LEFT JOIN fixed_barcode_holdings fh ON fh.unit_id = u.id AND fh.quantity_on_hand > 0
+WHERE u.brand_id = $1
+GROUP BY 1, 2
+ORDER BY 1, 2
+`
+
+type MigratorUnitOwnershipCountsRow struct {
+	OwnerType string `json:"owner_type"`
+	Status    string `json:"status"`
+	Units     int64  `json:"units"`
+}
+
+// TEC-1006: units of the brand by current owner type (” : none) and status.
+func (q *Queries) MigratorUnitOwnershipCounts(ctx context.Context, brandID int64) ([]MigratorUnitOwnershipCountsRow, error) {
+	rows, err := q.db.Query(ctx, migratorUnitOwnershipCounts, brandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MigratorUnitOwnershipCountsRow{}
+	for rows.Next() {
+		var i MigratorUnitOwnershipCountsRow
+		if err := rows.Scan(&i.OwnerType, &i.Status, &i.Units); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const migratorUnitsUsedWithoutOwner = `-- name: MigratorUnitsUsedWithoutOwner :many
+SELECT DISTINCT ON (si.unit_id)
+       si.unit_id, u.uuid AS unit_uuid, s.id AS service_id, s.organization_id, s.service_no,
+       s.completed_at, si.uuid AS service_item_uuid
+FROM service_items si
+JOIN services s ON s.id = si.service_id
+JOIN units u ON u.id = si.unit_id
+WHERE s.brand_id = $1 AND s.status = 'completed' AND u.unit_kind = 'serial'
+  AND NOT EXISTS (SELECT 1 FROM unit_current_state st WHERE st.unit_id = si.unit_id)
+ORDER BY si.unit_id, s.completed_at DESC NULLS LAST, s.id DESC
+`
+
+type MigratorUnitsUsedWithoutOwnerRow struct {
+	UnitID          int64              `json:"unit_id"`
+	UnitUuid        uuid.UUID          `json:"unit_uuid"`
+	ServiceID       int64              `json:"service_id"`
+	OrganizationID  int64              `json:"organization_id"`
+	ServiceNo       string             `json:"service_no"`
+	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
+	ServiceItemUuid uuid.UUID          `json:"service_item_uuid"`
+}
+
+// TEC-1006: serial units used in a completed service that have no owner
+// (the legacy ledger could not name the service); the latest completed
+// service per unit.
+func (q *Queries) MigratorUnitsUsedWithoutOwner(ctx context.Context, brandID int64) ([]MigratorUnitsUsedWithoutOwnerRow, error) {
+	rows, err := q.db.Query(ctx, migratorUnitsUsedWithoutOwner, brandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []MigratorUnitsUsedWithoutOwnerRow{}
+	for rows.Next() {
+		var i MigratorUnitsUsedWithoutOwnerRow
+		if err := rows.Scan(
+			&i.UnitID,
+			&i.UnitUuid,
+			&i.ServiceID,
+			&i.OrganizationID,
+			&i.ServiceNo,
+			&i.CompletedAt,
+			&i.ServiceItemUuid,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const migratorUnitsWithoutMovements = `-- name: MigratorUnitsWithoutMovements :many

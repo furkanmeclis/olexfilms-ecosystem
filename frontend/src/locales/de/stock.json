@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "Das Bild ist zu groß; verwenden Sie eines unter etwa 150 KB.",
   "label_templates.errors.generic": "Die Vorlage konnte nicht gespeichert werden.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Eine andere Vorlage hat bereits diesen Namen.",
-  "label_templates.errors.VALIDATION_ERROR": "Einige Felder sind ungültig; prüfen Sie das Formular."
+  "label_templates.errors.VALIDATION_ERROR": "Einige Felder sind ungültig; prüfen Sie das Formular.",
+  "trace.title": "Barcode-Verlauf",
+  "trace.origin": "Herkunftslager",
+  "trace.orders": "Aufträge",
+  "trace.services": "Services",
+  "trace.no_order": "Nicht per Auftrag versandt.",
+  "trace.no_order_unknown": "Kein Auftrag gefunden; Herkunft unbekannt (Altimport).",
+  "trace.no_service": "In keinem Service verwendet.",
+  "trace.source.order": "Per Auftrag",
+  "trace.source.stock": "Im Bestand",
+  "trace.source.unknown": "Herkunft unbekannt"
 }

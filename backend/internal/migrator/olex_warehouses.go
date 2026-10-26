@@ -35,7 +35,18 @@ type WarehousesStep struct {
 	// WHSystem is the migration_map source system of the warehouse rows;
 	// empty means SourceWH.
 	WHSystem string
+	// PrimaryCode / PrimaryName (TEC-1006): the warehouse with this code
+	// (normalised) becomes the center's primary warehouse under this name
+	// on every run; empty: none.
+	PrimaryCode, PrimaryName string
 }
+
+// The Olex primary warehouse (TEC-1006): the legacy AFM Florya warehouse is
+// the center warehouse ("AFM Florya = merkez depo").
+const (
+	OlexPrimaryWarehouseCode = "FLORYA"
+	OlexPrimaryWarehouseName = "AFM Florya Merkez"
+)
 
 // Name implements Step.
 func (WarehousesStep) Name() string { return "warehouses" }
@@ -165,7 +176,32 @@ func (s WarehousesStep) Run(ctx context.Context, src Sources, dst *Target, m *Ma
 			return StepResult{Counts: c}, fmt.Errorf("warehouse location %s: %w", l.ID, err)
 		}
 	}
+	if err := s.markPrimary(ctx, dst.Q, centerID, c); err != nil {
+		return StepResult{Counts: c}, err
+	}
 	return StepResult{Counts: c, Watermark: watermark}, nil
+}
+
+// markPrimary names the primary warehouse and makes it the only primary one
+// of the center (idempotent: a rerun changes nothing).
+func (s WarehousesStep) markPrimary(ctx context.Context, q *db.Queries, centerID int64, c counts) error {
+	code := whCode(s.PrimaryCode)
+	if code == "" {
+		return nil
+	}
+	if _, err := q.MigratorClearOtherPrimaryWarehouses(ctx, db.MigratorClearOtherPrimaryWarehousesParams{
+		OrganizationID: centerID, Code: code,
+	}); err != nil {
+		return fmt.Errorf("primary warehouse: %w", err)
+	}
+	n, err := q.MigratorSetPrimaryWarehouse(ctx, db.MigratorSetPrimaryWarehouseParams{
+		OrganizationID: centerID, Code: code, Name: truncate(s.PrimaryName, whNameMax),
+	})
+	if err != nil {
+		return fmt.Errorf("primary warehouse: %w", err)
+	}
+	c.add("primary_warehouse_set", n)
+	return nil
 }
 
 // olexCenterID returns the Olex center organization (created by the

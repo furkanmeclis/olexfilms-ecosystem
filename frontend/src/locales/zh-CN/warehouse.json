@@ -633,5 +633,22 @@
   "stock_panel.products": "产品",
   "stock_panel.units": "单元",
   "stock_panel.empty_title": "此货位为空",
-  "stock_panel.empty_description": "此货位没有库存记录。"
+  "stock_panel.empty_description": "此货位没有库存记录。",
+  "nav_units": "仓库单元",
+  "units.title": "仓库单元",
+  "units.description": "来自该仓库的所有条码：在库的以及随订单、服务等出库的。已出库单元不计入库存。",
+  "units.forbidden": "您无权查看仓库单元。",
+  "units.warehouse": "仓库",
+  "units.primary": "主仓",
+  "units.empty": "该仓库没有单元。",
+  "units.columns.barcode": "条码",
+  "units.columns.product": "产品",
+  "units.columns.state": "状态",
+  "units.columns.source": "来源",
+  "units.columns.order": "订单",
+  "units.columns.service": "服务 / 客户",
+  "units.columns.updated_at": "最近变更",
+  "units.columns.created_at": "创建",
+  "units.state.in": "在库",
+  "units.state.left": "已出库"
 }

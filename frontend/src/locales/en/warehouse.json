@@ -633,5 +633,22 @@
   "stock_panel.products": "Products",
   "stock_panel.units": "Units",
   "stock_panel.empty_title": "Nothing in this bin",
-  "stock_panel.empty_description": "No stock is recorded in this bin."
+  "stock_panel.empty_description": "No stock is recorded in this bin.",
+  "nav_units": "Warehouse units",
+  "units.title": "Warehouse units",
+  "units.description": "Every barcode that comes from the warehouse: those in it and those that left with an order, a service or otherwise. Departed units are not warehouse stock.",
+  "units.forbidden": "You cannot view the warehouse units.",
+  "units.warehouse": "Warehouse",
+  "units.primary": "primary",
+  "units.empty": "No units come from this warehouse.",
+  "units.columns.barcode": "Barcode",
+  "units.columns.product": "Product",
+  "units.columns.state": "State",
+  "units.columns.source": "Source",
+  "units.columns.order": "Order",
+  "units.columns.service": "Service / customer",
+  "units.columns.updated_at": "Last change",
+  "units.columns.created_at": "Created",
+  "units.state.in": "In the warehouse",
+  "units.state.left": "Left the warehouse"
 }

@@ -41,6 +41,10 @@ func RegisterRoutes(
 	// TEC-373: unit list export with the list filters (stock.read scope).
 	mux.Handle("POST /v1/stock/organizations/{uuid}/units/export", read(h.RequestUnitsExport))
 	mux.Handle("GET /v1/stock/locations/{uuid}/products", read(h.LocationStock))
+	// TEC-1006: every unit that originates from a warehouse of the active
+	// organization, in it or gone, with its order / service trace.
+	mux.Handle("GET /v1/stock/warehouses/{uuid}/units", scoped(h.WarehouseUnits, rbac.PermStockRead,
+		middleware.RequireFeature(checker, features.ModuleWarehouse)))
 
 	// TEC-157 reclassification: the holding organization requests
 	// (stock.write), the center approves (stock.reclassify, sensitive:

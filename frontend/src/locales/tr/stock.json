@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "Görsel çok büyük; yaklaşık 150 KB altında bir görsel kullanın.",
   "label_templates.errors.generic": "Şablon kaydedilemedi.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Bu ada sahip başka bir şablon var.",
-  "label_templates.errors.VALIDATION_ERROR": "Bazı alanlar geçersiz; formu kontrol edin."
+  "label_templates.errors.VALIDATION_ERROR": "Bazı alanlar geçersiz; formu kontrol edin.",
+  "trace.title": "Barkod izi",
+  "trace.origin": "Geldiği depo",
+  "trace.orders": "Siparişler",
+  "trace.services": "Hizmetler",
+  "trace.no_order": "Siparişle gitmedi.",
+  "trace.no_order_unknown": "Siparişi bulunamadı; kaynak bilinmiyor (legacy toplu yükleme).",
+  "trace.no_service": "Hizmette kullanılmadı.",
+  "trace.source.order": "Siparişle",
+  "trace.source.stock": "Stokta",
+  "trace.source.unknown": "Kaynak bilinmiyor"
 }

@@ -170,3 +170,41 @@ WHERE u.brand_id = sqlc.arg(brand_id)
        OR EXISTS (SELECT 1 FROM fixed_barcode_holdings h WHERE h.unit_id = u.id))
   AND NOT EXISTS (SELECT 1 FROM stock_movements m WHERE m.unit_id = u.id)
 ORDER BY u.id;
+
+-- name: MigratorClearOtherPrimaryWarehouses :execrows
+-- TEC-1006: one primary warehouse per organization.
+UPDATE warehouses SET is_primary = FALSE
+WHERE organization_id = sqlc.arg(organization_id) AND is_primary AND code <> sqlc.arg(code);
+
+-- name: MigratorSetPrimaryWarehouse :execrows
+UPDATE warehouses SET is_primary = TRUE, name = sqlc.arg(name)
+WHERE organization_id = sqlc.arg(organization_id) AND code = sqlc.arg(code)
+  AND (NOT is_primary OR name <> sqlc.arg(name));
+
+-- name: MigratorUnitsUsedWithoutOwner :many
+-- TEC-1006: serial units used in a completed service that have no owner
+-- (the legacy ledger could not name the service); the latest completed
+-- service per unit.
+SELECT DISTINCT ON (si.unit_id)
+       si.unit_id, u.uuid AS unit_uuid, s.id AS service_id, s.organization_id, s.service_no,
+       s.completed_at, si.uuid AS service_item_uuid
+FROM service_items si
+JOIN services s ON s.id = si.service_id
+JOIN units u ON u.id = si.unit_id
+WHERE s.brand_id = sqlc.arg(brand_id) AND s.status = 'completed' AND u.unit_kind = 'serial'
+  AND NOT EXISTS (SELECT 1 FROM unit_current_state st WHERE st.unit_id = si.unit_id)
+ORDER BY si.unit_id, s.completed_at DESC NULLS LAST, s.id DESC;
+
+-- name: MigratorUnitBarcodesIn :many
+SELECT barcode FROM units
+WHERE brand_id = sqlc.arg(brand_id) AND barcode = ANY (sqlc.arg(barcodes)::text[]);
+
+-- name: MigratorUnitOwnershipCounts :many
+-- TEC-1006: units of the brand by current owner type ('' : none) and status.
+SELECT COALESCE(st.owner_type, fh.owner_type, '')::text AS owner_type, u.status, count(DISTINCT u.id) AS units
+FROM units u
+LEFT JOIN unit_current_state st ON st.unit_id = u.id
+LEFT JOIN fixed_barcode_holdings fh ON fh.unit_id = u.id AND fh.quantity_on_hand > 0
+WHERE u.brand_id = sqlc.arg(brand_id)
+GROUP BY 1, 2
+ORDER BY 1, 2;

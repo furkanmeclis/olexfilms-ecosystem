@@ -301,6 +301,9 @@ func (s *Service) history(ctx context.Context, v viewer, u db.Unit, st *db.UnitC
 			Holder: *orgRef(r.orgs[h.HolderOrgID]), Quantity: h.QuantityOnHand,
 		})
 	}
+	if out.Trace, err = s.Trace(ctx, v.f, u); err != nil {
+		return model.UnitHistory{}, err
+	}
 	docs, actors, err := s.movementLinks(ctx, rows)
 	if err != nil {
 		return model.UnitHistory{}, err

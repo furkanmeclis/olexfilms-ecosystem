@@ -18,15 +18,17 @@ type Warehouse struct {
 	Address                  *string   `json:"address"`
 	Active                   bool      `json:"active"`
 	RequireLocationPlacement bool      `json:"require_location_placement"`
-	SortOrder                int32     `json:"sort_order"`
-	CreatedAt                time.Time `json:"created_at"`
-	UpdatedAt                time.Time `json:"updated_at"`
+	// IsPrimary (TEC-1006): legacy units without a location originate here.
+	IsPrimary bool      `json:"is_primary"`
+	SortOrder int32     `json:"sort_order"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func warehouseView(w db.Warehouse) Warehouse {
 	return Warehouse{
 		UUID: w.Uuid, Code: w.Code, Name: w.Name, Address: textPtr(w.Address),
-		Active: w.Active, RequireLocationPlacement: w.RequireLocationPlacement, SortOrder: w.SortOrder, CreatedAt: ts(w.CreatedAt), UpdatedAt: ts(w.UpdatedAt),
+		Active: w.Active, RequireLocationPlacement: w.RequireLocationPlacement, IsPrimary: w.IsPrimary, SortOrder: w.SortOrder, CreatedAt: ts(w.CreatedAt), UpdatedAt: ts(w.UpdatedAt),
 	}
 }
 

@@ -57,7 +57,8 @@ func olexSteps() []Step {
 
 		// TEC-257: warehouse structure, stock units and their initial
 		// ownership.
-		WarehousesStep{},
+		// TEC-1006: AFM Florya is the center warehouse "AFM Florya Merkez".
+		WarehousesStep{PrimaryCode: OlexPrimaryWarehouseCode, PrimaryName: OlexPrimaryWarehouseName},
 		UnitsStep{},
 
 		// TEC-258: legacy stock movements -> ledger opening, projection
@@ -82,6 +83,10 @@ func olexSteps() []Step {
 		// TEC-262: NexPTG device accounts -> measurement_devices, reports
 		// with their measurement rows -> measurement_results.
 		MeasurementsStep{},
+
+		// TEC-1006: units used in legacy services get the service as owner;
+		// legacy barcodes vs units consistency report.
+		UnitTraceStep{},
 	}
 }
 

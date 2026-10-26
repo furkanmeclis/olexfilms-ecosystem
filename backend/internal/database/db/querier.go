@@ -340,6 +340,7 @@ type Querier interface {
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error)
 	CountWarehouseMembers(ctx context.Context, arg CountWarehouseMembersParams) (int64, error)
+	CountWarehouseTraceUnits(ctx context.Context, arg CountWarehouseTraceUnitsParams) (int64, error)
 	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
@@ -1363,6 +1364,8 @@ type Querier interface {
 	// TEC-223: the price a unit was sold at to buyer by seller (its latest
 	// order line with the unit assigned, the order not cancelled), in currency.
 	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
+	// TEC-1006: the warehouse-layer trace of a unit (view unit_traces).
+	GetUnitTrace(ctx context.Context, unitID int64) (GetUnitTraceRow, error)
 	GetUsedOAuthCodeFamily(ctx context.Context, codeHash string) (pgtype.UUID, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
@@ -2694,6 +2697,8 @@ type Querier interface {
 	ListTransferSiblings(ctx context.Context, arg ListTransferSiblingsParams) ([]Organization, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
 	ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int64) ([]UnitCurrentState, error)
+	ListUnitTraceOrders(ctx context.Context, unitID int64) ([]ListUnitTraceOrdersRow, error)
+	ListUnitTraceServices(ctx context.Context, unitID int64) ([]ListUnitTraceServicesRow, error)
 	// Brand-independent barcode lookup for the warehouse scanner (K20): the
 	// caller narrows the result by scope.
 	ListUnitsByBarcode(ctx context.Context, barcode string) ([]Unit, error)
@@ -2750,6 +2755,10 @@ type Querier interface {
 	// Scope.
 	// Typed locations of a warehouse, optionally one room.
 	ListWarehouseScopeLocationIDs(ctx context.Context, arg ListWarehouseScopeLocationIDsParams) ([]int64, error)
+	// TEC-1006: every unit (any brand, K20) whose origin is the warehouse, in it or gone (state
+	// in: placed in one of its locations; left: anywhere else). Sort:
+	// docs/list-contract.md, keys from stock usecase WarehouseUnitSort.
+	ListWarehouseTraceUnits(ctx context.Context, arg ListWarehouseTraceUnitsParams) ([]ListWarehouseTraceUnitsRow, error)
 	// The lines of the given transfers with their unit, product and locations.
 	ListWarehouseTransferExportLines(ctx context.Context, arg ListWarehouseTransferExportLinesParams) ([]ListWarehouseTransferExportLinesRow, error)
 	ListWarehouseTransferLines(ctx context.Context, transferID int64) ([]WarehouseTransferLine, error)
@@ -3033,6 +3042,8 @@ type Querier interface {
 	MigratorCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarModelByUUIDRow, error)
 	MigratorCarModelIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorCategoryIDByUUID(ctx context.Context, arg MigratorCategoryIDByUUIDParams) (int64, error)
+	// TEC-1006: one primary warehouse per organization.
+	MigratorClearOtherPrimaryWarehouses(ctx context.Context, arg MigratorClearOtherPrimaryWarehousesParams) (int64, error)
 	// Whether another live user already holds the e-mail or the phone.
 	MigratorContactTaken(ctx context.Context, arg MigratorContactTakenParams) (MigratorContactTakenRow, error)
 	// Pieces of the product the migrated ownership puts at the location: serial
@@ -3187,6 +3198,7 @@ type Querier interface {
 	// A unit of the brand with its product and the category's part keys.
 	MigratorServiceUnit(ctx context.Context, arg MigratorServiceUnitParams) (MigratorServiceUnitRow, error)
 	MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error
+	MigratorSetPrimaryWarehouse(ctx context.Context, arg MigratorSetPrimaryWarehouseParams) (int64, error)
 	// The legacy status of a service that is not final yet. A final status is
 	// written after the items, which are locked afterwards.
 	MigratorSetServiceStatus(ctx context.Context, arg MigratorSetServiceStatusParams) error
@@ -3199,10 +3211,17 @@ type Querier interface {
 	MigratorShortURLTokenTaken(ctx context.Context, token string) (bool, error)
 	// The migrated service of a legacy transfer, with its vehicle's owner now.
 	MigratorTransferService(ctx context.Context, argUuid uuid.UUID) (MigratorTransferServiceRow, error)
+	MigratorUnitBarcodesIn(ctx context.Context, arg MigratorUnitBarcodesInParams) ([]string, error)
 	MigratorUnitByUUID(ctx context.Context, arg MigratorUnitByUUIDParams) (MigratorUnitByUUIDRow, error)
 	// TEC-258: a movement this application wrote (not an imported legacy one).
 	MigratorUnitHasLedgerMovements(ctx context.Context, unitID int64) (bool, error)
 	MigratorUnitHasMovements(ctx context.Context, unitID int64) (bool, error)
+	// TEC-1006: units of the brand by current owner type ('' : none) and status.
+	MigratorUnitOwnershipCounts(ctx context.Context, brandID int64) ([]MigratorUnitOwnershipCountsRow, error)
+	// TEC-1006: serial units used in a completed service that have no owner
+	// (the legacy ledger could not name the service); the latest completed
+	// service per unit.
+	MigratorUnitsUsedWithoutOwner(ctx context.Context, brandID int64) ([]MigratorUnitsUsedWithoutOwnerRow, error)
 	// TEC-258: units of the brand whose ownership was written without a movement
 	// (TEC-257): they need an opening movement before the projection rebuild.
 	MigratorUnitsWithoutMovements(ctx context.Context, brandID int64) ([]int64, error)

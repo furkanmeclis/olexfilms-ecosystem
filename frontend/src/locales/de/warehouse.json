@@ -633,5 +633,22 @@
   "stock_panel.products": "Produkte",
   "stock_panel.units": "Einheiten",
   "stock_panel.empty_title": "Dieses Fach ist leer",
-  "stock_panel.empty_description": "In diesem Fach ist kein Bestand erfasst."
+  "stock_panel.empty_description": "In diesem Fach ist kein Bestand erfasst.",
+  "nav_units": "Lagereinheiten",
+  "units.title": "Lagereinheiten",
+  "units.description": "Alle Barcodes aus dem Lager: vorhandene und per Auftrag, Service oder anders abgegangene. Abgegangene Einheiten zählen nicht zum Lagerbestand.",
+  "units.forbidden": "Keine Berechtigung für die Lagereinheiten.",
+  "units.warehouse": "Lager",
+  "units.primary": "primär",
+  "units.empty": "Keine Einheiten aus diesem Lager.",
+  "units.columns.barcode": "Barcode",
+  "units.columns.product": "Produkt",
+  "units.columns.state": "Zustand",
+  "units.columns.source": "Herkunft",
+  "units.columns.order": "Auftrag",
+  "units.columns.service": "Service / Kunde",
+  "units.columns.updated_at": "Letzte Änderung",
+  "units.columns.created_at": "Erstellt",
+  "units.state.in": "Im Lager",
+  "units.state.left": "Abgegangen"
 }
