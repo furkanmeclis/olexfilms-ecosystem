@@ -83,12 +83,15 @@ func TestOlexServicePointMerge(t *testing.T) {
 	// owner, every legacy barcode is a unit. (The ownership counts cover the
 	// whole brand of the shared test database, so they are not asserted.)
 	trace := stepCounts(t, first, "unit_trace")
-	if trace["service_consumption_created"] != 2 || trace["legacy_barcodes_missing"] != 0 ||
+	// At least the two fixture units; units other tests left in the shared
+	// database may be traced too.
+	if trace["service_consumption_created"] < 2 || trace["legacy_barcodes_missing"] != 0 ||
 		trace["legacy_barcodes"] != trace["legacy_barcodes_in_units"] {
 		t.Fatalf("unit_trace counts = %v", trace)
 	}
 	if n := scalar(`SELECT count(*) FROM service_items si JOIN services s ON s.id = si.service_id
 		JOIN units u ON u.id = si.unit_id
+		JOIN brands b ON b.id = s.brand_id AND b.slug = 'olex'
 		WHERE s.status = 'completed' AND u.unit_kind = 'serial'
 		  AND NOT EXISTS (SELECT 1 FROM unit_current_state st WHERE st.unit_id = si.unit_id)`); n != 0 {
 		t.Fatalf("%d units of completed services without an owner", n)
@@ -295,7 +298,8 @@ func checkWarehouseTrace(t *testing.T, ctx context.Context, tx pgx.Tx) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if total == 0 || leftTotal == 0 || int64(len(all)) != total || int64(len(left)) != leftTotal || leftTotal >= total {
+	page := func(n int64) int { return int(min(n, 100)) }
+	if total == 0 || leftTotal == 0 || len(all) != page(total) || len(left) != page(leftTotal) || leftTotal >= total {
 		t.Fatalf("warehouse units: all %d, left %d", total, leftTotal)
 	}
 	var used *stockmodel.WarehouseUnitRow
