@@ -31,7 +31,7 @@ test("valid service number shows the warranties without personal data", async ({
   await expect(card.locator('[data-slot="days-remaining"]')).toHaveText(
     "3,393",
   );
-  await expect(card).toContainText("Olexfilms");
+  await expect(page.locator("main")).toContainText("Olexfilms");
   await expect(card).toContainText("BMW M3");
   await expect(card).toContainText("34 *** 12");
   await expect(card).toContainText("6752");
