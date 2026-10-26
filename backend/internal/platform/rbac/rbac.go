@@ -158,6 +158,7 @@ const (
 	PermStockAdjust     = "stock.adjust"
 	PermStockReclassify = "stock.reclassify"
 	PermStockImport     = "stock.import"
+	PermStockBulk       = "stock.bulk" // TEC-1008, super_admin only
 
 	// Stock forecast (TEC-483, F5-04a): algorithmic stock depletion and
 	// center network demand snapshots (K15).

@@ -803,6 +803,14 @@ var Permissions = []PermissionDef{
 		Scopes:      []Scope{ScopeSubtree},
 		Description: "Set distributor or dealer required/hidden overrides for intake photo angles.",
 	},
+
+	// TEC-1008: bulk barcode operations. Appended last; migration 000154
+	// seeds it.
+	{
+		Slug: PermStockBulk, Name: "Bulk barcode operations", Module: "stock",
+		Scopes: scopesAll, Sensitive: true, SuperAdminOnly: true,
+		Description: "Convert, move, reclassify, void or annotate many barcodes at once (preview, step-up, undo).",
+	},
 }
 
 // BrandIndependentGrants lists the grants a non-super_admin role may hold at
