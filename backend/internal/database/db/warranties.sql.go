@@ -495,7 +495,7 @@ func (q *Queries) GetPendingVehicleTransfer(ctx context.Context, vehicleID int64
 const getPublicWarrantyByCode = `-- name: GetPublicWarrantyByCode :one
 SELECT w.public_code, w.status, w.start_at, w.end_at,
        p.name AS product_name,
-       o.name AS organization_name, o.city AS organization_city,
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.city AS organization_city,
        COALESCE(pr.name, '')::text AS organization_province,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        (cb.logo_object_key IS NOT NULL)::boolean AS car_brand_has_logo,
@@ -1421,7 +1421,7 @@ func (q *Queries) ListWarrantyCertificateItems(ctx context.Context, arg ListWarr
 }
 
 const listWarrantyNoticeContexts = `-- name: ListWarrantyNoticeContexts :many
-SELECT w.id, v.plate, p.name AS product_name, o.name AS organization_name, o.timezone
+SELECT w.id, v.plate, p.name AS product_name, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.timezone
 FROM warranties w
 JOIN vehicles v ON v.id = w.vehicle_id
 JOIN products p ON p.id = w.product_id

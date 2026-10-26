@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "Plantilla XSLT de factura electrónica cargada",
   "actions.einvoice.xslt_reset": "Plantilla XSLT de factura electrónica restablecida",
   "actions.einvoice.buyer_profile_updated": "Perfil de facturación del comprador actualizado",
-  "resources.einvoices": "Facturas electrónicas"
+  "resources.einvoices": "Facturas electrónicas",
+  "actions.services.created_on_behalf": "Servicio abierto para un distribuidor"
 }

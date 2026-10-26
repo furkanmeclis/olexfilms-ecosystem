@@ -352,5 +352,11 @@
   "review_questions.validation.text_tr": "Le texte turc de la question est obligatoire.",
   "review_questions.toast.saved": "Question enregistrée.",
   "review_questions.toast.failed": "L'opération a échoué. Réessayez.",
-  "wizard.steps.photos": "Photos de réception"
+  "wizard.steps.photos": "Photos de réception",
+  "network_scope.label": "Périmètre des services",
+  "network_scope.own": "Les nôtres",
+  "network_scope.network": "Tout le réseau",
+  "wizard.performer": "Réalisé par",
+  "wizard.performer_own": "{{name}} (notre point de service)",
+  "wizard.performer_hint": "Si vous choisissez un revendeur, le service est ouvert pour lui et l'action est journalisée."
 }

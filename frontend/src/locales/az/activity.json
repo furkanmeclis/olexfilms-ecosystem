@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "E-faktura XSLT şablonu yükləndi",
   "actions.einvoice.xslt_reset": "E-faktura XSLT şablonu standarta qaytarıldı",
   "actions.einvoice.buyer_profile_updated": "Alıcının faktura profili yeniləndi",
-  "resources.einvoices": "E-fakturalar"
+  "resources.einvoices": "E-fakturalar",
+  "actions.services.created_on_behalf": "Diler adına xidmət açıldı"
 }

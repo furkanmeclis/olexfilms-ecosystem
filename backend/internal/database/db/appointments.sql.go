@@ -46,7 +46,7 @@ WITH claimed AS (
       AND u.phone_e164 IS NOT NULL
     RETURNING a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at, a.plan_id
 )
-SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, c.plan_id, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, c.plan_id, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, COALESCE(v.plate, '')::text AS plate
 FROM claimed c
 JOIN organizations o ON o.id = c.organization_id
 LEFT JOIN vehicles v ON v.id = c.vehicle_id
@@ -132,7 +132,7 @@ WITH claimed AS (
       AND u.phone_e164 IS NOT NULL
     RETURNING a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at, a.plan_id
 )
-SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, c.plan_id, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, c.plan_id, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, COALESCE(v.plate, '')::text AS plate
 FROM claimed c
 JOIN organizations o ON o.id = c.organization_id
 LEFT JOIN vehicles v ON v.id = c.vehicle_id
@@ -1185,7 +1185,7 @@ func (q *Queries) ListAppointmentsByPlan(ctx context.Context, arg ListAppointmen
 
 const listPortalAppointments = `-- name: ListPortalAppointments :many
 SELECT a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at, a.plan_id,
-       o.uuid AS dealer_uuid, o.name AS dealer_name,
+       o.uuid AS dealer_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS dealer_name,
        v.uuid AS vehicle_uuid, v.plate AS vehicle_plate
 FROM appointments a
 JOIN organizations o ON o.id = a.organization_id

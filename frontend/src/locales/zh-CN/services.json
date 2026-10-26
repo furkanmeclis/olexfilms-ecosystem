@@ -352,5 +352,11 @@
   "review_questions.validation.text_tr": "土耳其语问题文本为必填项。",
   "review_questions.toast.saved": "问题已保存。",
   "review_questions.toast.failed": "操作失败，请重试。",
-  "wizard.steps.photos": "接车照片"
+  "wizard.steps.photos": "接车照片",
+  "network_scope.label": "服务范围",
+  "network_scope.own": "本店",
+  "network_scope.network": "整个网络",
+  "wizard.performer": "执行方",
+  "wizard.performer_own": "{{name}}（本店服务点）",
+  "wizard.performer_hint": "选择经销商后，服务以该经销商名义创建，并记录操作。"
 }

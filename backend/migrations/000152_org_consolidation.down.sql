@@ -86,6 +86,8 @@ END $$;
 DROP TABLE IF EXISTS org_merge_changes;
 DROP TABLE IF EXISTS org_merge_runs;
 
+DROP FUNCTION IF EXISTS org_customer_name(TEXT, TEXT, BOOLEAN, TEXT);
+
 ALTER TABLE organizations
     DROP CONSTRAINT IF EXISTS chk_organizations_merged_into,
     DROP CONSTRAINT IF EXISTS chk_organizations_service_point_name,

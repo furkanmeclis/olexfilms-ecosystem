@@ -20,6 +20,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/imagefit"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	platstorage "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -92,6 +93,8 @@ func (s *Service) renderExecutedPDF(ctx context.Context, q *db.Queries, row db.C
 	if err != nil {
 		return nil, "", err
 	}
+	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	org = orgbrand.ForCustomer(org)
 	vars, err := s.contractDocumentVars(ctx, q, row, org)
 	if err != nil {
 		return nil, "", err
@@ -437,6 +440,8 @@ func (l contractDocumentLoader) Load(ctx context.Context, viewer docmodel.Viewer
 	if err != nil {
 		return docmodel.Source{}, err
 	}
+	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	org = orgbrand.ForCustomer(org)
 	vars, err := l.s.contractDocumentVars(ctx, q, row, org)
 	if err != nil {
 		return docmodel.Source{}, err

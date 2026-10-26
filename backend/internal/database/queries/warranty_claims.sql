@@ -291,7 +291,7 @@ SELECT c.id AS claim_id, c.uuid AS claim_uuid, c.organization_id, c.brand_id,
        w.status AS warranty_status, w.service_item_id,
        s.service_no, s.plate, s.uuid AS service_uuid,
        p.name AS product_name,
-       o.name AS organization_name, o.parent_id AS organization_parent_id,
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.parent_id AS organization_parent_id,
        o.uuid AS organization_uuid,
        parent.type AS organization_parent_type
 FROM warranty_claims c

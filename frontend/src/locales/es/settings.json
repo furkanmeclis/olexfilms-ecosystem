@@ -174,5 +174,10 @@
   "system.groups.einvoice": "Factura electrónica",
   "system.groups.einvoice_hint": "Facturas UBL-TR de e-Fatura y e-Arşiv.",
   "system.keys.einvoice_default_vat_rate": "Tipo de IVA predeterminado (%)",
-  "system.keys.einvoice_default_vat_rate_hint": "Tipo aplicado a una línea de factura cuyo producto o categoría no tiene tipo de IVA. El 0 % requiere un código de exención y no se puede elegir aquí."
+  "system.keys.einvoice_default_vat_rate_hint": "Tipo aplicado a una línea de factura cuyo producto o categoría no tiene tipo de IVA. El 0 % requiere un código de exención y no se puede elegir aquí.",
+  "service_point.title": "Punto de servicio",
+  "service_point.hint": "Activado, este nombre y logotipo se muestran a los clientes en la garantía y su PDF, el portal y WhatsApp; el panel mantiene el nombre de la organización.",
+  "service_point.enabled": "Mostrar el nombre del punto de servicio a los clientes",
+  "service_point.name": "Nombre del punto de servicio",
+  "service_point.no_logo": "Sin logotipo; se usa el de la organización."
 }

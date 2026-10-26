@@ -106,6 +106,12 @@ func TenantLogoObjectKey(tenantUUID uuid.UUID, ext string) string {
 	return fmt.Sprintf("tenants/%s/logo.%s", tenantUUID.String(), strings.TrimPrefix(ext, "."))
 }
 
+// ServicePointLogoObjectKey builds tenants/{tid}/service-point-logo.{ext}
+// (TEC-1003: the center's customer-facing logo).
+func ServicePointLogoObjectKey(tenantUUID uuid.UUID, ext string) string {
+	return fmt.Sprintf("tenants/%s/service-point-logo.%s", tenantUUID.String(), strings.TrimPrefix(ext, "."))
+}
+
 // WorkspaceLogoObjectKey builds tenants/{tid}/workspaces/{wid}/logo.{ext}.
 func WorkspaceLogoObjectKey(tenantUUID, workspaceUUID uuid.UUID, ext string) string {
 	return fmt.Sprintf(

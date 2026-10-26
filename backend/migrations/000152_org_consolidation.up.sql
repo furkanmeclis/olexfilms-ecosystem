@@ -20,6 +20,15 @@ ALTER TABLE organizations
     ADD CONSTRAINT chk_organizations_merged_into CHECK (
         merged_into_id IS NULL OR (merged_into_id <> id AND deleted_at IS NOT NULL));
 
+-- The name customers see (warranty page, portal, WhatsApp, fleet portal):
+-- the service point name of a center that has it on, else the name. Kept in
+-- step with internal/platform/orgbrand.
+CREATE FUNCTION org_customer_name(org_type TEXT, org_name TEXT, sp_enabled BOOLEAN, sp_name TEXT)
+RETURNS TEXT LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+    SELECT CASE WHEN org_type = 'center' AND sp_enabled AND btrim(COALESCE(sp_name, '')) <> ''
+                THEN btrim(sp_name) ELSE org_name END
+$$;
+
 CREATE INDEX idx_organizations_merged_into ON organizations (merged_into_id) WHERE merged_into_id IS NOT NULL;
 
 -- 2. Merge runs (cmd/org-merge and the migrator organizations step). Every

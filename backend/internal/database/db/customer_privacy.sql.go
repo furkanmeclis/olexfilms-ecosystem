@@ -124,7 +124,7 @@ func (q *Queries) CustomerLinkedToBrand(ctx context.Context, arg CustomerLinkedT
 const listCustomerExportServices = `-- name: ListCustomerExportServices :many
 SELECT s.uuid, s.service_no, s.status, s.plate, s.plate_country, s.vin, s.model_year, s.km,
        s.package, s.completed_at, s.cancelled_at, s.created_at,
-       o.name AS organization_name, cb.name AS car_brand_name, cm.name AS car_model_name
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, cb.name AS car_brand_name, cm.name AS car_model_name
 FROM services s
 JOIN organizations o ON o.id = s.organization_id
 JOIN car_brands cb ON cb.id = s.car_brand_id
@@ -198,7 +198,7 @@ func (q *Queries) ListCustomerExportServices(ctx context.Context, arg ListCustom
 const listCustomerExportWarranties = `-- name: ListCustomerExportWarranties :many
 SELECT w.uuid, w.public_code, w.item_kind, w.status, w.start_at, w.end_at, w.voided_at, w.created_at,
        p.name AS product_name, p.sku AS product_sku, s.service_no,
-       v.plate, v.plate_country, v.vin, o.name AS organization_name
+       v.plate, v.plate_country, v.vin, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name
 FROM warranties w
 JOIN products p ON p.id = w.product_id
 JOIN services s ON s.id = w.service_id

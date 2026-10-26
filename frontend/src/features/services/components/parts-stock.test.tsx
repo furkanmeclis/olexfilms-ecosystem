@@ -28,6 +28,10 @@ vi.mock("@/providers/locale-provider", () => ({
   }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+// A dealer: the wizard has no performer picker (TEC-1003).
+vi.mock("@/hooks/use-active-organization", () => ({
+  useActiveOrganization: () => ({ uuid: "o1", slug: "acme", type: "dealer" }),
+}));
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: (p: string) => granted.set.has(p) }),
 }));

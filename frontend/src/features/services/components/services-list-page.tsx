@@ -33,6 +33,10 @@ import {
   vehicleTitle,
 } from "@/features/services/lib/detail";
 import { SERVICE_STATUSES } from "@/features/services/lib/list-filters";
+import {
+  NetworkScopeToggle,
+  useNetworkScope,
+} from "@/features/services/lib/network-scope";
 import { useScopeOrganizationOptions } from "@/features/services/lib/use-scope-organizations";
 import {
   SERVICES_EXPORT_PATH,
@@ -62,6 +66,7 @@ export function ServicesListPage({ slug }: { slug: string }) {
   const router = useRouter();
   const access = resolveServiceListAccess(can);
   const orgFilter = useScopeOrganizationOptions(slug, access.canRead);
+  const network = useNetworkScope(slug, "services");
   const money = useServiceMoney();
   // TEC-343: the API sends income / profit only to accounting readers.
   const showIncome =
@@ -303,7 +308,14 @@ export function ServicesListPage({ slug }: { slug: string }) {
     initialPageSize: SERVICE_PAGE_SIZE,
     persistKey: SERVICES_PERSIST_KEY,
   });
-  const params: ServiceListQuery = listState.params;
+  // TEC-1003: "own" narrows the center's list to its own services.
+  const params: ServiceListQuery = useMemo(
+    () =>
+      network.organizationUuid
+        ? { ...listState.params, organization_uuid: network.organizationUuid }
+        : listState.params,
+    [listState.params, network.organizationUuid],
+  );
 
   const list = useQuery({
     queryKey: serviceWizardKeys.list(params),
@@ -314,8 +326,15 @@ export function ServicesListPage({ slug }: { slug: string }) {
 
   // The export runs on the same filters, search and sort as the list.
   const exportQuery = useMemo(
-    () => ({ ...listState.filterParams, q: params.q, sort: params.sort }),
-    [listState.filterParams, params.q, params.sort],
+    () => ({
+      ...listState.filterParams,
+      ...(network.organizationUuid
+        ? { organization_uuid: network.organizationUuid }
+        : {}),
+      q: params.q,
+      sort: params.sort,
+    }),
+    [listState.filterParams, network.organizationUuid, params.q, params.sort],
   );
   const filtered = listState.columnFilters.length > 0 || Boolean(params.q);
 
@@ -395,6 +414,12 @@ export function ServicesListPage({ slug }: { slug: string }) {
         )}
         toolbarExtra={
           <>
+            {network.visible ? (
+              <NetworkScopeToggle
+                scope={network.scope}
+                onChange={network.setScope}
+              />
+            ) : null}
             <ExportMenu
               exportPath={SERVICES_EXPORT_PATH}
               query={exportQuery}

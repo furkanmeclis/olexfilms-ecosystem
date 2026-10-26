@@ -3538,6 +3538,7 @@ type Querier interface {
 	// Organization Google Business link (decision 7).
 	SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetOrganizationGoogleBusinessURLParams) (Organization, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
+	SetOrganizationServicePointLogo(ctx context.Context, arg SetOrganizationServicePointLogoParams) (Organization, error)
 	// TEC-367: batch reorder (PUT /v1/platform/plate-formats/order).
 	SetPlateFormatSortOrder(ctx context.Context, arg SetPlateFormatSortOrderParams) error
 	// TEC-212: bulk engine adapter (one product, logged + undoable).
@@ -3776,6 +3777,8 @@ type Querier interface {
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
+	// TEC-1003: the center's service point (customer-facing name and switch).
+	UpdateOrganizationServicePoint(ctx context.Context, arg UpdateOrganizationServicePointParams) (Organization, error)
 	UpdatePartConsumptionExpectation(ctx context.Context, arg UpdatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	UpdatePerformanceTarget(ctx context.Context, arg UpdatePerformanceTargetParams) (PerformanceTarget, error)
 	UpdatePhotoAngle(ctx context.Context, arg UpdatePhotoAngleParams) (PhotoAngle, error)

@@ -352,5 +352,11 @@
   "review_questions.validation.text_tr": "نص السؤال باللغة التركية مطلوب.",
   "review_questions.toast.saved": "تم حفظ السؤال.",
   "review_questions.toast.failed": "فشلت العملية. حاول مرة أخرى.",
-  "wizard.steps.photos": "صور الاستلام"
+  "wizard.steps.photos": "صور الاستلام",
+  "network_scope.label": "نطاق الخدمات",
+  "network_scope.own": "خدماتنا",
+  "network_scope.network": "الشبكة كاملة",
+  "wizard.performer": "المنفّذ",
+  "wizard.performer_own": "{{name}} (نقطة خدمتنا)",
+  "wizard.performer_hint": "إذا اخترت وكيلًا تُفتح الخدمة باسمه ويُسجَّل الإجراء."
 }

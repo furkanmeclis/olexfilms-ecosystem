@@ -58,12 +58,12 @@ Dört kod tabanı ve açık gereksinim listesi okundu (30.09.2026). Özet: hub o
 | K1 | Tek app, tek DB, marka izolasyonu | Her ürün, bayi, stok birimi, hizmet ve kullanıcı bir `brand` altında. Olex kullanıcısı Glorian ürünü göremez ve kullanamaz. |
 | K2 | Glorian bu kapsamda taşınmaz | Glorian mevcut kurulumunda kalır. Yeni app'in depo modülü `brand=glorian` fiziksel stoğunu tutmaya devam eder ve Glorian hub'ına Inventory API sözleşmesiyle senkron olur (katalog pull, barkod push, sipariş outbound, reconcile). Garanti/hizmet/müşteri tarafı Glorian'a kapalı. Kod marka-bilinçli; Glorian'ı ileride içeri almak veri import'udur. Migrator'da Glorian profili hazır, kapalı. |
 | K3 | Giriş URL'i markayı belirler | Bu fazda tek domain: `olexfilms.app`. Glorian gelirse `warranty.glorianppf.com` üçüncü URL olur. |
-| K4 | Distribütör modeli | Bayilere bayilik yapan hesap. Kendi depoları (birden fazla olabilir), kendi alt bayileri, merkez depoya erişimi yok. Katalog yalnızca merkezden; kendi katalog tanımlamaz, barkod üretmez. Kendisi de hizmet verebilir. Kayıtta "depo olarak tanımla" preset'i ile depo otomatik açılır. |
-| K5 | Ülke/bölge veritabanı | Ülke > il > ilçe. Her distribütöre territory atanır; o bölgedeki bayiler distribütöre bağlıdır. Her ülke = bir distribütör varsayımı; çakışma kontrolü territory ataması üzerinden. Türkiye'de de distribütör var. |
-| K6 | Admin bayiye doğrudan ürün satmaz | Ürün akışı merkez → distribütör → bayi. Hizmet satışı (ürün dışı) merkezden bayiye doğrudan olabilir. |
+| K4 | Distribütör modeli | Bayilere bayilik yapan hesap (yurt dışı). Kendi depoları (birden fazla olabilir), kendi alt bayileri, merkez depoya erişimi yok. Katalog yalnızca merkezden; kendi katalog tanımlamaz, barkod üretmez. Kendisi de hizmet verebilir. Kayıtta "depo olarak tanımla" preset'i ile depo otomatik açılır. **TEC-1003:** Türkiye'de distribütör yok; TR bayileri doğrudan merkeze bağlıdır. Merkezin kendi hizmet noktası (AFM Florya, aynı tüzel kişi) merkeze katıldı: merkez hizmet, müşteri, garanti, randevu ve hizmette stok tüketimini kendisi yapar, ayrı bir bayi org'u yoktur. |
+| K5 | Ülke/bölge veritabanı | Ülke > il > ilçe. Her distribütöre territory atanır; o bölgedeki bayiler distribütöre bağlıdır. Her ülke = bir distribütör varsayımı; çakışma kontrolü territory ataması üzerinden. Distribütörü olmayan bölge (Türkiye, TEC-1003) merkezindir: oradaki bayiler ve lead'ler merkeze düşer. |
+| K6 | Ürün akışı ağaçtaki bir üstten | Ürün akışı merkez → distribütör → bayi; distribütörü olmayan bayi (Türkiye, TEC-1003) doğrudan merkezden alır (merkez → bayi). Sipariş her zaman doğrudan üst org'a verilir. Hizmet satışı (ürün dışı) merkezden bayiye doğrudan olabilir. |
 | K7 | Para birimi ve kur | Organizasyon başına para birimi; admin distribütör kaydında seçer. Sistemde kur tablosu: günlük otomatik çekim (TCMB, ECB) + manuel üzerine yazma; her sipariş ve muhasebe kaydında o anki kur dondurulur. |
-| K8 | Fiyat zinciri | Admin ürün alış + satış fiyatı (distribütöre) belirler ve distribütör bazında özel fiyat verebilir. Distribütörün alışı = admin siparişindeki satış fiyatı; distribütör kendi satışını belirler. Bayinin alışı = distribütörün satışı; bayi son satış fiyatını kendisi belirler, satış başına kâr analizi. Merkez tavsiye satış fiyatı yayınlar. Fiyat görünürlüğü izin scope'u ile. |
-| K9 | Muhasebe köprüsü hiyerarşik ve tek yönlü | Üst seviye (merkez veya distribütör) alt seviyeye sipariş/hizmet satışı işler → alt seviyenin defterine otomatik gider + üst seviyeye borç düşer; alt seviye bu kayıtları silemez, üst deftere yazamaz. Her org'un tedarikçisi = ağaçta bir üstü. |
+| K8 | Fiyat zinciri | Admin ürün alış + satış fiyatı (distribütöre) belirler ve distribütör bazında özel fiyat verebilir. Distribütörün alışı = admin siparişindeki satış fiyatı; distribütör kendi satışını belirler. Bayinin alışı = distribütörün satışı; merkeze bağlı bayinin (Türkiye, TEC-1003) alışı = merkezin satış fiyatı. Bayi son satış fiyatını kendisi belirler, satış başına kâr analizi. Merkez tavsiye satış fiyatı yayınlar. Fiyat görünürlüğü izin scope'u ile. |
+| K9 | Muhasebe köprüsü hiyerarşik ve tek yönlü | Üst seviye (merkez veya distribütör; Türkiye'de merkez → bayi, TEC-1003) alt seviyeye sipariş/hizmet satışı işler → alt seviyenin defterine otomatik gider + üst seviyeye borç düşer; alt seviye bu kayıtları silemez, üst deftere yazamaz. Her org'un tedarikçisi = ağaçta bir üstü. |
 | K10 | Lokalizasyon her yerde | Bayi, müşteri, distribütör ve kullanıcı kendi dil + saat dilimi tercihini tutar; UI, WhatsApp, e-posta, PDF buna göre. 12 mevcut dil + Arapça; RTL zorunlu. |
 | K11 | Müşteri bir user'dır | Ayrı customer auth yok. Giriş yalnızca telefon OTP (WhatsApp), her OTP'de KVKK bilgilendirmesi. Müşteri global: birden fazla bayi ve distribütörden hizmet alabilir. Müşteriden bayiye yükseltme = rol değişimi, geçmiş korunur. Filo müşterisi e-posta + şifre ile girer. |
 | K12 | Bayi = basit stok | Bayi elindeki birimleri görür, siparişi kabul eder, hizmette tüketir. Konum/sayım/göz yok. Tam depo modülü merkez ve distribütörde. |
@@ -95,19 +95,21 @@ Dört kod tabanı ve açık gereksinim listesi okundu (30.09.2026). Özet: hub o
 Sistem bir organizasyon ağacı üzerine kurulu: merkez → distribütör → bayi. Ürün, fiyat, muhasebe köprüsü, modül izinleri ve kampanya onayı hep bu ağacı izler. Müşteri ağacın dışında, global bir user'dır.
 
 ```
-Merkez (Olex)
- ├─ Distribütör TR  ── depo(lar) ── bayiler (il/ilçe territory)
+Merkez (Olex) ── depo(lar) ── hizmet noktası (AFM Florya, müşteriye görünen ad/logo)
+ ├─ TR bayileri (distribütörsüz, doğrudan merkeze bağlı)
  ├─ Distribütör DE  ── depo(lar) ── bayiler
  ├─ Distribütör NL  ── ...
  └─ ...
-Müşteri (global user) ── hizmet alır: herhangi bir bayi/distribütör
+Müşteri (global user) ── hizmet alır: herhangi bir bayi/distribütör/merkez
 ```
+
+**TEC-1003 (org sadeleştirme):** Türkiye distribütörü ve AFM Florya bayisi merkeze katıldı (`org_merge_runs`; `org-merge` komutu kuru çalıştırma raporu ve geri alma ile; migrator aynı birleştirmeyi idempotent yapar). Birleşen org silinmiş (deleted_at) ve `merged_into_id` ile merkeze işaretli kalır; onun aldığı legacy siparişler tarihçe olarak alıcıda durur. Merkezin "hizmet noktası" (`service_point_*`) açıkken müşteri yüzeylerinde (garanti sayfası/PDF, servis ve ölçüm PDF'leri, portal, WhatsApp) o ad ve logo görünür, panelde kurum adı kalır. Merkez kullanıcısı formda bayi seçip o bayi adına hizmet açabilir (activity log: `services.created_on_behalf`). Merkez listelerinde "Kendi hizmetlerimiz / Tüm ağ" ayrımı vardır. Eski AFM Florya personeli `center_service` rolüyle (yalnız merkezin kendi hizmet/müşteri/garanti/randevu kayıtları) merkezin üyesidir.
 
 **Roller (izinler scope'lu RBAC ile verilir; roller hazır paket):**
 
 | Organizasyon | Roller | Not |
 | --- | --- | --- |
-| Merkez | `super_admin`, `center_staff`, `center_warehouse`, `center_accounting`, `center_social` | center_staff modül bazında izin paketi alır. center_social lead, kampanya ve sosyal modüllere erişir, tüm sistem verisini görür; gelecek sosyal modüller için rezerve. |
+| Merkez | `super_admin`, `center_staff`, `center_warehouse`, `center_accounting`, `center_social`, `center_service` | center_staff modül bazında izin paketi alır. center_social lead, kampanya ve sosyal modüllere erişir, tüm sistem verisini görür; gelecek sosyal modüller için rezerve. center_service (TEC-1003) merkezin hizmet noktası personelidir: dealer_staff paketi, managed scope (yalnız merkezin kendi kayıtları); depo, fiyat, muhasebe, ağ yok. |
 | Distribütör | `owner`, `staff`, `warehouse_staff`, `accounting` | subtree scope: kendi ağacındaki bayileri görür |
 | Bayi | `owner`, `staff`, `accounting` | staff hizmet açar, fiyat ve muhasebe görmez |
 | Müşteri | `customer` | telefon OTP |
@@ -258,7 +260,7 @@ Migrator ayrı bir container; eski hub ve depo veritabanlarına (MariaDB) bağla
 
 | Taşınır | Kaynak | Not |
 | --- | --- | --- |
-| Bayiler, kullanıcılar, roller | hub `dealers`, `users`, `model_has_roles` | 151 bayi, 317 user; hepsi Türkiye distribütörü altına |
+| Bayiler, kullanıcılar, roller | hub `dealers`, `users`, `model_has_roles` | 151 bayi, 317 user; hepsi doğrudan merkez altına (TEC-1003); hub bayi 1 (AFM Florya) merkeze katılır, personeli merkez rolleriyle |
 | Müşteriler | hub `customers` | user'a dönüşür; telefon normalize |
 | Araç markası/modeli | hub `car_brands`, `car_models`, `car_brands.json` | 372 marka, 3.702 model, logo dosyaları S3'e |
 | Ürün ve kategori | hub `products`, `product_categories`; depo `products`, `brands` | 121 ürün, brand ile eşleşir |

@@ -245,12 +245,14 @@ func (h *Handler) Profit(w http.ResponseWriter, r *http.Request) {
 }
 
 type createBody struct {
-	CustomerUUID   string  `json:"customer_uuid"`
-	VehicleUUID    string  `json:"vehicle_uuid"`
-	KM             *int64  `json:"km"`
-	Package        *string `json:"package"`
-	Notes          *string `json:"notes"`
-	HasMeasurement bool    `json:"has_measurement"`
+	// TEC-1003: the center opens a service for one of its dealers.
+	OrganizationUUID string  `json:"organization_uuid"`
+	CustomerUUID     string  `json:"customer_uuid"`
+	VehicleUUID      string  `json:"vehicle_uuid"`
+	KM               *int64  `json:"km"`
+	Package          *string `json:"package"`
+	Notes            *string `json:"notes"`
+	HasMeasurement   bool    `json:"has_measurement"`
 }
 
 // Create (POST /v1/services): a draft service of the active organization.
@@ -260,7 +262,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, err := h.svc.Create(r.Context(), caller(r), svcuc.CreateInput{
-		CustomerUUID: b.CustomerUUID, VehicleUUID: b.VehicleUUID, KM: b.KM,
+		OrganizationUUID: b.OrganizationUUID, CustomerUUID: b.CustomerUUID, VehicleUUID: b.VehicleUUID, KM: b.KM,
 		Package: b.Package, Notes: b.Notes, HasMeasurement: b.HasMeasurement,
 	})
 	if err != nil {

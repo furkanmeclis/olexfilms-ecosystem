@@ -352,5 +352,11 @@
   "review_questions.validation.text_tr": "El texto de la pregunta en turco es obligatorio.",
   "review_questions.toast.saved": "Pregunta guardada.",
   "review_questions.toast.failed": "La operación ha fallado. Inténtelo de nuevo.",
-  "wizard.steps.photos": "Fotos de recepción"
+  "wizard.steps.photos": "Fotos de recepción",
+  "network_scope.label": "Alcance de servicios",
+  "network_scope.own": "Propios",
+  "network_scope.network": "Toda la red",
+  "wizard.performer": "Realizado por",
+  "wizard.performer_own": "{{name}} (nuestro punto de servicio)",
+  "wizard.performer_hint": "Si elige un distribuidor, el servicio se abre a su nombre y la acción queda registrada."
 }

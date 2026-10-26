@@ -352,5 +352,11 @@
   "review_questions.validation.text_tr": "Текст питання турецькою обов’язковий.",
   "review_questions.toast.saved": "Питання збережено.",
   "review_questions.toast.failed": "Не вдалося виконати дію. Спробуйте ще раз.",
-  "wizard.steps.photos": "Фото приймання"
+  "wizard.steps.photos": "Фото приймання",
+  "network_scope.label": "Охоплення послуг",
+  "network_scope.own": "Наші",
+  "network_scope.network": "Уся мережа",
+  "wizard.performer": "Виконавець",
+  "wizard.performer_own": "{{name}} (наш сервісний пункт)",
+  "wizard.performer_hint": "Якщо обрати дилера, послугу буде відкрито від його імені, дію записано в журнал."
 }

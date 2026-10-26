@@ -352,5 +352,11 @@
   "review_questions.validation.text_tr": "Текстът на въпроса на турски е задължителен.",
   "review_questions.toast.saved": "Въпросът е запазен.",
   "review_questions.toast.failed": "Операцията не бе успешна. Опитайте отново.",
-  "wizard.steps.photos": "Снимки при приемане"
+  "wizard.steps.photos": "Снимки при приемане",
+  "network_scope.label": "Обхват на услугите",
+  "network_scope.own": "Нашите",
+  "network_scope.network": "Цялата мрежа",
+  "wizard.performer": "Изпълнител",
+  "wizard.performer_own": "{{name}} (нашият сервизен пункт)",
+  "wizard.performer_hint": "Ако изберете дилър, услугата се открива на негово име и действието се записва."
 }

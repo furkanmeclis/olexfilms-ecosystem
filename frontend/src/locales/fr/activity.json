@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "Modèle XSLT de facture électronique téléversé",
   "actions.einvoice.xslt_reset": "Modèle XSLT de facture électronique réinitialisé",
   "actions.einvoice.buyer_profile_updated": "Profil de facturation de l'acheteur mis à jour",
-  "resources.einvoices": "Factures électroniques"
+  "resources.einvoices": "Factures électroniques",
+  "actions.services.created_on_behalf": "Service ouvert pour un revendeur"
 }

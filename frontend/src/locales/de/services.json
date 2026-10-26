@@ -352,5 +352,11 @@
   "review_questions.validation.text_tr": "Der türkische Fragetext ist Pflicht.",
   "review_questions.toast.saved": "Frage gespeichert.",
   "review_questions.toast.failed": "Der Vorgang ist fehlgeschlagen. Versuchen Sie es erneut.",
-  "wizard.steps.photos": "Annahmefotos"
+  "wizard.steps.photos": "Annahmefotos",
+  "network_scope.label": "Servicebereich",
+  "network_scope.own": "Eigene",
+  "network_scope.network": "Gesamtes Netz",
+  "wizard.performer": "Ausgeführt von",
+  "wizard.performer_own": "{{name}} (eigener Servicepunkt)",
+  "wizard.performer_hint": "Wählen Sie einen Händler, wird der Service für ihn eröffnet und protokolliert."
 }

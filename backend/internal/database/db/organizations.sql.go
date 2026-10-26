@@ -1645,6 +1645,75 @@ func (q *Queries) SetOrganizationLogo(ctx context.Context, arg SetOrganizationLo
 	return i, err
 }
 
+const setOrganizationServicePointLogo = `-- name: SetOrganizationServicePointLogo :one
+UPDATE organizations
+SET service_point_logo_object_key = $1
+WHERE uuid = $2 AND type = 'center' AND deleted_at IS NULL
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id
+`
+
+type SetOrganizationServicePointLogoParams struct {
+	ObjectKey pgtype.Text `json:"object_key"`
+	Uuid      uuid.UUID   `json:"uuid"`
+}
+
+func (q *Queries) SetOrganizationServicePointLogo(ctx context.Context, arg SetOrganizationServicePointLogoParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, setOrganizationServicePointLogo, arg.ObjectKey, arg.Uuid)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+		&i.InvoiceVkn,
+		&i.InvoiceTckn,
+		&i.InvoiceTaxOffice,
+		&i.InvoiceLegalName,
+		&i.EinvoiceRegistered,
+		&i.EinvoiceAlias,
+		&i.InvoiceEmail,
+		&i.ServicePointEnabled,
+		&i.ServicePointName,
+		&i.ServicePointLogoObjectKey,
+		&i.MergedIntoID,
+	)
+	return i, err
+}
+
 const slugExists = `-- name: SlugExists :one
 SELECT EXISTS(
     SELECT 1 FROM organizations WHERE slug = $1 AND deleted_at IS NULL
@@ -1955,6 +2024,84 @@ func (q *Queries) UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrga
 		arg.ProvinceID,
 		arg.DistrictID,
 		arg.Uuid,
+	)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.Slug,
+		&i.Name,
+		&i.City,
+		&i.District,
+		&i.Phone,
+		&i.Address,
+		&i.LogoObjectKey,
+		&i.Status,
+		&i.PlanCode,
+		&i.AccessStartsAt,
+		&i.AccessEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Email,
+		&i.Website,
+		&i.Tagline,
+		&i.FooterText,
+		&i.PaperSize,
+		&i.PrimaryColor,
+		&i.Type,
+		&i.ParentID,
+		&i.BrandID,
+		&i.Currency,
+		&i.Locale,
+		&i.Timezone,
+		&i.CountryID,
+		&i.ContractPdfKey,
+		&i.ContractValidUntil,
+		&i.Settings,
+		&i.ProvinceID,
+		&i.DistrictID,
+		&i.PhoneRaw,
+		&i.GoogleBusinessUrl,
+		&i.Latitude,
+		&i.Longitude,
+		&i.InvoiceVkn,
+		&i.InvoiceTckn,
+		&i.InvoiceTaxOffice,
+		&i.InvoiceLegalName,
+		&i.EinvoiceRegistered,
+		&i.EinvoiceAlias,
+		&i.InvoiceEmail,
+		&i.ServicePointEnabled,
+		&i.ServicePointName,
+		&i.ServicePointLogoObjectKey,
+		&i.MergedIntoID,
+	)
+	return i, err
+}
+
+const updateOrganizationServicePoint = `-- name: UpdateOrganizationServicePoint :one
+UPDATE organizations
+SET service_point_enabled = COALESCE($1::boolean, service_point_enabled),
+    service_point_name = CASE WHEN $2::boolean THEN $3::varchar ELSE service_point_name END
+WHERE id = $4 AND type = 'center' AND deleted_at IS NULL
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id
+`
+
+type UpdateOrganizationServicePointParams struct {
+	Enabled pgtype.Bool `json:"enabled"`
+	SetName bool        `json:"set_name"`
+	Name    pgtype.Text `json:"name"`
+	ID      int64       `json:"id"`
+}
+
+// TEC-1003: the center's service point (customer-facing name and switch).
+func (q *Queries) UpdateOrganizationServicePoint(ctx context.Context, arg UpdateOrganizationServicePointParams) (Organization, error) {
+	row := q.db.QueryRow(ctx, updateOrganizationServicePoint,
+		arg.Enabled,
+		arg.SetName,
+		arg.Name,
+		arg.ID,
 	)
 	var i Organization
 	err := row.Scan(

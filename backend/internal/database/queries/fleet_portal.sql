@@ -86,7 +86,7 @@ WHERE v.fleet_org_id = sqlc.arg(fleet_org_id)::bigint AND v.deleted_at IS NULL
 -- completed_at | service_no | status, default -created_at.
 SELECT s.uuid, s.service_no, s.status, s.package, s.plate, s.plate_country, s.model_year,
        s.completed_at, s.created_at,
-       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       o.uuid AS organization_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.type AS organization_type,
        v.uuid AS vehicle_uuid,
        cb.name AS car_brand_name, cm.name AS car_model_name
 FROM services s
@@ -148,7 +148,7 @@ WITH fw AS (
                  ELSE 'expired' END)::text AS state,
            p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
            s.uuid AS service_uuid, s.service_no,
-           o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+           o.uuid AS organization_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.type AS organization_type,
            v.uuid AS vehicle_uuid, v.plate
     FROM warranties w
     JOIN vehicles v ON v.id = w.vehicle_id
@@ -201,7 +201,7 @@ WHERE v.fleet_org_id = sqlc.arg(fleet_org_id)::bigint
 -- Scheduled / confirmed appointments of the fleet's vehicles at the visible
 -- dealers from now on.
 SELECT a.uuid, a.starts_at, a.ends_at, a.status,
-       o.uuid AS organization_uuid, o.name AS organization_name,
+       o.uuid AS organization_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name,
        v.uuid AS vehicle_uuid, v.plate
 FROM appointments a
 JOIN vehicles v ON v.id = a.vehicle_id

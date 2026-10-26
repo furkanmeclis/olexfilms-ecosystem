@@ -4145,6 +4145,25 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/public/organizations/service-point-logo/{uuid}:
+    get:
+      tags: [Public]
+      operationId: getPublicServicePointLogo
+      summary: Stream a center's service point logo (TEC-1003)
+      security: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Logo bytes
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /v1/platform/organizations/meta:
     get:
       tags: [Platform]
@@ -6045,6 +6064,51 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/settings/service-point-logo:
+    put:
+      tags: [Tenant]
+      operationId: putTenantServicePointLogo
+      summary: Upload the center's service point logo (TEC-1003)
+      description: Multipart form field `logo`, same rules as the letterhead logo. Brand center only (400 elsewhere).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Tenant]
+      operationId: deleteTenantServicePointLogo
+      summary: Remove the service point logo (the organization logo shows again)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantSettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -36623,6 +36687,21 @@ components:
           type: [number, "null"]
           description: TEC-240 map position (WGS84); null together with longitude when unset.
         longitude: { type: [number, "null"] }
+        service_point:
+          $ref: "#/components/schemas/TenantServicePoint"
+
+    TenantServicePoint:
+      type: object
+      description: |
+        TEC-1003, brand center only (absent elsewhere). While enabled, the
+        name and logo replace the organization's on customer surfaces
+        (warranty page and PDF, service / measurement PDFs, portal,
+        WhatsApp); the panel keeps the organization name.
+      required: [enabled, name, logo_url]
+      properties:
+        enabled: { type: boolean }
+        name: { type: [string, "null"], maxLength: 200 }
+        logo_url: { type: [string, "null"] }
 
     PatchTenantSettingsRequest:
       type: object
@@ -36647,6 +36726,13 @@ components:
             position. One without the other or an out of range value is
             400 VALIDATION_ERROR.
         longitude: { type: [number, "null"], minimum: -180, maximum: 180 }
+        service_point_enabled:
+          type: boolean
+          description: TEC-1003, brand center only (400 elsewhere).
+        service_point_name:
+          type: string
+          maxLength: 200
+          description: TEC-1003, brand center only; an empty string clears it.
 
     NearbyDealer:
       type: object
@@ -43250,6 +43336,15 @@ components:
       type: object
       required: [customer_uuid, vehicle_uuid]
       properties:
+        organization_uuid:
+          type: string
+          format: uuid
+          description: |
+            TEC-1003. The brand center opens the service for one of its
+            active dealers (inside its services.write scope); the service
+            belongs to the dealer and the action is written to the activity
+            log (services.created_on_behalf). Omitted or the active
+            organization: the active organization. Any other caller: 400.
         customer_uuid: { type: string, format: uuid }
         vehicle_uuid: { type: string, format: uuid }
         km: { type: integer, minimum: 0, maximum: 5000000 }

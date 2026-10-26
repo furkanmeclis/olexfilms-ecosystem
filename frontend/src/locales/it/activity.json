@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "Modello XSLT della fattura elettronica caricato",
   "actions.einvoice.xslt_reset": "Modello XSLT della fattura elettronica ripristinato",
   "actions.einvoice.buyer_profile_updated": "Profilo di fatturazione dell'acquirente aggiornato",
-  "resources.einvoices": "Fatture elettroniche"
+  "resources.einvoices": "Fatture elettroniche",
+  "actions.services.created_on_behalf": "Servizio aperto per un rivenditore"
 }
