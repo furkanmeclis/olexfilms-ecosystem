@@ -92,7 +92,9 @@ ALTER TABLE stock_movements ADD CONSTRAINT chk_stock_movements_type CHECK (type 
 CREATE TABLE stock_bulk_jobs (
     id              BIGSERIAL    PRIMARY KEY,
     uuid            UUID         NOT NULL DEFAULT gen_random_uuid(),
-    organization_id BIGINT       NOT NULL REFERENCES organizations (id) ON DELETE RESTRICT,
+    -- Deferrable like every organization key (org merges, TEC-1003).
+    organization_id BIGINT       NOT NULL REFERENCES organizations (id) ON DELETE RESTRICT
+                                 DEFERRABLE INITIALLY IMMEDIATE,
     action          VARCHAR(32)  NOT NULL,
     params          JSONB        NOT NULL DEFAULT '{}'::jsonb,
     selection       JSONB        NOT NULL DEFAULT '{}'::jsonb,

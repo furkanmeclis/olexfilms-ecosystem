@@ -208,11 +208,18 @@ func TestStockSchemaConstraints(t *testing.T) {
 		}
 	})
 
-	t.Run("roll product requires meters", func(t *testing.T) {
-		f.expectCode(t, "roll without meters", func(sp pgx.Tx) error {
-			_, err := db.New(sp).CreateUnit(ctx, f.unitParams(t, f.roll, "", ""))
-			return err
-		}, "23514")
+	// TEC-1008 (000154): a product may hold pieces and rolls together; a
+	// unit is a roll when it carries meters, so a roll product accepts a
+	// piece unit. Meters stay paired (initial and remaining).
+	t.Run("roll product accepts a piece unit", func(t *testing.T) {
+		sp, err := f.tx.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = sp.Rollback(ctx) }()
+		if _, err := db.New(sp).CreateUnit(ctx, f.unitParams(t, f.roll, "", "")); err != nil {
+			t.Fatalf("piece unit of a roll product: %v", err)
+		}
 	})
 
 	t.Run("movement update and delete rejected", func(t *testing.T) {

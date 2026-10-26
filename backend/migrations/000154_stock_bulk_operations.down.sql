@@ -3,7 +3,11 @@ DELETE FROM permissions WHERE slug = 'stock.bulk';
 DROP TABLE IF EXISTS stock_bulk_job_items;
 DROP TABLE IF EXISTS stock_bulk_jobs;
 
+-- Conversions written by bulk jobs go with the feature (append-only ledger:
+-- the trigger is bypassed for this one statement, like 000135's down).
+ALTER TABLE stock_movements DISABLE TRIGGER trg_stock_movements_append_only;
 DELETE FROM stock_movements WHERE type = 'measure_conversion';
+ALTER TABLE stock_movements ENABLE TRIGGER trg_stock_movements_append_only;
 ALTER TABLE stock_movements DROP CONSTRAINT chk_stock_movements_type;
 ALTER TABLE stock_movements ADD CONSTRAINT chk_stock_movements_type CHECK (type IN (
     'entry', 'placement', 'transfer_out', 'transfer_in', 'transfer_cancel_restore', 'order_out', 'received',
