@@ -66,5 +66,8 @@
   "campaign_unsubscribe.invalid_title": "Недійсне посилання",
   "campaign_unsubscribe.invalid_body": "Це посилання для відписки недійсне. Переконайтеся, що скопіювали посилання повністю.",
   "campaign_unsubscribe.error": "Сталася помилка. Спробуйте ще раз трохи згодом.",
-  "campaign_unsubscribe.home": "На головну сторінку"
+  "campaign_unsubscribe.home": "На головну сторінку",
+  "digits": "Цифри",
+  "digits_arab": "Арабсько-індійські (٠١٢٣)",
+  "digits_latn": "Латинські (0123)"
 }

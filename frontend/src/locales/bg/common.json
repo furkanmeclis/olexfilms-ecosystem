@@ -64,5 +64,8 @@
   "campaign_unsubscribe.invalid_title": "Невалидна връзка",
   "campaign_unsubscribe.invalid_body": "Тази връзка за отписване не е валидна. Уверете се, че сте копирали цялата връзка.",
   "campaign_unsubscribe.error": "Възникна проблем. Моля, опитайте отново след малко.",
-  "campaign_unsubscribe.home": "Към началната страница"
+  "campaign_unsubscribe.home": "Към началната страница",
+  "digits": "Цифри",
+  "digits_arab": "Арабско-индийски (٠١٢٣)",
+  "digits_latn": "Латински (0123)"
 }

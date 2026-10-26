@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 )
 
 var placeholderRE = regexp.MustCompile(`\{\{\s*\.?([a-zA-Z0-9_]+)\s*\}\}`)
@@ -29,6 +31,26 @@ func Render(tpl string, vars map[string]string) string {
 		}
 		return vars[strings.ToLower(sub[1])]
 	})
+}
+
+// RenderLocale is Render for a message in language lang (TEC-1009): in
+// Arabic the formatted values (dates, amounts, counts) are written with
+// Arabic-Indic digits; identifiers (plate, VIN, codes, links, numbers, ids;
+// i18n.LatinOnlyKey) and the template text itself are left as they are.
+func RenderLocale(tpl string, vars map[string]string, lang string) string {
+	loc, ok := i18n.Parse(lang)
+	if !ok || loc != i18n.LocaleAR || len(vars) == 0 {
+		return Render(tpl, vars)
+	}
+	local := make(map[string]string, len(vars))
+	for k, v := range vars {
+		if i18n.LatinOnlyKey(k) {
+			local[k] = v
+			continue
+		}
+		local[k] = i18n.Digits(loc, v)
+	}
+	return Render(tpl, local)
 }
 
 // Placeholders returns the distinct placeholder keys used in tpl (sorted).

@@ -1,4 +1,5 @@
 import type { StatusTone } from '@/ui/status-pill';
+import { intlLocale } from '../../core/digits.ts';
 
 /** Decimal string from the API to a number; empty or garbage is null. */
 export function num(value: string | number | null | undefined): number | null {
@@ -11,7 +12,7 @@ export function num(value: string | number | null | undefined): number | null {
 export function formatDeviation(value: string | number | null | undefined, locale: string): string {
   const n = num(value);
   if (n === null) return '–';
-  const text = new Intl.NumberFormat(locale, { maximumFractionDigits: 1, signDisplay: 'exceptZero' }).format(n);
+  const text = new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: 1, signDisplay: 'exceptZero' }).format(n);
   return `${text}%`;
 }
 

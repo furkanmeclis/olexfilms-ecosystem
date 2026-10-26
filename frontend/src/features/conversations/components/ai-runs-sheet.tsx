@@ -25,15 +25,18 @@ const RUN_TONE: Record<ConversationAIRun["status"], string> = {
   skipped: "border-muted-foreground/40 bg-muted text-muted-foreground",
 };
 
-function fmtDuration(ms: number | null | undefined) {
+function fmtDuration(
+  ms: number | null | undefined,
+  num: (v: number, o?: Intl.NumberFormatOptions) => string,
+) {
   if (ms === null || ms === undefined) return null;
-  if (ms < 1000) return `${ms} ms`;
-  return `${(ms / 1000).toFixed(1)} s`;
+  if (ms < 1000) return `${num(ms)} ms`;
+  return `${num(ms / 1000, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`;
 }
 
 function RunRow({ run }: { run: ConversationAIRun }) {
   const { t, format } = useLocale();
-  const duration = fmtDuration(run.duration_ms);
+  const duration = fmtDuration(run.duration_ms, format.number);
   return (
     <li
       className="space-y-2 border-b py-3 last:border-b-0"
