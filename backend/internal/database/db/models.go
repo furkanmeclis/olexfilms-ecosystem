@@ -2485,6 +2485,10 @@ type Product struct {
 	LockedFields           []string           `json:"locked_fields"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	DefaultRollMeters      pgtype.Numeric     `json:"default_roll_meters"`
+	RollWidthCm            pgtype.Numeric     `json:"roll_width_cm"`
+	MinCutMeters           pgtype.Numeric     `json:"min_cut_meters"`
+	WastePct               pgtype.Numeric     `json:"waste_pct"`
 }
 
 type ProductCategory struct {
@@ -3160,6 +3164,45 @@ type StepupSetting struct {
 	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StockBulkJob struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	Action         string             `json:"action"`
+	Params         []byte             `json:"params"`
+	Selection      []byte             `json:"selection"`
+	Status         string             `json:"status"`
+	Total          int32              `json:"total"`
+	Eligible       int32              `json:"eligible"`
+	Excluded       int32              `json:"excluded"`
+	Succeeded      int32              `json:"succeeded"`
+	Failed         int32              `json:"failed"`
+	Reverted       int32              `json:"reverted"`
+	Error          pgtype.Text        `json:"error"`
+	CreatedBy      int64              `json:"created_by"`
+	RunBy          pgtype.Int8        `json:"run_by"`
+	UndoneBy       pgtype.Int8        `json:"undone_by"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	StartedAt      pgtype.Timestamptz `json:"started_at"`
+	FinishedAt     pgtype.Timestamptz `json:"finished_at"`
+	UndoneAt       pgtype.Timestamptz `json:"undone_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StockBulkJobItem struct {
+	ID             int64              `json:"id"`
+	JobID          int64              `json:"job_id"`
+	OrganizationID int64              `json:"organization_id"`
+	UnitID         int64              `json:"unit_id"`
+	Status         string             `json:"status"`
+	Reason         pgtype.Text        `json:"reason"`
+	Meters         pgtype.Numeric     `json:"meters"`
+	Previous       []byte             `json:"previous"`
+	MovementID     pgtype.Int8        `json:"movement_id"`
+	Error          pgtype.Text        `json:"error"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type StockCount struct {
 	ID                    int64              `json:"id"`
 	Uuid                  uuid.UUID          `json:"uuid"`
@@ -3618,6 +3661,8 @@ type Unit struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	BatchID         pgtype.Int8        `json:"batch_id"`
+	Lot             pgtype.Text        `json:"lot"`
+	Note            pgtype.Text        `json:"note"`
 }
 
 type UnitCurrentState struct {

@@ -297,5 +297,15 @@
   "discipline.fields.avg_sale_price": "Фактическая средняя (30 дней)",
   "discipline.fields.sales_quantity": "Продано (30 дней)",
   "discipline.org_types.dealer": "Дилер",
-  "discipline.org_types.distributor": "Дистрибьютор"
+  "discipline.org_types.distributor": "Дистрибьютор",
+  "roll.title": "Настройки рулона",
+  "roll.hint": "Коробки, учтённые поштучно, переводятся в рулоны этой длины; у товара могут быть и штуки, и рулоны.",
+  "roll.default_meters": "Длина по умолчанию (м)",
+  "roll.width_cm": "Ширина (см)",
+  "roll.min_cut_meters": "Мин. отрез (м)",
+  "roll.waste_pct": "Отходы (%)",
+  "roll.save": "Сохранить",
+  "roll.saved": "Сохранено.",
+  "roll.failed": "Не удалось сохранить.",
+  "roll.invalid": "Введите число."
 }

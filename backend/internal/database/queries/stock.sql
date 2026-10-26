@@ -427,3 +427,9 @@ VALUES (
 )
 ON CONFLICT (idempotency_key) DO NOTHING
 RETURNING *;
+
+-- name: SetUnitMeasure :exec
+-- TEC-1008: a piece unit becomes a roll (meters) or a never-cut roll a
+-- piece (NULL); only ledger.ConvertMeasure calls it.
+UPDATE units SET initial_meters = sqlc.narg(meters)::numeric, remaining_meters = sqlc.narg(meters)::numeric
+WHERE id = sqlc.arg(id);

@@ -489,7 +489,7 @@ func (q *Queries) GetOrderOutbound(ctx context.Context, arg GetOrderOutboundPara
 
 const getProductByConnectionExternalID = `-- name: GetProductByConnectionExternalID :one
 
-SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at FROM products
+SELECT id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct FROM products
 WHERE connection_id = $1 AND external_id = $2
 `
 
@@ -524,6 +524,10 @@ func (q *Queries) GetProductByConnectionExternalID(ctx context.Context, arg GetP
 		&i.LockedFields,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DefaultRollMeters,
+		&i.RollWidthCm,
+		&i.MinCutMeters,
+		&i.WastePct,
 	)
 	return i, err
 }
@@ -1217,7 +1221,7 @@ SET category_id = $1,
     connection_id = $9,
     locked_fields = $10::text[]
 WHERE id = $11 AND brand_id = $12
-RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, category_id, sku, name, description_md, warranty_duration_months, micron_thickness, images, unit_type, uses_fixed_barcode, active, external_id, connection_id, locked_fields, created_at, updated_at, default_roll_meters, roll_width_cm, min_cut_meters, waste_pct
 `
 
 type UpdateSyncedProductParams struct {
@@ -1271,6 +1275,10 @@ func (q *Queries) UpdateSyncedProduct(ctx context.Context, arg UpdateSyncedProdu
 		&i.LockedFields,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DefaultRollMeters,
+		&i.RollWidthCm,
+		&i.MinCutMeters,
+		&i.WastePct,
 	)
 	return i, err
 }

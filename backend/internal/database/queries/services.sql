@@ -526,8 +526,12 @@ WHERE id = sqlc.arg(id)
 RETURNING *;
 
 -- name: GetServiceConsumedPurchaseCost :one
+-- TEC-1008 proportional rule: meters cut from a box bought as a piece and
+-- converted to a roll cost unit_price / the roll length per meter.
 SELECT COALESCE(SUM(
     CASE
+      WHEN si.meters IS NOT NULL AND bought.meters IS NULL AND u.initial_meters > 0
+        THEN si.meters * bought.unit_price / u.initial_meters
       WHEN si.meters IS NOT NULL THEN si.meters * bought.unit_price
       WHEN si.quantity IS NOT NULL THEN si.quantity * bought.unit_price
       WHEN bought.meters IS NOT NULL THEN bought.meters * bought.unit_price
@@ -537,6 +541,7 @@ SELECT COALESCE(SUM(
 ), 0)::numeric(18,2) AS cost
 FROM services s
 JOIN service_items si ON si.service_id = s.id
+JOIN units u ON u.id = si.unit_id
 LEFT JOIN LATERAL (
     SELECT oi.unit_price, oiu.quantity, oiu.meters
     FROM order_item_units oiu

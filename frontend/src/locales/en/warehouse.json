@@ -650,5 +650,6 @@
   "units.columns.updated_at": "Last change",
   "units.columns.created_at": "Created",
   "units.state.in": "In the warehouse",
-  "units.state.left": "Left the warehouse"
+  "units.state.left": "Left the warehouse",
+  "nav_bulk": "Bulk barcode operations"
 }

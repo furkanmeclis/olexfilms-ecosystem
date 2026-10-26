@@ -142,7 +142,7 @@ VALUES (
     $5, 'generated', $6,
     $7, $8, $9
 )
-RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id
+RETURNING id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note
 `
 
 type CreateBatchUnitParams struct {
@@ -188,6 +188,8 @@ func (q *Queries) CreateBatchUnit(ctx context.Context, arg CreateBatchUnitParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.BatchID,
+		&i.Lot,
+		&i.Note,
 	)
 	return i, err
 }
@@ -565,7 +567,7 @@ func (q *Queries) ListLabelTemplates(ctx context.Context, arg ListLabelTemplates
 }
 
 const listUnitsByBarcodes = `-- name: ListUnitsByBarcodes :many
-SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id FROM units
+SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note FROM units
 WHERE barcode = ANY($1::text[])
 ORDER BY barcode, brand_id, id
 `
@@ -598,6 +600,8 @@ func (q *Queries) ListUnitsByBarcodes(ctx context.Context, barcodes []string) ([
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.BatchID,
+			&i.Lot,
+			&i.Note,
 		); err != nil {
 			return nil, err
 		}
@@ -610,7 +614,7 @@ func (q *Queries) ListUnitsByBarcodes(ctx context.Context, barcodes []string) ([
 }
 
 const listUnitsByBatch = `-- name: ListUnitsByBatch :many
-SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id FROM units WHERE batch_id = $1 ORDER BY barcode, id
+SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note FROM units WHERE batch_id = $1 ORDER BY barcode, id
 `
 
 func (q *Queries) ListUnitsByBatch(ctx context.Context, batchID pgtype.Int8) ([]Unit, error) {
@@ -640,6 +644,8 @@ func (q *Queries) ListUnitsByBatch(ctx context.Context, batchID pgtype.Int8) ([]
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.BatchID,
+			&i.Lot,
+			&i.Note,
 		); err != nil {
 			return nil, err
 		}
@@ -652,7 +658,7 @@ func (q *Queries) ListUnitsByBatch(ctx context.Context, batchID pgtype.Int8) ([]
 }
 
 const listUnitsByBrandBarcodes = `-- name: ListUnitsByBrandBarcodes :many
-SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id FROM units
+SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note FROM units
 WHERE brand_id = $1 AND barcode = ANY($2::text[])
 ORDER BY barcode, id
 `
@@ -689,6 +695,8 @@ func (q *Queries) ListUnitsByBrandBarcodes(ctx context.Context, arg ListUnitsByB
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.BatchID,
+			&i.Lot,
+			&i.Note,
 		); err != nil {
 			return nil, err
 		}

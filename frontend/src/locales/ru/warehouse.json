@@ -650,5 +650,6 @@
   "units.columns.updated_at": "Последнее изменение",
   "units.columns.created_at": "Создан",
   "units.state.in": "На складе",
-  "units.state.left": "Ушёл со склада"
+  "units.state.left": "Ушёл со склада",
+  "nav_bulk": "Массовые операции"
 }

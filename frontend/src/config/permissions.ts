@@ -139,6 +139,8 @@ export const Permission = {
   StockAdjust: "stock.adjust",
   StockReclassify: "stock.reclassify",
   StockImport: "stock.import",
+  /** TEC-1008: bulk barcode operations (super_admin). */
+  StockBulk: "stock.bulk",
   /** TEC-486: stock forecast add-on screens. */
   StockForecastRead: "stock_forecast.read",
   StockForecastManage: "stock_forecast.manage",
@@ -551,6 +553,7 @@ export const permissions = {
     read: Permission.StockRead,
     write: Permission.StockWrite,
     reclassify: Permission.StockReclassify,
+    bulk: Permission.StockBulk,
   },
   stockForecast: {
     read: Permission.StockForecastRead,

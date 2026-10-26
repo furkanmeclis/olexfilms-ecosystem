@@ -164,6 +164,9 @@ import (
 	stockledger "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	stockrebuild "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/rebuild"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
+	stockbulkmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockbulk"
+	stockbulkhandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockbulk/handler"
+	stockbulkusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockbulk/usecase"
 	stockforecastmodule "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast"
 	stockforecasthandler "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast/handler"
 	stockforecastusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stockforecast/usecase"
@@ -948,6 +951,13 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 		featureSvc, tokens, loader, deps.Queries)
 	// TEC-156: super_admin projection drift check (dry run).
 	stockmodule.RegisterPlatformRoutes(mux, stockhandler.NewRebuild(stockrebuild.New(deps.DB, deps.Queries), deps.Queries), tokens, loader)
+	// TEC-1008: bulk barcode operations (super_admin, step-up, background).
+	var bulkQueue stockbulkusecase.Enqueuer
+	if deps.Queue != nil {
+		bulkQueue = deps.Queue
+	}
+	stockbulkmodule.RegisterRoutes(mux, stockbulkhandler.New(stockbulkusecase.New(deps.DB, deps.Queries,
+		outbox.NewStore(deps.DB, deps.Queries), bulkQueue)), tokens, loader, deps.Queries, stepUpSvc)
 	// TEC-201: warehouse tree (warehouses, rooms, aisle/shelf/bin locations).
 	warehousemodule.RegisterRoutes(mux, warehousehandler.New(warehouseusecase.New(deps.DB, deps.Queries)),
 		featureSvc, tokens, loader, deps.Queries)

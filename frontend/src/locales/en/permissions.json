@@ -217,5 +217,6 @@
   "labels.showcase.read": "View showcase",
   "labels.showcase.write": "Edit showcase",
   "labels.platform.showcase.review": "Review dealer showcases",
-  "groups.dealer_showcase": "Dealer showcase"
+  "groups.dealer_showcase": "Dealer showcase",
+  "labels.stock.bulk": "Bulk barcode operations"
 }

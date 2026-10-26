@@ -59,6 +59,12 @@ vi.mock("@/features/catalog/services/catalog.service", async (orig) => ({
         active: true,
         external_id: null,
         locked_fields: [],
+        roll: {
+          default_meters: 15,
+          width_cm: 152,
+          min_cut_meters: null,
+          waste_pct: null,
+        },
         created_at: "2026-10-01T00:00:00Z",
         updated_at: "2026-10-01T00:00:00Z",
       }),
@@ -233,6 +239,14 @@ describe("ProductDetailPage write controls", () => {
     expect(labels).toContain("common.delete");
     expect(labels).toContain("catalog.prices.add_currency");
     expect(labels).toContain("catalog.distributor_prices.add");
+    // TEC-1008: roll defaults, editable by the center.
+    const roll = container.querySelector("[data-testid=product-roll]");
+    expect(roll).not.toBeNull();
+    expect(
+      (container.querySelector("#roll-default_meters") as HTMLInputElement)
+        .value,
+    ).toBe("15");
+    expect(labels).toContain("catalog.roll.save");
   });
 
   it("dealer reads the product and its purchase price only", async () => {

@@ -51,6 +51,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/catalog/products/{uuid}", read(h.GetProduct))
 	mux.Handle("PATCH /v1/catalog/products/{uuid}", write(h.UpdateProduct))
 	mux.Handle("DELETE /v1/catalog/products/{uuid}", write(h.DeleteProduct))
+	// TEC-1008: roll defaults (default length, width, minimum cut, waste).
+	mux.Handle("PUT /v1/catalog/products/{uuid}/roll", write(h.UpdateRollSettings))
 
 	// TEC-152: product images (center only on top of catalog.write, K4).
 	mux.Handle("POST /v1/catalog/products/{uuid}/images", write(h.UploadProductImage))

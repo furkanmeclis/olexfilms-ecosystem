@@ -167,7 +167,9 @@ func (s *Service) AddItem(ctx context.Context, c Caller, id uuid.UUID, in ItemIn
 			ServiceID: svc.ID, ProductID: product.ID, UnitID: unit.ID, Kind: kind,
 			AppliedParts: mustJSON(parts), Notes: textOrNull(in.Notes),
 		}
-		roll := unit.UnitKind == ledger.KindSerial && product.UnitType == "roll_meter"
+		// TEC-1008: a unit is a roll when it carries meters (a box converted
+		// from pieces is a roll of a piece product).
+		roll := unit.UnitKind == ledger.KindSerial && unit.InitialMeters.Valid
 		switch {
 		case unit.UnitKind == ledger.KindFixed:
 			if kind != KindFull {

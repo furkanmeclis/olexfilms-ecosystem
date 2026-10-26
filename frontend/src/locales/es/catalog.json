@@ -297,5 +297,15 @@
   "discipline.fields.avg_sale_price": "Media real (30 días)",
   "discipline.fields.sales_quantity": "Cantidad vendida (30 días)",
   "discipline.org_types.dealer": "Concesionario",
-  "discipline.org_types.distributor": "Distribuidor"
+  "discipline.org_types.distributor": "Distribuidor",
+  "roll.title": "Ajustes del rollo",
+  "roll.hint": "Las cajas contadas como piezas pasan a rollos de esta longitud; un producto puede tener ambos.",
+  "roll.default_meters": "Longitud por defecto (m)",
+  "roll.width_cm": "Ancho (cm)",
+  "roll.min_cut_meters": "Corte mínimo (m)",
+  "roll.waste_pct": "Merma (%)",
+  "roll.save": "Guardar",
+  "roll.saved": "Guardado.",
+  "roll.failed": "No se pudo guardar.",
+  "roll.invalid": "Introduzca un número."
 }

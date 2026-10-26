@@ -976,8 +976,9 @@ func TestPhotoStandardGrants(t *testing.T) {
 			t.Fatalf("%s def = %+v", slug, def)
 		}
 	}
-	if last := Permissions[len(Permissions)-1]; last.Slug != PermPhotoStandardOverride {
-		t.Fatalf("catalog is append-only; last = %s", last.Slug)
+	// Append-only: TEC-1008 stock.bulk follows it.
+	if prev := Permissions[len(Permissions)-2]; prev.Slug != PermPhotoStandardOverride {
+		t.Fatalf("catalog is append-only; before the last = %s", prev.Slug)
 	}
 	want := map[string]map[string]Scope{
 		RoleSuperAdmin: {
@@ -1021,5 +1022,24 @@ func TestCenterRoleFor(t *testing.T) {
 	}
 	if got, _ := CenterRoleFor(RoleDealerOwner); got != RoleCenterStaff {
 		t.Fatalf("dealer_owner -> %s", got)
+	}
+}
+
+// TEC-1008: bulk barcode operations are super_admin only, appended last.
+func TestStockBulkGrant(t *testing.T) {
+	def, ok := PermissionBySlug(PermStockBulk)
+	if !ok || !def.SuperAdminOnly || !def.Sensitive || def.Module != "stock" {
+		t.Fatalf("stock.bulk def = %+v", def)
+	}
+	if last := Permissions[len(Permissions)-1]; last.Slug != PermStockBulk {
+		t.Fatalf("catalog is append-only; last = %s", last.Slug)
+	}
+	for _, r := range Roles {
+		if _, ok := r.Grants[PermStockBulk]; ok {
+			t.Fatalf("%s must not hold stock.bulk", r.Slug)
+		}
+	}
+	if RoleGrants(RoleDef{Slug: RoleSuperAdmin})[PermStockBulk] != ScopeAll {
+		t.Fatal("super_admin stock.bulk")
 	}
 }

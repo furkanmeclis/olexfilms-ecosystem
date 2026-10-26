@@ -277,6 +277,8 @@ export const routes = {
       barcodes: (slug: string) => `/t/${slug}/warehouse/barcodes`,
       // TEC-1006: every unit of a warehouse, in it or gone.
       units: (slug: string) => `/t/${slug}/warehouse/units`,
+      // TEC-1008: bulk barcode operations (super_admin).
+      bulk: (slug: string) => `/t/${slug}/warehouse/bulk`,
       // TEC-232 (slice 2)
       transfers: (slug: string) => `/t/${slug}/warehouse/transfers`,
       transfer: (slug: string, uuid: string) =>

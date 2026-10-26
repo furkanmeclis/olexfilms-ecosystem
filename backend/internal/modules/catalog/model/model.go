@@ -78,8 +78,19 @@ type Product struct {
 	Active                 bool        `json:"active"`
 	ExternalID             *string     `json:"external_id"`
 	LockedFields           []string    `json:"locked_fields"`
-	CreatedAt              time.Time   `json:"created_at"`
-	UpdatedAt              time.Time   `json:"updated_at"`
+	// Roll (TEC-1008): roll defaults; any product may hold rolls (a box
+	// counted as a piece is converted to a roll of DefaultMeters).
+	Roll      RollSettings `json:"roll"`
+	CreatedAt time.Time    `json:"created_at"`
+	UpdatedAt time.Time    `json:"updated_at"`
+}
+
+// RollSettings are the roll defaults of a product (TEC-1008).
+type RollSettings struct {
+	DefaultMeters *float64 `json:"default_meters"`
+	WidthCm       *float64 `json:"width_cm"`
+	MinCutMeters  *float64 `json:"min_cut_meters"`
+	WastePct      *float64 `json:"waste_pct"`
 }
 
 // CategoryInput creates a category (POST) or patches it (PATCH: nil keeps).

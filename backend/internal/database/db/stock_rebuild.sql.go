@@ -299,7 +299,7 @@ func (q *Queries) ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int6
 }
 
 const listUnitsByIDs = `-- name: ListUnitsByIDs :many
-SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id FROM units WHERE id = ANY($1::bigint[]) ORDER BY id
+SELECT id, uuid, organization_id, brand_id, product_id, barcode, unit_kind, source, status, initial_meters, remaining_meters, connection_id, external_id, external_status, created_at, updated_at, batch_id, lot, note FROM units WHERE id = ANY($1::bigint[]) ORDER BY id
 `
 
 func (q *Queries) ListUnitsByIDs(ctx context.Context, ids []int64) ([]Unit, error) {
@@ -329,6 +329,8 @@ func (q *Queries) ListUnitsByIDs(ctx context.Context, ids []int64) ([]Unit, erro
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.BatchID,
+			&i.Lot,
+			&i.Note,
 		); err != nil {
 			return nil, err
 		}

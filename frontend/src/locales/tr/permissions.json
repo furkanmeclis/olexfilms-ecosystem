@@ -217,5 +217,6 @@
   "labels.showcase.read": "Vitrini görüntüle",
   "labels.showcase.write": "Vitrini düzenle",
   "labels.platform.showcase.review": "Bayi vitrinlerini onayla",
-  "groups.dealer_showcase": "Bayi vitrini"
+  "groups.dealer_showcase": "Bayi vitrini",
+  "labels.stock.bulk": "Toplu barkod işlemleri"
 }

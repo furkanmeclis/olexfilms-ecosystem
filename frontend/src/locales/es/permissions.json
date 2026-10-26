@@ -217,5 +217,6 @@
   "labels.showcase.read": "Ver escaparate",
   "labels.showcase.write": "Editar escaparate",
   "labels.platform.showcase.review": "Revisar escaparates de distribuidores",
-  "groups.dealer_showcase": "Escaparate del distribuidor"
+  "groups.dealer_showcase": "Escaparate del distribuidor",
+  "labels.stock.bulk": "Operaciones masivas de códigos"
 }

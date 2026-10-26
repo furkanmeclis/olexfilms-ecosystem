@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/config/routes";
 import { DistributorPricesCard } from "@/features/catalog/components/distributor-prices-card";
 import { ProductPricesCard } from "@/features/catalog/components/product-prices-card";
+import { ProductRollCard } from "@/features/catalog/components/product-roll-card";
 import {
   catalogKeys,
   useCatalogAccess,
@@ -226,6 +227,11 @@ export function ProductDetailPage({
         </Card>
       ) : null}
 
+      <ProductRollCard
+        key={JSON.stringify(p.roll)}
+        product={p}
+        canWrite={catalog.canWrite}
+      />
       <ProductPricesCard productUuid={p.uuid} access={pricing} />
       <DistributorPricesCard productUuid={p.uuid} access={pricing} />
 

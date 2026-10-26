@@ -52,6 +52,12 @@ function product(images: CatalogProduct["images"]): CatalogProduct {
     active: true,
     external_id: null,
     locked_fields: [],
+    roll: {
+      default_meters: null,
+      width_cm: null,
+      min_cut_meters: null,
+      waste_pct: null,
+    },
     created_at: "2026-10-01T00:00:00Z",
     updated_at: "2026-10-01T00:00:00Z",
   };

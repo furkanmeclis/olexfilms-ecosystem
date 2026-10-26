@@ -650,5 +650,6 @@
   "units.columns.updated_at": "Остання зміна",
   "units.columns.created_at": "Створено",
   "units.state.in": "На складі",
-  "units.state.left": "Вибуло зі складу"
+  "units.state.left": "Вибуло зі складу",
+  "nav_bulk": "Масові операції"
 }
