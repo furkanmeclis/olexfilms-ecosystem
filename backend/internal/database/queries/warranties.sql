@@ -96,7 +96,8 @@ LIMIT 1;
 -- TEC-1005: the public service summary (no customer data).
 -- name: GetPublicService :one
 SELECT s.service_no, s.package, s.completed_at, s.created_at,
-       o.name AS organization_name, o.city AS organization_city,
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name,
+       o.city AS organization_city,
        COALESCE(pr.name, '')::text AS organization_province,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        (cb.logo_object_key IS NOT NULL)::boolean AS car_brand_has_logo,
