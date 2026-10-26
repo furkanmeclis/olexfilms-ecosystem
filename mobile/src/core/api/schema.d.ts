@@ -11619,9 +11619,29 @@ export interface paths {
         put?: never;
         /**
          * Open a draft service of the active organization
-         * @description Needs services.write. The customer must be linked to an organization of the services.write scope and the vehicle must belong to the customer (domain brand) and carry a car brand and model; plate, VIN, car brand/model and year are copied into the service (TEC-97 decision 3). The brand is the organization's brand (decision 2) and the number is DS + 8 alphanumerics. has_measurement needs the vehicle VIN. A read-only organization (K23: no contract yet) gets 403 ORGANIZATION_READ_ONLY on every write.
+         * @description Needs services.write. The customer must be linked to an organization of the services.write scope and the vehicle must belong to the customer (domain brand) and carry a car brand and model; plate, VIN, car brand/model and year are copied into the service (TEC-97 decision 3). The brand is the organization's brand (decision 2) and the number is service_no when given (TEC-1004), else DS + 8 alphanumerics. has_measurement needs the vehicle VIN. A read-only organization (K23: no contract yet) gets 403 ORGANIZATION_READ_ONLY on every write.
          */
         post: operations["createService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/service-no-availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check a hand-entered service number
+         * @description TEC-1004. Needs services.write. Whether service_no may be given to a new service or, with service_uuid, to that service (its own number is available to it). Only yes / no: the holder is not revealed.
+         */
+        get: operations["getServiceNoAvailability"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11669,7 +11689,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit km, package, notes and the measurement answer
+         * Edit km, package, notes, the measurement answer and the number
          * @description Needs services.write reaching the service. Completed and cancelled services are locked except for the center (409 SERVICE_NOT_EDITABLE).
          */
         patch: operations["updateService"];
@@ -25062,6 +25082,8 @@ export interface components {
             editable: boolean;
             /** @description The caller may add or remove items */
             items_editable: boolean;
+            /** @description TEC-1004. The caller may change the number (false once completed or cancelled) */
+            service_no_editable?: boolean;
             available_transitions: components["schemas"]["ServiceStatus"][];
             /** @description True when the service was opened from an approved warranty claim. */
             is_warranty_reapply: boolean;
@@ -25080,6 +25102,8 @@ export interface components {
             notes?: string;
             /** @default false */
             has_measurement: boolean;
+            /** @description TEC-1004. A hand-entered number (the printed warranty card's QR https://olexfilms.app/warranty/XXXX): 4 to 32 letters, digits, '-' or '_', kept as entered (surrounding space trimmed). Another service's number or a warranty public code / alias is 409 SERVICE_NO_TAKEN. Omitted, null or blank: DS + 8 alphanumerics. */
+            service_no?: string | null;
         };
         ServiceUpdateInput: {
             km?: number | null;
@@ -25088,6 +25112,22 @@ export interface components {
             has_measurement?: boolean;
             /** @description Replaces the VIN snapshot of the service (the vehicle record is not changed). Same rules as the vehicle VIN: 17 letters or digits without I, O, Q; spaces and dashes are dropped. null or "" clears it (400 while has_measurement is true). */
             vin?: string | null;
+            /** @description TEC-1004. Changes the number (same rules as on create) until the service is completed or cancelled; then 409 SERVICE_NO_LOCKED (the same number is a no-op). Taken: 409 SERVICE_NO_TAKEN. */
+            service_no?: string;
+        };
+        ServiceNoAvailability: {
+            /** @description The trimmed number */
+            service_no: string;
+            /** @description The number has the allowed shape */
+            valid: boolean;
+            /** @description Valid and not held by another service, warranty code or alias */
+            available: boolean;
+        };
+        EnvelopeServiceNoAvailability: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceNoAvailability"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         ServiceItemInput: {
             barcode: string;
@@ -51265,6 +51305,33 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getServiceNoAvailability: {
+        parameters: {
+            query: {
+                service_no: string;
+                service_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Availability */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceNoAvailability"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     requestServiceListExport: {

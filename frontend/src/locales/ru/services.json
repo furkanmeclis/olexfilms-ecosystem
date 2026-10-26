@@ -352,5 +352,16 @@
   "review_questions.validation.text_tr": "Текст вопроса на турецком обязателен.",
   "review_questions.toast.saved": "Вопрос сохранён.",
   "review_questions.toast.failed": "Не удалось выполнить действие. Повторите попытку.",
-  "wizard.steps.photos": "Фото приёмки"
+  "wizard.steps.photos": "Фото приёмки",
+  "service_no.label": "Номер услуги",
+  "service_no.placeholder": "Номер или QR-код с гарантийной карты",
+  "service_no.auto": "Оставьте пустым для автоматического номера.",
+  "service_no.invalid": "4-32 символа: буквы, цифры, '-' или '_'.",
+  "service_no.taken": "Этот номер используется другой услугой.",
+  "service_no.available": "Номер свободен.",
+  "service_no.locked": "Номер заблокирован, так как услуга завершена.",
+  "service_no.scan": "Сканировать QR-код",
+  "service_no.scan_title": "Отсканируйте гарантийную карту",
+  "service_no.scan_description": "Покажите QR-код карты камере; номер будет заполнен.",
+  "service_no.camera_denied": "Камера недоступна. Введите номер вручную или используйте QR-сканер."
 }

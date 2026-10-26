@@ -206,5 +206,12 @@
   "placeholder_notes": "Araç veya işlemle ilgili not",
   "placeholder_cancel_reason": "Örn. müşteri vazgeçti",
   "placeholder_quantity": "1 adet",
-  "placeholder_meters": "1,5 m"
+  "placeholder_meters": "1,5 m",
+  "service_no_placeholder": "Garanti kartındaki numara veya karekod",
+  "service_no_auto": "Boş bırakılırsa numara otomatik verilir.",
+  "service_no_invalid": "4-32 karakter: harf, rakam, '-' veya '_'.",
+  "service_no_taken": "Bu numara başka bir hizmette kullanılıyor.",
+  "service_no_available": "Numara kullanılabilir.",
+  "service_no_scan": "Karekodu okut",
+  "service_no_label": "Hizmet numarası"
 }

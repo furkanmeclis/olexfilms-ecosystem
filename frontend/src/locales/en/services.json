@@ -352,5 +352,16 @@
   "review_questions.validation.text_tr": "The Turkish question text is required.",
   "review_questions.toast.saved": "Question saved.",
   "review_questions.toast.failed": "The operation failed. Try again.",
-  "wizard.steps.photos": "Intake photos"
+  "wizard.steps.photos": "Intake photos",
+  "service_no.label": "Service number",
+  "service_no.placeholder": "Number or QR code on the warranty card",
+  "service_no.auto": "Leave empty to get a number automatically.",
+  "service_no.invalid": "4-32 characters: letters, digits, '-' or '_'.",
+  "service_no.taken": "This number is used by another service.",
+  "service_no.available": "The number is available.",
+  "service_no.locked": "The number is locked because the service is completed.",
+  "service_no.scan": "Scan QR code",
+  "service_no.scan_title": "Scan the warranty card",
+  "service_no.scan_description": "Show the card's QR code to the camera; the number is filled in.",
+  "service_no.camera_denied": "The camera is not available. Type the number or use a QR scanner."
 }
