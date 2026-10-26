@@ -43324,9 +43324,9 @@ components:
       type: object
       required: [service_no, valid, available]
       properties:
-        service_no: { type: string, description: The trimmed number }
-        valid: { type: boolean, description: The number has the allowed shape }
-        available: { type: boolean, description: Valid and not held by another service, warranty code or alias }
+        service_no: { type: string, description: "The trimmed number" }
+        valid: { type: boolean, description: "The number has the allowed shape" }
+        available: { type: boolean, description: "Valid and not held by another service, warranty code or alias" }
 
     EnvelopeServiceNoAvailability:
       type: object
