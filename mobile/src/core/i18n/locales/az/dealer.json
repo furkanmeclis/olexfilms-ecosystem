@@ -197,5 +197,12 @@
   "invalid.email": "Düzgün e-poçt daxil edin.",
   "invalid.company_name": "Şirkət adını daxil edin.",
   "invalid.tax_office": "Vergi idarəsini yoxlayın.",
-  "invalid.tax_no": "Vergi nömrəsi 5-20 hərf və ya rəqəm olmalıdır."
+  "invalid.tax_no": "Vergi nömrəsi 5-20 hərf və ya rəqəm olmalıdır.",
+  "service_no_placeholder": "Zəmanət kartındakı nömrə və ya QR kod",
+  "service_no_auto": "Boş qoysanız nömrə avtomatik verilir.",
+  "service_no_invalid": "4-32 simvol: hərf, rəqəm, '-' və ya '_'.",
+  "service_no_taken": "Bu nömrə başqa xidmətdə istifadə olunur.",
+  "service_no_available": "Nömrə istifadə edilə bilər.",
+  "service_no_scan": "QR kodu oxut",
+  "service_no_label": "Xidmət nömrəsi"
 }

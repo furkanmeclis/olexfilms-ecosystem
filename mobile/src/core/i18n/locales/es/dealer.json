@@ -197,5 +197,12 @@
   "invalid.email": "Introduzca un correo válido.",
   "invalid.company_name": "Introduce el nombre de la empresa.",
   "invalid.tax_office": "Revisa la oficina tributaria.",
-  "invalid.tax_no": "El número fiscal debe tener 5-20 letras o dígitos."
+  "invalid.tax_no": "El número fiscal debe tener 5-20 letras o dígitos.",
+  "service_no_placeholder": "Número o código QR de la tarjeta de garantía",
+  "service_no_auto": "Déjelo vacío para un número automático.",
+  "service_no_invalid": "4-32 caracteres: letras, dígitos, '-' o '_'.",
+  "service_no_taken": "Este número lo usa otro servicio.",
+  "service_no_available": "El número está disponible.",
+  "service_no_scan": "Escanear QR",
+  "service_no_label": "Número de servicio"
 }

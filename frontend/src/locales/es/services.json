@@ -352,5 +352,16 @@
   "review_questions.validation.text_tr": "El texto de la pregunta en turco es obligatorio.",
   "review_questions.toast.saved": "Pregunta guardada.",
   "review_questions.toast.failed": "La operación ha fallado. Inténtelo de nuevo.",
-  "wizard.steps.photos": "Fotos de recepción"
+  "wizard.steps.photos": "Fotos de recepción",
+  "service_no.label": "Número de servicio",
+  "service_no.placeholder": "Número o código QR de la tarjeta de garantía",
+  "service_no.auto": "Déjelo vacío para un número automático.",
+  "service_no.invalid": "4-32 caracteres: letras, dígitos, '-' o '_'.",
+  "service_no.taken": "Este número lo usa otro servicio.",
+  "service_no.available": "El número está disponible.",
+  "service_no.locked": "El número está bloqueado porque el servicio se completó.",
+  "service_no.scan": "Escanear QR",
+  "service_no.scan_title": "Escanee la tarjeta de garantía",
+  "service_no.scan_description": "Muestre el código QR de la tarjeta a la cámara; el número se completa.",
+  "service_no.camera_denied": "La cámara no está disponible. Escriba el número o use un lector QR."
 }
