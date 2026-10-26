@@ -43,6 +43,25 @@ Later native modules (BLE, plate recognition) also need the development build.
 | `npm run uniwind:types` | Regenerates `src/uniwind-types.d.ts` (Metro also does this on start) |
 | `npm run doctor` | `expo-doctor` |
 
+## TestFlight (TEC-1011)
+
+- Store build and upload run on EAS, started by CI: every green push to `main` that
+  touched `mobile/` (or `docs/openapi.yaml`) runs the `mobile-release` job, which calls
+  `eas build -p ios --profile production --auto-submit --no-wait` from `mobile/`.
+  Re-run by hand with the workflow's `workflow_dispatch` (builds regardless of paths).
+- Same EAS project (`@furkanmeclis/olexfilms`), bundle id `com.olexfilms.app` and
+  App Store Connect record (ascAppId in `eas.json`) as the previous Olexfilms app, so
+  builds land in the existing TestFlight app and its internal tester group.
+- Build numbers: `appVersionSource: remote` + `autoIncrement`; the counter lives on EAS
+  (`eas build:version:get -p ios`), nothing to commit. It was set to 45 after the last
+  Xcode-uploaded 1.0.0 (44). The marketing version is `version` in `app.json`.
+- `EXPO_PUBLIC_API_URL` for builds comes from the EAS environment of the profile
+  (`eas env:list --environment production`), not from the repo: `https://olexfilms.app/api`.
+- Secrets: GitHub repo secret `EXPO_TOKEN` (an expo.dev access token); Apple distribution
+  certificate, provisioning profile and ASC API key are stored on EAS (`eas credentials -p ios`).
+- Status: `eas submit:status -p ios --profile production` shows processing and TestFlight
+  state straight from App Store Connect.
+
 ## OTA updates
 
 JS-only changes ship over the air with `expo-updates` + EAS Update (config in
