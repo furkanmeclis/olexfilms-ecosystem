@@ -843,6 +843,10 @@ var deCatalog = map[string]string{
 	"warranty.certificate.terms_title":         "Garantiebedingungen",
 	"warranty.certificate.terms":               "Die Garantie umfasst Material- und Verarbeitungsfehler, die bei der Anbringung der in diesem Zertifikat aufgeführten Produkte durch einen autorisierten Händler entstehen.\nJede Garantie gilt zwischen dem daneben angegebenen Beginn- und Enddatum.\nUnfälle, Kollisionen, Steinschlag- und Aufprallschäden, unsachgemäße Pflege oder Verwendung von Chemikalien, unbefugte Eingriffe und normaler Verschleiß sind ausgeschlossen.\nBei einem Garantieanspruch sind dieses Zertifikat und der Garantiecode vorzulegen; die Garantie kann durch Scannen des QR-Codes geprüft werden.\nBei einem Halterwechsel können aktive Garantien auf den neuen Halter übertragen werden.",
 	"warranty.certificate.generated_at":        "Ausgestellt",
+	"warranty.certificate.status":              "Status",
+	"warranty.certificate.status.active":       "Aktiv",
+	"warranty.certificate.status.expired":      "Abgelaufen",
+	"warranty.certificate.status.void":         "Ungültig",
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Servicebericht",
 	"resources.tenant.services.pdf":         "Servicebericht",

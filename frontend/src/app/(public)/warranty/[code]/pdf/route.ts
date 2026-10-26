@@ -6,8 +6,9 @@ import {
 } from "@/lib/server/upstream";
 
 /**
- * Anonymous warranty PDF (TEC-248): `/warranty/{code}/pdf?lang=&tz=` →
- * Go `GET /v1/public/warranties/{code}/pdf`. No session, no cookies; the
+ * Anonymous warranty PDF (TEC-248), one document per service (TEC-1005):
+ * `/warranty/{code}/pdf?lang=&tz=` → Go
+ * `GET /v1/public/service-warranties/{code}/pdf`. No session, no cookies; the
  * client IP and host are forwarded for Go's per-IP limit and brand (K3).
  * A miss or failure goes back to the page (303), which shows the warranty
  * state and, for 429 / errors, a notice (`?pdf=`).
@@ -57,7 +58,7 @@ export async function GET(request: Request, { params }: Context) {
   let res;
   try {
     res = await fetchUpstreamStream(
-      `public/warranties/${encodeURIComponent(code)}/pdf${qs ? `?${qs}` : ""}`,
+      `public/service-warranties/${encodeURIComponent(code)}/pdf${qs ? `?${qs}` : ""}`,
       { method: "GET", headers },
     );
   } catch {

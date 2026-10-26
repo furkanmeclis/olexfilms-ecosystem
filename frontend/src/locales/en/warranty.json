@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "Add at least one photo before submitting.",
   "claims.toast.photo_error": "Some photos could not be uploaded.",
   "claims.toast.photos_uploaded": "Photos uploaded.",
-  "claims.portal.label": "Warranty claim:"
+  "claims.portal.label": "Warranty claim:",
+  "public.service_no": "Service number",
+  "public.service_date": "Service date",
+  "public.package": "Package",
+  "public.warranties": "Applied products and warranties",
+  "public.applied_parts": "Applied parts"
 }

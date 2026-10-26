@@ -42,6 +42,8 @@ export const E2E_WARRANTY = {
   ok: "E2EWARRANTY0001",
   limited: "E2ELIMITED00001",
   missing: "E2EMISSING00001",
+  /** A per-warranty code of the ok service (TEC-1005 redirect). */
+  oldCode: "E2EOLDCODE00001",
 };
 
 /** Public quote token the upstream mock answers (TEC-320, keep in sync). */

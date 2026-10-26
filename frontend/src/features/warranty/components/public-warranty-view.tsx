@@ -1,4 +1,6 @@
 import {
+  Building2,
+  CarFront,
   CircleAlert,
   Clock3,
   FileDown,
@@ -7,6 +9,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { AppLogo } from "@/components/brand/ides-logo";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -17,10 +20,13 @@ import {
 } from "@/config/i18n";
 import { VehicleBrandLogo } from "@/features/vehicle-catalog/components/vehicle-brand-logo";
 import {
+  hasActiveWarranty,
   publicWarrantyPdfHref,
+  sortWarranties,
   statusTone,
   type PdfNotice,
-  type PublicWarranty,
+  type PublicService,
+  type PublicServiceWarranty,
   type PublicWarrantyResult,
 } from "@/features/warranty/lib/public-warranty";
 import {
@@ -39,16 +45,19 @@ export type PublicWarrantyViewProps = {
   path: string;
   /** A failed PDF download sent back here (`?pdf=`, TEC-248). */
   pdfNotice?: PdfNotice | null;
-  /** Clock of the progress bar (tests). */
+  /** Clock of the progress bars (tests). */
   now?: Date;
 };
 
+type T = (key: string, params?: Record<string, string | number>) => string;
+
 /**
- * Public warranty page body (TEC-189). Renders on the server: no session,
- * no client fetch. Mobile first, logical properties only (RTL for ar).
- * Four screens: the warranty, not found, rate limited (429) and error.
- * TEC-248: vehicle brand logo, elapsed-period progress bar and the
- * anonymous PDF download.
+ * Public warranty page body (TEC-189; one page per service, TEC-1005). The
+ * legacy hub's layout (vehicle, applied products with their warranties,
+ * dealer, certificate) without the phone mock frame, in the brand tokens.
+ * Renders on the server: no session, no client fetch. Mobile first,
+ * logical properties only (RTL for ar). Four screens: the service, not
+ * found, rate limited (429) and error.
  */
 export function PublicWarrantyView({
   result,
@@ -58,15 +67,14 @@ export function PublicWarrantyView({
   pdfNotice = null,
   now,
 }: PublicWarrantyViewProps) {
-  const t = (key: string, params?: Record<string, string | number>) =>
-    translate(locale, key, params);
+  const t: T = (key, params) => translate(locale, key, params);
 
   let body: ReactNode;
   switch (result.kind) {
     case "ok":
       body = (
-        <WarrantyCard
-          warranty={result.warranty}
+        <ServiceBody
+          service={result.service}
           locale={locale}
           timeZone={timeZone}
           t={t}
@@ -111,17 +119,24 @@ export function PublicWarrantyView({
       );
   }
 
+  const brandName =
+    result.kind === "ok" ? result.service.brand.name : undefined;
   return (
     <main
       lang={locale}
       dir={localeDir(locale)}
       data-slot="public-warranty"
-      className="bg-muted/30 text-foreground min-h-dvh px-4 py-6 sm:py-10"
+      className="bg-muted/30 text-foreground min-h-dvh"
     >
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4">
-        <p className="text-muted-foreground text-center text-sm font-medium">
-          {t("warranty.public.page_title")}
-        </p>
+      <header className="bg-primary text-primary-foreground [--brand-glyph:var(--primary-foreground)]">
+        <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-3 px-4 pt-8 pb-14 text-center">
+          <AppLogo className="h-10 w-auto" />
+          <p className="text-sm font-medium tracking-wide opacity-90">
+            {t("warranty.public.page_title")}
+          </p>
+        </div>
+      </header>
+      <div className="mx-auto -mt-10 flex w-full max-w-2xl flex-col gap-4 px-4 pb-10">
         {body}
         <nav
           aria-label={t("warranty.public.language")}
@@ -144,18 +159,21 @@ export function PublicWarrantyView({
             </a>
           ))}
         </nav>
+        {brandName ? (
+          <p className="text-muted-foreground text-center text-xs">
+            © {brandName}
+          </p>
+        ) : null}
       </div>
     </main>
   );
 }
 
-const STATUS_KEYS: Record<PublicWarranty["status"], string> = {
+const STATUS_KEYS: Record<PublicServiceWarranty["status"], string> = {
   active: "warranty.public.status.active",
   expired: "warranty.public.status.expired",
   void: "warranty.public.status.void",
 };
-
-type T = (key: string, params?: Record<string, string | number>) => string;
 
 const PROGRESS_TONE_CLASS = {
   success: "bg-emerald-500",
@@ -165,15 +183,14 @@ const PROGRESS_TONE_CLASS = {
 
 /**
  * Elapsed share of start → end. Server rendered (no locale provider), so it
- * is a plain bar rather than the panel's client WarrantyProgressBar. It
- * grows along the inline axis, filling right-to-left in RTL.
+ * is a plain bar; it grows along the inline axis (right-to-left in RTL).
  */
 function PublicProgress({
   warranty,
   now,
   t,
 }: {
-  warranty: PublicWarranty;
+  warranty: PublicServiceWarranty;
   now?: Date;
   t: T;
 }) {
@@ -205,65 +222,91 @@ function PublicProgress({
   );
 }
 
-function WarrantyCard({
+function Card({
+  icon,
+  title,
+  children,
+  slot,
+}: {
+  icon: ReactNode;
+  title: string;
+  children: ReactNode;
+  slot?: string;
+}) {
+  return (
+    <section
+      data-slot={slot}
+      className="bg-card flex flex-col gap-4 rounded-2xl border p-5 shadow-sm"
+    >
+      <h2 className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+        <span className="text-primary">{icon}</span>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function partLabel(t: T, part: string): string {
+  const key = `services.parts.names.${part}`;
+  const label = t(key);
+  return label === key ? part : label;
+}
+
+function WarrantyItem({
   warranty,
   locale,
   timeZone,
   t,
-  pdfNotice,
   now,
 }: {
-  warranty: PublicWarranty;
+  warranty: PublicServiceWarranty;
   locale: AppLocale;
   timeZone: string;
   t: T;
-  pdfNotice: PdfNotice | null;
   now?: Date;
 }) {
   const ctx = { locale, timeZone };
-  const v = warranty.vehicle;
-  const vehicleName = [v.brand_name, v.model_name].filter(Boolean).join(" ");
   return (
-    <section
-      data-screen="warranty"
-      className="bg-card flex flex-col gap-5 rounded-2xl border p-5 shadow-sm"
+    <li
+      data-slot="warranty-item"
+      data-warranty-status={warranty.status}
+      className="flex flex-col gap-3 rounded-xl border p-4"
     >
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium tracking-wide uppercase">
-            <ShieldCheck className="size-4" aria-hidden />
-            {warranty.brand.name}
-          </span>
-          <h1 className="text-xl leading-tight font-semibold break-words">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {warranty.category ? (
+            <span className="text-muted-foreground text-xs font-medium">
+              {warranty.category}
+            </span>
+          ) : null}
+          <h3 className="leading-tight font-semibold break-words">
             {warranty.product.name}
-          </h1>
+          </h3>
         </div>
         <Badge
           variant={statusTone(warranty.status)}
           data-status={warranty.status}
-          className="shrink-0 px-2.5 py-1 text-sm"
+          className="shrink-0"
         >
           {t(STATUS_KEYS[warranty.status])}
         </Badge>
-      </header>
-
+      </div>
       {warranty.status === "active" ? (
-        <div className="bg-muted/60 flex items-baseline justify-between gap-3 rounded-xl px-4 py-3">
+        <div className="bg-muted/60 flex items-baseline justify-between gap-3 rounded-lg px-3 py-2">
           <span className="text-muted-foreground text-sm">
             {t("warranty.public.days_remaining")}
           </span>
           <span
             data-slot="days-remaining"
-            className="text-2xl font-semibold tabular-nums"
+            className="text-xl font-semibold tabular-nums"
           >
             {formatNumber(warranty.days_remaining, ctx)}
           </span>
         </div>
       ) : null}
-
       <PublicProgress warranty={warranty} now={now} t={t} />
-
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <Field label={t("warranty.public.start")}>
           {formatDate(warranty.start_at, ctx, "medium")}
         </Field>
@@ -271,20 +314,79 @@ function WarrantyCard({
           {formatDate(warranty.end_at, ctx, "medium")}
         </Field>
       </dl>
+      {warranty.parts.length > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-muted-foreground text-xs">
+            {t("warranty.public.applied_parts")}
+          </span>
+          <ul className="flex flex-wrap gap-1.5">
+            {warranty.parts.map((part) => (
+              <li
+                key={part}
+                className="bg-muted rounded-full px-2.5 py-0.5 text-xs"
+              >
+                {partLabel(t, part)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </li>
+  );
+}
 
-      <div className="flex flex-col gap-3 border-t pt-4">
-        <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          {t("warranty.public.vehicle")}
-        </h2>
+function ServiceBody({
+  service,
+  locale,
+  timeZone,
+  t,
+  pdfNotice,
+  now,
+}: {
+  service: PublicService;
+  locale: AppLocale;
+  timeZone: string;
+  t: T;
+  pdfNotice: PdfNotice | null;
+  now?: Date;
+}) {
+  const ctx = { locale, timeZone };
+  const v = service.vehicle;
+  const vehicleName = [v.brand_name, v.model_name].filter(Boolean).join(" ");
+  const warranties = sortWarranties(service.warranties);
+  return (
+    <div data-screen="warranty" className="flex flex-col gap-4">
+      <Card
+        slot="vehicle"
+        icon={<CarFront className="size-4" aria-hidden />}
+        title={t("warranty.public.vehicle")}
+      >
         <div className="flex items-center gap-3">
           <VehicleBrandLogo
             uuid={v.brand_logo_uuid}
             name={v.brand_name}
-            height={36}
+            height={40}
           />
-          <span className="font-medium break-words">{vehicleName}</span>
+          <div className="flex min-w-0 flex-col">
+            <span className="text-lg font-semibold break-words">
+              {vehicleName}
+            </span>
+            {v.model_year ? (
+              <span className="text-muted-foreground text-sm">
+                {String(v.model_year)}
+              </span>
+            ) : null}
+          </div>
         </div>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <Field label={t("warranty.public.service_no")}>
+            <span dir="ltr" className="font-mono" data-slot="service-no">
+              {service.service_no}
+            </span>
+          </Field>
+          <Field label={t("warranty.public.service_date")}>
+            {formatDate(service.service_date, ctx, "medium")}
+          </Field>
           {v.plate_masked ? (
             <Field label={t("warranty.public.plate")}>
               <span dir="ltr" className="font-mono tracking-wider">
@@ -299,36 +401,56 @@ function WarrantyCard({
               </span>
             </Field>
           ) : null}
-          {v.model_year ? (
-            <Field label={t("warranty.public.model_year")}>
-              {String(v.model_year)}
+          {service.package ? (
+            <Field label={t("warranty.public.package")}>
+              {service.package}
             </Field>
           ) : null}
         </dl>
-      </div>
+      </Card>
 
-      <div className="flex flex-col gap-1 border-t pt-4 text-sm">
-        <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          {t("warranty.public.dealer")}
-        </span>
-        <span className="font-medium break-words">
-          {warranty.dealer.name}
-          {warranty.dealer.city ? (
+      <Card
+        slot="warranties"
+        icon={<ShieldCheck className="size-4" aria-hidden />}
+        title={t("warranty.public.warranties")}
+      >
+        <ul className="flex flex-col gap-3">
+          {warranties.map((w) => (
+            <WarrantyItem
+              key={w.public_code}
+              warranty={w}
+              locale={locale}
+              timeZone={timeZone}
+              t={t}
+              now={now}
+            />
+          ))}
+        </ul>
+      </Card>
+
+      <Card
+        slot="dealer"
+        icon={<Building2 className="size-4" aria-hidden />}
+        title={t("warranty.public.dealer")}
+      >
+        <p className="font-medium break-words">
+          {service.dealer.name}
+          {service.dealer.city ? (
             <span className="text-muted-foreground font-normal">
               {" · "}
-              {warranty.dealer.city}
+              {service.dealer.city}
             </span>
           ) : null}
-        </span>
-      </div>
+        </p>
+      </Card>
 
-      {warranty.status === "active" ? (
-        <div className="flex flex-col gap-2 border-t pt-4">
+      {hasActiveWarranty(service) ? (
+        <div className="flex flex-col gap-2">
           <a
             data-slot="pdf-download"
-            href={publicWarrantyPdfHref(warranty.public_code, locale, timeZone)}
+            href={publicWarrantyPdfHref(service.service_no, locale, timeZone)}
             rel="nofollow noreferrer"
-            className={cn(buttonVariants({ variant: "outline" }), "w-full")}
+            className={cn(buttonVariants({ size: "lg" }), "w-full")}
           >
             <FileDown className="size-4" aria-hidden />
             {t("warranty.public.download_pdf")}
@@ -349,10 +471,10 @@ function WarrantyCard({
         </div>
       ) : null}
 
-      <p className="text-muted-foreground text-xs">
+      <p className="text-muted-foreground text-center text-xs">
         {t("warranty.public.privacy_note")}
       </p>
-    </section>
+    </div>
   );
 }
 

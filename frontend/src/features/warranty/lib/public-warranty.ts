@@ -1,12 +1,17 @@
 import type { components } from "@/generated/api";
 
 /**
- * Public warranty page (TEC-189): `/warranty/{public_code}` reads Go
- * `GET /v1/public/warranties/{public_code}` on the server. The response has
- * no personal data (masked plate, last 4 VIN characters only).
+ * Public warranty page (TEC-189, one page per service since TEC-1005):
+ * `/warranty/{code}` reads Go `GET /v1/public/service-warranties/{code}` on
+ * the server. code is the service number (printed warranty cards), else a
+ * warranty public code (per-warranty links before TEC-1005); the page then
+ * moves to `/warranty/{service_no}`. The response has no personal data
+ * (masked plate, last 4 VIN characters only).
  */
-export type PublicWarranty = components["schemas"]["PublicWarranty"];
-export type PublicWarrantyStatus = PublicWarranty["status"];
+export type PublicService = components["schemas"]["PublicService"];
+export type PublicServiceWarranty =
+  components["schemas"]["PublicServiceWarranty"];
+export type PublicWarrantyStatus = PublicServiceWarranty["status"];
 
 /**
  * Same shape as the Go path check: new codes are 22 base64url characters,
@@ -26,8 +31,9 @@ export function parsePdfNotice(
 }
 
 /**
- * Same-origin download link of the anonymous PDF (TEC-248): the route
- * handler forwards it to Go `GET /v1/public/warranties/{code}/pdf`.
+ * Same-origin download link of the service PDF (TEC-248, TEC-1005): the
+ * route handler forwards it to Go
+ * `GET /v1/public/service-warranties/{code}/pdf`.
  */
 export function publicWarrantyPdfHref(
   code: string,
@@ -39,7 +45,7 @@ export function publicWarrantyPdfHref(
 }
 
 export type PublicWarrantyResult =
-  | { kind: "ok"; warranty: PublicWarranty }
+  | { kind: "ok"; service: PublicService }
   | { kind: "not_found" }
   | { kind: "rate_limited"; retryAfter: number | null }
   | { kind: "error" };
@@ -71,6 +77,27 @@ export type PublicWarrantyRequest = {
   forwardedHost: string | null;
 };
 
+/** Whether any warranty of the service is active (the PDF is offered). */
+export function hasActiveWarranty(service: PublicService): boolean {
+  return service.warranties.some((w) => w.status === "active");
+}
+
+/**
+ * The warranties in display order: active first (soonest end first), then
+ * expired, then void.
+ */
+export function sortWarranties(
+  warranties: readonly PublicServiceWarranty[],
+): PublicServiceWarranty[] {
+  const rank = { active: 0, expired: 1, void: 2 } as const;
+  return [...warranties].sort(
+    (a, b) =>
+      rank[a.status] - rank[b.status] ||
+      a.end_at.localeCompare(b.end_at) ||
+      a.public_code.localeCompare(b.public_code),
+  );
+}
+
 /**
  * Looks a public code up. A malformed code is not_found without a request
  * (Go answers the same 404); 429 keeps Retry-After; anything else unexpected
@@ -89,10 +116,10 @@ export async function fetchPublicWarranty(
 
   let res: UpstreamResponse;
   try {
-    res = await fetcher(`public/warranties/${encodeURIComponent(code)}`, {
-      method: "GET",
-      headers,
-    });
+    res = await fetcher(
+      `public/service-warranties/${encodeURIComponent(code)}`,
+      { method: "GET", headers },
+    );
   } catch {
     return { kind: "error" };
   }
@@ -106,10 +133,10 @@ export async function fetchPublicWarranty(
   if (res.status !== 200) return { kind: "error" };
   try {
     const envelope = JSON.parse(new TextDecoder().decode(res.body)) as {
-      data?: PublicWarranty;
+      data?: PublicService;
     };
-    if (!envelope.data?.public_code) return { kind: "error" };
-    return { kind: "ok", warranty: envelope.data };
+    if (!envelope.data?.service_no) return { kind: "error" };
+    return { kind: "ok", service: envelope.data };
   } catch {
     return { kind: "error" };
   }
