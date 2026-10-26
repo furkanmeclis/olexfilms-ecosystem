@@ -174,5 +174,10 @@
   "system.groups.einvoice": "الفاتورة الإلكترونية",
   "system.groups.einvoice_hint": "فواتير UBL-TR الإلكترونية (e-Fatura وe-Arşiv).",
   "system.keys.einvoice_default_vat_rate": "نسبة ضريبة القيمة المضافة الافتراضية (%)",
-  "system.keys.einvoice_default_vat_rate_hint": "النسبة المطبقة على بند الفاتورة الذي لا يملك منتجه أو فئته نسبة ضريبة. نسبة 0% تتطلب رمز إعفاء ولا يمكن اختيارها هنا."
+  "system.keys.einvoice_default_vat_rate_hint": "النسبة المطبقة على بند الفاتورة الذي لا يملك منتجه أو فئته نسبة ضريبة. نسبة 0% تتطلب رمز إعفاء ولا يمكن اختيارها هنا.",
+  "service_point.title": "نقطة الخدمة",
+  "service_point.hint": "عند التفعيل يرى العملاء هذا الاسم والشعار في صفحة الضمان وملف PDF والبوابة وواتساب، وتبقى لوحة التحكم باسم المؤسسة.",
+  "service_point.enabled": "إظهار اسم نقطة الخدمة للعملاء",
+  "service_point.name": "اسم نقطة الخدمة",
+  "service_point.no_logo": "لا يوجد شعار؛ يُستخدم شعار المؤسسة."
 }

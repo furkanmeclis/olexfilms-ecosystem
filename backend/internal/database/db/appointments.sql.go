@@ -46,7 +46,7 @@ WITH claimed AS (
       AND u.phone_e164 IS NOT NULL
     RETURNING a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at, a.plan_id
 )
-SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, c.plan_id, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, c.plan_id, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, COALESCE(v.plate, '')::text AS plate
 FROM claimed c
 JOIN organizations o ON o.id = c.organization_id
 LEFT JOIN vehicles v ON v.id = c.vehicle_id
@@ -132,7 +132,7 @@ WITH claimed AS (
       AND u.phone_e164 IS NOT NULL
     RETURNING a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at, a.plan_id
 )
-SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, c.plan_id, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+SELECT c.id, c.uuid, c.organization_id, c.brand_id, c.customer_user_id, c.vehicle_id, c.starts_at, c.ends_at, c.estimated_minutes, c.source, c.status, c.cancel_reason, c.lead_id, c.service_id, c.note, c.created_by_user_id, c.reminded_24h_at, c.reminded_2h_at, c.created_at, c.updated_at, c.deleted_at, c.plan_id, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, COALESCE(v.plate, '')::text AS plate
 FROM claimed c
 JOIN organizations o ON o.id = c.organization_id
 LEFT JOIN vehicles v ON v.id = c.vehicle_id
@@ -699,7 +699,7 @@ func (q *Queries) GetPortalAppointmentByUUID(ctx context.Context, arg GetPortalA
 }
 
 const getPortalAppointmentDealer = `-- name: GetPortalAppointmentDealer :one
-SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, s.portal_appointments_enabled
+SELECT o.id, o.uuid, o.slug, o.name, o.city, o.district, o.phone, o.address, o.logo_object_key, o.status, o.plan_code, o.access_starts_at, o.access_ends_at, o.created_at, o.updated_at, o.deleted_at, o.email, o.website, o.tagline, o.footer_text, o.paper_size, o.primary_color, o.type, o.parent_id, o.brand_id, o.currency, o.locale, o.timezone, o.country_id, o.contract_pdf_key, o.contract_valid_until, o.settings, o.province_id, o.district_id, o.phone_raw, o.google_business_url, o.latitude, o.longitude, o.invoice_vkn, o.invoice_tckn, o.invoice_tax_office, o.invoice_legal_name, o.einvoice_registered, o.einvoice_alias, o.invoice_email, o.service_point_enabled, o.service_point_name, o.service_point_logo_object_key, o.merged_into_id, s.portal_appointments_enabled
 FROM organizations o
 JOIN appointment_settings s ON s.organization_id = o.id
 WHERE o.uuid = $1
@@ -763,6 +763,10 @@ type GetPortalAppointmentDealerRow struct {
 	EinvoiceRegistered        bool               `json:"einvoice_registered"`
 	EinvoiceAlias             pgtype.Text        `json:"einvoice_alias"`
 	InvoiceEmail              pgtype.Text        `json:"invoice_email"`
+	ServicePointEnabled       bool               `json:"service_point_enabled"`
+	ServicePointName          pgtype.Text        `json:"service_point_name"`
+	ServicePointLogoObjectKey pgtype.Text        `json:"service_point_logo_object_key"`
+	MergedIntoID              pgtype.Int8        `json:"merged_into_id"`
 	PortalAppointmentsEnabled bool               `json:"portal_appointments_enabled"`
 }
 
@@ -817,6 +821,10 @@ func (q *Queries) GetPortalAppointmentDealer(ctx context.Context, arg GetPortalA
 		&i.EinvoiceRegistered,
 		&i.EinvoiceAlias,
 		&i.InvoiceEmail,
+		&i.ServicePointEnabled,
+		&i.ServicePointName,
+		&i.ServicePointLogoObjectKey,
+		&i.MergedIntoID,
 		&i.PortalAppointmentsEnabled,
 	)
 	return i, err
@@ -1177,7 +1185,7 @@ func (q *Queries) ListAppointmentsByPlan(ctx context.Context, arg ListAppointmen
 
 const listPortalAppointments = `-- name: ListPortalAppointments :many
 SELECT a.id, a.uuid, a.organization_id, a.brand_id, a.customer_user_id, a.vehicle_id, a.starts_at, a.ends_at, a.estimated_minutes, a.source, a.status, a.cancel_reason, a.lead_id, a.service_id, a.note, a.created_by_user_id, a.reminded_24h_at, a.reminded_2h_at, a.created_at, a.updated_at, a.deleted_at, a.plan_id,
-       o.uuid AS dealer_uuid, o.name AS dealer_name,
+       o.uuid AS dealer_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS dealer_name,
        v.uuid AS vehicle_uuid, v.plate AS vehicle_plate
 FROM appointments a
 JOIN organizations o ON o.id = a.organization_id

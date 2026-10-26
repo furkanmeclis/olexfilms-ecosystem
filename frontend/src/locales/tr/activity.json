@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "e-Fatura XSLT şablonu yüklendi",
   "actions.einvoice.xslt_reset": "e-Fatura XSLT şablonu varsayılana döndü",
   "actions.einvoice.buyer_profile_updated": "Alıcı fatura profili güncellendi",
-  "resources.einvoices": "e-Faturalar"
+  "resources.einvoices": "e-Faturalar",
+  "actions.services.created_on_behalf": "Bayi adına hizmet açıldı"
 }

@@ -348,3 +348,17 @@ SET status = sqlc.arg(status),
     access_ends_at = sqlc.narg(access_ends_at)
 WHERE uuid = sqlc.arg(uuid) AND brand_id = sqlc.arg(brand_id) AND deleted_at IS NULL
 RETURNING *;
+
+-- name: UpdateOrganizationServicePoint :one
+-- TEC-1003: the center's service point (customer-facing name and switch).
+UPDATE organizations
+SET service_point_enabled = COALESCE(sqlc.narg(enabled)::boolean, service_point_enabled),
+    service_point_name = CASE WHEN sqlc.arg(set_name)::boolean THEN sqlc.narg(name)::varchar ELSE service_point_name END
+WHERE id = sqlc.arg(id) AND type = 'center' AND deleted_at IS NULL
+RETURNING *;
+
+-- name: SetOrganizationServicePointLogo :one
+UPDATE organizations
+SET service_point_logo_object_key = sqlc.narg(object_key)
+WHERE uuid = sqlc.arg(uuid) AND type = 'center' AND deleted_at IS NULL
+RETURNING *;

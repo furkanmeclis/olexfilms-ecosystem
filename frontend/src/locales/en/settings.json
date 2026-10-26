@@ -174,5 +174,10 @@
   "system.groups.einvoice": "e-Invoice",
   "system.groups.einvoice_hint": "UBL-TR e-Fatura and e-Arşiv invoices.",
   "system.keys.einvoice_default_vat_rate": "Default VAT rate (%)",
-  "system.keys.einvoice_default_vat_rate_hint": "Rate applied to an invoice line whose product or category has no VAT rate. 0% needs an exemption code and cannot be chosen here."
+  "system.keys.einvoice_default_vat_rate_hint": "Rate applied to an invoice line whose product or category has no VAT rate. 0% needs an exemption code and cannot be chosen here.",
+  "service_point.title": "Service point",
+  "service_point.hint": "While on, this name and logo are shown to customers on the warranty page and PDF, the portal and WhatsApp messages; the panel keeps the organization name.",
+  "service_point.enabled": "Show the service point name to customers",
+  "service_point.name": "Service point name",
+  "service_point.no_logo": "No logo; the organization logo is used."
 }

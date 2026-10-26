@@ -2291,6 +2291,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/organizations/service-point-logo/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream a center's service point logo (TEC-1003) */
+        get: operations["getPublicServicePointLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/organizations/meta": {
         parameters: {
             query?: never;
@@ -3394,6 +3411,27 @@ export interface paths {
         head?: never;
         /** Update organization export letterhead */
         patch: operations["patchTenantSettings"];
+        trace?: never;
+    };
+    "/v1/tenant/settings/service-point-logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload the center's service point logo (TEC-1003)
+         * @description Multipart form field `logo`, same rules as the letterhead logo. Brand center only (400 elsewhere).
+         */
+        put: operations["putTenantServicePointLogo"];
+        post?: never;
+        /** Remove the service point logo (the organization logo shows again) */
+        delete: operations["deleteTenantServicePointLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/tenant/settings/logo": {
@@ -19968,6 +20006,18 @@ export interface components {
             /** @description TEC-240 map position (WGS84); null together with longitude when unset. */
             latitude?: number | null;
             longitude?: number | null;
+            service_point?: components["schemas"]["TenantServicePoint"];
+        };
+        /**
+         * @description TEC-1003, brand center only (absent elsewhere). While enabled, the
+         *     name and logo replace the organization's on customer surfaces
+         *     (warranty page and PDF, service / measurement PDFs, portal,
+         *     WhatsApp); the panel keeps the organization name.
+         */
+        TenantServicePoint: {
+            enabled: boolean;
+            name: string | null;
+            logo_url: string | null;
         };
         PatchTenantSettingsRequest: {
             company_name?: string;
@@ -19989,6 +20039,10 @@ export interface components {
              */
             latitude?: number | null;
             longitude?: number | null;
+            /** @description TEC-1003, brand center only (400 elsewhere). */
+            service_point_enabled?: boolean;
+            /** @description TEC-1003, brand center only; an empty string clears it. */
+            service_point_name?: string;
         };
         NearbyDealer: {
             /**
@@ -25093,6 +25147,15 @@ export interface components {
             warranties?: components["schemas"]["ServiceWarranty"][];
         };
         ServiceCreateInput: {
+            /**
+             * Format: uuid
+             * @description TEC-1003. The brand center opens the service for one of its
+             *     active dealers (inside its services.write scope); the service
+             *     belongs to the dealer and the action is written to the activity
+             *     log (services.created_on_behalf). Omitted or the active
+             *     organization: the active organization. Any other caller: 400.
+             */
+            organization_uuid?: string;
             /** Format: uuid */
             customer_uuid: string;
             /** Format: uuid */
@@ -34514,6 +34577,27 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    getPublicServicePointLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logo bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
     getPlatformOrganizationsMeta: {
         parameters: {
             query?: never;
@@ -36376,6 +36460,54 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    putTenantServicePointLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTenantSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteTenantServicePointLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTenantSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
         };
     };

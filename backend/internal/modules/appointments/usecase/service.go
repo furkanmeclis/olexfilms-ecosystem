@@ -1126,7 +1126,9 @@ func (s *Service) emit(ctx context.Context, tx pgx.Tx, name string, a db.Appoint
 	}
 	id, uid := a.ID, a.Uuid
 	var organizationName, plate string
-	_ = tx.QueryRow(ctx, `SELECT name FROM organizations WHERE id = $1`, a.OrganizationID).Scan(&organizationName)
+	// TEC-1003: customers see the center's service point name.
+	_ = tx.QueryRow(ctx, `SELECT org_customer_name(type, name, service_point_enabled, service_point_name)
+		FROM organizations WHERE id = $1`, a.OrganizationID).Scan(&organizationName)
 	if a.VehicleID.Valid {
 		_ = tx.QueryRow(ctx, `SELECT COALESCE(plate, '') FROM vehicles WHERE id = $1`, a.VehicleID.Int64).Scan(&plate)
 	}

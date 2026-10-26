@@ -363,5 +363,11 @@
   "service_no.scan": "Scan QR code",
   "service_no.scan_title": "Scan the warranty card",
   "service_no.scan_description": "Show the card's QR code to the camera; the number is filled in.",
-  "service_no.camera_denied": "The camera is not available. Type the number or use a QR scanner."
+  "service_no.camera_denied": "The camera is not available. Type the number or use a QR scanner.",
+  "network_scope.label": "Service scope",
+  "network_scope.own": "Our own",
+  "network_scope.network": "Whole network",
+  "wizard.performer": "Performed by",
+  "wizard.performer_own": "{{name}} (our service point)",
+  "wizard.performer_hint": "If you pick a dealer, the service is opened for that dealer and the action is logged."
 }

@@ -44,9 +44,11 @@ var (
 // them here (organizations, users, customers, catalog, stock, services, ...).
 func olexSteps() []Step {
 	return []Step{
-		OrganizationsStep{}, // TEC-254: center, TR distributor, dealers
-		UsersStep{},         // TEC-254: users, memberships, roles
-		CustomersStep{},     // TEC-255: customers -> users, profiles, dealer links
+		// TEC-254: center and dealers; TEC-1003: the TR distributor of
+		// earlier runs and the AFM Florya service point merge into the center.
+		OrganizationsStep{ServicePointDealerID: OlexServicePointDealerID},
+		UsersStep{},     // TEC-254: users, memberships, roles
+		CustomersStep{}, // TEC-255: customers -> users, profiles, dealer links
 
 		// TEC-256: car brands, models and brand logos; product categories,
 		// products and the warehouse product match.

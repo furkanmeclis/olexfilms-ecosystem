@@ -174,5 +174,10 @@
   "system.groups.einvoice": "Электронный счёт",
   "system.groups.einvoice_hint": "Счета UBL-TR e-Fatura и e-Arşiv.",
   "system.keys.einvoice_default_vat_rate": "Ставка НДС по умолчанию (%)",
-  "system.keys.einvoice_default_vat_rate_hint": "Ставка для строки счёта, у товара или категории которой нет ставки НДС. Ставка 0% требует кода освобождения и здесь недоступна."
+  "system.keys.einvoice_default_vat_rate_hint": "Ставка для строки счёта, у товара или категории которой нет ставки НДС. Ставка 0% требует кода освобождения и здесь недоступна.",
+  "service_point.title": "Сервисный пункт",
+  "service_point.hint": "Когда включено, клиенты видят это имя и логотип на странице и в PDF гарантии, в портале и WhatsApp; в панели остаётся название организации.",
+  "service_point.enabled": "Показывать клиентам название сервисного пункта",
+  "service_point.name": "Название сервисного пункта",
+  "service_point.no_logo": "Нет логотипа; используется логотип организации."
 }

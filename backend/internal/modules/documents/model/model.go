@@ -30,6 +30,17 @@ const (
 	KindPriceList = "price_list"
 )
 
+// CustomerFacing reports whether a document kind goes to customers: it
+// carries the service point name and logo of the center (TEC-1003). Order
+// slips, invoice views and price lists are B2B and keep the organization.
+func CustomerFacing(kind string) bool {
+	switch kind {
+	case KindService, KindMeasurement, KindContract, KindWarranty, KindQuote, KindFleetReport:
+		return true
+	}
+	return false
+}
+
 // Languages a template may be written in (K10: 12 languages + Arabic).
 // A missing language falls back to en.
 var Languages = []string{"tr", "en", "bg", "de", "el", "uk", "ru", "fr", "es", "it", "zh_CN", "az", "ar"}

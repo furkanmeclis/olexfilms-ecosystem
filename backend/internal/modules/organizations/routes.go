@@ -39,6 +39,7 @@ func RegisterRoutes(
 	mux.HandleFunc("POST /v1/public/organizations/register", h.PublicRegister)
 	mux.HandleFunc("GET /v1/public/organizations/by-slug/{slug}", h.PublicBySlug)
 	mux.HandleFunc("GET /v1/public/organizations/logo/{uuid}", h.PublicStreamLogo)
+	mux.HandleFunc("GET /v1/public/organizations/service-point-logo/{uuid}", h.PublicStreamServicePointLogo)
 	mux.HandleFunc("GET /v1/public/brand", h.PublicBrand)
 	mux.HandleFunc("GET /v1/public/dealers", h.PublicDealerCodes)
 	mux.HandleFunc("GET /v1/public/dealers/nearby", h.PublicNearbyDealers)
@@ -96,4 +97,7 @@ func RegisterRoutes(
 	mux.Handle("PATCH /v1/tenant/settings", tenantSettingsWrite(h.TenantPatchSettings))
 	mux.Handle("PUT /v1/tenant/settings/logo", tenantSettingsWrite(h.TenantUploadLogo))
 	mux.Handle("DELETE /v1/tenant/settings/logo", tenantSettingsWrite(h.TenantDeleteLogo))
+	// TEC-1003: the center's service point logo.
+	mux.Handle("PUT /v1/tenant/settings/service-point-logo", tenantSettingsWrite(h.TenantUploadServicePointLogo))
+	mux.Handle("DELETE /v1/tenant/settings/service-point-logo", tenantSettingsWrite(h.TenantDeleteServicePointLogo))
 }

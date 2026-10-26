@@ -14,6 +14,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/certtheme"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -268,6 +269,8 @@ func (s *CertificateService) certificate(ctx context.Context, svc db.Service, ro
 	if err != nil {
 		return Certificate{}, fmt.Errorf("warranty certificate: organization: %w", err)
 	}
+	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	org = orgbrand.ForCustomer(org)
 	refs, err := s.q.GetServiceRefs(ctx, svc.ID)
 	if err != nil {
 		return Certificate{}, fmt.Errorf("warranty certificate: refs: %w", err)

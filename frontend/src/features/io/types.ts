@@ -123,6 +123,8 @@ export type AppSettings = {
   /** TEC-240 map position; tenant settings only (null when unset). */
   latitude?: TenantSettingsSchema["latitude"];
   longitude?: TenantSettingsSchema["longitude"];
+  /** TEC-1003: the brand center's service point (tenant settings only). */
+  service_point?: TenantSettingsSchema["service_point"];
 };
 
 type TenantSettingsSchema = components["schemas"]["TenantSettings"];

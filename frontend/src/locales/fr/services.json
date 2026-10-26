@@ -363,5 +363,11 @@
   "service_no.scan": "Scanner le QR code",
   "service_no.scan_title": "Scannez la carte de garantie",
   "service_no.scan_description": "Présentez le QR code de la carte à la caméra ; le numéro est rempli.",
-  "service_no.camera_denied": "Caméra indisponible. Saisissez le numéro ou utilisez un lecteur QR."
+  "service_no.camera_denied": "Caméra indisponible. Saisissez le numéro ou utilisez un lecteur QR.",
+  "network_scope.label": "Périmètre des services",
+  "network_scope.own": "Les nôtres",
+  "network_scope.network": "Tout le réseau",
+  "wizard.performer": "Réalisé par",
+  "wizard.performer_own": "{{name}} (notre point de service)",
+  "wizard.performer_hint": "Si vous choisissez un revendeur, le service est ouvert pour lui et l'action est journalisée."
 }

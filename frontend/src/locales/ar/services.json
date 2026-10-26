@@ -363,5 +363,11 @@
   "service_no.scan": "مسح رمز QR",
   "service_no.scan_title": "امسح بطاقة الضمان",
   "service_no.scan_description": "وجّه رمز QR الخاص بالبطاقة إلى الكاميرا؛ سيُملأ الرقم.",
-  "service_no.camera_denied": "الكاميرا غير متاحة. أدخل الرقم يدويًا أو استخدم قارئ QR."
+  "service_no.camera_denied": "الكاميرا غير متاحة. أدخل الرقم يدويًا أو استخدم قارئ QR.",
+  "network_scope.label": "نطاق الخدمات",
+  "network_scope.own": "خدماتنا",
+  "network_scope.network": "الشبكة كاملة",
+  "wizard.performer": "المنفّذ",
+  "wizard.performer_own": "{{name}} (نقطة خدمتنا)",
+  "wizard.performer_hint": "إذا اخترت وكيلًا تُفتح الخدمة باسمه ويُسجَّل الإجراء."
 }

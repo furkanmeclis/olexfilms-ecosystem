@@ -103,7 +103,7 @@ func NormalizePrice(field, raw string) (string, error) {
 
 // Price sources of the effective purchase price.
 const (
-	SourceList        = "list"        // center list price (sale to distributors)
+	SourceList        = "list"        // center list price (sale to distributors and to dealers under the center)
 	SourceOverride    = "override"    // distributor-specific price set by the center
 	SourceDistributor = "distributor" // the parent distributor's dealer price
 	SourceOwn         = "own"         // the center's own purchase price
@@ -318,7 +318,9 @@ func (s *Service) distributorPrices(ctx context.Context, v Viewer, ids []int64, 
 }
 
 // Dealer: only its purchase price, i.e. the dealer price of its parent
-// distributor (K8). A dealer without a distributor parent sees no price.
+// distributor (K8), or for a dealer directly under the center (Türkiye,
+// TEC-1003) the center's sale price. A dealer without such a parent sees no
+// price.
 func (s *Service) dealerPrices(ctx context.Context, v Viewer, ids []int64, at func(int64, string) *EffectivePrice) error {
 	if !v.PurchaseRead {
 		return nil
@@ -330,7 +332,23 @@ func (s *Service) dealerPrices(ctx context.Context, v Viewer, ids []int64, at fu
 	if err != nil {
 		return fmt.Errorf("supplier: %w", err)
 	}
-	if parent.Type != OrgDistributor || parent.BrandID != v.BrandID {
+	if parent.BrandID != v.BrandID {
+		return nil
+	}
+	if parent.Type == OrgCenter {
+		rows, err := s.q.ListProductPricesForProducts(ctx, db.ListProductPricesForProductsParams{BrandID: v.BrandID, ProductIds: ids})
+		if err != nil {
+			return fmt.Errorf("list prices: %w", err)
+		}
+		for _, r := range rows {
+			if p := numericText(r.SaleToDistributorPrice); p != nil {
+				e := at(r.ProductID, r.Currency)
+				e.PurchasePrice, e.PurchasePriceSource = p, SourceList
+			}
+		}
+		return nil
+	}
+	if parent.Type != OrgDistributor {
 		return nil
 	}
 	rows, err := s.q.ListDealerPricesForProducts(ctx, db.ListDealerPricesForProductsParams{

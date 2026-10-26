@@ -363,5 +363,11 @@
   "service_no.scan": "Сканувати QR-код",
   "service_no.scan_title": "Скануйте гарантійну картку",
   "service_no.scan_description": "Покажіть QR-код картки камері; номер буде заповнено.",
-  "service_no.camera_denied": "Камера недоступна. Введіть номер вручну або скористайтеся QR-сканером."
+  "service_no.camera_denied": "Камера недоступна. Введіть номер вручну або скористайтеся QR-сканером.",
+  "network_scope.label": "Охоплення послуг",
+  "network_scope.own": "Наші",
+  "network_scope.network": "Уся мережа",
+  "wizard.performer": "Виконавець",
+  "wizard.performer_own": "{{name}} (наш сервісний пункт)",
+  "wizard.performer_hint": "Якщо обрати дилера, послугу буде відкрито від його імені, дію записано в журнал."
 }

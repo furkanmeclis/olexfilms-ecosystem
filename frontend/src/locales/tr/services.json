@@ -363,5 +363,11 @@
   "service_no.scan": "Karekodu okut",
   "service_no.scan_title": "Garanti kartını okutun",
   "service_no.scan_description": "Kartın karekodunu kameraya gösterin; numara alana yazılır.",
-  "service_no.camera_denied": "Kameraya erişilemedi. Numarayı elle girin veya karekod okuyucuyla okutun."
+  "service_no.camera_denied": "Kameraya erişilemedi. Numarayı elle girin veya karekod okuyucuyla okutun.",
+  "network_scope.label": "Hizmet kapsamı",
+  "network_scope.own": "Kendi hizmetlerimiz",
+  "network_scope.network": "Tüm ağ",
+  "wizard.performer": "Hizmeti yapan",
+  "wizard.performer_own": "{{name}} (kendi hizmet noktamız)",
+  "wizard.performer_hint": "Bir bayi seçerseniz hizmet o bayiye ait açılır ve işlem kayda geçer."
 }

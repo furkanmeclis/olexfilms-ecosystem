@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "Загружен XSLT-шаблон электронных счетов",
   "actions.einvoice.xslt_reset": "XSLT-шаблон электронных счетов сброшен на стандартный",
   "actions.einvoice.buyer_profile_updated": "Профиль счетов покупателя обновлён",
-  "resources.einvoices": "Электронные счета"
+  "resources.einvoices": "Электронные счета",
+  "actions.services.created_on_behalf": "Услуга открыта от имени дилера"
 }

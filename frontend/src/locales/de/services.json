@@ -363,5 +363,11 @@
   "service_no.scan": "QR-Code scannen",
   "service_no.scan_title": "Garantiekarte scannen",
   "service_no.scan_description": "Halten Sie den QR-Code der Karte vor die Kamera; die Nummer wird eingetragen.",
-  "service_no.camera_denied": "Kein Kamerazugriff. Geben Sie die Nummer ein oder nutzen Sie einen QR-Scanner."
+  "service_no.camera_denied": "Kein Kamerazugriff. Geben Sie die Nummer ein oder nutzen Sie einen QR-Scanner.",
+  "network_scope.label": "Servicebereich",
+  "network_scope.own": "Eigene",
+  "network_scope.network": "Gesamtes Netz",
+  "wizard.performer": "Ausgeführt von",
+  "wizard.performer_own": "{{name}} (eigener Servicepunkt)",
+  "wizard.performer_hint": "Wählen Sie einen Händler, wird der Service für ihn eröffnet und protokolliert."
 }

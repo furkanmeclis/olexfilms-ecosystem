@@ -174,5 +174,10 @@
   "system.groups.einvoice": "E-faktura",
   "system.groups.einvoice_hint": "UBL-TR e-Fatura və e-Arşiv fakturaları.",
   "system.keys.einvoice_default_vat_rate": "Standart ƏDV dərəcəsi (%)",
-  "system.keys.einvoice_default_vat_rate_hint": "Məhsulunda və ya kateqoriyasında ƏDV dərəcəsi olmayan faktura sətrinə tətbiq edilən dərəcə. 0% azadolma kodu tələb etdiyi üçün burada seçilə bilməz."
+  "system.keys.einvoice_default_vat_rate_hint": "Məhsulunda və ya kateqoriyasında ƏDV dərəcəsi olmayan faktura sətrinə tətbiq edilən dərəcə. 0% azadolma kodu tələb etdiyi üçün burada seçilə bilməz.",
+  "service_point.title": "Xidmət nöqtəsi",
+  "service_point.hint": "Aktiv olduqda bu ad və loqo zəmanət səhifəsi və PDF-də, portalda və WhatsApp-da müştəriyə göstərilir; paneldə qurum adı qalır.",
+  "service_point.enabled": "Müştərilərə xidmət nöqtəsinin adını göstər",
+  "service_point.name": "Xidmət nöqtəsinin adı",
+  "service_point.no_logo": "Loqo yoxdur; qurumun loqosu istifadə olunur."
 }

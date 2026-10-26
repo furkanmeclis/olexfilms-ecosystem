@@ -71,6 +71,11 @@ func (s *Service) enqueueCreated(ctx context.Context, tx pgx.Tx, c Caller, user 
 	if s.out == nil || s.portal == "" || !welcomeWanted(user, p) {
 		return nil
 	}
+	// TEC-1003: the welcome message names the center's service point.
+	if err := tx.QueryRow(ctx, `SELECT org_customer_name(type, name, service_point_enabled, service_point_name)
+		FROM organizations WHERE id = $1`, c.Org.InternalID).Scan(&c.Org.Name); err != nil {
+		return fmt.Errorf("customers: organization name: %w", err)
+	}
 	if err := s.out.Enqueue(ctx, tx, CreatedEvent(c, user, s.portal)); err != nil {
 		return fmt.Errorf("customers: outbox: %w", err)
 	}

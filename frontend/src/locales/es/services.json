@@ -363,5 +363,11 @@
   "service_no.scan": "Escanear QR",
   "service_no.scan_title": "Escanee la tarjeta de garantía",
   "service_no.scan_description": "Muestre el código QR de la tarjeta a la cámara; el número se completa.",
-  "service_no.camera_denied": "La cámara no está disponible. Escriba el número o use un lector QR."
+  "service_no.camera_denied": "La cámara no está disponible. Escriba el número o use un lector QR.",
+  "network_scope.label": "Alcance de servicios",
+  "network_scope.own": "Propios",
+  "network_scope.network": "Toda la red",
+  "wizard.performer": "Realizado por",
+  "wizard.performer_own": "{{name}} (nuestro punto de servicio)",
+  "wizard.performer_hint": "Si elige un distribuidor, el servicio se abre a su nombre y la acción queda registrada."
 }

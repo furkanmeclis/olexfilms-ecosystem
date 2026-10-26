@@ -612,6 +612,33 @@ func (s *Service) ClearLogo(ctx context.Context, id uuid.UUID) (Organization, er
 	return mapOrganization(row), nil
 }
 
+// SetServicePointLogo stores the center's service point logo (TEC-1003);
+// an empty key clears it.
+func (s *Service) SetServicePointLogo(ctx context.Context, id uuid.UUID, objectKey string) error {
+	_, err := s.q.SetOrganizationServicePointLogo(ctx, db.SetOrganizationServicePointLogoParams{
+		Uuid: id, ObjectKey: pgtype.Text{String: objectKey, Valid: objectKey != ""},
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	return err
+}
+
+// ServicePointLogoObjectKey returns the stored service point logo key.
+func (s *Service) ServicePointLogoObjectKey(ctx context.Context, id uuid.UUID) (string, error) {
+	row, err := s.q.GetOrganizationByUUID(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrNotFound
+		}
+		return "", err
+	}
+	if !row.ServicePointLogoObjectKey.Valid || row.ServicePointLogoObjectKey.String == "" {
+		return "", ErrNotFound
+	}
+	return row.ServicePointLogoObjectKey.String, nil
+}
+
 // LogoObjectKey returns stored logo key.
 func (s *Service) LogoObjectKey(ctx context.Context, id uuid.UUID) (string, error) {
 	row, err := s.q.GetOrganizationByUUID(ctx, id)
