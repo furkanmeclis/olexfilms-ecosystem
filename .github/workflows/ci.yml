@@ -408,13 +408,17 @@ jobs:
             echo "::error::a required CI job failed or was cancelled"; exit 1
           fi
 
-  # TEC-1011: every green push to main that touched mobile/ (or the OpenAPI
-  # spec, changes.mobile) starts an iOS production build on EAS and
-  # auto-submits it to TestFlight (ASC app in mobile/eas.json). The build and
-  # the upload run on EAS; this job only triggers them (--no-wait). Build
-  # numbers come from the EAS remote counter (appVersionSource: remote,
-  # autoIncrement). Needs the EXPO_TOKEN secret. Manual run: workflow_dispatch
-  # is a full run, so it builds regardless of the changed paths.
+  # TEC-1011 + TEC-854: every green push to main that touched mobile/ (or the
+  # OpenAPI spec, changes.mobile) ships the app. Decided by the native
+  # fingerprint against the latest finished store build on EAS:
+  #   unchanged -> JS-only change -> `eas update` on the production channel
+  #                (reaches the TestFlight/App Store binaries over the air)
+  #   changed, or no previous build -> `eas build --auto-submit` -> new
+  #                TestFlight build (native dependency, config plugin, SDK).
+  # Both run on EAS; this job only triggers them. Build numbers come from the
+  # EAS remote counter (appVersionSource: remote, autoIncrement). The bundle's
+  # env (EXPO_PUBLIC_API_URL) comes from the EAS "production" environment.
+  # Needs the EXPO_TOKEN secret. workflow_dispatch runs the same decision.
   mobile-release:
     needs: [changes, ci]
     if: >-
@@ -425,6 +429,8 @@ jobs:
     defaults:
       run:
         working-directory: mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -433,14 +439,43 @@ jobs:
           cache: npm
           cache-dependency-path: mobile/package-lock.json
       - name: Install
-        run: npm ci
-      - name: EAS build + TestFlight submit
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
             echo "::error::EXPO_TOKEN secret is not set"; exit 1
           fi
+          npm ci
+      - name: Fingerprint vs latest store build
+        id: fp
+        run: |
+          # --json still prints progress lines to stdout; keep from the JSON start.
+          last=$(npx eas-cli@latest build:list -p ios --status finished \
+            --distribution store --limit 1 --json --non-interactive \
+            | sed -n '/^\[/,$p' | jq -r '.[0].id // empty')
+          if [ -z "$last" ]; then
+            echo "no finished store build on EAS yet -> build"
+            echo "mode=build" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          cmp=$(npx eas-cli@latest fingerprint:compare --build-id "$last" \
+            --environment production --json --non-interactive | sed -n '/^{/,$p')
+          remote=$(jq -r '.fingerprint1.hash // empty' <<<"$cmp")
+          local=$(jq -r '.fingerprint2.hash // empty' <<<"$cmp")
+          echo "latest build $last fingerprint=$remote local=$local"
+          if [ -n "$remote" ] && [ "$remote" = "$local" ]; then
+            echo "mode=update" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=build" >> "$GITHUB_OUTPUT"
+          fi
+          echo "last=$last" >> "$GITHUB_OUTPUT"
+      - name: OTA update (fingerprint unchanged)
+        if: steps.fp.outputs.mode == 'update'
+        run: |
+          npx eas-cli@latest update --channel production --platform ios \
+            --environment production --non-interactive \
+            --message "${GITHUB_SHA::8}: $(git log -1 --format=%s | cut -c1-100)"
+          echo "EAS OTA update published to channel production (same fingerprint as build ${{ steps.fp.outputs.last }})" >> "$GITHUB_STEP_SUMMARY"
+      - name: EAS build + TestFlight submit (fingerprint changed)
+        if: steps.fp.outputs.mode == 'build'
+        run: |
           npx eas-cli@latest build -p ios --profile production \
             --auto-submit --non-interactive --no-wait
           echo "EAS iOS production build queued (auto-submit to TestFlight)" >> "$GITHUB_STEP_SUMMARY"

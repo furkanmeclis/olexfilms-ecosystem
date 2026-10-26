@@ -43,24 +43,33 @@ Later native modules (BLE, plate recognition) also need the development build.
 | `npm run uniwind:types` | Regenerates `src/uniwind-types.d.ts` (Metro also does this on start) |
 | `npm run doctor` | `expo-doctor` |
 
-## TestFlight (TEC-1011)
+## TestFlight and OTA from CI (TEC-1011)
 
-- Store build and upload run on EAS, started by CI: every green push to `main` that
-  touched `mobile/` (or `docs/openapi.yaml`) runs the `mobile-release` job, which calls
-  `eas build -p ios --profile production --auto-submit --no-wait` from `mobile/`.
-  Re-run by hand with the workflow's `workflow_dispatch` (builds regardless of paths).
+- Every green push to `main` that touched `mobile/` (or `docs/openapi.yaml`) runs the
+  `mobile-release` job from `mobile/`. It compares the native fingerprint with the latest
+  finished store build on EAS (`eas fingerprint:compare --build-id …`):
+  - **unchanged** → JS-only change → `eas update --channel production` (OTA; the TestFlight
+    binary picks it up on next foreground/cold start, see "OTA updates" below);
+  - **changed** (native dependency, config plugin, `app.json` native field, SDK) or no
+    previous build → `eas build -p ios --profile production --auto-submit --no-wait` → new
+    TestFlight build.
+  Re-run by hand with the workflow's `workflow_dispatch` (same decision).
 - Same EAS project (`@furkanmeclis/olexfilms`), bundle id `com.olexfilms.app` and
   App Store Connect record (ascAppId in `eas.json`) as the previous Olexfilms app, so
   builds land in the existing TestFlight app and its internal tester group.
 - Build numbers: `appVersionSource: remote` + `autoIncrement`; the counter lives on EAS
-  (`eas build:version:get -p ios`), nothing to commit. It was set to 45 after the last
-  Xcode-uploaded 1.0.0 (44). The marketing version is `version` in `app.json`.
-- `EXPO_PUBLIC_API_URL` for builds comes from the EAS environment of the profile
-  (`eas env:list --environment production`), not from the repo: `https://olexfilms.app/api`.
-- Secrets: GitHub repo secret `EXPO_TOKEN` (an expo.dev access token); Apple distribution
-  certificate, provisioning profile and ASC API key are stored on EAS (`eas credentials -p ios`).
+  (`eas build:version:get -p ios`), nothing to commit. The marketing version is `version`
+  in `app.json`.
+- `EXPO_PUBLIC_API_URL` for builds and updates comes from the EAS `production`
+  environment (`eas env:list --environment production`), not from the repo. Until the
+  cutover it is the staging host; switch it there, never in the repo.
+- Secrets: GitHub repo secret `EXPO_TOKEN` (Expo robot user "GitHub App"); Apple
+  distribution certificate, provisioning profile and ASC API key are stored on EAS
+  (`eas credentials -p ios`).
 - Status: `eas submit:status -p ios --profile production` shows processing and TestFlight
-  state straight from App Store Connect.
+  state straight from App Store Connect; `eas channel:view production` the latest OTA.
+- In this monorepo the EAS CLI may pick the wrong root locally; run it with
+  `EAS_PROJECT_ROOT=$PWD` from `mobile/`.
 
 ## OTA updates
 
