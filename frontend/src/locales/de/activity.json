@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "XSLT-Vorlage für E-Rechnungen hochgeladen",
   "actions.einvoice.xslt_reset": "XSLT-Vorlage für E-Rechnungen auf Standard zurückgesetzt",
   "actions.einvoice.buyer_profile_updated": "Rechnungsprofil des Käufers aktualisiert",
-  "resources.einvoices": "E-Rechnungen"
+  "resources.einvoices": "E-Rechnungen",
+  "actions.services.created_on_behalf": "Service für Händler eröffnet"
 }

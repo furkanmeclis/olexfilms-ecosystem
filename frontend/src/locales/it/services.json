@@ -363,5 +363,11 @@
   "service_no.scan": "Scansiona QR",
   "service_no.scan_title": "Scansiona la scheda di garanzia",
   "service_no.scan_description": "Mostra il QR code della scheda alla fotocamera; il numero viene compilato.",
-  "service_no.camera_denied": "Fotocamera non disponibile. Digita il numero o usa un lettore QR."
+  "service_no.camera_denied": "Fotocamera non disponibile. Digita il numero o usa un lettore QR.",
+  "network_scope.label": "Ambito dei servizi",
+  "network_scope.own": "Nostri",
+  "network_scope.network": "Tutta la rete",
+  "wizard.performer": "Eseguito da",
+  "wizard.performer_own": "{{name}} (nostro punto di servizio)",
+  "wizard.performer_hint": "Se scegli un rivenditore, il servizio viene aperto per lui e l'azione viene registrata."
 }

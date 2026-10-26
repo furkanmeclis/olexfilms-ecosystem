@@ -684,7 +684,7 @@ func (q *Queries) ListOrganizationStockUnitRows(ctx context.Context, arg ListOrg
 }
 
 const listOrganizationsByIDs = `-- name: ListOrganizationsByIDs :many
-SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email FROM organizations WHERE id = ANY($1::bigint[])
+SELECT id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id FROM organizations WHERE id = ANY($1::bigint[])
 `
 
 func (q *Queries) ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Organization, error) {
@@ -742,6 +742,10 @@ func (q *Queries) ListOrganizationsByIDs(ctx context.Context, ids []int64) ([]Or
 			&i.EinvoiceRegistered,
 			&i.EinvoiceAlias,
 			&i.InvoiceEmail,
+			&i.ServicePointEnabled,
+			&i.ServicePointName,
+			&i.ServicePointLogoObjectKey,
+			&i.MergedIntoID,
 		); err != nil {
 			return nil, err
 		}

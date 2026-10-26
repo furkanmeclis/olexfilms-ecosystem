@@ -136,7 +136,7 @@ LIMIT sqlc.arg(page_limit) OFFSET sqlc.arg(page_offset);
 -- name: ListPortalAppointments :many
 -- TEC-327: the dealer and vehicle labels the portal list shows.
 SELECT sqlc.embed(a),
-       o.uuid AS dealer_uuid, o.name AS dealer_name,
+       o.uuid AS dealer_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS dealer_name,
        v.uuid AS vehicle_uuid, v.plate AS vehicle_plate
 FROM appointments a
 JOIN organizations o ON o.id = a.organization_id
@@ -261,7 +261,7 @@ WITH claimed AS (
       AND u.phone_e164 IS NOT NULL
     RETURNING a.*
 )
-SELECT c.*, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+SELECT c.*, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, COALESCE(v.plate, '')::text AS plate
 FROM claimed c
 JOIN organizations o ON o.id = c.organization_id
 LEFT JOIN vehicles v ON v.id = c.vehicle_id;
@@ -281,7 +281,7 @@ WITH claimed AS (
       AND u.phone_e164 IS NOT NULL
     RETURNING a.*
 )
-SELECT c.*, o.name AS organization_name, COALESCE(v.plate, '')::text AS plate
+SELECT c.*, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, COALESCE(v.plate, '')::text AS plate
 FROM claimed c
 JOIN organizations o ON o.id = c.organization_id
 LEFT JOIN vehicles v ON v.id = c.vehicle_id;

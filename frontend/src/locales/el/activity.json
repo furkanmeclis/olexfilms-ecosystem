@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "Μεταφορτώθηκε πρότυπο XSLT ηλεκτρονικών τιμολογίων",
   "actions.einvoice.xslt_reset": "Το πρότυπο XSLT επανήλθε στο προεπιλεγμένο",
   "actions.einvoice.buyer_profile_updated": "Το προφίλ τιμολόγησης του αγοραστή ενημερώθηκε",
-  "resources.einvoices": "Ηλεκτρονικά τιμολόγια"
+  "resources.einvoices": "Ηλεκτρονικά τιμολόγια",
+  "actions.services.created_on_behalf": "Υπηρεσία ανοίχτηκε για αντιπρόσωπο"
 }

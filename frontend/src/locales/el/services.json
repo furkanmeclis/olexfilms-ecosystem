@@ -363,5 +363,11 @@
   "service_no.scan": "Σάρωση QR",
   "service_no.scan_title": "Σαρώστε την κάρτα εγγύησης",
   "service_no.scan_description": "Δείξτε τον κωδικό QR της κάρτας στην κάμερα· ο αριθμός συμπληρώνεται.",
-  "service_no.camera_denied": "Η κάμερα δεν είναι διαθέσιμη. Πληκτρολογήστε τον αριθμό ή χρησιμοποιήστε σαρωτή QR."
+  "service_no.camera_denied": "Η κάμερα δεν είναι διαθέσιμη. Πληκτρολογήστε τον αριθμό ή χρησιμοποιήστε σαρωτή QR.",
+  "network_scope.label": "Εύρος υπηρεσιών",
+  "network_scope.own": "Δικά μας",
+  "network_scope.network": "Όλο το δίκτυο",
+  "wizard.performer": "Εκτελείται από",
+  "wizard.performer_own": "{{name}} (δικό μας σημείο εξυπηρέτησης)",
+  "wizard.performer_hint": "Αν επιλέξετε αντιπρόσωπο, η υπηρεσία ανοίγει για αυτόν και η ενέργεια καταγράφεται."
 }

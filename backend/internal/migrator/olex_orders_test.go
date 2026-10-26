@@ -135,16 +135,17 @@ func TestOlexOrders(t *testing.T) {
 		t.Errorf("hub order 2 and its warehouse order map to %d orders, want 1", n)
 	}
 
+	// TEC-1003: TR dealers buy from the center.
 	want := []orderRow{
 		// hub 1: delivered -> received, two lines, three units.
-		{"", "received", "distributor", "", 2, "SYN-PPF-GLOSS=SYN-HUB-0002,SYN-PPF-GLOSS=SYN-HUB-0003,SYN-PPF-MATTE=SYN-HUB-0004", true, true},
+		{"", "received", "center", "", 2, "SYN-PPF-GLOSS=SYN-HUB-0002,SYN-PPF-GLOSS=SYN-HUB-0003,SYN-PPF-MATTE=SYN-HUB-0004", true, true},
 		// hub 2 + warehouse: the warehouse (updated later) decides: shipped.
 		// The Glorian warehouse line is skipped; the hub line keeps its unit.
-		{"SYN-WH-REF-0001", "shipped", "distributor", "", 1, "SYN-WIN-01=SYN-HUB-0006", true, true},
+		{"SYN-WH-REF-0001", "shipped", "center", "", 1, "SYN-WIN-01=SYN-HUB-0006", true, true},
 		// hub 3: pending -> submitted, not approved yet.
-		{"", "submitted", "distributor", "", 1, "", false, false},
+		{"", "submitted", "center", "", 1, "", false, false},
 		// warehouse-only draft.
-		{"SYN-WH-REF-0002", "draft", "distributor", "", 1, "", false, false},
+		{"SYN-WH-REF-0002", "draft", "center", "", 1, "", false, false},
 	}
 	got := orders()
 	if len(got) != len(want) {

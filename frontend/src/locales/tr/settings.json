@@ -174,5 +174,10 @@
   "system.groups.einvoice": "e-Fatura",
   "system.groups.einvoice_hint": "UBL-TR e-Fatura ve e-Arşiv faturaları.",
   "system.keys.einvoice_default_vat_rate": "Varsayılan KDV oranı (%)",
-  "system.keys.einvoice_default_vat_rate_hint": "Ürününde veya kategorisinde KDV oranı tanımlı olmayan fatura satırına uygulanan oran. %0 istisna kodu gerektirdiği için burada seçilemez."
+  "system.keys.einvoice_default_vat_rate_hint": "Ürününde veya kategorisinde KDV oranı tanımlı olmayan fatura satırına uygulanan oran. %0 istisna kodu gerektirdiği için burada seçilemez.",
+  "service_point.title": "Hizmet noktası",
+  "service_point.hint": "Açıkken bu ad ve logo garanti sayfası ve PDF'i, portal ve WhatsApp mesajlarında müşteriye gösterilir; panelde kurum adı kalır.",
+  "service_point.enabled": "Müşterilere hizmet noktası adını göster",
+  "service_point.name": "Hizmet noktası adı",
+  "service_point.no_logo": "Logo yok; kurum logosu kullanılır."
 }

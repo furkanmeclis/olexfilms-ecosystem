@@ -3,14 +3,11 @@ package migrator
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator/legacyfixture"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator/source"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
@@ -48,21 +45,6 @@ func newOrgsUsersEnv(t *testing.T) *orgsUsersEnv {
 	}
 
 	e := &orgsUsersEnv{t: t, ctx: ctx, pool: pool, system: "t" + uuid.NewString()[:8]}
-	q := db.New(pool)
-	brand, err := q.GetBrandBySlug(ctx, OlexBrandSlug)
-	if err != nil {
-		t.Fatal(err)
-	}
-	country, err := q.GetCountryByISO2(ctx, TRCountry)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = q.MigratorCountryDistributor(ctx, db.MigratorCountryDistributorParams{BrandID: brand.ID, CountryID: country.ID})
-	hadDistributor := err == nil
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		t.Fatal(err)
-	}
-
 	t.Cleanup(func() {
 		ctx := context.Background()
 		exec := func(sql string, args ...any) {
@@ -74,11 +56,6 @@ func newOrgsUsersEnv(t *testing.T) *orgsUsersEnv {
 			AND email = ANY($2)`, e.system, fixtureEmails)
 		exec(`DELETE FROM organizations WHERE uuid IN (SELECT target_uuid FROM migration_map WHERE source_system = $1 AND target_table = 'organizations')`, e.system)
 		exec(`DELETE FROM migration_map WHERE source_system = $1`, e.system)
-		if !hadDistributor {
-			exec(`DELETE FROM territories WHERE organization_id IN (SELECT id FROM organizations WHERE slug = $1)`, TRDistributorSlug)
-			exec(`DELETE FROM organizations WHERE slug = $1 AND type = 'distributor'
-				AND NOT EXISTS (SELECT 1 FROM organizations c WHERE c.parent_id = organizations.id)`, TRDistributorSlug)
-		}
 	})
 
 	e.runner = &Runner{
@@ -150,7 +127,7 @@ func (e *orgsUsersEnv) counts() tableCounts {
 }
 
 // TEC-254 acceptance over the legacy fixture: the three dealers land under
-// the Türkiye distributor, users / memberships / roles match the fixture, a
+// the brand center (TEC-1003: no Türkiye distributor), users / memberships / roles match the fixture, a
 // rerun creates nothing and an unmapped role shows up in the report.
 func TestOlexOrganizationsAndUsers(t *testing.T) {
 	e := newOrgsUsersEnv(t)
@@ -176,21 +153,11 @@ func TestOlexOrganizationsAndUsers(t *testing.T) {
 		t.Errorf("default role map left roles unmapped: %v", users)
 	}
 
-	// The tree: center -> TR distributor (with the TR territory) -> dealers.
-	var distributorID, centerID int64
-	var distributorParent int64
-	if err := pool.QueryRow(ctx, `
-		SELECT d.id, d.parent_id, c.id
-		FROM territories t
-		JOIN organizations d ON d.id = t.organization_id AND d.type = 'distributor'
-		JOIN organizations c ON c.type = 'center' AND c.brand_id = d.brand_id
-		JOIN brands b ON b.id = d.brand_id AND b.slug = 'olex'
-		JOIN countries co ON co.id = t.country_id AND co.iso2 = 'TR'
-		WHERE t.province_id IS NULL`).Scan(&distributorID, &distributorParent, &centerID); err != nil {
-		t.Fatalf("TR distributor territory: %v", err)
-	}
-	if distributorParent != centerID {
-		t.Errorf("distributor parent = %d, want center %d", distributorParent, centerID)
+	// The tree: center -> dealers (TEC-1003: no distributor, no territory).
+	var centerID int64
+	if err := pool.QueryRow(ctx, `SELECT o.id FROM organizations o JOIN brands b ON b.id = o.brand_id AND b.slug = 'olex'
+		WHERE o.type = 'center' AND o.deleted_at IS NULL`).Scan(&centerID); err != nil {
+		t.Fatalf("olex center: %v", err)
 	}
 
 	type dealer struct {
@@ -222,8 +189,8 @@ func TestOlexOrganizationsAndUsers(t *testing.T) {
 		t.Fatalf("dealers = %+v", got)
 	}
 	for id, d := range got {
-		if d.Parent != distributorID || d.Type != "dealer" || !d.Brd {
-			t.Errorf("dealer %s = %+v, want an olex dealer under distributor %d", id, d, distributorID)
+		if d.Parent != centerID || d.Type != "dealer" || !d.Brd {
+			t.Errorf("dealer %s = %+v, want an olex dealer under the center %d", id, d, centerID)
 		}
 		if !d.Province || !d.District {
 			t.Errorf("dealer %s address not mapped: %+v", id, d)
@@ -301,7 +268,7 @@ func TestOlexOrganizationsAndUsers(t *testing.T) {
 	for _, step := range []string{"organizations", "users"} {
 		c := stepCounts(t, second, step)
 		for _, k := range []string{cntCreated, cntUpdated, "members_created", "member_roles_created", "user_roles_created",
-			"center_created", "distributor_created", "territory_created"} {
+			"center_created", "distributor_merged", "service_point_merged"} {
 			if c[k] != 0 {
 				t.Errorf("rerun %s.%s = %d, want 0 (%v)", step, k, c[k], c)
 			}

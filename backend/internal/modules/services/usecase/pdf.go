@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/certtheme"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -192,6 +193,8 @@ func (p *PDFService) doc(ctx context.Context, svc db.Service, loc i18n.Locale) (
 	if err != nil {
 		return PDFDoc{}, fmt.Errorf("services pdf: organization: %w", err)
 	}
+	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	org = orgbrand.ForCustomer(org)
 	zone, err := time.LoadLocation(org.Timezone)
 	if err != nil || org.Timezone == "" {
 		zone = time.UTC

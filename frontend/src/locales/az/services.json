@@ -363,5 +363,11 @@
   "service_no.scan": "QR kodu oxut",
   "service_no.scan_title": "Zəmanət kartını oxudun",
   "service_no.scan_description": "Kartın QR kodunu kameraya göstərin; nömrə yazılacaq.",
-  "service_no.camera_denied": "Kameraya giriş yoxdur. Nömrəni əl ilə daxil edin və ya QR skanerdən istifadə edin."
+  "service_no.camera_denied": "Kameraya giriş yoxdur. Nömrəni əl ilə daxil edin və ya QR skanerdən istifadə edin.",
+  "network_scope.label": "Xidmət əhatəsi",
+  "network_scope.own": "Özümüzün",
+  "network_scope.network": "Bütün şəbəkə",
+  "wizard.performer": "İcra edən",
+  "wizard.performer_own": "{{name}} (öz xidmət nöqtəmiz)",
+  "wizard.performer_hint": "Diler seçsəniz, xidmət onun adına açılır və əməliyyat qeydə alınır."
 }

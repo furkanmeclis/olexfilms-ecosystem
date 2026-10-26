@@ -38,6 +38,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/msgtemplate"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
@@ -212,6 +213,8 @@ func (p *PDFService) GeneratePDF(ctx context.Context, resultID int64) error {
 	if err != nil {
 		return err
 	}
+	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	org = orgbrand.ForCustomer(org)
 	doc, err := p.buildDocument(ctx, qtx, row, org)
 	if err != nil {
 		return err
@@ -339,6 +342,8 @@ func (p *PDFService) RenderHTML(ctx context.Context, resultID int64) (Document, 
 	if err != nil {
 		return Document{}, err
 	}
+	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	org = orgbrand.ForCustomer(org)
 	return p.buildDocument(ctx, p.q, row, org)
 }
 

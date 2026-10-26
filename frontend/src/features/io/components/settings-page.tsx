@@ -7,6 +7,7 @@ import { Loading } from "@/components/common/loading";
 import { EntityPage } from "@/components/entity";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
+import { ServicePointCard } from "@/features/io/components/service-point-card";
 import { SettingsForm } from "@/features/io/components/settings-form";
 import { ioKeys } from "@/features/io/hooks/query-keys";
 import { McpEndpointsCard } from "@/features/mcp";
@@ -66,6 +67,19 @@ export function SettingsPage({ scope = "platform", slug }: SettingsPageProps) {
     },
   });
 
+  const servicePointLogo = useAppMutation({
+    mutationFn: (file: File | null) =>
+      file
+        ? settingsService.uploadServicePointLogo(file)
+        : settingsService.deleteServicePointLogo(),
+    onSuccess: (data, file) => {
+      void queryClient.setQueryData(settingsKey, data);
+      appToast.success(
+        t(file ? "settings.toast.logo_saved" : "settings.toast.logo_removed"),
+      );
+    },
+  });
+
   const homeHref =
     tenant && slug ? routes.tenant.home(slug) : routes.platform.home;
   const settingsHref =
@@ -118,6 +132,25 @@ export function SettingsPage({ scope = "platform", slug }: SettingsPageProps) {
           onUploadLogo={(file) => uploadLogo.mutate(file)}
           onRemoveLogo={() => removeLogo.mutate()}
         />
+      ) : null}
+      {tenant && settingsQuery.data?.service_point ? (
+        <div className="mt-6">
+          <ServicePointCard
+            key={JSON.stringify(settingsQuery.data.service_point)}
+            servicePoint={settingsQuery.data.service_point}
+            canWrite={canWrite}
+            isSaving={save.isPending}
+            isLogoBusy={servicePointLogo.isPending}
+            onSave={({ enabled, name }) =>
+              save.mutate({
+                service_point_enabled: enabled,
+                service_point_name: name,
+              })
+            }
+            onUploadLogo={(file) => servicePointLogo.mutate(file)}
+            onRemoveLogo={() => servicePointLogo.mutate(null)}
+          />
+        </div>
       ) : null}
       {tenant && slug ? (
         <div className="mt-6">

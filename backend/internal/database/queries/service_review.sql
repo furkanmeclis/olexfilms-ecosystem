@@ -25,5 +25,5 @@ WHERE s.id = sqlc.arg(service_id)::bigint
   )
 RETURNING s.id, s.uuid, s.service_no, s.organization_id, s.brand_id,
           s.customer_user_id, s.plate, s.review_request_sent_at,
-          o.name AS organization_name,
+          org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name,
           COALESCE(NULLIF(btrim(o.google_business_url), ''), '')::text AS review_url;

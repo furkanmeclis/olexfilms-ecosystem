@@ -27,7 +27,7 @@ endef
 
 DB_URL ?= postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-.PHONY: tools run dev worker ping-job search-reindex inventory-rebuild roles-sync normalize-org-phones build test lint fmt tidy sqlc migrate-up migrate-down migrate-create health create-super-admin openapi-lint
+.PHONY: tools run dev worker ping-job search-reindex inventory-rebuild roles-sync normalize-org-phones org-merge build test lint fmt tidy sqlc migrate-up migrate-down migrate-create health create-super-admin openapi-lint
 
 tools:
 	@echo "go:            $$(go version)"
@@ -71,6 +71,10 @@ roles-sync:
 # into E.164. ARGS=--dry-run reports without writing.
 normalize-org-phones:
 	@$(load_env) go run ./cmd/normalize-org-phones $(ARGS)
+
+# TEC-1003: merge / undo-merge organizations (dry run unless ARGS has -apply).
+org-merge:
+	@$(load_env) go run ./cmd/org-merge $(ARGS)
 
 # TEC-640: talk to the WhatsApp AI as a simulated contact (no phone).
 .PHONY: wa-sim

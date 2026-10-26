@@ -49,7 +49,7 @@ WHERE public_code = sqlc.arg(public_code) AND brand_id = sqlc.arg(brand_id);
 -- name: GetPublicWarrantyByCode :one
 SELECT w.public_code, w.status, w.start_at, w.end_at,
        p.name AS product_name,
-       o.name AS organization_name, o.city AS organization_city,
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.city AS organization_city,
        COALESCE(pr.name, '')::text AS organization_province,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        (cb.logo_object_key IS NOT NULL)::boolean AS car_brand_has_logo,
@@ -254,7 +254,7 @@ WHERE id = sqlc.arg(id) AND status = 'active' AND notified_7_at IS NULL;
 -- Notification context of the cron events (TEC-187): plate, product and the
 -- organization's name and time zone (end date is shown in the org zone).
 -- name: ListWarrantyNoticeContexts :many
-SELECT w.id, v.plate, p.name AS product_name, o.name AS organization_name, o.timezone
+SELECT w.id, v.plate, p.name AS product_name, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.timezone
 FROM warranties w
 JOIN vehicles v ON v.id = w.vehicle_id
 JOIN products p ON p.id = w.product_id

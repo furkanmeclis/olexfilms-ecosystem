@@ -117,6 +117,29 @@ func (m *Mapper) Link(ctx context.Context, key Key, target uuid.UUID, checksum s
 // Lookup returns the target uuid of an already mapped key (for foreign keys
 // to rows an earlier step migrated).
 func (m *Mapper) Lookup(ctx context.Context, system, table, id string) (uuid.UUID, bool, error) {
+	target, ok, err := m.LookupRaw(ctx, system, table, id)
+	if err != nil || !ok {
+		return target, ok, err
+	}
+	if table != "dealers" {
+		return target, true, nil
+	}
+	// TEC-1003: a dealer merged into another organization (AFM Florya into
+	// the center) resolves to the organization that took its records, so
+	// later steps write there.
+	live, err := m.q.MigratorMergedOrganizationUUID(ctx, target)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return target, true, nil
+	}
+	if err != nil {
+		return uuid.Nil, false, fmt.Errorf("migrator: merged organization: %w", err)
+	}
+	return live, true, nil
+}
+
+// LookupRaw is Lookup without following organization merges: history rows
+// that stay with a merged organization (the orders it bought) use it.
+func (m *Mapper) LookupRaw(ctx context.Context, system, table, id string) (uuid.UUID, bool, error) {
 	row, err := m.get(ctx, Key{System: system, Table: table, ID: id})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, false, nil

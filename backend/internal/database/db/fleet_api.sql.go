@@ -880,7 +880,7 @@ func (q *Queries) ListFleetPlanVehicles(ctx context.Context, arg ListFleetPlanVe
 
 const listFleetRecentServices = `-- name: ListFleetRecentServices :many
 SELECT s.uuid, s.service_no, s.status, s.created_at, s.completed_at, s.plate,
-       v.uuid AS vehicle_uuid, o.uuid AS organization_uuid, o.name AS organization_name
+       v.uuid AS vehicle_uuid, o.uuid AS organization_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name
 FROM services s
 JOIN vehicles v ON v.id = s.vehicle_id
 JOIN organizations o ON o.id = s.organization_id

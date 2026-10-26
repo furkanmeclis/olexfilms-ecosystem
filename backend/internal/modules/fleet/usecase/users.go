@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/repository"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/password"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
@@ -123,7 +124,7 @@ func (s *Service) InviteUser(ctx context.Context, c Caller, fleetUUID uuid.UUID,
 		}
 		inviter := ""
 		if org, err := q.GetOrganizationByID(ctx, c.OrgID); err == nil {
-			inviter = org.Name
+			inviter = orgbrand.Name(org) // TEC-1003: service point name
 		}
 		if err := s.emit(ctx, tx, events.FleetUserInvited, c.OrgID, c.UserID, fleet, map[string]any{
 			"user_uuid": user.Uuid.String(), "is_primary": primary, "dealer_name": inviter,

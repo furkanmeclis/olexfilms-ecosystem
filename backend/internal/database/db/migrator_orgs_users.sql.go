@@ -326,6 +326,27 @@ func (q *Queries) MigratorMatchProvince(ctx context.Context, arg MigratorMatchPr
 	return id, err
 }
 
+const migratorMergedOrganizationUUID = `-- name: MigratorMergedOrganizationUUID :one
+WITH RECURSIVE chain AS (
+    SELECT o.id, o.uuid, o.merged_into_id, 0 AS depth
+    FROM organizations o WHERE o.uuid = $1
+    UNION ALL
+    SELECT o.id, o.uuid, o.merged_into_id, c.depth + 1
+    FROM organizations o JOIN chain c ON o.id = c.merged_into_id
+    WHERE c.depth < 10
+)
+SELECT chain.uuid FROM chain WHERE chain.merged_into_id IS NULL ORDER BY chain.depth DESC LIMIT 1
+`
+
+// TEC-1003: the live organization a merged one ended up in (follows
+// merged_into_id); the organization itself when it is not merged.
+func (q *Queries) MigratorMergedOrganizationUUID(ctx context.Context, argUuid uuid.UUID) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, migratorMergedOrganizationUUID, argUuid)
+	var uuid_2 uuid.UUID
+	err := row.Scan(&uuid_2)
+	return uuid_2, err
+}
+
 const migratorOrganizationIDByUUID = `-- name: MigratorOrganizationIDByUUID :one
 SELECT id FROM organizations WHERE uuid = $1
 `
@@ -335,6 +356,23 @@ func (q *Queries) MigratorOrganizationIDByUUID(ctx context.Context, argUuid uuid
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const migratorOrganizationStateByUUID = `-- name: MigratorOrganizationStateByUUID :one
+SELECT id, type, deleted_at FROM organizations WHERE uuid = $1
+`
+
+type MigratorOrganizationStateByUUIDRow struct {
+	ID        int64              `json:"id"`
+	Type      string             `json:"type"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+
+func (q *Queries) MigratorOrganizationStateByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorOrganizationStateByUUIDRow, error) {
+	row := q.db.QueryRow(ctx, migratorOrganizationStateByUUID, argUuid)
+	var i MigratorOrganizationStateByUUIDRow
+	err := row.Scan(&i.ID, &i.Type, &i.DeletedAt)
+	return i, err
 }
 
 const migratorRoleOrgTypes = `-- name: MigratorRoleOrgTypes :many
