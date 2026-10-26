@@ -1224,6 +1224,8 @@ type Querier interface {
 	// dealer or distributor of a brand. Only the showcase columns: no tax id,
 	// account, members or settings.
 	GetPublicDealerBySlug(ctx context.Context, arg GetPublicDealerBySlugParams) (GetPublicDealerBySlugRow, error)
+	// TEC-1005: the public service summary (no customer data).
+	GetPublicService(ctx context.Context, arg GetPublicServiceParams) (GetPublicServiceRow, error)
 	// Public warranty lookup (TEC-189): only the fields the public page shows.
 	// No users join: the holder's personal data is never read, so an anonymized
 	// customer's warranty answers the same way (K19). Vehicle fields come from
@@ -2420,6 +2422,8 @@ type Querier interface {
 	// distributors for the public sitemap. Same filters as
 	// GetPublicDealerBySlug; code and last change only.
 	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
+	// TEC-1005: every warranty of a public service, whatever its status.
+	ListPublicServiceWarranties(ctx context.Context, arg ListPublicServiceWarrantiesParams) ([]ListPublicServiceWarrantiesRow, error)
 	// Nearby dealers list: which of the given organizations of the brand serve
 	// a published showcase, with the live Google rating and its source and the
 	// rating frozen in the snapshot (TEC-469: a manual rating under approval
@@ -3411,6 +3415,11 @@ type Querier interface {
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone
 	// written by the API in the meantime is kept (only phone_raw is cleared).
 	ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOrganizationRawPhoneParams) (int64, error)
+	// TEC-1005: the service of a public code /warranty/{code}: its service
+	// number (printed warranty cards, TEC-1004), else a warranty public code of
+	// it (the per-warranty links before TEC-1005), else a legacy alias. Only a
+	// service with a warranty has a public page.
+	ResolvePublicServiceID(ctx context.Context, arg ResolvePublicServiceIDParams) (int64, error)
 	ResolveStockCountLine(ctx context.Context, arg ResolveStockCountLineParams) (StockCountLine, error)
 	ResolveStockForecastThresholdProduct(ctx context.Context, arg ResolveStockForecastThresholdProductParams) (ResolveStockForecastThresholdProductRow, error)
 	// The most specific territory covering an address (district > province >

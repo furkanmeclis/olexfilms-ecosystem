@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "Göndərməzdən əvvəl ən azı bir foto əlavə edin.",
   "claims.toast.photo_error": "Bəzi fotolar yüklənə bilmədi.",
   "claims.toast.photos_uploaded": "Fotolar yükləndi.",
-  "claims.portal.label": "Zəmanət müraciəti:"
+  "claims.portal.label": "Zəmanət müraciəti:",
+  "public.service_no": "Xidmət nömrəsi",
+  "public.service_date": "Xidmət tarixi",
+  "public.package": "Paket",
+  "public.warranties": "Tətbiq olunan məhsullar və zəmanətlər",
+  "public.applied_parts": "Tətbiq olunan hissələr"
 }

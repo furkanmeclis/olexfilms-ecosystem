@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "Προσθέστε τουλάχιστον μία φωτογραφία πριν την υποβολή.",
   "claims.toast.photo_error": "Ορισμένες φωτογραφίες δεν μεταφορτώθηκαν.",
   "claims.toast.photos_uploaded": "Οι φωτογραφίες μεταφορτώθηκαν.",
-  "claims.portal.label": "Αίτημα εγγύησης:"
+  "claims.portal.label": "Αίτημα εγγύησης:",
+  "public.service_no": "Αριθμός υπηρεσίας",
+  "public.service_date": "Ημερομηνία υπηρεσίας",
+  "public.package": "Πακέτο",
+  "public.warranties": "Εφαρμοσμένα προϊόντα και εγγυήσεις",
+  "public.applied_parts": "Εφαρμοσμένα μέρη"
 }

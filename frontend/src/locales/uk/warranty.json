@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "Додайте щонайменше одне фото перед надсиланням.",
   "claims.toast.photo_error": "Деякі фото не вдалося завантажити.",
   "claims.toast.photos_uploaded": "Фото завантажено.",
-  "claims.portal.label": "Гарантійна заявка:"
+  "claims.portal.label": "Гарантійна заявка:",
+  "public.service_no": "Номер послуги",
+  "public.service_date": "Дата послуги",
+  "public.package": "Пакет",
+  "public.warranties": "Застосовані продукти та гарантії",
+  "public.applied_parts": "Оброблені деталі"
 }
