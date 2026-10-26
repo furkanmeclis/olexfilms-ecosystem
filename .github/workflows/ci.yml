@@ -411,9 +411,11 @@ jobs:
   # Every green push to main gets the next v0.N tag (first one: v0.1);
   # Dokploy deploys on v0.* tag pushes. Tags pushed with GITHUB_TOKEN do not
   # start other workflows, but GitHub still sends the tag push webhook.
+  # A job skipped by the path filter would skip this one through the needs
+  # chain (ci runs with always()), so the gate reads ci's result itself.
   release-tag:
     needs: [ci]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ !cancelled() && needs.ci.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
