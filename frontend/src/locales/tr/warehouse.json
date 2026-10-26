@@ -633,5 +633,22 @@
   "stock_panel.products": "Ürünler",
   "stock_panel.units": "Birimler",
   "stock_panel.empty_title": "Bu göz boş",
-  "stock_panel.empty_description": "Bu gözde kayıtlı stok yok."
+  "stock_panel.empty_description": "Bu gözde kayıtlı stok yok.",
+  "nav_units": "Depo birimleri",
+  "units.title": "Depo birimleri",
+  "units.description": "Depodan gelen tüm barkodlar: depoda olanlar ve sipariş, hizmet ya da başka yolla çıkanlar. Çıkan birimler depo stoğuna sayılmaz.",
+  "units.forbidden": "Depo birimlerini görme yetkiniz yok.",
+  "units.warehouse": "Depo",
+  "units.primary": "birincil",
+  "units.empty": "Bu depodan gelen birim yok.",
+  "units.columns.barcode": "Barkod",
+  "units.columns.product": "Ürün",
+  "units.columns.state": "Durum",
+  "units.columns.source": "Kaynak",
+  "units.columns.order": "Sipariş",
+  "units.columns.service": "Hizmet / müşteri",
+  "units.columns.updated_at": "Son hareket",
+  "units.columns.created_at": "Oluşturma",
+  "units.state.in": "Depoda",
+  "units.state.left": "Depodan çıktı"
 }

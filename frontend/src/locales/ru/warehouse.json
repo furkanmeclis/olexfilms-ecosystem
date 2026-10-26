@@ -633,5 +633,22 @@
   "stock_panel.products": "Товары",
   "stock_panel.units": "Единицы",
   "stock_panel.empty_title": "Ячейка пуста",
-  "stock_panel.empty_description": "В этой ячейке нет учтённого остатка."
+  "stock_panel.empty_description": "В этой ячейке нет учтённого остатка.",
+  "nav_units": "Единицы склада",
+  "units.title": "Единицы склада",
+  "units.description": "Все штрихкоды со склада: на месте и ушедшие с заказом, услугой и т. п. Ушедшие единицы не считаются складским остатком.",
+  "units.forbidden": "Нет доступа к единицам склада.",
+  "units.warehouse": "Склад",
+  "units.primary": "основной",
+  "units.empty": "С этого склада нет единиц.",
+  "units.columns.barcode": "Штрихкод",
+  "units.columns.product": "Товар",
+  "units.columns.state": "Состояние",
+  "units.columns.source": "Источник",
+  "units.columns.order": "Заказ",
+  "units.columns.service": "Услуга / клиент",
+  "units.columns.updated_at": "Последнее изменение",
+  "units.columns.created_at": "Создан",
+  "units.state.in": "На складе",
+  "units.state.left": "Ушёл со склада"
 }

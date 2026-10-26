@@ -633,5 +633,22 @@
   "stock_panel.products": "Productos",
   "stock_panel.units": "Unidades",
   "stock_panel.empty_title": "Este hueco está vacío",
-  "stock_panel.empty_description": "No hay stock registrado en este hueco."
+  "stock_panel.empty_description": "No hay stock registrado en este hueco.",
+  "nav_units": "Unidades del almacén",
+  "units.title": "Unidades del almacén",
+  "units.description": "Todos los códigos del almacén: los que están y los que salieron por pedido, servicio u otro. Las unidades salidas no cuentan como stock.",
+  "units.forbidden": "No puede ver las unidades del almacén.",
+  "units.warehouse": "Almacén",
+  "units.primary": "principal",
+  "units.empty": "No hay unidades de este almacén.",
+  "units.columns.barcode": "Código",
+  "units.columns.product": "Producto",
+  "units.columns.state": "Estado",
+  "units.columns.source": "Origen",
+  "units.columns.order": "Pedido",
+  "units.columns.service": "Servicio / cliente",
+  "units.columns.updated_at": "Último cambio",
+  "units.columns.created_at": "Creado",
+  "units.state.in": "En el almacén",
+  "units.state.left": "Salió"
 }

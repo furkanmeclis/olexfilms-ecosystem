@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "L'image est trop lourde ; utilisez-en une de moins de 150 Ko environ.",
   "label_templates.errors.generic": "Le modèle n'a pas pu être enregistré.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Un autre modèle porte déjà ce nom.",
-  "label_templates.errors.VALIDATION_ERROR": "Certains champs ne sont pas valides ; vérifiez le formulaire."
+  "label_templates.errors.VALIDATION_ERROR": "Certains champs ne sont pas valides ; vérifiez le formulaire.",
+  "trace.title": "Traçabilité",
+  "trace.origin": "Entrepôt d'origine",
+  "trace.orders": "Commandes",
+  "trace.services": "Services",
+  "trace.no_order": "Pas expédié avec une commande.",
+  "trace.no_order_unknown": "Aucune commande ; origine inconnue (import historique).",
+  "trace.no_service": "Non utilisé dans un service.",
+  "trace.source.order": "Par commande",
+  "trace.source.stock": "En stock",
+  "trace.source.unknown": "Origine inconnue"
 }

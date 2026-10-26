@@ -633,5 +633,22 @@
   "stock_panel.products": "Məhsullar",
   "stock_panel.units": "Vahidlər",
   "stock_panel.empty_title": "Bu göz boşdur",
-  "stock_panel.empty_description": "Bu gözdə qeydə alınmış stok yoxdur."
+  "stock_panel.empty_description": "Bu gözdə qeydə alınmış stok yoxdur.",
+  "nav_units": "Anbar vahidləri",
+  "units.title": "Anbar vahidləri",
+  "units.description": "Anbardan gələn bütün barkodlar: anbarda olanlar və sifariş, xidmət və s. ilə çıxanlar. Çıxanlar anbar ehtiyatına sayılmır.",
+  "units.forbidden": "Anbar vahidlərinə baxmaq icazəniz yoxdur.",
+  "units.warehouse": "Anbar",
+  "units.primary": "əsas",
+  "units.empty": "Bu anbardan vahid yoxdur.",
+  "units.columns.barcode": "Barkod",
+  "units.columns.product": "Məhsul",
+  "units.columns.state": "Vəziyyət",
+  "units.columns.source": "Mənbə",
+  "units.columns.order": "Sifariş",
+  "units.columns.service": "Xidmət / müştəri",
+  "units.columns.updated_at": "Son dəyişiklik",
+  "units.columns.created_at": "Yaradılıb",
+  "units.state.in": "Anbarda",
+  "units.state.left": "Anbardan çıxıb"
 }

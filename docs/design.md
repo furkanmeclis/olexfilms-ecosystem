@@ -265,12 +265,12 @@ Migrator ayrı bir container; eski hub ve depo veritabanlarına (MariaDB) bağla
 | Araç markası/modeli | hub `car_brands`, `car_models`, `car_brands.json` | 372 marka, 3.702 model, logo dosyaları S3'e |
 | Ürün ve kategori | hub `products`, `product_categories`; depo `products`, `brands` | 121 ürün, brand ile eşleşir |
 | Stok birimleri ve sahiplik | hub `stock_items` (11.968); depo `product_barcodes` (13.525) | Tek `units` tablosu; hub `dealer` konumu = bayi sahipliği, depo `placed` = merkez depo |
-| Stok hareketleri | hub `stock_movements` (13.910); depo `stock_movements` | Ledger açılışı; sahiplik projeksiyonu bunlardan türetilir |
+| Stok hareketleri | hub `stock_movements` (13.910); depo `stock_movements` | Ledger açılışı; sahiplik projeksiyonu bunlardan türetilir. TEC-1006 `unit_trace` adımı: tamamlanmış legacy hizmette kullanılan birim hizmete sahiplenir (son tamamlanan hizmet), legacy barkod ↔ birim tutarlılık raporu. Depo katmanı izi `unit_traces` görünümü: menşe depo (ilk konum, yoksa birincil depo), son sipariş/hizmet, kaynak (sipariş / stok / bilinmiyor) |
 | Hizmet, kalem, görsel, durum logu | hub `services`, `service_items`, `service_images`, `service_status_logs` | 6.484 hizmet, 14.700 log |
 | Garanti | hub `warranties` (8.789) | çift kayıtlar birleştirilir |
 | Ölçüm raporları | hub `nexptg_reports` (122), `nexptg_report_measurements` (7.081), pivot | `measurement_results`; VIN eksikse "tamamlanacak" işaretli |
 | Siparişler | hub `orders`, `order_items`, `order_item_stock` (1.393); depo `orders` | external_reference ile eşleşenler tek kayıt |
-| Depo yapısı | depo `warehouses`, `warehouse_sites`, `warehouse_locations`, `bin_product_stocks` | 2 depo, 5 konum |
+| Depo yapısı | depo `warehouses`, `warehouse_sites`, `warehouse_locations`, `bin_product_stocks` | 2 depo, 5 konum; legacy "AFM Florya" (FLORYA) merkezin birincil deposu "AFM Florya Merkez" olur (TEC-1006) |
 | Araç devirleri, kısa URL'ler, cihaz kayıtları | hub `service_customer_transfers`, `short_urls`, `nexptg_api_users` | |
 | Arşiv (salt okunur tablo) | hub `sms_logs`, `notifications`, WhatsApp logları | yeni bildirim merkezine girmez |
 | Taşınmaz | `queue_monitors`, `activity_log`, push kampanyaları, `cache`, `sessions`, fuar ayarları, Evolution API verisi, AI katmanı konuşmaları | |

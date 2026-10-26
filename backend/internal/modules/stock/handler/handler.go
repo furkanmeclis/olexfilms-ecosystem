@@ -162,6 +162,26 @@ func (h *Handler) OrganizationUnits(w http.ResponseWriter, r *http.Request) {
 	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, in.Limit, in.Offset))
 }
 
+// WarehouseUnits serves GET /v1/stock/warehouses/{uuid}/units (TEC-1006).
+func (h *Handler) WarehouseUnits(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "uuid is invalid")
+		return
+	}
+	in, err := stockusecase.ParseWarehouseUnitFilter(r.URL.Query())
+	if err != nil {
+		writeQueryError(w, r, err)
+		return
+	}
+	items, total, err := h.svc.WarehouseUnits(r.Context(), orgctx.MustScope(r.Context()).InternalID, id, in)
+	if err != nil {
+		writeQueryError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, apiquery.NewPage(items, total, in.Limit, in.Offset))
+}
+
 // LocationStock serves GET /v1/stock/locations/{uuid}/products.
 func (h *Handler) LocationStock(w http.ResponseWriter, r *http.Request) {
 	h.list(w, r, func(f scopefilter.Filter, id uuid.UUID, in model.StockFilter) ([]model.ProductStock, int64, error) {

@@ -845,6 +845,16 @@ export function tenantNav(slug: string) {
             orgTypes: ["center", "distributor"],
           },
           {
+            // TEC-1006: units of a warehouse with the ones that left it.
+            id: "warehouse-units",
+            titleKey: "warehouse.nav_units",
+            href: routes.tenant.warehouse.units(slug),
+            icon: Boxes,
+            permission: [permissions.warehouse.read, permissions.stock.read],
+            feature: "warehouse",
+            orgTypes: ["center", "distributor"],
+          },
+          {
             id: "warehouse-barcodes",
             titleKey: "warehouse.nav_barcodes",
             href: routes.tenant.warehouse.barcodes(slug),

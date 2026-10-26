@@ -3636,6 +3636,19 @@ type UnitCurrentState struct {
 	OwnerServiceID      pgtype.Int8        `json:"owner_service_id"`
 }
 
+type UnitTrace struct {
+	UnitID            int64       `json:"unit_id"`
+	BrandID           int64       `json:"brand_id"`
+	IssuerOrgID       int64       `json:"issuer_org_id"`
+	OriginWarehouseID int64       `json:"origin_warehouse_id"`
+	OwnerType         pgtype.Text `json:"owner_type"`
+	OwnerID           pgtype.Int8 `json:"owner_id"`
+	HolderOrgID       int64       `json:"holder_org_id"`
+	LastOrderID       int64       `json:"last_order_id"`
+	LastServiceID     int64       `json:"last_service_id"`
+	Source            string      `json:"source"`
+}
+
 type User struct {
 	ID               int64              `json:"id"`
 	Uuid             uuid.UUID          `json:"uuid"`
@@ -3728,6 +3741,7 @@ type Warehouse struct {
 	CreatedAt                pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
 	RequireLocationPlacement bool               `json:"require_location_placement"`
+	IsPrimary                bool               `json:"is_primary"`
 }
 
 type WarehouseLocation struct {

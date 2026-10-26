@@ -111,6 +111,98 @@ type UnitHistory struct {
 	Current   *CurrentState `json:"current"`
 	Holdings  []Holding     `json:"holdings"`
 	Movements MovementPage  `json:"movements"`
+	// Trace (TEC-1006): where the unit came from and went.
+	Trace *UnitTrace `json:"trace"`
+}
+
+// Unit trace sources (TEC-1006).
+const (
+	TraceSourceOrder   = "order"   // it went out with an order
+	TraceSourceStock   = "stock"   // it never left its issuer
+	TraceSourceUnknown = "unknown" // at / used by another organization without an order
+)
+
+// UnitTrace is the warehouse-layer trace of a unit (TEC-1006): its origin
+// warehouse, the orders that carried it and the services that used it.
+// Orders and services outside the viewer's scope are left out.
+type UnitTrace struct {
+	Source          string         `json:"source"`
+	OriginWarehouse *WarehouseRef  `json:"origin_warehouse"`
+	Orders          []TraceOrder   `json:"orders"`
+	Services        []TraceService `json:"services"`
+}
+
+// WarehouseRef names a warehouse.
+type WarehouseRef struct {
+	UUID uuid.UUID `json:"uuid"`
+	Code string    `json:"code"`
+	Name string    `json:"name"`
+}
+
+// TraceOrder is an order that carried the unit.
+type TraceOrder struct {
+	UUID              uuid.UUID  `json:"uuid"`
+	OrderNo           string     `json:"order_no"`
+	Status            string     `json:"status"`
+	ExternalReference *string    `json:"external_reference"`
+	Buyer             OrgRef     `json:"buyer"`
+	Seller            OrgRef     `json:"seller"`
+	CreatedAt         time.Time  `json:"created_at"`
+	SubmittedAt       *time.Time `json:"submitted_at"`
+	ShippedAt         *time.Time `json:"shipped_at"`
+	ReceivedAt        *time.Time `json:"received_at"`
+}
+
+// TraceService is a service that used the unit.
+type TraceService struct {
+	UUID         uuid.UUID     `json:"uuid"`
+	ServiceNo    string        `json:"service_no"`
+	Status       string        `json:"status"`
+	CompletedAt  *time.Time    `json:"completed_at"`
+	Organization OrgRef        `json:"organization"`
+	Customer     TraceCustomer `json:"customer"`
+}
+
+// WarehouseUnitRow is one unit of the warehouse unit list (TEC-1006):
+// every unit that originates from the warehouse, in it or gone.
+type WarehouseUnitRow struct {
+	UUID            uuid.UUID        `json:"uuid"`
+	Barcode         string           `json:"barcode"`
+	UnitKind        string           `json:"unit_kind"`
+	Status          string           `json:"status"`
+	InitialMeters   *string          `json:"initial_meters"`
+	RemainingMeters *string          `json:"remaining_meters"`
+	Product         ProductRef       `json:"product"`
+	Source          string           `json:"source"`
+	InWarehouse     bool             `json:"in_warehouse"`
+	OwnerType       *string          `json:"owner_type"`
+	LocationCode    *string          `json:"location_code"`
+	Holder          *OrgRef          `json:"holder"`
+	Order           *TraceOrderRef   `json:"order"`
+	Service         *TraceServiceRef `json:"service"`
+	CreatedAt       time.Time        `json:"created_at"`
+	UpdatedAt       time.Time        `json:"updated_at"`
+}
+
+// TraceOrderRef is the latest order of a list row.
+type TraceOrderRef struct {
+	UUID      uuid.UUID `json:"uuid"`
+	OrderNo   string    `json:"order_no"`
+	BuyerName string    `json:"buyer_name"`
+}
+
+// TraceServiceRef is the latest service of a list row.
+type TraceServiceRef struct {
+	UUID         uuid.UUID  `json:"uuid"`
+	ServiceNo    string     `json:"service_no"`
+	CompletedAt  *time.Time `json:"completed_at"`
+	CustomerName string     `json:"customer_name"`
+}
+
+// TraceCustomer is the customer of a trace service.
+type TraceCustomer struct {
+	UUID uuid.UUID `json:"uuid"`
+	Name string    `json:"name"`
 }
 
 // CategoryRef names a product category.

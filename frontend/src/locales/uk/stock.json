@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "Зображення завелике; використовуйте файл менше приблизно 150 КБ.",
   "label_templates.errors.generic": "Не вдалося зберегти шаблон.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Шаблон із такою назвою вже існує.",
-  "label_templates.errors.VALIDATION_ERROR": "Деякі поля заповнено неправильно; перевірте форму."
+  "label_templates.errors.VALIDATION_ERROR": "Деякі поля заповнено неправильно; перевірте форму.",
+  "trace.title": "Слід штрихкоду",
+  "trace.origin": "Склад походження",
+  "trace.orders": "Замовлення",
+  "trace.services": "Послуги",
+  "trace.no_order": "Не відправлявся із замовленням.",
+  "trace.no_order_unknown": "Замовлення не знайдено; джерело невідоме (старий імпорт).",
+  "trace.no_service": "Не використовувався в послузі.",
+  "trace.source.order": "За замовленням",
+  "trace.source.stock": "На складі",
+  "trace.source.unknown": "Джерело невідоме"
 }

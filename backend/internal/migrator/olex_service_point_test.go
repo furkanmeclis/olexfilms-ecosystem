@@ -4,6 +4,16 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	stockmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
+	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/pkg/apiquery"
+
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgmerge"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 )
@@ -47,7 +57,7 @@ func TestOlexServicePointMerge(t *testing.T) {
 			CustomersStep{System: hubSys},
 			VehicleCatalogStep{System: hubSys},
 			CatalogStep{System: hubSys, WHSystem: whSys},
-			WarehousesStep{WHSystem: whSys},
+			WarehousesStep{WHSystem: whSys, PrimaryCode: "SYN-WH-1", PrimaryName: "Sentetik Ana Depo"},
 			UnitsStep{System: hubSys, WHSystem: whSys},
 			LedgerStep{System: hubSys, WHSystem: whSys},
 			OrdersStep{System: hubSys, WHSystem: whSys},
@@ -56,6 +66,7 @@ func TestOlexServicePointMerge(t *testing.T) {
 			ServicesStep{System: hubSys},
 			WarrantiesStep{System: hubSys},
 			MeasurementsStep{System: hubSys},
+			UnitTraceStep{System: hubSys, WHSystem: whSys},
 		}
 	}
 	e.runner.Pool = tx
@@ -67,7 +78,25 @@ func TestOlexServicePointMerge(t *testing.T) {
 
 	// 1. The old shape: a full run, then the dealers under a TR distributor
 	//    that sold them their orders.
-	e.run("olexfx-sp-before", Options{})
+	first := e.run("olexfx-sp-before", Options{})
+	// TEC-1006: the units of completed legacy services get the service as
+	// owner, every legacy barcode is a unit. (The ownership counts cover the
+	// whole brand of the shared test database, so they are not asserted.)
+	trace := stepCounts(t, first, "unit_trace")
+	// At least the two fixture units; units other tests left in the shared
+	// database may be traced too.
+	if trace["service_consumption_created"] < 2 || trace["legacy_barcodes_missing"] != 0 ||
+		trace["legacy_barcodes"] != trace["legacy_barcodes_in_units"] {
+		t.Fatalf("unit_trace counts = %v", trace)
+	}
+	if n := scalar(`SELECT count(*) FROM service_items si JOIN services s ON s.id = si.service_id
+		JOIN units u ON u.id = si.unit_id
+		JOIN brands b ON b.id = s.brand_id AND b.slug = 'olex'
+		WHERE s.status = 'completed' AND u.unit_kind = 'serial'
+		  AND NOT EXISTS (SELECT 1 FROM unit_current_state st WHERE st.unit_id = si.unit_id)`); n != 0 {
+		t.Fatalf("%d units of completed services without an owner", n)
+	}
+	checkWarehouseTrace(t, ctx, tx)
 	var centerID, dealer1, countryID int64
 	if err := tx.QueryRow(ctx, `SELECT c.id, o.id, o.country_id
 		FROM migration_map m JOIN organizations o ON o.uuid = m.target_uuid
@@ -185,6 +214,9 @@ func TestOlexServicePointMerge(t *testing.T) {
 	servicesTotal := scalar(`SELECT count(*) FROM services`)
 	warrantiesTotal := scalar(`SELECT count(*) FROM warranties`)
 	rep = e.run("olexfx-sp", Options{})
+	if n := stepCounts(t, rep, "unit_trace")["service_consumption_created"]; n != 0 {
+		t.Errorf("rerun created %d service consumptions", n)
+	}
 	oc = stepCounts(t, rep, "organizations")
 	if oc["distributor_merged"] != 0 || oc["service_point_merged"] != 0 {
 		t.Errorf("rerun merged again: %v", oc)
@@ -238,5 +270,56 @@ func TestOlexServicePointMerge(t *testing.T) {
 	}
 	if _, err := orgmerge.Undo(ctx, tx, runs[0]); err == nil {
 		t.Error("a second undo must fail")
+	}
+}
+
+// checkWarehouseTrace (TEC-1006): the primary warehouse lists the units that
+// left it with their order / service, and a used unit's trace names its
+// service and customer.
+func checkWarehouseTrace(t *testing.T, ctx context.Context, tx pgx.Tx) {
+	t.Helper()
+	q := db.New(tx)
+	var whUUID uuid.UUID
+	var orgID int64
+	if err := tx.QueryRow(ctx, `SELECT uuid, organization_id FROM warehouses WHERE is_primary AND name = 'Sentetik Ana Depo'`).
+		Scan(&whUUID, &orgID); err != nil {
+		t.Fatalf("primary warehouse: %v", err)
+	}
+	svc := stockusecase.New(q)
+	all, total, err := svc.WarehouseUnits(ctx, orgID, whUUID, stockusecase.WarehouseUnitFilter{
+		Sort: apiquery.ResolvedSort{Key: "barcode"}, Limit: 100,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	left, leftTotal, err := svc.WarehouseUnits(ctx, orgID, whUUID, stockusecase.WarehouseUnitFilter{
+		State: stockusecase.WarehouseUnitLeft, Sort: apiquery.ResolvedSort{Key: "barcode"}, Limit: 100,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := func(n int64) int { return int(min(n, 100)) }
+	if total == 0 || leftTotal == 0 || len(all) != page(total) || len(left) != page(leftTotal) || leftTotal >= total {
+		t.Fatalf("warehouse units: all %d, left %d", total, leftTotal)
+	}
+	var used *stockmodel.WarehouseUnitRow
+	for i := range left {
+		if left[i].InWarehouse {
+			t.Fatalf("left row %s is in the warehouse", left[i].Barcode)
+		}
+		if left[i].Service != nil && used == nil {
+			used = &left[i]
+		}
+	}
+	if used == nil || used.Service.CustomerName == "" {
+		t.Fatalf("no used unit with its service among %d left units", len(left))
+	}
+	u, err := q.GetUnitByUUID(ctx, used.UUID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tr, err := svc.Trace(ctx, scopefilter.Filter{Scope: rbac.ScopeAll}, u)
+	if err != nil || tr == nil || len(tr.Services) == 0 || tr.OriginWarehouse == nil || tr.OriginWarehouse.UUID != whUUID {
+		t.Fatalf("trace of %s = %+v, %v", u.Barcode, tr, err)
 	}
 }

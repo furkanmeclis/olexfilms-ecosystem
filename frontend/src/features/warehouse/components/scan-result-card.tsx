@@ -10,6 +10,7 @@ import {
   type WarehouseScanResult,
 } from "@/features/warehouse/services/warehouse.service";
 import { ScanUnitOperations } from "@/features/stock/components/unit-operations";
+import { UnitTraceCard } from "@/features/stock/components/unit-trace-card";
 import { useLocale } from "@/providers/locale-provider";
 
 type Location = NonNullable<WarehouseScanResult["location"]>;
@@ -178,6 +179,11 @@ export function ScanResultCard({
               }}
             />
           </dl>
+        ) : null}
+        {result.type === "unit" && unit?.trace ? (
+          <div className="pt-2">
+            <UnitTraceCard trace={unit.trace} slug={slug} />
+          </div>
         ) : null}
 
         {result.type === "product" && product ? (

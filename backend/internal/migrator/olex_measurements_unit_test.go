@@ -114,9 +114,14 @@ func TestMeasurementQueriesPassGuard(t *testing.T) {
 	}
 }
 
+// Measurements run after every other import; only the TEC-1006 unit trace
+// (which reads the migrated services) follows them.
 func TestOlexStepsEndWithMeasurements(t *testing.T) {
 	steps := olexSteps()
-	if got := steps[len(steps)-1].Name(); got != "measurements" {
-		t.Errorf("last olex step = %q, want measurements", got)
+	if got := steps[len(steps)-2].Name(); got != "measurements" {
+		t.Errorf("olex step before the last = %q, want measurements", got)
+	}
+	if got := steps[len(steps)-1].Name(); got != "unit_trace" {
+		t.Errorf("last olex step = %q, want unit_trace", got)
 	}
 }

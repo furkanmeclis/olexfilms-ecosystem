@@ -116,7 +116,7 @@ VALUES (
     (SELECT COALESCE(MAX(w.sort_order) + 1, 0) FROM warehouses w
      WHERE w.organization_id = $1)
 )
-RETURNING id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement
+RETURNING id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement, is_primary
 `
 
 type CreateWarehouseParams struct {
@@ -150,6 +150,7 @@ func (q *Queries) CreateWarehouse(ctx context.Context, arg CreateWarehouseParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RequireLocationPlacement,
+		&i.IsPrimary,
 	)
 	return i, err
 }
@@ -335,7 +336,7 @@ func (q *Queries) GetTypedLocationByUUID(ctx context.Context, arg GetTypedLocati
 }
 
 const getWarehouseByID = `-- name: GetWarehouseByID :one
-SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement FROM warehouses
+SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement, is_primary FROM warehouses
 WHERE id = $1 AND organization_id = $2
 `
 
@@ -359,12 +360,13 @@ func (q *Queries) GetWarehouseByID(ctx context.Context, arg GetWarehouseByIDPara
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RequireLocationPlacement,
+		&i.IsPrimary,
 	)
 	return i, err
 }
 
 const getWarehouseByUUID = `-- name: GetWarehouseByUUID :one
-SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement FROM warehouses
+SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement, is_primary FROM warehouses
 WHERE uuid = $1 AND organization_id = $2
 `
 
@@ -388,6 +390,7 @@ func (q *Queries) GetWarehouseByUUID(ctx context.Context, arg GetWarehouseByUUID
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RequireLocationPlacement,
+		&i.IsPrimary,
 	)
 	return i, err
 }
@@ -577,7 +580,7 @@ func (q *Queries) ListRoomsByUUIDs(ctx context.Context, arg ListRoomsByUUIDsPara
 const listWarehouses = `-- name: ListWarehouses :many
 
 
-SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement FROM warehouses
+SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement, is_primary FROM warehouses
 WHERE organization_id = $1
   AND ($2::bool IS NULL OR active = $2::bool)
 ORDER BY sort_order, id
@@ -613,6 +616,7 @@ func (q *Queries) ListWarehouses(ctx context.Context, arg ListWarehousesParams) 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RequireLocationPlacement,
+			&i.IsPrimary,
 		); err != nil {
 			return nil, err
 		}
@@ -625,7 +629,7 @@ func (q *Queries) ListWarehouses(ctx context.Context, arg ListWarehousesParams) 
 }
 
 const listWarehousesByUUIDs = `-- name: ListWarehousesByUUIDs :many
-SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement FROM warehouses
+SELECT id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement, is_primary FROM warehouses
 WHERE uuid = ANY($1::uuid[]) AND organization_id = $2
 `
 
@@ -655,6 +659,7 @@ func (q *Queries) ListWarehousesByUUIDs(ctx context.Context, arg ListWarehousesB
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.RequireLocationPlacement,
+			&i.IsPrimary,
 		); err != nil {
 			return nil, err
 		}
@@ -829,7 +834,7 @@ SET code = $1,
     active = $4,
     require_location_placement = $5
 WHERE id = $6 AND organization_id = $7
-RETURNING id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement
+RETURNING id, uuid, organization_id, code, name, address, active, sort_order, created_at, updated_at, require_location_placement, is_primary
 `
 
 type UpdateWarehouseParams struct {
@@ -865,6 +870,7 @@ func (q *Queries) UpdateWarehouse(ctx context.Context, arg UpdateWarehouseParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.RequireLocationPlacement,
+		&i.IsPrimary,
 	)
 	return i, err
 }

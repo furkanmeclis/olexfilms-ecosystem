@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "图片过大；请使用约 150 KB 以内的图片。",
   "label_templates.errors.generic": "无法保存模板。",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "已有同名模板。",
-  "label_templates.errors.VALIDATION_ERROR": "部分字段无效，请检查表单。"
+  "label_templates.errors.VALIDATION_ERROR": "部分字段无效，请检查表单。",
+  "trace.title": "条码追溯",
+  "trace.origin": "来源仓库",
+  "trace.orders": "订单",
+  "trace.services": "服务",
+  "trace.no_order": "未随订单发出。",
+  "trace.no_order_unknown": "未找到订单；来源未知（旧系统批量导入）。",
+  "trace.no_service": "未在服务中使用。",
+  "trace.source.order": "随订单",
+  "trace.source.stock": "在库",
+  "trace.source.unknown": "来源未知"
 }

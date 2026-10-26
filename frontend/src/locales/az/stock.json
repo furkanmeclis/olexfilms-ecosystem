@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "Şəkil çox böyükdür; təxminən 150 KB-dan kiçik şəkil istifadə edin.",
   "label_templates.errors.generic": "Şablon saxlanıla bilmədi.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Bu adda başqa şablon artıq var.",
-  "label_templates.errors.VALIDATION_ERROR": "Bəzi sahələr etibarsızdır; formu yoxlayın."
+  "label_templates.errors.VALIDATION_ERROR": "Bəzi sahələr etibarsızdır; formu yoxlayın.",
+  "trace.title": "Barkod izi",
+  "trace.origin": "Mənşə anbarı",
+  "trace.orders": "Sifarişlər",
+  "trace.services": "Xidmətlər",
+  "trace.no_order": "Sifarişlə getməyib.",
+  "trace.no_order_unknown": "Sifariş tapılmadı; mənbə naməlum (köhnə idxal).",
+  "trace.no_service": "Xidmətdə istifadə olunmayıb.",
+  "trace.source.order": "Sifarişlə",
+  "trace.source.stock": "Ehtiyatda",
+  "trace.source.unknown": "Mənbə naməlum"
 }
