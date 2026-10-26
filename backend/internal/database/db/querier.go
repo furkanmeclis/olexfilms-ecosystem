@@ -133,6 +133,7 @@ type Querier interface {
 	ClearDefaultLabelTemplate(ctx context.Context, arg ClearDefaultLabelTemplateParams) error
 	ClearOrganizationLogo(ctx context.Context, argUuid uuid.UUID) (Organization, error)
 	ClearServiceIncome(ctx context.Context, arg ClearServiceIncomeParams) (Service, error)
+	ClearStockEntryLineScan(ctx context.Context, id int64) (int64, error)
 	ClearWarehouseMemberDefault(ctx context.Context, arg ClearWarehouseMemberDefaultParams) error
 	// A cancelled re-application service releases the claim for a new attempt.
 	ClearWarrantyClaimReapplyService(ctx context.Context, arg ClearWarrantyClaimReapplyServiceParams) (WarrantyClaim, error)
@@ -321,6 +322,7 @@ type Querier interface {
 	CountStockCounts(ctx context.Context, arg CountStockCountsParams) (int64, error)
 	CountStockEntries(ctx context.Context, arg CountStockEntriesParams) (int64, error)
 	CountStockEntryLines(ctx context.Context, entryID int64) (int64, error)
+	CountStockEntryScanned(ctx context.Context, entryID int64) (CountStockEntryScannedRow, error)
 	CountStockForecastSubtreeSummary(ctx context.Context, arg CountStockForecastSubtreeSummaryParams) (int64, error)
 	CountStockForecasts(ctx context.Context, arg CountStockForecastsParams) (int64, error)
 	CountStockMovementsByUnit(ctx context.Context, unitID int64) (int64, error)
@@ -439,6 +441,7 @@ type Querier interface {
 	// statement (the fleet cari in the dealer's ledger).
 	CreateFleetUser(ctx context.Context, arg CreateFleetUserParams) (FleetUser, error)
 	CreateImportJob(ctx context.Context, arg CreateImportJobParams) (ImportJob, error)
+	CreateImportMappingTemplate(ctx context.Context, arg CreateImportMappingTemplateParams) (ImportMappingTemplate, error)
 	// An applied import batch is a confirmed entry at once.
 	CreateImportStockEntry(ctx context.Context, arg CreateImportStockEntryParams) (StockEntry, error)
 	CreateIntakePhoto(ctx context.Context, arg CreateIntakePhotoParams) (IntakePhoto, error)
@@ -679,6 +682,7 @@ type Querier interface {
 	// Draft deletion (items, images and logs must be gone first).
 	DeleteDraftService(ctx context.Context, arg DeleteDraftServiceParams) (int64, error)
 	DeleteFixedBarcodeHoldingForRepair(ctx context.Context, id int64) error
+	DeleteImportMappingTemplate(ctx context.Context, arg DeleteImportMappingTemplateParams) (int64, error)
 	DeleteIntegrationConnection(ctx context.Context, id int64) (int64, error)
 	DeleteLabelTemplate(ctx context.Context, arg DeleteLabelTemplateParams) (int64, error)
 	DeleteLogPurgeRule(ctx context.Context, argUuid uuid.UUID) (int64, error)
@@ -729,6 +733,7 @@ type Querier interface {
 	DeleteStaleQRLoginChallenges(ctx context.Context) (int64, error)
 	DeleteStockCountScan(ctx context.Context, arg DeleteStockCountScanParams) (int64, error)
 	DeleteStockEntryLine(ctx context.Context, arg DeleteStockEntryLineParams) (int64, error)
+	DeleteStockEntryScan(ctx context.Context, arg DeleteStockEntryScanParams) (int64, error)
 	DeleteStockImportRows(ctx context.Context, batchID int64) (int64, error)
 	DeleteStorageShare(ctx context.Context, argUuid uuid.UUID) error
 	DeleteStorageStar(ctx context.Context, arg DeleteStorageStarParams) error
@@ -837,6 +842,7 @@ type Querier interface {
 	// A province of an active country by name, case- and Turkish-accent-
 	// insensitively; Turkey first when several countries have the name.
 	FindProvinceByName(ctx context.Context, name string) (Province, error)
+	FindStockEntryLineByBarcode(ctx context.Context, arg FindStockEntryLineByBarcodeParams) (StockEntryLine, error)
 	// The sibling with this code (bulk generation reuses existing nodes).
 	FindTypedLocationChild(ctx context.Context, arg FindTypedLocationChildParams) (WarehouseLocation, error)
 	// Plate lookup (not unique: plates change hands).
@@ -1359,6 +1365,7 @@ type Querier interface {
 	GetStorageTrashByOriginalKey(ctx context.Context, originalKey string) (StorageTrash, error)
 	GetStorageTrashByUUID(ctx context.Context, argUuid uuid.UUID) (StorageTrash, error)
 	GetSupplierByUUID(ctx context.Context, arg GetSupplierByUUIDParams) (Supplier, error)
+	GetSupplierRef(ctx context.Context, id int64) (GetSupplierRefRow, error)
 	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
 	GetTaskByUUID(ctx context.Context, arg GetTaskByUUIDParams) (Task, error)
 	// An organization of the brand by uuid (the use case checks the type).
@@ -1577,6 +1584,7 @@ type Querier interface {
 	// Scans.
 	InsertStockCountScan(ctx context.Context, arg InsertStockCountScanParams) (StockCountScan, error)
 	InsertStockEntryLine(ctx context.Context, arg InsertStockEntryLineParams) (StockEntryLine, error)
+	InsertStockEntryScan(ctx context.Context, arg InsertStockEntryScanParams) (StockEntryScan, error)
 	InsertStockImportRow(ctx context.Context, arg InsertStockImportRowParams) (StockImportRow, error)
 	// ---------------------------------------------------------------------------
 	// Stock movements (append-only: insert and read only).
@@ -2097,6 +2105,7 @@ type Querier interface {
 	// for admins) and tenant jobs (organization_id). Sort:
 	// docs/list-contract.md, keys from imports/usecase.SortSpec.
 	ListImportJobsFiltered(ctx context.Context, arg ListImportJobsFilteredParams) ([]ListImportJobsFilteredRow, error)
+	ListImportMappingTemplates(ctx context.Context, arg ListImportMappingTemplatesParams) ([]ListImportMappingTemplatesRow, error)
 	// AI pipeline (TEC-396, F4-02c) -------------------------------------------------
 	// Inbound contact messages of a conversation newer than after_id and since,
 	// newest first (the pipeline turns them oldest first).
@@ -2634,6 +2643,7 @@ type Querier interface {
 	// The lines of the given entries with their unit, product and location.
 	ListStockEntryExportLines(ctx context.Context, arg ListStockEntryExportLinesParams) ([]ListStockEntryExportLinesRow, error)
 	ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error)
+	ListStockEntryScans(ctx context.Context, entryID int64) ([]StockEntryScan, error)
 	ListStockForecastHistory(ctx context.Context, arg ListStockForecastHistoryParams) ([]StockForecast, error)
 	ListStockForecastNetworkInputs(ctx context.Context, arg ListStockForecastNetworkInputsParams) ([]ListStockForecastNetworkInputsRow, error)
 	ListStockForecastNotifyUserIDs(ctx context.Context, organizationID int64) ([]int64, error)
@@ -2685,6 +2695,7 @@ type Querier interface {
 	ListStorageStarsByUser(ctx context.Context, userID int64) ([]StorageStar, error)
 	ListStorageTrash(ctx context.Context, arg ListStorageTrashParams) ([]StorageTrash, error)
 	ListStuckProcessingNotificationIDs(ctx context.Context, staleMinutes int32) ([]int64, error)
+	ListSupplierProductCodes(ctx context.Context, supplierID int64) ([]ListSupplierProductCodesRow, error)
 	ListSuppliers(ctx context.Context, arg ListSuppliersParams) ([]Supplier, error)
 	// ---------------------------------------------------------------------------
 	// Suppliers.
@@ -3635,8 +3646,13 @@ type Querier interface {
 	// it posted (TEC-381: a planned payment is booked on its paid_on).
 	SetStaffPaymentFinanceEntry(ctx context.Context, arg SetStaffPaymentFinanceEntryParams) (StaffPayment, error)
 	SetStockBulkJobStatus(ctx context.Context, arg SetStockBulkJobStatusParams) (StockBulkJob, error)
+	// TEC-1007: stock entry from a container list. The delivery on the entry
+	// header, the arrival scan (expected vs received), remembered supplier
+	// product codes and saved import column mappings.
+	SetStockEntryHeader(ctx context.Context, arg SetStockEntryHeaderParams) (StockEntry, error)
 	SetStockEntryLineLocation(ctx context.Context, arg SetStockEntryLineLocationParams) (int64, error)
 	SetStockEntryLineMovements(ctx context.Context, arg SetStockEntryLineMovementsParams) error
+	SetStockEntryLineScanned(ctx context.Context, arg SetStockEntryLineScannedParams) (StockEntryLine, error)
 	SetStockEntryLineUndone(ctx context.Context, arg SetStockEntryLineUndoneParams) error
 	SetStockImportBatchState(ctx context.Context, arg SetStockImportBatchStateParams) (StockImportBatch, error)
 	SetStockImportRowErrors(ctx context.Context, arg SetStockImportRowErrorsParams) (StockImportRow, error)
@@ -3997,6 +4013,7 @@ type Querier interface {
 	// repository contract for daily snapshots and list screens.
 	UpsertStockForecastSnapshot(ctx context.Context, arg UpsertStockForecastSnapshotParams) (StockForecast, error)
 	UpsertStockForecastThreshold(ctx context.Context, arg UpsertStockForecastThresholdParams) (StockForecastThreshold, error)
+	UpsertSupplierProductCode(ctx context.Context, arg UpsertSupplierProductCodeParams) error
 	UpsertSystemModuleFlag(ctx context.Context, arg UpsertSystemModuleFlagParams) (ModuleFlag, error)
 	UpsertSystemRole(ctx context.Context, arg UpsertSystemRoleParams) (Role, error)
 	UpsertSystemSetting(ctx context.Context, arg UpsertSystemSettingParams) (SystemSetting, error)

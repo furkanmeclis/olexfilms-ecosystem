@@ -176,6 +176,11 @@ type EntryLine struct {
 	EntryMovementUUID     *uuid.UUID     `json:"entry_movement_uuid"`
 	PlacementMovementUUID *uuid.UUID     `json:"placement_movement_uuid"`
 	Undone                bool           `json:"undone"`
+	// TEC-1007: container list columns and the arrival scan.
+	BoxNo     *string    `json:"box_no"`
+	Lot       *string    `json:"lot"`
+	Meters    *string    `json:"meters"`
+	ScannedAt *time.Time `json:"scanned_at"`
 }
 
 // StockEntry is the entry document.
@@ -188,16 +193,23 @@ type StockEntry struct {
 	ImportBatchUUID *uuid.UUID      `json:"import_batch_uuid"`
 	// Import entries (TEC-759): the import job, its file and the batch
 	// status (applied / undone / partially_undone).
-	ImportJobUUID        *uuid.UUID        `json:"import_job_uuid,omitempty"`
-	ImportSourceFilename *string           `json:"import_source_filename,omitempty"`
-	ImportStatus         *string           `json:"import_status,omitempty"`
-	LineCount            int64             `json:"line_count"`
-	PlacedCount          *int64            `json:"placed_count,omitempty"`
-	Lines                []EntryLine       `json:"lines,omitempty"`
-	LabelBatches         []EntryLabelBatch `json:"label_batches,omitempty"`
-	CreatedAt            time.Time         `json:"created_at"`
-	ConfirmedAt          *time.Time        `json:"confirmed_at"`
-	CancelledAt          *time.Time        `json:"cancelled_at"`
+	ImportJobUUID        *uuid.UUID `json:"import_job_uuid,omitempty"`
+	ImportSourceFilename *string    `json:"import_source_filename,omitempty"`
+	ImportStatus         *string    `json:"import_status,omitempty"`
+	// TEC-1007: the delivery of a container entry.
+	Supplier        *EntrySupplier    `json:"supplier"`
+	ContainerNo     *string           `json:"container_no"`
+	WaybillNo       *string           `json:"waybill_no"`
+	ArrivalDate     *string           `json:"arrival_date"`
+	DefaultLocation *EntryLocation    `json:"default_location"`
+	LineCount       int64             `json:"line_count"`
+	PlacedCount     *int64            `json:"placed_count,omitempty"`
+	ScannedCount    *int64            `json:"scanned_count,omitempty"`
+	Lines           []EntryLine       `json:"lines,omitempty"`
+	LabelBatches    []EntryLabelBatch `json:"label_batches,omitempty"`
+	CreatedAt       time.Time         `json:"created_at"`
+	ConfirmedAt     *time.Time        `json:"confirmed_at"`
+	CancelledAt     *time.Time        `json:"cancelled_at"`
 }
 
 // --- inputs ------------------------------------------------------------------
@@ -210,6 +222,8 @@ type EntryInput struct {
 	// DefaultWarehouse: an empty WarehouseUUID takes the caller's default
 	// warehouse (mobile, TEC-769).
 	DefaultWarehouse bool
+	// Header: the delivery of a container entry (TEC-1007), optional.
+	Header EntryHeaderInput
 }
 
 // EntryLinesInput adds lines to a draft. with_existing: Barcodes.
@@ -296,6 +310,11 @@ func (s *StockEntries) Create(ctx context.Context, c EntryCaller, in EntryInput)
 		})
 		if err != nil {
 			return err
+		}
+		if !in.Header.empty() {
+			if e, err = s.setHeader(ctx, q, e, in.Header); err != nil {
+				return err
+			}
 		}
 		return audit(ctx, q, c, AuditStockEntryCreated, e, map[string]any{"warehouse_id": w.ID, "mode": mode})
 	})
@@ -398,8 +417,9 @@ func (s *StockEntries) AddLines(ctx context.Context, c EntryCaller, id uuid.UUID
 			} else if in.FixedQuantity != nil && *in.FixedQuantity != 1 {
 				return invalid("fixed_quantity", "only fixed barcode products carry a quantity")
 			}
+			// TEC-1007: lines land on the entry's default bin when it has one.
 			if _, err := q.InsertStockEntryLine(ctx, db.InsertStockEntryLineParams{
-				EntryID: e.ID, UnitID: u.ID, Quantity: qty,
+				EntryID: e.ID, UnitID: u.ID, Quantity: qty, LocationID: e.DefaultLocationID,
 			}); err != nil {
 				if isUnique(err) {
 					return invalid("barcodes", "barcode "+u.Barcode+" is already on this entry")
@@ -935,6 +955,9 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 		UUID: e.Uuid, Mode: e.Mode, Status: e.Status, Note: textPtr(e.Note),
 		CreatedAt: ts(e.CreatedAt), ConfirmedAt: tsPtr(e.ConfirmedAt), CancelledAt: tsPtr(e.CancelledAt),
 	}
+	if err := s.viewHeader(ctx, q, e, &out); err != nil {
+		return out, err
+	}
 	if e.WarehouseID.Valid {
 		w, err := q.GetWarehouseByID(ctx, db.GetWarehouseByIDParams{ID: e.WarehouseID.Int64, OrganizationID: e.OrganizationID})
 		if err != nil {
@@ -974,7 +997,7 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 	products := map[int64]db.Product{}
 	locations := map[int64]db.WarehouseLocation{}
 	batches := map[int64]bool{}
-	var placed int64
+	var placed, scanned int64
 	for _, l := range lines {
 		u, err := q.GetUnit(ctx, l.UnitID)
 		if err != nil {
@@ -991,6 +1014,11 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 			UUID: l.Uuid, UnitUUID: u.Uuid, Barcode: u.Barcode, UnitKind: u.UnitKind, UnitStatus: u.Status,
 			Quantity: l.Quantity, Product: EntryProduct{UUID: p.Uuid, SKU: p.Sku, Name: p.Name},
 			LabelURL: stockusecase.UnitLabelPath(u.Barcode), Undone: l.UndoMovementID.Valid,
+			BoxNo: textPtr(l.BoxNo), Lot: textPtr(u.Lot), Meters: numericString(u.InitialMeters),
+			ScannedAt: tsPtr(l.ScannedAt),
+		}
+		if l.ScannedAt.Valid {
+			scanned++
 		}
 		if l.LocationID.Valid {
 			placed++
@@ -1020,6 +1048,7 @@ func (s *StockEntries) view(ctx context.Context, q *db.Queries, e db.StockEntry,
 		out.Lines = append(out.Lines, line)
 	}
 	out.PlacedCount = &placed
+	out.ScannedCount = &scanned
 	return out, nil
 }
 

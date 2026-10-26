@@ -1462,6 +1462,19 @@ type ImportJob struct {
 	SourceFilename string             `json:"source_filename"`
 }
 
+type ImportMappingTemplate struct {
+	ID             int64              `json:"id"`
+	Uuid           uuid.UUID          `json:"uuid"`
+	OrganizationID int64              `json:"organization_id"`
+	Resource       string             `json:"resource"`
+	Name           string             `json:"name"`
+	SupplierID     pgtype.Int8        `json:"supplier_id"`
+	Mapping        []byte             `json:"mapping"`
+	CreatedBy      pgtype.Int8        `json:"created_by"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type IntakePhoto struct {
 	ID             int64              `json:"id"`
 	Uuid           uuid.UUID          `json:"uuid"`
@@ -3282,6 +3295,11 @@ type StockEntry struct {
 	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	SupplierID        pgtype.Int8        `json:"supplier_id"`
+	ContainerNo       pgtype.Text        `json:"container_no"`
+	WaybillNo         pgtype.Text        `json:"waybill_no"`
+	ArrivalDate       pgtype.Date        `json:"arrival_date"`
+	DefaultLocationID pgtype.Int8        `json:"default_location_id"`
 }
 
 type StockEntryLine struct {
@@ -3295,6 +3313,18 @@ type StockEntryLine struct {
 	PlacementMovementID pgtype.Int8        `json:"placement_movement_id"`
 	UndoMovementID      pgtype.Int8        `json:"undo_movement_id"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	BoxNo               pgtype.Text        `json:"box_no"`
+	ScannedAt           pgtype.Timestamptz `json:"scanned_at"`
+	ScannedBy           pgtype.Int8        `json:"scanned_by"`
+}
+
+type StockEntryScan struct {
+	ID        int64              `json:"id"`
+	EntryID   int64              `json:"entry_id"`
+	Barcode   string             `json:"barcode"`
+	UnitID    pgtype.Int8        `json:"unit_id"`
+	ScannedBy int64              `json:"scanned_by"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type StockForecast struct {
@@ -3582,6 +3612,17 @@ type Supplier struct {
 	Email          pgtype.Text        `json:"email"`
 	Note           string             `json:"note"`
 	Active         bool               `json:"active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type SupplierProductCode struct {
+	ID             int64              `json:"id"`
+	OrganizationID int64              `json:"organization_id"`
+	BrandID        int64              `json:"brand_id"`
+	SupplierID     int64              `json:"supplier_id"`
+	Code           string             `json:"code"`
+	ProductID      int64              `json:"product_id"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
