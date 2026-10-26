@@ -194,5 +194,10 @@
   "fields.entry_barcodes.product_name": "Nom du produit",
   "fields.entry_barcodes.product_sku": "SKU du produit",
   "fields.entry_barcodes.barcode": "Code-barres",
-  "fields.entry_barcodes.location_code": "Code emplacement"
+  "fields.entry_barcodes.location_code": "Code emplacement",
+  "fields.entry_barcodes.supplier_code": "Code produit fournisseur",
+  "fields.entry_barcodes.quantity": "Quantité",
+  "fields.entry_barcodes.meters": "Mètres",
+  "fields.entry_barcodes.lot": "Lot",
+  "fields.entry_barcodes.box_no": "N° de carton"
 }

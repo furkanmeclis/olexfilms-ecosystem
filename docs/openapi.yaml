@@ -12928,6 +12928,251 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Warehouse]
+      operationId: updateStockEntryHeader
+      summary: Change the delivery of a draft entry (TEC-1007)
+      description: >-
+        Needs `warehouse.write` and, for a restricted user, membership of the
+        entry warehouse. Supplier, container / waybill number, arrival date,
+        default bin and note of a draft. 409 STOCK_ENTRY_NOT_DRAFT after
+        confirm or cancel; 404 for an unknown supplier.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryHeaderInput" }
+      responses:
+        "200":
+          description: Entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-entries/{uuid}/arrival-scans:
+    post:
+      tags: [Warehouse]
+      operationId: scanStockEntryArrival
+      summary: Check one arrived barcode against a draft entry (TEC-1007)
+      description: >-
+        Needs `warehouse.write`. A barcode of the entry marks its line
+        received (`matched`, or `already` when scanned before); any other
+        barcode is recorded as an extra. Returns the running counts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StockEntryArrivalScanInput" }
+      responses:
+        "200":
+          description: Scan result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryArrivalScan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+    delete:
+      tags: [Warehouse]
+      operationId: unscanStockEntryArrival
+      summary: Take back one arrival scan (TEC-1007)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+        - name: barcode
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 128 }
+      responses:
+        "200":
+          description: Running counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryArrivalScan"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/warehouse/stock-entries/{uuid}/arrival-report:
+    get:
+      tags: [Warehouse]
+      operationId: getStockEntryArrivalReport
+      summary: Expected vs received of the arrival scan (TEC-1007)
+      description: Needs `warehouse.read`. Missing lines (not scanned) and extras (scanned, not on the entry).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockEntryArrivalReport"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/suppliers:
+    get:
+      tags: [Warehouse]
+      operationId: listWarehouseSuppliers
+      summary: Active suppliers of the active organization for stock entries (TEC-1007)
+      description: Needs `warehouse.write`. `q` matches the name; sorted by name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Q"
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Suppliers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseSupplierPage"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Warehouse]
+      operationId: createWarehouseSupplier
+      summary: Add a supplier from the stock entry form (TEC-1007)
+      description: Needs `warehouse.write`.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WarehouseSupplierInput" }
+      responses:
+        "201":
+          description: Supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeWarehouseSupplier"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /v1/warehouse/entry-import-templates:
+    get:
+      tags: [Warehouse]
+      operationId: listEntryImportTemplates
+      summary: Saved column mappings of the stock entry import (TEC-1007)
+      description: Needs `warehouse.write`. Sorted by name.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Templates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeEntryImportMappingTemplateList"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Warehouse]
+      operationId: saveEntryImportTemplate
+      summary: Save a column mapping (a supplier's template) (TEC-1007)
+      description: >-
+        Needs `warehouse.write`. Values must be fields of the stock entry
+        import (400 otherwise); the same name replaces the saved mapping.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EntryImportMappingTemplateInput" }
+      responses:
+        "200":
+          description: Template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeEntryImportMappingTemplate"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/warehouse/entry-import-templates/{uuid}:
+    delete:
+      tags: [Warehouse]
+      operationId: deleteEntryImportTemplate
+      summary: Delete a saved column mapping (TEC-1007)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ResourceUUID"
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/warehouse/stock-entries/{uuid}/import:
     post:
@@ -40314,6 +40559,190 @@ components:
         warehouse_uuid: { type: string, format: uuid }
         mode: { type: string, enum: [with_existing, generate_new] }
         note: { type: [string, "null"], maxLength: 500 }
+        supplier_uuid: { type: [string, "null"], format: uuid, description: "TEC-1007: a supplier of the active organization (GET /v1/warehouse/suppliers)." }
+        container_no: { type: [string, "null"], maxLength: 64 }
+        waybill_no: { type: [string, "null"], maxLength: 64 }
+        arrival_date: { type: [string, "null"], format: date }
+        default_location_uuid: { type: [string, "null"], format: uuid, description: "A bin of the entry warehouse; later lines (scan, import) land on it." }
+
+    StockEntryHeaderInput:
+      type: object
+      additionalProperties: false
+      description: >-
+        TEC-1007 delivery of a draft entry. A missing field keeps its value,
+        null or an empty string clears it.
+      properties:
+        note: { type: [string, "null"], maxLength: 500 }
+        supplier_uuid: { type: [string, "null"], format: uuid, description: "TEC-1007: a supplier of the active organization (GET /v1/warehouse/suppliers)." }
+        container_no: { type: [string, "null"], maxLength: 64 }
+        waybill_no: { type: [string, "null"], maxLength: 64 }
+        arrival_date: { type: [string, "null"], format: date }
+        default_location_uuid: { type: [string, "null"], format: uuid, description: "A bin of the entry warehouse; later lines (scan, import) land on it." }
+
+    StockEntrySupplier:
+      type: object
+      required: [uuid, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+
+    WarehouseSupplier:
+      type: object
+      required: [uuid, name, tax_no, active]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        tax_no: { type: [string, "null"] }
+        active: { type: boolean }
+
+    WarehouseSupplierInput:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        tax_no: { type: [string, "null"], maxLength: 64 }
+
+    EnvelopeWarehouseSupplier:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/WarehouseSupplier" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeWarehouseSupplierPage:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/WarehouseSupplier" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EntryImportMappingTemplate:
+      type: object
+      required: [uuid, name, supplier, mapping, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        supplier:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntrySupplier"
+        mapping:
+          type: object
+          additionalProperties: { type: string }
+          description: Source column header -> import field.
+        updated_at: { type: string, format: date-time }
+
+    EntryImportMappingTemplateInput:
+      type: object
+      additionalProperties: false
+      required: [name, mapping]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100, description: "Saving an existing name replaces it." }
+        supplier_uuid: { type: [string, "null"], format: uuid }
+        mapping:
+          type: object
+          additionalProperties: { type: string }
+
+    EnvelopeEntryImportMappingTemplate:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/EntryImportMappingTemplate" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeEntryImportMappingTemplateList:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/EntryImportMappingTemplate" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockEntryArrivalScanInput:
+      type: object
+      additionalProperties: false
+      required: [barcode]
+      properties:
+        barcode: { type: string, minLength: 1, maxLength: 128, description: "Scanned barcode or OFW:U:<barcode> label." }
+
+    StockEntryArrivalScan:
+      type: object
+      required: [result, barcode, line, expected, scanned, extras]
+      properties:
+        result:
+          type: string
+          enum: [matched, already, extra]
+          description: matched - a line is received now; already - scanned before; extra - not on the entry.
+        barcode: { type: string }
+        line:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryLine"
+        expected: { type: integer, format: int64 }
+        scanned: { type: integer, format: int64 }
+        extras: { type: integer, format: int64 }
+
+    EnvelopeStockEntryArrivalScan:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockEntryArrivalScan" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    StockEntryArrivalExtra:
+      type: object
+      required: [barcode, product, scanned_at]
+      properties:
+        barcode: { type: string }
+        product:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryProduct"
+        scanned_at: { type: string, format: date-time }
+
+    StockEntryArrivalReport:
+      type: object
+      required: [expected, scanned, missing, extras]
+      properties:
+        expected: { type: integer, format: int64 }
+        scanned: { type: integer, format: int64 }
+        missing:
+          type: array
+          items: { $ref: "#/components/schemas/StockEntryLine" }
+        extras:
+          type: array
+          items: { $ref: "#/components/schemas/StockEntryArrivalExtra" }
+
+    EnvelopeStockEntryArrivalReport:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/StockEntryArrivalReport" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     StockEntryLinesInput:
       type: object
@@ -40378,7 +40807,7 @@ components:
 
     StockEntryLine:
       type: object
-      required: [uuid, unit_uuid, barcode, unit_kind, unit_status, quantity, product, location, label_url, entry_movement_uuid, placement_movement_uuid, undone]
+      required: [uuid, unit_uuid, barcode, unit_kind, unit_status, quantity, product, location, label_url, entry_movement_uuid, placement_movement_uuid, undone, box_no, lot, meters, scanned_at]
       properties:
         uuid: { type: string, format: uuid }
         unit_uuid: { type: string, format: uuid }
@@ -40395,10 +40824,14 @@ components:
         entry_movement_uuid: { type: [string, "null"], format: uuid }
         placement_movement_uuid: { type: [string, "null"], format: uuid }
         undone: { type: boolean, description: "Voided by an import undo (mode import)." }
+        box_no: { type: [string, "null"], description: TEC-1007 box (carton) number of the container list. }
+        lot: { type: [string, "null"], description: Lot of the unit. }
+        meters: { type: [string, "null"], description: Initial length of a roll unit. }
+        scanned_at: { type: [string, "null"], format: date-time, description: TEC-1007 arrival scan. }
 
     StockEntry:
       type: object
-      required: [uuid, mode, status, note, warehouse, import_batch_uuid, line_count, created_at, confirmed_at, cancelled_at]
+      required: [uuid, mode, status, note, warehouse, import_batch_uuid, line_count, created_at, confirmed_at, cancelled_at, supplier, container_no, waybill_no, arrival_date, default_location]
       properties:
         uuid: { type: string, format: uuid }
         mode: { $ref: "#/components/schemas/StockEntryMode" }
@@ -40422,8 +40855,20 @@ components:
             Import entries - status of the import batch (applied, undone,
             partially_undone when some rows moved after the import and were
             not undone).
+        supplier:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntrySupplier"
+        container_no: { type: [string, "null"] }
+        waybill_no: { type: [string, "null"] }
+        arrival_date: { type: [string, "null"], format: date }
+        default_location:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockEntryLocation"
         line_count: { type: integer, format: int64 }
         placed_count: { type: integer, format: int64, description: Detail responses only. }
+        scanned_count: { type: integer, format: int64, description: Detail responses only; lines received by the arrival scan. }
         lines:
           type: array
           description: Detail responses only.

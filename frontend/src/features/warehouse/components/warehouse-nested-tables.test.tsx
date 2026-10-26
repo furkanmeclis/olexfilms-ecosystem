@@ -118,6 +118,10 @@ describe("EntryLinesTable (TEC-376)", () => {
       "barcode",
       "product",
       "quantity",
+      "meters",
+      "lot",
+      "box_no",
+      "scanned",
       "location",
       "actions",
     ]);

@@ -55,6 +55,17 @@ import { useLocale } from "@/providers/locale-provider";
 import { appToast } from "@/providers/toast-provider";
 import { cn } from "@/lib/utils";
 
+/**
+ * Column mapping helpers on the columns step (TEC-1007 saved templates):
+ * the file headers, the current mapping (source header -> field) and a
+ * setter that replaces the mapping of the given headers.
+ */
+export type ImportWizardMappingTools = {
+  headers: string[];
+  mapping: Record<string, string>;
+  applyMapping: (mapping: Record<string, string>) => void;
+};
+
 /** Values of the resource-specific options and their setter. */
 export type ImportWizardOptions = {
   values: Record<string, string>;
@@ -93,9 +104,26 @@ export type ImportWizardProps = {
    */
   resultAction?: (job: ImportJob) => ReactNode;
   title?: string;
+  /**
+   * A saved mapping (source header -> field) applied over the suggested one
+   * after the upload, e.g. the template of the entry's supplier.
+   */
+  presetMapping?: (headers: string[]) => Record<string, string> | null;
+  /** Extra controls above the column mapping (save / apply templates). */
+  mappingTools?: (tools: ImportWizardMappingTools) => ReactNode;
 };
 
 type Step = "file" | "columns" | "preview" | "confirm" | "result";
+
+/** Keeps the entries of a saved mapping whose header is in the file. */
+function onlyHeaders(
+  mapping: Record<string, string>,
+  headers: string[],
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(mapping).filter(([header]) => headers.includes(header)),
+  );
+}
 
 const STEPS: Step[] = ["file", "columns", "preview", "confirm", "result"];
 
@@ -150,6 +178,8 @@ export function ImportWizard({
   resultLink,
   resultAction,
   title,
+  presetMapping,
+  mappingTools,
 }: ImportWizardProps) {
   const { t, tp, locale } = useLocale();
   const params = useParams<{ slug?: string }>();
@@ -226,9 +256,11 @@ export function ImportWizard({
       for (const header of Object.values(serverMapping)) {
         if (!headers.includes(header)) headers.push(header);
       }
+      const preset = presetMapping?.(fileHead.headers);
       const merged = {
         ...suggestColumnMapping(fileHead.headers, schema, label),
         ...serverMapping,
+        ...(preset ? apiMappingToUi(onlyHeaders(preset, headers)) : {}),
       };
       setHead({ headers, samples: fileHead.samples });
       setMapping(merged);
@@ -367,6 +399,17 @@ export function ImportWizard({
             />
           ) : null}
 
+          {step === "columns" && mappingTools
+            ? mappingTools({
+                headers: head.headers,
+                mapping: uiMappingToApi(mapping),
+                applyMapping: (next) => {
+                  const ui = apiMappingToUi(onlyHeaders(next, head.headers));
+                  setMapping(ui);
+                  setAutoFields(new Set(Object.keys(ui)));
+                },
+              })
+            : null}
           {step === "columns" ? (
             <ImportColumnsStep
               resource={resource}

@@ -322,6 +322,15 @@ export const IMPORT_SCHEMA: Partial<
       key: "location_code",
       labelKey: "imports.fields.entry_barcodes.location_code",
     },
+    // TEC-1007: container list columns.
+    {
+      key: "supplier_code",
+      labelKey: "imports.fields.entry_barcodes.supplier_code",
+    },
+    { key: "quantity", labelKey: "imports.fields.entry_barcodes.quantity" },
+    { key: "meters", labelKey: "imports.fields.entry_barcodes.meters" },
+    { key: "lot", labelKey: "imports.fields.entry_barcodes.lot" },
+    { key: "box_no", labelKey: "imports.fields.entry_barcodes.box_no" },
   ],
   // TEC-473/477: the fleet comes from the job defaults (fleet_uuid).
   "tenant.fleet.vehicles": [

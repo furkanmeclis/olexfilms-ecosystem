@@ -210,5 +210,10 @@
   "fields.entry_barcodes.product_name": "Название товара",
   "fields.entry_barcodes.product_sku": "SKU товара",
   "fields.entry_barcodes.barcode": "Штрихкод",
-  "fields.entry_barcodes.location_code": "Код ячейки"
+  "fields.entry_barcodes.location_code": "Код ячейки",
+  "fields.entry_barcodes.supplier_code": "Код товара поставщика",
+  "fields.entry_barcodes.quantity": "Количество",
+  "fields.entry_barcodes.meters": "Метры",
+  "fields.entry_barcodes.lot": "Партия",
+  "fields.entry_barcodes.box_no": "№ коробки"
 }

@@ -37,6 +37,14 @@ export type StockEntryLinesInput = Schemas["StockEntryLinesInput"];
 export type StockEntryPlaceInput = Schemas["StockEntryPlaceInput"];
 export type StockEntryStatus = Schemas["StockEntryStatus"];
 export type StockEntryMode = Schemas["StockEntryMode"];
+// --- TEC-1007: container entries ---
+export type StockEntryHeaderInput = Schemas["StockEntryHeaderInput"];
+export type StockEntryArrivalScan = Schemas["StockEntryArrivalScan"];
+export type StockEntryArrivalReport = Schemas["StockEntryArrivalReport"];
+export type WarehouseSupplier = Schemas["WarehouseSupplier"];
+export type EntryImportMappingTemplate = Schemas["EntryImportMappingTemplate"];
+export type EntryImportMappingTemplateInput =
+  Schemas["EntryImportMappingTemplateInput"];
 export type BarcodeBatch = Schemas["BarcodeBatch"];
 export type BarcodeBatchInput = Schemas["BarcodeBatchInput"];
 export type BarcodeVoidInput = Schemas["BarcodeVoidInput"];
@@ -322,6 +330,67 @@ export const warehouseService = {
       `/v1/warehouse/stock-entries/${enc(uuid)}/cancel`,
     );
   },
+  // --- Container entries (TEC-1007) -------------------------------------------
+  updateEntryHeader(uuid: string, body: StockEntryHeaderInput) {
+    return platformRequest<StockEntry>(
+      "PATCH",
+      `/v1/warehouse/stock-entries/${enc(uuid)}`,
+      { body },
+    );
+  },
+  arrivalScan(uuid: string, barcode: string) {
+    return platformRequest<StockEntryArrivalScan>(
+      "POST",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/arrival-scans`,
+      { body: { barcode } },
+    );
+  },
+  arrivalUnscan(uuid: string, barcode: string) {
+    return platformRequest<StockEntryArrivalScan>(
+      "DELETE",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/arrival-scans`,
+      { query: { barcode } },
+    );
+  },
+  arrivalReport(uuid: string) {
+    return platformRequest<StockEntryArrivalReport>(
+      "GET",
+      `/v1/warehouse/stock-entries/${enc(uuid)}/arrival-report`,
+    );
+  },
+  listSuppliers(q: string) {
+    return platformRequest<Page<WarehouseSupplier>>(
+      "GET",
+      "/v1/warehouse/suppliers",
+      { query: { q: q || undefined, limit: 50, offset: 0 } },
+    );
+  },
+  createSupplier(name: string) {
+    return platformRequest<WarehouseSupplier>(
+      "POST",
+      "/v1/warehouse/suppliers",
+      { body: { name } },
+    );
+  },
+  listEntryImportTemplates() {
+    return platformRequest<Page<EntryImportMappingTemplate>>(
+      "GET",
+      "/v1/warehouse/entry-import-templates",
+    );
+  },
+  saveEntryImportTemplate(body: EntryImportMappingTemplateInput) {
+    return platformRequest<EntryImportMappingTemplate>(
+      "POST",
+      "/v1/warehouse/entry-import-templates",
+      { body },
+    );
+  },
+  deleteEntryImportTemplate(uuid: string) {
+    return platformRequest<void>(
+      "DELETE",
+      `/v1/warehouse/entry-import-templates/${enc(uuid)}`,
+    );
+  },
 
   // --- Barcode batches, center only (TEC-202, K14) ---------------------------
   listBatches(params: BatchListQuery) {
@@ -596,6 +665,10 @@ export const warehouseKeys = {
   entries: (params: StockEntryListQuery) =>
     ["warehouse", "entries", params] as const,
   entry: (uuid: string) => ["warehouse", "entry", uuid] as const,
+  arrivalReport: (uuid: string) =>
+    ["warehouse", "arrival-report", uuid] as const,
+  suppliers: (q: string) => ["warehouse", "suppliers", q] as const,
+  entryImportTemplates: ["warehouse", "entry-import-templates"] as const,
   batches: (params: BatchListQuery) =>
     ["warehouse", "batches", params] as const,
   units: (warehouseUuid: string, params: WarehouseUnitListQuery) =>
