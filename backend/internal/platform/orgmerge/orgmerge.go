@@ -538,6 +538,15 @@ func Undo(ctx context.Context, tx pgx.Tx, runUUID string) (UndoReport, error) {
 		out.Reverted += tag.RowsAffected()
 	}
 
+	// Rows added at the target after the merge under a parent the undo moved
+	// back (a migrator rerun adds measurement values to a merged result)
+	// follow their parent through the composite keys.
+	followed, err := followParents(ctx, tx, out.SourceID, out.TargetID)
+	if err != nil {
+		return out, err
+	}
+	out.Reverted += followed
+
 	// Inserted rows (target memberships; their roles cascade).
 	tag, err := tx.Exec(ctx, `DELETE FROM organization_members m USING org_merge_changes c
 		WHERE c.run_id = $1 AND c.kind = 'insert' AND c.table_name = 'organization_members'
@@ -560,6 +569,87 @@ func Undo(ctx context.Context, tx pgx.Tx, runUUID string) (UndoReport, error) {
 }
 
 // --- helpers -------------------------------------------------------------
+
+// followParents moves child rows from target back to source when their
+// composite foreign key points at a parent row that is at the source,
+// repeating until nothing changes (children of children).
+func followParents(ctx context.Context, tx pgx.Tx, source, target int64) (int64, error) {
+	cols, err := orgColumns(ctx, tx)
+	if err != nil {
+		return 0, err
+	}
+	isOrg := map[string]bool{}
+	for _, c := range cols {
+		isOrg[c.String()] = true
+	}
+	rows, err := tx.Query(ctx, `SELECT c.conrelid::regclass::text, c.confrelid::regclass::text,
+			ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY k(n, i)
+			      JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.n ORDER BY k.i),
+			ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY k(n, i)
+			      JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.n ORDER BY k.i)
+		FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace
+		WHERE c.contype = 'f' AND n.nspname = 'public' AND array_length(c.conkey, 1) > 1`)
+	if err != nil {
+		return 0, fmt.Errorf("orgmerge: composite keys: %w", err)
+	}
+	type fk struct {
+		child, parent      string
+		childCols, parCols []string
+	}
+	var fks []fk
+	for rows.Next() {
+		var f fk
+		if err := rows.Scan(&f.child, &f.parent, &f.childCols, &f.parCols); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		fks = append(fks, f)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	var stmts []string
+	for _, f := range fks {
+		child, parent := strings.Trim(f.child, `"`), strings.Trim(f.parent, `"`)
+		org := -1
+		for i, c := range f.childCols {
+			if isOrg[child+"."+c] && isOrg[parent+"."+f.parCols[i]] {
+				org = i
+				break
+			}
+		}
+		if org < 0 {
+			continue
+		}
+		join := []string{}
+		for i := range f.childCols {
+			if i != org {
+				join = append(join, fmt.Sprintf("c.%s = p.%s", ident(f.childCols[i]), ident(f.parCols[i])))
+			}
+		}
+		stmts = append(stmts, fmt.Sprintf(`UPDATE %s c SET %s = $1 FROM %s p
+			WHERE c.%s = $2 AND p.%s = $1 AND %s`,
+			ident(child), ident(f.childCols[org]), ident(parent), ident(f.childCols[org]), ident(f.parCols[org]),
+			strings.Join(join, " AND ")))
+	}
+	var total int64
+	for range 10 {
+		var round int64
+		for _, st := range stmts {
+			tag, err := tx.Exec(ctx, st, source, target)
+			if err != nil {
+				return total, fmt.Errorf("orgmerge: follow parents: %w", err)
+			}
+			round += tag.RowsAffected()
+		}
+		total += round
+		if round == 0 {
+			break
+		}
+	}
+	return total, nil
+}
 
 func loadOrg(ctx context.Context, tx pgx.Tx, id int64) (Org, *time.Time, error) {
 	var o Org
