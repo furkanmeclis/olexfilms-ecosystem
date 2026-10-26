@@ -3452,6 +3452,11 @@ type Querier interface {
 	ServiceActivityCounts(ctx context.Context, arg ServiceActivityCountsParams) (ServiceActivityCountsRow, error)
 	ServiceActivityTopProducts(ctx context.Context, arg ServiceActivityTopProductsParams) ([]ServiceActivityTopProductsRow, error)
 	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
+	// TEC-1004: a hand-entered service number must not be another service's
+	// number, nor a warranty public code or alias of another service (the
+	// public page /warranty/{no} resolves all three). except_service_id 0
+	// checks a new service.
+	ServiceNoTaken(ctx context.Context, arg ServiceNoTakenParams) (bool, error)
 	// publish_at is stamped with NOW() when a row is published without one.
 	SetAnnouncementStatus(ctx context.Context, arg SetAnnouncementStatusParams) (Announcement, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
@@ -3803,6 +3808,9 @@ type Querier interface {
 	UpdateServiceCatalogItem(ctx context.Context, arg UpdateServiceCatalogItemParams) (ServiceCatalogItem, error)
 	UpdateServiceImage(ctx context.Context, arg UpdateServiceImageParams) (ServiceImage, error)
 	UpdateServiceItem(ctx context.Context, arg UpdateServiceItemParams) (ServiceItem, error)
+	// TEC-1004: the number of a service that is not completed or cancelled
+	// (the caller has locked the row and checked the status).
+	UpdateServiceNo(ctx context.Context, arg UpdateServiceNoParams) (Service, error)
 	// Moves the service to status (not completed / cancelled, which have their
 	// own queries). The caller has locked the row and validated the transition.
 	UpdateServiceStatus(ctx context.Context, arg UpdateServiceStatusParams) (Service, error)

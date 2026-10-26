@@ -112,6 +112,10 @@ func TestOlexMeasurements(t *testing.T) {
 	for k, want := range map[string]int64{
 		"devices_read": 2, "devices_created": 2, "devices_inactive": 1, "device_serial_from_username": 1,
 		"reports_read": 2, "reports_created": 2, "measurements_read": 6, "vin_pending": 1,
+		// TEC-1010: both reports are normalized (the roof row of report 2
+		// has neither a value nor a time); the synthetic part names and the
+		// "hatchback" body type are not on the part map.
+		"reports_normalized": 2, "values_normalized": 5, "values_unmatched": 5,
 	} {
 		if mc[k] != want {
 			t.Errorf("measurements.%s = %d, want %d (%v)", k, mc[k], want, mc)
@@ -217,6 +221,14 @@ func TestOlexMeasurements(t *testing.T) {
 		t.Errorf("outbox_events inserted = %d, want 0", n)
 	}
 
+	// TEC-1010: the readings are in measurement_values, the rows parsed.
+	if n := scalar(`SELECT COUNT(*) FROM measurement_values WHERE result_id IN (`+results+`)`, hubSys); n != 5 {
+		t.Errorf("measurement_values = %d, want 5", n)
+	}
+	if n := scalar(`SELECT COUNT(*) FROM measurement_results WHERE parsed_at IS NULL AND id IN (`+results+`)`, hubSys); n != 0 {
+		t.Errorf("unparsed legacy results = %d, want 0", n)
+	}
+
 	// Second run: nothing new.
 	second := e.run("olexfx-measurements", Options{})
 	rc := stepCounts(t, second, "measurements")
@@ -225,7 +237,7 @@ func TestOlexMeasurements(t *testing.T) {
 			t.Errorf("rerun measurements.%s = %d, want 0", k, v)
 		}
 	}
-	if rc["reports_unchanged"] != 2 || rc["devices_unchanged"] != 2 {
+	if rc["reports_unchanged"] != 2 || rc["devices_unchanged"] != 2 || rc["reports_normalized"] != 0 {
 		t.Errorf("rerun counts = %v", rc)
 	}
 	if after := countRows(); after != before {

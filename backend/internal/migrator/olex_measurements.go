@@ -6,17 +6,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator/source"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/svg"
+	measurementsusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/measurements/usecase"
 )
 
 // ---------------------------------------------------------------- step 8
@@ -39,6 +43,10 @@ import (
 //     "services.vehicle"); the organization is the service's, else the
 //     dealer of the account's / report's user, else the Olex center. A
 //     report without a usable VIN is vin_pending ("tamamlanacak").
+//   - Each written result is normalized into measurement_values in the
+//     step's transaction (TEC-1010), and so is an unchanged one whose
+//     parsed_at is still NULL; values_unmatched counts the readings that do
+//     not land on a numbered point of the part map (expected 0).
 //
 // Every legacy row is recorded in migration_map: the measurement rows and
 // the pivot rows point at the result of their report, so the cutover delta
@@ -151,9 +159,10 @@ type measurementRun struct {
 	c          counts
 	brandID    int64
 	centerID   int64
-	userDealer map[int64]int64 // hub user id -> hub dealer id
-	orgs       map[int64]int64 // hub dealer id -> organization id (0: unmapped)
-	users      map[int64]int64 // hub user id -> users.id (0: unmapped)
+	userDealer map[int64]int64                // hub user id -> hub dealer id
+	orgs       map[int64]int64                // hub dealer id -> organization id (0: unmapped)
+	users      map[int64]int64                // hub user id -> users.id (0: unmapped)
+	tx         measurementsusecase.TxBeginner // nil: results are not normalized
 }
 
 // Run implements Step.
@@ -176,6 +185,9 @@ func (s MeasurementsStep) Run(ctx context.Context, src Sources, dst *Target, m *
 	}
 	r := &measurementRun{step: s, q: dst.Q, m: m, c: c, brandID: brand.ID, centerID: center.ID,
 		orgs: map[int64]int64{}, users: map[int64]int64{}}
+	if dst.Tx != nil {
+		r.tx = dst.Tx
+	}
 	if r.userDealer, err = readDealerLinks(ctx, hub, legacyUserDealersQuery); err != nil {
 		return StepResult{Counts: c}, fmt.Errorf("user dealers: %w", err)
 	}
@@ -668,7 +680,7 @@ func (r *measurementRun) importReport(ctx context.Context, rep *legacyReport, ap
 		return fmt.Errorf("read measurement result: %w", err)
 	case !res.Changed:
 		r.c.inc("reports_unchanged")
-		return nil
+		return r.normalize(ctx, rep.ID, res.UUID, t.OrgID, false)
 	default:
 		if err := r.q.MigratorUpdateMeasurementResult(ctx, db.MigratorUpdateMeasurementResultParams{
 			ID: id, OrganizationID: t.OrgID, BrandID: t.BrandID, ServiceID: t.ServiceID, VehicleID: t.Vehicle,
@@ -693,6 +705,53 @@ func (r *measurementRun) importReport(ctx context.Context, rep *legacyReport, ap
 			return err
 		}
 	}
+	return r.normalize(ctx, rep.ID, res.UUID, t.OrgID, true)
+}
+
+// normalize parses the result's raw into measurement_values (TEC-1010): a
+// written result always, an unchanged one while its parsed_at is NULL (a
+// run from before TEC-1010 left them unparsed). The readings that do not
+// land on a numbered point of the part map are counted (values_unmatched,
+// expected 0) on every run.
+func (r *measurementRun) normalize(ctx context.Context, legacyID int64, id uuid.UUID, orgID int64, force bool) error {
+	if r.tx == nil {
+		return nil
+	}
+	row, err := r.q.GetMeasurementResultByUUID(ctx, db.GetMeasurementResultByUUIDParams{Uuid: id, OrganizationID: orgID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read measurement result: %w", err)
+	}
+	if parsed, err := measurementsusecase.ParseRaw(row.Raw); err == nil {
+		readings := make([]svg.Reading, 0, len(parsed.Values))
+		for _, v := range parsed.Values {
+			rd := svg.Reading{PartType: v.PartType}
+			if v.Position != nil {
+				p := int(*v.Position)
+				rd.Position = &p
+			}
+			readings = append(readings, rd)
+		}
+		if n := len(svg.UnmatchedReadings(svg.Report{BodyType: parsed.BodyType, Readings: readings})); n > 0 {
+			r.c.add("values_unmatched", int64(n))
+			r.report("report_values_unmatched", legacyID)
+		}
+	}
+	if !force && row.ParsedAt.Valid {
+		return nil
+	}
+	out, err := measurementsusecase.NormalizeIsolated(ctx, r.tx, row, slog.Default())
+	if err != nil {
+		return fmt.Errorf("normalize: %w", err)
+	}
+	if !out.Parsed {
+		r.report("report_unparseable", legacyID)
+		return nil
+	}
+	r.c.inc("reports_normalized")
+	r.c.add("values_normalized", int64(out.Values))
 	return nil
 }
 

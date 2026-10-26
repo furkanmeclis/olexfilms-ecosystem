@@ -20,6 +20,8 @@ import { Text } from '@/ui/text';
 
 import { customerSubtitle, customerTitle } from './customer-name';
 import { type CustomerSummary, useDebounced, useLinks, type Vehicle, vehicleLabel } from './lib';
+import { isValidServiceNo } from './service-no';
+import { ServiceNoField } from './service-no-field';
 import { errorText, ListSkeleton, SearchField, Section } from './ui';
 import type { IconName } from '@/ui/icons';
 
@@ -49,6 +51,7 @@ export function NewServiceScreen() {
   const [km, setKm] = useState('');
   const [notes, setNotes] = useState('');
   const [measure, setMeasure] = useState(false);
+  const [serviceNo, setServiceNo] = useState('');
 
   const create = useMutation({
     mutationFn: () =>
@@ -60,6 +63,7 @@ export function NewServiceScreen() {
             km: km.trim() ? Number.parseInt(km.replace(/\D/g, ''), 10) : undefined,
             notes: notes.trim() || undefined,
             has_measurement: measure && !!vehicle?.vin,
+            service_no: serviceNo.trim() || undefined,
           },
         }),
       ),
@@ -138,6 +142,7 @@ export function NewServiceScreen() {
                 last
               />
             </Section>
+            <ServiceNoField value={serviceNo} onChange={setServiceNo} />
             <Input label={t('km')} placeholder={t('placeholder_km', { ns: 'common' })} keyboardType="number-pad" value={km} onChangeText={setKm} />
             <Input label={t('notes')} placeholder={t('placeholder_notes')} value={notes} onChangeText={setNotes} multiline className="min-h-24 py-3" />
             <View className="flex-row items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3">
@@ -156,7 +161,13 @@ export function NewServiceScreen() {
                 {errorText(create.error)}
               </Text>
             ) : null}
-            <Button title={t('create_service')} size="lg" loading={create.isPending} onPress={() => create.mutate()} />
+            <Button
+              title={t('create_service')}
+              size="lg"
+              loading={create.isPending}
+              disabled={!!serviceNo.trim() && !isValidServiceNo(serviceNo)}
+              onPress={() => create.mutate()}
+            />
             <Text variant="footnote" tone="muted" className="text-center">
               {t('items_after_create')}
             </Text>

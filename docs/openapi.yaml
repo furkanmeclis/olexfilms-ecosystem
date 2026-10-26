@@ -22446,7 +22446,8 @@ paths:
         customer (domain brand) and carry a car brand and model; plate, VIN,
         car brand/model and year are copied into the service (TEC-97
         decision 3). The brand is the organization's brand (decision 2) and
-        the number is DS + 8 alphanumerics. has_measurement needs the
+        the number is service_no when given (TEC-1004), else DS + 8
+        alphanumerics. has_measurement needs the
         vehicle VIN. A read-only organization (K23: no contract yet) gets
         403 ORGANIZATION_READ_ONLY on every write.
       security:
@@ -22470,6 +22471,36 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/services/service-no-availability:
+    get:
+      tags: [Services]
+      operationId: getServiceNoAvailability
+      summary: Check a hand-entered service number
+      description: >-
+        TEC-1004. Needs services.write. Whether service_no may be given to a
+        new service or, with service_uuid, to that service (its own number
+        is available to it). Only yes / no: the holder is not revealed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: service_no, in: query, required: true, schema: { type: string, maxLength: 64 } }
+        - { name: service_uuid, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Availability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceNoAvailability"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/services/export:
     post:
@@ -22532,7 +22563,7 @@ paths:
     patch:
       tags: [Services]
       operationId: updateService
-      summary: Edit km, package, notes and the measurement answer
+      summary: Edit km, package, notes, the measurement answer and the number
       description: >-
         Needs services.write reaching the service. Completed and cancelled
         services are locked except for the center (409 SERVICE_NOT_EDITABLE).
@@ -43313,6 +43344,9 @@ components:
         updated_at: { type: string, format: date-time }
         editable: { type: boolean, description: The caller may edit the form and images }
         items_editable: { type: boolean, description: The caller may add or remove items }
+        service_no_editable:
+          type: boolean
+          description: TEC-1004. The caller may change the number (false once completed or cancelled)
         available_transitions:
           type: array
           items: { $ref: "#/components/schemas/ServiceStatus" }
@@ -43351,6 +43385,14 @@ components:
         package: { type: string, maxLength: 255 }
         notes: { type: string, maxLength: 5000 }
         has_measurement: { type: boolean, default: false }
+        service_no:
+          type: [string, "null"]
+          description: >-
+            TEC-1004. A hand-entered number (the printed warranty card's QR
+            https://olexfilms.app/warranty/XXXX): 4 to 32 letters, digits,
+            '-' or '_', kept as entered (surrounding space trimmed). Another
+            service's number or a warranty public code / alias is 409
+            SERVICE_NO_TAKEN. Omitted, null or blank: DS + 8 alphanumerics.
 
     ServiceUpdateInput:
       type: object
@@ -43366,6 +43408,28 @@ components:
             not changed). Same rules as the vehicle VIN: 17 letters or digits
             without I, O, Q; spaces and dashes are dropped. null or "" clears
             it (400 while has_measurement is true).
+        service_no:
+          type: string
+          description: >-
+            TEC-1004. Changes the number (same rules as on create) until the
+            service is completed or cancelled; then 409 SERVICE_NO_LOCKED
+            (the same number is a no-op). Taken: 409 SERVICE_NO_TAKEN.
+
+    ServiceNoAvailability:
+      type: object
+      required: [service_no, valid, available]
+      properties:
+        service_no: { type: string, description: "The trimmed number" }
+        valid: { type: boolean, description: "The number has the allowed shape" }
+        available: { type: boolean, description: "Valid and not held by another service, warranty code or alias" }
+
+    EnvelopeServiceNoAvailability:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceNoAvailability" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ServiceItemInput:
       type: object

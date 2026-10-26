@@ -2,7 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { AlertTriangle, CheckCircle2, ExternalLink, Gauge } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ExternalLink,
+  Gauge,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -15,6 +21,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -26,6 +37,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { routes } from "@/config/routes";
 import { MeasurementPdfButton } from "@/features/measurements/components/measurement-pdf-button";
+import { PartMap } from "@/features/measurements/components/part-map";
+import {
+  measurementKeys,
+  measurementsService,
+} from "@/features/measurements/services/measurements.service";
 import {
   phaseLink,
   phaseOptions,
@@ -364,6 +380,66 @@ function PhaseCard({
   );
 }
 
+/**
+ * The part map with the µm of every numbered point of a linked
+ * measurement (TEC-1010), opened on demand so the detail is fetched only
+ * when wanted; needs measurements.read like the measurement page.
+ */
+function PhaseMap({
+  phase,
+  measurementUuid,
+}: {
+  phase: MeasurementPhase;
+  measurementUuid: string;
+}) {
+  const { t } = useLocale();
+  const [open, setOpen] = useState(false);
+  const detail = useQuery({
+    queryKey: measurementKeys.detail(measurementUuid),
+    queryFn: () => measurementsService.get(measurementUuid),
+    enabled: open,
+  });
+  return (
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="rounded-lg border"
+      data-testid={`measurement-map-${phase}`}
+    >
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 p-3 text-start text-sm font-medium"
+        >
+          <span>
+            {t(`measurements.phase.${phase}`)} ·{" "}
+            {t("measurements.service.map_toggle")}
+          </span>
+          <ChevronDown
+            className={cn("size-4 transition-transform", open && "rotate-180")}
+          />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="border-t p-3">
+        {detail.isLoading ? (
+          <Loading />
+        ) : detail.isError || !detail.data ? (
+          <ErrorState
+            title={t("measurements.service.load_failed")}
+            onRetry={() => void detail.refetch()}
+            retryLabel={t("common.retry")}
+          />
+        ) : (
+          <PartMap
+            bodyType={detail.data.body_type}
+            readings={detail.data.values}
+          />
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function CheckDialog({
   serviceUuid,
   onClose,
@@ -693,6 +769,18 @@ export function ServiceMeasurementsSection({
             />
           ))}
         </div>
+        {canOpen
+          ? PHASES.map((phase) => {
+              const link = phaseLink(data, phase);
+              return link ? (
+                <PhaseMap
+                  key={phase}
+                  phase={phase}
+                  measurementUuid={link.measurement.uuid}
+                />
+              ) : null;
+            })
+          : null}
         <div className="space-y-2" data-testid="measurement-diff">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="font-medium">{t("measurements.diff.title")}</p>

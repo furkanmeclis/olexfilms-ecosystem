@@ -22,8 +22,13 @@ import {
 } from "@/features/customers/services/customers.service";
 import { NewCustomerForm } from "@/features/services/components/new-customer-form";
 import { NewVehicleForm } from "@/features/services/components/new-vehicle-form";
+import { ServiceNoField } from "@/features/services/components/service-no-field";
 import { WizardActions } from "@/features/services/components/wizard-bar";
 import type { ServiceWizardAccess } from "@/features/services/lib/access";
+import {
+  extractServiceNo,
+  isValidServiceNo,
+} from "@/features/services/lib/service-no";
 import { parseKm } from "@/features/services/lib/wizard";
 import {
   serviceWizardKeys,
@@ -192,6 +197,7 @@ export function CustomerVehicleStep({
     service?.km !== null && service?.km !== undefined ? String(service.km) : "",
   );
   const [kmError, setKmError] = useState<string | null>(null);
+  const [serviceNo, setServiceNo] = useState(service?.service_no ?? "");
   const locked = Boolean(service);
   const performers = usePerformerOptions(slug, locked);
   const [performer, setPerformer] = useState(OWN_PERFORMER);
@@ -209,10 +215,11 @@ export function CustomerVehicleStep({
   });
 
   const save = useMutation({
-    mutationFn: (kmValue: number | null) => {
+    mutationFn: ({ kmValue, no }: { kmValue: number | null; no: string }) => {
       if (service) {
         return serviceWizardService.updateService(service.uuid, {
           km: kmValue,
+          ...(no && no !== service.service_no ? { service_no: no } : {}),
         });
       }
       return serviceWizardService.createService({
@@ -224,6 +231,7 @@ export function CustomerVehicleStep({
         // Answered in step 3, which also saves the VIN.
         has_measurement: false,
         ...(kmValue !== null ? { km: kmValue } : {}),
+        ...(no ? { service_no: no } : {}),
       });
     },
     onSuccess: (saved) => {
@@ -236,7 +244,11 @@ export function CustomerVehicleStep({
     },
     onError: (error: unknown) =>
       appToast.error(
-        isApiError(error) ? error.message : t("services.wizard.save_failed"),
+        isApiError(error) && error.code === "SERVICE_NO_TAKEN"
+          ? t("services.service_no.taken")
+          : isApiError(error)
+            ? error.message
+            : t("services.wizard.save_failed"),
       ),
   });
 
@@ -254,9 +266,24 @@ export function CustomerVehicleStep({
       return;
     }
     setKmError(null);
+    const no = extractServiceNo(serviceNo);
+    if (no && !isValidServiceNo(no)) {
+      appToast.error(t("services.service_no.invalid"));
+      return;
+    }
     if (!service && (!customer || !vehicle)) return;
-    save.mutate(parsed);
+    save.mutate({ kmValue: parsed, no });
   };
+
+  const serviceNoField = (
+    <ServiceNoField
+      value={serviceNo}
+      onChange={setServiceNo}
+      serviceUuid={service?.uuid}
+      disabled={service ? !service.service_no_editable : false}
+      optional={!service}
+    />
+  );
 
   const kmField = (
     <div className="max-w-xs space-y-2">
@@ -307,6 +334,7 @@ export function CustomerVehicleStep({
             vin={service.vin}
           />
         </section>
+        {serviceNoField}
         {kmField}
         <WizardActions>
           <Button
@@ -569,7 +597,12 @@ export function CustomerVehicleStep({
         </section>
       ) : null}
 
-      {customer && vehicle ? kmField : null}
+      {customer && vehicle ? (
+        <>
+          {serviceNoField}
+          {kmField}
+        </>
+      ) : null}
 
       <WizardActions>
         <Button
