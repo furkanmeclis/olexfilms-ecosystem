@@ -385,7 +385,7 @@ func documentHTML(loc i18n.Locale, lh *ioengine.Letterhead, title string, info [
 	b.WriteString(`</table><p class="muted">`)
 	b.WriteString(esc(i18n.Translate(loc, "accounting.statement.generated_at")))
 	b.WriteString(`: `)
-	b.WriteString(esc(pdfrender.IssuedAt(generated, zone)))
+	b.WriteString(esc(pdfrender.IssuedAt(generated, zone, loc)))
 	b.WriteString(`</p>`)
 	b.WriteString(ioengine.LetterheadFooterHTMLFor(lh, string(loc)))
 	return pdfrender.Document{

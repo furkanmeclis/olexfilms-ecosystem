@@ -64,5 +64,8 @@
   "campaign_unsubscribe.invalid_title": "Bağlantı geçersiz",
   "campaign_unsubscribe.invalid_body": "Bu abonelik bağlantısı geçerli değil. Bağlantının tamamını kopyaladığınızdan emin olun.",
   "campaign_unsubscribe.error": "Bir sorun oluştu. Lütfen biraz sonra tekrar deneyin.",
-  "campaign_unsubscribe.home": "Ana sayfaya git"
+  "campaign_unsubscribe.home": "Ana sayfaya git",
+  "digits": "Rakamlar",
+  "digits_arab": "Arap-Hint (٠١٢٣)",
+  "digits_latn": "Latin (0123)"
 }

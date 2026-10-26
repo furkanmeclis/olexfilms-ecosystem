@@ -64,5 +64,8 @@
   "campaign_unsubscribe.invalid_title": "Μη έγκυρος σύνδεσμος",
   "campaign_unsubscribe.invalid_body": "Αυτός ο σύνδεσμος απεγγραφής δεν είναι έγκυρος. Βεβαιωθείτε ότι αντιγράψατε ολόκληρο τον σύνδεσμο.",
   "campaign_unsubscribe.error": "Παρουσιάστηκε πρόβλημα. Δοκιμάστε ξανά σε λίγο.",
-  "campaign_unsubscribe.home": "Μετάβαση στην αρχική σελίδα"
+  "campaign_unsubscribe.home": "Μετάβαση στην αρχική σελίδα",
+  "digits": "Ψηφία",
+  "digits_arab": "Αραβοϊνδικά (٠١٢٣)",
+  "digits_latn": "Λατινικά (0123)"
 }

@@ -68,5 +68,8 @@
   "campaign_unsubscribe.invalid_title": "رابط غير صالح",
   "campaign_unsubscribe.invalid_body": "رابط إلغاء الاشتراك هذا غير صالح. تأكد من نسخ الرابط كاملاً.",
   "campaign_unsubscribe.error": "حدثت مشكلة. يُرجى المحاولة مرة أخرى بعد قليل.",
-  "campaign_unsubscribe.home": "الانتقال إلى الصفحة الرئيسية"
+  "campaign_unsubscribe.home": "الانتقال إلى الصفحة الرئيسية",
+  "digits": "الأرقام",
+  "digits_arab": "عربية مشرقية (٠١٢٣)",
+  "digits_latn": "لاتينية (0123)"
 }

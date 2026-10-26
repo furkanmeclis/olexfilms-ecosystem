@@ -31,10 +31,15 @@ func Zone(names ...string) *time.Location {
 
 // IssuedAt prints the moment a document was issued as wall-clock time in
 // zone, followed by the zone name: "2026-10-09 14:32 (Europe/Istanbul)". A
-// nil zone is i18n.DefaultTimezone.
-func IssuedAt(t time.Time, zone *time.Location) string {
+// nil zone is i18n.DefaultTimezone. With a locale the time is written in
+// its digits (TEC-1009: Arabic-Indic for ar); the zone name stays Latin.
+func IssuedAt(t time.Time, zone *time.Location, locale ...i18n.Locale) string {
 	if zone == nil {
 		zone = Zone()
 	}
-	return t.In(zone).Format("2006-01-02 15:04") + " (" + zone.String() + ")"
+	at := t.In(zone).Format("2006-01-02 15:04")
+	if len(locale) > 0 {
+		at = i18n.Digits(locale[0], at)
+	}
+	return at + " (" + zone.String() + ")"
 }

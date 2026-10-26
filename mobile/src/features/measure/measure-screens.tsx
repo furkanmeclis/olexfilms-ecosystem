@@ -40,6 +40,7 @@ import { useGaugeSession } from '@/features/ble-gauge/use-gauge-session';
 import { PARTS, parseValues, PLATE_RECOGNITION_ENABLED } from './parts';
 import { MeasurementMap } from './point-map-view';
 import type { IconName } from '@/ui/icons';
+import { intlLocale } from '@/core/digits';
 
 type Measurement =
   paths['/v1/measurements']['get']['responses'][200]['content']['application/json']['data']['items'][number];
@@ -291,7 +292,7 @@ export function MeasurementDetailScreen() {
 export function NewMeasurementScreen() {
   const { t, i18n } = useTranslation('measure');
   // Example readings in the user's number format (the parser accepts both , and .).
-  const sample = (n: number[]) => n.map((x) => new Intl.NumberFormat(i18n.language).format(x)).join(' ');
+  const sample = (n: number[]) => n.map((x) => new Intl.NumberFormat(intlLocale(i18n.language)).format(x)).join(' ');
   const qc = useQueryClient();
   const unit = usePreferences((s) => s.unit);
   const [plate, setPlate] = useState('');

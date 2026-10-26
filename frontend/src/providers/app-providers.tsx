@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import type { AppLocale } from "@/config/i18n";
+import type { DigitStyle } from "@/lib/i18n/digits";
 import type { LocaleCatalog } from "@/lib/i18n/types";
 import { StepUpProvider } from "@/features/step-up-engine";
 import { AuthProvider } from "@/providers/auth-provider";
@@ -20,6 +21,7 @@ type AppProvidersProps = {
   locale?: AppLocale;
   messages?: LocaleCatalog | null;
   timeZone?: string;
+  digits?: DigitStyle;
 };
 
 export function AppProviders({
@@ -27,12 +29,14 @@ export function AppProviders({
   locale,
   messages,
   timeZone,
+  digits,
 }: AppProvidersProps) {
   return (
     <LocaleProvider
       initialLocale={locale}
       initialMessages={messages}
       initialTimeZone={timeZone}
+      initialDigits={digits}
     >
       <ThemeProvider>
         <QueryProvider>

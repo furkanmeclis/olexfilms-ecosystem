@@ -143,7 +143,7 @@ export function ShowcasePreview({
           <Star className="size-5 fill-amber-400 text-amber-500" aria-hidden />
           <span className="font-medium">
             {showcase.google_rating
-              ? `${showcase.google_rating.toFixed(1)} / 5`
+              ? `${format.number(showcase.google_rating, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / ${format.number(5)}`
               : t("showcase.rating.none")}
           </span>
           {showcase.google_review_count !== null ? (

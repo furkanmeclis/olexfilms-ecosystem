@@ -70,11 +70,11 @@ function AppointmentCard({
   draggable: boolean;
   onOpen: (a: Appointment) => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const a = placed.appointment;
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: a.uuid, disabled: !draggable });
-  const time = new Intl.DateTimeFormat(locale, {
+  const time = new Intl.DateTimeFormat(format.intlLocale, {
     timeZone,
     hour: "2-digit",
     minute: "2-digit",
@@ -195,7 +195,7 @@ export function AppointmentCalendar({
   readOnly?: boolean;
 }) {
   const canWrite = canWriteProp && !readOnly;
-  const { t, locale, format } = useLocale();
+  const { t, format } = useLocale();
   const qc = useQueryClient();
   const [view, setView] = useState<CalendarView>(initialView);
   const [anchor, setAnchor] = useState(
@@ -303,7 +303,10 @@ export function AppointmentCalendar({
   const dayHeader = (date: string) => {
     const at = new Date(`${date}T12:00:00Z`);
     const f = (o: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat(locale, { timeZone: "UTC", ...o }).format(at);
+      new Intl.DateTimeFormat(format.intlLocale, {
+        timeZone: "UTC",
+        ...o,
+      }).format(at);
     return {
       weekday: f({ weekday: "short" }),
       day: f({ day: "numeric", month: "short" }),
@@ -312,7 +315,7 @@ export function AppointmentCalendar({
   const title =
     view === "week"
       ? `${format.date(`${firstDay}T12:00:00Z`)} – ${format.date(`${lastDay}T12:00:00Z`)}`
-      : new Intl.DateTimeFormat(locale, {
+      : new Intl.DateTimeFormat(format.intlLocale, {
           timeZone: "UTC",
           weekday: "long",
           day: "numeric",

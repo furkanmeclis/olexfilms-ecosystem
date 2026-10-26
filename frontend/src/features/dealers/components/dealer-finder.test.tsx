@@ -35,6 +35,10 @@ vi.mock("@/providers/locale-provider", () => ({
     dir: "ltr",
     t: (key: string, params?: Record<string, string | number>) =>
       params ? `${key} ${JSON.stringify(params)}` : key,
+    format: {
+      number: (v: number, o?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat("en", o).format(v),
+    },
   }),
 }));
 

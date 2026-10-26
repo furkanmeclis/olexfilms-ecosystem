@@ -7,6 +7,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -19,6 +21,7 @@ import { authService } from "@/services/auth.service";
 import { useAuth } from "@/providers/auth-provider";
 import { useLocale } from "@/providers/locale-provider";
 import { cn } from "@/lib/utils";
+import { DIGIT_STYLES, hasDigitChoice } from "@/lib/i18n/digits";
 import { mapMeToAuthUser } from "@/lib/auth/types";
 
 /** Every supported language, each written in its own name. */
@@ -26,7 +29,7 @@ export const localeOptions: { value: AppLocale; label: string }[] =
   SUPPORTED_LOCALES.map((value) => ({ value, label: LOCALE_NAMES[value] }));
 
 export function LocaleSwitch() {
-  const { locale, setLocale, t } = useLocale();
+  const { locale, setLocale, t, digits, setDigits } = useLocale();
   const { isAuthenticated, setUser, user } = useAuth();
 
   const applyLocale = async (next: AppLocale) => {
@@ -71,6 +74,26 @@ export function LocaleSwitch() {
             />
           </DropdownMenuItem>
         ))}
+        {hasDigitChoice(locale) ? (
+          <>
+            {/* TEC-1009: Arabic-Indic digits by default, Latin by choice. */}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>{t("common.digits")}</DropdownMenuLabel>
+            {DIGIT_STYLES.map((style) => (
+              <DropdownMenuItem
+                key={style}
+                data-digits={style}
+                onClick={() => setDigits(style)}
+              >
+                {t(`common.digits_${style}`)}
+                <Check
+                  size={14}
+                  className={cn("ms-auto", digits !== style && "hidden")}
+                />
+              </DropdownMenuItem>
+            ))}
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
