@@ -38,6 +38,7 @@ import { useGauge } from '@/features/ble-gauge/store';
 import { useGaugeSession } from '@/features/ble-gauge/use-gauge-session';
 
 import { PARTS, parseValues, PLATE_RECOGNITION_ENABLED } from './parts';
+import { MeasurementMap } from './point-map-view';
 import type { IconName } from '@/ui/icons';
 
 type Measurement =
@@ -248,7 +249,9 @@ export function MeasurementDetailScreen() {
             </List>
 
             <SectionHeader title={t('readings')} />
-            {rows.length ? (
+            {m.values.length ? (
+              <MeasurementMap bodyType={m.body_type} values={m.values} />
+            ) : rows.length ? (
               <List>
                 {rows.map((r, i) => {
                   const min = Math.min(...r.values);

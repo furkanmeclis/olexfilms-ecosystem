@@ -1,14 +1,23 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { Loading } from "@/components/common/loading";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   PLACES,
   composePlaceView,
   toInlineSvg,
+  type PartMapData,
 } from "@/features/measurements/lib/part-map";
+import {
+  convertThickness,
+  partPoints,
+  unitDigits,
+  type PointValue,
+  type ThicknessUnit,
+} from "@/features/measurements/lib/point-readings";
 import {
   LEGEND,
   interpretationColor,
@@ -43,6 +52,100 @@ export function InterpretationLegend() {
   );
 }
 
+const UNITS: ThicknessUnit[] = ["um", "mil"];
+
+function PointChip({
+  point,
+  unit,
+}: {
+  point: PointValue;
+  unit: ThicknessUnit;
+}) {
+  const { t, format } = useLocale();
+  const color = interpretationColor(point.level);
+  return (
+    <li
+      className="flex items-center gap-1.5 rounded-full border px-1.5 py-0.5 text-xs"
+      data-testid="point-value"
+    >
+      <span
+        className="inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-gray-900"
+        style={{ backgroundColor: color }}
+        aria-hidden
+      >
+        {point.position}
+      </span>
+      <span className="sr-only">
+        {t("measurements.points.point", { n: point.position })}
+      </span>
+      <span className="font-medium tabular-nums">
+        {point.valueUm === null
+          ? "—"
+          : format.number(convertThickness(point.valueUm, unit), {
+              maximumFractionDigits: unitDigits(unit),
+              minimumFractionDigits: unitDigits(unit),
+            })}
+      </span>
+      <span className="text-muted-foreground">
+        {t(`measurements.units.${unit}`)}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * The µm value of every numbered point, per part (TEC-1010): outside and
+ * inside readings separately, the number in its level color like the map.
+ */
+export function PointReadings({
+  map,
+  readings,
+  unit,
+}: {
+  map: PartMapData | null | undefined;
+  readings: readonly MapReading[];
+  unit: ThicknessUnit;
+}) {
+  const { t } = useLocale();
+  const parts = useMemo(() => partPoints(map, readings), [map, readings]);
+  if (parts.length === 0) return null;
+  const partLabel = (part: string) => {
+    const key = `measurements.parts.${part}`;
+    const label = t(key);
+    return label === key ? part : label;
+  };
+  return (
+    <div className="grid gap-3 sm:grid-cols-2" data-testid="point-readings">
+      {parts.map((p) => (
+        <div key={p.part} className="space-y-1.5 rounded-md border p-3">
+          <p className="text-sm font-medium">{partLabel(p.part)}</p>
+          {(
+            [
+              ["outside", p.outside],
+              ["inside", p.inside],
+            ] as const
+          ).map(([side, list]) =>
+            list.length > 0 ? (
+              <div key={side} className="space-y-1">
+                {p.inside.length > 0 ? (
+                  <p className="text-muted-foreground text-xs">
+                    {t(`measurements.points.${side}`)}
+                  </p>
+                ) : null}
+                <ul className="flex flex-wrap gap-1.5" dir="ltr">
+                  {list.map((pt) => (
+                    <PointChip key={pt.position} point={pt} unit={unit} />
+                  ))}
+                </ul>
+              </div>
+            ) : null,
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /**
  * NexPTG part map of a measurement: the four views of the body type with
  * each part in its mean level color and the numbered points, colored in
@@ -57,6 +160,7 @@ export function PartMap({
   readings: readonly MapReading[];
 }) {
   const { t } = useLocale();
+  const [unit, setUnit] = useState<ThicknessUnit>("um");
   const map = useQuery({
     queryKey: measurementKeys.partMap(bodyType ?? ""),
     queryFn: () => measurementsService.partMap(bodyType ?? ""),
@@ -75,15 +179,47 @@ export function PartMap({
   }, [map.data, readings]);
 
   if (bodyType && map.isLoading) return <Loading />;
+  const unitPicker = (
+    <ToggleGroup
+      type="single"
+      variant="outline"
+      size="sm"
+      value={unit}
+      onValueChange={(v) => v && setUnit(v as ThicknessUnit)}
+      aria-label={t("measurements.units.label")}
+      data-testid="thickness-unit"
+    >
+      {UNITS.map((u) => (
+        <ToggleGroupItem key={u} value={u}>
+          {t(`measurements.units.${u}`)}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+  const points = (
+    <PointReadings map={map.data} readings={readings} unit={unit} />
+  );
   if (!bodyType || map.isError || views.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm" data-testid="part-map-empty">
-        {t("measurements.map.unavailable")}
-      </p>
+      <div className="space-y-4">
+        <p
+          className="text-muted-foreground text-sm"
+          data-testid="part-map-empty"
+        >
+          {t("measurements.map.unavailable")}
+        </p>
+        {readings.length > 0 ? (
+          <>
+            {unitPicker}
+            {points}
+          </>
+        ) : null}
+      </div>
     );
   }
   return (
     <div className="space-y-4" data-testid="part-map">
+      <div className="flex justify-end">{unitPicker}</div>
       <div className="grid gap-4 md:grid-cols-2" dir="ltr">
         {views.map(({ place, svg }) => (
           <figure key={place} className="rounded-md border p-2">
@@ -104,6 +240,7 @@ export function PartMap({
         ))}
       </div>
       <InterpretationLegend />
+      {points}
     </div>
   );
 }
