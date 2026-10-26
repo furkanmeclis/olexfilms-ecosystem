@@ -83,7 +83,9 @@ func TestOlexServicePointMerge(t *testing.T) {
 	// owner, every legacy barcode is a unit. (The ownership counts cover the
 	// whole brand of the shared test database, so they are not asserted.)
 	trace := stepCounts(t, first, "unit_trace")
-	if trace["service_consumption_created"] != 2 || trace["legacy_barcodes_missing"] != 0 ||
+	// At least the two fixture units; units other tests left in the shared
+	// database may be traced too.
+	if trace["service_consumption_created"] < 2 || trace["legacy_barcodes_missing"] != 0 ||
 		trace["legacy_barcodes"] != trace["legacy_barcodes_in_units"] {
 		t.Fatalf("unit_trace counts = %v", trace)
 	}
