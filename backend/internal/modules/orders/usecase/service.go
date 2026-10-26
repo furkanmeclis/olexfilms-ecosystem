@@ -328,7 +328,8 @@ func (s *Service) insertLines(ctx context.Context, q *db.Queries, o db.Order, bu
 // --- Create / edit ---------------------------------------------------------------
 
 // supplier returns the seller of the active organization: its parent, when
-// the flow is center -> distributor or distributor -> dealer (K6).
+// the flow is center -> distributor, distributor -> dealer or, for a dealer
+// directly under the center (Türkiye, TEC-1003), center -> dealer (K6).
 func (s *Service) supplier(ctx context.Context, q *db.Queries, buyer db.Organization) (db.Organization, error) {
 	if buyer.Type != OrgDistributor && buyer.Type != OrgDealer {
 		return db.Organization{}, ErrNoSupplier
@@ -341,7 +342,7 @@ func (s *Service) supplier(ctx context.Context, q *db.Queries, buyer db.Organiza
 		return db.Organization{}, fmt.Errorf("orders: supplier: %w", err)
 	}
 	flowOK := (buyer.Type == OrgDistributor && seller.Type == OrgCenter) ||
-		(buyer.Type == OrgDealer && seller.Type == OrgDistributor)
+		(buyer.Type == OrgDealer && (seller.Type == OrgDistributor || seller.Type == OrgCenter))
 	if seller.BrandID != buyer.BrandID || !flowOK {
 		return db.Organization{}, ErrNoSupplier
 	}

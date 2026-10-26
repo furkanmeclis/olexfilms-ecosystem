@@ -124,3 +124,19 @@ ON CONFLICT DO NOTHING;
 
 -- name: MigratorRoleOrgTypes :many
 SELECT slug, org_type FROM roles WHERE slug = ANY (sqlc.arg(slugs)::text[]);
+
+-- name: MigratorMergedOrganizationUUID :one
+-- TEC-1003: the live organization a merged one ended up in (follows
+-- merged_into_id); the organization itself when it is not merged.
+WITH RECURSIVE chain AS (
+    SELECT o.id, o.uuid, o.merged_into_id, 0 AS depth
+    FROM organizations o WHERE o.uuid = sqlc.arg(uuid)
+    UNION ALL
+    SELECT o.id, o.uuid, o.merged_into_id, c.depth + 1
+    FROM organizations o JOIN chain c ON o.id = c.merged_into_id
+    WHERE c.depth < 10
+)
+SELECT chain.uuid FROM chain WHERE chain.merged_into_id IS NULL ORDER BY chain.depth DESC LIMIT 1;
+
+-- name: MigratorOrganizationStateByUUID :one
+SELECT id, type, deleted_at FROM organizations WHERE uuid = $1;

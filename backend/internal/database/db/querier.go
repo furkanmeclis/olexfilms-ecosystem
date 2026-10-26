@@ -3145,6 +3145,9 @@ type Querier interface {
 	MigratorMeasurementDeviceBySerial(ctx context.Context, arg MigratorMeasurementDeviceBySerialParams) (MigratorMeasurementDeviceBySerialRow, error)
 	MigratorMeasurementDeviceByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorMeasurementDeviceByUUIDRow, error)
 	MigratorMeasurementResultIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	// TEC-1003: the live organization a merged one ended up in (follows
+	// merged_into_id); the organization itself when it is not merged.
+	MigratorMergedOrganizationUUID(ctx context.Context, argUuid uuid.UUID) (uuid.UUID, error)
 	MigratorMoveVehicleOwner(ctx context.Context, arg MigratorMoveVehicleOwnerParams) (int64, error)
 	// TEC-261: migrator step 9 (orders). Written only by cmd/migrator inside a
 	// step transaction. Legacy orders are history: no status history row, no
@@ -3160,6 +3163,7 @@ type Querier interface {
 	// outbox: the import starts no warranty and sends no notification.
 	MigratorOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorOrganizationByUUIDRow, error)
 	MigratorOrganizationIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorOrganizationStateByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorOrganizationStateByUUIDRow, error)
 	MigratorOrganizationUUIDByID(ctx context.Context, id int64) (uuid.UUID, error)
 	MigratorProductForUnit(ctx context.Context, arg MigratorProductForUnitParams) (MigratorProductForUnitRow, error)
 	MigratorProductIDByUUID(ctx context.Context, arg MigratorProductIDByUUIDParams) (int64, error)

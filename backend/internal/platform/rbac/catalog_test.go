@@ -399,7 +399,8 @@ func TestWarehouseGrants(t *testing.T) {
 }
 
 // TEC-214: tasks.* are center-only (brand scope); every center role holds
-// both, no distributor or dealer role holds either.
+// both, no distributor or dealer role holds either. center_service (TEC-1003)
+// is the center's service point staff, not network management: none.
 func TestTaskGrants(t *testing.T) {
 	for _, r := range Roles {
 		if r.Slug == RoleSuperAdmin {
@@ -407,7 +408,7 @@ func TestTaskGrants(t *testing.T) {
 		}
 		for _, slug := range []string{PermTasksRead, PermTasksWrite} {
 			sc, ok := r.Grants[slug]
-			if r.OrgType == OrgTypeCenter {
+			if r.OrgType == OrgTypeCenter && r.Slug != RoleCenterService {
 				if sc != ScopeBrand {
 					t.Fatalf("%s %s = %q, want brand", r.Slug, slug, sc)
 				}
@@ -776,6 +777,7 @@ func TestFleetGrants(t *testing.T) {
 		RoleDistributorOwner: {PermFleetsRead: ScopeSubtree, PermFleetsManage: ScopeSubtree},
 		RoleDealerOwner:      {PermFleetsRead: ScopeManaged, PermFleetsManage: ScopeManaged, PermFleetsPlan: ScopeManaged},
 		RoleDealerStaff:      {PermFleetsRead: ScopeManaged, PermFleetsPlan: ScopeManaged},
+		RoleCenterService:    {PermFleetsRead: ScopeManaged, PermFleetsPlan: ScopeManaged},
 		RoleFleet:            {PermFleetPortalRead: ScopeOwn},
 	}
 	for _, r := range Roles {
@@ -991,5 +993,33 @@ func TestPhotoStandardGrants(t *testing.T) {
 				t.Fatalf("%s %s = %q, want %q", r.Slug, slug, got, exp)
 			}
 		}
+	}
+}
+
+// TEC-1003: every distributor / dealer role has a center counterpart that
+// exists in the catalog at the center.
+func TestCenterRoleFor(t *testing.T) {
+	for _, r := range Roles {
+		got, ok := CenterRoleFor(r.Slug)
+		switch r.OrgType {
+		case OrgTypeCenter, OrgTypeDistributor, OrgTypeDealer:
+			if !ok {
+				t.Fatalf("%s has no center role", r.Slug)
+			}
+			def, found := RoleBySlug(got)
+			if !found || def.OrgType != OrgTypeCenter {
+				t.Fatalf("%s -> %s is not a center role", r.Slug, got)
+			}
+		default:
+			if ok {
+				t.Fatalf("%s must not map to a center role", r.Slug)
+			}
+		}
+	}
+	if got, _ := CenterRoleFor(RoleDealerStaff); got != RoleCenterService {
+		t.Fatalf("dealer_staff -> %s", got)
+	}
+	if got, _ := CenterRoleFor(RoleDealerOwner); got != RoleCenterStaff {
+		t.Fatalf("dealer_owner -> %s", got)
 	}
 }

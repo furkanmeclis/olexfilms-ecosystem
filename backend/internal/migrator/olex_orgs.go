@@ -16,22 +16,32 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/migrator/normalize"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgmerge"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/slug"
 )
 
-// Olex organization tree defaults (TEC-254, K1/K5).
+// Olex organization tree defaults (TEC-254, K1/K5; TEC-1003).
 const (
 	OlexBrandSlug = "olex"
-	// TRCountry is the country of the Türkiye distributor and the default
-	// country of legacy addresses and phones.
+	// TRCountry is the default country of legacy dealers, addresses and
+	// phones.
 	TRCountry = "TR"
-	// TRDistributorSlug and TRDistributorName name the Türkiye distributor
-	// the migrator creates when the brand has none.
+	// TRDistributorSlug names the Türkiye distributor earlier migrator runs
+	// created. Since TEC-1003 Türkiye has no distributor: the TR dealers hang
+	// under the center, and a distributor left with this slug is merged into
+	// the center.
 	TRDistributorSlug = "olex-turkiye"
-	TRDistributorName = "Olex Türkiye Distribütörü"
-	olexCenterSlug    = "olex-merkez"
-	olexCenterName    = "Olex Merkez"
+	// OlexServicePointDealerID is the legacy hub dealer that is the center's
+	// own service point (AFM Florya, the same legal entity as the center):
+	// it is merged into the center and lends the center its customer-facing
+	// name and logo (TEC-1003).
+	OlexServicePointDealerID = 1
+	olexCenterSlug           = "olex-merkez"
+	olexCenterName           = "Olex Merkez"
 )
+
+// mergeActor is org_merge_runs.actor of merges the migrator runs.
+const mergeActor = "migrator"
 
 // Report count keys shared by the steps. Keys with a ":" suffix carry the
 // offending value (a role name, a dealer id) so the run report lists them.
@@ -49,15 +59,13 @@ func (c counts) add(key string, n int64) { c[key] += n }
 
 // olexTree is the fixed top of the Olex organization tree.
 type olexTree struct {
-	BrandID       int64
-	CenterID      int64
-	CountryID     int64 // Türkiye
-	DistributorID int64 // Türkiye distributor
+	BrandID   int64
+	CenterID  int64
+	CountryID int64 // Türkiye
 }
 
-// resolveOlexTree finds the Olex center and the Türkiye distributor. With
-// create it adds whichever is missing (K5: the distributor gets the TR
-// country territory); without it a missing one is an error.
+// resolveOlexTree finds the Olex center. With create it adds a missing
+// center; without it a missing one is an error.
 func resolveOlexTree(ctx context.Context, q *db.Queries, create bool, c counts) (olexTree, error) {
 	var t olexTree
 	brand, err := q.GetBrandBySlug(ctx, OlexBrandSlug)
@@ -87,73 +95,81 @@ func resolveOlexTree(ctx context.Context, q *db.Queries, create bool, c counts) 
 	default:
 		return t, fmt.Errorf("olex center: %w", err)
 	}
-
-	id, err := q.MigratorCountryDistributor(ctx, db.MigratorCountryDistributorParams{BrandID: brand.ID, CountryID: country.ID})
-	if err == nil {
-		t.DistributorID = id
-		return t, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return t, fmt.Errorf("TR distributor: %w", err)
-	}
-	// No country territory yet: a distributor created by an earlier run (or
-	// by hand) under the reserved slug is reused.
-	id, err = q.MigratorDistributorBySlug(ctx, db.MigratorDistributorBySlugParams{Slug: TRDistributorSlug, BrandID: brand.ID})
-	switch {
-	case err == nil:
-		t.DistributorID = id
-	case errors.Is(err, pgx.ErrNoRows) && create:
-		t.DistributorID, err = q.MigratorInsertOrganization(ctx, db.MigratorInsertOrganizationParams{
-			Uuid: uuid.New(), Slug: TRDistributorSlug, Name: TRDistributorName, Status: "active",
-			Type: "distributor", ParentID: pgInt8(t.CenterID), BrandID: brand.ID, CountryID: pgInt8(country.ID),
-		})
-		if err != nil {
-			return t, fmt.Errorf("create TR distributor: %w", err)
-		}
-		c.inc("distributor_created")
-	case errors.Is(err, pgx.ErrNoRows):
-		return t, errors.New("TR distributor is missing; run the organizations step first")
-	default:
-		return t, fmt.Errorf("TR distributor: %w", err)
-	}
-	if create {
-		if err := assignCountryTerritory(ctx, q, t, c); err != nil {
-			return t, err
-		}
-	}
 	return t, nil
 }
 
-// assignCountryTerritory gives Türkiye to the distributor under the same
-// advisory lock the territory service takes. An overlapping territory of
-// another distributor is left alone and reported (K5 forbids overlaps).
-func assignCountryTerritory(ctx context.Context, q *db.Queries, t olexTree, c counts) error {
-	if err := q.LockTerritoryArea(ctx, db.LockTerritoryAreaParams{BrandID: t.BrandID, CountryID: t.CountryID}); err != nil {
-		return fmt.Errorf("lock territory: %w", err)
+// mergeIntoCenter merges an organization into the center (orgmerge) and
+// adds the run to the step counts.
+func mergeIntoCenter(ctx context.Context, dst *Target, tree olexTree, orgID int64, servicePoint bool, label string, c counts) error {
+	keep := []orgmerge.Column{}
+	if servicePoint {
+		// The orders the service point bought from the center stay its
+		// history (TEC-1003): the buyer keeps pointing at it.
+		keep = append(keep, orgmerge.Column{Table: "orders", Column: "buyer_org_id"})
 	}
-	overlaps, err := q.ListOverlappingTerritories(ctx, db.ListOverlappingTerritoriesParams{BrandID: t.BrandID, CountryID: t.CountryID})
+	rep, err := orgmerge.Merge(ctx, dst.Tx, orgmerge.Options{
+		SourceID: orgID, TargetID: tree.CenterID, Actor: mergeActor, Keep: keep, ServicePoint: servicePoint,
+	})
 	if err != nil {
-		return fmt.Errorf("territory overlaps: %w", err)
+		return fmt.Errorf("merge %s into the center: %w", label, err)
 	}
-	if len(overlaps) > 0 {
-		c.add("territory_conflict", int64(len(overlaps)))
-		return nil
+	c.inc(label + "_merged")
+	c.add(label+"_merge_moved", rep.Moved())
+	for _, t := range rep.Tables {
+		if t.Kept > 0 {
+			c.add(label+"_merge_kept:"+t.String(), t.Kept)
+		}
 	}
-	if _, err := q.CreateTerritory(ctx, db.CreateTerritoryParams{
-		BrandID: t.BrandID, OrganizationID: t.DistributorID, CountryID: t.CountryID,
-	}); err != nil {
-		return fmt.Errorf("create TR territory: %w", err)
-	}
-	c.inc("territory_created")
 	return nil
 }
 
+// mergeTRDistributor merges the Türkiye distributor of earlier runs into
+// the center: its dealers, orders and territory move to the center.
+func mergeTRDistributor(ctx context.Context, dst *Target, tree olexTree, c counts) error {
+	id, err := dst.Q.MigratorDistributorBySlug(ctx, db.MigratorDistributorBySlugParams{Slug: TRDistributorSlug, BrandID: tree.BrandID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("TR distributor: %w", err)
+	}
+	return mergeIntoCenter(ctx, dst, tree, id, false, "distributor", c)
+}
+
+// mergeServicePoint merges the organization of the service point dealer
+// (OlexServicePointDealerID) into the center once.
+func (s OrganizationsStep) mergeServicePoint(ctx context.Context, dst *Target, m *Mapper, tree olexTree, c counts) error {
+	if s.ServicePointDealerID == 0 {
+		return nil
+	}
+	target, ok, err := m.LookupRaw(ctx, s.system(), "dealers", strconv.FormatInt(s.ServicePointDealerID, 10))
+	if err != nil || !ok {
+		return err
+	}
+	org, err := dst.Q.MigratorOrganizationStateByUUID(ctx, target)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("service point dealer: %w", err)
+	}
+	if org.DeletedAt.Valid || org.Type != "dealer" {
+		return nil // merged by an earlier run
+	}
+	return mergeIntoCenter(ctx, dst, tree, org.ID, true, "service_point", c)
+}
+
 // OrganizationsStep imports hub dealers as Olex dealer organizations under
-// the Türkiye distributor, creating the center and the distributor when they
-// are missing (TEC-254).
+// the brand center, creating the center when it is missing (TEC-254). Since
+// TEC-1003 it also merges the Türkiye distributor of earlier runs and the
+// service point dealer into the center (idempotent: a merged organization
+// is not merged again, and later steps resolve it to the center).
 type OrganizationsStep struct {
 	// System is the migration_map source system; empty means SourceHub.
 	System string
+	// ServicePointDealerID is the legacy hub dealer merged into the center
+	// (0: none).
+	ServicePointDealerID int64
 }
 
 // Name implements Step.
@@ -190,6 +206,9 @@ func (s OrganizationsStep) Run(ctx context.Context, src Sources, dst *Target, m 
 	if err != nil {
 		return StepResult{Counts: c}, err
 	}
+	if err := mergeTRDistributor(ctx, dst, tree, c); err != nil {
+		return StepResult{Counts: c}, err
+	}
 
 	query, args := dealersQuery, []any{}
 	if dst.Mode == ModeDelta && !dst.Since.IsZero() {
@@ -224,6 +243,9 @@ func (s OrganizationsStep) Run(ctx context.Context, src Sources, dst *Target, m 
 		if err := s.importDealer(ctx, dst.Q, m, tree, countries, d, c); err != nil {
 			return StepResult{Counts: c}, fmt.Errorf("dealer %d: %w", d.ID, err)
 		}
+	}
+	if err := s.mergeServicePoint(ctx, dst, m, tree, c); err != nil {
+		return StepResult{Counts: c}, err
 	}
 	return StepResult{Counts: c, Watermark: watermark}, nil
 }
@@ -296,7 +318,7 @@ func (s OrganizationsStep) importDealer(ctx context.Context, q *db.Queries, m *M
 		_, err = q.MigratorInsertOrganization(ctx, db.MigratorInsertOrganizationParams{
 			Uuid: res.UUID, Slug: slugValue, Name: name, Email: email, Phone: phone, PhoneRaw: phoneRaw,
 			Address: address, City: city, District: district, Website: website, Status: status,
-			Type: "dealer", ParentID: pgInt8(tree.DistributorID), BrandID: tree.BrandID,
+			Type: "dealer", ParentID: pgInt8(tree.CenterID), BrandID: tree.BrandID,
 			CountryID: pgInt8(countryID), ProvinceID: provinceID, DistrictID: districtID,
 			CreatedAt: pgTime(d.CreatedAt),
 		})

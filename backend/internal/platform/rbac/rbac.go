@@ -8,6 +8,7 @@ const (
 	RoleCenterWarehouse  = "center_warehouse"
 	RoleCenterAccounting = "center_accounting"
 	RoleCenterSocial     = "center_social"
+	RoleCenterService    = "center_service"
 
 	RoleDistributorOwner          = "distributor_owner"
 	RoleDistributorStaff          = "distributor_staff"
@@ -384,4 +385,25 @@ func DefaultMemberRole(orgType, memberRole string) string {
 		}
 		return RoleDealerStaff
 	}
+}
+
+// CenterRoleFor maps a distributor or dealer role to the center role its
+// holder gets when the organization is merged into the brand center
+// (TEC-1003): owners and staff become center staff, dealer staff the
+// center's service point staff, warehouse and accounting roles their center
+// counterparts. Center roles map to themselves; other roles have none.
+func CenterRoleFor(slug string) (string, bool) {
+	switch slug {
+	case RoleCenterStaff, RoleCenterWarehouse, RoleCenterAccounting, RoleCenterSocial, RoleCenterService:
+		return slug, true
+	case RoleDistributorOwner, RoleDistributorStaff, RoleDealerOwner:
+		return RoleCenterStaff, true
+	case RoleDealerStaff:
+		return RoleCenterService, true
+	case RoleDistributorWarehouseStaff:
+		return RoleCenterWarehouse, true
+	case RoleDistributorAccounting, RoleDealerAccounting:
+		return RoleCenterAccounting, true
+	}
+	return "", false
 }
