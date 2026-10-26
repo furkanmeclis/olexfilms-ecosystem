@@ -30,6 +30,8 @@ import {
   translatePlural,
   type LocaleCatalog,
 } from "@/lib/i18n/messages";
+import { DIGITS_COOKIE, type DigitStyle } from "@/lib/i18n/digits";
+import { DigitsContext } from "@/lib/i18n/digits-context";
 
 type LocaleContextValue = {
   locale: AppLocale;
@@ -39,6 +41,9 @@ type LocaleContextValue = {
   /** Loads the language chunk, then switches (cookie + <html lang dir>). */
   setLocale: (locale: AppLocale) => Promise<void>;
   setTimeZone: (timeZone: string | null | undefined) => void;
+  /** Arabic digits (TEC-1009): Arabic-Indic by default, Latin by choice. */
+  digits: DigitStyle;
+  setDigits: (digits: DigitStyle) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
   tp: (
     key: string,
@@ -85,6 +90,8 @@ type LocaleProviderProps = {
   initialMessages?: LocaleCatalog | null;
   /** Resolved on the server from the NEXT_TIMEZONE cookie. */
   initialTimeZone?: string;
+  /** Resolved on the server from the NEXT_DIGITS cookie (TEC-1009). */
+  initialDigits?: DigitStyle;
 };
 
 export function LocaleProvider({
@@ -92,6 +99,7 @@ export function LocaleProvider({
   initialLocale = i18nConfig.defaultLocale,
   initialMessages,
   initialTimeZone = i18nConfig.defaultTimeZone,
+  initialDigits = "arab",
 }: LocaleProviderProps) {
   // Same catalog on the server render and the hydration render, so the
   // first paint is already in the right language (no flash, no mismatch).
@@ -99,6 +107,7 @@ export function LocaleProvider({
 
   const [locale, setLocaleState] = useState<AppLocale>(initialLocale);
   const [timeZone, setTimeZoneState] = useState(initialTimeZone);
+  const [digits, setDigitsState] = useState<DigitStyle>(initialDigits);
   // Re-render once a catalog that SSR did not hand over has arrived.
   const [, setCatalogVersion] = useState(0);
 
@@ -122,6 +131,11 @@ export function LocaleProvider({
     if (!next || !isValidTimeZone(next)) return;
     writeCookie(i18nConfig.timeZoneCookieName, next);
     setTimeZoneState(next);
+  }, []);
+
+  const setDigits = useCallback((next: DigitStyle) => {
+    writeCookie(DIGITS_COOKIE, next);
+    setDigitsState(next);
   }, []);
 
   useEffect(() => {
@@ -164,19 +178,23 @@ export function LocaleProvider({
       timeZone,
       setLocale,
       setTimeZone,
+      digits,
+      setDigits,
       t: (key, params) =>
         translate(locale, key, params, i18nConfig.fallbackLocale),
       tp: (key, count, params) => translatePlural(locale, key, count, params),
-      format: createFormatter({ locale, timeZone }),
+      format: createFormatter({ locale, timeZone, digits }),
     }),
-    [locale, timeZone, setLocale, setTimeZone],
+    [locale, timeZone, digits, setLocale, setTimeZone, setDigits],
   );
 
   return (
     <LocaleContext.Provider value={value}>
-      <Direction.DirectionProvider dir={value.dir}>
-        {children}
-      </Direction.DirectionProvider>
+      <DigitsContext.Provider value={digits}>
+        <Direction.DirectionProvider dir={value.dir}>
+          {children}
+        </Direction.DirectionProvider>
+      </DigitsContext.Provider>
     </LocaleContext.Provider>
   );
 }

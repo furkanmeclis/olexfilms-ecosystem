@@ -64,5 +64,8 @@
   "campaign_unsubscribe.invalid_title": "Invalid link",
   "campaign_unsubscribe.invalid_body": "This unsubscribe link is not valid. Make sure you copied the whole link.",
   "campaign_unsubscribe.error": "Something went wrong. Please try again in a moment.",
-  "campaign_unsubscribe.home": "Go to homepage"
+  "campaign_unsubscribe.home": "Go to homepage",
+  "digits": "Digits",
+  "digits_arab": "Arabic-Indic (٠١٢٣)",
+  "digits_latn": "Latin (0123)"
 }

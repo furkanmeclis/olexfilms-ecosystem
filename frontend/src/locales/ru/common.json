@@ -66,5 +66,8 @@
   "campaign_unsubscribe.invalid_title": "Недействительная ссылка",
   "campaign_unsubscribe.invalid_body": "Эта ссылка для отписки недействительна. Убедитесь, что скопировали ссылку полностью.",
   "campaign_unsubscribe.error": "Произошла ошибка. Попробуйте ещё раз чуть позже.",
-  "campaign_unsubscribe.home": "На главную страницу"
+  "campaign_unsubscribe.home": "На главную страницу",
+  "digits": "Цифры",
+  "digits_arab": "Арабско-индийские (٠١٢٣)",
+  "digits_latn": "Латинские (0123)"
 }

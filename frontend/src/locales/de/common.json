@@ -64,5 +64,8 @@
   "campaign_unsubscribe.invalid_title": "Ungültiger Link",
   "campaign_unsubscribe.invalid_body": "Dieser Abmeldelink ist ungültig. Prüfen Sie, ob Sie den vollständigen Link kopiert haben.",
   "campaign_unsubscribe.error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es gleich noch einmal.",
-  "campaign_unsubscribe.home": "Zur Startseite"
+  "campaign_unsubscribe.home": "Zur Startseite",
+  "digits": "Ziffern",
+  "digits_arab": "Arabisch-indisch (٠١٢٣)",
+  "digits_latn": "Lateinisch (0123)"
 }

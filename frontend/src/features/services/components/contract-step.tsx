@@ -335,7 +335,7 @@ function MediaPanel({
   canWrite: boolean;
   onChanged: () => void;
 }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -411,7 +411,11 @@ function MediaPanel({
               )}
               <div className="flex items-center justify-between gap-1 p-1.5 text-xs">
                 <span className="truncate" dir="ltr">
-                  {(m.size_bytes / (1024 * 1024)).toFixed(1)} MB
+                  {format.number(m.size_bytes / (1024 * 1024), {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}{" "}
+                  MB
                 </span>
                 {editable ? (
                   <Button

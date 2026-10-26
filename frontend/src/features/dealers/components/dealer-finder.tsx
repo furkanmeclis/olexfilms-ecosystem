@@ -272,7 +272,7 @@ function DealerResults({
   onRetry: () => void;
   canBook: boolean;
 }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   if (loading || !result) {
     return (
       <p
@@ -344,7 +344,10 @@ function DealerResults({
                           aria-hidden
                         />
                         {t("portal.dealers.google_rating", {
-                          rating: d.google_rating.toFixed(1),
+                          rating: format.number(d.google_rating, {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          }),
                         })}
                       </p>
                     ) : null}

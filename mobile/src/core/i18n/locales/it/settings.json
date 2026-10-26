@@ -19,5 +19,8 @@
   "about": "Informazioni",
   "api_server": "Server",
   "app_version": "Versione dell'app",
-  "watch_intro": "Rivedi la presentazione"
+  "watch_intro": "Rivedi la presentazione",
+  "digits": "Cifre",
+  "digits.arab": "Cifre arabo-indiane (٠١٢٣)",
+  "digits.latn": "Cifre latine (0123)"
 }

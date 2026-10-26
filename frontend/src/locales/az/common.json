@@ -64,5 +64,8 @@
   "campaign_unsubscribe.invalid_title": "Keçid etibarsızdır",
   "campaign_unsubscribe.invalid_body": "Bu abunəlik keçidi etibarlı deyil. Keçidi tam köçürdüyünüzə əmin olun.",
   "campaign_unsubscribe.error": "Problem yarandı. Bir az sonra yenidən cəhd edin.",
-  "campaign_unsubscribe.home": "Ana səhifəyə keç"
+  "campaign_unsubscribe.home": "Ana səhifəyə keç",
+  "digits": "Rəqəmlər",
+  "digits_arab": "Ərəb-hind (٠١٢٣)",
+  "digits_latn": "Latın (0123)"
 }

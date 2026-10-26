@@ -16,6 +16,7 @@ import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
+import { intlLocale } from '@/core/digits';
 
 const header = { 'X-Mobile-Api-Version': MOBILE_API_VERSION };
 
@@ -62,7 +63,7 @@ export function QrLoginScreen() {
             <ListRow title={t('organization')} subtitle={org?.name ?? '—'} />
             <ListRow
               title={t('expires')}
-              subtitle={new Date(scan.data.expires_at).toLocaleTimeString(i18n.language)}
+              subtitle={new Date(scan.data.expires_at).toLocaleTimeString(intlLocale(i18n.language))}
               last
             />
           </List>
