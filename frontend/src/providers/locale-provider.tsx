@@ -31,6 +31,7 @@ import {
   type LocaleCatalog,
 } from "@/lib/i18n/messages";
 import { DIGITS_COOKIE, type DigitStyle } from "@/lib/i18n/digits";
+import { DigitsContext } from "@/lib/i18n/digits-context";
 
 type LocaleContextValue = {
   locale: AppLocale;
@@ -189,9 +190,11 @@ export function LocaleProvider({
 
   return (
     <LocaleContext.Provider value={value}>
-      <Direction.DirectionProvider dir={value.dir}>
-        {children}
-      </Direction.DirectionProvider>
+      <DigitsContext.Provider value={digits}>
+        <Direction.DirectionProvider dir={value.dir}>
+          {children}
+        </Direction.DirectionProvider>
+      </DigitsContext.Provider>
     </LocaleContext.Provider>
   );
 }

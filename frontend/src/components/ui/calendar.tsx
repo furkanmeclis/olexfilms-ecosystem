@@ -15,7 +15,7 @@ import {
 import { cn } from "@/lib/utils/index";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { hasDigitChoice, intlLocale } from "@/lib/i18n/digits";
-import { useFormatter } from "@/providers/locale-provider";
+import { useDigits } from "@/lib/i18n/digits-context";
 
 function Calendar({
   className,
@@ -31,7 +31,7 @@ function Calendar({
 }) {
   const defaultClassNames = getDefaultClassNames();
   // TEC-1009: Arabic-Indic day numbers unless the user picked Latin.
-  const { digits } = useFormatter();
+  const digits = useDigits();
   const code = props.locale?.code ?? "default";
   const arabic = hasDigitChoice(code) && digits === "arab";
 
