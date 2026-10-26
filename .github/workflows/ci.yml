@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Weekly full run (every job, whatever changed): the image build and the
+  # DR drill stay proven even when no merge touched their inputs.
+  schedule:
+    - cron: "0 3 * * 1"
 
 # One run per PR (or ref). PRs cancel superseded runs; main runs always
 # finish so every green main commit gets its v0.N tag.
@@ -21,62 +25,93 @@ env:
   MIGRATE_VERSION: v4.19.1
 
 jobs:
-  # Decides which heavy jobs a PR needs (plain git diff, no third-party
-  # action). Push to main, tags, workflow_dispatch and PRs labelled
-  # "ci-full" run everything (full=true), as does a PR touching .github/.
-  #   frontend/**                 -> frontend, contracts
+  # Decides which jobs a run needs (plain git diff, no third-party action).
+  # PRs diff against their base; a push to main diffs against the previous
+  # main (squash merges only, so that is one commit; a force/multi-commit
+  # push falls back to full). workflow_dispatch, the weekly schedule, a PR
+  # labelled "ci-full" and a change to this file run everything (full=true).
+  #   frontend/**                 -> frontend-check, frontend-unit, contracts
+  #                                  + frontend-e2e unless only unit-test files
   #   backend/**, db/**           -> backend, contracts
+  #   backend/migrations/**       -> backend, contracts, dr-drill
   #   mobile/**                   -> mobile
   #   docs/openapi.yaml,
-  #   backend/docs/openapi.yaml   -> backend, frontend, contracts, mobile
-  #   docs/**, *.md (alone)       -> nothing heavy
-  #   .github/**                  -> everything (incl. image-build, dr-drill)
-  #   Makefile, scripts/, other   -> backend, frontend, contracts
+  #   backend/docs/openapi.yaml   -> backend, frontend-*, contracts, mobile
+  #   Dockerfiles, compose.prod.yml, deploy/**, backup/restore/dr-drill
+  #   and gen-env-server scripts  -> image-build, dr-drill (infra)
+  #   docs/**, *.md, .github/**   -> nothing (ci.yml itself -> everything)
+  #   Makefile, scripts/, other   -> backend, frontend-*, contracts
   changes:
     runs-on: ubuntu-latest
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      e2e: ${{ steps.filter.outputs.e2e }}
       contracts: ${{ steps.filter.outputs.contracts }}
       mobile: ${{ steps.filter.outputs.mobile }}
+      infra: ${{ steps.filter.outputs.infra }}
       full: ${{ steps.filter.outputs.full }}
     steps:
       - uses: actions/checkout@v7
-        if: github.event_name == 'pull_request'
         with:
           # PR checkout is the merge commit; HEAD^1 is the current base.
+          # On main the previous commit is the previous main (squash merges).
           fetch-depth: 2
       - name: Changed areas
         id: filter
         env:
           EVENT: ${{ github.event_name }}
           CI_FULL: ${{ contains(github.event.pull_request.labels.*.name, 'ci-full') }}
+          BEFORE: ${{ github.event.before }}
         run: |
-          backend=false; frontend=false; contracts=false; mobile=false; full=false
-          if [ "$EVENT" != "pull_request" ] || [ "$CI_FULL" = "true" ]; then
-            full=true
-          else
-            files=$(git diff --name-only HEAD^1 HEAD)
-            printf '%s\n' "$files"
-            while IFS= read -r f; do
-              [ -z "$f" ] && continue
-              case "$f" in
-                docs/openapi.yaml|backend/docs/openapi.yaml)
-                  backend=true; frontend=true; contracts=true; mobile=true ;;
-                # Markdown anywhere is never built, embedded or tested.
-                *.md|docs/*) ;;
-                frontend/*) frontend=true; contracts=true ;;
-                mobile/*) mobile=true ;;
-                backend/*|db/*) backend=true; contracts=true ;;
-                .github/*) full=true ;;
-                *) backend=true; frontend=true; contracts=true ;;
-              esac
-            done <<< "$files"
+          backend=false; frontend=false; e2e=false; contracts=false
+          mobile=false; infra=false; full=false
+          files=""
+          case "$EVENT" in
+            pull_request)
+              [ "$CI_FULL" = "true" ] && full=true || files=$(git diff --name-only HEAD^1 HEAD) ;;
+            push)
+              # Compare with the pushed-from commit; unreachable (force push,
+              # first push) means full.
+              if [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -qE '^0+$' \
+                 && git fetch --no-tags --depth=1 origin "$BEFORE" 2>/dev/null; then
+                files=$(git diff --name-only "$BEFORE" HEAD)
+              else
+                full=true
+              fi ;;
+            *) full=true ;;
+          esac
+          printf '%s\n' "$files"
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              .github/workflows/ci.yml) full=true ;;
+              # Other workflows are manual; nothing here depends on them.
+              .github/*) ;;
+              docs/openapi.yaml|backend/docs/openapi.yaml)
+                backend=true; frontend=true; e2e=true; contracts=true; mobile=true ;;
+              # Markdown anywhere is never built, embedded or tested.
+              *.md|docs/*) ;;
+              backend/Dockerfile|frontend/Dockerfile|compose.prod.yml|deploy/*|\
+              scripts/backup.sh|scripts/restore.sh|scripts/dr-drill.sh|scripts/gen-env-server.sh|.dockerignore|*/.dockerignore)
+                infra=true ;;
+              backend/migrations/*) backend=true; contracts=true; infra=true ;;
+              # Unit-test-only files never reach the production build.
+              frontend/*.test.ts|frontend/*.test.tsx|frontend/vitest.config.ts|frontend/src/test/*)
+                frontend=true; contracts=true ;;
+              frontend/*) frontend=true; e2e=true; contracts=true ;;
+              mobile/*) mobile=true ;;
+              backend/*|db/*) backend=true; contracts=true ;;
+              *) backend=true; frontend=true; e2e=true; contracts=true ;;
+            esac
+          done <<< "$files"
+          if [ "$full" = "true" ]; then
+            backend=true; frontend=true; e2e=true; contracts=true; mobile=true; infra=true
           fi
-          if [ "$full" = "true" ]; then backend=true; frontend=true; contracts=true; mobile=true; fi
           {
-            echo "backend=$backend"; echo "frontend=$frontend"
-            echo "contracts=$contracts"; echo "mobile=$mobile"; echo "full=$full"
+            echo "backend=$backend"; echo "frontend=$frontend"; echo "e2e=$e2e"
+            echo "contracts=$contracts"; echo "mobile=$mobile"
+            echo "infra=$infra"; echo "full=$full"
           } | tee -a "$GITHUB_OUTPUT"
 
   backend:
@@ -151,10 +186,13 @@ jobs:
         working-directory: .
         run: make openapi-lint
 
-  frontend:
+  # Lint, format and types. vitest (frontend-unit) and the production
+  # build + mocked Playwright run (frontend-e2e) are separate jobs so the
+  # three run side by side.
+  frontend-check:
     needs: [changes]
     if: needs.changes.outputs.frontend == 'true'
-    runs-on: ubuntu-24.04 # Playwright chromium henüz ubuntu-26.04 desteklemiyor
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
@@ -182,12 +220,66 @@ jobs:
         run: pnpm format:check
       - name: Typecheck
         run: pnpm typecheck
-      - name: Unit tests
-        run: pnpm test
+
+  # vitest: 268 files, ~5 min on one runner; two shards run side by side.
+  frontend-unit:
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Unit tests (shard ${{ matrix.shard }}/2)
+        run: pnpm test -- --shard=${{ matrix.shard }}/2
+
+  # TEC-183: mocked end-to-end run on the production build; page.route
+  # answers the BFF calls, so no backend or database is needed. Skipped when
+  # a PR only touches unit-test files (changes.e2e).
+  frontend-e2e:
+    needs: [changes]
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-24.04 # Playwright chromium henüz ubuntu-26.04 desteklemiyor
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      # Next.js compiler cache: a lockfile+source hit is exact, otherwise the
+      # newest cache for this lockfile is a warm start.
+      - uses: actions/cache@v6
+        with:
+          path: frontend/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}-${{ hashFiles('frontend/src/**', 'frontend/next.config.ts') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}-
       - name: Build
         run: pnpm build
-      # TEC-183: mocked end-to-end run on the build above; page.route
-      # answers the BFF calls, so no backend or database is needed.
       - name: Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
       - name: E2E (mocked API)
@@ -256,11 +348,11 @@ jobs:
 
   # Builds the production images exactly as Dokploy does (compose.prod.yml),
   # without pushing. A throw-away env file satisfies the required (:?) vars.
-  # Not on PRs (minutes): main push, tags, workflow_dispatch, a PR labelled
-  # "ci-full" or a PR changing .github/ (changes.full).
+  # Only when its inputs change (Dockerfiles, compose.prod.yml, deploy/,
+  # gen-env-server.sh: changes.infra), on a full run and weekly.
   image-build:
     needs: [changes]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -280,10 +372,10 @@ jobs:
 
   # Backups are only real if they restore: backup.sh, drop everything,
   # restore.sh, compare every table/file/index, sign in. Same triggers as
-  # image-build (changes.full).
+  # image-build plus migrations (changes.infra).
   dr-drill:
     needs: [changes]
-    if: needs.changes.outputs.full == 'true'
+    if: needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -300,7 +392,7 @@ jobs:
   ci:
     name: ci
     if: always()
-    needs: [changes, backend, frontend, contracts, mobile, image-build, dr-drill]
+    needs: [changes, backend, frontend-check, frontend-unit, frontend-e2e, contracts, mobile, image-build, dr-drill]
     runs-on: ubuntu-latest
     steps:
       - name: All jobs green
@@ -316,51 +408,33 @@ jobs:
             echo "::error::a required CI job failed or was cancelled"; exit 1
           fi
 
-  # TEC-1011: every green push to main that touched mobile/ starts an iOS
-  # production build on EAS and auto-submits it to TestFlight (ASC app in
-  # mobile/eas.json). The build and the upload run on EAS; this job only
-  # triggers them (--no-wait). Build numbers come from the EAS remote counter
-  # (appVersionSource: remote, autoIncrement). Needs the EXPO_TOKEN secret.
-  # Manual run: workflow_dispatch builds regardless of the changed paths.
+  # TEC-1011: every green push to main that touched mobile/ (or the OpenAPI
+  # spec, changes.mobile) starts an iOS production build on EAS and
+  # auto-submits it to TestFlight (ASC app in mobile/eas.json). The build and
+  # the upload run on EAS; this job only triggers them (--no-wait). Build
+  # numbers come from the EAS remote counter (appVersionSource: remote,
+  # autoIncrement). Needs the EXPO_TOKEN secret. Manual run: workflow_dispatch
+  # is a full run, so it builds regardless of the changed paths.
   mobile-release:
-    needs: [ci]
+    needs: [changes, ci]
     if: >-
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-      github.event_name == 'workflow_dispatch'
+      needs.changes.outputs.mobile == 'true' &&
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+       github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-      - name: mobile/ changed?
-        id: changed
-        env:
-          EVENT: ${{ github.event_name }}
-        run: |
-          if [ "$EVENT" = "workflow_dispatch" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
-          fi
-          # main only receives squash merges, so HEAD^ is the previous main.
-          if git diff --name-only HEAD^ HEAD -- . ../docs/openapi.yaml | grep -q .; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "mobile/ unchanged, no EAS build" >> "$GITHUB_STEP_SUMMARY"
-          fi
       - uses: actions/setup-node@v7
-        if: steps.changed.outputs.run == 'true'
         with:
           node-version-file: frontend/.nvmrc
           cache: npm
           cache-dependency-path: mobile/package-lock.json
       - name: Install
-        if: steps.changed.outputs.run == 'true'
         run: npm ci
       - name: EAS build + TestFlight submit
-        if: steps.changed.outputs.run == 'true'
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
