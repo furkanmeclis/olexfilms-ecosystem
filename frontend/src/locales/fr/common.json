@@ -64,5 +64,8 @@
   "campaign_unsubscribe.invalid_title": "Lien non valide",
   "campaign_unsubscribe.invalid_body": "Ce lien de désabonnement n'est pas valide. Vérifiez que vous avez copié le lien en entier.",
   "campaign_unsubscribe.error": "Un problème est survenu. Veuillez réessayer dans un instant.",
-  "campaign_unsubscribe.home": "Aller à l'accueil"
+  "campaign_unsubscribe.home": "Aller à l'accueil",
+  "digits": "Chiffres",
+  "digits_arab": "Arabes orientaux (٠١٢٣)",
+  "digits_latn": "Latins (0123)"
 }

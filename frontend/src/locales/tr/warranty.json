@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "Göndermeden önce en az bir fotoğraf ekleyin.",
   "claims.toast.photo_error": "Bazı fotoğraflar yüklenemedi.",
   "claims.toast.photos_uploaded": "Fotoğraflar yüklendi.",
-  "claims.portal.label": "Garanti talebi:"
+  "claims.portal.label": "Garanti talebi:",
+  "public.service_no": "Hizmet numarası",
+  "public.service_date": "Hizmet tarihi",
+  "public.package": "Paket",
+  "public.warranties": "Uygulanan ürünler ve garantiler",
+  "public.applied_parts": "Uygulanan parçalar"
 }

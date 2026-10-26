@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "Ajoutez au moins une photo avant l'envoi.",
   "claims.toast.photo_error": "Certaines photos n'ont pas pu être téléversées.",
   "claims.toast.photos_uploaded": "Photos téléversées.",
-  "claims.portal.label": "Réclamation de garantie :"
+  "claims.portal.label": "Réclamation de garantie :",
+  "public.service_no": "Numéro de service",
+  "public.service_date": "Date du service",
+  "public.package": "Forfait",
+  "public.warranties": "Produits appliqués et garanties",
+  "public.applied_parts": "Pièces traitées"
 }

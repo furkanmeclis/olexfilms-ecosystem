@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "提交前请至少添加一张照片。",
   "claims.toast.photo_error": "部分照片上传失败。",
   "claims.toast.photos_uploaded": "照片已上传。",
-  "claims.portal.label": "保修索赔："
+  "claims.portal.label": "保修索赔：",
+  "public.service_no": "服务编号",
+  "public.service_date": "服务日期",
+  "public.package": "套餐",
+  "public.warranties": "已施工产品及保修",
+  "public.applied_parts": "施工部位"
 }

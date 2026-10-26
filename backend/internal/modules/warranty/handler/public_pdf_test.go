@@ -188,7 +188,8 @@ func TestPublicPDFIssuedAtTimezone(t *testing.T) {
 
 	for _, tc := range []struct{ name, query, want string }{
 		{"istanbul tr", "?lang=tr&tz=Europe%2FIstanbul", "Düzenlenme: 2026-10-09 14:32 (Europe/Istanbul)"},
-		{"istanbul ar", "?lang=ar&tz=Europe%2FIstanbul", "2026-10-09 14:32 (Europe/Istanbul)"},
+		// TEC-1009: Arabic-Indic digits, the zone name stays Latin.
+		{"istanbul ar", "?lang=ar&tz=Europe%2FIstanbul", "٢٠٢٦-١٠-٠٩ ١٤:٣٢ (Europe/Istanbul)"},
 		{"other zone", "?lang=en&tz=America%2FNew_York", "2026-10-09 07:32 (America/New_York)"},
 		{"missing tz", "?lang=tr", "Düzenlenme: 2026-10-09 14:32 (Europe/Istanbul)"},
 		{"invalid tz", "?lang=tr&tz=Not%2FAZone", "Düzenlenme: 2026-10-09 14:32 (Europe/Istanbul)"},

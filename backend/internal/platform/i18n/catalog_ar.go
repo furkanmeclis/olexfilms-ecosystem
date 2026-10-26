@@ -843,6 +843,10 @@ var arCatalog = map[string]string{
 	"warranty.certificate.terms_title":         "شروط الضمان",
 	"warranty.certificate.terms":               "يغطي الضمان عيوب المواد والتنفيذ الناتجة عن تركيب المنتجات المدرجة في هذه الشهادة من قِبل وكيل معتمد.\nكل ضمان ساري المفعول بين تاريخي البداية والنهاية المذكورين بجانبه.\nلا يشمل الضمان الحوادث والاصطدامات وأضرار الحصى والصدمات وسوء العناية أو استخدام المواد الكيميائية والتدخل غير المصرح به والتآكل الطبيعي.\nيجب تقديم هذه الشهادة ورمز الضمان عند أي مطالبة بالضمان، ويمكن التحقق من صلاحية الضمان بمسح رمز QR.\nعند انتقال ملكية المركبة يمكن نقل الضمانات السارية إلى المالك الجديد.",
 	"warranty.certificate.generated_at":        "تاريخ الإصدار",
+	"warranty.certificate.status":              "الحالة",
+	"warranty.certificate.status.active":       "سارٍ",
+	"warranty.certificate.status.expired":      "منتهي",
+	"warranty.certificate.status.void":         "ملغى",
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "تقرير الخدمة",
 	"resources.tenant.services.pdf":         "تقرير الخدمة",

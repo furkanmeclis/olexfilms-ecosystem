@@ -3042,6 +3042,93 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/public/service-warranties/{code}:
+    get:
+      tags: [Public]
+      operationId: getPublicServiceWarranties
+      summary: Public warranty page of a service (every warranty of it)
+      description: |
+        TEC-1005. No authentication. The page /warranty/{service_no} (the
+        legacy hub's page and the QR of the printed warranty cards) shows
+        one service with all of its warranties. code is the service number,
+        else a warranty public code of the service (per-warranty links
+        before TEC-1005), else a legacy alias; service_no in the answer is
+        the canonical page address. Only a service with a warranty in the
+        domain brand is found. No personal data: masked plate, last four
+        VIN characters, no holder. Same per-IP limit and 404 rules as
+        GET /v1/public/warranties/{public_code}.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, minLength: 4, maxLength: 32, pattern: "^[A-Za-z0-9_-]{4,32}$" }
+      responses:
+        "200":
+          description: The service page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicService"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /v1/public/service-warranties/{code}/pdf:
+    get:
+      tags: [Public]
+      operationId: getPublicServiceWarrantiesPdf
+      summary: Anonymous warranty PDF of a service
+      description: |
+        TEC-1005. One document with every warranty of the service (status
+        per warranty), offered while one of them is active (else 404), with
+        a QR code to /warranty/{service_no}. Built from the public
+        projection only. PDF rate limit bucket and lang / tz as
+        GET /v1/public/warranties/{public_code}/pdf.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, minLength: 4, maxLength: 32, pattern: "^[A-Za-z0-9_-]{4,32}$" }
+        - { name: lang, in: query, required: false, schema: { type: string } }
+        - { name: tz, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: The PDF (attachment)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: PDF rendering is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /v1/public/warranties/{public_code}/pdf:
     get:
       tags: [Public]
@@ -35913,6 +36000,49 @@ components:
       properties:
         success: { type: boolean, enum: [true] }
         data: { $ref: "#/components/schemas/PublicBrand" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    PublicService:
+      type: object
+      description: Public warranty page of a service (TEC-1005); never carries personal data.
+      required: [service_no, package, service_date, brand, dealer, vehicle, warranties]
+      properties:
+        service_no: { type: string, description: "Canonical page address /warranty/{service_no}" }
+        package: { type: [string, "null"] }
+        service_date: { type: string, format: date-time, description: "Completion time, else creation" }
+        brand: { $ref: "#/components/schemas/PublicWarranty/properties/brand" }
+        dealer: { $ref: "#/components/schemas/PublicWarranty/properties/dealer" }
+        vehicle: { $ref: "#/components/schemas/PublicWarranty/properties/vehicle" }
+        warranties:
+          type: array
+          items: { $ref: "#/components/schemas/PublicServiceWarranty" }
+
+    PublicServiceWarranty:
+      type: object
+      required: [public_code, status, start_at, end_at, days_remaining, product, category, parts]
+      properties:
+        public_code: { type: string }
+        status: { type: string, enum: [active, expired, void] }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        days_remaining: { type: integer, minimum: 0 }
+        product:
+          type: object
+          required: [name]
+          properties:
+            name: { type: string }
+        category: { type: string, description: "Product category name (empty when none)" }
+        parts:
+          type: array
+          description: Applied part keys (services.parts.<key>)
+          items: { type: string }
+
+    EnvelopePublicService:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicService" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopePublicWarranty:

@@ -9,6 +9,7 @@ import { site } from "@/config/site";
 import { loadMessages } from "@/lib/i18n/messages";
 import { resolveRequestLocale } from "@/lib/i18n/request-locale";
 import { AppProviders } from "@/providers/app-providers";
+import { DIGITS_COOKIE, normalizeDigitStyle } from "@/lib/i18n/digits";
 
 import "./globals.css";
 
@@ -98,7 +99,14 @@ export default async function RootLayout({
       <body
         className={`${plusJakarta.variable} ${outfit.variable} ${jetbrainsMono.variable} min-h-full font-sans antialiased`}
       >
-        <AppProviders locale={locale} messages={messages} timeZone={timeZone}>
+        <AppProviders
+          locale={locale}
+          messages={messages}
+          timeZone={timeZone}
+          digits={
+            normalizeDigitStyle(store.get(DIGITS_COOKIE)?.value) ?? "arab"
+          }
+        >
           {children}
         </AppProviders>
         <Script

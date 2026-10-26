@@ -844,6 +844,10 @@ var trCatalog = map[string]string{
 	"warranty.certificate.terms_title":         "Garanti koşulları",
 	"warranty.certificate.terms":               "Garanti, bu belgede listelenen ürünlerin yetkili bayi tarafından uygulanmasından doğan malzeme ve işçilik kusurlarını kapsar.\nHer garanti, yanında yazan başlangıç ve bitiş tarihleri arasında geçerlidir.\nKaza, çarpma, taş ve darbe hasarı, uygunsuz bakım veya kimyasal kullanımı, yetkisiz müdahale ve olağan aşınma garanti kapsamı dışındadır.\nGaranti talebinde bu belge ve garanti kodu ibraz edilmelidir; garantinin geçerliliği QR kodu okutularak doğrulanabilir.\nAraç el değiştirdiğinde aktif garantiler yeni araç sahibine devredilebilir.",
 	"warranty.certificate.generated_at":        "Düzenlenme",
+	"warranty.certificate.status":              "Durum",
+	"warranty.certificate.status.active":       "Aktif",
+	"warranty.certificate.status.expired":      "Süresi doldu",
+	"warranty.certificate.status.void":         "Geçersiz",
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Hizmet raporu",
 	"resources.tenant.services.pdf":         "Hizmet raporu",
@@ -2045,6 +2049,10 @@ var enCatalog = map[string]string{
 	"warranty.certificate.terms_title":         "Warranty terms",
 	"warranty.certificate.terms":               "The warranty covers material and workmanship defects arising from the application of the products listed in this certificate by an authorized dealer.\nEach warranty is valid between the start and end dates shown next to it.\nAccidents, collisions, stone chips and impact damage, improper care or use of chemicals, unauthorized intervention and normal wear are not covered.\nThis certificate and the warranty code must be presented with any warranty claim; the warranty can be verified by scanning its QR code.\nWhen the vehicle changes hands, active warranties can be transferred to the new owner.",
 	"warranty.certificate.generated_at":        "Issued",
+	"warranty.certificate.status":              "Status",
+	"warranty.certificate.status.active":       "Active",
+	"warranty.certificate.status.expired":      "Expired",
+	"warranty.certificate.status.void":         "Void",
 	// TEC-196: service PDF.
 	"export.title.tenant.services.pdf":      "Service report",
 	"resources.tenant.services.pdf":         "Service report",

@@ -36,6 +36,20 @@ func formatDatetime(t time.Time, loc i18n.Locale) string {
 	return t.Format("02.01.2006 15:04 UTC")
 }
 
+// pdfCell writes a formatted date or number cell of a PDF in the locale's
+// digits (TEC-1009: Arabic-Indic for ar). Identifier columns (codes,
+// numbers, phones, plates; i18n.LatinOnlyKey) and text columns keep Latin
+// digits; CSV and XLSX stay machine-readable.
+func pdfCell(text string, col Column, loc i18n.Locale) string {
+	if col.Type != ColumnTypeDatetime && !col.AlignRight {
+		return text
+	}
+	if i18n.LatinOnlyKey(col.Key) {
+		return text
+	}
+	return i18n.Digits(loc, text)
+}
+
 func formatCell(v any, col Column, loc i18n.Locale) string {
 	if v == nil {
 		return ""

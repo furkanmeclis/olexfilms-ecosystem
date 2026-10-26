@@ -150,7 +150,8 @@ func (s *Service) PreviewTemplate(ctx context.Context, in model.TemplateInput) (
 	lang := i18n.Normalize(in.Language)
 	vars := ev.SampleVars(string(lang))
 	out := model.Rendered{
-		Subject: msgtemplate.Render(in.Subject, vars), Body: msgtemplate.Render(in.Body, vars),
+		Subject:  msgtemplate.RenderLocale(in.Subject, vars, string(lang)),
+		Body:     msgtemplate.RenderLocale(in.Body, vars, string(lang)),
 		Language: string(lang), Dir: i18n.Dir(lang),
 	}
 	if in.Channel == model.ChannelEmail {

@@ -14,6 +14,8 @@ import {
 
 import { cn } from "@/lib/utils/index";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { hasDigitChoice, intlLocale } from "@/lib/i18n/digits";
+import { useDigits } from "@/lib/i18n/digits-context";
 
 function Calendar({
   className,
@@ -28,9 +30,14 @@ function Calendar({
   buttonVariant?: React.ComponentProps<typeof Button>["variant"];
 }) {
   const defaultClassNames = getDefaultClassNames();
+  // TEC-1009: Arabic-Indic day numbers unless the user picked Latin.
+  const digits = useDigits();
+  const code = props.locale?.code ?? "default";
+  const arabic = hasDigitChoice(code) && digits === "arab";
 
   return (
     <DayPicker
+      numerals={arabic ? "arab" : undefined}
       showOutsideDays={showOutsideDays}
       className={cn(
         "group/calendar bg-background p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
@@ -41,7 +48,7 @@ function Calendar({
       captionLayout={captionLayout}
       formatters={{
         formatMonthDropdown: (date) =>
-          date.toLocaleString(props.locale?.code ?? "default", {
+          date.toLocaleString(intlLocale(code, digits), {
             month: "short",
           }),
         ...formatters,

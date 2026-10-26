@@ -119,7 +119,7 @@ export function CampaignDetailPage({
                       {t(key)}
                     </div>
                     <div className="text-xl font-semibold">
-                      {value.toLocaleString()}
+                      {format.number(value)}
                     </div>
                   </CardContent>
                 </Card>

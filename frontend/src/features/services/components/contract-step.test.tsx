@@ -30,7 +30,11 @@ vi.mock("@/providers/locale-provider", () => ({
     t: (key: string, params?: Record<string, string | number>) =>
       params ? `${key} ${JSON.stringify(params)}` : key,
     locale: "tr",
-    format: { dateTime: (v: string) => v },
+    format: {
+      dateTime: (v: string) => v,
+      number: (v: number, o?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat("en", o).format(v),
+    },
   }),
 }));
 vi.mock("next/navigation", () => ({

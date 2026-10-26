@@ -24,5 +24,8 @@
   "ota_runtime": "Runtime version",
   "ota_update_id": "Update ID",
   "ota_embedded": "Bundled with the app",
-  "ota_off": "Off (development)"
+  "ota_off": "Off (development)",
+  "digits": "Digits",
+  "digits.arab": "Arabic-Indic digits (٠١٢٣)",
+  "digits.latn": "Latin digits (0123)"
 }

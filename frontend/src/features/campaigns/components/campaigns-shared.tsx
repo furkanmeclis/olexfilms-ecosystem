@@ -78,7 +78,7 @@ export function campaignColumns({
 }: {
   slug: string;
   t: CampaignT;
-  format: { dateTime: (v: string) => string };
+  format: { dateTime: (v: string) => string; number: (v: number) => string };
   onDuplicate?: (campaign: Campaign) => void;
   onCancel?: (campaign: Campaign) => void;
   onDelete?: (campaign: Campaign) => void;
@@ -138,19 +138,19 @@ export function campaignColumns({
       accessorKey: "recipients_total",
       labelKey: "campaigns.columns.recipients_total",
       enableSorting: false,
-      cell: ({ row }) => row.original.recipients_total.toLocaleString(),
+      cell: ({ row }) => format.number(row.original.recipients_total),
     }),
     createColumn<Campaign>({
       accessorKey: "recipients_sent",
       labelKey: "campaigns.columns.recipients_sent",
       enableSorting: false,
-      cell: ({ row }) => row.original.recipients_sent.toLocaleString(),
+      cell: ({ row }) => format.number(row.original.recipients_sent),
     }),
     createColumn<Campaign>({
       accessorKey: "recipients_failed",
       labelKey: "campaigns.columns.recipients_failed",
       enableSorting: false,
-      cell: ({ row }) => row.original.recipients_failed.toLocaleString(),
+      cell: ({ row }) => format.number(row.original.recipients_failed),
     }),
     createColumn<Campaign>({
       id: "actions",
@@ -218,7 +218,7 @@ export function recipientColumns({
   format,
 }: {
   t: CampaignT;
-  format: { dateTime: (v: string) => string };
+  format: { dateTime: (v: string) => string; number: (v: number) => string };
 }): ColumnDef<CampaignRecipient>[] {
   return [
     createColumn<CampaignRecipient>({

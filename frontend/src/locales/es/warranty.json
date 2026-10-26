@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "Añada al menos una foto antes de enviar.",
   "claims.toast.photo_error": "Algunas fotos no se pudieron subir.",
   "claims.toast.photos_uploaded": "Fotos subidas.",
-  "claims.portal.label": "Reclamación de garantía:"
+  "claims.portal.label": "Reclamación de garantía:",
+  "public.service_no": "Número de servicio",
+  "public.service_date": "Fecha del servicio",
+  "public.package": "Paquete",
+  "public.warranties": "Productos aplicados y garantías",
+  "public.applied_parts": "Piezas tratadas"
 }

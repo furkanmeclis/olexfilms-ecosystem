@@ -24,5 +24,8 @@
   "ota_runtime": "Çalışma sürümü",
   "ota_update_id": "Güncelleme kimliği",
   "ota_embedded": "Uygulamayla gelen",
-  "ota_off": "Kapalı (geliştirme)"
+  "ota_off": "Kapalı (geliştirme)",
+  "digits": "Rakamlar",
+  "digits.arab": "Arap-Hint rakamları (٠١٢٣)",
+  "digits.latn": "Latin rakamlar (0123)"
 }

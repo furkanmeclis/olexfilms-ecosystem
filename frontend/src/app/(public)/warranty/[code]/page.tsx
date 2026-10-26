@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
+import { permanentRedirect } from "next/navigation";
 import { cache } from "react";
 
 import { i18nConfig, localeDir, normalizeLocale } from "@/config/i18n";
@@ -17,8 +18,11 @@ import {
 } from "@/lib/server/upstream";
 
 /**
- * Public warranty page (TEC-189), the target of the warranty QR code and
- * the notification links (PUBLIC_FRONTEND_URL/warranty/{public_code}).
+ * Public warranty page (TEC-189), one page per service (TEC-1005): the
+ * target of the printed warranty cards' QR (olexfilms.app/warranty/{no}),
+ * the certificate QR and the notification links. A warranty public code
+ * (per-warranty links before TEC-1005) resolves to its service and the
+ * page moves (308) to /warranty/{service_no}.
  * No session: rendered on the server from Go's public lookup, which rate
  * limits per client IP and returns no personal data. Language: `?lang=`,
  * else the language cookie, else the browser's Accept-Language.
@@ -78,12 +82,17 @@ export async function generateMetadata({
   let title = pageTitle;
   let description = translate(locale, "warranty.public.not_found_body");
   if (result.kind === "ok") {
-    const w = result.warranty;
-    title = `${w.product.name} · ${w.brand.name}`;
+    const s = result.service;
+    const products = s.warranties.map((w) => w.product.name).join(", ");
+    const active = s.warranties.some((w) => w.status === "active");
+    title = `${products} · ${s.brand.name}`;
     description = translate(locale, "warranty.public.og_description", {
-      brand: w.brand.name,
-      product: w.product.name,
-      status: translate(locale, `warranty.public.status.${w.status}`),
+      brand: s.brand.name,
+      product: products,
+      status: translate(
+        locale,
+        `warranty.public.status.${active ? "active" : (s.warranties[0]?.status ?? "expired")}`,
+      ),
     });
   } else if (result.kind === "not_found") {
     title = translate(locale, "warranty.public.not_found_title");
@@ -99,7 +108,7 @@ export async function generateMetadata({
       type: "website",
       title,
       description,
-      siteName: result.kind === "ok" ? result.warranty.brand.name : undefined,
+      siteName: result.kind === "ok" ? result.service.brand.name : undefined,
       locale,
     },
     twitter: { card: "summary", title, description },
@@ -116,8 +125,14 @@ export default async function PublicWarrantyPage({
   const { code } = await params;
   const { locale, timeZone } = await pageLocale(searchParams);
   if (locale !== i18nConfig.fallbackLocale) await loadMessages(locale);
-  const { pdf } = await searchParams;
+  const { pdf, lang } = await searchParams;
   const result = await lookup(code);
+  if (result.kind === "ok" && result.service.service_no !== code) {
+    const q = Array.isArray(lang) ? lang[0] : lang;
+    permanentRedirect(
+      `/warranty/${encodeURIComponent(result.service.service_no)}${q ? `?lang=${encodeURIComponent(q)}` : ""}`,
+    );
+  }
 
   return (
     <PublicWarrantyView

@@ -371,7 +371,7 @@ func FormatCertificateDate(t time.Time, zone *time.Location, loc i18n.Locale) st
 	if loc == i18n.LocaleEN || loc == i18n.LocaleZhCN {
 		return t.Format(time.DateOnly)
 	}
-	return t.Format("02.01.2006")
+	return i18n.Digits(loc, t.Format("02.01.2006"))
 }
 
 // --- Export adapter ------------------------------------------------------------
@@ -545,7 +545,7 @@ func CertificateHTML(c Certificate, loc i18n.Locale, title string) (string, erro
 		}
 	}
 	b.WriteString(`</ol><p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
-		esc(pdfrender.IssuedAt(c.GeneratedAt, pdfrender.Zone(c.Timezone))) + `</p>`)
+		esc(pdfrender.IssuedAt(c.GeneratedAt, pdfrender.Zone(c.Timezone), loc)) + `</p>`)
 	b.WriteString(ioengine.LetterheadFooterHTMLFor(&lh, string(loc)))
 	if c.Cert != nil {
 		b.WriteString(certtheme.ClosingPages(loc))

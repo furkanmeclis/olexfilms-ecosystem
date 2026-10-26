@@ -30,6 +30,7 @@ import { WarrantyQrButton } from './qr-sheet';
 import { openWarranty, shareWarranty } from './share';
 import { Sheet } from './sheet';
 import { DetailSkeleton, ErrorState, errorText, InfoRow, Section } from './ui';
+import { intlLocale } from '@/core/digits';
 
 export function useService(uuid: string) {
   return useQuery({
@@ -183,7 +184,7 @@ export function ServiceDetailScreen() {
               <InfoRow label={t('plate')} value={s.plate} />
               <InfoRow label={t('vehicle')} value={vehicleLabel(s.car_brand?.name, s.car_model?.name, s.model_year)} />
               <InfoRow label={t('vin')} value={s.vin} mono />
-              <InfoRow label={t('km')} value={s.km !== null ? new Intl.NumberFormat(i18n.language).format(s.km) : null} />
+              <InfoRow label={t('km')} value={s.km !== null ? new Intl.NumberFormat(intlLocale(i18n.language)).format(s.km) : null} />
               <InfoRow label={t('package')} value={s.package} />
               <InfoRow label={t('has_measurement')} value={s.has_measurement ? t('yes') : t('no')} last />
             </Section>

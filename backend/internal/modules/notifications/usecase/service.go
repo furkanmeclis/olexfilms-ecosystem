@@ -181,8 +181,8 @@ func (s *Service) Enqueue(ctx context.Context, in model.EnqueueInput) ([]model.N
 				return nil, err
 			}
 			if ok {
-				title = msgtemplate.Render(tpl.Subject, in.TemplateVars)
-				body = msgtemplate.Render(tpl.Body, in.TemplateVars)
+				title = msgtemplate.RenderLocale(tpl.Subject, in.TemplateVars, tpl.Language)
+				body = msgtemplate.RenderLocale(tpl.Body, in.TemplateVars, tpl.Language)
 				rowLang = tpl.Language
 			} else if title == "" {
 				title = in.TemplateCode

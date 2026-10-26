@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "أضف صورة واحدة على الأقل قبل الإرسال.",
   "claims.toast.photo_error": "تعذّر رفع بعض الصور.",
   "claims.toast.photos_uploaded": "تم رفع الصور.",
-  "claims.portal.label": "مطالبة الضمان:"
+  "claims.portal.label": "مطالبة الضمان:",
+  "public.service_no": "رقم الخدمة",
+  "public.service_date": "تاريخ الخدمة",
+  "public.package": "الباقة",
+  "public.warranties": "المنتجات المطبقة والضمانات",
+  "public.applied_parts": "الأجزاء المعالجة"
 }

@@ -6,6 +6,7 @@ import { Alert, Platform } from 'react-native';
 import { useSession } from '@/core/auth/session';
 import { API_URL, APP_VERSION } from '@/core/config';
 import { type Language, LANGUAGES, setLanguage } from '@/core/i18n';
+import type { DigitStyle } from '@/core/digits';
 import { type ThemePreference, type ThicknessUnit, usePreferences } from '@/core/preferences';
 import { getUpdateInfo } from '@/core/updates';
 import { PlateRecognitionSettings } from '@/features/plate-scan/plate-settings';
@@ -16,6 +17,7 @@ import { Text } from '@/ui/text';
 
 const THEMES: ThemePreference[] = ['system', 'light', 'dark'];
 const UNITS: ThicknessUnit[] = ['um', 'mil'];
+const DIGITS: DigitStyle[] = ['arab', 'latn'];
 
 function Checked({ on }: { on: boolean }) {
   return on ? <Icon name="check" tone="primary" size={20} /> : null;
@@ -25,6 +27,7 @@ export function SettingsScreen() {
   const { t, i18n } = useTranslation('settings');
   const theme = usePreferences((s) => s.theme);
   const unit = usePreferences((s) => s.unit);
+  const digits = usePreferences((s) => s.digits);
   const ota = getUpdateInfo();
 
   const pickLanguage = async (lang: Language) => {
@@ -85,6 +88,23 @@ export function SettingsScreen() {
             />
           ))}
         </List>
+
+        {i18n.language === 'ar' ? (
+          <>
+            <SectionHeader title={t('digits')} />
+            <List>
+              {DIGITS.map((d, i) => (
+                <ListRow
+                  key={d}
+                  title={t(`digits.${d}`)}
+                  onPress={() => usePreferences.getState().setDigits(d)}
+                  trailing={<Checked on={digits === d} />}
+                  last={i === DIGITS.length - 1}
+                />
+              ))}
+            </List>
+          </>
+        ) : null}
 
         <PlateRecognitionSettings />
 
