@@ -7,6 +7,7 @@ import { Alert, Linking, Pressable, RefreshControl, ScrollView, View } from 'rea
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
 import { useCan } from '@/core/spaces';
+import { ServiceMeasurementMaps } from '@/features/measure/point-map-view';
 import { Button } from '@/ui/button';
 import { Icon } from '@/ui/icon';
 import { Input } from '@/ui/input';
@@ -54,6 +55,10 @@ export function ServiceDetailScreen() {
   const { t, i18n } = useTranslation('dealer');
   const links = useLinks();
   const canWrite = useCan('services.write');
+  const canLinkMeasurements = useCan('measurements.link');
+  const canReadMeasurements = useCan('measurements.read');
+  const canMeasurements = canLinkMeasurements && canReadMeasurements;
+  const { t: tm } = useTranslation('measure');
   const svc = useService(uuid);
   const onWrite = useServiceWrite(uuid);
   const qc = useQueryClient();
@@ -182,6 +187,12 @@ export function ServiceDetailScreen() {
               <InfoRow label={t('package')} value={s.package} />
               <InfoRow label={t('has_measurement')} value={s.has_measurement ? t('yes') : t('no')} last />
             </Section>
+
+            {s.has_measurement && canMeasurements ? (
+              <Section title={tm('service_measurements')}>
+                <ServiceMeasurementMaps serviceUuid={s.uuid} />
+              </Section>
+            ) : null}
 
             <IntakePhotos
               uuid={s.uuid}

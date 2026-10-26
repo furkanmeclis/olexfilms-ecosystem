@@ -102,7 +102,8 @@ func Models() ([]Model, error) {
 }
 
 // ResolveID is NexptgBodyModelCatalog::resolveId: an exact model id, or a
-// case-insensitive folder / name / bodywork match (e.g. "SEDAN").
+// case-insensitive folder / name / bodywork match (e.g. "SEDAN"), else a
+// bodyTypeAliases entry (e.g. "ESTATE (STATION WAGON)").
 func ResolveID(bodyType string) (string, bool) {
 	if bodyType == "" {
 		return "", false
@@ -120,6 +121,9 @@ func ResolveID(bodyType string) (string, bool) {
 		if strings.EqualFold(m.Folder, bodyType) || strings.EqualFold(m.Name, bodyType) || strings.EqualFold(m.Bodywork, bodyType) {
 			return m.ID, true
 		}
+	}
+	if alias := aliasOf(bodyType); alias != "" {
+		return ResolveID(alias)
 	}
 	return "", false
 }
