@@ -1936,6 +1936,33 @@ func (q *Queries) ServiceNoExists(ctx context.Context, serviceNo string) (bool, 
 	return exists, err
 }
 
+const serviceNoTaken = `-- name: ServiceNoTaken :one
+SELECT (
+    EXISTS (SELECT 1 FROM services s
+            WHERE s.service_no = $1 AND s.id <> $2::bigint)
+    OR EXISTS (SELECT 1 FROM warranties w
+               WHERE w.public_code = $1 AND w.service_id <> $2::bigint)
+    OR EXISTS (SELECT 1 FROM warranty_public_code_aliases a JOIN warranties w ON w.id = a.warranty_id
+               WHERE a.code = $1 AND w.service_id <> $2::bigint)
+)::boolean AS taken
+`
+
+type ServiceNoTakenParams struct {
+	ServiceNo       string `json:"service_no"`
+	ExceptServiceID int64  `json:"except_service_id"`
+}
+
+// TEC-1004: a hand-entered service number must not be another service's
+// number, nor a warranty public code or alias of another service (the
+// public page /warranty/{no} resolves all three). except_service_id 0
+// checks a new service.
+func (q *Queries) ServiceNoTaken(ctx context.Context, arg ServiceNoTakenParams) (bool, error) {
+	row := q.db.QueryRow(ctx, serviceNoTaken, arg.ServiceNo, arg.ExceptServiceID)
+	var taken bool
+	err := row.Scan(&taken)
+	return taken, err
+}
+
 const setServiceIncome = `-- name: SetServiceIncome :one
 
 UPDATE services
@@ -2285,6 +2312,73 @@ func (q *Queries) UpdateServiceItem(ctx context.Context, arg UpdateServiceItemPa
 		&i.StockMovementID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateServiceNo = `-- name: UpdateServiceNo :one
+UPDATE services
+SET service_no         = $1,
+    updated_by_user_id = $2
+WHERE id = $3 AND brand_id = $4
+  AND status NOT IN ('completed', 'cancelled')
+RETURNING id, uuid, service_no, organization_id, brand_id, customer_user_id, vehicle_id, car_brand_id, car_model_id, model_year, plate, plate_country, vin, km, package, notes, has_measurement, measurement_result_id, contract_id, status, created_by_user_id, updated_by_user_id, completed_by_user_id, cancelled_by_user_id, cancel_reason, completed_at, cancelled_at, review_request_sent_at, created_at, updated_at, measurement_check_required, measurement_checked_at, warranty_claim_id, income_entry_id, income_amount, performed_by_user_id
+`
+
+type UpdateServiceNoParams struct {
+	ServiceNo       string      `json:"service_no"`
+	UpdatedByUserID pgtype.Int8 `json:"updated_by_user_id"`
+	ID              int64       `json:"id"`
+	BrandID         int64       `json:"brand_id"`
+}
+
+// TEC-1004: the number of a service that is not completed or cancelled
+// (the caller has locked the row and checked the status).
+func (q *Queries) UpdateServiceNo(ctx context.Context, arg UpdateServiceNoParams) (Service, error) {
+	row := q.db.QueryRow(ctx, updateServiceNo,
+		arg.ServiceNo,
+		arg.UpdatedByUserID,
+		arg.ID,
+		arg.BrandID,
+	)
+	var i Service
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.ServiceNo,
+		&i.OrganizationID,
+		&i.BrandID,
+		&i.CustomerUserID,
+		&i.VehicleID,
+		&i.CarBrandID,
+		&i.CarModelID,
+		&i.ModelYear,
+		&i.Plate,
+		&i.PlateCountry,
+		&i.Vin,
+		&i.Km,
+		&i.Package,
+		&i.Notes,
+		&i.HasMeasurement,
+		&i.MeasurementResultID,
+		&i.ContractID,
+		&i.Status,
+		&i.CreatedByUserID,
+		&i.UpdatedByUserID,
+		&i.CompletedByUserID,
+		&i.CancelledByUserID,
+		&i.CancelReason,
+		&i.CompletedAt,
+		&i.CancelledAt,
+		&i.ReviewRequestSentAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.MeasurementCheckRequired,
+		&i.MeasurementCheckedAt,
+		&i.WarrantyClaimID,
+		&i.IncomeEntryID,
+		&i.IncomeAmount,
+		&i.PerformedByUserID,
 	)
 	return i, err
 }

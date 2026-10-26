@@ -177,6 +177,9 @@ type ServiceView struct {
 	Editable bool `json:"editable"`
 	// ItemsEditable: the caller may add or remove items.
 	ItemsEditable bool `json:"items_editable"`
+	// ServiceNoEditable: the caller may change the number (TEC-1004): it is
+	// locked once the service is completed or cancelled.
+	ServiceNoEditable bool `json:"service_no_editable"`
 	// AvailableTransitions are the statuses the caller may move the service to.
 	AvailableTransitions []string                 `json:"available_transitions"`
 	Items                []ItemView               `json:"items,omitempty"`
@@ -246,6 +249,7 @@ func (s *Service) summary(ctx context.Context, q *db.Queries, c Caller, svc db.S
 		CancelReason:     textPtr(svc.CancelReason), CompletedAt: tsPtr(svc.CompletedAt), CancelledAt: tsPtr(svc.CancelledAt),
 		CreatedAt: svc.CreatedAt.Time, UpdatedAt: svc.UpdatedAt.Time,
 		Editable: canWrite, ItemsEditable: canWrite && itemsEditable(svc.Status),
+		ServiceNoEditable:    canWrite && !serviceNoLocked(svc.Status),
 		AvailableTransitions: availableTransitions(c, svc),
 		IsWarrantyReapply:    svc.WarrantyClaimID.Valid,
 	}

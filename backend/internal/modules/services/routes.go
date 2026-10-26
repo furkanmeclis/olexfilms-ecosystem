@@ -55,6 +55,8 @@ func RegisterRoutes(
 	mux.Handle("GET /v1/services", route(h.List))
 	mux.Handle("POST /v1/services/export", route(h.RequestListExport)) // TEC-377
 	mux.Handle("POST /v1/services", create)
+	// TEC-1004: hand-entered number check of the service form.
+	mux.Handle("GET /v1/services/service-no-availability", route(h.ServiceNoAvailability, write))
 	mux.Handle("GET /v1/services/{uuid}", route(h.Get))
 	mux.Handle("GET /v1/services/{uuid}/profit", route(h.Profit))
 	mux.Handle("POST /v1/services/{uuid}/income", route(h.RecordIncome, dealerAccounting, accountingWrite))

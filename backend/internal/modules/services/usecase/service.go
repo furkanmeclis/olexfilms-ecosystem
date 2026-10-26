@@ -386,6 +386,9 @@ type CreateInput struct {
 	Package        *string
 	Notes          *string
 	HasMeasurement bool
+	// ServiceNo is a hand-entered number (TEC-1004, a printed warranty
+	// card); nil or blank allocates DS + 8 characters.
+	ServiceNo *string
 }
 
 // Create opens a draft service: the customer must be in the caller's
@@ -412,6 +415,12 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 	km, err := kmOrNull("km", in.KM)
 	if err != nil {
 		return ServiceView{}, err
+	}
+	manualNo := ""
+	if in.ServiceNo != nil && strings.TrimSpace(*in.ServiceNo) != "" {
+		if manualNo, err = NormalizeServiceNo(*in.ServiceNo); err != nil {
+			return ServiceView{}, err
+		}
 	}
 	var created db.Service
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
@@ -455,8 +464,12 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 		if in.HasMeasurement && !v.Vin.Valid {
 			return invalid("has_measurement", "a measurement needs the vehicle VIN")
 		}
-		no, err := s.allocateServiceNo(ctx, q)
-		if err != nil {
+		no := manualNo
+		if no != "" {
+			if err := claimServiceNo(ctx, q, no, 0); err != nil {
+				return err
+			}
+		} else if no, err = s.allocateServiceNo(ctx, q); err != nil {
 			return err
 		}
 		row, err := q.CreateService(ctx, db.CreateServiceParams{
@@ -468,6 +481,9 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 			Status: StatusDraft, CreatedByUserID: c.actor(), PerformedByUserID: c.actor(),
 		})
 		if isUniqueViolation(err, "uq_services_service_no") {
+			if manualNo != "" {
+				return ErrServiceNoTaken
+			}
 			return ErrServiceNoExhausted
 		}
 		if err != nil {
@@ -518,6 +534,9 @@ type UpdateInput struct {
 	// VIN replaces the service's VIN snapshot (wizard step 3, TEC-181); the
 	// vehicle record is not touched. Same rules as the vehicle VIN.
 	VIN Optional[string]
+	// ServiceNo changes the number until the service is completed or
+	// cancelled (TEC-1004); null is rejected.
+	ServiceNo Optional[string]
 }
 
 // vinOrNull normalizes a VIN with the vehicle rules (customers.NormalizeVIN:
@@ -590,6 +609,14 @@ func (s *Service) Update(ctx context.Context, c Caller, id uuid.UUID, in UpdateI
 		svc, err := s.lockWritable(ctx, q, c, id)
 		if err != nil {
 			return err
+		}
+		if in.ServiceNo.Set {
+			if in.ServiceNo.Value == nil {
+				return invalid("service_no", "must not be null")
+			}
+			if svc, err = setServiceNo(ctx, q, svc, *in.ServiceNo.Value, c.actor()); err != nil {
+				return err
+			}
 		}
 		p := db.UpdateServiceParams{
 			ID: svc.ID, BrandID: svc.BrandID, CustomerUserID: svc.CustomerUserID, VehicleID: svc.VehicleID,
