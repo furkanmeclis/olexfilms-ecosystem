@@ -30,6 +30,8 @@ import (
 const (
 	CodeInvalidTransition           = "SERVICE_INVALID_TRANSITION"
 	CodeNotEditable                 = "SERVICE_NOT_EDITABLE"
+	CodeServiceNoTaken              = "SERVICE_NO_TAKEN"
+	CodeServiceNoLocked             = "SERVICE_NO_LOCKED"
 	CodeUnitInUse                   = "SERVICE_UNIT_IN_USE"
 	CodeUnitNotAvailable            = "SERVICE_UNIT_NOT_AVAILABLE"
 	CodeTooManyImages               = "SERVICE_TOO_MANY_IMAGES"
@@ -89,6 +91,10 @@ func writeError(w http.ResponseWriter, r *http.Request, err error) {
 		response.Forbidden(w, r, "This organization cannot perform this service action")
 	case errors.Is(err, svcuc.ErrInvalidTransition):
 		response.Conflict(w, r, CodeInvalidTransition, "The service status does not allow this transition")
+	case errors.Is(err, svcuc.ErrServiceNoTaken):
+		response.Conflict(w, r, CodeServiceNoTaken, "The service number is already in use")
+	case errors.Is(err, svcuc.ErrServiceNoLocked):
+		response.Conflict(w, r, CodeServiceNoLocked, "The service number cannot change after completion")
 	case errors.Is(err, svcuc.ErrNotEditable):
 		response.Conflict(w, r, CodeNotEditable, "The service status does not allow this change")
 	case errors.Is(err, svcuc.ErrUnitInUse):
@@ -253,6 +259,7 @@ type createBody struct {
 	Package          *string `json:"package"`
 	Notes            *string `json:"notes"`
 	HasMeasurement   bool    `json:"has_measurement"`
+	ServiceNo        *string `json:"service_no"`
 }
 
 // Create (POST /v1/services): a draft service of the active organization.
@@ -263,7 +270,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := h.svc.Create(r.Context(), caller(r), svcuc.CreateInput{
 		OrganizationUUID: b.OrganizationUUID, CustomerUUID: b.CustomerUUID, VehicleUUID: b.VehicleUUID, KM: b.KM,
-		Package: b.Package, Notes: b.Notes, HasMeasurement: b.HasMeasurement,
+		Package: b.Package, Notes: b.Notes, HasMeasurement: b.HasMeasurement, ServiceNo: b.ServiceNo,
 	})
 	if err != nil {
 		writeError(w, r, err)
@@ -278,6 +285,7 @@ type updateBody struct {
 	Notes          svcuc.Optional[string] `json:"notes"`
 	HasMeasurement svcuc.Optional[bool]   `json:"has_measurement"`
 	VIN            svcuc.Optional[string] `json:"vin"`
+	ServiceNo      svcuc.Optional[string] `json:"service_no"`
 }
 
 // Update (PATCH /v1/services/{uuid}).
@@ -292,7 +300,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := h.svc.Update(r.Context(), caller(r), id, svcuc.UpdateInput{
 		KM: b.KM, Package: b.Package, Notes: b.Notes, HasMeasurement: b.HasMeasurement,
-		VIN: b.VIN,
+		VIN: b.VIN, ServiceNo: b.ServiceNo,
 	})
 	if err != nil {
 		writeError(w, r, err)
@@ -353,6 +361,28 @@ func (h *Handler) RemoveItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, v)
+}
+
+// ServiceNoAvailability (GET /v1/services/service-no-availability,
+// TEC-1004): whether service_no may be given to a new service or, with
+// service_uuid, to that service.
+func (h *Handler) ServiceNoAvailability(w http.ResponseWriter, r *http.Request) {
+	v := r.URL.Query()
+	var id *uuid.UUID
+	if raw := v.Get("service_uuid"); raw != "" {
+		parsed, err := uuid.Parse(raw)
+		if err != nil {
+			response.ValidationError(w, r, []response.Detail{{Field: "service_uuid", Message: "must be a UUID"}})
+			return
+		}
+		id = &parsed
+	}
+	res, err := h.svc.CheckServiceNo(r.Context(), caller(r), v.Get("service_no"), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, res)
 }
 
 // StockUnits (GET /v1/services/{uuid}/stock-units?barcode&q&product_uuid&min_meters&limit&offset):

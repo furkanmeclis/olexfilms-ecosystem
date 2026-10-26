@@ -206,5 +206,12 @@
   "placeholder_notes": "A note about the vehicle or job",
   "placeholder_cancel_reason": "e.g. Customer changed their mind",
   "placeholder_quantity": "1 pc",
-  "placeholder_meters": "1.5 m"
+  "placeholder_meters": "1.5 m",
+  "service_no_placeholder": "Number or QR code on the warranty card",
+  "service_no_auto": "Leave empty to get a number automatically.",
+  "service_no_invalid": "4-32 characters: letters, digits, '-' or '_'.",
+  "service_no_taken": "This number is used by another service.",
+  "service_no_available": "The number is available.",
+  "service_no_scan": "Scan QR code",
+  "service_no_label": "Service number"
 }

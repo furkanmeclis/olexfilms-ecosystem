@@ -90,6 +90,12 @@ type NormalizeOutcome struct {
 	DeviceCreated bool
 }
 
+// NormalizeIsolated is normalizeIsolated for the migrator (TEC-1010): the
+// legacy_import rows are normalized in the step's transaction.
+func NormalizeIsolated(ctx context.Context, tx TxBeginner, row db.MeasurementResult, log *slog.Logger) (NormalizeOutcome, error) {
+	return normalizeIsolated(ctx, tx, row, log)
+}
+
 // normalizeIsolated normalizes row inside a savepoint of tx: a record that
 // cannot be parsed, or whose rows the database refuses, is logged and rolled
 // back to the savepoint, leaving parsed_at NULL. Only a failure to open or

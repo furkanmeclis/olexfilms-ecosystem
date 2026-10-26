@@ -41,6 +41,30 @@ WHERE service_no = sqlc.arg(service_no);
 -- name: ServiceNoExists :one
 SELECT EXISTS (SELECT 1 FROM services WHERE service_no = sqlc.arg(service_no))::boolean AS exists;
 
+-- TEC-1004: a hand-entered service number must not be another service's
+-- number, nor a warranty public code or alias of another service (the
+-- public page /warranty/{no} resolves all three). except_service_id 0
+-- checks a new service.
+-- name: ServiceNoTaken :one
+SELECT (
+    EXISTS (SELECT 1 FROM services s
+            WHERE s.service_no = sqlc.arg(service_no) AND s.id <> sqlc.arg(except_service_id)::bigint)
+    OR EXISTS (SELECT 1 FROM warranties w
+               WHERE w.public_code = sqlc.arg(service_no) AND w.service_id <> sqlc.arg(except_service_id)::bigint)
+    OR EXISTS (SELECT 1 FROM warranty_public_code_aliases a JOIN warranties w ON w.id = a.warranty_id
+               WHERE a.code = sqlc.arg(service_no) AND w.service_id <> sqlc.arg(except_service_id)::bigint)
+)::boolean AS taken;
+
+-- TEC-1004: the number of a service that is not completed or cancelled
+-- (the caller has locked the row and checked the status).
+-- name: UpdateServiceNo :one
+UPDATE services
+SET service_no         = sqlc.arg(service_no),
+    updated_by_user_id = sqlc.narg(updated_by_user_id)
+WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
+  AND status NOT IN ('completed', 'cancelled')
+RETURNING *;
+
 -- name: LockService :one
 SELECT * FROM services
 WHERE id = sqlc.arg(id) AND brand_id = sqlc.arg(brand_id)
