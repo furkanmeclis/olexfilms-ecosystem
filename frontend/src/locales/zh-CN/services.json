@@ -352,5 +352,22 @@
   "review_questions.validation.text_tr": "土耳其语问题文本为必填项。",
   "review_questions.toast.saved": "问题已保存。",
   "review_questions.toast.failed": "操作失败，请重试。",
-  "wizard.steps.photos": "接车照片"
+  "wizard.steps.photos": "接车照片",
+  "service_no.label": "服务编号",
+  "service_no.placeholder": "保修卡上的编号或二维码",
+  "service_no.auto": "留空将自动生成编号。",
+  "service_no.invalid": "4-32 个字符：字母、数字、'-' 或 '_'。",
+  "service_no.taken": "该编号已被其他服务使用。",
+  "service_no.available": "编号可用。",
+  "service_no.locked": "服务已完成，编号已锁定。",
+  "service_no.scan": "扫描二维码",
+  "service_no.scan_title": "扫描保修卡",
+  "service_no.scan_description": "将卡片二维码对准摄像头，编号将自动填入。",
+  "service_no.camera_denied": "无法使用摄像头。请手动输入编号或使用二维码扫描器。",
+  "network_scope.label": "服务范围",
+  "network_scope.own": "本店",
+  "network_scope.network": "整个网络",
+  "wizard.performer": "执行方",
+  "wizard.performer_own": "{{name}}（本店服务点）",
+  "wizard.performer_hint": "选择经销商后，服务以该经销商名义创建，并记录操作。"
 }

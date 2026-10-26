@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "Изображението е твърде голямо; използвайте такова под около 150 KB.",
   "label_templates.errors.generic": "Шаблонът не можа да бъде запазен.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Друг шаблон вече има това име.",
-  "label_templates.errors.VALIDATION_ERROR": "Някои полета са невалидни; проверете формуляра."
+  "label_templates.errors.VALIDATION_ERROR": "Някои полета са невалидни; проверете формуляра.",
+  "trace.title": "Проследяване",
+  "trace.origin": "Изходен склад",
+  "trace.orders": "Поръчки",
+  "trace.services": "Услуги",
+  "trace.no_order": "Не е изпратен с поръчка.",
+  "trace.no_order_unknown": "Няма поръчка; неизвестен източник (стар импорт).",
+  "trace.no_service": "Не е използван в услуга.",
+  "trace.source.order": "С поръчка",
+  "trace.source.stock": "Наличен",
+  "trace.source.unknown": "Неизвестен източник"
 }

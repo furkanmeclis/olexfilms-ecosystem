@@ -492,10 +492,86 @@ func (q *Queries) GetPendingVehicleTransfer(ctx context.Context, vehicleID int64
 	return i, err
 }
 
+const getPublicService = `-- name: GetPublicService :one
+SELECT s.service_no, s.package, s.completed_at, s.created_at,
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name,
+       o.city AS organization_city,
+       COALESCE(pr.name, '')::text AS organization_province,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       (cb.logo_object_key IS NOT NULL)::boolean AS car_brand_has_logo,
+       cm.name AS car_model_name,
+       s.model_year AS service_model_year, s.plate AS service_plate,
+       s.plate_country AS service_plate_country, s.vin AS service_vin,
+       v.model_year AS vehicle_model_year, v.plate AS vehicle_plate,
+       v.plate_country AS vehicle_plate_country, v.vin AS vehicle_vin
+FROM services s
+JOIN organizations o ON o.id = s.organization_id
+LEFT JOIN provinces pr ON pr.id = o.province_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+JOIN vehicles v ON v.id = s.vehicle_id
+WHERE s.id = $1 AND s.brand_id = $2
+`
+
+type GetPublicServiceParams struct {
+	ServiceID int64 `json:"service_id"`
+	BrandID   int64 `json:"brand_id"`
+}
+
+type GetPublicServiceRow struct {
+	ServiceNo            string             `json:"service_no"`
+	Package              pgtype.Text        `json:"package"`
+	CompletedAt          pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	OrganizationName     string             `json:"organization_name"`
+	OrganizationCity     string             `json:"organization_city"`
+	OrganizationProvince string             `json:"organization_province"`
+	CarBrandUuid         uuid.UUID          `json:"car_brand_uuid"`
+	CarBrandName         string             `json:"car_brand_name"`
+	CarBrandHasLogo      bool               `json:"car_brand_has_logo"`
+	CarModelName         string             `json:"car_model_name"`
+	ServiceModelYear     pgtype.Int2        `json:"service_model_year"`
+	ServicePlate         pgtype.Text        `json:"service_plate"`
+	ServicePlateCountry  pgtype.Text        `json:"service_plate_country"`
+	ServiceVin           pgtype.Text        `json:"service_vin"`
+	VehicleModelYear     pgtype.Int2        `json:"vehicle_model_year"`
+	VehiclePlate         pgtype.Text        `json:"vehicle_plate"`
+	VehiclePlateCountry  pgtype.Text        `json:"vehicle_plate_country"`
+	VehicleVin           pgtype.Text        `json:"vehicle_vin"`
+}
+
+// TEC-1005: the public service summary (no customer data).
+func (q *Queries) GetPublicService(ctx context.Context, arg GetPublicServiceParams) (GetPublicServiceRow, error) {
+	row := q.db.QueryRow(ctx, getPublicService, arg.ServiceID, arg.BrandID)
+	var i GetPublicServiceRow
+	err := row.Scan(
+		&i.ServiceNo,
+		&i.Package,
+		&i.CompletedAt,
+		&i.CreatedAt,
+		&i.OrganizationName,
+		&i.OrganizationCity,
+		&i.OrganizationProvince,
+		&i.CarBrandUuid,
+		&i.CarBrandName,
+		&i.CarBrandHasLogo,
+		&i.CarModelName,
+		&i.ServiceModelYear,
+		&i.ServicePlate,
+		&i.ServicePlateCountry,
+		&i.ServiceVin,
+		&i.VehicleModelYear,
+		&i.VehiclePlate,
+		&i.VehiclePlateCountry,
+		&i.VehicleVin,
+	)
+	return i, err
+}
+
 const getPublicWarrantyByCode = `-- name: GetPublicWarrantyByCode :one
 SELECT w.public_code, w.status, w.start_at, w.end_at,
        p.name AS product_name,
-       o.name AS organization_name, o.city AS organization_city,
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.city AS organization_city,
        COALESCE(pr.name, '')::text AS organization_province,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        (cb.logo_object_key IS NOT NULL)::boolean AS car_brand_has_logo,
@@ -928,6 +1004,62 @@ func (q *Queries) IncrementVehicleTransferAttempts(ctx context.Context, id int64
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listPublicServiceWarranties = `-- name: ListPublicServiceWarranties :many
+SELECT w.public_code, w.status, w.start_at, w.end_at,
+       p.name AS product_name, COALESCE(pc.name, '')::text AS category_name,
+       si.applied_parts
+FROM warranties w
+JOIN products p ON p.id = w.product_id
+LEFT JOIN product_categories pc ON pc.id = p.category_id
+JOIN service_items si ON si.id = w.service_item_id
+WHERE w.service_id = $1 AND w.brand_id = $2
+ORDER BY w.start_at, w.id
+`
+
+type ListPublicServiceWarrantiesParams struct {
+	ServiceID int64 `json:"service_id"`
+	BrandID   int64 `json:"brand_id"`
+}
+
+type ListPublicServiceWarrantiesRow struct {
+	PublicCode   string             `json:"public_code"`
+	Status       string             `json:"status"`
+	StartAt      pgtype.Timestamptz `json:"start_at"`
+	EndAt        pgtype.Timestamptz `json:"end_at"`
+	ProductName  string             `json:"product_name"`
+	CategoryName string             `json:"category_name"`
+	AppliedParts []byte             `json:"applied_parts"`
+}
+
+// TEC-1005: every warranty of a public service, whatever its status.
+func (q *Queries) ListPublicServiceWarranties(ctx context.Context, arg ListPublicServiceWarrantiesParams) ([]ListPublicServiceWarrantiesRow, error) {
+	rows, err := q.db.Query(ctx, listPublicServiceWarranties, arg.ServiceID, arg.BrandID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublicServiceWarrantiesRow{}
+	for rows.Next() {
+		var i ListPublicServiceWarrantiesRow
+		if err := rows.Scan(
+			&i.PublicCode,
+			&i.Status,
+			&i.StartAt,
+			&i.EndAt,
+			&i.ProductName,
+			&i.CategoryName,
+			&i.AppliedParts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listVehicleTransfersByVehicle = `-- name: ListVehicleTransfersByVehicle :many
@@ -1421,7 +1553,7 @@ func (q *Queries) ListWarrantyCertificateItems(ctx context.Context, arg ListWarr
 }
 
 const listWarrantyNoticeContexts = `-- name: ListWarrantyNoticeContexts :many
-SELECT w.id, v.plate, p.name AS product_name, o.name AS organization_name, o.timezone
+SELECT w.id, v.plate, p.name AS product_name, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.timezone
 FROM warranties w
 JOIN vehicles v ON v.id = w.vehicle_id
 JOIN products p ON p.id = w.product_id
@@ -1700,12 +1832,45 @@ func (q *Queries) MarkWarrantyNotified7(ctx context.Context, arg MarkWarrantyNot
 	return result.RowsAffected(), nil
 }
 
+const resolvePublicServiceID = `-- name: ResolvePublicServiceID :one
+SELECT x.service_id::bigint AS service_id
+FROM (
+    SELECT s.id AS service_id, 1 AS rank FROM services s
+    WHERE s.service_no = $1::text AND s.brand_id = $2::bigint
+    UNION ALL
+    SELECT w.service_id, 2 FROM warranties w
+    WHERE w.public_code = $1::text AND w.brand_id = $2::bigint
+    UNION ALL
+    SELECT w.service_id, 3 FROM warranty_public_code_aliases a JOIN warranties w ON w.id = a.warranty_id
+    WHERE a.code = $1::text AND a.brand_id = $2::bigint
+) x
+WHERE EXISTS (SELECT 1 FROM warranties w2 WHERE w2.service_id = x.service_id)
+ORDER BY x.rank
+LIMIT 1
+`
+
+type ResolvePublicServiceIDParams struct {
+	Code    string `json:"code"`
+	BrandID int64  `json:"brand_id"`
+}
+
+// TEC-1005: the service of a public code /warranty/{code}: its service
+// number (printed warranty cards, TEC-1004), else a warranty public code of
+// it (the per-warranty links before TEC-1005), else a legacy alias. Only a
+// service with a warranty has a public page.
+func (q *Queries) ResolvePublicServiceID(ctx context.Context, arg ResolvePublicServiceIDParams) (int64, error) {
+	row := q.db.QueryRow(ctx, resolvePublicServiceID, arg.Code, arg.BrandID)
+	var service_id int64
+	err := row.Scan(&service_id)
+	return service_id, err
+}
+
 const setOrganizationGoogleBusinessURL = `-- name: SetOrganizationGoogleBusinessURL :one
 
 UPDATE organizations
 SET google_business_url = $1
 WHERE id = $2
-RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email
+RETURNING id, uuid, slug, name, city, district, phone, address, logo_object_key, status, plan_code, access_starts_at, access_ends_at, created_at, updated_at, deleted_at, email, website, tagline, footer_text, paper_size, primary_color, type, parent_id, brand_id, currency, locale, timezone, country_id, contract_pdf_key, contract_valid_until, settings, province_id, district_id, phone_raw, google_business_url, latitude, longitude, invoice_vkn, invoice_tckn, invoice_tax_office, invoice_legal_name, einvoice_registered, einvoice_alias, invoice_email, service_point_enabled, service_point_name, service_point_logo_object_key, merged_into_id
 `
 
 type SetOrganizationGoogleBusinessURLParams struct {
@@ -1764,6 +1929,10 @@ func (q *Queries) SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetO
 		&i.EinvoiceRegistered,
 		&i.EinvoiceAlias,
 		&i.InvoiceEmail,
+		&i.ServicePointEnabled,
+		&i.ServicePointName,
+		&i.ServicePointLogoObjectKey,
+		&i.MergedIntoID,
 	)
 	return i, err
 }

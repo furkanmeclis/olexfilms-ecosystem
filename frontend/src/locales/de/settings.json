@@ -174,5 +174,10 @@
   "system.groups.einvoice": "E-Rechnung",
   "system.groups.einvoice_hint": "UBL-TR-Rechnungen für e-Fatura und e-Arşiv.",
   "system.keys.einvoice_default_vat_rate": "Standard-Mehrwertsteuersatz (%)",
-  "system.keys.einvoice_default_vat_rate_hint": "Satz für eine Rechnungsposition, deren Produkt oder Kategorie keinen Steuersatz hat. 0 % erfordert einen Befreiungscode und ist hier nicht wählbar."
+  "system.keys.einvoice_default_vat_rate_hint": "Satz für eine Rechnungsposition, deren Produkt oder Kategorie keinen Steuersatz hat. 0 % erfordert einen Befreiungscode und ist hier nicht wählbar.",
+  "service_point.title": "Servicepunkt",
+  "service_point.hint": "Wenn aktiv, sehen Kunden diesen Namen und dieses Logo auf Garantieseite und -PDF, im Portal und in WhatsApp; im Panel bleibt der Organisationsname.",
+  "service_point.enabled": "Servicepunkt-Namen Kunden zeigen",
+  "service_point.name": "Name des Servicepunkts",
+  "service_point.no_logo": "Kein Logo; das Organisationslogo wird verwendet."
 }

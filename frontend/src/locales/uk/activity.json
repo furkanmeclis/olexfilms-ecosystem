@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "Завантажено XSLT-шаблон е-рахунків",
   "actions.einvoice.xslt_reset": "XSLT-шаблон е-рахунків скинуто до стандартного",
   "actions.einvoice.buyer_profile_updated": "Профіль рахунків покупця оновлено",
-  "resources.einvoices": "Е-рахунки"
+  "resources.einvoices": "Е-рахунки",
+  "actions.services.created_on_behalf": "Послугу відкрито від імені дилера"
 }

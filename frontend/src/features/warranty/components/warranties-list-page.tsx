@@ -24,6 +24,10 @@ import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { catalogService } from "@/features/catalog/services/catalog.service";
 import { ExportMenu } from "@/features/io/components/export-menu";
+import {
+  NetworkScopeToggle,
+  useNetworkScope,
+} from "@/features/services/lib/network-scope";
 import { useScopeOrganizationOptions } from "@/features/services/lib/use-scope-organizations";
 import { downloadWarrantyCertificate } from "@/features/warranty/components/warranty-certificate-button";
 import { VoidDialog } from "@/features/warranty/components/warranty-detail-page";
@@ -75,6 +79,7 @@ export function WarrantiesListPage({ slug }: { slug: string }) {
   const canPickProduct = can(Permission.CatalogRead);
   const canVoid = can(Permission.WarrantiesVoid);
   const orgFilter = useScopeOrganizationOptions(slug, canRead);
+  const network = useNetworkScope(slug, "warranties");
   const [voidTarget, setVoidTarget] = useState<Warranty | null>(null);
 
   const columns = useMemo(
@@ -288,7 +293,14 @@ export function WarrantiesListPage({ slug }: { slug: string }) {
     initialPageSize: WARRANTY_PAGE_SIZE,
     persistKey: WARRANTIES_PERSIST_KEY,
   });
-  const params: WarrantyServerQuery = listState.params;
+  // TEC-1003: "own" narrows the center's list to its own warranties.
+  const params: WarrantyServerQuery = useMemo(
+    () =>
+      network.organizationUuid
+        ? { ...listState.params, organization_uuid: network.organizationUuid }
+        : listState.params,
+    [listState.params, network.organizationUuid],
+  );
   const { columnFilters, onColumnFiltersChange } = listState.tableState;
   const productUuid = String(
     columnFilters.find((f) => f.id === "product")?.value ?? "",
@@ -317,8 +329,15 @@ export function WarrantiesListPage({ slug }: { slug: string }) {
 
   // The export runs on the same filters, search and sort as the list.
   const exportQuery = useMemo(
-    () => ({ ...listState.filterParams, q: params.q, sort: params.sort }),
-    [listState.filterParams, params.q, params.sort],
+    () => ({
+      ...listState.filterParams,
+      ...(network.organizationUuid
+        ? { organization_uuid: network.organizationUuid }
+        : {}),
+      q: params.q,
+      sort: params.sort,
+    }),
+    [listState.filterParams, network.organizationUuid, params.q, params.sort],
   );
   const filtered = columnFilters.length > 0 || Boolean(params.q);
 
@@ -394,6 +413,12 @@ export function WarrantiesListPage({ slug }: { slug: string }) {
         )}
         toolbarExtra={
           <>
+            {network.visible ? (
+              <NetworkScopeToggle
+                scope={network.scope}
+                onChange={network.setScope}
+              />
+            ) : null}
             {canPickProduct ? (
               <AsyncCombobox
                 id="warranty-product"

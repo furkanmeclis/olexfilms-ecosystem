@@ -3042,6 +3042,93 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /v1/public/service-warranties/{code}:
+    get:
+      tags: [Public]
+      operationId: getPublicServiceWarranties
+      summary: Public warranty page of a service (every warranty of it)
+      description: |
+        TEC-1005. No authentication. The page /warranty/{service_no} (the
+        legacy hub's page and the QR of the printed warranty cards) shows
+        one service with all of its warranties. code is the service number,
+        else a warranty public code of the service (per-warranty links
+        before TEC-1005), else a legacy alias; service_no in the answer is
+        the canonical page address. Only a service with a warranty in the
+        domain brand is found. No personal data: masked plate, last four
+        VIN characters, no holder. Same per-IP limit and 404 rules as
+        GET /v1/public/warranties/{public_code}.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, minLength: 4, maxLength: 32, pattern: "^[A-Za-z0-9_-]{4,32}$" }
+      responses:
+        "200":
+          description: The service page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopePublicService"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /v1/public/service-warranties/{code}/pdf:
+    get:
+      tags: [Public]
+      operationId: getPublicServiceWarrantiesPdf
+      summary: Anonymous warranty PDF of a service
+      description: |
+        TEC-1005. One document with every warranty of the service (status
+        per warranty), offered while one of them is active (else 404), with
+        a QR code to /warranty/{service_no}. Built from the public
+        projection only. PDF rate limit bucket and lang / tz as
+        GET /v1/public/warranties/{public_code}/pdf.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, minLength: 4, maxLength: 32, pattern: "^[A-Za-z0-9_-]{4,32}$" }
+        - { name: lang, in: query, required: false, schema: { type: string } }
+        - { name: tz, in: query, required: false, schema: { type: string } }
+      responses:
+        "200":
+          description: The PDF (attachment)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          description: Rate limited per client IP
+          headers:
+            Retry-After:
+              description: Seconds until the window resets
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "503":
+          description: PDF rendering is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /v1/public/warranties/{public_code}/pdf:
     get:
       tags: [Public]
@@ -4131,6 +4218,25 @@ paths:
       tags: [Public]
       operationId: getPublicOrganizationLogo
       summary: Stream organization logo
+      security: []
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Logo bytes
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/public/organizations/service-point-logo/{uuid}:
+    get:
+      tags: [Public]
+      operationId: getPublicServicePointLogo
+      summary: Stream a center's service point logo (TEC-1003)
       security: []
       parameters:
         - name: uuid
@@ -6045,6 +6151,51 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /v1/tenant/settings/service-point-logo:
+    put:
+      tags: [Tenant]
+      operationId: putTenantServicePointLogo
+      summary: Upload the center's service point logo (TEC-1003)
+      description: Multipart form field `logo`, same rules as the letterhead logo. Brand center only (400 elsewhere).
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantSettings"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Tenant]
+      operationId: deleteTenantServicePointLogo
+      summary: Remove the service point logo (the organization logo shows again)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantSettings"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -10538,6 +10689,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EnvelopeStockProductPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/stock/warehouses/{uuid}/units:
+    parameters:
+      - $ref: "#/components/parameters/ResourceUUID"
+    get:
+      tags: [Stock]
+      operationId: listStockWarehouseUnits
+      summary: Units that originate from a warehouse, in it or gone (TEC-1006)
+      description: >-
+        Needs `stock.read` and the warehouse module; the warehouse belongs to
+        the active organization (404 otherwise). Every brand (K20). A unit
+        originates from the warehouse of the first location it was placed
+        in, else from its issuer's primary warehouse. Departed units are not
+        warehouse stock. Sort keys: barcode, product, source, created_at,
+        updated_at (default -updated_at). `q` matches a barcode or order /
+        service number prefix or a product name.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Q"
+        - $ref: "#/components/parameters/Sort"
+        - name: state
+          in: query
+          schema: { type: string, enum: [in, left] }
+        - name: source
+          in: query
+          description: CSV of order, stock, unknown.
+          schema: { type: string }
+        - name: product_uuid
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Warehouse units
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeStockWarehouseUnitPage"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -22382,7 +22581,8 @@ paths:
         customer (domain brand) and carry a car brand and model; plate, VIN,
         car brand/model and year are copied into the service (TEC-97
         decision 3). The brand is the organization's brand (decision 2) and
-        the number is DS + 8 alphanumerics. has_measurement needs the
+        the number is service_no when given (TEC-1004), else DS + 8
+        alphanumerics. has_measurement needs the
         vehicle VIN. A read-only organization (K23: no contract yet) gets
         403 ORGANIZATION_READ_ONLY on every write.
       security:
@@ -22406,6 +22606,36 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /v1/services/service-no-availability:
+    get:
+      tags: [Services]
+      operationId: getServiceNoAvailability
+      summary: Check a hand-entered service number
+      description: >-
+        TEC-1004. Needs services.write. Whether service_no may be given to a
+        new service or, with service_uuid, to that service (its own number
+        is available to it). Only yes / no: the holder is not revealed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - { name: service_no, in: query, required: true, schema: { type: string, maxLength: 64 } }
+        - { name: service_uuid, in: query, required: false, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Availability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeServiceNoAvailability"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /v1/services/export:
     post:
@@ -22468,7 +22698,7 @@ paths:
     patch:
       tags: [Services]
       operationId: updateService
-      summary: Edit km, package, notes and the measurement answer
+      summary: Edit km, package, notes, the measurement answer and the number
       description: >-
         Needs services.write reaching the service. Completed and cancelled
         services are locked except for the center (409 SERVICE_NOT_EDITABLE).
@@ -35590,6 +35820,49 @@ components:
         data: { $ref: "#/components/schemas/PublicBrand" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
+    PublicService:
+      type: object
+      description: Public warranty page of a service (TEC-1005); never carries personal data.
+      required: [service_no, package, service_date, brand, dealer, vehicle, warranties]
+      properties:
+        service_no: { type: string, description: "Canonical page address /warranty/{service_no}" }
+        package: { type: [string, "null"] }
+        service_date: { type: string, format: date-time, description: "Completion time, else creation" }
+        brand: { $ref: "#/components/schemas/PublicWarranty/properties/brand" }
+        dealer: { $ref: "#/components/schemas/PublicWarranty/properties/dealer" }
+        vehicle: { $ref: "#/components/schemas/PublicWarranty/properties/vehicle" }
+        warranties:
+          type: array
+          items: { $ref: "#/components/schemas/PublicServiceWarranty" }
+
+    PublicServiceWarranty:
+      type: object
+      required: [public_code, status, start_at, end_at, days_remaining, product, category, parts]
+      properties:
+        public_code: { type: string }
+        status: { type: string, enum: [active, expired, void] }
+        start_at: { type: string, format: date-time }
+        end_at: { type: string, format: date-time }
+        days_remaining: { type: integer, minimum: 0 }
+        product:
+          type: object
+          required: [name]
+          properties:
+            name: { type: string }
+        category: { type: string, description: "Product category name (empty when none)" }
+        parts:
+          type: array
+          description: Applied part keys (services.parts.<key>)
+          items: { type: string }
+
+    EnvelopePublicService:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/PublicService" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
     EnvelopePublicWarranty:
       type: object
       required: [success, data, meta]
@@ -36623,6 +36896,21 @@ components:
           type: [number, "null"]
           description: TEC-240 map position (WGS84); null together with longitude when unset.
         longitude: { type: [number, "null"] }
+        service_point:
+          $ref: "#/components/schemas/TenantServicePoint"
+
+    TenantServicePoint:
+      type: object
+      description: |
+        TEC-1003, brand center only (absent elsewhere). While enabled, the
+        name and logo replace the organization's on customer surfaces
+        (warranty page and PDF, service / measurement PDFs, portal,
+        WhatsApp); the panel keeps the organization name.
+      required: [enabled, name, logo_url]
+      properties:
+        enabled: { type: boolean }
+        name: { type: [string, "null"], maxLength: 200 }
+        logo_url: { type: [string, "null"] }
 
     PatchTenantSettingsRequest:
       type: object
@@ -36647,6 +36935,13 @@ components:
             position. One without the other or an out of range value is
             400 VALIDATION_ERROR.
         longitude: { type: [number, "null"], minimum: -180, maximum: 180 }
+        service_point_enabled:
+          type: boolean
+          description: TEC-1003, brand center only (400 elsewhere).
+        service_point_name:
+          type: string
+          maxLength: 200
+          description: TEC-1003, brand center only; an empty string clears it.
 
     NearbyDealer:
       type: object
@@ -38716,9 +39011,144 @@ components:
           enum: [stock_entry, warehouse_transfer, stock_count, service, order, transfer_request, stock_reclassification]
         uuid: { type: string, format: uuid }
 
+    StockUnitTrace:
+      type: object
+      description: |
+        TEC-1006. Warehouse-layer trace of a unit: the warehouse it comes
+        from (first location it was placed in, else the issuer's primary
+        warehouse — "AFM Florya Merkez" for legacy hub units), the orders
+        that carried it and the services that used it (outside the viewer's
+        scope left out). source: order = went out with an order, stock =
+        never left its issuer, unknown = at / used by another organization
+        without an order ("kaynak bilinmiyor").
+      required: [source, origin_warehouse, orders, services]
+      properties:
+        source: { type: string, enum: [order, stock, unknown] }
+        origin_warehouse:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockWarehouseRef"
+        orders:
+          type: array
+          items: { $ref: "#/components/schemas/StockTraceOrder" }
+        services:
+          type: array
+          items: { $ref: "#/components/schemas/StockTraceService" }
+
+    StockWarehouseRef:
+      type: object
+      required: [uuid, code, name]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+
+    StockTraceOrder:
+      type: object
+      required: [uuid, order_no, status, external_reference, buyer, seller, created_at, submitted_at, shipped_at, received_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        order_no: { type: string }
+        status: { type: string }
+        external_reference: { type: [string, "null"] }
+        buyer: { $ref: "#/components/schemas/StockTraceOrg" }
+        seller: { $ref: "#/components/schemas/StockTraceOrg" }
+        created_at: { type: string, format: date-time }
+        submitted_at: { type: [string, "null"], format: date-time }
+        shipped_at: { type: [string, "null"], format: date-time }
+        received_at: { type: [string, "null"], format: date-time }
+
+    StockTraceOrg:
+      type: object
+      required: [uuid, name, type]
+      properties:
+        uuid: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string }
+
+    StockTraceService:
+      type: object
+      required: [uuid, service_no, status, completed_at, organization, customer]
+      properties:
+        uuid: { type: string, format: uuid }
+        service_no: { type: string }
+        status: { type: string }
+        completed_at: { type: [string, "null"], format: date-time }
+        organization: { $ref: "#/components/schemas/StockTraceOrg" }
+        customer:
+          type: object
+          required: [uuid, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            name: { type: string }
+
+    StockWarehouseUnit:
+      type: object
+      description: TEC-1006. A unit that originates from the warehouse, in it (in_warehouse) or gone.
+      required: [uuid, barcode, unit_kind, status, initial_meters, remaining_meters, product, source, in_warehouse,
+        owner_type, location_code, holder, order, service, created_at, updated_at]
+      properties:
+        uuid: { type: string, format: uuid }
+        barcode: { type: string }
+        unit_kind: { type: string }
+        status: { type: string }
+        initial_meters: { type: [string, "null"] }
+        remaining_meters: { type: [string, "null"] }
+        product:
+          type: object
+          required: [uuid, sku, name]
+          properties:
+            uuid: { type: string, format: uuid }
+            sku: { type: string }
+            name: { type: string }
+        source: { type: string, enum: [order, stock, unknown] }
+        in_warehouse: { type: boolean }
+        owner_type: { type: [string, "null"] }
+        location_code: { type: [string, "null"] }
+        holder:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockTraceOrg"
+        order:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [uuid, order_no, buyer_name]
+              properties:
+                uuid: { type: string, format: uuid }
+                order_no: { type: string }
+                buyer_name: { type: string }
+        service:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [uuid, service_no, completed_at, customer_name]
+              properties:
+                uuid: { type: string, format: uuid }
+                service_no: { type: string }
+                completed_at: { type: [string, "null"], format: date-time }
+                customer_name: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    EnvelopeStockWarehouseUnitPage:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [items, total, limit, offset]
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/StockWarehouseUnit" }
+            total: { type: integer, format: int64 }
+            limit: { type: integer }
+            offset: { type: integer }
+
     StockUnitHistory:
       type: object
-      required: [unit, current, holdings, movements]
+      required: [unit, current, holdings, movements, trace]
       properties:
         unit: { $ref: "#/components/schemas/StockUnit" }
         current:
@@ -38739,6 +39169,10 @@ components:
             total: { type: integer, format: int64 }
             limit: { type: integer }
             offset: { type: integer }
+        trace:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockUnitTrace"
 
     StockProduct:
       type: object
@@ -38927,6 +39361,9 @@ components:
         address: { type: [string, "null"] }
         active: { type: boolean }
         require_location_placement: { type: boolean, description: Require placed units for order assignment and warehouse transfer lines. }
+        is_primary:
+          type: boolean
+          description: TEC-1006. The organization's primary warehouse (Olex center - AFM Florya Merkez); legacy units without a location originate from it.
         sort_order: { type: integer }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -39491,6 +39928,11 @@ components:
           oneOf:
             - type: "null"
             - $ref: "#/components/schemas/WarehouseScanLocation"
+        trace:
+          description: TEC-1006 order / service / customer trace.
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/StockUnitTrace"
 
     WarehouseScanResult:
       type: object
@@ -43227,6 +43669,9 @@ components:
         updated_at: { type: string, format: date-time }
         editable: { type: boolean, description: The caller may edit the form and images }
         items_editable: { type: boolean, description: The caller may add or remove items }
+        service_no_editable:
+          type: boolean
+          description: TEC-1004. The caller may change the number (false once completed or cancelled)
         available_transitions:
           type: array
           items: { $ref: "#/components/schemas/ServiceStatus" }
@@ -43250,12 +43695,29 @@ components:
       type: object
       required: [customer_uuid, vehicle_uuid]
       properties:
+        organization_uuid:
+          type: string
+          format: uuid
+          description: |
+            TEC-1003. The brand center opens the service for one of its
+            active dealers (inside its services.write scope); the service
+            belongs to the dealer and the action is written to the activity
+            log (services.created_on_behalf). Omitted or the active
+            organization: the active organization. Any other caller: 400.
         customer_uuid: { type: string, format: uuid }
         vehicle_uuid: { type: string, format: uuid }
         km: { type: integer, minimum: 0, maximum: 5000000 }
         package: { type: string, maxLength: 255 }
         notes: { type: string, maxLength: 5000 }
         has_measurement: { type: boolean, default: false }
+        service_no:
+          type: [string, "null"]
+          description: >-
+            TEC-1004. A hand-entered number (the printed warranty card's QR
+            https://olexfilms.app/warranty/XXXX): 4 to 32 letters, digits,
+            '-' or '_', kept as entered (surrounding space trimmed). Another
+            service's number or a warranty public code / alias is 409
+            SERVICE_NO_TAKEN. Omitted, null or blank: DS + 8 alphanumerics.
 
     ServiceUpdateInput:
       type: object
@@ -43271,6 +43733,28 @@ components:
             not changed). Same rules as the vehicle VIN: 17 letters or digits
             without I, O, Q; spaces and dashes are dropped. null or "" clears
             it (400 while has_measurement is true).
+        service_no:
+          type: string
+          description: >-
+            TEC-1004. Changes the number (same rules as on create) until the
+            service is completed or cancelled; then 409 SERVICE_NO_LOCKED
+            (the same number is a no-op). Taken: 409 SERVICE_NO_TAKEN.
+
+    ServiceNoAvailability:
+      type: object
+      required: [service_no, valid, available]
+      properties:
+        service_no: { type: string, description: "The trimmed number" }
+        valid: { type: boolean, description: "The number has the allowed shape" }
+        available: { type: boolean, description: "Valid and not held by another service, warranty code or alias" }
+
+    EnvelopeServiceNoAvailability:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/ServiceNoAvailability" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     ServiceItemInput:
       type: object

@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "الصورة كبيرة جدًا؛ استخدم صورة أصغر من نحو 150 كيلوبايت.",
   "label_templates.errors.generic": "تعذّر حفظ القالب.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "يوجد قالب آخر بهذا الاسم.",
-  "label_templates.errors.VALIDATION_ERROR": "بعض الحقول غير صالحة؛ راجع النموذج."
+  "label_templates.errors.VALIDATION_ERROR": "بعض الحقول غير صالحة؛ راجع النموذج.",
+  "trace.title": "تتبع الباركود",
+  "trace.origin": "مستودع المنشأ",
+  "trace.orders": "الطلبات",
+  "trace.services": "الخدمات",
+  "trace.no_order": "لم يُشحن بطلب.",
+  "trace.no_order_unknown": "لا يوجد طلب؛ المصدر غير معروف (استيراد قديم).",
+  "trace.no_service": "لم يُستخدم في خدمة.",
+  "trace.source.order": "بطلب",
+  "trace.source.stock": "في المخزون",
+  "trace.source.unknown": "المصدر غير معروف"
 }

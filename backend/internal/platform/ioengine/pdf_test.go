@@ -69,10 +69,15 @@ func TestEncodePDFLocalesGoThroughGotenberg(t *testing.T) {
 				`--primary:#112233`,
 				`<th>` + tc.label + `</th>`,
 				`Yıldız &lt;b&gt;`, `محمد`, `王小明`,
-				`<td class="num">16.50</td>`,
 				`<th class="num">`,
 				`Filtre &amp; değer`,
 				`<strong>Olex</strong>`,
+			}
+			// TEC-1009: numbers in Arabic-Indic digits for ar.
+			if tc.lang == "ar" {
+				want = append(want, `<td class="num">١٦.٥٠</td>`)
+			} else {
+				want = append(want, `<td class="num">16.50</td>`)
 			}
 			for _, w := range want {
 				if !strings.Contains(h, w) {

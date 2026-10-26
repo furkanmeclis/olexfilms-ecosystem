@@ -19,5 +19,8 @@
   "about": "关于",
   "api_server": "服务器",
   "app_version": "应用版本",
-  "watch_intro": "观看介绍"
+  "watch_intro": "观看介绍",
+  "digits": "数字",
+  "digits.arab": "阿拉伯-印度数字 (٠١٢٣)",
+  "digits.latn": "拉丁数字 (0123)"
 }

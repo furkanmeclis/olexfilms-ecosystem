@@ -1650,6 +1650,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/service-warranties/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public warranty page of a service (every warranty of it)
+         * @description TEC-1005. No authentication. The page /warranty/{service_no} (the
+         *     legacy hub's page and the QR of the printed warranty cards) shows
+         *     one service with all of its warranties. code is the service number,
+         *     else a warranty public code of the service (per-warranty links
+         *     before TEC-1005), else a legacy alias; service_no in the answer is
+         *     the canonical page address. Only a service with a warranty in the
+         *     domain brand is found. No personal data: masked plate, last four
+         *     VIN characters, no holder. Same per-IP limit and 404 rules as
+         *     GET /v1/public/warranties/{public_code}.
+         */
+        get: operations["getPublicServiceWarranties"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/service-warranties/{code}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Anonymous warranty PDF of a service
+         * @description TEC-1005. One document with every warranty of the service (status
+         *     per warranty), offered while one of them is active (else 404), with
+         *     a QR code to /warranty/{service_no}. Built from the public
+         *     projection only. PDF rate limit bucket and lang / tz as
+         *     GET /v1/public/warranties/{public_code}/pdf.
+         */
+        get: operations["getPublicServiceWarrantiesPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/warranties/{public_code}/pdf": {
         parameters: {
             query?: never;
@@ -2283,6 +2335,23 @@ export interface paths {
         };
         /** Stream organization logo */
         get: operations["getPublicOrganizationLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/organizations/service-point-logo/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream a center's service point logo (TEC-1003) */
+        get: operations["getPublicServicePointLogo"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3394,6 +3463,27 @@ export interface paths {
         head?: never;
         /** Update organization export letterhead */
         patch: operations["patchTenantSettings"];
+        trace?: never;
+    };
+    "/v1/tenant/settings/service-point-logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Upload the center's service point logo (TEC-1003)
+         * @description Multipart form field `logo`, same rules as the letterhead logo. Brand center only (400 elsewhere).
+         */
+        put: operations["putTenantServicePointLogo"];
+        post?: never;
+        /** Remove the service point logo (the organization logo shows again) */
+        delete: operations["deleteTenantServicePointLogo"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/tenant/settings/logo": {
@@ -5739,6 +5829,29 @@ export interface paths {
          * @description Needs `stock.read`; the location's organization must be inside the viewer's reach (404 otherwise). Rows come from the `bin_product_stocks` projection; same shape, filters and sort as the organization stock.
          */
         get: operations["listStockLocationProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/stock/warehouses/{uuid}/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Units that originate from a warehouse, in it or gone (TEC-1006)
+         * @description Needs `stock.read` and the warehouse module; the warehouse belongs to the active organization (404 otherwise). Every brand (K20). A unit originates from the warehouse of the first location it was placed in, else from its issuer's primary warehouse. Departed units are not warehouse stock. Sort keys: barcode, product, source, created_at, updated_at (default -updated_at). `q` matches a barcode or order / service number prefix or a product name.
+         */
+        get: operations["listStockWarehouseUnits"];
         put?: never;
         post?: never;
         delete?: never;
@@ -11619,9 +11732,29 @@ export interface paths {
         put?: never;
         /**
          * Open a draft service of the active organization
-         * @description Needs services.write. The customer must be linked to an organization of the services.write scope and the vehicle must belong to the customer (domain brand) and carry a car brand and model; plate, VIN, car brand/model and year are copied into the service (TEC-97 decision 3). The brand is the organization's brand (decision 2) and the number is DS + 8 alphanumerics. has_measurement needs the vehicle VIN. A read-only organization (K23: no contract yet) gets 403 ORGANIZATION_READ_ONLY on every write.
+         * @description Needs services.write. The customer must be linked to an organization of the services.write scope and the vehicle must belong to the customer (domain brand) and carry a car brand and model; plate, VIN, car brand/model and year are copied into the service (TEC-97 decision 3). The brand is the organization's brand (decision 2) and the number is service_no when given (TEC-1004), else DS + 8 alphanumerics. has_measurement needs the vehicle VIN. A read-only organization (K23: no contract yet) gets 403 ORGANIZATION_READ_ONLY on every write.
          */
         post: operations["createService"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/services/service-no-availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check a hand-entered service number
+         * @description TEC-1004. Needs services.write. Whether service_no may be given to a new service or, with service_uuid, to that service (its own number is available to it). Only yes / no: the holder is not revealed.
+         */
+        get: operations["getServiceNoAvailability"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11669,7 +11802,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit km, package, notes and the measurement answer
+         * Edit km, package, notes, the measurement answer and the number
          * @description Needs services.write reaching the service. Completed and cancelled services are locked except for the center (409 SERVICE_NOT_EDITABLE).
          */
         patch: operations["updateService"];
@@ -19157,6 +19290,44 @@ export interface components {
             data: components["schemas"]["PublicBrand"];
             meta: components["schemas"]["ResponseMeta"];
         };
+        /** @description Public warranty page of a service (TEC-1005); never carries personal data. */
+        PublicService: {
+            /** @description Canonical page address /warranty/{service_no} */
+            service_no: string;
+            package: string | null;
+            /**
+             * Format: date-time
+             * @description Completion time, else creation
+             */
+            service_date: string;
+            brand: components["schemas"]["PublicWarranty"]["brand"];
+            dealer: components["schemas"]["PublicWarranty"]["dealer"];
+            vehicle: components["schemas"]["PublicWarranty"]["vehicle"];
+            warranties: components["schemas"]["PublicServiceWarranty"][];
+        };
+        PublicServiceWarranty: {
+            public_code: string;
+            /** @enum {string} */
+            status: "active" | "expired" | "void";
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date-time */
+            end_at: string;
+            days_remaining: number;
+            product: {
+                name: string;
+            };
+            /** @description Product category name (empty when none) */
+            category: string;
+            /** @description Applied part keys (services.parts.<key>) */
+            parts: string[];
+        };
+        EnvelopePublicService: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PublicService"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
         EnvelopePublicWarranty: {
             /** @enum {boolean} */
             success: true;
@@ -19948,6 +20119,18 @@ export interface components {
             /** @description TEC-240 map position (WGS84); null together with longitude when unset. */
             latitude?: number | null;
             longitude?: number | null;
+            service_point?: components["schemas"]["TenantServicePoint"];
+        };
+        /**
+         * @description TEC-1003, brand center only (absent elsewhere). While enabled, the
+         *     name and logo replace the organization's on customer surfaces
+         *     (warranty page and PDF, service / measurement PDFs, portal,
+         *     WhatsApp); the panel keeps the organization name.
+         */
+        TenantServicePoint: {
+            enabled: boolean;
+            name: string | null;
+            logo_url: string | null;
         };
         PatchTenantSettingsRequest: {
             company_name?: string;
@@ -19969,6 +20152,10 @@ export interface components {
              */
             latitude?: number | null;
             longitude?: number | null;
+            /** @description TEC-1003, brand center only (400 elsewhere). */
+            service_point_enabled?: boolean;
+            /** @description TEC-1003, brand center only; an empty string clears it. */
+            service_point_name?: string;
         };
         NearbyDealer: {
             /**
@@ -21566,6 +21753,114 @@ export interface components {
             /** Format: uuid */
             uuid: string;
         };
+        /**
+         * @description TEC-1006. Warehouse-layer trace of a unit: the warehouse it comes
+         *     from (first location it was placed in, else the issuer's primary
+         *     warehouse — "AFM Florya Merkez" for legacy hub units), the orders
+         *     that carried it and the services that used it (outside the viewer's
+         *     scope left out). source: order = went out with an order, stock =
+         *     never left its issuer, unknown = at / used by another organization
+         *     without an order ("kaynak bilinmiyor").
+         */
+        StockUnitTrace: {
+            /** @enum {string} */
+            source: "order" | "stock" | "unknown";
+            origin_warehouse: null | components["schemas"]["StockWarehouseRef"];
+            orders: components["schemas"]["StockTraceOrder"][];
+            services: components["schemas"]["StockTraceService"][];
+        };
+        StockWarehouseRef: {
+            /** Format: uuid */
+            uuid: string;
+            code: string;
+            name: string;
+        };
+        StockTraceOrder: {
+            /** Format: uuid */
+            uuid: string;
+            order_no: string;
+            status: string;
+            external_reference: string | null;
+            buyer: components["schemas"]["StockTraceOrg"];
+            seller: components["schemas"]["StockTraceOrg"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            submitted_at: string | null;
+            /** Format: date-time */
+            shipped_at: string | null;
+            /** Format: date-time */
+            received_at: string | null;
+        };
+        StockTraceOrg: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            type: string;
+        };
+        StockTraceService: {
+            /** Format: uuid */
+            uuid: string;
+            service_no: string;
+            status: string;
+            /** Format: date-time */
+            completed_at: string | null;
+            organization: components["schemas"]["StockTraceOrg"];
+            customer: {
+                /** Format: uuid */
+                uuid: string;
+                name: string;
+            };
+        };
+        /** @description TEC-1006. A unit that originates from the warehouse, in it (in_warehouse) or gone. */
+        StockWarehouseUnit: {
+            /** Format: uuid */
+            uuid: string;
+            barcode: string;
+            unit_kind: string;
+            status: string;
+            initial_meters: string | null;
+            remaining_meters: string | null;
+            product: {
+                /** Format: uuid */
+                uuid: string;
+                sku: string;
+                name: string;
+            };
+            /** @enum {string} */
+            source: "order" | "stock" | "unknown";
+            in_warehouse: boolean;
+            owner_type: string | null;
+            location_code: string | null;
+            holder: null | components["schemas"]["StockTraceOrg"];
+            order: null | {
+                /** Format: uuid */
+                uuid: string;
+                order_no: string;
+                buyer_name: string;
+            };
+            service: null | {
+                /** Format: uuid */
+                uuid: string;
+                service_no: string;
+                /** Format: date-time */
+                completed_at: string | null;
+                customer_name: string;
+            };
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EnvelopeStockWarehouseUnitPage: {
+            data: {
+                items: components["schemas"]["StockWarehouseUnit"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+        };
         StockUnitHistory: {
             unit: components["schemas"]["StockUnit"];
             /** @description Single active owner of a serial unit; null for fixed barcodes and labels not in stock yet. */
@@ -21578,6 +21873,7 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            trace: null | components["schemas"]["StockUnitTrace"];
         };
         StockProduct: {
             product: {
@@ -21732,6 +22028,8 @@ export interface components {
             active: boolean;
             /** @description Require placed units for order assignment and warehouse transfer lines. */
             require_location_placement: boolean;
+            /** @description TEC-1006. The organization's primary warehouse (Olex center - AFM Florya Merkez); legacy units without a location originate from it. */
+            is_primary?: boolean;
             sort_order: number;
             /** Format: date-time */
             created_at: string;
@@ -22197,6 +22495,8 @@ export interface components {
             quantity_on_hand: number | null;
             holder: null | components["schemas"]["WarehouseScanHolder"];
             location: null | components["schemas"]["WarehouseScanLocation"];
+            /** @description TEC-1006 order / service / customer trace. */
+            trace?: null | components["schemas"]["StockUnitTrace"];
         };
         WarehouseScanResult: {
             /** @enum {string} */
@@ -25062,6 +25362,8 @@ export interface components {
             editable: boolean;
             /** @description The caller may add or remove items */
             items_editable: boolean;
+            /** @description TEC-1004. The caller may change the number (false once completed or cancelled) */
+            service_no_editable?: boolean;
             available_transitions: components["schemas"]["ServiceStatus"][];
             /** @description True when the service was opened from an approved warranty claim. */
             is_warranty_reapply: boolean;
@@ -25071,6 +25373,15 @@ export interface components {
             warranties?: components["schemas"]["ServiceWarranty"][];
         };
         ServiceCreateInput: {
+            /**
+             * Format: uuid
+             * @description TEC-1003. The brand center opens the service for one of its
+             *     active dealers (inside its services.write scope); the service
+             *     belongs to the dealer and the action is written to the activity
+             *     log (services.created_on_behalf). Omitted or the active
+             *     organization: the active organization. Any other caller: 400.
+             */
+            organization_uuid?: string;
             /** Format: uuid */
             customer_uuid: string;
             /** Format: uuid */
@@ -25080,6 +25391,8 @@ export interface components {
             notes?: string;
             /** @default false */
             has_measurement: boolean;
+            /** @description TEC-1004. A hand-entered number (the printed warranty card's QR https://olexfilms.app/warranty/XXXX): 4 to 32 letters, digits, '-' or '_', kept as entered (surrounding space trimmed). Another service's number or a warranty public code / alias is 409 SERVICE_NO_TAKEN. Omitted, null or blank: DS + 8 alphanumerics. */
+            service_no?: string | null;
         };
         ServiceUpdateInput: {
             km?: number | null;
@@ -25088,6 +25401,22 @@ export interface components {
             has_measurement?: boolean;
             /** @description Replaces the VIN snapshot of the service (the vehicle record is not changed). Same rules as the vehicle VIN: 17 letters or digits without I, O, Q; spaces and dashes are dropped. null or "" clears it (400 while has_measurement is true). */
             vin?: string | null;
+            /** @description TEC-1004. Changes the number (same rules as on create) until the service is completed or cancelled; then 409 SERVICE_NO_LOCKED (the same number is a no-op). Taken: 409 SERVICE_NO_TAKEN. */
+            service_no?: string;
+        };
+        ServiceNoAvailability: {
+            /** @description The trimmed number */
+            service_no: string;
+            /** @description The number has the allowed shape */
+            valid: boolean;
+            /** @description Valid and not held by another service, warranty code or alias */
+            available: boolean;
+        };
+        EnvelopeServiceNoAvailability: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["ServiceNoAvailability"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         ServiceItemInput: {
             barcode: string;
@@ -33426,6 +33755,86 @@ export interface operations {
             500: components["responses"]["InternalError"];
         };
     };
+    getPublicServiceWarranties: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The service page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePublicService"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getPublicServiceWarrantiesPdf: {
+        parameters: {
+            query?: {
+                lang?: string;
+                tz?: string;
+            };
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The PDF (attachment) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
+            /** @description Rate limited per client IP */
+            429: {
+                headers: {
+                    /** @description Seconds until the window resets */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description PDF rendering is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     getPublicWarrantyPdf: {
         parameters: {
             query?: {
@@ -34454,6 +34863,27 @@ export interface operations {
         };
     };
     getPublicOrganizationLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Logo bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getPublicServicePointLogo: {
         parameters: {
             query?: never;
             header?: never;
@@ -36336,6 +36766,54 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    putTenantServicePointLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTenantSettings"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["InternalError"];
+        };
+    };
+    deleteTenantServicePointLogo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Updated settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTenantSettings"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["InternalError"];
         };
     };
@@ -40569,6 +41047,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeStockProductPage"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listStockWarehouseUnits: {
+        parameters: {
+            query?: {
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+                q?: components["parameters"]["Q"];
+                /** @description One primary sort field from the endpoint whitelist; prefix `-` for descending. Extra comma-separated fields are validated but ignored. Unknown field → 400 VALIDATION_ERROR. See docs/list-contract.md. */
+                sort?: components["parameters"]["Sort"];
+                state?: "in" | "left";
+                /** @description CSV of order, stock, unknown. */
+                source?: string;
+                product_uuid?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Warehouse units */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockWarehouseUnitPage"];
                 };
             };
             400: components["responses"]["BadRequest"];
@@ -51265,6 +51780,33 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getServiceNoAvailability: {
+        parameters: {
+            query: {
+                service_no: string;
+                service_uuid?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Availability */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeServiceNoAvailability"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     requestServiceListExport: {

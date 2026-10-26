@@ -37,6 +37,16 @@ const gate = vi.hoisted(() => ({
   features: [] as string[],
   request: vi.fn(),
 }));
+// TEC-1003: the active organization (a center gets the performer picker).
+const active = vi.hoisted(() => ({ type: "dealer" }));
+vi.mock("@/hooks/use-active-organization", () => ({
+  useActiveOrganization: () => ({
+    uuid: "o1",
+    slug: "acme",
+    name: "Acme",
+    type: active.type,
+  }),
+}));
 vi.mock("@/providers/permission-provider", () => ({
   usePermission: () => ({ can: (p: string) => gate.grants.has(p) }),
 }));
@@ -97,6 +107,7 @@ afterEach(() => {
   vi.clearAllMocks();
   gate.grants = new Set();
   gate.features = [];
+  active.type = "dealer";
 });
 
 async function flush() {
@@ -204,6 +215,39 @@ const service = (over: Partial<Service> = {}): Service => ({
 });
 
 describe("Step 1: customer and vehicle", () => {
+  it("lets the center pick the dealer it opens the service for (TEC-1003)", async () => {
+    gate.grants = new Set(["organizations.read"]);
+    gate.request.mockResolvedValue({
+      items: [{ uuid: "d1", name: "Bayi Bir" }],
+    });
+    active.type = "center";
+    await render(
+      createElement(CustomerVehicleStep, {
+        slug: "acme",
+        access: fullAccess,
+        onDone: vi.fn(),
+      }),
+    );
+    expect($("[data-testid=performer]")).not.toBeNull();
+    expect(gate.request).toHaveBeenCalledWith(
+      "GET",
+      "/v1/tenant/organizations",
+      expect.objectContaining({ query: { type: "dealer", limit: 200 } }),
+    );
+
+    act(() => root.unmount());
+    root = createRoot(container);
+    active.type = "dealer";
+    await render(
+      createElement(CustomerVehicleStep, {
+        slug: "acme",
+        access: fullAccess,
+        onDone: vi.fn(),
+      }),
+    );
+    expect($("[data-testid=performer]")).toBeNull();
+  });
+
   it("picks an existing customer and vehicle and opens the draft", async () => {
     api.listCustomers.mockResolvedValue({
       items: [customer],

@@ -23,6 +23,7 @@ import type { IconName } from '@/ui/icons';
 import { useBookingError } from './appointment-detail-screen';
 import { getAppointment, useAvailability } from './data';
 import { type AvailabilityDay, canReschedule, parseDay, todayIn } from './lib';
+import { intlLocale } from '@/core/digits';
 
 type Step = 'customer' | 'vehicle' | 'time';
 const STEPS: Step[] = ['customer', 'vehicle', 'time'];
@@ -251,7 +252,7 @@ function SlotPicker({ value, onChange }: { value: string | null; onChange: (star
                 off && !on && 'opacity-40',
               )}>
               <Text variant="caption" tone={on ? 'onPrimary' : 'muted'}>
-                {new Intl.DateTimeFormat(i18n.language, { weekday: 'short' }).format(date)}
+                {new Intl.DateTimeFormat(intlLocale(i18n.language), { weekday: 'short' }).format(date)}
               </Text>
               <Text variant="headline" tone={on ? 'onPrimary' : 'default'}>
                 {date.getDate()}
@@ -297,7 +298,7 @@ function SlotPicker({ value, onChange }: { value: string | null; onChange: (star
                     on ? 'border-primary bg-primary' : 'border-border bg-card active:bg-muted',
                   )}>
                   <Text variant="callout" tone={on ? 'onPrimary' : 'default'} className="font-semibold">
-                    {new Intl.DateTimeFormat(i18n.language, { timeStyle: 'short', timeZone: chosen.timezone }).format(new Date(s.start))}
+                    {new Intl.DateTimeFormat(intlLocale(i18n.language), { timeStyle: 'short', timeZone: chosen.timezone }).format(new Date(s.start))}
                   </Text>
                 </Pressable>
               );

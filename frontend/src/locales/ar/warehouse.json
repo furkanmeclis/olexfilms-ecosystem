@@ -633,5 +633,22 @@
   "stock_panel.products": "المنتجات",
   "stock_panel.units": "الوحدات",
   "stock_panel.empty_title": "هذه الخانة فارغة",
-  "stock_panel.empty_description": "لا يوجد مخزون مسجل في هذه الخانة."
+  "stock_panel.empty_description": "لا يوجد مخزون مسجل في هذه الخانة.",
+  "nav_units": "وحدات المستودع",
+  "units.title": "وحدات المستودع",
+  "units.description": "كل الباركودات القادمة من المستودع: الموجودة والتي خرجت بطلب أو خدمة أو غير ذلك. الوحدات الخارجة لا تُحسب مخزونًا.",
+  "units.forbidden": "لا يمكنك عرض وحدات المستودع.",
+  "units.warehouse": "المستودع",
+  "units.primary": "رئيسي",
+  "units.empty": "لا توجد وحدات من هذا المستودع.",
+  "units.columns.barcode": "الباركود",
+  "units.columns.product": "المنتج",
+  "units.columns.state": "الحالة",
+  "units.columns.source": "المصدر",
+  "units.columns.order": "الطلب",
+  "units.columns.service": "الخدمة / العميل",
+  "units.columns.updated_at": "آخر تغيير",
+  "units.columns.created_at": "الإنشاء",
+  "units.state.in": "في المستودع",
+  "units.state.left": "خرج من المستودع"
 }

@@ -211,5 +211,6 @@
   "actions.einvoice.xslt_uploaded": "已上传电子发票 XSLT 样式表",
   "actions.einvoice.xslt_reset": "电子发票 XSLT 样式表已恢复默认",
   "actions.einvoice.buyer_profile_updated": "买方开票资料已更新",
-  "resources.einvoices": "电子发票"
+  "resources.einvoices": "电子发票",
+  "actions.services.created_on_behalf": "代经销商创建服务"
 }

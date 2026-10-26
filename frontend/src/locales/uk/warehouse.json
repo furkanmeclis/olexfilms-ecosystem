@@ -633,5 +633,22 @@
   "stock_panel.products": "Товари",
   "stock_panel.units": "Одиниці",
   "stock_panel.empty_title": "Комірка порожня",
-  "stock_panel.empty_description": "У цій комірці немає облікового залишку."
+  "stock_panel.empty_description": "У цій комірці немає облікового залишку.",
+  "nav_units": "Одиниці складу",
+  "units.title": "Одиниці складу",
+  "units.description": "Усі штрихкоди зі складу: на місці та ті, що пішли із замовленням, послугою тощо. Вибулі одиниці не рахуються як залишок.",
+  "units.forbidden": "Немає доступу до одиниць складу.",
+  "units.warehouse": "Склад",
+  "units.primary": "основний",
+  "units.empty": "З цього складу немає одиниць.",
+  "units.columns.barcode": "Штрихкод",
+  "units.columns.product": "Товар",
+  "units.columns.state": "Стан",
+  "units.columns.source": "Джерело",
+  "units.columns.order": "Замовлення",
+  "units.columns.service": "Послуга / клієнт",
+  "units.columns.updated_at": "Остання зміна",
+  "units.columns.created_at": "Створено",
+  "units.state.in": "На складі",
+  "units.state.left": "Вибуло зі складу"
 }

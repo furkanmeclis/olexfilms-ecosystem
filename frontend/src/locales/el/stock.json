@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "Η εικόνα είναι πολύ μεγάλη· χρησιμοποιήστε μία κάτω από περίπου 150 KB.",
   "label_templates.errors.generic": "Δεν ήταν δυνατή η αποθήκευση του προτύπου.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Υπάρχει ήδη άλλο πρότυπο με αυτό το όνομα.",
-  "label_templates.errors.VALIDATION_ERROR": "Ορισμένα πεδία δεν είναι έγκυρα· ελέγξτε τη φόρμα."
+  "label_templates.errors.VALIDATION_ERROR": "Ορισμένα πεδία δεν είναι έγκυρα· ελέγξτε τη φόρμα.",
+  "trace.title": "Ιχνηλασιμότητα",
+  "trace.origin": "Αποθήκη προέλευσης",
+  "trace.orders": "Παραγγελίες",
+  "trace.services": "Υπηρεσίες",
+  "trace.no_order": "Δεν στάλθηκε με παραγγελία.",
+  "trace.no_order_unknown": "Δεν βρέθηκε παραγγελία· άγνωστη προέλευση (παλιά εισαγωγή).",
+  "trace.no_service": "Δεν χρησιμοποιήθηκε σε υπηρεσία.",
+  "trace.source.order": "Με παραγγελία",
+  "trace.source.stock": "Σε απόθεμα",
+  "trace.source.unknown": "Άγνωστη προέλευση"
 }

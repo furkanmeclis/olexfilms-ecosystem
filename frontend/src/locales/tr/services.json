@@ -352,5 +352,22 @@
   "review_questions.validation.text_tr": "Türkçe soru metni zorunludur.",
   "review_questions.toast.saved": "Soru kaydedildi.",
   "review_questions.toast.failed": "İşlem tamamlanamadı. Tekrar deneyin.",
-  "wizard.steps.photos": "Kabul fotoğrafları"
+  "wizard.steps.photos": "Kabul fotoğrafları",
+  "service_no.label": "Hizmet numarası",
+  "service_no.placeholder": "Garanti kartındaki numara veya karekod",
+  "service_no.auto": "Boş bırakılırsa numara otomatik verilir.",
+  "service_no.invalid": "4-32 karakter: harf, rakam, '-' veya '_'.",
+  "service_no.taken": "Bu numara başka bir hizmette kullanılıyor.",
+  "service_no.available": "Numara kullanılabilir.",
+  "service_no.locked": "Hizmet tamamlandığı için numara kilitli.",
+  "service_no.scan": "Karekodu okut",
+  "service_no.scan_title": "Garanti kartını okutun",
+  "service_no.scan_description": "Kartın karekodunu kameraya gösterin; numara alana yazılır.",
+  "service_no.camera_denied": "Kameraya erişilemedi. Numarayı elle girin veya karekod okuyucuyla okutun.",
+  "network_scope.label": "Hizmet kapsamı",
+  "network_scope.own": "Kendi hizmetlerimiz",
+  "network_scope.network": "Tüm ağ",
+  "wizard.performer": "Hizmeti yapan",
+  "wizard.performer_own": "{{name}} (kendi hizmet noktamız)",
+  "wizard.performer_hint": "Bir bayi seçerseniz hizmet o bayiye ait açılır ve işlem kayda geçer."
 }

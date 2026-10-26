@@ -236,5 +236,10 @@
   "claims.toast.photo_required": "Добавете поне една снимка преди изпращане.",
   "claims.toast.photo_error": "Някои снимки не можаха да бъдат качени.",
   "claims.toast.photos_uploaded": "Снимките са качени.",
-  "claims.portal.label": "Гаранционна претенция:"
+  "claims.portal.label": "Гаранционна претенция:",
+  "public.service_no": "Номер на услугата",
+  "public.service_date": "Дата на услугата",
+  "public.package": "Пакет",
+  "public.warranties": "Приложени продукти и гаранции",
+  "public.applied_parts": "Обработени части"
 }

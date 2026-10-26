@@ -1,0 +1,70 @@
+# TEC-1011: ship the iOS app on every push to main that touches mobile/
+# (Expo "deploy to production" pattern, iOS only). Triggered by the Expo
+# GitHub app (project base directory: /mobile), not by GitHub Actions.
+#
+#   fingerprint  -> native hash of the project with the production env
+#   get_ios_build -> is there already a finished production build with it?
+#     yes -> publish_ios_update: JS-only change, OTA on channel "production"
+#     no  -> build_ios + submit_ios: new TestFlight build (native dep,
+#            config plugin, app.json native field, SDK upgrade)
+#
+# Build numbers come from the EAS remote counter (eas.json autoIncrement);
+# EXPO_PUBLIC_API_URL comes from the EAS "production" environment.
+# Skip a run with "[eas skip]" in the commit message. Manual run:
+#   npx eas-cli@latest workflow:run deploy-ios.yml   (from mobile/)
+name: Deploy iOS (TestFlight or OTA)
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'mobile/**'
+      - 'docs/openapi.yaml'
+      - '!mobile/**/*.md'
+
+concurrency:
+  cancel_in_progress: false
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+jobs:
+  fingerprint:
+    name: Fingerprint
+    type: fingerprint
+    environment: production
+
+  get_ios_build:
+    name: Existing iOS build for this fingerprint?
+    needs: [fingerprint]
+    type: get-build
+    params:
+      platform: ios
+      profile: production
+      distribution: store
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+
+  build_ios:
+    name: Build iOS (fingerprint changed)
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
+    type: build
+    params:
+      platform: ios
+      profile: production
+
+  submit_ios:
+    name: Submit to TestFlight
+    needs: [build_ios]
+    type: submit
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+      profile: production
+
+  publish_ios_update:
+    name: OTA update (fingerprint unchanged)
+    needs: [get_ios_build]
+    if: ${{ needs.get_ios_build.outputs.build_id }}
+    type: update
+    environment: production
+    params:
+      channel: production
+      platform: ios

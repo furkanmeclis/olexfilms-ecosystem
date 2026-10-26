@@ -66,7 +66,7 @@ WHERE v.uuid = sqlc.arg(uuid)
 -- name: ListPortalServices :many
 SELECT s.uuid, s.service_no, s.status, s.package, s.plate, s.plate_country, s.model_year,
        s.completed_at, s.created_at,
-       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       o.uuid AS organization_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.type AS organization_type,
        v.uuid AS vehicle_uuid,
        cb.name AS car_brand_name, cm.name AS car_model_name
 FROM services s
@@ -142,7 +142,7 @@ WHERE (s.customer_user_id = sqlc.arg(user_id)::bigint
 SELECT w.uuid, w.public_code, w.start_at, w.end_at,
        p.uuid AS product_uuid, p.sku AS product_sku, p.name AS product_name,
        s.uuid AS service_uuid, s.service_no,
-       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type
+       o.uuid AS organization_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.type AS organization_type
 FROM warranties w
 JOIN brands b ON b.id = w.brand_id
 JOIN products p ON p.id = w.product_id
@@ -177,7 +177,7 @@ WHERE s.vehicle_id = sqlc.arg(vehicle_id)::bigint
 -- warranty holder sees it, within the domain brand, excluding Glorian.
 -- name: ListPortalContracts :many
 SELECT s.uuid, s.service_no, s.status, s.plate, s.plate_country, s.model_year, s.created_at,
-       o.uuid AS organization_uuid, o.name AS organization_name, o.type AS organization_type,
+       o.uuid AS organization_uuid, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.type AS organization_type,
        v.uuid AS vehicle_uuid,
        cb.name AS car_brand_name, cm.name AS car_model_name,
        ci.uuid AS contract_uuid, ci.contract_no, ci.executed_at,

@@ -213,6 +213,7 @@ export function ServiceWizardPage({
   if (shown === "customer_vehicle" || !current) {
     body = (
       <CustomerVehicleStep
+        slug={slug}
         access={access}
         service={current}
         onDone={(saved) => {

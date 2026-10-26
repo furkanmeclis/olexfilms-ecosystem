@@ -197,5 +197,12 @@
   "invalid.email": "Inserisci un'e-mail valida.",
   "invalid.company_name": "Inserisci la ragione sociale.",
   "invalid.tax_office": "Controlla l'ufficio delle imposte.",
-  "invalid.tax_no": "Il codice fiscale deve avere 5-20 lettere o cifre."
+  "invalid.tax_no": "Il codice fiscale deve avere 5-20 lettere o cifre.",
+  "service_no_placeholder": "Numero o QR code della scheda di garanzia",
+  "service_no_auto": "Lascia vuoto per un numero automatico.",
+  "service_no_invalid": "4-32 caratteri: lettere, cifre, '-' o '_'.",
+  "service_no_taken": "Questo numero è usato da un altro servizio.",
+  "service_no_available": "Il numero è disponibile.",
+  "service_no_scan": "Scansiona QR",
+  "service_no_label": "Numero servizio"
 }

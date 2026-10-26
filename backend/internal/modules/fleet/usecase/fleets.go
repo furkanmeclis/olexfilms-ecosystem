@@ -10,6 +10,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/fleet/repository"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -132,7 +133,7 @@ func (s *Service) RequestLink(ctx context.Context, c Caller, fleetUUID uuid.UUID
 			return fmt.Errorf("fleet: users: %w", err)
 		}
 		if err := s.emit(ctx, tx, events.FleetLinkRequested, dealer.ID, c.UserID, f.Organization, map[string]any{
-			"link_uuid": link.Uuid.String(), "dealer_org_id": dealer.ID, "dealer_name": dealer.Name,
+			"link_uuid": link.Uuid.String(), "dealer_org_id": dealer.ID, "dealer_name": orgbrand.Name(dealer),
 			"notify_user_ids": notify,
 		}); err != nil {
 			return err
@@ -266,7 +267,7 @@ func (s *Service) DecideLink(ctx context.Context, userID int64, linkUUID uuid.UU
 			notify = append(notify, link.CreatedByUserID.Int64)
 		}
 		if err := s.emit(ctx, tx, name, f.ID, userID, f, map[string]any{
-			"link_uuid": link.Uuid.String(), "dealer_org_id": dealer.ID, "dealer_name": dealer.Name,
+			"link_uuid": link.Uuid.String(), "dealer_org_id": dealer.ID, "dealer_name": orgbrand.Name(dealer),
 			"notify_user_ids": notify,
 		}); err != nil {
 			return err

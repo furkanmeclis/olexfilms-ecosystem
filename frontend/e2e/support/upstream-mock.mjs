@@ -60,14 +60,14 @@ function toE164(phone, country) {
 /** Public codes of the warranty spec: one per screen. */
 const WARRANTY_OK = "E2EWARRANTY0001";
 const WARRANTY_LIMITED = "E2ELIMITED00001";
+/** A per-warranty code of the service (TEC-1005): the page moves to its number. */
+const WARRANTY_OLD_CODE = "E2EOLDCODE00001";
 
-const warranty = {
-  public_code: WARRANTY_OK,
-  status: "active",
-  start_at: "2026-01-15T10:00:00Z",
-  end_at: "2036-01-15T20:59:59Z",
-  days_remaining: 3393,
-  product: { name: "Olex PPF Gloss" },
+/** TEC-1005: the service page; its number is WARRANTY_OK. */
+const warrantyService = {
+  service_no: WARRANTY_OK,
+  package: "Full body",
+  service_date: "2026-01-15T10:00:00Z",
   brand: { name: "Olexfilms", slug: "olex" },
   dealer: { name: "Kadıköy Bayi", city: "İstanbul" },
   vehicle: {
@@ -78,6 +78,18 @@ const warranty = {
     plate_masked: "34 *** 12",
     vin_last4: "6752",
   },
+  warranties: [
+    {
+      public_code: WARRANTY_OLD_CODE,
+      status: "active",
+      start_at: "2026-01-15T10:00:00Z",
+      end_at: "2036-01-15T20:59:59Z",
+      days_remaining: 3393,
+      product: { name: "Olex PPF Gloss" },
+      category: "PPF",
+      parts: ["body_kaput"],
+    },
+  ],
 };
 
 /** Public quote token of the TEC-320 spec (keep in sync with constants). */
@@ -375,10 +387,10 @@ const server = createServer(async (req, res) => {
     });
   }
 
-  const code = path.match(/^\/v1\/public\/warranties\/([^/]+)$/)?.[1];
+  const code = path.match(/^\/v1\/public\/service-warranties\/([^/]+)$/)?.[1];
   if (req.method === "GET" && code) {
-    if (code === WARRANTY_OK) {
-      return send(res, 200, { success: true, data: warranty });
+    if (code === WARRANTY_OK || code === WARRANTY_OLD_CODE) {
+      return send(res, 200, { success: true, data: warrantyService });
     }
     if (code === WARRANTY_LIMITED) {
       return send(res, 429, error("RATE_LIMITED", "Too many requests"), {

@@ -36,7 +36,9 @@ import (
 //
 // Parties (K6): the buyer is the dealer (hub dealer_id; warehouse customer ->
 // its hub dealer through source/external_id or dealer_code), the seller is
-// the dealer's parent distributor. Currency is the brand currency (TRY for
+// the dealer's parent (the brand center for TR dealers since TEC-1003, a
+// distributor abroad). The orders of a dealer merged into the center (AFM
+// Florya) keep that dealer as buyer: they are history (TEC-1003). Currency is the brand currency (TRY for
 // Olex); an approved order freezes the rate of its order date, or 1 when no
 // rate is stored (reported, K7). Legacy orders carry no prices, so lines are
 // written at 0.
@@ -575,7 +577,7 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 		skipOrder(c, l, cand, "buyer_unmapped", true)
 		return nil
 	}
-	buyerUUID, ok, err := u.m.Lookup(ctx, s.system(), "dealers", strconv.FormatInt(dealerID, 10))
+	buyerUUID, ok, err := u.m.LookupRaw(ctx, s.system(), "dealers", strconv.FormatInt(dealerID, 10))
 	if err != nil {
 		return err
 	}
@@ -593,7 +595,8 @@ func (s OrdersStep) importOrder(ctx context.Context, u *orderCtx, l *legacyOrder
 	if err != nil {
 		return fmt.Errorf("buyer: %w", err)
 	}
-	if buyer.BrandID != u.brandID || buyer.Type != "dealer" || buyer.ParentType != "distributor" {
+	if buyer.BrandID != u.brandID || buyer.Type != "dealer" ||
+		(buyer.ParentType != "distributor" && buyer.ParentType != "center") {
 		c.inc("skipped_parties:" + label)
 		skipOrder(c, l, cand, "parties", true)
 		return nil

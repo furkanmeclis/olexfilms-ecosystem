@@ -197,5 +197,12 @@
   "invalid.email": "请输入有效的电子邮件。",
   "invalid.company_name": "请输入公司名称。",
   "invalid.tax_office": "请检查税务局。",
-  "invalid.tax_no": "税号须为 5-20 位字母或数字。"
+  "invalid.tax_no": "税号须为 5-20 位字母或数字。",
+  "service_no_placeholder": "保修卡上的编号或二维码",
+  "service_no_auto": "留空将自动生成编号。",
+  "service_no_invalid": "4-32 个字符：字母、数字、'-' 或 '_'。",
+  "service_no_taken": "该编号已被其他服务使用。",
+  "service_no_available": "编号可用。",
+  "service_no_scan": "扫描二维码",
+  "service_no_label": "服务编号"
 }

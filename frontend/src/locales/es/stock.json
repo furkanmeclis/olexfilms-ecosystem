@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "La imagen es demasiado grande; use una de menos de unos 150 KB.",
   "label_templates.errors.generic": "No se pudo guardar la plantilla.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Ya existe otra plantilla con este nombre.",
-  "label_templates.errors.VALIDATION_ERROR": "Algunos campos no son válidos; revise el formulario."
+  "label_templates.errors.VALIDATION_ERROR": "Algunos campos no son válidos; revise el formulario.",
+  "trace.title": "Trazabilidad",
+  "trace.origin": "Almacén de origen",
+  "trace.orders": "Pedidos",
+  "trace.services": "Servicios",
+  "trace.no_order": "No salió con un pedido.",
+  "trace.no_order_unknown": "Sin pedido; origen desconocido (importación antigua).",
+  "trace.no_service": "No usado en un servicio.",
+  "trace.source.order": "Por pedido",
+  "trace.source.stock": "En stock",
+  "trace.source.unknown": "Origen desconocido"
 }

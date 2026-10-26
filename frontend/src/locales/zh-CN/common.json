@@ -63,5 +63,8 @@
   "campaign_unsubscribe.invalid_title": "链接无效",
   "campaign_unsubscribe.invalid_body": "此退订链接无效。请确认您复制了完整链接。",
   "campaign_unsubscribe.error": "出现问题，请稍后再试。",
-  "campaign_unsubscribe.home": "返回首页"
+  "campaign_unsubscribe.home": "返回首页",
+  "digits": "数字",
+  "digits_arab": "阿拉伯-印度数字 (٠١٢٣)",
+  "digits_latn": "拉丁数字 (0123)"
 }

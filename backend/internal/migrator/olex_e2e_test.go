@@ -110,6 +110,7 @@ func TestOlexEndToEndFullRerunDelta(t *testing.T) {
 				ServicesStep{System: hubSys},
 				WarrantiesStep{System: hubSys},
 				MeasurementsStep{System: hubSys},
+				UnitTraceStep{System: hubSys, WHSystem: whSys},
 			}
 		},
 	}

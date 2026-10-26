@@ -633,5 +633,22 @@
   "stock_panel.products": "Продукти",
   "stock_panel.units": "Единици",
   "stock_panel.empty_title": "Клетката е празна",
-  "stock_panel.empty_description": "В тази клетка няма отчетена наличност."
+  "stock_panel.empty_description": "В тази клетка няма отчетена наличност.",
+  "nav_units": "Единици в склада",
+  "units.title": "Единици в склада",
+  "units.description": "Всички баркодове от склада: налични и излезли с поръчка, услуга или друго. Излезлите не се броят за наличност.",
+  "units.forbidden": "Нямате достъп до единиците в склада.",
+  "units.warehouse": "Склад",
+  "units.primary": "основен",
+  "units.empty": "Няма единици от този склад.",
+  "units.columns.barcode": "Баркод",
+  "units.columns.product": "Продукт",
+  "units.columns.state": "Състояние",
+  "units.columns.source": "Източник",
+  "units.columns.order": "Поръчка",
+  "units.columns.service": "Услуга / клиент",
+  "units.columns.updated_at": "Последна промяна",
+  "units.columns.created_at": "Създаден",
+  "units.state.in": "В склада",
+  "units.state.left": "Излязъл"
 }

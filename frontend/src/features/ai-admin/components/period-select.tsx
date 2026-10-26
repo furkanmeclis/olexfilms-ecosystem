@@ -20,16 +20,16 @@ export function PeriodSelect({
   value: string;
   onChange: (period: string) => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t, format } = useLocale();
   const periods = useMemo(() => recentPeriods(12), []);
   const label = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat(locale, {
+    const fmt = new Intl.DateTimeFormat(format.intlLocale, {
       year: "numeric",
       month: "long",
       timeZone: "UTC",
     });
     return (period: string) => fmt.format(new Date(`${period}-01T00:00:00Z`));
-  }, [locale]);
+  }, [format.intlLocale]);
 
   return (
     <Select value={value} onValueChange={onChange}>

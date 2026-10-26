@@ -6,6 +6,15 @@ import { platformRequest } from "@/lib/api/platform-request";
 
 type Schemas = components["schemas"];
 
+/** TEC-1006: a unit of the warehouse unit list (in it or gone). */
+export type WarehouseTraceUnit = Schemas["StockWarehouseUnit"];
+/** TEC-1006: the order / service / customer trace of a unit. */
+export type UnitTrace = Schemas["StockUnitTrace"];
+export type WarehouseUnitListQuery = Record<
+  string,
+  string | number | undefined
+>;
+
 export type Warehouse = Schemas["Warehouse"];
 export type WarehouseInput = Schemas["WarehouseInput"];
 export type WarehousePatch = Schemas["WarehousePatch"];
@@ -143,6 +152,15 @@ export function locationLabelsPath(opts: {
  * (K14). Writes go through platformRequest (step-up retry).
  */
 export const warehouseService = {
+  // --- Warehouse units (TEC-1006) ----------------------------------------
+  listWarehouseUnits(warehouseUuid: string, params: WarehouseUnitListQuery) {
+    return platformRequest<Page<WarehouseTraceUnit>>(
+      "GET",
+      `/v1/stock/warehouses/${encodeURIComponent(warehouseUuid)}/units`,
+      { query: params },
+    );
+  },
+
   // --- Tree (TEC-201) -----------------------------------------------------
   listWarehouses() {
     return platformRequest<{ items: Warehouse[] }>(
@@ -580,6 +598,8 @@ export const warehouseKeys = {
   entry: (uuid: string) => ["warehouse", "entry", uuid] as const,
   batches: (params: BatchListQuery) =>
     ["warehouse", "batches", params] as const,
+  units: (warehouseUuid: string, params: WarehouseUnitListQuery) =>
+    ["warehouse", "units", warehouseUuid, params] as const,
   transfers: (params: TransferListQuery) =>
     ["warehouse", "transfers", params] as const,
   transfer: (uuid: string) => ["warehouse", "transfer", uuid] as const,

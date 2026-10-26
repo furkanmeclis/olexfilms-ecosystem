@@ -340,6 +340,7 @@ type Querier interface {
 	CountUsersWithRole(ctx context.Context, roleSlug string) (int64, error)
 	CountVisibleAnnouncements(ctx context.Context, arg CountVisibleAnnouncementsParams) (int64, error)
 	CountWarehouseMembers(ctx context.Context, arg CountWarehouseMembersParams) (int64, error)
+	CountWarehouseTraceUnits(ctx context.Context, arg CountWarehouseTraceUnitsParams) (int64, error)
 	CountWarehouseTransferLines(ctx context.Context, transferID int64) (int64, error)
 	CountWarehouseTransfers(ctx context.Context, arg CountWarehouseTransfersParams) (int64, error)
 	CountWarrantiesInScope(ctx context.Context, arg CountWarrantiesInScopeParams) (int64, error)
@@ -1223,6 +1224,8 @@ type Querier interface {
 	// dealer or distributor of a brand. Only the showcase columns: no tax id,
 	// account, members or settings.
 	GetPublicDealerBySlug(ctx context.Context, arg GetPublicDealerBySlugParams) (GetPublicDealerBySlugRow, error)
+	// TEC-1005: the public service summary (no customer data).
+	GetPublicService(ctx context.Context, arg GetPublicServiceParams) (GetPublicServiceRow, error)
 	// Public warranty lookup (TEC-189): only the fields the public page shows.
 	// No users join: the holder's personal data is never read, so an anonymized
 	// customer's warranty answers the same way (K19). Vehicle fields come from
@@ -1363,6 +1366,8 @@ type Querier interface {
 	// TEC-223: the price a unit was sold at to buyer by seller (its latest
 	// order line with the unit assigned, the order not cancelled), in currency.
 	GetUnitLastOrderPrice(ctx context.Context, arg GetUnitLastOrderPriceParams) (GetUnitLastOrderPriceRow, error)
+	// TEC-1006: the warehouse-layer trace of a unit (view unit_traces).
+	GetUnitTrace(ctx context.Context, unitID int64) (GetUnitTraceRow, error)
 	GetUsedOAuthCodeFamily(ctx context.Context, codeHash string) (pgtype.UUID, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
@@ -2417,6 +2422,8 @@ type Querier interface {
 	// distributors for the public sitemap. Same filters as
 	// GetPublicDealerBySlug; code and last change only.
 	ListPublicDealerCodes(ctx context.Context, arg ListPublicDealerCodesParams) ([]ListPublicDealerCodesRow, error)
+	// TEC-1005: every warranty of a public service, whatever its status.
+	ListPublicServiceWarranties(ctx context.Context, arg ListPublicServiceWarrantiesParams) ([]ListPublicServiceWarrantiesRow, error)
 	// Nearby dealers list: which of the given organizations of the brand serve
 	// a published showcase, with the live Google rating and its source and the
 	// rating frozen in the snapshot (TEC-469: a manual rating under approval
@@ -2694,6 +2701,8 @@ type Querier interface {
 	ListTransferSiblings(ctx context.Context, arg ListTransferSiblingsParams) ([]Organization, error)
 	ListUnitCurrentStatesByHolder(ctx context.Context, arg ListUnitCurrentStatesByHolderParams) ([]ListUnitCurrentStatesByHolderRow, error)
 	ListUnitCurrentStatesByUnitIDs(ctx context.Context, ids []int64) ([]UnitCurrentState, error)
+	ListUnitTraceOrders(ctx context.Context, unitID int64) ([]ListUnitTraceOrdersRow, error)
+	ListUnitTraceServices(ctx context.Context, unitID int64) ([]ListUnitTraceServicesRow, error)
 	// Brand-independent barcode lookup for the warehouse scanner (K20): the
 	// caller narrows the result by scope.
 	ListUnitsByBarcode(ctx context.Context, barcode string) ([]Unit, error)
@@ -2750,6 +2759,10 @@ type Querier interface {
 	// Scope.
 	// Typed locations of a warehouse, optionally one room.
 	ListWarehouseScopeLocationIDs(ctx context.Context, arg ListWarehouseScopeLocationIDsParams) ([]int64, error)
+	// TEC-1006: every unit (any brand, K20) whose origin is the warehouse, in it or gone (state
+	// in: placed in one of its locations; left: anywhere else). Sort:
+	// docs/list-contract.md, keys from stock usecase WarehouseUnitSort.
+	ListWarehouseTraceUnits(ctx context.Context, arg ListWarehouseTraceUnitsParams) ([]ListWarehouseTraceUnitsRow, error)
 	// The lines of the given transfers with their unit, product and locations.
 	ListWarehouseTransferExportLines(ctx context.Context, arg ListWarehouseTransferExportLinesParams) ([]ListWarehouseTransferExportLinesRow, error)
 	ListWarehouseTransferLines(ctx context.Context, transferID int64) ([]WarehouseTransferLine, error)
@@ -3033,6 +3046,8 @@ type Querier interface {
 	MigratorCarModelByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorCarModelByUUIDRow, error)
 	MigratorCarModelIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
 	MigratorCategoryIDByUUID(ctx context.Context, arg MigratorCategoryIDByUUIDParams) (int64, error)
+	// TEC-1006: one primary warehouse per organization.
+	MigratorClearOtherPrimaryWarehouses(ctx context.Context, arg MigratorClearOtherPrimaryWarehousesParams) (int64, error)
 	// Whether another live user already holds the e-mail or the phone.
 	MigratorContactTaken(ctx context.Context, arg MigratorContactTakenParams) (MigratorContactTakenRow, error)
 	// Pieces of the product the migrated ownership puts at the location: serial
@@ -3145,6 +3160,9 @@ type Querier interface {
 	MigratorMeasurementDeviceBySerial(ctx context.Context, arg MigratorMeasurementDeviceBySerialParams) (MigratorMeasurementDeviceBySerialRow, error)
 	MigratorMeasurementDeviceByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorMeasurementDeviceByUUIDRow, error)
 	MigratorMeasurementResultIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	// TEC-1003: the live organization a merged one ended up in (follows
+	// merged_into_id); the organization itself when it is not merged.
+	MigratorMergedOrganizationUUID(ctx context.Context, argUuid uuid.UUID) (uuid.UUID, error)
 	MigratorMoveVehicleOwner(ctx context.Context, arg MigratorMoveVehicleOwnerParams) (int64, error)
 	// TEC-261: migrator step 9 (orders). Written only by cmd/migrator inside a
 	// step transaction. Legacy orders are history: no status history row, no
@@ -3160,6 +3178,7 @@ type Querier interface {
 	// outbox: the import starts no warranty and sends no notification.
 	MigratorOrganizationByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorOrganizationByUUIDRow, error)
 	MigratorOrganizationIDByUUID(ctx context.Context, argUuid uuid.UUID) (int64, error)
+	MigratorOrganizationStateByUUID(ctx context.Context, argUuid uuid.UUID) (MigratorOrganizationStateByUUIDRow, error)
 	MigratorOrganizationUUIDByID(ctx context.Context, id int64) (uuid.UUID, error)
 	MigratorProductForUnit(ctx context.Context, arg MigratorProductForUnitParams) (MigratorProductForUnitRow, error)
 	MigratorProductIDByUUID(ctx context.Context, arg MigratorProductIDByUUIDParams) (int64, error)
@@ -3183,6 +3202,7 @@ type Querier interface {
 	// A unit of the brand with its product and the category's part keys.
 	MigratorServiceUnit(ctx context.Context, arg MigratorServiceUnitParams) (MigratorServiceUnitRow, error)
 	MigratorSetCarBrandLogo(ctx context.Context, arg MigratorSetCarBrandLogoParams) error
+	MigratorSetPrimaryWarehouse(ctx context.Context, arg MigratorSetPrimaryWarehouseParams) (int64, error)
 	// The legacy status of a service that is not final yet. A final status is
 	// written after the items, which are locked afterwards.
 	MigratorSetServiceStatus(ctx context.Context, arg MigratorSetServiceStatusParams) error
@@ -3195,10 +3215,17 @@ type Querier interface {
 	MigratorShortURLTokenTaken(ctx context.Context, token string) (bool, error)
 	// The migrated service of a legacy transfer, with its vehicle's owner now.
 	MigratorTransferService(ctx context.Context, argUuid uuid.UUID) (MigratorTransferServiceRow, error)
+	MigratorUnitBarcodesIn(ctx context.Context, arg MigratorUnitBarcodesInParams) ([]string, error)
 	MigratorUnitByUUID(ctx context.Context, arg MigratorUnitByUUIDParams) (MigratorUnitByUUIDRow, error)
 	// TEC-258: a movement this application wrote (not an imported legacy one).
 	MigratorUnitHasLedgerMovements(ctx context.Context, unitID int64) (bool, error)
 	MigratorUnitHasMovements(ctx context.Context, unitID int64) (bool, error)
+	// TEC-1006: units of the brand by current owner type ('' : none) and status.
+	MigratorUnitOwnershipCounts(ctx context.Context, brandID int64) ([]MigratorUnitOwnershipCountsRow, error)
+	// TEC-1006: serial units used in a completed service that have no owner
+	// (the legacy ledger could not name the service); the latest completed
+	// service per unit.
+	MigratorUnitsUsedWithoutOwner(ctx context.Context, brandID int64) ([]MigratorUnitsUsedWithoutOwnerRow, error)
 	// TEC-258: units of the brand whose ownership was written without a movement
 	// (TEC-257): they need an opening movement before the projection rebuild.
 	MigratorUnitsWithoutMovements(ctx context.Context, brandID int64) ([]int64, error)
@@ -3388,6 +3415,11 @@ type Querier interface {
 	// Success: phone gets the E.164 form and phone_raw is cleared. A phone
 	// written by the API in the meantime is kept (only phone_raw is cleared).
 	ResolveOrganizationRawPhone(ctx context.Context, arg ResolveOrganizationRawPhoneParams) (int64, error)
+	// TEC-1005: the service of a public code /warranty/{code}: its service
+	// number (printed warranty cards, TEC-1004), else a warranty public code of
+	// it (the per-warranty links before TEC-1005), else a legacy alias. Only a
+	// service with a warranty has a public page.
+	ResolvePublicServiceID(ctx context.Context, arg ResolvePublicServiceIDParams) (int64, error)
 	ResolveStockCountLine(ctx context.Context, arg ResolveStockCountLineParams) (StockCountLine, error)
 	ResolveStockForecastThresholdProduct(ctx context.Context, arg ResolveStockForecastThresholdProductParams) (ResolveStockForecastThresholdProductRow, error)
 	// The most specific territory covering an address (district > province >
@@ -3448,6 +3480,11 @@ type Querier interface {
 	ServiceActivityCounts(ctx context.Context, arg ServiceActivityCountsParams) (ServiceActivityCountsRow, error)
 	ServiceActivityTopProducts(ctx context.Context, arg ServiceActivityTopProductsParams) ([]ServiceActivityTopProductsRow, error)
 	ServiceNoExists(ctx context.Context, serviceNo string) (bool, error)
+	// TEC-1004: a hand-entered service number must not be another service's
+	// number, nor a warranty public code or alias of another service (the
+	// public page /warranty/{no} resolves all three). except_service_id 0
+	// checks a new service.
+	ServiceNoTaken(ctx context.Context, arg ServiceNoTakenParams) (bool, error)
 	// publish_at is stamped with NOW() when a row is published without one.
 	SetAnnouncementStatus(ctx context.Context, arg SetAnnouncementStatusParams) (Announcement, error)
 	SetAppSettingsLogo(ctx context.Context, logoObjectKey pgtype.Text) (AppSetting, error)
@@ -3534,6 +3571,7 @@ type Querier interface {
 	// Organization Google Business link (decision 7).
 	SetOrganizationGoogleBusinessURL(ctx context.Context, arg SetOrganizationGoogleBusinessURLParams) (Organization, error)
 	SetOrganizationLogo(ctx context.Context, arg SetOrganizationLogoParams) (Organization, error)
+	SetOrganizationServicePointLogo(ctx context.Context, arg SetOrganizationServicePointLogoParams) (Organization, error)
 	// TEC-367: batch reorder (PUT /v1/platform/plate-formats/order).
 	SetPlateFormatSortOrder(ctx context.Context, arg SetPlateFormatSortOrderParams) error
 	// TEC-212: bulk engine adapter (one product, logged + undoable).
@@ -3772,6 +3810,8 @@ type Querier interface {
 	UpdateOrganizationLetterhead(ctx context.Context, arg UpdateOrganizationLetterheadParams) (Organization, error)
 	UpdateOrganizationParent(ctx context.Context, arg UpdateOrganizationParentParams) (Organization, error)
 	UpdateOrganizationPlatform(ctx context.Context, arg UpdateOrganizationPlatformParams) (Organization, error)
+	// TEC-1003: the center's service point (customer-facing name and switch).
+	UpdateOrganizationServicePoint(ctx context.Context, arg UpdateOrganizationServicePointParams) (Organization, error)
 	UpdatePartConsumptionExpectation(ctx context.Context, arg UpdatePartConsumptionExpectationParams) (PartConsumptionExpectation, error)
 	UpdatePerformanceTarget(ctx context.Context, arg UpdatePerformanceTargetParams) (PerformanceTarget, error)
 	UpdatePhotoAngle(ctx context.Context, arg UpdatePhotoAngleParams) (PhotoAngle, error)
@@ -3796,6 +3836,9 @@ type Querier interface {
 	UpdateServiceCatalogItem(ctx context.Context, arg UpdateServiceCatalogItemParams) (ServiceCatalogItem, error)
 	UpdateServiceImage(ctx context.Context, arg UpdateServiceImageParams) (ServiceImage, error)
 	UpdateServiceItem(ctx context.Context, arg UpdateServiceItemParams) (ServiceItem, error)
+	// TEC-1004: the number of a service that is not completed or cancelled
+	// (the caller has locked the row and checked the status).
+	UpdateServiceNo(ctx context.Context, arg UpdateServiceNoParams) (Service, error)
 	// Moves the service to status (not completed / cancelled, which have their
 	// own queries). The caller has locked the row and validated the transition.
 	UpdateServiceStatus(ctx context.Context, arg UpdateServiceStatusParams) (Service, error)

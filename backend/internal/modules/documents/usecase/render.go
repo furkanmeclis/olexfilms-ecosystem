@@ -15,6 +15,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/documents/model"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/queue"
@@ -205,6 +206,9 @@ func (s *Service) renderRow(ctx context.Context, row db.DocumentRender) ([]byte,
 	if err != nil {
 		return nil, err
 	}
+	if model.CustomerFacing(row.Kind) {
+		org = orgbrand.ForCustomer(org)
+	}
 	vars := s.organizationVars(ctx, org)
 	for k, v := range src.Vars {
 		vars[strings.ToLower(k)] = v
@@ -239,6 +243,9 @@ func (s *Service) RenderSource(ctx context.Context, kind, sourceID, locale strin
 	org, err := s.q.GetOrganizationByID(ctx, src.OrganizationID)
 	if err != nil {
 		return nil, notFound(err)
+	}
+	if model.CustomerFacing(kind) {
+		org = orgbrand.ForCustomer(org)
 	}
 	tpl, err := s.resolveTemplate(ctx, kind, src.BrandID, lang)
 	if err != nil {

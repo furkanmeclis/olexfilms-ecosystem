@@ -1032,7 +1032,7 @@ SELECT
     q.id, q.uuid, q.organization_id, q.brand_id, q.lead_id, q.quote_no, q.currency,
     q.subtotal, q.discount_total, q.tax_total, q.grand_total, q.valid_until,
     q.status, q.public_token, q.created_at, q.updated_at,
-    o.name AS organization_name
+    org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name
 FROM quotes q
 JOIN organizations o ON o.id = q.organization_id
 WHERE q.public_token = $1
@@ -1100,7 +1100,7 @@ SELECT
     u.phone_e164 AS customer_phone_e164,
     COALESCE(NULLIF(u.locale, ''), NULLIF(o.locale, ''), NULLIF(c.locale, ''), 'tr')::text AS language,
     COALESCE(NULLIF(l.candidate_contact_name, ''), NULLIF(l.candidate_company_name, ''), NULLIF(u.name || ' ' || u.surname, ' '), 'Müşteri')::text AS recipient_name,
-    o.name AS organization_name
+    org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name
 FROM quotes q
 JOIN leads l ON l.id = q.lead_id
 JOIN organizations o ON o.id = q.organization_id

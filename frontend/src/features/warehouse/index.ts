@@ -4,6 +4,7 @@ export { ScanPage } from "./components/scan-page";
 export { StockEntriesPage } from "./components/stock-entries-page";
 export { StockEntryDetailPage } from "./components/stock-entry-detail-page";
 export { WarehouseHomePage } from "./components/warehouse-home-page";
+export { WarehouseUnitsPage } from "./components/warehouse-units-page";
 // TEC-232 (slice 2)
 export { CountDetailPage } from "./components/count-detail-page";
 export { CountsPage } from "./components/counts-page";

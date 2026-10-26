@@ -420,41 +420,8 @@ func (h *Handler) TenantPatchSettings(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) TenantUploadLogo(w http.ResponseWriter, r *http.Request) {
 	scope := orgctx.MustScope(r.Context())
-	// Cap the whole body: ParseMultipartForm only bounds memory and spills
-	// the rest to temp files.
-	r.Body = http.MaxBytesReader(w, r.Body, (3<<20)+(1<<20))
-	if err := r.ParseMultipartForm(3 << 20); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
-		return
-	}
-	file, header, err := r.FormFile("logo")
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, "logo is required")
-		return
-	}
-	defer func() { _ = file.Close() }()
-	head := make([]byte, 512)
-	n, _ := io.ReadFull(file, head)
-	mime, err := storage.DetectLogoMIME(header.Header.Get("Content-Type"), head[:n])
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, err.Error())
-		return
-	}
-	if err := storage.ValidateLogoSize(header.Size); err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, err.Error())
-		return
-	}
-	ext, err := storage.LogoExtForMIME(mime)
-	if err != nil {
-		response.BadRequest(w, r, response.CodeValidationError, err.Error())
-		return
-	}
-	key := storage.TenantLogoObjectKey(scope.UUID, ext)
-	body := io.MultiReader(strings.NewReader(string(head[:n])), file)
-	if err := h.store.Upload(r.Context(), storage.File{
-		Body: body, Size: header.Size, ContentType: mime, Filename: header.Filename,
-	}, key); err != nil {
-		response.InternalErr(w, r, err, "logo upload failed")
+	key, ok := h.uploadLogo(w, r, func(ext string) string { return storage.TenantLogoObjectKey(scope.UUID, ext) })
+	if !ok {
 		return
 	}
 	if _, err := h.svc.SetLogo(r.Context(), scope.UUID, key); err != nil {
@@ -467,6 +434,116 @@ func (h *Handler) TenantUploadLogo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, r, http.StatusOK, s)
+}
+
+// uploadLogo reads the "logo" form file, checks it and stores it under the
+// key keyFn builds from its extension. It writes the error response itself.
+func (h *Handler) uploadLogo(w http.ResponseWriter, r *http.Request, keyFn func(ext string) string) (string, bool) {
+	// Cap the whole body: ParseMultipartForm only bounds memory and spills
+	// the rest to temp files.
+	r.Body = http.MaxBytesReader(w, r.Body, (3<<20)+(1<<20))
+	if err := r.ParseMultipartForm(3 << 20); err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "invalid multipart form")
+		return "", false
+	}
+	file, header, err := r.FormFile("logo")
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "logo is required")
+		return "", false
+	}
+	defer func() { _ = file.Close() }()
+	head := make([]byte, 512)
+	n, _ := io.ReadFull(file, head)
+	mime, err := storage.DetectLogoMIME(header.Header.Get("Content-Type"), head[:n])
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, err.Error())
+		return "", false
+	}
+	if err := storage.ValidateLogoSize(header.Size); err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, err.Error())
+		return "", false
+	}
+	ext, err := storage.LogoExtForMIME(mime)
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, err.Error())
+		return "", false
+	}
+	key := keyFn(ext)
+	body := io.MultiReader(strings.NewReader(string(head[:n])), file)
+	if err := h.store.Upload(r.Context(), storage.File{
+		Body: body, Size: header.Size, ContentType: mime, Filename: header.Filename,
+	}, key); err != nil {
+		response.InternalErr(w, r, err, "logo upload failed")
+		return "", false
+	}
+	return key, true
+}
+
+// TenantUploadServicePointLogo stores the center's service point logo
+// (TEC-1003).
+func (h *Handler) TenantUploadServicePointLogo(w http.ResponseWriter, r *http.Request) {
+	scope := orgctx.MustScope(r.Context())
+	if scope.OrgType != orgusecase.TypeCenter {
+		response.BadRequest(w, r, response.CodeValidationError, "only the brand center has a service point")
+		return
+	}
+	key, ok := h.uploadLogo(w, r, func(ext string) string { return storage.ServicePointLogoObjectKey(scope.UUID, ext) })
+	if !ok {
+		return
+	}
+	if err := h.svc.SetServicePointLogo(r.Context(), scope.UUID, key); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	s, err := h.svc.GetTenantSettings(r.Context(), scope.InternalID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, s)
+}
+
+// TenantDeleteServicePointLogo clears the service point logo (the
+// organization logo shows again). A logo copied from a merged organization
+// (AFM Florya) is not deleted from storage.
+func (h *Handler) TenantDeleteServicePointLogo(w http.ResponseWriter, r *http.Request) {
+	scope := orgctx.MustScope(r.Context())
+	if key, err := h.svc.ServicePointLogoObjectKey(r.Context(), scope.UUID); err == nil &&
+		strings.HasPrefix(key, "tenants/"+scope.UUID.String()+"/") {
+		_ = h.store.Delete(r.Context(), key)
+	}
+	if err := h.svc.SetServicePointLogo(r.Context(), scope.UUID, ""); err != nil {
+		writeError(w, r, err)
+		return
+	}
+	s, err := h.svc.GetTenantSettings(r.Context(), scope.InternalID)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	response.JSON(w, r, http.StatusOK, s)
+}
+
+// PublicStreamServicePointLogo serves a center's service point logo.
+func (h *Handler) PublicStreamServicePointLogo(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(r.PathValue("uuid"))
+	if err != nil {
+		response.BadRequest(w, r, response.CodeValidationError, "organization uuid is invalid")
+		return
+	}
+	key, err := h.svc.ServicePointLogoObjectKey(r.Context(), id)
+	if err != nil {
+		writeError(w, r, err)
+		return
+	}
+	rc, _, err := h.store.Download(r.Context(), key)
+	if err != nil {
+		response.NotFound(w, r, "logo not found")
+		return
+	}
+	defer func() { _ = rc.Close() }()
+	w.Header().Set("Content-Type", storage.MIMEFromLogoKey(key))
+	_, _ = io.Copy(w, rc)
 }
 
 func (h *Handler) TenantDeleteLogo(w http.ResponseWriter, r *http.Request) {

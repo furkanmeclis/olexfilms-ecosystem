@@ -33,6 +33,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/labels"
+	stockmodel "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/model"
 	stockusecase "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/usecase"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
@@ -134,6 +135,8 @@ type ScanUnit struct {
 	QuantityOnHand  *int32            `json:"quantity_on_hand"`
 	Holder          *ScanOrganization `json:"holder"`
 	Location        *ScanLocation     `json:"location"`
+	// Trace (TEC-1006): origin warehouse, orders, services and customers.
+	Trace *stockmodel.UnitTrace `json:"trace"`
 }
 
 // ScanResult is the resolved entity: Type names which of Location, Unit
@@ -402,13 +405,13 @@ func (s *Scanner) unit(ctx context.Context, c ScanCaller, match string, candidat
 		if err != nil {
 			return ScanResult{}, false, err
 		}
-		res, err := s.unitResult(ctx, ru, match)
+		res, err := s.unitResult(ctx, ru, f, match)
 		return res, err == nil, err
 	}
 	return ScanResult{}, false, nil
 }
 
-func (s *Scanner) unitResult(ctx context.Context, ru stockusecase.ReachedUnit, match string) (ScanResult, error) {
+func (s *Scanner) unitResult(ctx context.Context, ru stockusecase.ReachedUnit, f scopefilter.Filter, match string) (ScanResult, error) {
 	u := ru.Unit
 	p, err := s.q.GetProductByIDAnyBrand(ctx, u.ProductID)
 	if err != nil {
@@ -464,6 +467,11 @@ func (s *Scanner) unitResult(ctx context.Context, ru stockusecase.ReachedUnit, m
 			}
 		}
 	}
+	trace, err := s.stock.Trace(ctx, f, u)
+	if err != nil {
+		return ScanResult{}, err
+	}
+	out.Trace = trace
 	return ScanResult{Type: ScanTypeUnit, MatchedBy: match, Code: u.Barcode, Unit: &out, Product: &prod}, nil
 }
 

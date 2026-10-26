@@ -482,7 +482,7 @@ func (a *DataExportAdapter) DocumentHTML(ds ioengine.Dataset, locale string, lh 
 		b.WriteString(`<tr><th>` + esc(t(line.LabelKey)) + `</th><td>` + esc(line.Value) + `</td></tr>`)
 	}
 	b.WriteString(`<tr><th>` + esc(t("export.generated_at")) + `</th><td>` +
-		esc(pdfrender.IssuedAt(doc.ExportedAt, zone)) + `</td></tr></table>`)
+		esc(pdfrender.IssuedAt(doc.ExportedAt, zone, i18n.Normalize(locale))) + `</td></tr></table>`)
 	for _, sec := range dataSections(doc, loc) {
 		b.WriteString(`<h2>` + esc(t(sec.key)) + `</h2>`)
 		if len(sec.records) == 0 {

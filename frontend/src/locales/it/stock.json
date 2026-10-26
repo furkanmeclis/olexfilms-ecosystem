@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "L'immagine è troppo grande; usane una sotto circa 150 KB.",
   "label_templates.errors.generic": "Impossibile salvare il modello.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Un altro modello ha già questo nome.",
-  "label_templates.errors.VALIDATION_ERROR": "Alcuni campi non sono validi; controlla il modulo."
+  "label_templates.errors.VALIDATION_ERROR": "Alcuni campi non sono validi; controlla il modulo.",
+  "trace.title": "Tracciabilità",
+  "trace.origin": "Magazzino di origine",
+  "trace.orders": "Ordini",
+  "trace.services": "Servizi",
+  "trace.no_order": "Non spedito con un ordine.",
+  "trace.no_order_unknown": "Nessun ordine; origine sconosciuta (import storico).",
+  "trace.no_service": "Non usato in un servizio.",
+  "trace.source.order": "Con ordine",
+  "trace.source.stock": "In stock",
+  "trace.source.unknown": "Origine sconosciuta"
 }

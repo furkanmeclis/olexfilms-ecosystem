@@ -29,6 +29,7 @@ describe("tenant nav: warehouse (TEC-231)", () => {
       routes.tenant.warehouse.locations("acme"),
       routes.tenant.warehouse.scan("acme"),
       routes.tenant.warehouse.entries("acme"),
+      routes.tenant.warehouse.units("acme"),
       routes.tenant.warehouse.barcodes("acme"),
       routes.tenant.warehouse.transfers("acme"),
       routes.tenant.warehouse.counts("acme"),
@@ -47,6 +48,15 @@ describe("tenant nav: warehouse (TEC-231)", () => {
       expect(ids).toContain("warehouse-counts");
       expect(ids).toContain("warehouse-end-of-day");
     }
+  });
+
+  it("units (TEC-1006): center and distributor, with stock.read", () => {
+    const both = [Permission.WarehouseRead, Permission.StockRead];
+    expect(visibleIds(both, "center")).toContain("warehouse-units");
+    expect(visibleIds(both, "distributor")).toContain("warehouse-units");
+    expect(visibleIds([Permission.WarehouseRead], "center")).not.toContain(
+      "warehouse-units",
+    );
   });
 
   it("barcodes: center only, with stock.read", () => {

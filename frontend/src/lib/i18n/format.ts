@@ -9,12 +9,20 @@
  * these plain functions are for code outside React and for tests.
  */
 import { i18nConfig, type AppLocale } from "@/config/i18n";
+import { intlLocale, type DigitStyle } from "@/lib/i18n/digits";
 
 export type FormatContext = {
   locale: AppLocale;
   /** IANA name, e.g. "Asia/Dubai". Defaults to Europe/Istanbul. */
   timeZone?: string;
+  /** Arabic digits (TEC-1009): Arabic-Indic by default, Latin by choice. */
+  digits?: DigitStyle;
 };
+
+/** The Intl locale tag of a context (numbering system for Arabic). */
+function tag(ctx: FormatContext): string {
+  return intlLocale(ctx.locale, ctx.digits);
+}
 
 export type DateInput = Date | string | number | null | undefined;
 
@@ -68,11 +76,12 @@ function dateTimeFormat(
   options: Intl.DateTimeFormatOptions,
 ) {
   const opts = { ...options, timeZone: zoneOf(ctx) };
+  const locale = tag(ctx);
   return cached(
     "dt",
-    ctx.locale,
+    locale,
     opts,
-    () => new Intl.DateTimeFormat(ctx.locale, opts),
+    () => new Intl.DateTimeFormat(locale, opts),
   );
 }
 
@@ -155,10 +164,11 @@ export function formatRelative(
   const base = toDate(now);
   if (!d || !base) return EMPTY_VALUE;
   const diff = (d.getTime() - base.getTime()) / 1000;
-  let rtf = relativeCache.get(ctx.locale);
+  const locale = tag(ctx);
+  let rtf = relativeCache.get(locale);
   if (!rtf) {
-    rtf = new Intl.RelativeTimeFormat(ctx.locale, { numeric: "auto" });
-    relativeCache.set(ctx.locale, rtf);
+    rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+    relativeCache.set(locale, rtf);
   }
   for (const [unit, seconds] of RELATIVE_UNITS) {
     if (Math.abs(diff) >= seconds || unit === "second") {
@@ -169,11 +179,12 @@ export function formatRelative(
 }
 
 function numberFormat(ctx: FormatContext, options: Intl.NumberFormatOptions) {
+  const locale = tag(ctx);
   return cached(
     "nf",
-    ctx.locale,
+    locale,
     options,
-    () => new Intl.NumberFormat(ctx.locale, options),
+    () => new Intl.NumberFormat(locale, options),
   );
 }
 
@@ -258,6 +269,9 @@ export function timeZoneOffsetLabel(
 export type Formatter = {
   locale: AppLocale;
   timeZone: string;
+  digits: DigitStyle;
+  /** Locale tag for a direct Intl call (Arabic numbering system). */
+  intlLocale: string;
   date: (value: DateInput, style?: DateStyle) => string;
   time: (value: DateInput, options?: { seconds?: boolean }) => string;
   dateTime: (
@@ -280,10 +294,16 @@ export type Formatter = {
 
 /** Binds locale and time zone once (LocaleProvider exposes it). */
 export function createFormatter(ctx: FormatContext): Formatter {
-  const c: FormatContext = { locale: ctx.locale, timeZone: zoneOf(ctx) };
+  const c: FormatContext = {
+    locale: ctx.locale,
+    timeZone: zoneOf(ctx),
+    digits: ctx.digits ?? "arab",
+  };
   return {
     locale: c.locale,
     timeZone: c.timeZone as string,
+    digits: c.digits as DigitStyle,
+    intlLocale: tag(c),
     date: (v, style) => formatDate(v, c, style),
     time: (v, o) => formatTime(v, c, o),
     dateTime: (v, o) => formatDateTime(v, c, o),

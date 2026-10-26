@@ -633,5 +633,22 @@
   "stock_panel.products": "Προϊόντα",
   "stock_panel.units": "Μονάδες",
   "stock_panel.empty_title": "Η θέση είναι κενή",
-  "stock_panel.empty_description": "Δεν υπάρχει καταγεγραμμένο απόθεμα σε αυτή τη θέση."
+  "stock_panel.empty_description": "Δεν υπάρχει καταγεγραμμένο απόθεμα σε αυτή τη θέση.",
+  "nav_units": "Μονάδες αποθήκης",
+  "units.title": "Μονάδες αποθήκης",
+  "units.description": "Όλα τα barcode της αποθήκης: όσα υπάρχουν και όσα έφυγαν με παραγγελία, υπηρεσία κ.λπ. Όσα έφυγαν δεν μετρούν στο απόθεμα.",
+  "units.forbidden": "Δεν έχετε πρόσβαση στις μονάδες αποθήκης.",
+  "units.warehouse": "Αποθήκη",
+  "units.primary": "κύρια",
+  "units.empty": "Καμία μονάδα από αυτή την αποθήκη.",
+  "units.columns.barcode": "Barcode",
+  "units.columns.product": "Προϊόν",
+  "units.columns.state": "Κατάσταση",
+  "units.columns.source": "Προέλευση",
+  "units.columns.order": "Παραγγελία",
+  "units.columns.service": "Υπηρεσία / πελάτης",
+  "units.columns.updated_at": "Τελευταία αλλαγή",
+  "units.columns.created_at": "Δημιουργία",
+  "units.state.in": "Στην αποθήκη",
+  "units.state.left": "Έφυγε"
 }

@@ -839,6 +839,65 @@ func grants(base map[string]Scope, extra map[string]Scope) map[string]Scope {
 	return out
 }
 
+// dealerStaffGrants is the dealer_staff package; center_service (TEC-1003,
+// 000152) is the same package at the center.
+var dealerStaffGrants = grants(baseGrants, map[string]Scope{
+	PermVehicleCatalogRead: ScopeManaged,
+	PermCatalogRead:        ScopeManaged,
+	PermServicesRead:       ScopeManaged,
+	PermServicesWrite:      ScopeOwn,
+	PermCustomersRead:      ScopeManaged,
+	PermCustomersWrite:     ScopeOwn,
+	PermVehiclesRead:       ScopeManaged,
+	PermVehiclesWrite:      ScopeOwn,
+	PermOrdersRead:         ScopeManaged,
+	PermOrdersReceive:      ScopeManaged,
+	PermServicesComplete:   ScopeOwn,
+	PermWarrantiesRead:     ScopeManaged,
+	PermVehiclesTransfer:   ScopeOwn,
+	PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
+	PermContractsRead:      ScopeManaged, // TEC-285 (000083)
+	PermContractsWrite:     ScopeOwn,
+	PermMeasurementsRead:   ScopeManaged, // TEC-293 (000085)
+	PermMeasurementsLink:   ScopeManaged, // TEC-293 (000085)
+	// TEC-329 (000086).
+	PermAnnouncementsRead: ScopeManaged,
+	PermLibraryRead:       ScopeManaged,
+	// TEC-312 (000087).
+	PermLeadsRead:   ScopeManaged,
+	PermLeadsWrite:  ScopeManaged,
+	PermQuotesRead:  ScopeManaged,
+	PermQuotesWrite: ScopeManaged,
+	// TEC-322 (000090).
+	PermAppointmentsRead:  ScopeManaged,
+	PermAppointmentsWrite: ScopeManaged,
+	// TEC-350 (000091).
+	PermReviewsRead: ScopeManaged,
+	// TEC-334 (000092).
+	PermWarrantyClaimsRead:  ScopeManaged,
+	PermWarrantyClaimsWrite: ScopeManaged,
+	// TEC-383 (000101).
+	PermAIUse:            ScopeOwn,
+	PermAIActionsConfirm: ScopeOwn,
+	// TEC-472 (000112): reads linked fleets and runs bulk plans and
+	// intake; opening fleets is the owner's.
+	PermFleetsRead: ScopeManaged,
+	PermFleetsPlan: ScopeManaged,
+	// TEC-466 (000113): reads the showcase, the owner edits it.
+	PermShowcaseRead: ScopeManaged,
+	// TEC-483 (000115).
+	PermStockForecastRead: ScopeManaged,
+})
+
+// without copies g minus the given permissions.
+func without(g map[string]Scope, slugs ...string) map[string]Scope {
+	out := grants(g, nil)
+	for _, s := range slugs {
+		delete(out, s)
+	}
+	return out
+}
+
 var baseGrants = map[string]Scope{
 	PermAuthSession:         ScopeOwn,
 	PermNotificationsRead:   ScopeOwn,
@@ -1092,6 +1151,15 @@ var Roles = []RoleDef{
 			PermShowcaseRead:           ScopeBrand,
 			PermPlatformShowcaseReview: ScopeBrand,
 		}),
+	},
+	{
+		// TEC-1003 (000152): the center's own service point staff (the
+		// former AFM Florya dealer staff). Managed scope = the center's own
+		// records only; no warehouse, prices, accounting or network.
+		Slug: RoleCenterService, Name: "Center service staff", OrgType: OrgTypeCenter,
+		Description: "Center service point staff: the center's own services, customers, warranties and appointments; no warehouse, prices or accounting",
+		// The dealer showcase is a dealer page; the center has none.
+		Grants: without(dealerStaffGrants, PermShowcaseRead),
 	},
 	{
 		Slug: RoleDistributorOwner, Name: "Distributor owner", OrgType: OrgTypeDistributor,
@@ -1417,53 +1485,7 @@ var Roles = []RoleDef{
 	{
 		Slug: RoleDealerStaff, Name: "Dealer staff", OrgType: OrgTypeDealer,
 		Description: "Dealer staff: reads the dealer's services, writes own records; no prices or accounting",
-		Grants: grants(baseGrants, map[string]Scope{
-			PermVehicleCatalogRead: ScopeManaged,
-			PermCatalogRead:        ScopeManaged,
-			PermServicesRead:       ScopeManaged,
-			PermServicesWrite:      ScopeOwn,
-			PermCustomersRead:      ScopeManaged,
-			PermCustomersWrite:     ScopeOwn,
-			PermVehiclesRead:       ScopeManaged,
-			PermVehiclesWrite:      ScopeOwn,
-			PermOrdersRead:         ScopeManaged,
-			PermOrdersReceive:      ScopeManaged,
-			PermServicesComplete:   ScopeOwn,
-			PermWarrantiesRead:     ScopeManaged,
-			PermVehiclesTransfer:   ScopeOwn,
-			PermMeasurementsWrite:  ScopeManaged, // TEC-233 (000076)
-			PermContractsRead:      ScopeManaged, // TEC-285 (000083)
-			PermContractsWrite:     ScopeOwn,
-			PermMeasurementsRead:   ScopeManaged, // TEC-293 (000085)
-			PermMeasurementsLink:   ScopeManaged, // TEC-293 (000085)
-			// TEC-329 (000086).
-			PermAnnouncementsRead: ScopeManaged,
-			PermLibraryRead:       ScopeManaged,
-			// TEC-312 (000087).
-			PermLeadsRead:   ScopeManaged,
-			PermLeadsWrite:  ScopeManaged,
-			PermQuotesRead:  ScopeManaged,
-			PermQuotesWrite: ScopeManaged,
-			// TEC-322 (000090).
-			PermAppointmentsRead:  ScopeManaged,
-			PermAppointmentsWrite: ScopeManaged,
-			// TEC-350 (000091).
-			PermReviewsRead: ScopeManaged,
-			// TEC-334 (000092).
-			PermWarrantyClaimsRead:  ScopeManaged,
-			PermWarrantyClaimsWrite: ScopeManaged,
-			// TEC-383 (000101).
-			PermAIUse:            ScopeOwn,
-			PermAIActionsConfirm: ScopeOwn,
-			// TEC-472 (000112): reads linked fleets and runs bulk plans and
-			// intake; opening fleets is the owner's.
-			PermFleetsRead: ScopeManaged,
-			PermFleetsPlan: ScopeManaged,
-			// TEC-466 (000113): reads the showcase, the owner edits it.
-			PermShowcaseRead: ScopeManaged,
-			// TEC-483 (000115).
-			PermStockForecastRead: ScopeManaged,
-		}),
+		Grants:      dealerStaffGrants,
 	},
 	{
 		Slug: RoleDealerAccounting, Name: "Dealer accounting", OrgType: OrgTypeDealer,

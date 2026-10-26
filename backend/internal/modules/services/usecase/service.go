@@ -24,6 +24,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	custuc "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/customers/usecase"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/authctx"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
@@ -379,13 +380,21 @@ func isUniqueViolation(err error, constraint string) bool {
 // --- Create ---------------------------------------------------------------------
 
 // CreateInput opens a draft service of the active organization.
+// OrganizationUUID (TEC-1003) lets the brand center open the service on
+// behalf of a dealer of its network, as the legacy center did: the service
+// belongs to that dealer, the center user is its creator and the action is
+// written to the activity log.
 type CreateInput struct {
-	CustomerUUID   string
-	VehicleUUID    string
-	KM             *int64
-	Package        *string
-	Notes          *string
-	HasMeasurement bool
+	OrganizationUUID string
+	CustomerUUID     string
+	VehicleUUID      string
+	KM               *int64
+	Package          *string
+	Notes            *string
+	HasMeasurement   bool
+	// ServiceNo is a hand-entered number (TEC-1004, a printed warranty
+	// card); nil or blank allocates DS + 8 characters.
+	ServiceNo *string
 }
 
 // Create opens a draft service: the customer must be in the caller's
@@ -413,6 +422,21 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 	if err != nil {
 		return ServiceView{}, err
 	}
+	var onBehalf uuid.UUID
+	if v := strings.TrimSpace(in.OrganizationUUID); v != "" && v != c.Org.UUID.String() {
+		if onBehalf, err = parseUUID("organization_uuid", v); err != nil {
+			return ServiceView{}, err
+		}
+		if !c.isCenter() {
+			return ServiceView{}, invalid("organization_uuid", "only the brand center opens services for another organization")
+		}
+	}
+	manualNo := ""
+	if in.ServiceNo != nil && strings.TrimSpace(*in.ServiceNo) != "" {
+		if manualNo, err = NormalizeServiceNo(*in.ServiceNo); err != nil {
+			return ServiceView{}, err
+		}
+	}
 	var created db.Service
 	err = s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		org, err := q.GetOrganizationByID(ctx, c.Org.InternalID)
@@ -421,6 +445,11 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 		}
 		if org.BrandID != c.Org.BrandID {
 			return ErrForbidden
+		}
+		if onBehalf != uuid.Nil {
+			if org, err = s.onBehalfOrg(ctx, q, c, onBehalf); err != nil {
+				return err
+			}
 		}
 		customer, err := q.GetUserByUUID(ctx, customerID)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -455,8 +484,12 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 		if in.HasMeasurement && !v.Vin.Valid {
 			return invalid("has_measurement", "a measurement needs the vehicle VIN")
 		}
-		no, err := s.allocateServiceNo(ctx, q)
-		if err != nil {
+		no := manualNo
+		if no != "" {
+			if err := claimServiceNo(ctx, q, no, 0); err != nil {
+				return err
+			}
+		} else if no, err = s.allocateServiceNo(ctx, q); err != nil {
 			return err
 		}
 		row, err := q.CreateService(ctx, db.CreateServiceParams{
@@ -468,6 +501,9 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 			Status: StatusDraft, CreatedByUserID: c.actor(), PerformedByUserID: c.actor(),
 		})
 		if isUniqueViolation(err, "uq_services_service_no") {
+			if manualNo != "" {
+				return ErrServiceNoTaken
+			}
 			return ErrServiceNoExhausted
 		}
 		if err != nil {
@@ -476,6 +512,15 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 		if err := s.log(ctx, q, row, "", StatusDraft, c, nil, nil); err != nil {
 			return err
 		}
+		if onBehalf != uuid.Nil {
+			actor := c.Principal.UserInternal
+			if err := activity.Write(ctx, q, &actor, "services.created_on_behalf", "services", &row.Uuid, map[string]any{
+				"service_no": row.ServiceNo, "organization_uuid": org.Uuid.String(), "organization_name": org.Name,
+				"actor_organization_uuid": c.Org.UUID.String(),
+			}, activity.Meta{}); err != nil {
+				return fmt.Errorf("services: activity: %w", err)
+			}
+		}
 		created = row
 		return s.emit(ctx, tx, events.ServiceCreated, row, "", c, nil)
 	})
@@ -483,6 +528,28 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (Service
 		return ServiceView{}, err
 	}
 	return s.view(ctx, s.q, c, created)
+}
+
+// onBehalfOrg is the dealer the center opens a service for: an active
+// dealer of the brand inside the caller's services.write scope.
+func (s *Service) onBehalfOrg(ctx context.Context, q *db.Queries, c Caller, id uuid.UUID) (db.Organization, error) {
+	org, err := q.GetOrganizationByUUID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return db.Organization{}, invalid("organization_uuid", "organization not found")
+	}
+	if err != nil {
+		return db.Organization{}, fmt.Errorf("services: organization: %w", err)
+	}
+	if org.BrandID != c.Org.BrandID || org.DeletedAt.Valid || !c.Filter.AllowsOrg(org.ID, org.BrandID) {
+		return db.Organization{}, invalid("organization_uuid", "organization not found")
+	}
+	if org.Type != OrgDealer {
+		return db.Organization{}, invalid("organization_uuid", "services are opened for a dealer")
+	}
+	if org.Status != "active" {
+		return db.Organization{}, invalid("organization_uuid", "the dealer is not active")
+	}
+	return org, nil
 }
 
 // --- Update ------------------------------------------------------------------------
@@ -518,6 +585,9 @@ type UpdateInput struct {
 	// VIN replaces the service's VIN snapshot (wizard step 3, TEC-181); the
 	// vehicle record is not touched. Same rules as the vehicle VIN.
 	VIN Optional[string]
+	// ServiceNo changes the number until the service is completed or
+	// cancelled (TEC-1004); null is rejected.
+	ServiceNo Optional[string]
 }
 
 // vinOrNull normalizes a VIN with the vehicle rules (customers.NormalizeVIN:
@@ -590,6 +660,14 @@ func (s *Service) Update(ctx context.Context, c Caller, id uuid.UUID, in UpdateI
 		svc, err := s.lockWritable(ctx, q, c, id)
 		if err != nil {
 			return err
+		}
+		if in.ServiceNo.Set {
+			if in.ServiceNo.Value == nil {
+				return invalid("service_no", "must not be null")
+			}
+			if svc, err = setServiceNo(ctx, q, svc, *in.ServiceNo.Value, c.actor()); err != nil {
+				return err
+			}
 		}
 		p := db.UpdateServiceParams{
 			ID: svc.ID, BrandID: svc.BrandID, CustomerUserID: svc.CustomerUserID, VehicleID: svc.VehicleID,

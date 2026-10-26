@@ -408,43 +408,6 @@ jobs:
             echo "::error::a required CI job failed or was cancelled"; exit 1
           fi
 
-  # TEC-1011: every green push to main that touched mobile/ (or the OpenAPI
-  # spec, changes.mobile) starts an iOS production build on EAS and
-  # auto-submits it to TestFlight (ASC app in mobile/eas.json). The build and
-  # the upload run on EAS; this job only triggers them (--no-wait). Build
-  # numbers come from the EAS remote counter (appVersionSource: remote,
-  # autoIncrement). Needs the EXPO_TOKEN secret. Manual run: workflow_dispatch
-  # is a full run, so it builds regardless of the changed paths.
-  mobile-release:
-    needs: [changes, ci]
-    if: >-
-      needs.changes.outputs.mobile == 'true' &&
-      ((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-       github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: frontend/.nvmrc
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
-      - name: Install
-        run: npm ci
-      - name: EAS build + TestFlight submit
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "::error::EXPO_TOKEN secret is not set"; exit 1
-          fi
-          npx eas-cli@latest build -p ios --profile production \
-            --auto-submit --non-interactive --no-wait
-          echo "EAS iOS production build queued (auto-submit to TestFlight)" >> "$GITHUB_STEP_SUMMARY"
-
   # Every green push to main gets the next v0.N tag (first one: v0.1);
   # Dokploy deploys on v0.* tag pushes. Tags pushed with GITHUB_TOKEN do not
   # start other workflows, but GitHub still sends the tag push webhook.

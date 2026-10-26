@@ -633,5 +633,22 @@
   "stock_panel.products": "Prodotti",
   "stock_panel.units": "Unità",
   "stock_panel.empty_title": "Questo vano è vuoto",
-  "stock_panel.empty_description": "Nessuna giacenza registrata in questo vano."
+  "stock_panel.empty_description": "Nessuna giacenza registrata in questo vano.",
+  "nav_units": "Unità di magazzino",
+  "units.title": "Unità di magazzino",
+  "units.description": "Tutti i codici del magazzino: presenti e usciti con ordine, servizio o altro. Le unità uscite non contano nello stock.",
+  "units.forbidden": "Non puoi vedere le unità di magazzino.",
+  "units.warehouse": "Magazzino",
+  "units.primary": "principale",
+  "units.empty": "Nessuna unità da questo magazzino.",
+  "units.columns.barcode": "Codice",
+  "units.columns.product": "Prodotto",
+  "units.columns.state": "Stato",
+  "units.columns.source": "Origine",
+  "units.columns.order": "Ordine",
+  "units.columns.service": "Servizio / cliente",
+  "units.columns.updated_at": "Ultima modifica",
+  "units.columns.created_at": "Creato",
+  "units.state.in": "In magazzino",
+  "units.state.left": "Uscito"
 }

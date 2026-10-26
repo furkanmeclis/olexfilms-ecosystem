@@ -52,7 +52,7 @@ describe("GET /warranty/[code]/pdf", () => {
     expect(await res.text()).toBe("%PDF");
     const [path, init] = upstream.fetch.mock.calls[0]!;
     expect(path).toBe(
-      `public/warranties/${CODE}/pdf?lang=tr&tz=Europe%2FIstanbul`,
+      `public/service-warranties/${CODE}/pdf?lang=tr&tz=Europe%2FIstanbul`,
     );
     const h = new Headers(init.headers);
     expect(h.get("x-forwarded-for")).toBe("203.0.113.5");

@@ -1,6 +1,8 @@
 import type { ComponentRef, ReactNode, Ref } from 'react';
 import { TextInput, type TextInputProps, View } from 'react-native';
 
+import { toLatinDigits } from '@/core/digits';
+
 import { cn } from './cn';
 import { fontFamily } from './fonts';
 import { Icon } from './icon';
@@ -21,7 +23,7 @@ type Props = TextInputProps & {
   ref?: Ref<ComponentRef<typeof TextInput>>;
 };
 
-export function Input({ label, error, hint, className, icon, leading, trailing, ref, style, ...props }: Props) {
+export function Input({ label, error, hint, className, icon, leading, trailing, ref, style, onChangeText, ...props }: Props) {
   const family = fontFamily('sans');
   const field = (
     <TextInput
@@ -35,6 +37,8 @@ export function Input({ label, error, hint, className, icon, leading, trailing, 
         className,
       )}
       style={family ? [{ fontFamily: family }, style] : style}
+      // TEC-1009: Arabic-Indic / Persian digits are stored as Latin.
+      onChangeText={onChangeText ? (text) => onChangeText(toLatinDigits(text)) : undefined}
       {...props}
     />
   );

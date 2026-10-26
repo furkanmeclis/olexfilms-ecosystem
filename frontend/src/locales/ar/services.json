@@ -352,5 +352,22 @@
   "review_questions.validation.text_tr": "نص السؤال باللغة التركية مطلوب.",
   "review_questions.toast.saved": "تم حفظ السؤال.",
   "review_questions.toast.failed": "فشلت العملية. حاول مرة أخرى.",
-  "wizard.steps.photos": "صور الاستلام"
+  "wizard.steps.photos": "صور الاستلام",
+  "service_no.label": "رقم الخدمة",
+  "service_no.placeholder": "الرقم أو رمز QR الموجود على بطاقة الضمان",
+  "service_no.auto": "اتركه فارغًا لإنشاء رقم تلقائيًا.",
+  "service_no.invalid": "من 4 إلى 32 حرفًا: أحرف أو أرقام أو '-' أو '_'.",
+  "service_no.taken": "هذا الرقم مستخدم في خدمة أخرى.",
+  "service_no.available": "الرقم متاح.",
+  "service_no.locked": "الرقم مقفل لأن الخدمة مكتملة.",
+  "service_no.scan": "مسح رمز QR",
+  "service_no.scan_title": "امسح بطاقة الضمان",
+  "service_no.scan_description": "وجّه رمز QR الخاص بالبطاقة إلى الكاميرا؛ سيُملأ الرقم.",
+  "service_no.camera_denied": "الكاميرا غير متاحة. أدخل الرقم يدويًا أو استخدم قارئ QR.",
+  "network_scope.label": "نطاق الخدمات",
+  "network_scope.own": "خدماتنا",
+  "network_scope.network": "الشبكة كاملة",
+  "wizard.performer": "المنفّذ",
+  "wizard.performer_own": "{{name}} (نقطة خدمتنا)",
+  "wizard.performer_hint": "إذا اخترت وكيلًا تُفتح الخدمة باسمه ويُسجَّل الإجراء."
 }

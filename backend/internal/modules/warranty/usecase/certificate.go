@@ -14,6 +14,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/certtheme"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/pdfrender"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/scopefilter"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/storage"
@@ -268,6 +269,8 @@ func (s *CertificateService) certificate(ctx context.Context, svc db.Service, ro
 	if err != nil {
 		return Certificate{}, fmt.Errorf("warranty certificate: organization: %w", err)
 	}
+	// TEC-1003: the customer sees the center's service point (AFM Florya).
+	org = orgbrand.ForCustomer(org)
 	refs, err := s.q.GetServiceRefs(ctx, svc.ID)
 	if err != nil {
 		return Certificate{}, fmt.Errorf("warranty certificate: refs: %w", err)
@@ -368,7 +371,7 @@ func FormatCertificateDate(t time.Time, zone *time.Location, loc i18n.Locale) st
 	if loc == i18n.LocaleEN || loc == i18n.LocaleZhCN {
 		return t.Format(time.DateOnly)
 	}
-	return t.Format("02.01.2006")
+	return i18n.Digits(loc, t.Format("02.01.2006"))
 }
 
 // --- Export adapter ------------------------------------------------------------
@@ -542,7 +545,7 @@ func CertificateHTML(c Certificate, loc i18n.Locale, title string) (string, erro
 		}
 	}
 	b.WriteString(`</ol><p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
-		esc(pdfrender.IssuedAt(c.GeneratedAt, pdfrender.Zone(c.Timezone))) + `</p>`)
+		esc(pdfrender.IssuedAt(c.GeneratedAt, pdfrender.Zone(c.Timezone), loc)) + `</p>`)
 	b.WriteString(ioengine.LetterheadFooterHTMLFor(&lh, string(loc)))
 	if c.Cert != nil {
 		b.WriteString(certtheme.ClosingPages(loc))

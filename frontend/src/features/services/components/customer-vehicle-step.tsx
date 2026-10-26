@@ -8,10 +8,27 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { permissions } from "@/config/permissions";
+import {
+  customerKeys,
+  customersService,
+} from "@/features/customers/services/customers.service";
 import { NewCustomerForm } from "@/features/services/components/new-customer-form";
 import { NewVehicleForm } from "@/features/services/components/new-vehicle-form";
+import { ServiceNoField } from "@/features/services/components/service-no-field";
 import { WizardActions } from "@/features/services/components/wizard-bar";
 import type { ServiceWizardAccess } from "@/features/services/lib/access";
+import {
+  extractServiceNo,
+  isValidServiceNo,
+} from "@/features/services/lib/service-no";
 import { parseKm } from "@/features/services/lib/wizard";
 import {
   serviceWizardKeys,
@@ -20,10 +37,12 @@ import {
   type Vehicle,
 } from "@/features/services/services/service-wizard.service";
 import { VehicleBrandLogo } from "@/features/vehicle-catalog/components/vehicle-brand-logo";
+import { useActiveOrganization } from "@/hooks/use-active-organization";
 import { useDebounce } from "@/hooks/use-debounce";
 import { isApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/providers/locale-provider";
+import { usePermission } from "@/providers/permission-provider";
 import { appToast } from "@/providers/toast-provider";
 
 export type PickedCustomer = {
@@ -36,6 +55,8 @@ export type PickedCustomer = {
 };
 
 export type CustomerVehicleStepProps = {
+  /** Tenant slug: the center picks the dealer it opens the service for. */
+  slug?: string;
   access: ServiceWizardAccess;
   /** The draft, once created: customer and vehicle are then fixed. */
   service?: Service | null;
@@ -79,6 +100,30 @@ function CustomerName({ customer }: { customer: NamedCustomer }) {
       ) : null}
     </span>
   );
+}
+
+/** "Own" value of the performer picker (the active organization). */
+const OWN_PERFORMER = "own";
+
+/**
+ * TEC-1003: the brand center opens a service for itself (its service
+ * point) or, as the legacy center did, for a dealer of its network
+ * (organization_uuid). Other organizations always open their own.
+ */
+function usePerformerOptions(slug: string | undefined, locked: boolean) {
+  const { can } = usePermission();
+  const org = useActiveOrganization(slug);
+  const enabled =
+    !locked &&
+    org?.type === "center" &&
+    can(permissions.organizations.tenantRead);
+  const dealers = useQuery({
+    queryKey: [...customerKeys.organizations, "dealers"],
+    queryFn: () => customersService.listDealers(),
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+  return { enabled, ownName: org?.name ?? "", dealers: dealers.data ?? [] };
 }
 
 /** A service needs the car brand and model on the vehicle (TEC-179). */
@@ -135,6 +180,7 @@ function VehicleSummary({
  * only km is editable here.
  */
 export function CustomerVehicleStep({
+  slug,
   access,
   service,
   onDone,
@@ -151,7 +197,10 @@ export function CustomerVehicleStep({
     service?.km !== null && service?.km !== undefined ? String(service.km) : "",
   );
   const [kmError, setKmError] = useState<string | null>(null);
+  const [serviceNo, setServiceNo] = useState(service?.service_no ?? "");
   const locked = Boolean(service);
+  const performers = usePerformerOptions(slug, locked);
+  const [performer, setPerformer] = useState(OWN_PERFORMER);
 
   const customers = useQuery({
     queryKey: serviceWizardKeys.customers(debounced),
@@ -166,18 +215,23 @@ export function CustomerVehicleStep({
   });
 
   const save = useMutation({
-    mutationFn: (kmValue: number | null) => {
+    mutationFn: ({ kmValue, no }: { kmValue: number | null; no: string }) => {
       if (service) {
         return serviceWizardService.updateService(service.uuid, {
           km: kmValue,
+          ...(no && no !== service.service_no ? { service_no: no } : {}),
         });
       }
       return serviceWizardService.createService({
+        ...(performers.enabled && performer !== OWN_PERFORMER
+          ? { organization_uuid: performer }
+          : {}),
         customer_uuid: customer?.uuid ?? "",
         vehicle_uuid: vehicle?.uuid ?? "",
         // Answered in step 3, which also saves the VIN.
         has_measurement: false,
         ...(kmValue !== null ? { km: kmValue } : {}),
+        ...(no ? { service_no: no } : {}),
       });
     },
     onSuccess: (saved) => {
@@ -190,7 +244,11 @@ export function CustomerVehicleStep({
     },
     onError: (error: unknown) =>
       appToast.error(
-        isApiError(error) ? error.message : t("services.wizard.save_failed"),
+        isApiError(error) && error.code === "SERVICE_NO_TAKEN"
+          ? t("services.service_no.taken")
+          : isApiError(error)
+            ? error.message
+            : t("services.wizard.save_failed"),
       ),
   });
 
@@ -208,9 +266,24 @@ export function CustomerVehicleStep({
       return;
     }
     setKmError(null);
+    const no = extractServiceNo(serviceNo);
+    if (no && !isValidServiceNo(no)) {
+      appToast.error(t("services.service_no.invalid"));
+      return;
+    }
     if (!service && (!customer || !vehicle)) return;
-    save.mutate(parsed);
+    save.mutate({ kmValue: parsed, no });
   };
+
+  const serviceNoField = (
+    <ServiceNoField
+      value={serviceNo}
+      onChange={setServiceNo}
+      serviceUuid={service?.uuid}
+      disabled={service ? !service.service_no_editable : false}
+      optional={!service}
+    />
+  );
 
   const kmField = (
     <div className="max-w-xs space-y-2">
@@ -261,6 +334,7 @@ export function CustomerVehicleStep({
             vin={service.vin}
           />
         </section>
+        {serviceNoField}
         {kmField}
         <WizardActions>
           <Button
@@ -280,6 +354,33 @@ export function CustomerVehicleStep({
 
   return (
     <div className="space-y-8" data-testid="customer-vehicle-step">
+      {performers.enabled ? (
+        <section className="max-w-md space-y-2">
+          <Label htmlFor="service-performer">
+            {t("services.wizard.performer")}
+          </Label>
+          <Select value={performer} onValueChange={setPerformer}>
+            <SelectTrigger id="service-performer" data-testid="performer">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={OWN_PERFORMER}>
+                {t("services.wizard.performer_own", {
+                  name: performers.ownName,
+                })}
+              </SelectItem>
+              {performers.dealers.map((d) => (
+                <SelectItem key={d.uuid} value={d.uuid}>
+                  {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-muted-foreground text-xs">
+            {t("services.wizard.performer_hint")}
+          </p>
+        </section>
+      ) : null}
       {/* Customer */}
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -496,7 +597,12 @@ export function CustomerVehicleStep({
         </section>
       ) : null}
 
-      {customer && vehicle ? kmField : null}
+      {customer && vehicle ? (
+        <>
+          {serviceNoField}
+          {kmField}
+        </>
+      ) : null}
 
       <WizardActions>
         <Button

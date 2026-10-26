@@ -7,6 +7,7 @@ import { errorMessage, i18n } from '@/core/i18n';
 import type { StatusTone } from '@/ui/status-pill';
 
 import type { StockCountStatus, StockEntryStatus, TransferStatus } from './api';
+import { intlLocale } from '@/core/digits';
 
 /**
  * Message for a failed warehouse call: the web errors catalog first, then the
@@ -41,7 +42,7 @@ export function confirmAction(opts: { title: string; body?: string; action: stri
 export function formatDate(iso: string | null | undefined, withTime = true) {
   if (!iso) return '';
   const d = new Date(iso);
-  return new Intl.DateTimeFormat(i18n.language, {
+  return new Intl.DateTimeFormat(intlLocale(i18n.language), {
     day: 'numeric',
     month: 'short',
     ...(withTime ? { hour: '2-digit', minute: '2-digit' } : { year: 'numeric' }),
@@ -52,7 +53,7 @@ export function formatNumber(n: number | string | null | undefined, digits = 0) 
   if (n === null || n === undefined || n === '') return '';
   const v = typeof n === 'string' ? Number(n) : n;
   if (!Number.isFinite(v)) return String(n);
-  return new Intl.NumberFormat(i18n.language, { maximumFractionDigits: digits, minimumFractionDigits: 0 }).format(v);
+  return new Intl.NumberFormat(intlLocale(i18n.language), { maximumFractionDigits: digits, minimumFractionDigits: 0 }).format(v);
 }
 
 export function transferTone(s: TransferStatus): StatusTone {

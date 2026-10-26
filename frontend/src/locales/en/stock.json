@@ -246,5 +246,15 @@
   "label_templates.validation.logo_size": "The image is too large; use one under about 150 KB.",
   "label_templates.errors.generic": "The template could not be saved.",
   "label_templates.errors.STOCK_LABEL_TEMPLATE_NAME_TAKEN": "Another template already has this name.",
-  "label_templates.errors.VALIDATION_ERROR": "Some fields are not valid; check the form."
+  "label_templates.errors.VALIDATION_ERROR": "Some fields are not valid; check the form.",
+  "trace.title": "Barcode trace",
+  "trace.origin": "Origin warehouse",
+  "trace.orders": "Orders",
+  "trace.services": "Services",
+  "trace.no_order": "Not shipped with an order.",
+  "trace.no_order_unknown": "No order found; source unknown (legacy bulk import).",
+  "trace.no_service": "Not used in a service.",
+  "trace.source.order": "By order",
+  "trace.source.stock": "In stock",
+  "trace.source.unknown": "Source unknown"
 }

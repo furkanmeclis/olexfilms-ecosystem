@@ -49,7 +49,7 @@ WHERE public_code = sqlc.arg(public_code) AND brand_id = sqlc.arg(brand_id);
 -- name: GetPublicWarrantyByCode :one
 SELECT w.public_code, w.status, w.start_at, w.end_at,
        p.name AS product_name,
-       o.name AS organization_name, o.city AS organization_city,
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.city AS organization_city,
        COALESCE(pr.name, '')::text AS organization_province,
        cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
        (cb.logo_object_key IS NOT NULL)::boolean AS car_brand_has_logo,
@@ -72,6 +72,59 @@ WHERE w.brand_id = sqlc.arg(brand_id)::bigint
                   WHERE a.code = sqlc.arg(public_code)::text AND a.brand_id = sqlc.arg(brand_id)::bigint))
 ORDER BY (w.public_code = sqlc.arg(public_code)::text) DESC
 LIMIT 1;
+
+-- TEC-1005: the service of a public code /warranty/{code}: its service
+-- number (printed warranty cards, TEC-1004), else a warranty public code of
+-- it (the per-warranty links before TEC-1005), else a legacy alias. Only a
+-- service with a warranty has a public page.
+-- name: ResolvePublicServiceID :one
+SELECT x.service_id::bigint AS service_id
+FROM (
+    SELECT s.id AS service_id, 1 AS rank FROM services s
+    WHERE s.service_no = sqlc.arg(code)::text AND s.brand_id = sqlc.arg(brand_id)::bigint
+    UNION ALL
+    SELECT w.service_id, 2 FROM warranties w
+    WHERE w.public_code = sqlc.arg(code)::text AND w.brand_id = sqlc.arg(brand_id)::bigint
+    UNION ALL
+    SELECT w.service_id, 3 FROM warranty_public_code_aliases a JOIN warranties w ON w.id = a.warranty_id
+    WHERE a.code = sqlc.arg(code)::text AND a.brand_id = sqlc.arg(brand_id)::bigint
+) x
+WHERE EXISTS (SELECT 1 FROM warranties w2 WHERE w2.service_id = x.service_id)
+ORDER BY x.rank
+LIMIT 1;
+
+-- TEC-1005: the public service summary (no customer data).
+-- name: GetPublicService :one
+SELECT s.service_no, s.package, s.completed_at, s.created_at,
+       org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name,
+       o.city AS organization_city,
+       COALESCE(pr.name, '')::text AS organization_province,
+       cb.uuid AS car_brand_uuid, cb.name AS car_brand_name,
+       (cb.logo_object_key IS NOT NULL)::boolean AS car_brand_has_logo,
+       cm.name AS car_model_name,
+       s.model_year AS service_model_year, s.plate AS service_plate,
+       s.plate_country AS service_plate_country, s.vin AS service_vin,
+       v.model_year AS vehicle_model_year, v.plate AS vehicle_plate,
+       v.plate_country AS vehicle_plate_country, v.vin AS vehicle_vin
+FROM services s
+JOIN organizations o ON o.id = s.organization_id
+LEFT JOIN provinces pr ON pr.id = o.province_id
+JOIN car_brands cb ON cb.id = s.car_brand_id
+JOIN car_models cm ON cm.id = s.car_model_id
+JOIN vehicles v ON v.id = s.vehicle_id
+WHERE s.id = sqlc.arg(service_id) AND s.brand_id = sqlc.arg(brand_id);
+
+-- TEC-1005: every warranty of a public service, whatever its status.
+-- name: ListPublicServiceWarranties :many
+SELECT w.public_code, w.status, w.start_at, w.end_at,
+       p.name AS product_name, COALESCE(pc.name, '')::text AS category_name,
+       si.applied_parts
+FROM warranties w
+JOIN products p ON p.id = w.product_id
+LEFT JOIN product_categories pc ON pc.id = p.category_id
+JOIN service_items si ON si.id = w.service_item_id
+WHERE w.service_id = sqlc.arg(service_id) AND w.brand_id = sqlc.arg(brand_id)
+ORDER BY w.start_at, w.id;
 
 -- Warranty certificate (TEC-188, one PDF per service, decision 2): the
 -- active warranties of a service with the covered product, unit and item.
@@ -202,7 +255,7 @@ WHERE id = sqlc.arg(id) AND status = 'active' AND notified_7_at IS NULL;
 -- Notification context of the cron events (TEC-187): plate, product and the
 -- organization's name and time zone (end date is shown in the org zone).
 -- name: ListWarrantyNoticeContexts :many
-SELECT w.id, v.plate, p.name AS product_name, o.name AS organization_name, o.timezone
+SELECT w.id, v.plate, p.name AS product_name, org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text AS organization_name, o.timezone
 FROM warranties w
 JOIN vehicles v ON v.id = w.vehicle_id
 JOIN products p ON p.id = w.product_id

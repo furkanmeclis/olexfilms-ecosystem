@@ -19,5 +19,8 @@
   "about": "À propos",
   "api_server": "Serveur",
   "app_version": "Version de l'app",
-  "watch_intro": "Revoir la présentation"
+  "watch_intro": "Revoir la présentation",
+  "digits": "Chiffres",
+  "digits.arab": "Chiffres arabes orientaux (٠١٢٣)",
+  "digits.latn": "Chiffres latins (0123)"
 }
