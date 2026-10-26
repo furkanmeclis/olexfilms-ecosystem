@@ -69,7 +69,7 @@ func ExportTableHTML(ds Dataset, locale string, lh *Letterhead, title string) st
 	b.WriteString(`<h1 class="doc-title">`)
 	b.WriteString(esc(title))
 	b.WriteString(`</h1><p class="muted">`)
-	b.WriteString(esc(ExportedAtLabel(locale)))
+	b.WriteString(esc(i18n.Digits(i18n.Normalize(locale), ExportedAtLabel(locale))))
 	b.WriteString(`</p>`)
 	if info := exportInfoHTML(ds.Info, loc); info != "" {
 		b.WriteString(info)
@@ -115,7 +115,7 @@ func writeExportRow(b *strings.Builder, columns []Column, row map[string]any, lo
 	b.WriteString(`<tr>`)
 	for _, c := range columns {
 		b.WriteString(exportCellOpen("td", c))
-		b.WriteString(pdfrender.EscapeText(formatCell(row[c.Key], c, loc)))
+		b.WriteString(pdfrender.EscapeText(pdfCell(formatCell(row[c.Key], c, loc), c, loc)))
 		b.WriteString(`</td>`)
 	}
 	b.WriteString(`</tr>`)

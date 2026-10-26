@@ -1,3 +1,4 @@
+import { intlLocale } from '../../core/digits.ts';
 /**
  * Customer appointment booking (web `portal-appointment-booking`): pure rules
  * for the day window, dealer list and time labels.
@@ -38,14 +39,14 @@ export function dayInstant(date: string): Date {
 export function formatSlotTime(iso: string, locale: string, timeZone?: string): string {
   const opts: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
   try {
-    return new Intl.DateTimeFormat(locale, timeZone ? { ...opts, timeZone } : opts).format(new Date(iso));
+    return new Intl.DateTimeFormat(intlLocale(locale), timeZone ? { ...opts, timeZone } : opts).format(new Date(iso));
   } catch {
-    return new Intl.DateTimeFormat(locale, opts).format(new Date(iso));
+    return new Intl.DateTimeFormat(intlLocale(locale), opts).format(new Date(iso));
   }
 }
 
 export function formatDayLabel(date: string, locale: string, options: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' }).format(dayInstant(date));
+  return new Intl.DateTimeFormat(intlLocale(locale), { ...options, timeZone: 'UTC' }).format(dayInstant(date));
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

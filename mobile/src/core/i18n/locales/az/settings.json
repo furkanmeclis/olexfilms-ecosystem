@@ -19,5 +19,8 @@
   "about": "Haqqında",
   "api_server": "Server",
   "app_version": "Tətbiq versiyası",
-  "watch_intro": "Təqdimata baxın"
+  "watch_intro": "Təqdimata baxın",
+  "digits": "Rəqəmlər",
+  "digits.arab": "Ərəb-hind rəqəmləri (٠١٢٣)",
+  "digits.latn": "Latın rəqəmləri (0123)"
 }

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import type { components } from '@/core/api/schema';
 import { API_URL } from '@/core/config';
 import type { StatusTone } from '@/ui/status-pill';
+import { intlLocale } from '@/core/digits';
 
 type S = components['schemas'];
 export type Service = S['Service'];
@@ -48,12 +49,12 @@ export function publicWarrantyUrl(code: string) {
 
 export function formatDate(iso: string | null | undefined, locale: string) {
   if (!iso) return '';
-  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
+  return new Intl.DateTimeFormat(intlLocale(locale), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
 }
 
 export function formatDateTime(iso: string | null | undefined, locale: string) {
   if (!iso) return '';
-  return new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
@@ -63,7 +64,7 @@ export function formatDateTime(iso: string | null | undefined, locale: string) {
 }
 
 export function formatNumber(n: number, locale: string) {
-  return new Intl.NumberFormat(locale).format(n);
+  return new Intl.NumberFormat(intlLocale(locale)).format(n);
 }
 
 export function fullName(p: { name: string; surname?: string | null } | null | undefined) {

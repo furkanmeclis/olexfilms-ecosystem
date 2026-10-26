@@ -64,5 +64,8 @@
   "campaign_unsubscribe.invalid_title": "Enlace no válido",
   "campaign_unsubscribe.invalid_body": "Este enlace de baja no es válido. Asegúrese de haber copiado el enlace completo.",
   "campaign_unsubscribe.error": "Se ha producido un problema. Vuelva a intentarlo dentro de un momento.",
-  "campaign_unsubscribe.home": "Ir a la página de inicio"
+  "campaign_unsubscribe.home": "Ir a la página de inicio",
+  "digits": "Dígitos",
+  "digits_arab": "Arábigo-índicos (٠١٢٣)",
+  "digits_latn": "Latinos (0123)"
 }

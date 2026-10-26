@@ -1,4 +1,5 @@
 import type { components } from '@/core/api/schema';
+import { intlLocale } from '../../core/digits.ts';
 
 type S = components['schemas'];
 export type CariAccount = S['CariAccount'];
@@ -187,7 +188,7 @@ export function einvoiceTimeline(
 export function formatMoney(amount: string | number, currency: string, locale: string) {
   const v = typeof amount === 'number' ? amount : Number(amount);
   try {
-    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(v);
+    return new Intl.NumberFormat(intlLocale(locale), { style: 'currency', currency }).format(v);
   } catch {
     return `${v.toFixed(2)} ${currency}`;
   }

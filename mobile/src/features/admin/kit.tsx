@@ -11,6 +11,7 @@ import { EmptyState } from '@/ui/empty-state';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 import type { IconName } from '@/ui/icons';
+import { intlLocale } from '@/core/digits';
 
 /** Page shape of the list contract (docs/list-contract.md). */
 export type Page<T> = { items: T[]; total: number; limit: number; offset: number };
@@ -58,21 +59,21 @@ export function useFormat() {
     number: (n: number | string | null | undefined, digits = 0) => {
       const v = typeof n === 'string' ? Number(n) : n;
       if (v === null || v === undefined || Number.isNaN(v)) return '–';
-      return new Intl.NumberFormat(locale, { maximumFractionDigits: digits }).format(v);
+      return new Intl.NumberFormat(intlLocale(locale), { maximumFractionDigits: digits }).format(v);
     },
     money: (n: string | number | null | undefined, currency: string) => {
       const v = typeof n === 'string' ? Number(n) : n;
       if (v === null || v === undefined || Number.isNaN(v)) return '–';
       try {
-        return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(v);
+        return new Intl.NumberFormat(intlLocale(locale), { style: 'currency', currency }).format(v);
       } catch {
         return `${v.toFixed(2)} ${currency}`;
       }
     },
     date: (iso: string | null | undefined) =>
-      iso ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso)) : '–',
+      iso ? new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium' }).format(new Date(iso)) : '–',
     dateTime: (iso: string | null | undefined) =>
-      iso ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso)) : '–',
+      iso ? new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso)) : '–',
   };
 }
 

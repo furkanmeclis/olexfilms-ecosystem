@@ -507,7 +507,7 @@ func PDFHTML(d PDFDoc, loc i18n.Locale, title string) (string, error) {
 		b.WriteString(`<p class="muted">` + esc(t("warranty.certificate.verify_hint")) + `</p>`)
 	}
 	b.WriteString(`<p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
-		esc(pdfrender.IssuedAt(d.GeneratedAt, pdfrender.Zone(d.Timezone))) + `</p>`)
+		esc(pdfrender.IssuedAt(d.GeneratedAt, pdfrender.Zone(d.Timezone), loc)) + `</p>`)
 	b.WriteString(ioengine.LetterheadFooterHTMLFor(&lh, string(loc)))
 	if d.Cert != nil {
 		b.WriteString(certtheme.ClosingPages(loc))

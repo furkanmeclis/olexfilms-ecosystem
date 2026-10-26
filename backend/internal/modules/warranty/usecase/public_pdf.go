@@ -96,7 +96,7 @@ func PublicCertificateHTML(w PublicWarranty, verifyURL string, zone *time.Locati
 		}
 	}
 	b.WriteString(`</ol><p class="muted">` + esc(t("warranty.certificate.generated_at")) + `: ` +
-		esc(pdfrender.IssuedAt(generatedAt, zone)) + `</p>`)
+		esc(pdfrender.IssuedAt(generatedAt, zone, loc)) + `</p>`)
 	if cert {
 		b.WriteString(certtheme.ClosingPages(loc))
 	}
