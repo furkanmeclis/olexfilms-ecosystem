@@ -8,10 +8,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
@@ -53,10 +55,17 @@ func (im *EntryBarcodeImporter) ImportSchema() []ioengine.ImportField {
 		{Key: "product_sku", LabelKey: "entry_import.product_sku", Type: ioengine.ColumnTypeString, Kind: ioengine.FieldCode, HintKey: "entry_import.hint.product_sku"},
 		{Key: "barcode", LabelKey: "entry_import.barcode", Type: ioengine.ColumnTypeString, Kind: ioengine.FieldCode, Required: true, HintKey: "entry_import.hint.barcode"},
 		{Key: "location_code", LabelKey: "entry_import.location_code", Type: ioengine.ColumnTypeString, Kind: ioengine.FieldCode, HintKey: "entry_import.hint.location_code"},
+		// TEC-1007: container list columns.
+		{Key: "supplier_code", LabelKey: "entry_import.supplier_code", Type: ioengine.ColumnTypeString, Kind: ioengine.FieldCode, HintKey: "entry_import.hint.supplier_code"},
+		{Key: "quantity", LabelKey: "entry_import.quantity", Type: ioengine.ColumnTypeString, Kind: ioengine.FieldText, HintKey: "entry_import.hint.quantity"},
+		{Key: "meters", LabelKey: "entry_import.meters", Type: ioengine.ColumnTypeString, Kind: ioengine.FieldText, HintKey: "entry_import.hint.meters"},
+		{Key: "lot", LabelKey: "entry_import.lot", Type: ioengine.ColumnTypeString, Kind: ioengine.FieldCode, HintKey: "entry_import.hint.lot"},
+		{Key: "box_no", LabelKey: "entry_import.box_no", Type: ioengine.ColumnTypeString, Kind: ioengine.FieldCode, HintKey: "entry_import.hint.box_no"},
 	}
 }
 func (im *EntryBarcodeImporter) SampleRows() []map[string]any {
-	return []map[string]any{{"product_name": "", "product_sku": "PPF-GLOSS", "barcode": "OLX-000001", "location_code": "A-01"}}
+	return []map[string]any{{"product_name": "", "product_sku": "PPF-GLOSS", "barcode": "OLX-000001", "location_code": "A-01",
+		"supplier_code": "", "quantity": "1", "meters": "", "lot": "", "box_no": ""}}
 }
 
 func (im *EntryBarcodeImporter) SampleLookups(ctx context.Context) (map[string][]string, error) {
@@ -141,7 +150,21 @@ type entryImportRow struct {
 	LineID     int64          `json:"line_id,omitempty"`
 	Created    bool           `json:"created,omitempty"`
 	UnitStatus string         `json:"unit_status,omitempty"`
+	// TEC-1007: container list columns. Quantity 0 reads as 1.
+	Quantity     int32  `json:"quantity,omitempty"`
+	Centimeters  int64  `json:"centimeters,omitempty"`
+	Lot          string `json:"lot,omitempty"`
+	BoxNo        string `json:"box_no,omitempty"`
+	SupplierCode string `json:"supplier_code,omitempty"`
 }
+
+func (r entryImportRow) quantity() int32 {
+	if r.Quantity < 1 {
+		return 1
+	}
+	return r.Quantity
+}
+
 type entryImportBatch struct {
 	EntryID, OrganizationID, BrandID int64
 	Policy, Status                   string
@@ -230,7 +253,11 @@ type importProduct struct {
 	ID              int64
 	SKU, Name, Kind string
 	Fixed           bool
+	DefaultCm       int64
 }
+
+func (p importProduct) roll() bool { return p.Kind == "roll_meter" && !p.Fixed }
+
 type importLocation struct {
 	ID   int64
 	Code string
@@ -264,19 +291,25 @@ func (im *EntryBarcodeImporter) Stage(ctx context.Context, job ioengine.ImportJo
 			return err
 		}
 		center := organization.Type == "center"
-		products, err := tx.Query(ctx, `SELECT id,sku,name,unit_type,uses_fixed_barcode FROM products WHERE brand_id=$1 AND active`, b.BrandID)
+		products, err := tx.Query(ctx, `SELECT id,sku,name,unit_type,uses_fixed_barcode,default_roll_meters FROM products WHERE brand_id=$1 AND active`, b.BrandID)
 		if err != nil {
 			return err
 		}
 		bySKU := map[string]importProduct{}
+		byID := map[int64]importProduct{}
 		byName := map[string][]importProduct{}
 		for products.Next() {
 			var p importProduct
-			if err := products.Scan(&p.ID, &p.SKU, &p.Name, &p.Kind, &p.Fixed); err != nil {
+			var def pgtype.Numeric
+			if err := products.Scan(&p.ID, &p.SKU, &p.Name, &p.Kind, &p.Fixed, &def); err != nil {
 				products.Close()
 				return err
 			}
+			if def.Valid {
+				p.DefaultCm, _ = ledger.NumericToCentimeters(def)
+			}
 			bySKU[strings.ToUpper(p.SKU)] = p
+			byID[p.ID] = p
 			name := strings.ToUpper(strings.TrimSpace(p.Name))
 			byName[name] = append(byName[name], p)
 		}
@@ -306,6 +339,17 @@ func (im *EntryBarcodeImporter) Stage(ctx context.Context, job ioengine.ImportJo
 		locs.Close()
 		if err != nil {
 			return err
+		}
+		// TEC-1007: the supplier's remembered product codes.
+		bySupplierCode := map[string]int64{}
+		if e.SupplierID.Valid {
+			known, err := q.ListSupplierProductCodes(ctx, e.SupplierID.Int64)
+			if err != nil {
+				return err
+			}
+			for _, k := range known {
+				bySupplierCode[strings.ToUpper(k.Code)] = k.ProductID
+			}
 		}
 		codes := make([]string, 0, len(raw))
 		for _, v := range raw {
@@ -346,16 +390,41 @@ func (im *EntryBarcodeImporter) Stage(ctx context.Context, job ioengine.ImportJo
 			sku := entryCell(data, "product_sku")
 			name := entryCell(data, "product_name")
 			locCode := entryCell(data, "location_code")
+			supplierCode := entryCell(data, "supplier_code")
 			r := entryImportRow{Index: idx + 1, Data: data, Barcode: barcode, Status: "invalid", Errors: []string{}, Target: map[string]any{}}
+			r.Lot, r.BoxNo = entryCell(data, "lot"), entryCell(data, "box_no")
+			if utf8.RuneCountInString(r.Lot) > 64 {
+				r.Errors = append(r.Errors, "lot_too_long")
+			}
+			if utf8.RuneCountInString(r.BoxNo) > 64 {
+				r.Errors = append(r.Errors, "box_no_too_long")
+			}
+			if supplierCode != "" {
+				if !e.SupplierID.Valid {
+					r.Errors = append(r.Errors, "supplier_required")
+				} else if utf8.RuneCountInString(supplierCode) > 64 {
+					r.Errors = append(r.Errors, "supplier_code_too_long")
+				} else {
+					r.SupplierCode = supplierCode
+				}
+			}
 			if barcode == "" {
 				r.Errors = append(r.Errors, "barcode_required")
 			} else if utf8.RuneCountInString(barcode) > 64 {
 				r.Errors = append(r.Errors, "barcode_too_long")
 			}
-			if sku == "" && name == "" {
+			var p importProduct
+			if sku == "" && name == "" && r.SupplierCode != "" {
+				// A supplier code alone resolves through the remembered codes.
+				if id, ok := bySupplierCode[strings.ToUpper(r.SupplierCode)]; ok {
+					p = byID[id]
+				}
+				if p.ID == 0 {
+					r.Errors = append(r.Errors, "supplier_code_unknown")
+				}
+			} else if sku == "" && name == "" && supplierCode == "" {
 				r.Errors = append(r.Errors, "product_required")
 			}
-			var p importProduct
 			if sku != "" {
 				p = bySKU[strings.ToUpper(sku)]
 				if p.ID == 0 {
@@ -378,6 +447,7 @@ func (im *EntryBarcodeImporter) Stage(ctx context.Context, job ioengine.ImportJo
 				r.ProductID = p.ID
 				r.Target["product_name"] = p.Name
 				r.Target["product_sku"] = p.SKU
+				entryImportAmounts(data, p, &r)
 			}
 			if locCode != "" {
 				matches := byCode[strings.ToUpper(locCode)]
@@ -404,7 +474,7 @@ func (im *EntryBarcodeImporter) Stage(ctx context.Context, job ioengine.ImportJo
 					r.Status = classifyEntryImportUnit(u, p, b.Policy, &r)
 				} else if u, exists := units[norm]; exists {
 					r.Status = classifyEntryImportUnit(u, p, b.Policy, &r)
-				} else if p.Kind == "roll_meter" && !p.Fixed {
+				} else if p.roll() && r.Centimeters <= 0 {
 					r.Status = "invalid"
 					r.Errors = append(r.Errors, "roll_meters_required")
 				} else if !center {
@@ -434,6 +504,42 @@ func (im *EntryBarcodeImporter) Stage(ctx context.Context, job ioengine.ImportJo
 	summary.BatchUUID = job.UUID.String()
 	return summary, err
 }
+
+// entryImportAmounts reads quantity (fixed barcodes) and meters (new rolls;
+// the product's default roll length when the column is empty).
+func entryImportAmounts(data map[string]any, p importProduct, r *entryImportRow) {
+	if raw := entryCell(data, "quantity"); raw != "" {
+		f, err := strconv.ParseFloat(strings.ReplaceAll(raw, ",", "."), 64)
+		n := int(f)
+		switch {
+		case err != nil || float64(n) != f || n < 1 || n > 100000:
+			r.Errors = append(r.Errors, "quantity_invalid")
+		case n > 1 && !p.Fixed:
+			r.Errors = append(r.Errors, "quantity_not_allowed")
+		default:
+			r.Quantity = int32(n)
+		}
+	}
+	raw := entryCell(data, "meters")
+	if raw == "" {
+		if p.roll() {
+			r.Centimeters = p.DefaultCm
+		}
+		return
+	}
+	if !p.roll() {
+		r.Errors = append(r.Errors, "meters_not_allowed")
+		return
+	}
+	cm, err := ledger.ParseMeters(strings.ReplaceAll(raw, ",", "."))
+	if err != nil || cm <= 0 {
+		r.Errors = append(r.Errors, "meters_invalid")
+		return
+	}
+	r.Centimeters = cm
+	r.Target["meters"] = fmt.Sprintf("%d.%02d", cm/100, cm%100)
+}
+
 func classifyEntryImportUnit(u importUnit, p importProduct, policy string, r *entryImportRow) string {
 	conflict := ""
 	enterableStatus := u.Status == "printed" || u.Status == "reserved" || (u.Kind == "fixed" && u.Status == "available")
@@ -518,12 +624,22 @@ func (im *EntryBarcodeImporter) Apply(ctx context.Context, job ioengine.ImportJo
 				if p.UsesFixedBarcode {
 					kind = "fixed"
 				}
+				arg := db.CreateUnitParams{OrganizationID: b.OrganizationID, BrandID: b.BrandID, ProductID: p.ID, Barcode: r.Barcode, UnitKind: kind, Source: "imported", Status: "printed"}
 				if p.UnitType == "roll_meter" && !p.UsesFixedBarcode {
-					return ioengine.ErrImportRejected
+					if r.Centimeters <= 0 {
+						return ioengine.ErrImportRejected
+					}
+					arg.InitialMeters = ledger.CentimetersToNumeric(r.Centimeters)
+					arg.RemainingMeters = arg.InitialMeters
 				}
-				u, err = q.CreateUnit(ctx, db.CreateUnitParams{OrganizationID: b.OrganizationID, BrandID: b.BrandID, ProductID: p.ID, Barcode: r.Barcode, UnitKind: kind, Source: "imported", Status: "printed"})
+				u, err = q.CreateUnit(ctx, arg)
 				if err != nil {
 					return err
+				}
+				if r.Lot != "" {
+					if err := q.SetUnitLot(ctx, db.SetUnitLotParams{ID: u.ID, Lot: pgtype.Text{String: r.Lot, Valid: true}}); err != nil {
+						return err
+					}
 				}
 			} else {
 				u, err = q.GetUnitByBarcode(ctx, db.GetUnitByBarcodeParams{BrandID: b.BrandID, Barcode: r.Barcode})
@@ -544,9 +660,27 @@ func (im *EntryBarcodeImporter) Apply(ctx context.Context, job ioengine.ImportJo
 					return ioengine.ErrImportRejected
 				}
 			}
-			arg := db.InsertStockEntryLineParams{EntryID: e.ID, UnitID: u.ID, Quantity: 1}
+			if u.UnitKind != "fixed" && r.quantity() != 1 {
+				return ioengine.ErrImportRejected
+			}
+			arg := db.InsertStockEntryLineParams{EntryID: e.ID, UnitID: u.ID, Quantity: r.quantity()}
+			if r.LocationID == 0 && e.DefaultLocationID.Valid {
+				// TEC-1007: rows without a bin land on the entry's default bin.
+				b.Rows[idx].LocationID = e.DefaultLocationID.Int64
+				r.LocationID = e.DefaultLocationID.Int64
+			}
 			if r.LocationID != 0 {
 				arg.LocationID = pgtype.Int8{Int64: r.LocationID, Valid: true}
+			}
+			if r.BoxNo != "" {
+				arg.BoxNo = pgtype.Text{String: r.BoxNo, Valid: true}
+			}
+			if r.SupplierCode != "" && e.SupplierID.Valid {
+				if err := q.UpsertSupplierProductCode(ctx, db.UpsertSupplierProductCodeParams{
+					OrganizationID: e.OrganizationID, BrandID: e.BrandID, SupplierID: e.SupplierID.Int64, Code: r.SupplierCode, ProductID: p.ID,
+				}); err != nil {
+					return err
+				}
 			}
 			line, err := q.InsertStockEntryLine(ctx, arg)
 			if err != nil {
@@ -591,7 +725,7 @@ func (im *EntryBarcodeImporter) Undo(ctx context.Context, job ioengine.ImportJob
 				continue
 			}
 			var lineExists bool
-			err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM stock_entry_lines l JOIN units u ON u.id=l.unit_id WHERE l.id=$1 AND l.entry_id=$2 AND l.unit_id=$3 AND l.entry_movement_id IS NULL AND l.placement_movement_id IS NULL AND l.location_id IS NOT DISTINCT FROM NULLIF($4::bigint,0) AND l.quantity=1 AND u.status=$5)`, r.LineID, b.EntryID, r.UnitID, r.LocationID, r.UnitStatus).Scan(&lineExists)
+			err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM stock_entry_lines l JOIN units u ON u.id=l.unit_id WHERE l.id=$1 AND l.entry_id=$2 AND l.unit_id=$3 AND l.entry_movement_id IS NULL AND l.placement_movement_id IS NULL AND l.location_id IS NOT DISTINCT FROM NULLIF($4::bigint,0) AND l.quantity=$6 AND u.status=$5)`, r.LineID, b.EntryID, r.UnitID, r.LocationID, r.UnitStatus, r.quantity()).Scan(&lineExists)
 			if err != nil {
 				return err
 			}

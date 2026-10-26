@@ -28,6 +28,13 @@ import {
 import { Permission } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { ImportWizard } from "@/features/io/components/import-wizard";
+import {
+  ArrivalScanCard,
+  ContainerDeliveryCard,
+  MappingTemplateBar,
+  supplierTemplate,
+  useEntryImportTemplates,
+} from "@/features/warehouse/components/container-entry";
 import { EntryLinesTable } from "@/features/warehouse/components/entry-lines-table";
 import { GenerateForm } from "@/features/warehouse/components/generate-form";
 import { LabelButton } from "@/features/warehouse/components/label-button";
@@ -109,6 +116,9 @@ export function StockEntryDetailPage({
   const draft = entry?.status === "draft";
   const editable = canWrite && draft;
   const warehouseUuid = entry?.warehouse?.uuid ?? "";
+  const templates = useEntryImportTemplates(
+    Boolean(editable && entry?.mode === "with_existing"),
+  );
 
   const rooms = useQuery({
     queryKey: warehouseKeys.rooms(warehouseUuid),
@@ -370,6 +380,19 @@ export function StockEntryDetailPage({
                 </fieldset>
               )}
               confirmCopy={entryImportConfirmCopy}
+              presetMapping={() =>
+                supplierTemplate(
+                  templates.data?.items ?? [],
+                  entry.supplier?.uuid,
+                )?.mapping ?? null
+              }
+              mappingTools={(tools) => (
+                <MappingTemplateBar
+                  tools={tools}
+                  templates={templates.data?.items ?? []}
+                  supplier={entry.supplier}
+                />
+              )}
             />
           ) : null}
           <Card>
@@ -410,6 +433,22 @@ export function StockEntryDetailPage({
               ) : null}
             </CardContent>
           </Card>
+
+          {entry.mode !== "import" ? (
+            <ContainerDeliveryCard
+              key={entry.uuid}
+              entry={entry}
+              editable={editable}
+              onSaved={apply}
+            />
+          ) : null}
+
+          {editable && lines.length > 0 ? (
+            <ArrivalScanCard
+              entry={entry}
+              onChanged={() => void qc.invalidateQueries({ queryKey: key })}
+            />
+          ) : null}
 
           {editable ? (
             <Card>

@@ -16,7 +16,7 @@ const cancelStockEntry = `-- name: CancelStockEntry :one
 UPDATE stock_entries
 SET status = 'cancelled', cancelled_at = NOW()
 WHERE id = $1 AND status = 'draft'
-RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id
 `
 
 func (q *Queries) CancelStockEntry(ctx context.Context, id int64) (StockEntry, error) {
@@ -38,6 +38,11 @@ func (q *Queries) CancelStockEntry(ctx context.Context, id int64) (StockEntry, e
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SupplierID,
+		&i.ContainerNo,
+		&i.WaybillNo,
+		&i.ArrivalDate,
+		&i.DefaultLocationID,
 	)
 	return i, err
 }
@@ -46,7 +51,7 @@ const confirmStockEntry = `-- name: ConfirmStockEntry :one
 UPDATE stock_entries
 SET status = 'confirmed', confirmed_at = NOW(), confirmed_by_user_id = $1
 WHERE id = $2 AND status = 'draft'
-RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id
 `
 
 type ConfirmStockEntryParams struct {
@@ -73,6 +78,11 @@ func (q *Queries) ConfirmStockEntry(ctx context.Context, arg ConfirmStockEntryPa
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SupplierID,
+		&i.ContainerNo,
+		&i.WaybillNo,
+		&i.ArrivalDate,
+		&i.DefaultLocationID,
 	)
 	return i, err
 }
@@ -145,7 +155,7 @@ INSERT INTO stock_entries (
     $4, $4, NOW()
 )
 ON CONFLICT (import_batch_id) DO NOTHING
-RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id
 `
 
 type CreateImportStockEntryParams struct {
@@ -180,6 +190,11 @@ func (q *Queries) CreateImportStockEntry(ctx context.Context, arg CreateImportSt
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SupplierID,
+		&i.ContainerNo,
+		&i.WaybillNo,
+		&i.ArrivalDate,
+		&i.DefaultLocationID,
 	)
 	return i, err
 }
@@ -192,7 +207,7 @@ INSERT INTO stock_entries (
     $1, $2, $3, $4,
     $5, $6
 )
-RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id
 `
 
 type CreateStockEntryParams struct {
@@ -232,6 +247,11 @@ func (q *Queries) CreateStockEntry(ctx context.Context, arg CreateStockEntryPara
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SupplierID,
+		&i.ContainerNo,
+		&i.WaybillNo,
+		&i.ArrivalDate,
+		&i.DefaultLocationID,
 	)
 	return i, err
 }
@@ -282,7 +302,7 @@ func (q *Queries) FindOpenStockEntryForUnit(ctx context.Context, arg FindOpenSto
 }
 
 const getStockEntryByImportBatch = `-- name: GetStockEntryByImportBatch :one
-SELECT id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at FROM stock_entries WHERE import_batch_id = $1 FOR UPDATE
+SELECT id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id FROM stock_entries WHERE import_batch_id = $1 FOR UPDATE
 `
 
 func (q *Queries) GetStockEntryByImportBatch(ctx context.Context, importBatchID pgtype.Int8) (StockEntry, error) {
@@ -304,12 +324,17 @@ func (q *Queries) GetStockEntryByImportBatch(ctx context.Context, importBatchID 
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SupplierID,
+		&i.ContainerNo,
+		&i.WaybillNo,
+		&i.ArrivalDate,
+		&i.DefaultLocationID,
 	)
 	return i, err
 }
 
 const getStockEntryByUUID = `-- name: GetStockEntryByUUID :one
-SELECT id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at FROM stock_entries
+SELECT id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id FROM stock_entries
 WHERE uuid = $1 AND organization_id = $2
 `
 
@@ -337,6 +362,11 @@ func (q *Queries) GetStockEntryByUUID(ctx context.Context, arg GetStockEntryByUU
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SupplierID,
+		&i.ContainerNo,
+		&i.WaybillNo,
+		&i.ArrivalDate,
+		&i.DefaultLocationID,
 	)
 	return i, err
 }
@@ -382,12 +412,12 @@ func (q *Queries) GetUnitBatchUUID(ctx context.Context, id int64) (uuid.UUID, er
 
 const insertStockEntryLine = `-- name: InsertStockEntryLine :one
 INSERT INTO stock_entry_lines (
-    entry_id, unit_id, quantity, location_id, entry_movement_id
+    entry_id, unit_id, quantity, location_id, entry_movement_id, box_no
 ) VALUES (
     $1, $2, $3,
-    $4, $5
+    $4, $5, $6
 )
-RETURNING id, uuid, entry_id, unit_id, quantity, location_id, entry_movement_id, placement_movement_id, undo_movement_id, created_at
+RETURNING id, uuid, entry_id, unit_id, quantity, location_id, entry_movement_id, placement_movement_id, undo_movement_id, created_at, box_no, scanned_at, scanned_by
 `
 
 type InsertStockEntryLineParams struct {
@@ -396,6 +426,7 @@ type InsertStockEntryLineParams struct {
 	Quantity        int32       `json:"quantity"`
 	LocationID      pgtype.Int8 `json:"location_id"`
 	EntryMovementID pgtype.Int8 `json:"entry_movement_id"`
+	BoxNo           pgtype.Text `json:"box_no"`
 }
 
 func (q *Queries) InsertStockEntryLine(ctx context.Context, arg InsertStockEntryLineParams) (StockEntryLine, error) {
@@ -405,6 +436,7 @@ func (q *Queries) InsertStockEntryLine(ctx context.Context, arg InsertStockEntry
 		arg.Quantity,
 		arg.LocationID,
 		arg.EntryMovementID,
+		arg.BoxNo,
 	)
 	var i StockEntryLine
 	err := row.Scan(
@@ -418,12 +450,15 @@ func (q *Queries) InsertStockEntryLine(ctx context.Context, arg InsertStockEntry
 		&i.PlacementMovementID,
 		&i.UndoMovementID,
 		&i.CreatedAt,
+		&i.BoxNo,
+		&i.ScannedAt,
+		&i.ScannedBy,
 	)
 	return i, err
 }
 
 const listStockEntries = `-- name: ListStockEntries :many
-SELECT e.id, e.uuid, e.organization_id, e.brand_id, e.warehouse_id, e.mode, e.status, e.note, e.import_batch_id, e.created_by_user_id, e.confirmed_by_user_id, e.confirmed_at, e.cancelled_at, e.created_at, e.updated_at FROM stock_entries e
+SELECT e.id, e.uuid, e.organization_id, e.brand_id, e.warehouse_id, e.mode, e.status, e.note, e.import_batch_id, e.created_by_user_id, e.confirmed_by_user_id, e.confirmed_at, e.cancelled_at, e.created_at, e.updated_at, e.supplier_id, e.container_no, e.waybill_no, e.arrival_date, e.default_location_id FROM stock_entries e
 WHERE e.organization_id = $1
   AND (COALESCE(cardinality($2::text[]), 0) = 0 OR e.status = ANY ($2::text[]))
   AND (COALESCE(cardinality($3::text[]), 0) = 0 OR e.mode = ANY ($3::text[]))
@@ -513,6 +548,11 @@ func (q *Queries) ListStockEntries(ctx context.Context, arg ListStockEntriesPara
 			&i.CancelledAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.SupplierID,
+			&i.ContainerNo,
+			&i.WaybillNo,
+			&i.ArrivalDate,
+			&i.DefaultLocationID,
 		); err != nil {
 			return nil, err
 		}
@@ -525,7 +565,7 @@ func (q *Queries) ListStockEntries(ctx context.Context, arg ListStockEntriesPara
 }
 
 const listStockEntryLines = `-- name: ListStockEntryLines :many
-SELECT id, uuid, entry_id, unit_id, quantity, location_id, entry_movement_id, placement_movement_id, undo_movement_id, created_at FROM stock_entry_lines WHERE entry_id = $1 ORDER BY id
+SELECT id, uuid, entry_id, unit_id, quantity, location_id, entry_movement_id, placement_movement_id, undo_movement_id, created_at, box_no, scanned_at, scanned_by FROM stock_entry_lines WHERE entry_id = $1 ORDER BY id
 `
 
 func (q *Queries) ListStockEntryLines(ctx context.Context, entryID int64) ([]StockEntryLine, error) {
@@ -548,6 +588,9 @@ func (q *Queries) ListStockEntryLines(ctx context.Context, entryID int64) ([]Sto
 			&i.PlacementMovementID,
 			&i.UndoMovementID,
 			&i.CreatedAt,
+			&i.BoxNo,
+			&i.ScannedAt,
+			&i.ScannedBy,
 		); err != nil {
 			return nil, err
 		}
@@ -560,7 +603,7 @@ func (q *Queries) ListStockEntryLines(ctx context.Context, entryID int64) ([]Sto
 }
 
 const lockStockEntryByUUID = `-- name: LockStockEntryByUUID :one
-SELECT id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at FROM stock_entries
+SELECT id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id FROM stock_entries
 WHERE uuid = $1 AND organization_id = $2
 FOR UPDATE
 `
@@ -589,6 +632,11 @@ func (q *Queries) LockStockEntryByUUID(ctx context.Context, arg LockStockEntryBy
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SupplierID,
+		&i.ContainerNo,
+		&i.WaybillNo,
+		&i.ArrivalDate,
+		&i.DefaultLocationID,
 	)
 	return i, err
 }
@@ -597,7 +645,7 @@ const markStockEntryUndone = `-- name: MarkStockEntryUndone :one
 UPDATE stock_entries
 SET status = 'undone'
 WHERE id = $1 AND status = 'confirmed'
-RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at
+RETURNING id, uuid, organization_id, brand_id, warehouse_id, mode, status, note, import_batch_id, created_by_user_id, confirmed_by_user_id, confirmed_at, cancelled_at, created_at, updated_at, supplier_id, container_no, waybill_no, arrival_date, default_location_id
 `
 
 func (q *Queries) MarkStockEntryUndone(ctx context.Context, id int64) (StockEntry, error) {
@@ -619,6 +667,11 @@ func (q *Queries) MarkStockEntryUndone(ctx context.Context, id int64) (StockEntr
 		&i.CancelledAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.SupplierID,
+		&i.ContainerNo,
+		&i.WaybillNo,
+		&i.ArrivalDate,
+		&i.DefaultLocationID,
 	)
 	return i, err
 }

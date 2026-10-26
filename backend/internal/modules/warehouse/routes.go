@@ -117,6 +117,16 @@ func RegisterEntryRoutes(
 	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/place", write(h.Place))
 	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/confirm", write(h.Confirm))
 	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/cancel", write(h.Cancel))
+	// TEC-1007: container entries.
+	mux.Handle("PATCH /v1/warehouse/stock-entries/{uuid}", write(h.UpdateHeader))
+	mux.Handle("POST /v1/warehouse/stock-entries/{uuid}/arrival-scans", write(h.Scan))
+	mux.Handle("DELETE /v1/warehouse/stock-entries/{uuid}/arrival-scans", write(h.Unscan))
+	mux.Handle("GET /v1/warehouse/stock-entries/{uuid}/arrival-report", read(h.ArrivalReport))
+	mux.Handle("GET /v1/warehouse/suppliers", write(h.Suppliers))
+	mux.Handle("POST /v1/warehouse/suppliers", write(h.CreateSupplier))
+	mux.Handle("GET /v1/warehouse/entry-import-templates", write(h.MappingTemplates))
+	mux.Handle("POST /v1/warehouse/entry-import-templates", write(h.SaveMappingTemplate))
+	mux.Handle("DELETE /v1/warehouse/entry-import-templates/{uuid}", write(h.DeleteMappingTemplate))
 }
 
 // RegisterEntryImportRoutes mounts the record-scoped barcode import upload and template.

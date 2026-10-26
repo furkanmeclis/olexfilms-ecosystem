@@ -80,6 +80,19 @@ type entryBody struct {
 	WarehouseUUID string  `json:"warehouse_uuid"`
 	Mode          string  `json:"mode"`
 	Note          *string `json:"note"`
+	// TEC-1007: the delivery of a container entry.
+	SupplierUUID        *string `json:"supplier_uuid"`
+	ContainerNo         *string `json:"container_no"`
+	WaybillNo           *string `json:"waybill_no"`
+	ArrivalDate         *string `json:"arrival_date"`
+	DefaultLocationUUID *string `json:"default_location_uuid"`
+}
+
+func (b entryBody) header() wh.EntryHeaderInput {
+	return wh.EntryHeaderInput{
+		SupplierUUID: b.SupplierUUID, ContainerNo: b.ContainerNo, WaybillNo: b.WaybillNo,
+		ArrivalDate: b.ArrivalDate, DefaultLocationUUID: b.DefaultLocationUUID,
+	}
 }
 
 type entryLinesBody struct {
@@ -120,9 +133,9 @@ func (h *Entries) Create(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &b) {
 		return
 	}
-	out, err := h.svc.Create(r.Context(), entryCaller(r), wh.EntryInput{WarehouseUUID: b.WarehouseUUID, Mode: b.Mode, Note: b.Note})
+	out, err := h.svc.Create(r.Context(), entryCaller(r), wh.EntryInput{WarehouseUUID: b.WarehouseUUID, Mode: b.Mode, Note: b.Note, Header: b.header()})
 	if err != nil {
-		writeEntryError(w, r, err)
+		writeContainerError(w, r, err)
 		return
 	}
 	response.JSON(w, r, http.StatusCreated, out)

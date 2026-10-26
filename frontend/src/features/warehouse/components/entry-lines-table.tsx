@@ -87,6 +87,45 @@ export function EntryLinesTable({
           labelKey: "warehouse.fields.quantity",
           cell: ({ row }) => format.number(row.original.quantity),
         }),
+        // TEC-1007: container list columns and the arrival scan.
+        createColumn<StockEntryLine>({
+          id: "meters",
+          accessorFn: (l) => (l.meters ? Number(l.meters) : null),
+          labelKey: "warehouse.fields.meters",
+          cell: ({ row }) =>
+            row.original.meters
+              ? `${format.number(Number(row.original.meters))} m`
+              : "—",
+        }),
+        createColumn<StockEntryLine>({
+          id: "lot",
+          accessorFn: (l) => l.lot ?? "",
+          labelKey: "warehouse.fields.lot",
+          cell: ({ row }) => row.original.lot ?? "—",
+        }),
+        createColumn<StockEntryLine>({
+          id: "box_no",
+          accessorFn: (l) => l.box_no ?? "",
+          labelKey: "warehouse.fields.box_no",
+          cell: ({ row }) => row.original.box_no ?? "—",
+        }),
+        createColumn<StockEntryLine>({
+          id: "scanned",
+          accessorFn: (l) => (l.scanned_at ? 1 : 0),
+          labelKey: "warehouse.arrival.received",
+          cell: ({ row }) =>
+            row.original.scanned_at ? (
+              <span
+                className="text-emerald-600"
+                data-testid="entry-line-scanned"
+                title={format.dateTime(row.original.scanned_at)}
+              >
+                ✓
+              </span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            ),
+        }),
         createColumn<StockEntryLine>({
           id: "location",
           accessorFn: (l) => l.location?.full_code ?? l.location?.code ?? "",

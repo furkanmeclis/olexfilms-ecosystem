@@ -314,6 +314,23 @@ export class WarehouseMock {
       this.entries.unshift(e);
       return ok(this.entryView(e), 201);
     }
+    // TEC-1007: saved import mappings and the arrival check.
+    if (path === "/v1/warehouse/entry-import-templates" && method === "GET")
+      return ok({ items: [], total: 0, limit: 0, offset: 0 });
+    const arrival = path.match(
+      /^\/v1\/warehouse\/stock-entries\/([^/]+)\/arrival-report$/,
+    );
+    if (arrival && method === "GET") {
+      const e = this.entries.find((x) => x.uuid === arrival[1]);
+      if (!e) return fail(404, "NOT_FOUND");
+      const lines = (e.lines as Json[]) ?? [];
+      return ok({
+        expected: lines.length,
+        scanned: 0,
+        missing: lines,
+        extras: [],
+      });
+    }
     const entryPath = path.match(
       /^\/v1\/warehouse\/stock-entries\/([^/]+)(?:\/(lines|place|confirm|cancel))?$/,
     );

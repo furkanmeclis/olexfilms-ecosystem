@@ -111,10 +111,10 @@ RETURNING *;
 
 -- name: InsertStockEntryLine :one
 INSERT INTO stock_entry_lines (
-    entry_id, unit_id, quantity, location_id, entry_movement_id
+    entry_id, unit_id, quantity, location_id, entry_movement_id, box_no
 ) VALUES (
     sqlc.arg(entry_id), sqlc.arg(unit_id), sqlc.arg(quantity),
-    sqlc.narg(location_id), sqlc.narg(entry_movement_id)
+    sqlc.narg(location_id), sqlc.narg(entry_movement_id), sqlc.narg(box_no)
 )
 RETURNING *;
 

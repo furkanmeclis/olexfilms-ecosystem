@@ -6906,6 +6906,116 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Change the delivery of a draft entry (TEC-1007)
+         * @description Needs `warehouse.write` and, for a restricted user, membership of the entry warehouse. Supplier, container / waybill number, arrival date, default bin and note of a draft. 409 STOCK_ENTRY_NOT_DRAFT after confirm or cancel; 404 for an unknown supplier.
+         */
+        patch: operations["updateStockEntryHeader"];
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/arrival-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check one arrived barcode against a draft entry (TEC-1007)
+         * @description Needs `warehouse.write`. A barcode of the entry marks its line received (`matched`, or `already` when scanned before); any other barcode is recorded as an extra. Returns the running counts.
+         */
+        post: operations["scanStockEntryArrival"];
+        /** Take back one arrival scan (TEC-1007) */
+        delete: operations["unscanStockEntryArrival"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/stock-entries/{uuid}/arrival-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Expected vs received of the arrival scan (TEC-1007)
+         * @description Needs `warehouse.read`. Missing lines (not scanned) and extras (scanned, not on the entry).
+         */
+        get: operations["getStockEntryArrivalReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active suppliers of the active organization for stock entries (TEC-1007)
+         * @description Needs `warehouse.write`. `q` matches the name; sorted by name.
+         */
+        get: operations["listWarehouseSuppliers"];
+        put?: never;
+        /**
+         * Add a supplier from the stock entry form (TEC-1007)
+         * @description Needs `warehouse.write`.
+         */
+        post: operations["createWarehouseSupplier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/entry-import-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Saved column mappings of the stock entry import (TEC-1007)
+         * @description Needs `warehouse.write`. Sorted by name.
+         */
+        get: operations["listEntryImportTemplates"];
+        put?: never;
+        /**
+         * Save a column mapping (a supplier's template) (TEC-1007)
+         * @description Needs `warehouse.write`. Values must be fields of the stock entry import (400 otherwise); the same name replaces the saved mapping.
+         */
+        post: operations["saveEntryImportTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/warehouse/entry-import-templates/{uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a saved column mapping (TEC-1007) */
+        delete: operations["deleteEntryImportTemplate"];
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -22795,6 +22905,156 @@ export interface components {
             /** @enum {string} */
             mode: "with_existing" | "generate_new";
             note?: string | null;
+            /**
+             * Format: uuid
+             * @description TEC-1007: a supplier of the active organization (GET /v1/warehouse/suppliers).
+             */
+            supplier_uuid?: string | null;
+            container_no?: string | null;
+            waybill_no?: string | null;
+            /** Format: date */
+            arrival_date?: string | null;
+            /**
+             * Format: uuid
+             * @description A bin of the entry warehouse; later lines (scan, import) land on it.
+             */
+            default_location_uuid?: string | null;
+        };
+        /** @description TEC-1007 delivery of a draft entry. A missing field keeps its value, null or an empty string clears it. */
+        StockEntryHeaderInput: {
+            note?: string | null;
+            /**
+             * Format: uuid
+             * @description TEC-1007: a supplier of the active organization (GET /v1/warehouse/suppliers).
+             */
+            supplier_uuid?: string | null;
+            container_no?: string | null;
+            waybill_no?: string | null;
+            /** Format: date */
+            arrival_date?: string | null;
+            /**
+             * Format: uuid
+             * @description A bin of the entry warehouse; later lines (scan, import) land on it.
+             */
+            default_location_uuid?: string | null;
+        };
+        StockEntrySupplier: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+        };
+        WarehouseSupplier: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            tax_no: string | null;
+            active: boolean;
+        };
+        WarehouseSupplierInput: {
+            name: string;
+            tax_no?: string | null;
+        };
+        EnvelopeWarehouseSupplier: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["WarehouseSupplier"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeWarehouseSupplierPage: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["WarehouseSupplier"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EntryImportMappingTemplate: {
+            /** Format: uuid */
+            uuid: string;
+            name: string;
+            supplier: null | components["schemas"]["StockEntrySupplier"];
+            /** @description Source column header -> import field. */
+            mapping: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            updated_at: string;
+        };
+        EntryImportMappingTemplateInput: {
+            /** @description Saving an existing name replaces it. */
+            name: string;
+            /** Format: uuid */
+            supplier_uuid?: string | null;
+            mapping: {
+                [key: string]: string;
+            };
+        };
+        EnvelopeEntryImportMappingTemplate: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["EntryImportMappingTemplate"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeEntryImportMappingTemplateList: {
+            /** @enum {boolean} */
+            success: true;
+            data: {
+                items: components["schemas"]["EntryImportMappingTemplate"][];
+                /** Format: int64 */
+                total: number;
+                limit: number;
+                offset: number;
+            };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        StockEntryArrivalScanInput: {
+            /** @description Scanned barcode or OFW:U:<barcode> label. */
+            barcode: string;
+        };
+        StockEntryArrivalScan: {
+            /**
+             * @description matched - a line is received now; already - scanned before; extra - not on the entry.
+             * @enum {string}
+             */
+            result: "matched" | "already" | "extra";
+            barcode: string;
+            line: null | components["schemas"]["StockEntryLine"];
+            /** Format: int64 */
+            expected: number;
+            /** Format: int64 */
+            scanned: number;
+            /** Format: int64 */
+            extras: number;
+        };
+        EnvelopeStockEntryArrivalScan: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockEntryArrivalScan"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        StockEntryArrivalExtra: {
+            barcode: string;
+            product: null | components["schemas"]["StockEntryProduct"];
+            /** Format: date-time */
+            scanned_at: string;
+        };
+        StockEntryArrivalReport: {
+            /** Format: int64 */
+            expected: number;
+            /** Format: int64 */
+            scanned: number;
+            missing: components["schemas"]["StockEntryLine"][];
+            extras: components["schemas"]["StockEntryArrivalExtra"][];
+        };
+        EnvelopeStockEntryArrivalReport: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["StockEntryArrivalReport"];
+            meta: components["schemas"]["ResponseMeta"];
         };
         StockEntryLinesInput: {
             /** @description with_existing only. */
@@ -22866,6 +23126,17 @@ export interface components {
             placement_movement_uuid: string | null;
             /** @description Voided by an import undo (mode import). */
             undone: boolean;
+            /** @description TEC-1007 box (carton) number of the container list. */
+            box_no: string | null;
+            /** @description Lot of the unit. */
+            lot: string | null;
+            /** @description Initial length of a roll unit. */
+            meters: string | null;
+            /**
+             * Format: date-time
+             * @description TEC-1007 arrival scan.
+             */
+            scanned_at: string | null;
         };
         StockEntry: {
             /** Format: uuid */
@@ -22885,6 +23156,12 @@ export interface components {
             import_source_filename?: string;
             /** @description Import entries - status of the import batch (applied, undone, partially_undone when some rows moved after the import and were not undone). */
             import_status?: string;
+            supplier: null | components["schemas"]["StockEntrySupplier"];
+            container_no: string | null;
+            waybill_no: string | null;
+            /** Format: date */
+            arrival_date: string | null;
+            default_location: null | components["schemas"]["StockEntryLocation"];
             /** Format: int64 */
             line_count: number;
             /**
@@ -22892,6 +23169,11 @@ export interface components {
              * @description Detail responses only.
              */
             placed_count?: number;
+            /**
+             * Format: int64
+             * @description Detail responses only; lines received by the arrival scan.
+             */
+            scanned_count?: number;
             /** @description Detail responses only. */
             lines?: components["schemas"]["StockEntryLine"][];
             /** @description Detail responses only. */
@@ -43316,6 +43598,253 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["EnvelopeStockEntry"];
                 };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateStockEntryHeader: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryHeaderInput"];
+            };
+        };
+        responses: {
+            /** @description Entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntry"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    scanStockEntryArrival: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockEntryArrivalScanInput"];
+            };
+        };
+        responses: {
+            /** @description Scan result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryArrivalScan"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    unscanStockEntryArrival: {
+        parameters: {
+            query: {
+                barcode: string;
+            };
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Running counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryArrivalScan"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    getStockEntryArrivalReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeStockEntryArrivalReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listWarehouseSuppliers: {
+        parameters: {
+            query?: {
+                q?: components["parameters"]["Q"];
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Suppliers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseSupplierPage"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    createWarehouseSupplier: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WarehouseSupplierInput"];
+            };
+        };
+        responses: {
+            /** @description Supplier */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeWarehouseSupplier"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listEntryImportTemplates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Templates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEntryImportMappingTemplateList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    saveEntryImportTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryImportMappingTemplateInput"];
+            };
+        };
+        responses: {
+            /** @description Template */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeEntryImportMappingTemplate"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    deleteEntryImportTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                uuid: components["parameters"]["ResourceUUID"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];

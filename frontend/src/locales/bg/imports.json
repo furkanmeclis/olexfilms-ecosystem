@@ -194,5 +194,10 @@
   "fields.entry_barcodes.product_name": "Име на продукта",
   "fields.entry_barcodes.product_sku": "SKU на продукта",
   "fields.entry_barcodes.barcode": "Баркод",
-  "fields.entry_barcodes.location_code": "Код на клетка"
+  "fields.entry_barcodes.location_code": "Код на клетка",
+  "fields.entry_barcodes.supplier_code": "Код на продукта при доставчика",
+  "fields.entry_barcodes.quantity": "Количество",
+  "fields.entry_barcodes.meters": "Метри",
+  "fields.entry_barcodes.lot": "Партида",
+  "fields.entry_barcodes.box_no": "№ кашон"
 }
