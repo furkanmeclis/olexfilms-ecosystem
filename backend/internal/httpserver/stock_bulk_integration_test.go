@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/modules/stock/ledger"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 )
@@ -168,9 +169,121 @@ func TestIntegrationStockBulkConvertAndUndo(t *testing.T) {
 		t.Fatalf("void undo = %d %s", code, errCode(env))
 	}
 
-	// The history lists both jobs.
+	// change_product and set_lot, undone: the unit is back on its product
+	// and its lot is cleared.
+	p2 := it.product(center, "T1008B")
+	code, env = it.do("POST", "/v1/platform/stock-bulk", hostOlex, tok, map[string]any{
+		"action": "change_product", "params": map[string]any{"product_uuid": p2.Uuid.String()},
+		"selection": map[string]any{"barcodes": []string{units[1]}},
+	})
+	if code != http.StatusCreated {
+		t.Fatalf("change preview = %d %s", code, errCode(env))
+	}
+	cp := job(code, env)
+	if code, env := it.do("POST", "/v1/platform/stock-bulk/"+cp.UUID+"/run", hostOlex, tok, nil); code != http.StatusAccepted || job(code, env).Succeeded != 1 {
+		t.Fatalf("change run = %d %s", code, errCode(env))
+	}
+	productOf := func(barcode string) int64 {
+		t.Helper()
+		var id int64
+		if err := it.pool.QueryRow(ctx, `SELECT product_id FROM units WHERE barcode = $1`, barcode).Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	if productOf(units[1]) != p2.ID {
+		t.Fatal("product not changed")
+	}
+	if code, env := it.do("POST", "/v1/platform/stock-bulk/"+cp.UUID+"/undo", hostOlex, tok, nil); code != http.StatusAccepted || job(code, env).Reverted != 1 {
+		t.Fatalf("change undo = %d %s", code, errCode(env))
+	}
+	if productOf(units[1]) != p.ID {
+		t.Fatal("product not restored")
+	}
+	code, env = it.do("POST", "/v1/platform/stock-bulk", hostOlex, tok, map[string]any{
+		"action": "set_lot", "params": map[string]any{"lot": "KONT-42"},
+		"selection": map[string]any{"barcodes": []string{units[1], units[3]}},
+	})
+	lj := job(code, env)
+	if code != http.StatusCreated || lj.Eligible != 2 {
+		t.Fatalf("lot preview = %d %+v", code, lj)
+	}
+	if code, env := it.do("POST", "/v1/platform/stock-bulk/"+lj.UUID+"/run", hostOlex, tok, nil); code != http.StatusAccepted {
+		t.Fatalf("lot run = %d %s", code, errCode(env))
+	}
+	var lots int
+	if err := it.pool.QueryRow(ctx, `SELECT count(*) FROM units WHERE lot = 'KONT-42'`).Scan(&lots); err != nil || lots != 2 {
+		t.Fatalf("lots = %d %v", lots, err)
+	}
+	if code, env := it.do("POST", "/v1/platform/stock-bulk/"+lj.UUID+"/undo", hostOlex, tok, nil); code != http.StatusAccepted {
+		t.Fatalf("lot undo = %d %s", code, errCode(env))
+	}
+	if err := it.pool.QueryRow(ctx, `SELECT count(*) FROM units WHERE lot = 'KONT-42'`).Scan(&lots); err != nil || lots != 0 {
+		t.Fatalf("lots after undo = %d %v", lots, err)
+	}
+
+	// The history lists the jobs.
 	code, env = it.do("GET", "/v1/platform/stock-bulk?sort=-created_at", hostOlex, tok, nil)
 	if code != http.StatusOK {
 		t.Fatalf("list = %d %s", code, errCode(env))
+	}
+}
+
+// TEC-1008 proportional cost rule: meters cut from a box the dealer bought
+// as a piece (300 per box) and that is now a 25 m roll cost 300 / 25 per
+// meter: a 3 m cut costs 36.
+func TestIntegrationConvertedRollCostIsProportional(t *testing.T) {
+	it := newIntegration(t)
+	ctx := context.Background()
+	center := it.brandCenter("olex")
+	dealer := it.org("t1008c-dealer", "dealer", center)
+	owner, opw := it.user("t1008c-owner")
+	it.member(dealer, owner, "owner")
+	tok := it.loginOrg(owner, opw, dealer)
+	p := it.product(center, "T1008C")
+	cust, veh := it.svcCustomer(dealer, "t1008c-cust", "34C1008"+it.suffix[len(it.suffix)-3:])
+
+	s, _ := it.svcCall("POST", "/v1/services", tok,
+		map[string]any{"customer_uuid": cust.Uuid.String(), "vehicle_uuid": veh.Uuid.String()}, http.StatusCreated)
+	var svcID int64
+	if err := it.pool.QueryRow(ctx, `SELECT id FROM services WHERE uuid = $1`, s.UUID).Scan(&svcID); err != nil {
+		t.Fatal(err)
+	}
+	u := it.stockChain().unit(center, p, 10089)
+	var cur string
+	if err := it.pool.QueryRow(ctx, `SELECT currency FROM brands WHERE id = $1`, center.BrandID).Scan(&cur); err != nil {
+		t.Fatal(err)
+	}
+	var orderID, itemID int64
+	if err := it.pool.QueryRow(ctx, `INSERT INTO orders (order_no, organization_id, brand_id, seller_org_id, buyer_org_id,
+		status, currency, subtotal, total) VALUES ($1, $2, $3, $2, $4, 'received', $5, 300, 300) RETURNING id`,
+		"T1008C-"+it.suffix, center.ID, center.BrandID, dealer.ID, cur).Scan(&orderID); err != nil {
+		t.Fatalf("order: %v", err)
+	}
+	if err := it.pool.QueryRow(ctx, `INSERT INTO order_items (order_id, organization_id, brand_id, product_id, quantity,
+		unit_price, price_source, line_total) VALUES ($1, $2, $3, $4, 1, 300, 'list', 300) RETURNING id`,
+		orderID, center.ID, center.BrandID, p.ID).Scan(&itemID); err != nil {
+		t.Fatalf("order item: %v", err)
+	}
+	if _, err := it.pool.Exec(ctx, `INSERT INTO order_item_units (order_item_id, organization_id, brand_id, unit_id, quantity)
+		VALUES ($1, $2, $3, $4, 1)`, itemID, center.ID, center.BrandID, u.ID); err != nil {
+		t.Fatalf("order unit: %v", err)
+	}
+	// The box became a 25 m roll; a 3 m cut is on the service.
+	if _, err := it.pool.Exec(ctx, `UPDATE units SET initial_meters = 25, remaining_meters = 22 WHERE id = $1`, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := it.pool.Exec(ctx, `INSERT INTO service_items (service_id, organization_id, brand_id, product_id, unit_id,
+		kind, meters) VALUES ($1, $2, $3, $4, $5, 'partial', 3)`, svcID, dealer.ID, dealer.BrandID, p.ID, u.ID); err != nil {
+		t.Fatalf("service item: %v", err)
+	}
+	cost, err := it.q.GetServiceConsumedPurchaseCost(ctx, db.GetServiceConsumedPurchaseCostParams{
+		ServiceID: svcID, BrandID: dealer.BrandID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := cost.Float64Value(); v.Float64 != 36 {
+		t.Fatalf("cost = %v, want 36", v.Float64)
 	}
 }

@@ -133,6 +133,8 @@ Müşteri (global user) ── hizmet alır: herhangi bir bayi/distribütör/mer
 
 **Referans:** otopoly-go `backend/internal/modules/billing` (plan, entitlement, hard/soft limit) ve `RequireFeature` middleware'i (`backend/internal/httpserver`), https://github.com/furkanmeclis/otopoly-go, /Users/furkanmeclis/Documents/Projects/otopoly-go.
 
+**TEC-1008 (toplu barkod işlemleri, super_admin):** Merkezde depo > "Toplu barkod işlemleri". Barkodlar filtreyle (ürün, depo, durum, lot, stok girişi) veya yapıştırılan/Excel listesiyle (`BARKOD;metre`) seçilir. Önizleme her birimi uygun / dışlanan (sebebiyle) diye ayırır. Bayiye gitmiş, hizmette kullanılmış, tükenmiş, yolda, siparişe ayrılmış ve stoğa girmemiş birimler dışlanır. Onay step-up ister; iş arka planda (`stock:bulk`) çalışır ve geri alınabilir (void hariç). Her değişiklik ileriye dönük bir ledger hareketidir; geçmiş değişmez. İşlemler: adet → rulo (`measure_conversion`), ürün değiştirme (reclassification), konum taşıma (placement), void, lot/not. Bir üründe adet ve rulo birlikte bulunabilir: birim metraj taşıyorsa rulodur. Ürün kartında varsayılan rulo uzunluğu, en, minimum kesim ve fire payı tutulur. Maliyet: adet fiyatıyla alınmış kutu ruloya çevrildiyse metre maliyeti = alış fiyatı ÷ rulo uzunluğu (orantılı, kullanıcı kararı 26.10).
+
 ## 5. Modül envanteri
 
 Her modül için: seviye (Ç = çekirdek, S = standart, E = eklenti), kapsam ve referans alınan repo + yol. Yerel yollar `/Users/furkanmeclis/Documents/Projects/` altındadır; tabloda kısaltılmıştır.
