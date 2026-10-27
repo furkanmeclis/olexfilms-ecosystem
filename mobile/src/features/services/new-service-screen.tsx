@@ -9,7 +9,8 @@ import { z } from 'zod';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
-import { useCan } from '@/core/spaces';
+import { useSession } from '@/core/auth/session';
+import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
 import { PlateScanButton } from '@/features/plate-scan/plate-scan-button';
 import { Segmented } from '@/features/warehouse/parts';
 import { Button } from '@/ui/button';
@@ -52,6 +53,8 @@ export function NewServiceScreen() {
   const [notes, setNotes] = useState('');
   const [measure, setMeasure] = useState(false);
   const [serviceNo, setServiceNo] = useState('');
+  const performers = usePerformers();
+  const [performer, setPerformer] = useState<string>(OWN);
 
   const create = useMutation({
     mutationFn: () =>
@@ -64,6 +67,8 @@ export function NewServiceScreen() {
             notes: notes.trim() || undefined,
             has_measurement: measure && !!vehicle?.vin,
             service_no: serviceNo.trim() || undefined,
+            // TEC-1003: the center may open the service for a dealer of its network.
+            organization_uuid: performers.enabled && performer !== OWN ? performer : undefined,
           },
         }),
       ),
@@ -142,6 +147,7 @@ export function NewServiceScreen() {
                 last
               />
             </Section>
+            {performers.enabled ? <PerformerPicker performers={performers} value={performer} onChange={setPerformer} /> : null}
             <ServiceNoField value={serviceNo} onChange={setServiceNo} />
             <Input label={t('km')} placeholder={t('placeholder_km', { ns: 'common' })} keyboardType="number-pad" value={km} onChangeText={setKm} />
             <Input label={t('notes')} placeholder={t('placeholder_notes')} value={notes} onChangeText={setNotes} multiline className="min-h-24 py-3" />
@@ -175,6 +181,68 @@ export function NewServiceScreen() {
         ) : null}
       </ScrollView>
     </>
+  );
+}
+
+const OWN = 'own';
+
+/**
+ * Who performs the service. Since TEC-1003 the center runs its own service
+ * point and may also open a service on behalf of a dealer of its network
+ * (web: "Hizmeti yapan"); the backend accepts `organization_uuid` only there.
+ */
+function usePerformers() {
+  const me = useSession((s) => s.me);
+  const canList = useCan('tenant.settings.read');
+  const enabled = isCenterWorkplace(me) && canList;
+  const dealers = useQuery({
+    queryKey: ['tenant', 'organizations', 'dealers'],
+    enabled,
+    staleTime: 5 * 60_000,
+    queryFn: () => unwrap(api.GET('/v1/tenant/organizations', { params: { query: { type: 'dealer', limit: 200 } } })),
+  });
+  return {
+    enabled,
+    ownName: activeMembership(me)?.name ?? '',
+    dealers: (dealers.data?.items ?? []).map((o) => ({ uuid: o.uuid, name: o.name })),
+    isPending: enabled && dealers.isPending,
+  };
+}
+
+function PerformerPicker({
+  performers,
+  value,
+  onChange,
+}: {
+  performers: ReturnType<typeof usePerformers>;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { t } = useTranslation('dealer');
+  const [open, setOpen] = useState(false);
+  const own = t('performer_own', { name: performers.ownName });
+  const current = value === OWN ? own : (performers.dealers.find((d) => d.uuid === value)?.name ?? own);
+  const pick = (v: string) => {
+    onChange(v);
+    setOpen(false);
+  };
+  return (
+    <View className="gap-1.5">
+      <Text variant="footnote" tone="muted" className="font-medium">
+        {t('performer_label')}
+      </Text>
+      <Section>
+        <Summary icon="building" title={current} subtitle={t('performer_hint')} onPress={() => setOpen((o) => !o)} last={!open} />
+        {open ? (
+          <>
+            <PickRow title={own} selected={value === OWN} onPress={() => pick(OWN)} last={!performers.dealers.length} />
+            {performers.dealers.map((d, i) => (
+              <PickRow key={d.uuid} title={d.name} selected={value === d.uuid} onPress={() => pick(d.uuid)} last={i === performers.dealers.length - 1} />
+            ))}
+          </>
+        ) : null}
+      </Section>
+    </View>
   );
 }
 

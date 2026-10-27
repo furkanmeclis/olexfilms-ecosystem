@@ -2,7 +2,7 @@ import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { useSession } from '@/core/auth/session';
-import { activeMembership, type SpaceKind } from '@/core/spaces';
+import { activeMembership, isCenterWorkplace, kindsOf, type SpaceKind } from '@/core/spaces';
 import type { IconName } from '@/ui/icons';
 import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
@@ -23,6 +23,9 @@ type Item = {
  * a closed module is not drawn at all. Rows open their screens as they are built.
  */
 const ITEMS: Item[] = [
+  // TEC-1016: the center works in the dealer workplace; its admin tabs (approvals, network) become menu rows.
+  { key: 'approvals', icon: 'warrantyClaim', spaces: [], built: [], orgTypes: ['center'] },
+  { key: 'network', icon: 'network', permission: 'organizations.read', spaces: [], built: [], orgTypes: ['center'] },
   { key: 'customers', icon: 'customers', permission: 'customers.read', spaces: ['bayi', 'admin'], built: ['bayi', 'admin'] },
   // TEC-866: no warranty list row for dealers (bayi); warranties open from the service detail.
   { key: 'appointments', icon: 'appointment', permission: 'appointments.read', spaces: ['bayi'], built: ['bayi'] },
@@ -71,9 +74,15 @@ export function MenuScreen({ space }: { space: SpaceKind }) {
   const can = (p?: string | string[]) =>
     !p || !!me?.user.is_super_admin || [p].flat().some((k) => !!me?.permissions.includes(k));
   const orgType = activeMembership(me)?.type;
+  // The center's workplace also shows the admin rows (TEC-1016); their screens live under /bayi/menu.
+  const workplace = space === 'bayi' && isCenterWorkplace(me);
+  const shows = (i: Item) => i.spaces.includes(space) || (workplace && (i.spaces.includes('admin') || i.spaces.length === 0));
+  const built = (i: Item) => !!i.built?.includes(space) || (workplace && (i.built?.includes('admin') || i.spaces.length === 0));
   const items = ITEMS.filter(
-    (i) => i.spaces.includes(space) && can(i.permission) && (!i.orgTypes || (!!orgType && i.orgTypes.includes(orgType))),
+    (i) => shows(i) && can(i.permission) && (!i.orgTypes || (!!orgType && i.orgTypes.includes(orgType))),
   );
+  // Warehouse screens open over this space; swiping back returns here (no space switcher).
+  const warehouse = space !== 'depo' && kindsOf(me).includes('depo');
 
   return (
     <>
@@ -87,7 +96,7 @@ export function MenuScreen({ space }: { space: SpaceKind }) {
                 title={t(`menu:${i.key}`)}
                 icon={i.icon}
                 onPress={() =>
-                  i.built?.includes(space)
+                  built(i)
                     ? router.push(`/${space}/menu/${i.key}` as never)
                     : router.push({ pathname: '/soon/[key]', params: { key: i.key } })
                 }
@@ -96,9 +105,16 @@ export function MenuScreen({ space }: { space: SpaceKind }) {
             ))}
           </List>
         ) : null}
+        {warehouse ? (
+          <List>
+            <ListRow icon="warehouse" title={t('menu:warehouse')} subtitle={t('menu:warehouse_hint')} onPress={() => router.push('/depo')} last />
+          </List>
+        ) : null}
         <List>
           <ListRow icon="search" title={t('nav:search')} onPress={() => router.push('/search')} />
-          <ListRow icon="spaces" title={t('spaces:title')} onPress={() => router.push('/spaces')} />
+          {(me?.organizations?.length ?? 0) > 1 ? (
+            <ListRow icon="spaces" title={t('spaces:title')} onPress={() => router.push('/spaces')} />
+          ) : null}
           <ListRow icon="settings" title={t('nav:settings')} onPress={() => router.push('/settings')} last />
         </List>
       </Screen>

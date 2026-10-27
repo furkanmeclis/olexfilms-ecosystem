@@ -213,5 +213,10 @@
   "service_no_taken": "This number is used by another service.",
   "service_no_available": "The number is available.",
   "service_no_scan": "Scan QR code",
-  "service_no_label": "Service number"
+  "service_no_label": "Service number",
+  "performer_label": "Performed by",
+  "performer_own": "Own ({{name}})",
+  "performer_hint": "Change to open it for a dealer",
+  "scope_own": "Our services",
+  "scope_network": "Whole network"
 }

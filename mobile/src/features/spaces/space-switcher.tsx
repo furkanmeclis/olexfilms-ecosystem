@@ -7,52 +7,31 @@ import { ActivityIndicator, View } from 'react-native';
 import { useSession } from '@/core/auth/session';
 import { errorMessage } from '@/core/i18n';
 import { isApiError } from '@/core/api/errors';
-import { kindsOf, listSpaces, type Space, type SpaceKind, useActiveSpace, useResolvedSpace } from '@/core/spaces';
+import { listOrganizations } from '@/core/spaces';
 import { BrandLogo } from '@/ui/brand-logo';
-import { cn } from '@/ui/cn';
 import { List, ListRow } from '@/ui/list';
 import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
-const SPACE_COLOR: Record<SpaceKind, string> = {
-  bayi: 'bg-[#1f6b4a]',
-  depo: 'bg-[#2f5d8a]',
-  admin: 'bg-[#a86d0c]',
-  musteri: 'bg-[#6a4a7a]',
-};
-
-function Badge({ kind }: { kind: SpaceKind }) {
-  const { t } = useTranslation('spaces');
-  return (
-    <View className={cn('size-9 items-center justify-center rounded-md', SPACE_COLOR[kind])}>
-      <Text variant="headline" className="text-white">
-        {t(`kind.${kind}`).slice(0, 1)}
-      </Text>
-    </View>
-  );
-}
-
-/** Switch between the user's spaces in one tap; no new sign-in. */
+/**
+ * Organization switcher, only for accounts with more than one membership
+ * (TEC-1016: a single account opens one space, there is no space switch).
+ */
 export function SpaceSwitcher() {
   const { t } = useTranslation('spaces');
   const me = useSession((s) => s.me);
-  const current = useResolvedSpace();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string>();
-  const spaces = listSpaces(me);
+  const orgs = listOrganizations(me);
 
-  const open = async (s: Space) => {
+  const open = async (slug: string, active: boolean) => {
     setError(undefined);
     void Haptics.selectionAsync();
     try {
-      if (!s.active) {
-        setBusy(s.key);
-        const next = await useSession.getState().switchOrganization(s.orgSlug);
-        const kinds = kindsOf(next);
-        useActiveSpace.getState().setKind(kinds.includes(s.kind) ? s.kind : (kinds[0] ?? s.kind));
-      } else {
-        useActiveSpace.getState().setKind(s.kind);
+      if (!active) {
+        setBusy(slug);
+        await useSession.getState().switchOrganization(slug);
       }
       // One POP_TO action: an organization switch can drop the current space's
       // stack (Stack.Protected) before a queued POP_TO_TOP runs, leaving it unhandled.
@@ -79,23 +58,22 @@ export function SpaceSwitcher() {
       />
       <Screen className="pt-2">
         <List>
-          {spaces.map((s, i) => (
-            <ListRow
-              key={s.key}
-              title={s.orgName}
-              subtitle={`${t(`kind.${s.kind}`)} · ${t(`org_type.${s.orgType}`)}`}
-              leading={<Badge kind={s.kind} />}
-              trailing={
-                busy === s.key ? (
-                  <ActivityIndicator />
-                ) : s.active && s.kind === current ? (
-                  <StatusPill label={t('active')} tone="done" />
-                ) : undefined
-              }
-              onPress={() => void open(s)}
-              last={i === spaces.length - 1}
-            />
-          ))}
+          {orgs.map((o, i) => {
+            const active = o.uuid === me?.active_organization_uuid;
+            return (
+              <ListRow
+                key={o.uuid}
+                title={o.name}
+                subtitle={t(`org_type.${o.type ?? 'dealer'}`)}
+                icon="building"
+                trailing={
+                  busy === o.slug ? <ActivityIndicator /> : active ? <StatusPill label={t('active')} tone="done" /> : undefined
+                }
+                onPress={() => void open(o.slug, active)}
+                last={i === orgs.length - 1}
+              />
+            );
+          })}
         </List>
         {error ? (
           <Text variant="footnote" tone="danger" className="text-center">

@@ -27,5 +27,6 @@
   "ota_off": "Off (development)",
   "digits": "Digits",
   "digits.arab": "Arabic-Indic digits (٠١٢٣)",
-  "digits.latn": "Latin digits (0123)"
+  "digits.latn": "Latin digits (0123)",
+  "switch_organization": "Switch organization"
 }

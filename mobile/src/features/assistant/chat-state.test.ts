@@ -174,7 +174,8 @@ describe('labels and links', () => {
   it('links records that have a mobile screen', () => {
     assert.equal(recordPath('bayi', 'lead', 'u'), '/bayi/menu/leads/u');
     assert.equal(recordPath('admin', 'task', 'u'), '/admin/menu/tasks/u');
-    assert.equal(recordPath('bayi', 'task', 'u'), null);
+    assert.equal(recordPath('bayi', 'task', 'u'), '/bayi/menu/tasks/u');
+    assert.equal(recordPath('depo', 'task', 'u'), null);
     assert.equal(recordPath('bayi', 'appointment', 'u'), null);
   });
 });

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type Href, router, Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Alert, RefreshControl, View } from 'react-native';
 
@@ -14,7 +14,7 @@ import { Screen } from '@/ui/screen';
 import { Skeleton } from '@/ui/skeleton';
 import { Text } from '@/ui/text';
 
-import { ErrorState, useFormat } from './kit';
+import { ErrorState, useChildHref, useFormat } from './kit';
 
 const LIMIT = 20;
 
@@ -66,6 +66,8 @@ function Nothing() {
 function OrderApprovals() {
   const { t } = useTranslation('admin');
   const f = useFormat();
+  // Relative: approvals is a tab in the admin space and a menu screen in the center workplace (TEC-1016).
+  const href = useChildHref();
   const q = useQuery({
     queryKey: ['approvals', 'orders'],
     queryFn: () => unwrap(api.GET('/v1/orders', { params: { query: { status: 'submitted', side: 'seller', limit: LIMIT } } })),
@@ -80,7 +82,7 @@ function OrderApprovals() {
               key={o.uuid}
               title={`${o.order_no} · ${o.buyer.name}`}
               subtitle={`${f.money(o.total, o.currency)} · ${f.date(o.submitted_at ?? o.created_at)}`}
-              onPress={() => router.push(`/admin/approvals/orders/${o.uuid}` as Href)}
+              onPress={() => router.push(href(`orders/${o.uuid}`))}
               last={i === items.length - 1}
             />
           ))}

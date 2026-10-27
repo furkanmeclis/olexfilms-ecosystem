@@ -100,5 +100,7 @@
   "approvals.confirm_reject": "Talep reddedilsin mi?",
   "approvals.module_line": "{{module}} · talep eden: {{name}}",
   "approvals.no_access": "Size ait onay yok",
-  "approvals.no_access_body": "Kararınızı bekleyen talepler burada görünür."
+  "approvals.no_access_body": "Kararınızı bekleyen talepler burada görünür.",
+  "home.action.new_service": "Yeni hizmet",
+  "home.action.measure": "Ölçüm"
 }

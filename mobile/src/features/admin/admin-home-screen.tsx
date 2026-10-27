@@ -5,7 +5,7 @@ import { Pressable, RefreshControl, View } from 'react-native';
 
 import { isApiError } from '@/core/api/errors';
 import { useSession } from '@/core/auth/session';
-import { activeMembership, useCan } from '@/core/spaces';
+import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
 import { type Period, PERIODS, useReport } from '@/features/reports/api';
 import { StatTiles, TimeChart } from '@/features/reports/report-view';
 import { HomeHeaderLeft, HomeHeaderRight } from '@/features/shell/header-actions';
@@ -26,12 +26,29 @@ function greetingKey(hour: number) {
 
 type Action = { key: string; icon: IconName; href: Href; permission?: string };
 
-const ACTIONS: Action[] = [
-  { key: 'network', icon: 'network', href: '/admin/network', permission: 'organizations.read' },
-  { key: 'approvals', icon: 'warrantyClaim', href: '/admin/approvals' },
-  { key: 'orders', icon: 'cart', href: '/admin/menu/orders' as Href, permission: 'orders.read' },
-  { key: 'reports', icon: 'chart', href: '/admin/menu/reports' as Href },
-];
+/**
+ * Quick actions. The center opens this home inside its workplace (`bayi`,
+ * TEC-1016), where service intake comes first and the admin screens live in
+ * the menu; a distributor opens it in the `admin` space with its own tabs.
+ */
+function actionsFor(workplace: boolean): Action[] {
+  if (workplace) {
+    return [
+      { key: 'new_service', icon: 'add', href: '/bayi/services/new' as Href, permission: 'services.write' },
+      { key: 'measure', icon: 'gauge', href: '/bayi/measure' as Href, permission: 'services.write' },
+      { key: 'approvals', icon: 'warrantyClaim', href: '/bayi/menu/approvals' as Href },
+      { key: 'network', icon: 'network', href: '/bayi/menu/network' as Href, permission: 'organizations.read' },
+      { key: 'orders', icon: 'cart', href: '/bayi/menu/orders' as Href, permission: 'orders.read' },
+      { key: 'reports', icon: 'chart', href: '/bayi/menu/reports' as Href },
+    ];
+  }
+  return [
+    { key: 'network', icon: 'network', href: '/admin/network', permission: 'organizations.read' },
+    { key: 'approvals', icon: 'warrantyClaim', href: '/admin/approvals' },
+    { key: 'orders', icon: 'cart', href: '/admin/menu/orders' as Href, permission: 'orders.read' },
+    { key: 'reports', icon: 'chart', href: '/admin/menu/reports' as Href },
+  ];
+}
 
 /**
  * Admin home: network KPIs from the overview report. The center sees the whole
@@ -44,7 +61,7 @@ export function AdminHomeScreen() {
   const [period, setPeriod] = useState<Period>('30d');
   const canServices = useCan('services.read');
   const perms = new Set(me?.permissions ?? []);
-  const actions = ACTIONS.filter((a) => !a.permission || me?.user.is_super_admin || perms.has(a.permission));
+  const actions = actionsFor(isCenterWorkplace(me)).filter((a) => !a.permission || me?.user.is_super_admin || perms.has(a.permission));
 
   const overview = useReport('overview', { period });
   const trend = useReport('services.trend', { period, enabled: canServices });

@@ -27,5 +27,9 @@
   "sale_prices": "Satış fiyatlarım",
   "purchases": "Alımlar",
   "disputes": "İtirazlar",
-  "einvoices": "e-Fatura"
+  "einvoices": "e-Fatura",
+  "approvals": "Onaylar",
+  "network": "Bayi ağı",
+  "warehouse": "Depo",
+  "warehouse_hint": "Stok, iş emirleri ve sayım"
 }

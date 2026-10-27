@@ -5,7 +5,8 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
-import { activeMembership, useCan } from '@/core/spaces';
+import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
+import { AdminHomeScreen } from '@/features/admin/admin-home-screen';
 import { formatNumber, useLinks } from '@/features/services/lib';
 import { ServiceRow } from '@/features/services/services-list-screen';
 import { errorText } from '@/features/services/ui';
@@ -168,4 +169,14 @@ export function DealerHome() {
       </ScrollView>
     </>
   );
+}
+
+/**
+ * Home of the `bayi` workplace: the center (which runs its own service point
+ * since TEC-1003) gets the network dashboard with service intake on top
+ * (TEC-1016); a dealer gets its own home.
+ */
+export function WorkplaceHome() {
+  const center = useSession((s) => isCenterWorkplace(s.me));
+  return center ? <AdminHomeScreen /> : <DealerHome />;
 }
