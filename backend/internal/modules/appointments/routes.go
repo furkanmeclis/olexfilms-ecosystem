@@ -45,13 +45,21 @@ func RegisterRoutes(
 	mux.Handle("POST /v1/appointments/{uuid}/start-intake", route(h.StartIntake, write))
 }
 
-func RegisterPortalRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager, loader middleware.IdentityLoader) {
+// RegisterPortalRoutes mounts the customer portal booking routes. TEC-1023:
+// every route answers 403 FEATURE_DISABLED while appointments is closed
+// system wide; availability, create and cancel also answer it when the
+// module is off for the dealer (the use case checks the organization). The
+// "my appointments" list keeps showing history.
+func RegisterPortalRoutes(mux *http.ServeMux, h *handler.Handler, tokens *jwt.Manager, loader middleware.IdentityLoader,
+	system middleware.SystemFeatureChecker,
+) {
 	authn := middleware.Authenticate(tokens, loader)
+	module := middleware.RequireSystemFeature(system, features.ModuleAppointments)
 	read := func(fn http.HandlerFunc) http.Handler {
-		return middleware.Chain(fn, authn)
+		return middleware.Chain(fn, authn, module)
 	}
 	write := func(fn http.HandlerFunc) http.Handler {
-		return middleware.Chain(fn, authn, middleware.DenyPortalReadOnly)
+		return middleware.Chain(fn, authn, middleware.DenyPortalReadOnly, module)
 	}
 
 	mux.Handle("GET /v1/portal/dealers/{uuid}/availability", read(h.PortalAvailability))

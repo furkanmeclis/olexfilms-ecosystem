@@ -11,6 +11,7 @@ import (
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/features"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -36,7 +37,23 @@ var (
 	ErrAlreadyReviewed = errors.New("services: service already reviewed")
 	// ErrReviewNotCompleted: only a completed service can be reviewed (422).
 	ErrReviewNotCompleted = errors.New("services: service is not completed")
+	// ErrReviewsDisabled: the reviews module is off for the service's
+	// organization (TEC-1023; 403 FEATURE_DISABLED).
+	ErrReviewsDisabled = errors.New("services: reviews module disabled")
 )
+
+// reviewsOn reports whether the reviews module is on for an organization
+// (TEC-1023). Without a feature checker it reads as on.
+func (s *Service) reviewsOn(ctx context.Context, orgID int64) (bool, error) {
+	if s.features == nil {
+		return true, nil
+	}
+	on, err := s.features.Enabled(ctx, orgID, features.ModuleReviews)
+	if err != nil {
+		return false, fmt.Errorf("services: reviews feature: %w", err)
+	}
+	return on, nil
+}
 
 // ServiceReviewInput is the body of POST /v1/portal/services/{uuid}/review.
 // The ratings are pointers so a missing one is a validation error.
@@ -170,7 +187,13 @@ func (s *Service) PortalGetReview(ctx context.Context, brandID, userID int64, id
 	r, err := s.q.GetServiceReviewByService(ctx, svc.ID)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
-		out.CanReview = svc.Status == StatusCompleted
+		// TEC-1023: no new review while the organization's reviews module
+		// is off; an existing review still shows.
+		on, ferr := s.reviewsOn(ctx, svc.OrganizationID)
+		if ferr != nil {
+			return PortalServiceReview{}, ferr
+		}
+		out.CanReview = on && svc.Status == StatusCompleted
 	case err != nil:
 		return PortalServiceReview{}, fmt.Errorf("services: get review: %w", err)
 	default:
@@ -191,6 +214,11 @@ func (s *Service) PortalCreateReview(ctx context.Context, brandID, userID int64,
 	svc, _, err := s.portalService(ctx, brandID, userID, id)
 	if err != nil {
 		return PortalServiceReview{}, err
+	}
+	if on, err := s.reviewsOn(ctx, svc.OrganizationID); err != nil {
+		return PortalServiceReview{}, err
+	} else if !on {
+		return PortalServiceReview{}, ErrReviewsDisabled
 	}
 	platform, product, comment, err := normalizeReview(in)
 	if err != nil {

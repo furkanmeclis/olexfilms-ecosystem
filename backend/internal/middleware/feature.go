@@ -57,3 +57,33 @@ func RequireFeatureForOrgType(ent FeatureChecker, orgType, key string) func(http
 		})
 	}
 }
+
+// SystemFeatureChecker answers whether a module is open system wide
+// (features.Service.SystemEnabled).
+type SystemFeatureChecker interface {
+	SystemEnabled(ctx context.Context, key string) (bool, error)
+}
+
+// RequireSystemFeature blocks a module the platform admin closed system
+// wide (403 FEATURE_DISABLED). TEC-1023: the portal routes have no active
+// organization, so they use it in place of RequireFeature; the use cases
+// check the module of the organization a portal action targets. A nil
+// checker passes.
+func RequireSystemFeature(ent SystemFeatureChecker, key string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if ent != nil {
+				on, err := ent.SystemEnabled(r.Context(), key)
+				if err != nil {
+					response.InternalErr(w, r, err, "feature check failed")
+					return
+				}
+				if !on {
+					response.Error(w, r, http.StatusForbidden, response.CodeFeatureDisabled, "This feature is not enabled")
+					return
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

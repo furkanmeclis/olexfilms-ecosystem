@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgctx"
@@ -34,6 +35,36 @@ func TestRequireFeature(t *testing.T) {
 		RequireFeature(tc.checker, "module.x")(ok).ServeHTTP(rec, req)
 		if rec.Code != tc.want {
 			t.Fatalf("%s: got %d want %d", tc.name, rec.Code, tc.want)
+		}
+	}
+}
+
+type systemChecker struct{ closed string }
+
+func (s systemChecker) SystemEnabled(_ context.Context, key string) (bool, error) {
+	return key != s.closed, nil
+}
+
+// TEC-1023: the portal gate closes a module only when it is closed system wide.
+func TestRequireSystemFeature(t *testing.T) {
+	ok := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
+	cases := []struct {
+		name    string
+		checker SystemFeatureChecker
+		want    int
+	}{
+		{"nil checker allows", nil, http.StatusOK},
+		{"open module allows", systemChecker{closed: "reviews"}, http.StatusOK},
+		{"closed module 403", systemChecker{closed: "appointments"}, http.StatusForbidden},
+	}
+	for _, tc := range cases {
+		rec := httptest.NewRecorder()
+		RequireSystemFeature(tc.checker, "appointments")(ok).ServeHTTP(rec, httptest.NewRequest("GET", "/x", nil))
+		if rec.Code != tc.want {
+			t.Fatalf("%s: got %d want %d", tc.name, rec.Code, tc.want)
+		}
+		if tc.want == http.StatusForbidden && !strings.Contains(rec.Body.String(), "FEATURE_DISABLED") {
+			t.Fatalf("%s: body %s lacks FEATURE_DISABLED", tc.name, rec.Body.String())
 		}
 	}
 }
