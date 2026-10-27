@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "Bazı satırlarda fiyat yok; 0 olarak kaydedildi.",
   "form.errors.price_invalid": "Birim fiyat 0 veya pozitif olmalı, en fazla 4 ondalık.",
   "items.price_missing": "Fiyat yok",
-  "detail.created_by_seller": "Merkez tarafından oluşturuldu"
+  "detail.created_by_seller": "Merkez tarafından oluşturuldu",
+  "actions.deliver.button": "Teslim edildi",
+  "actions.deliver.title": "Sipariş teslim edildi olarak işaretlensin mi?",
+  "actions.deliver.description": "Elden veya ambar teslimi kaydedilir. Stok, bayi teslim aldığında bayiye geçer. İsterseniz teslim notu ekleyin.",
+  "actions.deliver.confirm": "Teslim edildi",
+  "actions.deliver.success": "Sipariş teslim edildi olarak işaretlendi.",
+  "detail.delivered_at": "Teslim"
 }

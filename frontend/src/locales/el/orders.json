@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "Ορισμένες γραμμές δεν έχουν τιμή· αποθηκεύτηκαν με 0.",
   "form.errors.price_invalid": "Η τιμή μονάδας πρέπει να είναι 0 ή μεγαλύτερη, με έως 4 δεκαδικά.",
   "items.price_missing": "Χωρίς τιμή",
-  "detail.created_by_seller": "Δημιουργήθηκε από το κέντρο"
+  "detail.created_by_seller": "Δημιουργήθηκε από το κέντρο",
+  "actions.deliver.button": "Παραδόθηκε",
+  "actions.deliver.title": "Να σημειωθεί η παραγγελία ως παραδοθείσα;",
+  "actions.deliver.description": "Καταγράφει παράδοση χέρι με χέρι ή από αποθήκη. Το απόθεμα περνά στον αντιπρόσωπο όταν την παραλάβει. Μπορείτε να προσθέσετε σημείωση.",
+  "actions.deliver.confirm": "Παραδόθηκε",
+  "actions.deliver.success": "Η παραγγελία σημειώθηκε ως παραδοθείσα.",
+  "detail.delivered_at": "Παράδοση"
 }

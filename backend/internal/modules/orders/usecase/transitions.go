@@ -68,13 +68,15 @@ type rule struct {
 //
 //	shipped -> received (buyer, orders.receive; received per shipped unit,
 //	    the units become available at the buyer; all units or none)
-//	shipped -> cancelling (either side, orders.cancel; nothing moves yet)
+//	shipped -> delivered (seller, orders.ship; TEC-1024: status and time
+//	    only, e.g. hand or depot delivery; the reason is the delivery note)
+//	delivered -> received (buyer, orders.receive; the stock moves here)
+//	shipped | delivered -> cancelling (either side, orders.cancel)
 //	cancelling -> cancelled (seller, orders.cancel or orders.ship: the goods
 //	    are back; order_cancel_restore per shipped unit)
 //
-// received is final here (no cancel; returns are a separate flow).
-// delivered is in the schema but not used: received follows shipped
-// directly, delivered answers 409 ORDER_TRANSITION_UNAVAILABLE.
+// received is final here (no cancel; returns are a separate flow). A
+// shipment by cargo may still go shipped -> received directly.
 var transitions = map[string]map[string]rule{
 	StatusDraft: {
 		StatusSubmitted: {PartyBuyer, []string{rbac.PermOrdersWrite}},
@@ -103,6 +105,11 @@ var transitions = map[string]map[string]rule{
 	},
 	StatusShipped: {
 		StatusReceived:   {PartyBuyer, []string{rbac.PermOrdersReceive}},
+		StatusDelivered:  {PartySeller, []string{rbac.PermOrdersShip}},
+		StatusCancelling: {PartyEither, []string{rbac.PermOrdersCancel}},
+	},
+	StatusDelivered: {
+		StatusReceived:   {PartyBuyer, []string{rbac.PermOrdersReceive}},
 		StatusCancelling: {PartyEither, []string{rbac.PermOrdersCancel}},
 	},
 	StatusCancelling: {
@@ -113,7 +120,7 @@ var transitions = map[string]map[string]rule{
 // supportedTargets are the statuses this API moves an order to.
 var supportedTargets = map[string]bool{
 	StatusSubmitted: true, StatusApproved: true, StatusPreparing: true,
-	StatusProcessing: true, StatusReady: true, StatusShipped: true, StatusReceived: true,
+	StatusProcessing: true, StatusReady: true, StatusShipped: true, StatusDelivered: true, StatusReceived: true,
 	StatusCancelling: true, StatusCancelled: true,
 }
 
@@ -167,6 +174,8 @@ func eventFor(to string) string {
 		return events.OrdersReady
 	case StatusShipped:
 		return events.OrdersShipped
+	case StatusDelivered:
+		return events.OrdersDelivered
 	case StatusReceived:
 		return events.OrdersReceived
 	case StatusCancelling:

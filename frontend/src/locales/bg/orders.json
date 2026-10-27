@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "Някои редове нямат цена; записани са с 0.",
   "form.errors.price_invalid": "Единичната цена трябва да е 0 или повече, с до 4 десетични знака.",
   "items.price_missing": "Няма цена",
-  "detail.created_by_seller": "Създадена от центъра"
+  "detail.created_by_seller": "Създадена от центъра",
+  "actions.deliver.button": "Доставена",
+  "actions.deliver.title": "Да се отбележи ли поръчката като доставена?",
+  "actions.deliver.description": "Записва доставка на ръка или от склад. Наличността преминава към дилъра, когато я получи. Можете да добавите бележка.",
+  "actions.deliver.confirm": "Доставена",
+  "actions.deliver.success": "Поръчката е отбелязана като доставена.",
+  "detail.delivered_at": "Доставка"
 }

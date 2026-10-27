@@ -42,7 +42,7 @@ var (
 	ErrNoSupplier = errors.New("orders: organization cannot place orders")
 	// ErrInvalidTransition: the order's status does not allow the move.
 	ErrInvalidTransition = errors.New("orders: invalid status transition")
-	// ErrTransitionUnavailable: a status this API does not move to (delivered).
+	// ErrTransitionUnavailable: a status this API does not move to.
 	ErrTransitionUnavailable = errors.New("orders: transition not available yet")
 	// ErrNotEditable: lines change only while the order is a draft.
 	ErrNotEditable = errors.New("orders: order is not a draft")

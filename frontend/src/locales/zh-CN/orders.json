@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "部分行没有价格，已按 0 保存。",
   "form.errors.price_invalid": "单价必须大于等于 0，最多 4 位小数。",
   "items.price_missing": "无价格",
-  "detail.created_by_seller": "由中心创建"
+  "detail.created_by_seller": "由中心创建",
+  "actions.deliver.button": "标记已送达",
+  "actions.deliver.title": "将订单标记为已送达？",
+  "actions.deliver.description": "记录当面或仓库交付。经销商签收后库存才转入。可添加送达备注。",
+  "actions.deliver.confirm": "已送达",
+  "actions.deliver.success": "订单已标记为已送达。",
+  "detail.delivered_at": "送达"
 }

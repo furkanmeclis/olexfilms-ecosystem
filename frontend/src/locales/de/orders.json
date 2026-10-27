@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "Einige Zeilen haben keinen Preis; sie wurden mit 0 gespeichert.",
   "form.errors.price_invalid": "Der Stückpreis muss 0 oder mehr sein, höchstens 4 Dezimalstellen.",
   "items.price_missing": "Kein Preis",
-  "detail.created_by_seller": "Von der Zentrale angelegt"
+  "detail.created_by_seller": "Von der Zentrale angelegt",
+  "actions.deliver.button": "Als zugestellt markieren",
+  "actions.deliver.title": "Bestellung als zugestellt markieren?",
+  "actions.deliver.description": "Erfasst eine Übergabe von Hand oder im Depot. Der Bestand geht beim Empfang an den Händler über. Optional mit Zustellnotiz.",
+  "actions.deliver.confirm": "Zugestellt",
+  "actions.deliver.success": "Die Bestellung wurde als zugestellt markiert.",
+  "detail.delivered_at": "Zugestellt"
 }

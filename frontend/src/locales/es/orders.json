@@ -244,5 +244,11 @@
   "center_form.price_missing_warning": "Algunas líneas no tienen precio; se guardaron con 0.",
   "form.errors.price_invalid": "El precio unitario debe ser 0 o mayor, con 4 decimales como máximo.",
   "items.price_missing": "Sin precio",
-  "detail.created_by_seller": "Creado por el centro"
+  "detail.created_by_seller": "Creado por el centro",
+  "actions.deliver.button": "Marcar entregado",
+  "actions.deliver.title": "¿Marcar el pedido como entregado?",
+  "actions.deliver.description": "Registra una entrega en mano o en almacén. El stock pasa al distribuidor cuando lo recibe. Puede añadir una nota.",
+  "actions.deliver.confirm": "Entregado",
+  "actions.deliver.success": "El pedido se marcó como entregado.",
+  "detail.delivered_at": "Entregado"
 }
