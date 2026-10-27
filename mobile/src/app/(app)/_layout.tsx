@@ -46,7 +46,8 @@ export default function AppLayout() {
 
       <Stack.Screen
         name="spaces"
-        options={{ headerShown: true, presentation: 'formSheet', sheetAllowedDetents: [0.55, 1], sheetGrabberVisible: true }}
+        // Sized to its rows (two spaces, maybe a few organizations), no empty half sheet.
+        options={{ headerShown: true, presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }}
       />
       <Stack.Screen name="search" options={{ headerShown: true, presentation: 'modal' }} />
       <Stack.Screen name="intro" options={{ presentation: 'modal' }} />

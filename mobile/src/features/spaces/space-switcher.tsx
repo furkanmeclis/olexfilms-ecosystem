@@ -12,7 +12,6 @@ import { kindsOf, listOrganizations, type SpaceKind } from '@/core/spaces';
 import { BrandLogo } from '@/ui/brand-logo';
 import { cn } from '@/ui/cn';
 import { List, ListRow, SectionHeader } from '@/ui/list';
-import { Screen } from '@/ui/screen';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
 
@@ -87,7 +86,7 @@ export function SpaceSwitcher() {
           ),
         }}
       />
-      <Screen className="pt-2">
+      <View className="gap-1 px-4 pb-8 pt-2">
         {spaces.length ? (
           <>
             <SectionHeader title={t('spaces_title')} />
@@ -136,7 +135,7 @@ export function SpaceSwitcher() {
             {error}
           </Text>
         ) : null}
-      </Screen>
+      </View>
     </>
   );
 }
