@@ -711,5 +711,12 @@
   "transfer.created_at": "Creato",
   "transfer.shipped_at": "Spedito",
   "transfer.completed_at": "Ricevuto",
-  "transfer.cancelled_at": "Annullato"
+  "transfer.cancelled_at": "Annullato",
+  "count.progress_guided": "{{counted}} / {{expected}} unità attese contate",
+  "count.progress_blind": "scansioni (conteggio cieco)",
+  "count.kpi.accuracy": "Accuratezza",
+  "count.kpi.expected_counted": "Atteso / contato",
+  "count.kpi.scans": "Scansioni",
+  "count.kpi.duration": "Durata",
+  "count.duration_minutes": "{{minutes}} min"
 }

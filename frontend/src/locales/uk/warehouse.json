@@ -711,5 +711,12 @@
   "transfer.created_at": "Створено",
   "transfer.shipped_at": "Відправлено",
   "transfer.completed_at": "Отримано",
-  "transfer.cancelled_at": "Скасовано"
+  "transfer.cancelled_at": "Скасовано",
+  "count.progress_guided": "{{counted}} / {{expected}} очікуваних одиниць пораховано",
+  "count.progress_blind": "сканувань (сліпа інвентаризація)",
+  "count.kpi.accuracy": "Точність",
+  "count.kpi.expected_counted": "Очікувалося / пораховано",
+  "count.kpi.scans": "Сканування",
+  "count.kpi.duration": "Тривалість",
+  "count.duration_minutes": "{{minutes}} хв"
 }

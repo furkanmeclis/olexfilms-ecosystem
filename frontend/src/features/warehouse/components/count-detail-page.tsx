@@ -14,6 +14,14 @@ import { ErrorState } from "@/components/common/error-state";
 import { StatusChip } from "@/components/common/status-chip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  countAccuracyPercent,
+  countDurationMinutes,
+  countProgressPercent,
+  countResultBadges,
+  countResultTone,
+} from "@/features/warehouse/lib/count-progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Permission } from "@/config/permissions";
@@ -76,7 +84,7 @@ export function CountDetailPage({
   slug: string;
   uuid: string;
 }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const access = useWarehouseAccess(slug);
   const canWrite = access.can(Permission.WarehouseWrite);
   const qc = useQueryClient();
@@ -226,13 +234,54 @@ export function CountDetailPage({
               {count.progress ? (
                 <div className="sm:col-span-4" data-testid="count-progress">
                   <Info label={t("warehouse.count.progress")}>
-                    {t("warehouse.count.progress_text", {
-                      scans: count.progress.scans,
-                      units: count.progress.serial_units,
-                      quantity:
-                        count.progress.fixed_quantity +
-                        count.progress.product_quantity,
-                    })}
+                    {/* TEC-1032: guided counts show a bar against the expected totals, blind counts the big scan total. */}
+                    {countProgressPercent(count) !== null && count.expected ? (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <span>
+                            {t("warehouse.count.progress_guided", {
+                              counted:
+                                count.progress.serial_units +
+                                count.progress.fixed_quantity,
+                              expected:
+                                count.expected.serial_units +
+                                count.expected.fixed_quantity,
+                            })}
+                          </span>
+                          <span
+                            className="font-semibold tabular-nums"
+                            data-testid="count-progress-percent"
+                          >
+                            %{countProgressPercent(count)}
+                          </span>
+                        </div>
+                        <Progress
+                          value={countProgressPercent(count) ?? 0}
+                          aria-label={t("warehouse.count.progress")}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-2">
+                        <span
+                          className="text-2xl font-semibold tabular-nums"
+                          data-testid="count-progress-scans"
+                        >
+                          {format.number(count.progress.scans)}
+                        </span>
+                        <span className="text-muted-foreground text-sm">
+                          {t("warehouse.count.progress_blind")}
+                        </span>
+                      </div>
+                    )}
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t("warehouse.count.progress_text", {
+                        scans: count.progress.scans,
+                        units: count.progress.serial_units,
+                        quantity:
+                          count.progress.fixed_quantity +
+                          count.progress.product_quantity,
+                      })}
+                    </p>
                   </Info>
                 </div>
               ) : null}
@@ -273,6 +322,26 @@ export function CountDetailPage({
         </>
       )}
     </WarehouseShell>
+  );
+}
+
+/** One KPI tile of the count report (TEC-1032). */
+function Kpi({
+  label,
+  value,
+  testId,
+}: {
+  label: string;
+  value: string;
+  testId: string;
+}) {
+  return (
+    <div className="bg-muted/40 rounded-lg border p-3">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="text-xl font-semibold tabular-nums" data-testid={testId}>
+        {value}
+      </dd>
+    </div>
   );
 }
 
@@ -513,7 +582,7 @@ export function CountReportCard({
   count: StockCount;
   canApprove: boolean;
 }) {
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const qc = useQueryClient();
   const { confirm } = useDialogs();
   const { ensure } = useStepUp();
@@ -569,7 +638,7 @@ export function CountReportCard({
   return (
     <Card data-testid="count-report">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
-        <div>
+        <div className="space-y-2">
           <CardTitle>{t("warehouse.count.report_title")}</CardTitle>
           {count.summary ? (
             <p className="text-muted-foreground text-sm">
@@ -578,6 +647,21 @@ export function CountReportCard({
                 unresolved: count.summary.unresolved,
               })}
             </p>
+          ) : null}
+          {/* TEC-1032: per-result badges (legacy report header). */}
+          {countResultBadges(count).length > 0 ? (
+            <div
+              className="flex flex-wrap gap-1.5"
+              data-testid="count-result-badges"
+            >
+              {countResultBadges(count).map((b) => (
+                <StatusChip
+                  key={b.result}
+                  label={`${t(`warehouse.count_result.${b.result}`)} · ${b.count}`}
+                  tone={countResultTone(b.result)}
+                />
+              ))}
+            </div>
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -605,6 +689,55 @@ export function CountReportCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* TEC-1032: report KPIs (legacy: Doğruluk / Beklenen-Sayılan / Tarama / Süre). */}
+        <dl
+          className="grid gap-3 sm:grid-cols-4"
+          data-testid="count-report-kpis"
+        >
+          <Kpi
+            label={t("warehouse.count.kpi.accuracy")}
+            value={
+              countAccuracyPercent(count) === null
+                ? "—"
+                : `%${countAccuracyPercent(count)}`
+            }
+            testId="count-kpi-accuracy"
+          />
+          <Kpi
+            label={t("warehouse.count.kpi.expected_counted")}
+            value={
+              count.expected && count.progress
+                ? `${format.number(
+                    count.expected.serial_units + count.expected.fixed_quantity,
+                  )} / ${format.number(
+                    count.progress.serial_units + count.progress.fixed_quantity,
+                  )}`
+                : count.progress
+                  ? format.number(
+                      count.progress.serial_units +
+                        count.progress.fixed_quantity,
+                    )
+                  : "—"
+            }
+            testId="count-kpi-expected"
+          />
+          <Kpi
+            label={t("warehouse.count.kpi.scans")}
+            value={count.progress ? format.number(count.progress.scans) : "—"}
+            testId="count-kpi-scans"
+          />
+          <Kpi
+            label={t("warehouse.count.kpi.duration")}
+            value={
+              countDurationMinutes(count) === null
+                ? "—"
+                : t("warehouse.count.duration_minutes", {
+                    minutes: countDurationMinutes(count) ?? 0,
+                  })
+            }
+            testId="count-kpi-duration"
+          />
+        </dl>
         {canApprove && isCreator ? (
           <p
             className="text-muted-foreground text-sm"
