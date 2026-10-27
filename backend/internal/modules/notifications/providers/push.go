@@ -30,7 +30,32 @@ func pushData(n db.Notification) map[string]any {
 	if img := pushImage(n); img != "" {
 		data["image_url"] = img
 	}
+	for k, v := range pushRecordIDs(n) {
+		data[k] = v
+	}
 	return data
+}
+
+// pushRecordKeys are the payload ids a push carries so the app opens the
+// record on tap without fetching the notification first.
+var pushRecordKeys = []string{"order_uuid", "service_uuid", "customer_uuid", "warranty_uuid", "appointment_uuid"}
+
+// pushRecordIDs returns the record ids of the notification payload.
+func pushRecordIDs(n db.Notification) map[string]string {
+	if len(n.Payload) == 0 {
+		return nil
+	}
+	var p map[string]any
+	if json.Unmarshal(n.Payload, &p) != nil {
+		return nil
+	}
+	out := map[string]string{}
+	for _, k := range pushRecordKeys {
+		if v, ok := p[k].(string); ok && v != "" {
+			out[k] = v
+		}
+	}
+	return out
 }
 
 // pushImage is the https image URL of a push (payload image_url, set by

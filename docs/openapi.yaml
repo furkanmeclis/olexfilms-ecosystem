@@ -6110,6 +6110,81 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /v1/tenant/members:
+    post:
+      tags: [Tenant]
+      operationId: createTenantMember
+      summary: Add a staff member to the active organization (phone-first account)
+      description: >-
+        members.write (the center owner at brand scope, migration 000165;
+        a dealer owner for its own organization). The phone (E.164 or the
+        organization country's national form) is what the mobile OTP
+        sign-in looks up, so it is required; the e-mail is optional. A
+        phone that already belongs to a user attaches that user
+        (`existing` true). `role_slugs` are system roles of the
+        organization's type (owner roles refused; empty: the default staff
+        role), `warehouse_uuids` warehouses of the organization the member
+        joins (the first becomes the default). 409 when the user is already
+        a member or the e-mail is taken.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantMemberCreateRequest"
+      responses:
+        "201":
+          description: Member created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantMember"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /v1/tenant/dealers:
+    post:
+      tags: [Tenant]
+      operationId: createTenantDealer
+      summary: Open a dealer with its owner directly under the active organization
+      description: >-
+        organizations.write (the center owner at brand scope, migration
+        000165; a distributor owner). The dealer starts active without a
+        trial end, directly under the caller's center or distributor; the
+        owner (phone-first account, see POST /v1/tenant/members) becomes
+        its dealer_owner. 400 when the active organization is a dealer.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantDealerCreateRequest"
+      responses:
+        "201":
+          description: Dealer and owner created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnvelopeTenantDealer"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /v1/tenant/settings:
     get:
       tags: [Tenant]
@@ -24983,6 +25058,10 @@ paths:
         ship, receipt or cancel writes no movement). Other moves answer 409
         ORDER_INVALID_TRANSITION. Every move writes the status history and
         an orders.* outbox event.
+        Notifications: shipped and delivered tell the buyer's members
+        holding orders.read (ORDER_SHIPPED, ORDER_DELIVERED); received tells
+        the seller's members holding orders.approve (ORDER_RECEIVED); in-app,
+        web push and Expo push, never the actor.
         TEC-1024: shipped -> delivered (seller, orders.ship; status and
         delivered_at only, `reason` is kept as the delivery note in the
         history; orders.delivered; typical for hand or depot delivery);
@@ -36471,6 +36550,84 @@ components:
             total: { type: integer }
             limit: { type: integer }
             offset: { type: integer }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    TenantAccountInput:
+      type: object
+      required: [name, phone]
+      properties:
+        name: { type: string, maxLength: 100 }
+        surname: { type: string, maxLength: 100 }
+        phone: { type: string, description: "E.164 or national form", example: "+905551112233" }
+        email: { type: string, format: email }
+
+    TenantMemberCreateRequest:
+      allOf:
+        - $ref: "#/components/schemas/TenantAccountInput"
+        - type: object
+          properties:
+            role_slugs:
+              type: array
+              items: { type: string }
+              example: [center_warehouse]
+            warehouse_uuids:
+              type: array
+              items: { type: string, format: uuid }
+
+    TenantDealerCreateRequest:
+      type: object
+      required: [name, owner]
+      properties:
+        name: { type: string, maxLength: 255 }
+        phone: { type: string }
+        city: { type: string }
+        district: { type: string }
+        address: { type: string }
+        country_id: { type: integer, format: int64 }
+        province_id: { type: integer, format: int64 }
+        district_id: { type: integer, format: int64 }
+        owner: { $ref: "#/components/schemas/TenantAccountInput" }
+
+    TenantMember:
+      type: object
+      required: [user_uuid, name, surname, phone, role_slugs, warehouse_uuids, existing]
+      properties:
+        user_uuid: { type: string, format: uuid }
+        name: { type: string }
+        surname: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        role_slugs:
+          type: array
+          items: { type: string }
+        warehouse_uuids:
+          type: array
+          items: { type: string, format: uuid }
+        existing:
+          type: boolean
+          description: The phone already belonged to a user, who was attached.
+
+    TenantDealerResult:
+      type: object
+      required: [organization, owner]
+      properties:
+        organization: { $ref: "#/components/schemas/Organization" }
+        owner: { $ref: "#/components/schemas/TenantMember" }
+
+    EnvelopeTenantMember:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/TenantMember" }
+        meta: { $ref: "#/components/schemas/ResponseMeta" }
+
+    EnvelopeTenantDealer:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: "#/components/schemas/TenantDealerResult" }
         meta: { $ref: "#/components/schemas/ResponseMeta" }
 
     EnvelopeOrganization:

@@ -93,6 +93,13 @@ func RegisterRoutes(
 	}
 	mux.Handle("GET /v1/tenant/organizations", orgsInScope(h.TenantListOrganizations))
 	mux.Handle("GET /v1/tenant/organizations/{uuid}", orgsInScope(h.TenantGetOrganization))
+	// Phone-first account opening: staff of the active organization
+	// (members.write) and a dealer with its owner under it
+	// (organizations.write; center or distributor).
+	mux.Handle("POST /v1/tenant/members", middleware.Chain(http.HandlerFunc(h.TenantCreateMember), authn, requireOrg,
+		require(rbac.PermMembersWrite)))
+	mux.Handle("POST /v1/tenant/dealers", middleware.Chain(http.HandlerFunc(h.TenantCreateDealer), authn, requireOrg,
+		require(rbac.PermOrganizationsWrite)))
 	mux.Handle("GET /v1/tenant/settings", tenantSettingsRead(h.TenantGetSettings))
 	mux.Handle("PATCH /v1/tenant/settings", tenantSettingsWrite(h.TenantPatchSettings))
 	mux.Handle("PUT /v1/tenant/settings/logo", tenantSettingsWrite(h.TenantUploadLogo))

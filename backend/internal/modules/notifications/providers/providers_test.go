@@ -214,3 +214,21 @@ func TestPushProvidersCarryImage(t *testing.T) {
 		t.Fatalf("non-https image must be dropped: %v %v", web, err)
 	}
 }
+
+// Push data carries the record ids of the payload so the app opens the
+// record on tap.
+func TestPushDataCarriesRecordIDs(t *testing.T) {
+	n := db.Notification{
+		Uuid:    uuid.New(),
+		Payload: []byte(`{"order_uuid":"o-1","order_no":"ORD-1","service_uuid":"","status":"shipped"}`),
+	}
+	d := pushData(n)
+	if d["order_uuid"] != "o-1" || d["notification_uuid"] != n.Uuid.String() {
+		t.Fatalf("push data = %v", d)
+	}
+	for _, k := range []string{"order_no", "service_uuid", "status"} {
+		if _, ok := d[k]; ok {
+			t.Fatalf("push data carries %s: %v", k, d)
+		}
+	}
+}

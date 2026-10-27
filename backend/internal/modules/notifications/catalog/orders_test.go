@@ -66,3 +66,34 @@ func TestOrderWarehouseTemplatesCoverEveryLocale(t *testing.T) {
 		}
 	}
 }
+
+// The order status events (shipped, delivered, received) ship a template
+// in every locale for in-app, web push and Expo push.
+func TestOrderStatusTemplatesCoverEveryLocale(t *testing.T) {
+	for _, code := range []string{EventOrderShipped, EventOrderDelivered, EventOrderReceived} {
+		ev, ok := Lookup(code)
+		if !ok {
+			t.Fatalf("%s not registered", code)
+		}
+		seen := map[string]bool{}
+		for _, tpl := range ev.Templates {
+			seen[tpl.Channel+"/"+tpl.Language] = true
+			if strings.TrimSpace(tpl.Subject) == "" || strings.TrimSpace(tpl.Body) == "" {
+				t.Errorf("%s %s/%s: empty text", code, tpl.Channel, tpl.Language)
+			}
+			if unknown := msgtemplate.Unknown(ev.Spec(), tpl.Subject, tpl.Body); len(unknown) > 0 {
+				t.Errorf("%s %s/%s: unknown placeholders %v", code, tpl.Channel, tpl.Language, unknown)
+			}
+			if !strings.Contains(tpl.Subject+tpl.Body, "{{order_no}}") {
+				t.Errorf("%s %s/%s: misses the order number", code, tpl.Channel, tpl.Language)
+			}
+		}
+		for _, ch := range OrderStatusChannels {
+			for _, l := range msgtemplate.Locales {
+				if !seen[ch+"/"+l] {
+					t.Errorf("%s: missing %s/%s", code, ch, l)
+				}
+			}
+		}
+	}
+}

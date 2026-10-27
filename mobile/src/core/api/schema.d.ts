@@ -3447,6 +3447,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenant/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a staff member to the active organization (phone-first account)
+         * @description members.write (the center owner at brand scope, migration 000165; a dealer owner for its own organization). The phone (E.164 or the organization country's national form) is what the mobile OTP sign-in looks up, so it is required; the e-mail is optional. A phone that already belongs to a user attaches that user (`existing` true). `role_slugs` are system roles of the organization's type (owner roles refused; empty: the default staff role), `warehouse_uuids` warehouses of the organization the member joins (the first becomes the default). 409 when the user is already a member or the e-mail is taken.
+         */
+        post: operations["createTenantMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/dealers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open a dealer with its owner directly under the active organization
+         * @description organizations.write (the center owner at brand scope, migration 000165; a distributor owner). The dealer starts active without a trial end, directly under the caller's center or distributor; the owner (phone-first account, see POST /v1/tenant/members) becomes its dealer_owner. 400 when the active organization is a dealer.
+         */
+        post: operations["createTenantDealer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/settings": {
         parameters: {
             query?: never;
@@ -13044,7 +13084,7 @@ export interface paths {
         put?: never;
         /**
          * Move an order to another status
-         * @description Transitions (TEC-166, TEC-167): draft -> submitted (buyer, orders.write); submitted -> approved (seller, orders.approve: line prices are fetched again and locked, the rate to TRY is frozen into rate_snapshot/try_rate, 422 RATE_NOT_FOUND without a rate); approved -> preparing | processing (seller, orders.ship or orders.approve); processing -> preparing (seller, orders.ship; TEC-261, a migrated order continues on the barcode path); preparing -> ready (seller, orders.ship; every line fully assigned, else 409 ORDER_NOT_FULLY_ASSIGNED); ready -> preparing (seller, orders.ship; TEC-1032: reopen preparation to fix a wrong scan, the assigned units stay); ready -> shipped (seller, orders.ship; one ledger order_out per assigned unit with idempotency key order:order_item_unit:<id>:order_out:<barcode>, serial units go in_transit owned by the buyer, reservations are consumed; 409 ORDER_STOCK_UNAVAILABLE when the ledger refuses); draft | submitted | approved | processing | preparing | ready -> cancelled (either side, orders.cancel; active reservations are released). After shipping (TEC-168): shipped -> received (buyer, orders.receive; the whole shipment, no partial receipt: one ledger received per shipped unit with idempotency key order:order_item_unit:<id>:received:<barcode>, the units become available at the buyer organization; orders.received); shipped -> cancelling (either side, orders.cancel; nothing moves, the reason is kept; orders.cancel_requested); cancelling -> cancelled (seller, orders.cancel or orders.ship, once the goods are back: one ledger order_cancel_restore per shipped unit returns it to the seller's source owner and status). A received order cannot be cancelled (409 ORDER_INVALID_TRANSITION; returns are a separate flow). A request for the current status is a no-op (a repeated ship, receipt or cancel writes no movement). Other moves answer 409 ORDER_INVALID_TRANSITION. Every move writes the status history and an orders.* outbox event. TEC-1024: shipped -> delivered (seller, orders.ship; status and delivered_at only, `reason` is kept as the delivery note in the history; orders.delivered; typical for hand or depot delivery); delivered -> received (buyer, orders.receive; the stock moves here, as from shipped); delivered -> cancelling (either side, orders.cancel). A cargo shipment may still go shipped -> received directly.
+         * @description Transitions (TEC-166, TEC-167): draft -> submitted (buyer, orders.write); submitted -> approved (seller, orders.approve: line prices are fetched again and locked, the rate to TRY is frozen into rate_snapshot/try_rate, 422 RATE_NOT_FOUND without a rate); approved -> preparing | processing (seller, orders.ship or orders.approve); processing -> preparing (seller, orders.ship; TEC-261, a migrated order continues on the barcode path); preparing -> ready (seller, orders.ship; every line fully assigned, else 409 ORDER_NOT_FULLY_ASSIGNED); ready -> preparing (seller, orders.ship; TEC-1032: reopen preparation to fix a wrong scan, the assigned units stay); ready -> shipped (seller, orders.ship; one ledger order_out per assigned unit with idempotency key order:order_item_unit:<id>:order_out:<barcode>, serial units go in_transit owned by the buyer, reservations are consumed; 409 ORDER_STOCK_UNAVAILABLE when the ledger refuses); draft | submitted | approved | processing | preparing | ready -> cancelled (either side, orders.cancel; active reservations are released). After shipping (TEC-168): shipped -> received (buyer, orders.receive; the whole shipment, no partial receipt: one ledger received per shipped unit with idempotency key order:order_item_unit:<id>:received:<barcode>, the units become available at the buyer organization; orders.received); shipped -> cancelling (either side, orders.cancel; nothing moves, the reason is kept; orders.cancel_requested); cancelling -> cancelled (seller, orders.cancel or orders.ship, once the goods are back: one ledger order_cancel_restore per shipped unit returns it to the seller's source owner and status). A received order cannot be cancelled (409 ORDER_INVALID_TRANSITION; returns are a separate flow). A request for the current status is a no-op (a repeated ship, receipt or cancel writes no movement). Other moves answer 409 ORDER_INVALID_TRANSITION. Every move writes the status history and an orders.* outbox event. Notifications: shipped and delivered tell the buyer's members holding orders.read (ORDER_SHIPPED, ORDER_DELIVERED); received tells the seller's members holding orders.approve (ORDER_RECEIVED); in-app, web push and Expo push, never the actor. TEC-1024: shipped -> delivered (seller, orders.ship; status and delivered_at only, `reason` is kept as the delivery note in the history; orders.delivered; typical for hand or depot delivery); delivered -> received (buyer, orders.receive; the stock moves here, as from shipped); delivered -> cancelling (either side, orders.cancel). A cargo shipment may still go shipped -> received directly.
          */
         post: operations["transitionOrder"];
         delete?: never;
@@ -19671,6 +19711,68 @@ export interface components {
                 limit: number;
                 offset: number;
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        TenantAccountInput: {
+            name: string;
+            surname?: string;
+            /**
+             * @description E.164 or national form
+             * @example +905551112233
+             */
+            phone: string;
+            /** Format: email */
+            email?: string;
+        };
+        TenantMemberCreateRequest: components["schemas"]["TenantAccountInput"] & {
+            /**
+             * @example [
+             *       "center_warehouse"
+             *     ]
+             */
+            role_slugs?: string[];
+            warehouse_uuids?: string[];
+        };
+        TenantDealerCreateRequest: {
+            name: string;
+            phone?: string;
+            city?: string;
+            district?: string;
+            address?: string;
+            /** Format: int64 */
+            country_id?: number;
+            /** Format: int64 */
+            province_id?: number;
+            /** Format: int64 */
+            district_id?: number;
+            owner: components["schemas"]["TenantAccountInput"];
+        };
+        TenantMember: {
+            /** Format: uuid */
+            user_uuid: string;
+            name: string;
+            surname: string;
+            phone: string;
+            email?: string;
+            role_slugs: string[];
+            warehouse_uuids: string[];
+            /** @description The phone already belonged to a user, who was attached. */
+            existing: boolean;
+        };
+        TenantDealerResult: {
+            organization: components["schemas"]["Organization"];
+            owner: components["schemas"]["TenantMember"];
+        };
+        EnvelopeTenantMember: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["TenantMember"];
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        EnvelopeTenantDealer: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["TenantDealerResult"];
             meta: components["schemas"]["ResponseMeta"];
         };
         EnvelopeOrganization: {
@@ -37527,6 +37629,62 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    createTenantMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantMemberCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Member created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTenantMember"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    createTenantDealer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantDealerCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Dealer and owner created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopeTenantDealer"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
         };
     };
     getTenantSettings: {

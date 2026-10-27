@@ -141,9 +141,12 @@ type RegisterInput struct {
 	// InitialStatus overrides the normal active trial start for internal flows
 	// such as lead conversion (K23: distributor-opened dealers start read-only).
 	InitialStatus string
-	Currency      string
-	Locale        string
-	Timezone      string
+	// NoTrial opens the organization without a trial plan or access end
+	// (a dealer the center opens for itself, team.go).
+	NoTrial  bool
+	Currency string
+	Locale   string
+	Timezone string
 }
 
 // RegisterResult is created org + owner user id after signup.
@@ -386,14 +389,18 @@ func (s *Service) RegisterOrganization(ctx context.Context, in RegisterInput, ow
 	if status == "" {
 		status = "active"
 	}
+	plan, accessEnds := pgtype.Text{String: "trial", Valid: true}, pgtype.Timestamptz{Time: trialEnd, Valid: true}
+	if in.NoTrial {
+		plan, accessEnds = pgtype.Text{}, pgtype.Timestamptz{}
+	}
 	org, err := qtx.CreateOrganization(ctx, db.CreateOrganizationParams{
 		Slug: orgSlug, Name: in.OrganizationName,
 		City: city, District: district,
 		CountryID: countryID, ProvinceID: provinceID, DistrictID: districtID,
 		Phone: orgPhone, Address: strings.TrimSpace(in.Address),
-		Status: status, PlanCode: pgtype.Text{String: "trial", Valid: true},
+		Status: status, PlanCode: plan,
 		AccessStartsAt: pgtype.Timestamptz{Time: now, Valid: true},
-		AccessEndsAt:   pgtype.Timestamptz{Time: trialEnd, Valid: true},
+		AccessEndsAt:   accessEnds,
 		Type:           place.Type,
 		ParentID:       pgtype.Int8{Int64: place.Parent.ID, Valid: true},
 		BrandID:        place.Parent.BrandID,
