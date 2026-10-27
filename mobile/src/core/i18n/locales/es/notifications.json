@@ -13,5 +13,6 @@
   "error_generic": "No se pudo completar. Inténtalo de nuevo.",
   "no_permission": "No tienes acceso a las notificaciones.",
   "today": "Hoy",
-  "yesterday": "Ayer"
+  "yesterday": "Ayer",
+  "empty_body_customer": "Las novedades de tu coche, tu garantía y tus citas aparecen aquí."
 }

@@ -13,5 +13,6 @@
   "error_generic": "Das hat nicht geklappt. Bitte erneut versuchen.",
   "no_permission": "Sie dürfen Benachrichtigungen nicht sehen.",
   "today": "Heute",
-  "yesterday": "Gestern"
+  "yesterday": "Gestern",
+  "empty_body_customer": "Neuigkeiten zu Ihrem Auto, Ihrer Garantie und Ihren Terminen erscheinen hier."
 }

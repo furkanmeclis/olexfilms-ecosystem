@@ -102,5 +102,6 @@
   "approvals.no_access": "Καμία έγκριση για εσάς",
   "approvals.no_access_body": "Τα αιτήματα που περιμένουν την απόφασή σας εμφανίζονται εδώ.",
   "home.action.new_service": "Νέο σέρβις",
-  "home.action.measure": "Μέτρηση"
+  "home.action.measure": "Μέτρηση",
+  "orders.price_missing": "Χωρίς τιμή"
 }

@@ -1,1 +1,15 @@
-{}
+{
+  "buyer_label": "Sifariş veriləcək diler",
+  "buyer_pick": "Diler seç",
+  "buyer_search": "Diler axtar",
+  "buyer_none": "Uyğun diler yoxdur.",
+  "buyer_required": "Bir diler seç.",
+  "unit_price": "Vahid qiyməti",
+  "unit_price_auto": "Avtomatik",
+  "price_rule_center": "Qiymət boş qalsa dilerin alış qiyməti istifadə olunur; qiyməti olmayan məhsul 0 ilə əlavə edilir və işarələnir. Sifariş təsdiqlənmiş açılır, anbar hazırlamağa başlaya bilər.",
+  "create_for_dealer": "Sifarişi yarat",
+  "price_missing_title": "Qiyməti olmayan məhsullar",
+  "price_missing_body_one": "{{count}} məhsulun qiyməti yox idi; 0 ilə əlavə edildi və işarələndi.",
+  "price_missing_body_other": "{{count}} məhsulun qiyməti yox idi; 0 ilə əlavə edildi və işarələndi.",
+  "errors.price_invalid": "0 və ya daha çox, ən çox 4 onluq rəqəmli qiymət daxil et."
+}

@@ -13,5 +13,6 @@
   "error_generic": "Operazione non riuscita. Riprova.",
   "no_permission": "Non hai accesso alle notifiche.",
   "today": "Oggi",
-  "yesterday": "Ieri"
+  "yesterday": "Ieri",
+  "empty_body_customer": "Le novità su auto, garanzia e appuntamenti compaiono qui."
 }

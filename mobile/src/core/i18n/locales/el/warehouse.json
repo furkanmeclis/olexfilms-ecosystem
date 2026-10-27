@@ -538,5 +538,11 @@
   "validation.same_warehouse": "Επιλέξτε άλλη αποθήκη.",
   "validation.too_long": "Έως {{max}} χαρακτήρες.",
   "validation.warehouse": "Επιλέξτε αποθήκη.",
-  "m.open_orders": "Παραγγελίες προς επεξεργασία"
+  "m.open_orders": "Παραγγελίες προς επεξεργασία",
+  "orders.actions.deliver.button": "Παραδόθηκε",
+  "orders.actions.deliver.confirm": "Σήμανση ως παραδομένη",
+  "orders.actions.deliver.description": "Η παραγγελία σημειώνεται ως παραδομένη στον αντιπρόσωπο ιδιοχείρως ή στην αποθήκη· εκείνος την κλείνει με «Παραλήφθηκε».",
+  "orders.actions.deliver.success": "Σημειώθηκε ως παραδομένη.",
+  "orders.actions.deliver.title": "Σήμανση ως παραδομένη;",
+  "orders.price_missing": "Χωρίς τιμή"
 }

@@ -102,5 +102,6 @@
   "approvals.no_access": "Для вас нет согласований",
   "approvals.no_access_body": "Запросы, требующие вашего решения, появятся здесь.",
   "home.action.new_service": "Новый сервис",
-  "home.action.measure": "Замер"
+  "home.action.measure": "Замер",
+  "orders.price_missing": "Нет цены"
 }

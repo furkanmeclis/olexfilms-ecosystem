@@ -13,5 +13,6 @@
   "error_generic": "Əməliyyat tamamlanmadı. Yenidən cəhd et.",
   "no_permission": "Bildirişləri görmək icazən yoxdur.",
   "today": "Bu gün",
-  "yesterday": "Dünən"
+  "yesterday": "Dünən",
+  "empty_body_customer": "Avtomobilin, zəmanətin və görüşlərinlə bağlı yeniliklər burada görünür."
 }

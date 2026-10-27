@@ -102,5 +102,6 @@
   "approvals.no_access": "لا توجد موافقات لك",
   "approvals.no_access_body": "تظهر هنا الطلبات التي تحتاج إلى قرارك.",
   "home.action.new_service": "خدمة جديدة",
-  "home.action.measure": "قياس"
+  "home.action.measure": "قياس",
+  "orders.price_missing": "بلا سعر"
 }

@@ -102,5 +102,6 @@
   "approvals.no_access": "Няма одобрения за вас",
   "approvals.no_access_body": "Заявките, които чакат вашето решение, се появяват тук.",
   "home.action.new_service": "Ново обслужване",
-  "home.action.measure": "Измерване"
+  "home.action.measure": "Измерване",
+  "orders.price_missing": "Няма цена"
 }

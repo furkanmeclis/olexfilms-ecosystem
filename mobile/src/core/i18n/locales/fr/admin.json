@@ -102,5 +102,6 @@
   "approvals.no_access": "Aucune validation pour vous",
   "approvals.no_access_body": "Les demandes nécessitant votre décision apparaissent ici.",
   "home.action.new_service": "Nouvelle intervention",
-  "home.action.measure": "Mesure"
+  "home.action.measure": "Mesure",
+  "orders.price_missing": "Sans prix"
 }

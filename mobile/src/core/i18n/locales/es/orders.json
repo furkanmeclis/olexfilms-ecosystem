@@ -1,1 +1,15 @@
-{}
+{
+  "buyer_label": "Distribuidor del pedido",
+  "buyer_pick": "Elegir distribuidor",
+  "buyer_search": "Buscar distribuidor",
+  "buyer_none": "Ningún distribuidor coincide.",
+  "buyer_required": "Elige un distribuidor.",
+  "unit_price": "Precio unitario",
+  "unit_price_auto": "Automático",
+  "price_rule_center": "Sin precio se usa el precio de compra del distribuidor; un producto sin precio se añade a 0 y se marca. El pedido empieza aprobado, listo para el almacén.",
+  "create_for_dealer": "Crear pedido",
+  "price_missing_title": "Productos sin precio",
+  "price_missing_body_one": "{{count}} producto no tenía precio; se añadió a 0 y se marcó.",
+  "price_missing_body_other": "{{count}} productos no tenían precio; se añadieron a 0 y se marcaron.",
+  "errors.price_invalid": "Introduce un precio de 0 o más con hasta 4 decimales."
+}

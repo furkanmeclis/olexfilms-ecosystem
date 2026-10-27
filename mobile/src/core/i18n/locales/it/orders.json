@@ -1,1 +1,15 @@
-{}
+{
+  "buyer_label": "Rivenditore dell’ordine",
+  "buyer_pick": "Scegli un rivenditore",
+  "buyer_search": "Cerca rivenditore",
+  "buyer_none": "Nessun rivenditore corrispondente.",
+  "buyer_required": "Scegli un rivenditore.",
+  "unit_price": "Prezzo unitario",
+  "unit_price_auto": "Automatico",
+  "price_rule_center": "Senza prezzo vale il prezzo d’acquisto del rivenditore; un prodotto senza prezzo è aggiunto a 0 e segnalato. L’ordine parte approvato, pronto per il magazzino.",
+  "create_for_dealer": "Crea ordine",
+  "price_missing_title": "Prodotti senza prezzo",
+  "price_missing_body_one": "{{count}} prodotto non aveva un prezzo; è stato aggiunto a 0 e segnalato.",
+  "price_missing_body_other": "{{count}} prodotti non avevano un prezzo; sono stati aggiunti a 0 e segnalati.",
+  "errors.price_invalid": "Inserisci un prezzo da 0 in su con al massimo 4 decimali."
+}

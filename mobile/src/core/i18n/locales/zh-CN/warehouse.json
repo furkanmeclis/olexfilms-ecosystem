@@ -538,5 +538,11 @@
   "validation.same_warehouse": "请选择其他仓库。",
   "validation.too_long": "最多 {{max}} 个字符。",
   "validation.warehouse": "请选择仓库。",
-  "m.open_orders": "待处理订单"
+  "m.open_orders": "待处理订单",
+  "orders.actions.deliver.button": "已送达",
+  "orders.actions.deliver.confirm": "标记为已送达",
+  "orders.actions.deliver.description": "订单标记为已当面或在仓库交给经销商，由经销商点击“已收货”完成。",
+  "orders.actions.deliver.success": "已标记为已送达。",
+  "orders.actions.deliver.title": "标记为已送达？",
+  "orders.price_missing": "无价格"
 }

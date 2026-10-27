@@ -102,5 +102,6 @@
   "approvals.no_access": "Sizin üçün təsdiq yoxdur",
   "approvals.no_access_body": "Qərarınızı tələb edən sorğular burada görünəcək.",
   "home.action.new_service": "Yeni xidmət",
-  "home.action.measure": "Ölçmə"
+  "home.action.measure": "Ölçmə",
+  "orders.price_missing": "Qiymət yoxdur"
 }

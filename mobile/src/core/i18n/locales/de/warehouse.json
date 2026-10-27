@@ -538,5 +538,11 @@
   "validation.same_warehouse": "Wählen Sie ein anderes Lager.",
   "validation.too_long": "Höchstens {{max}} Zeichen.",
   "validation.warehouse": "Wählen Sie ein Lager.",
-  "m.open_orders": "Zu bearbeitende Bestellungen"
+  "m.open_orders": "Zu bearbeitende Bestellungen",
+  "orders.actions.deliver.button": "Zugestellt",
+  "orders.actions.deliver.confirm": "Als zugestellt markieren",
+  "orders.actions.deliver.description": "Die Bestellung gilt als persönlich oder im Lager an den Händler übergeben; der Händler schließt sie mit „Erhalten“ ab.",
+  "orders.actions.deliver.success": "Als zugestellt markiert.",
+  "orders.actions.deliver.title": "Als zugestellt markieren?",
+  "orders.price_missing": "Kein Preis"
 }
