@@ -24810,6 +24810,16 @@ paths:
         an item's `unit_price` (>= 0) wins (price_source `manual`), else the
         dealer's purchase price, else 0 with price_source `missing` and
         `price_missing` true.
+
+
+        TEC-1028: the order falls into the warehouse `seller_warehouse_uuid`
+        names (an active warehouse of the center, otherwise 400 on
+        `seller_warehouse_uuid`), else the center's primary warehouse. A
+        dealer order the seller approves falls into the seller's primary
+        warehouse. Picking suggestions and pick locations are limited to
+        that warehouse, and its staff (warehouse members holding
+        orders.ship, or holders without any warehouse membership; not the
+        actor) are notified in-app and by push (ORDER_WAREHOUSE_NEW).
       security:
         - bearerAuth: []
       requestBody:
@@ -45751,6 +45761,15 @@ components:
         created_by_seller:
           type: boolean
           description: The center opened the order for the dealer; it started approved (TEC-1024)
+        seller_warehouse:
+          description: >-
+            TEC-1028: the seller warehouse the order falls into (set at
+            approval: the warehouse picked on creation, else the seller's
+            primary warehouse). Seller side only, detail responses; null
+            otherwise.
+          oneOf:
+            - $ref: "#/components/schemas/OrderSellerWarehouse"
+            - type: "null"
         status: { $ref: "#/components/schemas/OrderStatus" }
         status_label: { type: string, description: Status in the request language }
         role:
@@ -46046,6 +46065,15 @@ components:
           maxItems: 200
           items: { $ref: "#/components/schemas/OrderItemInput" }
 
+    OrderSellerWarehouse:
+      type: object
+      required: [uuid, code, name, is_primary]
+      properties:
+        uuid: { type: string, format: uuid }
+        code: { type: string, example: MERKEZ }
+        name: { type: string, example: AFM Florya Merkez }
+        is_primary: { type: boolean }
+
     OrderCreateInput:
       type: object
       required: [items]
@@ -46057,6 +46085,13 @@ components:
           description: >-
             TEC-1024: the center opens an approved order for this active
             dealer directly under it. Only for a center (403 otherwise).
+        seller_warehouse_uuid:
+          type: string
+          format: uuid
+          description: >-
+            TEC-1028: the center's active warehouse the order falls into
+            (only with buyer_org_uuid, else 400). Omitted: the center's
+            primary warehouse.
         items:
           type: array
           minItems: 1

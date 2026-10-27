@@ -6,6 +6,8 @@
 -- an open warehouse transfer. Placed units (a warehouse location owns them)
 -- come first, then the oldest entry (FIFO: units.created_at), id tiebreak.
 -- Units the organization holds without a location only with include_unlocated.
+-- TEC-1028: with warehouse_id, placed units only in that warehouse (legacy
+-- locations outside any warehouse stay in).
 SELECT u.id, u.uuid, u.barcode, u.unit_kind, u.remaining_meters, u.created_at,
        s.owner_type, s.status,
        wl.uuid AS location_uuid,
@@ -17,7 +19,9 @@ WHERE u.product_id = sqlc.arg(product_id)
   AND s.holder_org_id = sqlc.arg(seller_org_id)
   AND s.status IN ('available', 'placed')
   AND (
-    s.owner_type = 'warehouse_location'
+    (s.owner_type = 'warehouse_location'
+     AND (sqlc.narg(warehouse_id)::bigint IS NULL OR wl.warehouse_id IS NULL
+         OR wl.warehouse_id = sqlc.narg(warehouse_id)::bigint))
     OR (sqlc.arg(include_unlocated)::bool AND s.owner_type = 'organization')
   )
   AND (u.remaining_meters IS NULL OR u.remaining_meters > 0)
@@ -33,7 +37,9 @@ LIMIT sqlc.arg(row_limit);
 -- name: ListOrderSuggestFixedCandidates :many
 -- Fixed barcodes of a product the seller holds: the quantity at warehouse
 -- locations and without one, and the largest single holding of each (one
--- assignment ships from one owner), oldest entry first.
+-- assignment ships from one owner), oldest entry first. TEC-1028: with
+-- warehouse_id, located holdings only in that warehouse (or a legacy
+-- location outside any warehouse).
 SELECT u.id, u.uuid, u.barcode, u.created_at,
        COALESCE(SUM(h.quantity_on_hand) FILTER (WHERE h.owner_type = 'warehouse_location'), 0)::bigint AS located_quantity,
        COALESCE(SUM(h.quantity_on_hand) FILTER (WHERE h.owner_type = 'organization'), 0)::bigint AS unlocated_quantity,
@@ -41,16 +47,21 @@ SELECT u.id, u.uuid, u.barcode, u.created_at,
        COALESCE(MAX(h.quantity_on_hand) FILTER (WHERE h.owner_type = 'organization'), 0)::bigint AS unlocated_max
 FROM units u
 JOIN fixed_barcode_holdings h ON h.unit_id = u.id
+LEFT JOIN warehouse_locations wl ON wl.id = h.owner_location_id
 WHERE u.product_id = sqlc.arg(product_id)
   AND u.unit_kind = 'fixed'
   AND h.holder_org_id = sqlc.arg(seller_org_id)
   AND h.quantity_on_hand > 0
+  AND (h.owner_type <> 'warehouse_location'
+       OR sqlc.narg(warehouse_id)::bigint IS NULL OR wl.warehouse_id IS NULL
+         OR wl.warehouse_id = sqlc.narg(warehouse_id)::bigint)
 GROUP BY u.id, u.uuid, u.barcode, u.created_at
 ORDER BY u.created_at ASC, u.id ASC
 LIMIT 50;
 
 -- name: ListFixedUnitLocations :many
--- Warehouse locations of the seller holding a fixed barcode, largest first.
+-- Warehouse locations of the seller holding a fixed barcode, largest first
+-- (TEC-1028: with warehouse_id, only that warehouse's).
 SELECT wl.uuid AS location_uuid, COALESCE(wl.full_code, wl.code)::text AS location_code,
        h.quantity_on_hand
 FROM fixed_barcode_holdings h
@@ -58,11 +69,14 @@ JOIN warehouse_locations wl ON wl.id = h.owner_location_id
 WHERE h.unit_id = sqlc.arg(unit_id)
   AND h.holder_org_id = sqlc.arg(seller_org_id)
   AND h.quantity_on_hand > 0
+  AND (sqlc.narg(warehouse_id)::bigint IS NULL OR wl.warehouse_id IS NULL
+         OR wl.warehouse_id = sqlc.narg(warehouse_id)::bigint)
 ORDER BY h.quantity_on_hand DESC, location_code ASC;
 
 -- name: ListProductPickLocations :many
 -- The seller's warehouse locations holding a product (bin_product_stocks:
--- pieces/rolls and meters), by location code.
+-- pieces/rolls and meters), by location code (TEC-1028: with
+-- warehouse_id, only that warehouse's).
 SELECT wl.uuid AS location_uuid, COALESCE(wl.full_code, wl.code)::text AS location_code,
        wl.name AS location_name, b.quantity, b.meters
 FROM bin_product_stocks b
@@ -70,6 +84,8 @@ JOIN warehouse_locations wl ON wl.id = b.location_id
 WHERE b.organization_id = sqlc.arg(seller_org_id)
   AND b.product_id = sqlc.arg(product_id)
   AND (b.quantity > 0 OR b.meters > 0)
+  AND (sqlc.narg(warehouse_id)::bigint IS NULL OR wl.warehouse_id IS NULL
+         OR wl.warehouse_id = sqlc.narg(warehouse_id)::bigint)
 ORDER BY location_code ASC, wl.id ASC;
 
 -- name: SumProductUnlocatedStock :one

@@ -683,6 +683,13 @@ function Parties({ order }: { order: Order }) {
       <dl className="grid gap-3 sm:grid-cols-2">
         <Field label={t("orders.detail.seller")}>{order.seller.name}</Field>
         <Field label={t("orders.detail.buyer")}>{order.buyer.name}</Field>
+        {order.seller_warehouse ? (
+          <Field label={t("orders.detail.seller_warehouse")}>
+            <span data-testid="order-seller-warehouse">
+              {order.seller_warehouse.name}
+            </span>
+          </Field>
+        ) : null}
         <Field label={t("orders.detail.role")}>
           {t(`orders.role.${order.role}`)}
         </Field>

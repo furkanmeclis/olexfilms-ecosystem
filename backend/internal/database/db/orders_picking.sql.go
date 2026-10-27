@@ -20,12 +20,15 @@ JOIN warehouse_locations wl ON wl.id = h.owner_location_id
 WHERE h.unit_id = $1
   AND h.holder_org_id = $2
   AND h.quantity_on_hand > 0
+  AND ($3::bigint IS NULL OR wl.warehouse_id IS NULL
+         OR wl.warehouse_id = $3::bigint)
 ORDER BY h.quantity_on_hand DESC, location_code ASC
 `
 
 type ListFixedUnitLocationsParams struct {
-	UnitID      int64 `json:"unit_id"`
-	SellerOrgID int64 `json:"seller_org_id"`
+	UnitID      int64       `json:"unit_id"`
+	SellerOrgID int64       `json:"seller_org_id"`
+	WarehouseID pgtype.Int8 `json:"warehouse_id"`
 }
 
 type ListFixedUnitLocationsRow struct {
@@ -34,9 +37,10 @@ type ListFixedUnitLocationsRow struct {
 	QuantityOnHand int32     `json:"quantity_on_hand"`
 }
 
-// Warehouse locations of the seller holding a fixed barcode, largest first.
+// Warehouse locations of the seller holding a fixed barcode, largest first
+// (TEC-1028: with warehouse_id, only that warehouse's).
 func (q *Queries) ListFixedUnitLocations(ctx context.Context, arg ListFixedUnitLocationsParams) ([]ListFixedUnitLocationsRow, error) {
-	rows, err := q.db.Query(ctx, listFixedUnitLocations, arg.UnitID, arg.SellerOrgID)
+	rows, err := q.db.Query(ctx, listFixedUnitLocations, arg.UnitID, arg.SellerOrgID, arg.WarehouseID)
 	if err != nil {
 		return nil, err
 	}
@@ -116,18 +120,23 @@ SELECT u.id, u.uuid, u.barcode, u.created_at,
        COALESCE(MAX(h.quantity_on_hand) FILTER (WHERE h.owner_type = 'organization'), 0)::bigint AS unlocated_max
 FROM units u
 JOIN fixed_barcode_holdings h ON h.unit_id = u.id
+LEFT JOIN warehouse_locations wl ON wl.id = h.owner_location_id
 WHERE u.product_id = $1
   AND u.unit_kind = 'fixed'
   AND h.holder_org_id = $2
   AND h.quantity_on_hand > 0
+  AND (h.owner_type <> 'warehouse_location'
+       OR $3::bigint IS NULL OR wl.warehouse_id IS NULL
+         OR wl.warehouse_id = $3::bigint)
 GROUP BY u.id, u.uuid, u.barcode, u.created_at
 ORDER BY u.created_at ASC, u.id ASC
 LIMIT 50
 `
 
 type ListOrderSuggestFixedCandidatesParams struct {
-	ProductID   int64 `json:"product_id"`
-	SellerOrgID int64 `json:"seller_org_id"`
+	ProductID   int64       `json:"product_id"`
+	SellerOrgID int64       `json:"seller_org_id"`
+	WarehouseID pgtype.Int8 `json:"warehouse_id"`
 }
 
 type ListOrderSuggestFixedCandidatesRow struct {
@@ -143,9 +152,11 @@ type ListOrderSuggestFixedCandidatesRow struct {
 
 // Fixed barcodes of a product the seller holds: the quantity at warehouse
 // locations and without one, and the largest single holding of each (one
-// assignment ships from one owner), oldest entry first.
+// assignment ships from one owner), oldest entry first. TEC-1028: with
+// warehouse_id, located holdings only in that warehouse (or a legacy
+// location outside any warehouse).
 func (q *Queries) ListOrderSuggestFixedCandidates(ctx context.Context, arg ListOrderSuggestFixedCandidatesParams) ([]ListOrderSuggestFixedCandidatesRow, error) {
-	rows, err := q.db.Query(ctx, listOrderSuggestFixedCandidates, arg.ProductID, arg.SellerOrgID)
+	rows, err := q.db.Query(ctx, listOrderSuggestFixedCandidates, arg.ProductID, arg.SellerOrgID, arg.WarehouseID)
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +197,10 @@ WHERE u.product_id = $1
   AND s.holder_org_id = $2
   AND s.status IN ('available', 'placed')
   AND (
-    s.owner_type = 'warehouse_location'
-    OR ($3::bool AND s.owner_type = 'organization')
+    (s.owner_type = 'warehouse_location'
+     AND ($3::bigint IS NULL OR wl.warehouse_id IS NULL
+         OR wl.warehouse_id = $3::bigint))
+    OR ($4::bool AND s.owner_type = 'organization')
   )
   AND (u.remaining_meters IS NULL OR u.remaining_meters > 0)
   AND NOT EXISTS (
@@ -197,14 +210,15 @@ WHERE u.product_id = $1
     SELECT 1 FROM warehouse_transfer_lines t WHERE t.unit_id = u.id AND t.is_open
   )
 ORDER BY (s.owner_type = 'warehouse_location') DESC, u.created_at ASC, u.id ASC
-LIMIT $4
+LIMIT $5
 `
 
 type ListOrderSuggestSerialCandidatesParams struct {
-	ProductID        int64 `json:"product_id"`
-	SellerOrgID      int64 `json:"seller_org_id"`
-	IncludeUnlocated bool  `json:"include_unlocated"`
-	RowLimit         int32 `json:"row_limit"`
+	ProductID        int64       `json:"product_id"`
+	SellerOrgID      int64       `json:"seller_org_id"`
+	WarehouseID      pgtype.Int8 `json:"warehouse_id"`
+	IncludeUnlocated bool        `json:"include_unlocated"`
+	RowLimit         int32       `json:"row_limit"`
 }
 
 type ListOrderSuggestSerialCandidatesRow struct {
@@ -226,10 +240,13 @@ type ListOrderSuggestSerialCandidatesRow struct {
 // an open warehouse transfer. Placed units (a warehouse location owns them)
 // come first, then the oldest entry (FIFO: units.created_at), id tiebreak.
 // Units the organization holds without a location only with include_unlocated.
+// TEC-1028: with warehouse_id, placed units only in that warehouse (legacy
+// locations outside any warehouse stay in).
 func (q *Queries) ListOrderSuggestSerialCandidates(ctx context.Context, arg ListOrderSuggestSerialCandidatesParams) ([]ListOrderSuggestSerialCandidatesRow, error) {
 	rows, err := q.db.Query(ctx, listOrderSuggestSerialCandidates,
 		arg.ProductID,
 		arg.SellerOrgID,
+		arg.WarehouseID,
 		arg.IncludeUnlocated,
 		arg.RowLimit,
 	)
@@ -270,12 +287,15 @@ JOIN warehouse_locations wl ON wl.id = b.location_id
 WHERE b.organization_id = $1
   AND b.product_id = $2
   AND (b.quantity > 0 OR b.meters > 0)
+  AND ($3::bigint IS NULL OR wl.warehouse_id IS NULL
+         OR wl.warehouse_id = $3::bigint)
 ORDER BY location_code ASC, wl.id ASC
 `
 
 type ListProductPickLocationsParams struct {
-	SellerOrgID int64 `json:"seller_org_id"`
-	ProductID   int64 `json:"product_id"`
+	SellerOrgID int64       `json:"seller_org_id"`
+	ProductID   int64       `json:"product_id"`
+	WarehouseID pgtype.Int8 `json:"warehouse_id"`
 }
 
 type ListProductPickLocationsRow struct {
@@ -287,9 +307,10 @@ type ListProductPickLocationsRow struct {
 }
 
 // The seller's warehouse locations holding a product (bin_product_stocks:
-// pieces/rolls and meters), by location code.
+// pieces/rolls and meters), by location code (TEC-1028: with
+// warehouse_id, only that warehouse's).
 func (q *Queries) ListProductPickLocations(ctx context.Context, arg ListProductPickLocationsParams) ([]ListProductPickLocationsRow, error) {
-	rows, err := q.db.Query(ctx, listProductPickLocations, arg.SellerOrgID, arg.ProductID)
+	rows, err := q.db.Query(ctx, listProductPickLocations, arg.SellerOrgID, arg.ProductID, arg.WarehouseID)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +339,7 @@ const setOrderShippingDocument = `-- name: SetOrderShippingDocument :one
 UPDATE orders
 SET shipping_document_key = $1
 WHERE id = $2
-RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status
+RETURNING id, uuid, order_no, organization_id, brand_id, seller_org_id, buyer_org_id, seller_warehouse_location_id, buyer_warehouse_location_id, status, currency, rate_snapshot, try_rate, subtotal, tax_total, total, delivery_mode, tracking_no, shipping_document_key, receipt_document_key, external_reference, note, cancel_reason, created_by_user_id, approved_by_user_id, submitted_at, approved_at, ready_at, shipped_at, delivered_at, received_at, cancel_requested_at, cancelled_at, created_at, updated_at, delivery_method_id, created_by_seller, invoice_status, seller_warehouse_id
 `
 
 type SetOrderShippingDocumentParams struct {
@@ -368,6 +389,7 @@ func (q *Queries) SetOrderShippingDocument(ctx context.Context, arg SetOrderShip
 		&i.DeliveryMethodID,
 		&i.CreatedBySeller,
 		&i.InvoiceStatus,
+		&i.SellerWarehouseID,
 	)
 	return i, err
 }

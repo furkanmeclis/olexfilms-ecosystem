@@ -15,6 +15,7 @@ const api = vi.hoisted(() => ({
 }));
 const catalog = vi.hoisted(() => ({ listProducts: vi.fn() }));
 const pricing = vi.hoisted(() => ({ getProduct: vi.fn() }));
+const warehouses = vi.hoisted(() => ({ listWarehouses: vi.fn() }));
 const state = vi.hoisted(() => ({
   grants: new Set<string>(),
   orgType: "distributor" as string | null,
@@ -85,6 +86,10 @@ vi.mock("@/features/catalog/services/catalog.service", async (orig) => ({
 vi.mock("@/features/catalog/services/pricing.service", async (orig) => ({
   ...(await orig<object>()),
   pricingService: pricing,
+}));
+vi.mock("@/features/warehouse/services/warehouse.service", async (orig) => ({
+  ...(await orig<object>()),
+  warehouseService: warehouses,
 }));
 
 import type { Order } from "@/features/orders/services/orders.service";
@@ -461,6 +466,7 @@ describe("OrderFormPage: validation", () => {
 
   it("the center gets the dealer order form (TEC-1024)", async () => {
     state.orgType = "center";
+    warehouses.listWarehouses.mockRejectedValue(new Error("forbidden"));
     await render(createElement(OrderFormPage, { slug: "acme" }));
     expect($("[data-testid=save-draft]")).toBeNull();
     expect($("[data-testid=center-order-dealer]")).not.toBeNull();
@@ -470,6 +476,35 @@ describe("OrderFormPage: validation", () => {
     expect($("[data-testid=dealer-error]")).not.toBeNull();
     expect($("[data-testid=lines-empty]")?.className).toContain(
       "text-destructive",
+    );
+  });
+
+  it("offers the center's active warehouses, primary first (TEC-1028)", async () => {
+    state.orgType = "center";
+    warehouses.listWarehouses.mockResolvedValue({
+      items: [
+        {
+          uuid: "w1",
+          code: "MAIN",
+          name: "Merkez",
+          active: true,
+          is_primary: true,
+        },
+        {
+          uuid: "w2",
+          code: "OLD",
+          name: "Eski",
+          active: false,
+          is_primary: false,
+        },
+      ],
+    });
+    await render(createElement(OrderFormPage, { slug: "acme" }));
+    await flush();
+    const trigger = $("[data-testid=center-order-warehouse]");
+    expect(trigger).not.toBeNull();
+    expect(trigger?.textContent).toContain(
+      "orders.center_form.warehouse_primary",
     );
   });
 

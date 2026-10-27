@@ -127,7 +127,7 @@ func (s *Service) suggest(ctx context.Context, q *db.Queries, o db.Order, it db.
 func serialCandidates(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem, in SuggestInput) ([]db.ListOrderSuggestSerialCandidatesRow, error) {
 	rows, err := q.ListOrderSuggestSerialCandidates(ctx, db.ListOrderSuggestSerialCandidatesParams{
 		ProductID: it.ProductID, SellerOrgID: o.SellerOrgID, IncludeUnlocated: in.IncludeUnlocated,
-		RowLimit: suggestScanLimit,
+		RowLimit: suggestScanLimit, WarehouseID: warehouseFilter(o),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("orders: suggestion candidates: %w", err)
@@ -221,7 +221,7 @@ func suggestRolls(ctx context.Context, q *db.Queries, o db.Order, it db.OrderIte
 // suggestFixed: quantities from the seller's unreserved fixed holdings.
 func (s *Service) suggestFixed(ctx context.Context, q *db.Queries, o db.Order, it db.OrderItem, missing *big.Rat, in SuggestInput, covered *big.Rat) ([]SuggestionView, error) {
 	rows, err := q.ListOrderSuggestFixedCandidates(ctx, db.ListOrderSuggestFixedCandidatesParams{
-		ProductID: it.ProductID, SellerOrgID: o.SellerOrgID,
+		ProductID: it.ProductID, SellerOrgID: o.SellerOrgID, WarehouseID: warehouseFilter(o),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("orders: fixed candidates: %w", err)
@@ -260,7 +260,7 @@ func (s *Service) suggestFixed(ctx context.Context, q *db.Queries, o db.Order, i
 			UnitUUID: r.Uuid, Barcode: r.Barcode, UnitKind: ledger.KindFixed,
 			Quantity: &qty, Located: r.LocatedQuantity > 0, EnteredAt: r.CreatedAt.Time,
 		}
-		locs, err := q.ListFixedUnitLocations(ctx, db.ListFixedUnitLocationsParams{UnitID: r.ID, SellerOrgID: o.SellerOrgID})
+		locs, err := q.ListFixedUnitLocations(ctx, db.ListFixedUnitLocationsParams{UnitID: r.ID, SellerOrgID: o.SellerOrgID, WarehouseID: warehouseFilter(o)})
 		if err != nil {
 			return nil, fmt.Errorf("orders: fixed locations: %w", err)
 		}
@@ -338,9 +338,13 @@ type PickLocationView struct {
 }
 
 // productLocations lists the seller's locations of a product by location
-// code, the stock without a location last.
-func productLocations(ctx context.Context, q *db.Queries, seller, product int64, roll bool) ([]PickLocationView, error) {
-	rows, err := q.ListProductPickLocations(ctx, db.ListProductPickLocationsParams{SellerOrgID: seller, ProductID: product})
+// code (only the order's warehouse, TEC-1028), the stock without a location
+// last.
+func productLocations(ctx context.Context, q *db.Queries, o db.Order, product int64, roll bool) ([]PickLocationView, error) {
+	seller := o.SellerOrgID
+	rows, err := q.ListProductPickLocations(ctx, db.ListProductPickLocationsParams{
+		SellerOrgID: seller, ProductID: product, WarehouseID: warehouseFilter(o),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("orders: pick locations: %w", err)
 	}
@@ -374,7 +378,7 @@ func (s *Service) PickLocations(ctx context.Context, c Caller, orderUUID, itemUU
 	if err != nil {
 		return nil, err
 	}
-	return productLocations(ctx, s.q, o.SellerOrgID, it.ProductID, it.Meters.Valid)
+	return productLocations(ctx, s.q, o, it.ProductID, it.Meters.Valid)
 }
 
 // sellerLine loads an order of the caller's selling side and one line.
@@ -514,7 +518,7 @@ func (s *Service) PickList(ctx context.Context, c Caller, orderUUID uuid.UUID) (
 		if done.Cmp(lineAmount(it)) >= 0 || !pickingStatus(o.Status) {
 			continue
 		}
-		locs, err := productLocations(ctx, s.q, o.SellerOrgID, it.ProductID, it.Meters.Valid)
+		locs, err := productLocations(ctx, s.q, o, it.ProductID, it.Meters.Valid)
 		if err != nil {
 			return PickListView{}, err
 		}

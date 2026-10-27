@@ -1207,6 +1207,8 @@ type Querier interface {
 	// Service summary of one vehicle across every organization of the brand.
 	GetPortalVehicleServiceSummary(ctx context.Context, arg GetPortalVehicleServiceSummaryParams) (GetPortalVehicleServiceSummaryRow, error)
 	GetPrimaryOrganizationOwnerForServiceContract(ctx context.Context, organizationID int64) (User, error)
+	// The active primary warehouse of an organization (TEC-1006).
+	GetPrimaryWarehouse(ctx context.Context, organizationID int64) (Warehouse, error)
 	GetProduct(ctx context.Context, arg GetProductParams) (Product, error)
 	// TEC-268 (F2-02c): Glorian catalog pull. A synced product is found by its
 	// connection + remote id; the pull rewrites only the remote-sourced columns
@@ -2006,7 +2008,8 @@ type Querier interface {
 	// the organization owner itself), per barcode, for the listed products.
 	ListFixedBarcodeQuantitiesByHolder(ctx context.Context, arg ListFixedBarcodeQuantitiesByHolderParams) ([]ListFixedBarcodeQuantitiesByHolderRow, error)
 	ListFixedBarcodeQuantitiesByLocation(ctx context.Context, arg ListFixedBarcodeQuantitiesByLocationParams) ([]ListFixedBarcodeQuantitiesByLocationRow, error)
-	// Warehouse locations of the seller holding a fixed barcode, largest first.
+	// Warehouse locations of the seller holding a fixed barcode, largest first
+	// (TEC-1028: with warehouse_id, only that warehouse's).
 	ListFixedUnitLocations(ctx context.Context, arg ListFixedUnitLocationsParams) ([]ListFixedUnitLocationsRow, error)
 	// Links of a fleet with the dealer names (fleet card, portal).
 	ListFleetDealerLinks(ctx context.Context, arg ListFleetDealerLinksParams) ([]ListFleetDealerLinksRow, error)
@@ -2253,7 +2256,9 @@ type Querier interface {
 	ListOrderStatusHistory(ctx context.Context, orderID int64) ([]OrderStatusHistory, error)
 	// Fixed barcodes of a product the seller holds: the quantity at warehouse
 	// locations and without one, and the largest single holding of each (one
-	// assignment ships from one owner), oldest entry first.
+	// assignment ships from one owner), oldest entry first. TEC-1028: with
+	// warehouse_id, located holdings only in that warehouse (or a legacy
+	// location outside any warehouse).
 	ListOrderSuggestFixedCandidates(ctx context.Context, arg ListOrderSuggestFixedCandidatesParams) ([]ListOrderSuggestFixedCandidatesRow, error)
 	// TEC-768: barcode suggestions, pick locations and the pick list of an order.
 	// Serial units (pieces, rolls) of a product the seller can assign: held in
@@ -2261,10 +2266,17 @@ type Querier interface {
 	// an open warehouse transfer. Placed units (a warehouse location owns them)
 	// come first, then the oldest entry (FIFO: units.created_at), id tiebreak.
 	// Units the organization holds without a location only with include_unlocated.
+	// TEC-1028: with warehouse_id, placed units only in that warehouse (legacy
+	// locations outside any warehouse stay in).
 	ListOrderSuggestSerialCandidates(ctx context.Context, arg ListOrderSuggestSerialCandidatesParams) ([]ListOrderSuggestSerialCandidatesRow, error)
 	// Orders an organization sells or buys: their documents carry the
 	// organization's name and dealer code, refreshed when it changes.
 	ListOrderUuidsByOrganization(ctx context.Context, organizationID int64) ([]uuid.UUID, error)
+	// The seller's staff of a warehouse: members holding the permission who are
+	// members of the warehouse, or who have no warehouse membership in the
+	// organization at all (they work in every warehouse, TEC-769). Without a
+	// warehouse every holder of the permission.
+	ListOrderWarehouseNotifyUserIDs(ctx context.Context, arg ListOrderWarehouseNotifyUserIDsParams) ([]int64, error)
 	// TEC-373 (DT-BE-5): the order list. One query serves every side:
 	// seller_org_id (side=seller: the active organization sells), buyer_org_id
 	// (side=buyer) or org_ids (side all: any organization of the orders.read
@@ -2447,7 +2459,8 @@ type Querier interface {
 	ListProductCategoryOrder(ctx context.Context, brandID int64) ([]ListProductCategoryOrderRow, error)
 	ListProductConsumptionSeries(ctx context.Context, arg ListProductConsumptionSeriesParams) ([]ListProductConsumptionSeriesRow, error)
 	// The seller's warehouse locations holding a product (bin_product_stocks:
-	// pieces/rolls and meters), by location code.
+	// pieces/rolls and meters), by location code (TEC-1028: with
+	// warehouse_id, only that warehouse's).
 	ListProductPickLocations(ctx context.Context, arg ListProductPickLocationsParams) ([]ListProductPickLocationsRow, error)
 	ListProductPrices(ctx context.Context, arg ListProductPricesParams) ([]ProductPrice, error)
 	ListProductPricesForProducts(ctx context.Context, arg ListProductPricesForProductsParams) ([]ListProductPricesForProductsRow, error)
@@ -3630,6 +3643,9 @@ type Querier interface {
 	SetOrderInvoiceStatus(ctx context.Context, arg SetOrderInvoiceStatusParams) (Order, error)
 	SetOrderItemUnitMovement(ctx context.Context, arg SetOrderItemUnitMovementParams) (OrderItemUnit, error)
 	SetOrderReceiptDocument(ctx context.Context, arg SetOrderReceiptDocumentParams) (Order, error)
+	// ---------------------------------------------------------------------------
+	// TEC-1028: the seller warehouse of an order.
+	SetOrderSellerWarehouse(ctx context.Context, arg SetOrderSellerWarehouseParams) (Order, error)
 	// TEC-768: the delivery method, mode and tracking number chosen at shipping.
 	SetOrderShipping(ctx context.Context, arg SetOrderShippingParams) (Order, error)
 	SetOrderShippingDocument(ctx context.Context, arg SetOrderShippingDocumentParams) (Order, error)
