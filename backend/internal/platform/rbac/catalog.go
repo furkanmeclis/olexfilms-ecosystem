@@ -777,10 +777,12 @@ var Permissions = []PermissionDef{
 		Description: "Archive, void and repair UBL-TR e-invoices. Requires step-up.",
 	},
 	{
+		// TEC-1026: the center accounting team (and the center owner) edits
+		// the seller profile and series; it was super_admin-only before.
 		Slug: PermEinvoiceSettings, Name: "Manage e-invoice settings", Module: "einvoice",
-		Scopes:         scopesAll,
-		SuperAdminOnly: true,
-		Description:    "Edit the center seller profile, UBL series and XSLT settings.",
+		Scopes:      scopesSupplier,
+		Sensitive:   true,
+		Description: "Edit the center seller profile, UBL series and XSLT settings.",
 	},
 
 	// TEC-505: recommended price versions (F5-09a). Appended last; migration
@@ -927,6 +929,16 @@ var Roles = []RoleDef{
 		Description: "Platform-level operator with all permissions",
 	},
 	{
+		// TEC-1026: the center owner holds every center role at once
+		// (center_staff ∪ center_warehouse ∪ center_accounting ∪
+		// center_social ∪ center_service, broadest scope on overlap). The
+		// grants are derived in init so a permission added to any center
+		// role reaches the owner automatically. Platform permissions are
+		// not included.
+		Slug: RoleCenterOwner, Name: "Center owner", OrgType: OrgTypeCenter,
+		Description: "Center owner: every center department (staff, warehouse, accounting, social and service point) in one role",
+	},
+	{
 		Slug: RoleCenterStaff, Name: "Center staff", OrgType: OrgTypeCenter,
 		Description: "Center staff: services, customers and the organization tree of the brand",
 		Grants: grants(baseGrants, map[string]Scope{
@@ -1004,6 +1016,9 @@ var Roles = []RoleDef{
 			// TEC-334 (000092).
 			PermWarrantyClaimsRead:   ScopeBrand,
 			PermWarrantyClaimsDecide: ScopeBrand,
+			// TEC-1026 (000158): the center opens claims for its own service
+			// point (TEC-1003, K4); managed = the center's own records.
+			PermWarrantyClaimsWrite: ScopeManaged,
 			// TEC-479 (000111).
 			PermCertificateTypesManage:     ScopeBrand,
 			PermCertificatesRead:           ScopeBrand,
@@ -1112,9 +1127,10 @@ var Roles = []RoleDef{
 			PermAIUsageRead:      ScopeBrand,
 			// TEC-400 (000104).
 			PermMCPConnect: ScopeOwn,
-			// TEC-501 (000124).
-			PermEinvoiceRead:   ScopeBrand,
-			PermEinvoiceManage: ScopeBrand,
+			// TEC-501 (000124); settings since TEC-1026 (000158).
+			PermEinvoiceRead:     ScopeBrand,
+			PermEinvoiceManage:   ScopeBrand,
+			PermEinvoiceSettings: ScopeBrand,
 		}),
 	},
 	{
@@ -1559,6 +1575,12 @@ var (
 	roleIndex = map[string]int{}
 )
 
+// CenterOwnerMembers are the center roles whose union is center_owner
+// (TEC-1026).
+var CenterOwnerMembers = []string{
+	RoleCenterStaff, RoleCenterWarehouse, RoleCenterAccounting, RoleCenterSocial, RoleCenterService,
+}
+
 func init() {
 	for i, p := range Permissions {
 		permIndex[p.Slug] = i
@@ -1566,6 +1588,35 @@ func init() {
 	for i, r := range Roles {
 		roleIndex[r.Slug] = i
 	}
+	Roles[roleIndex[RoleCenterOwner]].Grants = unionGrants(CenterOwnerMembers...)
+	BrandIndependentGrants[RoleCenterOwner] = unionBrandIndependent(CenterOwnerMembers...)
+}
+
+// unionGrants merges the grant maps of the given system roles; a permission
+// held by several of them keeps the broadest scope.
+func unionGrants(slugs ...string) map[string]Scope {
+	out := map[string]Scope{}
+	for _, slug := range slugs {
+		r := Roles[roleIndex[slug]]
+		for perm, scope := range r.Grants {
+			if cur, ok := out[perm]; ok {
+				out[perm] = Broader(cur, scope)
+			} else {
+				out[perm] = scope
+			}
+		}
+	}
+	return out
+}
+
+func unionBrandIndependent(slugs ...string) map[string]bool {
+	out := map[string]bool{}
+	for _, slug := range slugs {
+		for perm := range BrandIndependentGrants[slug] {
+			out[perm] = true
+		}
+	}
+	return out
 }
 
 // PermissionBySlug returns a catalog entry.

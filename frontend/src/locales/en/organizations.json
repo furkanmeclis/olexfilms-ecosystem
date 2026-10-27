@@ -51,6 +51,8 @@
   "fields.logo": "Logo",
   "fields.member": "User",
   "fields.member_role": "Role",
+  "fields.member_roles": "Organization roles",
+  "fields.member_roles_hint": "Empty gives the default role of the membership kind (owner → every department, staff → general staff). Only the selected roles are granted; for an accounting-only account pick \"Center accounting\" alone.",
   "placeholders.name": "Example Auto Wash",
   "placeholders.city": "Istanbul",
   "placeholders.district": "Kadikoy",

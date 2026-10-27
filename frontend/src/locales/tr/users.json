@@ -32,7 +32,7 @@
   "fields.uuid": "UUID",
   "fields.roles": "Roller",
   "fields.locale": "Dil",
-  "fields.roles_hint": "İzinler seçilen tüm rollerden birleştirilir.",
+  "fields.roles_hint": "İzinler seçilen tüm rollerden birleştirilir. Merkez, distribütör ve bayi rolleri burada değil, işletme sayfasındaki \"Personel ekle\" ile verilir.",
   "fields.email_verified": "E-posta doğrulama",
   "placeholders.name": "Ayşe",
   "placeholders.surname": "Yılmaz",
