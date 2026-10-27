@@ -11,5 +11,9 @@
   "switching": "Cambiando…",
   "none_title": "No hay espacios disponibles",
   "none_body": "Tu cuenta aún no está vinculada a ninguna organización. Contacta con tu administrador.",
-  "workplace": "Área de trabajo"
+  "workplace": "Área de trabajo",
+  "title_spaces": "Área y organización",
+  "switch_hint": "Mantén pulsado para cambiar de área",
+  "spaces_title": "Áreas",
+  "orgs_title": "Organizaciones"
 }

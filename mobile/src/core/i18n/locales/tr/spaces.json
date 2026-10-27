@@ -11,5 +11,9 @@
   "switching": "Geçiliyor…",
   "none_title": "Kullanılabilir alan yok",
   "none_body": "Hesabın henüz bir organizasyona bağlı değil. Yöneticinle iletişime geç.",
-  "workplace": "İş alanı"
+  "workplace": "İş alanı",
+  "title_spaces": "Alan ve kuruluş",
+  "switch_hint": "Basılı tut: diğer alana geç",
+  "spaces_title": "Alanlar",
+  "orgs_title": "Kuruluşlar"
 }

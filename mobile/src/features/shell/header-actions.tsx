@@ -5,7 +5,7 @@ import { Pressable, View } from 'react-native';
 
 import { useSession } from '@/core/auth/session';
 import { switchSpace } from '@/core/space-memory';
-import { kindsOf, type SpaceKind } from '@/core/spaces';
+import { kindsOf } from '@/core/spaces';
 import { NotificationBell } from '@/features/notifications/bell';
 import { BrandLogo } from '@/ui/brand-logo';
 import { Icon } from '@/ui/icon';
@@ -17,68 +17,62 @@ export function HeaderBrand() {
 }
 
 /**
- * Home header leading items: crest, then the space switch when the user also
- * works in the warehouse (TEC-1027: workplace ↔ warehouse, same account and
- * organization), else the user's initials.
+ * Home header leading items: crest, then the user's avatar. A user who also
+ * works in the warehouse switches space from it (TEC-1027): a long press
+ * jumps to the other space, a tap opens the space sheet.
  */
 export function HomeHeaderLeft() {
+  return (
+    <View className="flex-row items-center gap-2.5">
+      <HeaderBrand />
+      <SpaceButton />
+    </View>
+  );
+}
+
+/** Avatar; with two spaces (workplace + warehouse) it carries the space switch and a dot of the open space. */
+export function SpaceButton() {
+  const { t } = useTranslation('spaces');
   const me = useSession((s) => s.me);
   const kinds = kindsOf(me);
   const workplace = kinds.find((k) => k !== 'depo');
   const both = !!workplace && kinds.includes('depo');
-  return (
-    <View className="flex-row items-center gap-2.5">
-      <HeaderBrand />
-      {both ? <SpaceSwitch workplace={workplace} /> : <SpaceButton />}
-    </View>
-  );
-}
-
-/** Two-way switch between the workplace and the warehouse; the current one is filled. */
-function SpaceSwitch({ workplace }: { workplace: SpaceKind }) {
-  const { t } = useTranslation('spaces');
-  const me = useSession((s) => s.me);
-  const current = (useSegments() as string[])[1] === 'depo' ? 'depo' : workplace;
-  const options: { kind: SpaceKind; label: string }[] = [
-    { kind: workplace, label: t('workplace') },
-    { kind: 'depo', label: t('kind.depo') },
-  ];
-  return (
-    <View className="flex-row rounded-full bg-secondary p-0.5" accessibilityRole="tablist">
-      {options.map((o) => {
-        const on = o.kind === current;
-        return (
-          <Pressable
-            key={o.kind}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: on }}
-            hitSlop={4}
-            onPress={() => {
-              if (on) return;
-              void Haptics.selectionAsync();
-              switchSpace(me, o.kind);
-            }}
-            className={on ? 'rounded-full bg-primary px-3 py-1' : 'rounded-full px-3 py-1 active:opacity-70'}>
-            <Text variant="footnote" tone={on ? 'onPrimary' : 'default'} className="font-semibold">
-              {o.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-/** The user's initials (no action: Settings sit in the menu; TEC-1027). */
-export function SpaceButton() {
-  const user = useSession((s) => s.me?.user);
+  const inDepo = (useSegments() as string[])[1] === 'depo';
+  const many = (me?.organizations?.length ?? 0) > 1;
+  const user = me?.user;
   const initials = `${user?.name?.[0] ?? ''}${user?.surname?.[0] ?? ''}`.toUpperCase() || '?';
-  return (
-    <View accessible={false} className="size-8 items-center justify-center rounded-full bg-secondary">
+  const avatar = (
+    <View className="size-8 items-center justify-center rounded-full bg-secondary">
       <Text variant="footnote" className="font-bold">
         {initials}
       </Text>
+      {both ? (
+        <View
+          className={inDepo ? 'absolute -bottom-0.5 -end-0.5 size-3 rounded-full border-2 border-background bg-brand' : 'absolute -bottom-0.5 -end-0.5 size-3 rounded-full border-2 border-background bg-primary'}
+        />
+      ) : null}
     </View>
+  );
+  if (!both && !many) return <View accessible={false}>{avatar}</View>;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('title_spaces')}
+      accessibilityHint={both ? t('switch_hint') : undefined}
+      hitSlop={8}
+      delayLongPress={350}
+      onPress={() => router.push({ pathname: '/spaces', params: { from: inDepo ? 'depo' : (workplace ?? '') } })}
+      onLongPress={
+        both
+          ? () => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              switchSpace(me, inDepo ? workplace : 'depo');
+            }
+          : undefined
+      }
+      className="active:opacity-70">
+      {avatar}
+    </Pressable>
   );
 }
 

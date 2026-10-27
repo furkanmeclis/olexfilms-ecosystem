@@ -11,5 +11,9 @@
   "switching": "正在切换…",
   "none_title": "没有可用空间",
   "none_body": "你的账号尚未关联任何组织。请联系管理员。",
-  "workplace": "工作区"
+  "workplace": "工作区",
+  "title_spaces": "区域与组织",
+  "switch_hint": "长按切换到另一个区域",
+  "spaces_title": "区域",
+  "orgs_title": "组织"
 }
