@@ -46143,7 +46143,7 @@ components:
         code: { type: string }
         name: { type: string }
         country_iso2: { type: string }
-        empty_reason: { type: string, enum: [territory_no_dealers, unassigned_territory] }
+        empty_reason: { type: string, enum: [territory_no_dealers, unassigned_territory, no_dealers] }
         distributor: { $ref: "#/components/schemas/PerformanceMapDistributor" }
 
     PerformanceRegionMap:

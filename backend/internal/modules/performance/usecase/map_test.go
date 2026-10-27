@@ -76,6 +76,78 @@ func TestRegionMapProvinceCountsEmptyAndDistributorScope(t *testing.T) {
 	}
 }
 
+// TEC-1029: without distributor territories (TR since TEC-1003) the center
+// sees every province; a province with dealers is never empty and one
+// without dealers is "no_dealers" (bayi olmayan il), not an unassigned
+// territory. Once a distributor territory exists in the country the
+// territory semantics come back.
+func TestRegionMapCenterProvincesWithAndWithoutDealers(t *testing.T) {
+	f := newPerfFixture(t)
+	svc := New(nil, f.q, nil, nil, nil)
+	tr := f.country(t, "TR")
+	p34 := f.province(t, tr, "34")
+	p35 := f.province(t, tr, "35")
+	if _, err := f.tx.Exec(f.ctx, `DELETE FROM territories WHERE brand_id = $1 AND country_id = $2`, f.brandID, tr); err != nil {
+		t.Fatalf("clear territories: %v", err)
+	}
+	d := f.org(t, "dealer", "center-dealer", f.center.ID)
+	f.place(t, d.ID, tr, p34, 41.01, 28.97)
+	filter := MapFilter{Level: LevelProvince, CountryISO: "TR", Period: mapTestPeriod, Metric: model.MetricServicesCount}
+	center := mapCallerFor(f.center)
+
+	got, err := svc.RegionMap(f.ctx, center, filter)
+	if err != nil {
+		t.Fatalf("region map: %v", err)
+	}
+	if len(got.Items) != 81 {
+		t.Fatalf("TR provinces = %d, want 81", len(got.Items))
+	}
+	empty := map[string]string{}
+	for _, e := range got.EmptyRegions {
+		empty[e.Code] = e.Reason
+	}
+	for _, it := range got.Items {
+		reason, listed := empty[it.Code]
+		if it.DealerCount > 0 && listed {
+			t.Fatalf("province %s with %d dealers listed empty (%s)", it.Code, it.DealerCount, reason)
+		}
+		if it.DealerCount == 0 && reason != "no_dealers" {
+			t.Fatalf("province %s without dealers: reason %q, want no_dealers", it.Code, reason)
+		}
+	}
+	if findRegion(t, got.Items, "34").DealerCount < 1 {
+		t.Fatalf("Istanbul dealer missing")
+	}
+
+	// A distributor territory in the country brings territory semantics back.
+	f.territory(t, f.dist.ID, tr, p35, 0)
+	got, err = svc.RegionMap(f.ctx, center, filter)
+	if err != nil {
+		t.Fatalf("region map with territory: %v", err)
+	}
+	empty = map[string]string{}
+	for _, e := range got.EmptyRegions {
+		empty[e.Code] = e.Reason
+	}
+	for _, it := range got.Items {
+		reason, listed := empty[it.Code]
+		switch {
+		case it.DealerCount > 0:
+			if listed {
+				t.Fatalf("province %s with dealers listed empty (%s)", it.Code, reason)
+			}
+		case it.Code == "35":
+			if reason != "territory_no_dealers" {
+				t.Fatalf("Izmir reason %q, want territory_no_dealers", reason)
+			}
+		default:
+			if reason != "unassigned_territory" {
+				t.Fatalf("province %s reason %q, want unassigned_territory", it.Code, reason)
+			}
+		}
+	}
+}
+
 func TestGeoCentroidsSeedHas81TRProvinces(t *testing.T) {
 	f := newPerfFixture(t)
 	var n int

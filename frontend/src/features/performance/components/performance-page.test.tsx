@@ -407,6 +407,92 @@ describe("RegionMap", () => {
     expect(markers[0].radius).toBe(30);
     expect(captured.tables.at(-1)!.data).toHaveLength(1);
   });
+
+  it("shows provinces without dealers as hollow rings and lists them (TEC-1029)", async () => {
+    const province = {
+      level: "province" as const,
+      country_iso2: "TR",
+      country_name: "Türkiye",
+      missing_coordinates: 0,
+    };
+    api.regionMap.mockResolvedValue({
+      level: "province",
+      period: "2026-09",
+      metric: "services_count",
+      items: [
+        {
+          ...province,
+          id: 34,
+          code: "34",
+          name: "İstanbul",
+          dealer_count: 3,
+          latitude: 41,
+          longitude: 29,
+          metric_avg: 5,
+        },
+        {
+          ...province,
+          id: 6,
+          code: "06",
+          name: "Ankara",
+          dealer_count: 0,
+          latitude: 39.9,
+          longitude: 32.8,
+        },
+        {
+          ...province,
+          id: 35,
+          code: "35",
+          name: "İzmir",
+          dealer_count: 0,
+          latitude: 38.4,
+          longitude: 27.1,
+        },
+      ],
+      empty_regions: [
+        {
+          level: "province",
+          id: 6,
+          code: "06",
+          name: "Ankara",
+          country_iso2: "TR",
+          empty_reason: "no_dealers",
+        },
+        {
+          level: "province",
+          id: 35,
+          code: "35",
+          name: "İzmir",
+          country_iso2: "TR",
+          empty_reason: "no_dealers",
+        },
+      ],
+      missing_coordinates: 0,
+    });
+    await render(createElement(RegionMap, { slug: "acme", period: "2026-09" }));
+    const markers = captured.maps.at(-1)!.markers as {
+      id: string;
+      label: string;
+      hollow?: boolean;
+    }[];
+    expect(markers).toHaveLength(3);
+    const istanbul = markers.find((m) => m.id === "region:province:34")!;
+    const ankara = markers.find((m) => m.id === "region:province:6")!;
+    expect(istanbul.hollow).toBeFalsy();
+    expect(ankara.hollow).toBe(true);
+    expect(ankara.label).toContain("performance.map.no_dealers");
+    expect(captured.tables.at(-1)!.data).toHaveLength(2);
+    expect(q('[data-testid="performance-map-empty-title"]')!.textContent).toBe(
+      'performance.map.without_dealers.province {"count":2}',
+    );
+    const legend = q('[data-testid="performance-map-legend"]')!.textContent;
+    expect(legend).toContain(
+      'performance.map.with_dealers.province {"count":1}',
+    );
+    expect(legend).toContain(
+      'performance.map.without_dealers.province {"count":2}',
+    );
+  });
 });
 
 describe("performance navigation", () => {

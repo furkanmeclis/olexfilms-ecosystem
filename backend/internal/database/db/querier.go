@@ -2328,6 +2328,16 @@ type Querier interface {
 	ListPerformanceMapDealers(ctx context.Context, arg ListPerformanceMapDealersParams) ([]ListPerformanceMapDealersRow, error)
 	// Staff targets ---------------------------------------------------------------------
 	// Region map ------------------------------------------------------------------------
+	// empty_reason (TEC-1029) — an area with dealers is never empty:
+	//   ''                      dealer_count > 0
+	//   'territory_no_dealers'  no dealers, a distributor territory covers it
+	//   'unassigned_territory'  province without dealers and without an owner in
+	//                           a country that does use distributor territories
+	//   'no_dealers'            province without dealers in a country with no
+	//                           distributor territories (e.g. TR since TEC-1003:
+	//                           dealers sit under the center) — "bayi olmayan il"
+	// Country/district areas without dealers and without an owner stay ''.
+	// Only live distributor organizations' territories count as owners.
 	ListPerformanceMapRegions(ctx context.Context, arg ListPerformanceMapRegionsParams) ([]ListPerformanceMapRegionsRow, error)
 	// Metrics of the organizations over a closed period range (YYYY-MM).
 	ListPerformanceMetrics(ctx context.Context, arg ListPerformanceMetricsParams) ([]PerformanceMetricsMonthly, error)

@@ -27205,7 +27205,7 @@ export interface components {
             name: string;
             country_iso2: string;
             /** @enum {string} */
-            empty_reason: "territory_no_dealers" | "unassigned_territory";
+            empty_reason: "territory_no_dealers" | "unassigned_territory" | "no_dealers";
             distributor?: components["schemas"]["PerformanceMapDistributor"];
         };
         PerformanceRegionMap: {
