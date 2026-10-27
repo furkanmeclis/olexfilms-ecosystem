@@ -2002,13 +2002,13 @@ export interface paths {
         };
         /**
          * Review state of a service of the signed-in customer
-         * @description TEC-244. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). Returns the stored review (null when none), whether the user can send one now (completed service without a review) and the dealer's Google review link (null when the dealer has none).
+         * @description TEC-244. Portal session (services.read, scope customer); same ownership rule as GET /v1/portal/services/{uuid} (else 404). Returns the stored review (null when none), whether the user can send one now (completed service without a review) and the dealer's Google review link (null when the dealer has none). TEC-1023: 403 FEATURE_DISABLED while reviews is closed system wide; can_review is false when the service's organization has the module off.
          */
         get: operations["getPortalServiceReview"];
         put?: never;
         /**
          * Review a service of the signed-in customer
-         * @description TEC-244. Platform and product quality ratings (1-5) with an optional comment (at most 2000 characters), one review per service. Same ownership rule as GET /v1/portal/services/{uuid} (else 404). A rating out of range or missing answers 400 VALIDATION_ERROR; a second review 409 SERVICE_ALREADY_REVIEWED; a service that is not completed 422 SERVICE_REVIEW_NOT_COMPLETED; a read-only fleet session 403 PORTAL_READ_ONLY (TEC-245).
+         * @description TEC-244. Platform and product quality ratings (1-5) with an optional comment (at most 2000 characters), one review per service. Same ownership rule as GET /v1/portal/services/{uuid} (else 404). A rating out of range or missing answers 400 VALIDATION_ERROR; a second review 409 SERVICE_ALREADY_REVIEWED; a service that is not completed 422 SERVICE_REVIEW_NOT_COMPLETED; a read-only fleet session 403 PORTAL_READ_ONLY (TEC-245). TEC-1023: 403 FEATURE_DISABLED when reviews is closed system wide or off for the service's organization.
          */
         post: operations["createPortalServiceReview"];
         delete?: never;
@@ -4174,6 +4174,50 @@ export interface paths {
          * @description Every member may read it. `items` lists the modules the level above has access to (closed system wide or missing at the distributor are left out); `enabled` lists the keys that are on. The module catalog (keys, levels) comes from the backend; the frontend never duplicates it. TEC-508: every item carries its `description` in the request locale (Accept-Language; 13 languages), `free_default` (on by default, free, no service record), `price` (cheapest active `module_bundle` service catalog item containing the module, with the distributor override) or `contact_for_price` (paid, no bundle on sale) and the organization's newest module `request`.
          */
         get: operations["listFeatures"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/portal/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Customer-facing modules the portal session may use
+         * @description TEC-1023. Portal session (customer or fleet; a panel token is 403
+         *     REALM_FORBIDDEN). The portal has no active organization, so the
+         *     state of a module comes from the organizations behind the session.
+         *     `enabled` lists, in this order, the keys that apply; the mobile app
+         *     hides (and does not open) any customer area whose key is missing.
+         *
+         *     - A module closed system wide (platform admin) is never listed.
+         *     - `appointments`: at least one dealer of the request brand that takes
+         *       portal bookings (active, access window open, portal bookings on in
+         *       its appointment settings) has the module on. Booking is brand wide
+         *       (any dealer from the dealer finder), so a customer without a linked
+         *       organization can still book.
+         *     - `warranty_claims`, `reviews`: at least one organization the customer
+         *       is linked to (customer_organizations, or the organization of a
+         *       service the user owns or holds a warranty of) has the module on.
+         *     - `fleet`: the user is an active fleet user of the brand and at least
+         *       one actively linked dealer of the fleet has the module on (the
+         *       rule that opens `/v1/portal/fleet/*`).
+         *
+         *     Vehicle transfer, services, warranties and the other portal areas
+         *     ride on core modules (customers, services) and are always open, so
+         *     they are not listed. The per-organization gates still apply on the
+         *     routes: a dealer with appointments off answers 403 FEATURE_DISABLED
+         *     on availability, booking and cancel; reviews off answers 403 on the
+         *     review POST.
+         */
+        get: operations["listPortalFeatures"];
         put?: never;
         post?: never;
         delete?: never;
@@ -11947,7 +11991,7 @@ export interface paths {
         };
         /**
          * Narrow warranty claim statuses for the portal user
-         * @description Descriptions and photos are intentionally omitted.
+         * @description Descriptions and photos are intentionally omitted. TEC-1023: 403 FEATURE_DISABLED while warranty_claims is closed system wide; a dealer that turned the module off keeps its claims in the list (history).
          */
         get: operations["listPortalWarrantyClaims"];
         put?: never;
@@ -13767,7 +13811,7 @@ export interface paths {
         };
         /**
          * Get portal appointment availability for a dealer
-         * @description Customer portal only. Returns 404 unless the dealer belongs to the request brand, the appointments module is enabled and portal booking is enabled for the dealer.
+         * @description Customer portal only. Returns 404 unless the dealer belongs to the request brand and portal booking is enabled for the dealer. TEC-1023: 403 FEATURE_DISABLED when the appointments module is closed system wide or off for the dealer.
          */
         get: operations["getPortalDealerAvailability"];
         put?: never;
@@ -13785,12 +13829,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List my portal appointments */
+        /**
+         * List my portal appointments
+         * @description TEC-1023: 403 FEATURE_DISABLED while appointments is closed system wide. A dealer that turned the module off keeps its appointments in the list (history).
+         */
         get: operations["listPortalAppointments"];
         put?: never;
         /**
          * Book an appointment from the customer portal
-         * @description The signed-in customer may book only their own vehicle. The source is forced to portal. Capacity and closure checks use the same locked booking path as panel appointments.
+         * @description The signed-in customer may book only their own vehicle. The source is forced to portal. Capacity and closure checks use the same locked booking path as panel appointments. TEC-1023: 403 FEATURE_DISABLED when the appointments module is closed system wide or off for the dealer.
          */
         post: operations["createPortalAppointment"];
         delete?: never;
@@ -13810,7 +13857,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel my portal appointment
-         * @description Customer portal cancellation is allowed until two hours before the appointment starts; later attempts return 422 APPOINTMENT_CANCEL_WINDOW_CLOSED.
+         * @description Customer portal cancellation is allowed until two hours before the appointment starts; later attempts return 422 APPOINTMENT_CANCEL_WINDOW_CLOSED. TEC-1023: 403 FEATURE_DISABLED when the appointments module is closed system wide or off for the appointment's dealer.
          */
         post: operations["cancelPortalAppointment"];
         delete?: never;
@@ -21137,6 +21184,21 @@ export interface components {
                 items: components["schemas"]["FeatureListItem"][];
                 enabled: string[];
             };
+            meta: components["schemas"]["ResponseMeta"];
+        };
+        /** @description TEC-1023. GET /v1/portal/features: the customer-facing module keys the portal session may use (see the operation for the rule). */
+        PortalFeatures: {
+            enabled: components["schemas"]["PortalModuleKey"][];
+        };
+        /**
+         * @description TEC-1023. Customer-facing module: appointments (booking at a dealer), warranty_claims (claim statuses), reviews (service review form), fleet (fleet portal).
+         * @enum {string}
+         */
+        PortalModuleKey: "appointments" | "warranty_claims" | "reviews" | "fleet";
+        EnvelopePortalFeatures: {
+            /** @enum {boolean} */
+            success: true;
+            data: components["schemas"]["PortalFeatures"];
             meta: components["schemas"]["ResponseMeta"];
         };
         /** @description TEC-508. A module state with the Özellikler page meta. */
@@ -38524,6 +38586,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnvelopeFeatureList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listPortalFeatures: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Enabled customer-facing module keys */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvelopePortalFeatures"];
                 };
             };
             401: components["responses"]["Unauthenticated"];
@@ -56059,6 +56143,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createPortalAppointment: {

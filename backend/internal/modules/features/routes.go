@@ -41,6 +41,10 @@ func RegisterRoutes(
 	// TEC-508: the requester withdraws its pending request.
 	mux.Handle("DELETE /v1/features/{key}/request", tenant(h.CancelRequest, middleware.RequirePermission(rbac.PermModulesRead)))
 
+	// TEC-1023: the customer / fleet portal reads its module state (portal
+	// session; the realm middleware refuses panel tokens on /v1/portal/*).
+	mux.Handle("GET /v1/portal/features", middleware.Chain(http.HandlerFunc(h.PortalList), authn))
+
 	mux.Handle("GET /v1/tenant/modules/dealers", tenant(h.Dealers, readScope))
 	mux.Handle("POST /v1/tenant/modules/dealers/bulk", tenant(h.BulkDealers, manageScope))
 	mux.Handle("PUT /v1/tenant/modules/dealers/{uuid}/{key}", tenant(h.SetDealer, manageScope))

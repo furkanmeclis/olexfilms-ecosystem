@@ -60,7 +60,12 @@ func RegisterRoutes(
 		middleware.RequireScope(q, rbac.PermWarrantyClaimsDecide),
 		middleware.RequireScope(q, rbac.PermWarrantyClaimsRead),
 	))
+	// TEC-1023: 403 FEATURE_DISABLED while warranty_claims is closed system
+	// wide. A dealer that turned the module off keeps the customer's claim
+	// history readable (the list is read only).
+	system, _ := checker.(middleware.SystemFeatureChecker)
 	mux.Handle("GET /v1/portal/warranty-claims", middleware.Chain(
 		http.HandlerFunc(h.PortalList), authn, middleware.RequirePermission(rbac.PermWarrantiesRead),
+		middleware.RequireSystemFeature(system, features.ModuleWarrantyClaims),
 	))
 }

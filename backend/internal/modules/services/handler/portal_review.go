@@ -24,6 +24,9 @@ func writeReviewError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, svcuc.ErrReviewNotCompleted):
 		response.Error(w, r, http.StatusUnprocessableEntity, CodeReviewNotCompleted,
 			"Only a completed service can be reviewed")
+	case errors.Is(err, svcuc.ErrReviewsDisabled):
+		response.Error(w, r, http.StatusForbidden, response.CodeFeatureDisabled,
+			"Reviews are not enabled for this organization")
 	default:
 		writeError(w, r, err)
 	}

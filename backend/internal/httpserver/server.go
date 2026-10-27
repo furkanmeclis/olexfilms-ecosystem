@@ -795,7 +795,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	warrantymodule.RegisterCertificateRoutes(mux, warrantyhandler.NewCertificate(warrantyCert, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	servicesmodule.RegisterPDFRoutes(mux, serviceshandler.NewPDF(servicePDF, exportSvc), tokens, loader, deps.Queries, featureSvc)
 	// TEC-239: portal service detail and PDF.
-	servicesmodule.RegisterPortalDetailRoutes(mux, serviceshandler.NewPortalDetail(servicesSvc, servicePDF, exportSvc), tokens, loader)
+	servicesmodule.RegisterPortalDetailRoutes(mux, serviceshandler.NewPortalDetail(servicesSvc, servicePDF, exportSvc), tokens, loader, featureSvc)
 	// A nil *queue.Client must reach the import service as a nil Enqueuer
 	// (sync mode); a typed nil would fail every confirm.
 	var importQueue importusecase.Enqueuer
@@ -1015,7 +1015,7 @@ func New(cfg config.Config, log *slog.Logger, deps Deps) (*Server, error) {
 	appointmentsSvc.SetFeatureChecker(featureSvc)
 	fleetSvc.SetAppointments(appointmentsSvc)
 	appointmentsmodule.RegisterRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, deps.Queries, featureSvc)
-	appointmentsmodule.RegisterPortalRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader)
+	appointmentsmodule.RegisterPortalRoutes(mux, appointmentshandler.New(appointmentsSvc), tokens, loader, featureSvc)
 	// TEC-385 (F4-01c): AI assistant tool registry over the module use
 	// cases; the chat (F4-01f), WhatsApp (F4-02c) and MCP (F4-03c) use it.
 	s.aiTools = aitools.NewRegistry(featureSvc).WithToggles(aitools.SettingsToggles{Q: deps.Queries}).WithLogger(log)
