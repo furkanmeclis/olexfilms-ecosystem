@@ -51,6 +51,8 @@
   "fields.logo": "Loqo",
   "fields.member": "İstifadəçi",
   "fields.member_role": "Rol",
+  "fields.member_roles": "Təşkilat rolları",
+  "fields.member_roles_hint": "Boş qalarsa üzvlük növünün standart rolu verilir (sahib → bütün şöbələr, personal → ümumi personal). Yalnız seçilən rollar verilir; yalnız mühasibat hesabı üçün yalnız «Mərkəz mühasibatı» seçin.",
   "placeholders.name": "Nümunə Avtoyuma",
   "placeholders.city": "Bakı",
   "placeholders.district": "Nəsimi",

@@ -1,5 +1,7 @@
 
-import { HomeScreen } from './home-screen';
+import { useCan } from '@/core/spaces';
+
+import { HomeScreen, type QuickAction } from './home-screen';
 
 export function BayiHome() {
   return (
@@ -28,12 +30,13 @@ export function DepoHome() {
 }
 
 export function AdminHome() {
-  return (
-    <HomeScreen
-      actions={[
-        { key: 'customer', icon: 'customer', href: '/search' },
-        { key: 'appointment', icon: 'warrantyClaim', href: '/admin/approvals' },
-      ]}
-    />
-  );
+  // The approvals screen lists orders, module requests and reclassifications,
+  // each behind its permission; the shortcut shows only when one applies
+  // (center_service / center_accounting otherwise opened an empty screen).
+  const orders = useCan('orders.approve');
+  const modules = useCan('modules.manage');
+  const reclass = useCan('stock.reclassify');
+  const approvals: QuickAction[] =
+    orders || modules || reclass ? [{ key: 'appointment', icon: 'warrantyClaim', href: '/admin/approvals' }] : [];
+  return <HomeScreen actions={[{ key: 'customer', icon: 'customer', href: '/search' }, ...approvals]} />;
 }

@@ -55,6 +55,8 @@ func TestIntegrationEinvoices(t *testing.T) {
 
 	acc, apw := it.user("t503-acc")
 	it.member(center, acc, "staff", rbac.RoleCenterAccounting)
+	staff, spw := it.user("t503-staff")
+	it.member(center, staff, "staff", rbac.RoleCenterStaff)
 	admin, adpw := it.user("t503-admin", rbac.RoleSuperAdmin)
 	it.member(center, admin, "staff", rbac.RoleCenterAccounting)
 	distOwner, dpw := it.user("t503-dist-owner")
@@ -62,6 +64,7 @@ func TestIntegrationEinvoices(t *testing.T) {
 	dealerOwner, rpw := it.user("t503-dealer-owner")
 	it.member(dealer, dealerOwner, "owner")
 	accTok := it.loginOrg(acc, apw, center)
+	staffTok := it.loginOrg(staff, spw, center)
 	adminTok := it.loginOrg(admin, adpw, center)
 	distTok := it.loginOrg(distOwner, dpw, dist)
 	dealerTok := it.loginOrg(dealerOwner, rpw, dealer)
@@ -118,15 +121,17 @@ func TestIntegrationEinvoices(t *testing.T) {
 		}
 	}
 
-	// Settings: einvoice.settings (super_admin) only.
+	// Settings: einvoice.settings (super_admin and, since TEC-1026, the
+	// center accounting team); plain center staff has none.
 	settings := map[string]any{
 		"vkn": "9000068418", "tax_office": "Beşiktaş", "legal_name": "Olexfilms Merkez A.Ş.",
 		"address": "Papatya Cad. No:21", "city": "İstanbul", "district": "Beşiktaş",
 		"earchive_series": "EAR", "efatura_series": "EFN", "pdf_enabled": true,
 	}
-	if code, _ := it.do("PUT", "/v1/einvoices/settings", hostOlex, accTok, settings); code != http.StatusForbidden {
-		t.Fatalf("accounting settings write = %d", code)
+	if code, _ := it.do("PUT", "/v1/einvoices/settings", hostOlex, staffTok, settings); code != http.StatusForbidden {
+		t.Fatalf("staff settings write = %d", code)
 	}
+	mustDo(t, it, "PUT", "/v1/einvoices/settings", accTok, settings, http.StatusOK)
 	bad := map[string]any{}
 	for k, v := range settings {
 		bad[k] = v

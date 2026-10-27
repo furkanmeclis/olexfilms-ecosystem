@@ -51,6 +51,8 @@
   "fields.logo": "الشعار",
   "fields.member": "المستخدم",
   "fields.member_role": "الدور",
+  "fields.member_roles": "أدوار المنظمة",
+  "fields.member_roles_hint": "الفارغ يمنح الدور الافتراضي لنوع العضوية (المالك → كل الأقسام، الموظف → موظف عام). تُمنح الأدوار المحددة فقط؛ لحساب محاسبة فقط اختر «محاسبة المركز» وحده.",
   "placeholders.name": "مغسلة سيارات نموذجية",
   "placeholders.city": "دبي",
   "placeholders.district": "ديرة",

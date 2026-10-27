@@ -74,6 +74,8 @@ export function addOrganizationMemberFormSchema(t: Translate) {
   return z.object({
     user_uuid: z.string().uuid(t("organizations.validation.member_required")),
     role: z.enum(ORGANIZATION_MEMBER_ROLES),
+    // TEC-1026: organization roles of the org type; empty = default role.
+    role_slugs: z.array(z.string()).optional(),
   });
 }
 

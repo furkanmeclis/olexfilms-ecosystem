@@ -51,6 +51,8 @@
   "fields.logo": "Logo aziendale",
   "fields.member": "Utente",
   "fields.member_role": "Ruolo",
+  "fields.member_roles": "Ruoli dell’organizzazione",
+  "fields.member_roles_hint": "Vuoto assegna il ruolo predefinito del tipo di adesione (titolare → tutti i reparti, personale → personale generico). Vengono concessi solo i ruoli selezionati; per un account di sola contabilità scegliere soltanto «Contabilità del centro».",
   "placeholders.name": "Autolavaggio Esempio",
   "placeholders.city": "Milano",
   "placeholders.district": "Brera",

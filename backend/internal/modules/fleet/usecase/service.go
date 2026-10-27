@@ -108,6 +108,20 @@ func (s *Service) SetPlates(p PlateValidator) { s.plates = p }
 // SetInviter sets the password flow of the user invitation.
 func (s *Service) SetInviter(i PasswordInviter) { s.inviter = i }
 
+// CanServeFleets reports whether an organization opens and links fleets:
+// dealers, serving distributors and, since TEC-1003 (K4: the center's own
+// service point replaced the AFM Florya dealer), the brand center with its
+// service point switched on.
+func CanServeFleets(org db.Organization) bool {
+	switch org.Type {
+	case "dealer", "distributor":
+		return true
+	case "center":
+		return org.ServicePointEnabled
+	}
+	return false
+}
+
 // CreateFleetInput opens a fleet for a dealer (or a serving distributor).
 type CreateFleetInput struct {
 	Opener          db.Organization
@@ -198,7 +212,7 @@ func (s *Service) CreateFleet(ctx context.Context, in CreateFleetInput) (Fleet, 
 	if err != nil {
 		return Fleet{}, err
 	}
-	if in.Opener.Type != "dealer" && in.Opener.Type != "distributor" {
+	if !CanServeFleets(in.Opener) {
 		return Fleet{}, ErrNotLinkable
 	}
 	tx, err := s.conn.Begin(ctx)

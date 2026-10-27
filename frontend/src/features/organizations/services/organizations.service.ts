@@ -283,7 +283,10 @@ export const organizationsService = {
     );
   },
 
-  async addMember(uuid: string, body: { user_uuid: string; role?: string }) {
+  async addMember(
+    uuid: string,
+    body: { user_uuid: string; role?: string; role_slugs?: string[] },
+  ) {
     return platformRequest<{ status: string }>(
       "POST",
       `/v1/platform/organizations/${uuid}/members`,

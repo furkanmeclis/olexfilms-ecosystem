@@ -117,6 +117,9 @@ func TestStockGrants(t *testing.T) {
 		t.Fatalf("dealer_owner stock.read = %q", dealer.Grants[PermStockRead])
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.OrgType == OrgTypeCenter || r.Slug == RoleSuperAdmin {
 			continue
 		}
@@ -183,6 +186,9 @@ func TestStockForecastGrants(t *testing.T) {
 		}
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.Slug == RoleSuperAdmin || r.OrgType == OrgTypeCenter {
 			continue
 		}
@@ -199,6 +205,9 @@ func TestStockForecastGrants(t *testing.T) {
 // writes accounting.
 func TestAccountingGrants(t *testing.T) {
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.OrgType != OrgTypeDealer {
 			continue
 		}
@@ -245,6 +254,9 @@ func TestAccountingGrants(t *testing.T) {
 // the same scope.
 func TestCustomerGrants(t *testing.T) {
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		for _, perm := range []string{PermCustomersAnonymize, PermCustomersMerge} {
 			if _, ok := r.Grants[perm]; ok && r.OrgType != OrgTypeCenter {
 				t.Fatalf("%s (%s) must not hold %s", r.Slug, r.OrgType, perm)
@@ -265,7 +277,8 @@ func TestCustomerGrants(t *testing.T) {
 
 func TestDefaultMemberRole(t *testing.T) {
 	cases := map[[2]string]string{
-		{OrgTypeCenter, "owner"}:      RoleCenterStaff,
+		{OrgTypeCenter, "owner"}:      RoleCenterOwner,
+		{OrgTypeCenter, "staff"}:      RoleCenterStaff,
 		{OrgTypeDistributor, "owner"}: RoleDistributorOwner,
 		{OrgTypeDistributor, "staff"}: RoleDistributorStaff,
 		{OrgTypeDealer, "owner"}:      RoleDealerOwner,
@@ -297,6 +310,9 @@ func TestOrderGrants(t *testing.T) {
 		t.Fatalf("dealer_owner order grants = %v", dealer.Grants)
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.Slug == RoleSuperAdmin {
 			continue
 		}
@@ -329,6 +345,9 @@ func TestOrderGrants(t *testing.T) {
 // roles (and super_admin) cancel.
 func TestServiceGrants(t *testing.T) {
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.Slug == RoleSuperAdmin {
 			continue
 		}
@@ -355,6 +374,9 @@ func TestServiceGrants(t *testing.T) {
 // that writes vehicles may transfer them at the same scope.
 func TestWarrantyGrants(t *testing.T) {
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.Slug == RoleSuperAdmin {
 			continue
 		}
@@ -387,6 +409,9 @@ func TestWarehouseGrants(t *testing.T) {
 		}
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.OrgType != OrgTypeDealer {
 			continue
 		}
@@ -403,6 +428,9 @@ func TestWarehouseGrants(t *testing.T) {
 // is the center's service point staff, not network management: none.
 func TestTaskGrants(t *testing.T) {
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.Slug == RoleSuperAdmin {
 			continue
 		}
@@ -434,6 +462,9 @@ func TestContractGrants(t *testing.T) {
 		}
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.Slug == RoleSuperAdmin {
 			continue
 		}
@@ -471,6 +502,9 @@ func TestContractGrants(t *testing.T) {
 // cancellation.
 func TestServiceCatalogGrants(t *testing.T) {
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.Slug == RoleSuperAdmin || r.OrgType == OrgTypeCenter {
 			continue
 		}
@@ -503,6 +537,9 @@ func TestServiceCatalogGrants(t *testing.T) {
 // roles write nothing.
 func TestAnnouncementLibraryGrants(t *testing.T) {
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		switch r.OrgType {
 		case OrgTypeCenter, OrgTypeDistributor, OrgTypeDealer:
@@ -589,6 +626,9 @@ func TestDealerAccountingGrants(t *testing.T) {
 		}
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.Slug == RoleSuperAdmin || r.Slug == RoleDealerOwner || r.Slug == RoleDealerAccounting {
 			continue
 		}
@@ -636,6 +676,9 @@ func TestCertificateGrants(t *testing.T) {
 		t.Fatalf("dealer certificate grants = %v", dealer.Grants)
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if r.Slug == RoleSuperAdmin || r.Slug == RoleCenterStaff || r.Slug == RoleDistributorOwner || r.Slug == RoleDealerOwner {
 			continue
 		}
@@ -664,6 +707,9 @@ func TestAIGrants(t *testing.T) {
 		RoleDistributorOwner: ScopeManaged, RoleDealerOwner: ScopeManaged,
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		switch r.OrgType {
 		case OrgTypeCenter, OrgTypeDistributor, OrgTypeDealer:
@@ -706,6 +752,9 @@ func TestConversationGrants(t *testing.T) {
 		}
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		for _, slug := range slugs {
 			scope, ok := g[slug]
@@ -745,6 +794,9 @@ func TestCampaignGrants(t *testing.T) {
 		RoleDealerOwner: {PermCampaignsRead: ScopeManaged, PermCampaignsWrite: ScopeManaged},
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		for _, slug := range slugs {
 			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
@@ -781,6 +833,9 @@ func TestFleetGrants(t *testing.T) {
 		RoleFleet:            {PermFleetPortalRead: ScopeOwn},
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		for _, slug := range slugs {
 			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
@@ -814,6 +869,9 @@ func TestShowcaseGrants(t *testing.T) {
 		RoleDealerStaff:      {PermShowcaseRead: ScopeManaged},
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		for _, slug := range slugs {
 			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
@@ -843,6 +901,9 @@ func TestEfficiencyGrants(t *testing.T) {
 		RoleDealerOwner:      {PermEfficiencyRead: ScopeManaged},
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		for _, slug := range []string{PermEfficiencyRead, PermEfficiencyExpectationsManage} {
 			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
@@ -892,6 +953,9 @@ func TestPerformanceGrants(t *testing.T) {
 		RoleDealerAccounting: {PermPerformanceBonusManage: ScopeManaged},
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		for _, slug := range slugs {
 			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
@@ -914,8 +978,8 @@ func TestEinvoiceGrants(t *testing.T) {
 		if def.Module != "einvoice" {
 			t.Fatalf("%s def = %+v", slug, def)
 		}
-		if slug == PermEinvoiceSettings && !def.SuperAdminOnly {
-			t.Fatalf("%s must be super_admin-only: %+v", slug, def)
+		if slug == PermEinvoiceSettings && (def.SuperAdminOnly || !def.Sensitive) {
+			t.Fatalf("%s must be a sensitive center grant (TEC-1026): %+v", slug, def)
 		}
 		if slug == PermEinvoiceManage && !def.Sensitive {
 			t.Fatalf("%s must be sensitive: %+v", slug, def)
@@ -925,9 +989,12 @@ func TestEinvoiceGrants(t *testing.T) {
 		RoleSuperAdmin: {
 			PermEinvoiceRead: ScopeAll, PermEinvoiceManage: ScopeAll, PermEinvoiceSettings: ScopeAll,
 		},
-		RoleCenterAccounting: {PermEinvoiceRead: ScopeBrand, PermEinvoiceManage: ScopeBrand},
+		RoleCenterAccounting: {PermEinvoiceRead: ScopeBrand, PermEinvoiceManage: ScopeBrand, PermEinvoiceSettings: ScopeBrand},
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		for _, slug := range slugs {
 			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
@@ -957,6 +1024,9 @@ func TestPricingDisciplineGrants(t *testing.T) {
 		RoleDistributorOwner: ScopeSubtree,
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if got := RoleGrants(r)[PermPricingDisciplineRead]; got != want[r.Slug] {
 			t.Fatalf("%s %s = %q, want %q", r.Slug, PermPricingDisciplineRead, got, want[r.Slug])
 		}
@@ -988,6 +1058,9 @@ func TestPhotoStandardGrants(t *testing.T) {
 		RoleDistributorOwner: {PermPhotoStandardOverride: ScopeSubtree},
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		g := RoleGrants(r)
 		for _, slug := range slugs {
 			if got, exp := g[slug], want[r.Slug][slug]; got != exp {
@@ -1035,11 +1108,58 @@ func TestStockBulkGrant(t *testing.T) {
 		t.Fatalf("catalog is append-only; last = %s", last.Slug)
 	}
 	for _, r := range Roles {
+		if r.Slug == RoleCenterOwner {
+			continue // TEC-1026: derived union, see TestCenterOwnerUnion
+		}
 		if _, ok := r.Grants[PermStockBulk]; ok {
 			t.Fatalf("%s must not hold stock.bulk", r.Slug)
 		}
 	}
 	if RoleGrants(RoleDef{Slug: RoleSuperAdmin})[PermStockBulk] != ScopeAll {
 		t.Fatal("super_admin stock.bulk")
+	}
+}
+
+// TEC-1026: center_owner is the union of the other center roles, broadest
+// scope on overlap, nothing from the platform.
+func TestCenterOwnerUnion(t *testing.T) {
+	owner, ok := RoleBySlug(RoleCenterOwner)
+	if !ok || owner.OrgType != OrgTypeCenter {
+		t.Fatal("center_owner is not a center role")
+	}
+	if len(owner.Grants) == 0 {
+		t.Fatal("center_owner has no grants")
+	}
+	for _, slug := range CenterOwnerMembers {
+		r, _ := RoleBySlug(slug)
+		for perm, scope := range r.Grants {
+			if !owner.Grants[perm].Covers(scope) {
+				t.Fatalf("center_owner %s = %q, narrower than %s %q", perm, owner.Grants[perm], slug, scope)
+			}
+		}
+	}
+	for perm := range owner.Grants {
+		held := false
+		for _, slug := range CenterOwnerMembers {
+			r, _ := RoleBySlug(slug)
+			if _, ok := r.Grants[perm]; ok {
+				held = true
+			}
+		}
+		if !held {
+			t.Fatalf("center_owner holds %s that no center role holds", perm)
+		}
+		if def, _ := PermissionBySlug(perm); def.Module == "platform" {
+			t.Fatalf("center_owner must not hold platform permission %s", perm)
+		}
+	}
+	if owner.Grants[PermLeadsRead] != ScopeAll || owner.Grants[PermStockWrite] != ScopeAll {
+		t.Fatalf("center_owner leads/stock = %q %q, want all", owner.Grants[PermLeadsRead], owner.Grants[PermStockWrite])
+	}
+	if owner.Grants[PermAccountingWrite] != ScopeBrand || owner.Grants[PermServicesWrite] != ScopeBrand {
+		t.Fatalf("center_owner accounting/services = %q %q", owner.Grants[PermAccountingWrite], owner.Grants[PermServicesWrite])
+	}
+	if got, _ := CenterRoleFor(RoleCenterOwner); got != RoleCenterOwner {
+		t.Fatalf("center_owner -> %s", got)
 	}
 }
