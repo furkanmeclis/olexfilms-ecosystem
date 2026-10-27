@@ -73,7 +73,7 @@ Yedek şunları kapsar: app DB (`db.dump`), wuzapi DB (`wuzapi.dump`), SeaweedFS
 
 ## 6. CI ve sürüm
 
-`.github/workflows/ci.yml` her PR'da ve `main`'e her push'ta çalışır. Aynı ref'te yeni bir PR çalışması eskisini iptal eder; `main` çalışmaları iptal edilmez.
+`.github/workflows/ci.yml` her PR'da ve `main`'e her push'ta çalışır. Aynı PR'da yeni çalışma eskisini iptal eder. `main`'de de öyle: art arda birkaç merge gelirse yalnız en yeni push'un çalışması sürer, eskiler (kuyruktaki ya da koşan) iptal edilir. Hayatta kalan çalışma değişiklik tespitini son `v0.N` tag'inden (son yeşil, yayınlanmış `main`) HEAD'e kadar yapar; böylece iptal edilen çalışmaların dokunduğu alanlar da test edilir, `mobile/` değişiklikleri de tek bir OTA/build kararıyla gönderilir. Tag yoksa ya da bulunamazsa tam çalışma yapılır. `mobile-release` ve `release-tag` başladıktan sonra iptal edilmez (job ve step koşulları `!failure()`); yeni çalışma onların bitmesini bekler, yarım kalmış EAS build/update ya da tag push olmaz. Haftalık zamanlı çalışma ve `workflow_dispatch` ayrı concurrency grubundadır; merge'leri iptal etmez, onlardan da iptal edilmez.
 
 | Job | Ne yapar |
 | --- | --- |
@@ -83,9 +83,9 @@ Yedek şunları kapsar: app DB (`db.dump`), wuzapi DB (`wuzapi.dump`), SeaweedFS
 | `image-build` | Sahte secret'lı env (`gen-env-server.sh --app ci.example`) ile `compose.prod.yml` backend + frontend image'larını buildx bake ile derler; push yok, gha cache |
 | `dr-drill` | `scripts/dr-drill.sh`: backup → silme → restore → doğrulama |
 | `ci` | Yukarıdakilerin hepsini bekler; biri bile başarılı değilse kırmızı. Branch protection / auto-merge zorunlu check'i budur |
-| `release-tag` | Yalnızca `main` push'unda ve `ci` yeşilse: sıradaki `v0.N` tag'ini atar |
+| `release-tag` | Yalnızca `main` push'unda, `ci` yeşilse ve çalışma yeni bir push ile iptal edilmediyse: sıradaki `v0.N` tag'ini atar |
 
-Tag akışı: PR squash-merge → `main` push → CI yeşil → `release-tag` en büyük `v0.N`'i bulur, `v0.(N+1)` atar (hiç yoksa `v0.1`); HEAD zaten `v0.N` ise bir şey yapmaz → GitHub tag push webhook'u → Dokploy `v0.*` tag'ini çeker ve `docker compose up -d --build` çalıştırır. Image registry'ye push yoktur; Dokploy sunucuda derler. `GITHUB_TOKEN` ile atılan tag başka workflow tetiklemez ama webhook yine gider.
+Tag akışı: PR squash-merge → `main` push → (arkadan yeni merge gelmezse) CI yeşil → `release-tag` en büyük `v0.N`'i bulur, `v0.(N+1)` atar (hiç yoksa `v0.1`); HEAD zaten `v0.N` ise bir şey yapmaz → GitHub tag push webhook'u → Dokploy `v0.*` tag'ini çeker ve `docker compose up -d --build` çalıştırır. Image registry'ye push yoktur; Dokploy sunucuda derler. `GITHUB_TOKEN` ile atılan tag başka workflow tetiklemez ama webhook yine gider. Art arda merge'lerde her `main` commit'i tag almaz; yalnız en yenisi tag alır ve deploy edilir (aradaki commit'ler onun içinde zaten vardır).
 
 Elle yapılacak iki ayar (bir kez, repo/Dokploy sahibi):
 
