@@ -51,6 +51,8 @@
   "fields.logo": "Logo de l'entreprise",
   "fields.member": "Utilisateur",
   "fields.member_role": "Rôle",
+  "fields.member_roles": "Rôles de l’organisation",
+  "fields.member_roles_hint": "Vide : le rôle par défaut du type d’adhésion est attribué (propriétaire → tous les services, personnel → personnel général). Seuls les rôles choisis sont attribués ; pour un compte comptabilité uniquement, choisissez seulement « Comptabilité du centre ».",
   "placeholders.name": "Lavage Auto Exemple",
   "placeholders.city": "Lyon",
   "placeholders.district": "Presqu'île",

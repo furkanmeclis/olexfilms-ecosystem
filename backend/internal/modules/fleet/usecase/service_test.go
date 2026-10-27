@@ -87,6 +87,27 @@ func TestCreateFleetValidation(t *testing.T) {
 	}
 }
 
+// TEC-1003: the center with its service point on serves fleets like a
+// dealer; without it (and any other type) it does not.
+func TestCanServeFleets(t *testing.T) {
+	cases := []struct {
+		org  db.Organization
+		want bool
+	}{
+		{db.Organization{Type: "dealer"}, true},
+		{db.Organization{Type: "distributor"}, true},
+		{db.Organization{Type: "center"}, false},
+		{db.Organization{Type: "center", ServicePointEnabled: true}, true},
+		{db.Organization{Type: "fleet"}, false},
+		{db.Organization{Type: "fleet", ServicePointEnabled: true}, false},
+	}
+	for _, c := range cases {
+		if got := CanServeFleets(c.org); got != c.want {
+			t.Fatalf("CanServeFleets(%s, sp=%v) = %v, want %v", c.org.Type, c.org.ServicePointEnabled, got, c.want)
+		}
+	}
+}
+
 // Opening a fleet creates the fleet organization outside the tree, its
 // profile with the defaults and the opener's active link; the same tax
 // number in the brand is ErrFleetExists.

@@ -51,6 +51,8 @@
   "fields.logo": "Firmenlogo",
   "fields.member": "Benutzer",
   "fields.member_role": "Rolle",
+  "fields.member_roles": "Organisationsrollen",
+  "fields.member_roles_hint": "Leer vergibt die Standardrolle der Mitgliedsart (Inhaber → alle Abteilungen, Personal → allgemeines Personal). Nur die gewählten Rollen werden vergeben; für ein reines Buchhaltungskonto nur „Buchhaltung Zentrale“ wählen.",
   "placeholders.name": "Beispiel Autopflege",
   "placeholders.city": "Berlin",
   "placeholders.district": "Mitte",

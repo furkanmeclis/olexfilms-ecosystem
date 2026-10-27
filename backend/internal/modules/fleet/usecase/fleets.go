@@ -57,7 +57,7 @@ func (s *Service) Open(ctx context.Context, c Caller, in OpenInput) (FleetView, 
 	if err != nil {
 		return FleetView{}, fmt.Errorf("fleet: opener: %w", err)
 	}
-	if opener.Type != "dealer" && opener.Type != "distributor" {
+	if !CanServeFleets(opener) {
 		return FleetView{}, ErrForbidden
 	}
 	f, err := s.CreateFleet(ctx, CreateFleetInput{
@@ -107,7 +107,7 @@ func (s *Service) RequestLink(ctx context.Context, c Caller, fleetUUID uuid.UUID
 		if err != nil {
 			return fmt.Errorf("fleet: dealer: %w", err)
 		}
-		if dealer.Type != "dealer" && dealer.Type != "distributor" {
+		if !CanServeFleets(dealer) {
 			return ErrForbidden
 		}
 		f, err := q.GetFleetByUUID(ctx, fleetUUID)

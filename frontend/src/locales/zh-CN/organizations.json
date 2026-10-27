@@ -51,6 +51,8 @@
   "fields.logo": "徽标",
   "fields.member": "用户",
   "fields.member_role": "角色",
+  "fields.member_roles": "组织角色",
+  "fields.member_roles_hint": "留空则授予成员类型的默认角色（所有者 → 所有部门，员工 → 普通员工）。只授予所选角色；如需仅会计账号，请只选择“中心会计”。",
   "placeholders.name": "示例洗车店",
   "placeholders.city": "上海",
   "placeholders.district": "浦东新区",

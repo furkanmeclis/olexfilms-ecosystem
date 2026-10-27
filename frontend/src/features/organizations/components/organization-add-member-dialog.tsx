@@ -61,9 +61,7 @@ function OrganizationRolesField({
   });
   const roles = useMemo(
     () =>
-      (data?.items ?? []).filter(
-        (role) => role.org_type === organizationType,
-      ),
+      (data?.items ?? []).filter((role) => role.org_type === organizationType),
     [data, organizationType],
   );
   const value = form.watch("role_slugs") ?? [];
@@ -93,9 +91,7 @@ function OrganizationRolesField({
             <Checkbox
               id={`member-role-${role.slug}`}
               checked={selected.has(role.slug)}
-              onCheckedChange={(checked) =>
-                toggle(role.slug, checked === true)
-              }
+              onCheckedChange={(checked) => toggle(role.slug, checked === true)}
             />
             <Label
               htmlFor={`member-role-${role.slug}`}
