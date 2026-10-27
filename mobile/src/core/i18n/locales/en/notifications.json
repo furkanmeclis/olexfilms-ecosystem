@@ -11,5 +11,8 @@
   "empty_unread": "Nothing unread",
   "empty_body": "New events for your work show up here.",
   "error_generic": "Could not complete the action. Try again.",
-  "no_permission": "You cannot view notifications."
+  "no_permission": "You cannot view notifications.",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "empty_body_customer": "News about your car, warranty and appointments shows up here."
 }

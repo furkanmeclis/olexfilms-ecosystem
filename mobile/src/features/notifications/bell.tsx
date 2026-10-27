@@ -3,18 +3,20 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
-import { api, unwrap } from '@/core/api/client';
-import { useCan } from '@/core/spaces';
+import { formatDigits } from '@/core/digits';
 import { Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
-/** Home header bell with the unread count; hidden without `notifications.read`. */
+import { useInbox } from './inbox';
+
+/** Home header bell with the unread count; hidden when the session has no inbox. */
 export function NotificationBell() {
-  const { t } = useTranslation('notifications');
-  const can = useCan('notifications.read');
+  const { t, i18n } = useTranslation('notifications');
+  const inbox = useInbox();
+  const can = inbox.enabled;
   const unread = useQuery({
     queryKey: ['notifications', 'unread-count'],
-    queryFn: () => unwrap(api.GET('/v1/notifications/unread-count')),
+    queryFn: inbox.unreadCount,
     enabled: can,
     refetchInterval: 60_000,
     staleTime: 30_000,
@@ -32,7 +34,7 @@ export function NotificationBell() {
         {count > 0 ? (
           <View className="absolute -right-0.5 -top-0.5 min-w-4 items-center rounded-full bg-destructive px-1">
             <Text variant="caption" className="text-[10px] font-bold text-primary-foreground">
-              {count > 99 ? '99+' : count}
+              {count > 99 ? `${formatDigits(99, i18n.language)}+` : formatDigits(count, i18n.language)}
             </Text>
           </View>
         ) : null}

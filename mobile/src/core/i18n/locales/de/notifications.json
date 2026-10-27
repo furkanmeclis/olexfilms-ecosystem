@@ -11,5 +11,7 @@
   "empty_unread": "Keine ungelesenen Benachrichtigungen",
   "empty_body": "Neues zu Ihrem Auto erscheint hier.",
   "error_generic": "Das hat nicht geklappt. Bitte erneut versuchen.",
-  "no_permission": "Sie dürfen Benachrichtigungen nicht sehen."
+  "no_permission": "Sie dürfen Benachrichtigungen nicht sehen.",
+  "today": "Heute",
+  "yesterday": "Gestern"
 }

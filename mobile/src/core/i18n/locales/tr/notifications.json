@@ -11,5 +11,8 @@
   "empty_unread": "Okunmamış bildirim yok",
   "empty_body": "İşinizle ilgili yeni olaylar burada görünür.",
   "error_generic": "İşlem tamamlanamadı. Tekrar deneyin.",
-  "no_permission": "Bildirimleri görme yetkiniz yok."
+  "no_permission": "Bildirimleri görme yetkiniz yok.",
+  "today": "Bugün",
+  "yesterday": "Dün",
+  "empty_body_customer": "Aracın, garantin ve randevularınla ilgili yenilikler burada görünür."
 }

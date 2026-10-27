@@ -11,5 +11,7 @@
   "empty_unread": "No hay notificaciones sin leer",
   "empty_body": "Las novedades de tu coche aparecen aquí.",
   "error_generic": "No se pudo completar. Inténtalo de nuevo.",
-  "no_permission": "No tienes acceso a las notificaciones."
+  "no_permission": "No tienes acceso a las notificaciones.",
+  "today": "Hoy",
+  "yesterday": "Ayer"
 }

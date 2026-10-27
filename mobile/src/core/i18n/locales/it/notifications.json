@@ -11,5 +11,7 @@
   "empty_unread": "Nessuna notifica non letta",
   "empty_body": "Le novità sulla tua auto compaiono qui.",
   "error_generic": "Operazione non riuscita. Riprova.",
-  "no_permission": "Non hai accesso alle notifiche."
+  "no_permission": "Non hai accesso alle notifiche.",
+  "today": "Oggi",
+  "yesterday": "Ieri"
 }

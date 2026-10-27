@@ -44,8 +44,31 @@ const ROUTES: Record<SpaceKind, Partial<Record<Kind, (uuid: string) => string>>>
     customers: (u) => `/admin/menu/customers/${u}`,
     warranties: (u) => `/admin/menu/customers/warranties/${u}`,
   },
-  musteri: {},
+  // TEC-1019: the customer space opens its own detail screens from the home stack.
+  musteri: {
+    services: (u) => `/musteri/service/${u}`,
+    warranties: (u) => `/musteri/warranty/${u}`,
+    appointments: () => '/musteri/appointments',
+  },
 };
+
+/** Icon of a notification row, from the record it points at. */
+export function notificationIcon(n: Pick<AppNotification, 'action_url' | 'payload'>) {
+  switch (notificationTarget(n)?.kind) {
+    case 'warranties':
+      return 'warranty' as const;
+    case 'services':
+      return 'service' as const;
+    case 'appointments':
+      return 'appointment' as const;
+    case 'orders':
+      return 'order' as const;
+    case 'customers':
+      return 'customer' as const;
+    default:
+      return 'bell' as const;
+  }
+}
 
 /** App route for a notification in the given space, or null when none exists. */
 export function notificationRoute(n: Pick<AppNotification, 'action_url' | 'payload'>, space: SpaceKind | null): string | null {

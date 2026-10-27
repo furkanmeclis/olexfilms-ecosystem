@@ -11,5 +11,7 @@
   "empty_unread": "暂无未读通知",
   "empty_body": "与爱车相关的新动态会显示在这里。",
   "error_generic": "操作未完成，请重试。",
-  "no_permission": "您无权查看通知。"
+  "no_permission": "您无权查看通知。",
+  "today": "今天",
+  "yesterday": "昨天"
 }

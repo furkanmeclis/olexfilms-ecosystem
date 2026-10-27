@@ -11,5 +11,7 @@
   "empty_unread": "Oxunmamış bildiriş yoxdur",
   "empty_body": "Avtomobilinlə bağlı yeniliklər burada görünür.",
   "error_generic": "Əməliyyat tamamlanmadı. Yenidən cəhd et.",
-  "no_permission": "Bildirişləri görmək icazən yoxdur."
+  "no_permission": "Bildirişləri görmək icazən yoxdur.",
+  "today": "Bu gün",
+  "yesterday": "Dünən"
 }

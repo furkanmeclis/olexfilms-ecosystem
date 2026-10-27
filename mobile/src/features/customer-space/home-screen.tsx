@@ -9,7 +9,6 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, unwrap } from '@/core/api/client';
 import { useSession } from '@/core/auth/session';
@@ -78,7 +77,6 @@ function InlineError({ error, onRetry }: { error: unknown; onRetry: () => void }
  */
 export function CustomerHomeScreen() {
   const { t, i18n } = useTranslation('customer');
-  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const user = useSession((s) => s.me?.user);
   const links = useCustomerLinks();
@@ -119,12 +117,19 @@ export function CustomerHomeScreen() {
     queryFn: () => unwrap(api.GET('/v1/portal/vehicles/{uuid}', { params: { path: { uuid: current!.uuid } } })),
   });
 
-  const refresh = () => {
-    void vehicles.refetch();
-    void services.refetch();
-    void next.refetch();
-    if (current) void detail.refetch();
-    if (fleet) void fleetQ.refetch();
+  // Only a pull shows the spinner: background refetches toggling `refreshing`
+  // made iOS push the content down without giving the inset back.
+  const [pulling, setPulling] = useState(false);
+  const refresh = async () => {
+    setPulling(true);
+    await Promise.allSettled([
+      vehicles.refetch(),
+      services.refetch(),
+      next.refetch(),
+      current ? detail.refetch() : null,
+      fleet ? fleetQ.refetch() : null,
+    ]);
+    setPulling(false);
   };
 
   const appt = next.data?.items?.[0];
@@ -135,16 +140,17 @@ export function CustomerHomeScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ headerShown: false, title: t('home') }} />
+      <Stack.Screen options={{ title: t('home') }} />
       <ScrollView
         className="flex-1 bg-background"
-        // The tab stack header is transparent; iOS would add the insets again on top of ours (bottom: room for the floating tab bar).
-        contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 110 }}
+        // No native header here (the stack hides it up front); iOS adds the status bar
+        // and floating tab bar insets itself, so the padding stays small.
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
         refreshControl={
           <RefreshControl
-            refreshing={vehicles.isRefetching || services.isRefetching || next.isRefetching}
-            onRefresh={refresh}
+            refreshing={pulling}
+            onRefresh={() => void refresh()}
           />
         }>
         <View className="flex-row items-center justify-between px-5">
