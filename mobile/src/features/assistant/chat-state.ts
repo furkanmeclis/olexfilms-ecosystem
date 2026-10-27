@@ -242,7 +242,8 @@ export function recordPath(space: string, kind: string, uuid: string): string | 
     case 'order':
       return `/${space}/menu/orders/${uuid}`;
     case 'task':
-      return space === 'admin' ? `/admin/menu/tasks/${uuid}` : null;
+      // Tasks are an admin screen: the admin space and the center workplace (bayi menu, TEC-1016) have it.
+      return space === 'admin' || space === 'bayi' ? `/${space}/menu/tasks/${uuid}` : null;
     default:
       return null;
   }

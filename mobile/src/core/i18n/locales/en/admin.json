@@ -100,5 +100,7 @@
   "approvals.confirm_reject": "Reject this request?",
   "approvals.module_line": "{{module}} · requested by {{name}}",
   "approvals.no_access": "No approvals for you",
-  "approvals.no_access_body": "Requests that need your decision appear here."
+  "approvals.no_access_body": "Requests that need your decision appear here.",
+  "home.action.new_service": "New service",
+  "home.action.measure": "Measure"
 }

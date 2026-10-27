@@ -213,5 +213,10 @@
   "service_no_taken": "Bu numara başka bir hizmette kullanılıyor.",
   "service_no_available": "Numara kullanılabilir.",
   "service_no_scan": "Karekodu okut",
-  "service_no_label": "Hizmet numarası"
+  "service_no_label": "Hizmet numarası",
+  "performer_label": "Hizmeti yapan",
+  "performer_own": "Kendi ({{name}})",
+  "performer_hint": "Bayi adına açmak için değiştir",
+  "scope_own": "Kendi hizmetlerimiz",
+  "scope_network": "Tüm ağ"
 }

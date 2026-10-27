@@ -1,1 +1,1 @@
-export { DealerHome as default } from '@/features/dealer-home/dealer-home';
+export { WorkplaceHome as default } from '@/features/dealer-home/dealer-home';

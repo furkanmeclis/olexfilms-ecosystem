@@ -27,5 +27,6 @@
   "ota_off": "Kapalı (geliştirme)",
   "digits": "Rakamlar",
   "digits.arab": "Arap-Hint rakamları (٠١٢٣)",
-  "digits.latn": "Latin rakamlar (0123)"
+  "digits.latn": "Latin rakamlar (0123)",
+  "switch_organization": "Kuruluş değiştir"
 }

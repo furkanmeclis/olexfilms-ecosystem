@@ -25,6 +25,7 @@ function Checked({ on }: { on: boolean }) {
 
 export function SettingsScreen() {
   const { t, i18n } = useTranslation('settings');
+  const me = useSession((s) => s.me);
   const theme = usePreferences((s) => s.theme);
   const unit = usePreferences((s) => s.unit);
   const digits = usePreferences((s) => s.digits);
@@ -130,7 +131,9 @@ export function SettingsScreen() {
 
         <List className="mt-4">
           <ListRow icon="intro" title={t('watch_intro')} onPress={() => router.push('/intro')} />
-          <ListRow icon="spaces" title={t('switch_space')} onPress={() => router.push('/spaces')} />
+          {(me?.organizations?.length ?? 0) > 1 ? (
+            <ListRow icon="spaces" title={t('switch_organization')} onPress={() => router.push('/spaces')} />
+          ) : null}
           <ListRow icon="signOut" title={t('sign_out')} tone="danger" onPress={() => void useSession.getState().signOut()} last />
         </List>
 

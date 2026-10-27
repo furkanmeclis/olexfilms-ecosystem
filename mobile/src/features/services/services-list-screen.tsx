@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 
 import { api, unwrap } from '@/core/api/client';
-import { useCan } from '@/core/spaces';
+import { useSession } from '@/core/auth/session';
+import { activeMembership, isCenterWorkplace, useCan } from '@/core/spaces';
+import { readJSON, writeJSON } from '@/core/storage';
 import { Icon } from '@/ui/icon';
 import { StatusPill } from '@/ui/status-pill';
 import { Text } from '@/ui/text';
@@ -22,9 +24,32 @@ import {
   usePagedList,
   vehicleLabel,
 } from './lib';
+import { Segmented } from '@/features/warehouse/parts';
+
 import { Chips, ListBody, ListFooter, SearchField } from './ui';
 
 type Filter = 'all' | ServiceStatus;
+type Scope = 'own' | 'network';
+const SCOPE_KEY = 'services.scope';
+
+/**
+ * The center sees the whole network's services; "own" narrows the list to the
+ * ones its service point performed (web: network-scope toggle, TEC-1003).
+ */
+function useNetworkScope() {
+  const me = useSession((s) => s.me);
+  const center = isCenterWorkplace(me);
+  const [scope, setScope] = useState<Scope>(() => readJSON<Scope>(SCOPE_KEY) ?? 'own');
+  return {
+    center,
+    scope,
+    setScope: (next: Scope) => {
+      writeJSON(SCOPE_KEY, next);
+      setScope(next);
+    },
+    organizationUuid: center && scope === 'own' ? activeMembership(me)?.uuid : undefined,
+  };
+}
 
 export function ServiceRow({ s, onPress }: { s: Service; onPress: () => void }) {
   const { t, i18n } = useTranslation('dealer');
@@ -59,14 +84,16 @@ export function ServicesListScreen() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const query = useDebounced(q.trim());
+  const network = useNetworkScope();
 
-  const list = usePagedList(['services', 'list', { q: query, filter }], (offset) =>
+  const list = usePagedList(['services', 'list', { q: query, filter, org: network.organizationUuid }], (offset) =>
     unwrap(
       api.GET('/v1/services', {
         params: {
           query: {
             q: query || undefined,
             status: filter === 'all' ? undefined : filter,
+            organization_uuid: network.organizationUuid,
             limit: PAGE_SIZE,
             offset,
           },
@@ -110,6 +137,16 @@ export function ServicesListScreen() {
         ListHeaderComponent={
           <View className="gap-3 pb-1 pt-2">
             <SearchField value={q} onChange={setQ} placeholder={t('services_search')} />
+            {network.center ? (
+              <Segmented
+                options={[
+                  { value: 'own' as Scope, label: t('scope_own') },
+                  { value: 'network' as Scope, label: t('scope_network') },
+                ]}
+                value={network.scope}
+                onChange={network.setScope}
+              />
+            ) : null}
             <Chips options={chips} value={filter} onChange={setFilter} />
             {list.total !== undefined && list.items.length > 0 ? (
               <Text variant="footnote" tone="muted">

@@ -27,5 +27,9 @@
   "sale_prices": "My sale prices",
   "purchases": "Purchases",
   "disputes": "Disputes",
-  "einvoices": "e-Invoices"
+  "einvoices": "e-Invoices",
+  "approvals": "Approvals",
+  "network": "Dealer network",
+  "warehouse": "Warehouse",
+  "warehouse_hint": "Stock, jobs and counts"
 }
