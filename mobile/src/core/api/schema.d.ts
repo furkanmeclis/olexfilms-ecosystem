@@ -23209,10 +23209,10 @@ export interface components {
         };
         StockEntryArrivalScan: {
             /**
-             * @description matched - a line is received now; already - scanned before; extra - not on the entry.
+             * @description matched - a line is received now; already - scanned before; extra - not on the entry; unscanned - a scan was taken back (DELETE).
              * @enum {string}
              */
-            result: "matched" | "already" | "extra";
+            result: "matched" | "already" | "extra" | "unscanned";
             barcode: string;
             line: null | components["schemas"]["StockEntryLine"];
             /** Format: int64 */

@@ -109,7 +109,7 @@ describe("EntryLinesTable (TEC-376)", () => {
     expect(table.manual).toEqual(CLIENT_SIDE_MANUAL);
     expect(table.features).toEqual(
       expect.objectContaining({
-        persistKey: "tenant-warehouse-entry-lines-v1",
+        persistKey: "tenant-warehouse-entry-lines-v2",
         rowSelection: true,
       }),
     );
@@ -117,6 +117,7 @@ describe("EntryLinesTable (TEC-376)", () => {
       "__select",
       "barcode",
       "product",
+      "unit_status",
       "quantity",
       "meters",
       "lot",

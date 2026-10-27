@@ -697,5 +697,15 @@
   "kpis.open_orders": "Open orders",
   "kpis.draft_entries": "Draft stock entries",
   "kpis.open_transfers": "Open transfers",
-  "kpis.open_counts": "Open counts"
+  "kpis.open_counts": "Open counts",
+  "arrival.result.unscanned": "Scan taken back",
+  "labels.print_all": "Print all labels",
+  "labels.print_selected": "Print selected labels ({{count}})",
+  "labels.print_range": "Labels {{from}}–{{to}}",
+  "entry.unit_status": "Unit status",
+  "entry.created_at": "Created",
+  "entry.confirmed_at": "Confirmed",
+  "entry.cancelled_at": "Cancelled",
+  "entry.fixed_quantity_title": "Fixed-barcode product",
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: how many pieces were received?"
 }

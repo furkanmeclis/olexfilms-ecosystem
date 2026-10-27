@@ -697,5 +697,15 @@
   "kpis.open_orders": "Відкриті замовлення",
   "kpis.draft_entries": "Чернетки надходжень",
   "kpis.open_transfers": "Відкриті переміщення",
-  "kpis.open_counts": "Відкриті інвентаризації"
+  "kpis.open_counts": "Відкриті інвентаризації",
+  "arrival.result.unscanned": "Сканування скасовано",
+  "labels.print_all": "Друкувати всі етикетки",
+  "labels.print_selected": "Друкувати вибрані етикетки ({{count}})",
+  "labels.print_range": "Етикетки {{from}}–{{to}}",
+  "entry.unit_status": "Статус одиниці",
+  "entry.created_at": "Створено",
+  "entry.confirmed_at": "Підтверджено",
+  "entry.cancelled_at": "Скасовано",
+  "entry.fixed_quantity_title": "Товар із фіксованим штрихкодом",
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: скільки штук отримано?"
 }

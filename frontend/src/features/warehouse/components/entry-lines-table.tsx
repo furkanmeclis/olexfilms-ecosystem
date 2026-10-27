@@ -4,14 +4,32 @@ import type { ColumnDef, RowSelectionState } from "@tanstack/react-table";
 import { Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
+import { StatusChip } from "@/components/common/status-chip";
 import { CLIENT_SIDE_MANUAL, EntityTable } from "@/components/entity";
 import { createColumn, createSelectColumnDef } from "@/components/tables";
 import { Button } from "@/components/ui/button";
+import { unitStatusTone } from "@/features/stock/lib/stock";
+import type { StockUnitStatus } from "@/features/stock/services/stock.service";
 import { LabelButton } from "@/features/warehouse/components/label-button";
 import type { StockEntryLine } from "@/features/warehouse/services/warehouse.service";
 import { useLocale } from "@/providers/locale-provider";
 
-export const ENTRY_LINES_PERSIST_KEY = "tenant-warehouse-entry-lines-v1";
+export const ENTRY_LINES_PERSIST_KEY = "tenant-warehouse-entry-lines-v2";
+
+const UNIT_STATUSES: StockUnitStatus[] = [
+  "reserved",
+  "printed",
+  "available",
+  "placed",
+  "in_transit",
+  "used",
+  "void",
+];
+const UNIT_STATUS_OPTIONS = UNIT_STATUSES.map((value) => ({
+  value,
+  label: value,
+  labelKey: `stock.status.${value}`,
+}));
 
 /** Placed / not placed filter of a line's location column. */
 export function placementFilter(
@@ -80,6 +98,26 @@ export function EntryLinesTable({
                 {row.original.product.sku}
               </div>
             </div>
+          ),
+        }),
+        // TEC-1032: the unit's ledger status (reserved / printed / placed…).
+        createColumn<StockEntryLine>({
+          accessorKey: "unit_status",
+          labelKey: "warehouse.entry.unit_status",
+          filterVariant: "select",
+          filterOptions: UNIT_STATUS_OPTIONS,
+          cell: ({ row }) => (
+            <span
+              data-testid="entry-line-status"
+              data-status={row.original.unit_status}
+            >
+              <StatusChip
+                label={t(`stock.status.${row.original.unit_status}`)}
+                tone={unitStatusTone(
+                  row.original.unit_status as StockUnitStatus,
+                )}
+              />
+            </span>
           ),
         }),
         createColumn<StockEntryLine>({

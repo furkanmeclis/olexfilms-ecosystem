@@ -697,5 +697,15 @@
   "kpis.open_orders": "Açık sipariş",
   "kpis.draft_entries": "Bekleyen stok girişi",
   "kpis.open_transfers": "Açık transfer",
-  "kpis.open_counts": "Açık sayım"
+  "kpis.open_counts": "Açık sayım",
+  "arrival.result.unscanned": "Okutma geri alındı",
+  "labels.print_all": "Tüm etiketleri bas",
+  "labels.print_selected": "Seçili etiketleri bas ({{count}})",
+  "labels.print_range": "Etiketler {{from}}–{{to}}",
+  "entry.unit_status": "Birim durumu",
+  "entry.created_at": "Oluşturma",
+  "entry.confirmed_at": "Onay",
+  "entry.cancelled_at": "İptal",
+  "entry.fixed_quantity_title": "Sabit barkodlu ürün",
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: kaç adet teslim alındı?"
 }

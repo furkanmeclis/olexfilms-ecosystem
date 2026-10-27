@@ -697,5 +697,15 @@
   "kpis.open_orders": "Открытые заказы",
   "kpis.draft_entries": "Черновики поступлений",
   "kpis.open_transfers": "Открытые перемещения",
-  "kpis.open_counts": "Открытые инвентаризации"
+  "kpis.open_counts": "Открытые инвентаризации",
+  "arrival.result.unscanned": "Сканирование отменено",
+  "labels.print_all": "Печать всех этикеток",
+  "labels.print_selected": "Печать выбранных этикеток ({{count}})",
+  "labels.print_range": "Этикетки {{from}}–{{to}}",
+  "entry.unit_status": "Статус единицы",
+  "entry.created_at": "Создано",
+  "entry.confirmed_at": "Подтверждено",
+  "entry.cancelled_at": "Отменено",
+  "entry.fixed_quantity_title": "Товар с фиксированным штрихкодом",
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: сколько штук получено?"
 }
