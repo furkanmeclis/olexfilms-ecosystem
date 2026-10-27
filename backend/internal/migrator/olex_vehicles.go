@@ -247,7 +247,8 @@ func (s VehicleCatalogStep) importBrand(ctx context.Context, dst *Target, m *Map
 // copyLogo uploads the legacy logo file of b and points the brand at it.
 // The object key carries a hash of the bytes, so a rerun writes the same key
 // and an unchanged logo is not uploaded again. Missing or unsupported files
-// are reported, not fatal.
+// are reported, not fatal. SVG logos are sanitized and kept as SVG
+// (logo_svg counts them).
 func (s VehicleCatalogStep) copyLogo(ctx context.Context, dst *Target, brandID int64, brandUUID uuid.UUID, b legacyCarBrand, c counts) error {
 	rel := strings.TrimSpace(b.Logo)
 	if rel == "" {
@@ -270,15 +271,28 @@ func (s VehicleCatalogStep) copyLogo(ctx context.Context, dst *Target, brandID i
 	case err != nil:
 		return fmt.Errorf("read logo %q: %w", rel, err)
 	}
-	mime, err := storage.DetectLogoMIME("", body)
-	if err != nil {
-		c.inc("logo_unsupported:brand:" + id)
-		return nil
-	}
-	ext, err := storage.LogoExtForMIME(mime)
-	if err != nil {
-		c.inc("logo_unsupported:brand:" + id)
-		return nil
+	var mime, ext string
+	if storage.IsSVG(body) {
+		// Vector brand logos stay vector (TEC-1020): stored sanitized, the
+		// hash below is over the sanitized bytes so a rerun hits the same key.
+		clean, err := storage.SanitizeSVG(body)
+		if err != nil {
+			c.inc("logo_unsupported:brand:" + id)
+			return nil
+		}
+		body, mime, ext = clean, storage.SVGMIME, "svg"
+		c.inc("logo_svg")
+	} else {
+		mime, err = storage.DetectLogoMIME("", body)
+		if err != nil {
+			c.inc("logo_unsupported:brand:" + id)
+			return nil
+		}
+		ext, err = storage.LogoExtForMIME(mime)
+		if err != nil {
+			c.inc("logo_unsupported:brand:" + id)
+			return nil
+		}
 	}
 	sum := sha256.Sum256(body)
 	objectKey := storage.VehicleBrandLogoObjectKey(brandUUID, hex.EncodeToString(sum[:8]), ext)

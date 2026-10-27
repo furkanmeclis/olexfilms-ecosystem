@@ -54,12 +54,35 @@ function pick(file: File) {
 }
 
 describe("VehicleImageField", () => {
-  it("warns about SVG and never uploads it", () => {
+  it("uploads an SVG logo (TEC-1020)", () => {
     const onUpload = vi.fn();
     act(() =>
       root.render(
         createElement(VehicleImageField, {
           kind: "logo",
+          label: "Logo",
+          hasImage: false,
+          onUpload,
+        }),
+      ),
+    );
+    const input = container.querySelector<HTMLInputElement>(
+      'input[type="file"]',
+    );
+    expect(input?.accept).toContain("image/svg+xml");
+    const svg = new File(["<svg/>"], "bmw.svg", { type: "image/svg+xml" });
+    pick(svg);
+
+    expect(onUpload).toHaveBeenCalledWith(svg);
+    expect(toastWarning).not.toHaveBeenCalled();
+  });
+
+  it("warns about an SVG hero and never uploads it", () => {
+    const onUpload = vi.fn();
+    act(() =>
+      root.render(
+        createElement(VehicleImageField, {
+          kind: "hero",
           label: "Logo",
           hasImage: false,
           onUpload,
@@ -82,7 +105,7 @@ describe("VehicleImageField", () => {
     act(() =>
       root.render(
         createElement(VehicleImageField, {
-          kind: "logo",
+          kind: "hero",
           label: "Logo",
           hasImage: false,
           onUpload,

@@ -88,7 +88,8 @@ func decodeEnv[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
 // TEC-149 acceptance: only super_admin writes the vehicle catalog (403 for
 // organization roles, which still read it); the public logo URL needs no
 // auth and answers 200 + ETag + Cache-Control, 304 on If-None-Match and a
-// placeholder without a logo; SVG uploads are refused; hero falls back
+// placeholder without a logo; SVG logos are sanitized and served with a CSP
+// (TEC-1020) while SVG heroes stay refused; hero falls back
 // model → brand → default; a brand with models cannot be deleted (409).
 func TestIntegrationVehicleCatalog(t *testing.T) {
 	store := storage.NewMemory()
@@ -181,11 +182,26 @@ func TestIntegrationVehicleCatalog(t *testing.T) {
 		t.Fatalf("placeholder: %d %v", rec.Code, rec.Header())
 	}
 
-	// SVG is refused even when declared as PNG.
+	// SVG logo (TEC-1020): accepted whatever the declared type, stored
+	// without the script and served with the SVG CSP + nosniff.
 	for _, declared := range []string{"image/svg+xml", "image/png"} {
-		if rec := it.uploadImage("/v1/platform/vehicle-catalog/brands/"+brand.UUID+"/logo", adminTok, "logo", declared, []byte(svgBytes)); rec.Code < 400 || rec.Code >= 500 {
-			t.Fatalf("svg upload declared %s: %d, want 4xx", declared, rec.Code)
+		if rec := it.uploadImage("/v1/platform/vehicle-catalog/brands/"+brand.UUID+"/logo", adminTok, "logo", declared, []byte(svgBytes)); rec.Code != http.StatusOK {
+			t.Fatalf("svg upload declared %s: %d %s", declared, rec.Code, rec.Body.String())
 		}
+		rec := it.raw("GET", logoPath, "", "", nil, nil)
+		if rec.Code != http.StatusOK || rec.Header().Get("Content-Type") != storage.SVGMIME ||
+			rec.Header().Get("Content-Security-Policy") != storage.SVGContentSecurityPolicy ||
+			rec.Header().Get("X-Content-Type-Options") != "nosniff" ||
+			strings.Contains(rec.Body.String(), "script") || !strings.Contains(rec.Body.String(), "<svg") {
+			t.Fatalf("public svg logo: %d %v %s", rec.Code, rec.Header(), rec.Body.String())
+		}
+	}
+	// Not an SVG document (HTML) and SVG heroes are still refused.
+	if rec := it.uploadImage("/v1/platform/vehicle-catalog/brands/"+brand.UUID+"/logo", adminTok, "logo", "image/svg+xml", []byte(`<html><svg/></html>`)); rec.Code != http.StatusBadRequest {
+		t.Fatalf("html as svg logo: %d", rec.Code)
+	}
+	if rec := it.uploadImage("/v1/platform/vehicle-catalog/brands/"+brand.UUID+"/hero", adminTok, "hero", "image/svg+xml", []byte(svgBytes)); rec.Code != http.StatusBadRequest {
+		t.Fatalf("svg hero: %d, want 400", rec.Code)
 	}
 
 	// PNG logo: public 200 + ETag + Cache-Control, then 304.

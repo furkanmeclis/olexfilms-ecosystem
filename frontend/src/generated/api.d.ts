@@ -7635,7 +7635,7 @@ export interface paths {
         };
         /**
          * Car brand logo (public, cacheable)
-         * @description No auth, no signed URL. The frontend serves it at the fixed URL `/brand-logos/{uuid}`. Answers the stored logo (JPEG/PNG/WebP) with a strong `ETag` and `Cache-Control: public, max-age=86400`; a matching `If-None-Match` gets 304. The ETag changes with every upload. A brand without a logo gets an SVG placeholder (`max-age=3600`).
+         * @description No auth, no signed URL. The frontend serves it at the fixed URL `/brand-logos/{uuid}`. Answers the stored logo (JPEG/PNG/WebP, or a sanitized SVG sent with `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox` and `X-Content-Type-Options: nosniff`) with a strong `ETag` and `Cache-Control: public, max-age=86400`; a matching `If-None-Match` gets 304. The ETag changes with every upload. A brand without a logo gets an SVG placeholder (`max-age=3600`).
          */
         get: operations["getPublicBrandLogo"];
         put?: never;
@@ -8320,7 +8320,7 @@ export interface paths {
         get?: never;
         /**
          * Upload a car brand logo (super_admin)
-         * @description multipart field `logo`, JPEG/PNG/WebP up to 2 MiB, detected from the bytes. SVG (or anything else) is refused with 400.
+         * @description multipart field `logo`, JPEG/PNG/WebP or SVG up to 2 MiB, detected from the bytes. An SVG is sanitized server-side (allowlisted elements, no script/foreignObject/event handlers/external references) and stored as image/svg+xml; a malformed SVG or any other type is refused with 400.
          */
         put: operations["uploadVehicleBrandLogo"];
         post?: never;

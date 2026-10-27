@@ -23,6 +23,9 @@ var logoExtToMIME = map[string]string{
 	"jpeg": "image/jpeg",
 	"png":  "image/png",
 	"webp": "image/webp",
+	// Only car brand logos are stored as SVG (TEC-1020, SanitizeSVG); other
+	// logo kinds never produce an .svg key.
+	"svg": SVGMIME,
 }
 
 // NormalizeLogoMIME returns a canonical logo MIME or empty if unsupported.
