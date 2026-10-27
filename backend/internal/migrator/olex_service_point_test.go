@@ -2,6 +2,7 @@ package migrator
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -286,21 +287,35 @@ func checkWarehouseTrace(t *testing.T, ctx context.Context, tx pgx.Tx) {
 		t.Fatalf("primary warehouse: %v", err)
 	}
 	svc := stockusecase.New(q)
+	// The primary warehouse is the origin of every center unit without a
+	// warehouse placement, so units other packages commit into the shared
+	// Olex center concurrently show up in it, and between the count and the
+	// list statement of one call (read committed: each statement takes a
+	// new snapshot). Scope the check to the fixture units (barcodes "SYN-",
+	// q = barcode prefix): no other test creates those.
+	const fixturePrefix = "SYN-"
 	all, total, err := svc.WarehouseUnits(ctx, orgID, whUUID, stockusecase.WarehouseUnitFilter{
-		Sort: apiquery.ResolvedSort{Key: "barcode"}, Limit: 100,
+		Q: fixturePrefix, Sort: apiquery.ResolvedSort{Key: "barcode"}, Limit: 100,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	left, leftTotal, err := svc.WarehouseUnits(ctx, orgID, whUUID, stockusecase.WarehouseUnitFilter{
-		State: stockusecase.WarehouseUnitLeft, Sort: apiquery.ResolvedSort{Key: "barcode"}, Limit: 100,
+		Q: fixturePrefix, State: stockusecase.WarehouseUnitLeft, Sort: apiquery.ResolvedSort{Key: "barcode"}, Limit: 100,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	page := func(n int64) int { return int(min(n, 100)) }
-	if total == 0 || leftTotal == 0 || len(all) != page(total) || len(left) != page(leftTotal) || leftTotal >= total {
-		t.Fatalf("warehouse units: all %d, left %d", total, leftTotal)
+	// Fixture: SYN-DUP-0001 and SYN-WH-0002 are placed in the primary
+	// warehouse; the seven SYN-HUB units left it (dealer, service, trash).
+	if total != 9 || leftTotal != 7 || len(all) != int(total) || len(left) != int(leftTotal) {
+		t.Fatalf("warehouse units: all %d (%d rows), left %d (%d rows); want 9 and 7",
+			total, len(all), leftTotal, len(left))
+	}
+	for _, r := range all {
+		if !strings.HasPrefix(r.Barcode, fixturePrefix) {
+			t.Fatalf("unit %s is not a fixture unit", r.Barcode)
+		}
 	}
 	var used *stockmodel.WarehouseUnitRow
 	for i := range left {
