@@ -13,6 +13,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/database/db"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ioengine"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -247,7 +248,9 @@ func portalView(svc db.Service, refs db.GetServiceRefsRow, org db.Organization, 
 		CreatedAt:   svc.CreatedAt.Time, CompletedAt: tsPtr(svc.CompletedAt),
 		AppliedParts: []string{},
 		Products:     make([]PortalProductView, 0, len(items)),
-		Dealer: PortalDealerView{UUID: org.Uuid, Name: org.Name, City: org.City, District: org.District,
+		// TEC-1017: the center's service point name (orgbrand), as on the
+		// warranty page and the PDFs; the panel keeps the organization name.
+		Dealer: PortalDealerView{UUID: org.Uuid, Name: orgbrand.Name(org), City: org.City, District: org.District,
 			Address: org.Address},
 		Warranties: []PortalWarrantyView{},
 	}

@@ -333,10 +333,10 @@ WHERE (s.customer_user_id = $1::bigint
        OR s.plate ILIKE '%' || $8::text || '%')
 ORDER BY
   CASE WHEN NOT $9::bool THEN
-    CASE $10::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN o.name::text END
+    CASE $10::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text END
   END ASC,
   CASE WHEN $9::bool THEN
-    CASE $10::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN o.name::text END
+    CASE $10::text WHEN 'service_no' THEN s.service_no::text WHEN 'organization' THEN org_customer_name(o.type, o.name, o.service_point_enabled, o.service_point_name)::text END
   END DESC,
   CASE WHEN NOT $9::bool AND $10::text = 'status' THEN
     CASE s.status WHEN 'draft' THEN 0 WHEN 'pending' THEN 1 WHEN 'processing' THEN 2

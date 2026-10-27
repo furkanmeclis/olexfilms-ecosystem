@@ -113,3 +113,27 @@ func TestPortalViewHidesMeasurementAndPrices(t *testing.T) {
 		}
 	}
 }
+
+// TEC-1017: the dealer card names the center's service point when it is
+// on; a disabled service point or a normal dealer keeps the org name.
+func TestPortalViewDealerServicePointName(t *testing.T) {
+	sp := pgtype.Text{String: "AFM Florya", Valid: true}
+	cases := []struct {
+		name string
+		org  db.Organization
+		want string
+	}{
+		{"center service point on", db.Organization{Type: "center", Name: "Olex Merkez", ServicePointEnabled: true, ServicePointName: sp}, "AFM Florya"},
+		{"center service point off", db.Organization{Type: "center", Name: "Olex Merkez", ServicePointName: sp}, "Olex Merkez"},
+		{"dealer", db.Organization{Type: "dealer", Name: "Bayi A", ServicePointEnabled: true, ServicePointName: sp}, "Bayi A"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			c.org.Uuid = uuid.New()
+			v := portalView(db.Service{Uuid: uuid.New()}, db.GetServiceRefsRow{}, c.org, nil, nil, 7, i18n.LocaleTR)
+			if v.Dealer.Name != c.want || v.Dealer.UUID != c.org.Uuid {
+				t.Fatalf("dealer = %+v, want name %q", v.Dealer, c.want)
+			}
+		})
+	}
+}

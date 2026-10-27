@@ -46,6 +46,7 @@ import (
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/activity"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/events"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/i18n"
+	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/orgbrand"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/phone"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/rbac"
 	"github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/whatsapp"
@@ -360,9 +361,11 @@ func (s *Service) StartTransfer(ctx context.Context, c Caller, vehicleID uuid.UU
 		if from.Locale.Valid {
 			fromLocale = from.Locale.String
 		}
+		// TEC-1017: the customer WhatsApp names the center's service point.
+		orgName := orgbrand.Name(org)
 		msgs := []struct{ side, to, body string }{
-			{"from", from.PhoneE164.String, RenderTransferMessage(fromLocale, "from", s.tr.cfg.AppName, org.Name, label, fromCode, minutes)},
-			{"to", toPhone, RenderTransferMessage(toLocale, "to", s.tr.cfg.AppName, org.Name, label, toCode, minutes)},
+			{"from", from.PhoneE164.String, RenderTransferMessage(fromLocale, "from", s.tr.cfg.AppName, orgName, label, fromCode, minutes)},
+			{"to", toPhone, RenderTransferMessage(toLocale, "to", s.tr.cfg.AppName, orgName, label, toCode, minutes)},
 		}
 		for _, m := range msgs {
 			if _, err := s.tr.sender.SendText(ctx, m.to, m.body, whatsapp.SendOptions{ID: transferMessageID(t.Uuid, m.side)}); err != nil {
