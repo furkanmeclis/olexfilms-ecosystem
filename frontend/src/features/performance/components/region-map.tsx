@@ -47,6 +47,9 @@ import {
 } from "@/features/performance/services/performance.service";
 import { useLocale } from "@/providers/locale-provider";
 
+/** Radius of the hollow ring of an area without dealers. */
+const EMPTY_RADIUS = 7;
+
 const LEVEL_ZOOM: Record<MapLevel, number> = {
   country: 3,
   province: 5,
@@ -56,9 +59,11 @@ const LEVEL_ZOOM: Record<MapLevel, number> = {
 /**
  * Region map (TEC-494): level picker (country / province / district),
  * circles sized by the dealer count and colored by the selected metric,
- * an optional clustered dealer point layer and, beside the map, the empty
- * regions (territory without dealers / no territory owner). Region
- * tooltips carry the owning distributor of the territory.
+ * an optional clustered dealer point layer and, beside the map, the
+ * regions without dealers. TEC-1029: areas without dealers are drawn as
+ * hollow grey rings and a legend counts the areas with / without dealers
+ * ("Bayi olan iller / Bayi olmayan iller"). Region tooltips carry the
+ * owning distributor of the territory.
  */
 export function RegionMap({ slug, period }: { slug: string; period: string }) {
   const { t, format } = useLocale();
@@ -94,6 +99,22 @@ export function RegionMap({ slug, period }: { slug: string; period: string }) {
     const maxCount = Math.max(0, ...items.map((r) => r.dealer_count));
     const { min, max } = valueRange(items.map((r) => r.metric_avg));
     const out: MapMarker[] = items.map((r) => {
+      if (r.dealer_count <= 0) {
+        const parts = [r.name, t("performance.map.no_dealers")];
+        if (r.distributor) {
+          parts.push(
+            t("performance.map.territory_owner", { name: r.distributor.name }),
+          );
+        }
+        return {
+          id: `region:${r.level}:${r.id}`,
+          lat: r.latitude as number,
+          lng: r.longitude as number,
+          label: parts.join(" · "),
+          radius: EMPTY_RADIUS,
+          hollow: true,
+        };
+      }
       const parts = [
         r.name,
         t("performance.map.dealer_count", { count: r.dealer_count }),
@@ -143,6 +164,11 @@ export function RegionMap({ slug, period }: { slug: string; period: string }) {
     showDealers,
     t,
   ]);
+
+  const regionItems = regions.data?.items ?? [];
+  const withDealers = regionItems.filter((r) => r.dealer_count > 0).length;
+  const withoutDealers = regionItems.length - withDealers;
+  const emptyRegions = regions.data?.empty_regions ?? [];
 
   const emptyColumns = useMemo(
     () =>
@@ -236,6 +262,31 @@ export function RegionMap({ slug, period }: { slug: string; period: string }) {
               className="h-[28rem]"
               testId="performance-leaflet"
             />
+            {regions.data ? (
+              <ul
+                className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs"
+                data-testid="performance-map-legend"
+              >
+                <li className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden
+                    className="inline-block size-3 rounded-full bg-[#16a34a]/70"
+                  />
+                  {t(`performance.map.with_dealers.${level}`, {
+                    count: withDealers,
+                  })}
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden
+                    className="inline-block size-3 rounded-full border-2 border-dashed border-[#94a3b8]"
+                  />
+                  {t(`performance.map.without_dealers.${level}`, {
+                    count: withoutDealers,
+                  })}
+                </li>
+              </ul>
+            ) : null}
             {(regions.data?.missing_coordinates ?? 0) > 0 ? (
               <p className="text-muted-foreground text-xs">
                 {t("performance.map.missing_coordinates", {
@@ -246,12 +297,18 @@ export function RegionMap({ slug, period }: { slug: string; period: string }) {
           </div>
           <Card>
             <CardHeader>
-              <CardTitle>{t("performance.map.empty_regions")}</CardTitle>
+              <CardTitle>
+                <span data-testid="performance-map-empty-title">
+                  {t(`performance.map.without_dealers.${level}`, {
+                    count: emptyRegions.length,
+                  })}
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <EntityTable
                 columns={emptyColumns}
-                data={regions.data?.empty_regions ?? []}
+                data={emptyRegions}
                 getRowId={(row) => `${row.level}:${row.id}`}
                 isLoading={regions.isLoading}
                 manual={CLIENT_SIDE_MANUAL}

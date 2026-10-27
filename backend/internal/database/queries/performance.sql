@@ -442,9 +442,22 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- Region map ------------------------------------------------------------------------
 
 -- name: ListPerformanceMapRegions :many
+-- empty_reason (TEC-1029) — an area with dealers is never empty:
+--   ''                      dealer_count > 0
+--   'territory_no_dealers'  no dealers, a distributor territory covers it
+--   'unassigned_territory'  province without dealers and without an owner in
+--                           a country that does use distributor territories
+--   'no_dealers'            province without dealers in a country with no
+--                           distributor territories (e.g. TR since TEC-1003:
+--                           dealers sit under the center) — "bayi olmayan il"
+-- Country/district areas without dealers and without an owner stay ''.
+-- Only live distributor organizations' territories count as owners.
 WITH visible_territories AS (
     SELECT t.*
     FROM territories t
+    JOIN organizations town ON town.id = t.organization_id
+      AND town.type = 'distributor'
+      AND town.deleted_at IS NULL
     WHERE t.brand_id = sqlc.arg(brand_id)
       AND (
         sqlc.arg(actor_type)::text = 'center'
@@ -578,9 +591,11 @@ SELECT a.level,
        COALESCE(a.area_latitude, s.avg_latitude)::numeric AS latitude,
        COALESCE(a.area_longitude, s.avg_longitude)::numeric AS longitude,
        CASE
-         WHEN s.dealer_count = 0 AND owner.organization_id IS NOT NULL THEN 'territory_no_dealers'
-         WHEN a.level = 'province' AND owner.organization_id IS NULL THEN 'unassigned_territory'
-         ELSE ''
+         WHEN s.dealer_count > 0 THEN ''
+         WHEN owner.organization_id IS NOT NULL THEN 'territory_no_dealers'
+         WHEN a.level <> 'province' THEN ''
+         WHEN EXISTS (SELECT 1 FROM visible_territories t WHERE t.country_id = a.country_id) THEN 'unassigned_territory'
+         ELSE 'no_dealers'
        END::text AS empty_reason
 FROM areas a
 JOIN area_stats s ON s.level = a.level AND s.area_id = a.area_id
