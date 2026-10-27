@@ -177,20 +177,23 @@ func TestRecordUsageUpdatesMonthlyInSameTx(t *testing.T) {
 	if got, err := f.store.MonthlyTokens(f.ctx, f.dealer.ID, model.PoolOrg, now); err != nil || got != 300 {
 		t.Fatalf("monthly tokens = %d, %v", got, err)
 	}
-	// The system pool of the center is a separate projection row. The
-	// brand center is shared by other tests (portal chat, TEC-388), so the
-	// check is on the delta.
+	// The system pool is a separate projection row from the org pool of the
+	// same organization. It is checked on the fixture's own organization:
+	// the system pool row of the shared brand center is written by other
+	// packages concurrently (portal chat, TEC-388) and their commits land
+	// between a "before" read and the upsert (read committed), so a delta
+	// on the center is not deterministic.
 	sys := u
-	sys.OrganizationID, sys.Pool, sys.UserID, sys.Channel = f.center.ID, model.PoolSystem, nil, model.UsageChannelWhatsApp
-	sysBefore, err := f.store.MonthlyTokens(f.ctx, f.center.ID, model.PoolSystem, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, month, err := f.store.RecordUsage(f.ctx, sys); err != nil || month.QuotaTokens != sysBefore+150 {
+	sys.Pool, sys.UserID, sys.Channel = model.PoolSystem, nil, model.UsageChannelWhatsApp
+	if _, month, err := f.store.RecordUsage(f.ctx, sys); err != nil || month.QuotaTokens != 150 ||
+		month.RequestCount != 1 || month.Pool != model.PoolSystem {
 		t.Fatalf("system pool: %+v %v", month, err)
 	}
-	if got, _ := f.store.MonthlyTokens(f.ctx, f.center.ID, model.PoolOrg, now); got != 0 {
-		t.Fatalf("center org pool = %d, want 0", got)
+	if got, err := f.store.MonthlyTokens(f.ctx, f.dealer.ID, model.PoolSystem, now); err != nil || got != 150 {
+		t.Fatalf("system pool monthly = %d, %v", got, err)
+	}
+	if got, err := f.store.MonthlyTokens(f.ctx, f.dealer.ID, model.PoolOrg, now); err != nil || got != 300 {
+		t.Fatalf("org pool after system record = %d, %v; want 300", got, err)
 	}
 
 	// Same transaction: a rolled-back caller transaction leaves neither the
@@ -209,7 +212,7 @@ func TestRecordUsageUpdatesMonthlyInSameTx(t *testing.T) {
 		t.Fatalf("after rollback monthly = %d, want 300", got)
 	}
 	var n int64
-	if err := f.tx.QueryRow(f.ctx, `SELECT COUNT(*) FROM ai_usage WHERE organization_id = $1`, f.dealer.ID).Scan(&n); err != nil || n != 2 {
+	if err := f.tx.QueryRow(f.ctx, `SELECT COUNT(*) FROM ai_usage WHERE organization_id = $1 AND pool = 'org'`, f.dealer.ID).Scan(&n); err != nil || n != 2 {
 		t.Fatalf("ledger rows = %d, %v", n, err)
 	}
 
