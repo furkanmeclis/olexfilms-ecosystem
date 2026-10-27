@@ -31,6 +31,17 @@ func (h *Handler) Meta(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	h.listInbox(w, r, r.URL.Query().Get("status"), r.URL.Query().Get("channel"))
+}
+
+// PortalList is the customer / fleet portal inbox (TEC-1021): the session
+// user's own in-app notifications in the same page shape as List. status and
+// channel are not portal filters; the channel is always inapp.
+func (h *Handler) PortalList(w http.ResponseWriter, r *http.Request) {
+	h.listInbox(w, r, "", model.ChannelInapp)
+}
+
+func (h *Handler) listInbox(w http.ResponseWriter, r *http.Request, status, channel string) {
 	p := authctx.MustPrincipal(r.Context())
 	if banned := apiquery.ForbiddenParams(r.URL.Query()); len(banned) > 0 {
 		response.ValidationError(w, r, []response.Detail{{
@@ -39,8 +50,6 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := apiquery.Parse(r.URL.Query())
-	status := r.URL.Query().Get("status")
-	channel := r.URL.Query().Get("channel")
 	var unread *bool
 	if raw := strings.TrimSpace(r.URL.Query().Get("unread")); raw != "" {
 		b, err := strconv.ParseBool(raw)
