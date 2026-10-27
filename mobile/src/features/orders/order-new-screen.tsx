@@ -3,7 +3,8 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, TextInput, View } from 'react-native';
+import { Alert, FlatList, Modal, Platform, Pressable, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { api, unwrap } from '@/core/api/client';
 import { isApiError } from '@/core/api/errors';
@@ -37,20 +38,16 @@ function useDealers(enabled: boolean) {
   });
 }
 
-/** Required buyer of a center order: the chosen dealer, or a searchable list. */
+/** Required buyer of a center order: a row that opens a searchable sheet, like the other pickers. */
 function DealerPicker({ value, onChange, error }: { value: Dealer | null; onChange: (d: Dealer) => void; error?: string }) {
   const { t } = useTranslation('orders');
-  const dealers = useDealers(true);
-  const [open, setOpen] = useState(!value);
-  const [q, setQ] = useState('');
-  const needle = q.trim().toLocaleLowerCase();
-  const shown = (dealers.data ?? []).filter((d) => !needle || d.name.toLocaleLowerCase().includes(needle)).slice(0, 50);
+  const [open, setOpen] = useState(false);
   return (
     <View className="gap-2">
       <SectionHeader title={t('buyer_label')} />
       <Pressable
         accessibilityRole="button"
-        onPress={() => setOpen((o) => !o)}
+        onPress={() => setOpen(true)}
         className={cn(
           'min-h-14 flex-row items-center gap-3 rounded-lg border bg-card px-4 active:opacity-80',
           error ? 'border-destructive' : 'border-border',
@@ -66,48 +63,101 @@ function DealerPicker({ value, onChange, error }: { value: Dealer | null; onChan
           {error}
         </Text>
       ) : null}
-      {open ? (
-        <View className="gap-2 rounded-lg border border-border bg-card p-2">
-          <TextInput
-            value={q}
-            onChangeText={setQ}
-            placeholder={t('buyer_search')}
-            placeholderTextColorClassName="accent-muted-foreground"
-            className="min-h-11 rounded-md border border-border bg-background px-3 text-[17px] text-foreground"
-          />
-          {shown.map((d) => (
-            <Pressable
-              key={d.uuid}
-              accessibilityRole="button"
-              accessibilityState={{ selected: d.uuid === value?.uuid }}
-              onPress={() => {
-                onChange(d);
-                setOpen(false);
-                setQ('');
-              }}
-              className="min-h-11 flex-row items-center justify-between rounded-md px-3 active:bg-muted">
-              <Text variant="body" numberOfLines={1} className="flex-1">
-                {d.name}
-              </Text>
-              {d.uuid === value?.uuid ? <Icon name="check" tone="primary" size={16} /> : null}
-            </Pressable>
-          ))}
-          {!dealers.isPending && !shown.length ? (
-            <Text variant="footnote" tone="muted" className="px-3 py-2">
-              {t('buyer_none')}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
+      <DealerSheet
+        visible={open}
+        value={value}
+        onClose={() => setOpen(false)}
+        onPick={(d) => {
+          onChange(d);
+          setOpen(false);
+        }}
+      />
     </View>
   );
 }
 
-/**
- * Cart → order (web orders/new, TEC-170): the dealer picks catalog products
- * and amounts; the server resolves the prices (K8). Saving makes a draft;
- * sending moves it to submitted for the seller to approve.
- */
+function DealerSheet({
+  visible,
+  value,
+  onClose,
+  onPick,
+}: {
+  visible: boolean;
+  value: Dealer | null;
+  onClose: () => void;
+  onPick: (d: Dealer) => void;
+}) {
+  const { t } = useTranslation('orders');
+  const insets = useSafeAreaInsets();
+  const dealers = useDealers(visible);
+  const [q, setQ] = useState('');
+  const needle = q.trim().toLocaleLowerCase();
+  const results = (dealers.data ?? []).filter((d) => !needle || d.name.toLocaleLowerCase().includes(needle));
+  const close = () => {
+    setQ('');
+    onClose();
+  };
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={close}>
+      {/* iOS presents a page sheet below the status bar; Android shows it full screen. */}
+      <View className="flex-1 bg-background" style={{ paddingTop: Platform.OS === 'ios' ? 0 : insets.top }}>
+        <View className="flex-row items-center justify-between ps-5 pe-2 pb-2 pt-4">
+          <Text variant="title">{t('buyer_label')}</Text>
+          <Button title={t('common:close')} variant="ghost" onPress={close} />
+        </View>
+        <View className="px-4 pb-3">
+          <View className="min-h-11 flex-row items-center gap-2 rounded-xl bg-secondary px-3">
+            <Icon name="search" tone="muted-foreground" size={17} />
+            <TextInput
+              value={q}
+              onChangeText={setQ}
+              placeholder={t('buyer_search')}
+              placeholderTextColorClassName="accent-muted-foreground"
+              accessibilityLabel={t('buyer_search')}
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+              returnKeyType="search"
+              className="min-h-11 flex-1 text-[17px] text-foreground"
+            />
+          </View>
+        </View>
+        <FlatList
+          data={results}
+          keyExtractor={(d) => d.uuid}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+          ItemSeparatorComponent={() => <View className="ms-14 h-px bg-border" />}
+          ListEmptyComponent={
+            <Text variant="callout" tone="muted" className="px-5 py-8 text-center">
+              {dealers.isPending ? t('common:loading') : t('buyer_none')}
+            </Text>
+          }
+          renderItem={({ item }) => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: item.uuid === value?.uuid }}
+              onPress={() => {
+                void Haptics.selectionAsync();
+                setQ('');
+                onPick(item);
+              }}
+              className="min-h-[52px] flex-row items-center gap-3 px-4 active:bg-secondary">
+              <View className="size-8 items-center justify-center rounded-md bg-secondary">
+                <Icon name="building" tone="primary" size={16} />
+              </View>
+              <Text variant="body" className="flex-1" numberOfLines={1}>
+                {item.name}
+              </Text>
+              {item.uuid === value?.uuid ? <Icon name="check" tone="primary" size={18} weight="semibold" /> : null}
+            </Pressable>
+          )}
+        />
+      </View>
+    </Modal>
+  );
+}
+
 export function OrderNewScreen() {
   const { t } = useTranslation('orders');
   const qc = useQueryClient();
