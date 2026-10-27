@@ -707,5 +707,9 @@
   "entry.confirmed_at": "Confirmada",
   "entry.cancelled_at": "Cancelada",
   "entry.fixed_quantity_title": "Producto con código de barras fijo",
-  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: ¿cuántas piezas se recibieron?"
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: ¿cuántas piezas se recibieron?",
+  "transfer.created_at": "Creado",
+  "transfer.shipped_at": "Enviado",
+  "transfer.completed_at": "Recibido",
+  "transfer.cancelled_at": "Cancelado"
 }

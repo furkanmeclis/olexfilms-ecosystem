@@ -52,6 +52,9 @@ func TestTransitionRules(t *testing.T) {
 		{StatusPreparing, StatusReady, PartySeller, holds(rbac.PermOrdersApprove), false},
 		{StatusReady, StatusShipped, PartySeller, holds(rbac.PermOrdersShip), true},
 		{StatusReady, StatusShipped, PartyBuyer, all, false},
+		// TEC-1032: the seller reopens preparation to fix a wrong scan.
+		{StatusReady, StatusPreparing, PartySeller, holds(rbac.PermOrdersShip), true},
+		{StatusReady, StatusPreparing, PartyBuyer, all, false},
 		{StatusReady, StatusCancelled, PartyBuyer, holds(rbac.PermOrdersCancel), true},
 		{StatusShipped, StatusReceived, PartyBuyer, holds(rbac.PermOrdersReceive), true},
 		{StatusShipped, StatusReceived, PartySeller, holds(rbac.PermOrdersReceive), false},

@@ -64,6 +64,9 @@ import {
   type OrderItem,
 } from "@/features/orders/services/orders.service";
 import { OrderPlacementPanel } from "@/features/warehouse/components/order-placement-panel";
+import { ScanInput } from "@/features/warehouse/components/scan-input";
+import { scanKind, unitBarcode } from "@/features/warehouse/lib/scan";
+import { warehouseService } from "@/features/warehouse/services/warehouse.service";
 import { isApiError } from "@/lib/api";
 import { useLocale } from "@/providers/locale-provider";
 import { usePermission } from "@/providers/permission-provider";
@@ -225,6 +228,88 @@ function AssignForm({ order, item }: { order: Order; item: OrderItem }) {
         {t("orders.assign.submit")}
       </Button>
     </form>
+  );
+}
+
+/**
+ * Picks the line a scanned unit belongs to: the first line of the unit's
+ * product that is not fully assigned (TEC-1032, legacy ScanOrderBarcode).
+ */
+export function lineForProduct(
+  order: Order,
+  productUuid: string,
+): OrderItem | null {
+  return (
+    (order.items ?? []).find(
+      (item) => item.product.uuid === productUuid && !lineFullyAssigned(item),
+    ) ?? null
+  );
+}
+
+/**
+ * Order-level scan field (seller, preparing): the barcode resolves to its
+ * product through the universal scan and is assigned to the first open line
+ * of that product, so the operator scans box after box without finding the
+ * row. Rolls are assigned whole; a cut goes through the line form.
+ */
+function OrderScanBar({ order }: { order: Order }) {
+  const { t } = useLocale();
+  const store = useStoreOrder();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const onScan = async (code: string) => {
+    if (scanKind(code) === "location") {
+      setError(t("orders.scan.not_unit"));
+      return;
+    }
+    const barcode = unitBarcode(code);
+    setBusy(true);
+    setError(null);
+    try {
+      const scan = await warehouseService.scan(barcode);
+      const product = scan.product;
+      if (!product) {
+        setError(t("orders.scan.not_unit"));
+        return;
+      }
+      const item = lineForProduct(order, product.uuid);
+      if (!item) {
+        setError(t("orders.scan.no_line", { product: product.name }));
+        return;
+      }
+      const updated = await ordersService.assignUnit(order.uuid, item.uuid, {
+        barcode,
+      });
+      store(updated);
+      toast.success(t("orders.assign.success"));
+    } catch (err) {
+      setError(orderErrorMessage(err, t, t("orders.assign.failed")));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card data-testid="order-scan-bar">
+      <CardContent className="space-y-2 pt-6">
+        <ScanInput
+          expect="unit"
+          id="order-scan"
+          label={t("orders.scan.label")}
+          hint={t("orders.scan.hint")}
+          busy={busy}
+          onScan={onScan}
+        />
+        {error ? (
+          <p
+            role="alert"
+            className="text-destructive text-sm"
+            data-testid="order-scan-error"
+          >
+            {error}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -835,6 +920,7 @@ export function OrderDetailPage({
           {fully ? t("orders.assign.complete") : t("orders.assign.hint")}
         </p>
       ) : null}
+      {assign && !fully ? <OrderScanBar order={order} /> : null}
       <OrderPlacementPanel slug={slug} order={order} />
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Items order={order} assign={assign} />

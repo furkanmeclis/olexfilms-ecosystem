@@ -274,5 +274,20 @@
   "invoice.items_count": "Позицій: {{count}}",
   "invoice.recorded_by": "Записав(ла) {{name}}",
   "invoice.line_pending": "До виставлення рахунку",
-  "items.invoice": "Рахунок"
+  "items.invoice": "Рахунок",
+  "actions.back_to_preparing.button": "Повернути в підготовку",
+  "actions.back_to_preparing.title": "Знову відкрити підготовку?",
+  "actions.back_to_preparing.description": "Призначені одиниці залишаються в замовленні; додайте або приберіть штрихкоди, потім знову позначте як готове.",
+  "actions.back_to_preparing.confirm": "Відкрити",
+  "actions.back_to_preparing.success": "Замовлення знову готується.",
+  "list.queue.all": "Усі",
+  "list.queue.prepare": "До підготовки",
+  "list.queue.preparing": "Готуються",
+  "list.queue.ready": "Готові",
+  "list.queue.shipped": "Відправлені",
+  "list.queue.delivered": "Доставлені",
+  "scan.label": "Сканувати штрихкод",
+  "scan.hint": "Відсканований штрихкод призначається першому відкритому рядку його товару.",
+  "scan.no_line": "Немає рядка, що очікує призначення для цього товару: {{product}}",
+  "scan.not_unit": "Відскануйте штрихкод одиниці."
 }

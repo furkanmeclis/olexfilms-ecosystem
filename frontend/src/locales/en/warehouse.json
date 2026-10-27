@@ -707,5 +707,9 @@
   "entry.confirmed_at": "Confirmed",
   "entry.cancelled_at": "Cancelled",
   "entry.fixed_quantity_title": "Fixed-barcode product",
-  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: how many pieces were received?"
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: how many pieces were received?",
+  "transfer.created_at": "Created",
+  "transfer.shipped_at": "Shipped",
+  "transfer.completed_at": "Received",
+  "transfer.cancelled_at": "Cancelled"
 }

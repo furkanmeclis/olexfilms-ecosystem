@@ -24948,7 +24948,9 @@ paths:
         orders.approve); processing -> preparing (seller, orders.ship;
         TEC-261, a migrated order continues on the barcode path);
         preparing -> ready (seller, orders.ship; every line
-        fully assigned, else 409 ORDER_NOT_FULLY_ASSIGNED); ready -> shipped
+        fully assigned, else 409 ORDER_NOT_FULLY_ASSIGNED); ready -> preparing
+        (seller, orders.ship; TEC-1032: reopen preparation to fix a wrong
+        scan, the assigned units stay); ready -> shipped
         (seller, orders.ship; one ledger order_out per assigned unit with
         idempotency key order:order_item_unit:<id>:order_out:<barcode>,
         serial units go in_transit owned by the buyer, reservations are
