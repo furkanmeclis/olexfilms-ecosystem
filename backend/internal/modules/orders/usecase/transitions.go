@@ -60,6 +60,8 @@ type rule struct {
 //	processing -> preparing (seller, orders.ship; TEC-261: a migrated hub or
 //	    warehouse order sent to the warehouse continues on the barcode path)
 //	preparing -> ready (seller, orders.ship; every line fully assigned)
+//	ready -> preparing (seller, orders.ship; TEC-1032: reopen preparation to
+//	    fix a wrong scan, the assigned units stay)
 //	ready -> shipped (seller, orders.ship; order_out per assigned unit)
 //	draft | submitted | approved | processing | preparing | ready -> cancelled
 //	    (either side, orders.cancel; active reservations are released)
@@ -100,7 +102,10 @@ var transitions = map[string]map[string]rule{
 		StatusCancelled: {PartyEither, []string{rbac.PermOrdersCancel}},
 	},
 	StatusReady: {
-		StatusShipped:   {PartySeller, []string{rbac.PermOrdersShip}},
+		StatusShipped: {PartySeller, []string{rbac.PermOrdersShip}},
+		// TEC-1032: back to preparing to fix a wrong scan; the assigned
+		// units stay on the order.
+		StatusPreparing: {PartySeller, []string{rbac.PermOrdersShip}},
 		StatusCancelled: {PartyEither, []string{rbac.PermOrdersCancel}},
 	},
 	StatusShipped: {

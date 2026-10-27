@@ -707,5 +707,9 @@
   "entry.confirmed_at": "Підтверджено",
   "entry.cancelled_at": "Скасовано",
   "entry.fixed_quantity_title": "Товар із фіксованим штрихкодом",
-  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: скільки штук отримано?"
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: скільки штук отримано?",
+  "transfer.created_at": "Створено",
+  "transfer.shipped_at": "Відправлено",
+  "transfer.completed_at": "Отримано",
+  "transfer.cancelled_at": "Скасовано"
 }

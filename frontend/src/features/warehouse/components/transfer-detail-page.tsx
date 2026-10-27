@@ -314,6 +314,29 @@ export function TransferDetailPage({
                   {format.number(transfer.line_count)}
                 </span>
               </Info>
+              {/* TEC-1032: the document's timeline (legacy showed who/when). */}
+              <Info label={t("warehouse.transfer.created_at")}>
+                <span data-testid="transfer-created-at">
+                  {format.dateTime(transfer.created_at)}
+                </span>
+              </Info>
+              {transfer.shipped_at ? (
+                <Info label={t("warehouse.transfer.shipped_at")}>
+                  <span data-testid="transfer-shipped-at">
+                    {format.dateTime(transfer.shipped_at)}
+                  </span>
+                </Info>
+              ) : null}
+              {transfer.completed_at ? (
+                <Info label={t("warehouse.transfer.completed_at")}>
+                  {format.dateTime(transfer.completed_at)}
+                </Info>
+              ) : null}
+              {transfer.cancelled_at ? (
+                <Info label={t("warehouse.transfer.cancelled_at")}>
+                  {format.dateTime(transfer.cancelled_at)}
+                </Info>
+              ) : null}
               {transfer.note ? (
                 <div className="sm:col-span-4">
                   <Info label={t("warehouse.fields.note")}>

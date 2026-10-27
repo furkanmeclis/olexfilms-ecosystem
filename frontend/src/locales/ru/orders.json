@@ -274,5 +274,20 @@
   "invoice.items_count": "Позиций: {{count}}",
   "invoice.recorded_by": "Записал(а) {{name}}",
   "invoice.line_pending": "К выставлению счёта",
-  "items.invoice": "Счёт"
+  "items.invoice": "Счёт",
+  "actions.back_to_preparing.button": "Вернуть в подготовку",
+  "actions.back_to_preparing.title": "Снова открыть подготовку?",
+  "actions.back_to_preparing.description": "Назначенные единицы остаются в заказе; добавьте или уберите штрихкоды, затем снова отметьте как готовый.",
+  "actions.back_to_preparing.confirm": "Открыть",
+  "actions.back_to_preparing.success": "Заказ снова готовится.",
+  "list.queue.all": "Все",
+  "list.queue.prepare": "К подготовке",
+  "list.queue.preparing": "Готовятся",
+  "list.queue.ready": "Готовы",
+  "list.queue.shipped": "Отправлены",
+  "list.queue.delivered": "Доставлены",
+  "scan.label": "Сканировать штрихкод",
+  "scan.hint": "Отсканированный штрихкод назначается первой открытой строке его товара.",
+  "scan.no_line": "Нет строки, ожидающей назначения для этого товара: {{product}}",
+  "scan.not_unit": "Отсканируйте штрихкод единицы."
 }

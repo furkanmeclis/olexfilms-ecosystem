@@ -707,5 +707,9 @@
   "entry.confirmed_at": "Onay",
   "entry.cancelled_at": "İptal",
   "entry.fixed_quantity_title": "Sabit barkodlu ürün",
-  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: kaç adet teslim alındı?"
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: kaç adet teslim alındı?",
+  "transfer.created_at": "Oluşturma",
+  "transfer.shipped_at": "Sevk",
+  "transfer.completed_at": "Kabul",
+  "transfer.cancelled_at": "İptal"
 }

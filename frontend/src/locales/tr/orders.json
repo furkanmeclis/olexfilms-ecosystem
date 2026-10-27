@@ -274,5 +274,20 @@
   "invoice.items_count": "{{count}} kalem",
   "invoice.recorded_by": "{{name}} kaydetti",
   "invoice.line_pending": "Faturalanacak",
-  "items.invoice": "Fatura"
+  "items.invoice": "Fatura",
+  "actions.back_to_preparing.button": "Hazırlığa geri al",
+  "actions.back_to_preparing.title": "Sipariş hazırlığa geri alınsın mı?",
+  "actions.back_to_preparing.description": "Atanmış birimler siparişte kalır; barkod ekleyip çıkarabilirsiniz, sonra yeniden hazır işaretleyin.",
+  "actions.back_to_preparing.confirm": "Geri al",
+  "actions.back_to_preparing.success": "Sipariş yeniden hazırlanıyor.",
+  "list.queue.all": "Tümü",
+  "list.queue.prepare": "Hazırlanacak",
+  "list.queue.preparing": "Hazırlanıyor",
+  "list.queue.ready": "Hazır",
+  "list.queue.shipped": "Kargoda",
+  "list.queue.delivered": "Teslim edildi",
+  "scan.label": "Barkod okut",
+  "scan.hint": "Okutulan barkod ürünü eşleşen ilk eksik kaleme atanır.",
+  "scan.no_line": "Bu ürün için atama bekleyen kalem yok: {{product}}",
+  "scan.not_unit": "Birim barkodu okutun."
 }

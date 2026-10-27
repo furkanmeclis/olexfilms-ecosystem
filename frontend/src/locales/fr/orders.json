@@ -274,5 +274,20 @@
   "invoice.items_count": "{{count}} lignes",
   "invoice.recorded_by": "Enregistré par {{name}}",
   "invoice.line_pending": "À facturer",
-  "items.invoice": "Facture"
+  "items.invoice": "Facture",
+  "actions.back_to_preparing.button": "Retour à la préparation",
+  "actions.back_to_preparing.title": "Rouvrir la préparation ?",
+  "actions.back_to_preparing.description": "Les unités attribuées restent sur la commande ; ajoutez ou retirez des codes-barres, puis marquez-la de nouveau prête.",
+  "actions.back_to_preparing.confirm": "Rouvrir",
+  "actions.back_to_preparing.success": "La commande est de nouveau en préparation.",
+  "list.queue.all": "Toutes",
+  "list.queue.prepare": "À préparer",
+  "list.queue.preparing": "En préparation",
+  "list.queue.ready": "Prêtes",
+  "list.queue.shipped": "Expédiées",
+  "list.queue.delivered": "Livrées",
+  "scan.label": "Scanner un code-barres",
+  "scan.hint": "Le code-barres scanné est attribué à la première ligne ouverte de son produit.",
+  "scan.no_line": "Aucune ligne en attente d'attribution pour ce produit : {{product}}",
+  "scan.not_unit": "Scannez un code-barres d'unité."
 }

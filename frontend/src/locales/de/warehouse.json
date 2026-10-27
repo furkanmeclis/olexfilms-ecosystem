@@ -707,5 +707,9 @@
   "entry.confirmed_at": "Bestätigt",
   "entry.cancelled_at": "Storniert",
   "entry.fixed_quantity_title": "Produkt mit festem Barcode",
-  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: wie viele Stück wurden empfangen?"
+  "entry.fixed_quantity_description": "{{barcode}} · {{product}}: wie viele Stück wurden empfangen?",
+  "transfer.created_at": "Erstellt",
+  "transfer.shipped_at": "Versandt",
+  "transfer.completed_at": "Empfangen",
+  "transfer.cancelled_at": "Storniert"
 }

@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { permissions } from "@/config/permissions";
 import { routes } from "@/config/routes";
 import { OrderActionDialog } from "@/features/orders/components/order-action-dialog";
+import { OrderQueueChips } from "@/features/orders/components/order-queue-chips";
 import {
   activeOrderSide,
   canEditDraft,
@@ -391,6 +392,22 @@ export function OrdersListPage({ slug }: { slug: string }) {
             </Button>
           ))}
         </div>
+      ) : null}
+      {side === "seller" ? (
+        <OrderQueueChips
+          side={side}
+          statusFilter={
+            (listState.columnFilters.find((f) => f.id === "status")?.value as
+              string[] | undefined) ?? []
+          }
+          onPick={(statuses) => {
+            onColumnFiltersChange((prev) => [
+              ...prev.filter((f) => f.id !== "status"),
+              ...(statuses.length ? [{ id: "status", value: statuses }] : []),
+            ]);
+            setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+          }}
+        />
       ) : null}
       <EntityTable
         columns={columns}

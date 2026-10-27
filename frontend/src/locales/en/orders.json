@@ -274,5 +274,20 @@
   "invoice.items_count": "{{count}} lines",
   "invoice.recorded_by": "Recorded by {{name}}",
   "invoice.line_pending": "To be invoiced",
-  "items.invoice": "Invoice"
+  "items.invoice": "Invoice",
+  "actions.back_to_preparing.button": "Back to preparing",
+  "actions.back_to_preparing.title": "Reopen preparation?",
+  "actions.back_to_preparing.description": "Assigned units stay on the order; add or remove barcodes, then mark it ready again.",
+  "actions.back_to_preparing.confirm": "Reopen",
+  "actions.back_to_preparing.success": "The order is being prepared again.",
+  "list.queue.all": "All",
+  "list.queue.prepare": "To prepare",
+  "list.queue.preparing": "Preparing",
+  "list.queue.ready": "Ready",
+  "list.queue.shipped": "Shipped",
+  "list.queue.delivered": "Delivered",
+  "scan.label": "Scan barcode",
+  "scan.hint": "The scanned barcode is assigned to the first open line of its product.",
+  "scan.no_line": "No line awaiting assignment for this product: {{product}}",
+  "scan.not_unit": "Scan a unit barcode."
 }

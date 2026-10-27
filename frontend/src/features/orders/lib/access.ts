@@ -74,6 +74,7 @@ export type OrderActionKind =
   | "approve"
   | "reject"
   | "start_preparing"
+  | "back_to_preparing"
   | "mark_ready"
   | "ship"
   | "deliver"
@@ -117,8 +118,10 @@ function actionFor(order: Order, target: OrderStatus): OrderAction | null {
         reasonRequired: false,
       };
     case "preparing":
+      // TEC-1032: from ready the seller reopens preparation (wrong scan).
       return {
-        kind: "start_preparing",
+        kind:
+          order.status === "ready" ? "back_to_preparing" : "start_preparing",
         target,
         destructive: false,
         reasonRequired: false,

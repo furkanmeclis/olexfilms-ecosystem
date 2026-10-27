@@ -274,5 +274,20 @@
   "invoice.items_count": "{{count}} Positionen",
   "invoice.recorded_by": "Erfasst von {{name}}",
   "invoice.line_pending": "Zu fakturieren",
-  "items.invoice": "Rechnung"
+  "items.invoice": "Rechnung",
+  "actions.back_to_preparing.button": "Zurück zur Vorbereitung",
+  "actions.back_to_preparing.title": "Vorbereitung wieder öffnen?",
+  "actions.back_to_preparing.description": "Zugewiesene Einheiten bleiben auf der Bestellung; Barcodes hinzufügen oder entfernen, dann erneut als bereit markieren.",
+  "actions.back_to_preparing.confirm": "Wieder öffnen",
+  "actions.back_to_preparing.success": "Die Bestellung wird erneut vorbereitet.",
+  "list.queue.all": "Alle",
+  "list.queue.prepare": "Vorzubereiten",
+  "list.queue.preparing": "In Vorbereitung",
+  "list.queue.ready": "Bereit",
+  "list.queue.shipped": "Versandt",
+  "list.queue.delivered": "Geliefert",
+  "scan.label": "Barcode scannen",
+  "scan.hint": "Der gescannte Barcode wird der ersten offenen Position seines Produkts zugewiesen.",
+  "scan.no_line": "Keine Position wartet auf Zuweisung für dieses Produkt: {{product}}",
+  "scan.not_unit": "Einen Einheiten-Barcode scannen."
 }

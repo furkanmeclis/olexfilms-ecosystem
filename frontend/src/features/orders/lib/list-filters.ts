@@ -11,10 +11,10 @@ export const ORDER_INVOICE_STATUSES = [
 ] as const satisfies readonly OrderInvoiceStatus[];
 
 /**
- * Statuses offered in the filter, in flow order. delivered is in the schema
- * but not used (TEC-168: received follows shipped). processing is not
- * offered as a target but migrated orders sit in it (TEC-261), so it can be
- * filtered.
+ * Statuses offered in the filter, in flow order. delivered is the seller's
+ * hand / depot delivery step before the buyer receives (TEC-1024).
+ * processing is not offered as a target but migrated orders sit in it
+ * (TEC-261), so it can be filtered.
  */
 export const ORDER_FILTER_STATUSES = [
   "draft",
@@ -24,6 +24,7 @@ export const ORDER_FILTER_STATUSES = [
   "ready",
   "processing",
   "shipped",
+  "delivered",
   "received",
   "cancelling",
   "cancelled",
