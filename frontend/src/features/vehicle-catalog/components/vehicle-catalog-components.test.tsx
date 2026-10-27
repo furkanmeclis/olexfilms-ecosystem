@@ -66,9 +66,8 @@ describe("VehicleImageField", () => {
         }),
       ),
     );
-    const input = container.querySelector<HTMLInputElement>(
-      'input[type="file"]',
-    );
+    const input =
+      container.querySelector<HTMLInputElement>('input[type="file"]');
     expect(input?.accept).toContain("image/svg+xml");
     const svg = new File(["<svg/>"], "bmw.svg", { type: "image/svg+xml" });
     pick(svg);
