@@ -103,6 +103,10 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 		if err != nil {
 			return err
 		}
+		chosen, err := chosenWarehouse(ctx, q, seller.ID, in.SellerWarehouseUUID)
+		if err != nil {
+			return err
+		}
 		o, err := q.CreateOrder(ctx, db.CreateOrderParams{
 			SellerOrgID: seller.ID, BrandID: seller.BrandID, BuyerOrgID: buyer.ID,
 			Currency: strings.TrimSpace(brand.Currency), Note: textOrNull(in.Note), CreatedByUserID: c.actor(),
@@ -121,7 +125,14 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 		if err != nil {
 			return err
 		}
+		o, warehouse, err := assignWarehouse(ctx, q, o, chosen)
+		if err != nil {
+			return err
+		}
 		meta["created_by_seller"] = true
+		if warehouse != nil {
+			meta["seller_warehouse"] = warehouse.Code
+		}
 		if err := s.history(ctx, q, o, "", StatusApproved, c, nil, meta); err != nil {
 			return err
 		}
@@ -132,7 +143,10 @@ func (s *Service) createForBuyer(ctx context.Context, c Caller, in CreateInput) 
 		if err := s.emit(ctx, tx, events.OrdersApproved, o, "", c); err != nil {
 			return err
 		}
-		return s.emitCreatedBySeller(ctx, q, tx, o, seller, buyer, c)
+		if err := s.emitCreatedBySeller(ctx, q, tx, o, seller, buyer, c); err != nil {
+			return err
+		}
+		return s.emitWarehouseNew(ctx, q, tx, o, warehouse, c)
 	})
 	if err != nil {
 		return OrderView{}, err

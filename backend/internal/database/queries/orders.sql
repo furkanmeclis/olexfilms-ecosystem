@@ -462,3 +462,44 @@ WHERE brand_id = sqlc.arg(brand_id)
   AND (sqlc.narg(status)::text IS NULL OR status = sqlc.narg(status)::text)
 ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- ---------------------------------------------------------------------------
+-- TEC-1028: the seller warehouse of an order.
+
+-- name: SetOrderSellerWarehouse :one
+UPDATE orders
+SET seller_warehouse_id = sqlc.narg(seller_warehouse_id)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: GetPrimaryWarehouse :one
+-- The active primary warehouse of an organization (TEC-1006).
+SELECT * FROM warehouses
+WHERE organization_id = sqlc.arg(organization_id) AND is_primary AND active;
+
+-- name: ListOrderWarehouseNotifyUserIDs :many
+-- The seller's staff of a warehouse: members holding the permission who are
+-- members of the warehouse, or who have no warehouse membership in the
+-- organization at all (they work in every warehouse, TEC-769). Without a
+-- warehouse every holder of the permission.
+SELECT DISTINCT om.user_id
+FROM organization_members om
+JOIN users u ON u.id = om.user_id AND u.deleted_at IS NULL
+JOIN organization_member_roles mr ON mr.member_id = om.id
+JOIN role_permissions rp ON rp.role_id = mr.role_id
+JOIN permissions p ON p.id = rp.permission_id
+WHERE om.organization_id = sqlc.arg(organization_id)
+  AND p.slug = sqlc.arg(permission_slug)::text
+  AND (
+    sqlc.narg(warehouse_id)::bigint IS NULL
+    OR EXISTS (
+      SELECT 1 FROM warehouse_members wm
+      WHERE wm.organization_id = om.organization_id AND wm.user_id = om.user_id
+        AND wm.warehouse_id = sqlc.narg(warehouse_id)::bigint
+    )
+    OR NOT EXISTS (
+      SELECT 1 FROM warehouse_members wm
+      WHERE wm.organization_id = om.organization_id AND wm.user_id = om.user_id
+    )
+  )
+ORDER BY om.user_id;

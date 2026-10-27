@@ -96,6 +96,9 @@ type OrderView struct {
 	// CreatedBySeller: the center opened the order for the dealer
 	// (TEC-1024); it started approved.
 	CreatedBySeller bool `json:"created_by_seller"`
+	// SellerWarehouse: the seller warehouse the order falls into
+	// (TEC-1028; detail only, null before approval or without one).
+	SellerWarehouse *WarehouseRef `json:"seller_warehouse"`
 	// InvoiceStatus: pending, partial or invoiced by the seller's manual
 	// invoice records (TEC-1030); meaningful once the order is received.
 	InvoiceStatus string     `json:"invoice_status"`
@@ -231,6 +234,14 @@ func (s *Service) view(ctx context.Context, q *db.Queries, c Caller, o db.Order)
 	v, err := s.summary(ctx, q, c, o, orgCache{})
 	if err != nil {
 		return OrderView{}, err
+	}
+	// The seller warehouse is the seller's own business (TEC-1028).
+	if o.SellerWarehouseID.Valid && partyOf(c, o) == PartySeller {
+		w, err := q.GetWarehouseByID(ctx, db.GetWarehouseByIDParams{ID: o.SellerWarehouseID.Int64, OrganizationID: o.SellerOrgID})
+		if err != nil {
+			return OrderView{}, fmt.Errorf("orders: warehouse: %w", err)
+		}
+		v.SellerWarehouse = warehouseRef(w)
 	}
 	items, err := q.ListOrderItems(ctx, o.ID)
 	if err != nil {

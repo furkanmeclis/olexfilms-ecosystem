@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -14,6 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { routes } from "@/config/routes";
 import { ProductSearch } from "@/features/orders/components/product-search";
@@ -31,6 +38,10 @@ import {
   orderKeys,
   ordersService,
 } from "@/features/orders/services/orders.service";
+import {
+  warehouseKeys,
+  warehouseService,
+} from "@/features/warehouse/services/warehouse.service";
 import { useLocale } from "@/providers/locale-provider";
 
 /**
@@ -38,6 +49,10 @@ import { useLocale } from "@/providers/locale-provider";
  * order starts approved and goes straight to the warehouse flow; prices
  * never block (a typed unit price wins, else the dealer's purchase price,
  * else 0 flagged as missing).
+ *
+ * TEC-1028: the order falls into a warehouse of the center, the primary one
+ * unless another active warehouse is picked here. Without warehouse.read the
+ * picker stays hidden and the server applies the primary warehouse.
  */
 export function CenterOrderForm({
   slug,
@@ -52,6 +67,23 @@ export function CenterOrderForm({
   const [dealer, setDealer] = useState<ComboboxOption | null>(null);
   const [lines, setLines] = useState<OrderFormLine[]>([]);
   const [note, setNote] = useState("");
+  const [warehouse, setWarehouse] = useState<string | null>(null);
+  const warehouses = useQuery({
+    queryKey: warehouseKeys.warehouses,
+    queryFn: () => warehouseService.listWarehouses(),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const activeWarehouses = useMemo(
+    () => (warehouses.data?.items ?? []).filter((w) => w.active),
+    [warehouses.data?.items],
+  );
+  // The primary warehouse is preselected until the user picks one.
+  const warehouseValue =
+    warehouse ??
+    activeWarehouses.find((w) => w.is_primary)?.uuid ??
+    activeWarehouses[0]?.uuid ??
+    "";
   const [touched, setTouched] = useState(false);
   const errors = useMemo(() => validateOrderForm(lines), [lines]);
   const valid = formIsValid(errors) && dealer !== null;
@@ -79,6 +111,7 @@ export function CenterOrderForm({
     mutationFn: () =>
       ordersService.create({
         buyer_org_uuid: dealer?.value ?? "",
+        ...(warehouseValue ? { seller_warehouse_uuid: warehouseValue } : {}),
         items: toItemInputs(lines, true),
         ...(note.trim() ? { note: note.trim() } : {}),
       }),
@@ -133,6 +166,44 @@ export function CenterOrderForm({
               >
                 {t("orders.center_form.dealer_required")}
               </p>
+            ) : null}
+            {activeWarehouses.length > 0 ? (
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="center-order-warehouse">
+                  {t("orders.center_form.warehouse")}
+                </Label>
+                <Select value={warehouseValue} onValueChange={setWarehouse}>
+                  <SelectTrigger
+                    id="center-order-warehouse"
+                    className="w-full"
+                    data-testid="center-order-warehouse"
+                  >
+                    <SelectValue
+                      placeholder={t(
+                        "orders.center_form.warehouse_placeholder",
+                      )}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeWarehouses.map((w) => (
+                      <SelectItem
+                        key={w.uuid}
+                        value={w.uuid}
+                        data-testid="center-order-warehouse-option"
+                      >
+                        {w.is_primary
+                          ? t("orders.center_form.warehouse_primary", {
+                              name: w.name,
+                            })
+                          : w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-xs">
+                  {t("orders.center_form.warehouse_hint")}
+                </p>
+              </div>
             ) : null}
           </CardContent>
         </Card>

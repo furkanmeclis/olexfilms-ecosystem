@@ -2141,6 +2141,7 @@ type Order struct {
 	DeliveryMethodID          pgtype.Int8        `json:"delivery_method_id"`
 	CreatedBySeller           bool               `json:"created_by_seller"`
 	InvoiceStatus             string             `json:"invoice_status"`
+	SellerWarehouseID         pgtype.Int8        `json:"seller_warehouse_id"`
 }
 
 type OrderInvoice struct {

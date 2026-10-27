@@ -202,6 +202,8 @@ type createBody struct {
 	Note         *string    `json:"note"`
 	Items        []itemBody `json:"items"`
 	BuyerOrgUUID *string    `json:"buyer_org_uuid"`
+	// SellerWarehouseUUID: the center's warehouse (TEC-1028).
+	SellerWarehouseUUID *string `json:"seller_warehouse_uuid"`
 }
 
 // Create (POST /v1/orders): a draft order of the active organization to its
@@ -214,6 +216,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	o, err := h.svc.Create(r.Context(), caller(r), ord.CreateInput{
 		Note: body.Note, Items: toItems(body.Items), BuyerOrgUUID: body.BuyerOrgUUID,
+		SellerWarehouseUUID: body.SellerWarehouseUUID,
 	})
 	if err != nil {
 		writeError(w, r, err)

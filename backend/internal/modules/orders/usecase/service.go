@@ -175,6 +175,9 @@ type CreateInput struct {
 	// BuyerOrgUUID: the center opens the order for this dealer directly
 	// under it (TEC-1024); empty = the active organization is the buyer.
 	BuyerOrgUUID *string
+	// SellerWarehouseUUID: the center's warehouse the order falls into
+	// (TEC-1028, with BuyerOrgUUID); empty = the primary warehouse.
+	SellerWarehouseUUID *string
 }
 
 // DraftResult reports whether a stock-forecast draft reused an existing open
@@ -363,6 +366,9 @@ func (s *Service) Create(ctx context.Context, c Caller, in CreateInput) (OrderVi
 	}
 	if in.BuyerOrgUUID != nil && strings.TrimSpace(*in.BuyerOrgUUID) != "" {
 		return s.createForBuyer(ctx, c, in)
+	}
+	if in.SellerWarehouseUUID != nil && strings.TrimSpace(*in.SellerWarehouseUUID) != "" {
+		return OrderView{}, invalid("seller_warehouse_uuid", "is only accepted with buyer_org_uuid")
 	}
 	var created db.Order
 	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
@@ -643,6 +649,7 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 	}
 	var result db.Order
 	shipped := false
+	var warehouse *db.Warehouse
 	err := s.inTx(ctx, func(q *db.Queries, tx pgx.Tx) error {
 		o, err := s.lockVisible(ctx, q, c, orderUUID)
 		if err != nil {
@@ -667,6 +674,12 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 		switch to {
 		case StatusApproved:
 			o, meta, err = s.approve(ctx, q, c, o)
+			if err == nil {
+				o, warehouse, err = assignWarehouse(ctx, q, o, nil)
+			}
+			if err == nil && warehouse != nil {
+				meta["seller_warehouse"] = warehouse.Code
+			}
 		case StatusReady:
 			if err = checkFullyAssigned(ctx, q, o); err == nil {
 				o, err = q.UpdateOrderStatus(ctx, db.UpdateOrderStatusParams{ID: o.ID, Status: to})
@@ -722,7 +735,13 @@ func (s *Service) Transition(ctx context.Context, c Caller, orderUUID uuid.UUID,
 			return err
 		}
 		result = o
-		return s.emit(ctx, tx, eventFor(to), o, from, c)
+		if err := s.emit(ctx, tx, eventFor(to), o, from, c); err != nil {
+			return err
+		}
+		if to == StatusApproved {
+			return s.emitWarehouseNew(ctx, q, tx, o, warehouse, c)
+		}
+		return nil
 	})
 	if err != nil {
 		return OrderView{}, err

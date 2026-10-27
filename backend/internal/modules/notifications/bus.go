@@ -158,6 +158,8 @@ func RegisterEventHandlers(bus events.Bus, svc *notifusecase.Service, log *slog.
 	on(events.CustomerCreated, customerWelcomeDispatch)
 	// TEC-1024: the center opened an approved order for a dealer.
 	on(events.OrdersCreatedBySeller, orderCreatedBySellerDispatch)
+	// TEC-1028: a new approved order fell into a seller warehouse.
+	on(events.OrdersWarehouseNew, orderWarehouseNewDispatch)
 	// TEC-200: sibling stock transfer events go to the notified sides
 	// (notify_user_ids resolved by the transfer use case).
 	for name, code := range TransferEventCodes {

@@ -12963,6 +12963,8 @@ export interface paths {
          * @description The active organization is the buyer and its parent the seller: distributor -> center or dealer -> distributor (anything else is 422 ORDER_NO_SUPPLIER). The currency is the brand currency. Unit prices are the buyer's effective purchase price from the pricing module (K8); price fields sent by the client are ignored. A product without a price in the order currency is 400 with detail code PRICE_NOT_FOUND. Needs orders.write.
          *
          *     TEC-1024: with `buyer_org_uuid` the active organization must be the center (otherwise 403) and the buyer an active dealer directly under it in the same brand (otherwise 400 on `buyer_org_uuid`). The order is opened by the center as seller and starts `approved` (prices locked, rate frozen, `created_by_seller` true), so the warehouse flow (preparing -> unit assignment -> ready -> shipped -> received) continues unchanged; the dealer's members holding orders.read are notified (ORDER_CREATED_BY_SELLER). Prices never block on this path: an item's `unit_price` (>= 0) wins (price_source `manual`), else the dealer's purchase price, else 0 with price_source `missing` and `price_missing` true.
+         *
+         *     TEC-1028: the order falls into the warehouse `seller_warehouse_uuid` names (an active warehouse of the center, otherwise 400 on `seller_warehouse_uuid`), else the center's primary warehouse. A dealer order the seller approves falls into the seller's primary warehouse. Picking suggestions and pick locations are limited to that warehouse, and its staff (warehouse members holding orders.ship, or holders without any warehouse membership; not the actor) are notified in-app and by push (ORDER_WAREHOUSE_NEW).
          */
         post: operations["createOrder"];
         delete?: never;
@@ -26848,6 +26850,8 @@ export interface components {
             invoices?: components["schemas"]["OrderInvoice"][];
             /** @description The center opened the order for the dealer; it started approved (TEC-1024) */
             created_by_seller: boolean;
+            /** @description TEC-1028: the seller warehouse the order falls into (set at approval: the warehouse picked on creation, else the seller's primary warehouse). Seller side only, detail responses; null otherwise. */
+            seller_warehouse?: components["schemas"]["OrderSellerWarehouse"] | null;
             status: components["schemas"]["OrderStatus"];
             /** @description Status in the request language */
             status_label: string;
@@ -27109,6 +27113,15 @@ export interface components {
         OrderItemsInput: {
             items: components["schemas"]["OrderItemInput"][];
         };
+        OrderSellerWarehouse: {
+            /** Format: uuid */
+            uuid: string;
+            /** @example MERKEZ */
+            code: string;
+            /** @example AFM Florya Merkez */
+            name: string;
+            is_primary: boolean;
+        };
         OrderCreateInput: {
             note?: string;
             /**
@@ -27116,6 +27129,11 @@ export interface components {
              * @description TEC-1024: the center opens an approved order for this active dealer directly under it. Only for a center (403 otherwise).
              */
             buyer_org_uuid?: string;
+            /**
+             * Format: uuid
+             * @description TEC-1028: the center's active warehouse the order falls into (only with buyer_org_uuid, else 400). Omitted: the center's primary warehouse.
+             */
+            seller_warehouse_uuid?: string;
             items: components["schemas"]["OrderItemInput"][];
         };
         /** @enum {string} */

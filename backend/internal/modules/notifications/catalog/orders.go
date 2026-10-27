@@ -9,6 +9,15 @@ import "github.com/furkanmeclis/olexfilms-ecosystem/backend/internal/platform/ms
 // in all 13 locales for in-app and WhatsApp, like the transfer events.
 const EventOrderCreatedBySeller = "ORDER_CREATED_BY_SELLER"
 
+// EventOrderWarehouseNew (TEC-1028): a new approved order fell into a
+// seller warehouse. The orders use case resolves the warehouse staff
+// (notify_user_ids: members of the warehouse holding orders.ship, minus the
+// actor). It goes in-app and as web and Expo push, in all 13 locales.
+const EventOrderWarehouseNew = "ORDER_WAREHOUSE_NEW"
+
+// OrderWarehouseChannels are the default channels of ORDER_WAREHOUSE_NEW.
+var OrderWarehouseChannels = []string{ChannelInapp, ChannelWebPush, ChannelExpoPush}
+
 // OrderChannels are the default channels of the order events.
 var OrderChannels = []string{ChannelInapp, ChannelWhatsApp}
 
@@ -41,6 +50,52 @@ var orderTexts = map[string]localizedText{
 		"أنشأ {{seller_name}} الطلب {{order_no}} لصالح {{buyer_name}} ووافق عليه. سيتم تجهيزه وشحنه إليكم."},
 }
 
+var orderWarehouseTexts = map[string]localizedText{
+	"tr": {"Yeni sipariş hazırlanacak: {{order_no}}",
+		"{{buyer_name}} için {{order_no}} numaralı sipariş onaylandı ve {{warehouse_name}} deposuna düştü. Hazırlamaya başlayabilirsiniz."},
+	"en": {"New order to prepare: {{order_no}}",
+		"Order {{order_no}} for {{buyer_name}} was approved and assigned to the {{warehouse_name}} warehouse. You can start preparing it."},
+	"bg": {"Нова поръчка за подготовка: {{order_no}}",
+		"Поръчка {{order_no}} за {{buyer_name}} е одобрена и насочена към склад {{warehouse_name}}. Можете да започнете подготовката."},
+	"de": {"Neue Bestellung zur Vorbereitung: {{order_no}}",
+		"Die Bestellung {{order_no}} für {{buyer_name}} wurde genehmigt und dem Lager {{warehouse_name}} zugewiesen. Sie können mit der Vorbereitung beginnen."},
+	"el": {"Νέα παραγγελία προς προετοιμασία: {{order_no}}",
+		"Η παραγγελία {{order_no}} για {{buyer_name}} εγκρίθηκε και ανατέθηκε στην αποθήκη {{warehouse_name}}. Μπορείτε να ξεκινήσετε την προετοιμασία."},
+	"uk": {"Нове замовлення до підготовки: {{order_no}}",
+		"Замовлення {{order_no}} для {{buyer_name}} схвалено та призначено на склад {{warehouse_name}}. Можна починати підготовку."},
+	"ru": {"Новый заказ к подготовке: {{order_no}}",
+		"Заказ {{order_no}} для {{buyer_name}} одобрен и назначен на склад {{warehouse_name}}. Можно начинать подготовку."},
+	"fr": {"Nouvelle commande à préparer : {{order_no}}",
+		"La commande {{order_no}} pour {{buyer_name}} a été approuvée et affectée à l'entrepôt {{warehouse_name}}. Vous pouvez commencer la préparation."},
+	"es": {"Nuevo pedido por preparar: {{order_no}}",
+		"El pedido {{order_no}} para {{buyer_name}} fue aprobado y asignado al almacén {{warehouse_name}}. Puede empezar a prepararlo."},
+	"it": {"Nuovo ordine da preparare: {{order_no}}",
+		"L'ordine {{order_no}} per {{buyer_name}} è stato approvato e assegnato al magazzino {{warehouse_name}}. Può iniziare la preparazione."},
+	"zh-CN": {"新订单待备货：{{order_no}}",
+		"{{buyer_name}} 的订单 {{order_no}} 已批准并分配到 {{warehouse_name}} 仓库，可以开始备货。"},
+	"az": {"Hazırlanacaq yeni sifariş: {{order_no}}",
+		"{{buyer_name}} üçün {{order_no}} nömrəli sifariş təsdiqləndi və {{warehouse_name}} anbarına təyin olundu. Hazırlamağa başlaya bilərsiniz."},
+	"ar": {"طلب جديد للتجهيز: {{order_no}}",
+		"تمت الموافقة على الطلب {{order_no}} لصالح {{buyer_name}} وإسناده إلى مستودع {{warehouse_name}}. يمكنكم البدء في تجهيزه."},
+}
+
+func orderWarehouseTemplates() []DefaultTemplate {
+	out := make([]DefaultTemplate, 0, len(orderWarehouseTexts)*len(OrderWarehouseChannels))
+	for _, lang := range msgtemplate.Locales {
+		t, ok := orderWarehouseTexts[lang]
+		if !ok {
+			continue // TestOrderWarehouseTemplatesCoverEveryLocale reports it
+		}
+		for _, ch := range OrderWarehouseChannels {
+			out = append(out, DefaultTemplate{
+				Role: RoleGeneric, Channel: ch, Language: lang,
+				Subject: t.subject, Body: t.body, Format: "text",
+			})
+		}
+	}
+	return out
+}
+
 func orderTemplates() []DefaultTemplate {
 	out := make([]DefaultTemplate, 0, len(orderTexts)*len(OrderChannels))
 	for _, lang := range msgtemplate.Locales {
@@ -70,5 +125,17 @@ func init() {
 		},
 		UserConfigurable: true,
 		Templates:        orderTemplates(),
+	})
+	Register(Event{
+		Code: EventOrderWarehouseNew, Module: "orders",
+		DefaultChannels: OrderWarehouseChannels,
+		AudienceRoles:   []string{RoleCenter, RoleDistributor},
+		Placeholders: []msgtemplate.Placeholder{
+			ph("order_no", "SP00000123", "SP00000123"),
+			ph("buyer_name", "Kuzey Oto", "North Auto"),
+			ph("warehouse_name", "AFM Florya Merkez", "Main Warehouse"),
+		},
+		UserConfigurable: true,
+		Templates:        orderWarehouseTemplates(),
 	})
 }
